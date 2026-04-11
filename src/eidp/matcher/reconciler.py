@@ -142,40 +142,40 @@ def reconcile(session: Session, data_dir: Path) -> ReconcileReport:
                 used_codes.add(t.school_code)
                 continue
 
-        # Strategy 2: Match corporation_name as setter_name
+        # Strategy 2: Fuzzy matches go to needs_manual (not auto-applied per design)
         corp_norm = _norm(school.corporation_name)
         pref_targets = [t for t in targets if t.prefecture == school.prefecture and t.school_code not in used_codes]
+        best_candidate_t: TargetInstitution | None = None
+        best_score = 0.0
+        best_method = ""
 
         for t in pref_targets:
             setter_norm = _norm(t.setter_name)
             t_name_norm = _norm(t.name)
 
-            # Corporation name matches setter AND school name is substring
             if corp_norm and setter_norm and (corp_norm in setter_norm or setter_norm in corp_norm):
-                if norm_name in t_name_norm or t_name_norm in norm_name:
+                if norm_name and t_name_norm and (norm_name in t_name_norm or t_name_norm in norm_name):
                     score = min(len(norm_name), len(t_name_norm)) / max(len(norm_name), len(t_name_norm))
-                    if score >= 0.6:
-                        candidate.candidate_code = t.school_code
-                        candidate.candidate_name = t.name
-                        candidate.match_method = "setter_containment"
-                        candidate.confidence = round(score, 3)
-                        candidate.resolution = "assigned"
-                        report.auto_assigned.append(candidate)
-                        used_codes.add(t.school_code)
-                        break
-            # School name containment with high overlap
+                    if score > best_score:
+                        best_score = score
+                        best_candidate_t = t
+                        best_method = "setter_containment"
+
             if norm_name and t_name_norm:
                 if norm_name in t_name_norm or t_name_norm in norm_name:
                     score = min(len(norm_name), len(t_name_norm)) / max(len(norm_name), len(t_name_norm))
-                    if score >= 0.85:
-                        candidate.candidate_code = t.school_code
-                        candidate.candidate_name = t.name
-                        candidate.match_method = "name_containment"
-                        candidate.confidence = round(score, 3)
-                        candidate.resolution = "assigned"
-                        report.auto_assigned.append(candidate)
-                        used_codes.add(t.school_code)
-                        break
+                    if score > best_score:
+                        best_score = score
+                        best_candidate_t = t
+                        best_method = "name_containment"
+
+        if best_candidate_t is not None and best_score >= 0.6:
+            candidate.candidate_code = best_candidate_t.school_code
+            candidate.candidate_name = best_candidate_t.name
+            candidate.match_method = best_method
+            candidate.confidence = round(best_score, 3)
+            # Fuzzy matches always go to manual review, never auto-applied
+            report.needs_manual.append(candidate)
         else:
             # Check if school is excluded (閉校/統合/etc.)
             from eidp.db.models import SchoolYearStatus
@@ -253,33 +253,49 @@ def apply_reconciliation(session: Session, report: ReconcileReport) -> dict[str,
 
 
 def verify_identity(session: Session, data_dir: Path) -> dict[str, object]:
-    """Verification gate: check identity completeness."""
+    """Verification gate: check identity completeness including target list coverage."""
+    from sqlalchemy import text
+
+    from eidp.db.models import SchoolYearStatus
+
     total = session.query(func.count(School.id)).scalar() or 0
     with_code = session.query(func.count(School.id)).filter(School.school_code.isnot(None)).scalar() or 0
     without_code = total - with_code
 
     # Check for duplicate codes
-    from sqlalchemy import text
     dupes = session.execute(
         text("SELECT school_code, count(*) FROM school WHERE school_code IS NOT NULL GROUP BY school_code HAVING count(*) > 1")
     ).fetchall()
 
-    # Count excluded schools
-    from eidp.db.models import SchoolYearStatus
-    excluded = (
-        session.query(func.count(func.distinct(SchoolYearStatus.school_id)))
-        .filter(SchoolYearStatus.excluded_reason.isnot(None))
-        .scalar()
-        or 0
-    )
+    # Count excluded schools (no code needed)
+    excluded_ids = set()
+    for row in session.query(SchoolYearStatus.school_id).filter(SchoolYearStatus.excluded_reason.isnot(None)).distinct():
+        excluded_ids.add(row[0])
+
+    # Schools without code that are NOT excluded = truly unresolved
+    no_code_schools = session.query(School).filter(School.school_code.is_(None)).all()
+    truly_unresolved = [s for s in no_code_schools if s.id not in excluded_ids]
+
+    # Target list gap: MEXT target 専門学校 codes not in our DB
+    target_list_path = data_dir / "target_institutions.xlsx"
+    target_gap = 0
+    if target_list_path.exists():
+        targets = load_target_institutions(target_list_path)
+        db_codes = set()
+        for row in session.query(School.school_code).filter(School.school_code.isnot(None)):
+            if row[0]:
+                db_codes.add(row[0])
+        target_codes = {t.school_code for t in targets}
+        target_gap = len(target_codes - db_codes)
 
     result = {
         "total_schools": total,
         "with_code": with_code,
         "without_code": without_code,
+        "excluded_no_code_needed": len([s for s in no_code_schools if s.id in excluded_ids]),
+        "truly_unresolved": len(truly_unresolved),
         "duplicate_codes": len(dupes),
-        "excluded_schools": excluded,
-        "unresolved": without_code,
-        "pass": without_code == 0 and len(dupes) == 0,
+        "target_list_gap": target_gap,
+        "pass": len(truly_unresolved) == 0 and len(dupes) == 0 and target_gap == 0,
     }
     return result

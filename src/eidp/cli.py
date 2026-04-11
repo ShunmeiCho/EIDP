@@ -133,7 +133,7 @@ def verify_identity(
         if result["pass"]:
             typer.echo("\nGATE: PASS")
         else:
-            typer.echo(f"\nGATE: FAIL ({result['unresolved']} unresolved)")
+            typer.echo(f"\nGATE: FAIL (truly_unresolved={result['truly_unresolved']}, target_gap={result['target_list_gap']})")
     finally:
         session.close()
 

@@ -307,18 +307,25 @@ def apply_matches(session: Session, report: MatchReport) -> dict[str, int]:
         if school is None:
             continue
 
-        school.school_code = r.mext_code
-        stats["codes_assigned"] += 1
+        if school.school_code is None:
+            school.school_code = r.mext_code
+            stats["codes_assigned"] += 1
 
         if r.mext_name and r.mext_name != school.school_name:
-            alias = SchoolAlias(
-                school_id=r.school_id,
-                alias_name=r.mext_name,
-                alias_type="formal",
-                source="mext",
+            existing_alias = (
+                session.query(SchoolAlias)
+                .filter(SchoolAlias.school_id == r.school_id, SchoolAlias.alias_name == r.mext_name)
+                .first()
             )
-            session.add(alias)
-            stats["aliases_created"] += 1
+            if not existing_alias:
+                alias = SchoolAlias(
+                    school_id=r.school_id,
+                    alias_name=r.mext_name,
+                    alias_type="formal",
+                    source="mext",
+                )
+                session.add(alias)
+                stats["aliases_created"] += 1
 
     session.flush()
     log.info("matches_applied", **stats)

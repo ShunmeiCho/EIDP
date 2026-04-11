@@ -105,17 +105,30 @@ def import_sairoku(ws: openpyxl.worksheet.worksheet.Worksheet, session: Session)
         if cache_key in school_cache:
             school_id = school_cache[cache_key]
         else:
-            school = School(
-                prefecture=prefecture,
-                corporation_name=corp_name,
-                school_name=school_name,
-                school_type="専門学校",
+            # Upsert: find existing or create
+            existing = (
+                session.query(School)
+                .filter(
+                    School.prefecture == prefecture,
+                    School.corporation_name == corp_name,
+                    School.school_name == school_name,
+                )
+                .first()
             )
-            session.add(school)
-            session.flush()
-            school_id = school.id
+            if existing:
+                school_id = existing.id
+            else:
+                school = School(
+                    prefecture=prefecture,
+                    corporation_name=corp_name,
+                    school_name=school_name,
+                    school_type="専門学校",
+                )
+                session.add(school)
+                session.flush()
+                school_id = school.id
+                stats["schools"] += 1
             school_cache[cache_key] = school_id
-            stats["schools"] += 1
 
         # Year status columns: cols 3-9 (0-indexed) for 2019-2025
         for i, year in enumerate(SAIROKU_YEARS):
