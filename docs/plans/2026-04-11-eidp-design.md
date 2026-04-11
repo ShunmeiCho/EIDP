@@ -124,15 +124,34 @@ The taxonomy system classifies departments into **14 field categories**. The com
 [Competition Report Generation]
 ```
 
-### Strategy: Semi-Auto with Human Gates
+### Strategy: AI-Assisted with Human Approval
 
-Human review appears only at low-confidence decision points. Every human judgment is recorded as structured data to improve future automation.
+All decision points use AI to generate proposals with confidence scores. Humans review and approve, not research and decide. Every human judgment is recorded as structured data to improve future automation.
 
 ```
 AUTO ──> confidence >= threshold ──> AUTO ACCEPT
   |
-  └──> confidence < threshold  ──> REVIEW QUEUE ──> Human ──> Decision logged
+  └──> confidence < threshold  ──> AI PROPOSAL ──> Human Approve/Reject ──> Decision logged
 ```
+
+**AI Proposal Layer**: At every review point, AI generates:
+- A ranked list of candidates with confidence scores and reasoning
+- For school matching: web search for name change history, cross-reference multiple sources
+- For PDF identification: LLM-based content classification
+- For data extraction: LLM cross-validation against previous year data
+- For department changes: automated diff analysis with change-type classification
+
+**Human Role**: Approve/reject AI proposals (batch processing), not manual research.
+
+**Default-Approve Mode**: Proposals with confidence >= 0.9 are pre-approved. Reviewer only sees items that need attention (low confidence or AI-flagged anomalies).
+
+**Estimated Human Effort** (with AI proposals):
+
+| Task | Without AI | With AI Proposals |
+|------|-----------|-------------------|
+| 89 school MEXT matching | 2-3 hours | ~15 min (batch confirm) |
+| Cross-sheet name fixes | 3-4 hours | ~20 min |
+| Weekly runtime review | 2-4 hrs/week | 15-30 min/week |
 
 ---
 
@@ -503,24 +522,37 @@ Weekly cycle (June-August):
 
 ### Review Queue Design
 
-**Who**: Solo developer (project owner), estimated 2-4 hours/week during June-August. Review queue designed for single-reviewer batch processing (30-60 min sessions).
+**Who**: Solo developer (project owner), estimated 15-30 min/week during June-August (reduced from 2-4 hours/week by AI proposal layer). Review queue designed for approval-based batch processing.
 
 **Interface**: Simple web UI (Flask/FastAPI + HTML templates) or Streamlit app.
 
-**Confidence Thresholds** (calibrated from agent test results):
+**AI Proposal + Confidence Thresholds**:
 
-| Item Type | Auto-Accept | Review | Auto-Reject |
-|-----------|-------------|--------|-------------|
-| URL match | >= 0.9 (86% of schools) | 0.5 - 0.9 (14%) | < 0.5 |
+| Item Type | Auto-Accept | AI Proposal (human approves) | Auto-Reject |
+|-----------|-------------|------------------------------|-------------|
+| URL match | >= 0.9 (86%) | 0.5 - 0.9 (14%) | < 0.5 |
 | PDF identification | >= 0.8 | 0.4 - 0.8 | < 0.4 |
-| Data extraction (per field) | >= 0.95 | 0.7 - 0.95 | < 0.7 |
-| Department match | exact only | all non-exact | — |
+| Data extraction | >= 0.95 | 0.7 - 0.95 | < 0.7 |
+| Department match | exact only | AI proposes with reasoning | — |
+| School MEXT code | exact + NFKC | AI web-search + propose candidate | no match found |
 
-**Estimated Review Volume** (per season, updated with verified data):
-- URL verification: ~220-330 schools (10-15%, down from 10-20%)
-- PDF verification: ~100-200 schools
-- Data extraction: ~200-400 departments
-- Department changes: ~100-300 events
+**AI Proposal Format** (displayed in Review Queue UI):
+```
+[AI Proposal] 三幸学園「札幌医療秘書福祉＆IT専門学校」
+              → MEXT「札幌医療秘書福祉専門学校」(H101310100147)
+              Reason: 2024 name change added「＆IT」suffix
+              Confidence: 0.95
+              Sources: MEXT CSV match after infix removal
+
+              [Approve] [Reject] [Skip]
+```
+
+**Estimated Review Volume** (per season, with AI proposals):
+- URL verification: ~30-50 items needing human attention (AI resolves 85%+ automatically)
+- PDF verification: ~20-40 items
+- Data extraction: ~40-80 items (only anomalies)
+- Department changes: ~20-60 items (AI classifies, human confirms exceptions)
+- School identity: 89 one-time items (AI proposes, human batch-confirms)
 
 ---
 
