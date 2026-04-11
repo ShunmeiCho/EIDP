@@ -74,6 +74,71 @@ def match_mext(
 
 
 @app.command()
+def reconcile(
+    data_dir: Path = typer.Option(Path("data/mext"), help="MEXT data directory"),
+    dry_run: bool = typer.Option(False, help="Show results without writing to DB"),
+) -> None:
+    """Reconcile unmatched schools against target institution list (Step 4)."""
+    from eidp.db.session import SessionLocal
+    from eidp.matcher.reconciler import apply_reconciliation, reconcile as do_reconcile
+
+    session = SessionLocal()
+    try:
+        report = do_reconcile(session, data_dir)
+
+        typer.echo(f"\nReconciliation Results:")
+        typer.echo(f"  Already resolved:   {report.already_resolved}")
+        typer.echo(f"  Auto-assigned:      {len(report.auto_assigned)}")
+        typer.echo(f"  Excluded:           {len(report.excluded)}")
+        typer.echo(f"  Needs manual:       {len(report.needs_manual)}")
+        typer.echo(f"  Missing from DB:    {len(report.missing_from_db)}")
+
+        if not dry_run:
+            stats = apply_reconciliation(session, report)
+            session.commit()
+            typer.echo(f"\nApplied:")
+            typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
+            typer.echo(f"  Aliases created: {stats['aliases_created']}")
+        else:
+            typer.echo("\n(dry run)")
+            session.rollback()
+
+        if report.needs_manual:
+            typer.echo(f"\nManual resolution needed ({len(report.needs_manual)}):")
+            from collections import Counter
+            corps = Counter(c.corporation_name for c in report.needs_manual)
+            for corp, count in corps.most_common(10):
+                typer.echo(f"  {corp}: {count}")
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
+def verify_identity(
+    data_dir: Path = typer.Option(Path("data/mext"), help="MEXT data directory"),
+) -> None:
+    """Verify all schools have stable IDs (Step 4 gate)."""
+    from eidp.db.session import SessionLocal
+    from eidp.matcher.reconciler import verify_identity as do_verify
+
+    session = SessionLocal()
+    try:
+        result = do_verify(session, data_dir)
+        typer.echo(f"\nIdentity Verification:")
+        for k, v in result.items():
+            typer.echo(f"  {k}: {v}")
+        if result["pass"]:
+            typer.echo("\nGATE: PASS")
+        else:
+            typer.echo(f"\nGATE: FAIL ({result['unresolved']} unresolved)")
+    finally:
+        session.close()
+
+
+@app.command()
 def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func
