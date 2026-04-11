@@ -20,3 +20,4 @@ build/
 
 # Large binary data (tracked via LFS or excluded)
 # sample Excel files are original data — keep in repo for now
+.omx/

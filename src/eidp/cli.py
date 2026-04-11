@@ -32,6 +32,51 @@ def import_excel(
 
 
 @app.command()
+def match_mext(
+    data_dir: Path = typer.Option(Path("data/mext"), help="MEXT data directory"),
+    dry_run: bool = typer.Option(False, help="Show matches without writing to DB"),
+) -> None:
+    """Match schools against MEXT school codes (Step 3)."""
+    from eidp.db.session import get_session
+    from eidp.matcher.school_matcher import apply_matches, match_schools
+
+    session_gen = get_session()
+    session = next(session_gen)
+    try:
+        report = match_schools(session, data_dir)
+
+        typer.echo(f"\nMatch Results:")
+        typer.echo(f"  Exact:        {len(report.exact)}")
+        typer.echo(f"  NFKC:         {len(report.nfkc)}")
+        typer.echo(f"  Pref+Partial: {len(report.pref_partial)}")
+        typer.echo(f"  Unmatched:    {len(report.unmatched)}")
+        typer.echo(f"  Match rate:   {report.total_matched / report.total * 100:.1f}%")
+
+        if not dry_run:
+            stats = apply_matches(session, report)
+            next(session_gen, None)
+            typer.echo(f"\nApplied:")
+            typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
+            typer.echo(f"  Aliases created: {stats['aliases_created']}")
+            typer.echo(f"  Conflicts:      {stats['conflicts']}")
+        else:
+            typer.echo("\n(dry run — no DB writes)")
+
+        if report.unmatched:
+            typer.echo(f"\nTop unmatched corporations:")
+            from collections import Counter
+            corps = Counter(r.corporation_name for r in report.unmatched)
+            for corp, count in corps.most_common(10):
+                typer.echo(f"  {corp}: {count}")
+    except Exception:
+        try:
+            next(session_gen, None)
+        except Exception:
+            pass
+        raise
+
+
+@app.command()
 def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func
