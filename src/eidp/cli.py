@@ -159,5 +159,64 @@ def db_info() -> None:
         session.close()
 
 
+@app.command()
+def populate_reviews(
+    data_dir: Path = typer.Option(Path("data/mext"), help="MEXT data directory"),
+) -> None:
+    """Populate review_item table with unresolved schools for manual review (Step 6)."""
+    from eidp.db.session import SessionLocal
+    from eidp.review.populate import populate_review_items
+
+    session = SessionLocal()
+    try:
+        stats = populate_review_items(session, data_dir)
+        session.commit()
+        typer.echo(f"\nReview Items Populated:")
+        typer.echo(f"  Created:          {stats['created']}")
+        typer.echo(f"  Skipped existing: {stats['skipped_existing']}")
+        typer.echo(f"  Skipped excluded: {stats['skipped_excluded']}")
+        typer.echo(f"  Total unresolved: {stats['total_unresolved']}")
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
+def review_ui(
+    port: int = typer.Option(8501, help="Port for the Streamlit server"),
+) -> None:
+    """Launch the Streamlit review UI for school identity resolution (Step 6)."""
+    import subprocess
+    import sys
+
+    app_path = Path(__file__).parent / "review" / "app.py"
+    typer.echo(f"Launching review UI on http://localhost:{port}")
+    subprocess.run(
+        [sys.executable, "-m", "streamlit", "run", str(app_path), "--server.port", str(port)],
+        check=True,
+    )
+
+
+@app.command()
+def eval_pdf(
+    gold_dir: Path = typer.Option(Path("data/gold-set"), help="Gold annotation directory"),
+    pdf_dir: Path = typer.Option(Path("data/sample-pdfs"), help="Sample PDF directory"),
+) -> None:
+    """Evaluate PDF parser against gold set (Step 5 / Step 9)."""
+    from eidp.pdf.eval_harness import load_all_gold_annotations, print_eval_report
+
+    annotations = load_all_gold_annotations(gold_dir)
+    typer.echo(f"Gold set: {len(annotations)} annotations loaded")
+    for key, ann in annotations.items():
+        typer.echo(f"  {key}: {ann.school_name} ({len(ann.departments)} departments)")
+
+    typer.echo("\nTo run evaluation, implement a parser and call:")
+    typer.echo("  from eidp.pdf.eval_harness import run_full_evaluation, print_eval_report")
+    typer.echo("  results = run_full_evaluation(your_parse_fn, gold_dir, pdf_dir)")
+    typer.echo("  print_eval_report(results)")
+
+
 if __name__ == "__main__":
     app()
