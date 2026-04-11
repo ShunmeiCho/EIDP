@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: eidp-postgres
+    environment:
+      POSTGRES_DB: eidp
+      POSTGRES_USER: eidp
+      POSTGRES_PASSWORD: eidp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
