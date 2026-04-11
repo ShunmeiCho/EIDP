@@ -1,0 +1,12 @@
+{
+  "total": 2212,
+  "exact_count": 1879,
+  "fuzzy_count": 134,
+  "partial_count": 1,
+  "unmatched_count": 198,
+  "exact_rate": 84.94575045207957,
+  "fuzzy_rate": 6.0578661844484625,
+  "partial_rate": 0.045207956600361664,
+  "cumulative_rate": 91.04882459312839,
+  "unmatched_rate": 8.95117540687161
+}

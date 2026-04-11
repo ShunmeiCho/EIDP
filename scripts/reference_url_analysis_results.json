@@ -1,0 +1,1156 @@
+[
+  {
+    "name": "Toho Gakuen",
+    "url": "https://www.tohogakuen.ac.jp/about/valuation/",
+    "domain": "tohogakuen.ac.jp",
+    "robots_txt": "User-agent: *\nDisallow:\nSitemap:https://www.tohogakuen.ac.jp/sitemap.xml",
+    "page_fetch": {
+      "status_code": 200,
+      "content_type": "text/html; charset=utf-8",
+      "error": null,
+      "redirect_chain": [],
+      "html_length": 100415
+    },
+    "page_structure": {
+      "has_table_layout": false,
+      "has_list_layout": true,
+      "has_accordion": true,
+      "has_tab_layout": false,
+      "heading_count": 18,
+      "total_links": 282,
+      "pdf_links_count": 79,
+      "headings": [
+        {
+          "level": "h1",
+          "text": "情報公開"
+        },
+        {
+          "level": "h3",
+          "text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書"
+        },
+        {
+          "level": "h3",
+          "text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）"
+        },
+        {
+          "level": "h3",
+          "text": "授業計画（シラバス）※遷移先の画面にて検索"
+        },
+        {
+          "level": "h3",
+          "text": "成績評価の実施方針"
+        },
+        {
+          "level": "h3",
+          "text": "ディプロマ・ポリシー"
+        },
+        {
+          "level": "h3",
+          "text": "自己評価報告書"
+        },
+        {
+          "level": "h3",
+          "text": "学校関係者評価報告書"
+        },
+        {
+          "level": "h3",
+          "text": "事業報告書"
+        },
+        {
+          "level": "h3",
+          "text": "財務情報"
+        },
+        {
+          "level": "h3",
+          "text": "文部科学省「キャリア形成促進プログラム」認定学科"
+        },
+        {
+          "level": "h3",
+          "text": "文部科学省「職業実践専門課程」認定学科"
+        },
+        {
+          "level": "h2",
+          "text": "Join us!"
+        },
+        {
+          "level": "h3",
+          "text": "資料請求"
+        },
+        {
+          "level": "h4",
+          "text": "LINE相談"
+        },
+        {
+          "level": "h4",
+          "text": "電話相談"
+        },
+        {
+          "level": "h4",
+          "text": "個別相談"
+        },
+        {
+          "level": "h4",
+          "text": "オンライン個別相談"
+        }
+      ]
+    },
+    "js_rendering": {
+      "has_noscript": true,
+      "has_react_root": false,
+      "has_vue_app": false,
+      "has_angular": false,
+      "script_count": 11,
+      "has_data_attributes": false,
+      "body_has_content": true,
+      "pdf_links_in_raw_html": true,
+      "likely_js_rendered": false
+    },
+    "pdf_links": [
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_toho_2025.pdf",
+        "anchor_text": "PDF2025年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_toho_2025.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_toho_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_toho_2024.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_movie_2025.pdf",
+        "anchor_text": "PDF2025年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_movie_2025.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_movie_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_movie_2024.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_onkyo_2025.pdf",
+        "anchor_text": "PDF2025年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_onkyo_2025.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_onkyo_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_onkyo_2024.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_announce_2025.pdf",
+        "anchor_text": "PDF2025年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_announce_2025.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_announce_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "大学等における修学の支援に関する法律第3条第1項の確認に係る申請書",
+        "path_pattern": "/pdf/about/valuation/support/support_announce_2024.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/toho_2.pdf",
+        "anchor_text": "PDF放送技術科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/toho_2.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/toho_1.pdf",
+        "anchor_text": "PDF放送芸術科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/toho_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/toho_3.pdf",
+        "anchor_text": "PDF照明クリエイティブ科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/toho_3.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/toho_4.pdf",
+        "anchor_text": "PDFテレビ美術科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/toho_4.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/toho_5.pdf",
+        "anchor_text": "PDF放送音響科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/toho_5.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/movie_1.pdf",
+        "anchor_text": "PDF映画制作科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/movie_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/movie_2.pdf",
+        "anchor_text": "PDFプロモーション映像科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/movie_2.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/movie_4.pdf",
+        "anchor_text": "PDF小説創作科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/movie_4.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/movie_3.pdf",
+        "anchor_text": "PDFアニメーション・CG科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/movie_3.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/onkyo_1.pdf",
+        "anchor_text": "PDF音響技術科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/onkyo_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/onkyo_2.pdf",
+        "anchor_text": "PDF音響芸術科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/onkyo_2.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/announce_1.pdf",
+        "anchor_text": "PDF声優科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/announce_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/announce_2.pdf",
+        "anchor_text": "PDF配信クリエイター科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/announce_2.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/announce_3.pdf",
+        "anchor_text": "PDF演技科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/announce_3.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/announce_5.pdf",
+        "anchor_text": "PDFダンスパフォーマンス科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/announce_5.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/syllabus/announce_4.pdf",
+        "anchor_text": "PDFアナウンス科",
+        "heading_text": "実務経験のある教員等による授業科目の一覧表・授業計画（シラバス）",
+        "path_pattern": "/pdf/about/valuation/syllabus/announce_4.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/gpa/gpa_toho.pdf",
+        "anchor_text": "PDF東放学園専門学校",
+        "heading_text": "成績評価の実施方針",
+        "path_pattern": "/pdf/about/valuation/gpa/gpa_toho.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/gpa/gpa_movie.pdf",
+        "anchor_text": "PDF東放学園映画アニメCG専門学校",
+        "heading_text": "成績評価の実施方針",
+        "path_pattern": "/pdf/about/valuation/gpa/gpa_movie.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/gpa/gpa_onkyo.pdf",
+        "anchor_text": "PDF東放学園音響専門学校",
+        "heading_text": "成績評価の実施方針",
+        "path_pattern": "/pdf/about/valuation/gpa/gpa_onkyo.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/gpa/gpa_announce.pdf",
+        "anchor_text": "PDF専門学校東京アナウンス学院",
+        "heading_text": "成績評価の実施方針",
+        "path_pattern": "/pdf/about/valuation/gpa/gpa_announce.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/diploma/diploma_toho.pdf",
+        "anchor_text": "PDF東放学園専門学校",
+        "heading_text": "ディプロマ・ポリシー",
+        "path_pattern": "/pdf/about/valuation/diploma/diploma_toho.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/diploma/diploma_movie.pdf",
+        "anchor_text": "PDF東放学園映画アニメCG専門学校",
+        "heading_text": "ディプロマ・ポリシー",
+        "path_pattern": "/pdf/about/valuation/diploma/diploma_movie.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/diploma/diploma_onkyo.pdf",
+        "anchor_text": "PDF東放学園音響専門学校",
+        "heading_text": "ディプロマ・ポリシー",
+        "path_pattern": "/pdf/about/valuation/diploma/diploma_onkyo.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/diploma/diploma_announce.pdf",
+        "anchor_text": "PDF専門学校東京アナウンス学院",
+        "heading_text": "ディプロマ・ポリシー",
+        "path_pattern": "/pdf/about/valuation/diploma/diploma_announce.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_1_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_1_2024.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_1_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_1_2023.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_1_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_1_2022.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_2_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_2_2024.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_2_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_2_2023.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_2_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_2_2022.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_3_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_3_2024.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_3_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_3_2023.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_3_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_3_2022.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_4_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_4_2024.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_4_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_4_2023.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_4_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_4_2022.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_5_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_5_2024.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_5_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_5_2023.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_5_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "自己評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_5_2022.pdf",
+        "matched_keywords": [
+          "自己評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_1_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_1_2024.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_1_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_1_2023.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_1_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_1_2022.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_2_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_2_2024.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_2_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_2_2023.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_2_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_2_2022.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_3_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_3_2024.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_3_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_3_2023.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_3_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_3_2022.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_4_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_4_2024.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_4_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_4_2023.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_4_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_4_2022.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_5_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_5_2024.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_5_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_5_2023.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/valuation_education_5_2022.pdf",
+        "anchor_text": "PDF2022年度",
+        "heading_text": "学校関係者評価報告書",
+        "path_pattern": "/pdf/about/valuation/valuation_education_5_2022.pdf",
+        "matched_keywords": [
+          "学校関係者評価"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/business_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "事業報告書",
+        "path_pattern": "/pdf/about/valuation/business_2024.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/business_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "事業報告書",
+        "path_pattern": "/pdf/about/valuation/business_2023.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/financial_2024.pdf",
+        "anchor_text": "PDF2024年度",
+        "heading_text": "財務情報",
+        "path_pattern": "/pdf/about/valuation/financial_2024.pdf",
+        "matched_keywords": [
+          "財務情報"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/financial_2023.pdf",
+        "anchor_text": "PDF2023年度",
+        "heading_text": "財務情報",
+        "path_pattern": "/pdf/about/valuation/financial_2023.pdf",
+        "matched_keywords": [
+          "財務情報"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/career.pdf",
+        "anchor_text": "PDF映画VFX専攻科",
+        "heading_text": "文部科学省「キャリア形成促進プログラム」認定学科",
+        "path_pattern": "/pdf/about/valuation/career.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_toho_2.pdf",
+        "anchor_text": "PDF放送技術科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_toho_2.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_toho_1.pdf",
+        "anchor_text": "PDF放送芸術科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_toho_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_toho_3.pdf",
+        "anchor_text": "PDF照明クリエイティブ科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_toho_3.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_toho_4.pdf",
+        "anchor_text": "PDFテレビ美術科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_toho_4.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_toho_5.pdf",
+        "anchor_text": "PDF放送音響科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_toho_5.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_movie_1.pdf",
+        "anchor_text": "PDF映画制作科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_movie_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_movie_2.pdf",
+        "anchor_text": "PDFプロモーション映像科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_movie_2.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_movie_4.pdf",
+        "anchor_text": "PDF小説創作科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_movie_4.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_movie_3.pdf",
+        "anchor_text": "PDFアニメーション・CG科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_movie_3.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_onkyo_1.pdf",
+        "anchor_text": "PDF音響技術科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_onkyo_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_onkyo_2.pdf",
+        "anchor_text": "PDF音響芸術科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_onkyo_2.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/profession_announce_1.pdf",
+        "anchor_text": "PDF声優科",
+        "heading_text": "文部科学省「職業実践専門課程」認定学科",
+        "path_pattern": "/pdf/about/valuation/profession_announce_1.pdf",
+        "matched_keywords": [],
+        "is_likely_target": false,
+        "source": "a_tag"
+      }
+    ],
+    "pdf_link_count": 79,
+    "likely_target_count": 32,
+    "download_tests": [
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_toho_2025.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_length": "375851",
+        "downloadable": true,
+        "error": null,
+        "anti_scraping": null
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_toho_2024.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_length": "419162",
+        "downloadable": true,
+        "error": null,
+        "anti_scraping": null
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_movie_2025.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_length": "389852",
+        "downloadable": true,
+        "error": null,
+        "anti_scraping": null
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_movie_2024.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_length": "463395",
+        "downloadable": true,
+        "error": null,
+        "anti_scraping": null
+      },
+      {
+        "url": "https://www.tohogakuen.ac.jp/pdf/about/valuation/support/support_onkyo_2025.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_length": "311319",
+        "downloadable": true,
+        "error": null,
+        "anti_scraping": null
+      }
+    ]
+  },
+  {
+    "name": "JEC (Japan Electronics College)",
+    "url": "https://www.jec.ac.jp/school-outline/disclose/",
+    "domain": "jec.ac.jp",
+    "robots_txt": "# START YOAST BLOCK\n# ---------------------------\nUser-agent: *\nDisallow:\n\nSitemap: https://www.jec.ac.jp/sitemap_index.xml\n# ---------------------------\n# END YOAST BLOCK",
+    "page_fetch": {
+      "status_code": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "error": null,
+      "redirect_chain": [],
+      "html_length": 73055
+    },
+    "page_structure": {
+      "has_table_layout": false,
+      "has_list_layout": true,
+      "has_accordion": false,
+      "has_tab_layout": false,
+      "heading_count": 7,
+      "total_links": 301,
+      "pdf_links_count": 3,
+      "headings": [
+        {
+          "level": "h1",
+          "text": ""
+        },
+        {
+          "level": "h2",
+          "text": "情報公開"
+        },
+        {
+          "level": "h3",
+          "text": "学校紹介"
+        },
+        {
+          "level": "h3",
+          "text": "ごあいさつ"
+        },
+        {
+          "level": "h3",
+          "text": "本校の特色"
+        },
+        {
+          "level": "h3",
+          "text": "沿革"
+        },
+        {
+          "level": "h3",
+          "text": "校舎"
+        }
+      ]
+    },
+    "js_rendering": {
+      "has_noscript": true,
+      "has_react_root": false,
+      "has_vue_app": false,
+      "has_angular": false,
+      "script_count": 18,
+      "has_data_attributes": false,
+      "body_has_content": true,
+      "pdf_links_in_raw_html": true,
+      "likely_js_rendered": false
+    },
+    "pdf_links": [
+      {
+        "url": "https://www.jec.ac.jp/wp-content/themes/jec/assets/pdf/guideline.pdf",
+        "anchor_text": "授業運用ガイドライン",
+        "heading_text": "情報公開",
+        "path_pattern": "/wp-content/themes/jec/assets/pdf/guideline.pdf",
+        "matched_keywords": [
+          "情報公開"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.jec.ac.jp/wp-content/themes/jec/assets/pdf/regulations.pdf",
+        "anchor_text": "日本電子専門学校教務規程",
+        "heading_text": "情報公開",
+        "path_pattern": "/wp-content/themes/jec/assets/pdf/regulations.pdf",
+        "matched_keywords": [
+          "情報公開"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      },
+      {
+        "url": "https://www.jec.ac.jp/wp-content/themes/jec/assets/pdf/R7_higher-education-support-system_v3.pdf",
+        "anchor_text": "高等教育の修学支援新制度（高等教育無償化）令和7年度申請書様式第2号および別紙",
+        "heading_text": "情報公開",
+        "path_pattern": "/wp-content/themes/jec/assets/pdf/R7_higher-education-support-system_v3.pdf",
+        "matched_keywords": [
+          "修学支援",
+          "高等教育",
+          "新制度",
+          "情報公開"
+        ],
+        "is_likely_target": true,
+        "source": "a_tag"
+      }
+    ],
+    "pdf_link_count": 3,
+    "likely_target_count": 3,
+    "download_tests": [
+      {
+        "url": "https://www.jec.ac.jp/wp-content/themes/jec/assets/pdf/guideline.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_length": "",
+        "downloadable": true,
+        "error": null,
+        "anti_scraping": null
+      },
+      {
+        "url": "https://www.jec.ac.jp/wp-content/themes/jec/assets/pdf/regulations.pdf",
+        "status_code": 200,
+        "content_type": "application/pdf",
+        "content_length": "227180",
+        "downloadable": true,
+        "error": null,
+        "anti_scraping": null
+      },
+      {
+        "url": "https://www.jec.ac.jp/wp-content/themes/jec/assets/pdf/R7_higher-education-support-system_v3.pdf",
+        "status_code": 404,
+        "content_type": "text/html; charset=utf-8",
+        "content_length": "555",
+        "downloadable": false,
+        "error": null,
+        "anti_scraping": null
+      }
+    ]
+  },
+  {
+    "name": "TCA (Tokyo Communication Arts)",
+    "url": "https://www.tca.ac.jp/school/public_info/",
+    "domain": "tca.ac.jp",
+    "robots_txt": "[HTTP 404]",
+    "page_fetch": {
+      "status_code": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "error": null,
+      "redirect_chain": [],
+      "html_length": 14448
+    },
+    "page_structure": {
+      "has_table_layout": false,
+      "has_list_layout": false,
+      "has_accordion": false,
+      "has_tab_layout": false,
+      "heading_count": 0,
+      "total_links": 0,
+      "pdf_links_count": 0,
+      "headings": []
+    },
+    "js_rendering": {
+      "has_noscript": false,
+      "has_react_root": false,
+      "has_vue_app": false,
+      "has_angular": false,
+      "script_count": 0,
+      "has_data_attributes": false,
+      "body_has_content": true,
+      "pdf_links_in_raw_html": false,
+      "likely_js_rendered": false
+    },
+    "pdf_links": [],
+    "pdf_link_count": 0,
+    "likely_target_count": 0,
+    "download_tests": []
+  },
+  {
+    "name": "NKZ (Nakamura Gakuen)",
+    "url": "https://www.nkz.ac.jp/clginfo/thinfo.html",
+    "domain": "nkz.ac.jp",
+    "robots_txt": "[HTTP 404]",
+    "page_fetch": {
+      "status_code": 200,
+      "content_type": "text/html",
+      "error": null,
+      "redirect_chain": [],
+      "html_length": 6165
+    },
+    "page_structure": {
+      "has_table_layout": false,
+      "has_list_layout": true,
+      "has_accordion": false,
+      "has_tab_layout": false,
+      "heading_count": 3,
+      "total_links": 34,
+      "pdf_links_count": 0,
+      "headings": [
+        {
+          "level": "h1",
+          "text": "専門学校から大学まで、即戦力を育成する教育機関。"
+        },
+        {
+          "level": "h2",
+          "text": "Information学校情報"
+        },
+        {
+          "level": "h3",
+          "text": "HAL東京"
+        }
+      ]
+    },
+    "js_rendering": {
+      "has_noscript": true,
+      "has_react_root": false,
+      "has_vue_app": false,
+      "has_angular": false,
+      "script_count": 4,
+      "has_data_attributes": false,
+      "body_has_content": true,
+      "pdf_links_in_raw_html": false,
+      "likely_js_rendered": false
+    },
+    "pdf_links": [],
+    "pdf_link_count": 0,
+    "likely_target_count": 0,
+    "download_tests": []
+  }
+]
