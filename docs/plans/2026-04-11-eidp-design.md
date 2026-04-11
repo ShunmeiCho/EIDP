@@ -483,7 +483,14 @@ Edge-case classifications (year-suffix, duration qualifiers, abbreviated names) 
 
 **Goal**: Handle image-only PDFs and year-over-year department alignment.
 
-**Revised OCR estimate**: Based on 0% image PDF rate in samples, OCR may only be needed for a small minority of schools. Recommend building OCR as a fallback, not a primary path.
+**Revised OCR estimate**: Based on 0% image PDF rate in samples, OCR may only be needed for a small minority of schools (~5-10%).
+
+**2-Tier Extraction Strategy**:
+- Tier 1: pdfplumber (fast, deterministic, works for text-based PDFs)
+- Tier 2 fallback (when pdfplumber extracts < 80% of expected fields):
+  - Priority 1: MinerU (opendatalab/MinerU) — open-source, layout-aware, local deployment
+  - Priority 2: Qwen-VL OCR — strong CJK/Japanese recognition
+  - Priority 3: DeepSeek-VL OCR — alternative VL model
 
 **Department Matching Decision Table** (confirmed by stakeholder: errors trigger manual review):
 
