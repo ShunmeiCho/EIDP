@@ -148,15 +148,10 @@ def _normalize_text(text: str) -> str:
 
 
 def _match_department_name(gold_name: str, parsed_name: str) -> bool:
-    """Check if department names match, allowing for minor variations."""
+    """Check if department names match, requiring exact normalized match."""
     g = _normalize_text(gold_name)
     p = _normalize_text(parsed_name)
-    if g == p:
-        return True
-    # Allow substring match (parsed name contains gold name or vice versa)
-    if g in p or p in g:
-        return True
-    return False
+    return g == p
 
 
 def _compare_numeric(
@@ -177,13 +172,31 @@ def _find_best_match(
 ) -> int | None:
     """Find the best matching parsed department for a gold department.
 
+    Matches on name + day_or_evening + duration_years to disambiguate
+    departments like 情報処理科(昼) vs 情報処理科(夜).
     Returns the index into parsed_depts, or None if no match found.
     """
+    # Pass 1: exact match on name + day/night + duration
+    for idx, parsed in enumerate(parsed_depts):
+        if idx in used_indices:
+            continue
+        if not _match_department_name(gold_dept.name, parsed.name):
+            continue
+        if gold_dept.day_or_evening and parsed.day_or_evening:
+            if _normalize_text(gold_dept.day_or_evening) != _normalize_text(parsed.day_or_evening):
+                continue
+        if gold_dept.duration_years and parsed.duration_years:
+            if gold_dept.duration_years != parsed.duration_years:
+                continue
+        return idx
+
+    # Pass 2: name-only fallback (for parsers that don't extract day/night)
     for idx, parsed in enumerate(parsed_depts):
         if idx in used_indices:
             continue
         if _match_department_name(gold_dept.name, parsed.name):
             return idx
+
     return None
 
 

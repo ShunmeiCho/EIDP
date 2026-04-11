@@ -160,6 +160,12 @@ def _approve_with_correction(
         st.error("Please enter a valid MEXT code.")
         return
 
+    # Validate MEXT code format: 13-character alphanumeric starting with H (vocational)
+    import re
+    if not re.match(r"^[A-Z]\d{12}$", corrected_code):
+        st.error(f"Invalid MEXT code format: '{corrected_code}'. Expected 13 chars like 'H101310100147'.")
+        return
+
     # Check for code conflict
     existing = session.query(School).filter(School.school_code == corrected_code).first()
     if existing and existing.id != school.id:
