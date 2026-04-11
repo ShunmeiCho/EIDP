@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Context
+.context/
+
+# Large binary data (tracked via LFS or excluded)
+# sample Excel files are original data — keep in repo for now
