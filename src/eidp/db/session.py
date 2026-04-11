@@ -15,9 +15,10 @@ def get_session() -> Generator[Session, None, None]:
     session = SessionLocal()
     try:
         yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
     finally:
         session.close()
+
+
+def commit_session(session: Session) -> None:
+    """Explicitly commit. Call after all operations succeed."""
+    session.commit()

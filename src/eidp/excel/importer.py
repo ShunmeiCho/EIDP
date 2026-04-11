@@ -19,22 +19,38 @@ SAIROKU_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025]
 # Status mapping: Excel free-text -> DB status enum
 LEGACY_TO_STATUS = {
     "〇": "collected",
+    "〇（一部欠損）": "collected",
+    "〇（一部昨年？）": "collected",
     "△": "collected",
     "△（不足）": "collected",
     "△（前年データ）": "stale",
+    "△（前年）": "stale",
+    "△（同一データ）": "stale",
     "対象外": "excluded",
     "学校なし": "excluded",
     "統合": "excluded",
+    "統廃合": "excluded",
     "閉校": "excluded",
+    "募集停止": "excluded",
     "リンクミス": "error",
     "職実": "collected",
     "職実代用": "collected",
+    "一部職実": "collected",
+    "一部職実代用": "collected",
+    "一部学科職実": "collected",
     "不足": "collected",
+    "欠損データ": "error",
+    "データなし": "error",
     "前年データ": "stale",
     "日付は変更されるが内容同じ": "stale",
+    "情報公開": "collected",
+    "事業報告": "collected",
+    "新規申請": "pending",
+    "不明": "pending",
+    "他法人": "excluded",
 }
 
-EXCLUDED_REASONS = {"対象外", "学校なし", "統合", "閉校"}
+EXCLUDED_REASONS = {"対象外", "学校なし", "統合", "統廃合", "閉校", "募集停止", "他法人"}
 
 # 学科別 year block layout per field-spec
 # 2019: 10 cols (no 備考), 2020-2025: 11 cols (with 備考)
@@ -167,6 +183,7 @@ def import_gakka(
         else:
             dept = Department(
                 school_id=school_id,
+                course_name=course_name if course_name else None,
                 canonical_name=dept_name,
                 course_type=day_night if day_night else None,
                 duration_years=duration,
@@ -287,14 +304,20 @@ def import_taisho_hiritu(
             school_id=school_id,
             school_number=school_number if school_number else None,
             fiscal_year=fiscal_year,
-            period="full",
             prev_enrollment=_safe_int(row[6]),
-            category_1=_safe_int(row[8]),
-            category_2=_safe_int(row[9]),
-            category_3=_safe_int(row[10]),
-            category_4=_safe_int(row[11]),
-            total=_safe_int(row[19]) if len(row) > 19 else None,
+            first_half_total=_safe_int(row[7]),
+            first_half_cat1=_safe_int(row[8]),
+            first_half_cat2=_safe_int(row[9]),
+            first_half_cat3=_safe_int(row[10]),
+            first_half_cat4=_safe_int(row[11]),
+            second_half_total=_safe_int(row[12]),
+            second_half_cat1=_safe_int(row[13]) if len(row) > 13 else None,
+            second_half_cat2=_safe_int(row[14]) if len(row) > 14 else None,
+            second_half_cat3=_safe_int(row[15]) if len(row) > 15 else None,
+            second_half_cat4=_safe_int(row[16]) if len(row) > 16 else None,
+            annual_total=_safe_int(row[17]) if len(row) > 17 else None,
             household_change=_safe_int(row[18]) if len(row) > 18 else None,
+            grand_total=_safe_int(row[19]) if len(row) > 19 else None,
             recipient_rate=_safe_float(row[21]) if len(row) > 21 else None,
             notes=_safe_str(row[20]) if len(row) > 20 and row[20] else None,
         )

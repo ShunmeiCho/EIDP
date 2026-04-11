@@ -1,8 +1,8 @@
-"""create 12 tables v3
+"""v4 fix P1 issues
 
-Revision ID: f27165f2305c
+Revision ID: 553945b78a8a
 Revises: 
-Create Date: 2026-04-11 23:56:51.364175
+Create Date: 2026-04-12 00:38:39.987075
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'f27165f2305c'
+revision: str = '553945b78a8a'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -75,6 +75,7 @@ def upgrade() -> None:
     op.create_table('department',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('school_id', sa.Integer(), nullable=False),
+    sa.Column('course_name', sa.String(length=200), nullable=True),
     sa.Column('canonical_name', sa.String(length=200), nullable=False),
     sa.Column('course_type', sa.String(length=10), nullable=True),
     sa.Column('duration_years', sa.Integer(), nullable=True),
@@ -197,13 +198,19 @@ def upgrade() -> None:
     sa.Column('school_number', sa.String(length=20), nullable=True),
     sa.Column('document_id', sa.Integer(), nullable=True),
     sa.Column('fiscal_year', sa.Integer(), nullable=False),
-    sa.Column('period', sa.String(length=10), nullable=False),
-    sa.Column('category_1', sa.Integer(), nullable=True),
-    sa.Column('category_2', sa.Integer(), nullable=True),
-    sa.Column('category_3', sa.Integer(), nullable=True),
-    sa.Column('category_4', sa.Integer(), nullable=True),
+    sa.Column('first_half_total', sa.Integer(), nullable=True),
+    sa.Column('first_half_cat1', sa.Integer(), nullable=True),
+    sa.Column('first_half_cat2', sa.Integer(), nullable=True),
+    sa.Column('first_half_cat3', sa.Integer(), nullable=True),
+    sa.Column('first_half_cat4', sa.Integer(), nullable=True),
+    sa.Column('second_half_total', sa.Integer(), nullable=True),
+    sa.Column('second_half_cat1', sa.Integer(), nullable=True),
+    sa.Column('second_half_cat2', sa.Integer(), nullable=True),
+    sa.Column('second_half_cat3', sa.Integer(), nullable=True),
+    sa.Column('second_half_cat4', sa.Integer(), nullable=True),
+    sa.Column('annual_total', sa.Integer(), nullable=True),
     sa.Column('household_change', sa.Integer(), nullable=True),
-    sa.Column('total', sa.Integer(), nullable=True),
+    sa.Column('grand_total', sa.Integer(), nullable=True),
     sa.Column('prev_enrollment', sa.Integer(), nullable=True),
     sa.Column('recipient_rate', sa.Numeric(precision=7, scale=4), nullable=True),
     sa.Column('extraction_confidence', sa.Numeric(precision=3, scale=2), nullable=True),
@@ -211,7 +218,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['document_id'], ['document.id'], ),
     sa.ForeignKeyConstraint(['school_id'], ['school.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('school_id', 'fiscal_year', 'period'),
+    sa.UniqueConstraint('school_id', 'fiscal_year'),
     comment='Support recipient data for 対象比率 sheet'
     )
     # ### end Alembic commands ###

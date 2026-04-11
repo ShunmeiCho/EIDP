@@ -32,7 +32,7 @@ class School(Base):
     school_type: Mapped[str | None] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     sites: Mapped[list["SchoolSite"]] = relationship(back_populates="school")
     departments: Mapped[list["Department"]] = relationship(back_populates="school")
@@ -104,6 +104,7 @@ class Department(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     school_id: Mapped[int] = mapped_column(ForeignKey("school.id"), nullable=False)
+    course_name: Mapped[str | None] = mapped_column(String(200))  # 課程名
     canonical_name: Mapped[str] = mapped_column(String(200), nullable=False)
     course_type: Mapped[str | None] = mapped_column(String(10))
     duration_years: Mapped[int | None] = mapped_column(Integer)
@@ -221,20 +222,26 @@ class SupportRecipient(Base):
     school_number: Mapped[str | None] = mapped_column(String(20))
     document_id: Mapped[int | None] = mapped_column(ForeignKey("document.id"))
     fiscal_year: Mapped[int] = mapped_column(Integer, nullable=False)
-    period: Mapped[str] = mapped_column(String(10), nullable=False)
-    category_1: Mapped[int | None] = mapped_column(Integer)
-    category_2: Mapped[int | None] = mapped_column(Integer)
-    category_3: Mapped[int | None] = mapped_column(Integer)
-    category_4: Mapped[int | None] = mapped_column(Integer)
-    household_change: Mapped[int | None] = mapped_column(Integer)
-    total: Mapped[int | None] = mapped_column(Integer)
+    first_half_total: Mapped[int | None] = mapped_column(Integer)  # 前半期
+    first_half_cat1: Mapped[int | None] = mapped_column(Integer)
+    first_half_cat2: Mapped[int | None] = mapped_column(Integer)
+    first_half_cat3: Mapped[int | None] = mapped_column(Integer)
+    first_half_cat4: Mapped[int | None] = mapped_column(Integer)
+    second_half_total: Mapped[int | None] = mapped_column(Integer)  # 後半期
+    second_half_cat1: Mapped[int | None] = mapped_column(Integer)
+    second_half_cat2: Mapped[int | None] = mapped_column(Integer)
+    second_half_cat3: Mapped[int | None] = mapped_column(Integer)
+    second_half_cat4: Mapped[int | None] = mapped_column(Integer)
+    annual_total: Mapped[int | None] = mapped_column(Integer)  # 年間
+    household_change: Mapped[int | None] = mapped_column(Integer)  # 家計急変多子世帯
+    grand_total: Mapped[int | None] = mapped_column(Integer)  # 総計
     prev_enrollment: Mapped[int | None] = mapped_column(Integer)
     recipient_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
     extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     notes: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
-        UniqueConstraint("school_id", "fiscal_year", "period"),
+        UniqueConstraint("school_id", "fiscal_year"),
         {"comment": "Support recipient data for 対象比率 sheet"},
     )
 

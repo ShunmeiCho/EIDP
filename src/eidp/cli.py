@@ -12,23 +12,21 @@ def import_excel(
     excel_path: Path = typer.Argument(..., help="Path to master Excel file"),
 ) -> None:
     """Import master Excel into database."""
-    from eidp.db.session import get_session
+    from eidp.db.session import SessionLocal
     from eidp.excel.importer import import_all
 
-    session_gen = get_session()
-    session = next(session_gen)
+    session = SessionLocal()
     try:
         results = import_all(excel_path, session)
-        next(session_gen, None)  # trigger commit
+        session.commit()
         for sheet, stats in results.items():
             typer.echo(f"  {sheet}: {stats}")
         typer.echo("Import complete.")
     except Exception:
-        try:
-            next(session_gen, None)
-        except Exception:
-            pass
+        session.rollback()
         raise
+    finally:
+        session.close()
 
 
 @app.command()
@@ -37,11 +35,10 @@ def match_mext(
     dry_run: bool = typer.Option(False, help="Show matches without writing to DB"),
 ) -> None:
     """Match schools against MEXT school codes (Step 3)."""
-    from eidp.db.session import get_session
     from eidp.matcher.school_matcher import apply_matches, match_schools
+    from eidp.db.session import SessionLocal
 
-    session_gen = get_session()
-    session = next(session_gen)
+    session = SessionLocal()
     try:
         report = match_schools(session, data_dir)
 
@@ -54,13 +51,14 @@ def match_mext(
 
         if not dry_run:
             stats = apply_matches(session, report)
-            next(session_gen, None)
+            session.commit()
             typer.echo(f"\nApplied:")
             typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
             typer.echo(f"  Aliases created: {stats['aliases_created']}")
             typer.echo(f"  Conflicts:      {stats['conflicts']}")
         else:
             typer.echo("\n(dry run — no DB writes)")
+            session.rollback()
 
         if report.unmatched:
             typer.echo(f"\nTop unmatched corporations:")
@@ -69,11 +67,10 @@ def match_mext(
             for corp, count in corps.most_common(10):
                 typer.echo(f"  {corp}: {count}")
     except Exception:
-        try:
-            next(session_gen, None)
-        except Exception:
-            pass
+        session.rollback()
         raise
+    finally:
+        session.close()
 
 
 @app.command()
@@ -81,16 +78,18 @@ def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func
 
-    from eidp.db.models import Department, DepartmentYearly, School, SchoolYearStatus, SupportRecipient
+    from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias, SchoolYearStatus, SupportRecipient
     from eidp.db.session import SessionLocal
 
     session = SessionLocal()
     try:
         typer.echo(f"Schools:            {session.query(func.count(School.id)).scalar()}")
+        typer.echo(f"  with school_code: {session.query(func.count(School.id)).filter(School.school_code.isnot(None)).scalar()}")
         typer.echo(f"Departments:        {session.query(func.count(Department.id)).scalar()}")
         typer.echo(f"DepartmentYearly:   {session.query(func.count(DepartmentYearly.id)).scalar()}")
         typer.echo(f"SchoolYearStatus:   {session.query(func.count(SchoolYearStatus.id)).scalar()}")
         typer.echo(f"SupportRecipient:   {session.query(func.count(SupportRecipient.id)).scalar()}")
+        typer.echo(f"SchoolAlias:        {session.query(func.count(SchoolAlias.id)).scalar()}")
     finally:
         session.close()
 

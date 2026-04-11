@@ -283,7 +283,13 @@ def apply_matches(session: Session, report: MatchReport) -> dict[str, int]:
 
     conflict_codes = {code for code, rs in code_to_results.items() if len(rs) > 1}
 
-    for r in all_matched:
+    # Only auto-apply exact and nfkc matches (validated strategies per design doc).
+    # Aggressive and pref_partial go to review queue (Step 4/6).
+    auto_apply = report.exact + report.nfkc
+    needs_review = report.pref_partial
+    stats["needs_review"] = len(needs_review)
+
+    for r in auto_apply:
         if not r.mext_code:
             continue
 
@@ -304,7 +310,6 @@ def apply_matches(session: Session, report: MatchReport) -> dict[str, int]:
         school.school_code = r.mext_code
         stats["codes_assigned"] += 1
 
-        # Create alias if MEXT name differs from DB name
         if r.mext_name and r.mext_name != school.school_name:
             alias = SchoolAlias(
                 school_id=r.school_id,
