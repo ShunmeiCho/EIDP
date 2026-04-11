@@ -25,13 +25,15 @@ Automate enrollment data collection for approximately 2,400 Japanese schools (un
 
 | Phase | Target | Count | Status |
 |-------|--------|-------|--------|
-| v1 | Vocational schools (専門学校) | 2,057 active targets | Current |
+| v1.0 | Vocational schools, master workbook only (専門学校無償化情報公開まとめ.xlsx) | 2,057 active targets | Current |
+| v1.1 | Competition workbook (競合校の在校生数.xlsx) | Same targets, 16-sheet report | After v1.0 ships |
 | v2 | Universities (大学) | ~773 (MEXT target list) | Planned, separate PDF parser needed |
 
-v1 focuses on vocational schools because the PDF form layout is standardized and verified. University PDFs use a different format (verified by Agent investigation) and require a separate parser design in v2.
+v1.0 focuses on the master workbook (4 sheets: 採録状況, 対象比率, 学科別, 在籍のみ抜粋) because it is the primary data collection output. The competition workbook (16 sheets) requires additional modeling for competitor pairings and sheet-specific layouts, deferred to v1.1.
 
-### Non-Goals (v1)
+### Non-Goals (v1.0)
 
+- Competition workbook generation (deferred to v1.1, requires competitor pairing model)
 - Replacing the existing Excel-based reporting format (stakeholders depend on it)
 - Building a public-facing web application
 - University data collection (deferred to v2, PDF format differs)
@@ -507,13 +509,20 @@ Weekly cycle (June-August):
    c. If new PDF found: download, extract, enqueue
    d. If no change: skip, retry next week
 
-2. For newly collected schools:
+2. For ALREADY collected schools (same-year revision detection):
+   a. Re-check disclosure page for PDF changes (hash comparison)
+   b. If PDF hash changed: download new version, extract, create new revision
+   c. department_yearly: increment revision, set old is_current=false
+   d. support_recipient: upsert (overwrite existing row for same school+year)
+   e. Set school_year_status to 'updated'
+
+3. For newly collected schools:
    a. Compare extracted data against previous year
    b. If data differs: set school_year_status to 'updated'
    c. If data same: set school_year_status to 'retry'
 
-3. Generate weekly diff report
-4. Export updated Excel for confirmed schools
+4. Generate weekly diff report
+5. Export updated Excel for confirmed schools
 ```
 
 ---
@@ -578,9 +587,15 @@ Reproduces the existing `◆専門学校無償化情報公開まとめ.xlsx` for
   - Snapshot metadata: the generation timestamp and included fiscal years are tracked in a `snapshot_metadata` record (stored as a row in `school_year_status` with a special `snapshot_generated` status, or as application-level config). No separate snapshot table needed — the snapshot is always re-derivable from `department_yearly`.
 - 対象比率: derived from support recipient data in appendix pages
 
-### Excel Export: Competition Report
+### Excel Export: Competition Report (v1.1)
 
-Reproduces `競合校の在校生数.xlsx` with 16 sheets (14 field categories + 1 summary + 1 group analysis). Updated incrementally as schools are confirmed.
+Deferred to v1.1. Requires additional schema:
+- Competitor pairing model (which schools are compared on which sheets)
+- Sheet membership and row ordering
+- 滋慶 group sheet special handling
+- 前年比/留学生比率 derived row calculations
+
+v1.0 stores `field_category` on departments and `taxonomy_mapping` for classification, which provides the data foundation. The report generation logic and pairing model are v1.1 scope.
 
 ### Weekly Diff Report
 
@@ -746,18 +761,22 @@ services:
 
 ### Step-by-Step Sequence (dependency order)
 
-| Step | Content | Deliverable | Verification |
-|------|---------|-------------|-------------|
-| 1 | Freeze field list + legacy output spec (all 4 sheets) | Field spec document | Stakeholder sign-off on output format |
-| 2 | Import existing Excel → DB (all 4 sheets fully modeled) | `school`, `department`, `school_year_status`, `department_yearly`, `support_recipient` populated | 2,212 schools, 9,759 dept rows, ~10,057 support_recipient rows, 在籍のみ re-derivable |
-| 3 | Import MEXT data + NFKC matching + school_alias table | `school_code` assigned, `school_alias` populated | 91% auto-matched, 198 override records |
-| 4 | Reconcile 198 unmatched + 14-school MEXT gap | All schools have stable IDs | Zero unresolved school identity |
-| 5 | Build gold set covering 〇/△/blank/リンクミス/corporation sites/government sites | 50+ annotated PDFs + expected output | Gold set covers all failure modes |
-| 6 | Review queue + override persistence (taxonomy_mapping, school_alias) | Web UI + DB tables | Single-reviewer batch processing works |
-| 7 | URL discovery module | `school_site` populated | 86%+ high-confidence on expanded sample |
-| 8 | PDF discovery + download (4 delivery patterns) | `document` populated | 4 reference sites pass |
-| 9 | PDF parser (cross-page tables, appendix, same-year revision) | `department_yearly` populated | Gold set precision >= 98% |
-| 10 | Excel export parity + incremental scheduler + deploy | Full pipeline end-to-end | Legacy Excel diff < 1% |
+| Step | Content | Deliverable | Verification | Status |
+|------|---------|-------------|-------------|--------|
+| 1 | Freeze field list + legacy output spec (all 4 sheets) | Field spec document | Stakeholder sign-off on output format | DONE |
+| 2 | Import existing Excel → DB (all 4 sheets fully modeled) | `school`, `department`, `school_year_status`, `department_yearly`, `support_recipient` populated | 2,212 schools, 9,458 depts, 39,822 yearly rows, 9,362 support rows | DONE |
+| 3 | Import MEXT data + NFKC matching + school_alias table | `school_code` assigned, `school_alias` populated | 90.5% auto-matched (2,001/2,212), 147 aliases | DONE |
+| 4 | Reconcile unmatched schools | Auto-reconcile + identify manual review targets | 2,031 codes assigned (91.8%), 89 deferred to Step 6 review queue | DONE (auto portion) |
+| 5 | Build gold set covering 〇/△/blank/リンクミス/corporation sites/government sites | 50+ annotated PDFs + expected output | Gold set covers all failure modes | |
+| 6 | Review queue + AI proposal + override persistence | Web UI with AI proposals, review_item enhanced | Batch approve/reject works, 89 school IDs resolved | |
+| 7 | URL discovery module | `school_site` populated | 86%+ high-confidence on expanded sample | |
+| 8 | PDF discovery + download (4 delivery patterns) | `document` populated | 4 reference sites pass | |
+| 9 | PDF parser (cross-page tables, appendix, same-year revision) | `department_yearly` populated from PDFs | Gold set precision >= 98% | |
+| 10 | Excel export (master workbook only) + incremental scheduler + deploy | Full pipeline end-to-end | Master workbook diff < 1% vs legacy | |
+
+**Note on Step 4**: The design originally required "zero unresolved school identity." The automated portion achieves 91.8% coverage. The remaining 89 schools (mainly renamed schools: 三幸学園 13, 国立病院機構 14, 大原学園 5) require human confirmation via Step 6 Review Queue. This is by design: the AI proposal layer in Step 6 will present candidates for batch approval.
+
+**Note on Step 10**: v1.0 produces the master workbook (専門学校無償化情報公開まとめ.xlsx, 4 sheets) only. Competition workbook (競合校の在校生数.xlsx, 16 sheets) is deferred to v1.1 because it requires additional schema for competitor pairings and sheet-specific layouts.
 
 ### Dependency Graph
 

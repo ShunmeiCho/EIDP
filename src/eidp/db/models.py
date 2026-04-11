@@ -274,8 +274,14 @@ class ReviewItem(Base):
     reference_table: Mapped[str | None] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(String(20), default="pending")
     priority: Mapped[int] = mapped_column(Integer, default=5)
+    confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
+    proposal_value: Mapped[str | None] = mapped_column(Text)  # AI/rule proposed value (JSON)
+    proposal_reason: Mapped[str | None] = mapped_column(Text)  # why this was proposed
+    proposal_source: Mapped[str | None] = mapped_column(String(50))  # rule, llm, web_search
+    evidence_url: Mapped[str | None] = mapped_column(Text)  # supporting evidence link
     assigned_to: Mapped[str | None] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    resolution: Mapped[str | None] = mapped_column(String(20))
+    resolution: Mapped[str | None] = mapped_column(String(20))  # approved, rejected, corrected
+    resolved_value: Mapped[str | None] = mapped_column(Text)  # actual applied value (if corrected)
     notes: Mapped[str | None] = mapped_column(Text)

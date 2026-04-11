@@ -1,8 +1,8 @@
-"""v4 fix P1 issues
+"""v5 design review fixes
 
-Revision ID: 553945b78a8a
+Revision ID: 172e4c8ae384
 Revises: 
-Create Date: 2026-04-12 00:38:39.987075
+Create Date: 2026-04-12 01:42:59.506422
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '553945b78a8a'
+revision: str = '172e4c8ae384'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,10 +28,16 @@ def upgrade() -> None:
     sa.Column('reference_table', sa.String(length=30), nullable=True),
     sa.Column('status', sa.String(length=20), nullable=False),
     sa.Column('priority', sa.Integer(), nullable=False),
+    sa.Column('confidence', sa.Numeric(precision=3, scale=2), nullable=True),
+    sa.Column('proposal_value', sa.Text(), nullable=True),
+    sa.Column('proposal_reason', sa.Text(), nullable=True),
+    sa.Column('proposal_source', sa.String(length=50), nullable=True),
+    sa.Column('evidence_url', sa.Text(), nullable=True),
     sa.Column('assigned_to', sa.String(length=50), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('resolution', sa.String(length=20), nullable=True),
+    sa.Column('resolved_value', sa.Text(), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
