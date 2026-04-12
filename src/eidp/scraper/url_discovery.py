@@ -311,19 +311,28 @@ def verify_urls_sync(
         headers={"User-Agent": "EIDP-DataCollector/1.0 (institutional research)"},
     ) as client:
         for site in unverified:
+            from datetime import datetime, timezone
+
             try:
+                # Try HEAD first, fall back to GET if 405/403
                 resp = client.head(site.url)
+                if resp.status_code in (405, 403):
+                    resp = client.get(site.url)
                 site.http_status = resp.status_code
                 site.verified = resp.status_code == 200
+                site.last_checked = datetime.now(timezone.utc)
                 if resp.status_code == 200:
+                    site.verified_at = datetime.now(timezone.utc)
                     stats["ok"] += 1
                 else:
                     stats["failed"] += 1
             except httpx.TimeoutException:
                 site.http_status = 0
+                site.last_checked = datetime.now(timezone.utc)
                 stats["timeout"] += 1
             except httpx.HTTPError:
                 site.http_status = -1
+                site.last_checked = datetime.now(timezone.utc)
                 stats["failed"] += 1
             stats["checked"] += 1
 

@@ -143,14 +143,25 @@ def import_sairoku(ws: openpyxl.worksheet.worksheet.Worksheet, session: Session)
 
             excluded_reason = raw_val if raw_val in EXCLUDED_REASONS else None
 
-            sys = SchoolYearStatus(
-                school_id=school_id,
-                fiscal_year=year,
-                status=status,
-                legacy_status=legacy,
-                excluded_reason=excluded_reason,
+            # Upsert: update existing or create new
+            existing_sys = (
+                session.query(SchoolYearStatus)
+                .filter(SchoolYearStatus.school_id == school_id, SchoolYearStatus.fiscal_year == year)
+                .first()
             )
-            session.add(sys)
+            if existing_sys:
+                existing_sys.status = status
+                existing_sys.legacy_status = legacy
+                existing_sys.excluded_reason = excluded_reason
+            else:
+                sys = SchoolYearStatus(
+                    school_id=school_id,
+                    fiscal_year=year,
+                    status=status,
+                    legacy_status=legacy,
+                    excluded_reason=excluded_reason,
+                )
+                session.add(sys)
             stats["statuses"] += 1
 
     session.flush()
@@ -189,23 +200,35 @@ def import_gakka(
             stats["school_misses"] += 1
             continue
 
-        # Create or find department
+        # Upsert department
         dept_key = (school_id, dept_name, day_night, course_name, duration)
         if dept_key in dept_cache:
             dept_id = dept_cache[dept_key]
         else:
-            dept = Department(
-                school_id=school_id,
-                course_name=course_name if course_name else None,
-                canonical_name=dept_name,
-                course_type=day_night if day_night else None,
-                duration_years=duration,
+            existing_dept = (
+                session.query(Department)
+                .filter(
+                    Department.school_id == school_id,
+                    Department.canonical_name == dept_name,
+                    Department.course_type == (day_night if day_night else None),
+                )
+                .first()
             )
-            session.add(dept)
-            session.flush()
-            dept_id = dept.id
+            if existing_dept:
+                dept_id = existing_dept.id
+            else:
+                dept = Department(
+                    school_id=school_id,
+                    course_name=course_name if course_name else None,
+                    canonical_name=dept_name,
+                    course_type=day_night if day_night else None,
+                    duration_years=duration,
+                )
+                session.add(dept)
+                session.flush()
+                dept_id = dept.id
+                stats["departments"] += 1
             dept_cache[dept_key] = dept_id
-            stats["departments"] += 1
 
         # Parse year blocks
         col_offset = GAKKA_KEY_COLS  # start after key columns
@@ -246,25 +269,48 @@ def import_gakka(
                 continue
             yearly_seen.add(yearly_key)
 
-            dy = DepartmentYearly(
-                department_id=dept_id,
-                fiscal_year=year,
-                revision=1,
-                is_current=True,
-                capacity=block_data.get("capacity"),
-                enrollment=block_data.get("enrollment"),
-                intl_students=block_data.get("intl_students"),
-                graduates=block_data.get("graduates"),
-                advanced=block_data.get("advanced"),
-                employed=block_data.get("employed"),
-                other=block_data.get("other"),
-                prev_enrollment=block_data.get("prev_enrollment"),
-                dropouts=block_data.get("dropouts"),
-                dropout_rate=block_data.get("dropout_rate"),
-                notes=block_data.get("notes"),
-                extraction_method="excel_import",
+            # Upsert: update existing or create
+            existing_dy = (
+                session.query(DepartmentYearly)
+                .filter(
+                    DepartmentYearly.department_id == dept_id,
+                    DepartmentYearly.fiscal_year == year,
+                    DepartmentYearly.revision == 1,
+                )
+                .first()
             )
-            session.add(dy)
+            if existing_dy:
+                existing_dy.capacity = block_data.get("capacity")
+                existing_dy.enrollment = block_data.get("enrollment")
+                existing_dy.intl_students = block_data.get("intl_students")
+                existing_dy.graduates = block_data.get("graduates")
+                existing_dy.advanced = block_data.get("advanced")
+                existing_dy.employed = block_data.get("employed")
+                existing_dy.other = block_data.get("other")
+                existing_dy.prev_enrollment = block_data.get("prev_enrollment")
+                existing_dy.dropouts = block_data.get("dropouts")
+                existing_dy.dropout_rate = block_data.get("dropout_rate")
+                existing_dy.notes = block_data.get("notes")
+            else:
+                dy = DepartmentYearly(
+                    department_id=dept_id,
+                    fiscal_year=year,
+                    revision=1,
+                    is_current=True,
+                    capacity=block_data.get("capacity"),
+                    enrollment=block_data.get("enrollment"),
+                    intl_students=block_data.get("intl_students"),
+                    graduates=block_data.get("graduates"),
+                    advanced=block_data.get("advanced"),
+                    employed=block_data.get("employed"),
+                    other=block_data.get("other"),
+                    prev_enrollment=block_data.get("prev_enrollment"),
+                    dropouts=block_data.get("dropouts"),
+                    dropout_rate=block_data.get("dropout_rate"),
+                    notes=block_data.get("notes"),
+                    extraction_method="excel_import",
+                )
+                session.add(dy)
             stats["yearly_rows"] += 1
 
     session.flush()
@@ -312,6 +358,34 @@ def import_taisho_hiritu(
             stats["duplicates"] += 1
             continue
         seen.add(dedup_key)
+
+        # Upsert: update existing or create
+        existing_sr = (
+            session.query(SupportRecipient)
+            .filter(SupportRecipient.school_id == school_id, SupportRecipient.fiscal_year == fiscal_year)
+            .first()
+        )
+        if existing_sr:
+            # Update in place
+            existing_sr.school_number = school_number if school_number else None
+            existing_sr.prev_enrollment = _safe_int(row[6])
+            existing_sr.first_half_total = _safe_int(row[7])
+            existing_sr.first_half_cat1 = _safe_int(row[8])
+            existing_sr.first_half_cat2 = _safe_int(row[9])
+            existing_sr.first_half_cat3 = _safe_int(row[10])
+            existing_sr.first_half_cat4 = _safe_int(row[11])
+            existing_sr.second_half_total = _safe_int(row[12])
+            existing_sr.second_half_cat1 = _safe_int(row[13]) if len(row) > 13 else None
+            existing_sr.second_half_cat2 = _safe_int(row[14]) if len(row) > 14 else None
+            existing_sr.second_half_cat3 = _safe_int(row[15]) if len(row) > 15 else None
+            existing_sr.second_half_cat4 = _safe_int(row[16]) if len(row) > 16 else None
+            existing_sr.annual_total = _safe_int(row[17]) if len(row) > 17 else None
+            existing_sr.household_change = _safe_int(row[18]) if len(row) > 18 else None
+            existing_sr.grand_total = _safe_int(row[19]) if len(row) > 19 else None
+            existing_sr.recipient_rate = _safe_float(row[21]) if len(row) > 21 else None
+            existing_sr.notes = _safe_str(row[20]) if len(row) > 20 and row[20] else None
+            stats["rows"] += 1
+            continue
 
         sr = SupportRecipient(
             school_id=school_id,

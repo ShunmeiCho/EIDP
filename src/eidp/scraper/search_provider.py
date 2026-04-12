@@ -117,7 +117,12 @@ class DuckDuckGoProvider(SearchProvider):
         return "duckduckgo"
 
     def search(self, query: str, count: int = 5) -> list[SearchResult]:
-        from ddgs import DDGS
+        try:
+            from ddgs import DDGS
+        except ImportError:
+            raise ImportError(
+                "ddgs package not installed. Run: uv sync --extra scraper"
+            )
 
         results: list[SearchResult] = []
         with DDGS() as ddgs:
