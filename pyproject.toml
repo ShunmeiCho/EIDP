@@ -23,6 +23,7 @@ scraper = [
     "httpx>=0.28,<1.0",
     "playwright>=1.58",
     "tenacity>=9.0,<10.0",
+    "ddgs>=8.0",
 ]
 pdf = [
     "pdfplumber>=0.11,<1.0",

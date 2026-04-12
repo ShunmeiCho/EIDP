@@ -175,9 +175,15 @@ def search_and_discover(
     from eidp.config import settings
     from eidp.scraper.search_provider import create_provider
 
+    api_key_map = {
+        "brave": settings.brave_api_key,
+        "google": settings.google_api_key,
+        "serper": settings.serper_api_key,
+        "duckduckgo": "",
+    }
     provider = create_provider(
         provider_name=settings.search_provider,
-        api_key=settings.brave_api_key if settings.search_provider == "brave" else settings.google_api_key,
+        api_key=api_key_map.get(settings.search_provider, ""),
         google_cx=settings.google_cx,
     )
 

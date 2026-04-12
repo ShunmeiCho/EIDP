@@ -11,10 +11,11 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
 
     # Search API (switch provider by changing search_provider)
-    search_provider: str = "brave"  # brave | google
+    search_provider: str = "duckduckgo"  # duckduckgo | brave | google | serper
     brave_api_key: str = ""
     google_api_key: str = ""
     google_cx: str = ""
+    serper_api_key: str = ""
 
     model_config = {"env_prefix": "EIDP_", "env_file": ".env", "extra": "ignore"}
 
