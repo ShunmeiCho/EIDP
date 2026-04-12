@@ -311,6 +311,89 @@ def populate_reviews(
 
 
 @app.command()
+def weekly_update(
+    storage_dir: Path = typer.Option(Path("data/pdfs"), help="PDF storage directory"),
+    pdf_batch: int = typer.Option(50, help="PDF discovery batch size"),
+    ingest_batch: int = typer.Option(50, help="Ingest batch size"),
+    export_path: Path = typer.Option(Path("output/weekly-export.xlsx"), help="Export output path"),
+) -> None:
+    """Run weekly incremental update pipeline (Steps 7-10).
+
+    Idempotent: safe to run multiple times. Skips already-processed items.
+    Designed for crontab: 0 2 * * 1 .venv/bin/eidp weekly-update
+    """
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.url_discovery import verify_urls_sync, get_discovery_stats
+
+    session = SessionLocal()
+    try:
+        typer.echo("=== EIDP Weekly Update ===")
+
+        # Phase 1: Verify unverified URLs
+        typer.echo("\n[1/4] Verifying URLs...")
+        verify_stats = verify_urls_sync(session, batch_size=200, timeout=10.0)
+        session.commit()
+        typer.echo(f"  {verify_stats}")
+
+        # Phase 2: PDF Discovery on verified URLs
+        typer.echo("\n[2/4] Discovering PDFs...")
+        from eidp.scraper.pdf_discovery import run_pdf_discovery
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        pdf_stats = run_pdf_discovery(session, storage_dir, batch_size=pdf_batch, rate_limit=1.5)
+        session.commit()
+        typer.echo(f"  {pdf_stats}")
+
+        # Phase 3: Ingest new PDFs
+        typer.echo("\n[3/4] Ingesting PDFs...")
+        from eidp.pipeline.ingest import run_ingestion
+        ingest_stats = run_ingestion(session, batch_size=ingest_batch)
+        session.commit()
+        typer.echo(f"  {ingest_stats}")
+
+        # Phase 4: Export updated workbook
+        typer.echo("\n[4/4] Exporting workbook...")
+        from eidp.excel.exporter import export_master_workbook
+        export_path.parent.mkdir(parents=True, exist_ok=True)
+        export_stats = export_master_workbook(session, export_path)
+        typer.echo(f"  {export_stats}")
+
+        # Summary
+        coverage = get_discovery_stats(session)
+        typer.echo(f"\n=== Summary ===")
+        typer.echo(f"  Verified disclosure: {coverage['verified_disclosure']} ({coverage['coverage_verified']})")
+        typer.echo(f"  Documents ingested: {ingest_stats.get('processed', 0)}")
+        typer.echo(f"  Export: {export_path}")
+
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
+def firecrawl_discover(
+    batch_size: int = typer.Option(30, help="Number of corporations to process"),
+) -> None:
+    """Discover school URLs from corporation root domains using Firecrawl (one-time)."""
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.firecrawl_discovery import run_firecrawl_discovery
+
+    session = SessionLocal()
+    try:
+        stats = run_firecrawl_discovery(session, batch_size=batch_size)
+        session.commit()
+        typer.echo(f"\nFirecrawl Discovery:")
+        for k, v in stats.items():
+            typer.echo(f"  {k}: {v}")
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
 def review_ui(
     port: int = typer.Option(8501, help="Port for the Streamlit server"),
 ) -> None:
