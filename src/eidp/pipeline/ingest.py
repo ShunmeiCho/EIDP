@@ -296,12 +296,19 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
     total_stats = {"processed": 0, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
 
     # Find documents not yet ingested
+    from sqlalchemy import or_
     docs = (
         session.query(Document)
         .filter(
             Document.file_path.isnot(None),
-            Document.ingest_status.in_([None, "pending", "transient_error"]),
-            Document.pdf_type.notin_(["non_target"]),
+            or_(
+                Document.ingest_status.is_(None),
+                Document.ingest_status.in_(["pending", "transient_error"]),
+            ),
+            or_(
+                Document.pdf_type.is_(None),
+                Document.pdf_type.notin_(["non_target"]),
+            ),
         )
         .limit(batch_size)
         .all()
