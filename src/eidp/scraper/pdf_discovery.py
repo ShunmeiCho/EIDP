@@ -165,6 +165,21 @@ def discover_pdfs_for_site(
     result = DiscoveryResult(school_id=school_id)
 
     try:
+        # Check robots.txt (best effort, non-blocking)
+        from urllib.parse import urlparse
+        parsed = urlparse(site_url)
+        robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+        try:
+            robots_resp = client.get(robots_url)
+            if robots_resp.status_code == 200 and "Disallow: /" in robots_resp.text:
+                # Full site disallow — skip but don't error
+                result.error = "robots.txt disallows crawling"
+                return result
+        except httpx.HTTPError:
+            pass  # No robots.txt or unreachable, proceed
+
+        time.sleep(1.0)  # Per-request delay (design: max 1 req/sec per domain)
+
         # Fetch main page
         resp = client.get(site_url)
         resp.raise_for_status()
@@ -172,7 +187,7 @@ def discover_pdfs_for_site(
 
         # Short/truncated HTML retry (TCA pattern)
         if len(html) < 500 and resp.status_code == 200:
-            time.sleep(1)
+            time.sleep(1.0)
             resp = client.get(site_url)
             html = resp.text
 
@@ -184,11 +199,11 @@ def discover_pdfs_for_site(
             subpages = _find_subpage_links(html, site_url)
             for sub_url in subpages:
                 try:
+                    time.sleep(1.0)  # Per-request delay
                     sub_resp = client.get(sub_url)
                     if sub_resp.status_code == 200:
                         sub_candidates = _extract_pdf_links(sub_resp.text, sub_url)
                         candidates.extend(sub_candidates)
-                    time.sleep(0.5)
                 except httpx.HTTPError:
                     continue
 
@@ -254,13 +269,22 @@ def run_pdf_discovery(
     """Run PDF discovery for schools with verified URLs but no documents."""
     stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
 
-    # Get school_sites that are verified but don't have documents yet
+    # Get school_sites without documents, excluding schools with excluded_reason
+    from sqlalchemy import or_
+    from eidp.db.models import SchoolYearStatus
+
     existing_doc_schools = session.query(Document.school_id).distinct()
+    excluded_school_ids = (
+        session.query(SchoolYearStatus.school_id)
+        .filter(SchoolYearStatus.excluded_reason.isnot(None))
+        .distinct()
+    )
     sites = (
         session.query(SchoolSite)
         .filter(
-            SchoolSite.http_status == 200,
+            or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None)),
             ~SchoolSite.school_id.in_(existing_doc_schools),
+            ~SchoolSite.school_id.in_(excluded_school_ids),
         )
         .order_by(SchoolSite.confidence.desc())
         .limit(batch_size)
@@ -305,9 +329,19 @@ def run_pdf_discovery(
 
             stats["found"] += 1
 
+            # Filter out negative-score candidates
+            viable = [c for c in result.candidates if c.score >= 0]
+            if not viable:
+                job.status = "review"
+                job.error_message = "all candidates have negative score"
+                job.finished_at = datetime.now(timezone.utc)
+                stats["failed"] += 1
+                time.sleep(rate_limit)
+                continue
+
             # Try downloading top candidates (fallback on 404)
             downloaded = False
-            for candidate in result.candidates[:3]:
+            for candidate in viable[:3]:
                 file_path, file_hash, file_size = download_pdf(
                     client, candidate, storage_dir, site.school_id,
                 )
@@ -328,6 +362,8 @@ def run_pdf_discovery(
                             file_path=file_path,
                             file_hash=file_hash,
                             file_size=file_size,
+                            content_type="text",  # assumed; OCR fallback updates later
+                            pdf_type="機関要件確認申請書" if candidate.score >= 2.0 else None,
                             confidence=min(candidate.score / 10.0, 0.99),
                             downloaded_at=datetime.now(timezone.utc),
                         )

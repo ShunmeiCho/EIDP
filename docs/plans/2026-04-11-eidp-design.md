@@ -305,24 +305,22 @@ CREATE TABLE school_alias (
 );
 
 -- Support recipient data (for 対象比率 sheet export)
+-- NOTE: Implementation uses a wide-row model (one row per school+year)
+-- with first_half_*/second_half_*/annual_total/grand_total columns.
+-- See models.py SupportRecipient for the actual schema.
+-- The per-period normalized design below is superseded by the implementation.
 CREATE TABLE support_recipient (
     id              SERIAL PRIMARY KEY,
     school_id       INTEGER REFERENCES school(id),
-    school_number   VARCHAR(20),             -- 学校番号 from Excel (mapped to school_code in Step 3)
+    school_number   VARCHAR(20),
     document_id     INTEGER REFERENCES document(id),
     fiscal_year     INTEGER NOT NULL,
-    period          VARCHAR(10) NOT NULL,    -- 前半期, 後半期, 年間
-    category_1      INTEGER,                 -- 第Ⅰ区分
-    category_2      INTEGER,                 -- 第Ⅱ区分
-    category_3      INTEGER,                 -- 第Ⅲ区分
-    category_4      INTEGER,                 -- 第Ⅳ区分
-    household_change INTEGER,                -- 家計急変多子世帯
-    total           INTEGER,                 -- 総計
-    prev_enrollment INTEGER,                 -- 前年在籍（for 受給比率 calculation）
-    recipient_rate  DECIMAL(5,4),            -- 受給比率
-    extraction_confidence DECIMAL(3,2),
-    notes           TEXT,
-    UNIQUE(school_id, fiscal_year, period)
+    first_half_total INTEGER, second_half_total INTEGER, annual_total INTEGER,
+    first_half_cat1..4 INTEGER, second_half_cat1..4 INTEGER,
+    household_change INTEGER, grand_total INTEGER,
+    prev_enrollment INTEGER, recipient_rate DECIMAL(7,4),
+    extraction_confidence DECIMAL(3,2), notes TEXT,
+    UNIQUE(school_id, fiscal_year)
 );
 
 -- Taxonomy mapping (persisted human decisions for competition classification)
