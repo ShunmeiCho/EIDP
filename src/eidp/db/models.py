@@ -94,7 +94,8 @@ class Document(Base):
     fiscal_year: Mapped[int | None] = mapped_column(Integer)
     is_current_year: Mapped[bool | None] = mapped_column(Boolean)
     content_type: Mapped[str | None] = mapped_column(String(20))
-    pdf_type: Mapped[str | None] = mapped_column(String(30))
+    pdf_type: Mapped[str | None] = mapped_column(String(30))  # target, non_target, image_only, unknown
+    ingest_status: Mapped[str | None] = mapped_column(String(30))  # pending, ingested, school_mismatch, parse_failed, transient_error
     confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

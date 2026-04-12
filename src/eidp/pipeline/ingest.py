@@ -57,7 +57,26 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     # Parse PDF
     annotation = parse_pdf(pdf_path)
 
-    # Determine fiscal year early — needed for both dept and support_recipient paths
+    # School-identity verification: check parsed school_name against target school
+    # Prevents wrong-school PDF data from silently entering the DB
+    if annotation.school_name:
+        from eidp.db.models import School
+        target_school = session.query(School).filter(School.id == doc.school_id).first()
+        if target_school:
+            parsed_name = _norm(annotation.school_name)
+            target_name = _norm(target_school.school_name)
+            # Check if parsed name matches target (substring match for flexibility)
+            if parsed_name and target_name and parsed_name not in target_name and target_name not in parsed_name:
+                log.warning("school_name_mismatch",
+                            doc_id=doc.id,
+                            parsed=annotation.school_name,
+                            target=target_school.school_name,
+                            school_id=doc.school_id)
+                doc.ingest_status = "school_mismatch"
+                stats["skipped"] = 1
+                return stats
+
+    # Determine fiscal year early �� needed for both dept and support_recipient paths
     fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
 
     # Quality gate: check department data quality before committing
@@ -267,20 +286,22 @@ def _parse_fiscal_year_from_annotation(year_str: str) -> int | None:
 def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
     """Ingest all un-ingested documents.
 
-    Uses pdf_type as ingestion status marker:
-    - 'target' or None: eligible for ingestion
-    - 'ingested': successfully processed (dept or support_recipient data written)
-    - 'parse_failed': parser returned no usable data, won't be retried
-    - 'non_target', 'image_only': skipped by ingest_document
+    Uses ingest_status to track processing state:
+    - None or 'pending': eligible for ingestion
+    - 'ingested': successfully processed
+    - 'school_mismatch': parsed school_name didn't match target
+    - 'parse_failed': parser returned no usable data
+    - 'transient_error': network/IO error, can be retried
     """
     total_stats = {"processed": 0, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
 
-    # Find documents not yet ingested: have a file path and pdf_type is 'target' or NULL
+    # Find documents not yet ingested
     docs = (
         session.query(Document)
         .filter(
             Document.file_path.isnot(None),
-            Document.pdf_type.in_(["target", None]),
+            Document.ingest_status.in_([None, "pending", "transient_error"]),
+            Document.pdf_type.notin_(["non_target"]),
         )
         .limit(batch_size)
         .all()
@@ -294,18 +315,18 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             stats = ingest_document(session, doc)
             nested.commit()
 
-            # Mark document as processed based on result
+            # Mark ingest_status based on result
             if stats.get("yearly_upserted", 0) > 0 or stats.get("support_recipient", 0) > 0:
-                doc.pdf_type = "ingested"
+                doc.ingest_status = "ingested"
             elif stats.get("skipped", 0) > 0:
-                doc.pdf_type = "parse_failed"
+                doc.ingest_status = "parse_failed"
 
             total_stats["processed"] += 1
             for k in ("departments_created", "yearly_upserted", "skipped"):
                 total_stats[k] += stats.get(k, 0)
         except Exception:
             nested.rollback()
-            doc.pdf_type = "parse_failed"
+            doc.ingest_status = "transient_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
 

@@ -445,29 +445,57 @@ def verify_urls_sync(
     return stats
 
 
-def get_discovery_stats(session: Session) -> dict[str, int]:
-    """Report URL discovery coverage."""
+def get_discovery_stats(session: Session) -> dict[str, int | str]:
+    """Report URL discovery coverage with verified/unverified breakdown.
+
+    Distinguishes:
+    - verified_disclosure: HTTP 200, school-specific URL (not corporation root)
+    - unverified_root: corporation root or unchecked URL
+    - total coverage: any URL (inflated, includes roots)
+    """
     total_schools = session.query(func.count(School.id)).scalar() or 0
     schools_with_url = (
         session.query(func.count(func.distinct(SchoolSite.school_id))).scalar() or 0
     )
-    verified_ok = (
-        session.query(func.count(SchoolSite.id))
+
+    # Verified school-specific disclosure pages (the real coverage number)
+    verified_disclosure = (
+        session.query(func.count(func.distinct(SchoolSite.school_id)))
+        .filter(
+            SchoolSite.http_status == 200,
+            SchoolSite.url_type != "corporation",
+        )
+        .scalar() or 0
+    )
+
+    # Unverified or corporation-root-only schools
+    verified_any = (
+        session.query(func.count(func.distinct(SchoolSite.school_id)))
         .filter(SchoolSite.http_status == 200)
-        .scalar()
-        or 0
+        .scalar() or 0
     )
-    high_confidence = (
+
+    corp_only = (
+        session.query(func.count(func.distinct(SchoolSite.school_id)))
+        .filter(SchoolSite.url_type == "corporation")
+        .scalar() or 0
+    )
+
+    unverified = (
         session.query(func.count(SchoolSite.id))
-        .filter(SchoolSite.confidence >= 0.8)
-        .scalar()
-        or 0
+        .filter(SchoolSite.http_status.is_(None))
+        .scalar() or 0
     )
+
+    pct = lambda n: f"{n / total_schools * 100:.1f}%" if total_schools > 0 else "0%"
 
     return {
         "total_schools": total_schools,
-        "schools_with_url": schools_with_url,
-        "coverage": f"{schools_with_url / total_schools * 100:.1f}%" if total_schools > 0 else "0%",
-        "verified_ok": verified_ok,
-        "high_confidence": high_confidence,
+        "schools_with_any_url": schools_with_url,
+        "coverage_any": pct(schools_with_url),
+        "verified_disclosure": verified_disclosure,
+        "coverage_verified": pct(verified_disclosure),
+        "verified_any_200": verified_any,
+        "corporation_root_only": corp_only,
+        "unverified_urls": unverified,
     }
