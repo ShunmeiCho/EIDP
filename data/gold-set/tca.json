@@ -2,7 +2,7 @@
   "school_name": "東京コミュニケーションアート専門学校",
   "school_type": "専門学校",
   "operator_name": "学校法人 滋慶学園",
-  "fiscal_year": "令和7年度",
+  "fiscal_year": "令和3年度",
   "source_pdf": "tca.pdf",
   "departments": [
     {
@@ -77,10 +77,10 @@
       "capacity": 160,
       "enrollment": 35,
       "intl_students": 15,
-      "graduates": 0,
-      "advanced": 0,
-      "employed": 0,
-      "other": 0,
+      "graduates": null,
+      "advanced": null,
+      "employed": null,
+      "other": null,
       "prev_enrollment": 13,
       "dropouts": 0,
       "dropout_rate": 0.0
@@ -114,6 +114,38 @@
       "employed": 64,
       "other": 57,
       "prev_enrollment": 272,
+      "dropouts": 12,
+      "dropout_rate": 4.0
+    },
+    {
+      "name": "エコ・コミュニケーション科3年制（昼間部一）",
+      "course_name": "文化・教養専門課程",
+      "duration_years": 3,
+      "day_or_evening": "昼",
+      "capacity": 120,
+      "enrollment": 44,
+      "intl_students": 5,
+      "graduates": 6,
+      "advanced": 0,
+      "employed": 6,
+      "other": 0,
+      "prev_enrollment": 28,
+      "dropouts": 2,
+      "dropout_rate": 7.0
+    },
+    {
+      "name": "エコ・コミュニケーション科2年制（昼間部二）",
+      "course_name": "文化・教養専門課程",
+      "duration_years": 2,
+      "day_or_evening": "昼",
+      "capacity": 400,
+      "enrollment": 364,
+      "intl_students": 12,
+      "graduates": 117,
+      "advanced": 0,
+      "employed": 70,
+      "other": 47,
+      "prev_enrollment": 267,
       "dropouts": 12,
       "dropout_rate": 4.0
     }
