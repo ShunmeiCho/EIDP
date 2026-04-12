@@ -199,11 +199,37 @@ def discover_urls(
 
 
 @app.command()
+def discover_pdfs(
+    storage_dir: Path = typer.Option(Path("data/pdfs"), help="PDF storage directory"),
+    batch_size: int = typer.Option(50, help="Number of sites to crawl"),
+    rate_limit: float = typer.Option(1.0, help="Seconds between requests"),
+) -> None:
+    """Discover and download PDFs from school disclosure pages (Step 8)."""
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.pdf_discovery import run_pdf_discovery
+
+    storage_dir.mkdir(parents=True, exist_ok=True)
+
+    session = SessionLocal()
+    try:
+        stats = run_pdf_discovery(session, storage_dir, batch_size=batch_size, rate_limit=rate_limit)
+        session.commit()
+        typer.echo(f"\nPDF Discovery Results:")
+        for k, v in stats.items():
+            typer.echo(f"  {k}: {v}")
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
 def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func
 
-    from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias, SchoolYearStatus, SupportRecipient
+    from eidp.db.models import CrawlJob, Department, DepartmentYearly, Document, School, SchoolAlias, SchoolSite, SchoolYearStatus, SupportRecipient
     from eidp.db.session import SessionLocal
 
     session = SessionLocal()
@@ -215,6 +241,9 @@ def db_info() -> None:
         typer.echo(f"SchoolYearStatus:   {session.query(func.count(SchoolYearStatus.id)).scalar()}")
         typer.echo(f"SupportRecipient:   {session.query(func.count(SupportRecipient.id)).scalar()}")
         typer.echo(f"SchoolAlias:        {session.query(func.count(SchoolAlias.id)).scalar()}")
+        typer.echo(f"SchoolSite:         {session.query(func.count(SchoolSite.id)).scalar()}")
+        typer.echo(f"Document:           {session.query(func.count(Document.id)).scalar()}")
+        typer.echo(f"CrawlJob:           {session.query(func.count(CrawlJob.id)).scalar()}")
     finally:
         session.close()
 
