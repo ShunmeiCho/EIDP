@@ -139,6 +139,53 @@ def verify_identity(
 
 
 @app.command()
+def discover_urls(
+    seed_csv: Path = typer.Option(Path("data/url-discovery/discovered-urls-50.csv"), help="Seed URL CSV"),
+    verify: bool = typer.Option(False, help="Verify URLs via HTTP HEAD"),
+    batch_size: int = typer.Option(50, help="Batch size for verification"),
+) -> None:
+    """Discover and register school URLs (Step 7)."""
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.url_discovery import (
+        get_discovery_stats,
+        import_seed_urls,
+        infer_corporation_urls,
+        verify_urls_sync,
+    )
+
+    session = SessionLocal()
+    try:
+        # Phase 1: Import seed URLs
+        if seed_csv.exists():
+            seed_stats = import_seed_urls(session, seed_csv)
+            typer.echo(f"Seed import: {seed_stats}")
+
+        # Phase 2: Corporation pattern inference
+        corp_stats = infer_corporation_urls(session)
+        typer.echo(f"Corporation inference: {corp_stats}")
+
+        session.commit()
+
+        # Phase 3: HTTP verification (optional)
+        if verify:
+            typer.echo(f"Verifying URLs (batch={batch_size})...")
+            verify_stats = verify_urls_sync(session, batch_size=batch_size)
+            session.commit()
+            typer.echo(f"Verification: {verify_stats}")
+
+        # Report
+        stats = get_discovery_stats(session)
+        typer.echo(f"\nURL Discovery Stats:")
+        for k, v in stats.items():
+            typer.echo(f"  {k}: {v}")
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
 def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func
