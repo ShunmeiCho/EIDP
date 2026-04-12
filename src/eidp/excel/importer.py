@@ -443,30 +443,32 @@ def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
 
     wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
 
-    results: dict[str, dict[str, int]] = {}
+    try:
+        results: dict[str, dict[str, int]] = {}
 
-    # Sheet 1: 採録状況 -> school + school_year_status
-    ws_sairoku = wb["採録状況"]
-    results["採録状況"] = import_sairoku(ws_sairoku, session)
+        # Sheet 1: 採録状況 -> school + school_year_status
+        ws_sairoku = wb["採録状況"]
+        results["採録状況"] = import_sairoku(ws_sairoku, session)
 
-    # Build school lookup for subsequent sheets
-    schools = session.query(School).all()
-    school_lookup: dict[tuple[str, str, str], int] = {
-        (s.prefecture, s.corporation_name, s.school_name): s.id for s in schools
-    }
-    log.info("school_lookup_built", size=len(school_lookup))
+        # Build school lookup for subsequent sheets
+        schools = session.query(School).all()
+        school_lookup: dict[tuple[str, str, str], int] = {
+            (s.prefecture, s.corporation_name, s.school_name): s.id for s in schools
+        }
+        log.info("school_lookup_built", size=len(school_lookup))
 
-    # Sheet 2: 対象比率 -> support_recipient
-    ws_taisho = wb["対象比率"]
-    results["対象比率"] = import_taisho_hiritu(ws_taisho, session, school_lookup)
+        # Sheet 2: 対象比率 -> support_recipient
+        ws_taisho = wb["対象比率"]
+        results["対象比率"] = import_taisho_hiritu(ws_taisho, session, school_lookup)
 
-    # Sheet 3: 学科別 -> department + department_yearly
-    ws_gakka = wb["学科別"]
-    results["学科別"] = import_gakka(ws_gakka, session, school_lookup)
+        # Sheet 3: 学科別 -> department + department_yearly
+        ws_gakka = wb["学科別"]
+        results["学科別"] = import_gakka(ws_gakka, session, school_lookup)
 
-    # Sheet 4: 在籍のみ抜粋 — snapshot, skip import (re-derivable from department_yearly)
-    results["在籍のみ抜粋"] = {"skipped": 1, "reason": "re-derivable from department_yearly"}
+        # Sheet 4: 在籍のみ抜粋 — snapshot, skip import (re-derivable from department_yearly)
+        results["在籍のみ抜粋"] = {"skipped": 1, "reason": "re-derivable from department_yearly"}
 
-    wb.close()
-    log.info("import_complete", results=results)
-    return results
+        log.info("import_complete", results=results)
+        return results
+    finally:
+        wb.close()

@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timezone
 
 import streamlit as st
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from eidp.db.models import ReviewItem, School, SchoolAlias, SchoolYearStatus
@@ -27,7 +27,11 @@ def _get_session() -> Session:
 
 
 def _commit(session: Session) -> None:
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -44,11 +48,26 @@ def _load_dashboard_stats(session: Session) -> dict[str, int]:
         or 0
     )
 
+    # Only exclude if the LATEST fiscal year has excluded_reason
+    latest_year_subq = (
+        session.query(
+            SchoolYearStatus.school_id,
+            func.max(SchoolYearStatus.fiscal_year).label("max_fy"),
+        )
+        .group_by(SchoolYearStatus.school_id)
+        .subquery()
+    )
     excluded_ids: set[int] = set()
     for row in (
         session.query(SchoolYearStatus.school_id)
+        .join(
+            latest_year_subq,
+            and_(
+                SchoolYearStatus.school_id == latest_year_subq.c.school_id,
+                SchoolYearStatus.fiscal_year == latest_year_subq.c.max_fy,
+            ),
+        )
         .filter(SchoolYearStatus.excluded_reason.isnot(None))
-        .distinct()
     ):
         excluded_ids.add(row[0])
     no_code = session.query(School).filter(School.school_code.is_(None)).all()

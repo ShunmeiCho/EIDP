@@ -23,6 +23,34 @@ from eidp.db.models import School, SchoolSite
 
 log = structlog.get_logger()
 
+# SSRF prevention: only allow http(s) to public hosts
+_BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}
+
+
+def _is_safe_url(url: str) -> bool:
+    """Validate URL is http(s) and not targeting internal/cloud metadata endpoints."""
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return False
+    if hostname in _BLOCKED_HOSTS:
+        return False
+    # Block 10.x, 172.16-31.x, 192.168.x private ranges
+    import ipaddress
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_private or ip.is_loopback or ip.is_link_local:
+            return False
+    except ValueError:
+        pass  # hostname is not an IP, that's fine
+    return True
+
 # Known corporation domain roots (for pattern-based initial discovery)
 CORPORATION_DOMAINS: dict[str, str] = {
     "大原学園": "https://www.o-hara.ac.jp/",
@@ -93,7 +121,7 @@ def import_seed_urls(
                 continue
 
             url = row.get("url_candidate_1", "").strip()
-            if not url:
+            if not url or not _is_safe_url(url):
                 continue
 
             # Check if already exists
@@ -218,8 +246,11 @@ def search_and_discover(
             stats["no_result"] += 1
             continue
 
-        # Take top result as primary URL
+        # Take top result as primary URL, with SSRF validation
         top = results[0]
+        if not _is_safe_url(top.url):
+            stats["errors"] += 1
+            continue
 
         # Score confidence based on title match
         confidence = 0.5

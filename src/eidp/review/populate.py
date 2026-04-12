@@ -33,12 +33,28 @@ def populate_review_items(session: Session, data_dir: Path) -> dict[str, int]:
     """
     stats = {"created": 0, "skipped_existing": 0, "skipped_excluded": 0, "total_unresolved": 0}
 
-    # Get excluded school IDs (these do not need codes)
+    # Get excluded school IDs — only if the LATEST fiscal year is excluded
+    # (a school excluded in R5 but active in R6 should not be skipped)
+    from sqlalchemy import and_
+    latest_year_subq = (
+        session.query(
+            SchoolYearStatus.school_id,
+            func.max(SchoolYearStatus.fiscal_year).label("max_fy"),
+        )
+        .group_by(SchoolYearStatus.school_id)
+        .subquery()
+    )
     excluded_ids: set[int] = set()
     for row in (
         session.query(SchoolYearStatus.school_id)
+        .join(
+            latest_year_subq,
+            and_(
+                SchoolYearStatus.school_id == latest_year_subq.c.school_id,
+                SchoolYearStatus.fiscal_year == latest_year_subq.c.max_fy,
+            ),
+        )
         .filter(SchoolYearStatus.excluded_reason.isnot(None))
-        .distinct()
     ):
         excluded_ids.add(row[0])
 

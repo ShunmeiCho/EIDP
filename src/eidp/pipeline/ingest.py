@@ -49,22 +49,38 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
 
     for dept_record in annotation.departments:
-        # Find or create department
+        # Find or create department — match full natural key to avoid collapsing
+        # same-name departments with different course_type/duration
         dept = (
             session.query(Department)
             .filter(
                 Department.school_id == doc.school_id,
                 Department.canonical_name == _norm(dept_record.name),
+                Department.course_type == (dept_record.day_or_evening if dept_record.day_or_evening else None),
+                Department.course_name == (dept_record.course_name if dept_record.course_name else None),
+                Department.duration_years == dept_record.duration_years,
             )
             .first()
         )
 
         if not dept:
+            # Try relaxed match (name-only) if strict match fails
+            # This handles cases where PDF parser couldn't extract all disambiguators
+            dept = (
+                session.query(Department)
+                .filter(
+                    Department.school_id == doc.school_id,
+                    Department.canonical_name == _norm(dept_record.name),
+                )
+                .first()
+            )
+
+        if not dept:
             dept = Department(
                 school_id=doc.school_id,
                 canonical_name=_norm(dept_record.name),
-                course_name=dept_record.course_name,
-                course_type=dept_record.day_or_evening,
+                course_name=dept_record.course_name if dept_record.course_name else None,
+                course_type=dept_record.day_or_evening if dept_record.day_or_evening else None,
                 duration_years=dept_record.duration_years,
             )
             session.add(dept)
@@ -72,51 +88,45 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
             stats["departments_created"] += 1
 
         if fiscal_year:
-            # Upsert department_yearly
-            existing = (
-                session.query(DepartmentYearly)
+            # Append-only: find current max revision, mark old as non-current, insert new revision
+            from sqlalchemy import func as sqlfunc
+
+            max_rev_row = (
+                session.query(sqlfunc.max(DepartmentYearly.revision))
                 .filter(
                     DepartmentYearly.department_id == dept.id,
                     DepartmentYearly.fiscal_year == fiscal_year,
-                    DepartmentYearly.revision == 1,
                 )
-                .first()
+                .scalar()
             )
+            next_revision = (max_rev_row or 0) + 1
 
-            if existing:
-                # Update existing
-                existing.capacity = dept_record.capacity
-                existing.enrollment = dept_record.enrollment
-                existing.intl_students = dept_record.intl_students
-                existing.graduates = dept_record.graduates
-                existing.advanced = dept_record.advanced
-                existing.employed = dept_record.employed
-                existing.other = dept_record.other
-                existing.prev_enrollment = dept_record.prev_enrollment
-                existing.dropouts = dept_record.dropouts
-                existing.dropout_rate = dept_record.dropout_rate
-                existing.document_id = doc.id
-                existing.extraction_method = "pdf_parse"
-            else:
-                dy = DepartmentYearly(
-                    department_id=dept.id,
-                    document_id=doc.id,
-                    fiscal_year=fiscal_year,
-                    revision=1,
-                    is_current=True,
-                    capacity=dept_record.capacity,
-                    enrollment=dept_record.enrollment,
-                    intl_students=dept_record.intl_students,
-                    graduates=dept_record.graduates,
-                    advanced=dept_record.advanced,
-                    employed=dept_record.employed,
-                    other=dept_record.other,
-                    prev_enrollment=dept_record.prev_enrollment,
-                    dropouts=dept_record.dropouts,
-                    dropout_rate=dept_record.dropout_rate,
-                    extraction_method="pdf_parse",
-                )
-                session.add(dy)
+            # Mark all existing rows for this dept+year as non-current
+            session.query(DepartmentYearly).filter(
+                DepartmentYearly.department_id == dept.id,
+                DepartmentYearly.fiscal_year == fiscal_year,
+                DepartmentYearly.is_current == True,  # noqa: E712
+            ).update({"is_current": False})
+
+            dy = DepartmentYearly(
+                department_id=dept.id,
+                document_id=doc.id,
+                fiscal_year=fiscal_year,
+                revision=next_revision,
+                is_current=True,
+                capacity=dept_record.capacity,
+                enrollment=dept_record.enrollment,
+                intl_students=dept_record.intl_students,
+                graduates=dept_record.graduates,
+                advanced=dept_record.advanced,
+                employed=dept_record.employed,
+                other=dept_record.other,
+                prev_enrollment=dept_record.prev_enrollment,
+                dropouts=dept_record.dropouts,
+                dropout_rate=dept_record.dropout_rate,
+                extraction_method="pdf_parse",
+            )
+            session.add(dy)
 
             stats["yearly_upserted"] += 1
 
@@ -187,10 +197,18 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
     log.info("ingestion_start", documents=len(docs))
 
     for doc in docs:
-        stats = ingest_document(session, doc)
-        total_stats["processed"] += 1
-        for k in ("departments_created", "yearly_upserted", "skipped"):
-            total_stats[k] += stats[k]
+        try:
+            # Use a savepoint so one bad doc doesn't abort the whole batch
+            nested = session.begin_nested()
+            stats = ingest_document(session, doc)
+            nested.commit()
+            total_stats["processed"] += 1
+            for k in ("departments_created", "yearly_upserted", "skipped"):
+                total_stats[k] += stats[k]
+        except Exception:
+            nested.rollback()
+            total_stats["skipped"] += 1
+            log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
 
     log.info("ingestion_complete", **total_stats)
     return total_stats

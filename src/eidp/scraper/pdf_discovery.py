@@ -278,21 +278,47 @@ def run_pdf_discovery(
     """Run PDF discovery for schools with verified URLs but no documents."""
     stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
 
-    # Get school_sites without documents, excluding schools with excluded_reason
-    from sqlalchemy import or_
+    # Get school_sites, excluding:
+    # - schools with a document for the current target fiscal year
+    # - schools excluded in their LATEST fiscal year only (not historical exclusions)
+    from sqlalchemy import and_, func, or_
     from eidp.db.models import SchoolYearStatus
 
-    existing_doc_schools = session.query(Document.school_id).distinct()
+    # Only exclude schools where the most recent year is excluded
+    latest_year_subq = (
+        session.query(
+            SchoolYearStatus.school_id,
+            func.max(SchoolYearStatus.fiscal_year).label("max_fy"),
+        )
+        .group_by(SchoolYearStatus.school_id)
+        .subquery()
+    )
     excluded_school_ids = (
         session.query(SchoolYearStatus.school_id)
+        .join(
+            latest_year_subq,
+            and_(
+                SchoolYearStatus.school_id == latest_year_subq.c.school_id,
+                SchoolYearStatus.fiscal_year == latest_year_subq.c.max_fy,
+            ),
+        )
         .filter(SchoolYearStatus.excluded_reason.isnot(None))
+    )
+
+    # Only skip schools that already have a document for the current target year
+    # (allow re-discovery if previous docs were from a different year or failed)
+    current_target_year = datetime.now().year  # approximate fiscal year
+    schools_with_current_docs = (
+        session.query(Document.school_id)
+        .filter(Document.fiscal_year == current_target_year)
         .distinct()
     )
+
     sites = (
         session.query(SchoolSite)
         .filter(
             or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None)),
-            ~SchoolSite.school_id.in_(existing_doc_schools),
+            ~SchoolSite.school_id.in_(schools_with_current_docs),
             ~SchoolSite.school_id.in_(excluded_school_ids),
         )
         .order_by(SchoolSite.confidence.desc())

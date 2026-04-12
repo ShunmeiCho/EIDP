@@ -34,6 +34,11 @@ class School(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    __table_args__ = (
+        UniqueConstraint("prefecture", "corporation_name", "school_name", name="uq_school_natural_key"),
+        {"comment": "School identity table"},
+    )
+
     sites: Mapped[list["SchoolSite"]] = relationship(back_populates="school")
     departments: Mapped[list["Department"]] = relationship(back_populates="school")
     year_statuses: Mapped[list["SchoolYearStatus"]] = relationship(back_populates="school")
@@ -111,6 +116,14 @@ class Department(Base):
     field_category: Mapped[str | None] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id", "canonical_name", "course_type", "course_name", "duration_years",
+            name="uq_department_natural_key",
+        ),
+        {"comment": "Department identity table"},
+    )
 
     school: Mapped["School"] = relationship(back_populates="departments")
     yearly_data: Mapped[list["DepartmentYearly"]] = relationship(back_populates="department")

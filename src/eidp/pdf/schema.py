@@ -10,7 +10,7 @@ class DepartmentRecord(BaseModel):
 
     name: str = Field(description="Department name (学科名)")
     course_name: str | None = Field(default=None, description="Course/program name (課程名)")
-    duration_years: int | None = Field(default=None, description="Program duration in years")
+    duration_years: float | None = Field(default=None, description="Program duration in years (supports 1.5, 2.4 etc.)")
     day_or_evening: str | None = Field(default=None, description="Day or evening (昼/夜)")
     capacity: int | None = Field(default=None, description="Student capacity (収定)")
     enrollment: int | None = Field(default=None, description="Enrolled students (在籍)")
