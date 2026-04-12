@@ -289,6 +289,44 @@ def review_ui(
 
 
 @app.command()
+def export_excel(
+    output: Path = typer.Option(Path("output/専門学校無償化情報公開まとめ.xlsx"), help="Output Excel file path"),
+) -> None:
+    """Export master Excel workbook from database (Step 10)."""
+    from eidp.db.session import SessionLocal
+    from eidp.excel.exporter import export_master_workbook
+
+    session = SessionLocal()
+    try:
+        results = export_master_workbook(session, output)
+        typer.echo(f"Exported to: {output}")
+        for sheet, count in results.items():
+            typer.echo(f"  {sheet}: {count} rows")
+    finally:
+        session.close()
+
+
+@app.command()
+def diff_excel(
+    exported: Path = typer.Argument(..., help="Path to exported Excel file"),
+    original: Path = typer.Option(
+        Path("sample/◆2025専門学校無償化情報公開まとめ.xlsx"),
+        help="Path to original reference Excel",
+    ),
+) -> None:
+    """Compare exported vs original Excel row counts per sheet."""
+    from eidp.excel.exporter import diff_workbooks
+
+    results = diff_workbooks(exported, original)
+    typer.echo("Sheet comparison (exported vs original):")
+    typer.echo(f"  {'Sheet':<16} {'Exported':>10} {'Original':>10} {'Diff':>8}")
+    typer.echo(f"  {'-'*16} {'-'*10} {'-'*10} {'-'*8}")
+    for sheet, stats in results.items():
+        diff_str = f"{stats['diff']:+d}" if stats["diff"] != 0 else "0"
+        typer.echo(f"  {sheet:<16} {stats['exported']:>10} {stats['original']:>10} {diff_str:>8}")
+
+
+@app.command()
 def eval_pdf(
     gold_dir: Path = typer.Option(Path("data/gold-set"), help="Gold annotation directory"),
     pdf_dir: Path = typer.Option(Path("data/sample-pdfs"), help="Sample PDF directory"),

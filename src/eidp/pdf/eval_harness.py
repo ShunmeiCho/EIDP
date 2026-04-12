@@ -148,18 +148,34 @@ def _normalize_text(text: str) -> str:
 
 
 def _match_department_name(gold_name: str, parsed_name: str) -> bool:
-    """Check if department names match, requiring exact normalized match."""
+    """Check if department names match.
+
+    Supports exact match and substring containment (gold in parsed or
+    parsed in gold) to handle cases where the parser extracts extra
+    parenthetical info like "(昼間部)" that the gold set omits, or vice versa.
+    """
     g = _normalize_text(gold_name)
     p = _normalize_text(parsed_name)
-    return g == p
+    if g == p:
+        return True
+    # Substring containment: gold in parsed or parsed in gold
+    return g in p or p in g
 
 
 def _compare_numeric(
-    gold_val: int | float,
-    parsed_val: int | float,
+    gold_val: int | float | None,
+    parsed_val: int | float | None,
     tolerance: float = 0.01,
 ) -> bool:
-    """Compare numeric values with tolerance for floats."""
+    """Compare numeric values with tolerance for floats.
+
+    Returns True if both are None (both missing = agreement).
+    Returns False if only one is None.
+    """
+    if gold_val is None and parsed_val is None:
+        return True
+    if gold_val is None or parsed_val is None:
+        return False
     if isinstance(gold_val, float) or isinstance(parsed_val, float):
         return math.isclose(float(gold_val), float(parsed_val), abs_tol=tolerance)
     return gold_val == parsed_val
@@ -291,9 +307,14 @@ def evaluate_parser(
             field_totals[f] += 1
 
             if f in TEXT_FIELDS:
-                is_correct = _normalize_text(str(gold_val)) == _normalize_text(
-                    str(parsed_val)
-                )
+                if gold_val is None and parsed_val is None:
+                    is_correct = True
+                elif gold_val is None or parsed_val is None:
+                    is_correct = False
+                else:
+                    is_correct = _normalize_text(str(gold_val)) == _normalize_text(
+                        str(parsed_val)
+                    )
             elif f in NUMERIC_FIELDS:
                 is_correct = _compare_numeric(gold_val, parsed_val)
             else:

@@ -1,12 +1,12 @@
-"""PDF text extractor — Step 9.
+"""PDF text extractor -- Step 9.
 
 Extracts enrollment data from 機関要件確認申請書 PDFs.
-The data is in text lines (not tables): each department section contains:
-- 学科名, 課程名, 昼夜, 年限 in the section header
-- "生徒総定員数 生徒実員 うち留学生数" header line
-- Numeric values on the next line
-- "卒業者数 進学者数 就職者数" in a separate table
-- "中退者" data in appendix
+Each department section in Form 2-4-2 contains:
+- Header table with 分野, 課程名, 学科名, 専門士, 高度専門士
+- 修業年限 and 昼夜 info
+- 生徒総定員数 / 生徒実員 / うち留学生数 row
+- 卒業者数 / 進学者数 / 就職者数 / その他 section
+- 中途退学の現状 with 年度当初在学者数, 退学者の数, 中退率
 
 2-tier: pdfplumber text extraction (Tier 1) -> MinerU/VL-OCR (Tier 2)
 """
@@ -33,178 +33,310 @@ def _extract_ints(text: str) -> list[int]:
     return [int(x) for x in re.findall(r"\d+", text.replace(",", ""))]
 
 
+def _extract_school_name(full_text: str) -> str:
+    """Extract school name from PDF text.
+
+    Looks for patterns:
+    - 学校名 field in tables (most reliable, appears on many pages)
+    - 大学等の名称 field on page 1
+    """
+    normed = _norm(full_text)
+
+    # Pattern 1: 学校名 field (appears in many table headers)
+    # e.g. "学校名 HAL東京" or "学校名 日本電子専門学校"
+    # Also handles "学校名(学部等名)" variant in TCA
+    m = re.search(r"学校名(?:\(学部等名\))?[\s:：]*(.+?)(?:\n|$)", normed)
+    if m:
+        name = m.group(1).strip()
+        # Remove trailing labels that might be on the same line
+        name = re.sub(r"\s*(?:設置者名|設置者|学校法人).*$", "", name)
+        if name:
+            return name
+
+    # Pattern 2: 大学等の名称 on page 1
+    m = re.search(r"大学等の名称[\s:：]*(.+?)(?:\n|$)", normed)
+    if m:
+        name = m.group(1).strip()
+        if name:
+            return name
+
+    return ""
+
+
+def _extract_fiscal_year(full_text: str) -> str:
+    """Extract fiscal year from PDF text.
+
+    PDFs use date format like "令和７年６月２７日" (full-width digits).
+    After NFKC normalization this becomes "令和7年6月27日".
+    We extract the year number and produce "令和7年度".
+    """
+    normed = _norm(full_text)
+
+    # Pattern 1: 令和N年度 (direct match, unlikely in these PDFs but safe)
+    m = re.search(r"令和(\d+)年度", normed)
+    if m:
+        return f"令和{m.group(1)}年度"
+
+    # Pattern 2: 令和N年M月D日 (date on cover page, extract year)
+    m = re.search(r"令和(\d+)年\d+月\d+日", normed)
+    if m:
+        return f"令和{m.group(1)}年度"
+
+    return ""
+
+
+def _extract_operator_name(full_text: str) -> str:
+    """Extract operator/founder name from PDF text.
+
+    Looks for 設置者名 field in tables.
+    """
+    normed = _norm(full_text)
+
+    m = re.search(r"設置者名[\s:：]*(.+?)(?:\n|$)", normed)
+    if m:
+        name = m.group(1).strip()
+        if name:
+            return name
+
+    # Fallback: 設置者の名称 from page 1
+    m = re.search(r"設置者の名称[\s:：]*(.+?)(?:\n|$)", normed)
+    if m:
+        name = m.group(1).strip()
+        if name:
+            return name
+
+    return ""
+
+
+def _parse_department_section(section_text: str) -> DepartmentRecord | None:
+    """Parse a single department section from PDF text.
+
+    Each department section spans roughly 2 pages and contains:
+    1. Header table: 分野 | 課程名 | 学科名 | 専門士 | 高度専門士
+    2. Duration and day/night info: 修業年限 | 昼夜 | total hours
+    3. Enrollment: 生徒総定員数, 生徒実員, うち留学生数
+    4. Graduation: 卒業者数, 進学者数, 就職者数, その他
+    5. Dropout: 年度当初在学者数, 退学者の数, 中退率
+    """
+    lines = section_text.strip().split("\n")
+    normed_lines = [_norm(line) for line in lines]
+
+    dept_name = ""
+    course = ""
+    day_night = ""
+    duration: int | None = None
+    capacity: int | None = None
+    enrollment: int | None = None
+    intl_students: int | None = None
+    graduates: int | None = None
+    advanced: int | None = None
+    employed: int | None = None
+    other: int | None = None
+    prev_enrollment: int | None = None
+    dropouts: int | None = None
+    dropout_rate: float | None = None
+
+    for i, line_norm in enumerate(normed_lines):
+        # -- Department name from header table --
+        # The header line contains: 分野 | 課程名 | 学科名 | 専門士 | 高度専門士
+        if "学科名" in line_norm and "分野" in line_norm and not dept_name:
+            # Look at the next few lines for the data rows
+            # Data row contains: field_name | course_name | dept_name | circle marks
+            for j in range(i + 1, min(i + 8, len(normed_lines))):
+                data_line = normed_lines[j]
+                # Skip sub-header lines
+                if "修業" in data_line and "昼夜" in data_line:
+                    break
+                if "全課程" in data_line or "授業時数" in data_line:
+                    break
+                if "開設" in data_line:
+                    break
+
+                # Look for 課程 keyword to identify the data row
+                cm = re.search(r"([\u4e00-\u9fff\u30fb\u30a0-\u30ff]+課程)", data_line)
+                if cm:
+                    course = cm.group(1)
+                    # Department name comes after the course name
+                    after_course_pos = data_line.index(course) + len(course)
+                    after_course = data_line[after_course_pos:].strip()
+                    # Remove circle marks and dashes
+                    dept_candidate = re.sub(r"[\s○\-－]+$", "", after_course).strip()
+                    if dept_candidate:
+                        dept_name = dept_candidate
+                        # Check if dept name continues on subsequent lines
+                        # (TCA/NKZ pattern: multi-line dept names in table cells)
+                        for k in range(j + 1, min(j + 4, len(normed_lines))):
+                            cont = normed_lines[k].strip()
+                            # Stop at known section boundaries
+                            if any(kw in cont for kw in (
+                                "修業", "昼夜", "全課程", "授業時数",
+                                "開設", "単位時間", "講義", "演習",
+                                "生徒総定員", "専任教員",
+                            )):
+                                break
+                            # Stop at circle/dash only lines
+                            if re.match(r"^[○\-－\s]+$", cont):
+                                break
+                            if not cont:
+                                break
+                            dept_name += cont
+                    break
+
+        # -- Duration and day/night --
+        # Pattern: "N年 昼" on same line, or "N年" and "昼/夜" separate
+        if not duration:
+            dm = re.search(r"(\d+)\s*年", line_norm)
+            if dm and "修業" in line_norm or (dm and "昼" in line_norm):
+                duration = int(dm.group(1))
+            elif dm and i > 0 and "修業" in normed_lines[i - 1]:
+                duration = int(dm.group(1))
+
+        if not day_night:
+            # Match "昼" as day when it appears in duration/schedule context
+            if re.search(r"(?:^|\s)昼(?:\s|$)", line_norm) and "昼夜" not in line_norm:
+                day_night = "昼"
+            elif re.search(r"(?:^|\s)夜(?:\s|$)", line_norm) and "昼夜" not in line_norm:
+                day_night = "夜"
+
+        # -- Enrollment data --
+        # 生徒総定員数 | 生徒実員 | うち留学生数 row with numbers
+        if "生徒総定員" in line_norm and "生徒実員" in line_norm:
+            nums = _extract_ints(line_norm)
+            if len(nums) >= 3:
+                capacity, enrollment, intl_students = nums[0], nums[1], nums[2]
+            elif i + 1 < len(normed_lines):
+                next_nums = _extract_ints(normed_lines[i + 1])
+                if len(next_nums) >= 3:
+                    capacity, enrollment, intl_students = (
+                        next_nums[0], next_nums[1], next_nums[2]
+                    )
+
+        # Also match the numbers-only line after header
+        if enrollment is None and i > 0:
+            prev = normed_lines[i - 1]
+            if "生徒総定員" in prev or "定員数" in prev:
+                nums = _extract_ints(line_norm)
+                if len(nums) >= 3:
+                    capacity, enrollment, intl_students = nums[0], nums[1], nums[2]
+
+        # -- Graduation data --
+        # 卒業者数 | 進学者数 | 就職者数 header, then numbers below
+        if "卒業者数" in line_norm and "進学" in line_norm:
+            nums = _extract_ints(line_norm)
+            if len(nums) >= 3:
+                graduates, advanced, employed = nums[0], nums[1], nums[2]
+                if len(nums) >= 4:
+                    other = nums[3]
+            elif i + 1 < len(normed_lines):
+                next_nums = _extract_ints(normed_lines[i + 1])
+                if len(next_nums) >= 3:
+                    graduates, advanced, employed = (
+                        next_nums[0], next_nums[1], next_nums[2]
+                    )
+                    if len(next_nums) >= 4:
+                        other = next_nums[3]
+
+        # Match standalone graduation numbers line with percentages
+        # Pattern: "118人 3人 101人 14人" or "118 (100%) 3 (2.5%) ..."
+        if graduates is None and i > 0:
+            prev = normed_lines[i - 1] if i > 0 else ""
+            if "卒業者数" in prev and "進学" in prev:
+                nums = _extract_ints(line_norm)
+                if len(nums) >= 6:
+                    # Numbers include percentages: grad, pct, adv, pct, emp, pct, other, pct
+                    graduates = nums[0]
+                    advanced = nums[2]
+                    employed = nums[4]
+                    if len(nums) >= 8:
+                        other = nums[6]
+
+        # -- Dropout data --
+        # 中途退学の現状 section
+        if "中途退学" in line_norm or "中退率" in line_norm:
+            # Look for the data row with numbers
+            for j in range(i, min(i + 5, len(normed_lines))):
+                data_line = normed_lines[j]
+                # Dropout rate with % sign
+                rm = re.search(r"(\d+\.?\d*)\s*[%％]", data_line)
+                if rm and dropout_rate is None:
+                    dropout_rate = float(rm.group(1))
+                # Numbers line (skip header lines)
+                if "年度当初" not in data_line and "途中" not in data_line:
+                    nums = _extract_ints(data_line)
+                    if len(nums) >= 2 and prev_enrollment is None:
+                        prev_enrollment = nums[0]
+                        dropouts = nums[1]
+
+    if not dept_name or enrollment is None:
+        return None
+
+    # Clean department name: remove extra whitespace but keep parenthetical info
+    dept_clean = re.sub(r"\s+", "", dept_name).strip()
+
+    return DepartmentRecord(
+        name=dept_clean,
+        course_name=course if course else None,
+        duration_years=duration,
+        day_or_evening=day_night if day_night else None,
+        capacity=capacity,
+        enrollment=enrollment,
+        intl_students=intl_students,
+        graduates=graduates,
+        advanced=advanced,
+        employed=employed,
+        other=other,
+        prev_enrollment=prev_enrollment,
+        dropouts=dropouts,
+        dropout_rate=dropout_rate,
+    )
+
+
 def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     """Parse a 機関要件確認申請書 PDF."""
     import pdfplumber
 
-    departments: list[DepartmentRecord] = []
-    school_name = ""
-    operator_name = ""
-    fiscal_year = ""
-
     with pdfplumber.open(str(pdf_path)) as pdf:
         full_text = ""
+        page_texts: list[str] = []
         for page in pdf.pages:
-            full_text += (page.extract_text() or "") + "\n===PAGE===\n"
+            page_text = page.extract_text() or ""
+            page_texts.append(page_text)
+            full_text += page_text + "\n===PAGE===\n"
 
     # Extract school-level info
-    m = re.search(r"令和\d+年度", full_text)
-    if m:
-        fiscal_year = _norm(m.group(0))
+    school_name = _extract_school_name(full_text)
+    fiscal_year = _extract_fiscal_year(full_text)
+    operator_name = _extract_operator_name(full_text)
 
-    # Extract school name from "名称" field or title
-    m = re.search(r"(?:確認を受けた|学校の)(?:名称|概要).*?名称[：:\s]*(.+?)(?:\n|設置者)", full_text, re.DOTALL)
-    if m:
-        school_name = _norm(m.group(1).split("\n")[0])
+    # Split into department sections
+    # Each department starts with "学科等の情報" section header
+    departments: list[DepartmentRecord] = []
 
-    # Fallback: search for school name pattern
-    if not school_name:
-        m = re.search(r"(?:専門学校|学院|学園|学校)[\s\S]{0,20}(?:名称)[：:\s]*(.+)", full_text)
-        if m:
-            school_name = _norm(m.group(1).split("\n")[0])
+    # Find department section boundaries by looking for "学科等の情報" on each page
+    normed_pages = [_norm(pt) for pt in page_texts]
+    dept_section_starts: list[int] = []
+    for i, page_text in enumerate(normed_pages):
+        if "学科等の情報" in page_text:
+            dept_section_starts.append(i)
 
-    # Extract per-department data
-    # Pattern: each department page has:
-    # 1. 学科名 in the header table
-    # 2. "生徒総定員数 生徒実員 うち留学生数" followed by numbers
-    # 3. "卒業者数 進学者数 就職者数" followed by numbers
+    for idx, start_page in enumerate(dept_section_starts):
+        # Each department section spans from this page to the next section start
+        if idx + 1 < len(dept_section_starts):
+            end_page = dept_section_starts[idx + 1]
+        else:
+            end_page = len(normed_pages)
 
-    # Split into per-department sections by looking for department name patterns
-    # The PDF structure repeats: 分野 -> 課程名 -> 学科名 -> enrollment data
-    sections = re.split(r"===PAGE===", full_text)
+        section_text = "\n".join(normed_pages[start_page:end_page])
+        dept = _parse_department_section(section_text)
+        if dept is not None:
+            departments.append(dept)
 
-    current_dept_name = ""
-    current_course = ""
-    current_day_night = ""
-    current_duration: int | None = None
-
-    for section in sections:
-        lines = section.strip().split("\n")
-
-        # Look for department identification
-        dept_name = ""
-        course = ""
-        day_night = ""
-        duration: int | None = None
-        capacity: int | None = None
-        enrollment: int | None = None
-        intl_students: int | None = None
-        graduates: int | None = None
-        advanced: int | None = None
-        employed: int | None = None
-        other: int | None = None
-        prev_enrollment: int | None = None
-        dropouts: int | None = None
-        dropout_rate: float | None = None
-
-        for i, line in enumerate(lines):
-            line_norm = _norm(line)
-
-            # Find department section: "分野 課程名 学科名" header
-            if "学科名" in line_norm and "分野" in line_norm and not dept_name:
-                # Check if data is on the SAME line (JEC pattern):
-                # "工業 工業専門課程 AIシステム科 ○"
-                if i + 1 < len(lines):
-                    next_line = _norm(lines[i + 1])
-                    # If next line has field+course+dept on one line
-                    parts = next_line.split()
-                    if len(parts) >= 3 and "課程" in next_line:
-                        # Pattern: "分野 課程名 学科名 [○]"
-                        for pi, p in enumerate(parts):
-                            if "課程" in p:
-                                course = p
-                                if pi + 1 < len(parts):
-                                    dept_candidate = parts[pi + 1]
-                                    if dept_candidate not in ("○", ""):
-                                        dept_name = dept_candidate
-                                break
-                    elif next_line and "修業" not in next_line and "昼夜" not in next_line:
-                        # Tohogakuen pattern: dept name alone on next line
-                        dept_name = next_line
-                        # Course on the line after that
-                        if i + 2 < len(lines):
-                            course_line = _norm(lines[i + 2])
-                            cm2 = re.search(r"([\u4e00-\u9fff]+(?:専門)?課程)", course_line)
-                            if cm2:
-                                course = cm2.group(1)
-
-            # Course name (standalone)
-            if not course:
-                cm = re.search(r"(?:課程名|課程)[：:\s]+(.+)", line_norm)
-                if cm:
-                    course = _norm(cm.group(1))
-
-            # Day/night and duration
-            if not day_night:
-                dnm = re.search(r"(\d+)年\s*(昼|夜)", line_norm)
-                if dnm:
-                    duration = int(dnm.group(1))
-                    day_night = dnm.group(2)
-                else:
-                    dnm2 = re.search(r"(昼|夜)\s*.*?(\d+).*?時間", line_norm)
-                    if dnm2:
-                        day_night = dnm2.group(1)
-
-            # Enrollment data: "生徒総定員数 生徒実員 うち留学生数"
-            if "生徒総定員" in line_norm or "定員数" in line_norm:
-                # Numbers on this line or next line
-                nums = _extract_ints(line_norm)
-                if len(nums) >= 3:
-                    capacity, enrollment, intl_students = nums[0], nums[1], nums[2]
-                elif i + 1 < len(lines):
-                    next_nums = _extract_ints(lines[i + 1])
-                    if len(next_nums) >= 3:
-                        capacity, enrollment, intl_students = next_nums[0], next_nums[1], next_nums[2]
-
-            # Graduate data: "卒業者数 進学者数 就職者数"
-            if "卒業者数" in line_norm and "進学" in line_norm:
-                nums = _extract_ints(line_norm)
-                if len(nums) >= 3:
-                    graduates, advanced, employed = nums[0], nums[1], nums[2]
-                    if len(nums) >= 4:
-                        other = nums[3]
-                elif i + 1 < len(lines):
-                    next_nums = _extract_ints(lines[i + 1])
-                    if len(next_nums) >= 3:
-                        graduates, advanced, employed = next_nums[0], next_nums[1], next_nums[2]
-                        if len(next_nums) >= 4:
-                            other = next_nums[3]
-
-            # Dropout data
-            if "中退者" in line_norm or "中退率" in line_norm:
-                nums = _extract_ints(line_norm)
-                if nums:
-                    prev_enrollment = nums[0] if len(nums) >= 1 else None
-                    dropouts = nums[1] if len(nums) >= 2 else None
-                # Dropout rate
-                rm = re.search(r"(\d+\.?\d*)\s*[%％]", line_norm)
-                if rm:
-                    dropout_rate = float(rm.group(1))
-
-        # If we found a department with enrollment data, record it
-        if dept_name and enrollment is not None:
-            # Clean department name (remove embedded day/night info)
-            dept_clean = re.sub(r"\n.*", "", dept_name)
-            dept_clean = re.sub(r"[（(].*?[）)]$", "", dept_clean).strip()
-
-            departments.append(DepartmentRecord(
-                name=dept_clean,
-                course_name=course if course else None,
-                duration_years=duration,
-                day_or_evening=day_night if day_night else None,
-                capacity=capacity,
-                enrollment=enrollment,
-                intl_students=intl_students,
-                graduates=graduates,
-                advanced=advanced,
-                employed=employed,
-                other=other,
-                prev_enrollment=prev_enrollment,
-                dropouts=dropouts,
-                dropout_rate=dropout_rate,
-            ))
-
-    log.info("pdf_parsed", path=str(pdf_path), school=school_name, departments=len(departments))
+    log.info(
+        "pdf_parsed",
+        path=str(pdf_path),
+        school=school_name,
+        departments=len(departments),
+    )
 
     return SchoolAnnotation(
         school_name=school_name,

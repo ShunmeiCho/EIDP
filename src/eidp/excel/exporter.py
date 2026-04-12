@@ -1,0 +1,375 @@
+"""Excel exporter -- generates master workbook from PostgreSQL database.
+
+Produces 4 sheets matching the legacy format:
+  Sheet 1: 採録状況 (10 cols)
+  Sheet 2: 対象比率 (22 cols)
+  Sheet 3: 学科別 (83 cols, multi-row header)
+  Sheet 4: 在籍のみ抜粋 (19 cols, multi-row header)
+"""
+
+from pathlib import Path
+
+import openpyxl
+import structlog
+from openpyxl.worksheet.worksheet import Worksheet
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+log = structlog.get_logger()
+
+FISCAL_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025]
+ENROLLMENT_YEARS = [2019, 2020, 2021, 2022, 2023, 2024]
+
+# 学科別: year block fields (DB column order)
+YEAR_BLOCK_FIELDS = [
+    "capacity", "enrollment", "intl_students", "graduates",
+    "advanced", "employed", "other", "prev_enrollment",
+    "dropouts", "dropout_rate",
+]
+# Excel headers for year block columns
+YEAR_BLOCK_HEADERS = [
+    "収定", "在籍", "留学生", "卒業", "進学", "就職",
+    "その他", "前年在籍", "中退", "中退率",
+]
+
+
+def _write_sairoku(ws: Worksheet, session: Session) -> int:
+    """Sheet 1: 採録状況 -- school collection status per year.
+
+    Returns the number of data rows written.
+    """
+    headers = ["都道府県", "法人名", "学校名"] + [f"{y}年度" for y in FISCAL_YEARS]
+    ws.append(headers)
+
+    query = text("""
+        SELECT
+            s.prefecture,
+            s.corporation_name,
+            s.school_name,
+            MAX(CASE WHEN sys.fiscal_year = 2019 THEN sys.legacy_status END) AS y2019,
+            MAX(CASE WHEN sys.fiscal_year = 2020 THEN sys.legacy_status END) AS y2020,
+            MAX(CASE WHEN sys.fiscal_year = 2021 THEN sys.legacy_status END) AS y2021,
+            MAX(CASE WHEN sys.fiscal_year = 2022 THEN sys.legacy_status END) AS y2022,
+            MAX(CASE WHEN sys.fiscal_year = 2023 THEN sys.legacy_status END) AS y2023,
+            MAX(CASE WHEN sys.fiscal_year = 2024 THEN sys.legacy_status END) AS y2024,
+            MAX(CASE WHEN sys.fiscal_year = 2025 THEN sys.legacy_status END) AS y2025
+        FROM school s
+        JOIN school_year_status sys ON sys.school_id = s.id
+        GROUP BY s.id, s.prefecture, s.corporation_name, s.school_name
+        ORDER BY s.id
+    """)
+
+    rows = session.execute(query).fetchall()
+    for row in rows:
+        ws.append(list(row))
+
+    count = len(rows)
+    log.info("sairoku_exported", rows=count)
+    return count
+
+
+def _write_taisho_hiritu(ws: Worksheet, session: Session) -> int:
+    """Sheet 2: 対象比率 -- support recipient data.
+
+    Returns the number of data rows written.
+    """
+    headers = [
+        "番号", "年度", "学校番号", "都道府県", "法人名", "学校名",
+        "前年在籍", "前半期", "第\u2160区分", "第\u2161区分", "第\u2162区分", "第\u2163区分",
+        "後半期", "第\u2160区分", "第\u2161区分", "第\u2162区分", "第\u2163区分",
+        "年間", "家計急変多子世帯", "総計", "備考", "受給比率",
+    ]
+    ws.append(headers)
+
+    query = text("""
+        SELECT
+            sr.id,
+            sr.fiscal_year,
+            sr.school_number,
+            s.prefecture,
+            s.corporation_name,
+            s.school_name,
+            sr.prev_enrollment,
+            sr.first_half_total,
+            sr.first_half_cat1,
+            sr.first_half_cat2,
+            sr.first_half_cat3,
+            sr.first_half_cat4,
+            sr.second_half_total,
+            sr.second_half_cat1,
+            sr.second_half_cat2,
+            sr.second_half_cat3,
+            sr.second_half_cat4,
+            sr.annual_total,
+            sr.household_change,
+            sr.grand_total,
+            sr.notes,
+            sr.recipient_rate
+        FROM support_recipient sr
+        JOIN school s ON s.id = sr.school_id
+        ORDER BY sr.id
+    """)
+
+    rows = session.execute(query).fetchall()
+    for row in rows:
+        raw = list(row)
+        # Format fiscal_year as "XXXX年度"
+        raw[1] = f"{raw[1]}年度" if raw[1] else raw[1]
+        ws.append(raw)
+
+    count = len(rows)
+    log.info("taisho_hiritu_exported", rows=count)
+    return count
+
+
+def _write_gakka(ws: Worksheet, session: Session) -> int:
+    """Sheet 3: 学科別 -- department yearly data with multi-row header.
+
+    Row 1: year group labels (merged spans in original, None-padded here)
+    Row 2: field name headers
+    Data rows start at row 3.
+
+    Returns the number of data rows written.
+    """
+    # Row 1: year group header
+    row1 = [None] * 7  # key columns have no year label
+    for year in FISCAL_YEARS:
+        label = f"{year}年度"
+        if year == 2019:
+            block_size = 10
+        else:
+            block_size = 11
+        row1.append(label)
+        row1.extend([None] * (block_size - 1))
+    ws.append(row1)
+
+    # Row 2: field name header
+    row2 = ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限"]
+    for year in FISCAL_YEARS:
+        row2.extend(YEAR_BLOCK_HEADERS)
+        if year >= 2020:
+            row2.append("備考")
+    ws.append(row2)
+
+    # Data query: join department + department_yearly (pivoted)
+    query = text("""
+        SELECT
+            s.prefecture,
+            s.corporation_name,
+            s.school_name,
+            d.course_name,
+            d.canonical_name,
+            d.course_type,
+            d.duration_years,
+            d.id AS dept_id
+        FROM department d
+        JOIN school s ON s.id = d.school_id
+        ORDER BY s.id, d.id
+    """)
+
+    depts = session.execute(query).fetchall()
+
+    # Pre-fetch all yearly data keyed by (department_id, fiscal_year)
+    yearly_query = text("""
+        SELECT
+            department_id, fiscal_year,
+            capacity, enrollment, intl_students, graduates,
+            advanced, employed, other, prev_enrollment,
+            dropouts, dropout_rate, notes
+        FROM department_yearly
+        WHERE is_current = true
+        ORDER BY department_id, fiscal_year
+    """)
+    yearly_rows = session.execute(yearly_query).fetchall()
+
+    yearly_map: dict[tuple[int, int], tuple] = {}
+    for yr in yearly_rows:
+        yearly_map[(yr[0], yr[1])] = yr[2:]  # skip dept_id and fiscal_year
+
+    count = 0
+    for dept in depts:
+        prefecture, corp, school, course, dept_name, day_night, duration, dept_id = dept
+        row: list = [prefecture, corp, school, course, dept_name, day_night, duration]
+
+        for year in FISCAL_YEARS:
+            yd = yearly_map.get((dept_id, year))
+            if yd is not None:
+                # yd = (capacity, enrollment, intl, graduates, advanced, employed,
+                #        other, prev_enrollment, dropouts, dropout_rate, notes)
+                row.extend(list(yd[:10]))  # 10 numeric fields
+                if year >= 2020:
+                    row.append(yd[10])  # notes
+            else:
+                if year == 2019:
+                    row.extend([None] * 10)
+                else:
+                    row.extend([None] * 11)
+
+        ws.append(row)
+        count += 1
+
+    log.info("gakka_exported", rows=count)
+    return count
+
+
+def _write_zaiseki(ws: Worksheet, session: Session) -> int:
+    """Sheet 4: 在籍のみ抜粋 -- enrollment-only extract.
+
+    Multi-row header:
+      Row 1: group labels (在籍者数, 留学生数)
+      Row 2: key + year column headers
+    Data starts row 3. Uses years 2019-2024.
+
+    Returns the number of data rows written.
+    """
+    # Row 1: group header
+    row1 = [None] * 7  # key columns
+    row1.append("在籍者数")
+    row1.extend([None] * 5)  # 6 years total, first label already placed
+    row1.append("留学生数")
+    row1.extend([None] * 5)
+    ws.append(row1)
+
+    # Row 2: field names
+    row2 = ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限"]
+    for year in ENROLLMENT_YEARS:
+        row2.append(f"{year}年度")
+    for year in ENROLLMENT_YEARS:
+        row2.append(f"{year}年度")
+    ws.append(row2)
+
+    # Data query: department joined with yearly enrollment/intl_students
+    query = text("""
+        SELECT
+            s.prefecture,
+            s.corporation_name,
+            s.school_name,
+            d.course_name,
+            d.canonical_name,
+            d.course_type,
+            d.duration_years,
+            d.id AS dept_id
+        FROM department d
+        JOIN school s ON s.id = d.school_id
+        ORDER BY s.id, d.id
+    """)
+    depts = session.execute(query).fetchall()
+
+    # Pre-fetch enrollment data for 2019-2024
+    yearly_query = text("""
+        SELECT department_id, fiscal_year, enrollment, intl_students
+        FROM department_yearly
+        WHERE is_current = true AND fiscal_year BETWEEN 2019 AND 2024
+        ORDER BY department_id, fiscal_year
+    """)
+    yearly_rows = session.execute(yearly_query).fetchall()
+
+    enroll_map: dict[tuple[int, int], tuple[int | None, int | None]] = {}
+    for yr in yearly_rows:
+        enroll_map[(yr[0], yr[1])] = (yr[2], yr[3])
+
+    count = 0
+    for dept in depts:
+        prefecture, corp, school, course, dept_name, day_night, duration, dept_id = dept
+        row: list = [prefecture, corp, school, course, dept_name, day_night, duration]
+
+        # Enrollment values for 2019-2024
+        for year in ENROLLMENT_YEARS:
+            data = enroll_map.get((dept_id, year))
+            row.append(data[0] if data else None)
+
+        # International student values for 2019-2024
+        for year in ENROLLMENT_YEARS:
+            data = enroll_map.get((dept_id, year))
+            row.append(data[1] if data else None)
+
+        ws.append(row)
+        count += 1
+
+    log.info("zaiseki_exported", rows=count)
+    return count
+
+
+def export_master_workbook(session: Session, output_path: Path) -> dict[str, int]:
+    """Generate the master Excel workbook from database.
+
+    Args:
+        session: SQLAlchemy session connected to the EIDP database.
+        output_path: Where to write the .xlsx file.
+
+    Returns:
+        Dict mapping sheet name to number of data rows exported.
+    """
+    log.info("export_start", output=str(output_path))
+
+    wb = openpyxl.Workbook()
+
+    # Sheet 1: 採録状況
+    ws_sairoku = wb.active
+    ws_sairoku.title = "採録状況"
+    sairoku_count = _write_sairoku(ws_sairoku, session)
+
+    # Sheet 2: 対象比率
+    ws_taisho = wb.create_sheet("対象比率")
+    taisho_count = _write_taisho_hiritu(ws_taisho, session)
+
+    # Sheet 3: 学科別
+    ws_gakka = wb.create_sheet("学科別")
+    gakka_count = _write_gakka(ws_gakka, session)
+
+    # Sheet 4: 在籍のみ抜粋
+    ws_zaiseki = wb.create_sheet("在籍のみ抜粋")
+    zaiseki_count = _write_zaiseki(ws_zaiseki, session)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(str(output_path))
+    wb.close()
+
+    results = {
+        "採録状況": sairoku_count,
+        "対象比率": taisho_count,
+        "学科別": gakka_count,
+        "在籍のみ抜粋": zaiseki_count,
+    }
+    log.info("export_complete", results=results, output=str(output_path))
+    return results
+
+
+def diff_workbooks(exported_path: Path, original_path: Path) -> dict[str, dict[str, int]]:
+    """Compare row counts between exported and original Excel files.
+
+    Args:
+        exported_path: Path to the exported workbook.
+        original_path: Path to the original reference workbook.
+
+    Returns:
+        Dict mapping sheet name to {exported, original, diff}.
+    """
+    wb_exp = openpyxl.load_workbook(exported_path, read_only=True, data_only=True)
+    wb_orig = openpyxl.load_workbook(original_path, read_only=True, data_only=True)
+
+    results: dict[str, dict[str, int]] = {}
+
+    all_sheets = set(wb_exp.sheetnames) | set(wb_orig.sheetnames)
+    for name in sorted(all_sheets):
+        exp_rows = 0
+        orig_rows = 0
+
+        if name in wb_exp.sheetnames:
+            ws = wb_exp[name]
+            exp_rows = ws.max_row or 0
+
+        if name in wb_orig.sheetnames:
+            ws = wb_orig[name]
+            orig_rows = ws.max_row or 0
+
+        results[name] = {
+            "exported": exp_rows,
+            "original": orig_rows,
+            "diff": exp_rows - orig_rows,
+        }
+
+    wb_exp.close()
+    wb_orig.close()
+
+    return results
