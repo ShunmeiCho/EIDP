@@ -101,6 +101,7 @@ class Document(Base):
 
     __table_args__ = (
         UniqueConstraint("school_id", "file_hash"),
+        UniqueConstraint("school_id", "source_url", name="uq_document_school_url"),
         {"comment": "PDF document registry"},
     )
 

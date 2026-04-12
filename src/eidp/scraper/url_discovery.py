@@ -373,6 +373,12 @@ async def verify_urls_async(
         headers={"User-Agent": "EIDP-DataCollector/1.0 (institutional research)"},
     ) as client:
         for site in unverified:
+            if not _is_safe_url(site.url):
+                site.http_status = -2
+                stats["failed"] += 1
+                stats["checked"] += 1
+                log.warning("ssrf_blocked_verify", url=site.url, school_id=site.school_id)
+                continue
             try:
                 resp = await client.head(site.url)
                 site.http_status = resp.status_code
@@ -417,6 +423,13 @@ def verify_urls_sync(
         for site in unverified:
             from datetime import datetime, timezone
 
+            if not _is_safe_url(site.url):
+                site.http_status = -2
+                site.last_checked = datetime.now(timezone.utc)
+                stats["failed"] += 1
+                stats["checked"] += 1
+                log.warning("ssrf_blocked_verify", url=site.url, school_id=site.school_id)
+                continue
             try:
                 # Try HEAD first, fall back to GET if 405/403
                 resp = client.head(site.url)

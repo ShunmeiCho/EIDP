@@ -134,6 +134,9 @@ def verify_identity(
             typer.echo("\nGATE: PASS")
         else:
             typer.echo(f"\nGATE: FAIL (truly_unresolved={result['truly_unresolved']}, target_gap={result['target_list_gap']})")
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
 
@@ -423,6 +426,9 @@ def export_excel(
         typer.echo(f"Exported to: {output}")
         for sheet, count in results.items():
             typer.echo(f"  {sheet}: {count} rows")
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
 

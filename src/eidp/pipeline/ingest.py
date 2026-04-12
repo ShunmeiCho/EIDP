@@ -30,28 +30,37 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     at least enrollment for every department. Support-recipient data
     is always committed when available (school-level, not dept-level).
     """
-    stats = {"departments_created": 0, "yearly_upserted": 0, "skipped": 0, "support_recipient": 0}
+    stats = {"departments_created": 0, "yearly_upserted": 0, "skipped": 0, "support_recipient": 0,
+             "skip_reason": None}
 
     if not doc.file_path:
+        doc.ingest_status = "no_file"
         stats["skipped"] = 1
+        stats["skip_reason"] = "no_file"
         return stats
 
     pdf_path = Path(doc.file_path)
     if not pdf_path.exists():
         log.warning("pdf_not_found", path=str(pdf_path), doc_id=doc.id)
+        doc.ingest_status = "no_file"
         stats["skipped"] = 1
+        stats["skip_reason"] = "no_file"
         return stats
 
     # Skip image-only PDFs (need OCR fallback, not yet implemented)
     if doc.content_type == "image":
         log.info("image_pdf_skipped", doc_id=doc.id, path=str(pdf_path))
+        doc.ingest_status = "image_only"
         stats["skipped"] = 1
+        stats["skip_reason"] = "image_only"
         return stats
 
     # Skip non-target documents
     if doc.pdf_type == "non_target":
         log.info("non_target_skipped", doc_id=doc.id, path=str(pdf_path))
+        doc.ingest_status = "non_target"
         stats["skipped"] = 1
+        stats["skip_reason"] = "non_target"
         return stats
 
     # Parse PDF
@@ -79,42 +88,38 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     # Determine fiscal year early �� needed for both dept and support_recipient paths
     fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
 
-    # Quality gate: check department data quality before committing
-    # Requirements:
+    # Quality gate: partial ingest — accept valid depts, skip invalid ones
+    # Requirements per dept:
     # 1. Fiscal year must be extracted (otherwise data goes to wrong year)
-    # 2. Every dept must have enrollment (minimum viable data)
-    # 3. Every dept must have a non-empty name (identity integrity)
-    dept_data_usable = False
+    # 2. Dept must have enrollment (minimum viable data)
+    # 3. Dept must have a non-empty name >= 2 chars (identity integrity)
+    valid_depts: list = []
     if annotation.departments and fiscal_year:
         valid_depts = [
             d for d in annotation.departments
             if d.enrollment is not None and d.name and len(d.name) >= 2
         ]
-        dept_data_usable = len(valid_depts) == len(annotation.departments)
-        if not dept_data_usable:
-            log.warning("low_quality_parse",
+        skipped_depts = len(annotation.departments) - len(valid_depts)
+        if skipped_depts > 0:
+            log.warning("partial_parse",
                         path=str(pdf_path), doc_id=doc.id,
                         total_depts=len(annotation.departments),
                         valid_depts=len(valid_depts),
+                        skipped_depts=skipped_depts,
                         fiscal_year=fiscal_year)
     elif annotation.departments and not fiscal_year:
         log.warning("no_fiscal_year_parsed",
                     path=str(pdf_path), doc_id=doc.id,
                     depts=len(annotation.departments))
 
-    if not dept_data_usable and not annotation.support_recipient:
+    if not valid_depts and not annotation.support_recipient:
         log.warning("no_usable_data_parsed", path=str(pdf_path), doc_id=doc.id)
+        doc.ingest_status = "parse_failed"
         stats["skipped"] = 1
+        stats["skip_reason"] = "no_data"
         return stats
 
-    if not dept_data_usable:
-        # Skip department ingestion but continue to support_recipient below
-        pass
-    else:
-        # Ingest department data — only when quality gate passes
-        pass
-
-    for dept_record in (annotation.departments if dept_data_usable else []):
+    for dept_record in valid_depts:
         # Find or create department — match full natural key to avoid collapsing
         # same-name departments with different course_type/duration
         dept = (
@@ -291,11 +296,15 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
     - 'ingested': successfully processed
     - 'school_mismatch': parsed school_name didn't match target
     - 'parse_failed': parser returned no usable data
+    - 'no_file': file_path missing or file not on disk
+    - 'image_only': image-only PDF, needs OCR
+    - 'non_target': not a target disclosure document
     - 'transient_error': network/IO error, can be retried
     """
     total_stats = {"processed": 0, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
 
-    # Find documents not yet ingested
+    # Find documents eligible for ingestion
+    # Skip: ingested, school_mismatch, parse_failed, no_file, image_only, non_target, permanent_error
     from sqlalchemy import or_
     docs = (
         session.query(Document)
@@ -323,17 +332,24 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             nested.commit()
 
             # Mark ingest_status based on result
+            # ingest_document may have already set a specific status (school_mismatch,
+            # no_file, image_only, non_target, parse_failed). Only override if not set.
             if stats.get("yearly_upserted", 0) > 0 or stats.get("support_recipient", 0) > 0:
                 doc.ingest_status = "ingested"
-            elif stats.get("skipped", 0) > 0:
+            elif stats.get("skipped", 0) > 0 and not doc.ingest_status:
                 doc.ingest_status = "parse_failed"
 
             total_stats["processed"] += 1
             for k in ("departments_created", "yearly_upserted", "skipped"):
                 total_stats[k] += stats.get(k, 0)
-        except Exception:
+        except (OSError, IOError):
             nested.rollback()
             doc.ingest_status = "transient_error"
+            total_stats["skipped"] += 1
+            log.exception("document_ingest_io_error", doc_id=doc.id, path=doc.file_path)
+        except Exception:
+            nested.rollback()
+            doc.ingest_status = "permanent_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
 

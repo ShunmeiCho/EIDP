@@ -182,7 +182,7 @@ def _parse_department_section(
         # Pattern: "N年 昼" on same line, or "N年" and "昼/夜" separate
         if not duration:
             dm = re.search(r"(\d+)\s*年", line_norm)
-            if dm and "修業" in line_norm or (dm and "昼" in line_norm):
+            if dm and ("修業" in line_norm or "昼" in line_norm):
                 duration = int(dm.group(1))
             elif dm and i > 0 and "修業" in normed_lines[i - 1]:
                 duration = int(dm.group(1))
@@ -258,8 +258,8 @@ def _parse_department_section(
         # -- Dropout data --
         # 中途退学の現状 section
         if "中途退学" in line_norm or "中退率" in line_norm:
-            # Look for the data row with numbers
-            for j in range(i, min(i + 5, len(normed_lines))):
+            # Look for the data row with numbers (start from next line to skip header)
+            for j in range(i + 1, min(i + 6, len(normed_lines))):
                 data_line = normed_lines[j]
                 # Dropout rate with % sign
                 rm = re.search(r"(\d+\.?\d*)\s*[%％]", data_line)
@@ -526,7 +526,8 @@ def _extract_dept_identity_from_table(page) -> tuple[str, str, int | None, str]:
                 day_night = "夜"
 
         return dept_name, course_name, duration, day_night
-    except Exception:
+    except Exception as e:
+        log.warning("table_extract_failed", error=str(e), error_type=type(e).__name__)
         return "", "", None, ""
 
 
@@ -556,7 +557,13 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
         normed_pages = [_norm(pt) for pt in page_texts]
         dept_section_starts: list[int] = []
         for i, page_text in enumerate(normed_pages):
-            if "分野" in page_text and "学科名" in page_text and "生徒総定員" in page_text:
+            # Require at least 2 of 3 markers (some PDFs split markers across tables/pages)
+            markers = sum([
+                "分野" in page_text,
+                "学科名" in page_text,
+                "生徒総定員" in page_text,
+            ])
+            if markers >= 2:
                 dept_section_starts.append(i)
 
         for idx, start_page in enumerate(dept_section_starts):

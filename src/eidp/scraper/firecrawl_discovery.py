@@ -17,6 +17,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Document, School, SchoolSite
+from eidp.scraper.url_discovery import _is_safe_url
 
 log = structlog.get_logger()
 
@@ -74,8 +75,11 @@ def _firecrawl_map(
             # API returns list of URL strings
             links = data.get("links", [])
             return [url if isinstance(url, str) else url.get("url", "") for url in links]
+    except httpx.HTTPStatusError as e:
+        log.warning("firecrawl_map_http_error", url=base_url, status=e.response.status_code, error=str(e))
+        return []
     except Exception as e:
-        log.warning("firecrawl_map_error", url=base_url, error=str(e))
+        log.warning("firecrawl_map_error", url=base_url, error=str(e), error_type=type(e).__name__)
         return []
 
 
@@ -106,9 +110,9 @@ def discover_pdfs_for_corporation(
             limit=200,
         )
 
-    # Split into PDF URLs and page URLs
-    pdf_links = [u for u in pdf_urls if u.endswith(".pdf")]
-    page_links = [u for u in pdf_urls if not u.endswith(".pdf")]
+    # Split into PDF URLs and page URLs, filtering unsafe URLs
+    pdf_links = [u for u in pdf_urls if u.endswith(".pdf") and u and _is_safe_url(u)]
+    page_links = [u for u in pdf_urls if not u.endswith(".pdf") and u and _is_safe_url(u)]
 
     log.info("firecrawl_corp_results",
              domain=corp_domain,
@@ -131,22 +135,23 @@ def discover_pdfs_for_corporation(
         matched = False
 
         # First: match PDF URLs by school name in URL path
+        # Store as SchoolSite (not Document) because the PDF isn't downloaded yet.
+        # pdf_discovery will later find these URLs and create proper Documents.
         for pdf_url in pdf_links:
             url_norm = _norm(pdf_url)
             if any(sn in url_norm for sn in short_names if len(sn) >= 4):
-                # Direct PDF match
-                existing = session.query(Document).filter(
-                    Document.school_id == school.id, Document.source_url == pdf_url
+                existing = session.query(SchoolSite).filter(
+                    SchoolSite.school_id == school.id, SchoolSite.url == pdf_url
                 ).first()
                 if not existing:
-                    doc = Document(
+                    site = SchoolSite(
                         school_id=school.id,
-                        source_url=pdf_url,
-                        discovered_from=corp_domain,
-                        pdf_type="target",
+                        url=pdf_url,
+                        url_type="school",
+                        discovery_method="firecrawl_map",
                         confidence=0.9,
                     )
-                    session.add(doc)
+                    session.add(site)
                 matched = True
                 stats["matched"] += 1
                 break

@@ -75,7 +75,7 @@ class SchoolResolver:
         Levels 3-4 record a SchoolAlias so the mapping is visible and auditable.
         Level 5 (auto-create) only fires when the school name is completely new.
         """
-        if not school_name:
+        if not school_name or len(school_name.strip()) < 2:
             return None
 
         # Level 1: exact match
