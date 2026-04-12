@@ -46,13 +46,13 @@ def _write_sairoku(ws: Worksheet, session: Session) -> int:
             s.prefecture,
             s.corporation_name,
             s.school_name,
-            MAX(CASE WHEN sys.fiscal_year = 2019 THEN sys.legacy_status END) AS y2019,
-            MAX(CASE WHEN sys.fiscal_year = 2020 THEN sys.legacy_status END) AS y2020,
-            MAX(CASE WHEN sys.fiscal_year = 2021 THEN sys.legacy_status END) AS y2021,
-            MAX(CASE WHEN sys.fiscal_year = 2022 THEN sys.legacy_status END) AS y2022,
-            MAX(CASE WHEN sys.fiscal_year = 2023 THEN sys.legacy_status END) AS y2023,
-            MAX(CASE WHEN sys.fiscal_year = 2024 THEN sys.legacy_status END) AS y2024,
-            MAX(CASE WHEN sys.fiscal_year = 2025 THEN sys.legacy_status END) AS y2025
+            MAX(CASE WHEN sys.fiscal_year = 2019 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2019,
+            MAX(CASE WHEN sys.fiscal_year = 2020 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2020,
+            MAX(CASE WHEN sys.fiscal_year = 2021 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2021,
+            MAX(CASE WHEN sys.fiscal_year = 2022 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2022,
+            MAX(CASE WHEN sys.fiscal_year = 2023 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2023,
+            MAX(CASE WHEN sys.fiscal_year = 2024 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2024,
+            MAX(CASE WHEN sys.fiscal_year = 2025 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2025
         FROM school s
         JOIN school_year_status sys ON sys.school_id = s.id
         GROUP BY s.id, s.prefecture, s.corporation_name, s.school_name

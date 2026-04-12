@@ -74,29 +74,44 @@ def _extract_fiscal_year(full_text: str) -> str:
     After NFKC normalization this becomes "令和7年6月27日".
     We extract the year number and produce "令和7年度".
 
-    Some PDFs (Tohogakuen, TCA) don't include the cover page with 令和 dates.
-    For those, we look for western calendar dates (e.g. "2025.5.23") and convert
-    to the Japanese fiscal year: 令和N年 = (western_year - 2018)年.
+    Priority order:
+    1. 令和N年度 — direct, highest confidence
+    2. 令和N年M月D日 — filing date on cover page
+    3. Western date "YYYY.M.D" — filing date pattern (not stray year references)
+    4. Most frequent western year — fallback, excludes future years
     """
     normed = _norm(full_text)
 
-    # Pattern 1: 令和N年度 (direct match)
+    # Pattern 1: 令和N年度 (direct match, highest confidence)
     m = re.search(r"令和(\d+)年度", normed)
     if m:
         return f"令和{m.group(1)}年度"
 
-    # Pattern 2: 令和N年M月D日 (date on cover page, extract year)
+    # Pattern 2: 令和N年M月D日 (filing date, extract year)
     m = re.search(r"令和(\d+)年\d+月\d+日", normed)
     if m:
         return f"令和{m.group(1)}年度"
 
-    # Pattern 3: Western calendar date (e.g. "2025.5.23" or "2025年")
-    # Convert to 令和: 令和N年 = (western_year - 2018)年
-    # Use the MAXIMUM year found to get the filing year
-    years = re.findall(r"(202[0-9])[\.\s年/]", normed)
-    if years:
-        western_year = max(int(y) for y in years)
+    # Pattern 3: Western filing date "YYYY.M.D" or "YYYY/M/D" pattern
+    # These are actual filing dates, not stray year references in policy text
+    filing_dates = re.findall(r"(202[0-9])[./]\d{1,2}[./]\d{1,2}", normed)
+    if filing_dates:
+        # Use the first filing date found (typically on the cover page)
+        western_year = int(filing_dates[0])
         reiwa_year = western_year - 2018
+        if reiwa_year > 0:
+            return f"令和{reiwa_year}年度"
+
+    # Pattern 4: Most frequent western year (fallback)
+    # Exclude years beyond current+1 to avoid future policy references like "2027年度決算"
+    from collections import Counter
+    import datetime
+    max_valid_year = datetime.date.today().year + 1
+    all_years = re.findall(r"(202[0-9])[\.\s年/]", normed)
+    valid_years = [int(y) for y in all_years if int(y) <= max_valid_year]
+    if valid_years:
+        most_common = Counter(valid_years).most_common(1)[0][0]
+        reiwa_year = most_common - 2018
         if reiwa_year > 0:
             return f"令和{reiwa_year}年度"
 

@@ -61,16 +61,27 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
 
     # Quality gate: check department data quality before committing
+    # Requirements:
+    # 1. Fiscal year must be extracted (otherwise data goes to wrong year)
+    # 2. Every dept must have enrollment (minimum viable data)
+    # 3. Every dept must have a non-empty name (identity integrity)
     dept_data_usable = False
-    if annotation.departments:
-        # Require enrollment for every parsed department (minimum viable data)
-        valid_depts = [d for d in annotation.departments if d.enrollment is not None]
+    if annotation.departments and fiscal_year:
+        valid_depts = [
+            d for d in annotation.departments
+            if d.enrollment is not None and d.name and len(d.name) >= 2
+        ]
         dept_data_usable = len(valid_depts) == len(annotation.departments)
         if not dept_data_usable:
             log.warning("low_quality_parse",
                         path=str(pdf_path), doc_id=doc.id,
                         total_depts=len(annotation.departments),
-                        valid_depts=len(valid_depts))
+                        valid_depts=len(valid_depts),
+                        fiscal_year=fiscal_year)
+    elif annotation.departments and not fiscal_year:
+        log.warning("no_fiscal_year_parsed",
+                    path=str(pdf_path), doc_id=doc.id,
+                    depts=len(annotation.departments))
 
     if not dept_data_usable and not annotation.support_recipient:
         log.warning("no_usable_data_parsed", path=str(pdf_path), doc_id=doc.id)
