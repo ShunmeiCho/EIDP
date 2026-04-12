@@ -475,17 +475,17 @@ def _parse_support_section(page_texts: list[str]) -> SupportRecipientRecord | No
     )
 
 
-def _extract_dept_identity_from_table(page) -> tuple[str, str]:
-    """Extract dept name and course name from pdfplumber table extraction.
+def _extract_dept_identity_from_table(page) -> tuple[str, str, int | None, str]:
+    """Extract dept name, course name, duration, and day/night from table.
 
     Uses structured table parsing which handles multi-line cell content
     correctly, unlike text-based extraction which interleaves columns.
-    Returns (dept_name, course_name).
+    Returns (dept_name, course_name, duration_years, day_night).
     """
     try:
         tables = page.extract_tables()
         if not tables or len(tables[0]) < 2:
-            return "", ""
+            return "", "", None, ""
 
         header_row = tables[0][0]
         data_row = tables[0][1]
@@ -504,9 +504,30 @@ def _extract_dept_identity_from_table(page) -> tuple[str, str]:
         if course_idx is not None and data_row[course_idx]:
             course_name = re.sub(r"\s+", "", data_row[course_idx])
 
-        return dept_name, course_name
+        # Clean dept name: strip schedule/duration suffixes
+        # Pattern: "放送芸術科昼間部(2年制)" -> "放送芸術科"
+        # Pattern: "ゲーム4年制学科（ゲーム企画コース）" -> keep as-is (sub-course is identity)
+        dept_name = re.sub(r"昼間部\(?[\d年制]*\)?$", "", dept_name)
+        dept_name = re.sub(r"夜間部\(?[\d年制]*\)?$", "", dept_name)
+
+        # Extract duration and day/night from table Row 4 if available
+        duration: int | None = None
+        day_night = ""
+        if len(tables[0]) >= 5:
+            row4 = tables[0][4]
+            row4_str = " ".join(str(c or "") for c in row4)
+            row4_clean = re.sub(r"\s+", "", row4_str)
+            dm = re.search(r"(\d+)年", row4_clean)
+            if dm:
+                duration = int(dm.group(1))
+            if "昼" in row4_clean and "昼夜" not in row4_clean:
+                day_night = "昼"
+            elif "夜" in row4_clean and "昼夜" not in row4_clean:
+                day_night = "夜"
+
+        return dept_name, course_name, duration, day_night
     except Exception:
-        return "", ""
+        return "", "", None, ""
 
 
 def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
@@ -545,8 +566,8 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
                 end_page = len(normed_pages)
 
             # Extract dept identity from table (reliable, handles multi-line names)
-            table_dept, table_course = _extract_dept_identity_from_table(
-                page_objects[start_page]
+            table_dept, table_course, table_duration, table_day_night = (
+                _extract_dept_identity_from_table(page_objects[start_page])
             )
 
             section_text = "\n".join(normed_pages[start_page:end_page])
@@ -555,6 +576,12 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
                 table_dept_name=table_dept,
                 table_course_name=table_course,
             )
+            # Override duration/day_night from table if text parsing missed them
+            if dept is not None:
+                if dept.duration_years is None and table_duration is not None:
+                    dept = dept.model_copy(update={"duration_years": table_duration})
+                if not dept.day_or_evening and table_day_night:
+                    dept = dept.model_copy(update={"day_or_evening": table_day_night})
             if dept is not None:
                 departments.append(dept)
 

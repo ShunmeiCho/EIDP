@@ -240,6 +240,11 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
             )
             session.add(new_sys)
 
+    # Write fiscal year back to Document so crawler can filter already-collected schools
+    if fiscal_year:
+        doc.fiscal_year = fiscal_year
+        doc.is_current_year = (fiscal_year >= 2025)
+
     session.flush()
     log.info("document_ingested", doc_id=doc.id, **stats)
     return stats

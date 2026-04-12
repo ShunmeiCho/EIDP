@@ -28,8 +28,15 @@ _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254",
 
 
 def _is_safe_url(url: str) -> bool:
-    """Validate URL is http(s) and not targeting internal/cloud metadata endpoints."""
+    """Validate URL is http(s) and not targeting internal/cloud metadata endpoints.
+
+    Performs DNS resolution to block rebinding-style hostnames (e.g.
+    169.254.169.254.nip.io) that resolve to private/metadata IPs.
+    """
     from urllib.parse import urlparse
+    import ipaddress
+    import socket
+
     try:
         parsed = urlparse(url)
     except Exception:
@@ -41,14 +48,25 @@ def _is_safe_url(url: str) -> bool:
         return False
     if hostname in _BLOCKED_HOSTS:
         return False
-    # Block 10.x, 172.16-31.x, 192.168.x private ranges
-    import ipaddress
+
+    # Check if hostname is a literal IP
     try:
         ip = ipaddress.ip_address(hostname)
         if ip.is_private or ip.is_loopback or ip.is_link_local:
             return False
     except ValueError:
-        pass  # hostname is not an IP, that's fine
+        # hostname is not an IP, resolve DNS to check actual IP
+        try:
+            resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            for _, _, _, _, sockaddr in resolved:
+                addr = sockaddr[0]
+                ip = ipaddress.ip_address(addr)
+                if ip.is_private or ip.is_loopback or ip.is_link_local:
+                    return False
+        except (socket.gaierror, OSError):
+            # DNS resolution failed, reject the URL
+            return False
+
     return True
 
 def _load_corporation_domains() -> dict[str, str]:
