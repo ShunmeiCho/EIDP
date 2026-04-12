@@ -189,7 +189,7 @@ def import_gakka(
         course_name = _safe_str(row[3])  # 課程名
         dept_name = _safe_str(row[4])    # 学科名
         day_night = _safe_str(row[5])    # 昼夜
-        duration = _safe_int(row[6])     # 年限
+        duration = _safe_float(row[6])   # 年限 (supports 1.5, 2.4 etc.)
 
         if not dept_name:
             continue
@@ -211,6 +211,8 @@ def import_gakka(
                     Department.school_id == school_id,
                     Department.canonical_name == dept_name,
                     Department.course_type == (day_night if day_night else None),
+                    Department.course_name == (course_name if course_name else None),
+                    Department.duration_years == duration,
                 )
                 .first()
             )

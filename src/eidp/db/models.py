@@ -107,7 +107,7 @@ class Department(Base):
     course_name: Mapped[str | None] = mapped_column(String(200))  # 課程名
     canonical_name: Mapped[str] = mapped_column(String(200), nullable=False)
     course_type: Mapped[str | None] = mapped_column(String(10))
-    duration_years: Mapped[int | None] = mapped_column(Integer)
+    duration_years: Mapped[float | None] = mapped_column(Numeric(3, 1))
     field_category: Mapped[str | None] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

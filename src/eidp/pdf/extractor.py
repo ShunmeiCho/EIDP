@@ -69,10 +69,14 @@ def _extract_fiscal_year(full_text: str) -> str:
     PDFs use date format like "令和７年６月２７日" (full-width digits).
     After NFKC normalization this becomes "令和7年6月27日".
     We extract the year number and produce "令和7年度".
+
+    Some PDFs (Tohogakuen, TCA) don't include the cover page with 令和 dates.
+    For those, we look for western calendar dates (e.g. "2025.5.23") and convert
+    to the Japanese fiscal year: 令和N年 = (western_year - 2018)年.
     """
     normed = _norm(full_text)
 
-    # Pattern 1: 令和N年度 (direct match, unlikely in these PDFs but safe)
+    # Pattern 1: 令和N年度 (direct match)
     m = re.search(r"令和(\d+)年度", normed)
     if m:
         return f"令和{m.group(1)}年度"
@@ -81,6 +85,16 @@ def _extract_fiscal_year(full_text: str) -> str:
     m = re.search(r"令和(\d+)年\d+月\d+日", normed)
     if m:
         return f"令和{m.group(1)}年度"
+
+    # Pattern 3: Western calendar date (e.g. "2025.5.23" or "2025年")
+    # Convert to 令和: 令和N年 = (western_year - 2018)年
+    # Use the MAXIMUM year found to get the filing year
+    years = re.findall(r"(202[0-9])[\.\s年/]", normed)
+    if years:
+        western_year = max(int(y) for y in years)
+        reiwa_year = western_year - 2018
+        if reiwa_year > 0:
+            return f"令和{reiwa_year}年度"
 
     return ""
 
@@ -139,48 +153,107 @@ def _parse_department_section(section_text: str) -> DepartmentRecord | None:
     for i, line_norm in enumerate(normed_lines):
         # -- Department name from header table --
         # The header line contains: 分野 | 課程名 | 学科名 | 専門士 | 高度専門士
+        # After pdfplumber extraction, the table columns are interleaved as text.
+        # We collect all text between the header and "修業" row, then extract
+        # the course name (contains 課程) and department name from the fragments.
         if "学科名" in line_norm and "分野" in line_norm and not dept_name:
-            # Look at the next few lines for the data rows
-            # Data row contains: field_name | course_name | dept_name | circle marks
-            for j in range(i + 1, min(i + 8, len(normed_lines))):
+            # Collect all lines between header and 修業 row
+            fragments: list[str] = []
+            for j in range(i + 1, min(i + 10, len(normed_lines))):
                 data_line = normed_lines[j]
-                # Skip sub-header lines
-                if "修業" in data_line and "昼夜" in data_line:
+                if "修業" in data_line or "全課程" in data_line:
                     break
-                if "全課程" in data_line or "授業時数" in data_line:
+                if "授業時数" in data_line or "開設" in data_line:
                     break
-                if "開設" in data_line:
-                    break
+                fragments.append(data_line)
 
-                # Look for 課程 keyword to identify the data row
-                cm = re.search(r"([\u4e00-\u9fff\u30fb\u30a0-\u30ff]+課程)", data_line)
-                if cm:
-                    course = cm.group(1)
-                    # Department name comes after the course name
-                    after_course_pos = data_line.index(course) + len(course)
-                    after_course = data_line[after_course_pos:].strip()
-                    # Remove circle marks and dashes
-                    dept_candidate = re.sub(r"[\s○\-－]+$", "", after_course).strip()
-                    if dept_candidate:
-                        dept_name = dept_candidate
-                        # Check if dept name continues on subsequent lines
-                        # (TCA/NKZ pattern: multi-line dept names in table cells)
-                        for k in range(j + 1, min(j + 4, len(normed_lines))):
-                            cont = normed_lines[k].strip()
-                            # Stop at known section boundaries
-                            if any(kw in cont for kw in (
-                                "修業", "昼夜", "全課程", "授業時数",
-                                "開設", "単位時間", "講義", "演習",
-                                "生徒総定員", "専任教員",
-                            )):
-                                break
-                            # Stop at circle/dash only lines
-                            if re.match(r"^[○\-－\s]+$", cont):
-                                break
-                            if not cont:
-                                break
-                            dept_name += cont
-                    break
+            # Reassemble text from fragments.
+            # pdfplumber extracts table columns left-to-right, producing
+            # interleaved text. We need to separate:
+            #   - 分野 (field name) -- discard
+            #   - 課程名 (course name, contains X課程) -- extract
+            #   - 学科名 (department name) -- extract
+            #
+            # Strategy: classify each fragment as course-part, dept-part, or
+            # field-name based on presence of 課程 keyword. Handle multi-line
+            # names by reassembling fragments in the same category.
+
+            # Field name patterns (分野 column values)
+            _field_names_list = [
+                "工業関係", "文化・教養", "文化教養", "工業",
+                "衛生", "商業実務", "教育・社会福祉", "服飾・家政",
+            ]
+
+            # Strategy: First, search for the course name in the ORIGINAL
+            # (un-cleaned) fragment text. The course name is a well-known
+            # pattern like "X専門課程". Then everything else is dept name.
+            #
+            # Common course names:
+            # 工業専門課程, 放送専門課程, 文化・教養専門課程,
+            # デジタル専門課程, etc.
+            all_frag_text = " ".join(fragments)
+            # Find course name in original text (may span fragments)
+            all_frag_joined = re.sub(r"\s+", "", all_frag_text)
+            cm = re.search(
+                r"([\u4e00-\u9fff\u30fb\u30a0-\u30ff]+専門課程"
+                r"|[\u4e00-\u9fff\u30fb\u30a0-\u30ff]+課程)",
+                all_frag_joined,
+            )
+            if cm:
+                course = cm.group(1)
+
+            # Now extract dept name: collect tokens that are NOT part of
+            # the field name or course name
+            dept_tokens: list[str] = []
+
+            for frag in fragments:
+                cleaned = re.sub(r"[○\-－]", "", frag).strip()
+                if not cleaned:
+                    continue
+
+                tokens = cleaned.split()
+                for token in tokens:
+                    token = token.strip()
+                    if not token:
+                        continue
+
+                    # Skip standalone field names
+                    is_field = False
+                    for fn in sorted(_field_names_list, key=len, reverse=True):
+                        if token == fn:
+                            is_field = True
+                            break
+                    if is_field:
+                        continue
+
+                    # Skip tokens that are part of the course name
+                    if course and token in course:
+                        continue
+                    # Skip tokens that are fragments of the course name
+                    # (e.g. "文化・教養専" is prefix of "文化・教養専門課程")
+                    if course:
+                        is_course_frag = False
+                        for fn in sorted(_field_names_list, key=len, reverse=True):
+                            if token.startswith(fn):
+                                remainder = token[len(fn):]
+                                if remainder and remainder in course:
+                                    is_course_frag = True
+                                    break
+                        if is_course_frag:
+                            continue
+                        # Also check if token itself is a substring of course
+                        if len(token) <= len(course) and token in course:
+                            continue
+
+                    dept_tokens.append(token)
+
+            dept_raw = "".join(dept_tokens)
+            # Remove 昼間部(N年制) metadata suffix (Tohogakuen pattern)
+            dept_raw = re.sub(r"昼間部\(?\d*年制?\)?$", "", dept_raw)
+            dept_raw = dept_raw.strip()
+
+            if dept_raw:
+                dept_name = dept_raw
 
         # -- Duration and day/night --
         # Pattern: "N年 昼" on same line, or "N年" and "昼/夜" separate
@@ -309,14 +382,15 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     operator_name = _extract_operator_name(full_text)
 
     # Split into department sections
-    # Each department starts with "学科等の情報" section header
+    # Each department page has "分野" + "学科名" in the header table
     departments: list[DepartmentRecord] = []
 
-    # Find department section boundaries by looking for "学科等の情報" on each page
+    # Find department section boundaries
+    # Look for pages containing both "分野" and "学科名" -- these are dept start pages
     normed_pages = [_norm(pt) for pt in page_texts]
     dept_section_starts: list[int] = []
     for i, page_text in enumerate(normed_pages):
-        if "学科等の情報" in page_text:
+        if "分野" in page_text and "学科名" in page_text and "生徒総定員" in page_text:
             dept_section_starts.append(i)
 
     for idx, start_page in enumerate(dept_section_starts):

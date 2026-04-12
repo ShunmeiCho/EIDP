@@ -145,6 +145,17 @@ def discover_urls(
     batch_size: int = typer.Option(50, help="Batch size for verification"),
 ) -> None:
     """Discover and register school URLs (Step 7)."""
+    try:
+        from eidp.scraper.url_discovery import (
+            get_discovery_stats,
+            import_seed_urls,
+            infer_corporation_urls,
+            verify_urls_sync,
+        )
+    except ImportError as e:
+        typer.echo(f"Missing dependency: {e}. Run: uv sync --extra scraper")
+        raise typer.Exit(1)
+
     from eidp.db.session import SessionLocal
     from eidp.scraper.url_discovery import (
         get_discovery_stats,
@@ -215,6 +226,33 @@ def discover_pdfs(
         stats = run_pdf_discovery(session, storage_dir, batch_size=batch_size, rate_limit=rate_limit)
         session.commit()
         typer.echo(f"\nPDF Discovery Results:")
+        for k, v in stats.items():
+            typer.echo(f"  {k}: {v}")
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
+def ingest_pdfs(
+    batch_size: int = typer.Option(50, help="Number of documents to process"),
+) -> None:
+    """Parse downloaded PDFs and write data to database (Step 9 -> DB)."""
+    try:
+        from eidp.pipeline.ingest import run_ingestion
+    except ImportError as e:
+        typer.echo(f"Missing dependency: {e}. Run: uv sync --extra pdf")
+        raise typer.Exit(1)
+
+    from eidp.db.session import SessionLocal
+
+    session = SessionLocal()
+    try:
+        stats = run_ingestion(session, batch_size=batch_size)
+        session.commit()
+        typer.echo(f"\nIngestion Results:")
         for k, v in stats.items():
             typer.echo(f"  {k}: {v}")
     except Exception:
