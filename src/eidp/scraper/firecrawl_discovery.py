@@ -46,9 +46,10 @@ def _firecrawl_map(
 ) -> list[dict]:
     """Call Firecrawl map API to discover URLs on a site."""
     if not api_key:
-        api_key = os.environ.get("FIRECRAWL_API_KEY", "")
+        from eidp.config import settings
+        api_key = settings.firecrawl_api_key or os.environ.get("FIRECRAWL_API_KEY", "")
     if not api_key:
-        log.warning("firecrawl_api_key_missing")
+        log.warning("firecrawl_api_key_missing", hint="Set EIDP_FIRECRAWL_API_KEY in .env")
         return []
 
     headers = {

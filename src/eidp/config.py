@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     google_cx: str = ""
     serper_api_key: str = ""
 
+    # Firecrawl API (for corporation root URL expansion)
+    firecrawl_api_key: str = ""
+
     model_config = {"env_prefix": "EIDP_", "env_file": ".env", "extra": "ignore"}
 
 
