@@ -141,7 +141,11 @@ def _extract_operator_name(full_text: str) -> str:
     return ""
 
 
-def _parse_department_section(section_text: str) -> DepartmentRecord | None:
+def _parse_department_section(
+    section_text: str,
+    table_dept_name: str = "",
+    table_course_name: str = "",
+) -> DepartmentRecord | None:
     """Parse a single department section from PDF text.
 
     Each department section spans roughly 2 pages and contains:
@@ -150,12 +154,16 @@ def _parse_department_section(section_text: str) -> DepartmentRecord | None:
     3. Enrollment: 生徒総定員数, 生徒実員, うち留学生数
     4. Graduation: 卒業者数, 進学者数, 就職者数, その他
     5. Dropout: 年度当初在学者数, 退学者の数, 中退率
+
+    table_dept_name/table_course_name: pre-extracted from pdfplumber table
+    extraction (reliable). Used directly when available.
     """
     lines = section_text.strip().split("\n")
     normed_lines = [_norm(line) for line in lines]
 
-    dept_name = ""
-    course = ""
+    # Use table-extracted names (reliable) or fall back to text parsing
+    dept_name = table_dept_name
+    course = table_course_name
     day_night = ""
     duration: int | None = None
     capacity: int | None = None
@@ -170,110 +178,6 @@ def _parse_department_section(section_text: str) -> DepartmentRecord | None:
     dropout_rate: float | None = None
 
     for i, line_norm in enumerate(normed_lines):
-        # -- Department name from header table --
-        # The header line contains: 分野 | 課程名 | 学科名 | 専門士 | 高度専門士
-        # After pdfplumber extraction, the table columns are interleaved as text.
-        # We collect all text between the header and "修業" row, then extract
-        # the course name (contains 課程) and department name from the fragments.
-        if "学科名" in line_norm and "分野" in line_norm and not dept_name:
-            # Collect all lines between header and 修業 row
-            fragments: list[str] = []
-            for j in range(i + 1, min(i + 10, len(normed_lines))):
-                data_line = normed_lines[j]
-                if "修業" in data_line or "全課程" in data_line:
-                    break
-                if "授業時数" in data_line or "開設" in data_line:
-                    break
-                fragments.append(data_line)
-
-            # Reassemble text from fragments.
-            # pdfplumber extracts table columns left-to-right, producing
-            # interleaved text. We need to separate:
-            #   - 分野 (field name) -- discard
-            #   - 課程名 (course name, contains X課程) -- extract
-            #   - 学科名 (department name) -- extract
-            #
-            # Strategy: classify each fragment as course-part, dept-part, or
-            # field-name based on presence of 課程 keyword. Handle multi-line
-            # names by reassembling fragments in the same category.
-
-            # Field name patterns (分野 column values)
-            _field_names_list = [
-                "工業関係", "文化・教養", "文化教養", "工業",
-                "衛生", "商業実務", "教育・社会福祉", "服飾・家政",
-            ]
-
-            # Strategy: First, search for the course name in the ORIGINAL
-            # (un-cleaned) fragment text. The course name is a well-known
-            # pattern like "X専門課程". Then everything else is dept name.
-            #
-            # Common course names:
-            # 工業専門課程, 放送専門課程, 文化・教養専門課程,
-            # デジタル専門課程, etc.
-            all_frag_text = " ".join(fragments)
-            # Find course name in original text (may span fragments)
-            all_frag_joined = re.sub(r"\s+", "", all_frag_text)
-            cm = re.search(
-                r"([\u4e00-\u9fff\u30fb\u30a0-\u30ff]+専門課程"
-                r"|[\u4e00-\u9fff\u30fb\u30a0-\u30ff]+課程)",
-                all_frag_joined,
-            )
-            if cm:
-                course = cm.group(1)
-
-            # Now extract dept name: collect tokens that are NOT part of
-            # the field name or course name
-            dept_tokens: list[str] = []
-
-            for frag in fragments:
-                cleaned = re.sub(r"[○\-－]", "", frag).strip()
-                if not cleaned:
-                    continue
-
-                tokens = cleaned.split()
-                for token in tokens:
-                    token = token.strip()
-                    if not token:
-                        continue
-
-                    # Skip standalone field names
-                    is_field = False
-                    for fn in sorted(_field_names_list, key=len, reverse=True):
-                        if token == fn:
-                            is_field = True
-                            break
-                    if is_field:
-                        continue
-
-                    # Skip tokens that are part of the course name
-                    if course and token in course:
-                        continue
-                    # Skip tokens that are fragments of the course name
-                    # (e.g. "文化・教養専" is prefix of "文化・教養専門課程")
-                    if course:
-                        is_course_frag = False
-                        for fn in sorted(_field_names_list, key=len, reverse=True):
-                            if token.startswith(fn):
-                                remainder = token[len(fn):]
-                                if remainder and remainder in course:
-                                    is_course_frag = True
-                                    break
-                        if is_course_frag:
-                            continue
-                        # Also check if token itself is a substring of course
-                        if len(token) <= len(course) and token in course:
-                            continue
-
-                    dept_tokens.append(token)
-
-            dept_raw = "".join(dept_tokens)
-            # Remove 昼間部(N年制) metadata suffix (Tohogakuen pattern)
-            dept_raw = re.sub(r"昼間部\(?\d*年制?\)?$", "", dept_raw)
-            dept_raw = dept_raw.strip()
-
-            if dept_raw:
-                dept_name = dept_raw
-
         # -- Duration and day/night --
         # Pattern: "N年 昼" on same line, or "N年" and "昼/夜" separate
         if not duration:
@@ -571,6 +475,40 @@ def _parse_support_section(page_texts: list[str]) -> SupportRecipientRecord | No
     )
 
 
+def _extract_dept_identity_from_table(page) -> tuple[str, str]:
+    """Extract dept name and course name from pdfplumber table extraction.
+
+    Uses structured table parsing which handles multi-line cell content
+    correctly, unlike text-based extraction which interleaves columns.
+    Returns (dept_name, course_name).
+    """
+    try:
+        tables = page.extract_tables()
+        if not tables or len(tables[0]) < 2:
+            return "", ""
+
+        header_row = tables[0][0]
+        data_row = tables[0][1]
+        h_str = [str(c or "") for c in header_row]
+
+        # Find column indices by header content
+        dept_idx = next((j for j, h in enumerate(h_str) if "学科名" in h), None)
+        course_idx = next((j for j, h in enumerate(h_str) if "課程名" in h), None)
+
+        dept_name = ""
+        course_name = ""
+
+        if dept_idx is not None and data_row[dept_idx]:
+            dept_name = re.sub(r"\s+", "", data_row[dept_idx])
+
+        if course_idx is not None and data_row[course_idx]:
+            course_name = re.sub(r"\s+", "", data_row[course_idx])
+
+        return dept_name, course_name
+    except Exception:
+        return "", ""
+
+
 def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     """Parse a 機関要件確認申請書 PDF."""
     import pdfplumber
@@ -578,39 +516,47 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     with pdfplumber.open(str(pdf_path)) as pdf:
         full_text = ""
         page_texts: list[str] = []
+        page_objects: list = []
         for page in pdf.pages:
             page_text = page.extract_text() or ""
             page_texts.append(page_text)
+            page_objects.append(page)
             full_text += page_text + "\n===PAGE===\n"
 
-    # Extract school-level info
-    school_name = _extract_school_name(full_text)
-    fiscal_year = _extract_fiscal_year(full_text)
-    operator_name = _extract_operator_name(full_text)
+        # Extract school-level info
+        school_name = _extract_school_name(full_text)
+        fiscal_year = _extract_fiscal_year(full_text)
+        operator_name = _extract_operator_name(full_text)
 
-    # Split into department sections
-    # Each department page has "分野" + "学科名" in the header table
-    departments: list[DepartmentRecord] = []
+        # Split into department sections
+        departments: list[DepartmentRecord] = []
 
-    # Find department section boundaries
-    # Look for pages containing both "分野" and "学科名" -- these are dept start pages
-    normed_pages = [_norm(pt) for pt in page_texts]
-    dept_section_starts: list[int] = []
-    for i, page_text in enumerate(normed_pages):
-        if "分野" in page_text and "学科名" in page_text and "生徒総定員" in page_text:
-            dept_section_starts.append(i)
+        # Find department section boundaries
+        normed_pages = [_norm(pt) for pt in page_texts]
+        dept_section_starts: list[int] = []
+        for i, page_text in enumerate(normed_pages):
+            if "分野" in page_text and "学科名" in page_text and "生徒総定員" in page_text:
+                dept_section_starts.append(i)
 
-    for idx, start_page in enumerate(dept_section_starts):
-        # Each department section spans from this page to the next section start
-        if idx + 1 < len(dept_section_starts):
-            end_page = dept_section_starts[idx + 1]
-        else:
-            end_page = len(normed_pages)
+        for idx, start_page in enumerate(dept_section_starts):
+            if idx + 1 < len(dept_section_starts):
+                end_page = dept_section_starts[idx + 1]
+            else:
+                end_page = len(normed_pages)
 
-        section_text = "\n".join(normed_pages[start_page:end_page])
-        dept = _parse_department_section(section_text)
-        if dept is not None:
-            departments.append(dept)
+            # Extract dept identity from table (reliable, handles multi-line names)
+            table_dept, table_course = _extract_dept_identity_from_table(
+                page_objects[start_page]
+            )
+
+            section_text = "\n".join(normed_pages[start_page:end_page])
+            dept = _parse_department_section(
+                section_text,
+                table_dept_name=table_dept,
+                table_course_name=table_course,
+            )
+            if dept is not None:
+                departments.append(dept)
 
     # Extract support recipient data (対象比率 section)
     support_recipient = _parse_support_section(page_texts)
