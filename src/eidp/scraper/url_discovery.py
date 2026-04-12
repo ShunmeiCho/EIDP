@@ -53,6 +53,7 @@ def _is_safe_url(url: str) -> bool:
 
 # Known corporation domain roots (for pattern-based initial discovery)
 CORPORATION_DOMAINS: dict[str, str] = {
+    # Existing mappings
     "大原学園": "https://www.o-hara.ac.jp/",
     "名古屋大原学園": "https://www.o-hara.ac.jp/",
     "三幸学園": "https://www.sanko.ac.jp/",
@@ -64,6 +65,26 @@ CORPORATION_DOMAINS: dict[str, str] = {
     "片柳学園": "https://www.neec.ac.jp/",
     "瀧澤学館": "https://www.takizawa.ac.jp/",
     "巨樹の会": "https://www.kyojunokai.or.jp/",
+    # New mappings (Priority 2 expansion)
+    "立志舎": "https://www.all-japan.ac.jp/",
+    "コミュニケーションアート": "https://www.comart.ac.jp/",
+    "Adachi学園": "https://www.akademeia21.com/",
+    "21世紀アカデメイア": "https://www.akademeia21.com/",
+    "麻生塾": "https://asojuku.ac.jp/",
+    "後藤学園": "https://www.goto.ac.jp/",
+    "河原学園": "https://www.kawahara.ac.jp/",
+    "吉田学園": "https://yoshida-g.ac.jp/",
+    "YIC学院": "https://www.yic.ac.jp/",
+    "ティビィシィ学院": "https://www.tbcgakuin.ac.jp/",
+    "日本教育財団": "https://www.nkz.ac.jp/",
+    "経専学園": "https://keisen-g.com/",
+    "岩崎学園": "https://www.iwasaki.ac.jp/",
+    "滋慶コミュニケーションアート": "https://www.jikei-com-art.ac.jp/",
+    "都築学園": "https://www.tsuzukigakuengroup.com/",
+    "電波学園": "https://www.denpa.jp/",
+    "エイシンカレッジ": "https://www.eishin.ac.jp/",
+    "金井学園": "https://www.kanaigakuen.ac.jp/",
+    "KBC学園": "https://kbcgroup.ac.jp/",
 }
 
 # Common disclosure page path patterns
@@ -196,7 +217,10 @@ def search_and_discover(
 ) -> dict[str, int]:
     """Use search API to discover URLs for schools without any URL.
 
-    Requires EIDP_BRAVE_API_KEY or EIDP_GOOGLE_API_KEY in environment.
+    Uses cascading query strategy:
+    1. "{school_name} 情報公開 高等教育無償化" (most specific)
+    2. "{school_name} 情報公開" (broader)
+    3. "{school_name} 専門学校" (find school homepage)
     """
     import time
 
@@ -230,53 +254,92 @@ def search_and_discover(
     log.info("search_discovery_start", provider=provider.name(), schools=len(schools_without))
 
     for school in schools_without:
-        # Build search query: school name + 情報公開 (disclosure page keyword)
-        query = f"{school.school_name} 情報公開 高等教育無償化"
+        # Cascading query strategy — try specific first, broaden on failure
+        queries = [
+            f"{school.school_name} 情報公開 高等教育無償化",
+            f"{school.school_name} 情報公開",
+            f"{school.school_name} 専門学校",
+        ]
 
-        try:
-            results = provider.search(query, count=3)
-        except Exception as e:
-            log.warning("search_error", school=school.school_name, error=str(e))
-            stats["errors"] += 1
-            continue
+        found = False
+        for query in queries:
+            try:
+                results = provider.search(query, count=3)
+            except Exception as e:
+                log.warning("search_error", school=school.school_name, error=str(e))
+                stats["errors"] += 1
+                time.sleep(rate_limit_delay)
+                break
+
+            if results:
+                # Find the best result (prefer .ac.jp domains and title matches)
+                best = _pick_best_result(results, school)
+                if best and _is_safe_url(best.url):
+                    confidence = _score_search_result(best, school)
+                    site = SchoolSite(
+                        school_id=school.id,
+                        url=best.url,
+                        url_type="school" if school.school_name in best.url else "corporation_subpage",
+                        discovery_method="web_search",
+                        confidence=confidence,
+                    )
+                    session.add(site)
+                    stats["found"] += 1
+                    found = True
+                    break
+
+            time.sleep(rate_limit_delay)
+
+        if not found and stats.get("errors", 0) == 0:
+            stats["no_result"] += 1
 
         stats["searched"] += 1
-
-        if not results:
-            stats["no_result"] += 1
-            continue
-
-        # Take top result as primary URL, with SSRF validation
-        top = results[0]
-        if not _is_safe_url(top.url):
-            stats["errors"] += 1
-            continue
-
-        # Score confidence based on title match
-        confidence = 0.5
-        if school.school_name in top.title:
-            confidence = 0.9
-        elif any(kw in top.title for kw in ["情報公開", "公開情報", "学校情報"]):
-            confidence = 0.8
-        elif school.corporation_name in top.title:
-            confidence = 0.7
-
-        site = SchoolSite(
-            school_id=school.id,
-            url=top.url,
-            url_type="school" if school.school_name in top.url else "corporation_subpage",
-            discovery_method="web_search",
-            confidence=confidence,
-        )
-        session.add(site)
-        stats["found"] += 1
-
-        # Rate limiting: respect 1 req/sec
         time.sleep(rate_limit_delay)
 
     session.flush()
     log.info("search_discovery_complete", **stats)
     return stats
+
+
+def _pick_best_result(
+    results: list,
+    school: "School",
+) -> object | None:
+    """Pick the best search result for a school, preferring .ac.jp domains."""
+    from eidp.scraper.search_provider import SearchResult
+
+    scored: list[tuple[float, SearchResult]] = []
+    for r in results:
+        score = _score_search_result(r, school)
+        scored.append((score, r))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[0][1] if scored else None
+
+
+def _score_search_result(result: object, school: "School") -> float:
+    """Score a search result for relevance to the target school."""
+    score = 0.5
+    title = getattr(result, "title", "")
+    url = getattr(result, "url", "")
+
+    # Name match in title
+    if school.school_name in title:
+        score = 0.9
+    elif school.corporation_name and school.corporation_name in title:
+        score = 0.7
+
+    # Keyword match
+    if any(kw in title for kw in ["情報公開", "公開情報", "学校情報", "機関要件"]):
+        score = min(score + 0.1, 0.99)
+
+    # Domain preference
+    if ".ac.jp" in url:
+        score = min(score + 0.05, 0.99)
+    elif ".ed.jp" in url or ".go.jp" in url:
+        score = min(score + 0.03, 0.99)
+
+    return score
 
 
 async def verify_urls_async(

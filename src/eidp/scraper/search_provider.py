@@ -118,10 +118,10 @@ class DuckDuckGoProvider(SearchProvider):
 
     def search(self, query: str, count: int = 5) -> list[SearchResult]:
         try:
-            from ddgs import DDGS
+            from duckduckgo_search import DDGS
         except ImportError:
             raise ImportError(
-                "ddgs package not installed. Run: uv sync --extra scraper"
+                "duckduckgo_search package not installed. Run: uv pip install duckduckgo_search"
             )
 
         results: list[SearchResult] = []
