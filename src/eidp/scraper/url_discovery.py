@@ -51,41 +51,31 @@ def _is_safe_url(url: str) -> bool:
         pass  # hostname is not an IP, that's fine
     return True
 
-# Known corporation domain roots (for pattern-based initial discovery)
-CORPORATION_DOMAINS: dict[str, str] = {
-    # Existing mappings
-    "大原学園": "https://www.o-hara.ac.jp/",
-    "名古屋大原学園": "https://www.o-hara.ac.jp/",
-    "三幸学園": "https://www.sanko.ac.jp/",
-    "穴吹学園": "https://www.anabuki.ac.jp/",
-    "滋慶学園": "https://www.jikeigroup.net/",
-    "東京滋慶学園": "https://www.jikeigroup.net/",
-    "大阪滋慶学園": "https://www.jikeigroup.net/",
-    "国際総合学園": "https://nsg.gr.jp/",
-    "片柳学園": "https://www.neec.ac.jp/",
-    "瀧澤学館": "https://www.takizawa.ac.jp/",
-    "巨樹の会": "https://www.kyojunokai.or.jp/",
-    # New mappings (Priority 2 expansion)
-    "立志舎": "https://www.all-japan.ac.jp/",
-    "コミュニケーションアート": "https://www.comart.ac.jp/",
-    "Adachi学園": "https://www.akademeia21.com/",
-    "21世紀アカデメイア": "https://www.akademeia21.com/",
-    "麻生塾": "https://asojuku.ac.jp/",
-    "後藤学園": "https://www.goto.ac.jp/",
-    "河原学園": "https://www.kawahara.ac.jp/",
-    "吉田学園": "https://yoshida-g.ac.jp/",
-    "YIC学院": "https://www.yic.ac.jp/",
-    "ティビィシィ学院": "https://www.tbcgakuin.ac.jp/",
-    "日本教育財団": "https://www.nkz.ac.jp/",
-    "経専学園": "https://keisen-g.com/",
-    "岩崎学園": "https://www.iwasaki.ac.jp/",
-    "滋慶コミュニケーションアート": "https://www.jikei-com-art.ac.jp/",
-    "都築学園": "https://www.tsuzukigakuengroup.com/",
-    "電波学園": "https://www.denpa.jp/",
-    "エイシンカレッジ": "https://www.eishin.ac.jp/",
-    "金井学園": "https://www.kanaigakuen.ac.jp/",
-    "KBC学園": "https://kbcgroup.ac.jp/",
-}
+def _load_corporation_domains() -> dict[str, str]:
+    """Load corporation -> domain mapping from external CSV.
+
+    CSV path: data/url-discovery/corporation_domains.csv
+    Columns: corporation_name, domain_url, notes
+    """
+    from eidp.config import settings
+
+    csv_path = settings.data_dir / "url-discovery" / "corporation_domains.csv"
+    domains: dict[str, str] = {}
+
+    if not csv_path.exists():
+        log.warning("corporation_domains_csv_not_found", path=str(csv_path))
+        return domains
+
+    with open(csv_path) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            corp = row.get("corporation_name", "").strip()
+            url = row.get("domain_url", "").strip()
+            if corp and url:
+                domains[corp] = url
+
+    log.info("corporation_domains_loaded", count=len(domains), path=str(csv_path))
+    return domains
 
 # Common disclosure page path patterns
 DISCLOSURE_PATHS = [
@@ -177,12 +167,14 @@ def import_seed_urls(
 def infer_corporation_urls(session: Session) -> dict[str, int]:
     """Register corporation domain roots for schools in known groups.
 
+    Reads corporation->domain mapping from data/url-discovery/corporation_domains.csv.
     These are NOT exact page URLs. They are corporation-level entry points
     that Step 8 (PDF discovery) will crawl to find disclosure pages.
     """
     stats = {"inferred": 0, "skipped_has_url": 0}
 
-    for corp_name, domain in CORPORATION_DOMAINS.items():
+    corporation_domains = _load_corporation_domains()
+    for corp_name, domain in corporation_domains.items():
         schools = (
             session.query(School)
             .filter(School.corporation_name == corp_name)
