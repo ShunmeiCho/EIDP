@@ -35,6 +35,9 @@ POSITIVE_KEYWORDS = [
 NEGATIVE_KEYWORDS = [
     "シラバス", "syllabus", "募集要項", "パンフレット",
     "入学案内", "カリキュラム", "時間割",
+    "規程", "規則", "規定", "就業規則", "学則",
+    "事業計画", "事業報告", "財務諸表", "決算",
+    "自己点検", "自己評価", "学校案内", "ガイドブック",
 ]
 
 # User-Agent mimicking a real browser (institutional research)
@@ -235,12 +238,44 @@ def discover_pdfs_for_site(
     return result
 
 
+def _classify_pdf_content(content: bytes) -> str:
+    """Quick-classify PDF content type by sampling first 3 pages.
+
+    Returns: 'target' (申請書), 'non_target' (wrong document), 'image_only' (needs OCR).
+    """
+    try:
+        import pdfplumber
+        import io
+        import unicodedata
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
+            sample_text = ""
+            # Scan up to 5 pages (some formats put markers on later pages)
+            for page in pdf.pages[:5]:
+                sample_text += (page.extract_text() or "") + "\n"
+
+        if not sample_text.strip() or "(cid:" in sample_text:
+            return "image_only"
+
+        # NFKC normalize to handle full-width digits (２→2, etc.)
+        normed = unicodedata.normalize("NFKC", sample_text)
+
+        # Check for target document markers
+        target_markers = ["様式第2号", "機関要件", "修学支援", "生徒総定員", "学科名"]
+        hits = sum(1 for m in target_markers if m in normed)
+        if hits >= 2:
+            return "target"
+
+        return "non_target"
+    except Exception:
+        return "unknown"
+
+
 def download_pdf(
     client: httpx.Client,
     candidate: PdfCandidate,
     storage_dir: Path,
     school_id: int,
-) -> tuple[str | None, str | None, int]:
+) -> tuple[str | None, str | None, int, str]:
     """Download PDF and return (file_path, sha256_hash, file_size)."""
     try:
         resp = client.get(candidate.pdf_url)
@@ -248,14 +283,17 @@ def download_pdf(
 
         content = resp.content
         if len(content) < 1000:  # Too small to be a real PDF
-            return None, None, 0
+            return None, None, 0, "unknown"
 
         # Verify it's actually a PDF
         if not content[:5] == b"%PDF-":
-            return None, None, 0
+            return None, None, 0, "unknown"
 
         file_hash = hashlib.sha256(content).hexdigest()
         file_size = len(content)
+
+        # Quick content validation: check if extractable text contains target keywords
+        pdf_type = _classify_pdf_content(content)
 
         # Storage path: data/pdfs/{school_id}/{hash[:8]}.pdf
         school_dir = storage_dir / str(school_id)
@@ -263,10 +301,10 @@ def download_pdf(
         file_path = school_dir / f"{file_hash[:8]}.pdf"
         file_path.write_bytes(content)
 
-        return str(file_path), file_hash, file_size
+        return str(file_path), file_hash, file_size, pdf_type
 
     except httpx.HTTPError:
-        return None, None, 0
+        return None, None, 0, "unknown"
 
 
 def run_pdf_discovery(
@@ -377,10 +415,15 @@ def run_pdf_discovery(
             # Try downloading top candidates (fallback on 404)
             downloaded = False
             for candidate in viable[:3]:
-                file_path, file_hash, file_size = download_pdf(
+                file_path, file_hash, file_size, pdf_type = download_pdf(
                     client, candidate, storage_dir, site.school_id,
                 )
                 if file_path:
+                    # Skip non-target PDFs (wrong document type)
+                    if pdf_type == "non_target":
+                        log.info("non_target_pdf_skipped", school_id=site.school_id, url=candidate.pdf_url)
+                        continue
+
                     # Check for duplicate hash
                     existing = (
                         session.query(Document)
@@ -390,6 +433,7 @@ def run_pdf_discovery(
                     if existing:
                         stats["skipped"] += 1
                     else:
+                        content_type = "image" if pdf_type == "image_only" else "text"
                         doc = Document(
                             school_id=site.school_id,
                             source_url=candidate.pdf_url,
@@ -397,8 +441,8 @@ def run_pdf_discovery(
                             file_path=file_path,
                             file_hash=file_hash,
                             file_size=file_size,
-                            content_type="text",  # assumed; OCR fallback updates later
-                            pdf_type="機関要件確認申請書" if candidate.score >= 2.0 else None,
+                            content_type=content_type,
+                            pdf_type=pdf_type,
                             confidence=min(candidate.score / 10.0, 0.99),
                             downloaded_at=datetime.now(timezone.utc),
                         )

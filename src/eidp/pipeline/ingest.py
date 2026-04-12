@@ -37,6 +37,18 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         stats["skipped"] = 1
         return stats
 
+    # Skip image-only PDFs (need OCR fallback, not yet implemented)
+    if doc.content_type == "image":
+        log.info("image_pdf_skipped", doc_id=doc.id, path=str(pdf_path))
+        stats["skipped"] = 1
+        return stats
+
+    # Skip non-target documents
+    if doc.pdf_type == "non_target":
+        log.info("non_target_skipped", doc_id=doc.id, path=str(pdf_path))
+        stats["skipped"] = 1
+        return stats
+
     # Parse PDF
     annotation = parse_pdf(pdf_path)
 

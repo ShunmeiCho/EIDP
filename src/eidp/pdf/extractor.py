@@ -50,6 +50,10 @@ def _extract_school_name(full_text: str) -> str:
         name = m.group(1).strip()
         # Remove trailing labels that might be on the same line
         name = re.sub(r"\s*(?:設置者名|設置者|学校法人).*$", "", name)
+        # Remove leading noise like "称】" from broken table extraction
+        name = re.sub(r"^[称名】\]]+\s*", "", name)
+        # Remove trailing "校長 XXX" pattern
+        name = re.sub(r"\s*校長\s*.*$", "", name)
         if name:
             return name
 
