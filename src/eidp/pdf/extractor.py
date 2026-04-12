@@ -297,35 +297,44 @@ def _parse_department_section(section_text: str) -> DepartmentRecord | None:
                     capacity, enrollment, intl_students = nums[0], nums[1], nums[2]
 
         # -- Graduation data --
-        # 卒業者数 | 進学者数 | 就職者数 header, then numbers below
-        if "卒業者数" in line_norm and "進学" in line_norm:
-            nums = _extract_ints(line_norm)
-            if len(nums) >= 3:
-                graduates, advanced, employed = nums[0], nums[1], nums[2]
-                if len(nums) >= 4:
-                    other = nums[3]
-            elif i + 1 < len(normed_lines):
-                next_nums = _extract_ints(normed_lines[i + 1])
-                if len(next_nums) >= 3:
-                    graduates, advanced, employed = (
-                        next_nums[0], next_nums[1], next_nums[2]
-                    )
-                    if len(next_nums) >= 4:
-                        other = next_nums[3]
-
-        # Match standalone graduation numbers line with percentages
-        # Pattern: "118人 3人 101人 14人" or "118 (100%) 3 (2.5%) ..."
-        if graduates is None and i > 0:
-            prev = normed_lines[i - 1] if i > 0 else ""
-            if "卒業者数" in prev and "進学" in prev:
-                nums = _extract_ints(line_norm)
-                if len(nums) >= 6:
-                    # Numbers include percentages: grad, pct, adv, pct, emp, pct, other, pct
-                    graduates = nums[0]
-                    advanced = nums[2]
-                    employed = nums[4]
-                    if len(nums) >= 8:
-                        other = nums[6]
+        # Format in PDF (multi-line header):
+        #   卒業者数、進学者数、就職者数(直近の年度の状況を記載)
+        #             就職者数
+        #   卒業者数 進学者数             その他
+        #             (自営業を含む。)
+        #   76人 5人 69人 2人
+        #   (100%) ( 6.6%) ( 90.8%) ( 2.6%)
+        #
+        # Strategy: find "卒業者数" header line, then scan forward up to 6 lines
+        # for the data row with "N人" pattern (4 numbers = grad, adv, emp, other)
+        if graduates is None and "卒業者数" in line_norm and ("進学" in line_norm or "就職" in line_norm):
+            # Scan forward for the data row
+            for j in range(i, min(i + 7, len(normed_lines))):
+                data_line = normed_lines[j]
+                # Skip header/label lines
+                if any(skip in data_line for skip in ["直近", "自営業", "状況を記載"]):
+                    continue
+                # Look for "N人" pattern (the data row)
+                person_nums = re.findall(r"(\d+)\s*人", data_line)
+                if len(person_nums) >= 3:
+                    graduates = int(person_nums[0])
+                    advanced = int(person_nums[1])
+                    employed = int(person_nums[2])
+                    if len(person_nums) >= 4:
+                        other = int(person_nums[3])
+                    break
+                # Also handle "N (pct%) N (pct%) ..." format
+                if graduates is None:
+                    all_nums = _extract_ints(data_line)
+                    pct_count = len(re.findall(r"\d+\.?\d*\s*[%％]", data_line))
+                    if pct_count >= 3 and len(all_nums) >= 6:
+                        # Interleaved: num, pct, num, pct, num, pct, num, pct
+                        graduates = all_nums[0]
+                        advanced = all_nums[2]
+                        employed = all_nums[4]
+                        if len(all_nums) >= 8:
+                            other = all_nums[6]
+                        break
 
         # -- Dropout data --
         # 中途退学の現状 section
