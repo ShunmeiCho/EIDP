@@ -3,15 +3,153 @@
 Sheets: 採録状況, 対象比率, 学科別, 在籍のみ抜粋 (snapshot, import skipped — re-derivable)
 """
 
+import unicodedata
 from pathlib import Path
 
 import openpyxl
 import structlog
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Department, DepartmentYearly, School, SchoolYearStatus, SupportRecipient
+from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias, SchoolYearStatus, SupportRecipient
 
 log = structlog.get_logger()
+
+
+def _norm(s: str) -> str:
+    """NFKC normalize and strip ALL whitespace for consistent matching.
+
+    Aligned with school_matcher._normalize() to prevent whitespace-based
+    mismatches from creating phantom School rows.
+    """
+    if not s:
+        return ""
+    import re
+    s = unicodedata.normalize("NFKC", s)
+    s = re.sub(r"\s+", "", s)
+    return s
+
+
+class SchoolResolver:
+    """Multi-level school lookup with auto-create for cross-sheet matching.
+
+    Lookup cascade:
+    1. Exact (prefecture, corporation_name, school_name) match
+    2. NFKC-normalized exact match
+    3. (prefecture, school_name) match — handles corporation name variations
+    4. Auto-create new School record from sheet data
+    """
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._exact: dict[tuple[str, str, str], int] = {}
+        self._norm: dict[tuple[str, str, str], int] = {}
+        self._pref_name: dict[tuple[str, str], int] = {}
+        self._name_only: dict[str, list[int]] = {}  # name -> [school_ids]
+        self._auto_created = 0
+
+    def build(self) -> None:
+        """Build all lookup indices from current School table."""
+        schools = self._session.query(School).all()
+        self._name_only.clear()
+        for s in schools:
+            key = (s.prefecture, s.corporation_name, s.school_name)
+            self._exact[key] = s.id
+
+            norm_key = (_norm(s.prefecture), _norm(s.corporation_name), _norm(s.school_name))
+            self._norm[norm_key] = s.id
+
+            pn_key = (_norm(s.prefecture), _norm(s.school_name))
+            if pn_key not in self._pref_name:
+                self._pref_name[pn_key] = s.id
+
+            norm_name = _norm(s.school_name)
+            self._name_only.setdefault(norm_name, []).append(s.id)
+
+        log.info("school_resolver_built", exact=len(self._exact),
+                 norm=len(self._norm), pref_name=len(self._pref_name))
+
+    def resolve(self, prefecture: str, corporation_name: str, school_name: str) -> int | None:
+        """Resolve a school to its DB id using cascading lookup.
+
+        Cascade: exact -> NFKC normalized -> (pref+name) -> name-only (unique) -> auto-create.
+        Levels 3-4 record a SchoolAlias so the mapping is visible and auditable.
+        Level 5 (auto-create) only fires when the school name is completely new.
+        """
+        if not school_name:
+            return None
+
+        # Level 1: exact match
+        key = (prefecture, corporation_name, school_name)
+        sid = self._exact.get(key)
+        if sid is not None:
+            return sid
+
+        # Level 2: NFKC + whitespace-normalized match
+        norm_key = (_norm(prefecture), _norm(corporation_name), _norm(school_name))
+        sid = self._norm.get(norm_key)
+        if sid is not None:
+            self._exact[key] = sid
+            return sid
+
+        # Level 3: (prefecture, school_name) match — corp name differs between sheets
+        pn_key = (_norm(prefecture), _norm(school_name))
+        sid = self._pref_name.get(pn_key)
+        if sid is not None:
+            self._exact[key] = sid
+            self._record_alias(sid, school_name, "pref_name_match")
+            return sid
+
+        # Level 4: name-only match — only when unique (1 school with this name)
+        norm_name = _norm(school_name)
+        candidates = self._name_only.get(norm_name, [])
+        if len(candidates) == 1:
+            sid = candidates[0]
+            self._exact[key] = sid
+            self._record_alias(sid, school_name, "name_only_match")
+            return sid
+
+        # Level 5: auto-create — school name is genuinely new
+        school = School(
+            prefecture=prefecture,
+            corporation_name=corporation_name,
+            school_name=school_name,
+            school_type="専門学校",
+        )
+        self._session.add(school)
+        self._session.flush()
+        self._auto_created += 1
+
+        # Update all indices
+        self._exact[key] = school.id
+        self._norm[norm_key] = school.id
+        if pn_key not in self._pref_name:
+            self._pref_name[pn_key] = school.id
+        self._name_only.setdefault(norm_name, []).append(school.id)
+
+        log.debug("school_auto_created", prefecture=prefecture,
+                  corporation_name=corporation_name, school_name=school_name,
+                  school_id=school.id)
+        return school.id
+
+    def _record_alias(self, school_id: int, alias_name: str, source: str) -> None:
+        """Record a SchoolAlias for audit trail when fuzzy match is used."""
+        existing = (
+            self._session.query(SchoolAlias)
+            .filter(SchoolAlias.school_id == school_id, SchoolAlias.alias_name == alias_name)
+            .first()
+        )
+        if not existing:
+            alias = SchoolAlias(
+                school_id=school_id,
+                alias_name=alias_name,
+                alias_type="cross_sheet",
+                source=source,
+            )
+            self._session.add(alias)
+
+    @property
+    def auto_created_count(self) -> int:
+        return self._auto_created
 
 # Year columns in 採録状況 (0-indexed from col B onward, after key columns)
 SAIROKU_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025]
@@ -172,13 +310,13 @@ def import_sairoku(ws: openpyxl.worksheet.worksheet.Worksheet, session: Session)
 def import_gakka(
     ws: openpyxl.worksheet.worksheet.Worksheet,
     session: Session,
-    school_lookup: dict[tuple[str, str, str], int],
+    resolver: SchoolResolver,
 ) -> dict[str, int]:
     """Import 学科別 sheet -> department + department_yearly tables.
 
     Multi-row header: row 1 = year groups, row 2 = field names. Data starts row 3.
     """
-    stats = {"departments": 0, "yearly_rows": 0, "school_misses": 0, "yearly_dupes": 0}
+    stats = {"departments": 0, "yearly_rows": 0, "school_misses": 0, "yearly_dupes": 0, "auto_created": 0}
     dept_cache: dict[tuple[int, str, str, str | None, int | None], int] = {}
     yearly_seen: set[tuple[int, int]] = set()  # (department_id, fiscal_year)
 
@@ -189,13 +327,14 @@ def import_gakka(
         course_name = _safe_str(row[3])  # 課程名
         dept_name = _safe_str(row[4])    # 学科名
         day_night = _safe_str(row[5])    # 昼夜
-        duration = _safe_float(row[6])   # 年限 (supports 1.5, 2.4 etc.)
+        duration_raw = _safe_float(row[6])   # 年限 (supports 1.5, 2.4 etc.)
+        # Round to 1 decimal to match DB Numeric(3,1) precision
+        duration = round(duration_raw, 1) if duration_raw is not None else None
 
         if not dept_name:
             continue
 
-        school_key = (prefecture, corp_name, school_name)
-        school_id = school_lookup.get(school_key)
+        school_id = resolver.resolve(prefecture, corp_name, school_name)
         if school_id is None:
             stats["school_misses"] += 1
             continue
@@ -323,7 +462,7 @@ def import_gakka(
 def import_taisho_hiritu(
     ws: openpyxl.worksheet.worksheet.Worksheet,
     session: Session,
-    school_lookup: dict[tuple[str, str, str], int],
+    resolver: SchoolResolver,
 ) -> dict[str, int]:
     """Import 対象比率 sheet -> support_recipient table.
 
@@ -332,7 +471,7 @@ def import_taisho_hiritu(
     前年在籍, 前半期, 第Ⅰ区分x4, 後半期, 第Ⅰ区分x4,
     年間, 家計急変多子世帯, 総計, 備考, 受給比率
     """
-    stats = {"rows": 0, "school_misses": 0, "duplicates": 0}
+    stats = {"rows": 0, "school_misses": 0, "duplicates": 0, "auto_created": 0}
     seen: set[tuple[int, int]] = set()  # (school_id, fiscal_year)
 
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -349,8 +488,7 @@ def import_taisho_hiritu(
         if fiscal_year is None:
             continue
 
-        school_key = (prefecture, corp_name, school_name)
-        school_id = school_lookup.get(school_key)
+        school_id = resolver.resolve(prefecture, corp_name, school_name)
         if school_id is None:
             stats["school_misses"] += 1
             continue
@@ -450,25 +588,31 @@ def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
         ws_sairoku = wb["採録状況"]
         results["採録状況"] = import_sairoku(ws_sairoku, session)
 
-        # Build school lookup for subsequent sheets
-        schools = session.query(School).all()
-        school_lookup: dict[tuple[str, str, str], int] = {
-            (s.prefecture, s.corporation_name, s.school_name): s.id for s in schools
-        }
-        log.info("school_lookup_built", size=len(school_lookup))
+        # Build multi-level school resolver for cross-sheet matching
+        resolver = SchoolResolver(session)
+        resolver.build()
 
         # Sheet 2: 対象比率 -> support_recipient
         ws_taisho = wb["対象比率"]
-        results["対象比率"] = import_taisho_hiritu(ws_taisho, session, school_lookup)
+        results["対象比率"] = import_taisho_hiritu(ws_taisho, session, resolver)
+        results["対象比率"]["auto_created"] = resolver.auto_created_count
+
+        # Rebuild resolver indices after sheet 2 auto-creates
+        if resolver.auto_created_count > 0:
+            resolver.build()
+
+        pre_gakka_auto = resolver.auto_created_count
 
         # Sheet 3: 学科別 -> department + department_yearly
         ws_gakka = wb["学科別"]
-        results["学科別"] = import_gakka(ws_gakka, session, school_lookup)
+        results["学科別"] = import_gakka(ws_gakka, session, resolver)
+        results["学科別"]["auto_created"] = resolver.auto_created_count - pre_gakka_auto
 
         # Sheet 4: 在籍のみ抜粋 — snapshot, skip import (re-derivable from department_yearly)
         results["在籍のみ抜粋"] = {"skipped": 1, "reason": "re-derivable from department_yearly"}
 
-        log.info("import_complete", results=results)
+        log.info("import_complete", results=results,
+                 total_auto_created=resolver.auto_created_count)
         return results
     finally:
         wb.close()

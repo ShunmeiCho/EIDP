@@ -17,7 +17,7 @@ from pathlib import Path
 
 import structlog
 
-from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation
+from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
 
 log = structlog.get_logger()
 
@@ -368,6 +368,185 @@ def _parse_department_section(section_text: str) -> DepartmentRecord | None:
     )
 
 
+def _safe_int_from_text(text: str) -> int | None:
+    """Extract a single integer from text like '342 人' or '-人'. Returns None for '-'."""
+    cleaned = text.replace(",", "").replace("，", "").strip()
+    if cleaned in ("-", "－", "―", ""):
+        return None
+    nums = re.findall(r"\d+", cleaned)
+    if nums:
+        return int(nums[0])
+    return None
+
+
+def _parse_support_section(page_texts: list[str]) -> SupportRecipientRecord | None:
+    """Parse 対象比率 section from PDF pages.
+
+    Finds the page containing "前年度の授業料等減免対象者" and extracts:
+    - 支援対象者数: first_half / second_half / annual totals
+    - 第I~IV区分: category breakdowns
+    - 家計急変: household change count
+    - 合計(年間): grand total
+
+    Page detection: tries （別紙） anchor first (appendix marker),
+    falls back to keyword detection. Handles multi-page appendix sections.
+    """
+    # Find the target page(s)
+    target_page_idx = None
+
+    # Strategy 1: Look for （別紙） anchor page with support recipient markers
+    for i, pt in enumerate(page_texts):
+        normed = _norm(pt)
+        if "別紙" in normed and "授業料等減免対象者" in normed:
+            target_page_idx = i
+            break
+
+    # Strategy 2: Fall back to keyword detection
+    if target_page_idx is None:
+        for i, pt in enumerate(page_texts):
+            normed = _norm(pt)
+            if "前年度の授業料等減免対象者" in normed and "支援対象者数" in normed:
+                target_page_idx = i
+                break
+
+    if target_page_idx is None:
+        return None
+
+    # Combine target page + next page for multi-page appendix handling
+    combined = page_texts[target_page_idx]
+    if target_page_idx + 1 < len(page_texts):
+        combined += "\n" + page_texts[target_page_idx + 1]
+    normed = _norm(combined)
+    lines = normed.split("\n")
+
+    first_half_total: int | None = None
+    second_half_total: int | None = None
+    annual_total: int | None = None
+    cat1_first: int | None = None
+    cat1_second: int | None = None
+    cat2_first: int | None = None
+    cat2_second: int | None = None
+    cat3_first: int | None = None
+    cat3_second: int | None = None
+    cat4_first: int | None = None
+    cat4_second: int | None = None
+    household_change: int | None = None
+    grand_total: int | None = None
+
+    for i, line in enumerate(lines):
+        # Support recipients total line:
+        # "※括弧内は多子世帯の学生等(内数) 342 人 (-人) 328 人 (11人) 350 人 (15人)"
+        if "支援対象者数" in line or ("括弧内は多子世帯" in line and "人" in line):
+            # Extract all numbers (ignoring parenthetical multi-child counts)
+            # Pattern: N 人 (Xperson) N 人 (Xperson) N 人 (Xperson)
+            # We want the main numbers, not the parenthetical ones
+            # Remove parenthetical content first
+            cleaned = re.sub(r"\([^)]*\)", "", line)
+            nums = re.findall(r"(\d+)\s*人", cleaned)
+            if len(nums) >= 3:
+                first_half_total = int(nums[0])
+                second_half_total = int(nums[1])
+                annual_total = int(nums[2])
+            elif len(nums) >= 2:
+                first_half_total = int(nums[0])
+                second_half_total = int(nums[1])
+
+        # Category lines: "第I区分 177 人 166 人"
+        # With next-line continuation for wrapped layouts
+        if "第I区分" in line and "第II" not in line and "第III" not in line and "第IV" not in line:
+            nums = re.findall(r"(\d+)\s*人", line)
+            if len(nums) >= 2:
+                cat1_first = int(nums[0])
+                cat1_second = int(nums[1])
+            elif len(nums) >= 1:
+                cat1_first = int(nums[0])
+            elif i + 1 < len(lines):
+                next_nums = re.findall(r"(\d+)\s*人", lines[i + 1])
+                if len(next_nums) >= 2:
+                    cat1_first = int(next_nums[0])
+                    cat1_second = int(next_nums[1])
+
+        if "第II区分" in line:
+            nums = re.findall(r"(\d+)\s*人", line)
+            if len(nums) >= 2:
+                cat2_first = int(nums[0])
+                cat2_second = int(nums[1])
+            elif len(nums) >= 1:
+                cat2_first = int(nums[0])
+            elif i + 1 < len(lines):
+                next_nums = re.findall(r"(\d+)\s*人", lines[i + 1])
+                if len(next_nums) >= 2:
+                    cat2_first = int(next_nums[0])
+                    cat2_second = int(next_nums[1])
+
+        if "第III区分" in line:
+            nums = re.findall(r"(\d+)\s*人", line)
+            if len(nums) >= 2:
+                cat3_first = int(nums[0])
+                cat3_second = int(nums[1])
+            elif len(nums) >= 1:
+                cat3_first = int(nums[0])
+            elif i + 1 < len(lines):
+                next_nums = re.findall(r"(\d+)\s*人", lines[i + 1])
+                if len(next_nums) >= 2:
+                    cat3_first = int(next_nums[0])
+                    cat3_second = int(next_nums[1])
+
+        if "第IV区分" in line and "理工農" in line:
+            nums = re.findall(r"(\d+)\s*人", line)
+            if len(nums) >= 2:
+                cat4_first = int(nums[0])
+                cat4_second = int(nums[1])
+            elif len(nums) >= 1:
+                cat4_first = int(nums[0])
+            elif i + 1 < len(lines):
+                next_nums = re.findall(r"(\d+)\s*人", lines[i + 1])
+                if len(next_nums) >= 2:
+                    cat4_first = int(next_nums[0])
+                    cat4_second = int(next_nums[1])
+
+        # Household change: "家計急変による\n0 人 (0人)"
+        # Skip the disclaimer line "※家計急変による者を除く"
+        if "家計急変" in line and "除く" not in line:
+            # Number might be on this line or the next
+            cleaned_line = re.sub(r"\([^)]*\)", "", line)
+            nums = re.findall(r"(\d+)\s*人", cleaned_line)
+            if nums:
+                household_change = int(nums[0])
+            elif i + 1 < len(lines):
+                next_line = re.sub(r"\([^)]*\)", "", lines[i + 1])
+                next_nums = re.findall(r"(\d+)\s*人", next_line)
+                if next_nums:
+                    household_change = int(next_nums[0])
+
+        # Grand total: "合計(年間) 350 人 (15人)"
+        if "合計" in line and "年間" in line:
+            cleaned = re.sub(r"\([^)]*\)", "", line)
+            nums = re.findall(r"(\d+)\s*人", cleaned)
+            if nums:
+                grand_total = int(nums[0])
+
+    # Only return if we got meaningful data
+    if first_half_total is None and second_half_total is None and grand_total is None:
+        return None
+
+    return SupportRecipientRecord(
+        first_half_total=first_half_total,
+        first_half_cat1=cat1_first,
+        first_half_cat2=cat2_first,
+        first_half_cat3=cat3_first,
+        first_half_cat4=cat4_first,
+        second_half_total=second_half_total,
+        second_half_cat1=cat1_second,
+        second_half_cat2=cat2_second,
+        second_half_cat3=cat3_second,
+        second_half_cat4=cat4_second,
+        annual_total=annual_total,
+        household_change=household_change,
+        grand_total=grand_total,
+    )
+
+
 def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     """Parse a 機関要件確認申請書 PDF."""
     import pdfplumber
@@ -409,11 +588,15 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
         if dept is not None:
             departments.append(dept)
 
+    # Extract support recipient data (対象比率 section)
+    support_recipient = _parse_support_section(page_texts)
+
     log.info(
         "pdf_parsed",
         path=str(pdf_path),
         school=school_name,
         departments=len(departments),
+        has_support_data=support_recipient is not None,
     )
 
     return SchoolAnnotation(
@@ -423,4 +606,5 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
         fiscal_year=fiscal_year,
         source_pdf=pdf_path.name,
         departments=departments,
+        support_recipient=support_recipient,
     )

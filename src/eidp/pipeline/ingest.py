@@ -10,7 +10,7 @@ from pathlib import Path
 import structlog
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Department, DepartmentYearly, Document, SchoolYearStatus
+from eidp.db.models import Department, DepartmentYearly, Document, SchoolYearStatus, SupportRecipient
 from eidp.pdf.extractor import parse_pdf
 from eidp.pdf.schema import SchoolAnnotation
 
@@ -141,6 +141,54 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
             session.add(dy)
 
             stats["yearly_upserted"] += 1
+
+    # Ingest support recipient data (対象比率)
+    # Non-destructive: only overwrite fields where PDF value is not None,
+    # preserving existing Excel-imported data for fields the parser couldn't extract.
+    if fiscal_year and annotation.support_recipient:
+        sr_data = annotation.support_recipient
+        existing_sr = (
+            session.query(SupportRecipient)
+            .filter(
+                SupportRecipient.school_id == doc.school_id,
+                SupportRecipient.fiscal_year == fiscal_year,
+            )
+            .first()
+        )
+
+        sr_fields = {
+            "first_half_total": sr_data.first_half_total,
+            "first_half_cat1": sr_data.first_half_cat1,
+            "first_half_cat2": sr_data.first_half_cat2,
+            "first_half_cat3": sr_data.first_half_cat3,
+            "first_half_cat4": sr_data.first_half_cat4,
+            "second_half_total": sr_data.second_half_total,
+            "second_half_cat1": sr_data.second_half_cat1,
+            "second_half_cat2": sr_data.second_half_cat2,
+            "second_half_cat3": sr_data.second_half_cat3,
+            "second_half_cat4": sr_data.second_half_cat4,
+            "annual_total": sr_data.annual_total,
+            "household_change": sr_data.household_change,
+            "grand_total": sr_data.grand_total,
+        }
+
+        if existing_sr:
+            existing_sr.document_id = doc.id
+            # Only overwrite fields that have non-None PDF values
+            for field_name, pdf_value in sr_fields.items():
+                if pdf_value is not None:
+                    setattr(existing_sr, field_name, pdf_value)
+            existing_sr.extraction_confidence = 0.85
+        else:
+            sr = SupportRecipient(
+                school_id=doc.school_id,
+                document_id=doc.id,
+                fiscal_year=fiscal_year,
+                extraction_confidence=0.85,
+                **{k: v for k, v in sr_fields.items()},
+            )
+            session.add(sr)
+        stats["support_recipient"] = 1
 
     # Update school_year_status
     if fiscal_year:
