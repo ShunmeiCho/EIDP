@@ -171,10 +171,19 @@ def discover_pdfs_for_site(
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
         try:
             robots_resp = client.get(robots_url)
-            if robots_resp.status_code == 200 and "Disallow: /" in robots_resp.text:
-                # Full site disallow — skip but don't error
-                result.error = "robots.txt disallows crawling"
-                return result
+            if robots_resp.status_code == 200:
+                # Only block on full-site disallow for all user agents
+                lines = robots_resp.text.strip().split("\n")
+                in_wildcard = False
+                for line in lines:
+                    line = line.strip()
+                    if line.lower().startswith("user-agent:") and "*" in line:
+                        in_wildcard = True
+                    elif line.lower().startswith("user-agent:"):
+                        in_wildcard = False
+                    elif in_wildcard and line.strip() == "Disallow: /":
+                        result.error = "robots.txt disallows all crawling"
+                        return result
         except httpx.HTTPError:
             pass  # No robots.txt or unreachable, proceed
 
