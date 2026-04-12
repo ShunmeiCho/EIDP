@@ -24,8 +24,13 @@ def _norm(s: str) -> str:
 
 
 def ingest_document(session: Session, doc: Document) -> dict[str, int]:
-    """Parse a downloaded PDF and write extracted data to DB."""
-    stats = {"departments_created": 0, "yearly_upserted": 0, "skipped": 0}
+    """Parse a downloaded PDF and write extracted data to DB.
+
+    Quality gate: only commit department data when the parser extracts
+    at least enrollment for every department. Support-recipient data
+    is always committed when available (school-level, not dept-level).
+    """
+    stats = {"departments_created": 0, "yearly_upserted": 0, "skipped": 0, "support_recipient": 0}
 
     if not doc.file_path:
         stats["skipped"] = 1
@@ -52,15 +57,34 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     # Parse PDF
     annotation = parse_pdf(pdf_path)
 
-    if not annotation.departments:
-        log.warning("no_departments_parsed", path=str(pdf_path), doc_id=doc.id)
+    # Determine fiscal year early — needed for both dept and support_recipient paths
+    fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
+
+    # Quality gate: check department data quality before committing
+    dept_data_usable = False
+    if annotation.departments:
+        # Require enrollment for every parsed department (minimum viable data)
+        valid_depts = [d for d in annotation.departments if d.enrollment is not None]
+        dept_data_usable = len(valid_depts) == len(annotation.departments)
+        if not dept_data_usable:
+            log.warning("low_quality_parse",
+                        path=str(pdf_path), doc_id=doc.id,
+                        total_depts=len(annotation.departments),
+                        valid_depts=len(valid_depts))
+
+    if not dept_data_usable and not annotation.support_recipient:
+        log.warning("no_usable_data_parsed", path=str(pdf_path), doc_id=doc.id)
         stats["skipped"] = 1
         return stats
 
-    # Determine fiscal year
-    fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
+    if not dept_data_usable:
+        # Skip department ingestion but continue to support_recipient below
+        pass
+    else:
+        # Ingest department data — only when quality gate passes
+        pass
 
-    for dept_record in annotation.departments:
+    for dept_record in (annotation.departments if dept_data_usable else []):
         # Find or create department — match full natural key to avoid collapsing
         # same-name departments with different course_type/duration
         dept = (
@@ -75,18 +99,9 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
             .first()
         )
 
-        if not dept:
-            # Try relaxed match (name-only) if strict match fails
-            # This handles cases where PDF parser couldn't extract all disambiguators
-            dept = (
-                session.query(Department)
-                .filter(
-                    Department.school_id == doc.school_id,
-                    Department.canonical_name == _norm(dept_record.name),
-                )
-                .first()
-            )
-
+        # No name-only fallback: if the full natural key doesn't match,
+        # create a new department rather than risking cross-linking data
+        # to the wrong department (Codex P1-2 fix).
         if not dept:
             dept = Department(
                 school_id=doc.school_id,
@@ -234,21 +249,22 @@ def _parse_fiscal_year_from_annotation(year_str: str) -> int | None:
 
 
 def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
-    """Ingest all un-ingested documents."""
+    """Ingest all un-ingested documents.
+
+    Uses pdf_type as ingestion status marker:
+    - 'target' or None: eligible for ingestion
+    - 'ingested': successfully processed (dept or support_recipient data written)
+    - 'parse_failed': parser returned no usable data, won't be retried
+    - 'non_target', 'image_only': skipped by ingest_document
+    """
     total_stats = {"processed": 0, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
 
-    # Find documents not yet ingested (no department_yearly with their document_id)
-    from sqlalchemy import func
-    ingested_doc_ids = (
-        session.query(DepartmentYearly.document_id)
-        .filter(DepartmentYearly.document_id.isnot(None))
-        .distinct()
-    )
+    # Find documents not yet ingested: have a file path and pdf_type is 'target' or NULL
     docs = (
         session.query(Document)
         .filter(
             Document.file_path.isnot(None),
-            ~Document.id.in_(ingested_doc_ids),
+            Document.pdf_type.in_(["target", None]),
         )
         .limit(batch_size)
         .all()
@@ -258,17 +274,25 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
 
     for doc in docs:
         try:
-            # Use a savepoint so one bad doc doesn't abort the whole batch
             nested = session.begin_nested()
             stats = ingest_document(session, doc)
             nested.commit()
+
+            # Mark document as processed based on result
+            if stats.get("yearly_upserted", 0) > 0 or stats.get("support_recipient", 0) > 0:
+                doc.pdf_type = "ingested"
+            elif stats.get("skipped", 0) > 0:
+                doc.pdf_type = "parse_failed"
+
             total_stats["processed"] += 1
             for k in ("departments_created", "yearly_upserted", "skipped"):
-                total_stats[k] += stats[k]
+                total_stats[k] += stats.get(k, 0)
         except Exception:
             nested.rollback()
+            doc.pdf_type = "parse_failed"
             total_stats["skipped"] += 1
             log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
 
+    session.flush()
     log.info("ingestion_complete", **total_stats)
     return total_stats

@@ -23,6 +23,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import CrawlJob, Document, SchoolSite
+from eidp.scraper.url_discovery import _is_safe_url
 
 log = structlog.get_logger()
 
@@ -168,6 +169,11 @@ def discover_pdfs_for_site(
     result = DiscoveryResult(school_id=school_id)
 
     try:
+        # SSRF validation: reject internal/metadata URLs
+        if not _is_safe_url(site_url):
+            result.error = "unsafe_url"
+            return result
+
         # Check robots.txt (best effort, non-blocking)
         from urllib.parse import urlparse
         parsed = urlparse(site_url)
@@ -210,6 +216,8 @@ def discover_pdfs_for_site(
         if not candidates and max_depth > 0:
             subpages = _find_subpage_links(html, site_url)
             for sub_url in subpages:
+                if not _is_safe_url(sub_url):
+                    continue
                 try:
                     time.sleep(1.0)  # Per-request delay
                     sub_resp = client.get(sub_url)
@@ -277,6 +285,8 @@ def download_pdf(
     school_id: int,
 ) -> tuple[str | None, str | None, int, str]:
     """Download PDF and return (file_path, sha256_hash, file_size)."""
+    if not _is_safe_url(candidate.pdf_url):
+        return None, None, 0, "unknown"
     try:
         resp = client.get(candidate.pdf_url)
         resp.raise_for_status()
