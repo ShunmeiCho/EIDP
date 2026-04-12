@@ -166,6 +166,17 @@ def discover_urls(
 
         session.commit()
 
+        # Phase 2.5: Web search discovery (if API key configured)
+        from eidp.config import settings
+        if settings.brave_api_key or settings.google_api_key:
+            from eidp.scraper.url_discovery import search_and_discover
+            typer.echo(f"Running web search ({settings.search_provider})...")
+            search_stats = search_and_discover(session, batch_size=batch_size)
+            session.commit()
+            typer.echo(f"Web search: {search_stats}")
+        else:
+            typer.echo("(No search API key configured, skipping web search)")
+
         # Phase 3: HTTP verification (optional)
         if verify:
             typer.echo(f"Verifying URLs (batch={batch_size})...")

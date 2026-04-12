@@ -161,6 +161,87 @@ def infer_corporation_urls(session: Session) -> dict[str, int]:
     return stats
 
 
+def search_and_discover(
+    session: Session,
+    batch_size: int = 100,
+    rate_limit_delay: float = 1.0,
+) -> dict[str, int]:
+    """Use search API to discover URLs for schools without any URL.
+
+    Requires EIDP_BRAVE_API_KEY or EIDP_GOOGLE_API_KEY in environment.
+    """
+    import time
+
+    from eidp.config import settings
+    from eidp.scraper.search_provider import create_provider
+
+    provider = create_provider(
+        provider_name=settings.search_provider,
+        api_key=settings.brave_api_key if settings.search_provider == "brave" else settings.google_api_key,
+        google_cx=settings.google_cx,
+    )
+
+    stats = {"searched": 0, "found": 0, "no_result": 0, "errors": 0}
+
+    # Schools without any URL
+    schools_with_url = session.query(SchoolSite.school_id).distinct()
+    schools_without = (
+        session.query(School)
+        .filter(~School.id.in_(schools_with_url))
+        .filter(School.status == "active")
+        .limit(batch_size)
+        .all()
+    )
+
+    log.info("search_discovery_start", provider=provider.name(), schools=len(schools_without))
+
+    for school in schools_without:
+        # Build search query: school name + 情報公開 (disclosure page keyword)
+        query = f"{school.school_name} 情報公開 高等教育無償化"
+
+        try:
+            results = provider.search(query, count=3)
+        except Exception as e:
+            log.warning("search_error", school=school.school_name, error=str(e))
+            stats["errors"] += 1
+            continue
+
+        stats["searched"] += 1
+
+        if not results:
+            stats["no_result"] += 1
+            continue
+
+        # Take top result as primary URL
+        top = results[0]
+
+        # Score confidence based on title match
+        confidence = 0.5
+        if school.school_name in top.title:
+            confidence = 0.9
+        elif any(kw in top.title for kw in ["情報公開", "公開情報", "学校情報"]):
+            confidence = 0.8
+        elif school.corporation_name in top.title:
+            confidence = 0.7
+
+        site = SchoolSite(
+            school_id=school.id,
+            url=top.url,
+            url_type="school" if school.school_name in top.url else "corporation_subpage",
+            discovery_method="web_search",
+            confidence=confidence,
+        )
+        session.add(site)
+        stats["found"] += 1
+
+        # Rate limiting: respect 1 req/sec
+        time.sleep(rate_limit_delay)
+
+    session.flush()
+    log.info("search_discovery_complete", **stats)
+    return stats
+
+
 async def verify_urls_async(
     session: Session,
     batch_size: int = 50,
