@@ -151,8 +151,14 @@ class SchoolResolver:
     def auto_created_count(self) -> int:
         return self._auto_created
 
-# Year columns in 採録状況 (0-indexed from col B onward, after key columns)
-SAIROKU_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025]
+# Year columns in 採録状況 — computed dynamically to match exporter
+def _compute_sairoku_years() -> list[int]:
+    from datetime import datetime
+    now = datetime.now()
+    current_fy = now.year if now.month >= 4 else now.year - 1
+    return list(range(2019, current_fy + 1))
+
+SAIROKU_YEARS = _compute_sairoku_years()
 
 # Status mapping: Excel free-text -> DB status enum
 LEGACY_TO_STATUS = {
@@ -374,7 +380,7 @@ def import_gakka(
         # Parse year blocks
         col_offset = GAKKA_KEY_COLS  # start after key columns
 
-        for year in range(2019, 2026):
+        for year in SAIROKU_YEARS:
             if year == 2019:
                 fields = YEAR_BLOCK_FIELDS_NO_BIKO
                 block_size = 10
