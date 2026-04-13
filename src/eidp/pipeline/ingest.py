@@ -164,17 +164,19 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
             # Append-only: find current max revision, mark old as non-current, insert new revision
             from sqlalchemy import func as sqlfunc
 
-            # Lock existing rows to prevent concurrent revision conflicts
-            max_rev_row = (
-                session.query(sqlfunc.max(DepartmentYearly.revision))
+            # Lock existing rows first, then compute max revision
+            # (FOR UPDATE cannot be combined with aggregate functions in PostgreSQL)
+            existing_rows = (
+                session.query(DepartmentYearly)
                 .filter(
                     DepartmentYearly.department_id == dept.id,
                     DepartmentYearly.fiscal_year == fiscal_year,
                 )
                 .with_for_update()
-                .scalar()
+                .all()
             )
-            next_revision = (max_rev_row or 0) + 1
+            max_rev_row = max((r.revision for r in existing_rows), default=0) if existing_rows else 0
+            next_revision = max_rev_row + 1
 
             # Mark all existing rows for this dept+year as non-current
             session.query(DepartmentYearly).filter(
