@@ -48,18 +48,17 @@ def _write_sairoku(ws: Worksheet, session: Session) -> int:
     headers = ["都道府県", "法人名", "学校名"] + [f"{y}年度" for y in FISCAL_YEARS]
     ws.append(headers)
 
-    query = text("""
+    # Generate CASE WHEN clauses dynamically from FISCAL_YEARS
+    year_cols = ",\n            ".join(
+        f"MAX(CASE WHEN sys.fiscal_year = {y} THEN COALESCE(sys.legacy_status, sys.status) END) AS y{y}"
+        for y in FISCAL_YEARS
+    )
+    query = text(f"""
         SELECT
             s.prefecture,
             s.corporation_name,
             s.school_name,
-            MAX(CASE WHEN sys.fiscal_year = 2019 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2019,
-            MAX(CASE WHEN sys.fiscal_year = 2020 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2020,
-            MAX(CASE WHEN sys.fiscal_year = 2021 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2021,
-            MAX(CASE WHEN sys.fiscal_year = 2022 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2022,
-            MAX(CASE WHEN sys.fiscal_year = 2023 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2023,
-            MAX(CASE WHEN sys.fiscal_year = 2024 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2024,
-            MAX(CASE WHEN sys.fiscal_year = 2025 THEN COALESCE(sys.legacy_status, sys.status) END) AS y2025
+            {year_cols}
         FROM school s
         JOIN school_year_status sys ON sys.school_id = s.id
         GROUP BY s.id, s.prefecture, s.corporation_name, s.school_name

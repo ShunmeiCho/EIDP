@@ -182,7 +182,10 @@ def discover_urls(
             "serper": bool(settings.serper_api_key),
             "duckduckgo": True,  # no key needed
         }
-        provider_has_key = provider_key_map.get(settings.search_provider, False)
+        if settings.search_provider not in provider_key_map:
+            typer.echo(f"ERROR: Unknown search_provider '{settings.search_provider}'. Valid: {list(provider_key_map.keys())}")
+            raise typer.Exit(1)
+        provider_has_key = provider_key_map[settings.search_provider]
         if provider_has_key:
             from eidp.scraper.url_discovery import search_and_discover
             typer.echo(f"Running web search ({settings.search_provider})...")
