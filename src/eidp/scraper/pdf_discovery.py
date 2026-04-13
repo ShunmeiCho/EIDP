@@ -27,6 +27,27 @@ from eidp.scraper.url_discovery import _is_safe_url
 
 log = structlog.get_logger()
 
+
+def _safe_get(client: httpx.Client, url: str, **kwargs) -> httpx.Response:
+    """GET with manual redirect following + SSRF check on each hop."""
+    resp = client.get(url, **kwargs)
+    for _ in range(5):
+        if resp.status_code not in (301, 302, 303, 307, 308):
+            break
+        location = resp.headers.get("location", "")
+        if not location:
+            break
+        # Resolve relative redirects
+        from urllib.parse import urljoin as _urljoin
+        location = _urljoin(str(resp.url), location)
+        if not _is_safe_url(location):
+            log.warning("ssrf_blocked_redirect", url=location, origin=url)
+            raise httpx.HTTPStatusError(
+                "SSRF blocked redirect", request=resp.request, response=resp
+            )
+        resp = client.get(location, **kwargs)
+    return resp
+
 # Keywords that indicate the target document (高等教育修学支援新制度 確認申請書)
 POSITIVE_KEYWORDS = [
     "修学支援", "高等教育", "無償化", "確認申請", "機関要件",
@@ -198,15 +219,15 @@ def discover_pdfs_for_site(
 
         time.sleep(1.0)  # Per-request delay (design: max 1 req/sec per domain)
 
-        # Fetch main page
-        resp = client.get(site_url)
+        # Fetch main page (with safe redirect following)
+        resp = _safe_get(client, site_url)
         resp.raise_for_status()
         html = resp.text
 
         # Short/truncated HTML retry (TCA pattern)
         if len(html) < 500 and resp.status_code == 200:
             time.sleep(1.0)
-            resp = client.get(site_url)
+            resp = _safe_get(client, site_url)
             html = resp.text
 
         # Extract PDF candidates from main page
@@ -220,7 +241,7 @@ def discover_pdfs_for_site(
                     continue
                 try:
                     time.sleep(1.0)  # Per-request delay
-                    sub_resp = client.get(sub_url)
+                    sub_resp = _safe_get(client, sub_url)
                     if sub_resp.status_code == 200:
                         sub_candidates = _extract_pdf_links(sub_resp.text, sub_url)
                         candidates.extend(sub_candidates)
@@ -274,7 +295,8 @@ def _classify_pdf_content(content: bytes) -> str:
             return "target"
 
         return "non_target"
-    except Exception:
+    except Exception as e:
+        log.warning("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
         return "unknown"
 
 
@@ -288,7 +310,7 @@ def download_pdf(
     if not _is_safe_url(candidate.pdf_url):
         return None, None, 0, "unknown"
     try:
-        resp = client.get(candidate.pdf_url)
+        resp = _safe_get(client, candidate.pdf_url)
         resp.raise_for_status()
 
         content = resp.content
@@ -378,7 +400,7 @@ def run_pdf_discovery(
 
     with httpx.Client(
         timeout=30.0,
-        follow_redirects=True,
+        follow_redirects=False,
         headers=HEADERS,
     ) as client:
         for site in sites:

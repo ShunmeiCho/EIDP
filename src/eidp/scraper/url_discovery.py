@@ -369,7 +369,7 @@ async def verify_urls_async(
 
     async with httpx.AsyncClient(
         timeout=timeout,
-        follow_redirects=True,
+        follow_redirects=False,
         headers={"User-Agent": "EIDP-DataCollector/1.0 (institutional research)"},
     ) as client:
         for site in unverified:
@@ -381,6 +381,16 @@ async def verify_urls_async(
                 continue
             try:
                 resp = await client.head(site.url)
+                # Follow redirects manually with SSRF check on each hop
+                for _ in range(5):
+                    if resp.status_code not in (301, 302, 303, 307, 308):
+                        break
+                    location = resp.headers.get("location", "")
+                    if not location or not _is_safe_url(location):
+                        log.warning("ssrf_blocked_redirect", url=location, origin=site.url)
+                        resp = type("R", (), {"status_code": -2})()
+                        break
+                    resp = await client.head(location)
                 site.http_status = resp.status_code
                 site.verified = resp.status_code == 200
                 if resp.status_code == 200:
@@ -417,7 +427,7 @@ def verify_urls_sync(
 
     with httpx.Client(
         timeout=timeout,
-        follow_redirects=True,
+        follow_redirects=False,
         headers={"User-Agent": "EIDP-DataCollector/1.0 (institutional research)"},
     ) as client:
         for site in unverified:
@@ -433,6 +443,16 @@ def verify_urls_sync(
             try:
                 # Try HEAD first, fall back to GET if 405/403
                 resp = client.head(site.url)
+                # Follow redirects manually with SSRF check on each hop
+                for _ in range(5):
+                    if resp.status_code not in (301, 302, 303, 307, 308):
+                        break
+                    location = resp.headers.get("location", "")
+                    if not location or not _is_safe_url(location):
+                        log.warning("ssrf_blocked_redirect", url=location, origin=site.url)
+                        resp = type("R", (), {"status_code": -2})()
+                        break
+                    resp = client.head(location)
                 if resp.status_code in (405, 403):
                     resp = client.get(site.url)
                 site.http_status = resp.status_code

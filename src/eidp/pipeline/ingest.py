@@ -83,6 +83,7 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
                             school_id=doc.school_id)
                 doc.ingest_status = "school_mismatch"
                 stats["skipped"] = 1
+                stats["skip_reason"] = "school_mismatch"
                 return stats
 
     # Determine fiscal year early �� needed for both dept and support_recipient paths
@@ -111,6 +112,16 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         log.warning("no_fiscal_year_parsed",
                     path=str(pdf_path), doc_id=doc.id,
                     depts=len(annotation.departments))
+
+    # Guard: if we have data but no fiscal year, we can't write anything usable
+    if not fiscal_year and (annotation.departments or annotation.support_recipient):
+        log.warning("data_without_fiscal_year", path=str(pdf_path), doc_id=doc.id,
+                    depts=len(annotation.departments),
+                    has_support=annotation.support_recipient is not None)
+        doc.ingest_status = "parse_failed"
+        stats["skipped"] = 1
+        stats["skip_reason"] = "no_fiscal_year"
+        return stats
 
     if not valid_depts and not annotation.support_recipient:
         log.warning("no_usable_data_parsed", path=str(pdf_path), doc_id=doc.id)
@@ -241,6 +252,14 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         stats["support_recipient"] = 1
 
     # Update school_year_status
+    # Distinguish full vs partial collection
+    is_partial = (
+        valid_depts
+        and annotation.departments
+        and len(valid_depts) < len(annotation.departments)
+    )
+    collection_status = "partial" if is_partial else "collected"
+
     if fiscal_year:
         sys = (
             session.query(SchoolYearStatus)
@@ -251,14 +270,16 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
             .first()
         )
         if sys:
-            sys.status = "collected"
+            # Don't downgrade from "collected" to "partial"
+            if sys.status != "collected":
+                sys.status = collection_status
             sys.document_id = doc.id
         else:
             from datetime import datetime, timezone
             new_sys = SchoolYearStatus(
                 school_id=doc.school_id,
                 fiscal_year=fiscal_year,
-                status="collected",
+                status=collection_status,
                 document_id=doc.id,
                 collected_at=datetime.now(timezone.utc),
             )

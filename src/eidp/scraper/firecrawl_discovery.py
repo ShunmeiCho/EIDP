@@ -16,7 +16,7 @@ import httpx
 import structlog
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Document, School, SchoolSite
+from eidp.db.models import School, SchoolSite
 from eidp.scraper.url_discovery import _is_safe_url
 
 log = structlog.get_logger()
@@ -95,6 +95,12 @@ def discover_pdfs_for_corporation(
     """
     stats = {"searched": 0, "matched": 0, "unmatched": 0, "errors": 0}
 
+    # Validate corp domain before sending to Firecrawl API
+    if not _is_safe_url(corp_domain):
+        log.warning("ssrf_blocked_corp_domain", domain=corp_domain)
+        stats["errors"] += 1
+        return stats
+
     # Search for disclosure PDFs on the corporation site
     pdf_urls = _firecrawl_map(
         corp_domain,
@@ -111,8 +117,14 @@ def discover_pdfs_for_corporation(
         )
 
     # Split into PDF URLs and page URLs, filtering unsafe URLs
-    pdf_links = [u for u in pdf_urls if u.endswith(".pdf") and u and _is_safe_url(u)]
-    page_links = [u for u in pdf_urls if not u.endswith(".pdf") and u and _is_safe_url(u)]
+    # Handle .pdf?query and .PDF uppercase variants
+    def _is_pdf_url(url: str) -> bool:
+        from urllib.parse import urlparse
+        path = urlparse(url).path.lower()
+        return path.endswith(".pdf")
+
+    pdf_links = [u for u in pdf_urls if u and _is_pdf_url(u) and _is_safe_url(u)]
+    page_links = [u for u in pdf_urls if u and not _is_pdf_url(u) and _is_safe_url(u)]
 
     log.info("firecrawl_corp_results",
              domain=corp_domain,
