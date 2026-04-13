@@ -29,24 +29,37 @@ log = structlog.get_logger()
 
 
 def _safe_get(client: httpx.Client, url: str, **kwargs) -> httpx.Response:
-    """GET with manual redirect following + SSRF check on each hop."""
+    """GET with manual redirect following + SSRF check on each hop.
+
+    Raises httpx.HTTPStatusError on SSRF-blocked redirect or redirect loop.
+    Fails closed: if max hops exceeded, raises instead of returning last 3xx.
+    """
     resp = client.get(url, **kwargs)
+    visited = {url}
     for _ in range(5):
         if resp.status_code not in (301, 302, 303, 307, 308):
-            break
+            return resp
         location = resp.headers.get("location", "")
         if not location:
-            break
-        # Resolve relative redirects
-        from urllib.parse import urljoin as _urljoin
-        location = _urljoin(str(resp.url), location)
+            return resp
+        location = urljoin(str(resp.url), location)
+        if location in visited:
+            log.warning("redirect_loop", url=location, origin=url)
+            raise httpx.HTTPStatusError(
+                "Redirect loop detected", request=resp.request, response=resp
+            )
         if not _is_safe_url(location):
             log.warning("ssrf_blocked_redirect", url=location, origin=url)
             raise httpx.HTTPStatusError(
                 "SSRF blocked redirect", request=resp.request, response=resp
             )
+        visited.add(location)
         resp = client.get(location, **kwargs)
-    return resp
+    # Max hops exceeded — fail closed
+    log.warning("redirect_max_hops", url=url, hops=5)
+    raise httpx.HTTPStatusError(
+        "Too many redirects", request=resp.request, response=resp
+    )
 
 # Keywords that indicate the target document (高等教育修学支援新制度 確認申請書)
 POSITIVE_KEYWORDS = [
@@ -233,8 +246,9 @@ def discover_pdfs_for_site(
         # Extract PDF candidates from main page
         candidates = _extract_pdf_links(html, site_url)
 
-        # If no PDFs found, try subpage links (two-tier pattern)
-        if not candidates and max_depth > 0:
+        # Always try subpage links (two-tier pattern)
+        # Even if root has PDFs, target docs may be on subpages
+        if max_depth > 0:
             subpages = _find_subpage_links(html, site_url)
             for sub_url in subpages:
                 if not _is_safe_url(sub_url):
@@ -306,14 +320,28 @@ def download_pdf(
     storage_dir: Path,
     school_id: int,
 ) -> tuple[str | None, str | None, int, str]:
-    """Download PDF and return (file_path, sha256_hash, file_size)."""
+    """Download PDF and return (file_path, sha256_hash, file_size, pdf_type).
+
+    Max download size: 50MB. Larger files are skipped.
+    """
+    MAX_PDF_SIZE = 50 * 1024 * 1024  # 50 MB
+
     if not _is_safe_url(candidate.pdf_url):
         return None, None, 0, "unknown"
     try:
         resp = _safe_get(client, candidate.pdf_url)
         resp.raise_for_status()
 
+        # Check Content-Length before reading body
+        content_length = resp.headers.get("content-length")
+        if content_length and int(content_length) > MAX_PDF_SIZE:
+            log.warning("pdf_too_large", url=candidate.pdf_url, size=content_length)
+            return None, None, 0, "unknown"
+
         content = resp.content
+        if len(content) > MAX_PDF_SIZE:
+            log.warning("pdf_too_large_actual", url=candidate.pdf_url, size=len(content))
+            return None, None, 0, "unknown"
         if len(content) < 1000:  # Too small to be a real PDF
             return None, None, 0, "unknown"
 

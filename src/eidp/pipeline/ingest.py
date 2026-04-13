@@ -252,13 +252,13 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         stats["support_recipient"] = 1
 
     # Update school_year_status
-    # Distinguish full vs partial collection
-    is_partial = (
-        valid_depts
-        and annotation.departments
-        and len(valid_depts) < len(annotation.departments)
-    )
-    collection_status = "partial" if is_partial else "collected"
+    # Distinguish full vs partial vs support-only collection
+    if valid_depts and annotation.departments and len(valid_depts) < len(annotation.departments):
+        collection_status = "partial"
+    elif valid_depts:
+        collection_status = "collected"
+    else:
+        collection_status = "support_only"
 
     if fiscal_year:
         sys = (

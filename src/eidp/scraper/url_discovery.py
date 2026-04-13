@@ -381,19 +381,29 @@ async def verify_urls_async(
                 continue
             try:
                 resp = await client.head(site.url)
-                # Follow redirects manually with SSRF check on each hop
+                # Follow redirects manually with SSRF check + cycle detection
+                final_status = resp.status_code
+                visited = {site.url}
                 for _ in range(5):
                     if resp.status_code not in (301, 302, 303, 307, 308):
+                        final_status = resp.status_code
                         break
                     location = resp.headers.get("location", "")
-                    if not location or not _is_safe_url(location):
-                        log.warning("ssrf_blocked_redirect", url=location, origin=site.url)
-                        resp = type("R", (), {"status_code": -2})()
+                    if not location:
+                        final_status = resp.status_code
                         break
+                    from urllib.parse import urljoin
+                    location = urljoin(str(resp.url), location)
+                    if location in visited or not _is_safe_url(location):
+                        log.warning("ssrf_or_loop_blocked", url=location, origin=site.url)
+                        final_status = -2
+                        break
+                    visited.add(location)
                     resp = await client.head(location)
-                site.http_status = resp.status_code
-                site.verified = resp.status_code == 200
-                if resp.status_code == 200:
+                    final_status = resp.status_code
+                site.http_status = final_status
+                site.verified = final_status == 200
+                if final_status == 200:
                     stats["ok"] += 1
                 else:
                     stats["failed"] += 1
@@ -441,24 +451,37 @@ def verify_urls_sync(
                 log.warning("ssrf_blocked_verify", url=site.url, school_id=site.school_id)
                 continue
             try:
-                # Try HEAD first, fall back to GET if 405/403
+                # Try HEAD first, follow redirects with SSRF + cycle check
                 resp = client.head(site.url)
-                # Follow redirects manually with SSRF check on each hop
+                final_status = resp.status_code
+                visited = {site.url}
+                ssrf_blocked = False
                 for _ in range(5):
                     if resp.status_code not in (301, 302, 303, 307, 308):
+                        final_status = resp.status_code
                         break
                     location = resp.headers.get("location", "")
-                    if not location or not _is_safe_url(location):
-                        log.warning("ssrf_blocked_redirect", url=location, origin=site.url)
-                        resp = type("R", (), {"status_code": -2})()
+                    if not location:
+                        final_status = resp.status_code
                         break
+                    from urllib.parse import urljoin
+                    location = urljoin(str(resp.url), location)
+                    if location in visited or not _is_safe_url(location):
+                        log.warning("ssrf_or_loop_blocked", url=location, origin=site.url)
+                        final_status = -2
+                        ssrf_blocked = True
+                        break
+                    visited.add(location)
                     resp = client.head(location)
-                if resp.status_code in (405, 403):
+                    final_status = resp.status_code
+                # Fall back to GET only if HEAD returned 405/403 and not SSRF blocked
+                if final_status in (405, 403) and not ssrf_blocked:
                     resp = client.get(site.url)
-                site.http_status = resp.status_code
-                site.verified = resp.status_code == 200
+                    final_status = resp.status_code
+                site.http_status = final_status
+                site.verified = final_status == 200
                 site.last_checked = datetime.now(timezone.utc)
-                if resp.status_code == 200:
+                if final_status == 200:
                     site.verified_at = datetime.now(timezone.utc)
                     stats["ok"] += 1
                 else:
