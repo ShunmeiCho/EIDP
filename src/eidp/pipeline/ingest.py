@@ -290,7 +290,11 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     # Write fiscal year back to Document so crawler can filter already-collected schools
     if fiscal_year:
         doc.fiscal_year = fiscal_year
-        doc.is_current_year = (fiscal_year >= 2025)
+        # Compute current fiscal year dynamically (April-March boundary)
+        from datetime import datetime
+        now = datetime.now()
+        current_fy = now.year if now.month >= 4 else now.year - 1
+        doc.is_current_year = (fiscal_year >= current_fy)
 
     session.flush()
     log.info("document_ingested", doc_id=doc.id, **stats)
@@ -357,8 +361,10 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             # Mark ingest_status based on result
             # ingest_document may have already set a specific status (school_mismatch,
             # no_file, image_only, non_target, parse_failed). Only override if not set.
-            if stats.get("yearly_upserted", 0) > 0 or stats.get("support_recipient", 0) > 0:
+            if stats.get("yearly_upserted", 0) > 0:
                 doc.ingest_status = "ingested"
+            elif stats.get("support_recipient", 0) > 0 and stats.get("yearly_upserted", 0) == 0:
+                doc.ingest_status = "support_only"
             elif stats.get("skipped", 0) > 0 and not doc.ingest_status:
                 doc.ingest_status = "parse_failed"
 

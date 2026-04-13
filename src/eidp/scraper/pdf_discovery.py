@@ -450,7 +450,20 @@ def run_pdf_discovery(
             session.add(job)
             session.flush()
 
-            result = discover_pdfs_for_site(client, site.school_id, site.url)
+            # Handle direct PDF URLs (e.g., from Firecrawl) — download directly
+            site_path = urlparse(site.url).path.lower()
+            if site_path.endswith(".pdf"):
+                candidate = PdfCandidate(
+                    pdf_url=site.url,
+                    anchor_text="direct_pdf_url",
+                    page_url=site.url,
+                )
+                candidate.score = 1.0
+                result = DiscoveryResult(school_id=site.school_id)
+                result.candidates = [candidate]
+                result.best = candidate
+            else:
+                result = discover_pdfs_for_site(client, site.school_id, site.url)
             stats["crawled"] += 1
 
             if result.error:
@@ -486,12 +499,13 @@ def run_pdf_discovery(
                 file_path, file_hash, file_size, pdf_type = download_pdf(
                     client, candidate, storage_dir, site.school_id,
                 )
-                if file_path:
-                    # Skip non-target PDFs (wrong document type)
-                    if pdf_type == "non_target":
-                        log.info("non_target_pdf_skipped", school_id=site.school_id, url=candidate.pdf_url)
-                        continue
+                # non_target PDFs already cleaned up in download_pdf(), skip them
+                if pdf_type == "non_target":
+                    log.info("non_target_pdf_skipped", school_id=site.school_id, url=candidate.pdf_url)
+                    stats["skipped"] += 1
+                    continue
 
+                if file_path:
                     # Check for duplicate hash
                     existing = (
                         session.query(Document)

@@ -176,15 +176,20 @@ def discover_urls(
 
         # Phase 2.5: Web search discovery
         from eidp.config import settings
-        needs_key = {"brave", "google", "serper"}
-        has_key = settings.brave_api_key or settings.google_api_key or settings.serper_api_key
-        if settings.search_provider == "duckduckgo" or has_key:
+        provider_key_map = {
+            "brave": bool(settings.brave_api_key),
+            "google": bool(settings.google_api_key and settings.google_cx),
+            "serper": bool(settings.serper_api_key),
+            "duckduckgo": True,  # no key needed
+        }
+        provider_has_key = provider_key_map.get(settings.search_provider, False)
+        if provider_has_key:
             from eidp.scraper.url_discovery import search_and_discover
             typer.echo(f"Running web search ({settings.search_provider})...")
             search_stats = search_and_discover(session, batch_size=batch_size)
             session.commit()
             typer.echo(f"Web search: {search_stats}")
-        elif settings.search_provider in needs_key and not has_key:
+        else:
             typer.echo(f"(No API key for {settings.search_provider}, skipping web search)")
 
         # Phase 3: HTTP verification (optional)

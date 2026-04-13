@@ -17,8 +17,15 @@ from sqlalchemy.orm import Session
 
 log = structlog.get_logger()
 
-FISCAL_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025]
-ENROLLMENT_YEARS = [2019, 2020, 2021, 2022, 2023, 2024]
+def _compute_fiscal_years() -> list[int]:
+    """Compute fiscal years dynamically based on current date (April-March boundary)."""
+    from datetime import datetime
+    now = datetime.now()
+    current_fy = now.year if now.month >= 4 else now.year - 1
+    return list(range(2019, current_fy + 1))
+
+FISCAL_YEARS = _compute_fiscal_years()
+ENROLLMENT_YEARS = FISCAL_YEARS[:-1]  # enrollment data lags by 1 year
 
 # 学科別: year block fields (DB column order)
 YEAR_BLOCK_FIELDS = [
