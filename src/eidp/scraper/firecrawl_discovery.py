@@ -255,7 +255,7 @@ def run_firecrawl_discovery(
         log.info("firecrawl_corp_start", corp=corp_name, domain=domain, schools=len(schools))
 
         stats = discover_pdfs_for_corporation(session, domain, schools)
-        session.commit()
+        session.flush()  # flush, not commit — let CLI layer manage transaction
 
         total_stats["corps_processed"] += 1
         total_stats["schools_matched"] += stats["matched"]

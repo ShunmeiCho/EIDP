@@ -164,12 +164,14 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
             # Append-only: find current max revision, mark old as non-current, insert new revision
             from sqlalchemy import func as sqlfunc
 
+            # Lock existing rows to prevent concurrent revision conflicts
             max_rev_row = (
                 session.query(sqlfunc.max(DepartmentYearly.revision))
                 .filter(
                     DepartmentYearly.department_id == dept.id,
                     DepartmentYearly.fiscal_year == fiscal_year,
                 )
+                .with_for_update()
                 .scalar()
             )
             next_revision = (max_rev_row or 0) + 1
@@ -179,7 +181,7 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
                 DepartmentYearly.department_id == dept.id,
                 DepartmentYearly.fiscal_year == fiscal_year,
                 DepartmentYearly.is_current == True,  # noqa: E712
-            ).update({"is_current": False})
+            ).update({"is_current": False}, synchronize_session="fetch")
 
             dy = DepartmentYearly(
                 department_id=dept.id,

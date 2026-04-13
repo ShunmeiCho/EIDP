@@ -160,12 +160,6 @@ def discover_urls(
         raise typer.Exit(1)
 
     from eidp.db.session import SessionLocal
-    from eidp.scraper.url_discovery import (
-        get_discovery_stats,
-        import_seed_urls,
-        infer_corporation_urls,
-        verify_urls_sync,
-    )
 
     session = SessionLocal()
     try:

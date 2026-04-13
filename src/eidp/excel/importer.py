@@ -410,13 +410,14 @@ def import_gakka(
                 continue
             yearly_seen.add(yearly_key)
 
-            # Upsert: update existing or create
+            # Upsert: update the CURRENT revision (not hardcoded revision=1)
+            # This respects the append-only model — PDF ingest may have created later revisions
             existing_dy = (
                 session.query(DepartmentYearly)
                 .filter(
                     DepartmentYearly.department_id == dept_id,
                     DepartmentYearly.fiscal_year == year,
-                    DepartmentYearly.revision == 1,
+                    DepartmentYearly.is_current == True,  # noqa: E712
                 )
                 .first()
             )
@@ -431,6 +432,7 @@ def import_gakka(
                 existing_dy.prev_enrollment = block_data.get("prev_enrollment")
                 existing_dy.dropouts = block_data.get("dropouts")
                 existing_dy.dropout_rate = block_data.get("dropout_rate")
+                existing_dy.extraction_method = "excel_import"
                 existing_dy.notes = block_data.get("notes")
             else:
                 dy = DepartmentYearly(

@@ -272,12 +272,14 @@ def search_and_discover(
         ]
 
         found = False
+        had_error = False
         for query in queries:
             try:
                 results = provider.search(query, count=3)
             except Exception as e:
                 log.warning("search_error", school=school.school_name, error=str(e))
                 stats["errors"] += 1
+                had_error = True
                 time.sleep(rate_limit_delay)
                 break
 
@@ -300,7 +302,7 @@ def search_and_discover(
 
             time.sleep(rate_limit_delay)
 
-        if not found and stats.get("errors", 0) == 0:
+        if not found and not had_error:
             stats["no_result"] += 1
 
         stats["searched"] += 1

@@ -361,6 +361,12 @@ def download_pdf(
         file_path = school_dir / f"{file_hash[:8]}.pdf"
         file_path.write_bytes(content)
 
+        # Clean up non-target files to prevent orphaned disk usage
+        if pdf_type == "non_target":
+            file_path.unlink(missing_ok=True)
+            log.info("non_target_pdf_removed", url=candidate.pdf_url, path=str(file_path))
+            return None, None, 0, "non_target"
+
         return str(file_path), file_hash, file_size, pdf_type
 
     except httpx.HTTPError:
@@ -405,7 +411,9 @@ def run_pdf_discovery(
 
     # Only skip schools that already have a document for the current target year
     # (allow re-discovery if previous docs were from a different year or failed)
-    current_target_year = datetime.now().year  # approximate fiscal year
+    # Japanese fiscal year runs April-March: in Jan-Mar, target FY is previous calendar year
+    now = datetime.now()
+    current_target_year = now.year if now.month >= 4 else now.year - 1
     schools_with_current_docs = (
         session.query(Document.school_id)
         .filter(Document.fiscal_year == current_target_year)
