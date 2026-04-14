@@ -228,12 +228,13 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
 
     Returns the number of data rows written.
     """
-    # Row 1: group header
+    # Row 1: group header (dynamic year count)
+    n_years = len(ENROLLMENT_YEARS)
     row1 = [None] * 7  # key columns
     row1.append("在籍者数")
-    row1.extend([None] * 5)  # 6 years total, first label already placed
+    row1.extend([None] * (n_years - 1))
     row1.append("留学生数")
-    row1.extend([None] * 5)
+    row1.extend([None] * (n_years - 1))
     ws.append(row1)
 
     # Row 2: field names
@@ -261,11 +262,13 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
     """)
     depts = session.execute(query).fetchall()
 
-    # Pre-fetch enrollment data for 2019-2024
-    yearly_query = text("""
+    # Pre-fetch enrollment data for dynamic year range
+    min_ey = min(ENROLLMENT_YEARS)
+    max_ey = max(ENROLLMENT_YEARS)
+    yearly_query = text(f"""
         SELECT department_id, fiscal_year, enrollment, intl_students
         FROM department_yearly
-        WHERE is_current = true AND fiscal_year BETWEEN 2019 AND 2024
+        WHERE is_current = true AND fiscal_year BETWEEN {min_ey} AND {max_ey}
         ORDER BY department_id, fiscal_year
     """)
     yearly_rows = session.execute(yearly_query).fetchall()

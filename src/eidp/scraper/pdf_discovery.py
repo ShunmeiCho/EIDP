@@ -414,9 +414,14 @@ def run_pdf_discovery(
     # Japanese fiscal year runs April-March: in Jan-Mar, target FY is previous calendar year
     now = datetime.now()
     current_target_year = now.year if now.month >= 4 else now.year - 1
+    # Only skip schools that have a FULLY ingested current-year document
+    # support_only and partial docs should NOT suppress rediscovery
     schools_with_current_docs = (
         session.query(Document.school_id)
-        .filter(Document.fiscal_year == current_target_year)
+        .filter(
+            Document.fiscal_year == current_target_year,
+            Document.ingest_status == "ingested",
+        )
         .distinct()
     )
 
