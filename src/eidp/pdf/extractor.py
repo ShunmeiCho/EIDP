@@ -563,7 +563,10 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
                 "学科名" in page_text,
                 "生徒総定員" in page_text,
             ])
-            if markers >= 2:
+            # Exclude 様式第2号の4 (financial/management pages) which also
+            # contain 分野/学科名/生徒総定員 in a non-enrollment context
+            is_financial = "財務" in page_text or "経営情報の公表" in page_text
+            if markers >= 2 and not is_financial:
                 dept_section_starts.append(i)
 
         for idx, start_page in enumerate(dept_section_starts):
