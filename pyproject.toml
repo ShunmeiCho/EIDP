@@ -29,6 +29,11 @@ pdf = [
     "pdfplumber>=0.11,<1.0",
     "pymupdf>=1.25,<2.0",
 ]
+ocr = [
+    # PyMuPDF OCR (requires system Tesseract: brew install tesseract tesseract-lang)
+    "pymupdf>=1.25,<2.0",
+    # MinerU (optional, best accuracy): pip install 'magic-pdf[full]'
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=6.0",

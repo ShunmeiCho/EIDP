@@ -47,13 +47,22 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         stats["skip_reason"] = "no_file"
         return stats
 
-    # Skip image-only PDFs (need OCR fallback, not yet implemented)
+    # OCR fallback for image-only PDFs
     if doc.content_type == "image":
-        log.info("image_pdf_skipped", doc_id=doc.id, path=str(pdf_path))
-        doc.ingest_status = "image_only"
-        stats["skipped"] = 1
-        stats["skip_reason"] = "image_only"
-        return stats
+        from eidp.pdf.ocr import extract_text_ocr
+        ocr_pages = extract_text_ocr(pdf_path)
+        if not ocr_pages or not any(t.strip() for t in ocr_pages):
+            log.info("image_pdf_no_ocr", doc_id=doc.id, path=str(pdf_path))
+            doc.ingest_status = "image_only"
+            stats["skipped"] = 1
+            stats["skip_reason"] = "image_only"
+            return stats
+        # Use OCR text for parsing
+        from eidp.pdf.extractor import parse_pdf_ocr
+        annotation = parse_pdf_ocr(pdf_path, ocr_pages)
+        # Continue to school-identity check and ingestion below
+    else:
+        annotation = None  # will be set after this block
 
     # Skip non-target documents
     if doc.pdf_type == "non_target":
@@ -63,8 +72,9 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         stats["skip_reason"] = "non_target"
         return stats
 
-    # Parse PDF
-    annotation = parse_pdf(pdf_path)
+    # Parse PDF (skip if already parsed via OCR above)
+    if annotation is None:
+        annotation = parse_pdf(pdf_path)
 
     # School-identity verification: check parsed school_name against target school
     # Prevents wrong-school PDF data from silently entering the DB

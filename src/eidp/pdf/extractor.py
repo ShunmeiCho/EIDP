@@ -615,3 +615,63 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
         departments=departments,
         support_recipient=support_recipient,
     )
+
+
+def parse_pdf_ocr(pdf_path: Path, ocr_page_texts: list[str]) -> SchoolAnnotation:
+    """Parse a PDF using pre-extracted OCR text (for image-only PDFs).
+
+    Uses the same extraction logic as parse_pdf but with OCR-provided text
+    instead of pdfplumber text extraction. Table extraction is not available
+    for OCR text, so dept identity comes from text parsing only.
+    """
+    full_text = "\n===PAGE===\n".join(ocr_page_texts)
+
+    school_name = _extract_school_name(full_text)
+    fiscal_year = _extract_fiscal_year(full_text)
+    operator_name = _extract_operator_name(full_text)
+
+    departments: list[DepartmentRecord] = []
+    normed_pages = [_norm(pt) for pt in ocr_page_texts]
+    dept_section_starts: list[int] = []
+
+    for i, page_text in enumerate(normed_pages):
+        markers = sum([
+            "分野" in page_text,
+            "学科名" in page_text,
+            "生徒総定員" in page_text,
+        ])
+        is_financial = "財務" in page_text or "経営情報の公表" in page_text
+        if markers >= 2 and not is_financial:
+            dept_section_starts.append(i)
+
+    for idx, start_page in enumerate(dept_section_starts):
+        if idx + 1 < len(dept_section_starts):
+            end_page = dept_section_starts[idx + 1]
+        else:
+            end_page = len(normed_pages)
+
+        section_text = "\n".join(normed_pages[start_page:end_page])
+        # No table extraction for OCR — use text-only parsing
+        dept = _parse_department_section(section_text)
+        if dept is not None:
+            departments.append(dept)
+
+    support_recipient = _parse_support_section(ocr_page_texts)
+
+    log.info(
+        "pdf_parsed_ocr",
+        path=str(pdf_path),
+        school=school_name,
+        departments=len(departments),
+        has_support_data=support_recipient is not None,
+    )
+
+    return SchoolAnnotation(
+        school_name=school_name,
+        school_type="専門学校",
+        operator_name=operator_name,
+        fiscal_year=fiscal_year,
+        source_pdf=pdf_path.name,
+        departments=departments,
+        support_recipient=support_recipient,
+    )
