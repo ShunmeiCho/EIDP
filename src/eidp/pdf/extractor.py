@@ -225,11 +225,30 @@ def _parse_department_section(
             if len(nums) >= 3:
                 capacity, enrollment, intl_students = nums[0], nums[1], nums[2]
             elif i + 1 < len(normed_lines):
-                next_nums = _extract_ints(normed_lines[i + 1])
-                if len(next_nums) >= 3:
+                # Handle multi-line with "N人" pattern (e.g., "105人 84人 0人...")
+                next_line = normed_lines[i + 1]
+                # Strip parenthetical content like "(116の内数)" before extracting
+                clean_next = re.sub(r"\([^)]*\)", "", next_line)
+                person_nums = re.findall(r"(\d+)\s*人", clean_next)
+                if len(person_nums) >= 3:
                     capacity, enrollment, intl_students = (
-                        next_nums[0], next_nums[1], next_nums[2]
+                        int(person_nums[0]), int(person_nums[1]), int(person_nums[2])
                     )
+                else:
+                    next_nums = _extract_ints(next_line)
+                    if len(next_nums) >= 3:
+                        capacity, enrollment, intl_students = (
+                            next_nums[0], next_nums[1], next_nums[2]
+                        )
+                    # Handle split across 2 lines: "35(116の" + "160人 0人..."
+                    elif i + 2 < len(normed_lines):
+                        combined = next_line + " " + normed_lines[i + 2]
+                        clean_combined = re.sub(r"\([^)]*\)", "", combined)
+                        combined_nums = re.findall(r"(\d+)\s*人", clean_combined)
+                        if len(combined_nums) >= 3:
+                            capacity, enrollment, intl_students = (
+                                int(combined_nums[0]), int(combined_nums[1]), int(combined_nums[2])
+                            )
 
         # Also match the numbers-only line after header
         if enrollment is None and i > 0:
@@ -590,10 +609,12 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
                 "学科名" in page_text,
                 "生徒総定員" in page_text,
             ])
-            # Exclude 様式第2号の4 (financial/management pages) which also
-            # contain 分野/学科名/生徒総定員 in a non-enrollment context
+            # Exclude pages that are PURELY financial (様式第2号の4) without
+            # actual enrollment data. Pages that have BOTH financial and enrollment
+            # content (small school single-page PDFs) should be included.
             is_financial = "財務" in page_text or "経営情報の公表" in page_text
-            if markers >= 2 and not is_financial:
+            has_enrollment = "生徒実員" in page_text
+            if markers >= 2 and (not is_financial or has_enrollment):
                 dept_section_starts.append(i)
 
         for idx, start_page in enumerate(dept_section_starts):
