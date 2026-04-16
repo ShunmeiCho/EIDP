@@ -92,29 +92,54 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
     Best accuracy for Japanese tabular documents.
     """
     try:
-        from magic_pdf.data.data_reader_writer import FileBasedDataReader
         from magic_pdf.pipe.UNIPipe import UNIPipe
         from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
     except ImportError:
-        log.error("mineru_not_installed", hint="Install: pip install 'magic-pdf[full]'")
+        log.error("mineru_not_installed", hint="Install: pip install magic-pdf")
         return []
 
     # Read PDF bytes
-    reader = FileBasedDataReader("")
     pdf_bytes = Path(pdf_path).read_bytes()
+
+    # Image writer for extracted images (use DiskReaderWriter if available)
+    try:
+        from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
+        import tempfile
+        tmp_dir = tempfile.mkdtemp(prefix="mineru_")
+        image_writer = DiskReaderWriter(tmp_dir)
+    except ImportError:
+        image_writer = None
 
     # Run MinerU analysis
     model_json = doc_analyze(pdf_bytes)
-    pipe = UNIPipe(pdf_bytes, model_json, image_writer=None)
+    pipe = UNIPipe(pdf_bytes, model_json, image_writer=image_writer)
     pipe.pipe_classify()
     pipe.pipe_analyze()
     pipe.pipe_parse()
 
-    # Extract text per page from the parsed result
-    md_content = pipe.pipe_mk_markdown("")
+    # Extract text — pipe_mk_markdown returns (markdown_str, images_list)
+    result = pipe.pipe_mk_markdown(image_writer)
+    if isinstance(result, tuple):
+        md_content = result[0]
+    else:
+        md_content = result
 
-    # Split markdown by page markers if present, otherwise treat as single page
-    page_texts = [md_content] if md_content else []
+    # Split by page markers (MinerU uses --- or page breaks)
+    # Fall back to treating as pages separated by form boundaries
+    if md_content:
+        import re
+        # Split on page break patterns
+        pages = re.split(r"\n---\n|\n\f\n", md_content)
+        page_texts = [p.strip() for p in pages if p.strip()]
+        if not page_texts:
+            page_texts = [md_content]
+    else:
+        page_texts = []
+
+    # Cleanup temp dir
+    if image_writer:
+        import shutil
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
     log.info("ocr_mineru_complete", path=str(pdf_path), pages=len(page_texts),
              total_chars=sum(len(t) for t in page_texts))
