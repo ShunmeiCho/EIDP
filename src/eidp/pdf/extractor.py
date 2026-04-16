@@ -229,23 +229,17 @@ def _parse_department_section(
         # -- Enrollment data --
         # 生徒総定員数 | 生徒実員 | うち留学生数 row with numbers
         # OCR may split across lines: "生徒総定員" on one line, "生徒実員" on next
+        # OCR layout: labels span ~6 lines, then data lines with "N人" follow
         if enrollment is None and "生徒総定員" in line_norm and "生徒実員" not in line_norm:
-            # OCR split: header labels on separate lines, numbers follow after
-            # Scan forward for lines with N人 pattern
-            for j in range(i + 1, min(i + 6, len(normed_lines))):
+            # Scan forward up to 10 lines for N人 data (OCR has many label lines)
+            found_nums: list[int] = []
+            for j in range(i + 1, min(i + 12, len(normed_lines))):
                 data_line = normed_lines[j]
-                # Skip label-only lines
-                if any(k in data_line for k in ["生徒実員", "留学生", "教員", "総教員"]):
-                    continue
-                person_nums = re.findall(r"(\d+)\s*人", data_line)
-                if len(person_nums) >= 3:
-                    capacity, enrollment, intl_students = (
-                        int(person_nums[0]), int(person_nums[1]), int(person_nums[2])
-                    )
-                    break
-                all_nums = _extract_ints(data_line)
-                if len(all_nums) >= 3 and all(n < 10000 for n in all_nums[:3]):
-                    capacity, enrollment, intl_students = all_nums[0], all_nums[1], all_nums[2]
+                person_match = re.findall(r"(\d+)\s*人", data_line)
+                if person_match:
+                    found_nums.extend(int(n) for n in person_match)
+                if len(found_nums) >= 3:
+                    capacity, enrollment, intl_students = found_nums[0], found_nums[1], found_nums[2]
                     break
 
         if "生徒総定員" in line_norm and "生徒実員" in line_norm:
