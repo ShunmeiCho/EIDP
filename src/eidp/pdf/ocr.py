@@ -98,12 +98,14 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
         return []
 
     import re
+    import shutil
     import tempfile
 
     tmp_dir = tempfile.mkdtemp(prefix="mineru_")
+    md_content = ""
 
     try:
-        # MinerU v1.x API: uses Dataset + FileBasedDataWriter
+        # MinerU v1.x API: InferenceResult.pipe_ocr_mode()
         from magic_pdf.data.data_reader_writer import FileBasedDataWriter
         from magic_pdf.data.dataset import PymuDocDataset
 
@@ -111,13 +113,11 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
         image_writer = FileBasedDataWriter(tmp_dir)
 
         dataset = PymuDocDataset(pdf_bytes)
-        model_json = doc_analyze(dataset, ocr=True, lang="ja")
-
-        # Use OCR pipe for image-only PDFs
-        pipe_result = dataset.apply(model_json, image_writer, is_ocr=True)
+        infer_result = doc_analyze(dataset, ocr=True)
+        pipe_result = infer_result.pipe_ocr_mode(image_writer)
         md_content = pipe_result.get_markdown(image_writer)
 
-    except ImportError:
+    except (ImportError, AttributeError):
         # Fallback: MinerU v0.6.x API
         try:
             from magic_pdf.pipe.UNIPipe import UNIPipe
@@ -136,9 +136,8 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
             md_content = result[0] if isinstance(result, tuple) else result
         except Exception as e:
             log.warning("mineru_v06_failed", error=str(e))
-            md_content = ""
 
-    # Split by page markers
+    # Split by page markers (MinerU separates pages with ---)
     if md_content:
         pages = re.split(r"\n---\n|\n\f\n", md_content)
         page_texts = [p.strip() for p in pages if p.strip()]
@@ -147,8 +146,6 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
     else:
         page_texts = []
 
-    # Cleanup temp dir
-    import shutil
     shutil.rmtree(tmp_dir, ignore_errors=True)
 
     log.info("ocr_mineru_complete", path=str(pdf_path), pages=len(page_texts),
