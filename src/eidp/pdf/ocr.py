@@ -1,8 +1,8 @@
 """OCR fallback for image-only PDFs.
 
 Supports multiple OCR backends via provider pattern:
+- paddleocr: PaddleOCR PP-OCRv5 (best Japanese accuracy, recommended)
 - pymupdf: PyMuPDF built-in OCR (requires Tesseract system install)
-- mineru: MinerU pipeline (best accuracy, requires magic-pdf package)
 
 The provider is selected automatically based on available packages,
 or can be overridden via EIDP_OCR_PROVIDER env var.
@@ -19,30 +19,29 @@ import structlog
 
 log = structlog.get_logger()
 
+_VALID_PROVIDERS = ("paddleocr", "pymupdf")
+
 
 def _check_ocr_availability() -> str:
     """Detect available OCR provider. Returns provider name or 'none'."""
     import os
 
-    # Allow explicit override
     override = os.environ.get("EIDP_OCR_PROVIDER", "").lower()
-    if override in ("pymupdf", "mineru"):
+    if override in _VALID_PROVIDERS:
         return override
 
-    # Auto-detect: prefer MinerU > PyMuPDF OCR
+    # Auto-detect: prefer PaddleOCR > PyMuPDF OCR
     try:
-        from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze  # noqa: F401
-        return "mineru"
+        from paddleocr import PaddleOCR  # noqa: F401
+        return "paddleocr"
     except ImportError:
         pass
 
     try:
         import fitz  # noqa: F401
-        # PyMuPDF can do OCR if Tesseract is installed with Japanese language
         import shutil
         import subprocess
         if shutil.which("tesseract"):
-            # Verify Japanese language pack is available
             try:
                 langs = subprocess.run(
                     ["tesseract", "--list-langs"],
@@ -51,13 +50,76 @@ def _check_ocr_availability() -> str:
                 if "jpn" in langs:
                     return "pymupdf"
                 else:
-                    log.warning("tesseract_no_jpn", hint="Install: brew install tesseract-lang (macOS) or apt install tesseract-ocr-jpn")
+                    log.warning("tesseract_no_jpn", hint="Install: apt install tesseract-ocr-jpn")
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 pass
     except ImportError:
         pass
 
     return "none"
+
+
+def _pdf_to_page_images(pdf_path: Path) -> list[str]:
+    """Convert each PDF page to a temporary PNG image. Returns list of paths."""
+    import fitz
+    import tempfile
+
+    tmp_dir = tempfile.mkdtemp(prefix="eidp_ocr_")
+    image_paths: list[str] = []
+
+    doc = fitz.open(str(pdf_path))
+    try:
+        for i, page in enumerate(doc):
+            # 300 DPI for good OCR quality
+            mat = fitz.Matrix(300 / 72, 300 / 72)
+            pix = page.get_pixmap(matrix=mat)
+            img_path = f"{tmp_dir}/page_{i:04d}.png"
+            pix.save(img_path)
+            image_paths.append(img_path)
+    finally:
+        doc.close()
+
+    return image_paths
+
+
+def _ocr_with_paddleocr(pdf_path: Path) -> list[str]:
+    """Extract text from image PDF using PaddleOCR PP-OCRv5.
+
+    Requires: pip install paddleocr paddlepaddle
+    PP-OCRv5 unified model supports Japanese natively.
+    """
+    from paddleocr import PaddleOCR
+
+    ocr = PaddleOCR(lang="japan", show_log=False)
+
+    # Convert PDF pages to images first
+    try:
+        image_paths = _pdf_to_page_images(pdf_path)
+    except ImportError:
+        log.warning("pymupdf_not_installed", hint="pip install pymupdf (needed for PDF->image)")
+        return []
+
+    page_texts: list[str] = []
+    for img_path in image_paths:
+        result = ocr.ocr(img_path)
+        lines: list[str] = []
+        if result and result[0]:
+            for line_info in result[0]:
+                # PaddleOCR returns: [[box], (text, confidence)]
+                if len(line_info) >= 2:
+                    text = line_info[1][0] if isinstance(line_info[1], (list, tuple)) else str(line_info[1])
+                    lines.append(text)
+        page_texts.append("\n".join(lines))
+
+    # Cleanup temp images
+    import shutil
+    if image_paths:
+        tmp_dir = str(Path(image_paths[0]).parent)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    log.info("ocr_paddleocr_complete", path=str(pdf_path), pages=len(page_texts),
+             total_chars=sum(len(t) for t in page_texts))
+    return page_texts
 
 
 def _ocr_with_pymupdf(pdf_path: Path) -> list[str]:
@@ -73,7 +135,6 @@ def _ocr_with_pymupdf(pdf_path: Path) -> list[str]:
     doc = fitz.open(str(pdf_path))
     try:
         for page in doc:
-            # Use PyMuPDF's built-in OCR with Japanese language
             tp = page.get_textpage_ocr(language="jpn+eng", flags=fitz.TEXT_PRESERVE_WHITESPACE)
             text = page.get_text(textpage=tp)
             page_texts.append(text)
@@ -81,74 +142,6 @@ def _ocr_with_pymupdf(pdf_path: Path) -> list[str]:
         doc.close()
 
     log.info("ocr_pymupdf_complete", path=str(pdf_path), pages=len(page_texts),
-             total_chars=sum(len(t) for t in page_texts))
-    return page_texts
-
-
-def _ocr_with_mineru(pdf_path: Path) -> list[str]:
-    """Extract text from image PDF using MinerU pipeline.
-
-    Requires: pip install magic-pdf[full]
-    Best accuracy for Japanese tabular documents.
-    """
-    try:
-        from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
-    except ImportError:
-        log.error("mineru_not_installed", hint="Install: pip install magic-pdf")
-        return []
-
-    import re
-    import shutil
-    import tempfile
-
-    tmp_dir = tempfile.mkdtemp(prefix="mineru_")
-    md_content = ""
-
-    try:
-        # MinerU v1.x API: InferenceResult.pipe_ocr_mode()
-        from magic_pdf.data.data_reader_writer import FileBasedDataWriter
-        from magic_pdf.data.dataset import PymuDocDataset
-
-        pdf_bytes = Path(pdf_path).read_bytes()
-        image_writer = FileBasedDataWriter(tmp_dir)
-
-        dataset = PymuDocDataset(pdf_bytes)
-        infer_result = doc_analyze(dataset, ocr=True, lang="ja")
-        pipe_result = infer_result.pipe_ocr_mode(image_writer)
-        md_content = pipe_result.get_markdown(image_writer)
-
-    except (ImportError, AttributeError):
-        # Fallback: MinerU v0.6.x API
-        try:
-            from magic_pdf.pipe.UNIPipe import UNIPipe
-            from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
-
-            pdf_bytes = Path(pdf_path).read_bytes()
-            image_writer = DiskReaderWriter(tmp_dir)
-
-            model_json = doc_analyze(pdf_bytes)
-            pipe = UNIPipe(pdf_bytes, model_json, image_writer=image_writer)
-            pipe.pipe_classify()
-            pipe.pipe_analyze()
-            pipe.pipe_parse()
-
-            result = pipe.pipe_mk_markdown(image_writer)
-            md_content = result[0] if isinstance(result, tuple) else result
-        except Exception as e:
-            log.warning("mineru_v06_failed", error=str(e))
-
-    # Split by page markers (MinerU separates pages with ---)
-    if md_content:
-        pages = re.split(r"\n---\n|\n\f\n", md_content)
-        page_texts = [p.strip() for p in pages if p.strip()]
-        if not page_texts:
-            page_texts = [md_content]
-    else:
-        page_texts = []
-
-    shutil.rmtree(tmp_dir, ignore_errors=True)
-
-    log.info("ocr_mineru_complete", path=str(pdf_path), pages=len(page_texts),
              total_chars=sum(len(t) for t in page_texts))
     return page_texts
 
@@ -164,14 +157,14 @@ def extract_text_ocr(pdf_path: Path) -> list[str]:
     if provider == "none":
         log.warning("no_ocr_available",
                     path=str(pdf_path),
-                    hint="Install OCR: uv sync --extra ocr (requires Tesseract for pymupdf)")
+                    hint="Install OCR: pip install paddleocr paddlepaddle")
         return []
 
     log.info("ocr_start", path=str(pdf_path), provider=provider)
 
     try:
-        if provider == "mineru":
-            return _ocr_with_mineru(pdf_path)
+        if provider == "paddleocr":
+            return _ocr_with_paddleocr(pdf_path)
         elif provider == "pymupdf":
             return _ocr_with_pymupdf(pdf_path)
         else:

@@ -8,7 +8,7 @@ Each department section in Form 2-4-2 contains:
 - 卒業者数 / 進学者数 / 就職者数 / その他 section
 - 中途退学の現状 with 年度当初在学者数, 退学者の数, 中退率
 
-2-tier: pdfplumber text extraction (Tier 1) -> MinerU/VL-OCR (Tier 2)
+2-tier: pdfplumber text extraction (Tier 1) -> PaddleOCR/PyMuPDF OCR (Tier 2)
 """
 
 import re
@@ -666,16 +666,13 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
 
 
 def _clean_ocr_markdown(md_text: str) -> str:
-    """Convert MinerU Markdown output to plain text for parser consumption.
+    """Clean OCR output artifacts for parser consumption.
 
-    MinerU outputs Markdown with:
+    Strips Markdown-like artifacts that some OCR engines produce:
     - Table pipes: | 学校名 | HAL東京 | → 学校名 HAL東京
     - Image links: ![](path/to/img.jpg) → removed
     - Header markers: ## Section → Section
     - Bold/italic: **text** → text
-
-    This preprocessor strips Markdown artifacts so the existing regex-based
-    parser can extract enrollment data correctly.
     """
     lines = md_text.split("\n")
     cleaned: list[str] = []
@@ -710,9 +707,9 @@ def _clean_ocr_markdown(md_text: str) -> str:
 def parse_pdf_ocr(pdf_path: Path, ocr_page_texts: list[str]) -> SchoolAnnotation:
     """Parse a PDF using pre-extracted OCR text (for image-only PDFs).
 
-    Preprocesses MinerU Markdown output to plain text, then uses the same
-    extraction logic as parse_pdf. Table extraction is not available
-    for OCR text, so dept identity comes from text parsing only.
+    Cleans OCR output artifacts, then uses the same extraction logic
+    as parse_pdf. Table extraction is not available for OCR text,
+    so dept identity comes from text parsing only.
     """
     # Clean Markdown artifacts from OCR output
     cleaned_pages = [_clean_ocr_markdown(pt) for pt in ocr_page_texts]
