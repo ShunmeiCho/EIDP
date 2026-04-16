@@ -231,13 +231,21 @@ def _parse_department_section(
         # OCR may split across lines: "生徒総定員" on one line, "生徒実員" on next
         # OCR layout: labels span ~6 lines, then data lines with "N人" follow
         if enrollment is None and "生徒総定員" in line_norm and "生徒実員" not in line_norm:
-            # Scan forward up to 10 lines for N人 data (OCR has many label lines)
+            # OCR layout: labels on separate lines, then each number on its own line
+            # e.g. "40人" / "30人" / "0人" (or "V0" as OCR error for 0人)
             found_nums: list[int] = []
-            for j in range(i + 1, min(i + 12, len(normed_lines))):
+            for j in range(i + 1, min(i + 15, len(normed_lines))):
                 data_line = normed_lines[j]
+                # Skip label lines
+                if any(k in data_line for k in ["カリキュラム", "概要", "授業計画"]):
+                    break
+                # Match "N人" pattern
                 person_match = re.findall(r"(\d+)\s*人", data_line)
                 if person_match:
                     found_nums.extend(int(n) for n in person_match)
+                # OCR sometimes misreads "0人" as "V0", "Y0", "O0" etc.
+                elif re.match(r"^[VOYvo]\s*0$", data_line.strip()):
+                    found_nums.append(0)
                 if len(found_nums) >= 3:
                     capacity, enrollment, intl_students = found_nums[0], found_nums[1], found_nums[2]
                     break
