@@ -168,24 +168,32 @@ def _parse_department_section(
     # Text-only dept name extraction (fallback for OCR path where no table is available)
     if not dept_name:
         for i, line_norm in enumerate(normed_lines):
-            # Pattern: "分野 | 課程名 | 学科名" header followed by data row
-            if "学科名" in line_norm and ("分野" in line_norm or "課程名" in line_norm):
-                # Next non-empty line after header should contain dept identity
-                for j in range(i + 1, min(i + 3, len(normed_lines))):
+            # Pattern 1: "分野 | 課程名 | 学科名" all on same line (pdfplumber)
+            # Pattern 2: "学科名" on its own line (OCR split)
+            header_on_same_line = "学科名" in line_norm and ("分野" in line_norm or "課程名" in line_norm)
+            # OCR: "学科名" alone, and nearby lines have "分野"
+            header_ocr_split = (
+                "学科名" in line_norm
+                and "分野" not in line_norm
+                and any("分野" in normed_lines[k] for k in range(max(0, i - 3), i))
+            )
+            if header_on_same_line or header_ocr_split:
+                # Scan forward for dept identity data
+                _skip_labels = {"専門士", "高度専門士", "学科名", "分野", "課程名", "修業", "昼夜"}
+                for j in range(i + 1, min(i + 5, len(normed_lines))):
                     candidate = normed_lines[j].strip()
-                    # Skip header continuation lines
-                    if candidate and "専門士" not in candidate and "高度専門士" not in candidate:
-                        # Extract dept name: typically the longest token or the full line
-                        parts = re.split(r"\s{2,}", candidate)
-                        for part in parts:
-                            cleaned = re.sub(r"\s+", "", part)
-                            if len(cleaned) >= 3 and "専門課程" not in cleaned:
-                                if not dept_name:
-                                    dept_name = cleaned
-                                elif not course and cleaned != dept_name:
-                                    course = cleaned
-                        if dept_name:
-                            break
+                    if not candidate or any(s in candidate for s in _skip_labels):
+                        continue
+                    parts = re.split(r"\s{2,}", candidate)
+                    for part in parts:
+                        cleaned = re.sub(r"\s+", "", part)
+                        if len(cleaned) >= 3 and "専門課程" not in cleaned:
+                            if not dept_name:
+                                dept_name = cleaned
+                            elif not course and cleaned != dept_name:
+                                course = cleaned
+                    if dept_name:
+                        break
                 if dept_name:
                     break
     day_night = ""
@@ -220,6 +228,26 @@ def _parse_department_section(
 
         # -- Enrollment data --
         # 生徒総定員数 | 生徒実員 | うち留学生数 row with numbers
+        # OCR may split across lines: "生徒総定員" on one line, "生徒実員" on next
+        if enrollment is None and "生徒総定員" in line_norm and "生徒実員" not in line_norm:
+            # OCR split: header labels on separate lines, numbers follow after
+            # Scan forward for lines with N人 pattern
+            for j in range(i + 1, min(i + 6, len(normed_lines))):
+                data_line = normed_lines[j]
+                # Skip label-only lines
+                if any(k in data_line for k in ["生徒実員", "留学生", "教員", "総教員"]):
+                    continue
+                person_nums = re.findall(r"(\d+)\s*人", data_line)
+                if len(person_nums) >= 3:
+                    capacity, enrollment, intl_students = (
+                        int(person_nums[0]), int(person_nums[1]), int(person_nums[2])
+                    )
+                    break
+                all_nums = _extract_ints(data_line)
+                if len(all_nums) >= 3 and all(n < 10000 for n in all_nums[:3]):
+                    capacity, enrollment, intl_students = all_nums[0], all_nums[1], all_nums[2]
+                    break
+
         if "生徒総定員" in line_norm and "生徒実員" in line_norm:
             nums = _extract_ints(line_norm)
             if len(nums) >= 3:
@@ -269,7 +297,15 @@ def _parse_department_section(
         #
         # Strategy: find "卒業者数" header line, then scan forward up to 6 lines
         # for the data row with "N人" pattern (4 numbers = grad, adv, emp, other)
-        if graduates is None and "卒業者数" in line_norm and ("進学" in line_norm or "就職" in line_norm):
+        # OCR: "卒業者数" may appear alone; check nearby for "進学" or "就職"
+        grad_header_same_line = "卒業者数" in line_norm and ("進学" in line_norm or "就職" in line_norm)
+        grad_header_ocr = (
+            "卒業者数" in line_norm
+            and "進学" not in line_norm
+            and any("進学" in normed_lines[k] or "就職" in normed_lines[k]
+                    for k in range(i, min(i + 4, len(normed_lines))))
+        )
+        if graduates is None and (grad_header_same_line or grad_header_ocr):
             # Scan forward for the data row
             for j in range(i, min(i + 7, len(normed_lines))):
                 data_line = normed_lines[j]
