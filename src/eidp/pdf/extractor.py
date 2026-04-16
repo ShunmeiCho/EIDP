@@ -299,8 +299,11 @@ def _parse_department_section(
     if not dept_name or enrollment is None:
         return None
 
-    # Clean department name: remove extra whitespace but keep parenthetical info
+    # Clean department name: remove extra whitespace and Markdown artifacts
     dept_clean = re.sub(r"\s+", "", dept_name).strip()
+    # Reject names that still contain Markdown pipe delimiters (OCR artifact)
+    if "|" in dept_clean:
+        return None
 
     return DepartmentRecord(
         name=dept_clean,
@@ -641,21 +644,65 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     )
 
 
+def _clean_ocr_markdown(md_text: str) -> str:
+    """Convert MinerU Markdown output to plain text for parser consumption.
+
+    MinerU outputs Markdown with:
+    - Table pipes: | 学校名 | HAL東京 | → 学校名 HAL東京
+    - Image links: ![](path/to/img.jpg) → removed
+    - Header markers: ## Section → Section
+    - Bold/italic: **text** → text
+
+    This preprocessor strips Markdown artifacts so the existing regex-based
+    parser can extract enrollment data correctly.
+    """
+    lines = md_text.split("\n")
+    cleaned: list[str] = []
+
+    for line in lines:
+        # Remove image links
+        line = re.sub(r"!\[.*?\]\(.*?\)", "", line)
+        # Remove markdown header markers
+        line = re.sub(r"^#{1,6}\s+", "", line)
+        # Remove bold/italic markers
+        line = re.sub(r"\*{1,3}([^*]+)\*{1,3}", r"\1", line)
+
+        # Handle Markdown table rows: | cell1 | cell2 | → cell1 cell2
+        if "|" in line:
+            # Skip table separator rows like |---|---|
+            if re.match(r"^\|[\s\-:]+\|", line):
+                continue
+            # Extract cell contents, join with spaces
+            cells = [c.strip() for c in line.split("|") if c.strip()]
+            if cells:
+                line = " ".join(cells)
+
+        # Remove remaining pipe characters that might be artifacts
+        line = line.replace("|", " ").strip()
+
+        if line:
+            cleaned.append(line)
+
+    return "\n".join(cleaned)
+
+
 def parse_pdf_ocr(pdf_path: Path, ocr_page_texts: list[str]) -> SchoolAnnotation:
     """Parse a PDF using pre-extracted OCR text (for image-only PDFs).
 
-    Uses the same extraction logic as parse_pdf but with OCR-provided text
-    instead of pdfplumber text extraction. Table extraction is not available
+    Preprocesses MinerU Markdown output to plain text, then uses the same
+    extraction logic as parse_pdf. Table extraction is not available
     for OCR text, so dept identity comes from text parsing only.
     """
-    full_text = "\n===PAGE===\n".join(ocr_page_texts)
+    # Clean Markdown artifacts from OCR output
+    cleaned_pages = [_clean_ocr_markdown(pt) for pt in ocr_page_texts]
+    full_text = "\n===PAGE===\n".join(cleaned_pages)
 
     school_name = _extract_school_name(full_text)
     fiscal_year = _extract_fiscal_year(full_text)
     operator_name = _extract_operator_name(full_text)
 
     departments: list[DepartmentRecord] = []
-    normed_pages = [_norm(pt) for pt in ocr_page_texts]
+    normed_pages = [_norm(pt) for pt in cleaned_pages]
     dept_section_starts: list[int] = []
 
     for i, page_text in enumerate(normed_pages):
@@ -680,7 +727,7 @@ def parse_pdf_ocr(pdf_path: Path, ocr_page_texts: list[str]) -> SchoolAnnotation
         if dept is not None:
             departments.append(dept)
 
-    support_recipient = _parse_support_section(ocr_page_texts)
+    support_recipient = _parse_support_section(cleaned_pages)
 
     log.info(
         "pdf_parsed_ocr",
