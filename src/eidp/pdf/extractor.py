@@ -178,22 +178,36 @@ def _parse_department_section(
                 and any("分野" in normed_lines[k] for k in range(max(0, i - 3), i))
             )
             if header_on_same_line or header_ocr_split:
-                # Scan forward for dept identity data
+                # OCR layout: after "学科名" line, expect:
+                #   専門士 / 高度専門士 / <分野値> / <課程名値> / <学科名値>
+                # Collect candidates, pick the one that looks like a dept name
                 _skip_labels = {"専門士", "高度専門士", "学科名", "分野", "課程名", "修業", "昼夜"}
-                for j in range(i + 1, min(i + 5, len(normed_lines))):
+                # Common 分野 values to skip
+                _known_fields = {"衛生", "工業", "商業", "農業", "教育", "医療", "文化", "服飾"}
+                candidates: list[str] = []
+                for j in range(i + 1, min(i + 10, len(normed_lines))):
                     candidate = normed_lines[j].strip()
                     if not candidate or any(s in candidate for s in _skip_labels):
                         continue
-                    parts = re.split(r"\s{2,}", candidate)
-                    for part in parts:
-                        cleaned = re.sub(r"\s+", "", part)
-                        if len(cleaned) >= 3 and "専門課程" not in cleaned:
-                            if not dept_name:
-                                dept_name = cleaned
-                            elif not course and cleaned != dept_name:
-                                course = cleaned
-                    if dept_name:
+                    # Stop scanning at enrollment or content sections
+                    if any(k in candidate for k in ["生徒", "カリキュラム", "修業"]):
                         break
+                    cleaned = re.sub(r"\s+", "", candidate)
+                    if len(cleaned) >= 2:
+                        candidates.append(cleaned)
+
+                # From candidates, skip known 分野 values; take 課程名 + 学科名
+                for c in candidates:
+                    if c in _known_fields:
+                        continue
+                    if "専門課程" in c:
+                        if not course:
+                            course = c
+                        continue
+                    if not dept_name:
+                        dept_name = c
+                    elif not course and c != dept_name:
+                        course = c
                 if dept_name:
                     break
     day_night = ""
