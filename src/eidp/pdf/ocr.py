@@ -92,43 +92,54 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
     Best accuracy for Japanese tabular documents.
     """
     try:
-        from magic_pdf.pipe.UNIPipe import UNIPipe
         from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
     except ImportError:
         log.error("mineru_not_installed", hint="Install: pip install magic-pdf")
         return []
 
-    # Read PDF bytes
-    pdf_bytes = Path(pdf_path).read_bytes()
+    import re
+    import tempfile
 
-    # Image writer for extracted images (use DiskReaderWriter if available)
+    tmp_dir = tempfile.mkdtemp(prefix="mineru_")
+
     try:
-        from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
-        import tempfile
-        tmp_dir = tempfile.mkdtemp(prefix="mineru_")
-        image_writer = DiskReaderWriter(tmp_dir)
+        # MinerU v1.x API: uses Dataset + FileBasedDataWriter
+        from magic_pdf.data.data_reader_writer import FileBasedDataWriter
+        from magic_pdf.data.dataset import PymuDocDataset
+
+        pdf_bytes = Path(pdf_path).read_bytes()
+        image_writer = FileBasedDataWriter(tmp_dir)
+
+        dataset = PymuDocDataset(pdf_bytes)
+        model_json = doc_analyze(dataset, ocr=True, lang="ja")
+
+        # Use OCR pipe for image-only PDFs
+        pipe_result = dataset.apply(model_json, image_writer, is_ocr=True)
+        md_content = pipe_result.get_markdown(image_writer)
+
     except ImportError:
-        image_writer = None
+        # Fallback: MinerU v0.6.x API
+        try:
+            from magic_pdf.pipe.UNIPipe import UNIPipe
+            from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
 
-    # Run MinerU analysis
-    model_json = doc_analyze(pdf_bytes)
-    pipe = UNIPipe(pdf_bytes, model_json, image_writer=image_writer)
-    pipe.pipe_classify()
-    pipe.pipe_analyze()
-    pipe.pipe_parse()
+            pdf_bytes = Path(pdf_path).read_bytes()
+            image_writer = DiskReaderWriter(tmp_dir)
 
-    # Extract text — pipe_mk_markdown returns (markdown_str, images_list)
-    result = pipe.pipe_mk_markdown(image_writer)
-    if isinstance(result, tuple):
-        md_content = result[0]
-    else:
-        md_content = result
+            model_json = doc_analyze(pdf_bytes)
+            pipe = UNIPipe(pdf_bytes, model_json, image_writer=image_writer)
+            pipe.pipe_classify()
+            pipe.pipe_analyze()
+            pipe.pipe_parse()
 
-    # Split by page markers (MinerU uses --- or page breaks)
-    # Fall back to treating as pages separated by form boundaries
+            result = pipe.pipe_mk_markdown(image_writer)
+            md_content = result[0] if isinstance(result, tuple) else result
+        except Exception as e:
+            log.warning("mineru_v06_failed", error=str(e))
+            md_content = ""
+
+    # Split by page markers
     if md_content:
-        import re
-        # Split on page break patterns
         pages = re.split(r"\n---\n|\n\f\n", md_content)
         page_texts = [p.strip() for p in pages if p.strip()]
         if not page_texts:
@@ -137,9 +148,8 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
         page_texts = []
 
     # Cleanup temp dir
-    if image_writer:
-        import shutil
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+    import shutil
+    shutil.rmtree(tmp_dir, ignore_errors=True)
 
     log.info("ocr_mineru_complete", path=str(pdf_path), pages=len(page_texts),
              total_chars=sum(len(t) for t in page_texts))
