@@ -31,7 +31,7 @@ def _check_ocr_availability() -> str:
 
     # Auto-detect: prefer MinerU > PyMuPDF OCR
     try:
-        from magic_pdf.pipe.UNIPipe import UNIPipe  # noqa: F401
+        from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze  # noqa: F401
         return "mineru"
     except ImportError:
         pass
