@@ -164,6 +164,30 @@ def _parse_department_section(
     # Use table-extracted names (reliable) or fall back to text parsing
     dept_name = table_dept_name
     course = table_course_name
+
+    # Text-only dept name extraction (fallback for OCR path where no table is available)
+    if not dept_name:
+        for i, line_norm in enumerate(normed_lines):
+            # Pattern: "分野 | 課程名 | 学科名" header followed by data row
+            if "学科名" in line_norm and ("分野" in line_norm or "課程名" in line_norm):
+                # Next non-empty line after header should contain dept identity
+                for j in range(i + 1, min(i + 3, len(normed_lines))):
+                    candidate = normed_lines[j].strip()
+                    # Skip header continuation lines
+                    if candidate and "専門士" not in candidate and "高度専門士" not in candidate:
+                        # Extract dept name: typically the longest token or the full line
+                        parts = re.split(r"\s{2,}", candidate)
+                        for part in parts:
+                            cleaned = re.sub(r"\s+", "", part)
+                            if len(cleaned) >= 3 and "専門課程" not in cleaned:
+                                if not dept_name:
+                                    dept_name = cleaned
+                                elif not course and cleaned != dept_name:
+                                    course = cleaned
+                        if dept_name:
+                            break
+                if dept_name:
+                    break
     day_night = ""
     duration: int | None = None
     capacity: int | None = None

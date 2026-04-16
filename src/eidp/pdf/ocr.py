@@ -38,10 +38,22 @@ def _check_ocr_availability() -> str:
 
     try:
         import fitz  # noqa: F401
-        # PyMuPDF can do OCR if Tesseract is installed
+        # PyMuPDF can do OCR if Tesseract is installed with Japanese language
         import shutil
+        import subprocess
         if shutil.which("tesseract"):
-            return "pymupdf"
+            # Verify Japanese language pack is available
+            try:
+                langs = subprocess.run(
+                    ["tesseract", "--list-langs"],
+                    capture_output=True, text=True, timeout=5
+                ).stdout
+                if "jpn" in langs:
+                    return "pymupdf"
+                else:
+                    log.warning("tesseract_no_jpn", hint="Install: brew install tesseract-lang (macOS) or apt install tesseract-ocr-jpn")
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
     except ImportError:
         pass
 

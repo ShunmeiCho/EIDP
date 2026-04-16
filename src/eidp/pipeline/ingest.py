@@ -53,9 +53,11 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         ocr_pages = extract_text_ocr(pdf_path)
         if not ocr_pages or not any(t.strip() for t in ocr_pages):
             log.info("image_pdf_no_ocr", doc_id=doc.id, path=str(pdf_path))
-            doc.ingest_status = "image_only"
+            # Use ocr_pending instead of image_only so it can be retried
+            # after OCR dependencies are installed or improved
+            doc.ingest_status = "ocr_pending"
             stats["skipped"] = 1
-            stats["skip_reason"] = "image_only"
+            stats["skip_reason"] = "ocr_pending"
             return stats
         # Use OCR text for parsing
         from eidp.pdf.extractor import parse_pdf_ocr
@@ -351,7 +353,7 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             Document.file_path.isnot(None),
             or_(
                 Document.ingest_status.is_(None),
-                Document.ingest_status.in_(["pending", "transient_error"]),
+                Document.ingest_status.in_(["pending", "transient_error", "ocr_pending"]),
             ),
             or_(
                 Document.pdf_type.is_(None),
