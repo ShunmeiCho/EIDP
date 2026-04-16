@@ -113,7 +113,7 @@ def _ocr_with_mineru(pdf_path: Path) -> list[str]:
         image_writer = FileBasedDataWriter(tmp_dir)
 
         dataset = PymuDocDataset(pdf_bytes)
-        infer_result = doc_analyze(dataset, ocr=True)
+        infer_result = doc_analyze(dataset, ocr=True, lang="ja")
         pipe_result = infer_result.pipe_ocr_mode(image_writer)
         md_content = pipe_result.get_markdown(image_writer)
 
