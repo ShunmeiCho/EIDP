@@ -7,6 +7,11 @@ Supports multiple OCR backends via provider pattern:
 The provider is selected automatically based on available packages,
 or can be overridden via EIDP_OCR_PROVIDER env var.
 
+Device selection (GPU/CPU):
+- Auto-detects CUDA GPU via PaddlePaddle
+- Falls back to CPU if no GPU available
+- Override via EIDP_OCR_DEVICE env var ("gpu" or "cpu")
+
 Design for portability:
 - All OCR deps are optional (ocr extra in pyproject.toml)
 - If no OCR is available, returns empty text with a warning
@@ -20,6 +25,25 @@ import structlog
 log = structlog.get_logger()
 
 _VALID_PROVIDERS = ("paddleocr", "pymupdf")
+
+
+def _detect_device() -> str:
+    """Detect best available device for PaddleOCR. Returns 'gpu' or 'cpu'."""
+    import os
+
+    override = os.environ.get("EIDP_OCR_DEVICE", "").lower()
+    if override in ("gpu", "cpu"):
+        return override
+
+    try:
+        import paddle
+        if paddle.device.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0:
+            log.info("ocr_device_gpu", gpu=paddle.device.cuda.get_device_name(0))
+            return "gpu"
+    except Exception:
+        pass
+
+    return "cpu"
 
 
 def _check_ocr_availability() -> str:
@@ -70,9 +94,13 @@ def _pdf_to_page_images(pdf_path: Path) -> list[str]:
     doc = fitz.open(str(pdf_path))
     try:
         for i, page in enumerate(doc):
-            # 300 DPI for good OCR quality
             mat = fitz.Matrix(300 / 72, 300 / 72)
             pix = page.get_pixmap(matrix=mat)
+            # Limit image size to avoid PaddleOCR resize warnings
+            if max(pix.width, pix.height) > 4000:
+                scale = 4000 / max(pix.width, pix.height)
+                mat = fitz.Matrix(scale * 300 / 72, scale * 300 / 72)
+                pix = page.get_pixmap(matrix=mat)
             img_path = f"{tmp_dir}/page_{i:04d}.png"
             pix.save(img_path)
             image_paths.append(img_path)
@@ -85,14 +113,22 @@ def _pdf_to_page_images(pdf_path: Path) -> list[str]:
 def _ocr_with_paddleocr(pdf_path: Path) -> list[str]:
     """Extract text from image PDF using PaddleOCR PP-OCRv5.
 
-    Requires: pip install paddleocr paddlepaddle
+    Requires: pip install paddleocr paddlepaddle (or paddlepaddle-gpu)
     PP-OCRv5 unified model supports Japanese natively.
+    Uses GPU when available, falls back to CPU automatically.
     """
+    import os
     from paddleocr import PaddleOCR
 
-    ocr = PaddleOCR(lang="japan", show_log=False)
+    device = _detect_device()
+    log.info("ocr_paddleocr_init", device=device)
 
-    # Convert PDF pages to images first
+    # Suppress PaddleOCR connectivity check
+    os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
+    ocr = PaddleOCR(lang="japan")
+
+    # Convert PDF pages to images
     try:
         image_paths = _pdf_to_page_images(pdf_path)
     except ImportError:
@@ -101,14 +137,11 @@ def _ocr_with_paddleocr(pdf_path: Path) -> list[str]:
 
     page_texts: list[str] = []
     for img_path in image_paths:
-        result = ocr.ocr(img_path)
+        result = ocr.predict(img_path)
         lines: list[str] = []
-        if result and result[0]:
-            for line_info in result[0]:
-                # PaddleOCR returns: [[box], (text, confidence)]
-                if len(line_info) >= 2:
-                    text = line_info[1][0] if isinstance(line_info[1], (list, tuple)) else str(line_info[1])
-                    lines.append(text)
+        for page_result in result:
+            rec_texts = page_result.get("rec_texts", [])
+            lines.extend(rec_texts)
         page_texts.append("\n".join(lines))
 
     # Cleanup temp images
@@ -118,7 +151,7 @@ def _ocr_with_paddleocr(pdf_path: Path) -> list[str]:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
     log.info("ocr_paddleocr_complete", path=str(pdf_path), pages=len(page_texts),
-             total_chars=sum(len(t) for t in page_texts))
+             total_chars=sum(len(t) for t in page_texts), device=device)
     return page_texts
 
 
