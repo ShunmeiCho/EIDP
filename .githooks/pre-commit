@@ -1,0 +1,41 @@
+#!/bin/sh
+# Pre-commit hook: scan staged changes for secrets
+# Install: git config core.hooksPath .githooks
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "[pre-commit] gitleaks not found. Install: brew install gitleaks"
+    echo "[pre-commit] Skipping secret scan. Run 'brew install gitleaks' to enable."
+    exit 0
+fi
+
+echo "[pre-commit] Scanning staged changes for secrets..."
+gitleaks protect --staged --redact --config .gitleaks.toml
+STATUS=$?
+
+if [ $STATUS -ne 0 ]; then
+    echo ""
+    echo "[pre-commit] BLOCKED: potential secret detected in staged changes."
+    echo "[pre-commit] Fix the issue and try again, or use 'git commit --no-verify' if false positive."
+    exit 1
+fi
+
+# Block obviously large binary files
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+for f in $STAGED; do
+    if [ -f "$f" ]; then
+        SIZE=$(wc -c < "$f" 2>/dev/null || echo 0)
+        # 512 KB threshold for source files
+        if [ "$SIZE" -gt 524288 ]; then
+            # Allow *.xlsx in sample/ but block everywhere else
+            case "$f" in
+                sample/*) continue ;;
+                *.lock|*.sum|uv.lock|package-lock.json|yarn.lock) continue ;;
+                *) echo "[pre-commit] BLOCKED: $f is $SIZE bytes (>512 KB)."
+                   echo "[pre-commit] Add to .gitignore or use git LFS."
+                   exit 1 ;;
+            esac
+        fi
+    fi
+done
+
+exit 0
