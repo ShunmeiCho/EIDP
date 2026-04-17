@@ -18,6 +18,15 @@ build/
 # Context
 .context/
 
+# Secrets / environment
+.env
+.env.local
+.env.*.local
+
+# Data (PDFs, exports, large binaries — not source)
+data/pdfs/
+output/
+*.xlsx
+
 # Large binary data (tracked via LFS or excluded)
-# sample Excel files are original data — keep in repo for now
 .omx/
