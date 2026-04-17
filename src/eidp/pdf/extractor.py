@@ -181,24 +181,35 @@ def _parse_department_section(
                 # OCR layout: after "学科名" line, expect:
                 #   専門士 / 高度専門士 / <分野値> / <課程名値> / <学科名値>
                 # Collect candidates, pick the one that looks like a dept name
-                _skip_labels = {"専門士", "高度専門士", "学科名", "分野", "課程名", "修業", "昼夜"}
-                # Common 分野 values to skip
-                _known_fields = {"衛生", "工業", "商業", "農業", "教育", "医療", "文化", "服飾"}
+                _skip_labels = {"専門士", "高度専門士", "学科名", "分野", "課程名", "昼夜"}
+                # MEXT 8 official fields (分野) with short/full variants:
+                #   工業関係, 農業関係, 医療関係, 衛生関係,
+                #   教育・社会福祉関係, 商業実務関係, 服飾・家政関係, 文化・教養関係
+                # Match both short form ("工業") and full ("工業関係", "文化・教養関係")
+                _field_pattern = re.compile(
+                    r"^(工業|農業|医療|衛生|教育|社会福祉|商業|商業実務"
+                    r"|服飾|家政|服飾・家政|文化|教養|文化・教養|教育・社会福祉)"
+                    r"(関係)?$"
+                )
                 candidates: list[str] = []
-                for j in range(i + 1, min(i + 10, len(normed_lines))):
+                for j in range(i + 1, min(i + 12, len(normed_lines))):
                     candidate = normed_lines[j].strip()
                     if not candidate or any(s in candidate for s in _skip_labels):
                         continue
-                    # Stop scanning at enrollment or content sections
-                    if any(k in candidate for k in ["生徒", "カリキュラム", "修業"]):
+                    # Stop scanning at actual enrollment/curriculum sections
+                    # (but NOT at 修業 alone — OCR sometimes emits 修業年限 mid-header)
+                    if any(k in candidate for k in ["生徒総定員", "生徒実員", "カリキュラム"]):
                         break
                     cleaned = re.sub(r"\s+", "", candidate)
                     if len(cleaned) >= 2:
                         candidates.append(cleaned)
 
-                # From candidates, skip known 分野 values; take 課程名 + 学科名
+                # From candidates: skip 分野 values, detect 課程名 vs 学科名
                 for c in candidates:
-                    if c in _known_fields:
+                    if _field_pattern.match(c):
+                        continue
+                    # 修業年限 label/value should not be dept name
+                    if c in ("修業", "修業年限") or re.match(r"^\d+年?$", c):
                         continue
                     if "専門課程" in c:
                         if not course:
@@ -247,18 +258,25 @@ def _parse_department_section(
         if enrollment is None and "生徒総定員" in line_norm and "生徒実員" not in line_norm:
             # OCR layout: labels on separate lines, then each number on its own line
             # e.g. "40人" / "30人" / "0人" (or "V0" as OCR error for 0人)
+            # Page-break tolerant: scan wider window, only hard-break on next section header
             found_nums: list[int] = []
-            for j in range(i + 1, min(i + 15, len(normed_lines))):
-                data_line = normed_lines[j]
-                # Skip label lines
-                if any(k in data_line for k in ["カリキュラム", "概要", "授業計画"]):
+            for j in range(i + 1, min(i + 25, len(normed_lines))):
+                data_line = normed_lines[j].strip()
+                # Hard break only on next major section header (not mid-section 概要 labels)
+                if any(k in data_line for k in [
+                    "授業計画作成と公表",
+                    "成績評価の基準",
+                    "卒業・進級",
+                    "学修支援等",
+                ]):
                     break
                 # Match "N人" pattern
                 person_match = re.findall(r"(\d+)\s*人", data_line)
                 if person_match:
                     found_nums.extend(int(n) for n in person_match)
-                # OCR sometimes misreads "0人" as "V0", "Y0", "O0" etc.
-                elif re.match(r"^[VOYvo]\s*0$", data_line.strip()):
+                # OCR misreads of standalone "0人" as V0/Y0/O0 (not mid-token)
+                # Only match if line is EXACTLY the misread pattern (1-3 chars total)
+                elif len(data_line) <= 3 and re.match(r"^[VYO]0$", data_line):
                     found_nums.append(0)
                 if len(found_nums) >= 3:
                     capacity, enrollment, intl_students = found_nums[0], found_nums[1], found_nums[2]
@@ -329,8 +347,10 @@ def _parse_department_section(
                 data_line = normed_lines[j]
                 if any(skip in data_line for skip in ["直近", "自営業", "状況を記載"]):
                     continue
-                # Stop on percentage lines (next section)
-                if re.match(r"^\(\s*\d+", data_line) or "(100%)" in data_line:
+                # Stop on percentage lines (next section). Matches:
+                #   (100%), ( 6.6%), bare 100%, 6.6%, etc.
+                stripped = data_line.strip()
+                if re.match(r"^\(?\s*\d+(?:\.\d+)?\s*%", stripped):
                     break
                 person_nums = re.findall(r"(\d+)\s*人", data_line)
                 if person_nums:

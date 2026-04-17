@@ -16,9 +16,13 @@ Design for portability:
 - All OCR deps are optional (ocr extra in pyproject.toml)
 - If no OCR is available, returns empty text with a warning
 - Output is plain text per page, compatible with parse_pdf's text pipeline
+- Model is loaded once per process (singleton) to avoid GPU memory fragmentation
 """
 
+import os
+import tempfile
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -26,11 +30,12 @@ log = structlog.get_logger()
 
 _VALID_PROVIDERS = ("paddleocr", "pymupdf")
 
+# Module-level singleton for PaddleOCR (load once per process)
+_paddleocr_instance: Any | None = None
+
 
 def _detect_device() -> str:
     """Detect best available device for PaddleOCR. Returns 'gpu' or 'cpu'."""
-    import os
-
     override = os.environ.get("EIDP_OCR_DEVICE", "").lower()
     if override in ("gpu", "cpu"):
         return override
@@ -38,7 +43,6 @@ def _detect_device() -> str:
     try:
         import paddle
         if paddle.device.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0:
-            log.info("ocr_device_gpu", gpu=paddle.device.cuda.get_device_name(0))
             return "gpu"
     except Exception:
         pass
@@ -46,10 +50,40 @@ def _detect_device() -> str:
     return "cpu"
 
 
+def _get_paddleocr_instance() -> Any:
+    """Get (or create) module-level PaddleOCR instance.
+
+    Loads model once per process to avoid GPU memory fragmentation over
+    batch runs and to eliminate repeated model-load overhead.
+    """
+    global _paddleocr_instance
+    if _paddleocr_instance is not None:
+        return _paddleocr_instance
+
+    from paddleocr import PaddleOCR
+    import paddle
+
+    device = _detect_device()
+    os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
+    # Actually set the paddle device (was dead code before)
+    try:
+        if device == "gpu":
+            paddle.set_device("gpu:0")
+        else:
+            paddle.set_device("cpu")
+    except Exception as e:
+        log.warning("paddle_set_device_failed", device=device, error=str(e))
+
+    log.info("ocr_paddleocr_init", device=device,
+             gpu_name=paddle.device.cuda.get_device_name(0) if device == "gpu" else None)
+
+    _paddleocr_instance = PaddleOCR(lang="japan")
+    return _paddleocr_instance
+
+
 def _check_ocr_availability() -> str:
     """Detect available OCR provider. Returns provider name or 'none'."""
-    import os
-
     override = os.environ.get("EIDP_OCR_PROVIDER", "").lower()
     if override in _VALID_PROVIDERS:
         return override
@@ -83,14 +117,11 @@ def _check_ocr_availability() -> str:
     return "none"
 
 
-def _pdf_to_page_images(pdf_path: Path) -> list[str]:
-    """Convert each PDF page to a temporary PNG image. Returns list of paths."""
+def _pdf_to_page_images(pdf_path: Path, tmp_dir: str) -> list[str]:
+    """Convert each PDF page to a PNG image in tmp_dir. Returns list of paths."""
     import fitz
-    import tempfile
 
-    tmp_dir = tempfile.mkdtemp(prefix="eidp_ocr_")
     image_paths: list[str] = []
-
     doc = fitz.open(str(pdf_path))
     try:
         for i, page in enumerate(doc):
@@ -116,42 +147,36 @@ def _ocr_with_paddleocr(pdf_path: Path) -> list[str]:
     Requires: pip install paddleocr paddlepaddle (or paddlepaddle-gpu)
     PP-OCRv5 unified model supports Japanese natively.
     Uses GPU when available, falls back to CPU automatically.
+    Model instance is cached per-process for efficient batch runs.
     """
-    import os
-    from paddleocr import PaddleOCR
+    ocr = _get_paddleocr_instance()
 
-    device = _detect_device()
-    log.info("ocr_paddleocr_init", device=device)
+    # TemporaryDirectory context manager guarantees cleanup on any exit path
+    with tempfile.TemporaryDirectory(prefix="eidp_ocr_") as tmp_dir:
+        try:
+            image_paths = _pdf_to_page_images(pdf_path, tmp_dir)
+        except ImportError:
+            log.warning("pymupdf_not_installed", hint="pip install pymupdf (needed for PDF->image)")
+            return []
+        except Exception as e:
+            log.warning("pdf_to_image_failed", path=str(pdf_path), error=str(e))
+            return []
 
-    # Suppress PaddleOCR connectivity check
-    os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
-
-    ocr = PaddleOCR(lang="japan")
-
-    # Convert PDF pages to images
-    try:
-        image_paths = _pdf_to_page_images(pdf_path)
-    except ImportError:
-        log.warning("pymupdf_not_installed", hint="pip install pymupdf (needed for PDF->image)")
-        return []
-
-    page_texts: list[str] = []
-    for img_path in image_paths:
-        result = ocr.predict(img_path)
-        lines: list[str] = []
-        for page_result in result:
-            rec_texts = page_result.get("rec_texts", [])
-            lines.extend(rec_texts)
-        page_texts.append("\n".join(lines))
-
-    # Cleanup temp images
-    import shutil
-    if image_paths:
-        tmp_dir = str(Path(image_paths[0]).parent)
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+        page_texts: list[str] = []
+        for img_path in image_paths:
+            try:
+                result = ocr.predict(img_path)
+                lines: list[str] = []
+                for page_result in result:
+                    rec_texts = page_result.get("rec_texts", [])
+                    lines.extend(rec_texts)
+                page_texts.append("\n".join(lines))
+            except Exception as e:
+                log.warning("ocr_page_failed", path=img_path, error=str(e))
+                page_texts.append("")
 
     log.info("ocr_paddleocr_complete", path=str(pdf_path), pages=len(page_texts),
-             total_chars=sum(len(t) for t in page_texts), device=device)
+             total_chars=sum(len(t) for t in page_texts))
     return page_texts
 
 
