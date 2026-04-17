@@ -253,9 +253,17 @@ def _parse_department_section(
 
         # -- Enrollment data --
         # 生徒総定員数 | 生徒実員 | うち留学生数 row with numbers
-        # OCR may split across lines: "生徒総定員" on one line, "生徒実員" on next
+        # OCR may split across lines:
+        #   "生徒総定員" on one line, "生徒実員" on next
+        #   Or even "生徒総定" split from "員数" (OCR column wrap)
         # OCR layout: labels span ~6 lines, then data lines with "N人" follow
-        if enrollment is None and "生徒総定員" in line_norm and "生徒実員" not in line_norm:
+        enrollment_header_match = (
+            "生徒総定員" in line_norm
+            or (line_norm.strip() == "生徒総定"
+                and any("員数" in normed_lines[k]
+                        for k in range(i + 1, min(i + 10, len(normed_lines)))))
+        )
+        if enrollment is None and enrollment_header_match and "生徒実員" not in line_norm:
             # OCR layout: labels on separate lines, then each number on its own line
             # e.g. "40人" / "30人" / "0人" (or "V0" as OCR error for 0人)
             # Page-break tolerant: scan wider window, only hard-break on next section header
