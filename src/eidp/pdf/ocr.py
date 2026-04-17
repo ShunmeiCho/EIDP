@@ -21,6 +21,7 @@ Design for portability:
 
 import os
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +32,9 @@ log = structlog.get_logger()
 _VALID_PROVIDERS = ("paddleocr", "pymupdf")
 
 # Module-level singleton for PaddleOCR (load once per process)
+# Protected by a lock so concurrent first-callers don't double-initialize
 _paddleocr_instance: Any | None = None
+_paddleocr_lock = threading.Lock()
 
 
 def _detect_device() -> str:
@@ -55,31 +58,37 @@ def _get_paddleocr_instance() -> Any:
 
     Loads model once per process to avoid GPU memory fragmentation over
     batch runs and to eliminate repeated model-load overhead.
+    Thread-safe via double-checked locking.
     """
     global _paddleocr_instance
+    # Fast path: already initialized
     if _paddleocr_instance is not None:
         return _paddleocr_instance
 
-    from paddleocr import PaddleOCR
-    import paddle
+    # Slow path: acquire lock and double-check
+    with _paddleocr_lock:
+        if _paddleocr_instance is not None:
+            return _paddleocr_instance
 
-    device = _detect_device()
-    os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+        from paddleocr import PaddleOCR
+        import paddle
 
-    # Actually set the paddle device (was dead code before)
-    try:
-        if device == "gpu":
-            paddle.set_device("gpu:0")
-        else:
-            paddle.set_device("cpu")
-    except Exception as e:
-        log.warning("paddle_set_device_failed", device=device, error=str(e))
+        device = _detect_device()
+        os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
-    log.info("ocr_paddleocr_init", device=device,
-             gpu_name=paddle.device.cuda.get_device_name(0) if device == "gpu" else None)
+        try:
+            if device == "gpu":
+                paddle.set_device("gpu:0")
+            else:
+                paddle.set_device("cpu")
+        except Exception as e:
+            log.warning("paddle_set_device_failed", device=device, error=str(e))
 
-    _paddleocr_instance = PaddleOCR(lang="japan")
-    return _paddleocr_instance
+        log.info("ocr_paddleocr_init", device=device,
+                 gpu_name=paddle.device.cuda.get_device_name(0) if device == "gpu" else None)
+
+        _paddleocr_instance = PaddleOCR(lang="japan")
+        return _paddleocr_instance
 
 
 def _check_ocr_availability() -> str:

@@ -845,22 +845,35 @@ def parse_pdf_ocr(pdf_path: Path, ocr_page_texts: list[str]) -> SchoolAnnotation
     # Each header anchor starts a new section; data accumulates until next
     # anchor or end of document.
     #
-    # Anchor pattern (OCR): "分野" line followed within ~8 lines by "学科名"
-    # Anchor pattern (pdfplumber): "分野" and "学科名" on same line
+    # Anchor pattern (OCR): "分野" as standalone/short line followed by
+    #                       "学科名" within ~8 lines
+    # Anchor pattern (pdfplumber): "分野 | 課程名 | 学科名" all on same line
+    #
+    # To avoid body-text false positives, we require EITHER:
+    #   A) same-line: "分野" AND "学科名" on same line (typical pdfplumber)
+    #   B) OCR short line: "分野" on a line whose stripped length <= 5 chars
+    #      (e.g., exactly "分野" / "分野名") followed by "学科名" and
+    #      "課程名" both appearing in the next 8 lines
     section_starts: list[int] = []
     for idx, (_, line) in enumerate(all_lines):
         if "分野" not in line:
             continue
-        # Skip 分野 when it appears mid-sentence (not as a table header)
-        if len(line.strip()) > 10 and "分野" not in line.strip()[:5]:
+        stripped = line.strip()
+
+        # Pattern A: same-line header
+        if "分野" in stripped and "学科名" in stripped:
+            section_starts.append(idx)
             continue
-        # Check for 学科名 nearby (same line or within next 8 lines)
-        has_header_context = (
-            "学科名" in line
-            or any("学科名" in all_lines[k][1]
-                   for k in range(idx + 1, min(idx + 9, len(all_lines))))
-        )
-        if has_header_context:
+
+        # Pattern B: OCR short standalone line
+        # Require stripped length <= 5 (rejects any body text containing 分野)
+        if len(stripped) > 5:
+            continue
+        # Check both 学科名 AND 課程名 nearby (stronger signal than either alone)
+        window = [all_lines[k][1] for k in range(idx + 1, min(idx + 9, len(all_lines)))]
+        has_gakka = any("学科名" in w for w in window)
+        has_katei = any("課程名" in w for w in window)
+        if has_gakka and has_katei:
             section_starts.append(idx)
 
     # Parse each section

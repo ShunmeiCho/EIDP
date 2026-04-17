@@ -65,12 +65,26 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
                 .first()
             )
             if existing is not None:
+                # Propagate the twin's actual status, not a hardcoded one.
+                # If twin was 'ingested', this doc is still a mismatch (same PDF
+                # can't belong to two schools), but if twin was 'non_target' or
+                # 'permanent_error', we inherit that reason directly.
+                twin_status = existing.ingest_status
+                inherited_status = {
+                    "ingested": "school_mismatch",       # dup ingest to another school is a mismatch
+                    "support_only": "school_mismatch",   # dup support data to another school
+                    "school_mismatch": "school_mismatch",
+                    "non_target": "non_target",          # inherit: same PDF isn't a target form
+                    "permanent_error": "permanent_error",  # inherit: same PDF is malformed
+                }.get(twin_status, "school_mismatch")
+
                 log.info("hash_dedup_skip", doc_id=doc.id,
-                         twin_id=existing.id, twin_status=existing.ingest_status,
+                         twin_id=existing.id, twin_status=twin_status,
+                         inherited_status=inherited_status,
                          file_hash=doc.file_hash[:16])
-                doc.ingest_status = "school_mismatch"
+                doc.ingest_status = inherited_status
                 stats["skipped"] = 1
-                stats["skip_reason"] = f"hash_dedup:{existing.ingest_status}"
+                stats["skip_reason"] = f"hash_dedup:{twin_status}"
                 return stats
 
         from eidp.pdf.ocr import extract_text_ocr
@@ -370,20 +384,44 @@ def _infer_fiscal_year_from_download(downloaded_at) -> int | None:
     annual disclosure PDF (the one we're parsing) typically Jun-Aug,
     reporting data FROM the fiscal year that just ended.
 
-    Download timestamp logic:
+    downloaded_at is stored as UTC (timezone-aware); convert to JST
+    (UTC+9) before computing the April boundary, otherwise a JST Apr 1
+    download that was Mar 31 UTC would wrongly infer FY (Y-2).
+
+    Download timestamp logic (in JST):
     - Downloaded Jan-Mar of year Y:  likely reports FY (Y-2) data
       (FY Y-1 hasn't ended yet; schools publish in summer)
     - Downloaded Apr-Dec of year Y:  likely reports FY (Y-1) data
       (FY Y-1 just ended; schools published in summer)
 
-    Example: downloaded 2026-04 => FY 2025 (令和7年度).
-             downloaded 2026-02 => FY 2024 (令和6年度).
+    Example: downloaded 2026-04 JST => FY 2025 (令和7年度).
+             downloaded 2026-02 JST => FY 2024 (令和6年度).
+
+    Plausibility bound: refuse to infer for downloads older than 3
+    years (likely stale data, should be re-downloaded).
     """
     if downloaded_at is None:
         return None
-    if downloaded_at.month >= 4:
-        return downloaded_at.year - 1
-    return downloaded_at.year - 2
+
+    from datetime import datetime, timedelta, timezone
+    JST = timezone(timedelta(hours=9))
+
+    # Normalize to JST (handles both naive and aware datetimes)
+    if downloaded_at.tzinfo is None:
+        # Assume naive datetimes are UTC (matches upstream default)
+        dt_utc = downloaded_at.replace(tzinfo=timezone.utc)
+    else:
+        dt_utc = downloaded_at
+    dt_jst = dt_utc.astimezone(JST)
+
+    # Plausibility bound: downloads >3 years old are stale, don't infer
+    now_jst = datetime.now(JST)
+    if (now_jst - dt_jst).days > 3 * 365:
+        return None
+
+    if dt_jst.month >= 4:
+        return dt_jst.year - 1
+    return dt_jst.year - 2
 
 
 def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
@@ -401,8 +439,11 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
     """
     total_stats = {"processed": 0, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
 
-    # Find documents eligible for ingestion
-    # Skip: ingested, school_mismatch, parse_failed, no_file, image_only, non_target, permanent_error
+    # Find documents eligible for ingestion with row-level locking.
+    # FOR UPDATE SKIP LOCKED lets multiple parallel ingest workers pick
+    # disjoint sets of documents without double-processing.
+    # Skip: ingested, school_mismatch, parse_failed, no_file, image_only,
+    # non_target, permanent_error (terminal states).
     from sqlalchemy import or_
     docs = (
         session.query(Document)
@@ -410,7 +451,13 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             Document.file_path.isnot(None),
             or_(
                 Document.ingest_status.is_(None),
-                Document.ingest_status.in_(["pending", "transient_error", "ocr_pending"]),
+                Document.ingest_status.in_([
+                    "pending", "transient_error", "ocr_pending",
+                    # Recover stuck 'in_progress' from crashed prior runs.
+                    # FOR UPDATE SKIP LOCKED ensures we don't grab rows
+                    # another live worker is currently holding.
+                    "in_progress",
+                ]),
             ),
             or_(
                 Document.pdf_type.is_(None),
@@ -418,8 +465,20 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             ),
         )
         .limit(batch_size)
+        .with_for_update(skip_locked=True)
         .all()
     )
+
+    # Mark claimed docs as 'in_progress' to make claim visible across workers
+    # and commit immediately so row locks release.
+    for doc in docs:
+        doc.ingest_status = "in_progress"
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        log.exception("claim_commit_failed", claimed=len(docs))
+        return total_stats
 
     log.info("ingestion_start", documents=len(docs))
 
@@ -442,20 +501,33 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             total_stats["processed"] += 1
             for k in ("departments_created", "yearly_upserted", "skipped"):
                 total_stats[k] += stats.get(k, 0)
-            # Commit per-document so progress is durable if the process is killed
-            session.commit()
         except (OSError, IOError):
-            nested.rollback()
+            try:
+                nested.rollback()
+            except Exception:
+                log.exception("rollback_failed_after_io_error", doc_id=doc.id)
             doc.ingest_status = "transient_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_io_error", doc_id=doc.id, path=doc.file_path)
-            session.commit()
         except Exception:
-            nested.rollback()
+            try:
+                nested.rollback()
+            except Exception:
+                log.exception("rollback_failed_after_perm_error", doc_id=doc.id)
             doc.ingest_status = "permanent_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
+
+        # Per-document commit — guarded so a commit failure on one doc does not
+        # kill the batch. On commit failure, rollback the session and continue.
+        try:
             session.commit()
+        except Exception:
+            log.exception("per_doc_commit_failed", doc_id=doc.id, path=doc.file_path)
+            try:
+                session.rollback()
+            except Exception:
+                log.exception("rollback_failed_after_commit_error", doc_id=doc.id)
 
     log.info("ingestion_complete", **total_stats)
     return total_stats
