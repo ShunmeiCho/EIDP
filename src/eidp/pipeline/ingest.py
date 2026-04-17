@@ -122,8 +122,18 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
                 stats["skip_reason"] = "school_mismatch"
                 return stats
 
-    # Determine fiscal year early �� needed for both dept and support_recipient paths
+    # Determine fiscal year early — needed for both dept and support_recipient paths
     fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
+
+    # Fallback: if OCR couldn't extract fiscal_year (happens on scanned PDFs
+    # where 令和 date is rendered as image), infer from download timestamp.
+    # This is a best-effort inference, marked as such in the log.
+    if fiscal_year is None:
+        fiscal_year = _infer_fiscal_year_from_download(doc.downloaded_at)
+        if fiscal_year is not None:
+            log.info("fiscal_year_inferred_from_download",
+                     doc_id=doc.id, fiscal_year=fiscal_year,
+                     downloaded_at=str(doc.downloaded_at))
 
     # Quality gate: partial ingest — accept valid depts, skip invalid ones
     # Requirements per dept:
@@ -351,6 +361,29 @@ def _parse_fiscal_year_from_annotation(year_str: str) -> int | None:
     if m:
         return int(m.group(1))
     return None
+
+
+def _infer_fiscal_year_from_download(downloaded_at) -> int | None:
+    """Fallback: infer fiscal year from document download timestamp.
+
+    Japanese fiscal year: April N to March N+1. Schools publish the
+    annual disclosure PDF (the one we're parsing) typically Jun-Aug,
+    reporting data FROM the fiscal year that just ended.
+
+    Download timestamp logic:
+    - Downloaded Jan-Mar of year Y:  likely reports FY (Y-2) data
+      (FY Y-1 hasn't ended yet; schools publish in summer)
+    - Downloaded Apr-Dec of year Y:  likely reports FY (Y-1) data
+      (FY Y-1 just ended; schools published in summer)
+
+    Example: downloaded 2026-04 => FY 2025 (令和7年度).
+             downloaded 2026-02 => FY 2024 (令和6年度).
+    """
+    if downloaded_at is None:
+        return None
+    if downloaded_at.month >= 4:
+        return downloaded_at.year - 1
+    return downloaded_at.year - 2
 
 
 def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
