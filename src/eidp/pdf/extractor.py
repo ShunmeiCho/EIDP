@@ -322,13 +322,40 @@ def _parse_department_section(
                     for k in range(i, min(i + 4, len(normed_lines))))
         )
         if graduates is None and (grad_header_same_line or grad_header_ocr):
-            # Scan forward for the data row
-            for j in range(i, min(i + 7, len(normed_lines))):
+            # Scan forward and accumulate N人 across lines
+            # OCR puts each value on its own line: 33人 / 4人 / 22人 / 7人
+            grad_nums: list[int] = []
+            for j in range(i + 1, min(i + 12, len(normed_lines))):
                 data_line = normed_lines[j]
-                # Skip header/label lines
                 if any(skip in data_line for skip in ["直近", "自営業", "状況を記載"]):
                     continue
-                # Look for "N人" pattern (the data row)
+                # Stop on percentage lines (next section)
+                if re.match(r"^\(\s*\d+", data_line) or "(100%)" in data_line:
+                    break
+                person_nums = re.findall(r"(\d+)\s*人", data_line)
+                if person_nums:
+                    grad_nums.extend(int(n) for n in person_nums)
+                # Accumulate until we have 4 values, then break
+                if len(grad_nums) >= 4:
+                    break
+                # Accept 3 values if we've scanned enough
+                if len(grad_nums) >= 3 and j - i >= 8:
+                    break
+
+            if len(grad_nums) >= 3:
+                graduates = grad_nums[0]
+                advanced = grad_nums[1]
+                employed = grad_nums[2]
+                if len(grad_nums) >= 4:
+                    other = grad_nums[3]
+
+            # Fallback: original single-line scan (for pdfplumber path)
+            for j in range(i, min(i + 7, len(normed_lines))):
+                if graduates is not None:
+                    break
+                data_line = normed_lines[j]
+                if any(skip in data_line for skip in ["直近", "自営業", "状況を記載"]):
+                    continue
                 person_nums = re.findall(r"(\d+)\s*人", data_line)
                 if len(person_nums) >= 3:
                     graduates = int(person_nums[0])
