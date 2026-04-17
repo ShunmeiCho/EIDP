@@ -49,6 +49,30 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
 
     # OCR fallback for image-only PDFs
     if doc.content_type == "image":
+        # Content-hash deduplication: if another doc with same file_hash is
+        # already terminally processed (ingested/non_target/school_mismatch/
+        # permanent_error), this one inherits the same outcome without re-OCR
+        if doc.file_hash:
+            terminal_statuses = ["ingested", "non_target", "school_mismatch",
+                                 "permanent_error", "support_only"]
+            existing = (
+                session.query(Document)
+                .filter(
+                    Document.file_hash == doc.file_hash,
+                    Document.id != doc.id,
+                    Document.ingest_status.in_(terminal_statuses),
+                )
+                .first()
+            )
+            if existing is not None:
+                log.info("hash_dedup_skip", doc_id=doc.id,
+                         twin_id=existing.id, twin_status=existing.ingest_status,
+                         file_hash=doc.file_hash[:16])
+                doc.ingest_status = "school_mismatch"
+                stats["skipped"] = 1
+                stats["skip_reason"] = f"hash_dedup:{existing.ingest_status}"
+                return stats
+
         from eidp.pdf.ocr import extract_text_ocr
         ocr_pages = extract_text_ocr(pdf_path)
         if not ocr_pages or not any(t.strip() for t in ocr_pages):
@@ -385,17 +409,20 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
             total_stats["processed"] += 1
             for k in ("departments_created", "yearly_upserted", "skipped"):
                 total_stats[k] += stats.get(k, 0)
+            # Commit per-document so progress is durable if the process is killed
+            session.commit()
         except (OSError, IOError):
             nested.rollback()
             doc.ingest_status = "transient_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_io_error", doc_id=doc.id, path=doc.file_path)
+            session.commit()
         except Exception:
             nested.rollback()
             doc.ingest_status = "permanent_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
+            session.commit()
 
-    session.flush()
     log.info("ingestion_complete", **total_stats)
     return total_stats
