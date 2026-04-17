@@ -30,13 +30,41 @@ for idx, start in enumerate(dept_starts):
     section = "\n".join(normed[start:end])
     print(f"\nSection {idx+1} (pages {start+1}-{end}): {len(section)} chars")
 
+    # Manually run the same logic to see what values get extracted
+    import re
+    lines = section.split("\n")
+    normed_lines = [_norm(l) for l in lines]
+
+    # Check dept_name extraction
+    dept_name = ""
+    for i, ln in enumerate(normed_lines):
+        header_same = "学科名" in ln and ("分野" in ln or "課程名" in ln)
+        header_ocr = (
+            "学科名" in ln
+            and "分野" not in ln
+            and any("分野" in normed_lines[k] for k in range(max(0, i - 3), i))
+        )
+        if header_same or header_ocr:
+            print(f"  DEPT HEADER at line {i}: same={header_same} ocr={header_ocr}")
+            for j in range(i + 1, min(i + 5, len(normed_lines))):
+                c = normed_lines[j].strip()
+                print(f"    Candidate line {j}: '{c}'")
+            break
+
+    # Check enrollment extraction
+    for i, ln in enumerate(normed_lines):
+        if "生徒総定員" in ln:
+            print(f"  ENROLL HEADER at line {i}: '{ln}'")
+            for j in range(i + 1, min(i + 15, len(normed_lines))):
+                dl = normed_lines[j]
+                pm = re.findall(r"(\d+)\s*人", dl)
+                v0 = re.match(r"^[VOYvo]\s*0$", dl.strip())
+                if pm or v0:
+                    print(f"    Data line {j}: '{dl}' -> nums={pm} v0={bool(v0)}")
+            break
+
     result = _parse_department_section(section)
     if result is None:
-        print("  RESULT: None")
-        # Show what was found
-        lines = section.split("\n")
-        for lno, line in enumerate(lines):
-            if any(k in line for k in ["学科名", "分野", "定員", "実員", "40人", "30人", "卒業"]):
-                print(f"  Line {lno}: {line}")
+        print("  RESULT: None (dept_name or enrollment missing)")
     else:
         print(f"  RESULT: {result.dept_name} cap={result.capacity} enr={result.enrollment}")

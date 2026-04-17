@@ -41,20 +41,21 @@ def test_pipeline(pdf_path: str) -> None:
 
     for i, dept in enumerate(annotation.departments):
         print(f"\n  Department {i+1}:")
-        print(f"    Name:       {dept.dept_name}")
+        print(f"    Name:       {dept.name}")
         print(f"    Course:     {dept.course_name}")
-        print(f"    Duration:   {dept.duration_years}y {'Day' if dept.is_daytime else 'Night'}")
+        print(f"    Duration:   {dept.duration_years}y {dept.day_or_evening or ''}")
         print(f"    Capacity:   {dept.capacity}")
         print(f"    Enrollment: {dept.enrollment}")
-        print(f"    Foreign:    {dept.foreign_students}")
+        print(f"    Foreign:    {dept.intl_students}")
         print(f"    Graduates:  {dept.graduates}")
+        print(f"    Employed:   {dept.employed}")
         print(f"    Dropouts:   {dept.dropouts}")
+        print(f"    DropRate:   {dept.dropout_rate}")
 
     if annotation.support_recipient:
         sr = annotation.support_recipient
         print(f"\n  Support Recipient:")
-        print(f"    Exempt:     {sr.exempt_count}")
-        print(f"    Scholarship: {sr.scholarship_count}")
+        print(f"    Annual total: {sr.annual_total}")
 
 
 if __name__ == "__main__":
