@@ -820,26 +820,45 @@ def parse_pdf_ocr(pdf_path: Path, ocr_page_texts: list[str]) -> SchoolAnnotation
 
     departments: list[DepartmentRecord] = []
     normed_pages = [_norm(pt) for pt in cleaned_pages]
-    dept_section_starts: list[int] = []
 
-    for i, page_text in enumerate(normed_pages):
-        markers = sum([
-            "分野" in page_text,
-            "学科名" in page_text,
-            "生徒総定員" in page_text,
-        ])
+    # Build merged line stream with page boundaries preserved
+    # Each entry: (page_idx, line_text)
+    all_lines: list[tuple[int, str]] = []
+    for page_idx, page_text in enumerate(normed_pages):
         is_financial = "財務" in page_text or "経営情報の公表" in page_text
-        if markers >= 2 and not is_financial:
-            dept_section_starts.append(i)
+        if is_financial and "生徒実員" not in page_text:
+            # Skip pure financial pages (but keep mixed pages with enrollment data)
+            continue
+        for line in page_text.split("\n"):
+            all_lines.append((page_idx, line))
 
-    for idx, start_page in enumerate(dept_section_starts):
-        if idx + 1 < len(dept_section_starts):
-            end_page = dept_section_starts[idx + 1]
-        else:
-            end_page = len(normed_pages)
+    # Header-anchor state machine: split on the "分野" header that
+    # introduces a new department card (more reliable than page boundaries).
+    # Each header anchor starts a new section; data accumulates until next
+    # anchor or end of document.
+    #
+    # Anchor pattern (OCR): "分野" line followed within ~8 lines by "学科名"
+    # Anchor pattern (pdfplumber): "分野" and "学科名" on same line
+    section_starts: list[int] = []
+    for idx, (_, line) in enumerate(all_lines):
+        if "分野" not in line:
+            continue
+        # Skip 分野 when it appears mid-sentence (not as a table header)
+        if len(line.strip()) > 10 and "分野" not in line.strip()[:5]:
+            continue
+        # Check for 学科名 nearby (same line or within next 8 lines)
+        has_header_context = (
+            "学科名" in line
+            or any("学科名" in all_lines[k][1]
+                   for k in range(idx + 1, min(idx + 9, len(all_lines))))
+        )
+        if has_header_context:
+            section_starts.append(idx)
 
-        section_text = "\n".join(normed_pages[start_page:end_page])
-        # No table extraction for OCR — use text-only parsing
+    # Parse each section
+    for idx, start_line in enumerate(section_starts):
+        end_line = section_starts[idx + 1] if idx + 1 < len(section_starts) else len(all_lines)
+        section_text = "\n".join(line for _, line in all_lines[start_line:end_line])
         dept = _parse_department_section(section_text)
         if dept is not None:
             departments.append(dept)
