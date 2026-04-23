@@ -13,6 +13,7 @@ Each department section in Form 2-4-2 contains:
 
 import re
 import unicodedata
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import structlog
@@ -20,6 +21,8 @@ import structlog
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
 
 log = structlog.get_logger()
+
+JST = timezone(timedelta(hours=9))
 
 
 def _norm(text: str | None) -> str:
@@ -67,7 +70,18 @@ def _extract_school_name(full_text: str) -> str:
     return ""
 
 
-def _extract_fiscal_year(full_text: str) -> str:
+def _current_jst_fiscal_year() -> int:
+    now = datetime.now(JST)
+    return now.year if now.month >= 4 else now.year - 1
+
+
+def _format_reiwa_if_allowed(reiwa_year: int, max_fiscal_year: int | None = None) -> str | None:
+    fiscal_year = 2018 + reiwa_year
+    cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
+    return f"令和{reiwa_year}年度" if fiscal_year <= cap else None
+
+
+def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) -> str:
     """Extract fiscal year from PDF text.
 
     PDFs use date format like "令和７年６月２７日" (full-width digits).
@@ -85,12 +99,16 @@ def _extract_fiscal_year(full_text: str) -> str:
     # Pattern 1: 令和N年度 (direct match, highest confidence)
     m = re.search(r"令和(\d+)年度", normed)
     if m:
-        return f"令和{m.group(1)}年度"
+        fiscal_year = _format_reiwa_if_allowed(int(m.group(1)), max_fiscal_year)
+        if fiscal_year:
+            return fiscal_year
 
     # Pattern 2: 令和N年M月D日 (filing date, extract year)
     m = re.search(r"令和(\d+)年\d+月\d+日", normed)
     if m:
-        return f"令和{m.group(1)}年度"
+        fiscal_year = _format_reiwa_if_allowed(int(m.group(1)), max_fiscal_year)
+        if fiscal_year:
+            return fiscal_year
 
     # Pattern 3: Western filing date "YYYY.M.D" or "YYYY/M/D" pattern
     # These are actual filing dates, not stray year references in policy text
@@ -100,20 +118,23 @@ def _extract_fiscal_year(full_text: str) -> str:
         western_year = int(filing_dates[0])
         reiwa_year = western_year - 2018
         if reiwa_year > 0:
-            return f"令和{reiwa_year}年度"
+            fiscal_year = _format_reiwa_if_allowed(reiwa_year, max_fiscal_year)
+            if fiscal_year:
+                return fiscal_year
 
     # Pattern 4: Most frequent western year (fallback)
-    # Exclude years beyond current+1 to avoid future policy references like "2027年度決算"
+    # Exclude future fiscal years to avoid policy references like "2027年度決算"
     from collections import Counter
-    import datetime
-    max_valid_year = datetime.date.today().year + 1
+    max_valid_year = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
     all_years = re.findall(r"(202[0-9])[\.\s年/]", normed)
     valid_years = [int(y) for y in all_years if int(y) <= max_valid_year]
     if valid_years:
         most_common = Counter(valid_years).most_common(1)[0][0]
         reiwa_year = most_common - 2018
         if reiwa_year > 0:
-            return f"令和{reiwa_year}年度"
+            fiscal_year = _format_reiwa_if_allowed(reiwa_year, max_fiscal_year)
+            if fiscal_year:
+                return fiscal_year
 
     return ""
 

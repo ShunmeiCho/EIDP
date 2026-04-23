@@ -4,7 +4,9 @@ Takes Document rows, runs parse_pdf, writes department + department_yearly,
 updates school_year_status.
 """
 
+import re
 import unicodedata
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import structlog
@@ -15,6 +17,8 @@ from eidp.pdf.extractor import parse_pdf
 from eidp.pdf.schema import SchoolAnnotation
 
 log = structlog.get_logger()
+
+JST = timezone(timedelta(hours=9))
 
 
 def _norm(s: str) -> str:
@@ -137,12 +141,27 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
                 return stats
 
     # Determine fiscal year early — needed for both dept and support_recipient paths
-    fiscal_year = _parse_fiscal_year_from_annotation(annotation.fiscal_year)
+    fiscal_year = _parse_fiscal_year_from_annotation(
+        annotation.fiscal_year,
+        source_url=doc.source_url,
+    )
 
     # Fallback: if OCR couldn't extract fiscal_year (happens on scanned PDFs
     # where 令和 date is rendered as image), infer from download timestamp.
     # This is a best-effort inference, marked as such in the log.
-    if fiscal_year is None:
+    if (
+        fiscal_year is None
+        and annotation.fiscal_year
+        and _has_fiscal_year_candidate(annotation.fiscal_year)
+    ):
+        log.warning(
+            "invalid_fiscal_year_parsed",
+            path=str(pdf_path),
+            doc_id=doc.id,
+            fiscal_year=annotation.fiscal_year,
+            source_url=doc.source_url,
+        )
+    elif fiscal_year is None:
         fiscal_year = _infer_fiscal_year_from_download(doc.downloaded_at)
         if fiscal_year is not None:
             log.info("fiscal_year_inferred_from_download",
@@ -363,17 +382,45 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     return stats
 
 
-def _parse_fiscal_year_from_annotation(year_str: str) -> int | None:
+def _current_jst_fiscal_year() -> int:
+    now = datetime.now(JST)
+    return now.year if now.month >= 4 else now.year - 1
+
+
+def _source_url_year_cap(source_url: str | None) -> int | None:
+    if not source_url:
+        return None
+    years = [int(y) for y in re.findall(r"20\d{2}", source_url)]
+    return max(years) if years else None
+
+
+def _has_fiscal_year_candidate(year_str: str) -> bool:
+    return bool(re.search(r"令和\d+|20\d{2}", year_str))
+
+
+def _parse_fiscal_year_from_annotation(
+    year_str: str,
+    *,
+    source_url: str | None = None,
+    max_fiscal_year: int | None = None,
+) -> int | None:
     """Convert '令和7年度' to western year 2025."""
-    import re
     if not year_str:
         return None
+
+    cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
+    url_cap = _source_url_year_cap(source_url)
+    if url_cap is not None:
+        cap = min(cap, url_cap)
+
     m = re.search(r"令和(\d+)", year_str)
     if m:
-        return 2018 + int(m.group(1))
+        fiscal_year = 2018 + int(m.group(1))
+        return fiscal_year if fiscal_year <= cap else None
     m = re.search(r"(20\d{2})", year_str)
     if m:
-        return int(m.group(1))
+        fiscal_year = int(m.group(1))
+        return fiscal_year if fiscal_year <= cap else None
     return None
 
 
@@ -402,9 +449,6 @@ def _infer_fiscal_year_from_download(downloaded_at) -> int | None:
     """
     if downloaded_at is None:
         return None
-
-    from datetime import datetime, timedelta, timezone
-    JST = timezone(timedelta(hours=9))
 
     # Normalize to JST (handles both naive and aware datetimes)
     if downloaded_at.tzinfo is None:
