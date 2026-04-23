@@ -30,3 +30,8 @@ output/
 
 # Large binary data (tracked via LFS or excluded)
 .omx/
+---
+# Skill migration scratchpads (never commit)
+findings.md
+progress.md
+task_plan.md
