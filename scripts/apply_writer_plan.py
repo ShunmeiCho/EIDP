@@ -81,10 +81,34 @@ def snapshot_school_site(session, pref: str, op_timestamp: str) -> int:
     return int(count)
 
 
-def apply_plan(pref: str, *, apply: bool, limit: int | None = None) -> dict:
+def load_verified_urls() -> set[str] | None:
+    """Return set of URL strings that HTTP verification marked ownership_ok=True.
+    Returns None if no verification file exists (disables --verified-only gating)."""
+    candidates = sorted(PLAN_DIR.glob("url-verification-202*.json"))
+    if not candidates:
+        return None
+    latest = candidates[-1]
+    data = json.loads(latest.read_text())
+    return {r["url"] for r in data.get("results", []) if r.get("ownership_ok")}
+
+
+def apply_plan(pref: str, *, apply: bool, limit: int | None = None,
+               verified_only: bool = False) -> dict:
     plan = load_plan(pref)
     stats = {"add": 0, "upgrade": 0, "noop": 0, "review": 0,
-             "skipped_duplicate": 0, "skipped_missing_url": 0, "errors": 0}
+             "skipped_duplicate": 0, "skipped_missing_url": 0,
+             "skipped_not_verified": 0, "errors": 0}
+
+    # Load HTTP verification set if --verified-only
+    verified_urls: set[str] | None = None
+    if verified_only:
+        verified_urls = load_verified_urls()
+        if verified_urls is None:
+            raise RuntimeError(
+                "--verified-only requested but no url-verification-*.json found. "
+                "Run scripts/http_verify_plan_urls.py first."
+            )
+        print(f"[{pref}] --verified-only: {len(verified_urls)} ownership-ok URLs loaded from verification file")
 
     session = SessionLocal()
     try:
@@ -96,7 +120,7 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None) -> dict:
             actionable = actionable[:limit]
 
         print(f"[{pref}] plan: actionable={len(actionable)} review={len(reviews)} "
-              f"dry_run={not apply} limit={limit}")
+              f"dry_run={not apply} limit={limit} verified_only={verified_only}")
 
         if apply:
             ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -114,6 +138,14 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None) -> dict:
                 stats["skipped_missing_url"] += 1
                 continue
 
+            # --verified-only gating: only apply URLs that passed HTTP ownership check
+            url_is_verified = False
+            if verified_urls is not None:
+                if url not in verified_urls:
+                    stats["skipped_not_verified"] += 1
+                    continue
+                url_is_verified = True
+
             # Check for UNIQUE (school_id, url) conflict
             existing = session.query(SchoolSite).filter(
                 SchoolSite.school_id == school_id,
@@ -121,10 +153,11 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None) -> dict:
             ).first()
             if existing:
                 if apply:
-                    # Update metadata on existing row (upgrade provenance)
                     existing.discovery_method = "prefecture_aggregator"
                     existing.url_type = url_type
                     existing.confidence = confidence
+                    if url_is_verified:
+                        existing.verified = True
                 stats["skipped_duplicate"] += 1
                 continue
 
@@ -135,7 +168,8 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None) -> dict:
                     url_type=url_type,
                     discovery_method="prefecture_aggregator",
                     confidence=confidence,
-                    verified=False,  # Stage 3 will HTTP-verify
+                    # verified=true only when HTTP ownership check passed
+                    verified=url_is_verified,
                 )
                 session.add(site)
 
@@ -189,6 +223,9 @@ def main() -> None:
     ap.add_argument("--all", action="store_true", help="apply all available plans")
     ap.add_argument("--apply", action="store_true", help="actually write to DB (default: dry-run)")
     ap.add_argument("--limit", type=int, default=None, help="limit ops (for testing)")
+    ap.add_argument("--verified-only", action="store_true",
+                    help="only apply URLs that passed HTTP ownership verification "
+                         "(requires scripts/http_verify_plan_urls.py output)")
     args = ap.parse_args()
 
     if not args.pref and not args.all:
@@ -203,17 +240,20 @@ def main() -> None:
     else:
         prefs = [args.pref]
 
-    master = {"apply": args.apply, "limit": args.limit, "prefs": {}}
+    master = {"apply": args.apply, "limit": args.limit,
+              "verified_only": args.verified_only, "prefs": {}}
     for pref in prefs:
         try:
-            stats = apply_plan(pref, apply=args.apply, limit=args.limit)
+            stats = apply_plan(pref, apply=args.apply, limit=args.limit,
+                               verified_only=args.verified_only)
             master["prefs"][pref] = stats
         except FileNotFoundError as e:
             print(f"[skip] {e}", file=sys.stderr)
             continue
 
     # Roll up totals
-    totals = {"add": 0, "upgrade": 0, "review": 0, "skipped_duplicate": 0, "errors": 0}
+    totals = {"add": 0, "upgrade": 0, "review": 0,
+              "skipped_duplicate": 0, "skipped_not_verified": 0, "errors": 0}
     for st in master["prefs"].values():
         for k in totals:
             totals[k] = totals[k] + st.get(k, 0)
