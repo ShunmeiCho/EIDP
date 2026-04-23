@@ -378,8 +378,16 @@ def run_pdf_discovery(
     storage_dir: Path,
     batch_size: int = 50,
     rate_limit: float = 1.0,
+    discovery_methods: list[str] | None = None,
 ) -> dict[str, int]:
-    """Run PDF discovery for schools with verified URLs but no documents."""
+    """Run PDF discovery for schools with verified URLs but no documents.
+
+    Args:
+        discovery_methods: optional list of school_site.discovery_method values
+            to restrict which URLs are crawled. E.g. ["prefecture_aggregator"]
+            to crawl ONLY the trusted pref aggregator URLs (per Codex P0-6b:
+            isolate polluted web_search URLs from pdf_discovery).
+    """
     stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
 
     # Get school_sites, excluding:
@@ -425,13 +433,18 @@ def run_pdf_discovery(
         .distinct()
     )
 
-    sites = (
+    site_query = (
         session.query(SchoolSite)
         .filter(
             or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None)),
             ~SchoolSite.school_id.in_(schools_with_current_docs),
             ~SchoolSite.school_id.in_(excluded_school_ids),
         )
+    )
+    if discovery_methods:
+        site_query = site_query.filter(SchoolSite.discovery_method.in_(discovery_methods))
+    sites = (
+        site_query
         .order_by(SchoolSite.confidence.desc())
         .limit(batch_size)
         .all()

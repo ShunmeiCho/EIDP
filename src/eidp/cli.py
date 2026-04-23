@@ -219,6 +219,11 @@ def discover_pdfs(
     storage_dir: Path = typer.Option(Path("data/pdfs"), help="PDF storage directory"),
     batch_size: int = typer.Option(50, help="Number of sites to crawl"),
     rate_limit: float = typer.Option(1.0, help="Seconds between requests"),
+    discovery_method: str = typer.Option(
+        "", help="Comma-separated list of school_site.discovery_method values to "
+                 "restrict crawling to. E.g. 'prefecture_aggregator' to crawl only "
+                 "prefecture-declared URLs. Empty = all methods (legacy behavior)."
+    ),
 ) -> None:
     """Discover and download PDFs from school disclosure pages (Step 8)."""
     from eidp.db.session import SessionLocal
@@ -226,9 +231,15 @@ def discover_pdfs(
 
     storage_dir.mkdir(parents=True, exist_ok=True)
 
+    methods = [m.strip() for m in discovery_method.split(",") if m.strip()] or None
+
     session = SessionLocal()
     try:
-        stats = run_pdf_discovery(session, storage_dir, batch_size=batch_size, rate_limit=rate_limit)
+        stats = run_pdf_discovery(
+            session, storage_dir,
+            batch_size=batch_size, rate_limit=rate_limit,
+            discovery_methods=methods,
+        )
         session.commit()
         typer.echo(f"\nPDF Discovery Results:")
         for k, v in stats.items():
