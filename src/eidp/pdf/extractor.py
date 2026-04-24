@@ -466,6 +466,17 @@ def _parse_department_section(
     if course_clean and course_clean in _FIELD_PREFIX_TERMS:
         course_clean = None
 
+    # Detect dept/course column swap: if dept_clean looks like a 課程
+    # (ends with 専門/本科 without 学科 marker) AND course_clean looks
+    # like a 学科 (has 学科/科 suffix), swap them.
+    if (
+        _LIKELY_COURSE_NAME_RE.search(dept_clean)
+        and not _HAS_DEPT_SUFFIX_RE.search(dept_clean)
+        and course_clean
+        and _HAS_DEPT_SUFFIX_RE.search(course_clean)
+    ):
+        dept_clean, course_clean = course_clean, dept_clean + "課程"
+
     return DepartmentRecord(
         name=dept_clean,
         course_name=course_clean if course_clean else None,
@@ -690,8 +701,11 @@ _FIELD_DEDUPE_RE = re.compile(
 _FIELD_PREFIX_TERMS = (
     "文化・教養",
     "教育・社会福祉",
+    "服飾・家政",
     "商業実務",
     "社会福祉",
+    "文化教養",
+    "教育社会福祉",
     "工業",
     "農業",
     "医療",
@@ -703,6 +717,9 @@ _FIELD_PREFIX_TERMS = (
     "文化",
     "教養",
 )
+# Names ending with 専門/本科 (without 学科) are likely 課程 leaked into 学科 column
+_LIKELY_COURSE_NAME_RE = re.compile(r"(専門|本科)$")
+_HAS_DEPT_SUFFIX_RE = re.compile(r"(学科|学部|学院|専攻|コース|科)$")
 _LEADING_FIELD_RE = re.compile(r"^(" + "|".join(_FIELD_PREFIX_TERMS) + r")(?=\S)")
 _DEPT_SUFFIX_RE = re.compile(r"(学科|学部|学院|専攻|コース|課程|学校|科)$")
 
