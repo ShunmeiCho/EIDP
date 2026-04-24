@@ -450,13 +450,25 @@ def _parse_department_section(
 
     # Clean department name: remove extra whitespace and Markdown artifacts
     dept_clean = re.sub(r"\s+", "", dept_name).strip()
+    # Strip stray 〇/○ markers from text-fallback path
+    dept_clean = re.sub(r"[〇○]", "", dept_clean)
     # Reject names that still contain Markdown pipe delimiters (OCR artifact)
     if "|" in dept_clean:
         return None
+    # Strip leaked 分野 prefix from text-fallback concatenated lines
+    # (e.g. "文化・教養グラフィックデザイン学科" -> "グラフィックデザイン学科")
+    dept_clean = _strip_leading_field_prefix(dept_clean)
+    # Final defense: if the cleaned name is itself just a 分野 term, reject
+    if dept_clean in _FIELD_PREFIX_TERMS or _is_template_header_text(dept_clean):
+        return None
+    # Clean course_name too: strip 〇 markers and bare-分野 leakage
+    course_clean = re.sub(r"[〇○]", "", course) if course else None
+    if course_clean and course_clean in _FIELD_PREFIX_TERMS:
+        course_clean = None
 
     return DepartmentRecord(
         name=dept_clean,
-        course_name=course if course else None,
+        course_name=course_clean if course_clean else None,
         duration_years=duration,
         day_or_evening=day_night if day_night else None,
         capacity=capacity,
