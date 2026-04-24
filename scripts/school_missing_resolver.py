@@ -48,13 +48,29 @@ from eidp.db.models import School, SchoolAlias
 from eidp.db.session import SessionLocal
 
 
-_BRANCH_MARKERS = ("澁谷", "渋谷", "キャンパス", "分校", "本校")
+_BRANCH_MARKERS = ("渋谷", "キャンパス", "分校", "本校")
 _PAREN_RE = re.compile(r"[(（]([^)）]{1,20})[)）]")
 _SUFFIX_TRIM = ("専門学校", "高等専門学校", "専修学校", "大学校", "学校", "大学", "専門")
 
+# 旧字体 → 新字体 (common educational institution name variants)
+# NFKC does NOT fold these — schools frequently use the historical form
+# in branch names (澁谷 instead of 渋谷) so operators pick up both.
+_KYUJITAI_MAP = str.maketrans({
+    "澁": "渋",
+    "櫻": "桜",
+    "廣": "広",
+    "舊": "旧",
+    "學": "学",
+    "藝": "芸",
+    "體": "体",
+    "國": "国",
+})
+
 
 def _nfkc_strip(s: str) -> str:
-    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", s or ""))
+    text = unicodedata.normalize("NFKC", s or "")
+    text = text.translate(_KYUJITAI_MAP)
+    return re.sub(r"\s+", "", text)
 
 
 def _strip_paren(s: str) -> tuple[str, str | None]:
@@ -74,8 +90,10 @@ def _strip_suffix(s: str) -> str:
 
 
 def _branch_marker(s: str) -> str | None:
+    """Detect branch marker after kyujitai fold (澁→渋 etc.)."""
+    normalized = _nfkc_strip(s)
     for m in _BRANCH_MARKERS:
-        if m in s:
+        if m in normalized:
             return m
     return None
 
@@ -126,13 +144,23 @@ def _candidate_schools(
         if tier2:
             return [_tuple(s) for s in tier2]
 
-    # Tier 3: substring both ways on suffix-stripped form
-    tier3 = [
-        s for s in schools
-        if tmpl_short and _strip_suffix(_nfkc_strip(s.school_name))
-        and (tmpl_short in _strip_suffix(_nfkc_strip(s.school_name))
-             or _strip_suffix(_nfkc_strip(s.school_name)) in tmpl_short)
-    ]
+    # Tier 3: substring both ways on suffix-stripped form.
+    # Branch-marker guard: if template has a branch marker (渋谷 etc.), the
+    # DB school must contain the SAME branch marker, otherwise we'd
+    # silently alias a branch to its parent main campus (unsafe).
+    tmpl_branch = _branch_marker(_nfkc_strip(template_name))
+    tier3: list[School] = []
+    for s in schools:
+        db_norm = _nfkc_strip(s.school_name)
+        db_short = _strip_suffix(db_norm)
+        if not (tmpl_short and db_short):
+            continue
+        if not (tmpl_short in db_short or db_short in tmpl_short):
+            continue
+        if tmpl_branch and tmpl_branch not in db_norm:
+            # Template references a branch; DB candidate lacks it → reject.
+            continue
+        tier3.append(s)
     return [_tuple(s) for s in tier3]
 
 
@@ -171,8 +199,14 @@ def classify(template_name: str, rows: int, schools: list[School]) -> Proposal:
         )
 
     if branch:
-        # No direct match, but has branch marker. Try parent search.
-        parent_name = template_name.replace(branch, "")
+        # No direct match, but has branch marker. Try parent search by
+        # stripping every kyujitai-equivalent form of the branch marker.
+        parent_name = template_name
+        for form in {branch, *(k for k, v in {"澁": "渋"}.items() if v == branch[0]) }:
+            parent_name = parent_name.replace(form, "")
+        # Also handle 澁谷 → 渋谷 in raw form
+        if branch == "渋谷":
+            parent_name = parent_name.replace("澁谷", "")
         parent_candidates = _candidate_schools(parent_name, schools)
         return Proposal(
             template_name=template_name,

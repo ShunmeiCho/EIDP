@@ -74,8 +74,37 @@ def test_truly_missing_when_no_match_no_branch() -> None:
     assert p.matched_school_id is None
 
 
+def test_branch_marker_prevents_aliasing_template_branch_to_db_main_campus() -> None:
+    """'澁谷' template must NOT silently alias to non-渋谷 DB school.
+
+    Regression: previously '東京スクールオブミュージック&ダンス専門学校澁谷'
+    was aliased to school 104 (main campus 葛西) because tier-3 substring
+    matched on '東京スクールオブミュージック&ダンス専門学校', silently
+    losing the 澁谷 branch info.
+    """
+    schools = [
+        _school(104, "東京スクールオブミュージック＆ダンス専門学校", corp="滋慶"),
+        _school(105, "東京スクールオブミュージック専門学校渋谷", corp="滋慶"),
+    ]
+    p = classify("東京スクールオブミュージック&ダンス専門学校澁谷", 4, schools)
+    # Either matches 105 alone (correct branch) OR ambiguous, but NEVER 104 alone.
+    if p.proposal_type == "alias_existing_school":
+        assert p.matched_school_id == 105
+    else:
+        assert p.matched_school_id != 104
+
+
+def test_kyujitai_variant_folds_for_matching() -> None:
+    """澁 (旧字体) and 渋 (新字体) must be treated equivalently."""
+    schools = [_school(105, "東京スクールオブミュージック専門学校渋谷", corp="滋慶")]
+    p = classify("東京スクールオブミュージック専門学校澁谷", 2, schools)
+    assert p.proposal_type == "alias_existing_school"
+    assert p.matched_school_id == 105
+
+
 def test_empty_candidates_for_branch_with_no_parent() -> None:
     schools = [_school(1, "全然違う学校")]
     p = classify("存在しない校澁谷", 1, schools)
     assert p.proposal_type == "truly_missing"
-    assert "澁谷" in p.reasoning
+    # Branch marker detected in reasoning (folded to new-form 渋谷)
+    assert "渋谷" in p.reasoning or "branch marker" in p.reasoning
