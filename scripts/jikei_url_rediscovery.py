@@ -33,7 +33,11 @@ from urllib.parse import urljoin
 
 import httpx
 
-from eidp.scraper.pdf_discovery import NEGATIVE_KEYWORDS, POSITIVE_KEYWORDS
+from eidp.scraper.pdf_discovery import (
+    NEGATIVE_KEYWORDS,
+    POSITIVE_KEYWORDS,
+    _classify_pdf_content,
+)
 
 
 # Known Jikei disclosure-page roots (per SchoolSite discovery_method=prefecture_aggregator)
@@ -73,6 +77,10 @@ class ProbeResult:
     verdict: str  # likely_target | rejected_negative | rejected_small | unreachable
     reason: str
     timestamp: str
+    # Set by _classify_likely: runs same classifier as discover-pdfs
+    # ('target' / 'non_target' / 'image_only' / 'unknown'). Only emitted
+    # for candidates that passed the filename/size/keyword pre-filter.
+    classifier: str = ""
 
 
 def _negative_hit(url: str, anchor: str) -> str | None:
@@ -151,10 +159,30 @@ def _classify(url: str, anchor: str, status: int, size: int) -> tuple[str, str]:
     return "rejected_no_signal", ""
 
 
+def _classify_body(client: httpx.Client, url: str) -> str:
+    """Download candidate PDF and run the same classifier discover-pdfs uses.
+
+    Returns 'target' / 'non_target' / 'image_only' / 'unknown' / 'fetch_error'.
+    50 MB cap matches download_pdf.
+    """
+    try:
+        resp = client.get(url, follow_redirects=True, timeout=30.0)
+        if resp.status_code != 200:
+            return "fetch_error"
+        content = resp.content
+        if len(content) < 1000 or len(content) > 50 * 1024 * 1024:
+            return "unknown"
+        if not content[:5] == b"%PDF-":
+            return "unknown"
+        return _classify_pdf_content(content)
+    except httpx.HTTPError:
+        return "fetch_error"
+
+
 def rediscover_all() -> list[ProbeResult]:
     OUT_JSONL.parent.mkdir(parents=True, exist_ok=True)
     results: list[ProbeResult] = []
-    with httpx.Client(headers=HEADERS, timeout=20.0) as client:
+    with httpx.Client(headers=HEADERS, timeout=30.0) as client:
         for school_id, (short, disclosure_url) in JIKEI_SITES.items():
             try:
                 r = client.get(disclosure_url, follow_redirects=True, timeout=20.0)
@@ -165,6 +193,9 @@ def rediscover_all() -> list[ProbeResult]:
             for cand_url, anchor_text in anchors:
                 status, size = _probe(client, cand_url)
                 verdict, reason = _classify(cand_url, anchor_text, status, size)
+                classifier = ""
+                if verdict == "likely_target":
+                    classifier = _classify_body(client, cand_url)
                 results.append(ProbeResult(
                     school_id=school_id,
                     school_short=short,
@@ -176,6 +207,7 @@ def rediscover_all() -> list[ProbeResult]:
                     verdict=verdict,
                     reason=reason,
                     timestamp=datetime.now(timezone.utc).isoformat(),
+                    classifier=classifier,
                 ))
     return results
 
@@ -187,25 +219,30 @@ def _print_report(results: list[ProbeResult]) -> None:
     for r in results:
         by_school.setdefault(r.school_id, []).append(r)
 
-    likely: list[ProbeResult] = []
+    classifier_target: list[ProbeResult] = []
     for sid, items in sorted(by_school.items()):
         short = items[0].school_short
         print(f"## school_id={sid} — {short}")
         for r in sorted(items, key=lambda x: (x.verdict, x.candidate_url)):
-            marker = "✓" if r.verdict == "likely_target" else " "
-            print(f"  {marker} [{r.verdict:22s}] {r.size_bytes:>8} bytes  {r.candidate_url[:80]}")
-            if r.verdict == "likely_target":
-                likely.append(r)
+            marker = "✓" if r.classifier == "target" else (
+                "?" if r.verdict == "likely_target" else " "
+            )
+            classifier_tag = f" classifier={r.classifier}" if r.classifier else ""
+            print(f"  {marker} [{r.verdict:22s}] {r.size_bytes:>8} bytes  {r.candidate_url[:75]}{classifier_tag}")
+            if r.classifier == "target":
+                classifier_target.append(r)
         print()
 
-    if likely:
-        print("# Proposed INSERT (review before running):")
+    if classifier_target:
+        print("# Proposed INSERT — only classifier='target' (pre-validated):")
         print("INSERT INTO school_site (school_id, url, url_type, discovery_method, verified, http_status) VALUES")
         lines = []
-        for r in likely:
+        for r in classifier_target:
             esc = r.candidate_url.replace("'", "''")
             lines.append(f"  ({r.school_id}, '{esc}', 'pdf', 'pattern_probe', true, 200)")
         print(",\n".join(lines) + "\nON CONFLICT (school_id, url) DO NOTHING;")
+    else:
+        print("# No candidates passed the content classifier as 'target'.")
 
 
 def main() -> None:
