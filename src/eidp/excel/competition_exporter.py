@@ -23,7 +23,14 @@ from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import func as sql_func
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Department, DepartmentYearly, Document, School, SchoolAlias
+from eidp.db.models import (
+    Department,
+    DepartmentChange,
+    DepartmentYearly,
+    Document,
+    School,
+    SchoolAlias,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -277,6 +284,11 @@ class CompetitionMatcher:
         self._school_index: dict[str, int] = {}
         self._alias_index: dict[str, int] = {}
         self._dept_cache: dict[int, list[Department]] = {}
+        # DepartmentChange(change_type='alias') consumed here so that the
+        #担当者 Proposals Review 'dept_alias_existing' approvals actually
+        # flow into exporter matching. Keyed by (school_id, _norm(old_name))
+        # so alias scope is limited to the school the dept belongs to.
+        self._dept_alias_index: dict[tuple[int, str], int] = {}
         self._build_indices()
 
     def _build_indices(self) -> None:
@@ -331,6 +343,22 @@ class CompetitionMatcher:
             elif len(ids) > 1:
                 self._ambiguous_short_keys.add(short)
 
+        # Dept-level alias index from DepartmentChange(change_type='alias').
+        # Join to Department to scope alias to its school for safety.
+        dept_alias_rows = (
+            self.session.query(DepartmentChange, Department)
+            .join(Department, Department.id == DepartmentChange.department_id)
+            .filter(DepartmentChange.change_type == "alias")
+            .all()
+        )
+        for change, dept in dept_alias_rows:
+            if not change.old_name:
+                continue
+            key = (dept.school_id, _norm(change.old_name))
+            # First-wins is safe here: same (school, old_name) shouldn't map
+            # to two departments. If it does, operator review should catch it.
+            self._dept_alias_index.setdefault(key, dept.id)
+
     def _depts_for_school(self, school_id: int) -> list[Department]:
         if school_id not in self._dept_cache:
             self._dept_cache[school_id] = (
@@ -380,6 +408,18 @@ class CompetitionMatcher:
                 school_id=school_id, department_ids=matching,
                 matched_via=matched_via + "+dept",
             )
+
+        # Approved DepartmentChange alias (from Proposals Review) before any
+        # fuzzy substring / kana fold — operator-verified mapping is stronger
+        # signal than heuristic matching.
+        alias_dept_id = self._dept_alias_index.get((school_id, dept_key))
+        if alias_dept_id is not None:
+            return MatchResult(
+                template_row=row, sheet_name=sheet_name,
+                school_id=school_id, department_ids=[alias_dept_id],
+                matched_via=matched_via + "+dept_alias",
+            )
+
         for d in depts:
             cn = _norm(d.canonical_name)
             if dept_key and cn and (dept_key in cn or cn in dept_key):

@@ -15,6 +15,7 @@ from eidp.db.models import (
 )
 from eidp.review.operator_pages import (
     ProposalDecision,
+    _load_decision_index,
     _read_proposals,
     _record_decision,
     apply_dept_alias_proposal,
@@ -158,6 +159,29 @@ def test_apply_preserves_school_context_on_picked_candidate() -> None:
         session.close()
 
 
+def test_apply_school_alias_refuses_cross_school_conflict() -> None:
+    """MEDIUM fix: alias already pointing to a different school must not be
+    silently created — matcher's ambiguity guard would otherwise flip the
+    row to school_name_ambiguous. Refuse up-front with a specific reason."""
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="A", school_name="学校A"))
+        session.add(School(id=2, prefecture="東京", corporation_name="B", school_name="学校B"))
+        session.add(SchoolAlias(school_id=1, alias_name="sharedKey", alias_type="x", source="y"))
+        session.flush()
+        created, reason = apply_school_alias_proposal(
+            session, school_id=2, alias_name="sharedKey",
+        )
+        assert created is False
+        assert reason.startswith("conflict_other_school:")
+        assert "1" in reason  # id=1 is the existing owner
+        # DB state unchanged — no alias pointing to school 2
+        rows = session.query(SchoolAlias).filter(SchoolAlias.school_id == 2).all()
+        assert rows == []
+    finally:
+        session.close()
+
+
 def test_deferred_decision_does_not_write_db_but_audits(tmp_path: Path) -> None:
     """Defer branch: no DB mutation, only decisions JSONL appended."""
     audit = tmp_path / "decisions.jsonl"
@@ -177,6 +201,53 @@ def test_deferred_decision_does_not_write_db_but_audits(tmp_path: Path) -> None:
     assert row["decision"] == "deferred"
     assert row["target_id"] is None
     assert row["proposal_kind"].startswith("school_alias_")
+
+
+def test_decision_index_dedupes_by_kind_prefix_and_template(tmp_path: Path) -> None:
+    """LOW fix: decisions JSONL should roll picker-kind variants
+    ('school_alias_ambiguous_candidates') up to the same key prefix
+    ('school_alias') used in the UI dedupe check."""
+    audit = tmp_path / "decisions.jsonl"
+    for kind in (
+        "school_alias",
+        "school_alias_ambiguous_candidates",
+        "school_alias_branch_of_existing",
+    ):
+        _record_decision(
+            ProposalDecision(
+                decision="approved",
+                proposal_kind=kind,
+                template_name="X",
+                target_id=1,
+                operator_name="t",
+                note="",
+                timestamp="2026-04-24T00:00:00+00:00",
+            ),
+            audit,
+        )
+    _record_decision(
+        ProposalDecision(
+            decision="deferred",
+            proposal_kind="dept_alias",
+            template_name="Y",
+            target_id=None,
+            operator_name="t",
+            note="",
+            timestamp="2026-04-24T00:00:00+00:00",
+        ),
+        audit,
+    )
+    idx = _load_decision_index(audit)
+    # school_alias variants collapse to one entry
+    assert ("school_alias", "X") in idx
+    assert ("dept_alias", "Y") in idx
+    # Last write wins for same key
+    assert idx[("school_alias", "X")] == "approved"
+    assert idx[("dept_alias", "Y")] == "deferred"
+
+
+def test_decision_index_returns_empty_for_missing_file(tmp_path: Path) -> None:
+    assert _load_decision_index(tmp_path / "absent.jsonl") == {}
 
 
 def test_read_proposals_tolerates_missing_file_and_junk_lines(tmp_path: Path) -> None:

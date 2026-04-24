@@ -771,6 +771,39 @@ def _record_decision(decision: ProposalDecision, audit_path: Path) -> None:
         fh.write(json.dumps(asdict(decision), ensure_ascii=False) + "\n")
 
 
+def _load_decision_index(audit_path: Path) -> dict[tuple[str, str], str]:
+    """Return {(proposal_kind_prefix, template_name): latest_decision}.
+
+    Keys use a kind PREFIX ('school_alias' or 'dept_alias') so both the
+    auto-approved 'school_alias' and the picker-driven
+    'school_alias_ambiguous_candidates' roll up to the same dedup key.
+    """
+    if not audit_path.exists():
+        return {}
+    out: dict[tuple[str, str], str] = {}
+    try:
+        with audit_path.open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                kind_full = row.get("proposal_kind", "")
+                kind_prefix = (
+                    "dept_alias"
+                    if kind_full.startswith("dept_alias")
+                    else "school_alias"
+                )
+                key = (kind_prefix, row.get("template_name", ""))
+                out[key] = row.get("decision", "")
+    except OSError:
+        return {}
+    return out
+
+
 def apply_school_alias_proposal(
     session: Session,
     *,
@@ -778,11 +811,21 @@ def apply_school_alias_proposal(
     alias_name: str,
     source: str = "proposal_review_queue",
 ) -> tuple[bool, str]:
-    """Idempotent SchoolAlias insert. Returns (created, reason)."""
+    """Idempotent SchoolAlias insert with cross-school conflict check.
+
+    Returns (created, reason). 'reason' values:
+      - inserted                       : new row added
+      - already_exists                 : same (school_id, alias_name) present
+      - conflict_other_school:<id>     : alias is registered to a different
+                                         school; refuse to insert. Matcher's
+                                         ambiguity guard would otherwise flip
+                                         the row to school_name_ambiguous.
+      - empty_alias                    : alias_name is blank after strip
+    """
     alias_name = alias_name.strip()
     if not alias_name:
         return False, "empty_alias"
-    exists = (
+    existing_same = (
         session.query(SchoolAlias)
         .filter(
             SchoolAlias.school_id == school_id,
@@ -790,8 +833,18 @@ def apply_school_alias_proposal(
         )
         .first()
     )
-    if exists is not None:
+    if existing_same is not None:
         return False, "already_exists"
+    conflict = (
+        session.query(SchoolAlias)
+        .filter(
+            SchoolAlias.alias_name == alias_name,
+            SchoolAlias.school_id != school_id,
+        )
+        .first()
+    )
+    if conflict is not None:
+        return False, f"conflict_other_school:{conflict.school_id}"
     session.add(
         SchoolAlias(
             school_id=school_id,
@@ -854,8 +907,14 @@ def _render_school_proposals_tab(session: Session) -> None:
         )
         return
 
+    decisions = _load_decision_index(_DEFAULT_PROPOSAL_DECISIONS)
+    hide_processed = st.session_state.get("hide_processed", True)
+
     by_type: dict[str, list[dict]] = {}
     for p in proposals:
+        key = ("school_alias", p.get("template_name", ""))
+        if hide_processed and key in decisions:
+            continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
     counts = {k: (len(v), sum(int(x.get("template_rows", 0)) for x in v))
@@ -1022,8 +1081,14 @@ def _render_dept_proposals_tab(session: Session) -> None:
         )
         return
 
+    decisions = _load_decision_index(_DEFAULT_PROPOSAL_DECISIONS)
+    hide_processed = st.session_state.get("hide_processed", True)
+
     by_type: dict[str, list[dict]] = {}
     for p in proposals:
+        key = ("dept_alias", p.get("template_dept", ""))
+        if hide_processed and key in decisions:
+            continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
     cols = st.columns(4)
@@ -1093,6 +1158,11 @@ def page_proposals_review(session: Session) -> None:
         key="operator_name",
         value=st.session_state.get("operator_name", ""),
     )
+    st.checkbox(
+        "Hide already-processed proposals (approved/deferred)",
+        key="hide_processed",
+        value=st.session_state.get("hide_processed", True),
+    )
     tab_school, tab_dept = st.tabs(
         ["School Missing", "Dept Unmatched"]
     )
@@ -1100,6 +1170,16 @@ def page_proposals_review(session: Session) -> None:
         _render_school_proposals_tab(session)
     with tab_dept:
         _render_dept_proposals_tab(session)
+
+
+def _decision_badge(decision: str) -> str:
+    if decision == "approved":
+        return ":green[APPROVED]"
+    if decision == "deferred":
+        return ":orange[DEFERRED]"
+    if decision == "already":
+        return ":gray[ALREADY]"
+    return ""
 
 
 # ---------------------------------------------------------------------------

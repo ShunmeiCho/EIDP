@@ -200,6 +200,44 @@ def test_norm_dept_kana_folds_long_vowel_and_small_i() -> None:
     assert _norm_dept_kana("看護学科") != _norm_dept_kana("情報学科")
 
 
+def test_matcher_consumes_department_change_alias() -> None:
+    """HIGH fix: DepartmentChange(change_type='alias') must flow into match().
+
+    Previously the approve button in Proposals Review's Dept tab wrote a
+    DepartmentChange row but matcher never read it, so approvals were
+    audit-only. This test locks that behaviour in.
+    """
+    from eidp.db.models import DepartmentChange
+
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="TSM"))
+        # Canonical DB name: 'プロミュージシャン科'; template uses '学科'
+        session.add(Department(id=521, school_id=1, canonical_name="プロミュージシャン科"))
+        session.add(DepartmentChange(
+            department_id=521,
+            change_type="alias",
+            fiscal_year=2026,
+            old_name="プロミュージシャン学科",  # template form
+            new_name="プロミュージシャン科",    # DB form
+            verified=False,
+        ))
+        session.flush()
+
+        matcher = CompetitionMatcher(session)
+        row = TemplateRow(
+            row_index=6, school_name="TSM",
+            dept_name="プロミュージシャン学科",  # template form
+            duration_label=None,
+        )
+        result = matcher.match("滋慶", row)
+        assert result.school_id == 1
+        assert result.department_ids == [521]
+        assert "dept_alias" in result.matched_via
+    finally:
+        session.close()
+
+
 def test_matcher_dept_kana_matches_across_transliteration_variants() -> None:
     """Kana fold alone should bridge the ー↔イ drift when the rest of the
     dept name is identical. Structural differences like '昼間部一' vs '昼一'
