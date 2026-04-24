@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from eidp.pdf.extractor import _parse_department_section, parse_pdf
+from eidp.pdf.extractor import (
+    _extract_dept_identity_from_table,
+    _find_dept_table,
+    _is_template_header_text,
+    _parse_department_section,
+    parse_pdf,
+)
 
 PDF_DIR = Path(__file__).resolve().parents[2] / "data" / "sample-pdfs"
 
@@ -54,3 +60,49 @@ def test_text_fallback_does_not_use_template_header_as_department_name() -> None
     assert dept.capacity == 80
     assert dept.enrollment == 20
     assert dept.intl_students == 16
+
+
+def test_find_dept_table_skips_school_info_table() -> None:
+    """Caught in Path F' doc=329: 学校名 table comes before dept table."""
+    tables = [
+        [["学校名", "葵会仙台看護専門学校"], ["設置者名", "学校法人 医療創生大学"]],
+        [["財務諸表等", "公表方法"], ["貸借対照表", "https://example.com"]],
+        [
+            ["分野", None, "課程名", None, "学科名", None, "専門士"],
+            ["医療", None, "医療専門課程", None, "看護学科", None, "〇"],
+            ["修業\n年限", "昼夜", "全課程の修了に必要な総\n授業時数又は総単位数", None, None, None, None],
+            ["3年", "昼", "3000単位時間／単位", None, None, None, None],
+        ],
+    ]
+    target, hidx = _find_dept_table(tables)
+    assert target is tables[2]
+    assert hidx == 0
+
+
+def test_template_numeric_unit_pattern_rejected() -> None:
+    """Caught in Path F' doc=329: parser leaked '1965単位 1035単位' as dept name."""
+    assert _is_template_header_text("1965単位1035単位")
+    assert _is_template_header_text("1230時間480時間900時間")
+    assert not _is_template_header_text("看護学科")
+
+
+def test_extract_dept_identity_strips_marker_and_dedupe_field_prefix() -> None:
+    """Caught in Path F' doc=336: course_name had '医療医療専門課程' duplicated prefix
+    and '〇' marker bleed."""
+
+    class FakePage:
+        def extract_tables(self) -> list[list[list]]:
+            return [
+                [
+                    ["分野", "課程名", "学科名", "専門士"],
+                    ["医療", "医療医療専門課程看護学科〇", "看護学科〇", "〇"],
+                    ["修業年限", "昼夜", None, None],
+                    ["3年", "昼", None, None],
+                ]
+            ]
+
+    dept_name, course_name, duration, day_night = _extract_dept_identity_from_table(FakePage())
+    assert dept_name == "看護学科"
+    assert course_name == "医療専門課程看護学科"
+    assert duration == 3
+    assert day_night == "昼"

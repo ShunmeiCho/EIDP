@@ -472,19 +472,24 @@ def _parse_department_section(
     )
 
 
+_TEMPLATE_HEADER_MARKERS = (
+    "修業全課程",
+    "全課程の修了",
+    "開設している授業",
+    "授業時数",
+    "総単位数",
+    "単位時間",
+)
+_TEMPLATE_NUMERIC_UNIT_RE = re.compile(r"\d+\s*(?:単位|時間)")
+
+
 def _is_template_header_text(text: str) -> bool:
     """Reject table header/help text that OCR can place where department names live."""
-    return any(
-        marker in text
-        for marker in (
-            "修業全課程",
-            "全課程の修了",
-            "開設している授業",
-            "授業時数",
-            "総単位数",
-            "単位時間",
-        )
-    )
+    if any(marker in text for marker in _TEMPLATE_HEADER_MARKERS):
+        return True
+    if _TEMPLATE_NUMERIC_UNIT_RE.search(text):
+        return True
+    return False
 
 
 def _safe_int_from_text(text: str) -> int | None:
@@ -666,55 +671,96 @@ def _parse_support_section(page_texts: list[str]) -> SupportRecipientRecord | No
     )
 
 
+_FIELD_DEDUPE_RE = re.compile(
+    r"^(工業|農業|医療|衛生|教育|社会福祉|商業|商業実務|服飾|家政|文化|教養)\1"
+)
+
+
+def _find_dept_table(tables: list[list[list]]) -> tuple[list[list] | None, int]:
+    """Find the table containing the dept identity header row (学科名 + 課程名).
+
+    Some PDFs put 学校名/設置者名 or 財務諸表 tables before the dept table,
+    so we cannot assume tables[0] is the right one. Header may also live on
+    rows 0/1/2 within a table, not just row 0.
+    """
+    for table in tables:
+        if not table or len(table) < 2:
+            continue
+        for hidx in range(min(3, len(table) - 1)):
+            row = table[hidx]
+            if not row:
+                continue
+            joined = "".join(str(c or "") for c in row)
+            if "学科名" in joined and "課程名" in joined:
+                return table, hidx
+    return None, -1
+
+
 def _extract_dept_identity_from_table(page) -> tuple[str, str, int | None, str]:
     """Extract dept name, course name, duration, and day/night from table.
 
-    Uses structured table parsing which handles multi-line cell content
-    correctly, unlike text-based extraction which interleaves columns.
-    Returns (dept_name, course_name, duration_years, day_night).
+    Scans all tables for the dept identity header (学科名 + 課程名) instead
+    of assuming tables[0]. Duration and 昼/夜 are searched dynamically among
+    the rows below the header rather than at a fixed offset, so multi-section
+    headers (e.g. 医療系 with separate 授業時数 sub-table) parse correctly.
     """
     try:
         tables = page.extract_tables()
-        if not tables or len(tables[0]) < 2:
+        if not tables:
             return "", "", None, ""
 
-        header_row = tables[0][0]
-        data_row = tables[0][1]
+        target_table, header_idx = _find_dept_table(tables)
+        if target_table is None:
+            return "", "", None, ""
+
+        header_row = target_table[header_idx]
+        data_row = target_table[header_idx + 1]
         h_str = [str(c or "") for c in header_row]
 
-        # Find column indices by header content
         dept_idx = next((j for j, h in enumerate(h_str) if "学科名" in h), None)
         course_idx = next((j for j, h in enumerate(h_str) if "課程名" in h), None)
 
         dept_name = ""
         course_name = ""
 
-        if dept_idx is not None and data_row[dept_idx]:
+        if dept_idx is not None and dept_idx < len(data_row) and data_row[dept_idx]:
             dept_name = re.sub(r"\s+", "", data_row[dept_idx])
 
-        if course_idx is not None and data_row[course_idx]:
+        if course_idx is not None and course_idx < len(data_row) and data_row[course_idx]:
             course_name = re.sub(r"\s+", "", data_row[course_idx])
 
-        # Clean dept name: strip schedule/duration suffixes
-        # Pattern: "放送芸術科昼間部(2年制)" -> "放送芸術科"
-        # Pattern: "ゲーム4年制学科（ゲーム企画コース）" -> keep as-is (sub-course is identity)
+        # Strip schedule/duration suffixes
         dept_name = re.sub(r"昼間部\(?[\d年制]*\)?$", "", dept_name)
         dept_name = re.sub(r"夜間部\(?[\d年制]*\)?$", "", dept_name)
+        # Strip trailing 〇/○ markers (専門士 indicator that bled into the cell)
+        dept_name = re.sub(r"[〇○]+$", "", dept_name)
+        course_name = re.sub(r"[〇○]+$", "", course_name)
+        # Dedupe field-prefix repetition like "医療医療専門課程" -> "医療専門課程"
+        course_name = _FIELD_DEDUPE_RE.sub(r"\1", course_name)
 
-        # Extract duration and day/night from table Row 4 if available
+        # Defensive: if extracted dept_name still looks like template/numeric junk,
+        # discard it so the text fallback can try.
+        if dept_name and _is_template_header_text(dept_name):
+            dept_name = ""
+
+        # Find duration/day_night row dynamically: scan rows after header for "X年" + 昼/夜
         duration: int | None = None
         day_night = ""
-        if len(tables[0]) >= 5:
-            row4 = tables[0][4]
-            row4_str = " ".join(str(c or "") for c in row4)
-            row4_clean = re.sub(r"\s+", "", row4_str)
-            dm = re.search(r"(\d+)年", row4_clean)
-            if dm:
+        for r in target_table[header_idx + 2 : header_idx + 8]:
+            row_str = " ".join(str(c or "") for c in r)
+            row_clean = re.sub(r"\s+", "", row_str)
+            if not row_clean:
+                continue
+            dm = re.search(r"(\d+)年", row_clean)
+            if dm and duration is None:
                 duration = int(dm.group(1))
-            if "昼" in row4_clean and "昼夜" not in row4_clean:
-                day_night = "昼"
-            elif "夜" in row4_clean and "昼夜" not in row4_clean:
-                day_night = "夜"
+            if not day_night and "昼夜" not in row_clean:
+                if "昼" in row_clean:
+                    day_night = "昼"
+                elif "夜" in row_clean:
+                    day_night = "夜"
+            if duration is not None and day_night:
+                break
 
         return dept_name, course_name, duration, day_night
     except Exception as e:
