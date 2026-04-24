@@ -452,6 +452,41 @@ def export_excel(
 
 
 @app.command()
+def export_competition_excel(
+    template: Path = typer.Option(
+        Path("sample/20250826更新版_競合校の在校生数.xlsx"),
+        help="Template workbook to overlay (16-sheet 競合校 layout)",
+    ),
+    output: Path = typer.Option(
+        Path("output/競合校の在校生数.xlsx"),
+        help="Output workbook path",
+    ),
+    fiscal_year: int = typer.Option(2026, help="Fiscal year column to add/update"),
+    gap_report: Path = typer.Option(
+        Path("output/競合校gap-report.csv"),
+        help="CSV listing template rows that could not be matched",
+    ),
+) -> None:
+    """Generate 競合校の在校生数 workbook from template + DB (Step 10b)."""
+    from eidp.db.session import SessionLocal
+    from eidp.excel.competition_exporter import export_competition_workbook
+
+    session = SessionLocal()
+    try:
+        stats = export_competition_workbook(
+            session, template, output, fiscal_year, gap_report
+        )
+        typer.echo(f"Exported to: {output}")
+        typer.echo(f"  matched:        {stats['matched']}")
+        typer.echo(f"  unmatched:      {stats['unmatched']}")
+        typer.echo(f"  cells_written:  {stats['cells_written']}")
+        if stats["unmatched"]:
+            typer.echo(f"  gap report:    {gap_report}")
+    finally:
+        session.close()
+
+
+@app.command()
 def diff_excel(
     exported: Path = typer.Argument(..., help="Path to exported Excel file"),
     original: Path = typer.Option(
