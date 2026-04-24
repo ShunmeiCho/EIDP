@@ -1,0 +1,17 @@
+# Force light theme with V1 Linear-inspired tokens.
+# Prevents browser's dark-mode preference from fighting our custom CSS.
+
+[theme]
+base = "light"
+primaryColor = "#5E6AD2"
+backgroundColor = "#FAFAFA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#0C0C0D"
+font = "sans serif"
+
+[server]
+headless = true
+runOnSave = false
+
+[browser]
+gatherUsageStats = false

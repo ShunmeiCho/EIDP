@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
@@ -893,9 +894,21 @@ def inject_v1_theme() -> None:
         }
 
         /* App background + top chrome */
-        .stApp { background: var(--eidp-bg); }
+        .stApp { background: var(--eidp-bg) !important; color: var(--eidp-ink) !important; }
         header[data-testid="stHeader"] { background: transparent; }
         .block-container { padding-top: 1.5rem; padding-bottom: 2rem; max-width: 1180px; }
+
+        /* Force readable text color on all primary surfaces */
+        .stApp, .stApp p, .stApp li, .stApp span, .stApp div,
+        .stApp label, .stApp [data-testid="stMarkdownContainer"] {
+          color: var(--eidp-ink) !important;
+        }
+        /* But preserve muted tones on known muted classes */
+        .stApp [data-testid="stCaptionContainer"],
+        .stApp [data-testid="stCaptionContainer"] p,
+        .stApp .stCaption {
+          color: var(--eidp-ink-low) !important;
+        }
 
         /* Global font */
         html, body, [class*="css"], .stApp, .stApp * {
@@ -906,31 +919,41 @@ def inject_v1_theme() -> None:
 
         /* Title brand */
         .eidp-title { margin-bottom: 24px; display: flex; align-items: baseline; gap: 10px; }
-        .eidp-brand { font-weight: 600; font-size: 20px; color: var(--eidp-ink); letter-spacing: -0.01em; }
-        .eidp-brand-sub { font-size: 13px; color: var(--eidp-ink-low); }
+        .eidp-brand { font-weight: 600 !important; font-size: 20px !important; color: var(--eidp-ink) !important; letter-spacing: -0.01em; }
+        .eidp-brand-sub { font-size: 13px !important; color: var(--eidp-ink-low) !important; }
 
         /* Serif on headings for Muji-flavored touch */
-        .stApp h1, .stApp h2, .stApp h3 {
-          font-family: 'Source Serif 4', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+        .stApp h1, .stApp h2, .stApp h3,
+        .stApp h1 *, .stApp h2 *, .stApp h3 * {
+          font-family: 'Source Serif 4', 'Hiragino Mincho ProN', 'Yu Mincho', serif !important;
           font-weight: 500;
           letter-spacing: -0.01em;
-          color: var(--eidp-ink);
+          color: var(--eidp-ink) !important;
         }
-        .stApp h1 { font-size: 30px; }
-        .stApp h2 { font-size: 22px; }
-        .stApp h3 { font-size: 17px; }
+        .stApp h1 { font-size: 30px !important; }
+        .stApp h2 { font-size: 22px !important; }
+        .stApp h3 { font-size: 17px !important; }
 
         /* Sidebar */
         section[data-testid="stSidebar"] {
-          background: var(--eidp-surface);
+          background: var(--eidp-surface) !important;
           border-right: 1px solid var(--eidp-border);
+        }
+        section[data-testid="stSidebar"],
+        section[data-testid="stSidebar"] * {
+          color: var(--eidp-ink) !important;
+        }
+        section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+        section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] *,
+        section[data-testid="stSidebar"] [data-testid="stCaption"] {
+          color: var(--eidp-ink-low) !important;
+          font-size: 11px;
         }
         section[data-testid="stSidebar"] > div { padding-top: 18px; }
         section[data-testid="stSidebar"] .stMarkdown p,
         section[data-testid="stSidebar"] label,
         section[data-testid="stSidebar"] .stRadio label { font-size: 13px; }
         section[data-testid="stSidebar"] hr { border-color: var(--eidp-border); }
-        section[data-testid="stSidebar"] [data-testid="stCaption"] { font-size: 11px; color: var(--eidp-ink-low); }
 
         /* Sidebar radio (nav) */
         section[data-testid="stSidebar"] .stRadio [role="radiogroup"] {
@@ -948,26 +971,29 @@ def inject_v1_theme() -> None:
 
         /* Metric cards */
         [data-testid="stMetric"] {
-          background: var(--eidp-surface);
+          background: var(--eidp-surface) !important;
           border: 1px solid var(--eidp-border);
           border-radius: 8px;
           padding: 14px 16px;
         }
-        [data-testid="stMetricLabel"] {
+        [data-testid="stMetricLabel"],
+        [data-testid="stMetricLabel"] * {
           color: var(--eidp-ink-low) !important;
           font-size: 11px !important;
           letter-spacing: 0.04em;
         }
         [data-testid="stMetricLabel"] p { font-size: 11px !important; }
-        [data-testid="stMetricValue"] {
+        [data-testid="stMetricValue"],
+        [data-testid="stMetricValue"] * {
           font-family: 'Source Serif 4', 'Hiragino Mincho ProN', serif !important;
-          font-weight: 600;
+          font-weight: 600 !important;
           font-size: 28px !important;
           letter-spacing: -0.02em;
-          color: var(--eidp-ink);
-          line-height: 1.2;
+          color: var(--eidp-ink) !important;
+          line-height: 1.2 !important;
         }
-        [data-testid="stMetricDelta"] {
+        [data-testid="stMetricDelta"],
+        [data-testid="stMetricDelta"] * {
           color: var(--eidp-ink-low) !important;
           font-size: 11px !important;
         }
@@ -981,21 +1007,22 @@ def inject_v1_theme() -> None:
           padding: 6px 14px;
           transition: background 120ms ease, border 120ms ease;
         }
-        .stButton > button[kind="primary"] {
-          background: var(--eidp-ink);
-          color: #FFFFFF;
-          border: 1px solid var(--eidp-ink);
+        .stButton > button[kind="primary"],
+        .stButton > button[kind="primary"] * {
+          background: var(--eidp-ink) !important;
+          color: #FFFFFF !important;
+          border: 1px solid var(--eidp-ink) !important;
         }
-        .stButton > button[kind="primary"]:hover { background: #000000; border-color: #000; }
+        .stButton > button[kind="primary"]:hover { background: #000000 !important; border-color: #000 !important; }
         .stButton > button:not([kind="primary"]) {
-          background: var(--eidp-surface);
-          color: var(--eidp-ink-mid);
-          border: 1px solid var(--eidp-border);
+          background: var(--eidp-surface) !important;
+          color: var(--eidp-ink) !important;
+          border: 1px solid var(--eidp-border) !important;
         }
+        .stButton > button:not([kind="primary"]) * { color: var(--eidp-ink) !important; }
         .stButton > button:not([kind="primary"]):hover {
-          background: var(--eidp-surface-alt);
-          color: var(--eidp-ink);
-          border-color: var(--eidp-border-strong);
+          background: var(--eidp-surface-alt) !important;
+          border-color: var(--eidp-border-strong) !important;
         }
         .stButton > button:disabled {
           opacity: 0.4;
@@ -1014,13 +1041,10 @@ def inject_v1_theme() -> None:
           border-radius: 6px;
           border: 1px solid var(--eidp-border);
           padding: 10px 14px;
+          background: var(--eidp-surface) !important;
         }
-        [data-testid="stAlert"] > div { font-size: 13px; }
-        /* Info = quiet neutral */
-        [data-baseweb="notification"][kind="info"] {
-          background: var(--eidp-surface-alt) !important;
-          color: var(--eidp-ink-mid);
-        }
+        [data-testid="stAlert"] * { color: var(--eidp-ink) !important; font-size: 13px; }
+        [data-testid="stAlert"] svg { color: var(--eidp-ink-mid) !important; }
 
         /* Horizontal radio → pill toggle */
         .stRadio > div:not([role="radiogroup"]) > div[role="radiogroup"][aria-orientation="horizontal"] {
@@ -1059,32 +1083,36 @@ def inject_v1_theme() -> None:
         /* Focus-mode custom hero (rendered via markdown html) */
         .eidp-focus-hero {
           padding: 32px 40px 24px;
-          background: var(--eidp-surface);
+          background: var(--eidp-surface) !important;
           border: 1px solid var(--eidp-border);
           border-radius: 10px;
           margin-bottom: 12px;
         }
         .eidp-focus-meta {
-          display: flex; gap: 22px; font-size: 12px; color: var(--eidp-ink-low);
+          display: flex; gap: 22px; font-size: 12px;
+          color: var(--eidp-ink-low) !important;
           text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px;
         }
+        .eidp-focus-meta > span { color: var(--eidp-ink-low) !important; }
         .eidp-focus-meta b {
-          color: var(--eidp-ink); font-weight: 500;
+          color: var(--eidp-ink) !important; font-weight: 500;
           font-family: 'JetBrains Mono', monospace; text-transform: none; letter-spacing: 0;
         }
         .eidp-focus-name {
-          font-family: 'Source Serif 4', 'Hiragino Mincho ProN', serif;
-          font-size: 34px; line-height: 1.25; letter-spacing: -0.01em;
-          color: var(--eidp-ink); font-weight: 500;
-          margin: 0 0 6px;
+          font-family: 'Source Serif 4', 'Hiragino Mincho ProN', serif !important;
+          font-size: 34px !important; line-height: 1.25 !important; letter-spacing: -0.01em;
+          color: var(--eidp-ink) !important; font-weight: 500 !important;
+          margin: 0 0 6px !important;
         }
         .eidp-focus-rows {
-          font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--eidp-ink-mid);
+          font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important;
+          color: var(--eidp-ink-mid) !important;
         }
         .eidp-focus-divider {
           display: flex; align-items: center; gap: 12px; margin: 20px 0;
-          color: var(--eidp-ink-low); font-size: 11px; letter-spacing: 0.08em;
+          color: var(--eidp-ink-low) !important; font-size: 11px; letter-spacing: 0.08em;
         }
+        .eidp-focus-divider > span { color: var(--eidp-ink-low) !important; }
         .eidp-focus-divider .line { flex: 1; border-top: 1px dashed var(--eidp-border-strong); }
 
         /* Subtle input styling */
@@ -1159,8 +1187,7 @@ def compute_todo_counts(session: Session) -> TodoCounts:
                 ):
                     url_needed += 1
 
-    # Auto approved this week (SchoolAlias rows from resolver applied batch)
-    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    # Auto approved cumulatively (SchoolAlias rows from resolver / review queue).
     auto_approved = (
         session.query(func.count(SchoolAlias.id))
         .filter(
@@ -1178,8 +1205,8 @@ def compute_todo_counts(session: Session) -> TodoCounts:
         excel_mtime = datetime.fromtimestamp(
             excel_path.stat().st_mtime, tz=timezone.utc
         )
-        latest_alias = (
-            session.query(func.max(SchoolAlias.id))
+        latest_alias_created = (
+            session.query(func.max(SchoolAlias.created_at))
             .filter(
                 SchoolAlias.source.in_(
                     ("school_missing_resolver", "proposal_review_queue")
@@ -1187,14 +1214,15 @@ def compute_todo_counts(session: Session) -> TodoCounts:
             )
             .scalar()
         )
-        # Heuristic: if there's been any approval after export, consider stale.
-        # Simpler proxy: count approvals today that happened after export mtime
-        # isn't cheap to compute; treat as stale if latest approved exists and
-        # user hasn't re-exported in last hour.
-        excel_stale = (
-            latest_alias is not None
-            and excel_mtime < datetime.now(timezone.utc) - timedelta(minutes=30)
-        )
+        if latest_alias_created is None:
+            excel_stale = False
+        else:
+            latest_alias_created = _as_utc(latest_alias_created)
+            now = datetime.now(timezone.utc)
+            excel_stale = (
+                latest_alias_created > excel_mtime
+                and now - latest_alias_created >= timedelta(minutes=30)
+            )
     else:
         excel_stale = auto_approved > 0
 
@@ -1206,6 +1234,12 @@ def compute_todo_counts(session: Session) -> TodoCounts:
         auto_approved=auto_approved,
         excel_stale=excel_stale,
     )
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def render_sidebar_todo(session: Session) -> None:
@@ -1649,17 +1683,21 @@ def _render_school_focus_mode(
         text=f"{ptr + 1} / {total} 件目",
     )
 
+    safe_type_label = html.escape(_SCHOOL_PROPOSAL_LABEL.get(ptype, ptype), quote=True)
+    safe_template_name = html.escape(str(item["template_name"]), quote=True)
+    safe_template_rows = html.escape(str(item.get("template_rows", 0)), quote=True)
+
     # Custom V1 hero card — Streamlit's default container can't do serif 34px
     st.markdown(
         f"""
         <div class="eidp-focus-hero">
           <div class="eidp-focus-meta">
-            <span>種別 · <b>{_SCHOOL_PROPOSAL_LABEL.get(ptype, ptype)}</b></span>
-            <span>影響 · <b>{item.get('template_rows', 0)} 行</b></span>
+            <span>種別 · <b>{safe_type_label}</b></span>
+            <span>影響 · <b>{safe_template_rows} 行</b></span>
             <span>候補 · <b>{len(candidates)} 件</b></span>
           </div>
-          <div class="eidp-focus-name">{item['template_name']}</div>
-          <div class="eidp-focus-rows">テンプレート内で {item.get('template_rows', 0)} 行に登場</div>
+          <div class="eidp-focus-name">{safe_template_name}</div>
+          <div class="eidp-focus-rows">テンプレート内で {safe_template_rows} 行に登場</div>
           <div class="eidp-focus-divider"><span class="line"></span><span>正しい DB 学校を選択</span><span class="line"></span></div>
         </div>
         """,
@@ -1740,8 +1778,9 @@ def _render_school_focus_mode(
                         "保留を選ぶか、別の候補を選んでください。"
                     )
                     return
-                # Advance
-                st.session_state.school_focus_idx = min(ptr + 1, total - 1)
+                # The current item disappears after the decision is recorded.
+                # Keep the same index so the next unprocessed item moves into view.
+                st.session_state.school_focus_idx = _next_focus_idx_after_decision(ptr, total)
                 st.rerun()
 
         if action_cols[1].button(
@@ -1761,7 +1800,7 @@ def _render_school_focus_mode(
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
             )
-            st.session_state.school_focus_idx = min(ptr + 1, total - 1)
+            st.session_state.school_focus_idx = _next_focus_idx_after_decision(ptr, total)
             st.rerun()
 
         if action_cols[2].button(
@@ -1781,6 +1820,13 @@ def _render_school_focus_mode(
         ):
             st.session_state.school_focus_idx = min(ptr + 1, total - 1)
             st.rerun()
+
+
+def _next_focus_idx_after_decision(ptr: int, total: int) -> int:
+    """Return the next index after the current proposal is removed."""
+    if total <= 1:
+        return 0
+    return max(0, min(ptr, total - 2))
 
 
 def _render_school_candidate_picker(
