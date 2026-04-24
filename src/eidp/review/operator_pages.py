@@ -860,6 +860,250 @@ def page_rejections() -> None:
 
 
 # ---------------------------------------------------------------------------
+# V1 theme injection — pull Streamlit close to the Linear-style mockup
+# ---------------------------------------------------------------------------
+
+def inject_v1_theme() -> None:
+    """Inject the V1 Linear-shell design tokens into Streamlit.
+
+    Streamlit's default theme is generic SaaS. This override pulls it
+    toward the mockup担当者 reviewed: #FAFAFA bg, Inter sans, Source Serif
+    display, dense metrics, dark primary buttons, pill-style horizontal
+    radio, sidebar with proper border. Call once from app.py main().
+    """
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+          --eidp-bg: #FAFAFA;
+          --eidp-surface: #FFFFFF;
+          --eidp-surface-alt: #F3F3F3;
+          --eidp-ink: #0C0C0D;
+          --eidp-ink-mid: #4E4E52;
+          --eidp-ink-low: #8C8C92;
+          --eidp-border: #E5E7EB;
+          --eidp-border-strong: #D1D1D6;
+          --eidp-accent: #5E6AD2;
+          --eidp-accent-soft: #EEF0FB;
+          --eidp-ok: #1F8B4C;
+          --eidp-warn: #A65A00;
+          --eidp-danger: #B42318;
+        }
+
+        /* App background + top chrome */
+        .stApp { background: var(--eidp-bg); }
+        header[data-testid="stHeader"] { background: transparent; }
+        .block-container { padding-top: 1.5rem; padding-bottom: 2rem; max-width: 1180px; }
+
+        /* Global font */
+        html, body, [class*="css"], .stApp, .stApp * {
+          font-family: 'Inter', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', sans-serif;
+          -webkit-font-smoothing: antialiased;
+          text-rendering: optimizeLegibility;
+        }
+
+        /* Title brand */
+        .eidp-title { margin-bottom: 24px; display: flex; align-items: baseline; gap: 10px; }
+        .eidp-brand { font-weight: 600; font-size: 20px; color: var(--eidp-ink); letter-spacing: -0.01em; }
+        .eidp-brand-sub { font-size: 13px; color: var(--eidp-ink-low); }
+
+        /* Serif on headings for Muji-flavored touch */
+        .stApp h1, .stApp h2, .stApp h3 {
+          font-family: 'Source Serif 4', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+          font-weight: 500;
+          letter-spacing: -0.01em;
+          color: var(--eidp-ink);
+        }
+        .stApp h1 { font-size: 30px; }
+        .stApp h2 { font-size: 22px; }
+        .stApp h3 { font-size: 17px; }
+
+        /* Sidebar */
+        section[data-testid="stSidebar"] {
+          background: var(--eidp-surface);
+          border-right: 1px solid var(--eidp-border);
+        }
+        section[data-testid="stSidebar"] > div { padding-top: 18px; }
+        section[data-testid="stSidebar"] .stMarkdown p,
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebar"] .stRadio label { font-size: 13px; }
+        section[data-testid="stSidebar"] hr { border-color: var(--eidp-border); }
+        section[data-testid="stSidebar"] [data-testid="stCaption"] { font-size: 11px; color: var(--eidp-ink-low); }
+
+        /* Sidebar radio (nav) */
+        section[data-testid="stSidebar"] .stRadio [role="radiogroup"] {
+          gap: 2px;
+        }
+        section[data-testid="stSidebar"] .stRadio [role="radiogroup"] > label {
+          padding: 6px 10px;
+          border-radius: 5px;
+        }
+        section[data-testid="stSidebar"] .stRadio [role="radiogroup"] > label:has(input:checked) {
+          background: var(--eidp-accent-soft);
+          color: var(--eidp-accent);
+          font-weight: 500;
+        }
+
+        /* Metric cards */
+        [data-testid="stMetric"] {
+          background: var(--eidp-surface);
+          border: 1px solid var(--eidp-border);
+          border-radius: 8px;
+          padding: 14px 16px;
+        }
+        [data-testid="stMetricLabel"] {
+          color: var(--eidp-ink-low) !important;
+          font-size: 11px !important;
+          letter-spacing: 0.04em;
+        }
+        [data-testid="stMetricLabel"] p { font-size: 11px !important; }
+        [data-testid="stMetricValue"] {
+          font-family: 'Source Serif 4', 'Hiragino Mincho ProN', serif !important;
+          font-weight: 600;
+          font-size: 28px !important;
+          letter-spacing: -0.02em;
+          color: var(--eidp-ink);
+          line-height: 1.2;
+        }
+        [data-testid="stMetricDelta"] {
+          color: var(--eidp-ink-low) !important;
+          font-size: 11px !important;
+        }
+        [data-testid="stMetricDelta"] svg { display: none; }
+
+        /* Primary button = dark, secondary = outline */
+        .stButton > button {
+          border-radius: 5px;
+          font-size: 13px;
+          font-weight: 500;
+          padding: 6px 14px;
+          transition: background 120ms ease, border 120ms ease;
+        }
+        .stButton > button[kind="primary"] {
+          background: var(--eidp-ink);
+          color: #FFFFFF;
+          border: 1px solid var(--eidp-ink);
+        }
+        .stButton > button[kind="primary"]:hover { background: #000000; border-color: #000; }
+        .stButton > button:not([kind="primary"]) {
+          background: var(--eidp-surface);
+          color: var(--eidp-ink-mid);
+          border: 1px solid var(--eidp-border);
+        }
+        .stButton > button:not([kind="primary"]):hover {
+          background: var(--eidp-surface-alt);
+          color: var(--eidp-ink);
+          border-color: var(--eidp-border-strong);
+        }
+        .stButton > button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        /* Container (st.container(border=True)) */
+        [data-testid="stVerticalBlockBorderWrapper"] {
+          background: var(--eidp-surface);
+          border: 1px solid var(--eidp-border) !important;
+          border-radius: 8px !important;
+        }
+
+        /* Alerts / info / warning / success / error */
+        [data-testid="stAlert"] {
+          border-radius: 6px;
+          border: 1px solid var(--eidp-border);
+          padding: 10px 14px;
+        }
+        [data-testid="stAlert"] > div { font-size: 13px; }
+        /* Info = quiet neutral */
+        [data-baseweb="notification"][kind="info"] {
+          background: var(--eidp-surface-alt) !important;
+          color: var(--eidp-ink-mid);
+        }
+
+        /* Horizontal radio → pill toggle */
+        .stRadio > div:not([role="radiogroup"]) > div[role="radiogroup"][aria-orientation="horizontal"] {
+          display: inline-flex;
+          border: 1px solid var(--eidp-border);
+          border-radius: 6px;
+          padding: 3px;
+          background: var(--eidp-surface);
+          gap: 0;
+        }
+        .stRadio > div:not([role="radiogroup"]) > div[role="radiogroup"][aria-orientation="horizontal"] > label {
+          margin: 0;
+          padding: 5px 14px;
+          border-radius: 4px;
+          font-size: 13px;
+          color: var(--eidp-ink-mid);
+        }
+        .stRadio > div:not([role="radiogroup"]) > div[role="radiogroup"][aria-orientation="horizontal"] > label:has(input:checked) {
+          background: var(--eidp-ink);
+          color: #FFFFFF;
+        }
+
+        /* Progress bar */
+        .stProgress > div > div > div > div { background: var(--eidp-accent) !important; }
+        .stProgress > div > div > div { background: var(--eidp-surface-alt) !important; height: 3px; }
+
+        /* Divider */
+        hr { border-color: var(--eidp-border); margin: 16px 0; }
+
+        /* Caption */
+        [data-testid="stCaptionContainer"], .stCaption {
+          color: var(--eidp-ink-low);
+          font-size: 12px;
+        }
+
+        /* Focus-mode custom hero (rendered via markdown html) */
+        .eidp-focus-hero {
+          padding: 32px 40px 24px;
+          background: var(--eidp-surface);
+          border: 1px solid var(--eidp-border);
+          border-radius: 10px;
+          margin-bottom: 12px;
+        }
+        .eidp-focus-meta {
+          display: flex; gap: 22px; font-size: 12px; color: var(--eidp-ink-low);
+          text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px;
+        }
+        .eidp-focus-meta b {
+          color: var(--eidp-ink); font-weight: 500;
+          font-family: 'JetBrains Mono', monospace; text-transform: none; letter-spacing: 0;
+        }
+        .eidp-focus-name {
+          font-family: 'Source Serif 4', 'Hiragino Mincho ProN', serif;
+          font-size: 34px; line-height: 1.25; letter-spacing: -0.01em;
+          color: var(--eidp-ink); font-weight: 500;
+          margin: 0 0 6px;
+        }
+        .eidp-focus-rows {
+          font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--eidp-ink-mid);
+        }
+        .eidp-focus-divider {
+          display: flex; align-items: center; gap: 12px; margin: 20px 0;
+          color: var(--eidp-ink-low); font-size: 11px; letter-spacing: 0.08em;
+        }
+        .eidp-focus-divider .line { flex: 1; border-top: 1px dashed var(--eidp-border-strong); }
+
+        /* Subtle input styling */
+        input, .stTextInput input, .stTextArea textarea {
+          border-radius: 5px !important;
+          border-color: var(--eidp-border) !important;
+          font-size: 13px !important;
+        }
+        input:focus, .stTextInput input:focus { border-color: var(--eidp-accent) !important; }
+
+        /* Checkbox */
+        .stCheckbox label { font-size: 13px; color: var(--eidp-ink-mid); }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
 # 今週のTODO counters (sidebar + ① page)
 # ---------------------------------------------------------------------------
 
@@ -1405,22 +1649,24 @@ def _render_school_focus_mode(
         text=f"{ptr + 1} / {total} 件目",
     )
 
+    # Custom V1 hero card — Streamlit's default container can't do serif 34px
+    st.markdown(
+        f"""
+        <div class="eidp-focus-hero">
+          <div class="eidp-focus-meta">
+            <span>種別 · <b>{_SCHOOL_PROPOSAL_LABEL.get(ptype, ptype)}</b></span>
+            <span>影響 · <b>{item.get('template_rows', 0)} 行</b></span>
+            <span>候補 · <b>{len(candidates)} 件</b></span>
+          </div>
+          <div class="eidp-focus-name">{item['template_name']}</div>
+          <div class="eidp-focus-rows">テンプレート内で {item.get('template_rows', 0)} 行に登場</div>
+          <div class="eidp-focus-divider"><span class="line"></span><span>正しい DB 学校を選択</span><span class="line"></span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     with st.container(border=True):
-        # Meta line
-        meta_cols = st.columns([1, 1, 1])
-        meta_cols[0].caption(
-            f"**種別**　{_SCHOOL_PROPOSAL_LABEL.get(ptype, ptype)}"
-        )
-        meta_cols[1].caption(
-            f"**影響**　テンプレ内 {item.get('template_rows', 0)} 行"
-        )
-        meta_cols[2].caption(
-            f"**候補**　{len(candidates)} 件"
-        )
-
-        # Big template name (V2 serif feel via Streamlit markdown h2)
-        st.markdown(f"## {item['template_name']}")
-
         if ptype == "branch_of_existing":
             st.warning(
                 "これは分校を指している可能性があります。本校に別名を付けると "

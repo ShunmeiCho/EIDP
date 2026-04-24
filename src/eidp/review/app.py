@@ -484,7 +484,12 @@ def main() -> None:
         page_icon=":material/school:",
         layout="wide",
     )
-    st.title("EIDP Operator Console")
+    operator_pages.inject_v1_theme()
+    st.markdown(
+        '<div class="eidp-title"><span class="eidp-brand">EIDP</span>'
+        '<span class="eidp-brand-sub">運用コンソール</span></div>',
+        unsafe_allow_html=True,
+    )
 
     session = _get_session()
 
