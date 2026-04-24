@@ -412,7 +412,7 @@ def page_pipeline_status(session: Session) -> None:
         if todo.excel_stale:
             st.warning(
                 "最近の承認が Excel に反映されていません。④ Excel出力 で再生成してください。",
-                icon="⚠",
+                icon="⚠️",
             )
         st.divider()
 
@@ -599,12 +599,103 @@ def _offer_download_safe(raw_path: str | Path, suffixes: tuple[str, ...]) -> Non
 # URL 補足
 # ---------------------------------------------------------------------------
 
+_URL_NEEDED_REASONS = {
+    "school_no_document": "学校はあるがPDFがない",
+    "school_doc_old_year_only": "PDFが古い年度のみ",
+}
+
+
+def _render_url_needed_worklist() -> None:
+    """Read gap-report CSV and render the list of schools that need a URL.
+
+    Shown above the submission form so担当者 sees the concrete worklist
+    (which 21 schools, with school_id to paste into the form) instead of
+    only a TODO count on the sidebar.
+    """
+    if not _DEFAULT_COMPETITION_GAP.exists():
+        st.info(
+            "gap-report がまだ生成されていません。④ Excel出力 を一度実行すると "
+            "ここに「URL追加が必要な学校」の一覧が出ます。"
+        )
+        return
+
+    import csv
+    from collections import defaultdict
+
+    # Aggregate by school_id: a single school may appear in many template rows.
+    # Some rows have no school_id (school_missing / no_fy_data) — we skip those
+    # here since the URL form requires school_id; they're visible in ⑤ instead.
+    agg: dict[str, dict[str, object]] = {}
+    by_name_only: list[dict[str, object]] = []
+
+    with _DEFAULT_COMPETITION_GAP.open(encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            reason = row.get("gap_reason", "")
+            if reason not in _URL_NEEDED_REASONS:
+                continue
+            sid = (row.get("school_id") or "").strip()
+            entry = {
+                "school_id": sid,
+                "school_name": row.get("school_name", ""),
+                "reason": reason,
+                "reason_label": _URL_NEEDED_REASONS[reason],
+                "detail": row.get("gap_detail", ""),
+                "rows": 1,
+            }
+            if sid:
+                key = sid
+                if key in agg:
+                    agg[key]["rows"] = int(agg[key]["rows"]) + 1  # type: ignore[operator]
+                else:
+                    agg[key] = entry
+            else:
+                by_name_only.append(entry)
+
+    items = list(agg.values()) + by_name_only
+    total = len(items)
+
+    if total == 0:
+        st.success("URL追加が必要な学校はありません。", icon="✅")
+        return
+
+    items.sort(key=lambda e: (str(e.get("reason", "")), str(e.get("school_name", ""))))
+
+    with st.expander(
+        f"URL追加が必要な学校一覧（{total}件）",
+        expanded=True,
+    ):
+        st.caption(
+            "下の表から school_id を確認し、フォームに入力して「登録 + 検証」してください。"
+            "原因が「古い年度のみ」なら最新年度のPDF URL、「PDFがない」なら任意の申請書URL を探します。"
+        )
+        # Compact table — column labels in Japanese
+        display_rows = [
+            {
+                "学校ID": e["school_id"] or "—",
+                "学校名": e["school_name"],
+                "原因": e["reason_label"],
+                "影響行数": e["rows"],
+                "詳細": e["detail"],
+            }
+            for e in items
+        ]
+        st.dataframe(
+            display_rows,
+            hide_index=True,
+            use_container_width=True,
+            height=min(40 + 35 * total, 420),
+        )
+
+
 def page_url_submission(session: Session) -> None:
     st.header("③ URL追加")
     st.caption(
         "担当者が自分で見つけた申請書PDFを登録する画面です。"
         "自動収集で取得できなかった学校のPDFを手動で追加する時に使います。"
     )
+
+    _render_url_needed_worklist()
+
     with st.expander("使い方", expanded=False):
         st.markdown(
             """
@@ -910,11 +1001,22 @@ def inject_v1_theme() -> None:
           color: var(--eidp-ink-low) !important;
         }
 
-        /* Global font */
-        html, body, [class*="css"], .stApp, .stApp * {
+        /* Global font — target only text elements, NEVER use universal selector.
+           Streamlit renders icons (expander chevron, sidebar toggle, number-input
+           +/−) via Material Symbols Rounded font + CSS ligatures. If we force
+           font-family on every span, the ligature fails and the icon name
+           ("keyboard_double_arrow_right", "arrow_right") renders as raw text. */
+        html, body, .stApp {
           font-family: 'Inter', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', sans-serif;
           -webkit-font-smoothing: antialiased;
           text-rendering: optimizeLegibility;
+        }
+        .stApp p, .stApp label, .stApp button,
+        .stApp input, .stApp textarea, .stApp select,
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+        .stApp [data-testid="stMarkdownContainer"],
+        .stApp [data-testid="stMarkdownContainer"] * {
+          font-family: 'Inter', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', sans-serif;
         }
 
         /* Title brand */
@@ -1292,9 +1394,9 @@ def render_sidebar_todo(session: Session) -> None:
     )
 
     if counts.excel_stale:
-        st.sidebar.warning("新しい承認あり · ④ で再出力推奨", icon="⚠")
+        st.sidebar.warning("新しい承認あり · ④ で再出力推奨", icon="⚠️")
     elif total_pending == 0 and counts.url_needed == 0:
-        st.sidebar.success("今週のTODOは完了", icon="✓")
+        st.sidebar.success("今週のTODOは完了", icon="✅")
 
 
 def _todo_line(
@@ -1664,7 +1766,7 @@ def _render_school_focus_mode(
     if not focus_items:
         st.success(
             "候補が複数の行 / 分校扱いの行は全て処理済みです。お疲れさまでした。",
-            icon="✓",
+            icon="✅",
         )
         return
 
@@ -1709,7 +1811,7 @@ def _render_school_focus_mode(
             st.warning(
                 "これは分校を指している可能性があります。本校に別名を付けると "
                 "分校データが本校に混ざります。確信がなければ「保留」にしてください。",
-                icon="⚠",
+                icon="⚠️",
             )
 
         if not candidates:

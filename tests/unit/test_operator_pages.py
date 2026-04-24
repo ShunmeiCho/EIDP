@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -10,7 +12,7 @@ from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 from eidp.cli import app
-from eidp.db.models import Base, School, SchoolSite
+from eidp.db.models import Base, School, SchoolAlias, SchoolSite
 from eidp.review import operator_pages
 
 
@@ -132,3 +134,53 @@ def test_operator_ui_cli_launches_streamlit(monkeypatch: pytest.MonkeyPatch) -> 
     assert calls
     assert calls[0][-2:] == ["--server.port", "8765"]
     assert calls[0][1:4] == ["-m", "streamlit", "run"]
+
+
+def test_next_focus_idx_after_decision_keeps_next_item_visible() -> None:
+    assert operator_pages._next_focus_idx_after_decision(0, 3) == 0
+    assert operator_pages._next_focus_idx_after_decision(1, 3) == 1
+    assert operator_pages._next_focus_idx_after_decision(2, 3) == 1
+    assert operator_pages._next_focus_idx_after_decision(0, 1) == 0
+
+
+def test_compute_todo_counts_marks_excel_stale_only_after_new_alias(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _session()
+    try:
+        empty_school = tmp_path / "school.jsonl"
+        empty_dept = tmp_path / "dept.jsonl"
+        empty_decisions = tmp_path / "decisions.jsonl"
+        empty_gap = tmp_path / "gap.csv"
+        excel = tmp_path / "competition.xlsx"
+        for path in (empty_school, empty_dept, empty_decisions):
+            path.write_text("", encoding="utf-8")
+        empty_gap.write_text("gap_reason\n", encoding="utf-8")
+        excel.write_bytes(b"xlsx")
+
+        now = datetime.now(timezone.utc)
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(
+            SchoolAlias(
+                school_id=1,
+                alias_name="学校Aテンプレ",
+                alias_type="competition_template",
+                source="proposal_review_queue",
+                created_at=now - timedelta(hours=1),
+            )
+        )
+        session.commit()
+
+        monkeypatch.setattr(operator_pages, "_DEFAULT_SCHOOL_PROPOSALS", empty_school)
+        monkeypatch.setattr(operator_pages, "_DEFAULT_DEPT_PROPOSALS", empty_dept)
+        monkeypatch.setattr(operator_pages, "_DEFAULT_PROPOSAL_DECISIONS", empty_decisions)
+        monkeypatch.setattr(operator_pages, "_DEFAULT_COMPETITION_GAP", empty_gap)
+        monkeypatch.setattr(operator_pages, "_DEFAULT_COMPETITION", excel)
+
+        os.utime(excel, ((now - timedelta(hours=2)).timestamp(), (now - timedelta(hours=2)).timestamp()))
+        assert operator_pages.compute_todo_counts(session).excel_stale is True
+
+        os.utime(excel, (now.timestamp(), now.timestamp()))
+        assert operator_pages.compute_todo_counts(session).excel_stale is False
+    finally:
+        session.close()
