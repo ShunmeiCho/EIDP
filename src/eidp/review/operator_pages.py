@@ -372,42 +372,54 @@ def _pipeline_stats(session: Session) -> dict[str, object]:
 
 
 def page_pipeline_status(session: Session) -> None:
-    st.header("Pipeline Status")
-    st.caption("End-to-end ingestion health for the weekly担当者 run.")
+    st.header("① データ状況")
+    st.caption(
+        "現在DBに入っている学校数・PDF数・学科数・年度別データ数の概況です。"
+        "週初めにここで全体規模を確認してください。"
+    )
 
     stats = _pipeline_stats(session)
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Schools", stats["total_schools"])
-    col2.metric("Documents", stats["total_documents"])
-    col3.metric("Departments", stats["dept_rows"])
-    col4.metric("Yearly rows", stats["dept_yearly_rows"])
+    col1.metric("学校数", stats["total_schools"])
+    col2.metric("取得PDF数", stats["total_documents"])
+    col3.metric("学科数", stats["dept_rows"])
+    col4.metric("年度別データ数", stats["dept_yearly_rows"])
 
     st.divider()
-    st.subheader("Documents by ingest_status")
+    st.subheader("PDF 取込状態の内訳")
+    st.caption(
+        "ingested = DBに反映済み / school_mismatch = 校名が合わず未反映 / "
+        "ocr_pending = OCR待ち / non_target = 対象外PDF"
+    )
     status = stats["docs_by_status"]
     if status:
         st.bar_chart(status)
     else:
-        st.info("No documents yet.")
+        st.info("まだ取込み済のPDFがありません。")
 
-    st.subheader("Documents by pdf_type")
+    st.subheader("PDF種別の内訳")
+    st.caption(
+        "target = 申請書（正しいPDF）/ image_only = 画像のみでOCR必要 / "
+        "non_target = 対象外 / unknown = 分類できない"
+    )
     pdf_type = stats["docs_by_pdf_type"]
     if pdf_type:
         st.bar_chart(pdf_type)
     else:
-        st.info("No pdf_type distribution yet.")
+        st.info("まだ分類データがありません。")
 
-    st.subheader("Fiscal year coverage (ingested)")
+    st.subheader("年度別のデータ件数（ingested のみ）")
+    st.caption("ここで最新年度（例: 2025）のデータ量を確認し、薄ければ URL追加 や 再取得 を検討します。")
     coverage = stats["coverage_by_year"]
     if coverage:
         rows = sorted(coverage.items(), key=lambda kv: (kv[0] or 0))
         st.dataframe(
-            {"fiscal_year": [r[0] for r in rows], "docs": [r[1] for r in rows]},
+            {"年度": [r[0] for r in rows], "PDF件数": [r[1] for r in rows]},
             hide_index=True,
         )
     else:
-        st.info("No ingested documents yet.")
+        st.info("まだ反映済みPDFがありません。")
 
 
 # ---------------------------------------------------------------------------
@@ -441,23 +453,27 @@ def _run_competition_export(
 
 
 def page_exports(session: Session) -> None:
-    st.header("Excel Exports")
-    st.caption("One-click regeneration for the two担当者 deliverables.")
+    st.header("④ Excel出力")
+    st.caption(
+        "担当者向けに配布する2種類のExcelを生成します。"
+        "② や ③ で承認・登録した内容が反映されます。"
+    )
 
-    st.subheader("Master workbook")
+    st.subheader("マスターExcel（全体一覧）")
+    st.caption("学校・学科・年度別データをまとめた全体ワークブック。")
     master_out = st.text_input(
-        "Master output path",
+        "マスターExcelの保存先（output/配下のみ可）",
         value=str(_DEFAULT_MASTER),
         key="master_out",
     )
-    if st.button("Export Master Excel", type="primary", key="btn_master"):
+    if st.button("マスターExcelを生成", type="primary", key="btn_master"):
         try:
             master_path = output_path(master_out, (".xlsx",))
             stats = _run_master_export(session, master_path)
-            st.success(f"Exported: {master_out}")
+            st.success(f"出力完了: {master_out}")
             st.json(stats)
         except PathPolicyError as exc:
-            st.error(f"Path rejected: {exc}")
+            st.error(f"パス不正（許可された出力先外）: {exc}")
         except Exception as exc:
             st.error(f"Export failed: {exc}")
 
@@ -465,31 +481,32 @@ def page_exports(session: Session) -> None:
 
     st.divider()
 
-    st.subheader("Competition workbook")
+    st.subheader("競合校Excel（16シート・テンプレ形式）")
+    st.caption("「競合校の在校生数」テンプレートに当年度データを埋め込んで出力します。")
     comp_cols = st.columns(2)
     template_in = comp_cols[0].text_input(
-        "Template path",
+        "テンプレートExcelのパス（sample/配下）",
         value=str(_DEFAULT_TEMPLATE),
         key="comp_template",
     )
     comp_out = comp_cols[1].text_input(
-        "Output path",
+        "出力先Excelのパス（output/配下）",
         value=str(_DEFAULT_COMPETITION),
         key="comp_out",
     )
     gap_out = st.text_input(
-        "Gap report CSV",
+        "マッチング漏れCSVの保存先",
         value=str(_DEFAULT_COMPETITION_GAP),
         key="comp_gap",
     )
     fy_pick = st.number_input(
-        "Fiscal year (0 = auto-detect year with most rows)",
+        "対象年度（0 = データ量が最大の年を自動選択）",
         min_value=0,
         value=0,
         step=1,
         key="comp_fy",
     )
-    if st.button("Export Competition Excel", type="primary", key="btn_comp"):
+    if st.button("競合校Excelを生成", type="primary", key="btn_comp"):
         try:
             fy = None if int(fy_pick) == 0 else int(fy_pick)
             template_path = sample_path(template_in, (".xlsx",))
@@ -502,10 +519,10 @@ def page_exports(session: Session) -> None:
                 gap_path,
                 fy,
             )
-            st.success(f"Exported: {comp_out}")
+            st.success(f"出力完了: {comp_out}")
             st.json(result)
         except PathPolicyError as exc:
-            st.error(f"Path rejected: {exc}")
+            st.error(f"パス不正（許可された出力先外）: {exc}")
         except Exception as exc:
             st.error(f"Export failed: {exc}")
 
@@ -514,7 +531,7 @@ def page_exports(session: Session) -> None:
 
 def _offer_download(path: Path) -> None:
     if not path.exists():
-        st.caption(f"(not generated yet: `{path}`)")
+        st.caption(f"（未生成: `{path}`）")
         return
     data = path.read_bytes()
     st.caption(
@@ -544,19 +561,57 @@ def _offer_download_safe(raw_path: str | Path, suffixes: tuple[str, ...]) -> Non
 # ---------------------------------------------------------------------------
 
 def page_url_submission(session: Session) -> None:
-    st.header("URL 補足")
-    st.caption("担当者が見つけた申請書 PDF を検証して SchoolSite に登録します。")
+    st.header("③ URL追加")
+    st.caption(
+        "担当者が自分で見つけた申請書PDFを登録する画面です。"
+        "自動収集で取得できなかった学校のPDFを手動で追加する時に使います。"
+    )
+    with st.expander("使い方", expanded=False):
+        st.markdown(
+            """
+**こういう時に使う**：
+- ⑤「マッチング漏れ一覧」で `学校はあるが対象PDFがまだない` の行を見つけた時
+- 学校の公式サイトで申請書PDFを見つけた時
+
+**操作手順**：
+1. 学校ID（`school.id`）を入力 — データ状況ページで確認できます
+2. 申請書PDFのURLを貼り付け
+3. 担当者名を入力（監査用）
+4. 「登録 + 検証」を押す
+
+**自動チェック**：
+URLは登録前に以下のチェックを通します。
+- 社内ネットワーク等の不正URL除外（SSRF対策）
+- HTTP 200 で取得可能
+- PDFの署名（%PDF-）が正しい
+- サイズが妥当（1KB〜50MB）
+- PDFの内容が申請書（機関要件・様式第2号など）であることを検証
+
+検証に失敗した場合はDB登録されません。
+            """
+        )
 
     with st.form("operator_url_submission"):
-        school_id = st.number_input("school.id", min_value=1, step=1, value=1)
-        url = st.text_input("PDF URL", placeholder="https://example.ac.jp/.../confirmation_application.pdf")
-        operator_name = st.text_input("Operator", placeholder="担当者名 or initials")
-        operator_note = st.text_area("Note", placeholder="掲載ページ、判断理由、年度メモなど", height=80)
-        run_now = st.checkbox("登録後にこの school の operator_manual URL を discovery + ingest する", value=False)
-        submitted = st.form_submit_button("Validate and register", type="primary")
+        school_id = st.number_input("学校ID（school.id）", min_value=1, step=1, value=1)
+        url = st.text_input("申請書PDFのURL", placeholder="https://example.ac.jp/.../confirmation_application.pdf")
+        operator_name = st.text_input("担当者名（監査用）", placeholder="例: 山田")
+        operator_note = st.text_area(
+            "メモ（任意）",
+            placeholder="掲載ページのURL、判断理由、年度メモなど",
+            height=80,
+        )
+        run_now = st.checkbox(
+            "登録後に自動で取込みまで行う（discovery + ingest）",
+            value=False,
+            help="オンにするとURL登録 → PDFダウンロード → DB反映まで一気に実行します。",
+        )
+        submitted = st.form_submit_button("登録 + 検証", type="primary")
 
     if not submitted:
-        st.info("URL は入庫前に SSRF guard、HTTP/PDF validation、PDF content classifier を通します。")
+        st.info(
+            "URL は登録前に SSRF 対策・HTTP検証・PDF内容分類 を通過する必要があります。"
+            "検証に失敗した場合はDBに書き込まれません。"
+        )
         return
 
     audit_path = output_path(_DEFAULT_OPERATOR_SUBMISSIONS, (".jsonl",))
@@ -616,24 +671,38 @@ def page_url_submission(session: Session) -> None:
 # ---------------------------------------------------------------------------
 
 def page_gap_report() -> None:
-    st.header("Competition Gap Report")
+    st.header("⑤ マッチング漏れ一覧")
     st.caption(
-        "Rows in the 競合校 template that did not match any DB school+dept. "
-        "Use this to prioritise discovery / ingestion work."
+        "競合校Excelでマッチングできなかった行の一覧です。"
+        "漏れの種類（原因）でグループ化されているので、どこに手を入れれば改善するかが分かります。"
     )
+    with st.expander("漏れ種別の意味", expanded=False):
+        st.markdown(
+            """
+- **学校がDBに登録されていない** (`school_missing`) → ② で別名追加 or 新規登録
+- **PDFが古い年度のみ** (`school_doc_old_year_only`) → ③ でURL追加
+- **PDFは取り込んだが校名が違う** (`school_mismatch_doc_rejected`) → ② で別名追加
+- **学校はあるがPDFがない** (`school_no_document`) → ③ でURL追加
+- **学科名が一致しない** (`dept_unmatched`) → ② の学科タブで別名追加
+- **本年度のデータがない** (`no_fy_data`) → ③ でURL追加
+            """
+        )
 
     gap_path = st.text_input(
-        "Gap CSV path",
+        "漏れレポートCSVのパス",
         value=str(_DEFAULT_COMPETITION_GAP),
         key="gap_path",
     )
     try:
         path = output_path(gap_path, (".csv",))
     except PathPolicyError as exc:
-        st.error(f"Path rejected: {exc}")
+        st.error(f"パス不正: {exc}")
         return
     if not path.exists():
-        st.info(f"No gap report at `{path}`. Run Competition Excel export first.")
+        st.info(
+            f"漏れレポートがまだありません: `{path}`。"
+            "先に ④ 競合校Excelを出力してください。"
+        )
         return
 
     import csv
@@ -641,15 +710,17 @@ def page_gap_report() -> None:
     with path.open(encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
 
-    st.write(f"Total unmatched rows: **{len(rows)}**")
+    st.write(f"漏れ行の合計: **{len(rows)}** 行")
     if not rows:
         return
 
     # Filters
     sheet_names = sorted({r.get("sheet", "") for r in rows})
-    school_terms = st.text_input("Filter by school name substring", key="gap_filter_school")
+    school_terms = st.text_input(
+        "学校名で絞り込み（部分一致）", key="gap_filter_school",
+    )
     sheets_pick = st.multiselect(
-        "Sheet filter",
+        "シートで絞り込み",
         sheet_names,
         default=sheet_names,
         key="gap_filter_sheet",
@@ -660,7 +731,7 @@ def page_gap_report() -> None:
         if r.get("sheet", "") in sheets_pick
         and (not school_terms or school_terms in r.get("school_name", ""))
     ]
-    st.write(f"Showing {len(filtered)} rows")
+    st.write(f"表示件数: {len(filtered)} 行")
     st.dataframe(filtered, hide_index=True)
 
 
@@ -669,31 +740,45 @@ def page_gap_report() -> None:
 # ---------------------------------------------------------------------------
 
 def page_rejections() -> None:
-    st.header("Discovery Rejections")
+    st.header("⑥ 除外PDF履歴")
     st.caption(
-        "Every PDF candidate that discover-pdfs rejected (non_target, HTTP "
-        "error, all-negative score, no candidates, etc.). Append-only JSONL."
+        "自動収集で「対象外」と判定されて取り込まれなかったPDFの履歴です。"
+        "「この学校のPDFが取れていないのはなぜ？」を調べる時に使います。"
     )
+    with st.expander("除外理由の意味", expanded=False):
+        st.markdown(
+            """
+- **classified_non_target** → 内容分類で申請書でないと判定
+- **no_candidates_found** → そもそもPDFリンクが見つからなかった
+- **all_negative_score** → 候補はあったが全て除外キーワード該当
+- **http_error / too_small / not_pdf_magic** → HTTPまたはファイル形式の問題
+- **unsafe_url** → 社内ネットワーク等の不正URLをブロック
+
+同じ学校ID（school_id）が何度も出てくる場合、③「URL追加」で手動補足すれば解決します。
+            """
+        )
 
     log_path = st.text_input(
-        "Rejection JSONL path",
+        "履歴ファイルのパス",
         value=str(_DEFAULT_REJECTIONS),
         key="rej_path",
     )
     try:
         path = output_path(log_path, (".jsonl",))
     except PathPolicyError as exc:
-        st.error(f"Path rejected: {exc}")
+        st.error(f"パス不正: {exc}")
         return
     if not path.exists():
-        st.info(f"No rejection log at `{path}`.")
+        st.info(f"履歴ファイルがありません: `{path}`")
         return
 
-    limit = st.slider("Tail lines", 10, 1000, 200, 10, key="rej_limit")
+    limit = st.slider(
+        "最新N件を表示", 10, 1000, 200, 10, key="rej_limit",
+    )
     records = _tail_jsonl(path, limit)
 
     if not records:
-        st.info("Log file is empty.")
+        st.info("履歴が空です。")
         return
 
     reason_counts: dict[str, int] = {}
@@ -706,21 +791,23 @@ def page_rejections() -> None:
 
     cols = st.columns(2)
     with cols[0]:
-        st.subheader("By reason")
+        st.subheader("理由別の件数")
         st.bar_chart(reason_counts)
     with cols[1]:
-        st.subheader("Top 15 schools by rejection count")
+        st.subheader("除外回数が多い学校（上位15）")
         top = sorted(school_counts.items(), key=lambda kv: kv[1], reverse=True)[:15]
         st.dataframe(
-            {"school_id": [t[0] for t in top], "rejections": [t[1] for t in top]},
+            {"学校ID": [t[0] for t in top], "除外回数": [t[1] for t in top]},
             hide_index=True,
         )
 
     st.divider()
-    st.subheader("Recent records")
-    school_filter = st.text_input("Filter by school_id (blank = all)", key="rej_school_filter")
+    st.subheader("最近の除外履歴")
+    school_filter = st.text_input(
+        "学校IDで絞り込み（空白=全件）", key="rej_school_filter",
+    )
     reason_filter = st.multiselect(
-        "Reason filter",
+        "除外理由で絞り込み",
         sorted(reason_counts.keys()),
         default=sorted(reason_counts.keys()),
         key="rej_reason_filter",
@@ -730,7 +817,7 @@ def page_rejections() -> None:
         if (not school_filter or str(r.get("school_id", "")) == school_filter)
         and r.get("reason") in reason_filter
     ]
-    st.write(f"Showing {len(shown)} records")
+    st.write(f"表示件数: {len(shown)} 件")
     st.dataframe(shown, hide_index=True)
 
 
@@ -917,6 +1004,14 @@ def _render_school_proposals_tab(session: Session) -> None:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
+    # Label map for 担当者 facing display
+    _SCHOOL_PROPOSAL_LABEL = {
+        "alias_existing_school": "一致候補が1つ（別名追加で即マッチ）",
+        "ambiguous_candidates": "候補が複数（選択が必要）",
+        "branch_of_existing": "分校扱いの行（本校はDBにあり・要注意）",
+        "truly_missing": "DBに該当校なし（法人情報が必要・対応外）",
+    }
+
     counts = {k: (len(v), sum(int(x.get("template_rows", 0)) for x in v))
               for k, v in by_type.items()}
     cols = st.columns(4)
@@ -927,20 +1022,35 @@ def _render_school_proposals_tab(session: Session) -> None:
         "truly_missing",
     ]):
         n, rows = counts.get(ptype, (0, 0))
-        cols[idx].metric(ptype, f"{n} names", f"{rows} rows")
+        cols[idx].metric(
+            _SCHOOL_PROPOSAL_LABEL.get(ptype, ptype),
+            f"{n} 校",
+            f"テンプレ {rows} 行",
+        )
 
     st.divider()
-    st.subheader("Auto-approvable: alias_existing_school")
-    for p in by_type.get("alias_existing_school", []):
+    st.subheader("自動承認OK：一致候補が1つだけの行")
+    st.caption(
+        "DB内に同じ学校が1つだけ見つかっている行です。"
+        "「承認」を押すと別名として登録され、次のExcel出力で一致します。"
+    )
+    items_single = by_type.get("alias_existing_school", [])
+    if not items_single:
+        st.info("対象なし（処理済みの可能性あり）")
+    for p in items_single:
         with st.container(border=True):
             cols = st.columns([4, 1])
             cols[0].write(
-                f"**{p['template_name']}** — {p['template_rows']} rows → "
-                f"id={p['matched_school_id']} `{p['matched_school_name']}` "
-                f"({p['matched_corporation']})"
+                f"**テンプレ名**: {p['template_name']}　"
+                f"（テンプレ内 {p['template_rows']} 行）"
+            )
+            cols[0].caption(
+                f"→ DBの一致校: id={p['matched_school_id']}　"
+                f"`{p['matched_school_name']}`　"
+                f"（法人: {p['matched_corporation']}）"
             )
             if cols[1].button(
-                "Approve",
+                "承認",
                 key=f"approve_sch_{p['matched_school_id']}_{p['template_name']}",
                 type="primary",
             ):
@@ -962,41 +1072,55 @@ def _render_school_proposals_tab(session: Session) -> None:
                     _DEFAULT_PROPOSAL_DECISIONS,
                 )
                 if created:
-                    st.success(f"Alias inserted: {p['template_name']} → id={p['matched_school_id']}")
+                    st.success(
+                        f"別名を登録しました: "
+                        f"「{p['template_name']}」→ id={p['matched_school_id']}"
+                    )
+                elif reason == "already_exists":
+                    st.info("すでに登録済みです（重複しません）")
+                elif reason.startswith("conflict_other_school:"):
+                    other_id = reason.split(":")[1]
+                    st.error(
+                        f"この別名はすでに別の学校 (id={other_id}) に使われています。"
+                        "このまま登録すると照合が曖昧になるため中止しました。"
+                    )
                 else:
-                    st.info(f"No-op: {reason}")
+                    st.info(f"未実行: {reason}")
 
     st.divider()
-    st.subheader(
-        "Operator decision required: ambiguous_candidates / branch_of_existing"
-    )
+    st.subheader("担当者の判断が必要な行")
     st.caption(
-        "Pick the correct DB school from the candidates. Truly-missing rows "
-        "stay read-only — creating a new school needs authoritative source "
-        "data (corporation, prefecture, school_code)."
+        "候補が複数ある場合は、正しいDBの学校を選んでから「承認」を押します。"
+        "わからなければ「保留」でOK — あとで再確認できます。"
     )
     for ptype in ("ambiguous_candidates", "branch_of_existing"):
         items = by_type.get(ptype, [])
         if not items:
             continue
-        st.markdown(f"### {ptype} — {len(items)} names")
+        st.markdown(
+            f"### {_SCHOOL_PROPOSAL_LABEL.get(ptype, ptype)} — {len(items)}校"
+        )
         if ptype == "branch_of_existing":
             st.warning(
-                "Branch rows detected. If the template refers to an actual "
-                "branch campus, aliasing to the parent may lump branch data "
-                "into parent. Prefer defer unless you know the branch is "
-                "part of the parent in DB."
+                "⚠ **分校扱いの行**：テンプレートが本当に分校を指す場合、本校に別名を "
+                "付けると分校のデータが本校に混ざります。分校がDB上の本校の一部として "
+                "扱われているか確信が持てなければ「保留」にしてください。"
             )
         for p in items:
             _render_school_candidate_picker(session, p, ptype)
 
     truly = by_type.get("truly_missing", [])
     if truly:
-        st.markdown(f"### truly_missing — {len(truly)} names (read-only)")
+        st.markdown(
+            f"### {_SCHOOL_PROPOSAL_LABEL['truly_missing']} — {len(truly)}校（操作不可）"
+        )
+        st.caption(
+            "これらの学校はDBに存在しません。新規登録には法人名・都道府県・文科省コード "
+            "などの正確な情報が必要です。対応は次期作業に回します。"
+        )
         for p in truly:
             st.caption(
-                f"  [{p['template_rows']} rows] {p['template_name']}  "
-                f"— needs authoritative corp + prefecture to insert"
+                f"　・ {p['template_name']}（テンプレ内 {p['template_rows']} 行）"
             )
 
 
@@ -1010,24 +1134,29 @@ def _render_school_candidate_picker(
     key_root = f"pick_{ptype}_{template}"
 
     with st.container(border=True):
-        st.write(f"**{template}** — {rows} rows")
+        st.write(f"**テンプレ名**: {template}　（テンプレ内 {rows} 行）")
         if not candidates:
-            st.caption("(no candidates — defer)")
+            st.caption("（DB候補なし — 保留推奨）")
             return
 
         options = [
-            f"id={c['school_id']}  {c['school_name']}  ({c['corporation']}, {c['prefecture']})"
+            f"id={c['school_id']}　{c['school_name']}　"
+            f"（法人: {c['corporation']} / {c['prefecture']}）"
             for c in candidates
         ]
         choice = st.selectbox(
-            "Select the correct DB school:",
-            ["(pick one)"] + options,
+            "正しいDB学校を選んでください：",
+            ["（選択してください）"] + options,
             key=f"{key_root}_select",
         )
 
         col_a, col_d = st.columns(2)
-        if col_a.button("Approve", key=f"{key_root}_approve", type="primary",
-                        disabled=choice == "(pick one)"):
+        if col_a.button(
+            "承認",
+            key=f"{key_root}_approve",
+            type="primary",
+            disabled=choice == "（選択してください）",
+        ):
             # Parse back to candidate dict
             idx = options.index(choice)
             picked = candidates[idx]
@@ -1050,13 +1179,21 @@ def _render_school_candidate_picker(
             )
             if created:
                 st.success(
-                    f"Alias inserted: {template} → id={picked['school_id']} "
-                    f"({picked['school_name']})"
+                    f"別名を登録しました: 「{template}」 → id={picked['school_id']} "
+                    f"（{picked['school_name']}）"
+                )
+            elif reason == "already_exists":
+                st.info("すでに登録済みです（重複しません）")
+            elif reason.startswith("conflict_other_school:"):
+                other_id = reason.split(":")[1]
+                st.error(
+                    f"この別名はすでに別の学校 (id={other_id}) に使われています。"
+                    "競合を避けるため登録を中止しました。"
                 )
             else:
-                st.info(f"No-op: {reason}")
+                st.info(f"未実行: {reason}")
 
-        if col_d.button("Defer", key=f"{key_root}_defer"):
+        if col_d.button("保留", key=f"{key_root}_defer"):
             _record_decision(
                 ProposalDecision(
                     decision="deferred",
@@ -1069,7 +1206,7 @@ def _render_school_candidate_picker(
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
             )
-            st.caption(f"Deferred: {template}")
+            st.caption(f"保留しました: {template}")
 
 
 def _render_dept_proposals_tab(session: Session) -> None:
@@ -1091,6 +1228,13 @@ def _render_dept_proposals_tab(session: Session) -> None:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
+    _DEPT_PROPOSAL_LABEL = {
+        "dept_alias_existing": "別名追加で即マッチ（候補1つ）",
+        "dept_group_candidate": "複数学科の合算行（今期は対応外）",
+        "dept_ambiguous": "候補が複数（選択が必要）",
+        "dept_truly_missing": "DBに該当学科なし",
+    }
+
     cols = st.columns(4)
     for idx, ptype in enumerate([
         "dept_alias_existing",
@@ -1099,19 +1243,25 @@ def _render_dept_proposals_tab(session: Session) -> None:
         "dept_truly_missing",
     ]):
         items = by_type.get(ptype, [])
-        cols[idx].metric(ptype, len(items))
+        cols[idx].metric(_DEPT_PROPOSAL_LABEL.get(ptype, ptype), len(items))
 
     st.divider()
-    st.subheader("Auto-approvable: dept_alias_existing")
-    for p in by_type.get("dept_alias_existing", []):
+    st.subheader("自動承認OK：一致候補が1つだけの学科")
+    items_single = by_type.get("dept_alias_existing", [])
+    if not items_single:
+        st.info("対象なし（処理済みか該当なし）")
+    for p in items_single:
         with st.container(border=True):
             cols = st.columns([4, 1])
             cols[0].write(
-                f"**{p['template_school']} / {p['template_dept']}** → "
-                f"dept_id={p['db_dept_ids'][0]} `{p['db_dept_names'][0]}`"
+                f"**{p['template_school']} / {p['template_dept']}**"
+            )
+            cols[0].caption(
+                f"→ DBの一致学科: dept_id={p['db_dept_ids'][0]}　"
+                f"`{p['db_dept_names'][0]}`"
             )
             key = f"approve_dept_{p['db_dept_ids'][0]}_{p['template_dept']}"
-            if cols[1].button("Approve", key=key, type="primary"):
+            if cols[1].button("承認", key=key, type="primary"):
                 created, reason = apply_dept_alias_proposal(
                     session,
                     department_id=p["db_dept_ids"][0],
@@ -1130,41 +1280,73 @@ def _render_dept_proposals_tab(session: Session) -> None:
                     _DEFAULT_PROPOSAL_DECISIONS,
                 )
                 if created:
-                    st.success(f"DepartmentChange alias inserted: {p['template_dept']} → dept_id={p['db_dept_ids'][0]}")
+                    st.success(
+                        f"学科別名を登録しました: 「{p['template_dept']}」 → "
+                        f"dept_id={p['db_dept_ids'][0]}"
+                    )
+                elif reason == "already_exists":
+                    st.info("すでに登録済みです（重複しません）")
                 else:
-                    st.info(f"No-op: {reason}")
+                    st.info(f"未実行: {reason}")
 
     st.divider()
-    st.subheader("Operator-decision required (read-only in this MVP)")
+    st.subheader("担当者の判断が必要な学科（現時点では表示のみ）")
+    st.caption(
+        "複数学科の合算行 (例: HALの「高度情報学科(情報処理・WEB開発・AI)」) は "
+        "合算ルールを別テーブルで管理する必要があるため、今期は対応外です。"
+    )
     for ptype, items in by_type.items():
         if ptype == "dept_alias_existing":
             continue
-        st.write(f"**{ptype}** — {len(items)} rows")
+        st.write(f"**{_DEPT_PROPOSAL_LABEL.get(ptype, ptype)}** — {len(items)}件")
         for p in items[:10]:
-            names = " | ".join(p.get("db_dept_names", [])[:3])
+            names = " ／ ".join(p.get("db_dept_names", [])[:3])
             st.caption(
-                f"  [{p['template_school'][:20]}] {p['template_dept']}  → {names}"
+                f"　・ [{p['template_school'][:20]}] {p['template_dept']}  → "
+                f"候補: {names if names else '（なし）'}"
             )
 
 
 def page_proposals_review(session: Session) -> None:
-    st.header("Proposals Review Queue")
+    st.header("② マッチング提案の確認")
     st.caption(
-        "Approve-or-defer gap resolution proposals from "
-        "school_missing_resolver and dept_unmatched_resolver."
+        "競合校テンプレートと DB の学校名・学科名を自動照合した結果です。"
+        "「承認」するとその行は以降のExcel出力に反映されます。"
+        "「保留」はDBに何も書かず、記録だけ残します。"
     )
+    with st.expander("このページの使い方（初回は必読）", expanded=False):
+        st.markdown(
+            """
+**目的**：競合校テンプレートの各行（= 学校×学科）をDBの正しいレコードに紐付ける。
+
+**画面の見方**：
+- **学校タブ**：テンプレートに書いてあるけどDBに一致しない「学校名」の一覧。
+- **学科タブ**：学校は一致したが、学科名だけ合わない行の一覧。
+
+**操作の流れ**：
+1. 担当者名を入力（監査用 — 誰が承認したか記録されます）
+2. 候補が1つだけ → 「承認」を押すだけ
+3. 候補が複数 → セレクトで正しいものを選んでから「承認」
+4. 自信がない → 「保留」（あとで再確認）
+
+**注意**：
+- `分校扱いの行` は警告が出ます。本校に紐付けると分校のデータが混ざるので、不確かなら保留してください。
+- `DBに該当校なし` の行は法人情報が必要なため、現時点では対応外です（上長に報告）。
+            """
+        )
     st.text_input(
-        "Operator name (audit tag)",
+        "担当者名（監査ログに記録）",
         key="operator_name",
         value=st.session_state.get("operator_name", ""),
+        placeholder="例: 山田",
     )
     st.checkbox(
-        "Hide already-processed proposals (approved/deferred)",
+        "処理済み（承認/保留）の行を隠す",
         key="hide_processed",
         value=st.session_state.get("hide_processed", True),
     )
     tab_school, tab_dept = st.tabs(
-        ["School Missing", "Dept Unmatched"]
+        ["学校タブ（学校名のマッチング）", "学科タブ（学科名のマッチング）"]
     )
     with tab_school:
         _render_school_proposals_tab(session)

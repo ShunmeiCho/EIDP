@@ -489,41 +489,43 @@ def main() -> None:
     session = _get_session()
 
     page = st.sidebar.radio(
-        "Navigation",
+        "メニュー",
         [
-            "Pipeline Status",
-            "URL 補足",
-            "Exports",
-            "Gap Report",
-            "Proposals Review",
-            "Rejections",
-            "Review Queue",
-            "History",
+            "① データ状況",
+            "② マッチング提案の確認",
+            "③ URL追加",
+            "④ Excel出力",
+            "⑤ マッチング漏れ一覧",
+            "⑥ 除外PDF履歴",
+            "⑦ 学校コード確認",
+            "⑧ 処理履歴",
         ],
         index=0,
     )
 
-    if page == "Pipeline Status":
+    if page == "① データ状況":
         operator_pages.page_pipeline_status(session)
-    elif page == "URL 補足":
-        operator_pages.page_url_submission(session)
-    elif page == "Exports":
-        operator_pages.page_exports(session)
-    elif page == "Gap Report":
-        operator_pages.page_gap_report()
-    elif page == "Proposals Review":
+    elif page == "② マッチング提案の確認":
         operator_pages.page_proposals_review(session)
-    elif page == "Rejections":
+    elif page == "③ URL追加":
+        operator_pages.page_url_submission(session)
+    elif page == "④ Excel出力":
+        operator_pages.page_exports(session)
+    elif page == "⑤ マッチング漏れ一覧":
+        operator_pages.page_gap_report()
+    elif page == "⑥ 除外PDF履歴":
         operator_pages.page_rejections()
-    elif page == "Review Queue":
+    elif page == "⑦ 学校コード確認":
         _page_review_queue(session)
-    elif page == "History":
+    elif page == "⑧ 処理履歴":
         _page_history(session)
 
     # Sidebar info
     st.sidebar.divider()
-    st.sidebar.caption("EIDP weekly operator workflow")
-    st.sidebar.caption("URL 補足 → discovery/ingest → Excel export → gap review")
+    st.sidebar.caption("週次運用フロー")
+    st.sidebar.caption(
+        "① 状況確認 → ② 提案承認 → ③ URL追加 → ④ Excel出力 → ⑤ 漏れ確認"
+    )
 
 
 if __name__ == "__main__":
