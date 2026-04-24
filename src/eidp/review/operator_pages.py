@@ -908,23 +908,109 @@ def _render_school_proposals_tab(session: Session) -> None:
                     st.info(f"No-op: {reason}")
 
     st.divider()
-    st.subheader("Operator-decision required (read-only in this MVP)")
-    for ptype, items in by_type.items():
-        if ptype == "alias_existing_school":
+    st.subheader(
+        "Operator decision required: ambiguous_candidates / branch_of_existing"
+    )
+    st.caption(
+        "Pick the correct DB school from the candidates. Truly-missing rows "
+        "stay read-only — creating a new school needs authoritative source "
+        "data (corporation, prefecture, school_code)."
+    )
+    for ptype in ("ambiguous_candidates", "branch_of_existing"):
+        items = by_type.get(ptype, [])
+        if not items:
             continue
-        st.write(f"**{ptype}** — {len(items)} names")
-        for p in items[:10]:
-            cand_summary = ""
-            if p.get("candidates"):
-                cand_summary = (
-                    " | ".join(
-                        f"id={c['school_id']} {c['school_name'][:20]}"
-                        for c in p["candidates"][:3]
-                    )
-                )
-            st.caption(
-                f"  [{p['template_rows']} rows] {p['template_name']}  {cand_summary}"
+        st.markdown(f"### {ptype} — {len(items)} names")
+        if ptype == "branch_of_existing":
+            st.warning(
+                "Branch rows detected. If the template refers to an actual "
+                "branch campus, aliasing to the parent may lump branch data "
+                "into parent. Prefer defer unless you know the branch is "
+                "part of the parent in DB."
             )
+        for p in items:
+            _render_school_candidate_picker(session, p, ptype)
+
+    truly = by_type.get("truly_missing", [])
+    if truly:
+        st.markdown(f"### truly_missing — {len(truly)} names (read-only)")
+        for p in truly:
+            st.caption(
+                f"  [{p['template_rows']} rows] {p['template_name']}  "
+                f"— needs authoritative corp + prefecture to insert"
+            )
+
+
+def _render_school_candidate_picker(
+    session: Session, proposal: dict, ptype: str
+) -> None:
+    """Render one picker card with Approve / Defer buttons."""
+    candidates = proposal.get("candidates") or []
+    template = proposal["template_name"]
+    rows = proposal.get("template_rows", 0)
+    key_root = f"pick_{ptype}_{template}"
+
+    with st.container(border=True):
+        st.write(f"**{template}** — {rows} rows")
+        if not candidates:
+            st.caption("(no candidates — defer)")
+            return
+
+        options = [
+            f"id={c['school_id']}  {c['school_name']}  ({c['corporation']}, {c['prefecture']})"
+            for c in candidates
+        ]
+        choice = st.selectbox(
+            "Select the correct DB school:",
+            ["(pick one)"] + options,
+            key=f"{key_root}_select",
+        )
+
+        col_a, col_d = st.columns(2)
+        if col_a.button("Approve", key=f"{key_root}_approve", type="primary",
+                        disabled=choice == "(pick one)"):
+            # Parse back to candidate dict
+            idx = options.index(choice)
+            picked = candidates[idx]
+            created, reason = apply_school_alias_proposal(
+                session,
+                school_id=int(picked["school_id"]),
+                alias_name=template,
+            )
+            _record_decision(
+                ProposalDecision(
+                    decision="approved" if created else "already",
+                    proposal_kind=f"school_alias_{ptype}",
+                    template_name=template,
+                    target_id=int(picked["school_id"]),
+                    operator_name=st.session_state.get("operator_name", ""),
+                    note=reason,
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                ),
+                _DEFAULT_PROPOSAL_DECISIONS,
+            )
+            if created:
+                st.success(
+                    f"Alias inserted: {template} → id={picked['school_id']} "
+                    f"({picked['school_name']})"
+                )
+            else:
+                st.info(f"No-op: {reason}")
+
+        if col_d.button("Defer", key=f"{key_root}_defer"):
+            _record_decision(
+                ProposalDecision(
+                    decision="deferred",
+                    proposal_kind=f"school_alias_{ptype}",
+                    template_name=template,
+                    target_id=None,
+                    operator_name=st.session_state.get("operator_name", ""),
+                    note="operator deferred — needs more research",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                ),
+                _DEFAULT_PROPOSAL_DECISIONS,
+            )
+            st.caption(f"Deferred: {template}")
 
 
 def _render_dept_proposals_tab(session: Session) -> None:

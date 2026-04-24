@@ -136,6 +136,49 @@ def test_record_decision_writes_audit_jsonl(tmp_path: Path) -> None:
     assert row["proposal_kind"] == "school_alias"
 
 
+def test_apply_preserves_school_context_on_picked_candidate() -> None:
+    """D-scope: when operator picks a candidate from an ambiguous proposal,
+    the resulting SchoolAlias is bound to THAT candidate, not any other.
+    """
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="片柳", school_name="日本工学院専門学校"))
+        session.add(School(id=2, prefecture="東京", corporation_name="片柳", school_name="日本工学院八王子専門学校"))
+        session.flush()
+        # Operator picks id=1 as the canonical 蒲田 school
+        created, _ = apply_school_alias_proposal(
+            session, school_id=1, alias_name="日本工学院(蒲田)",
+        )
+        assert created is True
+        # Only id=1 gets the alias
+        got = session.query(SchoolAlias).filter(SchoolAlias.alias_name == "日本工学院(蒲田)").all()
+        assert len(got) == 1
+        assert got[0].school_id == 1
+    finally:
+        session.close()
+
+
+def test_deferred_decision_does_not_write_db_but_audits(tmp_path: Path) -> None:
+    """Defer branch: no DB mutation, only decisions JSONL appended."""
+    audit = tmp_path / "decisions.jsonl"
+    _record_decision(
+        ProposalDecision(
+            decision="deferred",
+            proposal_kind="school_alias_ambiguous_candidates",
+            template_name="東京ビジュアルアーツ",
+            target_id=None,
+            operator_name="tester",
+            note="operator deferred",
+            timestamp="2026-04-24T00:00:00+00:00",
+        ),
+        audit,
+    )
+    row = json.loads(audit.read_text(encoding="utf-8").strip())
+    assert row["decision"] == "deferred"
+    assert row["target_id"] is None
+    assert row["proposal_kind"].startswith("school_alias_")
+
+
 def test_read_proposals_tolerates_missing_file_and_junk_lines(tmp_path: Path) -> None:
     path = tmp_path / "proposals.jsonl"
     assert _read_proposals(path) == []
