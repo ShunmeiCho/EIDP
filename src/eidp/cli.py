@@ -224,6 +224,10 @@ def discover_pdfs(
                  "restrict crawling to. E.g. 'prefecture_aggregator' to crawl only "
                  "prefecture-declared URLs. Empty = all methods (legacy behavior)."
     ),
+    school_id: list[int] = typer.Option(
+        None, help="Restrict discovery to specific school.id values (repeatable). "
+                   "Used for targeted gap-filling, e.g. 滋慶 group."
+    ),
 ) -> None:
     """Discover and download PDFs from school disclosure pages (Step 8)."""
     from eidp.db.session import SessionLocal
@@ -232,6 +236,7 @@ def discover_pdfs(
     storage_dir.mkdir(parents=True, exist_ok=True)
 
     methods = [m.strip() for m in discovery_method.split(",") if m.strip()] or None
+    school_filter = list(school_id) if school_id else None
 
     session = SessionLocal()
     try:
@@ -239,6 +244,7 @@ def discover_pdfs(
             session, storage_dir,
             batch_size=batch_size, rate_limit=rate_limit,
             discovery_methods=methods,
+            school_ids=school_filter,
         )
         session.commit()
         typer.echo(f"\nPDF Discovery Results:")
