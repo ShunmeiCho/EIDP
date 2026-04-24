@@ -16,14 +16,14 @@ def test_current_reiwa_year_is_accepted() -> None:
     assert _parse_fiscal_year_from_annotation("令和8年度", max_fiscal_year=2026) == 2026
 
 
-def test_source_url_year_caps_annotation_year() -> None:
+def test_current_fiscal_year_is_accepted_even_when_source_url_has_prior_year() -> None:
     assert (
         _parse_fiscal_year_from_annotation(
             "令和8年度",
             source_url="https://example.ac.jp/wp-content/uploads/2025/confirmation.pdf",
             max_fiscal_year=2026,
         )
-        is None
+        == 2026
     )
 
 

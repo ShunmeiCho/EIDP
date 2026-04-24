@@ -388,13 +388,6 @@ def _current_jst_fiscal_year() -> int:
     return now.year if now.month >= 4 else now.year - 1
 
 
-def _source_url_year_cap(source_url: str | None) -> int | None:
-    if not source_url:
-        return None
-    years = [int(y) for y in re.findall(r"20\d{2}", source_url)]
-    return max(years) if years else None
-
-
 def _has_fiscal_year_candidate(year_str: str) -> bool:
     return bool(re.search(r"令和\d+|20\d{2}", year_str))
 
@@ -410,9 +403,6 @@ def _parse_fiscal_year_from_annotation(
         return None
 
     cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
-    url_cap = _source_url_year_cap(source_url)
-    if url_cap is not None:
-        cap = min(cap, url_cap)
 
     m = re.search(r"令和(\d+)", year_str)
     if m:

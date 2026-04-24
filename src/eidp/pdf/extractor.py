@@ -222,6 +222,8 @@ def _parse_department_section(
                     if any(k in candidate for k in ["生徒総定員", "生徒実員", "カリキュラム"]):
                         break
                     cleaned = re.sub(r"\s+", "", candidate)
+                    if _is_template_header_text(cleaned):
+                        continue
                     if len(cleaned) >= 2:
                         candidates.append(cleaned)
 
@@ -467,6 +469,21 @@ def _parse_department_section(
         prev_enrollment=prev_enrollment,
         dropouts=dropouts,
         dropout_rate=dropout_rate,
+    )
+
+
+def _is_template_header_text(text: str) -> bool:
+    """Reject table header/help text that OCR can place where department names live."""
+    return any(
+        marker in text
+        for marker in (
+            "修業全課程",
+            "全課程の修了",
+            "開設している授業",
+            "授業時数",
+            "総単位数",
+            "単位時間",
+        )
     )
 
 
