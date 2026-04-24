@@ -63,6 +63,17 @@ def _norm_school_key(s: object) -> str:
     return key
 
 
+# Narrow kana-folding for dept names: collapse 'クリエーター' (DB) ↔
+# 'クリエイター' (template) and other long-vowel-vs-イ drift by stripping
+# both characters. Deliberately does NOT touch ッ/ョ/ュ/small-kana to
+# avoid over-merging genuinely different dept names (e.g. ジ vs ヂ).
+_DEPT_KANA_FOLD_RE = re.compile(r"[ーイィ]")
+
+
+def _norm_dept_kana(s: object) -> str:
+    return _DEPT_KANA_FOLD_RE.sub("", _norm(s))
+
+
 @dataclass(frozen=True)
 class YearColumns:
     """Where to read/write a fiscal-year's pair of cells."""
@@ -270,22 +281,39 @@ class CompetitionMatcher:
 
     def _build_indices(self) -> None:
         # Primary: exact normalised name lookup.
-        # Secondary: suffix-stripped key so '東京コミュニケーションアート'
-        # (template) matches '東京コミュニケーションアート専門学校' (DB).
+        # Secondary: suffix-stripped key, but ONLY when unique — two schools
+        # that collapse to the same short key become ambiguous and must not
+        # silently get merged into one lookup slot (Codex guardrail).
         self._school_key_index: dict[str, int] = {}
+        self._ambiguous_short_keys: set[str] = set()
+        short_to_ids: dict[str, set[int]] = {}
+
         for s in self.session.query(School).all():
             full = _norm(s.school_name)
             if full and full not in self._school_index:
                 self._school_index[full] = s.id
             short = _norm_school_key(s.school_name)
-            if short and short not in self._school_key_index:
-                self._school_key_index[short] = s.id
+            if short and short != full:
+                short_to_ids.setdefault(short, set()).add(s.id)
+
+        # Only index short keys that point to exactly one school id.
+        for short, ids in short_to_ids.items():
+            if len(ids) == 1:
+                self._school_key_index[short] = next(iter(ids))
+            else:
+                self._ambiguous_short_keys.add(short)
+
         for a in self.session.query(SchoolAlias).all():
             key = _norm(a.alias_name)
             if key and key not in self._alias_index:
                 self._alias_index[key] = a.school_id
             short = _norm_school_key(a.alias_name)
-            if short and short not in self._alias_index:
+            if (
+                short
+                and short != key
+                and short not in self._ambiguous_short_keys
+                and short not in self._alias_index
+            ):
                 self._alias_index[short] = a.school_id
 
     def _depts_for_school(self, school_id: int) -> list[Department]:
@@ -306,6 +334,13 @@ class CompetitionMatcher:
             matched_via = "alias" if school_id is not None else ""
         if school_id is None:
             short_key = _norm_school_key(row.school_name)
+            if short_key in self._ambiguous_short_keys:
+                # Short-form collides with >1 school → refuse the match so the
+                # gap report can surface it as a real disambiguation task.
+                return MatchResult(
+                    template_row=row, sheet_name=sheet_name,
+                    school_id=None, matched_via="school_name_ambiguous",
+                )
             school_id = self._school_key_index.get(short_key)
             matched_via = "suffix_strip" if school_id is not None else "unmatched"
 
@@ -334,10 +369,25 @@ class CompetitionMatcher:
             cn = _norm(d.canonical_name)
             if dept_key and cn and (dept_key in cn or cn in dept_key):
                 matching.append(d.id)
+        if matching:
+            return MatchResult(
+                template_row=row, sheet_name=sheet_name,
+                school_id=school_id, department_ids=matching,
+                matched_via=matched_via + "+dept_substr",
+            )
+
+        # Last-resort: narrow kana folding (ー / ィ only) to match
+        # 'クリエーター' ↔ 'クリエイター'-style transliteration drift.
+        dept_kana = _norm_dept_kana(row.dept_name)
+        for d in depts:
+            cnk = _norm_dept_kana(d.canonical_name)
+            if dept_kana and cnk and (dept_kana == cnk or dept_kana in cnk or cnk in dept_kana):
+                matching.append(d.id)
+
         return MatchResult(
             template_row=row, sheet_name=sheet_name,
             school_id=school_id, department_ids=matching,
-            matched_via=(matched_via + "+dept_substr") if matching
+            matched_via=(matched_via + "+dept_kana") if matching
             else (matched_via + "+dept_unmatched"),
         )
 
@@ -398,6 +448,8 @@ def _diagnose_gap(
       no_fy_data                      — dept matched, no yearly row this FY
     """
     if result.school_id is None:
+        if result.matched_via == "school_name_ambiguous":
+            return "school_name_ambiguous", ""
         return "school_missing", ""
 
     docs = (

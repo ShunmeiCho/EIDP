@@ -75,6 +75,40 @@ def test_ingest_accepts_matching_alias_and_does_not_mark_mismatch(tmp_path: Path
         session.close()
 
 
+def test_short_alias_does_not_falsely_match_by_substring(tmp_path: Path) -> None:
+    """Short aliases (< 6 chars) must be exact-match only.
+
+    Regression for Codex-flagged risk: 'TCA in 東京TCA情報学院' style
+    substring would otherwise let a 3-letter alias bleed across schools.
+    """
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="東京", corporation_name="A",
+            school_name="学校A",
+        ))
+        session.add(SchoolAlias(
+            school_id=1, alias_name="TCA", alias_type="short",
+            source="test",
+        ))
+        doc = _setup_doc(session, b"%PDF-1.5\n" + b"x" * 2000, tmp_path)
+
+        # Parsed name contains 'TCA' but is a different school entirely
+        fake = SchoolAnnotation(
+            school_name="大阪TCA情報学院",
+            corporation_name=None,
+            fiscal_year="令和7年度",
+            departments=[],
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=fake):
+            ingest_document(session, doc, recorder=None)
+
+        # Short 3-char alias must NOT match by substring → school_mismatch
+        assert doc.ingest_status == "school_mismatch"
+    finally:
+        session.close()
+
+
 def test_ingest_records_evidence_on_mismatch_including_aliases_tried(tmp_path: Path) -> None:
     session = _session()
     log_path = tmp_path / "ingest_rej.jsonl"

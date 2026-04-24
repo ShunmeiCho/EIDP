@@ -16,6 +16,7 @@ from eidp.excel.competition_exporter import (
     MatchResult,
     TemplateRow,
     _diagnose_gap,
+    _norm_dept_kana,
     _norm_school_key,
     export_competition_workbook,
 )
@@ -132,6 +133,77 @@ def test_matcher_suffix_strip_recovers_template_abbreviation() -> None:
     result = matcher.match("滋慶", row)
     assert result.school_id == 1
     assert result.matched_via == "suffix_strip"
+
+
+def test_suffix_strip_collision_blocks_fuzzy_match() -> None:
+    """Two schools with identical short keys must not silently collapse.
+
+    Regression for Codex-flagged risk: first-wins indexing would write
+    competition-row data to the wrong school.
+    """
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="東京", corporation_name="A",
+            school_name="東京デザイン専門学校",
+        ))
+        session.add(School(
+            id=2, prefecture="東京", corporation_name="B",
+            school_name="東京デザイン学校",  # different school, same short key
+        ))
+        session.flush()
+
+        matcher = CompetitionMatcher(session)
+        # Template abbreviates either as "東京デザイン" — ambiguous
+        row = TemplateRow(
+            row_index=6, school_name="東京デザイン",
+            dept_name=None, duration_label=None,
+        )
+        result = matcher.match("ゲーム", row)
+        assert result.school_id is None
+        assert result.matched_via == "school_name_ambiguous"
+
+        reason, _ = _diagnose_gap(session, result, 2026)
+        assert reason == "school_name_ambiguous"
+    finally:
+        session.close()
+
+
+def test_norm_dept_kana_folds_long_vowel_and_small_i() -> None:
+    # 'クリエーター' (ー) and 'クリエイター' (ィ) collapse to same key
+    assert _norm_dept_kana("スーパークリエーター科(昼一)") == _norm_dept_kana("スーパークリエイター科(昼一)")
+    # Different depts must NOT collapse
+    assert _norm_dept_kana("看護学科") != _norm_dept_kana("情報学科")
+
+
+def test_matcher_dept_kana_matches_across_transliteration_variants() -> None:
+    """Kana fold alone should bridge the ー↔イ drift when the rest of the
+    dept name is identical. Structural differences like '昼間部一' vs '昼一'
+    are NOT this rule's concern (would need a separate shift-normalizer)."""
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="東京", corporation_name="滋慶",
+            school_name="東京コミュニケーションアート専門学校",
+        ))
+        session.add(Department(
+            id=5, school_id=1, canonical_name="スーパークリエーター科",
+        ))
+        session.flush()
+
+        matcher = CompetitionMatcher(session)
+        row = TemplateRow(
+            row_index=6,
+            school_name="東京コミュニケーションアート",
+            dept_name="スーパークリエイター科",  # イ instead of ー
+            duration_label=None,
+        )
+        result = matcher.match("滋慶", row)
+        assert result.school_id == 1
+        assert result.department_ids == [5]
+        assert "dept_kana" in result.matched_via
+    finally:
+        session.close()
 
 
 def test_no_fy_data_when_dept_matched_but_yearly_missing() -> None:

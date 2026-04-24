@@ -177,10 +177,20 @@ def ingest_document(
                 if alias_norm:
                     candidate_names.append(alias_norm)
 
+            # Substring match is only trusted for candidates long enough that
+            # accidental containment is unlikely. Short aliases (e.g. 'TCA',
+            # 'HAL') must match exactly to avoid bleeding into other schools.
+            _MIN_SUBSTR_LEN = 6
+
             def _match_any(parsed: str, candidates: list[str]) -> str | None:
                 for c in candidates:
-                    if parsed in c or c in parsed:
+                    if not c:
+                        continue
+                    if parsed == c:
                         return c
+                    if len(c) >= _MIN_SUBSTR_LEN and len(parsed) >= _MIN_SUBSTR_LEN:
+                        if parsed in c or c in parsed:
+                            return c
                 return None
 
             matched_name = _match_any(parsed_name, candidate_names) if parsed_name else None
