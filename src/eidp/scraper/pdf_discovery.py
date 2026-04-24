@@ -23,6 +23,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import CrawlJob, Document, SchoolSite
+from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 from eidp.scraper.url_discovery import _is_safe_url
 
 log = structlog.get_logger()
@@ -320,15 +321,18 @@ def download_pdf(
     candidate: PdfCandidate,
     storage_dir: Path,
     school_id: int,
-) -> tuple[str | None, str | None, int, str]:
-    """Download PDF and return (file_path, sha256_hash, file_size, pdf_type).
+) -> tuple[str | None, str | None, int, str, str | None]:
+    """Download PDF and return (file_path, sha256_hash, file_size, pdf_type, reason).
+
+    `reason` is None on success, otherwise a short string identifying why the
+    candidate was rejected (used for evidence trail).
 
     Max download size: 50MB. Larger files are skipped.
     """
     MAX_PDF_SIZE = 50 * 1024 * 1024  # 50 MB
 
     if not _is_safe_url(candidate.pdf_url):
-        return None, None, 0, "unknown"
+        return None, None, 0, "unknown", "unsafe_url"
     try:
         resp = _safe_get(client, candidate.pdf_url)
         resp.raise_for_status()
@@ -337,18 +341,18 @@ def download_pdf(
         content_length = resp.headers.get("content-length")
         if content_length and int(content_length) > MAX_PDF_SIZE:
             log.warning("pdf_too_large", url=candidate.pdf_url, size=content_length)
-            return None, None, 0, "unknown"
+            return None, None, 0, "unknown", "too_large_header"
 
         content = resp.content
         if len(content) > MAX_PDF_SIZE:
             log.warning("pdf_too_large_actual", url=candidate.pdf_url, size=len(content))
-            return None, None, 0, "unknown"
+            return None, None, 0, "unknown", "too_large_body"
         if len(content) < 1000:  # Too small to be a real PDF
-            return None, None, 0, "unknown"
+            return None, None, 0, "unknown", "too_small"
 
         # Verify it's actually a PDF
         if not content[:5] == b"%PDF-":
-            return None, None, 0, "unknown"
+            return None, None, 0, "unknown", "not_pdf_magic"
 
         file_hash = hashlib.sha256(content).hexdigest()
         file_size = len(content)
@@ -366,12 +370,12 @@ def download_pdf(
         if pdf_type == "non_target":
             file_path.unlink(missing_ok=True)
             log.info("non_target_pdf_removed", url=candidate.pdf_url, path=str(file_path))
-            return None, None, 0, "non_target"
+            return None, None, 0, "non_target", "classified_non_target"
 
-        return str(file_path), file_hash, file_size, pdf_type
+        return str(file_path), file_hash, file_size, pdf_type, None
 
-    except httpx.HTTPError:
-        return None, None, 0, "unknown"
+    except httpx.HTTPError as e:
+        return None, None, 0, "unknown", f"http_error:{type(e).__name__}"
 
 
 def run_pdf_discovery(
@@ -381,6 +385,7 @@ def run_pdf_discovery(
     rate_limit: float = 1.0,
     discovery_methods: list[str] | None = None,
     school_ids: list[int] | None = None,
+    evidence_path: Path | None = None,
 ) -> dict[str, int]:
     """Run PDF discovery for schools with verified URLs but no documents.
 
@@ -391,8 +396,11 @@ def run_pdf_discovery(
             isolate polluted web_search URLs from pdf_discovery).
         school_ids: optional list of school.id to restrict discovery to a
             specific set (used for targeted gap-filling, e.g. 滋慶 group).
+        evidence_path: optional JSONL path that captures every rejected
+            candidate (URL/score/anchor/reason) per school for debug.
     """
     stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
+    recorder = EvidenceRecorder(evidence_path)
 
     # Get school_sites, excluding:
     # - schools with a document for the current target fiscal year
@@ -495,6 +503,13 @@ def run_pdf_discovery(
                 job.error_message = result.error
                 job.finished_at = datetime.now(timezone.utc)
                 stats["failed"] += 1
+                recorder.record(RejectionEvidence(
+                    school_id=site.school_id,
+                    pdf_url=site.url,
+                    page_url=site.url,
+                    reason="discovery_error",
+                    extra={"error": str(result.error)},
+                ))
                 time.sleep(rate_limit)
                 continue
 
@@ -502,6 +517,12 @@ def run_pdf_discovery(
                 job.status = "success"
                 job.finished_at = datetime.now(timezone.utc)
                 stats["skipped"] += 1
+                recorder.record(RejectionEvidence(
+                    school_id=site.school_id,
+                    pdf_url=site.url,
+                    page_url=site.url,
+                    reason="no_candidates_found",
+                ))
                 time.sleep(rate_limit)
                 continue
 
@@ -514,20 +535,52 @@ def run_pdf_discovery(
                 job.error_message = "all candidates have negative score"
                 job.finished_at = datetime.now(timezone.utc)
                 stats["failed"] += 1
+                for c in result.candidates:
+                    recorder.record(RejectionEvidence(
+                        school_id=site.school_id,
+                        pdf_url=c.pdf_url,
+                        page_url=c.page_url,
+                        anchor_text=c.anchor_text,
+                        pattern_type=c.pattern_type,
+                        score=c.score,
+                        reason="all_negative_score",
+                    ))
                 time.sleep(rate_limit)
                 continue
 
             # Try downloading top candidates (fallback on 404)
             downloaded = False
             for candidate in viable[:3]:
-                file_path, file_hash, file_size, pdf_type = download_pdf(
+                file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
                     client, candidate, storage_dir, site.school_id,
                 )
                 # non_target PDFs already cleaned up in download_pdf(), skip them
                 if pdf_type == "non_target":
                     log.info("non_target_pdf_skipped", school_id=site.school_id, url=candidate.pdf_url)
                     stats["skipped"] += 1
+                    recorder.record(RejectionEvidence(
+                        school_id=site.school_id,
+                        pdf_url=candidate.pdf_url,
+                        page_url=candidate.page_url,
+                        anchor_text=candidate.anchor_text,
+                        pattern_type=candidate.pattern_type,
+                        score=candidate.score,
+                        reason=reject_reason or "classified_non_target",
+                        pdf_type=pdf_type,
+                    ))
                     continue
+
+                if file_path is None and reject_reason is not None:
+                    recorder.record(RejectionEvidence(
+                        school_id=site.school_id,
+                        pdf_url=candidate.pdf_url,
+                        page_url=candidate.page_url,
+                        anchor_text=candidate.anchor_text,
+                        pattern_type=candidate.pattern_type,
+                        score=candidate.score,
+                        reason=reject_reason,
+                        pdf_type=pdf_type,
+                    ))
 
                 if file_path:
                     # Check for duplicate hash
@@ -572,4 +625,5 @@ def run_pdf_discovery(
             time.sleep(rate_limit)
 
     log.info("pdf_discovery_complete", **stats)
+    recorder.close()
     return stats

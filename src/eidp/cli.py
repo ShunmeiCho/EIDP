@@ -228,6 +228,11 @@ def discover_pdfs(
         None, help="Restrict discovery to specific school.id values (repeatable). "
                    "Used for targeted gap-filling, e.g. 滋慶 group."
     ),
+    evidence_log: Path = typer.Option(
+        Path("output/discovery_rejections.jsonl"),
+        help="JSONL file capturing every rejected PDF candidate (URL, score, "
+             "anchor, reason). Append-only. Use empty string to disable.",
+    ),
 ) -> None:
     """Discover and download PDFs from school disclosure pages (Step 8)."""
     from eidp.db.session import SessionLocal
@@ -237,6 +242,7 @@ def discover_pdfs(
 
     methods = [m.strip() for m in discovery_method.split(",") if m.strip()] or None
     school_filter = list(school_id) if school_id else None
+    evidence_path = evidence_log if str(evidence_log) else None
 
     session = SessionLocal()
     try:
@@ -245,6 +251,7 @@ def discover_pdfs(
             batch_size=batch_size, rate_limit=rate_limit,
             discovery_methods=methods,
             school_ids=school_filter,
+            evidence_path=evidence_path,
         )
         session.commit()
         typer.echo(f"\nPDF Discovery Results:")
