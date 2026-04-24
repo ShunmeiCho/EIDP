@@ -53,25 +53,21 @@ def _read_template_school_names(template_path: Path) -> list[str]:
 def _lookup_school_ids(session, template_names: list[str]) -> dict[str, list[School]]:
     """For each template name, return matching School rows (best-effort)."""
     out: dict[str, list[School]] = {}
+    school_rows = session.query(School).all()
+    alias_rows = session.query(SchoolAlias).filter(SchoolAlias.alias_name.isnot(None)).all()
     for name in template_names:
         norm_name = _norm(name)
         # Try canonical school_name first, then SchoolAlias.alias.
-        rows = session.query(School).all()
         # Substring match in normalized space — competitor names often differ
         # from the official school_name (短縮形, 地名 separation, etc.)
         matches: list[School] = [
-            s for s in rows
+            s for s in school_rows
             if norm_name in _norm(s.school_name) or _norm(s.school_name) in norm_name
         ]
         if not matches:
-            alias_rows = (
-                session.query(SchoolAlias)
-                .filter(SchoolAlias.alias.isnot(None))
-                .all()
-            )
             alias_school_ids = {
                 a.school_id for a in alias_rows
-                if norm_name in _norm(a.alias) or _norm(a.alias) in norm_name
+                if norm_name in _norm(a.alias_name) or _norm(a.alias_name) in norm_name
             }
             if alias_school_ids:
                 matches = (
@@ -84,9 +80,10 @@ def _lookup_school_ids(session, template_names: list[str]) -> dict[str, list[Sch
 
 
 def _corp_group_school_ids(session) -> list[School]:
+    corp_filters = [School.corporation_name.contains(c) for c in JIKEI_CORP_GROUPS]
     return (
         session.query(School)
-        .filter(or_(*[School.corporation_name == c for c in JIKEI_CORP_GROUPS]))
+        .filter(or_(*corp_filters))
         .order_by(School.corporation_name, School.school_name)
         .all()
     )
