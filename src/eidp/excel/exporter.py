@@ -1,10 +1,10 @@
 """Excel exporter -- generates master workbook from PostgreSQL database.
 
 Produces 4 sheets matching the legacy format:
-  Sheet 1: 採録状況 (10 cols)
+  Sheet 1: 採録状況 (school columns + fiscal-year status columns)
   Sheet 2: 対象比率 (22 cols)
-  Sheet 3: 学科別 (83 cols, multi-row header)
-  Sheet 4: 在籍のみ抜粋 (19 cols, multi-row header)
+  Sheet 3: 学科別 (dynamic fiscal-year blocks, multi-row header)
+  Sheet 4: 在籍のみ抜粋 (one-year-lag enrollment blocks, multi-row header)
 """
 
 from pathlib import Path
@@ -60,7 +60,7 @@ def _write_sairoku(ws: Worksheet, session: Session) -> int:
             s.school_name,
             {year_cols}
         FROM school s
-        JOIN school_year_status sys ON sys.school_id = s.id
+        LEFT JOIN school_year_status sys ON sys.school_id = s.id
         GROUP BY s.id, s.prefecture, s.corporation_name, s.school_name
         ORDER BY s.id
     """)
@@ -224,7 +224,7 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
     Multi-row header:
       Row 1: group labels (在籍者数, 留学生数)
       Row 2: key + year column headers
-    Data starts row 3. Uses years 2019-2024.
+    Data starts row 3. Uses years from 2019 through one year before the current fiscal year.
 
     Returns the number of data rows written.
     """
@@ -282,12 +282,12 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
         prefecture, corp, school, course, dept_name, day_night, duration, dept_id = dept
         row: list = [prefecture, corp, school, course, dept_name, day_night, duration]
 
-        # Enrollment values for 2019-2024
+        # Enrollment values for the one-year-lag range.
         for year in ENROLLMENT_YEARS:
             data = enroll_map.get((dept_id, year))
             row.append(data[0] if data else None)
 
-        # International student values for 2019-2024
+        # International student values for the one-year-lag range.
         for year in ENROLLMENT_YEARS:
             data = enroll_map.get((dept_id, year))
             row.append(data[1] if data else None)
