@@ -23,7 +23,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import func as sql_func
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias
+from eidp.db.models import Department, DepartmentYearly, Document, School, SchoolAlias
 
 log = structlog.get_logger(__name__)
 
@@ -238,6 +238,8 @@ class MatchResult:
     school_id: int | None
     department_ids: list[int] = field(default_factory=list)
     matched_via: str = "unmatched"
+    gap_reason: str = ""
+    gap_detail: str = ""
 
 
 class CompetitionMatcher:
@@ -349,6 +351,48 @@ def _aggregate_school_yearly(
         .filter(Department.school_id == school_id).all()
     ]
     return _aggregate_yearly(session, dept_ids, fiscal_year)
+
+
+def _diagnose_gap(
+    session: Session, result: MatchResult, fiscal_year: int
+) -> tuple[str, str]:
+    """Categorise why this row ended up in the gap report.
+
+    Returns (reason, detail). Reasons business-operators can act on:
+      school_missing                  — school not in School table at all
+      school_mismatch_doc_rejected    — school exists, target PDF downloaded
+                                         but ingest marked school_mismatch
+      school_no_document              — school exists, no PDF ever downloaded
+      school_doc_old_year_only        — school has docs, but none for this FY
+      dept_unmatched                  — school ingested, dept name diverges
+      no_fy_data                      — dept matched, no yearly row this FY
+    """
+    if result.school_id is None:
+        return "school_missing", ""
+
+    docs = (
+        session.query(Document)
+        .filter(Document.school_id == result.school_id)
+        .all()
+    )
+    if not docs:
+        return "school_no_document", ""
+
+    mismatched = [d for d in docs if d.ingest_status == "school_mismatch"]
+    ingested_fys = {d.fiscal_year for d in docs if d.ingest_status == "ingested"}
+    if fiscal_year not in ingested_fys:
+        if mismatched:
+            urls = ", ".join(sorted({d.source_url for d in mismatched})[:2])
+            return "school_mismatch_doc_rejected", urls
+        if ingested_fys:
+            return "school_doc_old_year_only", f"have_fys={sorted(y for y in ingested_fys if y)}"
+        return "school_no_document", f"doc_statuses={sorted({d.ingest_status or 'none' for d in docs})}"
+
+    # School has data for this FY but dept-level aggregation failed
+    if result.template_row.dept_name and not result.department_ids:
+        return "dept_unmatched", f"db_dept_count={len(session.query(Department).filter(Department.school_id == result.school_id).all())}"
+
+    return "no_fy_data", ""
 
 
 def auto_select_fiscal_year(session: Session) -> int:
@@ -492,7 +536,6 @@ def export_competition_workbook(
                     agg = _aggregate_school_yearly(
                         session, result.school_id, fiscal_year
                     )
-                    matched += 1
                 else:
                     if not result.department_ids:
                         unmatched_rows.append(result)
@@ -500,10 +543,12 @@ def export_competition_workbook(
                     agg = _aggregate_yearly(
                         session, result.department_ids, fiscal_year
                     )
-                    matched += 1
 
                 if agg.enrollment is None and agg.intl_students is None:
+                    unmatched_rows.append(result)
                     continue
+
+                matched += 1
 
                 if agg.enrollment is not None:
                     ws.cell(row.row_index, target_cols.zaiseki_col,
@@ -533,10 +578,14 @@ def export_competition_workbook(
     wb.save(str(output_path))
 
     if gap_report_path is not None and unmatched_rows:
+        for u in unmatched_rows:
+            u.gap_reason, u.gap_detail = _diagnose_gap(session, u, fiscal_year)
+
         gap_report_path.parent.mkdir(parents=True, exist_ok=True)
-        # Sort for deterministic output: sheet → school → dept → row
+        # Sort for deterministic output: reason → sheet → school → dept → row
         unmatched_rows.sort(
             key=lambda u: (
+                u.gap_reason,
                 u.sheet_name,
                 u.template_row.school_name,
                 u.template_row.dept_name or "",
@@ -546,11 +595,14 @@ def export_competition_workbook(
         with gap_report_path.open("w", newline="", encoding="utf-8") as fh:
             writer = csv.writer(fh)
             writer.writerow(
-                ["sheet", "row", "block_id", "school_name", "dept_name",
-                 "duration", "school_id", "matched_via"]
+                ["gap_reason", "gap_detail", "sheet", "row", "block_id",
+                 "school_name", "dept_name", "duration", "school_id",
+                 "matched_via"]
             )
             for u in unmatched_rows:
                 writer.writerow([
+                    u.gap_reason,
+                    u.gap_detail,
                     u.sheet_name,
                     u.template_row.row_index,
                     u.template_row.block_id,
