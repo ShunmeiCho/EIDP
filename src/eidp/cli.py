@@ -443,12 +443,28 @@ def firecrawl_discover(
 def review_ui(
     port: int = typer.Option(8501, help="Port for the Streamlit server"),
 ) -> None:
-    """Launch the Streamlit review UI for school identity resolution (Step 6)."""
+    """Launch the Streamlit operator/review UI."""
     import subprocess
     import sys
 
     app_path = Path(__file__).parent / "review" / "app.py"
     typer.echo(f"Launching review UI on http://localhost:{port}")
+    subprocess.run(
+        [sys.executable, "-m", "streamlit", "run", str(app_path), "--server.port", str(port)],
+        check=True,
+    )
+
+
+@app.command()
+def operator_ui(
+    port: int = typer.Option(8501, help="Port for the Streamlit server"),
+) -> None:
+    """Launch the Streamlit operator console for URL補足, exports, and review."""
+    import subprocess
+    import sys
+
+    app_path = Path(__file__).parent / "review" / "app.py"
+    typer.echo(f"Launching operator UI on http://localhost:{port}")
     subprocess.run(
         [sys.executable, "-m", "streamlit", "run", str(app_path), "--server.port", str(port)],
         check=True,

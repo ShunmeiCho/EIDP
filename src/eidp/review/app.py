@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import ReviewItem, School, SchoolAlias, SchoolYearStatus
 from eidp.db.session import SessionLocal
+from eidp.review import operator_pages
 
 
 # ---------------------------------------------------------------------------
@@ -479,29 +480,47 @@ def _page_history(session: Session) -> None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="EIDP School Review",
+        page_title="EIDP Operator Console",
         page_icon=":material/school:",
         layout="wide",
     )
-    st.title("EIDP - School Identity Review")
+    st.title("EIDP Operator Console")
 
     session = _get_session()
 
     page = st.sidebar.radio(
         "Navigation",
-        ["Review Queue", "History"],
+        [
+            "Pipeline Status",
+            "URL 補足",
+            "Exports",
+            "Gap Report",
+            "Rejections",
+            "Review Queue",
+            "History",
+        ],
         index=0,
     )
 
-    if page == "Review Queue":
+    if page == "Pipeline Status":
+        operator_pages.page_pipeline_status(session)
+    elif page == "URL 補足":
+        operator_pages.page_url_submission(session)
+    elif page == "Exports":
+        operator_pages.page_exports(session)
+    elif page == "Gap Report":
+        operator_pages.page_gap_report()
+    elif page == "Rejections":
+        operator_pages.page_rejections()
+    elif page == "Review Queue":
         _page_review_queue(session)
     elif page == "History":
         _page_history(session)
 
     # Sidebar info
     st.sidebar.divider()
-    st.sidebar.caption("EIDP School Identity Resolution")
-    st.sidebar.caption("AI Proposal + Human Approve/Reject workflow")
+    st.sidebar.caption("EIDP weekly operator workflow")
+    st.sidebar.caption("URL 補足 → discovery/ingest → Excel export → gap review")
 
 
 if __name__ == "__main__":
