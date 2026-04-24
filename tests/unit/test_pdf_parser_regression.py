@@ -86,6 +86,41 @@ def test_template_numeric_unit_pattern_rejected() -> None:
     assert not _is_template_header_text("看護学科")
 
 
+def test_extract_dept_identity_strips_leading_field_prefix() -> None:
+    """Caught in Path F' batch 50 doc=341: 分野 文化・教養 leaked into dept/course."""
+
+    class FakePage:
+        def extract_tables(self) -> list[list[list]]:
+            return [
+                [
+                    ["分野", "課程名", "学科名", "専門士", "高度専門士"],
+                    ["文化・教養", "文化・教養", "文化・教養グラフィックデザイン学科", "", "〇"],
+                    ["修業年限", "昼夜", None, None, None],
+                    ["2年", "昼", None, None, None],
+                ]
+            ]
+
+    dept_name, course_name, duration, day_night = _extract_dept_identity_from_table(FakePage())
+    assert dept_name == "グラフィックデザイン学科"
+    # course_name was just the 分野 term with no 課程/本科 suffix -> dropped
+    assert course_name == ""
+    assert duration == 2
+    assert day_night == "昼"
+
+
+def test_leading_field_strip_preserves_legit_dept_names() -> None:
+    """Legit names like 医療事務科 / 工業技術科 should not be stripped."""
+    from eidp.pdf.extractor import _strip_leading_field_prefix
+
+    # Strip: 分野 + proper 学科 suffix
+    assert _strip_leading_field_prefix("文化・教養グラフィックデザイン学科") == "グラフィックデザイン学科"
+    assert _strip_leading_field_prefix("医療看護学科") == "看護学科"
+    # Preserve: name that happens to start with 分野 word but remainder is too short
+    assert _strip_leading_field_prefix("工業科") == "工業科"
+    # Preserve: no matching suffix after strip
+    assert _strip_leading_field_prefix("医療センター職員") == "医療センター職員"
+
+
 def test_extract_dept_identity_strips_marker_and_dedupe_field_prefix() -> None:
     """Caught in Path F' doc=336: course_name had '医療医療専門課程' duplicated prefix
     and '〇' marker bleed."""

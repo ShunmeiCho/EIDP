@@ -674,6 +674,41 @@ def _parse_support_section(page_texts: list[str]) -> SupportRecipientRecord | No
 _FIELD_DEDUPE_RE = re.compile(
     r"^(工業|農業|医療|衛生|教育|社会福祉|商業|商業実務|服飾|家政|文化|教養)\1"
 )
+# Ordered from longest to shortest so multi-char fields match first.
+_FIELD_PREFIX_TERMS = (
+    "文化・教養",
+    "教育・社会福祉",
+    "商業実務",
+    "社会福祉",
+    "工業",
+    "農業",
+    "医療",
+    "衛生",
+    "教育",
+    "商業",
+    "服飾",
+    "家政",
+    "文化",
+    "教養",
+)
+_LEADING_FIELD_RE = re.compile(r"^(" + "|".join(_FIELD_PREFIX_TERMS) + r")(?=\S)")
+_DEPT_SUFFIX_RE = re.compile(r"(学科|学部|学院|専攻|コース|課程|学校|科)$")
+
+
+def _strip_leading_field_prefix(name: str) -> str:
+    """Strip 分野 prefix leaked into dept/course name by merged-cell PDFs.
+
+    Only strips if the remainder still looks like a valid dept identity
+    (ends with 学科/学部/学院/専攻/コース/課程/学校/科) so legit names
+    starting with 医療/教育/工業 (e.g. 医療事務科) survive.
+    """
+    m = _LEADING_FIELD_RE.match(name)
+    if not m:
+        return name
+    stripped = name[m.end():]
+    if len(stripped) >= 2 and _DEPT_SUFFIX_RE.search(stripped):
+        return stripped
+    return name
 
 
 def _find_dept_table(tables: list[list[list]]) -> tuple[list[list] | None, int]:
@@ -732,11 +767,17 @@ def _extract_dept_identity_from_table(page) -> tuple[str, str, int | None, str]:
         # Strip schedule/duration suffixes
         dept_name = re.sub(r"昼間部\(?[\d年制]*\)?$", "", dept_name)
         dept_name = re.sub(r"夜間部\(?[\d年制]*\)?$", "", dept_name)
-        # Strip trailing 〇/○ markers (専門士 indicator that bled into the cell)
-        dept_name = re.sub(r"[〇○]+$", "", dept_name)
-        course_name = re.sub(r"[〇○]+$", "", course_name)
+        # Strip all 〇/○ markers (専門士 indicator that bled into the cell,
+        # may appear at start/middle/end depending on cell merge direction).
+        dept_name = re.sub(r"[〇○]", "", dept_name)
+        course_name = re.sub(r"[〇○]", "", course_name)
         # Dedupe field-prefix repetition like "医療医療専門課程" -> "医療専門課程"
         course_name = _FIELD_DEDUPE_RE.sub(r"\1", course_name)
+        # Strip single 分野 prefix leaked into dept name (merged-cell PDFs)
+        dept_name = _strip_leading_field_prefix(dept_name)
+        # course_name that is just a 分野 term (no 課程/本科) is leakage, not a course
+        if course_name in _FIELD_PREFIX_TERMS:
+            course_name = ""
 
         # Defensive: if extracted dept_name still looks like template/numeric junk,
         # discard it so the text fallback can try.
