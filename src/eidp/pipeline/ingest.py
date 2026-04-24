@@ -6,6 +6,7 @@ updates school_year_status.
 
 import re
 import unicodedata
+from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -468,7 +469,11 @@ def _infer_fiscal_year_from_download(downloaded_at) -> int | None:
     return dt_jst.year - 2
 
 
-def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
+def run_ingestion(
+    session: Session,
+    batch_size: int = 50,
+    document_ids: Sequence[int] | None = None,
+) -> dict[str, int]:
     """Ingest all un-ingested documents.
 
     Uses ingest_status to track processing state:
@@ -489,25 +494,30 @@ def run_ingestion(session: Session, batch_size: int = 50) -> dict[str, int]:
     # Skip: ingested, school_mismatch, parse_failed, no_file, image_only,
     # non_target, permanent_error (terminal states).
     from sqlalchemy import or_
+
+    query = session.query(Document).filter(
+        Document.file_path.isnot(None),
+        or_(
+            Document.ingest_status.is_(None),
+            Document.ingest_status.in_([
+                "pending", "transient_error", "ocr_pending",
+                # Recover stuck 'in_progress' from crashed prior runs.
+                # FOR UPDATE SKIP LOCKED ensures we don't grab rows
+                # another live worker is currently holding.
+                "in_progress",
+            ]),
+        ),
+        or_(
+            Document.pdf_type.is_(None),
+            Document.pdf_type.notin_(["non_target"]),
+        ),
+    )
+    if document_ids:
+        query = query.filter(Document.id.in_(document_ids))
+
     docs = (
-        session.query(Document)
-        .filter(
-            Document.file_path.isnot(None),
-            or_(
-                Document.ingest_status.is_(None),
-                Document.ingest_status.in_([
-                    "pending", "transient_error", "ocr_pending",
-                    # Recover stuck 'in_progress' from crashed prior runs.
-                    # FOR UPDATE SKIP LOCKED ensures we don't grab rows
-                    # another live worker is currently holding.
-                    "in_progress",
-                ]),
-            ),
-            or_(
-                Document.pdf_type.is_(None),
-                Document.pdf_type.notin_(["non_target"]),
-            ),
-        )
+        query
+        .order_by(Document.id)
         .limit(batch_size)
         .with_for_update(skip_locked=True)
         .all()

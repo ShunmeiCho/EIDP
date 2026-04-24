@@ -320,10 +320,10 @@ def _parse_department_section(
                 next_line = normed_lines[i + 1]
                 # Strip parenthetical content like "(116の内数)" before extracting
                 clean_next = re.sub(r"\([^)]*\)", "", next_line)
-                person_nums = re.findall(r"(\d+)\s*人", clean_next)
-                if len(person_nums) >= 3:
+                next_nums = _extract_ints(clean_next)
+                if len(next_nums) >= 3:
                     capacity, enrollment, intl_students = (
-                        int(person_nums[0]), int(person_nums[1]), int(person_nums[2])
+                        next_nums[0], next_nums[1], next_nums[2]
                     )
                 else:
                     next_nums = _extract_ints(next_line)
@@ -705,6 +705,22 @@ def _extract_dept_identity_from_table(page) -> tuple[str, str, int | None, str]:
         return "", "", None, ""
 
 
+def _is_course_breakdown_section(dept_name: str, section_text: str) -> bool:
+    """Return True for course-level breakdown cards that should not become departments."""
+    dept_norm = _norm(dept_name)
+    if "コース" not in dept_norm:
+        return False
+
+    lines = _norm(section_text).split("\n")
+    for i, line in enumerate(lines):
+        if "生徒総定員" not in line and "定員数" not in line:
+            continue
+        window = "\n".join(lines[i : i + 4])
+        if "内数" in window:
+            return True
+    return False
+
+
 def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     """Parse a 機関要件確認申請書 PDF."""
     import pdfplumber
@@ -757,6 +773,9 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
             )
 
             section_text = "\n".join(normed_pages[start_page:end_page])
+            if _is_course_breakdown_section(table_dept, section_text):
+                continue
+
             dept = _parse_department_section(
                 section_text,
                 table_dept_name=table_dept,

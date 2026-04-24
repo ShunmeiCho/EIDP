@@ -254,6 +254,11 @@ def discover_pdfs(
 @app.command()
 def ingest_pdfs(
     batch_size: int = typer.Option(50, help="Number of documents to process"),
+    document_id: list[int] | None = typer.Option(
+        None,
+        "--document-id",
+        help="Specific document id to ingest. Repeat to target known PDFs.",
+    ),
 ) -> None:
     """Parse downloaded PDFs and write data to database (Step 9 -> DB)."""
     try:
@@ -266,7 +271,7 @@ def ingest_pdfs(
 
     session = SessionLocal()
     try:
-        stats = run_ingestion(session, batch_size=batch_size)
+        stats = run_ingestion(session, batch_size=batch_size, document_ids=document_id)
         session.commit()
         typer.echo(f"\nIngestion Results:")
         for k, v in stats.items():
@@ -472,17 +477,16 @@ def eval_pdf(
     pdf_dir: Path = typer.Option(Path("data/sample-pdfs"), help="Sample PDF directory"),
 ) -> None:
     """Evaluate PDF parser against gold set (Step 5 / Step 9)."""
-    from eidp.pdf.eval_harness import load_all_gold_annotations, print_eval_report
+    from eidp.pdf.eval_harness import load_all_gold_annotations, print_eval_report, run_full_evaluation
+    from eidp.pdf.extractor import parse_pdf
 
     annotations = load_all_gold_annotations(gold_dir)
     typer.echo(f"Gold set: {len(annotations)} annotations loaded")
     for key, ann in annotations.items():
         typer.echo(f"  {key}: {ann.school_name} ({len(ann.departments)} departments)")
 
-    typer.echo("\nTo run evaluation, implement a parser and call:")
-    typer.echo("  from eidp.pdf.eval_harness import run_full_evaluation, print_eval_report")
-    typer.echo("  results = run_full_evaluation(your_parse_fn, gold_dir, pdf_dir)")
-    typer.echo("  print_eval_report(results)")
+    results = run_full_evaluation(parse_pdf, gold_dir, pdf_dir)
+    print_eval_report(results)
 
 
 if __name__ == "__main__":
