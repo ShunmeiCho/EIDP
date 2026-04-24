@@ -276,19 +276,49 @@ def _emit_report(proposals: list[Proposal]) -> None:
     aliases = by_type.get("alias_existing_school", [])
     if aliases:
         total = sum(p.template_rows for p in aliases)
-        print(
-            f"\n# Proposed SchoolAlias INSERT — recovers {total} template rows:"
-        )
-        print(
-            "INSERT INTO school_alias (school_id, alias_name, alias_type, source) VALUES"
-        )
-        lines = []
+        # Emit two blocks: preflight conflict check + idempotent INSERT.
+        # SchoolAlias has NO UniqueConstraint(school_id, alias_name) in
+        # models.py — a plain 'ON CONFLICT DO NOTHING' would not deduplicate.
+        proposed_values = []
         for p in aliases:
             esc = (p.template_name or "").replace("'", "''")
-            lines.append(
-                f"  ({p.matched_school_id}, '{esc}', 'competition_template', 'school_missing_resolver')"
-            )
-        print(",\n".join(lines) + "\nON CONFLICT DO NOTHING;")
+            proposed_values.append(f"  ({p.matched_school_id}, '{esc}')")
+        values_block = ",\n".join(proposed_values)
+
+        print(
+            f"\n# PREFLIGHT — expect 0 rows; any row means the alias is "
+            f"already pointing to a different school:"
+        )
+        print("WITH proposed(school_id, alias_name) AS (VALUES")
+        print(values_block)
+        print(")")
+        print(
+            "SELECT p.alias_name, p.school_id AS proposed_school_id,"
+            " sa.school_id AS existing_school_id"
+        )
+        print("FROM proposed p")
+        print("JOIN school_alias sa ON sa.alias_name = p.alias_name")
+        print("WHERE sa.school_id <> p.school_id;")
+
+        print(
+            f"\n# Idempotent INSERT — recovers up to {total} template rows:"
+        )
+        print(
+            "INSERT INTO school_alias (school_id, alias_name, alias_type, source)"
+        )
+        print(
+            "SELECT p.school_id, p.alias_name,"
+            " 'competition_template', 'school_missing_resolver'"
+        )
+        print("FROM (VALUES")
+        print(values_block)
+        print(") AS p(school_id, alias_name)")
+        print("WHERE NOT EXISTS (")
+        print(
+            "  SELECT 1 FROM school_alias sa"
+            " WHERE sa.school_id = p.school_id AND sa.alias_name = p.alias_name"
+        )
+        print(");")
 
 
 def main() -> None:

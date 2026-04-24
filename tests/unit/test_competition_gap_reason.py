@@ -135,6 +135,30 @@ def test_matcher_suffix_strip_recovers_template_abbreviation() -> None:
     assert result.matched_via == "suffix_strip"
 
 
+def test_alias_pointing_to_multiple_schools_is_marked_ambiguous() -> None:
+    """If SchoolAlias has the same alias_name pointing to two different
+    school_id (data-integrity leak), the matcher must refuse rather than
+    silently picking the first one.
+    """
+    from eidp.db.models import SchoolAlias
+
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="A", school_name="AAA"))
+        session.add(School(id=2, prefecture="東京", corporation_name="B", school_name="BBB"))
+        session.add(SchoolAlias(school_id=1, alias_name="X", alias_type="t", source="s"))
+        session.add(SchoolAlias(school_id=2, alias_name="X", alias_type="t", source="s"))
+        session.flush()
+
+        matcher = CompetitionMatcher(session)
+        row = TemplateRow(row_index=6, school_name="X", dept_name=None, duration_label=None)
+        result = matcher.match("ゲーム", row)
+        assert result.school_id is None
+        assert result.matched_via == "school_name_ambiguous"
+    finally:
+        session.close()
+
+
 def test_suffix_strip_collision_blocks_fuzzy_match() -> None:
     """Two schools with identical short keys must not silently collapse.
 

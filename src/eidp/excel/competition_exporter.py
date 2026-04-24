@@ -303,18 +303,33 @@ class CompetitionMatcher:
             else:
                 self._ambiguous_short_keys.add(short)
 
-        for a in self.session.query(SchoolAlias).all():
+        # Pass 1: detect alias keys that point to multiple school_ids so the
+        # matcher never silently resolves ambiguous aliases to the first seen.
+        alias_rows = self.session.query(SchoolAlias).all()
+        alias_key_ids: dict[str, set[int]] = {}
+        alias_short_ids: dict[str, set[int]] = {}
+        for a in alias_rows:
             key = _norm(a.alias_name)
-            if key and key not in self._alias_index:
-                self._alias_index[key] = a.school_id
+            if key:
+                alias_key_ids.setdefault(key, set()).add(a.school_id)
             short = _norm_school_key(a.alias_name)
-            if (
-                short
-                and short != key
-                and short not in self._ambiguous_short_keys
-                and short not in self._alias_index
-            ):
-                self._alias_index[short] = a.school_id
+            if short and short != key:
+                alias_short_ids.setdefault(short, set()).add(a.school_id)
+
+        # Pass 2: index only unambiguous alias keys. Ambiguous keys go into
+        # _ambiguous_short_keys so match() surfaces them as ambiguous.
+        for key, ids in alias_key_ids.items():
+            if len(ids) == 1:
+                self._alias_index[key] = next(iter(ids))
+            else:
+                self._ambiguous_short_keys.add(key)
+        for short, ids in alias_short_ids.items():
+            if short in self._ambiguous_short_keys:
+                continue
+            if len(ids) == 1 and short not in self._alias_index:
+                self._alias_index[short] = next(iter(ids))
+            elif len(ids) > 1:
+                self._ambiguous_short_keys.add(short)
 
     def _depts_for_school(self, school_id: int) -> list[Department]:
         if school_id not in self._dept_cache:
