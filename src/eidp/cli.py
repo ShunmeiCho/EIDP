@@ -461,7 +461,10 @@ def export_competition_excel(
         Path("output/競合校の在校生数.xlsx"),
         help="Output workbook path",
     ),
-    fiscal_year: int = typer.Option(2026, help="Fiscal year column to add/update"),
+    fiscal_year: int = typer.Option(
+        0,
+        help="Fiscal year column to add/update; 0 = auto-pick year with most DB data",
+    ),
     gap_report: Path = typer.Option(
         Path("output/競合校gap-report.csv"),
         help="CSV listing template rows that could not be matched",
@@ -473,15 +476,18 @@ def export_competition_excel(
 
     session = SessionLocal()
     try:
+        fy_arg: int | None = fiscal_year if fiscal_year > 0 else None
         stats = export_competition_workbook(
-            session, template, output, fiscal_year, gap_report
+            session, template, output, fy_arg, gap_report
         )
         typer.echo(f"Exported to: {output}")
-        typer.echo(f"  matched:        {stats['matched']}")
-        typer.echo(f"  unmatched:      {stats['unmatched']}")
-        typer.echo(f"  cells_written:  {stats['cells_written']}")
+        typer.echo(f"  fiscal_year:        {stats['fiscal_year']}")
+        typer.echo(f"  matched:            {stats['matched']}")
+        typer.echo(f"  unmatched:          {stats['unmatched']}")
+        typer.echo(f"  cells_written:      {stats['cells_written']}")
+        typer.echo(f"  ratio_cells:        {stats['ratio_cells_written']}")
         if stats["unmatched"]:
-            typer.echo(f"  gap report:    {gap_report}")
+            typer.echo(f"  gap report:         {gap_report}")
     finally:
         session.close()
 

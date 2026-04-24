@@ -4,13 +4,8 @@ Reads the担当者 template workbook and overlays new fiscal-year columns
 without disturbing the existing 16-sheet structure or row order.
 
 Output:
-- Filled workbook (template clone + new fiscal-year columns)
-- Gap report CSV listing template rows that could not be matched to DB
-
-Match strategy (in order):
-1. Exact school_name match after NFKC + whitespace strip
-2. SchoolAlias table fallback
-3. Department canonical_name match within school
+- Filled workbook (template clone + new fiscal-year columns + ratios)
+- Gap report CSV (sorted), listing template rows that could not be matched
 """
 
 from __future__ import annotations
@@ -24,17 +19,23 @@ from pathlib import Path
 
 import structlog
 from openpyxl import load_workbook
-from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from sqlalchemy import func as sql_func
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias
 
 log = structlog.get_logger(__name__)
 
-# Header row contains "在籍数" and (one row above) the fiscal year integer.
 _ENROLLMENT_HEADER_TEXT = "在籍数"
 _INTL_HEADER_TEXT = "留学生"
+_PREV_RATIO_HEADER = "前年比"
+_INTL_RATIO_HEADER_PARTS = ("留学生", "比率")
+
+# Column gap between two side-by-side comparison blocks. Sample has gap=1
+# (cols 17-18 empty between left 3-16 and right 19-32). Use >=2 as a block
+# boundary heuristic.
+_BLOCK_GAP_THRESHOLD = 2
 
 
 def _norm(s: object) -> str:
@@ -62,7 +63,22 @@ class TemplateRow:
     row_index: int
     school_name: str
     dept_name: str | None
-    duration_label: str | None  # e.g. "4年制", "2年制"
+    duration_label: str | None
+    block_id: int = 0  # 0 = left/only block, 1 = right block (rollup sheet)
+
+
+@dataclass
+class SheetBlock:
+    """One comparison block within a sheet.
+
+    Category sheets have 1 block. 学校単位での比較 has 2 side-by-side blocks.
+    """
+
+    school_col: int
+    dept_col: int | None
+    duration_col: int | None
+    year_cols: list[YearColumns]
+    data_rows: list[TemplateRow]
 
 
 @dataclass
@@ -71,23 +87,19 @@ class SheetSchema:
 
     name: str
     header_row: int
-    year_cols: list[YearColumns]
-    data_rows: list[TemplateRow]
-    school_col: int  # 1-indexed
-    dept_col: int | None  # None for 学校単位 rollup sheet
-    duration_col: int | None
-    is_rollup: bool  # True for 学校単位での比較
+    blocks: list[SheetBlock]
+    is_rollup: bool
 
 
-def _find_header_row(ws: Worksheet) -> tuple[int, list[YearColumns]]:
-    """Locate the row containing 在籍数 markers and infer per-year columns."""
+def _find_header_row_and_year_triplets(
+    ws: Worksheet,
+) -> tuple[int, list[YearColumns]]:
+    """Scan first few rows for the 在籍数 header and infer all year columns."""
     for r in range(1, min(8, ws.max_row + 1)):
-        year_cols: list[YearColumns] = []
+        triplets: list[YearColumns] = []
         for c in range(1, ws.max_column + 1):
-            v = ws.cell(r, c).value
-            if v != _ENROLLMENT_HEADER_TEXT:
+            if ws.cell(r, c).value != _ENROLLMENT_HEADER_TEXT:
                 continue
-            # Year is in the row above (or two rows above for some sheets)
             year: int | None = None
             for offset in (1, 2):
                 if r - offset < 1:
@@ -103,89 +115,111 @@ def _find_header_row(ws: Worksheet) -> tuple[int, list[YearColumns]]:
                         break
             if year is None:
                 continue
-            # 留学生 column is the cell immediately to the right
             intl_col = c + 1
             if ws.cell(r, intl_col).value != _INTL_HEADER_TEXT:
                 continue
-            year_cols.append(
+            triplets.append(
                 YearColumns(fiscal_year=year, zaiseki_col=c, intl_col=intl_col)
             )
-        if year_cols:
-            return r, year_cols
+        if triplets:
+            return r, sorted(triplets, key=lambda y: y.zaiseki_col)
     return -1, []
 
 
-def _detect_school_columns(name: str) -> tuple[int, int | None, int | None]:
-    """Return (school_col, dept_col, duration_col) for a sheet."""
-    if name == "学校単位での比較":
-        # Layout: A=blank, B=school, C+ year data
-        return 2, None, None
-    # Category sheets: A=school, B=dept, C=duration
+def _group_triplets_into_blocks(
+    triplets: list[YearColumns],
+) -> list[list[YearColumns]]:
+    """Split sorted year triplets into blocks based on column-gap boundaries."""
+    if not triplets:
+        return []
+    blocks: list[list[YearColumns]] = [[triplets[0]]]
+    for prev, cur in zip(triplets, triplets[1:]):
+        # Each triplet spans 2 cols (zaiseki, intl). Gap > 2 → new block.
+        gap = cur.zaiseki_col - prev.intl_col
+        if gap > _BLOCK_GAP_THRESHOLD:
+            blocks.append([cur])
+        else:
+            blocks[-1].append(cur)
+    return blocks
+
+
+def _detect_block_id_cols(
+    ws: Worksheet, first_year_col: int, is_rollup: bool
+) -> tuple[int, int | None, int | None]:
+    """Return (school_col, dept_col, duration_col) for a block.
+
+    Category sheets: columns immediately before first_year_col hold
+    school/dept/duration. Rollup sheet: only school column.
+    """
+    if is_rollup:
+        # school sits at first_year_col - 1 (e.g. 2 for left block, 18 for right)
+        return max(1, first_year_col - 1), None, None
+    # Category: school=1, dept=2, duration=3 regardless of first_year_col
     return 1, 2, 3
 
 
 def parse_sheet_schema(ws: Worksheet) -> SheetSchema | None:
-    """Parse one sheet to identify header, year columns, and data rows.
-
-    Returns None if the sheet does not appear to be a competition sheet.
-    """
-    header_row, year_cols = _find_header_row(ws)
-    if header_row < 0 or not year_cols:
+    """Parse one sheet into a SheetSchema (multi-block aware)."""
+    header_row, triplets = _find_header_row_and_year_triplets(ws)
+    if header_row < 0:
         return None
-
-    school_col, dept_col, duration_col = _detect_school_columns(ws.title)
+    year_groups = _group_triplets_into_blocks(triplets)
     is_rollup = ws.title == "学校単位での比較"
 
-    data_rows: list[TemplateRow] = []
-    last_school: str = ""
-    for r in range(header_row + 1, ws.max_row + 1):
-        school_raw = ws.cell(r, school_col).value
-        dept_raw = ws.cell(r, dept_col).value if dept_col else None
-        duration_raw = ws.cell(r, duration_col).value if duration_col else None
+    blocks: list[SheetBlock] = []
+    for block_id, year_cols in enumerate(year_groups):
+        first_year_col = year_cols[0].zaiseki_col
+        school_col, dept_col, duration_col = _detect_block_id_cols(
+            ws, first_year_col, is_rollup
+        )
 
-        school = _norm(school_raw)
-        if school:
-            last_school = school
-        dept = _norm(dept_raw) if dept_raw else None
+        data_rows: list[TemplateRow] = []
+        last_school = ""
+        for r in range(header_row + 1, ws.max_row + 1):
+            school_raw = ws.cell(r, school_col).value
+            dept_raw = ws.cell(r, dept_col).value if dept_col else None
+            duration_raw = ws.cell(r, duration_col).value if duration_col else None
 
-        # Skip empty/ratio-only rows: a row counts if it has school OR dept identity
-        if not school and not dept:
-            continue
-        # Skip rows that have only number data (the alternate ratio row already
-        # belongs to the prior data row).
-        if not school and not dept_raw:
-            continue
-        # Use last_school for category sheets where school spans multiple rows
-        effective_school = school if school else last_school
-        if not effective_school:
-            continue
-        # For rollup sheet, only school name matters (no dept)
-        if is_rollup and not school:
-            continue
+            school = _norm(school_raw)
+            if school:
+                last_school = school
+            dept = _norm(dept_raw) if dept_raw else None
 
-        data_rows.append(
-            TemplateRow(
-                row_index=r,
-                school_name=effective_school,
-                dept_name=dept,
-                duration_label=str(duration_raw) if duration_raw else None,
+            if not school and not dept:
+                continue
+            effective_school = school if school else last_school
+            if not effective_school:
+                continue
+            if is_rollup and not school:
+                # rollup has no dept continuation; each data row has a school
+                continue
+
+            data_rows.append(
+                TemplateRow(
+                    row_index=r,
+                    school_name=effective_school,
+                    dept_name=dept,
+                    duration_label=str(duration_raw) if duration_raw else None,
+                    block_id=block_id,
+                )
+            )
+
+        blocks.append(
+            SheetBlock(
+                school_col=school_col,
+                dept_col=dept_col,
+                duration_col=duration_col,
+                year_cols=year_cols,
+                data_rows=data_rows,
             )
         )
 
     return SheetSchema(
-        name=ws.title,
-        header_row=header_row,
-        year_cols=year_cols,
-        data_rows=data_rows,
-        school_col=school_col,
-        dept_col=dept_col,
-        duration_col=duration_col,
-        is_rollup=is_rollup,
+        name=ws.title, header_row=header_row, blocks=blocks, is_rollup=is_rollup
     )
 
 
 def parse_template(template_path: Path) -> dict[str, SheetSchema]:
-    """Parse all sheets from a template workbook."""
     wb = load_workbook(str(template_path), data_only=True)
     schemas: dict[str, SheetSchema] = {}
     for name in wb.sheetnames:
@@ -203,7 +237,7 @@ class MatchResult:
     sheet_name: str
     school_id: int | None
     department_ids: list[int] = field(default_factory=list)
-    matched_via: str = "unmatched"  # exact | alias | dept | unmatched
+    matched_via: str = "unmatched"
 
 
 class CompetitionMatcher:
@@ -244,38 +278,40 @@ class CompetitionMatcher:
             matched_via = "alias" if school_id is not None else "unmatched"
 
         if school_id is None:
-            return MatchResult(template_row=row, sheet_name=sheet_name,
-                               school_id=None, matched_via="unmatched")
+            return MatchResult(
+                template_row=row, sheet_name=sheet_name,
+                school_id=None, matched_via="unmatched",
+            )
 
-        # Rollup sheet: school-level only
         if row.dept_name is None:
-            return MatchResult(template_row=row, sheet_name=sheet_name,
-                               school_id=school_id, matched_via=matched_via)
+            return MatchResult(
+                template_row=row, sheet_name=sheet_name,
+                school_id=school_id, matched_via=matched_via,
+            )
 
-        # Match dept by canonical_name within the school
         dept_key = _norm(row.dept_name)
         depts = self._depts_for_school(school_id)
         matching = [d.id for d in depts if _norm(d.canonical_name) == dept_key]
         if matching:
-            return MatchResult(template_row=row, sheet_name=sheet_name,
-                               school_id=school_id, department_ids=matching,
-                               matched_via=matched_via + "+dept")
-        # Substring fallback: dept_key contained in canonical_name (handles
-        # template using shorter form of long dept names).
+            return MatchResult(
+                template_row=row, sheet_name=sheet_name,
+                school_id=school_id, department_ids=matching,
+                matched_via=matched_via + "+dept",
+            )
         for d in depts:
             cn = _norm(d.canonical_name)
             if dept_key and cn and (dept_key in cn or cn in dept_key):
                 matching.append(d.id)
-        return MatchResult(template_row=row, sheet_name=sheet_name,
-                           school_id=school_id, department_ids=matching,
-                           matched_via=matched_via + "+dept_substr" if matching
-                           else matched_via + "+dept_unmatched")
+        return MatchResult(
+            template_row=row, sheet_name=sheet_name,
+            school_id=school_id, department_ids=matching,
+            matched_via=(matched_via + "+dept_substr") if matching
+            else (matched_via + "+dept_unmatched"),
+        )
 
 
 @dataclass
 class YearlyAggregate:
-    """Aggregated yearly data for a (school, dept-set, year)."""
-
     enrollment: int | None
     intl_students: int | None
 
@@ -296,56 +332,115 @@ def _aggregate_yearly(
     )
     if not rows:
         return YearlyAggregate(enrollment=None, intl_students=None)
-    enrollment = sum((r.enrollment or 0) for r in rows) if any(
+    enroll = sum((r.enrollment or 0) for r in rows) if any(
         r.enrollment is not None for r in rows
     ) else None
     intl = sum((r.intl_students or 0) for r in rows) if any(
         r.intl_students is not None for r in rows
     ) else None
-    return YearlyAggregate(enrollment=enrollment, intl_students=intl)
+    return YearlyAggregate(enrollment=enroll, intl_students=intl)
 
 
 def _aggregate_school_yearly(
     session: Session, school_id: int, fiscal_year: int
 ) -> YearlyAggregate:
-    """Sum across all departments of a school for the rollup sheet."""
-    dept_ids = [d.id for d in session.query(Department).filter(
-        Department.school_id == school_id
-    ).all()]
+    dept_ids = [
+        d.id for d in session.query(Department)
+        .filter(Department.school_id == school_id).all()
+    ]
     return _aggregate_yearly(session, dept_ids, fiscal_year)
 
 
-def _append_year_columns(
-    ws: Worksheet, schema: SheetSchema, fiscal_year: int
-) -> YearColumns:
-    """Write 在籍数 / 留学生 headers for a new fiscal year and return the cols."""
-    new_zaiseki_col = ws.max_column + 1
-    new_intl_col = new_zaiseki_col + 1
-    # Year label one row above header row
-    if schema.header_row > 1:
-        ws.cell(schema.header_row - 1, new_zaiseki_col, value=fiscal_year)
-    ws.cell(schema.header_row, new_zaiseki_col, value=_ENROLLMENT_HEADER_TEXT)
-    ws.cell(schema.header_row, new_intl_col, value=_INTL_HEADER_TEXT)
-    return YearColumns(
-        fiscal_year=fiscal_year,
-        zaiseki_col=new_zaiseki_col,
-        intl_col=new_intl_col,
+def auto_select_fiscal_year(session: Session) -> int:
+    """Pick the fiscal year with the most DepartmentYearly coverage.
+
+    Preferred signal for 担当者 reports where 最新 really means 'the most
+    populated year in DB', not a calendar projection.
+    """
+    rows = (
+        session.query(
+            DepartmentYearly.fiscal_year,
+            sql_func.count(DepartmentYearly.id),
+        )
+        .filter(
+            DepartmentYearly.document_id.isnot(None),
+            DepartmentYearly.is_current.is_(True),
+        )
+        .group_by(DepartmentYearly.fiscal_year)
+        .order_by(sql_func.count(DepartmentYearly.id).desc())
+        .all()
     )
+    if rows:
+        return int(rows[0][0])
+    # Fallback to calendar year if DB is empty
+    from datetime import datetime
+    return datetime.now().year
+
+
+def _append_year_columns_to_block(
+    ws: Worksheet,
+    schema: SheetSchema,
+    block: SheetBlock,
+    fiscal_year: int,
+) -> YearColumns:
+    """Append fiscal-year header cells at the end of a block."""
+    new_zaiseki = block.year_cols[-1].intl_col + 1
+    new_intl = new_zaiseki + 1
+    if schema.header_row > 1:
+        ws.cell(schema.header_row - 1, new_zaiseki, value=fiscal_year)
+    ws.cell(schema.header_row, new_zaiseki, value=_ENROLLMENT_HEADER_TEXT)
+    ws.cell(schema.header_row, new_intl, value=_INTL_HEADER_TEXT)
+    # Ratio headers one row below header_row (R5 in most sheets)
+    ratio_row = schema.header_row + 1
+    if ws.cell(ratio_row, new_zaiseki).value is None:
+        ws.cell(ratio_row, new_zaiseki, value=_PREV_RATIO_HEADER)
+    if ws.cell(ratio_row, new_intl).value is None:
+        ws.cell(ratio_row, new_intl, value="留学生\n比率")
+    return YearColumns(
+        fiscal_year=fiscal_year, zaiseki_col=new_zaiseki, intl_col=new_intl
+    )
+
+
+def _find_year_cols(
+    block: SheetBlock, fiscal_year: int
+) -> YearColumns | None:
+    for yc in block.year_cols:
+        if yc.fiscal_year == fiscal_year:
+            return yc
+    return None
+
+
+def _prev_year_enrollment(
+    ws: Worksheet, row_index: int, block: SheetBlock, fiscal_year: int
+) -> int | None:
+    """Read prior-year 在籍数 from template row for ratio computation."""
+    prev_year = fiscal_year - 1
+    prev_cols = _find_year_cols(block, prev_year)
+    if prev_cols is None:
+        return None
+    val = ws.cell(row_index, prev_cols.zaiseki_col).value
+    if isinstance(val, (int, float)) and val:
+        return int(val)
+    return None
 
 
 def export_competition_workbook(
     session: Session,
     template_path: Path,
     output_path: Path,
-    fiscal_year: int,
+    fiscal_year: int | None = None,
     gap_report_path: Path | None = None,
 ) -> dict[str, int]:
     """Generate the 競合校の在校生数 workbook for the given fiscal year.
 
-    Returns counts: matched / unmatched / cells_written.
+    fiscal_year=None → pick the year with the most DB coverage.
     """
     if not template_path.exists():
         raise FileNotFoundError(f"template not found: {template_path}")
+
+    if fiscal_year is None:
+        fiscal_year = auto_select_fiscal_year(session)
+        log.info("auto_fiscal_year_selected", fiscal_year=fiscal_year)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(template_path, output_path)
@@ -355,6 +450,7 @@ def export_competition_workbook(
     matched = 0
     unmatched_rows: list[MatchResult] = []
     cells_written = 0
+    ratio_cells_written = 0
 
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
@@ -362,49 +458,84 @@ def export_competition_workbook(
         if schema is None:
             continue
 
-        # Skip if year already present (idempotent re-runs)
-        existing_years = {yc.fiscal_year for yc in schema.year_cols}
-        if fiscal_year in existing_years:
-            new_cols = next(yc for yc in schema.year_cols if yc.fiscal_year == fiscal_year)
-        else:
-            new_cols = _append_year_columns(ws, schema, fiscal_year)
+        for block in schema.blocks:
+            existing = _find_year_cols(block, fiscal_year)
+            target_cols = existing or _append_year_columns_to_block(
+                ws, schema, block, fiscal_year
+            )
+            ratio_row_offset = 1  # ratio is one row below data
 
-        for row in schema.data_rows:
-            result = matcher.match(sheet_name, row)
-            if schema.is_rollup:
-                if result.school_id is None:
-                    unmatched_rows.append(result)
-                    continue
-                agg = _aggregate_school_yearly(session, result.school_id, fiscal_year)
-                matched += 1
-            else:
-                if not result.department_ids:
-                    unmatched_rows.append(result)
-                    continue
-                agg = _aggregate_yearly(session, result.department_ids, fiscal_year)
-                matched += 1
+            for row in block.data_rows:
+                result = matcher.match(sheet_name, row)
+                if schema.is_rollup:
+                    if result.school_id is None:
+                        unmatched_rows.append(result)
+                        continue
+                    agg = _aggregate_school_yearly(
+                        session, result.school_id, fiscal_year
+                    )
+                    matched += 1
+                else:
+                    if not result.department_ids:
+                        unmatched_rows.append(result)
+                        continue
+                    agg = _aggregate_yearly(
+                        session, result.department_ids, fiscal_year
+                    )
+                    matched += 1
 
-            if agg.enrollment is not None:
-                ws.cell(row.row_index, new_cols.zaiseki_col, value=agg.enrollment)
-                cells_written += 1
-            if agg.intl_students is not None:
-                ws.cell(row.row_index, new_cols.intl_col, value=agg.intl_students)
-                cells_written += 1
+                if agg.enrollment is None and agg.intl_students is None:
+                    continue
+
+                if agg.enrollment is not None:
+                    ws.cell(row.row_index, target_cols.zaiseki_col,
+                            value=agg.enrollment)
+                    cells_written += 1
+                if agg.intl_students is not None:
+                    ws.cell(row.row_index, target_cols.intl_col,
+                            value=agg.intl_students)
+                    cells_written += 1
+
+                # 前年比 = this_year_enrollment / prev_year_enrollment
+                prev_enroll = _prev_year_enrollment(
+                    ws, row.row_index, block, fiscal_year
+                )
+                if agg.enrollment and prev_enroll:
+                    ratio = agg.enrollment / prev_enroll
+                    ws.cell(row.row_index + ratio_row_offset,
+                            target_cols.zaiseki_col, value=ratio)
+                    ratio_cells_written += 1
+                # 留学生比率 = intl_students / enrollment  (legitimate ratio row)
+                if agg.enrollment and agg.intl_students is not None:
+                    intl_ratio = agg.intl_students / agg.enrollment
+                    ws.cell(row.row_index + ratio_row_offset,
+                            target_cols.intl_col, value=intl_ratio)
+                    ratio_cells_written += 1
 
     wb.save(str(output_path))
 
     if gap_report_path is not None and unmatched_rows:
         gap_report_path.parent.mkdir(parents=True, exist_ok=True)
+        # Sort for deterministic output: sheet → school → dept → row
+        unmatched_rows.sort(
+            key=lambda u: (
+                u.sheet_name,
+                u.template_row.school_name,
+                u.template_row.dept_name or "",
+                u.template_row.row_index,
+            )
+        )
         with gap_report_path.open("w", newline="", encoding="utf-8") as fh:
             writer = csv.writer(fh)
             writer.writerow(
-                ["sheet", "row", "school_name", "dept_name", "duration",
-                 "school_id", "matched_via"]
+                ["sheet", "row", "block_id", "school_name", "dept_name",
+                 "duration", "school_id", "matched_via"]
             )
             for u in unmatched_rows:
                 writer.writerow([
                     u.sheet_name,
                     u.template_row.row_index,
+                    u.template_row.block_id,
                     u.template_row.school_name,
                     u.template_row.dept_name or "",
                     u.template_row.duration_label or "",
@@ -419,10 +550,13 @@ def export_competition_workbook(
         matched=matched,
         unmatched=len(unmatched_rows),
         cells_written=cells_written,
+        ratio_cells_written=ratio_cells_written,
     )
 
     return {
         "matched": matched,
         "unmatched": len(unmatched_rows),
         "cells_written": cells_written,
+        "ratio_cells_written": ratio_cells_written,
+        "fiscal_year": fiscal_year,
     }
