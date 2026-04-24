@@ -272,6 +272,11 @@ def ingest_pdfs(
         "--document-id",
         help="Specific document id to ingest. Repeat to target known PDFs.",
     ),
+    evidence_log: Path = typer.Option(
+        Path("output/ingest_rejections.jsonl"),
+        help="JSONL file capturing every rejected document (doc_id, reason, "
+             "parsed_school_name, etc). Append-only. Use empty string to disable.",
+    ),
 ) -> None:
     """Parse downloaded PDFs and write data to database (Step 9 -> DB)."""
     try:
@@ -282,9 +287,16 @@ def ingest_pdfs(
 
     from eidp.db.session import SessionLocal
 
+    evidence_path = evidence_log if str(evidence_log) else None
+
     session = SessionLocal()
     try:
-        stats = run_ingestion(session, batch_size=batch_size, document_ids=document_id)
+        stats = run_ingestion(
+            session,
+            batch_size=batch_size,
+            document_ids=document_id,
+            evidence_path=evidence_path,
+        )
         session.commit()
         typer.echo(f"\nIngestion Results:")
         for k, v in stats.items():

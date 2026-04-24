@@ -32,10 +32,12 @@ def test_ingest_pdfs_forwards_document_ids(monkeypatch) -> None:
         *,
         batch_size: int,
         document_ids: list[int] | None,
+        evidence_path=None,
     ) -> dict[str, int]:
         captured["session"] = fake_session
         captured["batch_size"] = batch_size
         captured["document_ids"] = document_ids
+        captured["evidence_path"] = evidence_path
         return {"processed": 2, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
 
     monkeypatch.setattr("eidp.pipeline.ingest.run_ingestion", fake_run_ingestion)
@@ -46,11 +48,11 @@ def test_ingest_pdfs_forwards_document_ids(monkeypatch) -> None:
     )
 
     assert result.exit_code == 0
-    assert captured == {
-        "session": session,
-        "batch_size": 5,
-        "document_ids": [101, 202],
-    }
+    assert captured["session"] is session
+    assert captured["batch_size"] == 5
+    assert captured["document_ids"] == [101, 202]
+    # default evidence path is forwarded (non-None Path), regardless of file existence
+    assert captured["evidence_path"] is not None
     assert session.committed
     assert session.closed
     assert not session.rolled_back

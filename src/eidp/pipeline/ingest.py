@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from eidp.db.models import Department, DepartmentYearly, Document, SchoolYearStatus, SupportRecipient
 from eidp.pdf.extractor import parse_pdf
 from eidp.pdf.schema import SchoolAnnotation
+from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
 
 log = structlog.get_logger()
 
@@ -28,7 +29,30 @@ def _norm(s: str) -> str:
     return unicodedata.normalize("NFKC", s).strip()
 
 
-def ingest_document(session: Session, doc: Document) -> dict[str, int]:
+def _record_rejection(
+    recorder: IngestEvidenceRecorder | None,
+    doc: Document,
+    reason: str,
+    **detail: object,
+) -> None:
+    if recorder is None:
+        return
+    recorder.record(IngestRejection(
+        doc_id=doc.id,
+        school_id=doc.school_id,
+        file_path=doc.file_path,
+        source_url=doc.source_url,
+        pdf_type=doc.pdf_type,
+        reason=reason,
+        detail={k: str(v) for k, v in detail.items() if v is not None},
+    ))
+
+
+def ingest_document(
+    session: Session,
+    doc: Document,
+    recorder: IngestEvidenceRecorder | None = None,
+) -> dict[str, int]:
     """Parse a downloaded PDF and write extracted data to DB.
 
     Quality gate: only commit department data when the parser extracts
@@ -42,11 +66,13 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         doc.ingest_status = "no_file"
         stats["skipped"] = 1
         stats["skip_reason"] = "no_file"
+        _record_rejection(recorder, doc, "no_file")
         return stats
 
     pdf_path = Path(doc.file_path)
     if not pdf_path.exists():
         log.warning("pdf_not_found", path=str(pdf_path), doc_id=doc.id)
+        _record_rejection(recorder, doc, "no_file", path=str(pdf_path))
         doc.ingest_status = "no_file"
         stats["skipped"] = 1
         stats["skip_reason"] = "no_file"
@@ -87,6 +113,12 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
                          twin_id=existing.id, twin_status=twin_status,
                          inherited_status=inherited_status,
                          file_hash=doc.file_hash[:16])
+                _record_rejection(
+                    recorder, doc, "hash_dedup",
+                    twin_doc_id=existing.id,
+                    twin_status=twin_status,
+                    inherited_status=inherited_status,
+                )
                 doc.ingest_status = inherited_status
                 stats["skipped"] = 1
                 stats["skip_reason"] = f"hash_dedup:{twin_status}"
@@ -96,6 +128,7 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         ocr_pages = extract_text_ocr(pdf_path)
         if not ocr_pages or not any(t.strip() for t in ocr_pages):
             log.info("image_pdf_no_ocr", doc_id=doc.id, path=str(pdf_path))
+            _record_rejection(recorder, doc, "ocr_pending")
             # Use ocr_pending instead of image_only so it can be retried
             # after OCR dependencies are installed or improved
             doc.ingest_status = "ocr_pending"
@@ -112,6 +145,7 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
     # Skip non-target documents
     if doc.pdf_type == "non_target":
         log.info("non_target_skipped", doc_id=doc.id, path=str(pdf_path))
+        _record_rejection(recorder, doc, "non_target_pdf")
         doc.ingest_status = "non_target"
         stats["skipped"] = 1
         stats["skip_reason"] = "non_target"
@@ -122,20 +156,47 @@ def ingest_document(session: Session, doc: Document) -> dict[str, int]:
         annotation = parse_pdf(pdf_path)
 
     # School-identity verification: check parsed school_name against target school
-    # Prevents wrong-school PDF data from silently entering the DB
+    # Prevents wrong-school PDF data from silently entering the DB.
+    # Consults SchoolAlias so historical/alternate names also count as a match
+    # (e.g. 滋慶グループ 2024 renames: 東京ダンス&アクターズ → 東京ダンス・俳優
+    # ＆舞台芸術).
     if annotation.school_name:
-        from eidp.db.models import School
+        from eidp.db.models import School, SchoolAlias
         target_school = session.query(School).filter(School.id == doc.school_id).first()
         if target_school:
             parsed_name = _norm(annotation.school_name)
             target_name = _norm(target_school.school_name)
-            # Check if parsed name matches target (substring match for flexibility)
-            if parsed_name and target_name and parsed_name not in target_name and target_name not in parsed_name:
+            candidate_names: list[str] = [target_name] if target_name else []
+            aliases = (
+                session.query(SchoolAlias)
+                .filter(SchoolAlias.school_id == doc.school_id)
+                .all()
+            )
+            for a in aliases:
+                alias_norm = _norm(a.alias_name)
+                if alias_norm:
+                    candidate_names.append(alias_norm)
+
+            def _match_any(parsed: str, candidates: list[str]) -> str | None:
+                for c in candidates:
+                    if parsed in c or c in parsed:
+                        return c
+                return None
+
+            matched_name = _match_any(parsed_name, candidate_names) if parsed_name else None
+            if parsed_name and not matched_name:
                 log.warning("school_name_mismatch",
                             doc_id=doc.id,
                             parsed=annotation.school_name,
                             target=target_school.school_name,
+                            tried_aliases=[a.alias_name for a in aliases],
                             school_id=doc.school_id)
+                _record_rejection(
+                    recorder, doc, "school_mismatch",
+                    parsed_school_name=annotation.school_name,
+                    target_school_name=target_school.school_name,
+                    alias_count=len(aliases),
+                )
                 doc.ingest_status = "school_mismatch"
                 stats["skipped"] = 1
                 stats["skip_reason"] = "school_mismatch"
@@ -463,6 +524,7 @@ def run_ingestion(
     session: Session,
     batch_size: int = 50,
     document_ids: Sequence[int] | None = None,
+    evidence_path: Path | None = None,
 ) -> dict[str, int]:
     """Ingest all un-ingested documents.
 
@@ -526,10 +588,12 @@ def run_ingestion(
 
     log.info("ingestion_start", documents=len(docs))
 
+    recorder = IngestEvidenceRecorder(evidence_path)
+
     for doc in docs:
         try:
             nested = session.begin_nested()
-            stats = ingest_document(session, doc)
+            stats = ingest_document(session, doc, recorder=recorder)
             nested.commit()
 
             # Mark ingest_status based on result
@@ -545,7 +609,7 @@ def run_ingestion(
             total_stats["processed"] += 1
             for k in ("departments_created", "yearly_upserted", "skipped"):
                 total_stats[k] += stats.get(k, 0)
-        except (OSError, IOError):
+        except (OSError, IOError) as e:
             try:
                 nested.rollback()
             except Exception:
@@ -553,7 +617,8 @@ def run_ingestion(
             doc.ingest_status = "transient_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_io_error", doc_id=doc.id, path=doc.file_path)
-        except Exception:
+            _record_rejection(recorder, doc, "transient_error", error_type=type(e).__name__)
+        except Exception as e:
             try:
                 nested.rollback()
             except Exception:
@@ -561,6 +626,7 @@ def run_ingestion(
             doc.ingest_status = "permanent_error"
             total_stats["skipped"] += 1
             log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
+            _record_rejection(recorder, doc, "permanent_error", error_type=type(e).__name__)
 
         # Per-document commit — guarded so a commit failure on one doc does not
         # kill the batch. On commit failure, rollback the session and continue.
@@ -574,4 +640,5 @@ def run_ingestion(
                 log.exception("rollback_failed_after_commit_error", doc_id=doc.id)
 
     log.info("ingestion_complete", **total_stats)
+    recorder.close()
     return total_stats
