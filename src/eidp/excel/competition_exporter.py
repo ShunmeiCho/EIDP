@@ -47,6 +47,22 @@ def _norm(s: object) -> str:
     return re.sub(r"\s+", "", text)
 
 
+# Suffix strip for fuzzy school-name matching. 競合校 templates often use
+# abbreviated forms ("東京コミュニケーションアート") while DB stores the
+# formal name ("東京コミュニケーションアート専門学校"). Strip so both
+# collapse onto the same canonical key.
+_SCHOOL_NAME_SUFFIXES = ("専門学校", "高等専門学校", "専修学校", "学校", "専門", "大学", "短期大学")
+
+
+def _norm_school_key(s: object) -> str:
+    """NFKC + whitespace strip + common suffix strip for school-name match."""
+    key = _norm(s)
+    for suffix in _SCHOOL_NAME_SUFFIXES:
+        if key.endswith(suffix) and len(key) > len(suffix) + 1:
+            return key[: -len(suffix)]
+    return key
+
+
 @dataclass(frozen=True)
 class YearColumns:
     """Where to read/write a fiscal-year's pair of cells."""
@@ -253,14 +269,24 @@ class CompetitionMatcher:
         self._build_indices()
 
     def _build_indices(self) -> None:
+        # Primary: exact normalised name lookup.
+        # Secondary: suffix-stripped key so '東京コミュニケーションアート'
+        # (template) matches '東京コミュニケーションアート専門学校' (DB).
+        self._school_key_index: dict[str, int] = {}
         for s in self.session.query(School).all():
-            key = _norm(s.school_name)
-            if key and key not in self._school_index:
-                self._school_index[key] = s.id
+            full = _norm(s.school_name)
+            if full and full not in self._school_index:
+                self._school_index[full] = s.id
+            short = _norm_school_key(s.school_name)
+            if short and short not in self._school_key_index:
+                self._school_key_index[short] = s.id
         for a in self.session.query(SchoolAlias).all():
             key = _norm(a.alias_name)
             if key and key not in self._alias_index:
                 self._alias_index[key] = a.school_id
+            short = _norm_school_key(a.alias_name)
+            if short and short not in self._alias_index:
+                self._alias_index[short] = a.school_id
 
     def _depts_for_school(self, school_id: int) -> list[Department]:
         if school_id not in self._dept_cache:
@@ -277,7 +303,11 @@ class CompetitionMatcher:
         matched_via = "exact" if school_id is not None else ""
         if school_id is None:
             school_id = self._alias_index.get(school_key)
-            matched_via = "alias" if school_id is not None else "unmatched"
+            matched_via = "alias" if school_id is not None else ""
+        if school_id is None:
+            short_key = _norm_school_key(row.school_name)
+            school_id = self._school_key_index.get(short_key)
+            matched_via = "suffix_strip" if school_id is not None else "unmatched"
 
         if school_id is None:
             return MatchResult(

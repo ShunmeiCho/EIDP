@@ -11,9 +11,11 @@ from eidp.db.models import (
     School,
 )
 from eidp.excel.competition_exporter import (
+    CompetitionMatcher,
     MatchResult,
     TemplateRow,
     _diagnose_gap,
+    _norm_school_key,
 )
 
 
@@ -101,6 +103,33 @@ def test_dept_unmatched_when_school_fy_ok_but_no_dept_match() -> None:
     reason, detail = _diagnose_gap(session, _match(1, dept_ids=[]), 2026)
     assert reason == "dept_unmatched"
     assert "db_dept_count=1" in detail
+
+
+def test_norm_school_key_strips_common_suffixes() -> None:
+    assert _norm_school_key("東京コミュニケーションアート専門学校") == "東京コミュニケーションアート"
+    assert _norm_school_key("東京デザインテクノロジーセンター専門学校") == "東京デザインテクノロジーセンター"
+    # Already short — no change
+    assert _norm_school_key("東京コミュニケーションアート") == "東京コミュニケーションアート"
+
+
+def test_matcher_suffix_strip_recovers_template_abbreviation() -> None:
+    session = _session()
+    session.add(School(
+        id=1, prefecture="東京", corporation_name="滋慶学園",
+        school_name="東京コミュニケーションアート専門学校",
+    ))
+    session.flush()
+
+    matcher = CompetitionMatcher(session)
+    row = TemplateRow(
+        row_index=6,
+        school_name="東京コミュニケーションアート",  # template uses abbreviated form
+        dept_name=None,
+        duration_label=None,
+    )
+    result = matcher.match("滋慶", row)
+    assert result.school_id == 1
+    assert result.matched_via == "suffix_strip"
 
 
 def test_no_fy_data_when_dept_matched_but_yearly_missing() -> None:
