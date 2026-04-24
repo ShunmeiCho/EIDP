@@ -495,6 +495,7 @@ def main() -> None:
             "URL 補足",
             "Exports",
             "Gap Report",
+            "Proposals Review",
             "Rejections",
             "Review Queue",
             "History",
@@ -510,6 +511,8 @@ def main() -> None:
         operator_pages.page_exports(session)
     elif page == "Gap Report":
         operator_pages.page_gap_report()
+    elif page == "Proposals Review":
+        operator_pages.page_proposals_review(session)
     elif page == "Rejections":
         operator_pages.page_rejections()
     elif page == "Review Queue":

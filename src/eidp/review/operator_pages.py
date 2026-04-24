@@ -22,9 +22,11 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import (
     Department,
+    DepartmentChange,
     DepartmentYearly,
     Document,
     School,
+    SchoolAlias,
     SchoolSite,
     SchoolYearStatus,
 )
@@ -44,6 +46,9 @@ _DEFAULT_REJECTIONS = _OUTPUT_DIR / "discovery_rejections.jsonl"
 _DEFAULT_INGEST_REJECTIONS = _OUTPUT_DIR / "ingest_rejections.jsonl"
 _DEFAULT_OPERATOR_SUBMISSIONS = _OUTPUT_DIR / "operator_url_submissions.jsonl"
 _DEFAULT_PDF_STORAGE = _DATA_DIR / "pdfs"
+_DEFAULT_SCHOOL_PROPOSALS = _OUTPUT_DIR / "school_missing_proposals.jsonl"
+_DEFAULT_DEPT_PROPOSALS = _OUTPUT_DIR / "dept_unmatched_proposals.jsonl"
+_DEFAULT_PROPOSAL_DECISIONS = _OUTPUT_DIR / "proposal_decisions.jsonl"
 
 _MAX_OPERATOR_PDF_SIZE = 50 * 1024 * 1024
 _ACCEPTED_OPERATOR_CLASSIFIERS = {"target", "image_only"}
@@ -728,6 +733,292 @@ def page_rejections() -> None:
     st.write(f"Showing {len(shown)} records")
     st.dataframe(shown, hide_index=True)
 
+
+# ---------------------------------------------------------------------------
+# Proposals Review Queue (Phase 2 — School/Dept gap resolver approvals)
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class ProposalDecision:
+    decision: str  # approved | deferred | rejected
+    proposal_kind: str  # school_alias | dept_alias
+    template_name: str
+    target_id: int | None
+    operator_name: str
+    note: str
+    timestamp: str
+
+
+def _read_proposals(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return out
+
+
+def _record_decision(decision: ProposalDecision, audit_path: Path) -> None:
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    with audit_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(asdict(decision), ensure_ascii=False) + "\n")
+
+
+def apply_school_alias_proposal(
+    session: Session,
+    *,
+    school_id: int,
+    alias_name: str,
+    source: str = "proposal_review_queue",
+) -> tuple[bool, str]:
+    """Idempotent SchoolAlias insert. Returns (created, reason)."""
+    alias_name = alias_name.strip()
+    if not alias_name:
+        return False, "empty_alias"
+    exists = (
+        session.query(SchoolAlias)
+        .filter(
+            SchoolAlias.school_id == school_id,
+            SchoolAlias.alias_name == alias_name,
+        )
+        .first()
+    )
+    if exists is not None:
+        return False, "already_exists"
+    session.add(
+        SchoolAlias(
+            school_id=school_id,
+            alias_name=alias_name,
+            alias_type="competition_template",
+            source=source,
+        )
+    )
+    session.commit()
+    return True, "inserted"
+
+
+def apply_dept_alias_proposal(
+    session: Session,
+    *,
+    department_id: int,
+    old_name: str,
+    source: str = "proposal_review_queue",
+) -> tuple[bool, str]:
+    """Record a dept alias as DepartmentChange(change_type='alias')."""
+    old_name = old_name.strip()
+    if not old_name:
+        return False, "empty_old_name"
+    dept = session.get(Department, department_id)
+    if dept is None:
+        return False, "dept_not_found"
+    exists = (
+        session.query(DepartmentChange)
+        .filter(
+            DepartmentChange.department_id == department_id,
+            DepartmentChange.old_name == old_name,
+            DepartmentChange.change_type == "alias",
+        )
+        .first()
+    )
+    if exists is not None:
+        return False, "already_exists"
+    session.add(
+        DepartmentChange(
+            department_id=department_id,
+            change_type="alias",
+            fiscal_year=datetime.now(timezone.utc).year,
+            old_name=old_name,
+            new_name=dept.canonical_name,
+            verified=False,
+            verified_by=source,
+            notes="competition_template dept alias proposed by resolver",
+        )
+    )
+    session.commit()
+    return True, "inserted"
+
+
+def _render_school_proposals_tab(session: Session) -> None:
+    proposals = _read_proposals(_DEFAULT_SCHOOL_PROPOSALS)
+    if not proposals:
+        st.info(
+            f"No proposals at `{_DEFAULT_SCHOOL_PROPOSALS}`. "
+            "Run `uv run python scripts/school_missing_resolver.py` first."
+        )
+        return
+
+    by_type: dict[str, list[dict]] = {}
+    for p in proposals:
+        by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
+
+    counts = {k: (len(v), sum(int(x.get("template_rows", 0)) for x in v))
+              for k, v in by_type.items()}
+    cols = st.columns(4)
+    for idx, ptype in enumerate([
+        "alias_existing_school",
+        "ambiguous_candidates",
+        "branch_of_existing",
+        "truly_missing",
+    ]):
+        n, rows = counts.get(ptype, (0, 0))
+        cols[idx].metric(ptype, f"{n} names", f"{rows} rows")
+
+    st.divider()
+    st.subheader("Auto-approvable: alias_existing_school")
+    for p in by_type.get("alias_existing_school", []):
+        with st.container(border=True):
+            cols = st.columns([4, 1])
+            cols[0].write(
+                f"**{p['template_name']}** — {p['template_rows']} rows → "
+                f"id={p['matched_school_id']} `{p['matched_school_name']}` "
+                f"({p['matched_corporation']})"
+            )
+            if cols[1].button(
+                "Approve",
+                key=f"approve_sch_{p['matched_school_id']}_{p['template_name']}",
+                type="primary",
+            ):
+                created, reason = apply_school_alias_proposal(
+                    session,
+                    school_id=p["matched_school_id"],
+                    alias_name=p["template_name"],
+                )
+                _record_decision(
+                    ProposalDecision(
+                        decision="approved" if created else "already",
+                        proposal_kind="school_alias",
+                        template_name=p["template_name"],
+                        target_id=p["matched_school_id"],
+                        operator_name=st.session_state.get("operator_name", ""),
+                        note=reason,
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ),
+                    _DEFAULT_PROPOSAL_DECISIONS,
+                )
+                if created:
+                    st.success(f"Alias inserted: {p['template_name']} → id={p['matched_school_id']}")
+                else:
+                    st.info(f"No-op: {reason}")
+
+    st.divider()
+    st.subheader("Operator-decision required (read-only in this MVP)")
+    for ptype, items in by_type.items():
+        if ptype == "alias_existing_school":
+            continue
+        st.write(f"**{ptype}** — {len(items)} names")
+        for p in items[:10]:
+            cand_summary = ""
+            if p.get("candidates"):
+                cand_summary = (
+                    " | ".join(
+                        f"id={c['school_id']} {c['school_name'][:20]}"
+                        for c in p["candidates"][:3]
+                    )
+                )
+            st.caption(
+                f"  [{p['template_rows']} rows] {p['template_name']}  {cand_summary}"
+            )
+
+
+def _render_dept_proposals_tab(session: Session) -> None:
+    proposals = _read_proposals(_DEFAULT_DEPT_PROPOSALS)
+    if not proposals:
+        st.info(
+            f"No proposals at `{_DEFAULT_DEPT_PROPOSALS}`. "
+            "Run `uv run python scripts/dept_unmatched_resolver.py` first."
+        )
+        return
+
+    by_type: dict[str, list[dict]] = {}
+    for p in proposals:
+        by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
+
+    cols = st.columns(4)
+    for idx, ptype in enumerate([
+        "dept_alias_existing",
+        "dept_group_candidate",
+        "dept_ambiguous",
+        "dept_truly_missing",
+    ]):
+        items = by_type.get(ptype, [])
+        cols[idx].metric(ptype, len(items))
+
+    st.divider()
+    st.subheader("Auto-approvable: dept_alias_existing")
+    for p in by_type.get("dept_alias_existing", []):
+        with st.container(border=True):
+            cols = st.columns([4, 1])
+            cols[0].write(
+                f"**{p['template_school']} / {p['template_dept']}** → "
+                f"dept_id={p['db_dept_ids'][0]} `{p['db_dept_names'][0]}`"
+            )
+            key = f"approve_dept_{p['db_dept_ids'][0]}_{p['template_dept']}"
+            if cols[1].button("Approve", key=key, type="primary"):
+                created, reason = apply_dept_alias_proposal(
+                    session,
+                    department_id=p["db_dept_ids"][0],
+                    old_name=p["template_dept"],
+                )
+                _record_decision(
+                    ProposalDecision(
+                        decision="approved" if created else "already",
+                        proposal_kind="dept_alias",
+                        template_name=p["template_dept"],
+                        target_id=p["db_dept_ids"][0],
+                        operator_name=st.session_state.get("operator_name", ""),
+                        note=reason,
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ),
+                    _DEFAULT_PROPOSAL_DECISIONS,
+                )
+                if created:
+                    st.success(f"DepartmentChange alias inserted: {p['template_dept']} → dept_id={p['db_dept_ids'][0]}")
+                else:
+                    st.info(f"No-op: {reason}")
+
+    st.divider()
+    st.subheader("Operator-decision required (read-only in this MVP)")
+    for ptype, items in by_type.items():
+        if ptype == "dept_alias_existing":
+            continue
+        st.write(f"**{ptype}** — {len(items)} rows")
+        for p in items[:10]:
+            names = " | ".join(p.get("db_dept_names", [])[:3])
+            st.caption(
+                f"  [{p['template_school'][:20]}] {p['template_dept']}  → {names}"
+            )
+
+
+def page_proposals_review(session: Session) -> None:
+    st.header("Proposals Review Queue")
+    st.caption(
+        "Approve-or-defer gap resolution proposals from "
+        "school_missing_resolver and dept_unmatched_resolver."
+    )
+    st.text_input(
+        "Operator name (audit tag)",
+        key="operator_name",
+        value=st.session_state.get("operator_name", ""),
+    )
+    tab_school, tab_dept = st.tabs(
+        ["School Missing", "Dept Unmatched"]
+    )
+    with tab_school:
+        _render_school_proposals_tab(session)
+    with tab_dept:
+        _render_dept_proposals_tab(session)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _tail_jsonl(path: Path, limit: int) -> list[dict]:
     out: list[dict] = []
