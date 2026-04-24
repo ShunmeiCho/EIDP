@@ -7,6 +7,7 @@ from openpyxl import Workbook
 
 from eidp.excel.competition_exporter import (
     _norm,
+    _append_year_columns_to_block,
     _group_triplets_into_blocks,
     YearColumns,
     parse_sheet_schema,
@@ -118,6 +119,36 @@ def test_rollup_sheet_extracts_both_block_data_rows() -> None:
     assert right_schools - left_schools, (
         "right block should have schools not present in left block"
     )
+
+
+def test_append_year_to_left_rollup_block_preserves_right_block_identity() -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "学校単位での比較"
+    # Left block years: C:F. Right block years: I:L. H is the right school-name col.
+    ws.cell(3, 3, value=2024)
+    ws.cell(3, 5, value=2025)
+    ws.cell(3, 9, value=2024)
+    ws.cell(3, 11, value=2025)
+    for col in (3, 5, 9, 11):
+        ws.cell(4, col, value="在籍数")
+        ws.cell(4, col + 1, value="留学生")
+    ws.cell(6, 2, value="左学校")
+    ws.cell(6, 8, value="右学校")
+
+    schema = parse_sheet_schema(ws)
+    assert schema is not None
+    assert len(schema.blocks) == 2
+
+    new_cols = _append_year_columns_to_block(
+        ws, schema, schema.blocks[0], 2026, schema.blocks[1:]
+    )
+
+    assert new_cols.zaiseki_col == 7
+    assert new_cols.intl_col == 8
+    assert schema.blocks[1].school_col == 10
+    assert schema.blocks[1].year_cols[0].zaiseki_col == 11
+    assert ws.cell(6, schema.blocks[1].school_col).value == "右学校"
 
 
 @pytest.mark.skipif(not SAMPLE_TEMPLATE.exists(), reason="sample template absent")

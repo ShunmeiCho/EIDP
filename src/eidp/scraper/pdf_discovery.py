@@ -73,6 +73,7 @@ NEGATIVE_KEYWORDS = [
     "規程", "規則", "規定", "就業規則", "学則",
     "事業計画", "事業報告", "財務諸表", "決算",
     "自己点検", "自己評価", "学校案内", "ガイドブック",
+    "attachment", "appendix", "添付資料",
 ]
 
 # User-Agent mimicking a real browser (institutional research)

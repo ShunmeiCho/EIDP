@@ -382,10 +382,28 @@ def _append_year_columns_to_block(
     schema: SheetSchema,
     block: SheetBlock,
     fiscal_year: int,
+    following_blocks: list[SheetBlock] | None = None,
 ) -> YearColumns:
     """Append fiscal-year header cells at the end of a block."""
+    following_blocks = following_blocks or []
     new_zaiseki = block.year_cols[-1].intl_col + 1
     new_intl = new_zaiseki + 1
+    if following_blocks:
+        ws.insert_cols(new_zaiseki, amount=2)
+        for shifted in following_blocks:
+            shifted.school_col += 2
+            if shifted.dept_col is not None:
+                shifted.dept_col += 2
+            if shifted.duration_col is not None:
+                shifted.duration_col += 2
+            shifted.year_cols = [
+                YearColumns(
+                    fiscal_year=yc.fiscal_year,
+                    zaiseki_col=yc.zaiseki_col + 2,
+                    intl_col=yc.intl_col + 2,
+                )
+                for yc in shifted.year_cols
+            ]
     if schema.header_row > 1:
         ws.cell(schema.header_row - 1, new_zaiseki, value=fiscal_year)
     ws.cell(schema.header_row, new_zaiseki, value=_ENROLLMENT_HEADER_TEXT)
@@ -458,10 +476,10 @@ def export_competition_workbook(
         if schema is None:
             continue
 
-        for block in schema.blocks:
+        for block_index, block in enumerate(schema.blocks):
             existing = _find_year_cols(block, fiscal_year)
             target_cols = existing or _append_year_columns_to_block(
-                ws, schema, block, fiscal_year
+                ws, schema, block, fiscal_year, schema.blocks[block_index + 1:]
             )
             ratio_row_offset = 1  # ratio is one row below data
 
