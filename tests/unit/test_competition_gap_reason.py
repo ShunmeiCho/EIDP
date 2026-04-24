@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from openpyxl import Workbook
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,7 @@ from eidp.excel.competition_exporter import (
     TemplateRow,
     _diagnose_gap,
     _norm_school_key,
+    export_competition_workbook,
 )
 
 
@@ -144,3 +146,46 @@ def test_no_fy_data_when_dept_matched_but_yearly_missing() -> None:
     session.flush()
     reason, _ = _diagnose_gap(session, _match(1, dept_ids=[5]), 2026)
     assert reason == "no_fy_data"
+
+
+def test_export_overwrites_stale_gap_report_when_no_gaps(tmp_path) -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=5, school_id=1, canonical_name="ゲーム科"))
+        session.add(
+            DepartmentYearly(
+                department_id=5,
+                fiscal_year=2025,
+                revision=1,
+                is_current=True,
+                enrollment=10,
+                intl_students=2,
+            )
+        )
+        session.flush()
+
+        template = tmp_path / "template.xlsx"
+        output = tmp_path / "out.xlsx"
+        gap = tmp_path / "gap.csv"
+        gap.write_text("stale gap that must be removed\n", encoding="utf-8")
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "ゲーム"
+        ws.cell(2, 4, value=2025)
+        ws.cell(3, 4, value="在籍数")
+        ws.cell(3, 5, value="留学生")
+        ws.cell(4, 1, value="学校A")
+        ws.cell(4, 2, value="ゲーム科")
+        ws.cell(4, 3, value="2年制")
+        wb.save(template)
+
+        stats = export_competition_workbook(session, template, output, 2025, gap)
+
+        assert stats["unmatched"] == 0
+        contents = gap.read_text(encoding="utf-8")
+        assert "stale" not in contents
+        assert contents.startswith("gap_reason,gap_detail,sheet,row")
+    finally:
+        session.close()

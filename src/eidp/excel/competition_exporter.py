@@ -607,7 +607,7 @@ def export_competition_workbook(
 
     wb.save(str(output_path))
 
-    if gap_report_path is not None and unmatched_rows:
+    if gap_report_path is not None:
         for u in unmatched_rows:
             u.gap_reason, u.gap_detail = _diagnose_gap(session, u, fiscal_year)
 
