@@ -488,6 +488,9 @@ def main() -> None:
 
     session = _get_session()
 
+    # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
+    operator_pages.render_sidebar_todo(session)
+
     page = st.sidebar.radio(
         "メニュー",
         [

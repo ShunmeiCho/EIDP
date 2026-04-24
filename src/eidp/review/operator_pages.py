@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -374,10 +374,48 @@ def _pipeline_stats(session: Session) -> dict[str, object]:
 def page_pipeline_status(session: Session) -> None:
     st.header("① データ状況")
     st.caption(
-        "現在DBに入っている学校数・PDF数・学科数・年度別データ数の概況です。"
-        "週初めにここで全体規模を確認してください。"
+        "週初めの作業開始画面です。上の「今週のやること」で残タスクを、"
+        "下の「現在のDB」で全体規模を確認してください。"
     )
 
+    # 今週のTODO tiles — the V1 entry point担当者 sees first
+    try:
+        todo = compute_todo_counts(session)
+    except Exception:
+        todo = None
+
+    if todo is not None:
+        st.subheader("今週のやること")
+        tcols = st.columns(4)
+        tcols[0].metric(
+            "候補が複数で要承認",
+            todo.pending_ambiguous,
+            help="② マッチング提案 → 学校タブ で処理",
+        )
+        tcols[1].metric(
+            "URL追加が必要",
+            todo.url_needed,
+            help="③ URL追加 で補足",
+        )
+        tcols[2].metric(
+            "分校扱い（要確認）",
+            todo.pending_branch,
+            help="② 学校タブ · 分校扱い",
+        )
+        tcols[3].metric(
+            "自動承認済（累計）",
+            todo.auto_approved,
+            help="Excel再出力で反映されます",
+        )
+
+        if todo.excel_stale:
+            st.warning(
+                "最近の承認が Excel に反映されていません。④ Excel出力 で再生成してください。",
+                icon="⚠",
+            )
+        st.divider()
+
+    st.subheader("現在のDB")
     stats = _pipeline_stats(session)
 
     col1, col2, col3, col4 = st.columns(4)
@@ -822,6 +860,200 @@ def page_rejections() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 今週のTODO counters (sidebar + ① page)
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class TodoCounts:
+    pending_ambiguous: int  # ② で人間の判断待ち（候補複数）
+    pending_branch: int     # ② 分校要注意で未処理
+    pending_dept: int       # ② 学科タブで未処理
+    url_needed: int         # ③ URL追加が必要（school_no_document / old_year）
+    auto_approved: int      # 自動承認済（先週処理）
+    excel_stale: bool       # Excel再出力推奨（最新承認がExcelより新しい）
+
+
+def compute_todo_counts(session: Session) -> TodoCounts:
+    """Aggregate counts担当者 needs at a glance. Read-only."""
+    # School/Dept proposals with pending status (not in decisions JSONL)
+    decisions = _load_decision_index(_DEFAULT_PROPOSAL_DECISIONS)
+    school_proposals = _read_proposals(_DEFAULT_SCHOOL_PROPOSALS)
+    dept_proposals = _read_proposals(_DEFAULT_DEPT_PROPOSALS)
+
+    pending_ambiguous = 0
+    pending_branch = 0
+    for p in school_proposals:
+        key = ("school_alias", p.get("template_name", ""))
+        if key in decisions:
+            continue
+        ptype = p.get("proposal_type", "")
+        if ptype == "ambiguous_candidates":
+            pending_ambiguous += 1
+        elif ptype == "branch_of_existing":
+            pending_branch += 1
+
+    pending_dept = 0
+    for p in dept_proposals:
+        key = ("dept_alias", p.get("template_dept", ""))
+        if key in decisions:
+            continue
+        ptype = p.get("proposal_type", "")
+        # Only dept_alias_existing is approve-able in current UI; other dept
+        # types are read-only so don't count as担当者 work.
+        if ptype == "dept_alias_existing":
+            pending_dept += 1
+
+    # URL needed: count from gap report
+    url_needed = 0
+    if _DEFAULT_COMPETITION_GAP.exists():
+        import csv
+        with _DEFAULT_COMPETITION_GAP.open(encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                if row.get("gap_reason") in (
+                    "school_no_document",
+                    "school_doc_old_year_only",
+                ):
+                    url_needed += 1
+
+    # Auto approved this week (SchoolAlias rows from resolver applied batch)
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    auto_approved = (
+        session.query(func.count(SchoolAlias.id))
+        .filter(
+            SchoolAlias.source.in_(
+                ("school_missing_resolver", "proposal_review_queue")
+            ),
+        )
+        .scalar()
+        or 0
+    )
+
+    # Excel staleness: are there approved-but-not-exported aliases?
+    excel_path = _DEFAULT_COMPETITION
+    if excel_path.exists():
+        excel_mtime = datetime.fromtimestamp(
+            excel_path.stat().st_mtime, tz=timezone.utc
+        )
+        latest_alias = (
+            session.query(func.max(SchoolAlias.id))
+            .filter(
+                SchoolAlias.source.in_(
+                    ("school_missing_resolver", "proposal_review_queue")
+                ),
+            )
+            .scalar()
+        )
+        # Heuristic: if there's been any approval after export, consider stale.
+        # Simpler proxy: count approvals today that happened after export mtime
+        # isn't cheap to compute; treat as stale if latest approved exists and
+        # user hasn't re-exported in last hour.
+        excel_stale = (
+            latest_alias is not None
+            and excel_mtime < datetime.now(timezone.utc) - timedelta(minutes=30)
+        )
+    else:
+        excel_stale = auto_approved > 0
+
+    return TodoCounts(
+        pending_ambiguous=pending_ambiguous,
+        pending_branch=pending_branch,
+        pending_dept=pending_dept,
+        url_needed=url_needed,
+        auto_approved=auto_approved,
+        excel_stale=excel_stale,
+    )
+
+
+def render_sidebar_todo(session: Session) -> None:
+    """Render the live 今週のTODO block in Streamlit sidebar.
+
+    Called from app.py AFTER the page radio so it always stays visible.
+    """
+    try:
+        counts = compute_todo_counts(session)
+    except Exception as exc:  # pragma: no cover — UI must never crash
+        st.sidebar.caption(f"TODO 計算失敗: {exc}")
+        return
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**今週のやること**")
+
+    total_pending = (
+        counts.pending_ambiguous + counts.pending_branch + counts.pending_dept
+    )
+    _todo_line(
+        "候補が複数で要承認",
+        counts.pending_ambiguous,
+        hint="② 学校タブ",
+        urgent=counts.pending_ambiguous > 0,
+    )
+    _todo_line(
+        "分校扱い（要確認）",
+        counts.pending_branch,
+        hint="② 学校タブ",
+        urgent=False,
+    )
+    _todo_line(
+        "学科の別名承認",
+        counts.pending_dept,
+        hint="② 学科タブ",
+        urgent=counts.pending_dept > 0,
+    )
+    _todo_line(
+        "URL追加が必要",
+        counts.url_needed,
+        hint="③ URL追加",
+        urgent=counts.url_needed > 0,
+    )
+    _todo_line(
+        "自動承認済（累計）",
+        counts.auto_approved,
+        hint=None,
+        urgent=False,
+        done=True,
+    )
+
+    if counts.excel_stale:
+        st.sidebar.warning("新しい承認あり · ④ で再出力推奨", icon="⚠")
+    elif total_pending == 0 and counts.url_needed == 0:
+        st.sidebar.success("今週のTODOは完了", icon="✓")
+
+
+def _todo_line(
+    label: str,
+    count: int,
+    *,
+    hint: str | None,
+    urgent: bool,
+    done: bool = False,
+) -> None:
+    """One line in sidebar TODO. Uses Streamlit columns for alignment."""
+    c1, c2 = st.sidebar.columns([3, 1])
+    if urgent:
+        c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
+        c2.markdown(
+            f"<div style='text-align:right;color:#5E6AD2;font-weight:600;'>{count}</div>",
+            unsafe_allow_html=True,
+        )
+    elif done:
+        c1.markdown(
+            f"<small style='color:#888'>{label}</small>", unsafe_allow_html=True
+        )
+        c2.markdown(
+            f"<div style='text-align:right;color:#1F8B4C;'>{count}</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
+        c2.markdown(
+            f"<div style='text-align:right;color:#4E4E52;'>{count}</div>",
+            unsafe_allow_html=True,
+        )
+    if hint:
+        st.sidebar.caption(hint)
+
+
+# ---------------------------------------------------------------------------
 # Proposals Review Queue (Phase 2 — School/Dept gap resolver approvals)
 # ---------------------------------------------------------------------------
 
@@ -985,12 +1217,20 @@ def apply_dept_alias_proposal(
     return True, "inserted"
 
 
+_SCHOOL_PROPOSAL_LABEL = {
+    "alias_existing_school": "一致候補が1つ（別名追加で即マッチ）",
+    "ambiguous_candidates": "候補が複数（選択が必要）",
+    "branch_of_existing": "分校扱いの行（本校はDBにあり・要注意）",
+    "truly_missing": "DBに該当校なし（法人情報が必要・対応外）",
+}
+
+
 def _render_school_proposals_tab(session: Session) -> None:
     proposals = _read_proposals(_DEFAULT_SCHOOL_PROPOSALS)
     if not proposals:
         st.info(
-            f"No proposals at `{_DEFAULT_SCHOOL_PROPOSALS}`. "
-            "Run `uv run python scripts/school_missing_resolver.py` first."
+            f"提案ファイルがありません: `{_DEFAULT_SCHOOL_PROPOSALS}`。"
+            "先に `uv run python scripts/school_missing_resolver.py` を実行してください。"
         )
         return
 
@@ -1003,14 +1243,6 @@ def _render_school_proposals_tab(session: Session) -> None:
         if hide_processed and key in decisions:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
-
-    # Label map for 担当者 facing display
-    _SCHOOL_PROPOSAL_LABEL = {
-        "alias_existing_school": "一致候補が1つ（別名追加で即マッチ）",
-        "ambiguous_candidates": "候補が複数（選択が必要）",
-        "branch_of_existing": "分校扱いの行（本校はDBにあり・要注意）",
-        "truly_missing": "DBに該当校なし（法人情報が必要・対応外）",
-    }
 
     counts = {k: (len(v), sum(int(x.get("template_rows", 0)) for x in v))
               for k, v in by_type.items()}
@@ -1027,6 +1259,25 @@ def _render_school_proposals_tab(session: Session) -> None:
             f"{n} 校",
             f"テンプレ {rows} 行",
         )
+
+    # --- Mode toggle ---
+    focus_items = (
+        by_type.get("ambiguous_candidates", [])
+        + by_type.get("branch_of_existing", [])
+    )
+    mode = st.radio(
+        "モード",
+        ["一覧モード（まとめて見る）", "集中モード（1件ずつ判断）"],
+        horizontal=True,
+        key="school_mode",
+        help=(
+            "一覧モードはスキャン用、集中モードは1件ずつじっくり判断したい時に使います。"
+            f"集中モード対象: {len(focus_items)} 件"
+        ),
+    )
+    if mode.startswith("集中"):
+        _render_school_focus_mode(session, focus_items)
+        return
 
     st.divider()
     st.subheader("自動承認OK：一致候補が1つだけの行")
@@ -1122,6 +1373,168 @@ def _render_school_proposals_tab(session: Session) -> None:
             st.caption(
                 f"　・ {p['template_name']}（テンプレ内 {p['template_rows']} 行）"
             )
+
+
+def _render_school_focus_mode(
+    session: Session, focus_items: list[dict]
+) -> None:
+    """V2-inspired single-proposal focus card.
+
+    One proposal at a time. Large template name, recommended candidate with
+    reasoning, approve/defer/prev/next. Advances automatically after decision.
+    """
+    if not focus_items:
+        st.success(
+            "候補が複数の行 / 分校扱いの行は全て処理済みです。お疲れさまでした。",
+            icon="✓",
+        )
+        return
+
+    # Session-scoped pointer; clamp on re-render
+    ptr = st.session_state.get("school_focus_idx", 0)
+    ptr = max(0, min(ptr, len(focus_items) - 1))
+    item = focus_items[ptr]
+
+    total = len(focus_items)
+    ptype = item.get("proposal_type", "")
+    candidates = item.get("candidates") or []
+
+    # Progress strip
+    st.progress(
+        (ptr + 1) / total,
+        text=f"{ptr + 1} / {total} 件目",
+    )
+
+    with st.container(border=True):
+        # Meta line
+        meta_cols = st.columns([1, 1, 1])
+        meta_cols[0].caption(
+            f"**種別**　{_SCHOOL_PROPOSAL_LABEL.get(ptype, ptype)}"
+        )
+        meta_cols[1].caption(
+            f"**影響**　テンプレ内 {item.get('template_rows', 0)} 行"
+        )
+        meta_cols[2].caption(
+            f"**候補**　{len(candidates)} 件"
+        )
+
+        # Big template name (V2 serif feel via Streamlit markdown h2)
+        st.markdown(f"## {item['template_name']}")
+
+        if ptype == "branch_of_existing":
+            st.warning(
+                "これは分校を指している可能性があります。本校に別名を付けると "
+                "分校データが本校に混ざります。確信がなければ「保留」にしてください。",
+                icon="⚠",
+            )
+
+        if not candidates:
+            st.caption("DB候補が見つかりませんでした。保留のみ選択できます。")
+            choice = None
+            picked = None
+        else:
+            # Build option labels + recommendation
+            options = [
+                f"id={c['school_id']}　·　{c['school_name']}　"
+                f"（法人: {c['corporation']} / {c['prefecture']}）"
+                for c in candidates
+            ]
+            # Default selection: 「まだ選んでいない」 for safety, forces operator intent
+            choice = st.radio(
+                "正しいDBの学校を選択",
+                ["（まだ選んでいない）"] + options,
+                key=f"focus_pick_{ptr}_{item.get('template_name', '')}",
+                index=0,
+            )
+            if choice != "（まだ選んでいない）":
+                picked = candidates[options.index(choice)]
+            else:
+                picked = None
+
+            # Recommendation card (heuristic: first candidate is highest-ranked)
+            rec = candidates[0]
+            st.info(
+                f"**推奨候補**　id={rec['school_id']}　{rec['school_name']}"
+                f"　（{rec['corporation']} / {rec['prefecture']}）\n\n"
+                "テンプレ名に最も近い法人系列・地名・学校種別から推定。"
+                "確信がなければ他候補を選んでください。"
+            )
+
+        # Action row
+        action_cols = st.columns([2, 1, 1, 1])
+        if action_cols[0].button(
+            "承認して次へ",
+            type="primary",
+            disabled=(picked is None),
+            key=f"focus_approve_{ptr}",
+            use_container_width=True,
+        ):
+            if picked is not None:
+                created, reason = apply_school_alias_proposal(
+                    session,
+                    school_id=int(picked["school_id"]),
+                    alias_name=item["template_name"],
+                )
+                _record_decision(
+                    ProposalDecision(
+                        decision="approved" if created else "already",
+                        proposal_kind=f"school_alias_{ptype}",
+                        template_name=item["template_name"],
+                        target_id=int(picked["school_id"]),
+                        operator_name=st.session_state.get("operator_name", ""),
+                        note=reason,
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ),
+                    _DEFAULT_PROPOSAL_DECISIONS,
+                )
+                if reason.startswith("conflict_other_school:"):
+                    other = reason.split(":")[1]
+                    st.error(
+                        f"別名はすでに別の学校 (id={other}) に使われています。"
+                        "保留を選ぶか、別の候補を選んでください。"
+                    )
+                    return
+                # Advance
+                st.session_state.school_focus_idx = min(ptr + 1, total - 1)
+                st.rerun()
+
+        if action_cols[1].button(
+            "保留",
+            key=f"focus_defer_{ptr}",
+            use_container_width=True,
+        ):
+            _record_decision(
+                ProposalDecision(
+                    decision="deferred",
+                    proposal_kind=f"school_alias_{ptype}",
+                    template_name=item["template_name"],
+                    target_id=None,
+                    operator_name=st.session_state.get("operator_name", ""),
+                    note="operator deferred (focus mode)",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                ),
+                _DEFAULT_PROPOSAL_DECISIONS,
+            )
+            st.session_state.school_focus_idx = min(ptr + 1, total - 1)
+            st.rerun()
+
+        if action_cols[2].button(
+            "← 前へ",
+            disabled=(ptr == 0),
+            key=f"focus_prev_{ptr}",
+            use_container_width=True,
+        ):
+            st.session_state.school_focus_idx = max(0, ptr - 1)
+            st.rerun()
+
+        if action_cols[3].button(
+            "スキップ →",
+            disabled=(ptr >= total - 1),
+            key=f"focus_skip_{ptr}",
+            use_container_width=True,
+        ):
+            st.session_state.school_focus_idx = min(ptr + 1, total - 1)
+            st.rerun()
 
 
 def _render_school_candidate_picker(
