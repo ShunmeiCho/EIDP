@@ -62,35 +62,39 @@ def has_r8_signal(top: PdfCandidate | None) -> bool:
 
 
 def simulate(records: list[dict]) -> list[dict]:
+    """Use fresh httpx.Client per record to match production's per-site
+    isolation in run_pdf_discovery's `for site in sites` loop. Sharing a
+    single Client across 22 sequential calls produces empty candidate
+    lists for several URLs (server-side rate limiting or pool reuse
+    artifacts), even though production-exact isolated calls return
+    candidates. Production uses one Client for many sites too, but
+    operates with a real `time.sleep(rate_limit)` cadence — sim does not."""
     out: list[dict] = []
-    # follow_redirects MUST be False here; discover_pdfs_for_site uses
-    # _safe_get which does its own manual SSRF-checked redirect following.
-    # If httpx auto-follows, _safe_get's visited-set logic mistakenly
-    # raises "Redirect loop detected" and silently swallows the candidate.
-    with httpx.Client(timeout=20, follow_redirects=False, headers=HEADERS) as client:
-        for r in records:
-            url = r.get("final_url") or r.get("url")
-            sid = r.get("school_id") or 0
-            name = r.get("school_name")
-            pref = r.get("pref")
-            op = r.get("op")
-
+    # follow_redirects MUST be False to match _safe_get's manual handling.
+    client_kwargs = {"timeout": 30.0, "follow_redirects": False, "headers": HEADERS}
+    for r in records:
+        url = r.get("final_url") or r.get("url")
+        sid = r.get("school_id") or 0
+        name = r.get("school_name")
+        pref = r.get("pref")
+        op = r.get("op")
+        with httpx.Client(**client_kwargs) as client:
             result = discover_pdfs_for_site(client, sid, url, max_depth=2)
-            top = result.best
-            out.append({
-                "school_id": sid,
-                "school_name": name,
-                "pref": pref,
-                "op": op,
-                "url": url,
-                "fetch_error": result.error,
-                "candidates": len(result.candidates),
-                "top_pdf_url": top.pdf_url if top else None,
-                "top_anchor": (top.anchor_text or "")[:80] if top else None,
-                "top_score": top.score if top else None,
-                "classification": classify_pdf_target(top),
-                "r8_signal": has_r8_signal(top),
-            })
+        top = result.best
+        out.append({
+            "school_id": sid,
+            "school_name": name,
+            "pref": pref,
+            "op": op,
+            "url": url,
+            "fetch_error": result.error,
+            "candidates": len(result.candidates),
+            "top_pdf_url": top.pdf_url if top else None,
+            "top_anchor": (top.anchor_text or "")[:80] if top else None,
+            "top_score": top.score if top else None,
+            "classification": classify_pdf_target(top),
+            "r8_signal": has_r8_signal(top),
+        })
     return out
 
 
