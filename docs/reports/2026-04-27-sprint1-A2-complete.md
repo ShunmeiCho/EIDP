@@ -119,12 +119,12 @@ A3 全量 (22 verified) を実行すべきか、決定要素：
 - web_search 注入 URL と aggregator URL の干渉は今回 prefecture_aggregator filter で回避できたが、A3 全量だと他 pref で同じパターンが再現するか未検証
 - review queue 64 件未処理
 
-**推奨**: A3 を hokkaido だけ全量 (残 16 verified) で先に実行。tokyo/miyagi の各 1 件は別 batch で扱う。
+**推奨**: A3 を hokkaido だけ全量で先に実行。A2 後 dry-run 実測では、残りは **15 new rows** (2 add + 13 upgrade)、A2 済み 5 rows は skipped_duplicate、未 verified 1 row は skipped_not_verified。tokyo/miyagi の各 1 件は別 batch で扱う。
 
 ```bash
 ssh venus 'cd ~/workspace/EIDP && uv run python scripts/apply_writer_plan.py \
   --pref hokkaido --apply --verified-only'
-# expected: 16 more rows (3 add + 13 upgrade pending), 0 errors
+# expected after A2: 15 more rows (2 add + 13 upgrade), skipped_duplicate=5, skipped_not_verified=1, 0 errors
 ```
 
 owner の判断待ち。
