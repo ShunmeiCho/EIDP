@@ -70,3 +70,13 @@ def test_load_verified_entries_uses_row_identity_for_shared_urls(monkeypatch, tm
         ("tokyo", 10, "https://tokyo.example/disclosure/"),
     }
     assert ("aichi", 1390, shared_url) not in entries
+
+
+def test_resolve_verification_file_accepts_plan_dir_basename(monkeypatch, tmp_path) -> None:
+    plan_dir = tmp_path / "pref-aggregator"
+    plan_dir.mkdir()
+    detail_path = plan_dir / "url-verification-20260427_120000.json"
+    detail_path.write_text('{"results": []}', encoding="utf-8")
+    monkeypatch.setattr(apply_writer_plan, "PLAN_DIR", plan_dir)
+
+    assert apply_writer_plan.resolve_verification_file(Path(detail_path.name)) == detail_path

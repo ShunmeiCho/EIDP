@@ -96,15 +96,27 @@ def _verified_entry(record: dict) -> VerifiedEntry | None:
     return (pref, school_id, url)
 
 
-def load_verified_entries() -> set[VerifiedEntry] | None:
+def resolve_verification_file(verification_file: Path | None = None) -> Path | None:
+    if verification_file is None:
+        candidates = sorted(PLAN_DIR.glob("url-verification-202*.json"))
+        return candidates[-1] if candidates else None
+    if verification_file.exists():
+        return verification_file
+    if not verification_file.is_absolute():
+        plan_path = PLAN_DIR / verification_file
+        if plan_path.exists():
+            return plan_path
+    return verification_file
+
+
+def load_verified_entries(verification_file: Path | None = None) -> set[VerifiedEntry] | None:
     """Return (pref, school_id, url) rows marked ownership_ok=True.
 
     Returns None if no verification file exists (disables --verified-only gating).
     """
-    candidates = sorted(PLAN_DIR.glob("url-verification-202*.json"))
-    if not candidates:
+    latest = resolve_verification_file(verification_file)
+    if latest is None:
         return None
-    latest = candidates[-1]
     data = json.loads(latest.read_text())
     return {
         entry
@@ -113,8 +125,14 @@ def load_verified_entries() -> set[VerifiedEntry] | None:
     }
 
 
-def apply_plan(pref: str, *, apply: bool, limit: int | None = None,
-               verified_only: bool = False) -> dict:
+def apply_plan(
+    pref: str,
+    *,
+    apply: bool,
+    limit: int | None = None,
+    verified_only: bool = False,
+    verification_file: Path | None = None,
+) -> dict:
     plan = load_plan(pref)
     stats = {"add": 0, "upgrade": 0, "noop": 0, "review": 0,
              "skipped_duplicate": 0, "skipped_missing_url": 0,
@@ -123,13 +141,19 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None,
     # Load HTTP verification set if --verified-only
     verified_entries: set[VerifiedEntry] | None = None
     if verified_only:
-        verified_entries = load_verified_entries()
-        if verified_entries is None:
+        verification_path = resolve_verification_file(verification_file)
+        if verification_path is None:
             raise RuntimeError(
                 "--verified-only requested but no url-verification-*.json found. "
                 "Run scripts/http_verify_plan_urls.py first."
             )
-        print(f"[{pref}] --verified-only: {len(verified_entries)} ownership-ok rows loaded from verification file")
+        verified_entries = load_verified_entries(verification_path)
+        if verified_entries is None:
+            raise RuntimeError(f"verification file missing: {verification_path}")
+        print(
+            f"[{pref}] --verified-only: {len(verified_entries)} ownership-ok rows "
+            f"loaded from {verification_path}"
+        )
 
     session = SessionLocal()
     try:
@@ -252,6 +276,12 @@ def main() -> None:
     ap.add_argument("--verified-only", action="store_true",
                     help="only apply URLs that passed HTTP ownership verification "
                          "(requires scripts/http_verify_plan_urls.py output)")
+    ap.add_argument(
+        "--verification-file",
+        type=Path,
+        default=None,
+        help="specific url-verification-*.json to use with --verified-only; defaults to latest",
+    )
     args = ap.parse_args()
 
     if not args.pref and not args.all:
@@ -266,12 +296,19 @@ def main() -> None:
     else:
         prefs = [args.pref]
 
-    master = {"apply": args.apply, "limit": args.limit,
-              "verified_only": args.verified_only, "prefs": {}}
+    verification_file = resolve_verification_file(args.verification_file) if args.verified_only else None
+    master = {
+        "apply": args.apply,
+        "limit": args.limit,
+        "verified_only": args.verified_only,
+        "verification_file": str(verification_file) if verification_file else None,
+        "prefs": {},
+    }
     for pref in prefs:
         try:
             stats = apply_plan(pref, apply=args.apply, limit=args.limit,
-                               verified_only=args.verified_only)
+                               verified_only=args.verified_only,
+                               verification_file=verification_file)
             master["prefs"][pref] = stats
         except FileNotFoundError as e:
             print(f"[skip] {e}", file=sys.stderr)
