@@ -58,6 +58,7 @@ def _doc(
     school_id: int,
     fy: int,
     status: str = "ingested",
+    pdf_type: str | None = "target",
 ) -> Document:
     d = Document(
         id=id,
@@ -65,6 +66,7 @@ def _doc(
         source_url=f"https://x/{id}.pdf",
         fiscal_year=fy,
         ingest_status=status,
+        pdf_type=pdf_type,
     )
     session.add(d)
     session.flush()
@@ -127,7 +129,7 @@ def test_coverage_aggregates_url_pdf_and_extraction() -> None:
     _school(s, 3, "大阪")
     s.add(SchoolSite(school_id=1, url="https://a", verified=True))
     s.add(SchoolSite(school_id=2, url="https://b", verified=False))
-    _doc(s, 10, 1, 2026, "ingested")
+    _doc(s, 10, 1, 2026, "ingested", pdf_type="target")
     d1 = _dept(s, 100, 1)
     _yearly(s, 1000, d1.id, 2026, document_id=10, capacity=80)
     s.flush()
@@ -137,11 +139,27 @@ def test_coverage_aggregates_url_pdf_and_extraction() -> None:
     assert rep.totals.schools_with_url == 2
     assert rep.totals.schools_with_verified_url == 1
     assert rep.totals.schools_with_any_pdf == 1
+    assert rep.totals.schools_with_target_pdf == 1
     assert rep.totals.schools_with_current_fy_doc == 1
     assert rep.totals.schools_with_current_fy_extracted == 1
     pref_map = {p.prefecture: p for p in rep.by_prefecture}
     assert pref_map["東京"].schools_total == 2
     assert pref_map["大阪"].schools_total == 1
+
+
+def test_coverage_target_pdf_excludes_non_target_and_failed() -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    _school(s, 2, "東京")
+    _school(s, 3, "東京")
+    _doc(s, 10, 1, 2026, "ingested", pdf_type="non_target")
+    _doc(s, 11, 2, 2026, "parse_failed", pdf_type="target")
+    _doc(s, 12, 3, 2026, "ingested", pdf_type="target")
+    s.flush()
+
+    rep = compute_coverage(s, school_type="専門学校", fiscal_year=2026)
+    assert rep.totals.schools_with_any_pdf == 3
+    assert rep.totals.schools_with_target_pdf == 1
 
 
 def test_coverage_extraction_requires_capacity_not_null() -> None:
@@ -235,9 +253,48 @@ def test_gaps_pdf_distinguishes_site_known_vs_no_site() -> None:
     s.add(SchoolSite(school_id=1, url="https://a", verified=False))
     s.flush()
 
-    rep = compute_gaps(s, "pdf", school_type="専門学校")
+    rep = compute_gaps(s, "pdf", school_type="専門学校", fiscal_year=2026)
     assert rep.total == 2
     assert rep.by_reason == {"site_known_no_pdf": 1, "no_site_no_pdf": 1}
+
+
+def test_gaps_pdf_classifies_stale_non_target_mismatch_failed() -> None:
+    s = _session()
+    # School 1: only prev-year target ingested → stale_pdf_only
+    _school(s, 1, "東京")
+    _doc(s, 10, 1, 2025, "ingested", pdf_type="target")
+    # School 2: only non_target ingested → non_target_only
+    _school(s, 2, "東京")
+    _doc(s, 11, 2, 2026, "ingested", pdf_type="non_target")
+    # School 3: only school_mismatch → mismatch_only
+    _school(s, 3, "東京")
+    _doc(s, 12, 3, 2026, "school_mismatch", pdf_type="target")
+    # School 4: only parse_failed → parse_failed_only
+    _school(s, 4, "東京")
+    _doc(s, 13, 4, 2026, "parse_failed", pdf_type="target")
+    # School 5: target ingested for current FY → no gap
+    _school(s, 5, "東京")
+    _doc(s, 14, 5, 2026, "ingested", pdf_type="target")
+    s.flush()
+
+    rep = compute_gaps(s, "pdf", school_type="専門学校", fiscal_year=2026)
+    assert rep.by_reason == {
+        "stale_pdf_only": 1,
+        "non_target_only": 1,
+        "mismatch_only": 1,
+        "parse_failed_only": 1,
+    }
+    assert rep.total == 4
+
+
+def test_gaps_pdf_default_fy_does_not_crash() -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    s.flush()
+
+    rep = compute_gaps(s, "pdf", school_type="専門学校")
+    assert rep.total == 1
+    assert rep.by_reason == {"no_site_no_pdf": 1}
 
 
 def test_gaps_extraction_lists_ingested_docs_without_yearly() -> None:

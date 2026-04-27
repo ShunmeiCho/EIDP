@@ -1,6 +1,17 @@
 """School / URL / PDF coverage report.
 
 Acceptance criterion #1: 専門学校 PDF coverage by prefecture.
+
+Coverage uses three distinct denominators so we never confuse "any PDF
+exists" with "the target document was successfully ingested":
+
+- any_pdf       — any Document row exists for the school (including stale,
+                  non-target, parse_failed, school_mismatch)
+- target_pdf    — at least one Document with pdf_type='target' AND
+                  ingest_status='ingested' (any FY)
+- current_fy_doc — Document with fiscal_year=fy AND ingest_status='ingested'
+- current_fy_extracted — DepartmentYearly row exists with capacity not null
+                         for fy
 """
 
 from dataclasses import dataclass, field
@@ -25,6 +36,7 @@ class PrefectureCoverage:
     schools_with_url: int
     schools_with_verified_url: int
     schools_with_any_pdf: int
+    schools_with_target_pdf: int
     schools_with_current_fy_doc: int
     schools_with_current_fy_extracted: int
 
@@ -33,8 +45,16 @@ class PrefectureCoverage:
         return self.schools_with_url / self.schools_total if self.schools_total else 0.0
 
     @property
-    def pdf_rate(self) -> float:
+    def any_pdf_rate(self) -> float:
         return self.schools_with_any_pdf / self.schools_total if self.schools_total else 0.0
+
+    @property
+    def target_pdf_rate(self) -> float:
+        return (
+            self.schools_with_target_pdf / self.schools_total
+            if self.schools_total
+            else 0.0
+        )
 
     @property
     def current_fy_rate(self) -> float:
@@ -82,11 +102,12 @@ def compute_coverage(
             Document.school_id,
             Document.fiscal_year,
             Document.ingest_status,
+            Document.pdf_type,
         ).all()
     )
-    docs_by_school: dict[int, list[tuple[int | None, str | None]]] = {}
-    for sid, dfy, status in docs:
-        docs_by_school.setdefault(sid, []).append((dfy, status))
+    docs_by_school: dict[int, list[tuple[int | None, str | None, str | None]]] = {}
+    for sid, dfy, status, pdf_type in docs:
+        docs_by_school.setdefault(sid, []).append((dfy, status, pdf_type))
 
     extracted_school_ids = {
         sid
@@ -109,12 +130,20 @@ def compute_coverage(
             1 for sid in sids if any(sites_by_school.get(sid, []))
         )
         with_any_pdf = sum(1 for sid in sids if sid in docs_by_school)
+        with_target_pdf = sum(
+            1
+            for sid in sids
+            if any(
+                pdf_type == "target" and status == "ingested"
+                for _d_fy, status, pdf_type in docs_by_school.get(sid, [])
+            )
+        )
         with_current_doc = sum(
             1
             for sid in sids
             if any(
                 d_fy == fy and status == "ingested"
-                for d_fy, status in docs_by_school.get(sid, [])
+                for d_fy, status, _pdf_type in docs_by_school.get(sid, [])
             )
         )
         with_extracted = sum(1 for sid in sids if sid in extracted_school_ids)
@@ -125,6 +154,7 @@ def compute_coverage(
                 schools_with_url=with_url,
                 schools_with_verified_url=with_verified,
                 schools_with_any_pdf=with_any_pdf,
+                schools_with_target_pdf=with_target_pdf,
                 schools_with_current_fy_doc=with_current_doc,
                 schools_with_current_fy_extracted=with_extracted,
             )
@@ -136,6 +166,7 @@ def compute_coverage(
         schools_with_url=sum(r.schools_with_url for r in rows),
         schools_with_verified_url=sum(r.schools_with_verified_url for r in rows),
         schools_with_any_pdf=sum(r.schools_with_any_pdf for r in rows),
+        schools_with_target_pdf=sum(r.schools_with_target_pdf for r in rows),
         schools_with_current_fy_doc=sum(r.schools_with_current_fy_doc for r in rows),
         schools_with_current_fy_extracted=sum(
             r.schools_with_current_fy_extracted for r in rows

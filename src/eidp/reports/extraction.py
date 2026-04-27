@@ -1,6 +1,11 @@
 """Fiscal-year extraction rate + prev-year delta outliers.
 
-Acceptance criterion #2: 令和8年度数値抽出率 ≥ 95% (of discovered PDFs).
+Acceptance criterion #2: 令和8年度数値抽出率 ≥ 95% **of ingested PDFs**.
+
+This is intentionally narrower than "of discovered PDFs": a PDF that is
+discovered but not yet ingested (parse_failed / pending / transient) is
+not counted in the denominator. PDF discovery vs ingestion gap is tracked
+separately in `compute_gaps(kind="pdf")` (parse_failed_only / mismatch_only).
 """
 
 from dataclasses import dataclass

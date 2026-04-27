@@ -2,7 +2,15 @@
 
 Acceptance criterion #3 & supporting metric for sprint planning:
 - url: schools missing any school_site row
-- pdf: schools with site(s) but no Document
+- pdf: schools whose Document state blocks downstream extraction. Reason
+  taxonomy is fine-grained so Sprint 1/2 can attack each cause separately:
+    no_site_no_pdf       — no school_site, no Document
+    site_known_no_pdf    — site(s) registered, zero Document
+    stale_pdf_only       — has ingested Document but only for prev FYs
+    non_target_only      — has Document but pdf_type != 'target'
+    parse_failed_only    — has Document but all are parse_failed/transient
+    mismatch_only        — has Document but all are school_mismatch
+    has_target_pdf       — (informational; not emitted as gap)
 - extraction: documents ingested but DepartmentYearly missing for the doc
 - competition: read latest competition gap_report CSV (fast path; auth source)
 """
@@ -15,6 +23,7 @@ from typing import Literal
 from sqlalchemy.orm import Session
 
 from eidp.db.models import DepartmentYearly, Document, School, SchoolSite
+from eidp.reports.coverage import current_fiscal_year
 
 GapKind = Literal["url", "pdf", "extraction", "competition"]
 
@@ -71,29 +80,72 @@ def _gaps_url(session: Session, school_type: str | None) -> GapsReport:
     return _to_report("url", entries)
 
 
-def _gaps_pdf(session: Session, school_type: str | None) -> GapsReport:
+def _classify_pdf_state(
+    docs: list[tuple[int | None, str | None, str | None]],
+    fy: int,
+) -> str | None:
+    """Return gap reason for a school's Document set, or None if it has a
+    valid current-FY target PDF (no gap).
+    """
+    if not docs:
+        return None
+    for d_fy, status, pdf_type in docs:
+        if (
+            pdf_type == "target"
+            and status == "ingested"
+            and d_fy == fy
+        ):
+            return None
+    if any(
+        pdf_type == "target" and status == "ingested"
+        for _d_fy, status, pdf_type in docs
+    ):
+        return "stale_pdf_only"
+    if any(status == "ingested" for _d_fy, status, _pt in docs):
+        return "non_target_only"
+    if all(status == "school_mismatch" for _d_fy, status, _pt in docs):
+        return "mismatch_only"
+    if all(
+        status in ("parse_failed", "transient_error", "pending", None)
+        for _d_fy, status, _pt in docs
+    ):
+        return "parse_failed_only"
+    return "non_target_only"
+
+
+def _gaps_pdf(
+    session: Session, school_type: str | None, fiscal_year: int | None
+) -> GapsReport:
+    fy = fiscal_year if fiscal_year is not None else current_fiscal_year()
     q = session.query(School).filter(School.status == "active")
     if school_type:
         q = q.filter(School.school_type == school_type)
     schools = q.all()
 
     sids_with_site = {sid for (sid,) in session.query(SchoolSite.school_id).distinct()}
-    sids_with_doc = {sid for (sid,) in session.query(Document.school_id).distinct()}
+    docs_by_school: dict[int, list[tuple[int | None, str | None, str | None]]] = {}
+    for sid, dfy, status, pdf_type in session.query(
+        Document.school_id,
+        Document.fiscal_year,
+        Document.ingest_status,
+        Document.pdf_type,
+    ).all():
+        docs_by_school.setdefault(sid, []).append((dfy, status, pdf_type))
 
     entries: list[GapEntry] = []
     for s in schools:
-        if s.id in sids_with_doc:
-            continue
-        reason = (
-            "site_known_no_pdf" if s.id in sids_with_site else "no_site_no_pdf"
-        )
-        entries.append(
-            GapEntry(
-                school_id=s.id,
-                school_name=s.school_name,
-                reason=reason,
-                detail=s.prefecture or "",
+        docs = docs_by_school.get(s.id, [])
+        if not docs:
+            reason = "site_known_no_pdf" if s.id in sids_with_site else "no_site_no_pdf"
+            entries.append(
+                GapEntry(s.id, s.school_name, reason, s.prefecture or "")
             )
+            continue
+        classified = _classify_pdf_state(docs, fy)
+        if classified is None:
+            continue
+        entries.append(
+            GapEntry(s.id, s.school_name, classified, s.prefecture or "")
         )
     return _to_report("pdf", entries)
 
@@ -170,7 +222,7 @@ def compute_gaps(
     if kind == "url":
         return _gaps_url(session, school_type)
     if kind == "pdf":
-        return _gaps_pdf(session, school_type)
+        return _gaps_pdf(session, school_type, fiscal_year)
     if kind == "extraction":
         if fiscal_year is None:
             raise ValueError("fiscal_year required for kind=extraction")

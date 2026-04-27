@@ -612,16 +612,21 @@ def report_coverage(
     typer.echo(f"FY: {report.fiscal_year}  school_type: {report.school_type or 'all'}")
     typer.echo(
         f"Schools: {t.schools_total}  url={t.schools_with_url} ({t.url_rate:.1%}) "
-        f"pdf={t.schools_with_any_pdf} ({t.pdf_rate:.1%})  "
+        f"any_pdf={t.schools_with_any_pdf} ({t.any_pdf_rate:.1%}) "
+        f"target_pdf={t.schools_with_target_pdf} ({t.target_pdf_rate:.1%})  "
         f"extracted_FY{report.fiscal_year}={t.schools_with_current_fy_extracted} "
         f"({t.current_fy_rate:.1%})"
     )
     if by_prefecture:
-        typer.echo(f"\n{'Pref':<10} {'Total':>6} {'URL':>6} {'PDF':>6} {'Extr':>6} {'Cov%':>7}")
+        typer.echo(
+            f"\n{'Pref':<10} {'Total':>6} {'URL':>6} {'AnyPDF':>7} {'TgtPDF':>7} "
+            f"{'Extr':>6} {'Cov%':>7}"
+        )
         for r in report.by_prefecture:
             typer.echo(
                 f"{r.prefecture:<10} {r.schools_total:>6} {r.schools_with_url:>6} "
-                f"{r.schools_with_any_pdf:>6} {r.schools_with_current_fy_extracted:>6} "
+                f"{r.schools_with_any_pdf:>7} {r.schools_with_target_pdf:>7} "
+                f"{r.schools_with_current_fy_extracted:>6} "
                 f"{r.current_fy_rate:>6.1%}"
             )
 
@@ -633,10 +638,12 @@ def _coverage_row_to_dict(r: PrefectureCoverage) -> dict[str, object]:
         "schools_with_url": r.schools_with_url,
         "schools_with_verified_url": r.schools_with_verified_url,
         "schools_with_any_pdf": r.schools_with_any_pdf,
+        "schools_with_target_pdf": r.schools_with_target_pdf,
         "schools_with_current_fy_doc": r.schools_with_current_fy_doc,
         "schools_with_current_fy_extracted": r.schools_with_current_fy_extracted,
         "url_rate": round(r.url_rate, 4),
-        "pdf_rate": round(r.pdf_rate, 4),
+        "any_pdf_rate": round(r.any_pdf_rate, 4),
+        "target_pdf_rate": round(r.target_pdf_rate, 4),
         "current_fy_rate": round(r.current_fy_rate, 4),
     }
 
