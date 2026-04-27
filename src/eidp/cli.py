@@ -1,10 +1,13 @@
 """EIDP CLI entrypoint."""
 
+import json
 from pathlib import Path
 
 import typer
 
 app = typer.Typer(name="eidp", help="Education Institution Data Pipeline")
+report_app = typer.Typer(name="report", help="Acceptance-criteria reports")
+app.add_typer(report_app, name="report")
 
 
 @app.command()
@@ -569,6 +572,180 @@ def eval_pdf(
 
     results = run_full_evaluation(parse_pdf, gold_dir, pdf_dir)
     print_eval_report(results)
+
+
+@report_app.command("coverage")
+def report_coverage(
+    school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),
+    fiscal_year: int | None = typer.Option(None, help="Fiscal year (defaults to current FY)"),
+    by_prefecture: bool = typer.Option(False, "--by-prefecture", help="Show per-prefecture breakdown"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of table"),
+) -> None:
+    """Coverage rollup: schools / URLs / PDFs / extracted, by prefecture."""
+    from eidp.db.session import SessionLocal
+    from eidp.reports.coverage import compute_coverage
+
+    session = SessionLocal()
+    try:
+        st = None if school_type == "all" else school_type
+        report = compute_coverage(session, school_type=st, fiscal_year=fiscal_year)
+    finally:
+        session.close()
+
+    if output_json:
+        payload = {
+            "fiscal_year": report.fiscal_year,
+            "school_type": report.school_type,
+            "totals": _coverage_row_to_dict(report.totals),
+            "by_prefecture": [_coverage_row_to_dict(r) for r in report.by_prefecture],
+        }
+        typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    t = report.totals
+    typer.echo(f"FY: {report.fiscal_year}  school_type: {report.school_type or 'all'}")
+    typer.echo(
+        f"Schools: {t.schools_total}  url={t.schools_with_url} ({t.url_rate:.1%}) "
+        f"pdf={t.schools_with_any_pdf} ({t.pdf_rate:.1%})  "
+        f"extracted_FY{report.fiscal_year}={t.schools_with_current_fy_extracted} "
+        f"({t.current_fy_rate:.1%})"
+    )
+    if by_prefecture:
+        typer.echo(f"\n{'Pref':<10} {'Total':>6} {'URL':>6} {'PDF':>6} {'Extr':>6} {'Cov%':>7}")
+        for r in report.by_prefecture:
+            typer.echo(
+                f"{r.prefecture:<10} {r.schools_total:>6} {r.schools_with_url:>6} "
+                f"{r.schools_with_any_pdf:>6} {r.schools_with_current_fy_extracted:>6} "
+                f"{r.current_fy_rate:>6.1%}"
+            )
+
+
+def _coverage_row_to_dict(r) -> dict:
+    return {
+        "prefecture": r.prefecture,
+        "schools_total": r.schools_total,
+        "schools_with_url": r.schools_with_url,
+        "schools_with_verified_url": r.schools_with_verified_url,
+        "schools_with_any_pdf": r.schools_with_any_pdf,
+        "schools_with_current_fy_doc": r.schools_with_current_fy_doc,
+        "schools_with_current_fy_extracted": r.schools_with_current_fy_extracted,
+        "url_rate": round(r.url_rate, 4),
+        "pdf_rate": round(r.pdf_rate, 4),
+        "current_fy_rate": round(r.current_fy_rate, 4),
+    }
+
+
+@report_app.command("extraction")
+def report_extraction(
+    fiscal_year: int = typer.Option(..., "--fy", help="Fiscal year, e.g. 2026"),
+    delta_threshold: float = typer.Option(50.0, help="Delta % threshold for outlier flag"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of table"),
+) -> None:
+    """Extraction rate for FY + prev-year delta outliers."""
+    from eidp.db.session import SessionLocal
+    from eidp.reports.extraction import compute_extraction
+
+    session = SessionLocal()
+    try:
+        report = compute_extraction(session, fiscal_year, delta_threshold)
+    finally:
+        session.close()
+
+    if output_json:
+        payload = {
+            "fiscal_year": report.fiscal_year,
+            "documents_ingested": report.documents_ingested,
+            "documents_with_yearly_rows": report.documents_with_yearly_rows,
+            "extraction_rate": round(report.extraction_rate, 4),
+            "yearly_rows_total": report.yearly_rows_total,
+            "yearly_rows_with_capacity": report.yearly_rows_with_capacity,
+            "yearly_rows_with_enrollment": report.yearly_rows_with_enrollment,
+            "capacity_fill_rate": round(report.capacity_fill_rate, 4),
+            "delta_threshold_pct": report.delta_threshold_pct,
+            "delta_outliers": [
+                {
+                    "school_id": o.school_id,
+                    "department_id": o.department_id,
+                    "department_name": o.department_name,
+                    "prev_value": o.prev_value,
+                    "curr_value": o.curr_value,
+                    "delta_pct": o.delta_pct,
+                }
+                for o in report.delta_outliers
+            ],
+        }
+        typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    typer.echo(f"FY{report.fiscal_year} extraction:")
+    typer.echo(
+        f"  documents ingested: {report.documents_ingested}  "
+        f"with yearly rows: {report.documents_with_yearly_rows}  "
+        f"rate: {report.extraction_rate:.1%}"
+    )
+    typer.echo(
+        f"  yearly rows: {report.yearly_rows_total}  "
+        f"capacity: {report.yearly_rows_with_capacity} ({report.capacity_fill_rate:.1%})  "
+        f"enrollment: {report.yearly_rows_with_enrollment}"
+    )
+    typer.echo(f"  outliers vs FY{report.fiscal_year - 1} (>= {report.delta_threshold_pct}%): {len(report.delta_outliers)}")
+    for o in report.delta_outliers[:10]:
+        typer.echo(
+            f"    school#{o.school_id} dept#{o.department_id} {o.department_name}: "
+            f"{o.prev_value} -> {o.curr_value} ({o.delta_pct:+.1f}%)"
+        )
+
+
+@report_app.command("gaps")
+def report_gaps(
+    kind: str = typer.Option(..., "--kind", help="url|pdf|extraction|competition"),
+    school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),
+    fiscal_year: int | None = typer.Option(None, "--fy", help="Required for kind=extraction"),
+    competition_csv: Path | None = typer.Option(None, help="Override path for kind=competition"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of table"),
+) -> None:
+    """Unified gap counters by kind."""
+    from eidp.db.session import SessionLocal
+    from eidp.reports.gaps import compute_gaps
+
+    session = SessionLocal()
+    try:
+        st = None if school_type == "all" else school_type
+        report = compute_gaps(
+            session,
+            kind,  # type: ignore[arg-type]
+            school_type=st,
+            fiscal_year=fiscal_year,
+            competition_csv=competition_csv,
+        )
+    finally:
+        session.close()
+
+    if output_json:
+        payload = {
+            "kind": report.kind,
+            "total": report.total,
+            "by_reason": report.by_reason,
+            "sample": [
+                {
+                    "school_id": e.school_id,
+                    "school_name": e.school_name,
+                    "reason": e.reason,
+                    "detail": e.detail,
+                }
+                for e in report.sample
+            ],
+        }
+        typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    typer.echo(f"Gap kind: {report.kind}  total: {report.total}")
+    for reason, count in sorted(report.by_reason.items(), key=lambda x: -x[1]):
+        typer.echo(f"  {reason}: {count}")
+    if report.sample:
+        typer.echo(f"\nSample (first {len(report.sample)}):")
+        for e in report.sample[:20]:
+            typer.echo(f"  #{e.school_id or '-'} {e.school_name or '-'}  [{e.reason}]  {e.detail}")
 
 
 if __name__ == "__main__":
