@@ -87,7 +87,7 @@ Ingestion Results:
 ## Sprint 1 hokkaido 完結数字
 
 - target_pdf_any_fy: 5.0% → **5.4%** (+11 schools)
-- 22 verified URL → 15 ingested (68%) + 3 mismatch (14%) + 1 parse_fail (5%) + 1 in_progress (5%) + 2 skipped (8% A2 既出 + 既存 doc 重複)
+- 20 hokkaido verified rows → 18 new docs; 13 ingested (65%) + 3 mismatch (15%) + 2 parse_failed (10%) + 2 no new docs (sid=877 non-target skip, sid=900 existing doc duplicate)
 - baseline.md 予測 (Sprint 1 で 5.0% → 18%) のうち **hokkaido 単独で 0.4 ポイント貢献**
 
 47 都道府県への外挿 (hokkaido が 1/47):
@@ -113,16 +113,16 @@ Sprint 1 は "discovery と ingest pipeline が動く" を証明済み。R8 の�
 
 ## 次選択肢
 
-### B1: 残 7 prefecture (tokyo + miyagi など) verified apply
+### B1: 残 2 verified rows (tokyo + miyagi) apply
 
 A2/A3 で hokkaido は完結。残 verified URL は **tokyo=1, miyagi=1** のみ。
-- A4 dry-run 数字: tokyo `add=0 upgrade=1`, miyagi `add=0 upgrade=1` (lightweight)
+- B1 dry-run 数字: tokyo `add=0 upgrade=1`, miyagi `add=0 upgrade=1` (lightweight)
 - value: prefecture aggregator 全 verified を一気に消化
 
 ```bash
 ssh venus 'cd ~/workspace/EIDP && uv run python scripts/apply_writer_plan.py \
   --all --apply --verified-only'
-# expected: 2 upgrade only, skipped_dup=20 (hokkaido done), 0 errors
+# expected: 2 upgrade only, skipped_dup=20 (hokkaido done), skipped_not_verified=40, 0 errors
 ```
 
 ### B2: aichi + niigata 新 parser
