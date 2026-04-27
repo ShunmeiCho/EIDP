@@ -162,12 +162,29 @@ def build_plan(pref: str) -> WriterPlan:
     return plan
 
 
+def _is_spike_output(p: Path) -> bool:
+    """Spike outputs contain a `pdf_path` key; skip apply-reports / summaries."""
+    if p.stem == "summary":
+        return False
+    if p.stem.endswith("-writer-plan"):
+        return False
+    if p.stem.startswith("apply-report"):
+        return False
+    if p.stem.startswith("url-rescue") or p.stem.startswith("url-verification"):
+        return False
+    try:
+        data = json.loads(p.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    return isinstance(data, dict) and "pdf_path" in data
+
+
 def main() -> None:
     SPIKE_OUT_DIR.mkdir(parents=True, exist_ok=True)
-    # Discover all prefs with spike output (exclude summary.json and any -writer-plan.json)
+    # Discover all prefs with spike output (exclude summary / writer plans /
+    # apply-reports / URL verification artifacts).
     prefs = sorted(
-        p.stem for p in SPIKE_OUT_DIR.glob("*.json")
-        if p.stem != "summary" and not p.stem.endswith("-writer-plan")
+        p.stem for p in SPIKE_OUT_DIR.glob("*.json") if _is_spike_output(p)
     )
 
     master_summary: dict = {"prefectures": {}, "totals": {"add": 0, "upgrade": 0, "noop": 0, "review": 0}}
