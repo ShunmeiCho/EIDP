@@ -103,32 +103,38 @@ def main() -> None:
     parser.add_argument(
         "--input",
         type=Path,
-        default=REPO_ROOT / "output/pref-aggregator/url-verification-summary.json",
-        help="Path to url-verification-*.json (NOT -summary.json). "
-             "Defaults to summary if no detail file path is supplied.",
+        default=None,
+        help="Path to a detailed url-verification-*.json file. "
+             "Defaults to the latest detailed verification file.",
     )
     args = parser.parse_args()
 
     in_path = args.input
-    if not in_path.exists():
-        # Fallback: pick the latest detail file
+    if in_path is None:
         candidates = sorted(
             (REPO_ROOT / "output/pref-aggregator").glob("url-verification-2*.json")
         )
         if not candidates:
-            print(f"[sim] no verification file found at {in_path} or via glob", file=sys.stderr)
+            print("[sim] no detailed url-verification-2*.json file found", file=sys.stderr)
             sys.exit(1)
         in_path = candidates[-1]
         print(f"[sim] using latest detail file: {in_path}")
+    elif not in_path.exists():
+        print(f"[sim] verification file not found: {in_path}", file=sys.stderr)
+        sys.exit(1)
 
     raw = json.loads(in_path.read_text())
     records = raw if isinstance(raw, list) else raw.get("records", raw.get("results", []))
     if not records:
-        print(f"[sim] no records in {in_path}", file=sys.stderr)
+        print(
+            f"[sim] no per-record verification results in {in_path}; "
+            "pass the detailed url-verification-YYYYMMDD_HHMMSS.json, not the summary file",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    oks = [r for r in records if r.get("classification") == "html_ok"]
-    print(f"[sim] verified ownership_ok URLs: {len(oks)} (from {len(records)} total)")
+    oks = [r for r in records if r.get("ownership_ok")]
+    print(f"[sim] verified ownership_ok rows: {len(oks)} (from {len(records)} total)")
     print("[sim] using REAL pipeline discover_pdfs_for_site (with sub-page follow)")
 
     results = simulate(oks)
