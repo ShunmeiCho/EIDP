@@ -6,7 +6,7 @@ Acceptance criterion #1: 専門学校 PDF coverage by prefecture.
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from sqlalchemy import distinct, func
+from sqlalchemy import distinct
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, Document, School, SchoolSite

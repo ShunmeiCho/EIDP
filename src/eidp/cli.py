@@ -1,9 +1,15 @@
 """EIDP CLI entrypoint."""
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
+
+if TYPE_CHECKING:
+    from eidp.reports.coverage import PrefectureCoverage
 
 app = typer.Typer(name="eidp", help="Education Institution Data Pipeline")
 report_app = typer.Typer(name="report", help="Acceptance-criteria reports")
@@ -620,7 +626,7 @@ def report_coverage(
             )
 
 
-def _coverage_row_to_dict(r) -> dict:
+def _coverage_row_to_dict(r: PrefectureCoverage) -> dict[str, object]:
     return {
         "prefecture": r.prefecture,
         "schools_total": r.schools_total,
@@ -688,7 +694,10 @@ def report_extraction(
         f"capacity: {report.yearly_rows_with_capacity} ({report.capacity_fill_rate:.1%})  "
         f"enrollment: {report.yearly_rows_with_enrollment}"
     )
-    typer.echo(f"  outliers vs FY{report.fiscal_year - 1} (>= {report.delta_threshold_pct}%): {len(report.delta_outliers)}")
+    typer.echo(
+        f"  outliers vs FY{report.fiscal_year - 1} "
+        f"(>= {report.delta_threshold_pct}%): {len(report.delta_outliers)}"
+    )
     for o in report.delta_outliers[:10]:
         typer.echo(
             f"    school#{o.school_id} dept#{o.department_id} {o.department_name}: "

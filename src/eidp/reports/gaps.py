@@ -18,7 +18,7 @@ from eidp.db.models import DepartmentYearly, Document, School, SchoolSite
 
 GapKind = Literal["url", "pdf", "extraction", "competition"]
 
-_DEFAULT_COMPETITION_GAP = Path("output/competition-gap-report.csv")
+_DEFAULT_COMPETITION_GAP = Path("output/競合校gap-report.csv")
 
 
 @dataclass(frozen=True)
@@ -128,11 +128,16 @@ def _gaps_extraction(session: Session, fiscal_year: int) -> GapsReport:
 
 def _gaps_competition(csv_path: Path) -> GapsReport:
     if not csv_path.exists():
-        return GapsReport(
-            kind="competition",
-            total=0,
-            by_reason={"_csv_missing": 0},
-            sample=(),
+        return _to_report(
+            "competition",
+            [
+                GapEntry(
+                    school_id=None,
+                    school_name=None,
+                    reason="_csv_missing",
+                    detail=str(csv_path),
+                )
+            ],
         )
     entries: list[GapEntry] = []
     with csv_path.open(encoding="utf-8") as fh:

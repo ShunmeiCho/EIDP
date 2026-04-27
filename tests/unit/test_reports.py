@@ -276,6 +276,34 @@ def test_gaps_competition_reads_csv(tmp_path: Path) -> None:
     assert rep.sample[1].school_id is None
 
 
+def test_gaps_competition_default_uses_exporter_gap_name(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    gap_dir = tmp_path / "output"
+    gap_dir.mkdir()
+    csv_path = gap_dir / "競合校gap-report.csv"
+    csv_path.write_text(
+        "gap_reason,gap_detail,sheet,row,block_id,school_name,dept_name,duration,school_id,matched_via\n"
+        "school_no_document,,A,1,0,東京X,X科,2年制,1,exact\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    s = _session()
+    rep = compute_gaps(s, "competition")
+    assert rep.total == 1
+    assert rep.by_reason == {"school_no_document": 1}
+
+
+def test_gaps_competition_missing_csv_is_visible(tmp_path: Path) -> None:
+    s = _session()
+    missing = tmp_path / "missing.csv"
+
+    rep = compute_gaps(s, "competition", competition_csv=missing)
+
+    assert rep.total == 1
+    assert rep.by_reason == {"_csv_missing": 1}
+    assert rep.sample[0].detail == str(missing)
+
+
 def test_gaps_unknown_kind_raises() -> None:
     s = _session()
     with pytest.raises(ValueError):
