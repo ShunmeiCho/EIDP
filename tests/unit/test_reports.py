@@ -139,7 +139,8 @@ def test_coverage_aggregates_url_pdf_and_extraction() -> None:
     assert rep.totals.schools_with_url == 2
     assert rep.totals.schools_with_verified_url == 1
     assert rep.totals.schools_with_any_pdf == 1
-    assert rep.totals.schools_with_target_pdf == 1
+    assert rep.totals.schools_with_target_pdf_any_fy == 1
+    assert rep.totals.schools_with_target_pdf_current_fy == 1
     assert rep.totals.schools_with_current_fy_doc == 1
     assert rep.totals.schools_with_current_fy_extracted == 1
     pref_map = {p.prefecture: p for p in rep.by_prefecture}
@@ -159,7 +160,23 @@ def test_coverage_target_pdf_excludes_non_target_and_failed() -> None:
 
     rep = compute_coverage(s, school_type="専門学校", fiscal_year=2026)
     assert rep.totals.schools_with_any_pdf == 3
-    assert rep.totals.schools_with_target_pdf == 1
+    assert rep.totals.schools_with_target_pdf_any_fy == 1
+    assert rep.totals.schools_with_target_pdf_current_fy == 1
+
+
+def test_coverage_target_pdf_distinguishes_any_fy_vs_current_fy() -> None:
+    """Reviewer fix: target_pdf_rate must split any-FY (discovery health)
+    vs current-FY (R8 coverage); they were conflated before."""
+    s = _session()
+    _school(s, 1, "東京")  # only 2025 target → counts in any_fy, not current_fy
+    _school(s, 2, "東京")  # has 2026 target → counts in both
+    _doc(s, 10, 1, 2025, "ingested", pdf_type="target")
+    _doc(s, 11, 2, 2026, "ingested", pdf_type="target")
+    s.flush()
+
+    rep = compute_coverage(s, school_type="専門学校", fiscal_year=2026)
+    assert rep.totals.schools_with_target_pdf_any_fy == 2
+    assert rep.totals.schools_with_target_pdf_current_fy == 1
 
 
 def test_coverage_extraction_requires_capacity_not_null() -> None:
@@ -285,6 +302,30 @@ def test_gaps_pdf_classifies_stale_non_target_mismatch_failed() -> None:
         "parse_failed_only": 1,
     }
     assert rep.total == 4
+
+
+def test_gaps_pdf_classifies_extended_status_buckets() -> None:
+    """Reviewer fix: ocr_pending, support_only, no_file, permanent_error,
+    transient_error, in_progress used to silently fall to non_target_only.
+    Each must now report its own reason."""
+    s = _session()
+    cases = [
+        ("ocr_pending", "ocr_pending_only"),
+        ("support_only", "support_only"),
+        ("no_file", "no_file_only"),
+        ("permanent_error", "permanent_error_only"),
+        ("transient_error", "transient_error_only"),
+        ("in_progress", "in_progress_only"),
+    ]
+    for i, (status, _) in enumerate(cases, start=1):
+        _school(s, i, "東京")
+        _doc(s, 100 + i, i, 2026, status=status, pdf_type="target")
+    s.flush()
+
+    rep = compute_gaps(s, "pdf", school_type="専門学校", fiscal_year=2026)
+    expected = {expected_reason: 1 for _, expected_reason in cases}
+    assert rep.by_reason == expected
+    assert rep.total == len(cases)
 
 
 def test_gaps_pdf_default_fy_does_not_crash() -> None:

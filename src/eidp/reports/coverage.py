@@ -5,13 +5,19 @@ Acceptance criterion #1: 専門学校 PDF coverage by prefecture.
 Coverage uses three distinct denominators so we never confuse "any PDF
 exists" with "the target document was successfully ingested":
 
-- any_pdf       — any Document row exists for the school (including stale,
-                  non-target, parse_failed, school_mismatch)
-- target_pdf    — at least one Document with pdf_type='target' AND
-                  ingest_status='ingested' (any FY)
-- current_fy_doc — Document with fiscal_year=fy AND ingest_status='ingested'
+- any_pdf              — any Document row exists for the school (including
+                          stale, non-target, parse_failed, school_mismatch)
+- target_pdf_any_fy    — at least one Document with pdf_type='target' AND
+                          ingest_status='ingested', any fiscal year. This
+                          is a "discovery health" indicator, NOT R8 coverage.
+- target_pdf_current_fy — same but fiscal_year=fy. **This is the R8/current-FY
+                           coverage metric.** Use this when reporting business
+                           progress against the 70% goal.
+- current_fy_doc       — Document with fiscal_year=fy AND ingest_status='ingested'
+                          (regardless of pdf_type — useful for diagnosing
+                          target-classification gaps).
 - current_fy_extracted — DepartmentYearly row exists with capacity not null
-                         for fy
+                          for fy.
 """
 
 from dataclasses import dataclass, field
@@ -36,7 +42,8 @@ class PrefectureCoverage:
     schools_with_url: int
     schools_with_verified_url: int
     schools_with_any_pdf: int
-    schools_with_target_pdf: int
+    schools_with_target_pdf_any_fy: int
+    schools_with_target_pdf_current_fy: int
     schools_with_current_fy_doc: int
     schools_with_current_fy_extracted: int
 
@@ -49,9 +56,18 @@ class PrefectureCoverage:
         return self.schools_with_any_pdf / self.schools_total if self.schools_total else 0.0
 
     @property
-    def target_pdf_rate(self) -> float:
+    def target_pdf_any_fy_rate(self) -> float:
         return (
-            self.schools_with_target_pdf / self.schools_total
+            self.schools_with_target_pdf_any_fy / self.schools_total
+            if self.schools_total
+            else 0.0
+        )
+
+    @property
+    def target_pdf_current_fy_rate(self) -> float:
+        """The headline R8/current-FY coverage metric."""
+        return (
+            self.schools_with_target_pdf_current_fy / self.schools_total
             if self.schools_total
             else 0.0
         )
@@ -130,12 +146,20 @@ def compute_coverage(
             1 for sid in sids if any(sites_by_school.get(sid, []))
         )
         with_any_pdf = sum(1 for sid in sids if sid in docs_by_school)
-        with_target_pdf = sum(
+        with_target_any_fy = sum(
             1
             for sid in sids
             if any(
                 pdf_type == "target" and status == "ingested"
                 for _d_fy, status, pdf_type in docs_by_school.get(sid, [])
+            )
+        )
+        with_target_current_fy = sum(
+            1
+            for sid in sids
+            if any(
+                pdf_type == "target" and status == "ingested" and d_fy == fy
+                for d_fy, status, pdf_type in docs_by_school.get(sid, [])
             )
         )
         with_current_doc = sum(
@@ -154,7 +178,8 @@ def compute_coverage(
                 schools_with_url=with_url,
                 schools_with_verified_url=with_verified,
                 schools_with_any_pdf=with_any_pdf,
-                schools_with_target_pdf=with_target_pdf,
+                schools_with_target_pdf_any_fy=with_target_any_fy,
+                schools_with_target_pdf_current_fy=with_target_current_fy,
                 schools_with_current_fy_doc=with_current_doc,
                 schools_with_current_fy_extracted=with_extracted,
             )
@@ -166,7 +191,12 @@ def compute_coverage(
         schools_with_url=sum(r.schools_with_url for r in rows),
         schools_with_verified_url=sum(r.schools_with_verified_url for r in rows),
         schools_with_any_pdf=sum(r.schools_with_any_pdf for r in rows),
-        schools_with_target_pdf=sum(r.schools_with_target_pdf for r in rows),
+        schools_with_target_pdf_any_fy=sum(
+            r.schools_with_target_pdf_any_fy for r in rows
+        ),
+        schools_with_target_pdf_current_fy=sum(
+            r.schools_with_target_pdf_current_fy for r in rows
+        ),
         schools_with_current_fy_doc=sum(r.schools_with_current_fy_doc for r in rows),
         schools_with_current_fy_extracted=sum(
             r.schools_with_current_fy_extracted for r in rows

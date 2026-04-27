@@ -3,14 +3,20 @@
 Acceptance criterion #3 & supporting metric for sprint planning:
 - url: schools missing any school_site row
 - pdf: schools whose Document state blocks downstream extraction. Reason
-  taxonomy is fine-grained so Sprint 1/2 can attack each cause separately:
+  taxonomy is fine-grained so each sprint can attack a distinct cause:
     no_site_no_pdf       — no school_site, no Document
     site_known_no_pdf    — site(s) registered, zero Document
-    stale_pdf_only       — has ingested Document but only for prev FYs
-    non_target_only      — has Document but pdf_type != 'target'
-    parse_failed_only    — has Document but all are parse_failed/transient
-    mismatch_only        — has Document but all are school_mismatch
-    has_target_pdf       — (informational; not emitted as gap)
+    stale_pdf_only       — has target+ingested Document but only for prev FYs
+    non_target_only      — Documents exist, all classified non_target
+    mismatch_only        — Documents exist, all flagged school_mismatch
+    parse_failed_only    — Documents exist, all in parse_failed
+    transient_error_only — only transient errors (retry queue)
+    permanent_error_only — only permanent errors (extractor cannot handle)
+    no_file_only         — discovery succeeded but file never downloaded
+    ocr_pending_only     — OCR pipeline pending; not yet extracted
+    support_only         — only support_recipient extracted, no dept_yearly
+    in_progress_only     — currently being processed (transient state)
+    other_only           — unclassified status (extend taxonomy if seen)
 - extraction: documents ingested but DepartmentYearly missing for the doc
 - competition: read latest competition gap_report CSV (fast path; auth source)
 """
@@ -80,37 +86,74 @@ def _gaps_url(session: Session, school_type: str | None) -> GapsReport:
     return _to_report("url", entries)
 
 
+_STATUS_REASON: dict[str, str] = {
+    "school_mismatch": "mismatch_only",
+    "parse_failed": "parse_failed_only",
+    "transient_error": "transient_error_only",
+    "permanent_error": "permanent_error_only",
+    "no_file": "no_file_only",
+    "ocr_pending": "ocr_pending_only",
+    "support_only": "support_only",
+    "in_progress": "in_progress_only",
+    "non_target": "non_target_only",
+    "pending": "in_progress_only",
+}
+
+
 def _classify_pdf_state(
     docs: list[tuple[int | None, str | None, str | None]],
     fy: int,
 ) -> str | None:
     """Return gap reason for a school's Document set, or None if it has a
     valid current-FY target PDF (no gap).
+
+    Priority: ingested-target-current-fy > ingested-target-stale >
+    non_target classification > status-based bucketing.
     """
     if not docs:
         return None
-    for d_fy, status, pdf_type in docs:
-        if (
-            pdf_type == "target"
-            and status == "ingested"
-            and d_fy == fy
-        ):
-            return None
-    if any(
+
+    has_target_current = any(
+        pdf_type == "target" and status == "ingested" and d_fy == fy
+        for d_fy, status, pdf_type in docs
+    )
+    if has_target_current:
+        return None
+
+    has_target_any = any(
         pdf_type == "target" and status == "ingested"
         for _d_fy, status, pdf_type in docs
-    ):
+    )
+    if has_target_any:
         return "stale_pdf_only"
-    if any(status == "ingested" for _d_fy, status, _pt in docs):
+
+    has_non_target_ingested = any(
+        status == "ingested" and pdf_type != "target"
+        for _d_fy, status, pdf_type in docs
+    )
+    if has_non_target_ingested:
         return "non_target_only"
-    if all(status == "school_mismatch" for _d_fy, status, _pt in docs):
-        return "mismatch_only"
-    if all(
-        status in ("parse_failed", "transient_error", "pending", None)
-        for _d_fy, status, _pt in docs
+
+    statuses = {status for _d_fy, status, _pt in docs}
+    statuses.discard(None)
+    statuses.discard("ingested")  # already handled above
+
+    for preferred in (
+        "ocr_pending",
+        "in_progress",
+        "school_mismatch",
+        "transient_error",
+        "permanent_error",
+        "parse_failed",
+        "no_file",
+        "support_only",
+        "non_target",
+        "pending",
     ):
-        return "parse_failed_only"
-    return "non_target_only"
+        if preferred in statuses:
+            return _STATUS_REASON[preferred]
+
+    return "other_only"
 
 
 def _gaps_pdf(
