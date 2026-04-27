@@ -204,6 +204,40 @@ def parse_osaka_xlsx(xlsx_path: Path) -> list[PrefSchool]:
     return out
 
 
+def parse_7col_hokkaido(pdf_path: Path, pref: str = "hokkaido") -> list[PrefSchool]:
+    """Hokkaido: 7-col table with URL in col[5].
+
+    Header row:
+      ['確認大学等の名称', '確認大学等の所在地', '設置者の名称',
+       '設置者の主たる事務所の所在地', '機関要件\n確認日',
+       'ホームページURL', '備考']
+    """
+    out: list[PrefSchool] = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables():
+                for row in table:
+                    if not row or len(row) < 7:
+                        continue
+                    if is_header(row):
+                        continue
+                    school_name = (row[0] or "").strip()
+                    if not school_name or "確認大学" in school_name:
+                        continue
+                    url = extract_url(row[5])
+                    out.append(PrefSchool(
+                        pref=pref,
+                        school_name_raw=school_name,
+                        school_name_norm=norm(school_name),
+                        address=(row[1] or "").strip(),
+                        operator_kind="",
+                        operator_name=(row[2] or "").strip(),
+                        operator_address=(row[3] or "").strip(),
+                        disclosure_url=url,
+                    ))
+    return out
+
+
 def parse_5col(pdf_path: Path, pref: str) -> list[PrefSchool]:
     """Kanagawa / Saitama: 5-column tables. URL from col[4] 備考 OR hyperlink annotation on school name."""
     # Pre-extract hyperlink annotations (Saitama-style hidden URLs)
@@ -454,6 +488,7 @@ PARSERS = {
     "shizuoka": (lambda p: parse_5col(p, "shizuoka"), Path("/tmp/eidp_pref_pdfs/shizuoka.pdf")),
     "okinawa": (lambda p: parse_5col(p, "okinawa"), Path("/tmp/eidp_pref_pdfs/okinawa.pdf")),
     "miyagi": (lambda p: parse_5col(p, "miyagi"), Path("/tmp/eidp_pref_pdfs/miyagi.pdf")),
+    "hokkaido": (parse_7col_hokkaido, Path("/tmp/eidp_pref_pdfs/hokkaido.pdf")),
 }
 
 
