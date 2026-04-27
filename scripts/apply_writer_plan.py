@@ -36,7 +36,7 @@ import argparse
 import csv
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -47,6 +47,7 @@ from eidp.db.session import SessionLocal  # noqa: E402
 
 PLAN_DIR = REPO_ROOT / "output" / "pref-aggregator"
 REVIEW_DIR = REPO_ROOT / "output" / "pref-aggregator" / "review-queue"
+VerifiedEntry = tuple[str, int, str]
 
 
 def load_plan(pref: str) -> dict:
@@ -70,7 +71,7 @@ def snapshot_school_site(session, pref: str, op_timestamp: str) -> int:
         "hokkaido": "北海道", "niigata": "新潟県", "aichi": "愛知県",
     }
     pref_jp = pref_jp_map.get(pref, pref)
-    result = session.execute(text(f"""
+    session.execute(text(f"""
         CREATE TABLE IF NOT EXISTS "{backup_table}" AS
         SELECT ss.* FROM school_site ss
         JOIN school s ON s.id = ss.school_id
@@ -81,15 +82,35 @@ def snapshot_school_site(session, pref: str, op_timestamp: str) -> int:
     return int(count)
 
 
-def load_verified_urls() -> set[str] | None:
-    """Return set of URL strings that HTTP verification marked ownership_ok=True.
-    Returns None if no verification file exists (disables --verified-only gating)."""
+def _verified_entry(record: dict) -> VerifiedEntry | None:
+    if not record.get("ownership_ok"):
+        return None
+    try:
+        pref = str(record["pref"])
+        school_id = int(record["school_id"])
+        url = str(record["url"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not pref or not url:
+        return None
+    return (pref, school_id, url)
+
+
+def load_verified_entries() -> set[VerifiedEntry] | None:
+    """Return (pref, school_id, url) rows marked ownership_ok=True.
+
+    Returns None if no verification file exists (disables --verified-only gating).
+    """
     candidates = sorted(PLAN_DIR.glob("url-verification-202*.json"))
     if not candidates:
         return None
     latest = candidates[-1]
     data = json.loads(latest.read_text())
-    return {r["url"] for r in data.get("results", []) if r.get("ownership_ok")}
+    return {
+        entry
+        for r in data.get("results", [])
+        if (entry := _verified_entry(r)) is not None
+    }
 
 
 def apply_plan(pref: str, *, apply: bool, limit: int | None = None,
@@ -100,15 +121,15 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None,
              "skipped_not_verified": 0, "errors": 0}
 
     # Load HTTP verification set if --verified-only
-    verified_urls: set[str] | None = None
+    verified_entries: set[VerifiedEntry] | None = None
     if verified_only:
-        verified_urls = load_verified_urls()
-        if verified_urls is None:
+        verified_entries = load_verified_entries()
+        if verified_entries is None:
             raise RuntimeError(
                 "--verified-only requested but no url-verification-*.json found. "
                 "Run scripts/http_verify_plan_urls.py first."
             )
-        print(f"[{pref}] --verified-only: {len(verified_urls)} ownership-ok URLs loaded from verification file")
+        print(f"[{pref}] --verified-only: {len(verified_entries)} ownership-ok rows loaded from verification file")
 
     session = SessionLocal()
     try:
@@ -123,7 +144,7 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None,
               f"dry_run={not apply} limit={limit} verified_only={verified_only}")
 
         if apply:
-            ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             snapshot_count = snapshot_school_site(session, pref, ts)
             print(f"[{pref}] snapshot: {snapshot_count} rows backed up for rollback")
 
@@ -140,8 +161,13 @@ def apply_plan(pref: str, *, apply: bool, limit: int | None = None,
 
             # --verified-only gating: only apply URLs that passed HTTP ownership check
             url_is_verified = False
-            if verified_urls is not None:
-                if url not in verified_urls:
+            if verified_entries is not None:
+                try:
+                    verified_key = (pref, int(school_id), url)
+                except (TypeError, ValueError):
+                    stats["skipped_not_verified"] += 1
+                    continue
+                if verified_key not in verified_entries:
                     stats["skipped_not_verified"] += 1
                     continue
                 url_is_verified = True
@@ -259,11 +285,14 @@ def main() -> None:
             totals[k] = totals[k] + st.get(k, 0)
     master["totals"] = totals
 
-    report_path = PLAN_DIR / (
-        "apply-report-dryrun.json" if not args.apply else f"apply-report-{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    report_name = (
+        "apply-report-dryrun.json"
+        if not args.apply
+        else f"apply-report-{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     )
+    report_path = PLAN_DIR / report_name
     report_path.write_text(json.dumps(master, ensure_ascii=False, indent=2))
-    print(f"\n=== TOTALS ===")
+    print("\n=== TOTALS ===")
     print(json.dumps(totals, indent=2))
     print(f"Report: {report_path}")
 
