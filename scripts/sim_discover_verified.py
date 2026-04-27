@@ -63,7 +63,11 @@ def has_r8_signal(top: PdfCandidate | None) -> bool:
 
 def simulate(records: list[dict]) -> list[dict]:
     out: list[dict] = []
-    with httpx.Client(timeout=20, follow_redirects=True, headers=HEADERS) as client:
+    # follow_redirects MUST be False here; discover_pdfs_for_site uses
+    # _safe_get which does its own manual SSRF-checked redirect following.
+    # If httpx auto-follows, _safe_get's visited-set logic mistakenly
+    # raises "Redirect loop detected" and silently swallows the candidate.
+    with httpx.Client(timeout=20, follow_redirects=False, headers=HEADERS) as client:
         for r in records:
             url = r.get("final_url") or r.get("url")
             sid = r.get("school_id") or 0
