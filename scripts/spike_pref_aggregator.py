@@ -28,7 +28,6 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from eidp.db.models import School, SchoolSite  # noqa: E402
 from eidp.db.session import SessionLocal  # noqa: E402
 
-
 # --- Domain types ---------------------------------------------------------
 
 @dataclass
@@ -97,6 +96,7 @@ def norm(s: str | None) -> str:
     if not s:
         return ""
     s = unicodedata.normalize("NFKC", s)
+    s = s.replace("\u200b", "")
     s = re.sub(r"\s+", "", s)
     return s.strip()
 
@@ -109,6 +109,12 @@ def extract_url(cell: str | None) -> str | None:
         return None
     m = URL_RE.search(cell)
     return m.group(0) if m else None
+
+
+def clean_cell(cell: str | None) -> str:
+    if not cell:
+        return ""
+    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", cell).replace("\u200b", "")).strip()
 
 
 def extract_pdf_annotation_links(pdf_path: Path) -> dict[str, str]:
@@ -238,6 +244,96 @@ def parse_7col_hokkaido(pdf_path: Path, pref: str = "hokkaido") -> list[PrefScho
     return out
 
 
+def parse_13col_niigata(pdf_path: Path) -> list[PrefSchool]:
+    """Niigata: visually 5-column list extracted as 13 narrow PDF columns.
+
+    pdfplumber returns merged visual columns at fixed offsets:
+      col[0]  school name
+      col[3]  school address
+      col[6]  operator name
+      col[9]  operator address
+      col[12] remarks / URL (usually blank in current artifact)
+    """
+    out: list[PrefSchool] = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables():
+                for row in table:
+                    if not row or len(row) < 13:
+                        continue
+                    joined = clean_cell("".join(c or "" for c in row))
+                    if not joined or "確認大学等" in joined or joined in {"の名称", "備考"}:
+                        continue
+
+                    school_name = clean_cell(row[0])
+                    if not school_name:
+                        continue
+
+                    out.append(PrefSchool(
+                        pref="niigata",
+                        school_name_raw=school_name,
+                        school_name_norm=norm(school_name),
+                        address=clean_cell(row[3]),
+                        operator_kind="",
+                        operator_name=clean_cell(row[6]),
+                        operator_address=clean_cell(row[9]),
+                        disclosure_url=extract_url(row[12]),
+                    ))
+    return out
+
+
+def parse_aichi_index(_pdf_path: Path) -> list[PrefSchool]:
+    """Aichi: official HTML index with per-school disclosure links.
+
+    The downloaded `aichi.pdf` seed is an individual school application form,
+    not the prefecture-wide list. The real aggregator is the official index
+    page, which contains one anchor per school.
+    """
+    import html
+    import urllib.request
+    from urllib.parse import urljoin
+
+    index_url = "https://www.pref.aichi.jp/soshiki/shigaku/kikanyoukenkakunin.html"
+    html_path = _pdf_path.with_suffix(".html")
+    if html_path.exists():
+        page_html = html_path.read_text(encoding="utf-8")
+    else:
+        req = urllib.request.Request(index_url, headers={"User-Agent": "Mozilla/5.0 EIDP-DataCollector/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            page_html = resp.read().decode("utf-8", errors="replace")
+
+    anchors: list[tuple[str, str]] = []
+    for m in re.finditer(r'<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', page_html, re.S | re.I):
+        href = urljoin(index_url, html.unescape(m.group(1)))
+        label = re.sub(r"<[^>]+>", "", m.group(2))
+        label = html.unescape(label)
+        label = re.sub(r"\s*\[PDFファイル/[^]]+\]|\s*\[PDFファイル／[^]]+\]", "", label)
+        label = clean_cell(label)
+        anchors.append((label, href))
+
+    start = next((i for i, (label, _) in enumerate(anchors) if label == "愛知県立大学"), None)
+    if start is None:
+        return []
+
+    out: list[PrefSchool] = []
+    for label, href in anchors[start:]:
+        if "get.adobe.com" in href:
+            break
+        if not label or not href.startswith(("http://", "https://")):
+            continue
+        out.append(PrefSchool(
+            pref="aichi",
+            school_name_raw=label,
+            school_name_norm=norm(label),
+            address="",
+            operator_kind="",
+            operator_name="",
+            operator_address="",
+            disclosure_url=href,
+        ))
+    return out
+
+
 def parse_5col(pdf_path: Path, pref: str) -> list[PrefSchool]:
     """Kanagawa / Saitama: 5-column tables. URL from col[4] 備考 OR hyperlink annotation on school name."""
     # Pre-extract hyperlink annotations (Saitama-style hidden URLs)
@@ -328,6 +424,19 @@ def match_school(session, ps: PrefSchool, school_idx: dict, site_idx: dict) -> M
         if len(cand) == 1:
             match = cand[0]
             strategy = "operator_pref"
+
+    # Strategy 4: unique same-prefecture substring overlap. This is primarily
+    # for prefecture index pages that prefix the school name with an operator
+    # name in the anchor text (Aichi-style).
+    if not match:
+        cand = [
+            s for s in school_idx["_all"]
+            if len(norm(s.school_name)) >= 6
+            and (norm(s.school_name) in ps.school_name_norm or ps.school_name_norm in norm(s.school_name))
+        ]
+        if len(cand) == 1:
+            match = cand[0]
+            strategy = "substring_pref"
 
     existing_urls = site_idx.get(match.id, []) if match else []
     has_url = bool(existing_urls)
@@ -489,6 +598,8 @@ PARSERS = {
     "okinawa": (lambda p: parse_5col(p, "okinawa"), Path("/tmp/eidp_pref_pdfs/okinawa.pdf")),
     "miyagi": (lambda p: parse_5col(p, "miyagi"), Path("/tmp/eidp_pref_pdfs/miyagi.pdf")),
     "hokkaido": (parse_7col_hokkaido, Path("/tmp/eidp_pref_pdfs/hokkaido.pdf")),
+    "aichi": (parse_aichi_index, Path("/tmp/eidp_pref_pdfs/aichi.pdf")),
+    "niigata": (parse_13col_niigata, Path("/tmp/eidp_pref_pdfs/niigata.pdf")),
 }
 
 
