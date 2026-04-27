@@ -35,14 +35,21 @@ PDF Discovery Results:
 
 **100% download rate** — A2 の 60% (3/5) より大幅改善。原因: A2 は sid=877 で googleapis storage の non-target asset が大量に検出され 4 件 skip されたが、A3 の 15 校は target candidate がストレートに見つかった。
 
-### 3. ingest-pdfs (15 docs)
+### 3. ingest-pdfs (15 docs) — 最終確定
+
+```
+Ingestion Results:
+  processed: 15
+  departments_created: 34
+  yearly_upserted: 34
+  skipped: 5
+```
 
 | 状態 | 件数 |
 |---|---:|
 | **ingested** | **10** |
 | school_mismatch | 3 |
-| parse_failed | 1 |
-| in_progress | 1 (OCR 進行中、image_only) |
+| parse_failed | **2** (in_progress 1 件が最終 parse_failed) |
 
 **FY 分布 (ingested 10 件)**:
 
@@ -69,9 +76,8 @@ PDF Discovery Results:
 | no_site_no_pdf | 189 | 188 | **186** | **-3** |
 | stale_pdf_only | 119 | 121 | **130** | **+11** (R5/R6/R7 入庫分) |
 | mismatch_only | 79 | 79 | **82** | +3 (school 紐付け失敗) |
-| parse_failed_only | 19 | 19 | **20** | +1 |
+| parse_failed_only | 19 | 19 | **21** | **+2** (in_progress 確定後) |
 | non_target_only | 13 | 14 | **15** | +1 |
-| in_progress_only | (新) | - | 1 | OCR 中 |
 
 **Sprint 1 hokkaido 完了の総 gap 削減**:
 - `site_known_no_pdf + no_site_no_pdf` baseline 2,190 → A3 2,172 = **-18 schools**
