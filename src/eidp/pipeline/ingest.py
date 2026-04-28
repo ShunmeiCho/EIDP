@@ -29,6 +29,21 @@ def _norm(s: str) -> str:
     return unicodedata.normalize("NFKC", s).strip()
 
 
+def _collapse_ws(s: str) -> str:
+    """Same as _norm but also strips ALL internal whitespace.
+
+    Used in school-name matching only — extracted school names sometimes
+    insert ASCII spaces around inserted Latin segments (e.g.
+    '岩谷学園よこはま IT ビジネス専門学校' vs DB
+    '岩谷学園よこはまITビジネス専門学校'). Table parsing must NOT use
+    this — it relies on whitespace to detect column boundaries.
+    """
+    if not s:
+        return ""
+    import re as _re
+    return _re.sub(r"\s+", "", unicodedata.normalize("NFKC", s)).strip()
+
+
 def _record_rejection(
     recorder: IngestEvidenceRecorder | None,
     doc: Document,
@@ -183,13 +198,23 @@ def ingest_document(
             _MIN_SUBSTR_LEN = 6
 
             def _match_any(parsed: str, candidates: list[str]) -> str | None:
+                # Collapsed forms ignore internal whitespace; rescues common
+                # parser variants like '専門学校 ちば愛犬' vs DB
+                # '専門学校ちば愛犬' without requiring a SchoolAlias row.
+                parsed_c = _collapse_ws(parsed)
                 for c in candidates:
                     if not c:
                         continue
-                    if parsed == c:
+                    if parsed == c or parsed_c == _collapse_ws(c):
                         return c
                     if len(c) >= _MIN_SUBSTR_LEN and len(parsed) >= _MIN_SUBSTR_LEN:
-                        if parsed in c or c in parsed:
+                        c_collapsed = _collapse_ws(c)
+                        if (
+                            parsed in c
+                            or c in parsed
+                            or parsed_c in c_collapsed
+                            or c_collapsed in parsed_c
+                        ):
                             return c
                 return None
 

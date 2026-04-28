@@ -143,3 +143,58 @@ def test_ingest_records_evidence_on_mismatch_including_aliases_tried(tmp_path: P
         assert row["detail"]["alias_count"] == "1"
     finally:
         session.close()
+
+
+def test_ingest_match_collapses_internal_whitespace(tmp_path: Path) -> None:
+    """Sprint 5 D'-2 fix: parsed school names with extra internal spaces
+    around inserted Latin segments must match the DB name without
+    requiring an explicit SchoolAlias row.
+
+    Real cases observed (output/mismatch-classification-*.csv):
+      - '専門学校 ちば愛犬動物フラワー学園' vs DB '専門学校ちば愛犬動物フラワー学園'
+      - '岩谷学園よこはま IT ビジネス専門学校' vs DB '岩谷学園よこはまITビジネス専門学校'
+    """
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="千葉", corporation_name="ちば",
+            school_name="専門学校ちば愛犬動物フラワー学園",
+        ))
+        doc = _setup_doc(session, b"%PDF-1.5\n" + b"x" * 2000, tmp_path)
+
+        fake = SchoolAnnotation(
+            school_name="専門学校 ちば愛犬動物フラワー学園",  # extra ASCII space
+            corporation_name=None,
+            fiscal_year="令和7年度",
+            departments=[],
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=fake):
+            ingest_document(session, doc, recorder=None)
+
+        assert doc.ingest_status != "school_mismatch", (
+            f"expected match after whitespace collapse, got {doc.ingest_status}"
+        )
+    finally:
+        session.close()
+
+
+def test_ingest_match_collapses_internal_whitespace_with_latin(tmp_path: Path) -> None:
+    """岩谷学園パターン: half-width ASCII space inserted around Latin segment."""
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="神奈川", corporation_name="岩谷学園",
+            school_name="岩谷学園よこはまITビジネス専門学校",
+        ))
+        doc = _setup_doc(session, b"%PDF-1.5\n" + b"x" * 2000, tmp_path)
+        fake = SchoolAnnotation(
+            school_name="岩谷学園よこはま IT ビジネス専門学校",
+            corporation_name=None,
+            fiscal_year="令和7年度",
+            departments=[],
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=fake):
+            ingest_document(session, doc, recorder=None)
+        assert doc.ingest_status != "school_mismatch"
+    finally:
+        session.close()
