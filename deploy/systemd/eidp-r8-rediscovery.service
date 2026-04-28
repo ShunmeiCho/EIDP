@@ -1,0 +1,18 @@
+[Unit]
+Description=EIDP weekly R8 rediscovery and ingest
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=junming
+WorkingDirectory=/home/junming/workspace/EIDP
+EnvironmentFile=-/home/junming/workspace/EIDP/.env
+Environment=PATH=/home/junming/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+ExecStart=/usr/bin/env uv run python scripts/run_r8_rediscovery_weekly.py --methods prefecture_aggregator --current-fy 2026 --batch-size 250 --ingest-batch-size 500 --rate-limit 1.5
+TimeoutStartSec=6h
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
