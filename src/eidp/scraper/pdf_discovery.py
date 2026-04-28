@@ -11,11 +11,13 @@ scores candidates, downloads best match, stores in document table.
 """
 
 import hashlib
+import html as html_lib
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -29,7 +31,7 @@ from eidp.scraper.url_discovery import _is_safe_url
 log = structlog.get_logger()
 
 
-def _safe_get(client: httpx.Client, url: str, **kwargs) -> httpx.Response:
+def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
     """GET with manual redirect following + SSRF check on each hop.
 
     Raises httpx.HTTPStatusError on SSRF-blocked redirect or redirect loop.
@@ -83,6 +85,8 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "ja,en;q=0.5",
 }
+
+MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
 
 
 @dataclass
@@ -144,11 +148,12 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
         r'<a\s[^>]*href=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\'][^>]*>(.*?)</a>',
         html, re.IGNORECASE | re.DOTALL,
     ):
-        url = urljoin(base_url, m.group(1))
+        href = html_lib.unescape(m.group(1))
+        url = urljoin(base_url, href)
         if url not in seen_urls:
             seen_urls.add(url)
-            anchor = re.sub(r"<[^>]+>", "", m.group(2)).strip()
-            pattern = "cache_busted" if "?" in m.group(1) else "direct"
+            anchor = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
+            pattern = "cache_busted" if "?" in href else "direct"
             if "/wp-content/" in url:
                 pattern = "wordpress"
             candidates.append(PdfCandidate(
@@ -162,7 +167,8 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
                 rf'<{tag}\s[^>]*{attr}=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']',
                 html, re.IGNORECASE,
             ):
-                url = urljoin(base_url, m.group(1))
+                href = html_lib.unescape(m.group(1))
+                url = urljoin(base_url, href)
                 if url not in seen_urls:
                     seen_urls.add(url)
                     candidates.append(PdfCandidate(
@@ -289,9 +295,11 @@ def _classify_pdf_content(content: bytes) -> str:
     Returns: 'target' (申請書), 'non_target' (wrong document), 'image_only' (needs OCR).
     """
     try:
-        import pdfplumber
         import io
         import unicodedata
+
+        import pdfplumber
+
         with pdfplumber.open(io.BytesIO(content)) as pdf:
             sample_text = ""
             # Scan up to 5 pages (some formats put markers on later pages)
@@ -329,7 +337,7 @@ def download_pdf(
 
     Max download size: 50MB. Larger files are skipped.
     """
-    MAX_PDF_SIZE = 50 * 1024 * 1024  # 50 MB
+    max_pdf_size = 50 * 1024 * 1024  # 50 MB
 
     if not _is_safe_url(candidate.pdf_url):
         return None, None, 0, "unknown", "unsafe_url"
@@ -339,12 +347,12 @@ def download_pdf(
 
         # Check Content-Length before reading body
         content_length = resp.headers.get("content-length")
-        if content_length and int(content_length) > MAX_PDF_SIZE:
+        if content_length and int(content_length) > max_pdf_size:
             log.warning("pdf_too_large", url=candidate.pdf_url, size=content_length)
             return None, None, 0, "unknown", "too_large_header"
 
         content = resp.content
-        if len(content) > MAX_PDF_SIZE:
+        if len(content) > max_pdf_size:
             log.warning("pdf_too_large_actual", url=candidate.pdf_url, size=len(content))
             return None, None, 0, "unknown", "too_large_body"
         if len(content) < 1000:  # Too small to be a real PDF
@@ -406,6 +414,7 @@ def run_pdf_discovery(
     # - schools with a document for the current target fiscal year
     # - schools excluded in their LATEST fiscal year only (not historical exclusions)
     from sqlalchemy import and_, func, or_
+
     from eidp.db.models import SchoolYearStatus
 
     # Only exclude schools where the most recent year is excluded
@@ -477,7 +486,7 @@ def run_pdf_discovery(
                 school_id=site.school_id,
                 job_type="pdf_search",
                 status="running",
-                started_at=datetime.now(timezone.utc),
+                started_at=datetime.now(UTC),
             )
             session.add(job)
             session.flush()
@@ -501,7 +510,7 @@ def run_pdf_discovery(
             if result.error:
                 job.status = "failed"
                 job.error_message = result.error
-                job.finished_at = datetime.now(timezone.utc)
+                job.finished_at = datetime.now(UTC)
                 stats["failed"] += 1
                 recorder.record(RejectionEvidence(
                     school_id=site.school_id,
@@ -515,7 +524,7 @@ def run_pdf_discovery(
 
             if not result.best:
                 job.status = "success"
-                job.finished_at = datetime.now(timezone.utc)
+                job.finished_at = datetime.now(UTC)
                 stats["skipped"] += 1
                 recorder.record(RejectionEvidence(
                     school_id=site.school_id,
@@ -533,7 +542,7 @@ def run_pdf_discovery(
             if not viable:
                 job.status = "review"
                 job.error_message = "all candidates have negative score"
-                job.finished_at = datetime.now(timezone.utc)
+                job.finished_at = datetime.now(UTC)
                 stats["failed"] += 1
                 for c in result.candidates:
                     recorder.record(RejectionEvidence(
@@ -550,7 +559,7 @@ def run_pdf_discovery(
 
             # Try downloading top candidates (fallback on 404)
             downloaded = False
-            for candidate in viable[:3]:
+            for candidate in viable[:MAX_CANDIDATE_DOWNLOAD_ATTEMPTS]:
                 file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
                     client, candidate, storage_dir, site.school_id,
                 )
@@ -603,13 +612,13 @@ def run_pdf_discovery(
                             content_type=content_type,
                             pdf_type=pdf_type,
                             confidence=min(candidate.score / 10.0, 0.99),
-                            downloaded_at=datetime.now(timezone.utc),
+                            downloaded_at=datetime.now(UTC),
                         )
                         session.add(doc)
                         stats["downloaded"] += 1
 
                     job.status = "success"
-                    job.finished_at = datetime.now(timezone.utc)
+                    job.finished_at = datetime.now(UTC)
                     downloaded = True
                     break
 
@@ -618,7 +627,7 @@ def run_pdf_discovery(
             if not downloaded:
                 job.status = "failed"
                 job.error_message = f"download failed for {len(result.candidates)} candidates"
-                job.finished_at = datetime.now(timezone.utc)
+                job.finished_at = datetime.now(UTC)
                 stats["failed"] += 1
 
             session.flush()
