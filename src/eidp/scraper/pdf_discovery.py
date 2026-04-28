@@ -559,6 +559,7 @@ def run_pdf_discovery(
 
             # Try downloading top candidates (fallback on 404)
             downloaded = False
+            duplicate_seen = False
             for candidate in viable[:MAX_CANDIDATE_DOWNLOAD_ATTEMPTS]:
                 file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
                     client, candidate, storage_dir, site.school_id,
@@ -599,7 +600,21 @@ def run_pdf_discovery(
                         .first()
                     )
                     if existing:
+                        duplicate_seen = True
                         stats["skipped"] += 1
+                        recorder.record(RejectionEvidence(
+                            school_id=site.school_id,
+                            pdf_url=candidate.pdf_url,
+                            page_url=candidate.page_url,
+                            anchor_text=candidate.anchor_text,
+                            pattern_type=candidate.pattern_type,
+                            score=candidate.score,
+                            reason="duplicate_hash",
+                            pdf_type=pdf_type,
+                            extra={"existing_doc_id": str(existing.id)},
+                        ))
+                        time.sleep(0.5)
+                        continue
                     else:
                         content_type = "image" if pdf_type == "image_only" else "text"
                         doc = Document(
@@ -625,10 +640,15 @@ def run_pdf_discovery(
                 time.sleep(0.5)
 
             if not downloaded:
-                job.status = "failed"
-                job.error_message = f"download failed for {len(result.candidates)} candidates"
+                job.status = "success" if duplicate_seen else "failed"
+                job.error_message = (
+                    "all viable candidates already downloaded"
+                    if duplicate_seen
+                    else f"download failed for {len(result.candidates)} candidates"
+                )
                 job.finished_at = datetime.now(UTC)
-                stats["failed"] += 1
+                if not duplicate_seen:
+                    stats["failed"] += 1
 
             session.flush()
             time.sleep(rate_limit)
