@@ -26,8 +26,9 @@ Classifies each mismatch doc into:
 
 By default this script is read-only and writes
 output/mismatch-classification-{ts}.csv. Pass --apply to actually create
-SchoolAlias rows for the safe_alias bucket; --accept-similar widens
-apply to similar_alias too. --apply requires explicit owner authorization.
+SchoolAlias rows for the safe_alias bucket and reset those mismatch docs to
+pending so a targeted ingest can process them. --accept-similar widens apply
+to similar_alias too. --apply requires explicit owner authorization.
 """
 
 from __future__ import annotations
@@ -132,6 +133,9 @@ def classify(
     if np == ne:
         return "normalize_fix", "exact match after NFKC + space/paren strip"
 
+    if name_collision_other_school:
+        return "wrong_school", f"parsed matches sibling: {name_collision_other_school}"
+
     if np in ne or ne in np:
         # Substring: missing a few chars, e.g. '古屋医専' vs '名古屋医専'
         sim = similarity(np, ne)
@@ -145,10 +149,59 @@ def classify(
     if sim >= 0.85:
         return "similar_alias", f"medium similarity {sim:.2f}"
 
-    if name_collision_other_school:
-        return "wrong_school", f"parsed matches sibling: {name_collision_other_school}"
-
     return "defer", f"low similarity {sim:.2f} and no obvious twin/sibling"
+
+
+def apply_alias_rows(
+    session,
+    rows: list[dict],
+    apply_buckets: set[str],
+) -> dict[str, int]:
+    """Insert approved aliases and reset matching docs for targeted re-ingest."""
+    stats = {
+        "added": 0,
+        "skipped_existing": 0,
+        "conflicts": 0,
+        "reset_pending": 0,
+        "missing_doc": 0,
+    }
+    for r in rows:
+        if r["bucket"] not in apply_buckets:
+            continue
+        sid = int(r["school_id"])
+        alias_name = str(r["parsed_school_name"]).strip()
+        if not alias_name:
+            continue
+        alias_ready = False
+        existing = (
+            session.query(SchoolAlias)
+            .filter(SchoolAlias.alias_name == alias_name)
+            .first()
+        )
+        if existing and existing.school_id == sid:
+            stats["skipped_existing"] += 1
+            alias_ready = True
+        elif existing and existing.school_id != sid:
+            stats["conflicts"] += 1
+            continue
+        else:
+            session.add(SchoolAlias(
+                school_id=sid,
+                alias_name=alias_name,
+                alias_type="pdf_school_name",
+                source="mismatch_apply",
+            ))
+            stats["added"] += 1
+            alias_ready = True
+
+        if alias_ready:
+            doc = session.get(Document, int(r["doc_id"]))
+            if doc is None:
+                stats["missing_doc"] += 1
+            elif doc.ingest_status == "school_mismatch":
+                doc.ingest_status = "pending"
+                stats["reset_pending"] += 1
+    return stats
 
 
 def main() -> None:
@@ -241,36 +294,16 @@ def main() -> None:
         if args.accept_similar:
             apply_buckets.add("similar_alias")
 
-        added = 0
-        skipped_dup = 0
-        conflicts = 0
-        for r in rows:
-            if r["bucket"] not in apply_buckets:
-                continue
-            sid = r["school_id"]
-            alias_name = r["parsed_school_name"].strip()
-            if not alias_name:
-                continue
-            existing = (
-                session.query(SchoolAlias)
-                .filter(SchoolAlias.alias_name == alias_name)
-                .first()
-            )
-            if existing and existing.school_id == sid:
-                skipped_dup += 1
-                continue
-            if existing and existing.school_id != sid:
-                conflicts += 1
-                continue
-            session.add(SchoolAlias(
-                school_id=sid,
-                alias_name=alias_name,
-                alias_type="pdf_school_name",
-                source="mismatch_apply",
-            ))
-            added += 1
+        stats = apply_alias_rows(session, rows, apply_buckets)
         session.commit()
-        print(f"\n[apply] added={added} skipped_existing={skipped_dup} conflicts={conflicts}")
+        print(
+            "\n[apply] "
+            f"added={stats['added']} "
+            f"skipped_existing={stats['skipped_existing']} "
+            f"conflicts={stats['conflicts']} "
+            f"reset_pending={stats['reset_pending']} "
+            f"missing_doc={stats['missing_doc']}"
+        )
     finally:
         session.close()
 
