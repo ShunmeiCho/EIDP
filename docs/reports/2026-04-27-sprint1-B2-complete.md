@@ -1,4 +1,4 @@
-# Sprint 1 B2 完了 — 47 都道府県 verified pool 消化 + R8 First Hit
+# Sprint 1 B2 完了 — Aichi/Miyagi/Tokyo verified pool 消化 + R8 First Hit
 
 **日付:** 2026-04-27 17:30
 **Owner 授権:** "Go B2" + "Path 3" 明示
@@ -47,13 +47,15 @@ Batch 1 (3 docs):  3 processed, 3 dept, 3 yearly upserted
 Batch 2 (34 docs): 34 processed, 111 dept, 111 yearly upserted, 6 skipped
 ```
 
-**B2 batch 2 statuses**: ingested=27, school_mismatch=6, support_only=1
+**B2 全 (461-497) statuses (DB 再集計)**: ingested=**28**, school_mismatch=**8**, support_only=1
 
 ---
 
 ## R8 First Hit
 
-**FY 分布 (B2 batch 2 の 27 ingested)**:
+**R8 doc detail**: id=**473**, school_id=**1440** (三河歯科衛生専門学校), URL `http://mikawa-dental.ac.jp/information/pdf/application2025.pdf`, dept=歯科衛生士科, capacity=120, enrollment=99
+
+**FY 分布 (B2 28 ingested 全体)**:
 
 | FY | 件数 |
 |---:|---:|
@@ -64,7 +66,7 @@ Batch 2 (34 docs): 34 processed, 111 dept, 111 yearly upserted, 6 skipped
 | FY2025 (R7) | 16 |
 | **FY2026 (R8)** | **1** ← **Sprint 1 初の R8 取得** |
 
-詳細: A2/A3/B2 全 ingest = 40 docs / 49 yearly rows、内 R8 = **1**。
+詳細 (DB 再集計): **A2/A3/B2 全 = 55 docs (443-497) = 41 ingested + 11 school_mismatch + 2 parse_failed + 1 support_only、157 yearly rows、内 R8 = 1**。
 
 owner 北極星 `target_pdf_current_fy_rate` が baseline 0.1% (2/2428) → **0.12% (3/2428)**。  
 絶対値小だが、R8 PDF が aggregator 経由で取得可能であることを実機で証明。
@@ -86,7 +88,8 @@ owner 北極星 `target_pdf_current_fy_rate` が baseline 0.1% (2/2428) → **0.
 | FY2026 yearly rows | 8 | 8 | **9** | **+1** |
 | site_known_no_pdf | 2,001 | 1,986 | **1,955** | **-46** |
 | no_site_no_pdf | 189 | 186 | **180** | **-9** |
-| **総 PDF gap** | **2,190** | **2,172** | **2,135** | **-55 schools** |
+| **Sprint 1 主指標 gap** (`site_known + no_site`) | **2,190** | **2,172** | **2,135** | **-55 schools** |
+| 全 PDF gap (`eidp report gaps --kind pdf` total) | 2,426 | 2,426 | **2,425** | -1 |
 | stale_pdf_only | 119 | 130 | 155 | +36 |
 | mismatch_only | 79 | 82 | 90 | +11 |
 | parse_failed_only | 19 | 21 | 21 | +2 |
