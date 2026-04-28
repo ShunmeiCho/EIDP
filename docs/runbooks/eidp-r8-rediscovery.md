@@ -1,10 +1,10 @@
-# EIDP R8 Rediscovery Timer Runbook
+# EIDP R8 Rediscovery Weekly Runbook
 
 ## Purpose
 
 Sprint 4 proved that one-time stale rediscovery has zero R8 yield before the
 5-6月 publication peak. Sprint 7 converts that waiting period into a weekly
-systemd job:
+scheduled job:
 
 1. Select 専門学校 with an older ingested target PDF and no FY2026 target PDF.
 2. Revisit trusted `prefecture_aggregator` URLs.
@@ -12,56 +12,102 @@ systemd job:
 4. Write a JSON summary and rejection evidence under
    `output/r8-rediscovery-weekly/`.
 
-## Preflight
+## Scheduling Choice
+
+Owner decision (2026-04-28): **crontab** is the live scheduler. user-level
+systemd was rejected because `loginctl show-user junming -p Linger` returns
+`Linger=no` on venus and we don't have sudo to enable-linger. Without linger,
+a user timer silently misses runs whenever junming is logged out — that
+yields a "looks-installed-but-not-running" false sense of automation.
+
+The systemd unit files under `deploy/systemd/` are kept for the future
+migration: once `sudo loginctl enable-linger junming` is run, the same
+Python entrypoint can be moved over without rewriting the runner.
+
+## Preflight (read-only)
 
 ```bash
 cd ~/workspace/EIDP
 git status --short
 git pull --ff-only
-uv run python scripts/run_r8_rediscovery_weekly.py --dry-run --limit 5
+.venv/bin/python -c "import sys, eidp; assert sys.prefix.endswith('/.venv'), sys.prefix; print('venv ok:', sys.prefix)"
+.venv/bin/python scripts/run_r8_rediscovery_weekly.py --dry-run --limit 5
 ```
 
 The dry run is read-only against the database and should print a summary path,
 the stale school count, and zero discovery/ingest stats.
 
-## Install
+## Install (crontab path — primary)
 
-Production installation requires owner authorization because enabling the timer
-causes recurring DB writes and PDF downloads.
+No sudo required. Idempotent — re-running replaces any prior `EIDP-R8-CRON`
+entry.
 
 ```bash
-sudo cp deploy/systemd/eidp-r8-rediscovery.service /etc/systemd/system/
-sudo cp deploy/systemd/eidp-r8-rediscovery.timer /etc/systemd/system/
+cd ~/workspace/EIDP
+bash deploy/cron/install.sh
+crontab -l
+```
+
+Schedule: every Monday at 02:00 in venus' system timezone.
+
+```bash
+timedatectl              # confirm system TZ is JST (Asia/Tokyo)
+date '+%a %F %T %Z'      # current local time
+```
+
+Cron daemon survives reboot — `systemctl status cron` should show `active`.
+
+### Manual smoke (real DB writes; owner authorization required)
+
+```bash
+.venv/bin/python scripts/run_r8_rediscovery_weekly.py --limit 10
+```
+
+Or invoke the cron wrapper directly with the same flock/log/marker semantics:
+
+```bash
+bash scripts/run_r8_rediscovery_cron.sh --limit 10
+ls -lt logs/r8-rediscovery/run-*.log | head -3
+cat logs/r8-rediscovery/.last_failure 2>/dev/null || echo "no failure marker"
+```
+
+### Uninstall
+
+```bash
+crontab -l | grep -v 'EIDP-R8-CRON' | crontab -
+```
+
+## Install (systemd path — future, requires sudo + linger)
+
+Only relevant after `sudo loginctl enable-linger junming` is allowed.
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp deploy/systemd/eidp-r8-rediscovery.service ~/.config/systemd/user/
+cp deploy/systemd/eidp-r8-rediscovery.timer   ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now eidp-r8-rediscovery.timer
+systemctl --user list-timers eidp-r8-rediscovery.timer
+```
+
+For system-wide install (heaviest, requires sudo):
+
+```bash
+sudo cp deploy/systemd/eidp-r8-rediscovery.{service,timer} /etc/systemd/system/
 sudo systemctl daemon-reload
+sudo systemd-analyze verify eidp-r8-rediscovery.{service,timer}
 sudo systemctl enable --now eidp-r8-rediscovery.timer
-systemctl list-timers eidp-r8-rediscovery.timer
 ```
 
-Confirm the Venus host timezone is JST:
-
-```bash
-timedatectl
-```
-
-## Manual Run
-
-Use a limited run first if you need a production smoke test:
-
-```bash
-uv run python scripts/run_r8_rediscovery_weekly.py --limit 10
-```
-
-For the same command through systemd:
-
-```bash
-sudo systemctl start eidp-r8-rediscovery.service
-journalctl -u eidp-r8-rediscovery.service -f
-```
+When migrating from cron to systemd, **uninstall the cron entry first** to
+avoid double-firing.
 
 ## Outputs
 
 Each run writes:
 
+- `logs/r8-rediscovery/run-{utc-ts}.log`           — wrapper stdout/stderr (12-week ring buffer)
+- `logs/r8-rediscovery/.last_failure`              — only present on non-zero exit
 - `output/r8-rediscovery-weekly/{run_id}-summary.json`
 - `output/r8-rediscovery-weekly/{run_id}-discovery-rejections.jsonl`
 - `output/r8-rediscovery-weekly/{run_id}-ingest-rejections.jsonl`
@@ -69,14 +115,12 @@ Each run writes:
 The summary contains before/after snapshots for coverage, PDF gaps, extraction,
 new document IDs, discovery stats, ingest stats, and deltas.
 
-## Verification
-
-After a run:
+## Verification (after a run)
 
 ```bash
-uv run eidp report coverage --school-type 専門学校 --fy 2026
-uv run eidp report gaps --kind pdf --school-type 専門学校 --fy 2026
-uv run eidp report extraction --fy 2026
+.venv/bin/python -m eidp report coverage --school-type 専門学校 --fy 2026
+.venv/bin/python -m eidp report gaps --kind pdf --school-type 専門学校 --fy 2026
+.venv/bin/python -m eidp report extraction --fy 2026
 ```
 
 Expect `target_FY2026` to rise only when schools have actually published R8
@@ -84,12 +128,18 @@ PDFs. A zero-delta weekly run is valid during the pre-peak period.
 
 ## Recovery
 
-If the service is interrupted, rerun it. The runner only ingests documents
-created during the current run, and duplicate-hash rediscovery evidence is
-recorded without blocking later candidates.
+If the wrapper is interrupted (reboot mid-run, OOM, etc.), rerun it. Behavior:
 
-Disable the schedule with:
+- `flock` ensures at most one run at a time. If a previous invocation crashed
+  without releasing the lock, the lock file is automatically released when its
+  pid exits — re-running on the next schedule is safe.
+- The runner only ingests documents created during the current run.
+- Duplicate-hash rediscovery evidence is recorded without blocking later
+  candidates (Sprint 4 fix `3a35642`).
+
+To inspect the most recent failure:
 
 ```bash
-sudo systemctl disable --now eidp-r8-rediscovery.timer
+cat ~/workspace/EIDP/logs/r8-rediscovery/.last_failure
+tail -100 "$(ls -t ~/workspace/EIDP/logs/r8-rediscovery/run-*.log | head -1)"
 ```
