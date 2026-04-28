@@ -75,6 +75,7 @@ def test_apply_alias_resets_matching_doc_to_pending() -> None:
             "skipped_existing": 0,
             "conflicts": 0,
             "reset_pending": 1,
+            "reset_only_pending": 0,
             "missing_doc": 0,
         }
         assert alias.alias_name == "古屋医専"
@@ -122,5 +123,53 @@ def test_apply_alias_conflict_does_not_reset_doc() -> None:
         assert stats["reset_pending"] == 0
         assert doc is not None
         assert doc.ingest_status == "school_mismatch"
+    finally:
+        session.close()
+
+
+def test_reset_normalize_fix_resets_without_alias() -> None:
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=452,
+                prefecture="千葉",
+                corporation_name="C",
+                school_name="専門学校ちば愛犬動物フラワー学園",
+            )
+        )
+        session.add(
+            Document(
+                id=69,
+                school_id=452,
+                source_url="https://example.ac.jp/support.pdf",
+                file_path="data/pdfs/452/support.pdf",
+                pdf_type="target",
+                ingest_status="school_mismatch",
+            )
+        )
+        session.flush()
+
+        stats = apply_alias_rows(
+            session,
+            [
+                {
+                    "doc_id": 69,
+                    "school_id": 452,
+                    "parsed_school_name": "専門学校 ちば愛犬動物フラワー学園",
+                    "bucket": "normalize_fix",
+                }
+            ],
+            {"safe_alias"},
+            {"normalize_fix"},
+        )
+
+        doc = session.get(Document, 69)
+        assert stats["added"] == 0
+        assert stats["reset_pending"] == 1
+        assert stats["reset_only_pending"] == 1
+        assert session.query(SchoolAlias).count() == 0
+        assert doc is not None
+        assert doc.ingest_status == "pending"
     finally:
         session.close()

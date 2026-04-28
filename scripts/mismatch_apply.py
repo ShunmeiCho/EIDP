@@ -27,8 +27,10 @@ Classifies each mismatch doc into:
 By default this script is read-only and writes
 output/mismatch-classification-{ts}.csv. Pass --apply to actually create
 SchoolAlias rows for the safe_alias bucket and reset those mismatch docs to
-pending so a targeted ingest can process them. --accept-similar widens apply
-to similar_alias too. --apply requires explicit owner authorization.
+pending so a targeted ingest can process them. Use
+--apply --reset-normalize-fix to also reset normalize_fix docs without adding
+aliases. --accept-similar widens apply to similar_alias too. --apply requires
+explicit owner authorization.
 """
 
 from __future__ import annotations
@@ -156,17 +158,38 @@ def apply_alias_rows(
     session,
     rows: list[dict],
     apply_buckets: set[str],
+    reset_only_buckets: set[str] | None = None,
 ) -> dict[str, int]:
     """Insert approved aliases and reset matching docs for targeted re-ingest."""
+    reset_only_buckets = reset_only_buckets or set()
     stats = {
         "added": 0,
         "skipped_existing": 0,
         "conflicts": 0,
         "reset_pending": 0,
+        "reset_only_pending": 0,
         "missing_doc": 0,
     }
+
+    def reset_doc(doc_id: int) -> bool:
+        doc = session.get(Document, doc_id)
+        if doc is None:
+            stats["missing_doc"] += 1
+            return False
+        if doc.ingest_status == "school_mismatch":
+            doc.ingest_status = "pending"
+            stats["reset_pending"] += 1
+            return True
+        return False
+
     for r in rows:
-        if r["bucket"] not in apply_buckets:
+        bucket = r["bucket"]
+        if bucket in reset_only_buckets:
+            if reset_doc(int(r["doc_id"])):
+                stats["reset_only_pending"] += 1
+            continue
+
+        if bucket not in apply_buckets:
             continue
         sid = int(r["school_id"])
         alias_name = str(r["parsed_school_name"]).strip()
@@ -195,12 +218,7 @@ def apply_alias_rows(
             alias_ready = True
 
         if alias_ready:
-            doc = session.get(Document, int(r["doc_id"]))
-            if doc is None:
-                stats["missing_doc"] += 1
-            elif doc.ingest_status == "school_mismatch":
-                doc.ingest_status = "pending"
-                stats["reset_pending"] += 1
+            reset_doc(int(r["doc_id"]))
     return stats
 
 
@@ -215,6 +233,14 @@ def main() -> None:
         "--accept-similar",
         action="store_true",
         help="Also write rows for similar_alias bucket (requires --apply)",
+    )
+    parser.add_argument(
+        "--reset-normalize-fix",
+        action="store_true",
+        help=(
+            "With --apply, reset normalize_fix docs to pending without adding "
+            "SchoolAlias rows. Use after ingest's whitespace-collapsed matcher is deployed."
+        ),
     )
     args = parser.parse_args()
 
@@ -289,12 +315,13 @@ def main() -> None:
             print("\n[dry-run] no DB writes. Pass --apply to write SchoolAlias rows for safe_alias.")
             return
 
-        # Apply phase: only safe_alias (and similar_alias if --accept-similar)
+        # Apply phase: safe_alias gets alias+reset; normalize_fix can be reset-only.
         apply_buckets = {"safe_alias"}
         if args.accept_similar:
             apply_buckets.add("similar_alias")
+        reset_only_buckets = {"normalize_fix"} if args.reset_normalize_fix else set()
 
-        stats = apply_alias_rows(session, rows, apply_buckets)
+        stats = apply_alias_rows(session, rows, apply_buckets, reset_only_buckets)
         session.commit()
         print(
             "\n[apply] "
@@ -302,6 +329,7 @@ def main() -> None:
             f"skipped_existing={stats['skipped_existing']} "
             f"conflicts={stats['conflicts']} "
             f"reset_pending={stats['reset_pending']} "
+            f"reset_only_pending={stats['reset_only_pending']} "
             f"missing_doc={stats['missing_doc']}"
         )
     finally:
