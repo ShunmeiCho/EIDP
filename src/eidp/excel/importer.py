@@ -542,7 +542,37 @@ def import_taisho_hiritu(
         current_row = next((r for r in existing_rows if r.is_current), None)
         max_rev = max((r.revision for r in existing_rows), default=0)
 
+        # Build the new revision's field set up front so we can short-circuit
+        # the equality check (Sprint 8.2.2). Mirrors import_sairoku's no-op
+        # path: a re-import of identical 対象比率 must NOT churn revisions.
+        new_fields = {
+            "school_number": school_number if school_number else None,
+            "prev_enrollment": _safe_int(row[6]),
+            "first_half_total": _safe_int(row[7]),
+            "first_half_cat1": _safe_int(row[8]),
+            "first_half_cat2": _safe_int(row[9]),
+            "first_half_cat3": _safe_int(row[10]),
+            "first_half_cat4": _safe_int(row[11]),
+            "second_half_total": _safe_int(row[12]),
+            "second_half_cat1": _safe_int(row[13]) if len(row) > 13 else None,
+            "second_half_cat2": _safe_int(row[14]) if len(row) > 14 else None,
+            "second_half_cat3": _safe_int(row[15]) if len(row) > 15 else None,
+            "second_half_cat4": _safe_int(row[16]) if len(row) > 16 else None,
+            "annual_total": _safe_int(row[17]) if len(row) > 17 else None,
+            "household_change": _safe_int(row[18]) if len(row) > 18 else None,
+            "grand_total": _safe_int(row[19]) if len(row) > 19 else None,
+            "recipient_rate": _safe_float(row[21]) if len(row) > 21 else None,
+            "notes": _safe_str(row[20]) if len(row) > 20 and row[20] else None,
+        }
+
         if current_row is not None:
+            # Equality short-circuit: identical content → no new revision.
+            if all(
+                getattr(current_row, field) == value
+                for field, value in new_fields.items()
+            ):
+                stats["rows"] += 1
+                continue
             session.query(SupportRecipient).filter(
                 SupportRecipient.school_id == school_id,
                 SupportRecipient.fiscal_year == fiscal_year,
@@ -551,26 +581,10 @@ def import_taisho_hiritu(
 
         sr = SupportRecipient(
             school_id=school_id,
-            school_number=school_number if school_number else None,
             fiscal_year=fiscal_year,
-            prev_enrollment=_safe_int(row[6]),
-            first_half_total=_safe_int(row[7]),
-            first_half_cat1=_safe_int(row[8]),
-            first_half_cat2=_safe_int(row[9]),
-            first_half_cat3=_safe_int(row[10]),
-            first_half_cat4=_safe_int(row[11]),
-            second_half_total=_safe_int(row[12]),
-            second_half_cat1=_safe_int(row[13]) if len(row) > 13 else None,
-            second_half_cat2=_safe_int(row[14]) if len(row) > 14 else None,
-            second_half_cat3=_safe_int(row[15]) if len(row) > 15 else None,
-            second_half_cat4=_safe_int(row[16]) if len(row) > 16 else None,
-            annual_total=_safe_int(row[17]) if len(row) > 17 else None,
-            household_change=_safe_int(row[18]) if len(row) > 18 else None,
-            grand_total=_safe_int(row[19]) if len(row) > 19 else None,
-            recipient_rate=_safe_float(row[21]) if len(row) > 21 else None,
-            notes=_safe_str(row[20]) if len(row) > 20 and row[20] else None,
             revision=max_rev + 1,
             is_current=True,
+            **new_fields,
         )
         session.add(sr)
         stats["rows"] += 1

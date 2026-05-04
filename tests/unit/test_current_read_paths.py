@@ -267,6 +267,49 @@ def test_latest_excluded_school_ids_helper_uses_current_revision(engine):
         )
 
 
+def test_verify_identity_does_not_count_historic_year_excluded(engine):
+    """Sprint 8.2.2 — verify_identity must scope excluded counting to the
+    LATEST fiscal year's current revision. A school whose FY2025 current
+    revision is 閉校 but whose FY2026 current revision is collected must
+    NOT count as excluded (the school is back in scope).
+
+    Without this, verify_identity would return excluded_no_code_needed=1
+    for an active school, inflating ``pass`` and producing false positives
+    on acceptance gates.
+    """
+    from pathlib import Path
+    from eidp.matcher.reconciler import verify_identity
+
+    with Session(engine) as session:
+        # Active school: latest year is 2026 with no exclusion, but 2025
+        # carried 閉校.
+        active = School(
+            prefecture="東京都", corporation_name="A法人",
+            school_name="現役校", status="active", school_code=None,
+        )
+        session.add(active)
+        session.flush()
+        session.add_all([
+            # FY2025 current = excluded (historical state)
+            SchoolYearStatus(school_id=active.id, fiscal_year=2025,
+                             revision=1, is_current=True,
+                             status="excluded", excluded_reason="閉校"),
+            # FY2026 current = active again (school re-opened or re-found)
+            SchoolYearStatus(school_id=active.id, fiscal_year=2026,
+                             revision=1, is_current=True,
+                             status="collected", excluded_reason=None),
+        ])
+        session.commit()
+
+        report = verify_identity(session, Path("/nonexistent"))
+
+        assert report["excluded_no_code_needed"] == 0, (
+            "FY2025 'historical' exclusion must NOT count when FY2026 "
+            f"current revision is active. report={report}"
+        )
+        assert report["truly_unresolved"] == 1, report
+
+
 def test_reconciler_verify_identity_excluded_count_uses_current_revision(engine):
     """``verify_identity`` counts excluded schools to subtract from the
     'still missing school_code' tally. After 8.2.1 it must scope that count

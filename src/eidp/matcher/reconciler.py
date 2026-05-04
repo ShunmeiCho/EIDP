@@ -259,8 +259,6 @@ def verify_identity(session: Session, data_dir: Path) -> dict[str, object]:
     """Verification gate: check identity completeness including target list coverage."""
     from sqlalchemy import text
 
-    from eidp.db.models import SchoolYearStatus
-
     total = session.query(func.count(School.id)).scalar() or 0
     with_code = session.query(func.count(School.id)).filter(School.school_code.isnot(None)).scalar() or 0
     without_code = total - with_code
@@ -270,17 +268,15 @@ def verify_identity(session: Session, data_dir: Path) -> dict[str, object]:
         text("SELECT school_code, count(*) FROM school WHERE school_code IS NOT NULL GROUP BY school_code HAVING count(*) > 1")
     ).fetchall()
 
-    # Count excluded schools (no code needed). Sprint 8.2.1: only count
-    # current-revision exclusions so demoted history doesn't inflate the
-    # excluded set.
-    excluded_ids = set()
-    for row in (
-        session.query(SchoolYearStatus.school_id)
-        .filter(SchoolYearStatus.is_current.is_(True))
-        .filter(SchoolYearStatus.excluded_reason.isnot(None))
-        .distinct()
-    ):
-        excluded_ids.add(row[0])
+    # Count excluded schools (no code needed). Sprint 8.2.2: use the shared
+    # latest_excluded_school_ids helper so we count ONLY schools whose
+    # CURRENT revision in their LATEST fiscal year carries excluded_reason.
+    # The previous distinct() over all current-revision exclusions counted
+    # historical-year exclusions (e.g. FY2025 current="閉校") even when the
+    # latest year's current revision was active again — which produced
+    # false positives in `pass`.
+    from eidp.db.current_helpers import latest_excluded_school_ids
+    excluded_ids = {row[0] for row in latest_excluded_school_ids(session)}
 
     # Schools without code that are NOT excluded = truly unresolved
     no_code_schools = session.query(School).filter(School.school_code.is_(None)).all()
