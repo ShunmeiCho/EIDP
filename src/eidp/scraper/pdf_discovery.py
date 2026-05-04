@@ -412,31 +412,13 @@ def run_pdf_discovery(
 
     # Get school_sites, excluding:
     # - schools with a document for the current target fiscal year
-    # - schools excluded in their LATEST fiscal year only (not historical exclusions)
-    from sqlalchemy import and_, func, or_
+    # - schools whose CURRENT revision in their latest fiscal year is excluded
+    #   (Sprint 8.2.1: stale demoted revisions must NOT keep a school out).
+    from sqlalchemy import or_
 
-    from eidp.db.models import SchoolYearStatus
+    from eidp.db.current_helpers import latest_excluded_school_ids
 
-    # Only exclude schools where the most recent year is excluded
-    latest_year_subq = (
-        session.query(
-            SchoolYearStatus.school_id,
-            func.max(SchoolYearStatus.fiscal_year).label("max_fy"),
-        )
-        .group_by(SchoolYearStatus.school_id)
-        .subquery()
-    )
-    excluded_school_ids = (
-        session.query(SchoolYearStatus.school_id)
-        .join(
-            latest_year_subq,
-            and_(
-                SchoolYearStatus.school_id == latest_year_subq.c.school_id,
-                SchoolYearStatus.fiscal_year == latest_year_subq.c.max_fy,
-            ),
-        )
-        .filter(SchoolYearStatus.excluded_reason.isnot(None))
-    )
+    excluded_school_ids = latest_excluded_school_ids(session)
 
     # Only skip schools that already have a document for the current target year
     # (allow re-discovery if previous docs were from a different year or failed)

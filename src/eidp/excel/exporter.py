@@ -15,6 +15,8 @@ from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from eidp.db.current_helpers import IS_CURRENT_TRUE_SQL
+
 log = structlog.get_logger()
 
 def _compute_fiscal_years() -> list[int]:
@@ -53,6 +55,10 @@ def _write_sairoku(ws: Worksheet, session: Session) -> int:
         f"MAX(CASE WHEN sys.fiscal_year = {y} THEN COALESCE(sys.legacy_status, sys.status) END) AS y{y}"
         for y in FISCAL_YEARS
     )
+    # Sprint 8.2.1: school_year_status is now append-only with revision support.
+    # Filter the JOIN to is_current=true so Excel reflects only the latest
+    # revision per (school, fiscal_year), never a stale 'partial' shadowing
+    # a current 'collected'.
     query = text(f"""
         SELECT
             s.prefecture,
@@ -60,7 +66,9 @@ def _write_sairoku(ws: Worksheet, session: Session) -> int:
             s.school_name,
             {year_cols}
         FROM school s
-        LEFT JOIN school_year_status sys ON sys.school_id = s.id
+        LEFT JOIN school_year_status sys
+            ON sys.school_id = s.id
+            AND sys.is_current = {IS_CURRENT_TRUE_SQL}
         GROUP BY s.id, s.prefecture, s.corporation_name, s.school_name
         ORDER BY s.id
     """)
@@ -87,7 +95,10 @@ def _write_taisho_hiritu(ws: Worksheet, session: Session) -> int:
     ]
     ws.append(headers)
 
-    query = text("""
+    # Sprint 8.2.1: support_recipient is now append-only — filter to
+    # is_current=true so the 対象比率 sheet shows exactly one row per
+    # (school, fiscal_year), never an old + new pair side by side.
+    query = text(f"""
         SELECT
             sr.id,
             sr.fiscal_year,
@@ -113,6 +124,7 @@ def _write_taisho_hiritu(ws: Worksheet, session: Session) -> int:
             sr.recipient_rate
         FROM support_recipient sr
         JOIN school s ON s.id = sr.school_id
+        WHERE sr.is_current = {IS_CURRENT_TRUE_SQL}
         ORDER BY sr.id
     """)
 

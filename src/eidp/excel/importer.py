@@ -287,25 +287,49 @@ def import_sairoku(ws: openpyxl.worksheet.worksheet.Worksheet, session: Session)
 
             excluded_reason = raw_val if raw_val in EXCLUDED_REASONS else None
 
-            # Upsert: update existing or create new
-            existing_sys = (
+            # Append-only upsert (Sprint 8.2.1). Earlier this branch did
+            # in-place .first()-and-update which silently mutated old
+            # revisions — incompatible with the new
+            # UNIQUE(school_id, fiscal_year, revision) + partial unique on
+            # is_current=true contract. Now: demote prior current row,
+            # insert revision = max + 1 with is_current=True.
+            existing_rows = (
                 session.query(SchoolYearStatus)
-                .filter(SchoolYearStatus.school_id == school_id, SchoolYearStatus.fiscal_year == year)
-                .first()
+                .filter(
+                    SchoolYearStatus.school_id == school_id,
+                    SchoolYearStatus.fiscal_year == year,
+                )
+                .all()
             )
-            if existing_sys:
-                existing_sys.status = status
-                existing_sys.legacy_status = legacy
-                existing_sys.excluded_reason = excluded_reason
-            else:
-                sys = SchoolYearStatus(
+            current_row = next((r for r in existing_rows if r.is_current), None)
+            max_rev = max((r.revision for r in existing_rows), default=0)
+
+            if current_row is not None:
+                # Skip the write entirely if the current revision is already
+                # equal to the values we'd insert — keeps idempotent re-runs
+                # of the master Excel import from churning revisions.
+                if (current_row.status == status
+                        and current_row.legacy_status == legacy
+                        and current_row.excluded_reason == excluded_reason):
+                    stats["statuses"] += 1
+                    continue
+                session.query(SchoolYearStatus).filter(
+                    SchoolYearStatus.school_id == school_id,
+                    SchoolYearStatus.fiscal_year == year,
+                    SchoolYearStatus.is_current == True,  # noqa: E712
+                ).update({"is_current": False}, synchronize_session="fetch")
+
+            session.add(
+                SchoolYearStatus(
                     school_id=school_id,
                     fiscal_year=year,
                     status=status,
                     legacy_status=legacy,
                     excluded_reason=excluded_reason,
+                    revision=max_rev + 1,
+                    is_current=True,
                 )
-                session.add(sys)
+            )
             stats["statuses"] += 1
 
     session.flush()
@@ -507,33 +531,23 @@ def import_taisho_hiritu(
             continue
         seen.add(dedup_key)
 
-        # Upsert: update existing or create
-        existing_sr = (
+        # Append-only upsert (Sprint 8.2.1). Same rationale as
+        # SchoolYearStatus above — must not silently overwrite an old
+        # revision now that revision/is_current are part of the schema.
+        existing_rows = (
             session.query(SupportRecipient)
             .filter(SupportRecipient.school_id == school_id, SupportRecipient.fiscal_year == fiscal_year)
-            .first()
+            .all()
         )
-        if existing_sr:
-            # Update in place
-            existing_sr.school_number = school_number if school_number else None
-            existing_sr.prev_enrollment = _safe_int(row[6])
-            existing_sr.first_half_total = _safe_int(row[7])
-            existing_sr.first_half_cat1 = _safe_int(row[8])
-            existing_sr.first_half_cat2 = _safe_int(row[9])
-            existing_sr.first_half_cat3 = _safe_int(row[10])
-            existing_sr.first_half_cat4 = _safe_int(row[11])
-            existing_sr.second_half_total = _safe_int(row[12])
-            existing_sr.second_half_cat1 = _safe_int(row[13]) if len(row) > 13 else None
-            existing_sr.second_half_cat2 = _safe_int(row[14]) if len(row) > 14 else None
-            existing_sr.second_half_cat3 = _safe_int(row[15]) if len(row) > 15 else None
-            existing_sr.second_half_cat4 = _safe_int(row[16]) if len(row) > 16 else None
-            existing_sr.annual_total = _safe_int(row[17]) if len(row) > 17 else None
-            existing_sr.household_change = _safe_int(row[18]) if len(row) > 18 else None
-            existing_sr.grand_total = _safe_int(row[19]) if len(row) > 19 else None
-            existing_sr.recipient_rate = _safe_float(row[21]) if len(row) > 21 else None
-            existing_sr.notes = _safe_str(row[20]) if len(row) > 20 and row[20] else None
-            stats["rows"] += 1
-            continue
+        current_row = next((r for r in existing_rows if r.is_current), None)
+        max_rev = max((r.revision for r in existing_rows), default=0)
+
+        if current_row is not None:
+            session.query(SupportRecipient).filter(
+                SupportRecipient.school_id == school_id,
+                SupportRecipient.fiscal_year == fiscal_year,
+                SupportRecipient.is_current == True,  # noqa: E712
+            ).update({"is_current": False}, synchronize_session="fetch")
 
         sr = SupportRecipient(
             school_id=school_id,
@@ -555,6 +569,8 @@ def import_taisho_hiritu(
             grand_total=_safe_int(row[19]) if len(row) > 19 else None,
             recipient_rate=_safe_float(row[21]) if len(row) > 21 else None,
             notes=_safe_str(row[20]) if len(row) > 20 and row[20] else None,
+            revision=max_rev + 1,
+            is_current=True,
         )
         session.add(sr)
         stats["rows"] += 1

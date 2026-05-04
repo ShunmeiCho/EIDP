@@ -178,10 +178,13 @@ def reconcile(session: Session, data_dir: Path) -> ReconcileReport:
             report.needs_manual.append(candidate)
         else:
             # Check if school is excluded (閉校/統合/etc.)
+            # Sprint 8.2.1: filter is_current=True so a demoted historical
+            # revision can't masquerade as the latest state.
             from eidp.db.models import SchoolYearStatus
             latest_status = (
                 session.query(SchoolYearStatus)
                 .filter(SchoolYearStatus.school_id == school.id)
+                .filter(SchoolYearStatus.is_current.is_(True))
                 .order_by(SchoolYearStatus.fiscal_year.desc())
                 .first()
             )
@@ -267,9 +270,16 @@ def verify_identity(session: Session, data_dir: Path) -> dict[str, object]:
         text("SELECT school_code, count(*) FROM school WHERE school_code IS NOT NULL GROUP BY school_code HAVING count(*) > 1")
     ).fetchall()
 
-    # Count excluded schools (no code needed)
+    # Count excluded schools (no code needed). Sprint 8.2.1: only count
+    # current-revision exclusions so demoted history doesn't inflate the
+    # excluded set.
     excluded_ids = set()
-    for row in session.query(SchoolYearStatus.school_id).filter(SchoolYearStatus.excluded_reason.isnot(None)).distinct():
+    for row in (
+        session.query(SchoolYearStatus.school_id)
+        .filter(SchoolYearStatus.is_current.is_(True))
+        .filter(SchoolYearStatus.excluded_reason.isnot(None))
+        .distinct()
+    ):
         excluded_ids.add(row[0])
 
     # Schools without code that are NOT excluded = truly unresolved

@@ -29,7 +29,12 @@ def test_sairoku_export_preserves_schools_without_year_status() -> None:
                     school_id INTEGER NOT NULL,
                     fiscal_year INTEGER NOT NULL,
                     legacy_status TEXT,
-                    status TEXT
+                    status TEXT,
+                    -- Sprint 8.2.a added is_current as the discriminator for
+                    -- the partial unique index. The exporter (Sprint 8.2.1)
+                    -- now joins on it so demoted revisions don't shadow
+                    -- current ones.
+                    is_current INTEGER NOT NULL DEFAULT 1
                 )
                 """
             )
@@ -47,8 +52,8 @@ def test_sairoku_export_preserves_schools_without_year_status() -> None:
         conn.execute(
             text(
                 """
-                INSERT INTO school_year_status (school_id, fiscal_year, legacy_status, status)
-                VALUES (1, 2025, '○', 'verified')
+                INSERT INTO school_year_status (school_id, fiscal_year, legacy_status, status, is_current)
+                VALUES (1, 2025, '○', 'verified', 1)
                 """
             )
         )

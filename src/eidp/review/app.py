@@ -8,10 +8,10 @@ import json
 from datetime import datetime, timezone
 
 import streamlit as st
-from sqlalchemy import and_, func
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from eidp.db.models import ReviewItem, School, SchoolAlias, SchoolYearStatus
+from eidp.db.models import ReviewItem, School, SchoolAlias
 from eidp.db.session import SessionLocal
 from eidp.review import operator_pages
 
@@ -49,28 +49,9 @@ def _load_dashboard_stats(session: Session) -> dict[str, int]:
         or 0
     )
 
-    # Only exclude if the LATEST fiscal year has excluded_reason
-    latest_year_subq = (
-        session.query(
-            SchoolYearStatus.school_id,
-            func.max(SchoolYearStatus.fiscal_year).label("max_fy"),
-        )
-        .group_by(SchoolYearStatus.school_id)
-        .subquery()
-    )
-    excluded_ids: set[int] = set()
-    for row in (
-        session.query(SchoolYearStatus.school_id)
-        .join(
-            latest_year_subq,
-            and_(
-                SchoolYearStatus.school_id == latest_year_subq.c.school_id,
-                SchoolYearStatus.fiscal_year == latest_year_subq.c.max_fy,
-            ),
-        )
-        .filter(SchoolYearStatus.excluded_reason.isnot(None))
-    ):
-        excluded_ids.add(row[0])
+    # Sprint 8.2.1: centralised current-revision + latest-fy excluded filter.
+    from eidp.db.current_helpers import latest_excluded_school_ids
+    excluded_ids: set[int] = {row[0] for row in latest_excluded_school_ids(session)}
     no_code = session.query(School).filter(School.school_code.is_(None)).all()
     excluded_count = sum(1 for s in no_code if s.id in excluded_ids)
     unresolved_count = sum(1 for s in no_code if s.id not in excluded_ids)
