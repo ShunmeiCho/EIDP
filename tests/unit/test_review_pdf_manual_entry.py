@@ -314,3 +314,132 @@ def test_save_outcome_default_shape():
     assert o.lock_busy is False
     assert o.lock_owner is None
     assert o.error is None
+
+
+# ---------------------------------------------------------------------------
+# submit_form — UI wiring contract (Sprint 8.4.c.1.1)
+# ---------------------------------------------------------------------------
+
+
+def test_submit_form_routes_through_save_with_lock(engine, tmp_path, monkeypatch):
+    """The page MUST go through save_with_lock — that is the single
+    enforcement point for the shared advisory lock + the manual_entry
+    contract. This regression monkeypatches save_with_lock and asserts
+    submit_form calls it with the validated entries."""
+    from eidp.review.pages import pdf_manual_entry as page_mod
+
+    captured: dict = {}
+
+    def fake_save_with_lock(session, **kwargs):
+        captured.update(kwargs)
+        return SaveOutcome(ok=True)
+
+    monkeypatch.setattr(page_mod, "save_with_lock", fake_save_with_lock)
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="W学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="w", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[{"canonical_name": "A学科", "enrollment": 10}],
+            reason="image PDF",
+            lock_path=lock,
+        )
+
+    assert validation.ok, validation.errors
+    assert outcome is not None
+    assert outcome.ok is True
+    assert captured["document_id"] == doc.id
+    assert captured["fiscal_year"] == 2026
+    assert captured["lock_path"] == lock
+    assert captured["reason"] == "image PDF"
+    assert len(captured["entries"]) == 1
+    assert captured["entries"][0].canonical_name == "A学科"
+
+
+def test_submit_form_returns_validation_errors_without_calling_save(engine, tmp_path, monkeypatch):
+    """If form validation fails, save_with_lock must NOT be called.
+    Pins the contract that the lock is never held while the operator
+    is fixing input errors."""
+    from eidp.review.pages import pdf_manual_entry as page_mod
+
+    called = {"count": 0}
+
+    def fake_save_with_lock(session, **kwargs):
+        called["count"] += 1
+        return SaveOutcome(ok=True)
+
+    monkeypatch.setattr(page_mod, "save_with_lock", fake_save_with_lock)
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="V学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="v", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[{"canonical_name": "", "enrollment": 10}],  # missing name
+            reason=None,
+            lock_path=lock,
+        )
+
+    assert not validation.ok
+    assert any("canonical_name" in e.field for e in validation.errors)
+    assert outcome is None
+    assert called["count"] == 0
+
+
+def test_submit_form_rejects_when_no_valid_rows_remain(engine, tmp_path, monkeypatch):
+    """If every row has at least one error, submit_form must NOT call
+    save_with_lock even though the validation list happens to be empty
+    of *successful* entries — that's a degenerate save."""
+    from eidp.review.pages import pdf_manual_entry as page_mod
+
+    called = {"count": 0}
+    monkeypatch.setattr(
+        page_mod, "save_with_lock",
+        lambda *a, **kw: (called.__setitem__("count", called["count"] + 1) or SaveOutcome(ok=True)),
+    )
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="U学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="u", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[
+                {"canonical_name": "", "enrollment": 1},
+                {"canonical_name": "A", "enrollment": -5},
+            ],
+            reason=None,
+            lock_path=lock,
+        )
+
+    assert not validation.ok
+    assert outcome is None
+    assert called["count"] == 0
+
+
+def test_save_eligible_statuses_excludes_school_mismatch():
+    """``school_mismatch`` documents are listed in the queue but must
+    NOT have a save form rendered — the operator must fix the school
+    binding first. This test pins the policy constant so a future
+    page-mod change can't silently flip it."""
+    from eidp.review.pages.pdf_manual_entry import SAVE_ELIGIBLE_STATUSES
+
+    assert "school_mismatch" not in SAVE_ELIGIBLE_STATUSES
+    assert SAVE_ELIGIBLE_STATUSES == frozenset({
+        "ocr_pending", "parse_failed", "review_pending",
+    })

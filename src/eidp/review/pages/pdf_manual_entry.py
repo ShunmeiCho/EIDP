@@ -323,13 +323,171 @@ def save_with_lock(
 
 
 # ---------------------------------------------------------------------------
+# Submit handler — tested via monkeypatch
+# ---------------------------------------------------------------------------
+
+
+# Statuses where the operator CAN save data here. ``school_mismatch``
+# documents are listed read-only; the operator must resolve school
+# binding via a separate workflow before manual data entry is safe.
+SAVE_ELIGIBLE_STATUSES: frozenset[str] = frozenset({
+    "ocr_pending",
+    "parse_failed",
+    "review_pending",
+})
+
+
+def submit_form(
+    session: Session,
+    *,
+    document_id: int,
+    fiscal_year: int,
+    rows: list[dict],
+    reason: str | None,
+    lock_path: Path,
+) -> tuple[FormValidation, SaveOutcome | None]:
+    """Validate UI form rows then save through the locked pipeline.
+
+    Returns ``(validation, outcome)``. If validation fails, outcome is
+    None and the page renders the inline errors. If validation succeeds,
+    outcome carries the SaveOutcome from save_with_lock.
+
+    This is the unit-test seam: tests monkeypatch save_with_lock and
+    invoke submit_form to verify the page wires through to it instead
+    of writing directly.
+    """
+    fv = form_data_to_entries(rows)
+    if not fv.ok:
+        return fv, None
+    if not fv.entries:
+        # Form had only invalid rows — surface as a generic error.
+        fv.errors.append(ValidationError(field="form", message="no valid rows to save"))
+        return fv, None
+
+    outcome = save_with_lock(
+        session,
+        document_id=document_id,
+        fiscal_year=fiscal_year,
+        entries=fv.entries,
+        reason=reason,
+        lock_path=lock_path,
+    )
+    return fv, outcome
+
+
+# ---------------------------------------------------------------------------
 # Streamlit render
 # ---------------------------------------------------------------------------
 
 
+def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
+    session: Session,
+    row: QueueRow,
+    *,
+    lock_path: Path,
+) -> None:
+    """Render the actual editable form for one save-eligible queue row."""
+    import streamlit as st
+
+    fy_default = row.fiscal_year or 2026
+    state_key = f"manual_entry_rows__{row.document_id}"
+
+    if state_key not in st.session_state:
+        st.session_state[state_key] = [
+            {"canonical_name": "", "enrollment": "", "graduates": ""},
+        ]
+
+    cols = st.columns([1, 1, 1])
+    if cols[0].button("行を追加", key=f"add_{row.document_id}"):
+        st.session_state[state_key].append(
+            {"canonical_name": "", "enrollment": "", "graduates": ""}
+        )
+    if cols[1].button("最終行を削除", key=f"del_{row.document_id}"):
+        if len(st.session_state[state_key]) > 1:
+            st.session_state[state_key].pop()
+
+    with st.form(key=f"form_{row.document_id}"):
+        fiscal_year = st.number_input(
+            "年度 (fiscal_year)",
+            min_value=2019, max_value=2030, value=fy_default, step=1,
+            key=f"fy_{row.document_id}",
+        )
+        reason = st.text_input("操作メモ (reason)", key=f"reason_{row.document_id}")
+
+        form_rows: list[dict] = []
+        for i, _ in enumerate(st.session_state[state_key]):
+            st.markdown(f"**学科 #{i + 1}**")
+            c = st.columns([2, 1, 1, 1, 1, 1, 1])
+            canonical = c[0].text_input("学科名", key=f"name_{row.document_id}_{i}")
+            capacity = c[1].text_input("収定", key=f"cap_{row.document_id}_{i}")
+            enrollment = c[2].text_input("在籍", key=f"enr_{row.document_id}_{i}")
+            intl = c[3].text_input("留学生", key=f"intl_{row.document_id}_{i}")
+            graduates = c[4].text_input("卒業", key=f"grad_{row.document_id}_{i}")
+            advanced = c[5].text_input("進学", key=f"adv_{row.document_id}_{i}")
+            employed = c[6].text_input("就職", key=f"emp_{row.document_id}_{i}")
+            d = st.columns([1, 1, 1, 1, 1, 1])
+            other = d[0].text_input("その他", key=f"oth_{row.document_id}_{i}")
+            prev_enrollment = d[1].text_input("前年在籍", key=f"prev_{row.document_id}_{i}")
+            dropouts = d[2].text_input("中退", key=f"drp_{row.document_id}_{i}")
+            dropout_rate = d[3].text_input("中退率(0-1)", key=f"drprate_{row.document_id}_{i}")
+            duration_years = d[4].text_input("年限", key=f"dur_{row.document_id}_{i}")
+            dept_change = d[5].selectbox(
+                "学科改編", options=["", "新設", "廃科", "名称変更", "統合"],
+                key=f"chg_{row.document_id}_{i}",
+            )
+            form_rows.append({
+                "canonical_name": canonical,
+                "capacity": capacity,
+                "enrollment": enrollment,
+                "intl_students": intl,
+                "graduates": graduates,
+                "advanced": advanced,
+                "employed": employed,
+                "other": other,
+                "prev_enrollment": prev_enrollment,
+                "dropouts": dropouts,
+                "dropout_rate": dropout_rate,
+                "duration_years": duration_years,
+                "dept_change": dept_change or None,
+            })
+
+        submitted = st.form_submit_button("保存", type="primary")
+
+    if submitted:
+        validation, outcome = submit_form(
+            session,
+            document_id=row.document_id,
+            fiscal_year=int(fiscal_year),
+            rows=form_rows,
+            reason=reason or None,
+            lock_path=lock_path,
+        )
+        if not validation.ok:
+            for err in validation.errors:
+                st.error(f"{err.field}: {err.message}")
+            return
+        if outcome is None:  # defensive — submit_form returned validation-only path
+            return
+        if outcome.lock_busy:
+            st.warning(
+                f"週次処理中、編集は一時停止しています。少し待ってから再度保存してください "
+                f"(owner={outcome.lock_owner}, started_at={outcome.lock_started_at})"
+            )
+            return
+        if not outcome.ok:
+            st.error(f"保存できませんでした: {outcome.error}")
+            return
+        st.success(
+            f"保存しました。学科 {outcome.result.rows_written} 件、"
+            f"監査ログ {len(outcome.result.audit_actions)} 件。"
+        )
+        # Clear form state so the next render starts fresh.
+        st.session_state.pop(state_key, None)
+        st.rerun()
+
+
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin streamlit shell
-    """Top-level Streamlit render. Tests cover the helpers above; the
-    rendering itself is exercised by the operator via the running app."""
+    """Top-level Streamlit render for the PDF確認・手入力 page."""
     import streamlit as st
 
     st.subheader("PDF確認・手入力")
@@ -347,11 +505,23 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
 
     st.caption(f"待機 {len(queue)} 件")
     for row in queue[:20]:
-        with st.expander(f"[{row.ingest_status}] {row.school_name} ({row.prefecture}) — fy={row.fiscal_year} doc#{row.document_id}"):
+        with st.expander(
+            f"[{row.ingest_status}] {row.school_name} ({row.prefecture}) "
+            f"— fy={row.fiscal_year} doc#{row.document_id}"
+        ):
             st.write(f"source_url: {row.source_url}")
             if row.file_path:
                 st.write(f"file: {row.file_path}")
-            st.info(
-                "保存は ``pipeline.manual_entry.save_manual_entries`` を経由します。"
-                " UI から直接 DB に書き込みません。"
-            )
+
+            if row.ingest_status not in SAVE_ELIGIBLE_STATUSES:
+                # school_mismatch and other non-eligible statuses are
+                # read-only here. Saving manual data on a mismatched
+                # school would write to the wrong school_id; bind the
+                # document to the correct school first.
+                st.warning(
+                    "この文書は ``school_mismatch`` です。学校マッピングを"
+                    "先に修正してください。手入力は無効化されています。"
+                )
+                continue
+
+            _render_save_eligible_form(session, row, lock_path=lock_path)
