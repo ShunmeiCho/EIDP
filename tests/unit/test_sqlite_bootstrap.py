@@ -357,6 +357,153 @@ def test_apply_sqlite_pragmas_noop_on_non_sqlite(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+def test_support_recipient_revision_columns_present(bootstrapped_engine):
+    """Sprint 8.2.a: support_recipient must have revision + is_current with
+    a partial unique index ``idx_support_recipient_current`` on
+    (school_id, fiscal_year) WHERE is_current=true. Same append-only contract
+    as DepartmentYearly."""
+    inspector = inspect(bootstrapped_engine)
+    columns = {c["name"] for c in inspector.get_columns("support_recipient")}
+    assert {"revision", "is_current"}.issubset(columns), (
+        f"support_recipient must have revision + is_current, got {sorted(columns)}"
+    )
+
+    with bootstrapped_engine.connect() as conn:
+        row = conn.execute(
+            text(
+                "SELECT sql FROM sqlite_master "
+                "WHERE type='index' AND name='idx_support_recipient_current'"
+            )
+        ).first()
+    assert row is not None, "idx_support_recipient_current partial unique index must exist"
+    assert "WHERE" in (row[0] or "").upper()
+
+
+def test_school_year_status_revision_columns_present(bootstrapped_engine):
+    """Sprint 8.2.a: school_year_status mirror of the support_recipient
+    contract — revision + is_current + partial unique."""
+    inspector = inspect(bootstrapped_engine)
+    columns = {c["name"] for c in inspector.get_columns("school_year_status")}
+    assert {"revision", "is_current"}.issubset(columns), (
+        f"school_year_status must have revision + is_current, got {sorted(columns)}"
+    )
+
+    with bootstrapped_engine.connect() as conn:
+        row = conn.execute(
+            text(
+                "SELECT sql FROM sqlite_master "
+                "WHERE type='index' AND name='idx_school_year_status_current'"
+            )
+        ).first()
+    assert row is not None, "idx_school_year_status_current partial unique index must exist"
+    assert "WHERE" in (row[0] or "").upper()
+
+
+def test_support_recipient_revision_2_does_not_collide(bootstrapped_engine):
+    """Inserting a second revision for the same (school_id, fiscal_year) must
+    succeed once the previous current row is flipped. Without the partial
+    index + (school_id, fiscal_year, revision) unique this would fail."""
+    from eidp.db.models import SupportRecipient
+
+    with Session(bootstrapped_engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="テスト法人",
+            school_name="テスト専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.flush()
+
+        rev1 = SupportRecipient(
+            school_id=school.id,
+            fiscal_year=2026,
+            annual_total=100,
+            revision=1,
+            is_current=True,
+        )
+        session.add(rev1)
+        session.flush()
+
+        session.query(SupportRecipient).filter(
+            SupportRecipient.school_id == school.id,
+            SupportRecipient.fiscal_year == 2026,
+            SupportRecipient.is_current.is_(True),
+        ).update({"is_current": False}, synchronize_session="fetch")
+
+        rev2 = SupportRecipient(
+            school_id=school.id,
+            fiscal_year=2026,
+            annual_total=110,
+            revision=2,
+            is_current=True,
+        )
+        session.add(rev2)
+        session.commit()
+
+        rows = (
+            session.query(SupportRecipient)
+            .filter(SupportRecipient.school_id == school.id)
+            .order_by(SupportRecipient.revision)
+            .all()
+        )
+        assert [r.revision for r in rows] == [1, 2]
+        assert [r.is_current for r in rows] == [False, True]
+
+
+def test_school_year_status_revision_2_does_not_collide(bootstrapped_engine):
+    from eidp.db.models import SchoolYearStatus
+
+    with Session(bootstrapped_engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="テスト法人",
+            school_name="テスト専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.flush()
+
+        session.add(
+            SchoolYearStatus(
+                school_id=school.id,
+                fiscal_year=2026,
+                status="collected",
+                revision=1,
+                is_current=True,
+            )
+        )
+        session.flush()
+
+        session.query(SchoolYearStatus).filter(
+            SchoolYearStatus.school_id == school.id,
+            SchoolYearStatus.fiscal_year == 2026,
+            SchoolYearStatus.is_current.is_(True),
+        ).update({"is_current": False}, synchronize_session="fetch")
+
+        session.add(
+            SchoolYearStatus(
+                school_id=school.id,
+                fiscal_year=2026,
+                status="collected",
+                revision=2,
+                is_current=True,
+            )
+        )
+        session.commit()
+
+        rows = (
+            session.query(SchoolYearStatus)
+            .filter(SchoolYearStatus.school_id == school.id)
+            .order_by(SchoolYearStatus.revision)
+            .all()
+        )
+        assert [r.revision for r in rows] == [1, 2]
+        assert [r.is_current for r in rows] == [False, True]
+
+
 def test_empty_database_db_info_smoke(bootstrapped_engine):
     """After bootstrap on an empty SQLite DB, the row-count queries that
     `eidp db-info` issues must succeed and return 0 across the headline

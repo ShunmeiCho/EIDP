@@ -210,9 +210,20 @@ class SchoolYearStatus(Base):
     document_id: Mapped[int | None] = mapped_column(ForeignKey("document.id"))
     notes: Mapped[str | None] = mapped_column(Text)
 
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
     __table_args__ = (
-        UniqueConstraint("school_id", "fiscal_year"),
-        {"comment": "School-year collection status tracking"},
+        UniqueConstraint("school_id", "fiscal_year", "revision", name="uq_school_year_status_revision"),
+        Index(
+            "idx_school_year_status_current",
+            "school_id",
+            "fiscal_year",
+            unique=True,
+            postgresql_where=text("is_current = true"),
+            sqlite_where=text("is_current = 1"),
+        ),
+        {"comment": "School-year collection status tracking (append-only with revision support)"},
     )
 
     school: Mapped["School"] = relationship(back_populates="year_statuses")
@@ -256,10 +267,20 @@ class SupportRecipient(Base):
     recipient_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
     extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     notes: Mapped[str | None] = mapped_column(Text)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     __table_args__ = (
-        UniqueConstraint("school_id", "fiscal_year"),
-        {"comment": "Support recipient data for 対象比率 sheet"},
+        UniqueConstraint("school_id", "fiscal_year", "revision", name="uq_support_recipient_revision"),
+        Index(
+            "idx_support_recipient_current",
+            "school_id",
+            "fiscal_year",
+            unique=True,
+            postgresql_where=text("is_current = true"),
+            sqlite_where=text("is_current = 1"),
+        ),
+        {"comment": "Support recipient data for 対象比率 sheet (append-only with revision support)"},
     )
 
     school: Mapped["School"] = relationship(back_populates="support_recipients")
