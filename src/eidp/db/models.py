@@ -93,10 +93,11 @@ class Document(Base):
     file_hash: Mapped[str | None] = mapped_column(String(64))
     file_size: Mapped[int | None] = mapped_column(Integer)
     fiscal_year: Mapped[int | None] = mapped_column(Integer)
+    fiscal_year_override: Mapped[int | None] = mapped_column(Integer)  # set by 8.2.c override UI; effective_fiscal_year() reads
     is_current_year: Mapped[bool | None] = mapped_column(Boolean)
     content_type: Mapped[str | None] = mapped_column(String(20))
     pdf_type: Mapped[str | None] = mapped_column(String(30))  # target, non_target, image_only, unknown
-    ingest_status: Mapped[str | None] = mapped_column(String(30))  # pending, ingested, school_mismatch, parse_failed, transient_error
+    ingest_status: Mapped[str | None] = mapped_column(String(30))  # pending, ingested, school_mismatch, parse_failed, transient_error, review_pending, ocr_pending
     confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -176,6 +177,7 @@ class DepartmentYearly(Base):
     dropout_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
     extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     extraction_method: Mapped[str | None] = mapped_column(String(20))
+    confidence_breakdown: Mapped[str | None] = mapped_column(Text)  # 8.2.c: JSON: {f1_extraction, f2_completeness, f3_yoy_sanity, method, weights}
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -266,6 +268,7 @@ class SupportRecipient(Base):
     prev_enrollment: Mapped[int | None] = mapped_column(Integer)
     recipient_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
     extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
+    confidence_breakdown: Mapped[str | None] = mapped_column(Text)  # 8.2.c: JSON, mirrors DepartmentYearly
     notes: Mapped[str | None] = mapped_column(Text)
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -323,3 +326,29 @@ class ReviewItem(Base):
     resolution: Mapped[str | None] = mapped_column(String(20))  # approved, rejected, corrected
     resolved_value: Mapped[str | None] = mapped_column(Text)  # actual applied value (if corrected)
     notes: Mapped[str | None] = mapped_column(Text)
+
+
+class ManualActionLog(Base):
+    """Audit log for business-user actions (Sprint 8.2.c).
+
+    DB is the authoritative source. ``data/audit/manual-actions.jsonl`` is an
+    after-commit outbox that is rebuilt from this table on demand. ``action_id``
+    is a stable UUID assigned at insert so the JSONL outbox can dedup against
+    the DB rows.
+    """
+
+    __tablename__ = "manual_action_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    action_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)  # UUID4
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    actor: Mapped[str] = mapped_column(String(50), nullable=False, default="operator")
+    action_type: Mapped[str] = mapped_column(String(50), nullable=False)  # fiscal_year_override / manual_entry / r8_override / dept_change
+    target_table: Mapped[str] = mapped_column(String(50), nullable=False)  # document / department_yearly / support_recipient / school_year_status
+    target_id: Mapped[int | None] = mapped_column(Integer)
+    document_id: Mapped[int | None] = mapped_column(ForeignKey("document.id"))
+    old_value: Mapped[str | None] = mapped_column(Text)  # JSON
+    new_value: Mapped[str | None] = mapped_column(Text)  # JSON
+    reason: Mapped[str | None] = mapped_column(Text)
+    jsonl_exported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    jsonl_export_error: Mapped[str | None] = mapped_column(Text)
