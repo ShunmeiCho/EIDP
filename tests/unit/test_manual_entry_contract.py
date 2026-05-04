@@ -119,9 +119,10 @@ def test_audit_log_written_per_yearly_row(engine):
         session.commit()
 
         actions = session.query(ManualActionLog).all()
-        # Two actions: department create + department_yearly insert.
+        # Three actions (8.4.a.1): department create + department_yearly
+        # insert + document promotion from ocr_pending → ingested.
         types = sorted(a.target_table for a in actions)
-        assert types == ["department", "department_yearly"]
+        assert types == ["department", "department_yearly", "document"]
         for a in actions:
             assert a.action_type == "manual_entry"
             assert a.actor == "operator"
@@ -259,6 +260,185 @@ def test_empty_entries_is_no_op(engine):
         assert session.query(ManualActionLog).count() == 0
 
 
+def test_invalid_method_raises(engine):
+    """Sprint 8.4.a.1 — method must be in the allowed whitelist; a
+    silent ``method='bogus'`` injection is no longer accepted."""
+    with Session(engine) as session:
+        _, doc = _seed(session)
+        session.commit()
+        with pytest.raises(ValueError, match="method must be one of"):
+            save_manual_entries(
+                session, document_id=doc.id, fiscal_year=2026,
+                entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+                method="bogus",  # type: ignore[arg-type]
+            )
+
+
+def test_fiscal_year_mismatch_raises(engine):
+    """Sprint 8.4.a.1 — if doc.fiscal_year is set and differs from the
+    requested fiscal_year, refuse and direct the operator to the
+    R8-override flow (which moves all four tables atomically)."""
+    with Session(engine) as session:
+        _, doc = _seed(session, fiscal_year=2025)
+        session.commit()
+        with pytest.raises(ValueError, match="fiscal_year_override"):
+            save_manual_entries(
+                session, document_id=doc.id, fiscal_year=2026,
+                entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+            )
+
+
+def test_fiscal_year_backfill_when_document_has_none(engine):
+    """Sprint 8.4.a.1 — when Document.fiscal_year is None (typical for
+    a fresh ocr_pending entry), save_manual_entries backfills the
+    fiscal_year on the Document and audits the move."""
+    with Session(engine) as session:
+        # _seed default sets fiscal_year=2026; for this case we need a
+        # document with fiscal_year=None.
+        school = School(
+            prefecture="東京都", corporation_name="テスト法人",
+            school_name="テスト専門学校", school_type="専門学校", status="active",
+        )
+        session.add(school)
+        session.flush()
+        doc = Document(
+            school_id=school.id,
+            source_url="https://example.com/no-fy.pdf",
+            file_hash=("c" * 64),
+            pdf_type="target",
+            content_type="image",
+            fiscal_year=None,
+            ingest_status="ocr_pending",
+            downloaded_at=datetime.now(timezone.utc),
+        )
+        session.add(doc)
+        session.commit()
+
+        save_manual_entries(
+            session, document_id=doc.id, fiscal_year=2026,
+            entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+        )
+        session.commit()
+
+        session.refresh(doc)
+        assert doc.fiscal_year == 2026
+
+
+def test_negative_numeric_field_raises(engine):
+    """Sprint 8.4.a.1 — negative counts must be rejected at the pipeline
+    boundary, even if a future caller bypasses UI validation."""
+    with Session(engine) as session:
+        _, doc = _seed(session)
+        session.commit()
+        with pytest.raises(ValueError, match="enrollment.*non-negative"):
+            save_manual_entries(
+                session, document_id=doc.id, fiscal_year=2026,
+                entries=[DepartmentEntry(canonical_name="A学科", enrollment=-1)],
+            )
+
+
+def test_dropout_rate_out_of_range_raises(engine):
+    with Session(engine) as session:
+        _, doc = _seed(session)
+        session.commit()
+        with pytest.raises(ValueError, match="dropout_rate"):
+            save_manual_entries(
+                session, document_id=doc.id, fiscal_year=2026,
+                entries=[DepartmentEntry(canonical_name="A学科", dropout_rate=1.5)],
+            )
+
+
+def test_success_clears_ocr_pending_queue(engine):
+    """Sprint 8.4.a.1 — after a successful manual entry on an
+    ocr_pending document, the Document's ingest_status must transition
+    to 'ingested' so the queue surface clears, and the transition
+    must be audited."""
+    with Session(engine) as session:
+        _, doc = _seed(session)  # _seed sets ingest_status='ocr_pending'
+        session.commit()
+
+        result = save_manual_entries(
+            session, document_id=doc.id, fiscal_year=2026,
+            entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+        )
+        session.commit()
+
+        session.refresh(doc)
+        assert doc.ingest_status == "ingested"
+        assert result.document_status_changed_to == "ingested"
+
+        # Audit row for the document target_table records the transition.
+        doc_actions = (
+            session.query(ManualActionLog)
+            .filter(ManualActionLog.target_table == "document")
+            .all()
+        )
+        assert len(doc_actions) == 1
+        action = doc_actions[0]
+        import json
+        assert json.loads(action.old_value)["ingest_status"] == "ocr_pending"
+        assert json.loads(action.new_value)["ingest_status"] == "ingested"
+
+
+def test_success_clears_review_pending_and_parse_failed_queues(engine):
+    """All three queued statuses (ocr_pending / parse_failed /
+    review_pending) must be cleared by a successful manual entry."""
+    for prior_status in ("parse_failed", "review_pending"):
+        with Session(engine) as session:
+            school = School(
+                prefecture="東京都", corporation_name=f"法人_{prior_status}",
+                school_name=f"学校_{prior_status}", school_type="専門学校", status="active",
+            )
+            session.add(school)
+            session.flush()
+            doc = Document(
+                school_id=school.id,
+                source_url=f"https://example.com/{prior_status}.pdf",
+                file_hash=(prior_status.ljust(64, "0"))[:64],
+                pdf_type="target",
+                content_type="text",
+                fiscal_year=2026,
+                ingest_status=prior_status,
+            )
+            session.add(doc)
+            session.commit()
+
+            save_manual_entries(
+                session, document_id=doc.id, fiscal_year=2026,
+                entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+            )
+            session.commit()
+
+            session.refresh(doc)
+            assert doc.ingest_status == "ingested", (
+                f"prior={prior_status} did not clear to ingested"
+            )
+
+
+def test_success_does_not_change_already_ingested_status(engine):
+    """If the Document is already 'ingested' (e.g. operator is fixing
+    a typo on a confirmed row), the status MUST NOT be re-promoted
+    and no document audit row should fire."""
+    with Session(engine) as session:
+        _, doc = _seed(session)
+        doc.ingest_status = "ingested"
+        session.commit()
+
+        result = save_manual_entries(
+            session, document_id=doc.id, fiscal_year=2026,
+            entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+        )
+        session.commit()
+
+        assert result.document_status_changed_to is None
+        doc_actions = (
+            session.query(ManualActionLog)
+            .filter(ManualActionLog.target_table == "document")
+            .all()
+        )
+        assert len(doc_actions) == 0, "no document audit row when status was already ingested"
+
+
 def test_canonical_name_required(engine):
     with Session(engine) as session:
         _, doc = _seed(session)
@@ -272,18 +452,37 @@ def test_canonical_name_required(engine):
 
 def test_nfkc_normalisation_collapses_fullwidth_aliases(engine):
     """Entering 'ＡＢＣ学科' (full-width A B C) and 'ABC学科' (half-width)
-    must resolve to the SAME Department, not create two."""
+    must resolve to the SAME Department, not create two.
+
+    Sprint 8.4.a.1 made fiscal_year-mismatch on a single Document a hard
+    error (same PDF cannot be both R7 and R8 — that needs override). So
+    we use two separate documents, one per fiscal year, to exercise the
+    NFKC dedup path."""
     with Session(engine) as session:
-        _, doc = _seed(session)
+        school, doc1 = _seed(session, fiscal_year=2026)
+        # Second document targets fiscal_year 2027 — different doc, same
+        # school — so the NFKC dedup happens on Department, not via the
+        # forbidden cross-year reuse of one Document.
+        doc2 = Document(
+            school_id=school.id,
+            source_url="https://example.com/manual2.pdf",
+            file_hash=("b" * 64),
+            pdf_type="target",
+            content_type="image",
+            fiscal_year=2027,
+            ingest_status="ocr_pending",
+            downloaded_at=datetime.now(timezone.utc),
+        )
+        session.add(doc2)
         session.commit()
 
         save_manual_entries(
-            session, document_id=doc.id, fiscal_year=2026,
+            session, document_id=doc1.id, fiscal_year=2026,
             entries=[DepartmentEntry(canonical_name="ＡＢＣ学科", enrollment=10)],
         )
         session.commit()
         save_manual_entries(
-            session, document_id=doc.id, fiscal_year=2027,
+            session, document_id=doc2.id, fiscal_year=2027,
             entries=[DepartmentEntry(canonical_name="ABC学科", enrollment=12)],
         )
         session.commit()

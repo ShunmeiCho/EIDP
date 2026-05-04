@@ -49,6 +49,31 @@ from eidp.db.models import (
 ManualMethod = Literal["manual", "ocr_tesseract"]
 DeptChangeType = Literal["新設", "廃科", "名称変更", "統合"]
 
+ALLOWED_METHODS: frozenset[str] = frozenset({"manual", "ocr_tesseract"})
+
+# Sprint 8.4.a.1: ingest statuses that mean "this document is sitting in
+# a manual-review queue waiting for the operator". A successful
+# save_manual_entries call clears the queue by promoting the document
+# to ``ingested``.
+_QUEUED_INGEST_STATUSES: frozenset[str] = frozenset({
+    "ocr_pending",
+    "parse_failed",
+    "review_pending",
+})
+
+# Numeric fields whose value must be non-negative integers.
+_NON_NEGATIVE_INT_FIELDS: tuple[str, ...] = (
+    "capacity",
+    "enrollment",
+    "intl_students",
+    "graduates",
+    "advanced",
+    "employed",
+    "other",
+    "prev_enrollment",
+    "dropouts",
+)
+
 
 def _norm(value: str | None) -> str:
     if not value:
@@ -98,6 +123,25 @@ class ManualEntryResult:
     departments_created: int = 0
     department_changes_written: int = 0
     audit_actions: list[int] = field(default_factory=list)
+    document_status_changed_to: str | None = None
+
+
+def _validate_entry_numeric_fields(entry: DepartmentEntry) -> None:
+    """Reject negative counts and out-of-range dropout_rate.
+
+    Pipeline-level guardrail so a future CLI / OCR path cannot bypass
+    UI-side validation.
+    """
+    for field_name in _NON_NEGATIVE_INT_FIELDS:
+        value = getattr(entry, field_name)
+        if value is not None and value < 0:
+            raise ValueError(
+                f"DepartmentEntry.{field_name} must be non-negative; got {value}"
+            )
+    if entry.dropout_rate is not None and not (0.0 <= entry.dropout_rate <= 1.0):
+        raise ValueError(
+            f"DepartmentEntry.dropout_rate must be within [0, 1]; got {entry.dropout_rate}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -180,11 +224,41 @@ def save_manual_entries(
     """
     import json as _json
 
+    # 8.4.a.1: enforce the method whitelist at the pipeline boundary so a
+    # future CLI / OCR caller cannot silently inject e.g. method="bogus".
+    if method not in ALLOWED_METHODS:
+        raise ValueError(
+            f"method must be one of {sorted(ALLOWED_METHODS)}; got {method!r}"
+        )
+
     doc = session.get(Document, document_id)
     if doc is None:
         raise ValueError(f"Document id={document_id} not found")
+
+    # 8.4.a.1: fiscal_year coherence. If the Document already has a
+    # fiscal_year and the caller supplies a different one, refuse — that
+    # is a R8-override situation and must go through
+    # ``pipeline.fiscal_year_override.override_fiscal_year`` so all four
+    # tables move atomically. If the Document has no fiscal_year yet
+    # (typical for ocr_pending / parse_failed first manual confirmation),
+    # we backfill it on the document and audit the move.
+    fy_backfilled = False
+    if doc.fiscal_year is not None and doc.fiscal_year != fiscal_year:
+        raise ValueError(
+            f"Document id={document_id} fiscal_year={doc.fiscal_year} != "
+            f"requested fiscal_year={fiscal_year}. Use "
+            "pipeline.fiscal_year_override.override_fiscal_year to move "
+            "all four tables atomically."
+        )
+    if doc.fiscal_year is None:
+        doc.fiscal_year = fiscal_year
+        fy_backfilled = True
+
     if not entries:
         return ManualEntryResult(document_id=document_id, fiscal_year=fiscal_year)
+
+    for entry in entries:
+        _validate_entry_numeric_fields(entry)
 
     if method == "manual":
         extraction_confidence = 1.0
@@ -341,5 +415,46 @@ def save_manual_entries(
                 actor=actor,
             )
             result.audit_actions.append(audit_row.id)
+
+    # 8.4.a.1: if the document was sitting in a manual-review queue
+    # (ocr_pending / parse_failed / review_pending), promote it to
+    # ingested now that the operator has supplied the data. Audit the
+    # transition so the queue change is traceable.
+    prior_status = doc.ingest_status
+    if prior_status in _QUEUED_INGEST_STATUSES:
+        doc.ingest_status = "ingested"
+        result.document_status_changed_to = "ingested"
+        audit_row = log_manual_action(
+            session,
+            action_type="manual_entry",
+            target_table="document",
+            target_id=doc.id,
+            document_id=document_id,
+            old_value={"ingest_status": prior_status, **(
+                {"fiscal_year_backfilled_to": fiscal_year} if fy_backfilled else {}
+            )},
+            new_value={"ingest_status": "ingested", **(
+                {"fiscal_year": fiscal_year} if fy_backfilled else {}
+            )},
+            reason=reason,
+            actor=actor,
+        )
+        result.audit_actions.append(audit_row.id)
+    elif fy_backfilled:
+        # Document wasn't in a queued status but we still backfilled
+        # fiscal_year — audit that fact on its own so the move is
+        # traceable.
+        audit_row = log_manual_action(
+            session,
+            action_type="manual_entry",
+            target_table="document",
+            target_id=doc.id,
+            document_id=document_id,
+            old_value={"fiscal_year": None},
+            new_value={"fiscal_year": fiscal_year},
+            reason=reason,
+            actor=actor,
+        )
+        result.audit_actions.append(audit_row.id)
 
     return result
