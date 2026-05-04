@@ -357,14 +357,6 @@ def test_resolve_alembic_ini_prefers_app_root(tmp_path: Path, monkeypatch: pytes
     class _FakeSettings:
         app_root = fake_root
 
-    monkeypatch.setattr(
-        sqlite_bootstrap,
-        "_resolve_alembic_ini",
-        lambda: fake_root / "alembic.ini" if (fake_root / "alembic.ini").is_file()
-                else Path("/nope"),
-    )
-    # Direct call to verify resolution behavior — we use the real
-    # function with a monkey-patched config import.
     import eidp.config as cfg
 
     monkeypatch.setattr(cfg, "settings", _FakeSettings(), raising=True)
