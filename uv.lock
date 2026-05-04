@@ -588,7 +588,6 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "openpyxl" },
-    { name = "psycopg2-binary" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
@@ -614,6 +613,9 @@ pdf = [
     { name = "pdfplumber" },
     { name = "pymupdf" },
 ]
+postgres = [
+    { name = "psycopg2-binary" },
+]
 scraper = [
     { name = "ddgs" },
     { name = "httpx" },
@@ -621,19 +623,30 @@ scraper = [
     { name = "scrapy" },
     { name = "tenacity" },
 ]
+scraper-basic = [
+    { name = "ddgs" },
+    { name = "httpx" },
+    { name = "tenacity" },
+]
+scraper-playwright = [
+    { name = "playwright" },
+    { name = "scrapy" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.16,<2.0" },
-    { name = "ddgs", marker = "extra == 'scraper'", specifier = ">=8.0" },
-    { name = "httpx", marker = "extra == 'scraper'", specifier = ">=0.28,<1.0" },
+    { name = "ddgs", marker = "extra == 'scraper-basic'", specifier = ">=8.0" },
+    { name = "eidp", extras = ["scraper-basic"], marker = "extra == 'scraper'" },
+    { name = "eidp", extras = ["scraper-playwright"], marker = "extra == 'scraper'" },
+    { name = "httpx", marker = "extra == 'scraper-basic'", specifier = ">=0.28,<1.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15" },
     { name = "openpyxl", specifier = ">=3.1,<4.0" },
     { name = "paddleocr", marker = "extra == 'ocr'", specifier = ">=3.0" },
     { name = "paddlepaddle", marker = "extra == 'ocr'", specifier = ">=3.0" },
     { name = "pdfplumber", marker = "extra == 'pdf'", specifier = ">=0.11,<1.0" },
-    { name = "playwright", marker = "extra == 'scraper'", specifier = ">=1.58" },
-    { name = "psycopg2-binary", specifier = ">=2.9,<3.0" },
+    { name = "playwright", marker = "extra == 'scraper-playwright'", specifier = ">=1.58" },
+    { name = "psycopg2-binary", marker = "extra == 'postgres'", specifier = ">=2.9,<3.0" },
     { name = "pydantic", specifier = ">=2.0,<3.0" },
     { name = "pydantic-settings", specifier = ">=2.0,<3.0" },
     { name = "pymupdf", marker = "extra == 'ocr'", specifier = ">=1.25,<2.0" },
@@ -642,14 +655,14 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "python-dotenv", specifier = ">=1.0,<2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11" },
-    { name = "scrapy", marker = "extra == 'scraper'", specifier = ">=2.14,<3.0" },
+    { name = "scrapy", marker = "extra == 'scraper-playwright'", specifier = ">=2.14,<3.0" },
     { name = "sqlalchemy", specifier = ">=2.0,<3.0" },
     { name = "streamlit", specifier = ">=1.45,<2.0" },
     { name = "structlog", specifier = ">=25.0" },
-    { name = "tenacity", marker = "extra == 'scraper'", specifier = ">=9.0,<10.0" },
+    { name = "tenacity", marker = "extra == 'scraper-basic'", specifier = ">=9.0,<10.0" },
     { name = "typer", specifier = ">=0.16,<1.0" },
 ]
-provides-extras = ["scraper", "pdf", "ocr", "dev"]
+provides-extras = ["postgres", "scraper-basic", "scraper-playwright", "scraper", "pdf", "ocr", "dev"]
 
 [[package]]
 name = "et-xmlfile"

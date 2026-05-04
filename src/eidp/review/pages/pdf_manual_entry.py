@@ -479,7 +479,9 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
     """Render the actual editable form for one save-eligible queue row."""
     import streamlit as st
 
-    fy_default = row.fiscal_year or 2026
+    from eidp.config import settings
+
+    fy_default = row.fiscal_year or settings.target_fiscal_year
     state_key = f"manual_entry_rows__{row.document_id}"
 
     if state_key not in st.session_state:

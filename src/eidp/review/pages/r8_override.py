@@ -21,16 +21,15 @@ lock_busy=True)`` and the page renders the banner.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from sqlalchemy.orm import Session
 
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Document, School
 from eidp.pipeline.fiscal_year_override import override_fiscal_year
-
 
 # Documents in any of these statuses are eligible for R8 override:
 # they have data the operator can re-classify. Documents not yet
@@ -190,6 +189,8 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     """Top-level Streamlit render for the R8 判定 override page."""
     import streamlit as st
 
+    from eidp.config import settings
+
     st.subheader("R8 判定 (年度 override)")
     status = probe_lock(lock_path)
     if status.held:
@@ -218,7 +219,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         )
         target_fy = st.number_input(
             "新しい年度 (target_fy)", min_value=2019, max_value=2099,
-            value=2026, step=1,
+            value=settings.target_fiscal_year, step=1,
         )
         reason = st.text_input("操作メモ (reason)")
         submitted = st.form_submit_button("年度を確定", type="primary")

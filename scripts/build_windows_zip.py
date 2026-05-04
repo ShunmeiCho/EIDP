@@ -1,0 +1,192 @@
+"""Sprint 8.5.a — produce a Windows operator ZIP from a Mac dev box.
+
+What this script does
+---------------------
+1. Builds the project wheel via ``uv build --wheel`` so ``eidp`` itself
+   is installable from the wheelhouse without pulling from PyPI.
+2. Downloads every transitive dependency listed in
+   ``requirements-windows.txt`` constrained to
+   ``--platform win_amd64 --python-version 3.12 --implementation cp
+   --abi cp312 --only-binary :all:`` so we never accidentally embed a
+   Mac wheel or a wheel with the wrong ABI.
+3. Verifies the resulting wheelhouse: every file must end in
+   ``-cp312-cp312-win_amd64.whl`` or be a pure ``-py3-none-any.whl``
+   wheel. Anything else fails the build with a non-zero exit so a
+   future maintainer can't ship a poisoned wheelhouse by accident.
+4. Optionally assembles ``dist/eidp-windows.zip`` containing the
+   wheelhouse, scripts/, src/, requirements-windows.txt, and a few
+   docs. The actual Windows runtime (``python-build-standalone`` and
+   ``uv.exe``) is downloaded separately and added to ``runtime/``.
+
+The output of this script is the input to the Windows VM offline
+validation gate (Sprint 8.5.b). Mac alone cannot prove "first_setup.bat
+works on Windows" — this script only proves the assets are well-formed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_REQUIREMENTS = REPO_ROOT / "requirements-windows.txt"
+DEFAULT_WHEELHOUSE = REPO_ROOT / "dist" / "wheelhouse"
+DEFAULT_OUT_ZIP = REPO_ROOT / "dist" / "eidp-windows.zip"
+
+# Wheel filenames we consider safe to ship to Windows operator PCs.
+ACCEPTED_WHEEL_SUFFIXES = (
+    "-cp312-cp312-win_amd64.whl",
+    "-cp312-abi3-win_amd64.whl",
+    "-py3-none-any.whl",
+    "-py2.py3-none-any.whl",
+    "-py312-none-any.whl",
+)
+
+
+class WheelhouseError(RuntimeError):
+    """Raised when the wheelhouse contains a wheel that would break on
+    the operator PC (wrong platform, ABI, or Python version)."""
+
+
+def build_project_wheel(*, repo_root: Path, out_dir: Path) -> Path:
+    """Run ``uv build --wheel`` and return the path of the produced wheel."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cmd = ["uv", "build", "--wheel", "--out-dir", str(out_dir)]
+    print(f"$ {' '.join(cmd)}")
+    subprocess.run(cmd, cwd=repo_root, check=True)
+    wheels = sorted(out_dir.glob("eidp-*.whl"))
+    if not wheels:
+        raise RuntimeError(f"uv build --wheel produced no eidp wheel in {out_dir}")
+    return wheels[-1]
+
+
+def download_windows_wheels(
+    *,
+    requirements: Path,
+    dest: Path,
+    python_version: str = "3.12",
+    abi: str = "cp312",
+    implementation: str = "cp",
+    platform: str = "win_amd64",
+) -> None:
+    """Download every transitive dep into ``dest`` constrained to a
+    Windows / cp312 / abi cp312 wheel set."""
+    dest.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "uv", "pip", "download",
+        "-r", str(requirements),
+        "--dest", str(dest),
+        "--platform", platform,
+        "--python-version", python_version,
+        "--implementation", implementation,
+        "--abi", abi,
+        "--only-binary", ":all:",
+    ]
+    print(f"$ {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
+
+
+def verify_wheelhouse(wheelhouse: Path) -> list[Path]:
+    """Return the list of accepted wheels and raise on any rejected
+    file. The check is suffix-based and intentionally strict — we'd
+    rather fail loud here than discover a Mac wheel on the operator PC."""
+    if not wheelhouse.is_dir():
+        raise WheelhouseError(f"wheelhouse does not exist: {wheelhouse}")
+
+    accepted: list[Path] = []
+    rejected: list[Path] = []
+    for wheel in sorted(wheelhouse.glob("*.whl")):
+        if any(wheel.name.endswith(suffix) for suffix in ACCEPTED_WHEEL_SUFFIXES):
+            accepted.append(wheel)
+        else:
+            rejected.append(wheel)
+
+    other = [p for p in wheelhouse.iterdir() if p.suffix not in {".whl"}]
+    if rejected or other:
+        rejected_str = "\n".join(f"  rejected: {p.name}" for p in rejected)
+        other_str = "\n".join(f"  unexpected: {p.name}" for p in other)
+        raise WheelhouseError(
+            "wheelhouse contains files that do not match cp312/win_amd64 "
+            "or pure-Python wheel naming:\n"
+            f"{rejected_str}\n{other_str}".strip()
+        )
+    if not accepted:
+        raise WheelhouseError(f"wheelhouse is empty: {wheelhouse}")
+    return accepted
+
+
+def assemble_zip(
+    *,
+    out_zip: Path,
+    repo_root: Path,
+    wheelhouse: Path,
+) -> Path:
+    """Build a self-contained ZIP. ``runtime/`` (python-build-standalone
+    + uv.exe) is appended later by a separate step that downloads the
+    Windows runtime archive."""
+    out_zip.parent.mkdir(parents=True, exist_ok=True)
+    if out_zip.exists():
+        out_zip.unlink()
+
+    members: list[tuple[Path, str]] = []
+
+    # wheelhouse/
+    for wheel in sorted(wheelhouse.glob("*.whl")):
+        members.append((wheel, f"wheelhouse/{wheel.name}"))
+
+    # src/eidp/ — packaged so Streamlit can run from src layout if the
+    # operator prefers ``streamlit run src/eidp/review/app.py`` instead
+    # of relying solely on the installed wheel.
+    src_root = repo_root / "src" / "eidp"
+    for path in src_root.rglob("*"):
+        if path.is_file() and "__pycache__" not in path.parts:
+            arcname = "src/" + path.relative_to(repo_root / "src").as_posix()
+            members.append((path, arcname))
+
+    # scripts/ — .bat skeletons live here.
+    scripts_root = repo_root / "scripts"
+    for path in scripts_root.glob("*.bat"):
+        members.append((path, f"scripts/{path.name}"))
+
+    # top-level files
+    for name in ("requirements-windows.txt", "pyproject.toml"):
+        candidate = repo_root / name
+        if candidate.is_file():
+            members.append((candidate, name))
+
+    with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for src, arc in members:
+            zf.write(src, arc)
+    return out_zip
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Build the Windows operator ZIP.")
+    parser.add_argument("--requirements", type=Path, default=DEFAULT_REQUIREMENTS)
+    parser.add_argument("--wheelhouse", type=Path, default=DEFAULT_WHEELHOUSE)
+    parser.add_argument("--out-zip", type=Path, default=DEFAULT_OUT_ZIP)
+    parser.add_argument("--skip-download", action="store_true",
+                        help="Skip pip download — verify and assemble only")
+    parser.add_argument("--skip-zip", action="store_true",
+                        help="Skip assembling the ZIP — useful in CI")
+    args = parser.parse_args(argv)
+
+    if not args.skip_download:
+        build_project_wheel(repo_root=REPO_ROOT, out_dir=args.wheelhouse)
+        download_windows_wheels(requirements=args.requirements, dest=args.wheelhouse)
+
+    accepted = verify_wheelhouse(args.wheelhouse)
+    print(f"OK: wheelhouse contains {len(accepted)} accepted wheels")
+
+    if not args.skip_zip:
+        out = assemble_zip(out_zip=args.out_zip, repo_root=REPO_ROOT, wheelhouse=args.wheelhouse)
+        size_mb = out.stat().st_size / 1024 / 1024
+        print(f"OK: wrote {out} ({size_mb:.1f} MB)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
