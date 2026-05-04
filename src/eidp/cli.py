@@ -346,6 +346,35 @@ def db_bootstrap(
 
 
 @app.command()
+def audit_flush(
+    jsonl_path: Path = typer.Option(
+        Path("data/audit/manual-actions.jsonl"),
+        help="Where to append JSONL audit entries.",
+    ),
+) -> None:
+    """Flush pending manual_action_log rows to the JSONL outbox.
+
+    Idempotent and dedup-safe: if a row's action_id is already present in the
+    file (e.g. a prior flush wrote the line but crashed before stamping the
+    column), the row is just stamped, not re-written. Failures stash a short
+    reason on jsonl_export_error and remain pending for the next run.
+    """
+    from eidp.db.audit_outbox import flush_audit_outbox
+    from eidp.db.session import SessionLocal
+
+    session = SessionLocal()
+    try:
+        stats = flush_audit_outbox(session, jsonl_path=jsonl_path)
+        typer.echo(
+            f"Audit flush: exported={stats['exported']} "
+            f"already_present={stats['already_present']} "
+            f"failed={stats['failed']} → {jsonl_path}"
+        )
+    finally:
+        session.close()
+
+
+@app.command()
 def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func
