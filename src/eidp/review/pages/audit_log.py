@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from eidp.db.audit_outbox import flush_audit_outbox
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
-from eidp.db.models import ManualActionLog
+from eidp.db.models import Document, ManualActionLog
 
 
 @dataclass(frozen=True)
@@ -61,6 +61,31 @@ class FlushOutcome:
     lock_started_at: str | None = None
     stats: dict[str, int] | None = None
     error: str | None = None
+
+
+@dataclass(frozen=True)
+class QueueDepth:
+    """Sprint 8.6.d.4 — operator dashboard counts.
+
+    Surfaces the queue depth across the buckets that drive the
+    PDF確認・手入力 workflow so the audit page can show "how much work
+    is waiting" without the operator having to switch tabs.
+
+    ``review_pending`` and ``ocr_pending`` are the high-priority
+    buckets. ``parse_failed`` and ``school_mismatch`` are recoverable
+    but stuck without operator action. ``ingested`` and ``support_only``
+    are healthy outcomes. ``other`` is a catch-all for anything else
+    so a future status drift doesn't silently disappear from totals.
+    """
+
+    review_pending: int
+    ocr_pending: int
+    parse_failed: int
+    school_mismatch: int
+    ingested: int
+    support_only: int
+    other: int
+    total: int
 
 
 # Distinct action_types we surface in the filter dropdown. Mirrors the
@@ -156,6 +181,56 @@ def flush_outbox_via_ui(session: Session, jsonl_path: Path) -> dict[str, int]:
     return flush_audit_outbox(session, jsonl_path=jsonl_path)
 
 
+_KNOWN_QUEUE_STATUSES = (
+    "review_pending",
+    "ocr_pending",
+    "parse_failed",
+    "school_mismatch",
+    "ingested",
+    "support_only",
+)
+
+
+def queue_depth(session: Session) -> QueueDepth:
+    """Group every Document by ``ingest_status`` and return a
+    structured count. Used by the audit page header to show queue
+    depth at a glance.
+
+    NULL ``ingest_status`` rows count under ``other`` so a partially
+    initialized DB doesn't silently drop documents from the total.
+    """
+    rows = (
+        session.query(Document.ingest_status, func.count(Document.id))
+        .group_by(Document.ingest_status)
+        .all()
+    )
+    counts: dict[str, int] = {}
+    for status, count in rows:
+        key = status if status else "_null"
+        counts[key] = int(count or 0)
+
+    review = counts.get("review_pending", 0)
+    ocr = counts.get("ocr_pending", 0)
+    parse_failed = counts.get("parse_failed", 0)
+    mismatch = counts.get("school_mismatch", 0)
+    ingested = counts.get("ingested", 0)
+    support_only = counts.get("support_only", 0)
+    known_total = review + ocr + parse_failed + mismatch + ingested + support_only
+    grand_total = sum(counts.values())
+    other = grand_total - known_total
+
+    return QueueDepth(
+        review_pending=review,
+        ocr_pending=ocr,
+        parse_failed=parse_failed,
+        school_mismatch=mismatch,
+        ingested=ingested,
+        support_only=support_only,
+        other=other,
+        total=grand_total,
+    )
+
+
 def flush_outbox_with_lock(session: Session, *, jsonl_path: Path, lock_path: Path) -> FlushOutcome:
     """Flush audit JSONL outbox only after acquiring the shared UI lock."""
     try:
@@ -197,6 +272,21 @@ def render(  # pragma: no cover - thin streamlit shell
             f"週次処理中 (owner={status.owner})。"
             " このページは読み取り専用です。"
         )
+
+    # Sprint 8.6.d.4 — queue depth dashboard. Operator sees the
+    # actionable buckets (review_pending / ocr_pending / parse_failed /
+    # school_mismatch) before scrolling into the audit log itself.
+    depth = queue_depth(session)
+    st.markdown("**待機キュー**")
+    qcols = st.columns(4)
+    qcols[0].metric("要レビュー", depth.review_pending)
+    qcols[1].metric("OCR 待ち", depth.ocr_pending)
+    qcols[2].metric("解析失敗", depth.parse_failed)
+    qcols[3].metric("学校不一致", depth.school_mismatch)
+    icols = st.columns(3)
+    icols[0].metric("採録済み", depth.ingested)
+    icols[1].metric("対象比率のみ", depth.support_only)
+    icols[2].metric("その他", depth.other)
 
     pending = outbox_pending_count(session)
     cols = st.columns([2, 1])
