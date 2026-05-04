@@ -27,7 +27,6 @@ from sqlalchemy import Engine, text
 
 from eidp.db.models import Base
 
-
 _NULL_SAFE_DEPT_INDEX_DDL = """
 CREATE UNIQUE INDEX IF NOT EXISTS idx_department_natural_key_nullsafe
 ON department (
@@ -44,6 +43,35 @@ _SQLITE_PRAGMAS = (
     "PRAGMA foreign_keys=ON",
     "PRAGMA busy_timeout=5000",
 )
+
+
+def _resolve_alembic_ini() -> Path:
+    """Locate ``alembic.ini`` in deployment-aware order.
+
+    Priority:
+      1. ``settings.app_root / "alembic.ini"`` — the operator install
+         layout where the ZIP includes ``alembic.ini`` next to ``data``.
+      2. ``Path(__file__).resolve().parents[3] / "alembic.ini"`` — repo
+         source checkout, ``src/eidp/db/sqlite_bootstrap.py`` →
+         repo root via ``parents[3]``. Last resort.
+
+    Returns the first existing path; if none exist returns the
+    settings.app_root candidate so the caller surfaces a clear "no such
+    file" error pointing at the operator-visible location.
+    """
+    try:
+        from eidp.config import settings
+        primary = Path(settings.app_root) / "alembic.ini"
+    except Exception:
+        primary = None
+
+    fallback = Path(__file__).resolve().parents[3] / "alembic.ini"
+
+    if primary is not None and primary.is_file():
+        return primary
+    if fallback.is_file():
+        return fallback
+    return primary if primary is not None else fallback
 
 
 def is_sqlite(engine: Engine) -> bool:
@@ -95,7 +123,7 @@ def stamp_alembic_head(engine: Engine, alembic_ini: Path | None = None) -> None:
     from alembic.config import Config
 
     if alembic_ini is None:
-        alembic_ini = Path(__file__).resolve().parents[3] / "alembic.ini"
+        alembic_ini = _resolve_alembic_ini()
 
     cfg = Config(str(alembic_ini))
     cfg.set_main_option("sqlalchemy.url", str(engine.url))

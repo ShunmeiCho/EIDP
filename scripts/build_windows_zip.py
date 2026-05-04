@@ -67,16 +67,25 @@ def download_windows_wheels(
     *,
     requirements: Path,
     dest: Path,
+    python_executable: str | None = None,
     python_version: str = "3.12",
     abi: str = "cp312",
     implementation: str = "cp",
     platform: str = "win_amd64",
 ) -> None:
     """Download every transitive dep into ``dest`` constrained to a
-    Windows / cp312 / abi cp312 wheel set."""
+    Windows / cp312 / abi cp312 wheel set.
+
+    ``uv`` does not yet ship a ``pip download`` subcommand (only
+    ``install`` / ``compile`` / ``sync``), so we use ``pip`` directly
+    via ``python -m pip download``. The build host needs a Python with
+    pip available; the resolved wheelhouse is platform-tagged so it is
+    safe to ship to Windows regardless of build host OS.
+    """
     dest.mkdir(parents=True, exist_ok=True)
+    py = python_executable or sys.executable
     cmd = [
-        "uv", "pip", "download",
+        py, "-m", "pip", "download",
         "-r", str(requirements),
         "--dest", str(dest),
         "--platform", platform,
@@ -131,6 +140,29 @@ def assemble_zip(
     if out_zip.exists():
         out_zip.unlink()
 
+    members = collect_zip_members(repo_root=repo_root, wheelhouse=wheelhouse)
+
+    with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for src, arc in members:
+            zf.write(src, arc)
+    return out_zip
+
+
+def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path, str]]:
+    """Enumerate every (source_path, arcname) pair the Windows ZIP must
+    carry. Tested in isolation so we can assert on the manifest without
+    actually building a ZIP.
+
+    Layout:
+      wheelhouse/                  every accepted wheel
+      src/eidp/...                 importable source layout
+      scripts/*.bat                .bat launchers
+      scripts/run_r8_rediscovery_weekly.py   weekly runner
+      alembic.ini                  required by db-bootstrap
+      migrations/...               required by alembic stamp head
+      requirements-windows.txt     used by first_setup.bat
+      pyproject.toml               kept for parity with dev-side config
+    """
     members: list[tuple[Path, str]] = []
 
     # wheelhouse/
@@ -141,15 +173,31 @@ def assemble_zip(
     # operator prefers ``streamlit run src/eidp/review/app.py`` instead
     # of relying solely on the installed wheel.
     src_root = repo_root / "src" / "eidp"
-    for path in src_root.rglob("*"):
-        if path.is_file() and "__pycache__" not in path.parts:
-            arcname = "src/" + path.relative_to(repo_root / "src").as_posix()
-            members.append((path, arcname))
+    if src_root.is_dir():
+        for path in src_root.rglob("*"):
+            if path.is_file() and "__pycache__" not in path.parts:
+                arcname = "src/" + path.relative_to(repo_root / "src").as_posix()
+                members.append((path, arcname))
 
-    # scripts/ — .bat skeletons live here.
+    # scripts/*.bat + the weekly runner Python entrypoint.
     scripts_root = repo_root / "scripts"
-    for path in scripts_root.glob("*.bat"):
-        members.append((path, f"scripts/{path.name}"))
+    if scripts_root.is_dir():
+        for path in sorted(scripts_root.glob("*.bat")):
+            members.append((path, f"scripts/{path.name}"))
+        weekly = scripts_root / "run_r8_rediscovery_weekly.py"
+        if weekly.is_file():
+            members.append((weekly, "scripts/run_r8_rediscovery_weekly.py"))
+
+    # alembic.ini + migrations/ — db-bootstrap stamps head against this.
+    alembic_ini = repo_root / "alembic.ini"
+    if alembic_ini.is_file():
+        members.append((alembic_ini, "alembic.ini"))
+    migrations_root = repo_root / "migrations"
+    if migrations_root.is_dir():
+        for path in migrations_root.rglob("*"):
+            if path.is_file() and "__pycache__" not in path.parts:
+                arcname = "migrations/" + path.relative_to(migrations_root).as_posix()
+                members.append((path, arcname))
 
     # top-level files
     for name in ("requirements-windows.txt", "pyproject.toml"):
@@ -157,10 +205,7 @@ def assemble_zip(
         if candidate.is_file():
             members.append((candidate, name))
 
-    with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for src, arc in members:
-            zf.write(src, arc)
-    return out_zip
+    return members
 
 
 def main(argv: list[str] | None = None) -> int:

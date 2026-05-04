@@ -1,14 +1,14 @@
 @echo off
 REM Sprint 8.5.a — first-run setup for the Windows operator PC.
+REM Sprint 8.5.a.1 — fixed venv creation, fixed CLI command name, removed
+REM use of `uv pip install` against the wheelhouse without a target env.
 REM
-REM Resolves the application root from the script location (cd /d
-REM "%~dp0\.."), pins it via EIDP_APP_ROOT so subsequent processes
-REM agree on the path, then installs from the bundled wheelhouse with
-REM no network, bootstraps the SQLite database, imports the master
-REM school list, and registers the weekly Task Scheduler entry.
-REM
-REM This script is hand-written and intended to be reviewed statically
-REM on Mac before being executed for real on the Windows VM gate.
+REM Resolves the application root from the script location, pins it via
+REM EIDP_APP_ROOT, creates an isolated .venv from the bundled
+REM python-build-standalone runtime, installs from the bundled
+REM wheelhouse with no network, bootstraps the SQLite database, imports
+REM the master school list (if present), and registers the weekly Task
+REM Scheduler entry.
 
 setlocal EnableExtensions EnableDelayedExpansion
 
@@ -25,11 +25,28 @@ if not exist "logs"        mkdir "logs"
 
 REM 3. Use the bundled python-build-standalone runtime so we never
 REM    depend on whatever Python the operator might have installed.
-set "PYTHONHOME=%EIDP_APP_ROOT%\runtime\python"
-set "PATH=%EIDP_APP_ROOT%\runtime\python;%EIDP_APP_ROOT%\runtime;%PATH%"
+set "RUNTIME_PY=%EIDP_APP_ROOT%\runtime\python\python.exe"
+set "UV_EXE=%EIDP_APP_ROOT%\runtime\uv.exe"
+if not exist "%RUNTIME_PY%" (
+    echo [first_setup] ERROR: runtime\python\python.exe is missing. Re-extract the ZIP.
+    exit /b 2
+)
+if not exist "%UV_EXE%" (
+    echo [first_setup] ERROR: runtime\uv.exe is missing. Re-extract the ZIP.
+    exit /b 2
+)
 
-REM 4. Offline install from the bundled wheelhouse.
-"%EIDP_APP_ROOT%\runtime\uv.exe" pip install ^
+REM 4. Create an isolated venv (idempotent — uv venv is no-op if already valid).
+"%UV_EXE%" venv ".venv" --python "%RUNTIME_PY%"
+if errorlevel 1 (
+    echo [first_setup] uv venv failed
+    exit /b 1
+)
+set "VENV_PY=%EIDP_APP_ROOT%\.venv\Scripts\python.exe"
+
+REM 5. Offline install from the bundled wheelhouse into the venv.
+"%UV_EXE%" pip install ^
+    --python "%VENV_PY%" ^
     --no-index ^
     --find-links "%EIDP_APP_ROOT%\wheelhouse" ^
     --requirement "%EIDP_APP_ROOT%\requirements-windows.txt"
@@ -37,7 +54,8 @@ if errorlevel 1 (
     echo [first_setup] dependency install failed
     exit /b 1
 )
-"%EIDP_APP_ROOT%\runtime\uv.exe" pip install ^
+"%UV_EXE%" pip install ^
+    --python "%VENV_PY%" ^
     --no-index ^
     --find-links "%EIDP_APP_ROOT%\wheelhouse" ^
     eidp
@@ -46,16 +64,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 5. Bootstrap the SQLite database (idempotent).
-"%EIDP_APP_ROOT%\runtime\python\python.exe" -m eidp.cli db-bootstrap --sqlite
+REM 6. Bootstrap the SQLite database (idempotent).
+"%VENV_PY%" -m eidp.cli db-bootstrap --sqlite
 if errorlevel 1 (
     echo [first_setup] db-bootstrap failed
     exit /b 1
 )
 
-REM 6. Import the master school list if it exists.
+REM 7. Import the master school list if it exists. CLI command is import-excel.
 if exist "%EIDP_APP_ROOT%\data\master.xlsx" (
-    "%EIDP_APP_ROOT%\runtime\python\python.exe" -m eidp.cli import-master ^
+    "%VENV_PY%" -m eidp.cli import-excel ^
         "%EIDP_APP_ROOT%\data\master.xlsx"
     if errorlevel 1 (
         echo [first_setup] master import failed
@@ -65,7 +83,7 @@ if exist "%EIDP_APP_ROOT%\data\master.xlsx" (
     echo [first_setup] WARNING: data\master.xlsx is missing — operator must import manually before week 1.
 )
 
-REM 7. Register weekly Task Scheduler entry (Mondays 02:00 local).
+REM 8. Register weekly Task Scheduler entry (Mondays 02:00 local).
 schtasks /Create /F /SC WEEKLY /D MON /ST 02:00 ^
     /TN "EIDP Weekly Run" ^
     /TR "\"%EIDP_APP_ROOT%\scripts\weekly_run.bat\"" >nul
