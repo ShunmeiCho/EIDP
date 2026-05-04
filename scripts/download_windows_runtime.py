@@ -44,25 +44,34 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RUNTIME_DIR = REPO_ROOT / "runtime"
 
-# Pin to a known-good python-build-standalone release. cp312, install_only
-# layout (so the archive lays out as python/python.exe + python/Lib).
-# Bump release_tag + sha256 atomically when upgrading.
+# Sentinel returned by ``verify_sha256`` if a constants table still
+# carries the placeholder. Tests check production constants do NOT
+# carry this sentinel.
+PIN_SENTINEL = "PINNED_AFTER_FIRST_DOWNLOAD"
+
+# Pin to a verified python-build-standalone release. cp312, install_only
+# layout (the archive lays out as ``python/python.exe + python/Lib + ...``).
+# Bump release_tag + sha256 atomically when upgrading; sha256 must come
+# from the upstream SHA256SUMS file in the same release. Note the URL
+# uses ``%2B`` for the ``+`` between version and date because the
+# browser_download_url returned by the GitHub API URL-encodes it.
 PYTHON_BUILD_STANDALONE = {
-    "release_tag": "20251007",
-    "filename": "cpython-3.12.12+20251007-x86_64-pc-windows-msvc-install_only.tar.gz",
+    "release_tag": "20260414",
+    "filename": "cpython-3.12.13+20260414-x86_64-pc-windows-msvc-install_only.tar.gz",
     "url": (
         "https://github.com/astral-sh/python-build-standalone/releases/download/"
-        "20251007/cpython-3.12.12+20251007-x86_64-pc-windows-msvc-install_only.tar.gz"
+        "20260414/cpython-3.12.13%2B20260414-x86_64-pc-windows-msvc-install_only.tar.gz"
     ),
-    "sha256": "PINNED_AFTER_FIRST_DOWNLOAD",
+    "sha256": "c5a9e011e284c49c48106ca177342f3e3f64e95b4c6652d4a382cc7c9bb1cc46",
 }
 
-# Pin uv release. Mirror the same sha256 promise.
+# Pin uv release. SHA-256 lifted verbatim from the official
+# ``uv-x86_64-pc-windows-msvc.zip.sha256`` sidecar in the same release.
 UV_WINDOWS = {
-    "release_tag": "0.5.0",
+    "release_tag": "0.11.8",
     "filename": "uv-x86_64-pc-windows-msvc.zip",
-    "url": "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-x86_64-pc-windows-msvc.zip",
-    "sha256": "PINNED_AFTER_FIRST_DOWNLOAD",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.11.8/uv-x86_64-pc-windows-msvc.zip",
+    "sha256": "c84629a56e0706b69a47ea35862208af827cb6fbfa1d0ca763c52c67594637e8",
 }
 
 
@@ -115,7 +124,7 @@ def verify_sha256(path: Path, expected: str) -> None:
     unverified runtime.
     """
     actual = sha256_file(path)
-    if expected == "PINNED_AFTER_FIRST_DOWNLOAD":
+    if expected == PIN_SENTINEL:
         raise RuntimeAssetError(
             f"checksum pin missing for {path.name}; record sha256={actual}"
         )
@@ -134,15 +143,22 @@ def verify_python_archive_shape(archive: Path) -> None:
     """Confirm the python-build-standalone tarball lays out as
     ``python/python.exe`` so first_setup.bat finds the binary at the
     expected path. We only inspect the archive listing — no extraction
-    required for the shape check."""
+    required for the shape check.
+
+    The ``install_only`` flavor lays the binary at ``python/python.exe``
+    and that is the only path we accept. Earlier scaffolding allowed a
+    speculative ``python/install/python.exe`` fallback; we drop that
+    because (a) the install_only flavor never produces it and (b) if we
+    accepted it we would break ``first_setup.bat`` which expects
+    ``runtime/python/python.exe`` after extraction.
+    """
     if not tarfile.is_tarfile(archive):
         raise RuntimeAssetError(f"not a tar archive: {archive}")
     with tarfile.open(archive, "r:*") as tf:
         names = set(tf.getnames())
-    required = {"python/python.exe", "python/install/python.exe"}
-    if not (names & required):
+    if "python/python.exe" not in names:
         raise RuntimeAssetError(
-            f"python-build-standalone archive missing python/python.exe: "
+            f"python-build-standalone archive missing python/python.exe at top level: "
             f"sample names={sorted(list(names))[:5]}"
         )
 

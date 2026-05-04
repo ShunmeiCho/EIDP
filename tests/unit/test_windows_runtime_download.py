@@ -278,9 +278,13 @@ def test_download_and_extract_runtime_full_flow(tmp_path: Path, monkeypatch: pyt
     assert manifest.uv_exe.read_bytes() == b"FAKE_UV"
 
 
-def test_download_and_extract_runtime_fails_on_pin_sentinel(tmp_path: Path):
-    """Without monkeypatching the pin, the script must refuse to ship
-    the runtime."""
+def test_download_and_extract_runtime_fails_on_pin_sentinel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    """If a constants table is rolled back to the placeholder, the
+    download flow must refuse to ship the runtime even when archive
+    shape and download succeed. The script's safety net for an
+    unverified upstream pin."""
     rt = _load_runtime_script()
 
     py_archive_payload = io.BytesIO()
@@ -289,6 +293,9 @@ def test_download_and_extract_runtime_fails_on_pin_sentinel(tmp_path: Path):
         info.size = 4
         tf.addfile(info, io.BytesIO(b"FAKE"))
     py_bytes = py_archive_payload.getvalue()
+
+    # Roll the python pin back to the sentinel deliberately.
+    monkeypatch.setitem(rt.PYTHON_BUILD_STANDALONE, "sha256", rt.PIN_SENTINEL)
 
     class _StubResp:
         def __init__(self, payload: bytes):
@@ -312,6 +319,52 @@ def test_download_and_extract_runtime_fails_on_pin_sentinel(tmp_path: Path):
             cache_dir=tmp_path / "cache",
             opener=_fake_opener,
         )
+
+
+def test_production_constants_have_real_pins():
+    """Sprint 8.5.a.2.1 — guard against a future regression where a
+    bumper forgets to record the sha256 from the upstream SHA256SUMS
+    file. The placeholder ``PINNED_AFTER_FIRST_DOWNLOAD`` must never
+    appear in committed production constants."""
+    rt = _load_runtime_script()
+    py_pin = rt.PYTHON_BUILD_STANDALONE["sha256"]
+    uv_pin = rt.UV_WINDOWS["sha256"]
+    assert py_pin != rt.PIN_SENTINEL, "python pin still on placeholder"
+    assert uv_pin != rt.PIN_SENTINEL, "uv pin still on placeholder"
+    # Hex SHA-256 is 64 lowercase hex chars.
+    import re
+    hex_re = re.compile(r"^[0-9a-f]{64}$")
+    assert hex_re.match(py_pin), f"python pin is not hex SHA-256: {py_pin!r}"
+    assert hex_re.match(uv_pin), f"uv pin is not hex SHA-256: {uv_pin!r}"
+
+
+def test_python_archive_shape_rejects_install_subdir(tmp_path: Path):
+    """Sprint 8.5.a.2.1 — earlier scaffolding accepted
+    ``python/install/python.exe`` as a fallback layout. Real install_only
+    archives only ship ``python/python.exe`` at the top level, and the
+    bat scripts assume the extracted layout matches that. Reject the
+    speculative layout explicitly."""
+    rt = _load_runtime_script()
+    archive = tmp_path / "speculative.tar.gz"
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+        info = tarfile.TarInfo(name="python/install/python.exe")
+        info.size = 4
+        tf.addfile(info, io.BytesIO(b"FAKE"))
+    archive.write_bytes(buf.getvalue())
+    with pytest.raises(rt.RuntimeAssetError, match="missing python/python.exe"):
+        rt.verify_python_archive_shape(archive)
+
+
+def test_pinned_python_url_uses_percent_encoded_plus():
+    """Sprint 8.5.a.2.1 — the GitHub release URL for cpython-3.12.13+20260414
+    must percent-encode the ``+`` between version and date as ``%2B``.
+    Bare ``+`` returns 404 from the GitHub release CDN. Owner-found in
+    the failed smoke run."""
+    rt = _load_runtime_script()
+    url = rt.PYTHON_BUILD_STANDALONE["url"]
+    assert "%2B" in url, f"+ must be %2B in the asset URL: {url}"
+    assert "+20" not in url, f"raw + in URL would 404: {url}"
 
 
 # ---------------------------------------------------------------------------
