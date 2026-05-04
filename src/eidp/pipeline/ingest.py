@@ -384,51 +384,66 @@ def ingest_document(
             stats["yearly_upserted"] += 1
 
     # Ingest support recipient data (対象比率)
-    # Non-destructive: only overwrite fields where PDF value is not None,
-    # preserving existing Excel-imported data for fields the parser couldn't extract.
+    # Sprint 8.2.b: append-only with revision support. Old current row is
+    # flipped to is_current=False and a new revision is inserted. The merge
+    # semantics from before are preserved: the new revision row inherits any
+    # previously-known values for fields where the PDF didn't supply one
+    # (typically Excel-imported defaults).
     if fiscal_year and annotation.support_recipient:
         sr_data = annotation.support_recipient
-        existing_sr = (
+        existing_sr_rows = (
             session.query(SupportRecipient)
             .filter(
                 SupportRecipient.school_id == doc.school_id,
                 SupportRecipient.fiscal_year == fiscal_year,
             )
-            .first()
+            .with_for_update()
+            .all()
         )
+        current_sr = next((r for r in existing_sr_rows if r.is_current), None)
+        max_sr_rev = max((r.revision for r in existing_sr_rows), default=0)
 
-        sr_fields = {
-            "first_half_total": sr_data.first_half_total,
-            "first_half_cat1": sr_data.first_half_cat1,
-            "first_half_cat2": sr_data.first_half_cat2,
-            "first_half_cat3": sr_data.first_half_cat3,
-            "first_half_cat4": sr_data.first_half_cat4,
-            "second_half_total": sr_data.second_half_total,
-            "second_half_cat1": sr_data.second_half_cat1,
-            "second_half_cat2": sr_data.second_half_cat2,
-            "second_half_cat3": sr_data.second_half_cat3,
-            "second_half_cat4": sr_data.second_half_cat4,
-            "annual_total": sr_data.annual_total,
-            "household_change": sr_data.household_change,
-            "grand_total": sr_data.grand_total,
-        }
+        sr_field_names = (
+            "first_half_total",
+            "first_half_cat1",
+            "first_half_cat2",
+            "first_half_cat3",
+            "first_half_cat4",
+            "second_half_total",
+            "second_half_cat1",
+            "second_half_cat2",
+            "second_half_cat3",
+            "second_half_cat4",
+            "annual_total",
+            "household_change",
+            "grand_total",
+        )
+        # Start from current row's values (preserve Excel fallback) then
+        # overlay any non-None PDF values.
+        merged_sr_fields = {name: getattr(current_sr, name, None) for name in sr_field_names}
+        for name in sr_field_names:
+            pdf_value = getattr(sr_data, name, None)
+            if pdf_value is not None:
+                merged_sr_fields[name] = pdf_value
 
-        if existing_sr:
-            existing_sr.document_id = doc.id
-            # Only overwrite fields that have non-None PDF values
-            for field_name, pdf_value in sr_fields.items():
-                if pdf_value is not None:
-                    setattr(existing_sr, field_name, pdf_value)
-            existing_sr.extraction_confidence = 0.85
-        else:
-            sr = SupportRecipient(
-                school_id=doc.school_id,
-                document_id=doc.id,
-                fiscal_year=fiscal_year,
-                extraction_confidence=0.85,
-                **{k: v for k, v in sr_fields.items()},
-            )
-            session.add(sr)
+        # Demote the prior current row.
+        if current_sr is not None:
+            session.query(SupportRecipient).filter(
+                SupportRecipient.school_id == doc.school_id,
+                SupportRecipient.fiscal_year == fiscal_year,
+                SupportRecipient.is_current == True,  # noqa: E712
+            ).update({"is_current": False}, synchronize_session="fetch")
+
+        sr = SupportRecipient(
+            school_id=doc.school_id,
+            document_id=doc.id,
+            fiscal_year=fiscal_year,
+            revision=max_sr_rev + 1,
+            is_current=True,
+            extraction_confidence=0.85,
+            **merged_sr_fields,
+        )
+        session.add(sr)
         stats["support_recipient"] = 1
 
     # Update school_year_status
@@ -441,35 +456,58 @@ def ingest_document(
         collection_status = "support_only"
 
     if fiscal_year:
-        sys = (
+        # Sprint 8.2.b: append-only with revision support. Same pattern as
+        # SupportRecipient: demote current row, insert new revision. The
+        # "don't downgrade from collected to partial" rule is preserved by
+        # merging the prior current row's status into the new revision.
+        existing_sys_rows = (
             session.query(SchoolYearStatus)
             .filter(
                 SchoolYearStatus.school_id == doc.school_id,
                 SchoolYearStatus.fiscal_year == fiscal_year,
             )
-            .first()
+            .with_for_update()
+            .all()
         )
-        if sys:
-            # Don't downgrade from "collected" to "partial"
-            if sys.status != "collected":
-                sys.status = collection_status
-            sys.document_id = doc.id
-        else:
-            from datetime import datetime, timezone
-            new_sys = SchoolYearStatus(
-                school_id=doc.school_id,
-                fiscal_year=fiscal_year,
-                status=collection_status,
-                document_id=doc.id,
-                collected_at=datetime.now(timezone.utc),
-            )
-            session.add(new_sys)
+        current_sys = next((r for r in existing_sys_rows if r.is_current), None)
+        max_sys_rev = max((r.revision for r in existing_sys_rows), default=0)
+
+        # Don't downgrade collected → partial
+        effective_status = collection_status
+        if current_sys is not None and current_sys.status == "collected":
+            effective_status = "collected"
+        # Carry forward fields the new PDF doesn't override
+        legacy_status = current_sys.legacy_status if current_sys is not None else None
+        excluded_reason = current_sys.excluded_reason if current_sys is not None else None
+        last_checked = current_sys.last_checked if current_sys is not None else None
+
+        if current_sys is not None:
+            session.query(SchoolYearStatus).filter(
+                SchoolYearStatus.school_id == doc.school_id,
+                SchoolYearStatus.fiscal_year == fiscal_year,
+                SchoolYearStatus.is_current == True,  # noqa: E712
+            ).update({"is_current": False}, synchronize_session="fetch")
+
+        new_sys = SchoolYearStatus(
+            school_id=doc.school_id,
+            fiscal_year=fiscal_year,
+            status=effective_status,
+            legacy_status=legacy_status,
+            excluded_reason=excluded_reason,
+            last_checked=last_checked,
+            collected_at=datetime.now(timezone.utc),
+            document_id=doc.id,
+            revision=max_sys_rev + 1,
+            is_current=True,
+        )
+        session.add(new_sys)
 
     # Write fiscal year back to Document so crawler can filter already-collected schools
     if fiscal_year:
         doc.fiscal_year = fiscal_year
-        # Compute current fiscal year dynamically (April-March boundary)
-        from datetime import datetime
+        # Compute current fiscal year dynamically (April-March boundary).
+        # Use module-level datetime; a local re-import here would shadow it
+        # for the whole function body and break the append-only branches above.
         now = datetime.now()
         current_fy = now.year if now.month >= 4 else now.year - 1
         doc.is_current_year = (fiscal_year >= current_fy)
