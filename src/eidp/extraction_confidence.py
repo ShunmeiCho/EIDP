@@ -328,6 +328,42 @@ def breakdown_to_json(breakdown: ConfidenceBreakdown) -> str:
     )
 
 
+def compute_pdf_parse_breakdown(
+    record: dict,
+    *,
+    prior_enrollment: float | int | None,
+    required_fields: tuple[str, ...] = DEFAULT_REQUIRED_FIELDS,
+    weights: tuple[float, float, float] = DEFAULT_WEIGHTS,
+) -> ConfidenceBreakdown:
+    """Convenience wrapper used by ingest.py for the pdf_parse path.
+
+    F1 is approximated from required-field population (the v1 surrogate
+    described in the plan): all 4 required → 1.0, partial → 0.5, none
+    located → 0.0. F2 is the same population fraction. F3 reads the
+    current-enrollment vs ``prior_enrollment``.
+
+    Returns a frozen ``ConfidenceBreakdown`` ready for both
+    ``extraction_confidence`` (composite) and the ``confidence_breakdown``
+    JSON column.
+    """
+    populated = sum(1 for f in required_fields
+                    if record.get(f) is not None
+                    and not (isinstance(record.get(f), str) and not record.get(f).strip()))
+    if populated == 0:
+        f1 = 0.0
+    elif populated >= len(required_fields):
+        f1 = 1.0
+    else:
+        f1 = 0.5
+
+    f2 = compute_f2_completeness(record, required_fields=required_fields)
+    f3 = compute_f3_yoy_sanity(
+        current_enrollment=record.get("enrollment"),
+        previous_enrollment=prior_enrollment,
+    )
+    return build_breakdown(f1=f1, f2=f2, f3=f3, method="pdf_parse", weights=weights)
+
+
 def breakdown_from_json(blob: str) -> ConfidenceBreakdown:
     """Inverse of :func:`breakdown_to_json`. Tolerant of missing
     ``composite`` (recompute from factors) so older rows still load."""

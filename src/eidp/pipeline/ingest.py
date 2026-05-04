@@ -14,6 +14,12 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, Document, SchoolYearStatus, SupportRecipient
+from eidp.extraction_confidence import (
+    breakdown_to_json,
+    classify,
+    compute_pdf_parse_breakdown,
+    thresholds_from_env,
+)
 from eidp.pdf.extractor import parse_pdf
 from eidp.pdf.schema import SchoolAnnotation
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
@@ -354,6 +360,25 @@ def ingest_document(
             max_rev_row = max((r.revision for r in existing_rows), default=0) if existing_rows else 0
             next_revision = max_rev_row + 1
 
+            # Sprint 8.6.b — confidence + gating. Look up the prior current
+            # row's enrollment (if any) to feed F3 YoY sanity. Use the
+            # already-loaded ``existing_rows`` so we don't re-query.
+            prior_current = next((r for r in existing_rows if r.is_current), None)
+            prior_enrollment = (
+                prior_current.enrollment if prior_current is not None else None
+            )
+            dept_record_dict = {
+                "name": dept_record.name,
+                "capacity": dept_record.capacity,
+                "enrollment": dept_record.enrollment,
+                "graduates": dept_record.graduates,
+            }
+            breakdown = compute_pdf_parse_breakdown(
+                dept_record_dict, prior_enrollment=prior_enrollment,
+            )
+            verdict = classify(breakdown.composite, thresholds_from_env())
+            is_current_row = verdict in ("auto", "auto_flag")
+
             # Mark all existing rows for this dept+year as non-current
             session.query(DepartmentYearly).filter(
                 DepartmentYearly.department_id == dept.id,
@@ -366,7 +391,7 @@ def ingest_document(
                 document_id=doc.id,
                 fiscal_year=fiscal_year,
                 revision=next_revision,
-                is_current=True,
+                is_current=is_current_row,
                 capacity=dept_record.capacity,
                 enrollment=dept_record.enrollment,
                 intl_students=dept_record.intl_students,
@@ -378,6 +403,8 @@ def ingest_document(
                 dropouts=dept_record.dropouts,
                 dropout_rate=dept_record.dropout_rate,
                 extraction_method="pdf_parse",
+                extraction_confidence=breakdown.composite,
+                confidence_breakdown=breakdown_to_json(breakdown),
             )
             session.add(dy)
 
@@ -426,6 +453,19 @@ def ingest_document(
             if pdf_value is not None:
                 merged_sr_fields[name] = pdf_value
 
+        # Sprint 8.6.b — confidence + gating for the SR row. Required
+        # set is the two top-line totals; F3 compares annual_total YoY.
+        sr_required = ("annual_total", "grand_total")
+        sr_record_dict = {name: merged_sr_fields.get(name) for name in sr_required}
+        sr_prior_total = current_sr.annual_total if current_sr is not None else None
+        sr_breakdown = compute_pdf_parse_breakdown(
+            {**sr_record_dict, "enrollment": merged_sr_fields.get("annual_total")},
+            prior_enrollment=sr_prior_total,
+            required_fields=sr_required,
+        )
+        sr_verdict = classify(sr_breakdown.composite, thresholds_from_env())
+        sr_is_current = sr_verdict in ("auto", "auto_flag")
+
         # Demote the prior current row.
         if current_sr is not None:
             session.query(SupportRecipient).filter(
@@ -439,8 +479,9 @@ def ingest_document(
             document_id=doc.id,
             fiscal_year=fiscal_year,
             revision=max_sr_rev + 1,
-            is_current=True,
-            extraction_confidence=0.85,
+            is_current=sr_is_current,
+            extraction_confidence=sr_breakdown.composite,
+            confidence_breakdown=breakdown_to_json(sr_breakdown),
             **merged_sr_fields,
         )
         session.add(sr)
