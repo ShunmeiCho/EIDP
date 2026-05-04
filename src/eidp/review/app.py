@@ -6,6 +6,7 @@ Or directly: streamlit run src/eidp/review/app.py
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import streamlit as st
 from sqlalchemy import func
@@ -488,6 +489,7 @@ def main() -> None:
             "⑥ 除外PDF履歴",
             "⑦ 学校コード確認",
             "⑧ 処理履歴",
+            "⑨ PDF確認・手入力",
         ],
         index=0,
     )
@@ -508,6 +510,14 @@ def main() -> None:
         _page_review_queue(session)
     elif page == "⑧ 処理履歴":
         _page_history(session)
+    elif page == "⑨ PDF確認・手入力":
+        # Sprint 8.4.c.1 — business-user main battlefield. Lock path is
+        # ``data/.lock`` per v6 architecture, resolved against the
+        # configured data_dir so the same file is shared with the
+        # weekly runner.
+        from eidp.config import settings
+        from eidp.review.pages.pdf_manual_entry import render as render_manual_entry
+        render_manual_entry(session, lock_path=Path(settings.data_dir) / ".lock")
 
     # Sidebar info
     st.sidebar.divider()
