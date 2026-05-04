@@ -318,6 +318,34 @@ def ingest_pdfs(
 
 
 @app.command()
+def db_bootstrap(
+    sqlite: bool = typer.Option(False, "--sqlite", help="Bootstrap a fresh SQLite database (Windows path)."),
+) -> None:
+    """Bootstrap a database without running PG-only alembic migrations.
+
+    For SQLite (Windows business-user deployment) this builds the schema via
+    ORM metadata + adds the null-safe department index + applies PRAGMAs +
+    stamps alembic head. Idempotent and safe to re-run.
+    """
+    if not sqlite:
+        typer.echo("Pass --sqlite to bootstrap a SQLite database. PostgreSQL setups should run `alembic upgrade head`.")
+        raise typer.Exit(code=2)
+
+    from eidp.db.session import engine
+    from eidp.db.sqlite_bootstrap import bootstrap_sqlite, is_sqlite
+
+    if not is_sqlite(engine):
+        typer.echo(
+            f"ERROR: --sqlite requires EIDP_DATABASE_URL to point at SQLite, "
+            f"current dialect={engine.dialect.name!r}, url={engine.url!r}"
+        )
+        raise typer.Exit(code=1)
+
+    bootstrap_sqlite(engine)
+    typer.echo(f"SQLite bootstrap complete: {engine.url}")
+
+
+@app.command()
 def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func

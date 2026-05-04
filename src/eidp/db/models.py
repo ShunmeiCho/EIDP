@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -186,7 +187,8 @@ class DepartmentYearly(Base):
             "department_id",
             "fiscal_year",
             unique=True,
-            postgresql_where="is_current = true",
+            postgresql_where=text("is_current = true"),
+            sqlite_where=text("is_current = 1"),
         ),
         {"comment": "Yearly department snapshot, append-only with revision support"},
     )
