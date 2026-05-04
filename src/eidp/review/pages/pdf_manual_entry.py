@@ -35,12 +35,18 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
-from eidp.db.models import Document, School
+from eidp.db.models import Department, DepartmentYearly, Document, School, SupportRecipient
+from eidp.extraction_confidence import ConfidenceVerdict
 from eidp.pipeline.manual_entry import (
     ALLOWED_METHODS,
     DepartmentEntry,
     ManualEntryResult,
     save_manual_entries,
+)
+from eidp.review.confidence_panels import (
+    ConfidencePanel,
+    build_panel,
+    panel_summary_line,
 )
 
 # Statuses we surface in the manual-entry queue. Mirrors
@@ -113,6 +119,127 @@ class SaveOutcome:
     lock_started_at: str | None = None
     error: str | None = None
     result: ManualEntryResult | None = None
+
+
+# ---------------------------------------------------------------------------
+# Confidence summary
+# ---------------------------------------------------------------------------
+
+
+_VERDICT_RANK: dict[ConfidenceVerdict, int] = {
+    "rejected": 3,
+    "review_pending": 2,
+    "auto_flag": 1,
+    "auto": 0,
+}
+
+
+@dataclass(frozen=True)
+class RowPanel:
+    """One DY/SR row's confidence panel attached to a human-readable label."""
+
+    kind: str  # "department" | "support_recipient"
+    label: str
+    is_current: bool
+    panel: ConfidencePanel
+
+
+@dataclass(frozen=True)
+class DocConfidenceSummary:
+    """Per-document aggregate of every DY+SR row's confidence panel.
+
+    ``worst_verdict`` is the bucket with the highest priority across
+    all rows. The queue line surfaces just this summary; expanding the
+    row reveals every panel.
+    """
+
+    document_id: int
+    rows: list[RowPanel]
+    worst_verdict: ConfidenceVerdict | None
+    summary_line: str
+
+
+def summarize_confidence_for_document(
+    session: Session, document_id: int,
+) -> DocConfidenceSummary:
+    """Walk every DepartmentYearly + SupportRecipient row written by
+    ``document_id``, build a confidence panel for each, and return the
+    aggregate. Rows without a ``confidence_breakdown`` (e.g. legacy
+    pre-8.6.b data) are silently skipped — they pre-date the contract.
+    """
+    panels: list[RowPanel] = []
+
+    dy_rows = (
+        session.query(DepartmentYearly, Department)
+        .join(Department, Department.id == DepartmentYearly.department_id)
+        .filter(DepartmentYearly.document_id == document_id)
+        .all()
+    )
+    for dy, dept in dy_rows:
+        if not dy.confidence_breakdown:
+            continue
+        try:
+            panel = build_panel(dy.confidence_breakdown)
+        except Exception:
+            # Bad blob shouldn't poison the whole row; skip and log
+            # via the operator-visible queue rather than crashing.
+            continue
+        panels.append(RowPanel(
+            kind="department",
+            label=f"{dept.canonical_name or '(無名学科)'} fy={dy.fiscal_year}",
+            is_current=bool(dy.is_current),
+            panel=panel,
+        ))
+
+    sr_rows = (
+        session.query(SupportRecipient)
+        .filter(SupportRecipient.document_id == document_id)
+        .all()
+    )
+    for sr in sr_rows:
+        if not sr.confidence_breakdown:
+            continue
+        try:
+            panel = build_panel(sr.confidence_breakdown)
+        except Exception:
+            continue
+        panels.append(RowPanel(
+            kind="support_recipient",
+            label=f"対象比率 fy={sr.fiscal_year}",
+            is_current=bool(sr.is_current),
+            panel=panel,
+        ))
+
+    worst = _worst_verdict(panels)
+    summary = _summary_line(panels, worst)
+    return DocConfidenceSummary(
+        document_id=document_id,
+        rows=panels,
+        worst_verdict=worst,
+        summary_line=summary,
+    )
+
+
+def _worst_verdict(panels: list[RowPanel]) -> ConfidenceVerdict | None:
+    if not panels:
+        return None
+    return max(
+        (p.panel.verdict for p in panels),
+        key=lambda v: _VERDICT_RANK.get(v, 0),
+    )
+
+
+def _summary_line(panels: list[RowPanel], worst: ConfidenceVerdict | None) -> str:
+    if not panels:
+        return "(信頼度情報なし)"
+    n_total = len(panels)
+    n_review = sum(1 for p in panels if p.panel.verdict in ("review_pending", "rejected"))
+    # Pick the panel with the worst verdict to render the inline line.
+    target = max(panels, key=lambda p: _VERDICT_RANK.get(p.panel.verdict, 0))
+    base = panel_summary_line(target.panel)
+    if n_review > 0:
+        return f"{base}  / 要レビュー {n_review}/{n_total}"
+    return f"{base}  / 全{n_total}件"
 
 
 # ---------------------------------------------------------------------------
@@ -578,6 +705,29 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
         st.rerun()
 
 
+def _render_confidence_breakdown(  # pragma: no cover - thin streamlit shell
+    summary: DocConfidenceSummary,
+) -> None:
+    """Render every per-row confidence panel for one document. Each
+    panel surfaces the verdict glyph, composite, and the F1/F2/F3 table."""
+    import streamlit as st
+
+    from eidp.review.confidence_panels import panel_to_table_rows
+
+    if not summary.rows:
+        st.caption("(信頼度情報なし — 8.6.b 以前のデータ)")
+        return
+
+    for row_panel in summary.rows:
+        cur_glyph = "🟢" if row_panel.is_current else "⚪"
+        st.markdown(
+            f"{cur_glyph}  **{row_panel.label}**  "
+            f"— {row_panel.panel.label.glyph} {row_panel.panel.label.japanese}  "
+            f"composite={row_panel.panel.composite:.2f}"
+        )
+        st.table(panel_to_table_rows(row_panel.panel))
+
+
 def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streamlit shell
     """Render source metadata plus lazy PDF preview/download controls."""
     import streamlit as st
@@ -639,10 +789,16 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
 
     st.caption(f"待機 {len(queue)} 件")
     for row in queue[:20]:
-        with st.expander(
+        # Sprint 8.6.d.2 — confidence summary surfaces in the queue
+        # title so the operator sees worst-case verdict before
+        # expanding the row.
+        confidence = summarize_confidence_for_document(session, row.document_id)
+        title = (
             f"[{row.ingest_status}] {row.school_name} ({row.prefecture}) "
-            f"— fy={row.fiscal_year} doc#{row.document_id}"
-        ):
+            f"— fy={row.fiscal_year} doc#{row.document_id} | {confidence.summary_line}"
+        )
+        with st.expander(title):
+            _render_confidence_breakdown(confidence)
             pdf_col, form_col = st.columns([1, 2])
             with pdf_col:
                 _render_pdf_panel(row)
