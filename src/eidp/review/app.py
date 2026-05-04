@@ -491,6 +491,7 @@ def main() -> None:
             "⑧ 処理履歴",
             "⑨ PDF確認・手入力",
             "⑩ R8 判定 override",
+            "⑪ Excel プレビュー",
         ],
         index=0,
     )
@@ -526,6 +527,11 @@ def main() -> None:
         from eidp.config import settings
         from eidp.review.pages.r8_override import render as render_r8_override
         render_r8_override(session, lock_path=Path(settings.data_dir) / ".lock")
+    elif page == "⑪ Excel プレビュー":
+        # Sprint 8.4.c.3 — read-only dry-run before download.
+        from eidp.config import settings
+        from eidp.review.pages.excel_preview import render as render_excel_preview
+        render_excel_preview(session, lock_path=Path(settings.data_dir) / ".lock")
 
     # Sidebar info
     st.sidebar.divider()
