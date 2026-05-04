@@ -199,6 +199,17 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
                 arcname = "migrations/" + path.relative_to(migrations_root).as_posix()
                 members.append((path, arcname))
 
+    # runtime/ — python-build-standalone + uv.exe. Sprint 8.5.a.2.
+    # The download_windows_runtime.py script populates this directory.
+    # If it's missing the build is intentionally a soft fail unless
+    # --skip-runtime is passed; collect_zip_members itself just enumerates.
+    runtime_root = repo_root / "runtime"
+    if runtime_root.is_dir():
+        for path in runtime_root.rglob("*"):
+            if path.is_file() and "__pycache__" not in path.parts:
+                arcname = "runtime/" + path.relative_to(runtime_root).as_posix()
+                members.append((path, arcname))
+
     # top-level files
     for name in ("requirements-windows.txt", "pyproject.toml"):
         candidate = repo_root / name
@@ -206,6 +217,23 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             members.append((candidate, name))
 
     return members
+
+
+def assert_runtime_present(repo_root: Path) -> None:
+    """Sprint 8.5.a.2 — refuse to build a ZIP without the Windows runtime
+    unless the caller passes --skip-runtime explicitly. Mac side cannot
+    execute the binaries, but it can verify the layout matches what
+    first_setup.bat expects."""
+    runtime_root = repo_root / "runtime"
+    py_exe = runtime_root / "python" / "python.exe"
+    uv_exe = runtime_root / "uv.exe"
+    missing = [p for p in (py_exe, uv_exe) if not p.is_file()]
+    if missing:
+        raise RuntimeError(
+            "runtime files missing — run scripts/download_windows_runtime.py "
+            "first, or pass --skip-runtime to build a ZIP without the "
+            f"Windows runtime. Missing: {[str(p) for p in missing]}"
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -217,6 +245,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="Skip pip download — verify and assemble only")
     parser.add_argument("--skip-zip", action="store_true",
                         help="Skip assembling the ZIP — useful in CI")
+    parser.add_argument("--skip-runtime", action="store_true",
+                        help="Build a ZIP without runtime/. Operator must "
+                             "extract a runtime ZIP separately. Mac-only "
+                             "convenience flag — production ZIPs include runtime.")
     args = parser.parse_args(argv)
 
     if not args.skip_download:
@@ -227,6 +259,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"OK: wheelhouse contains {len(accepted)} accepted wheels")
 
     if not args.skip_zip:
+        if not args.skip_runtime:
+            assert_runtime_present(REPO_ROOT)
         out = assemble_zip(out_zip=args.out_zip, repo_root=REPO_ROOT, wheelhouse=args.wheelhouse)
         size_mb = out.stat().st_size / 1024 / 1024
         print(f"OK: wrote {out} ({size_mb:.1f} MB)")
