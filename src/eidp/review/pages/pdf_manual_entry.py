@@ -12,6 +12,7 @@ The render function is a thin Streamlit shell. The testable surface
 lives in pure helpers:
 
   * ``list_pending_documents`` — queue query.
+  * ``build_pdf_preview``      — local PDF → first-page PNG + download bytes.
   * ``form_data_to_entries``   — UI dict → ``DepartmentEntry`` list,
     with validation that mirrors ``save_manual_entries`` constraints
     so the user gets feedback before we try to save.
@@ -67,6 +68,23 @@ class QueueRow:
     ingest_status: str
     file_path: str | None
     source_url: str
+
+
+@dataclass(frozen=True)
+class PdfPreview:
+    """Preview payload for a local PDF attached to a queued document."""
+
+    path: Path | None
+    exists: bool
+    page_index: int = 0
+    page_count: int | None = None
+    image_png: bytes | None = None
+    pdf_bytes: bytes | None = None
+    error: str | None = None
+
+    @property
+    def filename(self) -> str:
+        return self.path.name if self.path else "document.pdf"
 
 
 @dataclass
@@ -136,6 +154,78 @@ def list_pending_documents(
         )
         for doc, school in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# PDF preview
+# ---------------------------------------------------------------------------
+
+
+def resolve_pdf_path(file_path: str | None, *, app_root: Path | None = None) -> Path | None:
+    """Resolve a document file_path for preview/download.
+
+    ``Document.file_path`` is typically stored as a relative path such as
+    ``data/pdfs/1/abcd.pdf``. Windows launchers set cwd to app root, but
+    tests and installed wheels may not, so callers can pass ``app_root``
+    explicitly. Absolute paths are returned unchanged.
+    """
+    if not file_path:
+        return None
+    path = Path(file_path)
+    if path.is_absolute():
+        return path
+    return (app_root or Path.cwd()) / path
+
+
+def build_pdf_preview(
+    file_path: str | None,
+    *,
+    app_root: Path | None = None,
+    page_index: int = 0,
+    dpi: int = 144,
+) -> PdfPreview:
+    """Load a local PDF and render one page as PNG for the operator UI.
+
+    The helper is deliberately self-contained and returns errors as data
+    so the Streamlit shell can show a business-readable message instead
+    of crashing the whole page.
+    """
+    path = resolve_pdf_path(file_path, app_root=app_root)
+    if path is None:
+        return PdfPreview(path=None, exists=False, error="PDF file path is missing")
+    if not path.exists():
+        return PdfPreview(path=path, exists=False, error=f"PDF file does not exist: {path}")
+    if page_index < 0:
+        return PdfPreview(path=path, exists=True, error=f"page_index must be >= 0; got {page_index}")
+
+    try:
+        import fitz  # type: ignore[import-not-found]  # PyMuPDF
+
+        pdf_bytes = path.read_bytes()
+        with fitz.open(str(path)) as doc:
+            page_count = doc.page_count
+            if page_count == 0:
+                return PdfPreview(
+                    path=path, exists=True, page_index=page_index,
+                    page_count=0, pdf_bytes=pdf_bytes,
+                    error="PDF has no pages",
+                )
+            if page_index >= page_count:
+                return PdfPreview(
+                    path=path, exists=True, page_index=page_index,
+                    page_count=page_count, pdf_bytes=pdf_bytes,
+                    error=f"page_index {page_index} out of range for {page_count} pages",
+                )
+            page = doc.load_page(page_index)
+            scale = dpi / 72
+            pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
+            image_png = pix.tobytes("png")
+        return PdfPreview(
+            path=path, exists=True, page_index=page_index,
+            page_count=page_count, image_png=image_png, pdf_bytes=pdf_bytes,
+        )
+    except Exception as exc:
+        return PdfPreview(path=path, exists=True, page_index=page_index, error=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -486,6 +576,48 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
         st.rerun()
 
 
+def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streamlit shell
+    """Render source metadata plus lazy PDF preview/download controls."""
+    import streamlit as st
+
+    st.write(f"source_url: {row.source_url}")
+    if not row.file_path:
+        st.warning("PDF ファイルが保存されていません。source_url から原本を確認してください。")
+        return
+
+    st.write(f"file: {row.file_path}")
+    state_key = f"show_pdf_preview__{row.document_id}"
+    if st.button("PDF を表示 / ダウンロード準備", key=f"load_pdf_{row.document_id}"):
+        st.session_state[state_key] = True
+
+    if not st.session_state.get(state_key):
+        st.caption("必要な文書だけ読み込みます。")
+        return
+
+    page_num = st.number_input(
+        "ページ", min_value=1, max_value=999, value=1, step=1,
+        key=f"pdf_page_{row.document_id}",
+    )
+    preview = build_pdf_preview(row.file_path, page_index=int(page_num) - 1)
+    if preview.error:
+        st.warning(preview.error)
+        return
+
+    if preview.pdf_bytes:
+        st.download_button(
+            "PDF ダウンロード",
+            data=preview.pdf_bytes,
+            file_name=preview.filename,
+            mime="application/pdf",
+            key=f"download_pdf_{row.document_id}",
+        )
+    if preview.image_png:
+        caption = f"{preview.filename} p.{preview.page_index + 1}"
+        if preview.page_count:
+            caption += f" / {preview.page_count}"
+        st.image(preview.image_png, caption=caption, use_container_width=True)
+
+
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin streamlit shell
     """Top-level Streamlit render for the PDF確認・手入力 page."""
     import streamlit as st
@@ -509,9 +641,9 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             f"[{row.ingest_status}] {row.school_name} ({row.prefecture}) "
             f"— fy={row.fiscal_year} doc#{row.document_id}"
         ):
-            st.write(f"source_url: {row.source_url}")
-            if row.file_path:
-                st.write(f"file: {row.file_path}")
+            pdf_col, form_col = st.columns([1, 2])
+            with pdf_col:
+                _render_pdf_panel(row)
 
             if row.ingest_status not in SAVE_ELIGIBLE_STATUSES:
                 # school_mismatch and other non-eligible statuses are
@@ -524,4 +656,5 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                 )
                 continue
 
-            _render_save_eligible_form(session, row, lock_path=lock_path)
+            with form_col:
+                _render_save_eligible_form(session, row, lock_path=lock_path)

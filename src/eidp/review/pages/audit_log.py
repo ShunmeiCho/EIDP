@@ -9,14 +9,13 @@ Same shape as the other three UI pages. Pure helpers under unit test:
 
   * ``list_recent_actions(session, *, limit, action_type, target_table)``
   * ``outbox_pending_count(session)``
-  * ``flush_outbox_via_ui(session, jsonl_path)`` — wraps
-    ``audit_outbox.flush_audit_outbox`` so the page never imports
-    audit_outbox directly.
+  * ``flush_outbox_with_lock(session, jsonl_path, lock_path)`` — locks
+    the shared write lane before exporting the JSONL outbox.
 
-Read-mostly page. The flush button writes the JSONL outbox file but
-does not modify business data; it sits outside the lock contract for
-the same reason ``audit-flush`` CLI does (the only side effect is
-appending to the outbox file + stamping ``jsonl_exported_at``).
+Read-mostly page. The flush button still writes JSONL and stamps
+``jsonl_exported_at``, so the UI routes it through the same shared lock
+as other operator writes. If the weekly runner is active, the button is
+disabled and the helper also returns ``lock_busy`` defensively.
 """
 
 from __future__ import annotations
@@ -30,7 +29,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from eidp.db.audit_outbox import flush_audit_outbox
-from eidp.db.locking import probe_lock
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import ManualActionLog
 
 
@@ -50,6 +49,18 @@ class ActionRow:
     old_value: dict | list | str | int | float | bool | None
     new_value: dict | list | str | int | float | bool | None
     jsonl_exported_at: str | None
+
+
+@dataclass(frozen=True)
+class FlushOutcome:
+    """Return shape for UI-triggered JSONL outbox flushes."""
+
+    ok: bool
+    lock_busy: bool = False
+    lock_owner: str | None = None
+    lock_started_at: str | None = None
+    stats: dict[str, int] | None = None
+    error: str | None = None
 
 
 # Distinct action_types we surface in the filter dropdown. Mirrors the
@@ -145,6 +156,26 @@ def flush_outbox_via_ui(session: Session, jsonl_path: Path) -> dict[str, int]:
     return flush_audit_outbox(session, jsonl_path=jsonl_path)
 
 
+def flush_outbox_with_lock(session: Session, *, jsonl_path: Path, lock_path: Path) -> FlushOutcome:
+    """Flush audit JSONL outbox only after acquiring the shared UI lock."""
+    try:
+        with acquire_lock(lock_path, owner="ui_audit_flush"):
+            try:
+                stats = flush_outbox_via_ui(session, jsonl_path)
+            except Exception as exc:
+                session.rollback()
+                return FlushOutcome(ok=False, error=str(exc))
+            return FlushOutcome(ok=True, stats=stats)
+    except LockBusyError:
+        status = probe_lock(lock_path)
+        return FlushOutcome(
+            ok=False,
+            lock_busy=True,
+            lock_owner=status.owner,
+            lock_started_at=status.started_at,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Streamlit render
 # ---------------------------------------------------------------------------
@@ -164,15 +195,25 @@ def render(  # pragma: no cover - thin streamlit shell
     if status.held:
         st.info(
             f"週次処理中 (owner={status.owner})。"
-            " このページは読み取り中心です。"
+            " このページは読み取り専用です。"
         )
 
     pending = outbox_pending_count(session)
     cols = st.columns([2, 1])
     cols[0].metric("JSONL outbox 未送信", pending)
-    if cols[1].button("Outbox を flush", type="primary"):
+    if cols[1].button("Outbox を flush", type="primary", disabled=status.held):
         with st.spinner("flushing..."):
-            stats = flush_outbox_via_ui(session, jsonl_path)
+            outcome = flush_outbox_with_lock(session, jsonl_path=jsonl_path, lock_path=lock_path)
+        if outcome.lock_busy:
+            st.warning(
+                f"週次処理中、Outbox flush は一時停止しています "
+                f"(owner={outcome.lock_owner}, started_at={outcome.lock_started_at})"
+            )
+            return
+        if not outcome.ok or outcome.stats is None:
+            st.error(f"Outbox flush に失敗しました: {outcome.error}")
+            return
+        stats = outcome.stats
         st.success(
             f"exported={stats['exported']} "
             f"already_present={stats['already_present']} "

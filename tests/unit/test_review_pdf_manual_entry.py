@@ -33,8 +33,10 @@ from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.review.pages.pdf_manual_entry import (
     QUEUE_STATUSES,
     SaveOutcome,
+    build_pdf_preview,
     form_data_to_entries,
     list_pending_documents,
+    resolve_pdf_path,
     save_with_lock,
 )
 
@@ -126,6 +128,71 @@ def test_queue_respects_limit(engine):
 
         rows = list_pending_documents(session, limit=3)
         assert len(rows) == 3
+
+
+# ---------------------------------------------------------------------------
+# PDF preview
+# ---------------------------------------------------------------------------
+
+
+def _make_pdf(path: Path, *, text: str = "hello") -> None:
+    import fitz  # type: ignore[import-not-found]
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), text)
+    doc.save(path)
+    doc.close()
+
+
+def test_resolve_pdf_path_handles_missing_absolute_and_relative(tmp_path):
+    assert resolve_pdf_path(None, app_root=tmp_path) is None
+
+    absolute = tmp_path / "a.pdf"
+    assert resolve_pdf_path(str(absolute), app_root=tmp_path) == absolute
+    assert resolve_pdf_path("data/pdfs/a.pdf", app_root=tmp_path) == tmp_path / "data/pdfs/a.pdf"
+
+
+def test_build_pdf_preview_returns_png_and_download_bytes(tmp_path):
+    pdf = tmp_path / "sample.pdf"
+    _make_pdf(pdf, text="preview")
+
+    preview = build_pdf_preview(str(pdf), dpi=72)
+    assert preview.exists is True
+    assert preview.error is None
+    assert preview.page_count == 1
+    assert preview.filename == "sample.pdf"
+    assert preview.pdf_bytes is not None and preview.pdf_bytes.startswith(b"%PDF")
+    assert preview.image_png is not None and preview.image_png.startswith(b"\x89PNG")
+
+
+def test_build_pdf_preview_resolves_relative_path_from_app_root(tmp_path):
+    pdf = tmp_path / "data" / "pdfs" / "sample.pdf"
+    pdf.parent.mkdir(parents=True)
+    _make_pdf(pdf)
+
+    preview = build_pdf_preview("data/pdfs/sample.pdf", app_root=tmp_path, dpi=72)
+    assert preview.error is None
+    assert preview.path == pdf
+    assert preview.image_png is not None
+
+
+def test_build_pdf_preview_missing_file_returns_error(tmp_path):
+    preview = build_pdf_preview("missing.pdf", app_root=tmp_path)
+    assert preview.exists is False
+    assert preview.image_png is None
+    assert "does not exist" in (preview.error or "")
+
+
+def test_build_pdf_preview_out_of_range_returns_error(tmp_path):
+    pdf = tmp_path / "sample.pdf"
+    _make_pdf(pdf)
+
+    preview = build_pdf_preview(str(pdf), page_index=5, dpi=72)
+    assert preview.exists is True
+    assert preview.page_count == 1
+    assert preview.image_png is None
+    assert "out of range" in (preview.error or "")
 
 
 # ---------------------------------------------------------------------------

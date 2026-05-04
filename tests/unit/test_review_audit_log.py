@@ -9,10 +9,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from eidp.db.audit import log_manual_action
+from eidp.db.locking import acquire_lock
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.review.pages.audit_log import (
     ACTION_TYPES,
     TARGET_TABLES,
+    FlushOutcome,
+    flush_outbox_with_lock,
     flush_outbox_via_ui,
     list_recent_actions,
     outbox_pending_count,
@@ -149,6 +152,46 @@ def test_flush_outbox_via_ui_is_idempotent(engine, tmp_path):
         assert first["exported"] == 3
         second = flush_outbox_via_ui(session, jsonl)
         assert second == {"exported": 0, "already_present": 0, "failed": 0}
+
+
+def test_flush_outbox_with_lock_drains_when_free(engine, tmp_path):
+    jsonl = tmp_path / "manual-actions.jsonl"
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        _seed_actions(session)
+        session.commit()
+
+        outcome = flush_outbox_with_lock(session, jsonl_path=jsonl, lock_path=lock)
+        assert outcome.ok is True
+        assert outcome.lock_busy is False
+        assert outcome.stats == {"exported": 3, "already_present": 0, "failed": 0}
+        assert outbox_pending_count(session) == 0
+        assert jsonl.exists()
+
+
+def test_flush_outbox_with_lock_returns_busy_without_exporting(engine, tmp_path):
+    jsonl = tmp_path / "manual-actions.jsonl"
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        _seed_actions(session)
+        session.commit()
+
+        with acquire_lock(lock, owner="weekly_runner"):
+            outcome = flush_outbox_with_lock(session, jsonl_path=jsonl, lock_path=lock)
+
+        assert outcome.ok is False
+        assert outcome.lock_busy is True
+        assert outcome.lock_owner == "weekly_runner"
+        assert outcome.stats is None
+        assert outbox_pending_count(session) == 3
+        assert not jsonl.exists()
+
+
+def test_flush_outcome_default_shape():
+    outcome = FlushOutcome(ok=True)
+    assert outcome.lock_busy is False
+    assert outcome.lock_owner is None
+    assert outcome.stats is None
 
 
 # ---------------------------------------------------------------------------
