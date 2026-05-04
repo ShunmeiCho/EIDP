@@ -774,6 +774,13 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     """Top-level Streamlit render for the PDF確認・手入力 page."""
     import streamlit as st
 
+    from eidp.config import settings
+    from eidp.ocr import (
+        availability_banner_severity,
+        availability_banner_text,
+        detect_ocr_availability,
+    )
+
     st.subheader("PDF確認・手入力")
     status = probe_lock(lock_path)
     if status.held:
@@ -781,6 +788,20 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             f"週次処理中、編集は一時停止しています "
             f"(owner={status.owner}, started_at={status.started_at})"
         )
+
+    # Sprint 8.6.d.3 — OCR add-on availability banner. Operators on a
+    # PC without the add-on still see image PDFs in the queue; the
+    # banner makes it obvious whether they can press an OCR button.
+    ocr_detection = detect_ocr_availability(app_root=Path(settings.app_root))
+    severity = availability_banner_severity(ocr_detection)
+    banner = availability_banner_text(ocr_detection)
+    severity_fn = {
+        "error": st.error,
+        "warning": st.warning,
+        "info": st.info,
+        "success": st.success,
+    }.get(severity, st.info)
+    severity_fn(banner)
 
     queue = list_pending_documents(session)
     if not queue:
