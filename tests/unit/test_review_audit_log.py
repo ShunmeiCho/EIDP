@@ -15,8 +15,8 @@ from eidp.review.pages.audit_log import (
     ACTION_TYPES,
     TARGET_TABLES,
     FlushOutcome,
-    flush_outbox_with_lock,
     flush_outbox_via_ui,
+    flush_outbox_with_lock,
     list_recent_actions,
     outbox_pending_count,
 )

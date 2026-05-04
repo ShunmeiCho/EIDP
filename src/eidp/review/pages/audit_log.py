@@ -21,9 +21,9 @@ disabled and the helper also returns ``lock_busy`` defensively.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session

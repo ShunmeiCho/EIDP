@@ -15,7 +15,7 @@ here (it exercises through the running app). This file pins the
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -72,7 +72,7 @@ def _seed_doc(
         content_type="image",
         fiscal_year=fiscal_year,
         ingest_status=status,
-        downloaded_at=datetime.now(timezone.utc),
+        downloaded_at=datetime.now(UTC),
     )
     session.add(doc)
     session.flush()

@@ -27,9 +27,10 @@ and refuses the save attempt. Read-only listing is unaffected.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -41,7 +42,6 @@ from eidp.pipeline.manual_entry import (
     ManualEntryResult,
     save_manual_entries,
 )
-
 
 # Statuses we surface in the manual-entry queue. Mirrors
 # ``manual_entry._QUEUED_INGEST_STATUSES`` plus ``school_mismatch`` which
