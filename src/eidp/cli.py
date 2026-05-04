@@ -51,7 +51,7 @@ def match_mext(
     try:
         report = match_schools(session, data_dir)
 
-        typer.echo(f"\nMatch Results:")
+        typer.echo("\nMatch Results:")
         typer.echo(f"  Exact:        {len(report.exact)}")
         typer.echo(f"  NFKC:         {len(report.nfkc)}")
         typer.echo(f"  Pref+Partial: {len(report.pref_partial)}")
@@ -61,7 +61,7 @@ def match_mext(
         if not dry_run:
             stats = apply_matches(session, report)
             session.commit()
-            typer.echo(f"\nApplied:")
+            typer.echo("\nApplied:")
             typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
             typer.echo(f"  Aliases created: {stats['aliases_created']}")
             typer.echo(f"  Conflicts:      {stats['conflicts']}")
@@ -70,7 +70,7 @@ def match_mext(
             session.rollback()
 
         if report.unmatched:
-            typer.echo(f"\nTop unmatched corporations:")
+            typer.echo("\nTop unmatched corporations:")
             from collections import Counter
             corps = Counter(r.corporation_name for r in report.unmatched)
             for corp, count in corps.most_common(10):
@@ -95,7 +95,7 @@ def reconcile(
     try:
         report = do_reconcile(session, data_dir)
 
-        typer.echo(f"\nReconciliation Results:")
+        typer.echo("\nReconciliation Results:")
         typer.echo(f"  Already resolved:   {report.already_resolved}")
         typer.echo(f"  Auto-assigned:      {len(report.auto_assigned)}")
         typer.echo(f"  Excluded:           {len(report.excluded)}")
@@ -105,7 +105,7 @@ def reconcile(
         if not dry_run:
             stats = apply_reconciliation(session, report)
             session.commit()
-            typer.echo(f"\nApplied:")
+            typer.echo("\nApplied:")
             typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
             typer.echo(f"  Aliases created: {stats['aliases_created']}")
         else:
@@ -136,7 +136,7 @@ def verify_identity(
     session = SessionLocal()
     try:
         result = do_verify(session, data_dir)
-        typer.echo(f"\nIdentity Verification:")
+        typer.echo("\nIdentity Verification:")
         for k, v in result.items():
             typer.echo(f"  {k}: {v}")
         if result["pass"]:
@@ -213,7 +213,7 @@ def discover_urls(
 
         # Report
         stats = get_discovery_stats(session)
-        typer.echo(f"\nURL Discovery Stats:")
+        typer.echo("\nURL Discovery Stats:")
         for k, v in stats.items():
             typer.echo(f"  {k}: {v}")
     except Exception:
@@ -263,7 +263,7 @@ def discover_pdfs(
             evidence_path=evidence_path,
         )
         session.commit()
-        typer.echo(f"\nPDF Discovery Results:")
+        typer.echo("\nPDF Discovery Results:")
         for k, v in stats.items():
             typer.echo(f"  {k}: {v}")
     except Exception:
@@ -307,7 +307,7 @@ def ingest_pdfs(
             evidence_path=evidence_path,
         )
         session.commit()
-        typer.echo(f"\nIngestion Results:")
+        typer.echo("\nIngestion Results:")
         for k, v in stats.items():
             typer.echo(f"  {k}: {v}")
     except Exception:
@@ -343,6 +343,91 @@ def db_bootstrap(
 
     bootstrap_sqlite(engine)
     typer.echo(f"SQLite bootstrap complete: {engine.url}")
+
+
+@app.command()
+def prefecture_aggregate(
+    pref: str = typer.Option(
+        ...,
+        help="Comma-separated prefecture keys (e.g. 'tokyo,kanagawa,saitama,miyagi'). Use 'all' for every registered parser.",
+    ),
+    artifact_dir: Path = typer.Option(
+        Path("data/prefecture-aggregators/artifacts"),
+        help="Directory holding {pref}.pdf or {pref}.xlsx artifacts.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("output/pref-aggregator"),
+        help="Where to write the per-prefecture writer-plan JSONs.",
+    ),
+    apply: bool = typer.Option(False, "--apply", help="Persist the writer-plan via SchoolSite inserts/upgrades."),
+    dry_run: bool = typer.Option(True, "--dry-run/--no-dry-run", help="Default: dry-run (writes JSON only)."),
+) -> None:
+    """Run the prefecture aggregator: parse → match → writer-plan, optionally apply.
+
+    The dry-run path is non-destructive. ``--apply`` drops the dry-run
+    safety and persists the recommended SchoolSite changes (with
+    ``discovery_method='prefecture_aggregator'``) before committing the
+    session. Always run --dry-run first and inspect the JSON output.
+    """
+    import json
+
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.prefecture_aggregator import (
+        PARSERS,
+        aggregate,
+        apply_writer_plan,
+    )
+
+    if apply and dry_run:
+        # ``--apply`` implies non-dry-run; surface this so the operator
+        # never misreads a green dry-run as an applied run.
+        dry_run = False
+
+    requested = [p.strip() for p in pref.split(",") if p.strip()]
+    if requested == ["all"]:
+        requested = sorted(PARSERS.keys())
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    session = SessionLocal()
+    try:
+        for p in requested:
+            artifact = artifact_dir / f"{p}.pdf"
+            if not artifact.exists():
+                # Try .xlsx (Osaka)
+                xlsx = artifact_dir / f"{p}.xlsx"
+                if xlsx.exists():
+                    artifact = xlsx
+                else:
+                    typer.echo(f"[skip] {p}: artifact missing at {artifact}")
+                    continue
+
+            report = aggregate(session, p, artifact)
+            out_path = output_dir / f"{p}.json"
+            out_path.write_text(
+                json.dumps(report.__dict__, ensure_ascii=False, indent=2, default=str),
+                encoding="utf-8",
+            )
+            typer.echo(
+                f"[{p}] extracted={report.extracted_total} "
+                f"matched={report.db_matched} unmatched={report.db_unmatched} "
+                f"actions={report.action_distribution} → {out_path}"
+            )
+
+            if not dry_run:
+                stats = apply_writer_plan(session, report)
+                typer.echo(f"[{p}] applied: {stats}")
+
+        if not dry_run:
+            session.commit()
+            typer.echo("All applies committed.")
+        else:
+            session.rollback()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 @app.command()
@@ -410,7 +495,7 @@ def populate_reviews(
     try:
         stats = populate_review_items(session, data_dir)
         session.commit()
-        typer.echo(f"\nReview Items Populated:")
+        typer.echo("\nReview Items Populated:")
         typer.echo(f"  Created:          {stats['created']}")
         typer.echo(f"  Skipped existing: {stats['skipped_existing']}")
         typer.echo(f"  Skipped excluded: {stats['skipped_excluded']}")
@@ -471,7 +556,7 @@ def weekly_update(
 
         # Summary
         coverage = get_discovery_stats(session)
-        typer.echo(f"\n=== Summary ===")
+        typer.echo("\n=== Summary ===")
         typer.echo(f"  Verified disclosure: {coverage['verified_disclosure']} ({coverage['coverage_verified']})")
         typer.echo(f"  Documents ingested: {ingest_stats.get('processed', 0)}")
         typer.echo(f"  Export: {export_path}")
@@ -495,7 +580,7 @@ def firecrawl_discover(
     try:
         stats = run_firecrawl_discovery(session, batch_size=batch_size)
         session.commit()
-        typer.echo(f"\nFirecrawl Discovery:")
+        typer.echo("\nFirecrawl Discovery:")
         for k, v in stats.items():
             typer.echo(f"  {k}: {v}")
     except Exception:
