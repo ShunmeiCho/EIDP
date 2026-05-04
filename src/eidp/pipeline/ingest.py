@@ -552,9 +552,19 @@ def ingest_document(
         current_sys = next((r for r in existing_sys_rows if r.is_current), None)
         max_sys_rev = max((r.revision for r in existing_sys_rows), default=0)
 
-        # Don't downgrade collected → partial
+        # Don't downgrade collected → partial — UNLESS the current
+        # ingest produced review-pending rows. Sprint 8.6.b.3 owner P1:
+        # the legacy inheritance rule was masking mixed-confidence
+        # downgrades, leaving SYS at 'collected' even when the latest
+        # data has parked rows that need operator review.
         effective_status = collection_status
-        if current_sys is not None and current_sys.status == "collected":
+        has_review_pending = (
+            stats["yearly_review_pending"] > 0
+            or stats["support_recipient_review_pending"] > 0
+        )
+        if (current_sys is not None
+                and current_sys.status == "collected"
+                and not has_review_pending):
             effective_status = "collected"
         # Carry forward fields the new PDF doesn't override
         legacy_status = current_sys.legacy_status if current_sys is not None else None

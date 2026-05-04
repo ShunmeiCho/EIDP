@@ -700,6 +700,115 @@ def test_sr_low_conf_keeps_prior_current_when_breakdown_forced_low(
         assert float(srs[1].extraction_confidence) < 0.5
 
 
+# ---------------------------------------------------------------------------
+# Sprint 8.6.b.3 — SYS 'collected' inheritance guard
+# ---------------------------------------------------------------------------
+
+
+def test_prior_collected_does_not_mask_mixed_review_pending(engine, tmp_path):
+    """Owner P1: the legacy 'don't downgrade collected → partial' rule
+    was overriding 8.6.b.2's collection_status logic. Reproduction:
+
+      1. ingest a fully-high-confidence PDF → SYS = collected
+      2. ingest a mixed (high + low) PDF for the same year
+      3. expect SYS NOT to inherit 'collected' because rows need review
+
+    Before the fix, the latest SYS revision was 'collected'. Operators
+    looking at the dashboard would think the year was closed even though
+    parked rows exist for them to verify."""
+    from eidp.db.models import SchoolYearStatus
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+
+        # Step 1: fully high-conf PDF.
+        doc1 = _seed_doc(session, school.id, url="https://x/i1.pdf",
+                         tmp_path=tmp_path, file_hash="t" * 64, name="i1.pdf")
+        ann_high = _annotation(dept_record=DepartmentRecord(
+            name="IH学科", capacity=40, enrollment=35, graduates=30,
+        ))
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann_high):
+            ingest_document(session, doc1, recorder=None)
+        session.commit()
+
+        sys_after_first = (
+            session.query(SchoolYearStatus)
+            .filter(SchoolYearStatus.is_current.is_(True))
+            .one()
+        )
+        assert sys_after_first.status == "collected", (
+            "fixture sanity: first ingest must reach 'collected' or the "
+            "regression doesn't actually exercise the inheritance path"
+        )
+
+        # Step 2: same year, mixed confidence.
+        doc2 = _seed_doc(session, school.id, url="https://x/i2.pdf",
+                         tmp_path=tmp_path, file_hash="u" * 64, name="i2.pdf")
+        ann_mixed = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="令和8年度",
+            source_pdf="i2.pdf",
+            departments=[
+                DepartmentRecord(name="IH学科", capacity=40, enrollment=35, graduates=30),
+                DepartmentRecord(name="IL学科", capacity=None, enrollment=20, graduates=None),
+            ],
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann_mixed):
+            ingest_document(session, doc2, recorder=None)
+        session.commit()
+
+        sys_rows = (
+            session.query(SchoolYearStatus)
+            .order_by(SchoolYearStatus.revision)
+            .all()
+        )
+        assert len(sys_rows) == 2
+        assert sys_rows[1].is_current is True
+        assert sys_rows[1].status != "collected", (
+            "current ingest produced parked rows — SYS must NOT inherit "
+            f"the prior 'collected' status; got {sys_rows[1].status!r}"
+        )
+
+
+def test_prior_collected_inherited_when_new_ingest_is_clean(engine, tmp_path):
+    """Counterpart — if the latest ingest is also fully high-confidence,
+    the legacy 'don't downgrade' rule should still preserve 'collected'.
+    We mustn't over-tighten and lose the legitimate inheritance path."""
+    from eidp.db.models import SchoolYearStatus
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+
+        doc1 = _seed_doc(session, school.id, url="https://x/c1.pdf",
+                         tmp_path=tmp_path, file_hash="v" * 64, name="c1.pdf")
+        ann_high = _annotation(dept_record=DepartmentRecord(
+            name="CH学科", capacity=40, enrollment=35, graduates=30,
+        ))
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann_high):
+            ingest_document(session, doc1, recorder=None)
+        session.commit()
+
+        # Second ingest: fewer departments listed but same one is
+        # populated. annotation.departments has 1 item, valid_depts has
+        # 1 item → full_recognition. yearly_review_pending == 0.
+        # Expect 'collected' to persist via inheritance.
+        doc2 = _seed_doc(session, school.id, url="https://x/c2.pdf",
+                         tmp_path=tmp_path, file_hash="w" * 64, name="c2.pdf")
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann_high):
+            ingest_document(session, doc2, recorder=None)
+        session.commit()
+
+        sys_rows = (
+            session.query(SchoolYearStatus)
+            .order_by(SchoolYearStatus.revision)
+            .all()
+        )
+        assert sys_rows[-1].is_current is True
+        assert sys_rows[-1].status == "collected"
+
+
 def test_compute_pdf_parse_breakdown_custom_required_fields():
     """SR path uses different required fields."""
     from eidp.extraction_confidence import compute_pdf_parse_breakdown
