@@ -512,6 +512,194 @@ def test_all_low_conf_does_not_mark_school_year_status_collected(engine, tmp_pat
         )
 
 
+# ---------------------------------------------------------------------------
+# Sprint 8.6.b.2 — mixed-confidence routing
+# ---------------------------------------------------------------------------
+
+
+def test_mixed_high_and_low_dept_routes_doc_to_review_pending(engine, tmp_path):
+    """Owner P1: 1 high-conf dept + 1 low-conf dept → the low row is
+    parked, the high row reaches Excel, but the Document MUST surface
+    in PDF確認・手入力 because part of the data needs review. Previously
+    such a doc was marked 'ingested' and disappeared from the queue."""
+    from eidp.pipeline.ingest import run_ingestion
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(session, school.id, url="https://x/mix.pdf",
+                        tmp_path=tmp_path, file_hash="o" * 64)
+        doc.ingest_status = None
+        session.commit()
+
+        ann = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="令和8年度",
+            source_pdf="mix.pdf",
+            departments=[
+                # high-confidence
+                DepartmentRecord(name="MA学科", capacity=40, enrollment=35, graduates=30),
+                # low-confidence (only enrollment populated → 2/4)
+                DepartmentRecord(name="MB学科", capacity=None, enrollment=20, graduates=None),
+            ],
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            run_ingestion(session)
+        session.commit()
+        session.refresh(doc)
+
+        assert doc.ingest_status == "review_pending", (
+            f"mixed-confidence PDF must route to review_pending so the "
+            f"low-conf row gets operator attention; got {doc.ingest_status!r}"
+        )
+
+        # Both rows exist in the DB; one is current, one is parked.
+        rows = session.query(DepartmentYearly).all()
+        assert len(rows) == 2
+        currents = [r for r in rows if r.is_current]
+        parked = [r for r in rows if not r.is_current]
+        assert len(currents) == 1
+        assert len(parked) == 1
+
+
+def test_mixed_high_and_low_dept_does_not_mark_sys_collected(engine, tmp_path):
+    """Owner P1 mirror for SchoolYearStatus: any review-pending row in
+    the same year prevents 'collected'. The operator must complete the
+    review pass before the fiscal year is declared closed."""
+    from eidp.db.models import SchoolYearStatus
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(session, school.id, url="https://x/mix2.pdf",
+                        tmp_path=tmp_path, file_hash="p" * 64)
+        ann = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="令和8年度",
+            source_pdf="mix2.pdf",
+            departments=[
+                DepartmentRecord(name="HA学科", capacity=40, enrollment=35, graduates=30),
+                DepartmentRecord(name="HB学科", capacity=None, enrollment=20, graduates=None),
+            ],
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        sys_rows = (
+            session.query(SchoolYearStatus)
+            .filter(SchoolYearStatus.is_current.is_(True))
+            .all()
+        )
+        assert len(sys_rows) == 1
+        assert sys_rows[0].status != "collected", (
+            "any parked row in the same fiscal_year must prevent the "
+            f"year from being declared collected; got {sys_rows[0].status!r}"
+        )
+
+
+def test_all_high_conf_still_marks_sys_collected(engine, tmp_path):
+    """Counterpart — when every dept is high-confidence and recognized,
+    SchoolYearStatus must still reach 'collected'. We mustn't over-tighten
+    the gate and break the happy path."""
+    from eidp.db.models import SchoolYearStatus
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(session, school.id, url="https://x/all-hi.pdf",
+                        tmp_path=tmp_path, file_hash="q" * 64)
+        ann = _annotation(dept_record=DepartmentRecord(
+            name="A学科", capacity=40, enrollment=35, graduates=30,
+        ))
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        sys_rows = (
+            session.query(SchoolYearStatus)
+            .filter(SchoolYearStatus.is_current.is_(True))
+            .all()
+        )
+        assert len(sys_rows) == 1
+        assert sys_rows[0].status == "collected"
+
+
+def test_sr_low_conf_keeps_prior_current_when_breakdown_forced_low(
+    engine, tmp_path, monkeypatch: pytest.MonkeyPatch,
+):
+    """Owner P2: stronger SR low-conf regression. The SR merge logic
+    inherits prior current values, so a "blank" overlay still produces
+    a high-conf saved record. To exercise the demote-only-if-promoting
+    branch directly, monkeypatch compute_pdf_parse_breakdown so the
+    second SR ingest deliberately scores as review_pending."""
+    from eidp.extraction_confidence import (
+        ConfidenceBreakdown,
+        compute_pdf_parse_breakdown,
+    )
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc1 = _seed_doc(session, school.id, url="https://x/sr1.pdf",
+                         tmp_path=tmp_path, file_hash="r" * 64, name="sr1.pdf")
+        doc2 = _seed_doc(session, school.id, url="https://x/sr2.pdf",
+                         tmp_path=tmp_path, file_hash="s" * 64, name="sr2.pdf")
+
+        first = _annotation(
+            dept_record=DepartmentRecord(name="SR学科", capacity=40,
+                                         enrollment=35, graduates=30),
+            sr=SupportRecipientRecord(annual_total=100, grand_total=100),
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=first):
+            ingest_document(session, doc1, recorder=None)
+        session.commit()
+
+        # Second ingest: use the real helper for DepartmentYearly but
+        # force a low-conf result for the SR call (the second invocation
+        # in ingest_document — first is dept, second is SR).
+        call_count = {"n": 0}
+
+        def fake_breakdown(record, *, prior_enrollment, **kw):
+            call_count["n"] += 1
+            if call_count["n"] >= 2:
+                return ConfidenceBreakdown(
+                    f1_extraction=0.0, f2_completeness=0.0, f3_yoy_sanity=0.0,
+                    method="pdf_parse", weights=(0.4, 0.4, 0.2), composite=0.0,
+                )
+            return compute_pdf_parse_breakdown(
+                record, prior_enrollment=prior_enrollment, **kw,
+            )
+
+        monkeypatch.setattr(
+            "eidp.pipeline.ingest.compute_pdf_parse_breakdown", fake_breakdown,
+        )
+
+        second = _annotation(
+            dept_record=DepartmentRecord(name="SR学科", capacity=40,
+                                         enrollment=35, graduates=30),
+            sr=SupportRecipientRecord(annual_total=200, grand_total=200),
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=second):
+            ingest_document(session, doc2, recorder=None)
+        session.commit()
+
+        srs = (
+            session.query(SupportRecipient)
+            .order_by(SupportRecipient.revision)
+            .all()
+        )
+        assert len(srs) == 2
+        # Old current must still be is_current=True. New low-conf row
+        # must be parked at False.
+        assert srs[0].is_current is True, (
+            "low-confidence SR revision must NOT demote the prior current row"
+        )
+        assert srs[1].is_current is False
+        assert float(srs[0].extraction_confidence) >= 0.85
+        assert float(srs[1].extraction_confidence) < 0.5
+
+
 def test_compute_pdf_parse_breakdown_custom_required_fields():
     """SR path uses different required fields."""
     from eidp.extraction_confidence import compute_pdf_parse_breakdown

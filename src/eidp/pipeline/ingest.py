@@ -516,7 +516,14 @@ def ingest_document(
         valid_depts and annotation.departments
         and len(valid_depts) >= len(annotation.departments)
     )
-    if stats["yearly_current"] > 0 and full_recognition:
+    no_review_pending = (
+        stats["yearly_review_pending"] == 0
+        and stats["support_recipient_review_pending"] == 0
+    )
+    # Sprint 8.6.b.2 — owner P1: even one parked row means the year is
+    # not "collected" yet, regardless of how many rows landed at
+    # is_current=True. Operator must finish review first.
+    if stats["yearly_current"] > 0 and full_recognition and no_review_pending:
         collection_status = "collected"
     elif stats["yearly_current"] > 0:
         collection_status = "partial"
@@ -756,14 +763,20 @@ def run_ingestion(
             yearly_review = stats.get("yearly_review_pending", 0)
             sr_review = stats.get("support_recipient_review_pending", 0)
 
-            if yearly_current > 0:
-                doc.ingest_status = "ingested"
-            elif sr_current > 0 and yearly_current == 0:
-                doc.ingest_status = "support_only"
-            elif yearly_review > 0 or sr_review > 0:
-                # Rows landed but every one was below the auto threshold.
-                # Operator must verify; manual-entry page filters on this.
+            # Sprint 8.6.b.2 — mixed-confidence routing. Owner P1: if a
+            # PDF carries one high-conf dept and one low-conf dept, the
+            # low-conf row was parked but the document was being marked
+            # ``ingested`` because yearly_current > 0. The operator
+            # would never see this PDF in PDF確認・手入力 even though
+            # part of the data needs verification. Reverse the priority:
+            # any review-pending row routes the document to review_pending,
+            # regardless of how many rows landed at is_current=True.
+            if yearly_review > 0 or sr_review > 0:
                 doc.ingest_status = "review_pending"
+            elif yearly_current > 0:
+                doc.ingest_status = "ingested"
+            elif sr_current > 0:
+                doc.ingest_status = "support_only"
             elif stats.get("skipped", 0) > 0 and not doc.ingest_status:
                 doc.ingest_status = "parse_failed"
 
