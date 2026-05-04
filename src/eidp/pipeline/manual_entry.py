@@ -235,6 +235,13 @@ def save_manual_entries(
     if doc is None:
         raise ValueError(f"Document id={document_id} not found")
 
+    # 8.4.a.2: empty entries is a strict no-op. Short-circuit BEFORE any
+    # DB mutation (fiscal_year backfill, status promotion) and BEFORE
+    # validation runs. Otherwise an empty save would silently mutate
+    # Document.fiscal_year without an audit row, breaking the contract.
+    if not entries:
+        return ManualEntryResult(document_id=document_id, fiscal_year=fiscal_year)
+
     # 8.4.a.1: fiscal_year coherence. If the Document already has a
     # fiscal_year and the caller supplies a different one, refuse — that
     # is a R8-override situation and must go through
@@ -253,9 +260,6 @@ def save_manual_entries(
     if doc.fiscal_year is None:
         doc.fiscal_year = fiscal_year
         fy_backfilled = True
-
-    if not entries:
-        return ManualEntryResult(document_id=document_id, fiscal_year=fiscal_year)
 
     for entry in entries:
         _validate_entry_numeric_fields(entry)

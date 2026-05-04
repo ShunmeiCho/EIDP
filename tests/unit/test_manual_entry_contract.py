@@ -260,6 +260,49 @@ def test_empty_entries_is_no_op(engine):
         assert session.query(ManualActionLog).count() == 0
 
 
+def test_empty_entries_does_not_backfill_fiscal_year(engine):
+    """Sprint 8.4.a.2 — empty entries must be a strict no-op. The bug
+    fixed here was: when Document.fiscal_year was None, the function
+    short-circuited on empty entries AFTER backfilling, leaving a
+    silent mutation with no audit. Test pins the corrected order:
+    short-circuit happens before any mutation."""
+    with Session(engine) as session:
+        school = School(
+            prefecture="東京都", corporation_name="テスト法人",
+            school_name="テスト専門学校", school_type="専門学校", status="active",
+        )
+        session.add(school)
+        session.flush()
+        doc = Document(
+            school_id=school.id,
+            source_url="https://example.com/empty.pdf",
+            file_hash=("d" * 64),
+            pdf_type="target",
+            content_type="image",
+            fiscal_year=None,                    # null on purpose
+            ingest_status="ocr_pending",
+        )
+        session.add(doc)
+        session.commit()
+
+        result = save_manual_entries(
+            session, document_id=doc.id, fiscal_year=2026, entries=[],
+        )
+        session.commit()
+
+        session.refresh(doc)
+        assert doc.fiscal_year is None, (
+            "empty entries must NOT backfill Document.fiscal_year — that "
+            "would be a silent mutation with no audit row"
+        )
+        assert doc.ingest_status == "ocr_pending", (
+            "empty entries must NOT promote ingest_status either"
+        )
+        assert session.query(ManualActionLog).count() == 0
+        assert result.rows_written == 0
+        assert result.document_status_changed_to is None
+
+
 def test_invalid_method_raises(engine):
     """Sprint 8.4.a.1 — method must be in the allowed whitelist; a
     silent ``method='bogus'`` injection is no longer accepted."""
