@@ -359,15 +359,16 @@ def prefecture_aggregate(
         Path("output/pref-aggregator"),
         help="Where to write the per-prefecture writer-plan JSONs.",
     ),
-    apply: bool = typer.Option(False, "--apply", help="Persist the writer-plan via SchoolSite inserts/upgrades."),
-    dry_run: bool = typer.Option(True, "--dry-run/--no-dry-run", help="Default: dry-run (writes JSON only)."),
+    apply: bool = typer.Option(False, "--apply", help="Persist the writer-plan via SchoolSite inserts/upgrades. Required for any DB write."),
 ) -> None:
     """Run the prefecture aggregator: parse → match → writer-plan, optionally apply.
 
-    The dry-run path is non-destructive. ``--apply`` drops the dry-run
-    safety and persists the recommended SchoolSite changes (with
-    ``discovery_method='prefecture_aggregator'``) before committing the
-    session. Always run --dry-run first and inspect the JSON output.
+    DB safety contract (Sprint 8.3.1): ``--apply`` is the *single* switch
+    that allows a write. Without ``--apply`` the command runs as a strict
+    dry-run — JSON writer-plan is emitted to ``output_dir`` and the
+    session is rolled back at the end. The previous ``--no-dry-run`` flag
+    was removed because it allowed a write without ``--apply`` being
+    explicitly stated.
     """
     import json
 
@@ -378,10 +379,7 @@ def prefecture_aggregate(
         apply_writer_plan,
     )
 
-    if apply and dry_run:
-        # ``--apply`` implies non-dry-run; surface this so the operator
-        # never misreads a green dry-run as an applied run.
-        dry_run = False
+    dry_run = not apply
 
     requested = [p.strip() for p in pref.split(",") if p.strip()]
     if requested == ["all"]:
