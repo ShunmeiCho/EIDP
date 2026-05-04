@@ -490,6 +490,7 @@ def main() -> None:
             "⑦ 学校コード確認",
             "⑧ 処理履歴",
             "⑨ PDF確認・手入力",
+            "⑩ R8 判定 override",
         ],
         index=0,
     )
@@ -518,6 +519,13 @@ def main() -> None:
         from eidp.config import settings
         from eidp.review.pages.pdf_manual_entry import render as render_manual_entry
         render_manual_entry(session, lock_path=Path(settings.data_dir) / ".lock")
+    elif page == "⑩ R8 判定 override":
+        # Sprint 8.4.c.2 — operator confirms a document's fiscal_year
+        # via the 4-table atomic rewrite path
+        # (pipeline.fiscal_year_override.override_fiscal_year).
+        from eidp.config import settings
+        from eidp.review.pages.r8_override import render as render_r8_override
+        render_r8_override(session, lock_path=Path(settings.data_dir) / ".lock")
 
     # Sidebar info
     st.sidebar.divider()
