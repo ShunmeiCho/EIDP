@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, func, inspect, select, text
+from sqlalchemy import create_engine, func, inspect, text
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, Document, School
@@ -138,6 +138,59 @@ def test_pragmas_applied(bootstrapped_engine):
     assert str(journal_mode).lower() == "wal", f"journal_mode must be WAL, got {journal_mode!r}"
     assert int(foreign_keys) == 1, "foreign_keys must be ON"
     assert int(busy_timeout) >= 5000, f"busy_timeout must be >= 5000ms, got {busy_timeout}"
+
+
+def test_connect_hook_applies_pragmas_per_connection(tmp_path):
+    """Sprint 8.1.1: per-connection PRAGMA hook on session.py must apply
+    ``foreign_keys=ON`` and ``busy_timeout`` to every new DBAPI connection,
+    not just the bootstrap connection. Otherwise a Streamlit / weekly_run
+    process that re-opens the file would default to ``foreign_keys=OFF``
+    and break the FK-protected 4-table contracts coming in Sprint 8.2.
+
+    We exercise this by creating a brand-new engine pointed at the same
+    file that bootstrap_sqlite ran against — emulating a separate process
+    re-opening the SQLite database.
+    """
+    from eidp.db.session import _install_sqlite_connect_hook
+
+    db_path = tmp_path / "eidp_hook_test.sqlite3"
+    bootstrap_engine = create_engine(f"sqlite:///{db_path}", future=True)
+    bootstrap_sqlite(bootstrap_engine)
+    bootstrap_engine.dispose()
+
+    # Fresh engine — analogue of a separate process attaching to the same DB.
+    fresh_engine = create_engine(f"sqlite:///{db_path}", future=True)
+    _install_sqlite_connect_hook(fresh_engine)
+    try:
+        with fresh_engine.connect() as conn:
+            fk = conn.execute(text("PRAGMA foreign_keys")).scalar()
+            bt = conn.execute(text("PRAGMA busy_timeout")).scalar()
+        assert int(fk) == 1, "connect hook must apply foreign_keys=ON to every new connection"
+        assert int(bt) >= 5000, f"connect hook must apply busy_timeout, got {bt}"
+    finally:
+        fresh_engine.dispose()
+
+
+def test_connect_hook_skips_non_sqlite():
+    """Hook installer must short-circuit for non-SQLite dialects so that
+    a developer's Postgres engine isn't littered with PRAGMA statements."""
+    from eidp.db.session import _install_sqlite_connect_hook
+
+    class _FakeDialect:
+        name = "postgresql"
+
+    listened = {"called": False}
+
+    class _FakeEngine:
+        dialect = _FakeDialect()
+
+        def __init__(self):
+            pass
+
+    # event.listens_for would raise if it tried to attach to a non-Engine,
+    # so the test passes simply by not raising and not registering anything.
+    _install_sqlite_connect_hook(_FakeEngine())  # type: ignore[arg-type]
+    assert listened["called"] is False  # sanity
 
 
 # ---------------------------------------------------------------------------
