@@ -21,7 +21,6 @@ from eidp.extraction_confidence import (
     thresholds_from_env,
 )
 from eidp.pdf.extractor import parse_pdf
-from eidp.pdf.schema import SchoolAnnotation
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
 
 log = structlog.get_logger()
@@ -80,7 +79,11 @@ def ingest_document(
     at least enrollment for every department. Support-recipient data
     is always committed when available (school-level, not dept-level).
     """
-    stats = {"departments_created": 0, "yearly_upserted": 0, "skipped": 0, "support_recipient": 0,
+    stats = {"departments_created": 0, "yearly_upserted": 0,
+             "yearly_current": 0, "yearly_review_pending": 0,
+             "support_recipient": 0, "support_recipient_current": 0,
+             "support_recipient_review_pending": 0,
+             "skipped": 0,
              "skip_reason": None}
 
     if not doc.file_path:
@@ -344,8 +347,6 @@ def ingest_document(
 
         if fiscal_year:
             # Append-only: find current max revision, mark old as non-current, insert new revision
-            from sqlalchemy import func as sqlfunc
-
             # Lock existing rows first, then compute max revision
             # (FOR UPDATE cannot be combined with aggregate functions in PostgreSQL)
             existing_rows = (
@@ -379,12 +380,18 @@ def ingest_document(
             verdict = classify(breakdown.composite, thresholds_from_env())
             is_current_row = verdict in ("auto", "auto_flag")
 
-            # Mark all existing rows for this dept+year as non-current
-            session.query(DepartmentYearly).filter(
-                DepartmentYearly.department_id == dept.id,
-                DepartmentYearly.fiscal_year == fiscal_year,
-                DepartmentYearly.is_current == True,  # noqa: E712
-            ).update({"is_current": False}, synchronize_session="fetch")
+            # Sprint 8.6.b.1 — only demote the prior trusted current row when
+            # we're inserting a row that will replace it as current. A low-
+            # confidence new revision must NOT clear out previously-verified
+            # data; instead it lands at is_current=False alongside the
+            # existing current row, and the operator can promote it from the
+            # review queue.
+            if is_current_row:
+                session.query(DepartmentYearly).filter(
+                    DepartmentYearly.department_id == dept.id,
+                    DepartmentYearly.fiscal_year == fiscal_year,
+                    DepartmentYearly.is_current == True,  # noqa: E712
+                ).update({"is_current": False}, synchronize_session="fetch")
 
             dy = DepartmentYearly(
                 department_id=dept.id,
@@ -409,6 +416,10 @@ def ingest_document(
             session.add(dy)
 
             stats["yearly_upserted"] += 1
+            if is_current_row:
+                stats["yearly_current"] += 1
+            else:
+                stats["yearly_review_pending"] += 1
 
     # Ingest support recipient data (対象比率)
     # Sprint 8.2.b: append-only with revision support. Old current row is
@@ -466,8 +477,10 @@ def ingest_document(
         sr_verdict = classify(sr_breakdown.composite, thresholds_from_env())
         sr_is_current = sr_verdict in ("auto", "auto_flag")
 
-        # Demote the prior current row.
-        if current_sr is not None:
+        # Sprint 8.6.b.1 — same demote-only-if-promoting rule as
+        # DepartmentYearly. A low-confidence SR row lands beside the
+        # prior current row, never replaces it.
+        if sr_is_current and current_sr is not None:
             session.query(SupportRecipient).filter(
                 SupportRecipient.school_id == doc.school_id,
                 SupportRecipient.fiscal_year == fiscal_year,
@@ -486,13 +499,32 @@ def ingest_document(
         )
         session.add(sr)
         stats["support_recipient"] = 1
+        if sr_is_current:
+            stats["support_recipient_current"] = 1
+        else:
+            stats["support_recipient_review_pending"] = 1
 
     # Update school_year_status
-    # Distinguish full vs partial vs support-only collection
-    if valid_depts and annotation.departments and len(valid_depts) < len(annotation.departments):
+    # Distinguish full vs partial vs support-only collection.
+    # Sprint 8.6.b.1: "collected" requires at least one DepartmentYearly
+    # row that ACTUALLY landed at is_current=True. If every dept fell
+    # below the review threshold, we cannot claim the year is collected
+    # — mark it partial so the operator queue treats this PDF as needing
+    # attention. The legacy "any valid dept" rule masked low-confidence
+    # rows that never reached Excel.
+    full_recognition = (
+        valid_depts and annotation.departments
+        and len(valid_depts) >= len(annotation.departments)
+    )
+    if stats["yearly_current"] > 0 and full_recognition:
+        collection_status = "collected"
+    elif stats["yearly_current"] > 0:
         collection_status = "partial"
     elif valid_depts:
-        collection_status = "collected"
+        # Departments parsed but every row was gated to review — treat
+        # the same as the prior "partial" surface so the operator sees
+        # this fiscal year is incomplete.
+        collection_status = "partial"
     else:
         collection_status = "support_only"
 
@@ -710,13 +742,28 @@ def run_ingestion(
             stats = ingest_document(session, doc, recorder=recorder)
             nested.commit()
 
-            # Mark ingest_status based on result
+            # Mark ingest_status based on result.
             # ingest_document may have already set a specific status (school_mismatch,
             # no_file, image_only, non_target, parse_failed). Only override if not set.
-            if stats.get("yearly_upserted", 0) > 0:
+            #
+            # Sprint 8.6.b.1: "ingested" requires at least one row to have
+            # actually reached is_current=True. If every dept and SR row
+            # was gated below the review threshold, the doc must surface
+            # in the manual-entry queue as ``review_pending`` — otherwise
+            # it disappears between Excel and the queue.
+            yearly_current = stats.get("yearly_current", 0)
+            sr_current = stats.get("support_recipient_current", 0)
+            yearly_review = stats.get("yearly_review_pending", 0)
+            sr_review = stats.get("support_recipient_review_pending", 0)
+
+            if yearly_current > 0:
                 doc.ingest_status = "ingested"
-            elif stats.get("support_recipient", 0) > 0 and stats.get("yearly_upserted", 0) == 0:
+            elif sr_current > 0 and yearly_current == 0:
                 doc.ingest_status = "support_only"
+            elif yearly_review > 0 or sr_review > 0:
+                # Rows landed but every one was below the auto threshold.
+                # Operator must verify; manual-entry page filters on this.
+                doc.ingest_status = "review_pending"
             elif stats.get("skipped", 0) > 0 and not doc.ingest_status:
                 doc.ingest_status = "parse_failed"
 
