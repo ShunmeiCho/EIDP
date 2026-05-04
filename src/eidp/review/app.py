@@ -492,6 +492,7 @@ def main() -> None:
             "⑨ PDF確認・手入力",
             "⑩ R8 判定 override",
             "⑪ Excel プレビュー",
+            "⑫ 監査ログ",
         ],
         index=0,
     )
@@ -532,6 +533,16 @@ def main() -> None:
         from eidp.config import settings
         from eidp.review.pages.excel_preview import render as render_excel_preview
         render_excel_preview(session, lock_path=Path(settings.data_dir) / ".lock")
+    elif page == "⑫ 監査ログ":
+        # Sprint 8.4.c.4 — manual_action_log browser + outbox flush.
+        from eidp.config import settings
+        from eidp.review.pages.audit_log import render as render_audit_log
+        data_dir = Path(settings.data_dir)
+        render_audit_log(
+            session,
+            lock_path=data_dir / ".lock",
+            jsonl_path=data_dir / "audit" / "manual-actions.jsonl",
+        )
 
     # Sidebar info
     st.sidebar.divider()
