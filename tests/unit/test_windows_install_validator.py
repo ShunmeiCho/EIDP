@@ -1,0 +1,228 @@
+"""Validate extracted Windows install evidence before/after VM steps."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "validate_windows_install.py"
+VM_RUNBOOK_PATH = Path(__file__).resolve().parents[2] / "docs" / "runbooks" / "eidp-windows-vm-validation.md"
+spec = importlib.util.spec_from_file_location("validate_windows_install", SCRIPT_PATH)
+assert spec and spec.loader
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+
+
+def _write(root: Path, rel: str, body: bytes | str = "") -> None:
+    path = root / Path(*rel.split("/"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(body, bytes):
+        path.write_bytes(body)
+    else:
+        path.write_text(body, encoding="utf-8")
+
+
+def _mkdir(root: Path, rel: str) -> None:
+    (root / Path(*rel.split("/"))).mkdir(parents=True, exist_ok=True)
+
+
+def _core_install(root: Path) -> Path:
+    for rel in module.CORE_FILES:
+        _write(root, rel, b"PE" if rel.endswith(".exe") else "")
+    for rel in module.CORE_DIRS:
+        _mkdir(root, rel)
+    _write(root, "src/eidp/__init__.py", "")
+    _write(root, "migrations/env.py", "")
+    _write(root, "wheelhouse/eidp-0.2.0-py3-none-any.whl", b"wheel")
+    _write(root, "wheelhouse/structlog-25.5.0-py3-none-any.whl", b"wheel")
+    _write(root, "data/master.xlsx", b"xlsx")
+    return root
+
+
+def _setup_artifacts(root: Path) -> None:
+    for rel in module.SETUP_DIRS:
+        _mkdir(root, rel)
+    for rel in module.SETUP_FILES:
+        _write(root, rel, b"sqlite" if rel.endswith(".sqlite3") else b"PE")
+
+
+def _weekly_artifacts(root: Path) -> None:
+    _write(
+        root,
+        "data/output/last_run.json",
+        json.dumps(
+            {
+                "status": "success",
+                "run_id": "20260505_010203",
+                "started_at": "2026-05-05T01:02:03+00:00",
+                "finished_at": "2026-05-05T01:02:10+00:00",
+            }
+        ),
+    )
+    _write(root, "logs/run-20260505.log", "ok")
+
+
+def test_validate_core_install_accepts_unzipped_layout(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+
+    check = module.validate_install(root)
+
+    assert check.ok, check.errors
+    assert check.details["wheel_count"] == 2
+    assert check.details["master_xlsx_present"] is True
+
+
+def test_validate_core_install_requires_project_wheel(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    (root / "wheelhouse" / "eidp-0.2.0-py3-none-any.whl").unlink()
+
+    check = module.validate_install(root)
+
+    assert not check.ok
+    assert any("project wheel" in error for error in check.errors)
+
+
+def test_validate_after_setup_requires_venv_and_sqlite(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert any(".venv/Scripts/python.exe" in error for error in check.errors)
+    assert any("data/eidp.sqlite3" in error for error in check.errors)
+
+
+def test_validate_after_setup_accepts_setup_artifacts(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert check.ok, check.errors
+
+
+def test_validate_after_weekly_requires_last_run_and_log(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+
+    check = module.validate_install(root, after_setup=True, after_weekly=True)
+
+    assert not check.ok
+    assert any("last_run.json" in error for error in check.errors)
+    assert any("logs/run-*.log" in error for error in check.errors)
+
+
+def test_validate_after_weekly_accepts_last_run_schema(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+
+    check = module.validate_install(root, after_setup=True, after_weekly=True)
+
+    assert check.ok, check.errors
+    assert check.details["last_run_status"] == "success"
+    assert check.details["run_log_count"] == 1
+
+
+def test_validate_after_weekly_rejects_bad_last_run_status(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    _write(
+        root,
+        "data/output/last_run.json",
+        json.dumps(
+            {
+                "status": "running",
+                "run_id": "20260505_010203",
+                "started_at": "2026-05-05T01:02:03+00:00",
+                "finished_at": "2026-05-05T01:02:10+00:00",
+            }
+        ),
+    )
+
+    check = module.validate_install(root, after_weekly=True)
+
+    assert not check.ok
+    assert any("status must be success" in error for error in check.errors)
+
+
+def test_validate_after_weekly_rejects_failed_last_run(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    _write(
+        root,
+        "data/output/last_run.json",
+        json.dumps(
+            {
+                "status": "failed",
+                "run_id": "20260505_010203",
+                "started_at": "2026-05-05T01:02:03+00:00",
+                "finished_at": "2026-05-05T01:02:10+00:00",
+            }
+        ),
+    )
+
+    check = module.validate_install(root, after_weekly=True)
+
+    assert not check.ok
+    assert any("status must be success" in error for error in check.errors)
+
+
+def test_validate_optional_ocr_addon(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+
+    missing = module.validate_install(root, require_ocr_addon=True)
+    assert not missing.ok
+
+    _write(root, "ocr-addon/tesseract/tesseract.exe", b"PE")
+    _write(root, "ocr-addon/tessdata/jpn.traineddata", b"jpn")
+    present = module.validate_install(root, require_ocr_addon=True)
+    assert present.ok, present.errors
+
+
+def test_validate_optional_playwright_addon(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+
+    missing = module.validate_install(root, require_playwright_addon=True)
+    assert not missing.ok
+
+    _mkdir(root, "playwright-addon/ms-playwright")
+    _mkdir(root, "playwright-addon/wheelhouse")
+    present = module.validate_install(root, require_playwright_addon=True)
+    assert present.ok, present.errors
+
+
+def test_cli_json_returns_nonzero_for_missing_setup_artifacts(tmp_path: Path, capsys) -> None:  # noqa: ANN001
+    root = _core_install(tmp_path / "EIDP")
+
+    rc = module.main([str(root), "--after-setup", "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert any(".venv/Scripts/python.exe" in error for error in payload["errors"])
+
+
+def test_vm_runbook_uses_packaged_validator_wrapper() -> None:
+    """The Windows VM checklist is executed from the extracted operator
+    ZIP, not from a Mac/dev checkout. Keep validation commands routed
+    through validate_install.bat and keep the path-with-spaces scenario
+    consistent across OCR / Playwright add-on stages."""
+    body = VM_RUNBOOK_PATH.read_text(encoding="utf-8")
+
+    assert "uv run python scripts/validate_windows_install.py" not in body
+    assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup' in body
+    assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup --after-weekly' in body
+    assert (
+        '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '
+        "--after-setup --require-ocr-addon"
+    ) in body
+    assert (
+        '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '
+        "--after-setup --require-playwright-addon"
+    ) in body

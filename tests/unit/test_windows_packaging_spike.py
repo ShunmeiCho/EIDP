@@ -134,9 +134,9 @@ def test_accepted_wheel_suffixes_includes_pure_python(tmp_path: Path):
 
 @pytest.fixture(scope="module")
 def bat_files() -> dict[str, str]:
-    """Read all four launcher scripts once."""
+    """Read all Windows launcher / utility scripts once."""
     out: dict[str, str] = {}
-    for name in ("first_setup.bat", "launch.bat", "weekly_run.bat", "uninstall.bat"):
+    for name in ("first_setup.bat", "launch.bat", "weekly_run.bat", "uninstall.bat", "validate_install.bat"):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
     return out
@@ -144,11 +144,11 @@ def bat_files() -> dict[str, str]:
 
 def test_bat_skeletons_all_present(bat_files: dict[str, str]):
     assert set(bat_files.keys()) == {
-        "first_setup.bat", "launch.bat", "weekly_run.bat", "uninstall.bat"
+        "first_setup.bat", "launch.bat", "weekly_run.bat", "uninstall.bat", "validate_install.bat",
     }
 
 
-@pytest.mark.parametrize("name", ["first_setup.bat", "launch.bat", "weekly_run.bat"])
+@pytest.mark.parametrize("name", ["first_setup.bat", "launch.bat", "weekly_run.bat", "validate_install.bat"])
 def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
     """All write-capable launchers MUST cd to the script parent so
     EIDP_APP_ROOT is anchored regardless of who invoked them
@@ -159,11 +159,13 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
     assert 'set "EIDP_APP_ROOT=%CD%"' in body, f"{name} must export EIDP_APP_ROOT"
 
 
-@pytest.mark.parametrize("name", ["launch.bat", "weekly_run.bat"])
-def test_long_running_bat_forces_utf8(bat_files: dict[str, str], name: str):
+@pytest.mark.parametrize("name", ["first_setup.bat", "launch.bat", "weekly_run.bat", "validate_install.bat"])
+def test_python_bat_forces_utf8(bat_files: dict[str, str], name: str):
     """Streamlit logs and run_r8_rediscovery_weekly print Japanese.
     Default Windows console is cp932 in JP, which corrupts text and
-    breaks downstream log scrapers. v6 Constraint #6 mandates UTF-8."""
+    breaks downstream log scrapers. first_setup also runs Python CLI
+    commands that may read/write Japanese data. v6 Constraint #6
+    mandates UTF-8."""
     body = bat_files[name]
     assert 'PYTHONIOENCODING=utf-8' in body
     assert 'PYTHONUTF8=1' in body
@@ -231,6 +233,44 @@ def test_runtime_bats_use_venv_python(bat_files: dict[str, str], name: str):
     )
 
 
+def test_weekly_run_uses_locale_safe_datestamp(bat_files: dict[str, str]):
+    """Windows %DATE% is locale-dependent (JP console can include
+    separators/day text). The log filename must come from a stable date
+    formatter, not substring slicing."""
+    body = bat_files["weekly_run.bat"]
+    assert "Get-Date -Format yyyyMMdd" in body
+    assert "%DATE:~" not in body
+
+
+def test_weekly_run_preserves_python_exit_code_after_endlocal(bat_files: dict[str, str]):
+    body = bat_files["weekly_run.bat"]
+    assert "set \"RC=%ERRORLEVEL%\"" in body
+    assert "endlocal & exit /b %RC%" in body
+
+
+def test_launch_preserves_streamlit_exit_code_after_endlocal(bat_files: dict[str, str]):
+    """Delayed expansion is not enabled in launch.bat. Capture the
+    Streamlit return code before `endlocal` so Task Scheduler / manual
+    runs observe the real failure status instead of a stale expansion."""
+    body = bat_files["launch.bat"]
+    assert "set \"RC=%ERRORLEVEL%\"" in body
+    assert "endlocal & exit /b %RC%" in body
+
+
+def test_validate_install_bat_runs_packaged_validator(bat_files: dict[str, str]):
+    """The VM checklist must be runnable from the extracted ZIP without
+    a dev checkout or `uv run`. The wrapper chooses .venv after setup,
+    falls back to the bundled runtime before setup, forwards all flags,
+    and preserves the validator exit code."""
+    body = bat_files["validate_install.bat"]
+    assert "validate_windows_install.py" in body
+    assert ".venv\\Scripts\\python.exe" in body
+    assert "runtime\\python\\python.exe" in body
+    assert '"%EIDP_APP_ROOT%" %*' in body
+    assert "set \"RC=%ERRORLEVEL%\"" in body
+    assert "endlocal & exit /b %RC%" in body
+
+
 def test_first_setup_calls_db_bootstrap_via_python_module(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
     # `python -m eidp.cli db-bootstrap --sqlite` is the actual command
@@ -295,11 +335,18 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "run_r8_rediscovery_weekly.py").write_text(
         "print('weekly')", encoding="utf-8",
     )
+    (fake_repo / "scripts" / "validate_windows_install.py").write_text(
+        "print('validate')", encoding="utf-8",
+    )
+    (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "alembic.ini").write_text("[alembic]\n", encoding="utf-8")
     migrations = fake_repo / "migrations"
     (migrations / "versions").mkdir(parents=True)
     (migrations / "env.py").write_text("# env", encoding="utf-8")
     (migrations / "versions" / "abcd_initial.py").write_text("# rev", encoding="utf-8")
+    (fake_repo / "docs" / "runbooks").mkdir(parents=True)
+    (fake_repo / "docs" / "runbooks" / "eidp-windows.md").write_text("# runbook", encoding="utf-8")
+    (fake_repo / "README.md").write_text("# EIDP", encoding="utf-8")
     (fake_repo / "requirements-windows.txt").write_text("structlog\n", encoding="utf-8")
     (fake_repo / "pyproject.toml").write_text("[project]\nname='eidp'\n", encoding="utf-8")
 
@@ -316,8 +363,16 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "scripts/run_r8_rediscovery_weekly.py" in arcs, (
         "weekly_run.bat depends on this Python entrypoint"
     )
+    assert "scripts/validate_windows_install.py" in arcs, (
+        "Windows VM checklist depends on this validation entrypoint"
+    )
+    assert "scripts/validate_install.bat" in arcs, (
+        "Windows VM checklist must run the validator from the extracted ZIP"
+    )
     assert "scripts/first_setup.bat" in arcs
     assert "wheelhouse/structlog-25.0.0-py3-none-any.whl" in arcs
+    assert "docs/runbooks/eidp-windows.md" in arcs
+    assert "README.md" in arcs
     assert "requirements-windows.txt" in arcs
 
 

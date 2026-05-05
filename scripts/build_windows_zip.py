@@ -158,8 +158,12 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       src/eidp/...                 importable source layout
       scripts/*.bat                .bat launchers
       scripts/run_r8_rediscovery_weekly.py   weekly runner
+      scripts/validate_windows_install.py    VM/operator evidence checker
+      scripts/validate_install.bat           VM/operator wrapper for the checker
       alembic.ini                  required by db-bootstrap
       migrations/...               required by alembic stamp head
+      docs/runbooks/eidp-windows.md operator runbook
+      README.md                    top-level operator/developer entrypoint
       requirements-windows.txt     used by first_setup.bat
       pyproject.toml               kept for parity with dev-side config
     """
@@ -179,14 +183,15 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
                 arcname = "src/" + path.relative_to(repo_root / "src").as_posix()
                 members.append((path, arcname))
 
-    # scripts/*.bat + the weekly runner Python entrypoint.
+    # scripts/*.bat + production/validation Python entrypoints.
     scripts_root = repo_root / "scripts"
     if scripts_root.is_dir():
         for path in sorted(scripts_root.glob("*.bat")):
             members.append((path, f"scripts/{path.name}"))
-        weekly = scripts_root / "run_r8_rediscovery_weekly.py"
-        if weekly.is_file():
-            members.append((weekly, "scripts/run_r8_rediscovery_weekly.py"))
+        for name in ("run_r8_rediscovery_weekly.py", "validate_windows_install.py"):
+            script = scripts_root / name
+            if script.is_file():
+                members.append((script, f"scripts/{name}"))
 
     # alembic.ini + migrations/ — db-bootstrap stamps head against this.
     alembic_ini = repo_root / "alembic.ini"
@@ -198,6 +203,13 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             if path.is_file() and "__pycache__" not in path.parts:
                 arcname = "migrations/" + path.relative_to(migrations_root).as_posix()
                 members.append((path, arcname))
+
+    # Operator-facing docs. Keep this narrow: historical reports/plans are
+    # useful in git, but the Windows operator ZIP should carry only the
+    # current runbook and top-level entrypoint.
+    runbook = repo_root / "docs" / "runbooks" / "eidp-windows.md"
+    if runbook.is_file():
+        members.append((runbook, "docs/runbooks/eidp-windows.md"))
 
     # runtime/ — python-build-standalone + uv.exe. Sprint 8.5.a.2.
     # The download_windows_runtime.py script populates this directory.
@@ -211,7 +223,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
                 members.append((path, arcname))
 
     # top-level files
-    for name in ("requirements-windows.txt", "pyproject.toml"):
+    for name in ("README.md", "requirements-windows.txt", "pyproject.toml"):
         candidate = repo_root / name
         if candidate.is_file():
             members.append((candidate, name))
