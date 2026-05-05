@@ -66,9 +66,18 @@ def _select_page(page_id: str) -> None:
     st.session_state.selected_page = page_id
 
 
-def _render_nav_button(page_id: str, label: str) -> None:
+def _render_nav_button(container, page_id: str, label: str) -> None:
+    """Render a navigation button into ``container`` (the sidebar root or
+    a sidebar expander).
+
+    Streamlit gotcha: ``st.sidebar.button`` ignores any ``with expander:``
+    context and always renders into the sidebar root. We must call
+    ``container.button`` explicitly so detail-page buttons land inside
+    the "詳細 operator" expander instead of leaking out alongside the
+    quick-access buttons.
+    """
     selected = st.session_state.get("selected_page") == page_id
-    if st.sidebar.button(
+    if container.button(
         label,
         key=f"nav_{page_id}",
         type="primary" if selected else "secondary",
@@ -87,15 +96,15 @@ def _render_sidebar_navigation() -> str:
     st.sidebar.markdown("**業務員クイック**")
     st.sidebar.caption(f"対象年度: {format_fiscal_year_label(settings.target_fiscal_year)}")
     for page_id, label in QUICK_PAGES:
-        _render_nav_button(page_id, label)
+        _render_nav_button(st.sidebar, page_id, label)
 
     detail_page_ids = {page_id for page_id, _label in DETAIL_PAGES}
-    with st.sidebar.expander(
+    detail_expander = st.sidebar.expander(
         "詳細 operator",
         expanded=st.session_state.selected_page in detail_page_ids,
-    ):
-        for page_id, label in DETAIL_PAGES:
-            _render_nav_button(page_id, label)
+    )
+    for page_id, label in DETAIL_PAGES:
+        _render_nav_button(detail_expander, page_id, label)
 
     return str(st.session_state.selected_page)
 
