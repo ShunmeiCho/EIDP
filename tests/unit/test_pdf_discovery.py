@@ -31,6 +31,23 @@ def test_confirmation_application_attachment_is_ranked_below_main_pdf() -> None:
     assert _score_candidate(main) > _score_candidate(attachment)
 
 
+def test_score_candidate_uses_configured_target_fiscal_year() -> None:
+    target = PdfCandidate(
+        pdf_url="https://example.ac.jp/r9.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和9年度 確認申請書",
+    )
+    previous = PdfCandidate(
+        pdf_url="https://example.ac.jp/r8.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和8年度 確認申請書",
+    )
+
+    assert _score_candidate(target, target_fiscal_year=2027) > _score_candidate(
+        previous, target_fiscal_year=2027
+    )
+
+
 def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
     html = """
     <a href="/albums/abm.php?d=16&amp;f=abm00001256.pdf&amp;n=%E6%94%B9.pdf">

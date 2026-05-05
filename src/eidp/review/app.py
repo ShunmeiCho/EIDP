@@ -5,27 +5,99 @@ Or directly: streamlit run src/eidp/review/app.py
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 import streamlit as st
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import ReviewItem, School, SchoolAlias
 from eidp.db.session import SessionLocal
+from eidp.fiscal_year import format_fiscal_year_label
 from eidp.review import operator_pages
-
 
 # ---------------------------------------------------------------------------
 # Session helpers
 # ---------------------------------------------------------------------------
 
+PAGE_STATUS = "status"
+PAGE_PROPOSALS = "proposals"
+PAGE_URL = "url"
+PAGE_EXPORTS = "exports"
+PAGE_GAPS = "gaps"
+PAGE_REJECTIONS = "rejections"
+PAGE_SCHOOL_CODE = "school_code"
+PAGE_HISTORY = "history"
+PAGE_MANUAL_ENTRY = "manual_entry"
+PAGE_FISCAL_YEAR_OVERRIDE = "fiscal_year_override"
+PAGE_EXCEL_PREVIEW = "excel_preview"
+PAGE_AUDIT_LOG = "audit_log"
+
+QUICK_PAGES = [
+    (PAGE_STATUS, "① データ状況"),
+    (PAGE_MANUAL_ENTRY, "② PDF確認・手入力"),
+    (PAGE_FISCAL_YEAR_OVERRIDE, "③ 年度判定・修正"),
+    (PAGE_EXCEL_PREVIEW, "④ Excel プレビュー"),
+    (PAGE_AUDIT_LOG, "⑤ 監査ログ"),
+]
+
+DETAIL_PAGES = [
+    (PAGE_PROPOSALS, "マッチング提案の確認"),
+    (PAGE_URL, "URL追加"),
+    (PAGE_EXPORTS, "Excel出力（管理者向け）"),
+    (PAGE_GAPS, "マッチング漏れ一覧"),
+    (PAGE_REJECTIONS, "除外PDF履歴"),
+    (PAGE_SCHOOL_CODE, "学校コード確認"),
+    (PAGE_HISTORY, "処理履歴"),
+]
+
+
 def _get_session() -> Session:
     """Get or reuse a SQLAlchemy session stored in Streamlit session_state."""
     if "db_session" not in st.session_state:
         st.session_state.db_session = SessionLocal()
-    return st.session_state.db_session
+    return cast(Session, st.session_state.db_session)
+
+
+def _select_page(page_id: str) -> None:
+    st.session_state.selected_page = page_id
+
+
+def _render_nav_button(page_id: str, label: str) -> None:
+    selected = st.session_state.get("selected_page") == page_id
+    if st.sidebar.button(
+        label,
+        key=f"nav_{page_id}",
+        type="primary" if selected else "secondary",
+        use_container_width=True,
+    ):
+        _select_page(page_id)
+        st.rerun()
+
+
+def _render_sidebar_navigation() -> str:
+    page_ids = {page_id for page_id, _label in QUICK_PAGES + DETAIL_PAGES}
+    if "selected_page" not in st.session_state or st.session_state.selected_page not in page_ids:
+        st.session_state.selected_page = PAGE_STATUS
+
+    st.sidebar.divider()
+    st.sidebar.markdown("**業務員クイック**")
+    st.sidebar.caption(f"対象年度: {format_fiscal_year_label(settings.target_fiscal_year)}")
+    for page_id, label in QUICK_PAGES:
+        _render_nav_button(page_id, label)
+
+    detail_page_ids = {page_id for page_id, _label in DETAIL_PAGES}
+    with st.sidebar.expander(
+        "詳細 operator",
+        expanded=st.session_state.selected_page in detail_page_ids,
+    ):
+        for page_id, label in DETAIL_PAGES:
+            _render_nav_button(page_id, label)
+
+    return str(st.session_state.selected_page)
 
 
 def _commit(session: Session) -> None:
@@ -149,7 +221,7 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
     item.status = "resolved"
     item.resolution = "approved"
     item.resolved_value = code
-    item.resolved_at = datetime.now(timezone.utc)
+    item.resolved_at = datetime.now(UTC)
     _commit(session)
 
 
@@ -181,7 +253,7 @@ def _approve_with_correction(
     item.status = "resolved"
     item.resolution = "corrected"
     item.resolved_value = corrected_code
-    item.resolved_at = datetime.now(timezone.utc)
+    item.resolved_at = datetime.now(UTC)
     _commit(session)
 
 
@@ -189,7 +261,7 @@ def _reject_item(session: Session, item: ReviewItem, notes: str = "") -> None:
     """Reject: mark the proposal as wrong, leave school_code NULL."""
     item.status = "resolved"
     item.resolution = "rejected"
-    item.resolved_at = datetime.now(timezone.utc)
+    item.resolved_at = datetime.now(UTC)
     if notes:
         item.notes = notes
     _commit(session)
@@ -478,65 +550,44 @@ def main() -> None:
     # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
     operator_pages.render_sidebar_todo(session)
 
-    page = st.sidebar.radio(
-        "メニュー",
-        [
-            "① データ状況",
-            "② マッチング提案の確認",
-            "③ URL追加",
-            "④ Excel出力",
-            "⑤ マッチング漏れ一覧",
-            "⑥ 除外PDF履歴",
-            "⑦ 学校コード確認",
-            "⑧ 処理履歴",
-            "⑨ PDF確認・手入力",
-            "⑩ R8 判定 override",
-            "⑪ Excel プレビュー",
-            "⑫ 監査ログ",
-        ],
-        index=0,
-    )
+    page = _render_sidebar_navigation()
 
-    if page == "① データ状況":
+    if page == PAGE_STATUS:
         operator_pages.page_pipeline_status(session)
-    elif page == "② マッチング提案の確認":
+    elif page == PAGE_PROPOSALS:
         operator_pages.page_proposals_review(session)
-    elif page == "③ URL追加":
+    elif page == PAGE_URL:
         operator_pages.page_url_submission(session)
-    elif page == "④ Excel出力":
+    elif page == PAGE_EXPORTS:
         operator_pages.page_exports(session)
-    elif page == "⑤ マッチング漏れ一覧":
+    elif page == PAGE_GAPS:
         operator_pages.page_gap_report()
-    elif page == "⑥ 除外PDF履歴":
+    elif page == PAGE_REJECTIONS:
         operator_pages.page_rejections()
-    elif page == "⑦ 学校コード確認":
+    elif page == PAGE_SCHOOL_CODE:
         _page_review_queue(session)
-    elif page == "⑧ 処理履歴":
+    elif page == PAGE_HISTORY:
         _page_history(session)
-    elif page == "⑨ PDF確認・手入力":
+    elif page == PAGE_MANUAL_ENTRY:
         # Sprint 8.4.c.1 — business-user main battlefield. Lock path is
         # ``data/.lock`` per v6 architecture, resolved against the
         # configured data_dir so the same file is shared with the
         # weekly runner.
-        from eidp.config import settings
-        from eidp.review.pages.pdf_manual_entry import render as render_manual_entry
+        from eidp.review._pages.pdf_manual_entry import render as render_manual_entry
         render_manual_entry(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == "⑩ R8 判定 override":
+    elif page == PAGE_FISCAL_YEAR_OVERRIDE:
         # Sprint 8.4.c.2 — operator confirms a document's fiscal_year
         # via the 4-table atomic rewrite path
         # (pipeline.fiscal_year_override.override_fiscal_year).
-        from eidp.config import settings
-        from eidp.review.pages.r8_override import render as render_r8_override
-        render_r8_override(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == "⑪ Excel プレビュー":
+        from eidp.review._pages.fiscal_year_override import render as render_fiscal_year_override
+        render_fiscal_year_override(session, lock_path=Path(settings.data_dir) / ".lock")
+    elif page == PAGE_EXCEL_PREVIEW:
         # Sprint 8.4.c.3 — read-only dry-run before download.
-        from eidp.config import settings
-        from eidp.review.pages.excel_preview import render as render_excel_preview
+        from eidp.review._pages.excel_preview import render as render_excel_preview
         render_excel_preview(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == "⑫ 監査ログ":
+    elif page == PAGE_AUDIT_LOG:
         # Sprint 8.4.c.4 — manual_action_log browser + outbox flush.
-        from eidp.config import settings
-        from eidp.review.pages.audit_log import render as render_audit_log
+        from eidp.review._pages.audit_log import render as render_audit_log
         data_dir = Path(settings.data_dir)
         render_audit_log(
             session,

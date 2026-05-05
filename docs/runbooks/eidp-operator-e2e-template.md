@@ -68,12 +68,12 @@ Updated: 2026-05-05
 
 ```
 
-### 工程 2: R8 判定
+### 工程 2: 対象年度判定
 
 | 指標 | 値 |
 | --- | ---: |
-| R8 自動判定数 | |
-| R8 override 数 | |
+| 対象年度 自動判定数 | |
+| 年度修正 数 | |
 | override 後の coverage / Excel 突合 | pass / fail |
 | review_pending 文書数 | |
 
@@ -126,7 +126,7 @@ override 例:
 | KPI | Target | Actual | 判定 |
 | --- | ---: | ---: | --- |
 | 新規 PDF 取得数 | 記録値 | | pass / watch / fail |
-| R8 自動判定成功率 | >= 90% | | pass / watch / fail |
+| 対象年度 自動判定成功率 | >= 90% | | pass / watch / fail |
 | OCR 自動成功率 | >= 70% | | pass / watch / fail |
 | HTTP 成功率 | >= 95% | | pass / watch / fail |
 | Excel 整合性 | 100% | | pass / watch / fail |

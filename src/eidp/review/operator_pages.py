@@ -492,14 +492,14 @@ def _run_competition_export(
 
 
 def page_exports(session: Session) -> None:
-    st.header("④ Excel出力")
+    st.header("Excel出力（管理者向け）")
     st.caption(
-        "担当者向けに配布する2種類のExcelを生成します。"
-        "② や ③ で承認・登録した内容が反映されます。"
+        "通常の週次業務では「Excel プレビュー」から確認・ダウンロードします。"
+        "この詳細ページは、保存先やテンプレートを管理者が明示して出力するための画面です。"
     )
 
     st.subheader("マスターExcel（全体一覧）")
-    st.caption("学校・学科・年度別データをまとめた全体ワークブック。")
+    st.caption("テンプレート不要。DB の現在データから新しい全体ワークブックを生成します。")
     master_out = st.text_input(
         "マスターExcelの保存先（output/配下のみ可）",
         value=str(_DEFAULT_MASTER),
@@ -521,10 +521,13 @@ def page_exports(session: Session) -> None:
     st.divider()
 
     st.subheader("競合校Excel（16シート・テンプレ形式）")
-    st.caption("「競合校の在校生数」テンプレートに当年度データを埋め込んで出力します。")
+    st.caption(
+        "既存の「競合校の在校生数」テンプレートを読み込み、対象年度の数値だけを埋めて"
+        "新しい Excel として保存します。通常の業務員は変更しません。"
+    )
     comp_cols = st.columns(2)
     template_in = comp_cols[0].text_input(
-        "テンプレートExcelのパス（sample/配下）",
+        "前年配布されたテンプレートExcel（sample/配下の管理用ファイル）",
         value=str(_DEFAULT_TEMPLATE),
         key="comp_template",
     )

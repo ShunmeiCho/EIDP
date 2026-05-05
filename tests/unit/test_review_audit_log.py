@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from eidp.db.audit import log_manual_action
 from eidp.db.locking import acquire_lock
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.review.pages.audit_log import (
+from eidp.review._pages.audit_log import (
     ACTION_TYPES,
     TARGET_TABLES,
     FlushOutcome,

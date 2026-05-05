@@ -30,7 +30,7 @@ from eidp.db.models import (
     School,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.review.pages.pdf_manual_entry import (
+from eidp.review._pages.pdf_manual_entry import (
     QUEUE_STATUSES,
     SaveOutcome,
     build_pdf_preview,
@@ -393,7 +393,7 @@ def test_submit_form_routes_through_save_with_lock(engine, tmp_path, monkeypatch
     enforcement point for the shared advisory lock + the manual_entry
     contract. This regression monkeypatches save_with_lock and asserts
     submit_form calls it with the validated entries."""
-    from eidp.review.pages import pdf_manual_entry as page_mod
+    from eidp.review._pages import pdf_manual_entry as page_mod
 
     captured: dict = {}
 
@@ -433,7 +433,7 @@ def test_submit_form_returns_validation_errors_without_calling_save(engine, tmp_
     """If form validation fails, save_with_lock must NOT be called.
     Pins the contract that the lock is never held while the operator
     is fixing input errors."""
-    from eidp.review.pages import pdf_manual_entry as page_mod
+    from eidp.review._pages import pdf_manual_entry as page_mod
 
     called = {"count": 0}
 
@@ -468,7 +468,7 @@ def test_submit_form_rejects_when_no_valid_rows_remain(engine, tmp_path, monkeyp
     """If every row has at least one error, submit_form must NOT call
     save_with_lock even though the validation list happens to be empty
     of *successful* entries — that's a degenerate save."""
-    from eidp.review.pages import pdf_manual_entry as page_mod
+    from eidp.review._pages import pdf_manual_entry as page_mod
 
     called = {"count": 0}
     monkeypatch.setattr(
@@ -504,7 +504,7 @@ def test_save_eligible_statuses_excludes_school_mismatch():
     NOT have a save form rendered — the operator must fix the school
     binding first. This test pins the policy constant so a future
     page-mod change can't silently flip it."""
-    from eidp.review.pages.pdf_manual_entry import SAVE_ELIGIBLE_STATUSES
+    from eidp.review._pages.pdf_manual_entry import SAVE_ELIGIBLE_STATUSES
 
     assert "school_mismatch" not in SAVE_ELIGIBLE_STATUSES
     assert SAVE_ELIGIBLE_STATUSES == frozenset({

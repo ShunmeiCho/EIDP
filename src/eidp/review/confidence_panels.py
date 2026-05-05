@@ -1,6 +1,6 @@
 """Sprint 8.6.d.1 — UI render helpers for ``confidence_breakdown``.
 
-Pure helpers consumed by the Streamlit pages (PDF確認・手入力 / R8 override
+Pure helpers consumed by the Streamlit pages (PDF確認・手入力 / 年度修正
 / Excel preview / 監査ログ). No ``streamlit`` imports — that lives in
 the page renderers; this module produces the data shape they display.
 

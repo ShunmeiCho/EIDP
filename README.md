@@ -18,7 +18,7 @@ Normal workflow:
 1. Extract `eidp-windows.zip` to `C:\EIDP`.
 2. Run `C:\EIDP\scripts\first_setup.bat` once.
 3. Run `C:\EIDP\scripts\launch.bat` to open the UI.
-4. Review PDFs, manual-entry items, R8 overrides, Excel preview, and audit logs
+4. Review PDFs, manual-entry items, fiscal-year corrections, Excel preview, and audit logs
    in the Streamlit sidebar.
 5. Let `weekly_run.bat` run by Windows Task Scheduler, or run it manually when
    instructed.

@@ -24,7 +24,9 @@ import httpx
 import structlog
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import CrawlJob, Document, SchoolSite
+from eidp.fiscal_year import fiscal_year_search_tokens
 from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 from eidp.scraper.url_discovery import _is_safe_url
 
@@ -109,10 +111,11 @@ class DiscoveryResult:
     error: str | None = None
 
 
-def _score_candidate(candidate: PdfCandidate) -> float:
+def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> float:
     """Score a PDF candidate by keyword relevance."""
     score = 0.0
     text = (candidate.anchor_text + " " + candidate.pdf_url).lower()
+    target_year = target_fiscal_year or settings.target_fiscal_year
 
     for kw in POSITIVE_KEYWORDS:
         if kw.lower() in text:
@@ -122,10 +125,11 @@ def _score_candidate(candidate: PdfCandidate) -> float:
         if kw.lower() in text:
             score -= 3.0
 
-    # Bonus for current year references
-    if "令和8" in text or "令和08" in text or "2026" in text or "r8" in text:
+    # Bonus for configured target-year references. EIDP is not R8-specific;
+    # R8 is just FY2026 when target_fiscal_year=2026.
+    if any(token.lower() in text for token in fiscal_year_search_tokens(target_year)):
         score += 3.0
-    if "令和7" in text or "2025" in text or "r7" in text:
+    if any(token.lower() in text for token in fiscal_year_search_tokens(target_year - 1)):
         score += 1.0
 
     # Bonus for pattern type reliability
@@ -420,17 +424,14 @@ def run_pdf_discovery(
 
     excluded_school_ids = latest_excluded_school_ids(session)
 
-    # Only skip schools that already have a document for the current target year
+    # Only skip schools that already have a document for the configured target year
     # (allow re-discovery if previous docs were from a different year or failed)
-    # Japanese fiscal year runs April-March: in Jan-Mar, target FY is previous calendar year
-    now = datetime.now()
-    current_target_year = now.year if now.month >= 4 else now.year - 1
-    # Only skip schools that have a FULLY ingested current-year document
+    # Only skip schools that have a FULLY ingested target-year document
     # support_only and partial docs should NOT suppress rediscovery
     schools_with_current_docs = (
         session.query(Document.school_id)
         .filter(
-            Document.fiscal_year == current_target_year,
+            Document.fiscal_year == settings.target_fiscal_year,
             Document.ingest_status == "ingested",
         )
         .distinct()

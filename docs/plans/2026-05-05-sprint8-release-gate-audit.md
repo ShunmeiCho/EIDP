@@ -39,13 +39,13 @@ Deployment must be a Windows ZIP flow:
 | Prefecture aggregator + safe CLI | `src/eidp/scraper/prefecture_aggregator.py`, `eidp prefecture-aggregate --apply` | Prior 8.3/8.3.1 tests logged | Local closed |
 | Operator manual-entry contract | `src/eidp/pipeline/manual_entry.py` | Prior 8.4.a/a.1/a.2 tests logged | Local closed |
 | Shared lock for UI / weekly | `src/eidp/db/locking.py`, `scripts/run_r8_rediscovery_weekly.py` | `tests/unit/test_r8_rediscovery_weekly.py`; VM still needed for actual `.bat` concurrency | Local closed, Windows open |
-| Streamlit 12-page operator UI | `src/eidp/review/app.py`, `src/eidp/review/pages/` | Prior 8.4 UI import smoke logged; VM still needed for browser/manual operation | Local closed, Windows open |
-| PDF preview / manual-entry UX | `src/eidp/review/pages/pdf_manual_entry.py` | Prior 8.4 gap fix logged | Local closed |
-| Excel preview separate from weekly runner | `src/eidp/review/pages/excel_preview.py`, `scripts/run_r8_rediscovery_weekly.py`, `scripts/verify_windows_distribution.py` | Unit tests and ZIP verifier assert no weekly Excel generation; VM file-lock test remains | Local closed, Windows open |
+| Streamlit 12-page operator UI | `src/eidp/review/app.py`, `src/eidp/review/_pages/` | Prior 8.4 UI import smoke logged; VM still needed for browser/manual operation | Local closed, Windows open |
+| PDF preview / manual-entry UX | `src/eidp/review/_pages/pdf_manual_entry.py` | Prior 8.4 gap fix logged | Local closed |
+| Excel preview separate from weekly runner | `src/eidp/review/_pages/excel_preview.py`, `scripts/run_r8_rediscovery_weekly.py`, `scripts/verify_windows_distribution.py` | Unit tests and ZIP verifier assert no weekly Excel generation; VM file-lock test remains | Local closed, Windows open |
 | Confidence architecture | `src/eidp/extraction_confidence.py` | Prior 8.6.a tests logged | Local closed |
 | Confidence gating in ingest | `src/eidp/pipeline/ingest.py` | Prior 8.6.b through 8.6.b.3 tests logged | Local closed |
 | Tesseract wrapper + runtime detect | `src/eidp/ocr/tesseract.py`, `src/eidp/ocr/runtime_detect.py` | Prior 8.6.c tests logged; real Windows subprocess remains open | Local closed, Windows open |
-| UI confidence breakdown / queue dashboard | `src/eidp/review/pages/` | Prior 8.6.d.1-d.4 tests logged | Local closed |
+| UI confidence breakdown / queue dashboard | `src/eidp/review/_pages/` | Prior 8.6.d.1-d.4 tests logged | Local closed |
 | Windows app-root and `.bat` contracts | `src/eidp/config.py`, `scripts/*.bat`, `scripts/verify_windows_distribution.py` | Static `.bat` tests and ZIP verifier check app-root anchors, UTF-8 env, exit-code preservation, offline install, locale-safe weekly log naming, and uninstall data protection; actual Windows execution open | Local closed, Windows open |
 | Repo Windows path safety | `scripts/check_windows_paths.py` | Current worktree check passes; covers case-insensitive collisions and reserved names | Local closed |
 | Windows wheelhouse platform / ABI guard | `scripts/build_windows_zip.py`, `requirements-windows.txt` | `tests/unit/test_windows_packaging_spike.py`; local smoke ZIP with `required_missing: []` | Local closed |

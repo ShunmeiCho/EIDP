@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import Document, School
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.review.pages.audit_log import QueueDepth, queue_depth
+from eidp.review._pages.audit_log import QueueDepth, queue_depth
 
 
 @pytest.fixture()

@@ -18,7 +18,7 @@ from eidp.db.models import (
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.extraction_confidence import breakdown_to_json, build_breakdown
-from eidp.review.pages.pdf_manual_entry import (
+from eidp.review._pages.pdf_manual_entry import (
     DocConfidenceSummary,
     summarize_confidence_for_document,
 )

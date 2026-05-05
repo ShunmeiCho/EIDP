@@ -1,8 +1,8 @@
-"""Streamlit page: R8 判定 override (Sprint 8.4.c.2).
+"""Streamlit page: fiscal-year judgment correction (Sprint 8.4.c.2).
 
 When the auto-parser put a document on the wrong fiscal_year (e.g.
-classified an R8 PDF as R7), the operator confirms the correct
-year here. The save path goes through
+classified a target-year PDF as the prior year), the operator confirms
+the correct year here. The save path goes through
 ``pipeline.fiscal_year_override.override_fiscal_year`` so all four
 tables (Document / DepartmentYearly / SupportRecipient /
 SchoolYearStatus) move atomically and every per-table change is
@@ -29,9 +29,10 @@ from sqlalchemy.orm import Session
 
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Document, School
+from eidp.fiscal_year import format_fiscal_year_label
 from eidp.pipeline.fiscal_year_override import override_fiscal_year
 
-# Documents in any of these statuses are eligible for R8 override:
+# Documents in any of these statuses are eligible for fiscal-year correction:
 # they have data the operator can re-classify. Documents not yet
 # ingested (pending / failed / mismatch) are excluded — those go to
 # the manual-entry page (8.4.c.1) first.
@@ -126,7 +127,7 @@ def override_with_lock(
         )
 
     try:
-        with acquire_lock(lock_path, owner="ui_r8_override"):
+        with acquire_lock(lock_path, owner="ui_fiscal_year_override"):
             try:
                 stats = override_fiscal_year(
                     session,
@@ -186,12 +187,16 @@ def submit_override_form(
 
 
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin streamlit shell
-    """Top-level Streamlit render for the R8 判定 override page."""
+    """Top-level Streamlit render for the fiscal-year correction page."""
     import streamlit as st
 
     from eidp.config import settings
 
-    st.subheader("R8 判定 (年度 override)")
+    st.subheader("対象年度の判定・修正")
+    st.caption(
+        f"現在の対象年度: {format_fiscal_year_label(settings.target_fiscal_year)}。"
+        "PDF の年度判定が違う場合だけ、正しい年度へ修正します。"
+    )
     status = probe_lock(lock_path)
     if status.held:
         st.warning(
@@ -206,19 +211,24 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
 
     label_to_doc: dict[str, CandidateRow] = {}
     for c in candidates:
-        override_label = f"(override→{c.fiscal_year_override})" if c.fiscal_year_override else ""
+        override_label = (
+            f"(修正済み→{format_fiscal_year_label(c.fiscal_year_override)})"
+            if c.fiscal_year_override
+            else ""
+        )
         key = (
             f"doc#{c.document_id} {c.school_name} ({c.prefecture}) "
-            f"fy={c.current_fiscal_year}{override_label} [{c.ingest_status}]"
+            f"{format_fiscal_year_label(c.current_fiscal_year)}{override_label} "
+            f"[{c.ingest_status}]"
         )
         label_to_doc[key] = c
 
-    with st.form(key="r8_override_form"):
+    with st.form(key="fiscal_year_override_form"):
         selected_label = st.selectbox(
             "対象文書", options=list(label_to_doc.keys()),
         )
         target_fy = st.number_input(
-            "新しい年度 (target_fy)", min_value=2019, max_value=2099,
+            "正しい年度", min_value=2019, max_value=2099,
             value=settings.target_fiscal_year, step=1,
         )
         reason = st.text_input("操作メモ (reason)")
@@ -241,13 +251,17 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             )
             return
         if not outcome.ok:
-            st.error(f"override に失敗しました: {outcome.error}")
+            st.error(f"年度修正に失敗しました: {outcome.error}")
             return
+        if outcome.stats is None:
+            st.error("年度修正に失敗しました: 結果件数を取得できませんでした。")
+            return
+        stats = outcome.stats
         st.success(
-            f"override 完了。"
-            f"DepartmentYearly={outcome.stats['department_yearly']} "
-            f"SupportRecipient={outcome.stats['support_recipient']} "
-            f"SchoolYearStatus={outcome.stats['school_year_status']} "
-            f"Document={outcome.stats['document']}"
+            f"年度修正が完了しました。"
+            f"DepartmentYearly={stats['department_yearly']} "
+            f"SupportRecipient={stats['support_recipient']} "
+            f"SchoolYearStatus={stats['school_year_status']} "
+            f"Document={stats['document']}"
         )
         st.rerun()

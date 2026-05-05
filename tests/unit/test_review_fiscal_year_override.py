@@ -1,4 +1,4 @@
-"""Sprint 8.4.c.2 — R8 override page helper regression.
+"""Sprint 8.4.c.2 — 年度修正 page helper regression.
 
 Same shape as 8.4.c.1's PDF確認・手入力 tests: render shell is
 exercised by the running app; helpers are unit-tested here.
@@ -11,7 +11,7 @@ Helpers under test:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -26,7 +26,7 @@ from eidp.db.models import (
     School,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.review.pages.r8_override import (
+from eidp.review._pages.fiscal_year_override import (
     OVERRIDE_ELIGIBLE_STATUSES,
     OverrideOutcome,
     list_override_candidates,
@@ -36,7 +36,7 @@ from eidp.review.pages.r8_override import (
 
 @pytest.fixture()
 def engine(tmp_path: Path):
-    db_path = tmp_path / "r8_override.sqlite3"
+    db_path = tmp_path / "fiscal_year_override.sqlite3"
     engine = create_engine(f"sqlite:///{db_path}", future=True)
     bootstrap_sqlite(engine)
     yield engine
@@ -66,7 +66,7 @@ def _seed_full_doc(
         content_type="text",
         fiscal_year=fiscal_year,
         ingest_status=status,
-        downloaded_at=datetime.now(timezone.utc),
+        downloaded_at=datetime.now(UTC),
     )
     session.add(doc)
     session.flush()
@@ -154,7 +154,7 @@ def test_override_with_lock_writes_when_lock_free(engine, tmp_path):
             session,
             document_id=doc.id,
             target_fy=2026,
-            reason="confirmed R8",
+            reason="confirmed target fiscal year",
             lock_path=lock,
         )
         assert outcome.ok is True
@@ -230,7 +230,7 @@ def test_override_with_lock_rejects_invalid_target_fy_without_lock(engine, tmp_p
 
 
 def test_submit_form_routes_through_override_with_lock(engine, tmp_path, monkeypatch):
-    from eidp.review.pages import r8_override as page_mod
+    from eidp.review._pages import fiscal_year_override as page_mod
 
     captured: dict = {}
 
@@ -250,19 +250,19 @@ def test_submit_form_routes_through_override_with_lock(engine, tmp_path, monkeyp
             session,
             document_id=doc.id,
             target_fy=2026,
-            reason="cover page says R8",
+            reason="cover page says target fiscal year",
             lock_path=lock,
         )
 
     assert outcome.ok is True
     assert captured["document_id"] == doc.id
     assert captured["target_fy"] == 2026
-    assert captured["reason"] == "cover page says R8"
+    assert captured["reason"] == "cover page says target fiscal year"
     assert captured["lock_path"] == lock
 
 
 def test_submit_form_rejects_invalid_document_without_lock(engine, tmp_path, monkeypatch):
-    from eidp.review.pages import r8_override as page_mod
+    from eidp.review._pages import fiscal_year_override as page_mod
 
     called = {"count": 0}
     monkeypatch.setattr(
@@ -281,7 +281,7 @@ def test_submit_form_rejects_invalid_document_without_lock(engine, tmp_path, mon
 
 
 def test_submit_form_rejects_out_of_range_target_fy(engine, tmp_path, monkeypatch):
-    from eidp.review.pages import r8_override as page_mod
+    from eidp.review._pages import fiscal_year_override as page_mod
 
     called = {"count": 0}
     monkeypatch.setattr(

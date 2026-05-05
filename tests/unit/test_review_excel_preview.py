@@ -18,7 +18,7 @@ from eidp.db.models import (
     SupportRecipient,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.review.pages.excel_preview import (
+from eidp.review._pages.excel_preview import (
     SHEET_ORDER,
     build_preview_workbook,
     count_unmatched_and_gap,
