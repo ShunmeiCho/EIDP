@@ -37,12 +37,21 @@ DEFAULT_WHEELHOUSE = REPO_ROOT / "dist" / "wheelhouse"
 DEFAULT_OUT_ZIP = REPO_ROOT / "dist" / "eidp-windows.zip"
 
 # Wheel filenames we consider safe to ship to Windows operator PCs.
+#
+# abi3 wheels (PEP 384 stable ABI) are forward-compatible: a wheel
+# built with cp310-abi3 / cp311-abi3 / cp312-abi3 runs on every cp
+# interpreter ≥ that minimum. cryptography, pymupdf, primp, protobuf
+# routinely ship as cp310-abi3 to avoid republishing per minor release.
 ACCEPTED_WHEEL_SUFFIXES = (
     "-cp312-cp312-win_amd64.whl",
+    "-cp310-abi3-win_amd64.whl",
+    "-cp311-abi3-win_amd64.whl",
     "-cp312-abi3-win_amd64.whl",
     "-py3-none-any.whl",
     "-py2.py3-none-any.whl",
     "-py312-none-any.whl",
+    "-py3-none-win_amd64.whl",
+    "-py2.py3-none-win_amd64.whl",
 )
 
 
@@ -113,7 +122,12 @@ def verify_wheelhouse(wheelhouse: Path) -> list[Path]:
         else:
             rejected.append(wheel)
 
-    other = [p for p in wheelhouse.iterdir() if p.suffix not in {".whl"}]
+    # pip download writes a .gitignore into its dest dir as a side effect;
+    # ignore that and only flag genuinely unexpected files.
+    other = [
+        p for p in wheelhouse.iterdir()
+        if p.suffix != ".whl" and p.name != ".gitignore"
+    ]
     if rejected or other:
         rejected_str = "\n".join(f"  rejected: {p.name}" for p in rejected)
         other_str = "\n".join(f"  unexpected: {p.name}" for p in other)
