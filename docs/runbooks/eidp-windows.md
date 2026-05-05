@@ -420,3 +420,11 @@ Restart-Service sshd
 
 それ以上の手作業（CRLF 変換、wheelhouse 追加、`.venv` 削除、ACL 修正など）は、本ランブックを書き終えた時点で全て build pipeline 側で済んでいます。
 業務員に渡る前に管理者側でこの章のチェックリストに従って ZIP の品質を確認してください。
+
+### 14.7 リモートからの HTTP アクセスが「業務員 PC では繋がる、外からは繋がらない」
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `http://localhost:8501` は業務員 PC のブラウザで開く、`http://<業務員 PC の LAN IP>:8501` は外部マシンから繋がらない | Windows Defender Firewall が `python.exe` の inbound を初回 prompt まで遮断する。`launch.bat` の python は `.venv\Scripts\python.exe` で、毎回 ZIP 設置先が変わると別実行ファイル扱いになり再 prompt | 通常運用は問題なし — 業務員は localhost で開けば OK。LAN 経由の運用が必要な場合のみ管理者 PowerShell で許可:<br><br>`New-NetFirewallRule -DisplayName "EIDP Streamlit" -Direction Inbound -Action Allow -Program "C:\workspace\EIDP\.venv\Scripts\python.exe" -Profile Private`<br><br>install 場所が異なれば `-Program` を実際のパスに合わせる |
+
+このパターンは初回 `launch.bat` 実行時に Defender ポップアップが出ることがあるが、業務員が「アクセスを許可する」を選択するだけで永続化される。CI / VM 検証では事前にルールを追加しておくのが楽。
