@@ -141,6 +141,30 @@ def verify_wheelhouse(wheelhouse: Path) -> list[Path]:
     return accepted
 
 
+def _resolve_master_xlsx(repo_root: Path) -> Path | None:
+    """Locate the master Excel file the Windows ZIP must ship.
+
+    Priority order:
+      1. data/master.xlsx                       — preferred canonical name
+      2. sample/◆2025専門学校無償化情報公開まとめ.xlsx
+                                                 — source spreadsheet
+                                                   team's filename, used
+                                                   when a fresh clone has
+                                                   not yet been renamed
+
+    Returns ``None`` when no candidate exists; the caller decides whether
+    that should be a build failure or a soft skip.
+    """
+    candidates = (
+        repo_root / "data" / "master.xlsx",
+        repo_root / "sample" / "◆2025専門学校無償化情報公開まとめ.xlsx",
+    )
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
 def _to_crlf(data: bytes) -> bytes:
     """Convert any LF / mixed line endings to CRLF.
 
@@ -253,6 +277,24 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
                 arcname = "runtime/" + path.relative_to(runtime_root).as_posix()
                 members.append((path, arcname))
 
+    # data/master.xlsx — bootstrap school + department + support_recipient
+    # rows so the operator's first launch.bat shows a populated UI instead
+    # of 12 empty pages. first_setup.bat calls `eidp import-excel` against
+    # this file. Discovered live on the 2026-05-06 Win VM dry run: a
+    # schema-OK DB without master rows leaves every page blank, which
+    # breaks the "ZIP unzip → it works" promise.
+    #
+    # The xlsx is NOT tracked in git (4.8 MB, exceeds the repo's secret /
+    # large-file pre-commit threshold). Build hosts must place a current
+    # master Excel at data/master.xlsx before running this script — see
+    # docs/runbooks/eidp-windows.md for the canonical source. We resolve
+    # via _resolve_master_xlsx so a build host that only has the sample
+    # copy from the source spreadsheet team can still produce a valid
+    # ZIP without a manual rename step.
+    master_xlsx = _resolve_master_xlsx(repo_root)
+    if master_xlsx is not None:
+        members.append((master_xlsx, "data/master.xlsx"))
+
     # top-level files
     for name in ("README.md", "requirements-windows.txt", "pyproject.toml"):
         candidate = repo_root / name
@@ -260,6 +302,22 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             members.append((candidate, name))
 
     return members
+
+
+def assert_master_xlsx_present(repo_root: Path) -> None:
+    """Sprint 8.7.d data-visibility gate: refuse to build a Windows ZIP
+    without a master Excel. A schema-OK DB without master rows leaves
+    every UI page blank, so we'd rather fail at build time than ship a
+    silent regression to the operator PC."""
+    if _resolve_master_xlsx(repo_root) is not None:
+        return
+    raise RuntimeError(
+        "master Excel is missing — looked for "
+        "data/master.xlsx and sample/◆2025専門学校無償化情報公開まとめ.xlsx. "
+        "Place a current master Excel at data/master.xlsx (preferred) or "
+        "use --skip-master to build a ZIP for a build host that supplies "
+        "master.xlsx out-of-band."
+    )
 
 
 def assert_runtime_present(repo_root: Path) -> None:
@@ -292,6 +350,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="Build a ZIP without runtime/. Operator must "
                              "extract a runtime ZIP separately. Mac-only "
                              "convenience flag — production ZIPs include runtime.")
+    parser.add_argument("--skip-master", action="store_true",
+                        help="Build a ZIP without data/master.xlsx. Use when "
+                             "a downstream pipeline injects master.xlsx after "
+                             "build. Production ZIPs always include master.")
     args = parser.parse_args(argv)
 
     if not args.skip_download:
@@ -304,6 +366,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_zip:
         if not args.skip_runtime:
             assert_runtime_present(REPO_ROOT)
+        if not args.skip_master:
+            assert_master_xlsx_present(REPO_ROOT)
         out = assemble_zip(out_zip=args.out_zip, repo_root=REPO_ROOT, wheelhouse=args.wheelhouse)
         size_mb = out.stat().st_size / 1024 / 1024
         print(f"OK: wrote {out} ({size_mb:.1f} MB)")

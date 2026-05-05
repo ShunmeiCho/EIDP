@@ -225,6 +225,24 @@ def test_first_setup_uses_existing_cli_command_for_master(bat_files: dict[str, s
     assert "import-excel" in body, "use eidp import-excel for master.xlsx"
 
 
+def test_first_setup_fails_loud_when_master_missing(bat_files: dict[str, str]):
+    """Sprint 8.7.d data-visibility gate: master.xlsx is mandatory for
+    v1. A schema-OK DB without master rows leaves every UI page blank,
+    which violates the 'ZIP unzip → it works' promise. first_setup.bat
+    must fail with a non-zero exit code rather than continue with a
+    soft warning."""
+    body = bat_files["first_setup.bat"]
+    assert "WARNING: data\\master.xlsx is missing" not in body, (
+        "first_setup must NOT silently continue when master.xlsx is "
+        "missing — fail loud so the operator notices"
+    )
+    assert "ERROR: data\\master.xlsx is missing" in body
+    assert "exit /b 3" in body, (
+        "first_setup must surface a distinct exit code (3) when master "
+        "is missing so Task Scheduler / VM validator can detect it"
+    )
+
+
 @pytest.mark.parametrize("name", ["launch.bat", "weekly_run.bat"])
 def test_runtime_bats_use_venv_python(bat_files: dict[str, str], name: str):
     body = bat_files[name]
@@ -354,6 +372,11 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     wheelhouse.mkdir()
     (wheelhouse / "structlog-25.0.0-py3-none-any.whl").write_bytes(b"")
 
+    # Sprint 8.7.d: master.xlsx must be carried into the ZIP so
+    # first_setup.bat → eidp import-excel populates the DB on day 1.
+    (fake_repo / "data").mkdir(parents=True, exist_ok=True)
+    (fake_repo / "data" / "master.xlsx").write_bytes(b"PK\x03\x04 fake xlsx")
+
     members = bw.collect_zip_members(repo_root=fake_repo, wheelhouse=wheelhouse)
     arcs = {arc for _, arc in members}
 
@@ -374,6 +397,49 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "docs/runbooks/eidp-windows.md" in arcs
     assert "README.md" in arcs
     assert "requirements-windows.txt" in arcs
+    assert "data/master.xlsx" in arcs, (
+        "Sprint 8.7.d data-visibility gate: master.xlsx must be in the "
+        "Windows ZIP so the operator's first launch shows real data"
+    )
+
+
+def test_resolve_master_xlsx_prefers_data_master(tmp_path: Path):
+    """Sprint 8.7.d: when both candidates exist, data/master.xlsx wins."""
+    bw = _load_build_script()
+    fake_repo = tmp_path / "repo"
+    (fake_repo / "data").mkdir(parents=True)
+    (fake_repo / "sample").mkdir(parents=True)
+    (fake_repo / "data" / "master.xlsx").write_bytes(b"data-version")
+    (fake_repo / "sample" / "◆2025専門学校無償化情報公開まとめ.xlsx").write_bytes(b"sample-version")
+
+    resolved = bw._resolve_master_xlsx(fake_repo)
+
+    assert resolved is not None
+    assert resolved.read_bytes() == b"data-version"
+
+
+def test_resolve_master_xlsx_falls_back_to_sample(tmp_path: Path):
+    """Sprint 8.7.d: a fresh clone without data/master.xlsx still resolves
+    to the source spreadsheet team's filename."""
+    bw = _load_build_script()
+    fake_repo = tmp_path / "repo"
+    (fake_repo / "sample").mkdir(parents=True)
+    (fake_repo / "sample" / "◆2025専門学校無償化情報公開まとめ.xlsx").write_bytes(b"sample-version")
+
+    resolved = bw._resolve_master_xlsx(fake_repo)
+
+    assert resolved is not None
+    assert resolved.name == "◆2025専門学校無償化情報公開まとめ.xlsx"
+
+
+def test_assert_master_xlsx_present_raises_when_absent(tmp_path: Path):
+    """Sprint 8.7.d: build must fail loud when no master Excel exists."""
+    bw = _load_build_script()
+    fake_repo = tmp_path / "repo"
+    fake_repo.mkdir()
+
+    with pytest.raises(RuntimeError, match="master Excel is missing"):
+        bw.assert_master_xlsx_present(fake_repo)
 
 
 def test_collect_zip_members_skips_pycache(tmp_path: Path):

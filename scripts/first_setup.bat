@@ -74,16 +74,23 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 7. Import the master school list if it exists. CLI command is import-excel.
-if exist "%EIDP_APP_ROOT%\data\master.xlsx" (
-    "%VENV_PY%" -m eidp.cli import-excel ^
-        "%EIDP_APP_ROOT%\data\master.xlsx"
-    if errorlevel 1 (
-        echo [first_setup] master import failed
-        exit /b 1
-    )
-) else (
-    echo [first_setup] WARNING: data\master.xlsx is missing — operator must import manually before week 1.
+REM 7. Import the master school list. CLI command is import-excel.
+REM    master.xlsx is mandatory for v1: without it the UI shows 12 empty
+REM    pages and the operator has no entry point. Fail loud rather than
+REM    quietly continuing — discovered on the 2026-05-06 Win VM dry run.
+if not exist "%EIDP_APP_ROOT%\data\master.xlsx" (
+    echo [first_setup] ERROR: data\master.xlsx is missing.
+    echo [first_setup] The Windows ZIP must ship with data\master.xlsx.
+    echo [first_setup] Re-extract the ZIP, or place a master Excel at
+    echo [first_setup]   %EIDP_APP_ROOT%\data\master.xlsx
+    echo [first_setup] and re-run this script.
+    exit /b 3
+)
+"%VENV_PY%" -m eidp.cli import-excel ^
+    "%EIDP_APP_ROOT%\data\master.xlsx"
+if errorlevel 1 (
+    echo [first_setup] master import failed
+    exit /b 1
 )
 
 REM 8. Register weekly Task Scheduler entry (Mondays 02:00 local).
