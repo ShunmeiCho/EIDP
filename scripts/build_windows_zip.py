@@ -243,7 +243,12 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
     if scripts_root.is_dir():
         for path in sorted(scripts_root.glob("*.bat")):
             members.append((path, f"scripts/{path.name}"))
-        for name in ("run_r8_rediscovery_weekly.py", "validate_windows_install.py"):
+        for name in (
+            "run_r8_rediscovery_weekly.py",
+            "validate_windows_install.py",
+            "bootstrap_pdf_pipeline.py",
+            "download_prefecture_artifacts.py",
+        ):
             script = scripts_root / name
             if script.is_file():
                 members.append((script, f"scripts/{name}"))
@@ -294,6 +299,21 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
     master_xlsx = _resolve_master_xlsx(repo_root)
     if master_xlsx is not None:
         members.append((master_xlsx, "data/master.xlsx"))
+
+    # data/prefecture-aggregators/seed.csv — Sprint 8.7.e bootstrap
+    # automation gate. seed.csv carries the 47-prefecture metadata
+    # (artifact URLs, parser keys, verified status). The operator PC
+    # downloads the per-prefecture artifact PDFs at runtime via
+    # `bootstrap_pdfs.bat` so the ZIP isn't frozen against the date it
+    # was packed — when prefectures publish new R8 / R9 PDFs the
+    # operator picks them up automatically without a new ZIP build.
+    #
+    # Artifacts/ is intentionally NOT in the ZIP. They live in the
+    # operator's data/prefecture-aggregators/artifacts/ after
+    # bootstrap_pdfs.bat first run.
+    pref_seed = repo_root / "data" / "prefecture-aggregators" / "seed.csv"
+    if pref_seed.is_file():
+        members.append((pref_seed, "data/prefecture-aggregators/seed.csv"))
 
     # top-level files
     for name in ("README.md", "requirements-windows.txt", "pyproject.toml"):

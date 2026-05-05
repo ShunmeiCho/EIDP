@@ -101,6 +101,10 @@ if errorlevel 1 (
     echo [first_setup] WARNING: schtasks registration failed; operator may need to run weekly_run.bat manually.
 )
 
-echo [first_setup] complete. Launch the UI by double-clicking scripts\launch.bat
+echo [first_setup] complete.
+echo [first_setup] Next steps:
+echo [first_setup]   1. Double-click scripts\bootstrap_pdfs.bat (one-time, online)
+echo [first_setup]      to download prefecture artifacts and discover school PDFs.
+echo [first_setup]   2. Double-click scripts\launch.bat to open the operator UI.
 endlocal
 exit /b 0

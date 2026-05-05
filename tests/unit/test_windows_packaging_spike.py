@@ -136,7 +136,10 @@ def test_accepted_wheel_suffixes_includes_pure_python(tmp_path: Path):
 def bat_files() -> dict[str, str]:
     """Read all Windows launcher / utility scripts once."""
     out: dict[str, str] = {}
-    for name in ("first_setup.bat", "launch.bat", "weekly_run.bat", "uninstall.bat", "validate_install.bat"):
+    for name in (
+        "first_setup.bat", "launch.bat", "weekly_run.bat",
+        "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
+    ):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
     return out
@@ -144,7 +147,8 @@ def bat_files() -> dict[str, str]:
 
 def test_bat_skeletons_all_present(bat_files: dict[str, str]):
     assert set(bat_files.keys()) == {
-        "first_setup.bat", "launch.bat", "weekly_run.bat", "uninstall.bat", "validate_install.bat",
+        "first_setup.bat", "launch.bat", "weekly_run.bat",
+        "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
     }
 
 
@@ -223,6 +227,43 @@ def test_first_setup_uses_existing_cli_command_for_master(bat_files: dict[str, s
     body = bat_files["first_setup.bat"]
     assert "import-master" not in body, "import-master is not a real CLI command"
     assert "import-excel" in body, "use eidp import-excel for master.xlsx"
+
+
+def test_first_setup_does_not_run_aggregate_or_discovery(bat_files: dict[str, str]):
+    """Sprint 8.7.e: first_setup.bat must stay OFFLINE. Prefecture
+    aggregate, discover-pdfs, ingest-pdfs all need internet access; we
+    push them into bootstrap_pdfs.bat so first_setup remains a clean
+    offline install (works inside corp networks while waiting for proxy
+    approval)."""
+    body = bat_files["first_setup.bat"]
+    assert "prefecture-aggregate" not in body, (
+        "first_setup.bat must NOT call prefecture-aggregate — that step "
+        "is online and belongs in bootstrap_pdfs.bat"
+    )
+    assert "discover-pdfs" not in body, (
+        "first_setup.bat must NOT call discover-pdfs"
+    )
+    assert "ingest-pdfs" not in body, (
+        "first_setup.bat must NOT call ingest-pdfs"
+    )
+    assert "bootstrap_pdfs.bat" in body, (
+        "first_setup.bat must point operators to bootstrap_pdfs.bat"
+    )
+
+
+def test_bootstrap_pdfs_bat_invokes_pipeline_script(bat_files: dict[str, str]):
+    """Sprint 8.7.e: bootstrap_pdfs.bat is a thin wrapper over
+    scripts/bootstrap_pdf_pipeline.py, which runs all four steps."""
+    body = bat_files["bootstrap_pdfs.bat"]
+    assert "bootstrap_pdf_pipeline.py" in body
+    assert ".venv\\Scripts\\python.exe" in body, (
+        "bootstrap_pdfs.bat must use the venv python created by first_setup"
+    )
+    assert "cd /d \"%~dp0\\..\"" in body, (
+        "bootstrap_pdfs.bat must anchor at the application root"
+    )
+    assert "set \"RC=%ERRORLEVEL%\"" in body
+    assert "endlocal & exit /b %RC%" in body
 
 
 def test_first_setup_fails_loud_when_master_missing(bat_files: dict[str, str]):
@@ -377,6 +418,24 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "data").mkdir(parents=True, exist_ok=True)
     (fake_repo / "data" / "master.xlsx").write_bytes(b"PK\x03\x04 fake xlsx")
 
+    # Sprint 8.7.e: prefecture seed.csv must be carried so the
+    # bootstrap_pdfs.bat pipeline can read artifact URLs and run the
+    # download → aggregate → discover-pdfs → ingest chain on the
+    # operator PC.
+    (fake_repo / "data" / "prefecture-aggregators").mkdir(parents=True, exist_ok=True)
+    (fake_repo / "data" / "prefecture-aggregators" / "seed.csv").write_text(
+        "pref_key,pref_jp\nfukuoka,福岡県\n", encoding="utf-8",
+    )
+    # Artifacts directory must NOT be in the ZIP (downloaded at runtime).
+    (fake_repo / "data" / "prefecture-aggregators" / "artifacts").mkdir(parents=True, exist_ok=True)
+    (fake_repo / "data" / "prefecture-aggregators" / "artifacts" / "fukuoka.pdf").write_bytes(b"%PDF-fake")
+    # Bootstrap pipeline scripts must be in the ZIP.
+    (fake_repo / "scripts" / "bootstrap_pdf_pipeline.py").write_text("print('boot')", encoding="utf-8")
+    (fake_repo / "scripts" / "bootstrap_pdfs.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "scripts" / "download_prefecture_artifacts.py").write_text(
+        "print('download')", encoding="utf-8",
+    )
+
     members = bw.collect_zip_members(repo_root=fake_repo, wheelhouse=wheelhouse)
     arcs = {arc for _, arc in members}
 
@@ -400,6 +459,32 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "data/master.xlsx" in arcs, (
         "Sprint 8.7.d data-visibility gate: master.xlsx must be in the "
         "Windows ZIP so the operator's first launch shows real data"
+    )
+    assert "data/prefecture-aggregators/seed.csv" in arcs, (
+        "Sprint 8.7.e: prefecture seed.csv carries artifact URLs and "
+        "must be in the ZIP for bootstrap_pdfs.bat to use"
+    )
+    artifact_arcs = {
+        a for a in arcs
+        if a.startswith("data/prefecture-aggregators/artifacts/")
+    }
+    assert artifact_arcs == set(), (
+        "Sprint 8.7.e: artifact PDFs must NOT be in the ZIP — they are "
+        "downloaded at runtime so the operator picks up newer prefecture "
+        "publications without a fresh ZIP build. Found: "
+        f"{sorted(artifact_arcs)}"
+    )
+    assert "scripts/bootstrap_pdfs.bat" in arcs, (
+        "Sprint 8.7.e: bootstrap_pdfs.bat is the operator entry point "
+        "for the discovery pipeline"
+    )
+    assert "scripts/bootstrap_pdf_pipeline.py" in arcs, (
+        "Sprint 8.7.e: bootstrap_pdf_pipeline.py is the Python "
+        "implementation behind bootstrap_pdfs.bat"
+    )
+    assert "scripts/download_prefecture_artifacts.py" in arcs, (
+        "Sprint 8.7.e: download_prefecture_artifacts.py is imported "
+        "by bootstrap_pdf_pipeline.py at runtime"
     )
 
 
