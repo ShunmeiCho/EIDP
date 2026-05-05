@@ -3,7 +3,7 @@
 # Safe to re-run: removes any prior EIDP-R8-CRON line before appending fresh.
 #
 # Usage (on venus, as user junming, no sudo):
-#   bash deploy/cron/install.sh
+#   bash deploy/legacy-venus/cron/install.sh
 #
 # To uninstall:
 #   crontab -l | grep -v 'EIDP-R8-CRON' | crontab -

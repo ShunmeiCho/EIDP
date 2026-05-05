@@ -1,5 +1,10 @@
 # EIDP R8 Rediscovery Weekly Runbook
 
+> Archived 2026-05-05 — Venus crontab/systemd operation is no longer the
+> target deployment path. Use `docs/runbooks/eidp-windows.md` for Sprint 8
+> Windows-PC operation. The legacy cron/systemd assets are kept under
+> `deploy/legacy-venus/` for historical reference only.
+
 ## Purpose
 
 Sprint 4 proved that one-time stale rediscovery has zero R8 yield before the
@@ -20,7 +25,7 @@ systemd was rejected because `loginctl show-user junming -p Linger` returns
 a user timer silently misses runs whenever junming is logged out — that
 yields a "looks-installed-but-not-running" false sense of automation.
 
-The systemd unit files under `deploy/systemd/` are kept for the future
+The systemd unit files under `deploy/legacy-venus/systemd/` are kept for the future
 migration: once `sudo loginctl enable-linger junming` is run, the same
 Python entrypoint can be moved over without rewriting the runner.
 
@@ -44,7 +49,7 @@ entry.
 
 ```bash
 cd ~/workspace/EIDP
-bash deploy/cron/install.sh
+bash deploy/legacy-venus/cron/install.sh
 crontab -l
 ```
 
@@ -66,7 +71,7 @@ Cron daemon survives reboot — `systemctl status cron` should show `active`.
 Or invoke the cron wrapper directly with the same flock/log/marker semantics:
 
 ```bash
-bash scripts/run_r8_rediscovery_cron.sh --limit 10
+bash deploy/legacy-venus/run_r8_rediscovery_cron.sh --limit 10
 ls -lt logs/r8-rediscovery/run-*.log | head -3
 cat logs/r8-rediscovery/.last_failure 2>/dev/null || echo "no failure marker"
 ```
@@ -83,8 +88,8 @@ Only relevant after `sudo loginctl enable-linger junming` is allowed.
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp deploy/systemd/eidp-r8-rediscovery.service ~/.config/systemd/user/
-cp deploy/systemd/eidp-r8-rediscovery.timer   ~/.config/systemd/user/
+cp deploy/legacy-venus/systemd/eidp-r8-rediscovery.service ~/.config/systemd/user/
+cp deploy/legacy-venus/systemd/eidp-r8-rediscovery.timer   ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now eidp-r8-rediscovery.timer
 systemctl --user list-timers eidp-r8-rediscovery.timer
@@ -93,7 +98,7 @@ systemctl --user list-timers eidp-r8-rediscovery.timer
 For system-wide install (heaviest, requires sudo):
 
 ```bash
-sudo cp deploy/systemd/eidp-r8-rediscovery.{service,timer} /etc/systemd/system/
+sudo cp deploy/legacy-venus/systemd/eidp-r8-rediscovery.{service,timer} /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemd-analyze verify eidp-r8-rediscovery.{service,timer}
 sudo systemctl enable --now eidp-r8-rediscovery.timer
