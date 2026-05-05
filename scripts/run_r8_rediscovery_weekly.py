@@ -1,14 +1,20 @@
 """Weekly R8 rediscovery runner.
 
-This is the systemd-facing production entrypoint for Sprint 7.  It
-targets schools that already have a target PDF for an older fiscal year
-but no current-FY target PDF, then runs:
+This is the Windows Task Scheduler-facing production entrypoint for
+Sprint 8. It targets schools that already have a target PDF for an older
+fiscal year but no current-FY target PDF, then runs:
 
 1. PDF rediscovery for the selected school_site methods.
 2. Ingestion only for documents created during this run.
-3. A JSON summary with before/after report snapshots and evidence paths.
+3. A timestamped JSON summary with before/after report snapshots and
+   evidence paths.
+4. ``data/output/last_run.json`` for the Streamlit operator UI.
 
 Use --dry-run for a read-only plan/snapshot check.
+
+Excel generation is intentionally NOT part of this runner. Operators
+generate Excel from the Streamlit preview page after reviewing queued
+items.
 """
 
 from __future__ import annotations
@@ -16,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -26,6 +33,8 @@ from sqlalchemy.orm import Session
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from eidp.config import settings  # noqa: E402
+from eidp.db.locking import acquire_lock  # noqa: E402
 from eidp.db.models import Document, School, SchoolSite  # noqa: E402
 from eidp.db.session import SessionLocal  # noqa: E402
 from eidp.pipeline.ingest import run_ingestion  # noqa: E402
@@ -35,6 +44,103 @@ from eidp.reports.gaps import compute_gaps  # noqa: E402
 from eidp.scraper.pdf_discovery import run_pdf_discovery  # noqa: E402
 
 DEFAULT_METHODS = ("prefecture_aggregator",)
+
+
+@dataclass(frozen=True)
+class WeeklyPaths:
+    """Filesystem contract for the Windows operator ZIP."""
+
+    app_root: Path
+    storage_dir: Path
+    output_dir: Path
+    last_run_path: Path
+    lock_path: Path
+    logs_dir: Path
+
+
+def resolve_weekly_paths(app_root: Path | None = None) -> WeeklyPaths:
+    """Resolve runner paths from the app root, never from ambient cwd.
+
+    ``weekly_run.bat`` sets ``EIDP_APP_ROOT`` before launching Python; in
+    tests we pass an explicit ``app_root``. All defaults match the
+    Windows ZIP layout.
+    """
+    root = (app_root or settings.app_root).resolve()
+    data_dir = root / "data"
+    output_dir = data_dir / "output" / "r8-rediscovery-weekly"
+    return WeeklyPaths(
+        app_root=root,
+        storage_dir=data_dir / "pdfs",
+        output_dir=output_dir,
+        last_run_path=data_dir / "output" / "last_run.json",
+        lock_path=data_dir / ".lock",
+        logs_dir=root / "logs",
+    )
+
+
+def write_last_run(
+    summary: dict[str, Any],
+    last_run_path: Path,
+    *,
+    status: str,
+    error: str | None = None,
+) -> Path:
+    """Write the small UI-facing last-run status file.
+
+    The timestamped ``*-summary.json`` remains the detailed evidence
+    artifact. ``last_run.json`` is intentionally compact so Streamlit can
+    show the latest weekly result without scanning the output directory.
+    """
+    last_run_path.parent.mkdir(parents=True, exist_ok=True)
+    new_document_ids = list(summary.get("new_document_ids") or [])
+    payload = {
+        "status": status,
+        "run_id": summary.get("run_id"),
+        "started_at": summary.get("started_at"),
+        "finished_at": summary.get("finished_at"),
+        "dry_run": bool(summary.get("dry_run", False)),
+        "current_fy": summary.get("current_fy"),
+        "school_type": summary.get("school_type"),
+        "methods": summary.get("methods"),
+        "stale_school_count": int(summary.get("stale_school_count") or 0),
+        "new_document_count": len(new_document_ids),
+        "new_document_ids": new_document_ids,
+        "discovery_stats": summary.get("discovery_stats") or {},
+        "ingest_stats": summary.get("ingest_stats") or {},
+        "summary_path": summary.get("summary_path"),
+        "error": error,
+    }
+    last_run_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return last_run_path
+
+
+def prune_run_logs(logs_dir: Path, *, keep: int = 12) -> tuple[list[Path], list[tuple[Path, str]]]:
+    """Keep only the latest ``run-*.log`` files by filename.
+
+    ``weekly_run.bat`` writes one log per run. The operator PC is a
+    single-user laptop/desktop, so a simple filename ringbuffer is enough
+    and avoids unbounded growth.
+
+    Returns ``(removed, failed)`` where ``failed`` carries (path, reason)
+    pairs so the caller can surface stuck files (per CLAUDE.md no-silent-
+    failure rule). Common cause on Windows is the file still being held
+    open by a viewer; the operator should close it and rerun.
+    """
+    if keep < 0:
+        raise ValueError("keep must be >= 0")
+    if not logs_dir.is_dir():
+        return [], []
+    logs = sorted(p for p in logs_dir.glob("run-*.log") if p.is_file())
+    removable = logs if keep == 0 else logs[:-keep]
+    removed: list[Path] = []
+    failed: list[tuple[Path, str]] = []
+    for path in removable:
+        try:
+            path.unlink()
+            removed.append(path)
+        except OSError as exc:
+            failed.append((path, str(exc)))
+    return removed, failed
 
 
 def select_stale_school_ids(
@@ -166,6 +272,45 @@ def run_weekly(
     ingest_batch_size: int,
     limit: int | None,
     dry_run: bool,
+    lock_path: Path | None = None,
+    last_run_path: Path | None = None,
+) -> dict[str, Any]:
+    """Public entry. Acquires the shared UI lock when ``lock_path`` is
+    provided, then delegates to ``_run_weekly_inner``. Splitting the
+    body removes the parameter-sprawl recursion the prior shape used to
+    re-take the lock and made pdb traces confusing."""
+    inner_kwargs: dict[str, Any] = dict(
+        current_fy=current_fy,
+        methods=methods,
+        school_type=school_type,
+        storage_dir=storage_dir,
+        output_dir=output_dir,
+        batch_size=batch_size,
+        rate_limit=rate_limit,
+        ingest_batch_size=ingest_batch_size,
+        limit=limit,
+        dry_run=dry_run,
+        last_run_path=last_run_path,
+    )
+    if lock_path is None:
+        return _run_weekly_inner(**inner_kwargs)
+    with acquire_lock(lock_path, owner="weekly_runner"):
+        return _run_weekly_inner(**inner_kwargs)
+
+
+def _run_weekly_inner(
+    *,
+    current_fy: int,
+    methods: list[str] | None,
+    school_type: str | None,
+    storage_dir: Path,
+    output_dir: Path,
+    batch_size: int,
+    rate_limit: float,
+    ingest_batch_size: int,
+    limit: int | None,
+    dry_run: bool,
+    last_run_path: Path | None,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     started_at = datetime.now(UTC)
@@ -246,10 +391,33 @@ def run_weekly(
             },
             "summary_path": str(summary_path),
         }
-        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
+        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if last_run_path is not None:
+            write_last_run(summary, last_run_path, status="success")
         return summary
-    except Exception:
+    except Exception as exc:
         session.rollback()
+        if last_run_path is not None:
+            failure_summary = {
+                "run_id": run_id,
+                "started_at": started_at.isoformat(),
+                "finished_at": datetime.now(UTC).isoformat(),
+                "dry_run": dry_run,
+                "current_fy": current_fy,
+                "school_type": school_type,
+                "methods": methods,
+                "stale_school_count": 0,
+                "new_document_ids": [],
+                "discovery_stats": {},
+                "ingest_stats": {},
+                "summary_path": str(summary_path),
+            }
+            write_last_run(
+                failure_summary,
+                last_run_path,
+                status="failed",
+                error=f"{type(exc).__name__}: {exc}",
+            )
         raise
     finally:
         session.close()
@@ -257,16 +425,22 @@ def run_weekly(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--current-fy", type=int, default=2026)
+    paths = resolve_weekly_paths()
+    parser.add_argument("--current-fy", type=int, default=settings.target_fiscal_year)
     parser.add_argument("--methods", nargs="+", default=list(DEFAULT_METHODS))
     parser.add_argument("--school-type", default="専門学校")
-    parser.add_argument("--storage-dir", type=Path, default=Path("data/pdfs"))
-    parser.add_argument("--output-dir", type=Path, default=Path("output/r8-rediscovery-weekly"))
+    parser.add_argument("--storage-dir", type=Path, default=paths.storage_dir)
+    parser.add_argument("--output-dir", type=Path, default=paths.output_dir)
+    parser.add_argument("--last-run-path", type=Path, default=paths.last_run_path)
+    parser.add_argument("--lock-path", type=Path, default=paths.lock_path)
+    parser.add_argument("--logs-dir", type=Path, default=paths.logs_dir)
+    parser.add_argument("--keep-logs", type=int, default=12)
     parser.add_argument("--batch-size", type=int, default=250)
     parser.add_argument("--rate-limit", type=float, default=1.5)
     parser.add_argument("--ingest-batch-size", type=int, default=500)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--no-lock", action="store_true")
     return parser.parse_args()
 
 
@@ -283,16 +457,29 @@ def main() -> None:
         ingest_batch_size=args.ingest_batch_size,
         limit=args.limit,
         dry_run=args.dry_run,
+        lock_path=None if args.no_lock else args.lock_path,
+        last_run_path=args.last_run_path,
     )
-    print(json.dumps({
+    # Sprint 8.7: prune BEFORE the final print so a closed-pipe error on
+    # stdout doesn't leave the ringbuffer unbounded.
+    _, prune_failures = prune_run_logs(args.logs_dir, keep=args.keep_logs)
+    payload = {
         "summary_path": summary["summary_path"],
+        "last_run_path": str(args.last_run_path),
         "dry_run": summary["dry_run"],
         "stale_school_count": summary["stale_school_count"],
         "new_document_ids": summary["new_document_ids"],
         "discovery_stats": summary["discovery_stats"],
         "ingest_stats": summary["ingest_stats"],
         "coverage_delta": summary["delta"]["coverage"],
-    }, ensure_ascii=False, indent=2))
+    }
+    if prune_failures:
+        # Surface stuck files so the operator can close them in Explorer
+        # and rerun. CLAUDE.md bans silent failure.
+        payload["log_prune_failures"] = [
+            {"path": str(p), "reason": reason} for p, reason in prune_failures
+        ]
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

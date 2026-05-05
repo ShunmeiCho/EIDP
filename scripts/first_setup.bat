@@ -15,6 +15,8 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM 1. Anchor at the application root regardless of who invoked us.
 cd /d "%~dp0\.."
 set "EIDP_APP_ROOT=%CD%"
+set "PYTHONIOENCODING=utf-8"
+set "PYTHONUTF8=1"
 
 REM 2. Make sure data/, logs/, output/ exist before any tool writes.
 if not exist "data"        mkdir "data"

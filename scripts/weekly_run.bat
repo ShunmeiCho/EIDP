@@ -22,7 +22,8 @@ if not exist "%VENV_PY%" (
 
 if not exist "logs" mkdir "logs"
 
-set "DATESTAMP=%DATE:~0,4%%DATE:~5,2%%DATE:~8,2%"
+for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd"') do set "DATESTAMP=%%I"
+if "%DATESTAMP%"=="" set "DATESTAMP=unknown-date"
 set "LOGFILE=%EIDP_APP_ROOT%\logs\run-%DATESTAMP%.log"
 
 echo [weekly_run] start %DATE% %TIME% >> "%LOGFILE%"
@@ -30,5 +31,4 @@ echo [weekly_run] start %DATE% %TIME% >> "%LOGFILE%"
 set "RC=%ERRORLEVEL%"
 echo [weekly_run] end %DATE% %TIME% rc=%RC% >> "%LOGFILE%"
 
-endlocal
-exit /b %RC%
+endlocal & exit /b %RC%

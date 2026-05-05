@@ -24,6 +24,6 @@ if not exist "%VENV_PY%" (
     "%EIDP_APP_ROOT%\src\eidp\review\app.py" ^
     --server.port 8501 ^
     --server.headless true
+set "RC=%ERRORLEVEL%"
 
-endlocal
-exit /b %ERRORLEVEL%
+endlocal & exit /b %RC%

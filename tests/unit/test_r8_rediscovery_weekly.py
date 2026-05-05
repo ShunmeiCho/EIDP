@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.db.locking import LockBusyError, acquire_lock
 from eidp.db.models import Base, Department, DepartmentYearly, Document, School, SchoolSite
 
 script = Path(__file__).resolve().parents[2] / "scripts" / "run_r8_rediscovery_weekly.py"
@@ -19,6 +22,10 @@ spec.loader.exec_module(module)
 
 select_stale_school_ids = module.select_stale_school_ids
 snapshot_reports = module._snapshot_reports
+resolve_weekly_paths = module.resolve_weekly_paths
+write_last_run = module.write_last_run
+prune_run_logs = module.prune_run_logs
+run_weekly = module.run_weekly
 
 
 def _session() -> Session:
@@ -162,3 +169,160 @@ def test_snapshot_reports_preserves_target_vs_any_current_fy_distinction() -> No
         assert snapshot["extraction"]["yearly_rows_total"] == 1
     finally:
         session.close()
+
+
+def test_resolve_weekly_paths_anchors_to_app_root(tmp_path: Path) -> None:
+    """Sprint 8.7.a — Windows Task Scheduler can invoke the .bat from an
+    arbitrary cwd. The Python runner must derive all operational paths from
+    the app root, not from process cwd."""
+
+    paths = resolve_weekly_paths(tmp_path)
+
+    assert paths.storage_dir == tmp_path / "data" / "pdfs"
+    assert paths.output_dir == tmp_path / "data" / "output" / "r8-rediscovery-weekly"
+    assert paths.last_run_path == tmp_path / "data" / "output" / "last_run.json"
+    assert paths.lock_path == tmp_path / "data" / ".lock"
+    assert paths.logs_dir == tmp_path / "logs"
+
+
+def test_parse_args_defaults_to_configured_target_fiscal_year(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["run_r8_rediscovery_weekly.py"])
+    monkeypatch.setattr(module.settings, "target_fiscal_year", 2027)
+
+    args = module.parse_args()
+
+    assert args.current_fy == 2027
+
+
+def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
+    """last_run.json is the Streamlit banner contract. Keep it small,
+    stable, and independent from the full timestamped summary."""
+
+    summary = {
+        "run_id": "20260505_010203",
+        "started_at": "2026-05-05T01:02:03+00:00",
+        "finished_at": "2026-05-05T01:02:10+00:00",
+        "dry_run": False,
+        "current_fy": 2026,
+        "stale_school_count": 3,
+        "new_document_ids": [10, 11],
+        "discovery_stats": {"downloaded": 2},
+        "ingest_stats": {"processed": 2},
+        "summary_path": str(tmp_path / "summary.json"),
+    }
+    out = tmp_path / "data" / "output" / "last_run.json"
+
+    write_last_run(summary, out, status="success")
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["status"] == "success"
+    assert payload["run_id"] == "20260505_010203"
+    assert payload["current_fy"] == 2026
+    assert payload["stale_school_count"] == 3
+    assert payload["new_document_count"] == 2
+    assert payload["new_document_ids"] == [10, 11]
+    assert payload["summary_path"].endswith("summary.json")
+    assert payload["error"] is None
+
+
+def test_prune_run_logs_keeps_latest_twelve_by_name(tmp_path: Path) -> None:
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    for day in range(1, 15):
+        (logs / f"run-202605{day:02d}.log").write_text(str(day), encoding="utf-8")
+    (logs / "ui.log").write_text("keep", encoding="utf-8")
+
+    removed, failed = prune_run_logs(logs, keep=12)
+
+    assert [p.name for p in removed] == ["run-20260501.log", "run-20260502.log"]
+    assert failed == []
+    remaining = sorted(p.name for p in logs.glob("run-*.log"))
+    assert remaining[0] == "run-20260503.log"
+    assert remaining[-1] == "run-20260514.log"
+    assert (logs / "ui.log").exists()
+
+
+def test_prune_run_logs_surfaces_unlink_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Owner-banned silent failure: when ``unlink`` fails (e.g. log file
+    held open by Notepad on Windows) the function must report the path
+    + reason so the runner can fold it into its JSON output."""
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    for day in range(1, 4):
+        (logs / f"run-202605{day:02d}.log").write_text("x", encoding="utf-8")
+
+    real_unlink = Path.unlink
+
+    def flaky_unlink(self: Path, *args, **kwargs):  # noqa: ANN001
+        if self.name == "run-20260501.log":
+            raise PermissionError("held open by another process")
+        return real_unlink(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", flaky_unlink)
+    removed, failed = prune_run_logs(logs, keep=1)
+
+    removed_names = {p.name for p in removed}
+    failed_names = {p.name for p, _ in failed}
+    assert removed_names == {"run-20260502.log"}
+    assert failed_names == {"run-20260501.log"}
+    assert all("held open" in reason for _, reason in failed)
+
+
+def test_run_weekly_respects_shared_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If UI/manual work is holding data/.lock, the weekly runner must not
+    proceed. This is the Windows single-user exclusion contract."""
+
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+
+    lock_path = tmp_path / "data" / ".lock"
+    with acquire_lock(lock_path, owner="ui"):
+        with pytest.raises(LockBusyError):
+            run_weekly(
+                current_fy=2026,
+                methods=["prefecture_aggregator"],
+                school_type="専門学校",
+                storage_dir=tmp_path / "data" / "pdfs",
+                output_dir=tmp_path / "data" / "output" / "r8-rediscovery-weekly",
+                batch_size=10,
+                rate_limit=1.5,
+                ingest_batch_size=10,
+                limit=None,
+                dry_run=True,
+                lock_path=lock_path,
+                last_run_path=tmp_path / "data" / "output" / "last_run.json",
+            )
+
+
+def test_run_weekly_writes_last_run_json_under_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+
+    last_run = tmp_path / "data" / "output" / "last_run.json"
+    summary = run_weekly(
+        current_fy=2026,
+        methods=["prefecture_aggregator"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "r8-rediscovery-weekly",
+        batch_size=10,
+        rate_limit=1.5,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=True,
+        lock_path=tmp_path / "data" / ".lock",
+        last_run_path=last_run,
+    )
+
+    assert Path(summary["summary_path"]).is_file()
+    payload = json.loads(last_run.read_text(encoding="utf-8"))
+    assert payload["status"] == "success"
+    assert payload["run_id"] == summary["run_id"]
+    assert payload["dry_run"] is True
