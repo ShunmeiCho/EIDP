@@ -141,6 +141,19 @@ def verify_wheelhouse(wheelhouse: Path) -> list[Path]:
     return accepted
 
 
+def _to_crlf(data: bytes) -> bytes:
+    """Convert any LF / mixed line endings to CRLF.
+
+    Windows cmd.exe parses .bat files line by line — when a .bat is
+    saved with Unix LF endings, cmd treats the whole file as one giant
+    line and emits the cascade of "'X' is not recognized" errors that
+    block first_setup.bat. Discovered live on the 2026-05-06 Win VM
+    dry run; folded back into the build pipeline so source files can
+    stay LF-friendly on Mac/Linux while the shipped artifact is correct.
+    """
+    return data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+
+
 def assemble_zip(
     *,
     out_zip: Path,
@@ -158,7 +171,11 @@ def assemble_zip(
 
     with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for src, arc in members:
-            zf.write(src, arc)
+            if arc.endswith(".bat"):
+                # Windows cmd.exe needs CRLF; rewrite on-the-fly.
+                zf.writestr(arc, _to_crlf(src.read_bytes()))
+            else:
+                zf.write(src, arc)
     return out_zip
 
 

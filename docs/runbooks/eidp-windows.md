@@ -344,3 +344,79 @@ Windows VM で確認する項目:
 - Excel 占有エラー
 - OCR add-on
 - Defender / SmartScreen
+
+## 14. 既知の問題と対処（2026-05-06 Win VM 試運転で発見）
+
+業務員 PC への配布 ZIP は試運転を経て、以下の問題に対応済みです。
+過去の配布 ZIP（v0.x 前期）を引き続き使う場合や、試運転中に類似の
+症状が出た場合の対処メモとしてください。
+
+### 14.1 cmd ウィンドウが「一閃即閉じ」する
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `first_setup.bat` をダブルクリックすると一瞬で閉じる、エラーメッセージが見えない | `.bat` の改行が LF（Mac/Linux 形式）になっており cmd.exe が解析不能 | 最新 ZIP（2026-05-06 以降）を使えば自動で CRLF に変換済み。古い ZIP の場合は PowerShell で `.bat` を再保存し直す。 |
+| `'nt' は内部または外部のコマンドでは...` のような無関係な単語のエラーが続く | 同上 | 同上 |
+| Defender / SmartScreen に阻まれる（"Windows によって PC が保護されました"） | ZIP に MOTW（Mark-of-the-Web、ダウンロード元の印）が付いている | 解凍前に PowerShell で `Unblock-File <ZIP>`、解凍後に `Get-ChildItem -Recurse <展開先> | Unblock-File` を実行 |
+
+PowerShell でまとめて：
+
+```powershell
+Unblock-File "$env:USERPROFILE\Downloads\eidp-windows.zip"
+Expand-Archive "$env:USERPROFILE\Downloads\eidp-windows.zip" -DestinationPath C:\workspace\EIDP -Force
+Get-ChildItem C:\workspace\EIDP -Recurse | Unblock-File
+```
+
+### 14.2 `[first_setup] dependency install failed` で停止する
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `uv pip install` が `No solution found when resolving dependencies` で失敗、`greenlet` / `watchdog` / `colorama` / `tzdata` などが見つからないと表示 | Mac/Linux 上で `pip download --platform win_amd64` を回した際、PEP 508 マーカ条件付きの間接依存が wheelhouse から漏れた | 最新 `requirements-windows.txt` には Windows 限定の間接依存を明示している（2026-05-06 修正）。古い ZIP の場合は build host で再ダウンロードして wheelhouse に追記 |
+
+最新 build_windows_zip.py を使えば再現しません。発見された wheel:
+
+- `greenlet`（sqlalchemy 用）
+- `watchdog`（streamlit 用）
+- `colorama`（typer / click 用）
+- `tzdata`（pandas 用）
+- `pywin32`（streamlit 一部機能で要求されることあり）
+
+### 14.3 `.venv` が既に存在するため `uv venv` が失敗する
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `A virtual environment already exists at .venv. Use --clear to replace it` | 以前の `first_setup.bat` 実行で `.venv` が作成済み | 最新 `first_setup.bat` は `uv venv --clear` を使用して再実行可能。古い ZIP の場合は `Remove-Item .venv -Recurse -Force` の後で再実行 |
+
+### 14.4 Streamlit が起動しない／HTTP 接続できない
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `launch.bat` を二重起動すると 2 つのプロセスが port 8501 を取り合う | Win cmd では `&` での連結が POSIX シェルと挙動が異なる | 既存 streamlit プロセスを停止: `Get-Process -Name python | Stop-Process -Force` してから再起動 |
+| `localhost:8501` に繋がらない、`192.168.0.x:8501` には繋がる | `--server.headless true` で起動した場合 IPv6 / loopback 解決問題 | ブラウザで `http://localhost:8501` を試した後、駄目なら `http://127.0.0.1:8501` |
+
+### 14.5 SSH 鍵認証で接続できない（管理者アカウント）
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `ssh-copy-id` 後も `Permission denied (publickey)` | 業務員アカウントが Administrators グループ所属の場合、Win sshd は `~/.ssh/authorized_keys` を読まず `C:\ProgramData\ssh\administrators_authorized_keys` を読む | 公開鍵を `administrators_authorized_keys` に書き込み、`icacls` で `Administrators:F` と `SYSTEM:F` のみを残す。`Restart-Service sshd` |
+
+PowerShell（管理者モード）：
+
+```powershell
+$pubkey = "ssh-rsa AAAA...your-mac-pubkey..."
+$dst = "C:\ProgramData\ssh\administrators_authorized_keys"
+Add-Content -Path $dst -Value $pubkey
+icacls $dst /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
+Restart-Service sshd
+```
+
+### 14.6 「業務員傻瓜式部署」の前提
+
+最新 ZIP を使う限り、業務員側の操作は次の 3 ステップのみで完了します：
+
+1. ZIP をダウンロード
+2. 解凍（Defender / SmartScreen の警告は最初の 1 回だけ「実行」を選択）
+3. `scripts\first_setup.bat` をダブルクリック → 完了メッセージを待つ
+
+それ以上の手作業（CRLF 変換、wheelhouse 追加、`.venv` 削除、ACL 修正など）は、本ランブックを書き終えた時点で全て build pipeline 側で済んでいます。
+業務員に渡る前に管理者側でこの章のチェックリストに従って ZIP の品質を確認してください。

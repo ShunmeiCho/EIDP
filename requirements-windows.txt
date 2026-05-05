@@ -26,3 +26,18 @@ ddgs>=8.0
 # PDF ingest
 pdfplumber>=0.11,<1.0
 pymupdf>=1.25,<2.0
+
+# Windows-conditional transitive deps that pip's cross-platform
+# resolver drops when running `pip download --platform win_amd64`
+# from a non-Windows build host. Listing them explicitly forces the
+# wheelhouse to include the win_amd64 wheels operators actually need.
+# (Without these, first_setup.bat fails at uv pip install with
+#  "No solution found when resolving dependencies".)
+#
+# Discovered live during the 8.5.b dry run on 2026-05-06; folded
+# back into source so future ZIP builds are correct out-of-the-box.
+greenlet>=3.0      # sqlalchemy[asyncio] companion on Win
+watchdog>=2.1.5,<7 # streamlit reloader on non-darwin
+colorama>=0.4      # click / typer ANSI on Win cmd.exe
+tzdata>=2024.1     # pandas zoneinfo on Win (no system tzdb)
+pywin32>=306       # streamlit / watchdog optional but commonly required

@@ -38,8 +38,9 @@ if not exist "%UV_EXE%" (
     exit /b 2
 )
 
-REM 4. Create an isolated venv (idempotent — uv venv is no-op if already valid).
-"%UV_EXE%" venv ".venv" --python "%RUNTIME_PY%"
+REM 4. Create an isolated venv. Use --clear so re-running first_setup.bat
+REM    after a partial failure (or to refresh deps) is safe and idempotent.
+"%UV_EXE%" venv ".venv" --python "%RUNTIME_PY%" --clear
 if errorlevel 1 (
     echo [first_setup] uv venv failed
     exit /b 1
