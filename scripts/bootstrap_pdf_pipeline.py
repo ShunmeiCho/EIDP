@@ -211,7 +211,12 @@ def main(argv: list[str] | None = None) -> int:
                         default=REPO_ROOT / "output" / "pref-aggregator")
     parser.add_argument("--storage-dir", type=Path,
                         default=REPO_ROOT / "data" / "pdfs")
-    parser.add_argument("--batch-size", type=int, default=100)
+    parser.add_argument(
+        "--batch-size", type=int, default=10000,
+        help="Max sites to crawl in step 3 / docs to ingest in step 4. "
+             "Default 10000 = effectively unlimited for v1 corpus (~700 sites). "
+             "Set lower to bound a single bootstrap session.",
+    )
     parser.add_argument("--rate-limit", type=float, default=1.5)
     parser.add_argument("--force-redownload", action="store_true",
                         help="Re-download prefecture artifacts even if cached.")
