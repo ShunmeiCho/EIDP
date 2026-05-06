@@ -29,9 +29,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
+
+from eidp.fiscal_year import current_fiscal_year
 
 
 def resolve_app_root(*, env: dict[str, str] | None = None, cwd: Path | None = None) -> Path:
@@ -69,10 +72,10 @@ class Settings(BaseSettings):
     data_dir: Path = _DEFAULT_APP_ROOT / "data"
     app_root: Path = _DEFAULT_APP_ROOT
 
-    # Operational year currently in scope. R8 = 令和8 = FY2026 today, but
-    # next year this rolls to FY2027 without a code change. UI defaults
-    # come from here instead of hardcoding ``2026``.
-    target_fiscal_year: int = 2026
+    # Operational year currently in scope. Defaults to the Japanese fiscal
+    # year for today, while EIDP_TARGET_FISCAL_YEAR remains available for
+    # explicit operator/admin override.
+    target_fiscal_year: int = Field(default_factory=current_fiscal_year)
 
     # Search API (switch provider by changing search_provider)
     search_provider: str = "duckduckgo"  # duckduckgo | brave | google | serper
@@ -88,7 +91,7 @@ class Settings(BaseSettings):
 
     @field_validator("data_dir", "app_root", mode="before")
     @classmethod
-    def _expand_path(cls, v):
+    def _expand_path(cls, v: Any) -> Any:
         if isinstance(v, str):
             return Path(v).expanduser()
         return v

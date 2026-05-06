@@ -6,6 +6,19 @@ operator-facing copy often also needs the Reiwa label (令和8年度).
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
+
+def current_fiscal_year(today: date | datetime | None = None) -> int:
+    """Return the Japanese fiscal year for ``today``.
+
+    Japanese academic/business fiscal years run April through March. This is
+    the default operational target year when the operator has not pinned an
+    explicit override in ``EIDP_TARGET_FISCAL_YEAR``.
+    """
+    current = today or date.today()
+    return current.year if current.month >= 4 else current.year - 1
+
 
 def reiwa_year_for_fiscal_year(fiscal_year: int) -> int | None:
     """Return the Reiwa year for a western fiscal year, if in Reiwa era."""
