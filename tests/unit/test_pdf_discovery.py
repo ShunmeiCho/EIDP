@@ -527,6 +527,63 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
         session.close()
 
 
+def test_run_pdf_discovery_prefilters_encoded_non_target_query_before_download(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Wrapper URLs can hide the visible PDF filename in an encoded query value."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        non_target = PdfCandidate(
+            pdf_url=(
+                "https://example.ac.jp/albums/abm.php?d=16&f=abm00001166.pdf"
+                "&n=%E5%AE%9F%E5%8B%99%E7%B5%8C%E9%A8%93_%E5%85%AC%E5%8B%99%E5%93%A1.pdf"
+            ),
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="公務員学科",
+            score=10.0,
+        )
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/r8-kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 確認申請書",
+            score=9.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[non_target, target], best=non_target)
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            download_calls.append(candidate.pdf_url)
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert download_calls == ["https://example.ac.jp/r8-kakunin.pdf"]
+        assert stats["prefiltered"] == 1
+        assert stats["downloaded"] == 1
+
+        first = json.loads(evidence.read_text(encoding="utf-8").splitlines()[0])
+        assert first["reason"] == "pre_filtered_non_target_hint"
+        assert first["extra"]["pre_download"] == "true"
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_prefilters_explicit_old_fiscal_year_before_download(
     monkeypatch, tmp_path: Path
 ) -> None:

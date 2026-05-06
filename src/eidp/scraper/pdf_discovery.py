@@ -96,6 +96,11 @@ PRE_DOWNLOAD_NEGATIVE_TOKENS = (
     "zaimu",
     "理事名簿",
     "rijimeibo",
+    "役員一覧",
+    "executive-list",
+    "executive_list",
+    "board-member",
+    "board_member",
     "学校評価",
     "gakkouuneihyouka",
     "学校関係者評価",
@@ -108,12 +113,26 @@ PRE_DOWNLOAD_NEGATIVE_TOKENS = (
     "自己評価",
     "jikohyoka",
     "evaluation",
+    "hyoukahokoku",
+    "daigakuhyouka",
+    "客観的指標",
+    "kyakkantekishihyo",
     "シラバス",
     "syllabus",
     "卒業認定",
+    "卒業の認定",
+    "sotugyo",
+    "sotsugyo",
     "graduation",
     "成績評価",
     "grading",
+    "給付金",
+    "kyufukin",
+    "学校の現況",
+    "gakkou_genjyou",
+    "gakkou_genjo",
+    "諸心得",
+    "knowledge",
 )
 
 # User-Agent mimicking a real browser (institutional research)
@@ -222,7 +241,7 @@ def _rejection_cache_key(
 def _candidate_hint_text(candidate: PdfCandidate) -> str:
     return unicodedata.normalize(
         "NFKC",
-        f"{candidate.anchor_text} {candidate.pdf_url}",
+        f"{candidate.anchor_text} {candidate.pdf_url} {unquote(candidate.pdf_url)}",
     )
 
 
