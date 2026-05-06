@@ -51,6 +51,7 @@ from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import pdfplumber
+from sqlalchemy.orm import Session
 
 # --- Domain types ---------------------------------------------------------
 
@@ -257,7 +258,7 @@ def extract_pdf_annotation_links(pdf_path: Path) -> dict[str, str]:
     it, the 36 schools whose URLs are annotation-only would be silently
     dropped on every run.
     """
-    import fitz  # type: ignore[import-not-found]  # pymupdf
+    import fitz  # type: ignore[import-untyped]  # pymupdf
 
     out: dict[str, str] = {}
     doc = fitz.open(pdf_path)
@@ -700,7 +701,7 @@ def parse(pref: str, artifact_path: Path) -> list[PrefSchool]:
 # --- Matching (DB lookup) -------------------------------------------------
 
 
-def build_indices(session, pref: str) -> tuple[dict[str, Any], dict[int, list[str]]]:
+def build_indices(session: Session, pref: str) -> tuple[dict[str, Any], dict[int, list[str]]]:
     """Pre-build (school_index, site_index) for a single prefecture.
 
     Done once per pref so per-school ``match_school`` is O(1) lookup
@@ -880,7 +881,7 @@ def build_report(
 
 
 def aggregate(
-    session,
+    session: Session,
     pref: str,
     artifact_path: Path,
 ) -> PrefReport:
@@ -892,7 +893,7 @@ def aggregate(
     return build_report(pref, artifact_path, results, site_index)
 
 
-def apply_writer_plan(session, report: PrefReport) -> dict[str, int]:
+def apply_writer_plan(session: Session, report: PrefReport) -> dict[str, int]:
     """Apply ``add`` / ``upgrade`` recommendations from a PrefReport.
 
     Sprint 8.3 contract: ``add`` inserts a new SchoolSite with
