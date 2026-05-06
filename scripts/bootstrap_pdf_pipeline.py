@@ -15,6 +15,12 @@ local SQLite database. It is the production entrypoint behind
             rows, gated by the confidence thresholds.
     Step 5  rebuild ``SchoolFiscalYearStatus`` rows for the operator UI.
 
+Scope note:
+    The prefecture-aggregator layer is currently a vocational-school-centered
+    bootstrap. It does not claim full coverage for universities. University
+    URLs that remain missing should be handled through the operator URL追加
+    flow or a separate university discovery pilot.
+
 Why not bake artifacts into the ZIP at build time?
     Prefectures publish new disclosures every fiscal year.
     A ZIP that ships pre-downloaded artifacts is frozen against the
@@ -395,7 +401,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             status="running",
             current_step=1,
             percent=0.05,
-            message="都道府県の公開データを取得しています。",
+            message="対応済みの都道府県公開データを取得しています。",
         )
     print("=== Step 1: download prefecture artifacts ===")
     ok, failed = step_download_artifacts(
@@ -415,7 +421,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             status="running",
             current_step=2,
             percent=0.25,
-            message="都道府県データから学校URLを登録しています。",
+            message="都道府県データから専門学校中心の学校URLを登録しています。",
             details={"prefectures_ok": len(ok), "prefectures_failed": len(failed)},
         )
     print("\n=== Step 2: prefecture-aggregate --apply ===")

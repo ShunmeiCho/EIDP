@@ -326,6 +326,18 @@ def needs_initial_url_bootstrap(summary: SchoolTaskSummary) -> bool:
     return summary.total > 0 and summary.no_url == summary.total
 
 
+def initial_bootstrap_warning_text(summary: SchoolTaskSummary) -> str:
+    """Explain the first acquisition scope without implying university coverage."""
+    return (
+        "まだ学校URLの初期取得が終わっていません。"
+        f"{summary.total}校を手作業で追加する状態ではありません。"
+        "下のボタンから初回取得を開始すると、対応済みの都道府県公開データから学校URLを登録し、"
+        "対象年度PDFの探索を開始します。"
+        "この初回取得は専門学校中心です。大学は未取得が残る前提で、学校別タスクのURL追加から"
+        "公式の情報公開ページを補足してください。"
+    )
+
+
 def latest_bootstrap_log(app_root: Path) -> Path | None:
     logs_dir = app_root / "logs"
     if not logs_dir.is_dir():
@@ -856,12 +868,7 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
     from eidp.config import settings
 
     app_root = settings.app_root
-    st.warning(
-        "まだ学校URLの初期取得が終わっていません。"
-        f"{summary.total}校を手作業で追加する状態ではありません。"
-        "下のボタンから初回取得を開始すると、都道府県の公開データから学校URLを登録し、"
-        "対象年度PDFの探索を開始します。"
-    )
+    st.warning(initial_bootstrap_warning_text(summary))
     st.caption("初回取得はオンライン処理です。学校数が多いため、数十分かかることがあります。")
 
     latest_progress = latest_bootstrap_progress(app_root)

@@ -16,6 +16,7 @@ from eidp.review._pages.school_year_tasks import (
     SchoolTaskSummary,
     blocking_reason_label,
     bootstrap_command,
+    initial_bootstrap_warning_text,
     is_pdf_site_url,
     latest_bootstrap_log,
     latest_bootstrap_progress,
@@ -230,6 +231,9 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
 
     assert needs_initial_url_bootstrap(all_no_url) is True
     assert needs_initial_url_bootstrap(mixed) is False
+    warning = initial_bootstrap_warning_text(all_no_url)
+    assert "専門学校中心" in warning
+    assert "大学は未取得が残る前提" in warning
 
 
 def test_bootstrap_command_uses_pipeline_script_and_lock_path(tmp_path) -> None:
