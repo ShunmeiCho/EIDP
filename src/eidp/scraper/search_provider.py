@@ -8,7 +8,9 @@ Usage:
 from __future__ import annotations
 
 import abc
+import importlib
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 import structlog
@@ -52,7 +54,7 @@ class BraveSearchProvider(SearchProvider):
             "Accept-Encoding": "gzip",
             "X-Subscription-Token": self._api_key,
         }
-        params = {"q": query, "count": count, "search_lang": "jp", "country": "JP"}
+        params: dict[str, str | int] = {"q": query, "count": count, "search_lang": "jp", "country": "JP"}
 
         with httpx.Client(timeout=15.0) as client:
             resp = client.get(self.API_URL, headers=headers, params=params)
@@ -84,7 +86,7 @@ class GoogleSearchProvider(SearchProvider):
         return "google"
 
     def search(self, query: str, count: int = 5) -> list[SearchResult]:
-        params = {
+        params: dict[str, str | int] = {
             "key": self._api_key,
             "cx": self._cx,
             "q": query,
@@ -111,21 +113,25 @@ class GoogleSearchProvider(SearchProvider):
 
 
 class DuckDuckGoProvider(SearchProvider):
-    """DuckDuckGo search via duckduckgo_search. No API key needed."""
+    """DuckDuckGo search via the packaged DDGS client. No API key needed."""
 
     def name(self) -> str:
         return "duckduckgo"
 
     def search(self, query: str, count: int = 5) -> list[SearchResult]:
+        ddgs_cls: Any
         try:
-            from duckduckgo_search import DDGS
+            ddgs_cls = importlib.import_module("ddgs").DDGS
         except ImportError:
-            raise ImportError(
-                "duckduckgo_search package not installed. Run: uv pip install duckduckgo_search"
-            )
+            try:
+                ddgs_cls = importlib.import_module("duckduckgo_search").DDGS
+            except ImportError as exc:
+                raise ImportError(
+                    "ddgs package not installed. Install EIDP with the scraper-basic extra."
+                ) from exc
 
         results: list[SearchResult] = []
-        with DDGS() as ddgs:
+        with ddgs_cls() as ddgs:
             for r in ddgs.text(query, region="jp-jp", max_results=count):
                 results.append(
                     SearchResult(
