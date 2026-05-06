@@ -60,6 +60,8 @@ class SchoolTaskRow:
     latest_document_status: str | None
     latest_document_url: str | None
     latest_site_url: str | None
+    latest_site_url_type: str | None
+    latest_site_discovery_method: str | None
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,66 @@ URL_SUBMISSION_PAGE_ID = "url"
 URL_SUBMISSION_QUERY_STATE_KEY = "url_submission_school_query"
 URL_SUBMISSION_SCHOOL_ID_STATE_KEY = "url_submission_school_id"
 
+BLOCKING_REASON_LABELS: dict[str, str] = {
+    "no_url": "URL追加が必要",
+    "no_target_pdf": "対象年度PDF待ち",
+    "stale_pdf_only": "旧年度PDFのみ",
+    "ocr_pending": "OCR/手入力待ち",
+    "parse_failed": "手入力待ち",
+    "not_extracted": "抽出待ち",
+    "review_required": "PDF確認待ち",
+    "dept_change_review": "学科変更確認",
+}
+
+URL_STATUS_LABELS: dict[str, str] = {
+    "no_url": "URLなし",
+    "pref_url": "都道府県データ由来URLあり",
+    "operator_url": "手動登録URLあり",
+    "unknown": "URLあり（種別未確認）",
+}
+
+PDF_STATUS_LABELS: dict[str, str] = {
+    "none": "PDFなし",
+    "confirmed_target": "対象年度PDFあり",
+    "rejected_stale": "旧年度PDFのみ",
+    "image_pending": "画像PDF/OCR待ち",
+    "discovered": "PDF候補あり",
+}
+
+EXTRACT_STATUS_LABELS: dict[str, str] = {
+    "none": "未抽出",
+    "parsed": "抽出済",
+    "manual_entered": "手入力済",
+    "ocr_pending": "OCR待ち",
+    "parse_failed": "抽出失敗",
+}
+
+YOY_DIFF_STATUS_LABELS: dict[str, str] = {
+    "unchecked": "未比較",
+    "new_school": "前年データなし",
+    "partial_diff": "前年差分あり",
+    "identical_to_prev_fy": "前年と同一",
+}
+
+EVIDENCE_LEVEL_LABELS: dict[str, str] = {
+    "none": "証拠なし",
+    "conflict": "年度矛盾",
+    "download_time": "取得日だけ",
+    "url_hint": "URL年度ヒント",
+    "pdf_text": "PDF本文で確認",
+    "prev_year_diff": "前年差分で確認",
+    "operator_override": "担当者確認済",
+}
+
+SITE_URL_TYPE_LABELS: dict[str, str] = {
+    "disclosure_page": "情報公開ページ",
+    "disclosure": "情報公開ページ",
+    "homepage": "学校/法人ページ",
+    "school_page": "学校ページ",
+    "direct_pdf": "PDF直リンク",
+    "pdf": "PDF直リンク",
+}
+
 
 def school_type_from_filter_label(label: str) -> str | None:
     return None if label == "すべて" else label
@@ -103,6 +165,30 @@ def url_submission_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
         URL_SUBMISSION_QUERY_STATE_KEY: row.school_name,
         URL_SUBMISSION_SCHOOL_ID_STATE_KEY: row.school_id,
     }
+
+
+def blocking_reason_label(reason: str | None) -> str:
+    if reason is None:
+        return "対応なし"
+    return BLOCKING_REASON_LABELS.get(reason, reason)
+
+
+def status_label(labels: dict[str, str], code: str | None) -> str:
+    if not code:
+        return ""
+    return labels.get(code, code)
+
+
+def site_url_type_label(url_type: str | None, url: str | None) -> str:
+    """Explain whether the registered URL is reusable for future fiscal years."""
+    normalized_type = (url_type or "").strip().lower()
+    lowered_url = (url or "").strip().lower()
+    base = SITE_URL_TYPE_LABELS.get(normalized_type)
+    if base is None:
+        base = "PDF直リンク" if lowered_url.endswith(".pdf") else "ページURL"
+    if base == "PDF直リンク":
+        return "PDF直リンク（対象年度ごとに更新確認が必要）"
+    return f"{base}（来年度以降も再取得入口として再利用）"
 
 
 def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
@@ -481,6 +567,8 @@ def list_school_year_tasks(
                 latest_document_status=doc.ingest_status if doc else None,
                 latest_document_url=doc.source_url if doc else None,
                 latest_site_url=site.url if site else None,
+                latest_site_url_type=site.url_type if site else None,
+                latest_site_discovery_method=site.discovery_method if site else None,
             )
         )
     return rows
@@ -702,8 +790,12 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     scope = {"要対応": "needs_action", "Excel出力可": "excel_ready", "全校": "all"}[scope_label]
 
     reasons = ["すべて", *_blocking_reason_options(session, fiscal_year=fiscal_year, school_type=school_type)]
-    reason_label = c2.selectbox("理由", reasons)
-    blocking_reason = None if reason_label == "すべて" else reason_label
+    reason_label = c2.selectbox(
+        "理由",
+        reasons,
+        format_func=lambda reason: "すべて" if reason == "すべて" else blocking_reason_label(str(reason)),
+    )
+    blocking_reason = None if reason_label == "すべて" else str(reason_label)
 
     prefectures = ["すべて", *_prefecture_options(session, fiscal_year=fiscal_year, school_type=school_type)]
     pref_label = c3.selectbox("都道府県", prefectures)
@@ -730,10 +822,11 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             "次の作業": row.next_action,
             "都道府県": row.prefecture,
             "学校": row.school_name,
-            "理由": row.blocking_reason or "",
-            "PDF": row.pdf_status,
-            "抽出": row.extract_status,
-            "証拠": row.evidence_level,
+            "理由": blocking_reason_label(row.blocking_reason),
+            "URL": status_label(URL_STATUS_LABELS, row.url_status),
+            "PDF": status_label(PDF_STATUS_LABELS, row.pdf_status),
+            "抽出": status_label(EXTRACT_STATUS_LABELS, row.extract_status),
+            "証拠": status_label(EVIDENCE_LEVEL_LABELS, row.evidence_level),
             "最新PDF年度": row.latest_document_fiscal_year,
             "学校ID": row.school_id,
         }
@@ -755,16 +848,18 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                     st.rerun()
             st.write(
                 {
-                    "url_status": row.url_status,
-                    "pdf_status": row.pdf_status,
-                    "extract_status": row.extract_status,
-                    "yoy_diff_status": row.yoy_diff_status,
-                    "evidence_level": row.evidence_level,
-                    "blocking_reason": row.blocking_reason,
+                    "URL": status_label(URL_STATUS_LABELS, row.url_status),
+                    "PDF": status_label(PDF_STATUS_LABELS, row.pdf_status),
+                    "抽出": status_label(EXTRACT_STATUS_LABELS, row.extract_status),
+                    "前年差分": status_label(YOY_DIFF_STATUS_LABELS, row.yoy_diff_status),
+                    "証拠": status_label(EVIDENCE_LEVEL_LABELS, row.evidence_level),
+                    "理由": blocking_reason_label(row.blocking_reason),
                 }
             )
             if row.latest_site_url:
-                st.caption(f"最新URL: {row.latest_site_url}")
+                site_kind = site_url_type_label(row.latest_site_url_type, row.latest_site_url)
+                method = row.latest_site_discovery_method or "不明"
+                st.caption(f"最新URL: {site_kind} / 登録方法={method} / {row.latest_site_url}")
             if row.latest_document_url:
                 st.caption(
                     f"最新PDF: doc#{row.latest_document_id} / fy={row.latest_document_fiscal_year} / "

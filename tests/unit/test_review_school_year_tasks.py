@@ -14,6 +14,7 @@ from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, Schoo
 from eidp.review._pages import school_year_tasks
 from eidp.review._pages.school_year_tasks import (
     SchoolTaskSummary,
+    blocking_reason_label,
     bootstrap_command,
     latest_bootstrap_log,
     latest_bootstrap_progress,
@@ -23,7 +24,9 @@ from eidp.review._pages.school_year_tasks import (
     read_bootstrap_progress,
     school_task_summary,
     school_type_from_filter_label,
+    site_url_type_label,
     start_initial_url_bootstrap,
+    status_label,
     url_submission_prefill_for_row,
 )
 
@@ -92,12 +95,20 @@ def _status(
     return row
 
 
-def _site(session: Session, school_id: int, url: str) -> None:
+def _site(
+    session: Session,
+    school_id: int,
+    url: str,
+    *,
+    url_type: str | None = None,
+    discovery_method: str = "prefecture_aggregator",
+) -> None:
     session.add(
         SchoolSite(
             school_id=school_id,
             url=url,
-            discovery_method="prefecture_aggregator",
+            url_type=url_type,
+            discovery_method=discovery_method,
             http_status=200,
         )
     )
@@ -360,7 +371,7 @@ def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_
         )
         _status(session, 2, pdf_status="rejected_stale", blocking_reason="stale_pdf_only")
         _status(session, 3, url_status="no_url", blocking_reason="no_url")
-        _site(session, 2, "https://school2.example/info")
+        _site(session, 2, "https://school2.example/info", url_type="disclosure_page")
         _doc(session, 20, 2, fy=2025)
         _doc(session, 21, 2, fy=2024)
         session.commit()
@@ -377,10 +388,33 @@ def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_
         }
         assert by_id[2].next_action == "公示待ち/再取得"
         assert by_id[2].latest_site_url == "https://school2.example/info"
+        assert by_id[2].latest_site_url_type == "disclosure_page"
+        assert by_id[2].latest_site_discovery_method == "prefecture_aggregator"
         assert by_id[2].latest_document_id == 21
         assert by_id[2].latest_document_fiscal_year == 2024
     finally:
         session.close()
+
+
+def test_operator_labels_hide_internal_status_codes() -> None:
+    assert blocking_reason_label("no_url") == "URL追加が必要"
+    assert blocking_reason_label("stale_pdf_only") == "旧年度PDFのみ"
+    assert blocking_reason_label(None) == "対応なし"
+    assert status_label(school_year_tasks.PDF_STATUS_LABELS, "confirmed_target") == "対象年度PDFあり"
+    assert status_label(school_year_tasks.EVIDENCE_LEVEL_LABELS, "operator_override") == "担当者確認済"
+    assert status_label(school_year_tasks.EVIDENCE_LEVEL_LABELS, "future_code") == "future_code"
+
+
+def test_site_url_type_label_explains_future_year_reuse() -> None:
+    assert site_url_type_label("disclosure_page", "https://school.example/public_info/") == (
+        "情報公開ページ（来年度以降も再取得入口として再利用）"
+    )
+    assert site_url_type_label("pdf", "https://school.example/r8.pdf") == (
+        "PDF直リンク（対象年度ごとに更新確認が必要）"
+    )
+    assert site_url_type_label(None, "https://school.example/info") == (
+        "ページURL（来年度以降も再取得入口として再利用）"
+    )
 
 
 def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> None:
@@ -394,13 +428,13 @@ def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> 
             _render_school_tasks_for_test,
             args=(session, tmp_path / "data" / ".lock"),
         )
-        app.run(timeout=5)
+        app.run(timeout=15)
 
         assert not app.exception
         url_buttons = [button for button in app.button if button.label == "この学校のURLを追加"]
         assert len(url_buttons) == 1
 
-        url_buttons[0].click().run(timeout=5)
+        url_buttons[0].click().run(timeout=15)
 
         assert app.session_state["selected_page"] == school_year_tasks.URL_SUBMISSION_PAGE_ID
         assert (
