@@ -204,6 +204,25 @@ def site_url_type_label(url_type: str | None, url: str | None) -> str:
     return f"{base}（来年度以降も再取得入口として再利用）"
 
 
+def site_entry_label(
+    discovery_method: str | None,
+    url_type: str | None,
+    url: str | None,
+) -> str:
+    """Explain the crawl entry's origin and long-term reuse quality."""
+    if not url:
+        return "入口なし"
+    if is_pdf_site_url(url_type, url):
+        return "PDF直リンク（今年度だけ弱い）"
+
+    method = (discovery_method or "").strip().lower()
+    if method == "prefecture_aggregator":
+        return "都道府県公式一覧の入口"
+    if method == "operator_manual":
+        return "手動登録ページ入口"
+    return "登録ページ入口"
+
+
 def is_pdf_site_url(url_type: str | None, url: str | None) -> bool:
     """Return True when a SchoolSite row points directly at a PDF file."""
     normalized_type = (url_type or "").strip().lower()
@@ -696,7 +715,7 @@ def list_school_year_tasks(
         .all()
     )
     school_ids = [int(school.id) for _status, school in pairs]
-    docs_by_school = _latest_documents_by_school(session, school_ids)
+    docs_by_school = _latest_documents_by_school(session, school_ids, fiscal_year=fiscal_year)
     sites_by_school = _latest_sites_by_school(session, school_ids)
 
     rows: list[SchoolTaskRow] = []
@@ -731,23 +750,63 @@ def list_school_year_tasks(
     return rows
 
 
-def _latest_documents_by_school(session: Session, school_ids: list[int]) -> dict[int, Document]:
+def _latest_documents_by_school(
+    session: Session,
+    school_ids: list[int],
+    *,
+    fiscal_year: int,
+) -> dict[int, Document]:
     if not school_ids:
         return {}
-    latest_doc_ids = [
-        int(doc_id)
-        for (doc_id,) in (
-            session.query(func.max(Document.id))
-            .filter(Document.school_id.in_(school_ids), Document.pdf_type == "target")
-            .group_by(Document.school_id)
-            .all()
+    docs = (
+        session.query(Document)
+        .filter(Document.school_id.in_(school_ids), Document.pdf_type == "target")
+        .all()
+    )
+    docs_by_school: dict[int, list[Document]] = {}
+    for doc in docs:
+        docs_by_school.setdefault(doc.school_id, []).append(doc)
+    selected: dict[int, Document] = {}
+    for school_id, school_docs in docs_by_school.items():
+        selected_doc = select_task_document(school_docs, fiscal_year=fiscal_year)
+        if selected_doc is not None:
+            selected[school_id] = selected_doc
+    return selected
+
+
+def select_task_document(docs: list[Document], *, fiscal_year: int) -> Document | None:
+    """Pick the document the task board should send the operator to.
+
+    ``max(id)`` is not enough: a later old-year discovery can arrive after a
+    valid target-year PDF and would make the UI look stale. Prefer target-year
+    PDFs first, then the newest old fiscal year as fallback evidence.
+    """
+    if not docs:
+        return None
+
+    def sort_key(doc: Document) -> tuple[int, int, int, int]:
+        if doc.fiscal_year == fiscal_year:
+            year_bucket = 3
+        elif doc.fiscal_year is not None and doc.fiscal_year < fiscal_year:
+            year_bucket = 2
+        elif doc.fiscal_year is None:
+            year_bucket = 1
+        else:
+            year_bucket = 0
+        status_bucket = {
+            "ingested": 3,
+            "review_pending": 2,
+            "parse_failed": 2,
+            "ocr_pending": 2,
+        }.get(doc.ingest_status or "", 1)
+        return (
+            year_bucket,
+            int(doc.fiscal_year or 0),
+            status_bucket,
+            int(doc.id or 0),
         )
-        if doc_id is not None
-    ]
-    if not latest_doc_ids:
-        return {}
-    docs = session.query(Document).filter(Document.id.in_(latest_doc_ids)).all()
-    return {doc.school_id: doc for doc in docs}
+
+    return max(docs, key=sort_key)
 
 
 def _latest_sites_by_school(session: Session, school_ids: list[int]) -> dict[int, SchoolSite]:
@@ -1050,6 +1109,11 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             "都道府県": row.prefecture,
             "学校": row.school_name,
             "理由": blocking_reason_label(row.blocking_reason),
+            "取得入口": site_entry_label(
+                row.latest_site_discovery_method,
+                row.latest_site_url_type,
+                row.latest_site_url,
+            ),
             "URL": status_label(URL_STATUS_LABELS, row.url_status),
             "PDF": status_label(PDF_STATUS_LABELS, row.pdf_status),
             "抽出": status_label(EXTRACT_STATUS_LABELS, row.extract_status),
@@ -1091,9 +1155,14 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                 }
             )
             if row.latest_site_url:
+                source_label = site_entry_label(
+                    row.latest_site_discovery_method,
+                    row.latest_site_url_type,
+                    row.latest_site_url,
+                )
                 site_kind = site_url_type_label(row.latest_site_url_type, row.latest_site_url)
                 method = row.latest_site_discovery_method or "不明"
-                st.caption(f"最新URL: {site_kind} / 登録方法={method} / {row.latest_site_url}")
+                st.caption(f"取得入口: {source_label} / {site_kind} / 登録方法={method} / {row.latest_site_url}")
             if row.latest_document_url:
                 st.caption(
                     f"最新PDF: doc#{row.latest_document_id} / fy={row.latest_document_fiscal_year} / "

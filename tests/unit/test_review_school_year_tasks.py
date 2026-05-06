@@ -29,6 +29,8 @@ from eidp.review._pages.school_year_tasks import (
     read_weekly_last_run,
     school_task_summary,
     school_type_from_filter_label,
+    select_task_document,
+    site_entry_label,
     site_url_type_label,
     start_initial_url_bootstrap,
     start_weekly_rediscovery,
@@ -493,8 +495,51 @@ def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_
         assert by_id[2].latest_site_url == "https://school2.example/info"
         assert by_id[2].latest_site_url_type == "disclosure_page"
         assert by_id[2].latest_site_discovery_method == "prefecture_aggregator"
-        assert by_id[2].latest_document_id == 21
-        assert by_id[2].latest_document_fiscal_year == 2024
+        assert by_id[2].latest_document_id == 20
+        assert by_id[2].latest_document_fiscal_year == 2025
+    finally:
+        session.close()
+
+
+def test_task_document_selection_prefers_target_year_over_later_stale_doc() -> None:
+    current_doc = Document(id=10, school_id=1, fiscal_year=2026, pdf_type="target", ingest_status="ingested")
+    stale_doc = Document(id=99, school_id=1, fiscal_year=2025, pdf_type="target", ingest_status="ingested")
+
+    selected = select_task_document([stale_doc, current_doc], fiscal_year=2026)
+
+    assert selected is current_doc
+
+
+def test_task_document_selection_uses_newest_old_fiscal_year_before_id() -> None:
+    older_fy_later_id = Document(id=99, school_id=1, fiscal_year=2024, pdf_type="target", ingest_status="ingested")
+    newer_fy_earlier_id = Document(id=10, school_id=1, fiscal_year=2025, pdf_type="target", ingest_status="ingested")
+
+    selected = select_task_document([older_fy_later_id, newer_fy_earlier_id], fiscal_year=2026)
+
+    assert selected is newer_fy_earlier_id
+
+
+def test_list_school_year_tasks_prefers_operator_relevant_pdf_context() -> None:
+    session = _session()
+    try:
+        _school(session, 7, name="現年度あり学校")
+        _status(
+            session,
+            7,
+            pdf_status="confirmed_target",
+            extract_status="parsed",
+            excel_ready=True,
+            blocking_reason=None,
+            evidence_level="pdf_text",
+        )
+        _doc(session, 10, 7, fy=2026)
+        _doc(session, 99, 7, fy=2025)
+        session.commit()
+
+        row = list_school_year_tasks(session, fiscal_year=2026, school_type="専門学校", scope="all")[0]
+
+        assert row.latest_document_id == 10
+        assert row.latest_document_fiscal_year == 2026
     finally:
         session.close()
 
@@ -582,6 +627,17 @@ def test_site_url_type_label_explains_future_year_reuse() -> None:
     assert site_url_type_label(None, "https://school.example/r8.pdf?download=1") == (
         "PDF直リンク（対象年度ごとに更新確認が必要）"
     )
+
+
+def test_site_entry_label_explains_source_and_reuse_quality() -> None:
+    assert site_entry_label("prefecture_aggregator", "disclosure_page", "https://school.example/info/") == (
+        "都道府県公式一覧の入口"
+    )
+    assert site_entry_label("operator_manual", "homepage", "https://school.example/") == "手動登録ページ入口"
+    assert site_entry_label("operator_manual", "pdf", "https://school.example/r8.pdf") == (
+        "PDF直リンク（今年度だけ弱い）"
+    )
+    assert site_entry_label(None, None, None) == "入口なし"
 
 
 def test_pdf_site_url_detection_uses_type_or_url_suffix() -> None:
