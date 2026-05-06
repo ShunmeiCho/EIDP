@@ -12,10 +12,10 @@ shizuoka,静岡県,70,https://www.pref.shizuoka.jp/kodomokyoiku/school/1002740/1
 miyagi,宮城県,66,https://www.pref.miyagi.jp/site/shigaku/koutou-hutankeigen-kouhyou.html,https://www.pref.miyagi.jp/documents/6669/koutouhutankeigen.pdf,pdf,5,no,yes(56),2026-04-01,downloaded,Annotation-type like Saitama
 okinawa,沖縄県,56,https://www.pref.okinawa.jp/site/somu/somushi/20190920.html,https://www.pref.okinawa.jp/_res/projects/default_project/_page_/001/009/426/r30831_koshin_kakunindaigaku.pdf,pdf,5,yes,no,2021-08-31,downloaded,"Old R3 version; needs check for newer R7/R8 file. Has HP address column"
 hiroshima,広島県,54,https://www.pref.hiroshima.lg.jp/soshiki/44/605623.html,unknown,unknown,unknown,unknown,unknown,unknown,decentralized,"Hiroshima publishes individual 様式第2号 per school, not aggregate list"
-chiba,千葉県,78,https://www.pref.chiba.lg.jp/gakuji/shiritsutou/shiritsugakkou/index.html,unknown,unknown,unknown,unknown,unknown,unknown,index_only,Private school directory found but specific 確認大学等 list TBD
-ibaraki,茨城県,50,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+chiba,千葉県,78,https://www.pref.chiba.lg.jp/gakuji/koutou-hutankeigen/index.html,https://www.pref.chiba.lg.jp/gakuji/koutou-hutankeigen/documents/kikanyouken20250831.pdf,pdf,6,no,no,2025-08-31,url_found,"62 schools, no disclosure URLs; 備考 has new-accreditation signals"
+ibaraki,茨城県,50,https://www.pref.ibaraki.jp/somu/somu/shigaku/private-school/school/koto-shugaku.html,https://www.pref.ibaraki.jp/somu/somu/shigaku/private-school/school/documents/20250829_shugakushien_kakunin.pdf,pdf,5,no,no,2025-08-29,url_found,"45 schools, no disclosure URLs; official school-universe list"
 gunma,群馬県,47,https://www.pref.gunma.jp/page/12959.html,https://www.pref.gunma.jp/page/12959.html,html,html,partial,no,2025-08-29,url_found,"43 rows parsed; 3 public-school links visible, private-school URLs not published in this page"
-tochigi,栃木県,46,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+tochigi,栃木県,46,https://www.pref.tochigi.lg.jp/b05/education/r8kikannyoukennkakuninnkou.html,https://www.pref.tochigi.lg.jp/b05/education/r8kikannyoukennkakuninnkou.html,html,html,link,no,2025-08-29,url_found,"39 rows parsed; school-name links point to disclosure/home pages"
 kyoto,京都府,46,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 kumamoto,熊本県,44,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 nagano,長野県,44,https://www.pref.nagano.lg.jp/ken-manabi/kyoiku/gakko/shiritsu/senshu/kakunin.html,https://www.pref.nagano.lg.jp/ken-manabi/kyoiku/gakko/shiritsu/senshu/kakunin.html,html,html,link,no,unknown,url_found,"HTML page; school-name links / official index structure"
@@ -45,4 +45,4 @@ saga,佐賀県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,t
 nagasaki,長崎県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 oita,大分県,unknown,https://www.pref.oita.jp/soshiki/11830/koutoukyouiku.html,https://www.pref.oita.jp/soshiki/11830/koutoukyouiku.html,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
 miyazaki,宮崎県,unknown,https://www.pref.miyazaki.lg.jp/miyazaki-bunkashinko/kyoikukosodate/kyoiku/20190821115530.html,https://www.pref.miyazaki.lg.jp/miyazaki-bunkashinko/kyoikukosodate/kyoiku/20190821115530.html,html,html,link,no,2025-08-05,url_found,HTML official index candidate
-kagoshima,鹿児島県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+kagoshima,鹿児島県,unknown,https://www.pref.kagoshima.jp/ab04/kyoiku-bunka/school/josei/kakunindaigakutou.html,https://www.pref.kagoshima.jp/ab04/kyoiku-bunka/school/josei/kakunindaigakutou.html,html,html,link,no,2025-08-29,url_found,"23 rows parsed; school-name links point to disclosure/home pages"

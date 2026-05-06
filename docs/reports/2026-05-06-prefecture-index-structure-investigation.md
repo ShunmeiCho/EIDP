@@ -47,7 +47,8 @@ The official-prefecture path is materially better:
 | --- | --- | --- | --- |
 | PDF text URL column | PDF table has an explicit URL column or 備考 URL | Tokyo, Kanagawa | `parse_tokyo`, `parse_5col` |
 | PDF school-name hyperlink | School name cell is clickable; URL is a PDF annotation, not table text | Saitama, Fukui, Miyagi-style, Akita partial | `extract_pdf_annotation_links` + `parse_5col` |
-| HTML table/list | Official page itself has school rows; school name or publication cell is linked | Aomori, Nagano, Wakayama, Tottori, Yamaguchi, Oita, Miyazaki | `parse_html_table` |
+| PDF school-universe table | PDF table lists confirmed schools but does not publish URLs | Chiba, Ibaraki | `parse_6col_indexed`, `parse_5col`; useful for yearly universe/remarks, not URL coverage |
+| HTML table/list | Official page itself has school rows; school name or publication cell is linked | Aomori, Nagano, Wakayama, Tottori, Yamaguchi, Oita, Miyazaki, Tochigi, Kagoshima | `parse_html_table` |
 | XLSX code list | Prefecture publishes XLSX with MEXT school code | Osaka | school-code matching path |
 | Partial official index | Official page lists schools but not every URL | Gunma | parse usable rows, leave missing URLs for fallback |
 | Decentralized publication | Prefecture page points to individual school PDFs or mixed structures | Hiroshima and some unclear pages | owner review / custom parser |
@@ -71,6 +72,10 @@ behavior remains runtime download on the Windows operator PC.
 | Miyazaki | HTML official page | 23 | 23 | 備考 includes name-change signals |
 | Gunma | HTML official page | 43 | 3 | private-school URL coverage is low; fallback needed |
 | Akita | PDF annotation links | 8 | 3 | parser is partial because pdfplumber splits some names |
+| Chiba | PDF school-universe table | 62 | 0 | official target-year list; 備考 has new-accreditation signals |
+| Ibaraki | PDF school-universe table | 45 | 0 | official school universe; no publication URLs in artifact |
+| Tochigi | HTML official page | 39 | 39 | school-name links point to disclosure/home pages |
+| Kagoshima | HTML official page | 23 | 23 | school-name links point to disclosure/home pages; 備考 has prior-year signals |
 
 ## 備考 Handling
 
@@ -118,6 +123,10 @@ Ready for runtime bootstrap:
 - Akita (partial parser)
 - Fukui
 - Gunma (partial URL coverage)
+- Chiba (school universe only; no URL coverage)
+- Ibaraki (school universe only; no URL coverage)
+- Tochigi
+- Kagoshima
 - Nagano
 - Wakayama
 - Tottori
@@ -127,9 +136,6 @@ Ready for runtime bootstrap:
 
 Candidate official pages found but not yet parser-verified:
 
-- Chiba: https://www.pref.chiba.lg.jp/gakuji/shiritsutou/syuugakusien/kikan_youken.html
-- Ibaraki: https://www.pref.ibaraki.jp/somu/somu/shigaku/shigaku/syugakusien/syugakusienseido.html
-- Tochigi: https://www.pref.tochigi.lg.jp/b05/2024mushouka.html
 - Kyoto: https://www.pref.kyoto.jp/bunkyo/syugakusien.html
 - Kumamoto: https://www.pref.kumamoto.jp/soshiki/143/58492.html
 - Yamagata: https://www.pref.yamagata.jp/020023/bunkyo/shigaku/shien/kikanyoukenkakunin.html
@@ -147,7 +153,6 @@ Candidate official pages found but not yet parser-verified:
 - Kochi: https://www.pref.kochi.lg.jp/doc/2019092000161/
 - Saga: https://www.pref.saga.lg.jp/kiji00371013/index.html
 - Nagasaki: https://www.pref.nagasaki.jp/bunrui/kanko-kyoiku-bunka/gakkokyoiku/shigaku-shinko/syuugakusien/
-- Kagoshima: https://www.pref.kagoshima.jp/kyoiku-bunka/school/josei/koutoukyoikushien/index.html
 - Kagawa: https://www.pref.kagawa.lg.jp/nodai/prospectus/kyoikujoho/taisyoukikan.html
 
 Needs owner/manual structure confirmation:
@@ -156,7 +161,6 @@ Needs owner/manual structure confirmation:
 - Hiroshima: appears decentralized; may publish individual 様式第2号 links.
 - Kagawa: current found page is school-level for 香川県立農業大学校, not a full prefecture-wide index.
 - Okinawa: seed has an old R3 PDF; likely newer page exists and must be checked.
-- Kagoshima: official page has "確認大学等の公表", but the exact artifact/link structure needs inspection.
 
 ## Product Build Implications
 

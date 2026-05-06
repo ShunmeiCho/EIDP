@@ -24,6 +24,7 @@ from eidp.scraper.prefecture_aggregator import (
     norm,
     parse,
     parse_5col,
+    parse_6col_indexed,
     parse_html_table,
     parse_tokyo,
     recommend_action,
@@ -173,9 +174,44 @@ def test_classify_url_quality():
 
 def test_classify_prefecture_remarks_keeps_school_change_signals():
     assert classify_prefecture_remarks("令和8年度新規認定校") == ["new_accreditation"]
+    assert classify_prefecture_remarks("新規") == ["new_accreditation"]
+    assert classify_prefecture_remarks("令和8年4月1日開校") == ["new_accreditation"]
     assert classify_prefecture_remarks("令和7年4月 名称変更（旧校名: A専門学校）") == ["name_change"]
     assert classify_prefecture_remarks("確認の取消しをした大学等") == ["withdrawal"]
     assert classify_prefecture_remarks("統合再編予定") == ["merger_reorg"]
+
+
+def test_parse_6col_indexed_skips_category_headings(monkeypatch, tmp_path: Path):
+    """Chiba-style PDFs put category rows like ``（公立専門学校）`` in the
+    school-name column. Those are table labels, not schools.
+    """
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["", "確認大学等の名称", "確認大学等の所在地", "設置者の名称", "設置者所在地", "備考"],
+                    [None, "公立専門学校）", None, None, None, None],
+                    ["1", "千葉県立保健医療大学", "千葉市", "千葉県", "千葉市", ""],
+                    ["55", "専門学校テスト校", "成田市", "学校法人T", "成田市", "新規"],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+    monkeypatch.setattr(pa, "extract_pdf_annotation_links", lambda _p: {})
+
+    parsed = parse_6col_indexed(tmp_path / "fake.pdf", "chiba")
+
+    assert [row.school_name_raw for row in parsed] == ["千葉県立保健医療大学", "専門学校テスト校"]
+    assert parsed[1].remarks == "新規"
 
 
 def test_recommend_action():

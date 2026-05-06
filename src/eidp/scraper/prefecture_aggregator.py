@@ -151,6 +151,14 @@ def _looks_like_school_name(text: str) -> bool:
     normalized = norm(text)
     if not normalized or normalized.isdigit() or len(normalized) < 4:
         return False
+    category = normalized.strip("()（）")
+    if re.fullmatch(
+        r"(?:(?:国立|公立|県立|市立|私立))?"
+        r"(?:大学|短期大学|専門学校|専修学校|高等専門学校|大学校)"
+        r"(?:[(（]?(?:国立|公立|県立|市立|私立)[)）]?)?",
+        category,
+    ):
+        return False
     if any(token in normalized for token in ("確認大学等", "学校名", "名称", "所在地", "設置者")):
         return False
     return any(token in normalized for token in ("大学", "短期大学", "専門学校", "高等専門学校", "大学校", "学院"))
@@ -199,7 +207,7 @@ def classify_prefecture_remarks(remarks: str | None) -> list[str]:
         return []
 
     tags: list[str] = []
-    if "新規" in text and ("認定" in text or "追加" in text):
+    if ("新規" in text and not any(token in text for token in ("取消", "辞退", "対象外"))) or "開校" in text:
         tags.append("new_accreditation")
     if any(token in text for token in ("名称変更", "校名変更", "改称", "旧称", "旧校名")):
         tags.append("name_change")
@@ -335,6 +343,47 @@ def parse_5col(pdf_path: Path, pref: str) -> list[PrefSchool]:
                         operator_address=(row[3] or "").strip(),
                         disclosure_url=url,
                         remarks=(row[4] or "").strip(),
+                    ))
+    return out
+
+
+def parse_6col_indexed(pdf_path: Path, pref: str) -> list[PrefSchool]:
+    """Chiba-style PDF: 6-column table with a leading row number column.
+
+    Layout:
+      [No, school_name, address, operator_name, operator_address, remarks]
+
+    Some prefectures publish useful school-universe and 備考 signals in this
+    format even when no disclosure URL is printed in the table.
+    """
+    annotation_links = extract_pdf_annotation_links(pdf_path)
+
+    out: list[PrefSchool] = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables():
+                for row in table:
+                    if not row or len(row) < 6 or is_header(row):
+                        continue
+                    school_name = clean_school_name(row[1])
+                    if not _looks_like_school_name(school_name):
+                        continue
+
+                    remarks = (row[5] or "").strip()
+                    url = extract_url(remarks)
+                    if not url:
+                        url = annotation_links.get(norm(school_name))
+
+                    out.append(PrefSchool(
+                        pref=pref,
+                        school_name_raw=school_name,
+                        school_name_norm=norm(school_name),
+                        address=(row[2] or "").strip(),
+                        operator_kind="",
+                        operator_name=(row[3] or "").strip(),
+                        operator_address=(row[4] or "").strip(),
+                        disclosure_url=url,
+                        remarks=remarks,
                     ))
     return out
 
@@ -590,8 +639,12 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "hokkaido": parse_7col_hokkaido,
     "akita": lambda p: parse_5col(p, "akita"),
     "aomori": lambda p: parse_html_table(p, "aomori"),
+    "chiba": lambda p: parse_6col_indexed(p, "chiba"),
     "fukui": lambda p: parse_5col(p, "fukui"),
     "gunma": lambda p: parse_html_table(p, "gunma"),
+    "ibaraki": lambda p: parse_5col(p, "ibaraki"),
+    "tochigi": lambda p: parse_html_table(p, "tochigi"),
+    "kagoshima": lambda p: parse_html_table(p, "kagoshima"),
     "miyazaki": lambda p: parse_html_table(p, "miyazaki"),
     "nagano": lambda p: parse_html_table(p, "nagano"),
     "wakayama": lambda p: parse_html_table(p, "wakayama"),
@@ -618,8 +671,12 @@ PREF_KEY_TO_DB = {
     "aichi": "愛知県",
     "akita": "秋田県",
     "aomori": "青森県",
+    "chiba": "千葉県",
     "fukui": "福井県",
     "gunma": "群馬県",
+    "ibaraki": "茨城県",
+    "tochigi": "栃木県",
+    "kagoshima": "鹿児島県",
     "miyazaki": "宮崎県",
     "nagano": "長野県",
     "wakayama": "和歌山県",
