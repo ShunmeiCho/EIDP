@@ -1,0 +1,67 @@
+# Active Goal Completion Audit — EIDP Rolling Automation
+
+Date: 2026-05-06
+Branch: `sprint8-handoff-finalize`
+Latest audited commit: `0fd1de2420614aaa7248ac1b5b3b27708cb93eb4`
+
+## Objective Restatement
+
+Build EIDP into a durable annual automation system for collecting each
+university/vocational school's official 修学支援新制度 confirmation PDF,
+verifying the configured target fiscal year, extracting department/student
+figures into the DB, and producing the Excel outputs through a Windows
+operator UI with minimal manual work.
+
+This is not a one-year R8 project. The same system must roll from FY2026
+to FY2027 and later by changing or deriving `target_fiscal_year`.
+
+## Prompt-To-Artifact Checklist
+
+| Requirement | Current evidence | Status |
+| --- | --- | --- |
+| Rolling target fiscal year, not hard-coded R8 | `src/eidp/config.py` uses `settings.target_fiscal_year`; `src/eidp/fiscal_year.py` derives Japanese fiscal year by April boundary and formats `2026年度（令和8年度）`. | Partial: runtime target is rolling; remaining R8 naming debt is tracked in `docs/plans/2026-05-06-v1.1-rolling-target-fy-charter.md` R-0. |
+| Start from official government/prefecture indexes where possible | `data/prefecture-aggregators/seed.csv`; `src/eidp/scraper/prefecture_aggregator.py`; recent commits add Chiba/Ibaraki/Tochigi/Kagoshima parser coverage and remark review items. | Partial: strong path exists, but not all 47 prefectures have supported parsers/verified current URLs. |
+| Show source chain / why a PDF was found | `src/eidp/review/_pages/pdf_manual_entry.py` shows selected PDF, source page, confidence, and discovery evidence log; `school_year_tasks.py` now labels crawl entry source quality. | Mostly covered locally; Windows click-through not revalidated after latest UI. |
+| Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. | Partial: manual entry is reduced, but unsupported prefectures and missing official links still need operator fallback. |
+| Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. | Mostly covered for current pipeline; needs Windows E2E validation with real data after latest branch. |
+| Make PDF確認 usable | `PDF確認・手入力` is now a detail page with target-year queue views, evidence panel, PDF preview/download, lock handling, and manual entry save path. | Improved but not fully product-validated; user still needs final UI test feedback. |
+| Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. | Covered locally with tests; real seed coverage still partial. |
+| Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; admin export page warns on non-target FY. | Partial: operator preview protected; full competition-export business lock needs dedicated audit before release. |
+| Windows operator delivery | `dist/eidp-windows.zip` rebuilt at commit `0fd1de2`, verifier `ok=true`, `git_dirty=false`, wheelhouse 79 wheels. | Mac-side package verified; Windows-native extraction/start/click-through not done for latest ZIP. |
+| Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
+
+## Latest Verification Evidence
+
+- `uv run pytest -q` → `726 passed, 5 warnings`
+- `uv run pytest tests/unit/test_review_prefecture_remarks.py tests/unit/test_review_school_year_tasks.py -q` → `34 passed`
+- `uv run ruff check src/eidp/review/_pages/prefecture_remarks.py tests/unit/test_review_prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py tests/unit/test_review_school_year_tasks.py` → passed
+- `uv run mypy src/eidp/review/_pages/prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py` → passed
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --json` → `ok=true`, `git_commit=0fd1de2420614aaa7248ac1b5b3b27708cb93eb4`, `git_dirty=false`
+
+## Missing Before Goal Can Be Marked Complete
+
+1. Complete or explicitly gate 47-prefecture official-index coverage.
+   Unsupported/todo prefectures must either gain parser support or show an
+   operator-visible fallback queue.
+2. Run latest ZIP on Windows and verify:
+   setup, UI start, initial bootstrap button, weekly rediscovery button,
+   official-index coverage page, school task drill-down, PDF確認, and Excel
+   preview.
+3. Finish R-0 naming debt or document every remaining legacy R8 occurrence as
+   compatibility-only.
+4. Audit competition Excel export so business output cannot silently use a
+   non-target fiscal year.
+5. Decide university scope: keep as gated pilot for v1.1, or start the v1.2
+   parser/discovery track.
+6. Validate the UI with real operator feedback; current tests prove wiring and
+   business rules, not usability under real workload.
+
+## Current Conclusion
+
+The project is materially closer to the intended automation architecture:
+official government indexes are now the primary acquisition surface, stale PDFs
+are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
+
+The active goal is **not complete**. The main remaining blockers are nationwide
+coverage, latest Windows E2E validation, final Excel target-FY audit, and the
+explicit university rollout decision.
