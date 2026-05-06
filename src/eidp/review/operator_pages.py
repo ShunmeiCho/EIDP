@@ -55,6 +55,7 @@ _DEFAULT_PROPOSAL_DECISIONS = _OUTPUT_DIR / "proposal_decisions.jsonl"
 
 _MAX_OPERATOR_PDF_SIZE = 50 * 1024 * 1024
 _ACCEPTED_OPERATOR_CLASSIFIERS = {"target", "image_only"}
+_ACCEPTED_OPERATOR_PAGE_CLASSIFIER = "html_page"
 
 
 class PathPolicyError(ValueError):
@@ -139,7 +140,7 @@ def _fetch_pdf_bytes(url: str) -> tuple[int, bytes]:
 
 
 def validate_operator_pdf_url(url: str) -> OperatorUrlValidation:
-    """Run the same safety/content gates used by discovery before DB insert."""
+    """Validate an operator-supplied long-lived disclosure page or PDF URL."""
     url = url.strip()
     if not _is_safe_url(url):
         return OperatorUrlValidation(False, "unsafe", "unsafe_url")
@@ -156,10 +157,18 @@ def validate_operator_pdf_url(url: str) -> OperatorUrlValidation:
         return OperatorUrlValidation(False, "unknown", "too_small", http_status=status, size_bytes=size)
     if size > _MAX_OPERATOR_PDF_SIZE:
         return OperatorUrlValidation(False, "unknown", "too_large", http_status=status, size_bytes=size)
-    if content[:5] != b"%PDF-":
-        return OperatorUrlValidation(False, "unknown", "not_pdf_magic", http_status=status, size_bytes=size)
 
     file_hash = hashlib.sha256(content).hexdigest()
+    if content[:5] != b"%PDF-":
+        lowered_sample = content[:4096].lower()
+        if b"<html" not in lowered_sample and b"<a " not in lowered_sample:
+            return OperatorUrlValidation(
+                False, "unknown", "not_pdf_or_html", http_status=status, size_bytes=size, sha256=file_hash
+            )
+        return OperatorUrlValidation(
+            True, _ACCEPTED_OPERATOR_PAGE_CLASSIFIER, "accepted_page", status, size, file_hash
+        )
+
     classifier = _classify_pdf_content(content)
     if classifier not in _ACCEPTED_OPERATOR_CLASSIFIERS:
         return OperatorUrlValidation(
@@ -176,7 +185,7 @@ def submit_operator_url(
     operator_name: str = "",
     operator_note: str = "",
 ) -> OperatorUrlSubmission:
-    """Validate a manually supplied PDF URL and insert/update SchoolSite."""
+    """Validate a manually supplied disclosure page/PDF URL and insert/update SchoolSite."""
     clean_url = url.strip()
     timestamp = datetime.now(UTC).isoformat()
     school = session.get(School, school_id)
@@ -218,6 +227,7 @@ def submit_operator_url(
         )
 
     now = datetime.now(UTC)
+    url_type = "disclosure_page" if validation.classifier == _ACCEPTED_OPERATOR_PAGE_CLASSIFIER else "pdf"
     existing = (
         session.query(SchoolSite)
         .filter(SchoolSite.school_id == school_id, SchoolSite.url == clean_url)
@@ -228,7 +238,7 @@ def submit_operator_url(
         site = SchoolSite(
             school_id=school_id,
             url=clean_url,
-            url_type="pdf",
+            url_type=url_type,
             discovery_method="operator_manual",
             confidence=1.0,
             verified=True,
@@ -239,7 +249,7 @@ def submit_operator_url(
         session.add(site)
     else:
         site = existing
-        site.url_type = site.url_type or "pdf"
+        site.url_type = site.url_type or url_type
         site.discovery_method = site.discovery_method or "operator_manual"
         site.confidence = max(float(site.confidence or 0), 1.0)
         site.verified = True
@@ -290,10 +300,11 @@ def run_operator_discovery_ingest(
     from eidp.pipeline.ingest import run_ingestion
     from eidp.scraper.pdf_discovery import run_pdf_discovery
 
+    doc_matches_source_or_page = (Document.source_url == source_url) | (Document.discovered_from == source_url)
     before_ids = {
         row[0]
         for row in session.query(Document.id)
-        .filter(Document.school_id == school_id, Document.source_url == source_url)
+        .filter(Document.school_id == school_id, doc_matches_source_or_page)
         .all()
     }
 
@@ -305,12 +316,14 @@ def run_operator_discovery_ingest(
         discovery_methods=["operator_manual"],
         school_ids=[school_id],
         evidence_path=discovery_evidence_path,
+        target_fiscal_year=settings.target_fiscal_year,
+        strict_target_fiscal_year=True,
     )
     session.flush()
 
     docs = (
         session.query(Document)
-        .filter(Document.school_id == school_id, Document.source_url == source_url)
+        .filter(Document.school_id == school_id, doc_matches_source_or_page)
         .order_by(Document.id)
         .all()
     )
@@ -725,8 +738,8 @@ def _render_url_needed_worklist() -> None:
 def page_url_submission(session: Session) -> None:
     st.header("③ URL追加")
     st.caption(
-        "担当者が自分で見つけた申請書PDFを登録する画面です。"
-        "自動収集で取得できなかった学校のPDFを手動で追加する時に使います。"
+        "担当者が自分で見つけた情報公開ページまたは申請書PDFを登録する画面です。"
+        "ページURLは来年度以降も再取得の入口として使います。"
     )
 
     _render_url_needed_worklist()
@@ -736,11 +749,11 @@ def page_url_submission(session: Session) -> None:
             """
 **こういう時に使う**：
 - ⑤「マッチング漏れ一覧」で `学校はあるが対象PDFがまだない` の行を見つけた時
-- 学校の公式サイトで申請書PDFを見つけた時
+- 学校または法人の公式サイトで情報公開ページ、または対象年度の申請書PDFを見つけた時
 
 **操作手順**：
 1. 学校ID（`school.id`）を入力 — データ状況ページで確認できます
-2. 申請書PDFのURLを貼り付け
+2. 情報公開ページURL、または申請書PDFのURLを貼り付け
 3. 担当者名を入力（監査用）
 4. 「登録 + 検証」を押す
 
@@ -748,9 +761,9 @@ def page_url_submission(session: Session) -> None:
 URLは登録前に以下のチェックを通します。
 - 社内ネットワーク等の不正URL除外（SSRF対策）
 - HTTP 200 で取得可能
-- PDFの署名（%PDF-）が正しい
 - サイズが妥当（1KB〜50MB）
-- PDFの内容が申請書（機関要件・様式第2号など）であることを検証
+- PDF直リンクの場合は、PDFの署名（%PDF-）と申請書内容（機関要件・様式第2号など）を検証
+- ページURLの場合は、長期利用する情報公開ページとして登録し、取込み時に対象年度PDFを探索
 
 検証に失敗した場合はDB登録されません。
             """
@@ -758,7 +771,10 @@ URLは登録前に以下のチェックを通します。
 
     with st.form("operator_url_submission"):
         school_id = st.number_input("学校ID（school.id）", min_value=1, step=1, value=1)
-        url = st.text_input("申請書PDFのURL", placeholder="https://example.ac.jp/.../confirmation_application.pdf")
+        url = st.text_input(
+            "情報公開ページまたは申請書PDFのURL",
+            placeholder="https://example.ac.jp/school/public_info/",
+        )
         operator_name = st.text_input("担当者名（監査用）", placeholder="例: 山田")
         operator_note = st.text_area(
             "メモ（任意）",
@@ -774,7 +790,7 @@ URLは登録前に以下のチェックを通します。
 
     if not submitted:
         st.info(
-            "URL は登録前に SSRF 対策・HTTP検証・PDF内容分類 を通過する必要があります。"
+            "URL は登録前に SSRF 対策・HTTP検証・PDF内容分類またはHTML確認を通過する必要があります。"
             "検証に失敗した場合はDBに書き込まれません。"
         )
         return

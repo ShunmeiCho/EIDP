@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 from eidp.cli import app
-from eidp.db.models import Base, School, SchoolAlias, SchoolSite
+from eidp.db.models import Base, Document, School, SchoolAlias, SchoolSite
 from eidp.review import operator_pages
 
 
@@ -69,6 +69,37 @@ def test_submit_operator_url_inserts_verified_school_site(monkeypatch: pytest.Mo
         session.close()
 
 
+def test_submit_operator_url_accepts_disclosure_page_for_reuse(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = _session()
+    try:
+        session.add(School(id=100, prefecture="東京", corporation_name="滋慶", school_name="東京アニメ"))
+        session.flush()
+
+        content = "<html><body><a href='/r8.pdf'>令和8年度 確認申請書</a></body></html>".encode()
+        content += b"x" * 1000
+        monkeypatch.setattr(operator_pages, "_is_safe_url", lambda url: True)
+        monkeypatch.setattr(operator_pages, "_fetch_pdf_bytes", lambda url: (200, content))
+
+        result = operator_pages.submit_operator_url(
+            session,
+            school_id=100,
+            url="https://anime.ac.jp/school/public_info/",
+            operator_name="op",
+        )
+
+        assert result.accepted is True
+        assert result.classifier == "html_page"
+        assert result.site_created is True
+
+        site = session.query(SchoolSite).one()
+        assert site.school_id == 100
+        assert site.url_type == "disclosure_page"
+        assert site.discovery_method == "operator_manual"
+        assert site.verified is True
+    finally:
+        session.close()
+
+
 def test_submit_operator_url_rejects_non_target_without_insert(monkeypatch: pytest.MonkeyPatch) -> None:
     session = _session()
     try:
@@ -89,6 +120,71 @@ def test_submit_operator_url_rejects_non_target_without_insert(monkeypatch: pyte
         assert result.accepted is False
         assert result.reason == "classified_non_target"
         assert session.query(SchoolSite).count() == 0
+    finally:
+        session.close()
+
+
+def test_run_operator_discovery_ingest_uses_strict_target_and_page_discovered_docs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session()
+    page_url = "https://anime.ac.jp/school/public_info/"
+    try:
+        session.add(School(id=100, prefecture="東京", corporation_name="滋慶", school_name="東京アニメ"))
+        session.add(
+            SchoolSite(
+                school_id=100,
+                url=page_url,
+                url_type="disclosure_page",
+                discovery_method="operator_manual",
+                http_status=200,
+            )
+        )
+        session.flush()
+
+        calls: dict[str, object] = {}
+
+        def fake_run_pdf_discovery(session_arg, **kwargs):  # noqa: ANN001
+            calls["discovery_kwargs"] = kwargs
+            session_arg.add(
+                Document(
+                    school_id=100,
+                    source_url="https://anime.ac.jp/r8.pdf",
+                    discovered_from=page_url,
+                    file_hash="h" * 64,
+                    file_path=str(tmp_path / "r8.pdf"),
+                    pdf_type="target",
+                    ingest_status="pending",
+                    fiscal_year=2026,
+                )
+            )
+            session_arg.flush()
+            return {"downloaded": 1, "skipped": 0, "failed": 0}
+
+        def fake_run_ingestion(session_arg, **kwargs):  # noqa: ANN001
+            calls["ingest_kwargs"] = kwargs
+            return {"processed": 1, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.run_pdf_discovery", fake_run_pdf_discovery)
+        monkeypatch.setattr("eidp.pipeline.ingest.run_ingestion", fake_run_ingestion)
+        monkeypatch.setattr(operator_pages.settings, "target_fiscal_year", 2026)
+
+        result = operator_pages.run_operator_discovery_ingest(
+            session,
+            school_id=100,
+            source_url=page_url,
+            storage_dir=tmp_path,
+            discovery_evidence_path=tmp_path / "discovery.jsonl",
+            ingest_evidence_path=tmp_path / "ingest.jsonl",
+        )
+
+        discovery_kwargs = calls["discovery_kwargs"]
+        assert discovery_kwargs["target_fiscal_year"] == 2026
+        assert discovery_kwargs["strict_target_fiscal_year"] is True
+        assert discovery_kwargs["discovery_methods"] == ["operator_manual"]
+        assert result["document_ids"] == [1]
+        assert calls["ingest_kwargs"]["document_ids"] == [1]
     finally:
         session.close()
 
@@ -158,7 +254,7 @@ def test_compute_todo_counts_marks_excel_stale_only_after_new_alias(
         empty_gap.write_text("gap_reason\n", encoding="utf-8")
         excel.write_bytes(b"xlsx")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.add(
             SchoolAlias(
