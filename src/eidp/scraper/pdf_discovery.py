@@ -14,6 +14,7 @@ import hashlib
 import html as html_lib
 import re
 import time
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -140,6 +141,91 @@ def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None 
 
     candidate.score = score
     return score
+
+
+def _candidate_has_fiscal_year_hint(candidate: PdfCandidate, fiscal_year: int) -> bool:
+    """Return True when URL/anchor explicitly mention ``fiscal_year``."""
+    text = (candidate.anchor_text + " " + candidate.pdf_url).lower()
+    return any(token.lower() in text for token in fiscal_year_search_tokens(fiscal_year))
+
+
+def _detect_fiscal_year_from_candidate_hint(
+    candidate: PdfCandidate,
+    *,
+    target_fiscal_year: int,
+) -> int | None:
+    """Best-effort fiscal-year detector from URL/anchor text.
+
+    Text extracted from the PDF body is authoritative. This helper is a fallback
+    for image PDFs or parser failures so strict current-FY mode can still reject
+    obvious R7/2025 URLs instead of silently storing them.
+    """
+    if _candidate_has_fiscal_year_hint(candidate, target_fiscal_year):
+        return target_fiscal_year
+    for fiscal_year in range(target_fiscal_year - 1, 2018, -1):
+        if _candidate_has_fiscal_year_hint(candidate, fiscal_year):
+            return fiscal_year
+    for fiscal_year in range(target_fiscal_year + 1, target_fiscal_year + 3):
+        if _candidate_has_fiscal_year_hint(candidate, fiscal_year):
+            return fiscal_year
+    return None
+
+
+def _extract_pdf_sample_text(content: bytes) -> str:
+    """Extract a small text sample from the first pages of a PDF."""
+    import io
+
+    import pdfplumber
+
+    with pdfplumber.open(io.BytesIO(content)) as pdf:
+        sample_text = ""
+        for page in pdf.pages[:5]:
+            sample_text += (page.extract_text() or "") + "\n"
+    return sample_text
+
+
+def _detect_fiscal_year_from_text(text: str) -> int | None:
+    """Best-effort fiscal-year detector for disclosure PDFs."""
+    normed = unicodedata.normalize("NFKC", text)
+
+    # Prefer explicit fiscal-year labels over filing dates.
+    m = re.search(r"令和\s*(\d+)\s*年度", normed)
+    if m:
+        return 2018 + int(m.group(1))
+
+    m = re.search(r"(20\d{2})\s*年度", normed)
+    if m:
+        return int(m.group(1))
+
+    # Most application forms carry a filing date on the cover page. In this
+    # domain that date is the practical fiscal-year signal for the form.
+    m = re.search(r"令和\s*(\d+)\s*年\s*\d+\s*月\s*\d+\s*日", normed)
+    if m:
+        return 2018 + int(m.group(1))
+
+    return None
+
+
+def _classify_pdf_sample_text(sample_text: str) -> str:
+    """Classify a PDF body sample as ``target`` / ``non_target`` / ``image_only``.
+
+    Marker check beats the cid-leak heuristic: real Japanese 申請書 PDFs
+    routinely contain ``(cid:1234)`` glyph fallbacks alongside extractable
+    ``様式第2号`` etc. text, and rejecting them as ``image_only`` would
+    silently drop legitimate target documents from the queue.
+    """
+    if not sample_text.strip():
+        return "image_only"
+
+    normed = unicodedata.normalize("NFKC", sample_text)
+    target_markers = ["様式第2号", "機関要件", "修学支援", "生徒総定員", "学科名"]
+    hits = sum(1 for m in target_markers if m in normed)
+    if hits >= 2:
+        return "target"
+
+    if "(cid:" in sample_text:
+        return "image_only"
+    return "non_target"
 
 
 def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
@@ -299,30 +385,7 @@ def _classify_pdf_content(content: bytes) -> str:
     Returns: 'target' (申請書), 'non_target' (wrong document), 'image_only' (needs OCR).
     """
     try:
-        import io
-        import unicodedata
-
-        import pdfplumber
-
-        with pdfplumber.open(io.BytesIO(content)) as pdf:
-            sample_text = ""
-            # Scan up to 5 pages (some formats put markers on later pages)
-            for page in pdf.pages[:5]:
-                sample_text += (page.extract_text() or "") + "\n"
-
-        if not sample_text.strip() or "(cid:" in sample_text:
-            return "image_only"
-
-        # NFKC normalize to handle full-width digits (２→2, etc.)
-        normed = unicodedata.normalize("NFKC", sample_text)
-
-        # Check for target document markers
-        target_markers = ["様式第2号", "機関要件", "修学支援", "生徒総定員", "学科名"]
-        hits = sum(1 for m in target_markers if m in normed)
-        if hits >= 2:
-            return "target"
-
-        return "non_target"
+        return _classify_pdf_sample_text(_extract_pdf_sample_text(content))
     except Exception as e:
         log.warning("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
         return "unknown"
@@ -333,6 +396,9 @@ def download_pdf(
     candidate: PdfCandidate,
     storage_dir: Path,
     school_id: int,
+    *,
+    target_fiscal_year: int | None = None,
+    strict_target_fiscal_year: bool = False,
 ) -> tuple[str | None, str | None, int, str, str | None]:
     """Download PDF and return (file_path, sha256_hash, file_size, pdf_type, reason).
 
@@ -369,8 +435,29 @@ def download_pdf(
         file_hash = hashlib.sha256(content).hexdigest()
         file_size = len(content)
 
-        # Quick content validation: check if extractable text contains target keywords
-        pdf_type = _classify_pdf_content(content)
+        detected_fiscal_year: int | None = None
+        try:
+            sample_text = _extract_pdf_sample_text(content)
+            pdf_type = _classify_pdf_sample_text(sample_text)
+            detected_fiscal_year = _detect_fiscal_year_from_text(sample_text)
+        except Exception as e:
+            log.warning("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
+            pdf_type = "unknown"
+
+        if strict_target_fiscal_year:
+            target_year = target_fiscal_year or settings.target_fiscal_year
+            if detected_fiscal_year is None:
+                detected_fiscal_year = _detect_fiscal_year_from_candidate_hint(
+                    candidate,
+                    target_fiscal_year=target_year,
+                )
+            if detected_fiscal_year is not None and detected_fiscal_year != target_year:
+                return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
+            if (
+                detected_fiscal_year is None
+                and not _candidate_has_fiscal_year_hint(candidate, target_year)
+            ):
+                return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
 
         # Storage path: data/pdfs/{school_id}/{hash[:8]}.pdf
         school_dir = storage_dir / str(school_id)
@@ -398,6 +485,8 @@ def run_pdf_discovery(
     discovery_methods: list[str] | None = None,
     school_ids: list[int] | None = None,
     evidence_path: Path | None = None,
+    target_fiscal_year: int | None = None,
+    strict_target_fiscal_year: bool = False,
 ) -> dict[str, int]:
     """Run PDF discovery for schools with verified URLs but no documents.
 
@@ -410,9 +499,14 @@ def run_pdf_discovery(
             specific set (used for targeted gap-filling, e.g. 滋慶 group).
         evidence_path: optional JSONL path that captures every rejected
             candidate (URL/score/anchor/reason) per school for debug.
+        target_fiscal_year: fiscal year to treat as current. Defaults to
+            ``settings.target_fiscal_year``.
+        strict_target_fiscal_year: when True, downloads are accepted only when
+            PDF text or URL/anchor evidence confirms ``target_fiscal_year``.
     """
     stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
     recorder = EvidenceRecorder(evidence_path)
+    target_year = target_fiscal_year or settings.target_fiscal_year
 
     # Get school_sites, excluding:
     # - schools with a document for the current target fiscal year
@@ -431,7 +525,8 @@ def run_pdf_discovery(
     schools_with_current_docs = (
         session.query(Document.school_id)
         .filter(
-            Document.fiscal_year == settings.target_fiscal_year,
+            Document.fiscal_year == target_year,
+            Document.pdf_type == "target",
             Document.ingest_status == "ingested",
         )
         .distinct()
@@ -521,6 +616,10 @@ def run_pdf_discovery(
             stats["found"] += 1
 
             # Filter out negative-score candidates
+            if target_fiscal_year is not None:
+                for c in result.candidates:
+                    _score_candidate(c, target_fiscal_year=target_year)
+                result.candidates.sort(key=lambda c: c.score, reverse=True)
             viable = [c for c in result.candidates if c.score >= 0]
             if not viable:
                 job.status = "review"
@@ -543,10 +642,22 @@ def run_pdf_discovery(
             # Try downloading top candidates (fallback on 404)
             downloaded = False
             duplicate_seen = False
+            cross_school_dup_seen = False
+            target_year_rejection_seen = False
             for candidate in viable[:MAX_CANDIDATE_DOWNLOAD_ATTEMPTS]:
-                file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
-                    client, candidate, storage_dir, site.school_id,
-                )
+                if strict_target_fiscal_year:
+                    file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
+                        client,
+                        candidate,
+                        storage_dir,
+                        site.school_id,
+                        target_fiscal_year=target_year,
+                        strict_target_fiscal_year=True,
+                    )
+                else:
+                    file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
+                        client, candidate, storage_dir, site.school_id,
+                    )
                 # non_target PDFs already cleaned up in download_pdf(), skip them
                 if pdf_type == "non_target":
                     log.info("non_target_pdf_skipped", school_id=site.school_id, url=candidate.pdf_url)
@@ -564,6 +675,11 @@ def run_pdf_discovery(
                     continue
 
                 if file_path is None and reject_reason is not None:
+                    if (
+                        reject_reason == "target_fiscal_year_not_detected"
+                        or reject_reason.startswith("fiscal_year_mismatch:")
+                    ):
+                        target_year_rejection_seen = True
                     recorder.record(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=candidate.pdf_url,
@@ -579,12 +695,18 @@ def run_pdf_discovery(
                     # Check for duplicate hash
                     existing = (
                         session.query(Document)
-                        .filter(Document.school_id == site.school_id, Document.file_hash == file_hash)
+                        .filter(Document.file_hash == file_hash)
                         .first()
                     )
                     if existing:
                         duplicate_seen = True
                         stats["skipped"] += 1
+                        if existing.school_id != site.school_id:
+                            cross_school_dup_seen = True
+                            reason = "duplicate_hash_other_school"
+                        else:
+                            reason = "duplicate_hash"
+                        Path(file_path).unlink(missing_ok=True)
                         recorder.record(RejectionEvidence(
                             school_id=site.school_id,
                             pdf_url=candidate.pdf_url,
@@ -592,9 +714,12 @@ def run_pdf_discovery(
                             anchor_text=candidate.anchor_text,
                             pattern_type=candidate.pattern_type,
                             score=candidate.score,
-                            reason="duplicate_hash",
+                            reason=reason,
                             pdf_type=pdf_type,
-                            extra={"existing_doc_id": str(existing.id)},
+                            extra={
+                                "existing_doc_id": str(existing.id),
+                                "existing_school_id": str(existing.school_id),
+                            },
                         ))
                         time.sleep(0.5)
                         continue
@@ -623,14 +748,27 @@ def run_pdf_discovery(
                 time.sleep(0.5)
 
             if not downloaded:
-                job.status = "success" if duplicate_seen else "failed"
-                job.error_message = (
-                    "all viable candidates already downloaded"
-                    if duplicate_seen
-                    else f"download failed for {len(result.candidates)} candidates"
-                )
+                if cross_school_dup_seen:
+                    # PDF is already on disk under another school. The
+                    # operator console must surface this for manual
+                    # alias / reassignment. "success" would mislead.
+                    job.status = "review"
+                    job.error_message = (
+                        "candidate PDFs are duplicates of documents "
+                        "already attached to other schools"
+                    )
+                elif duplicate_seen:
+                    job.status = "success"
+                    job.error_message = "all viable candidates already downloaded"
+                elif target_year_rejection_seen:
+                    job.status = "review"
+                    job.error_message = f"no {target_year} PDF candidate confirmed"
+                    stats["skipped"] += 1
+                else:
+                    job.status = "failed"
+                    job.error_message = f"download failed for {len(result.candidates)} candidates"
                 job.finished_at = datetime.now(UTC)
-                if not duplicate_seen:
+                if not (duplicate_seen or cross_school_dup_seen or target_year_rejection_seen):
                     stats["failed"] += 1
 
             session.flush()

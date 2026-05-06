@@ -13,7 +13,7 @@ import hashlib
 import html
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -21,6 +21,7 @@ import streamlit as st
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import (
     Department,
     DepartmentChange,
@@ -31,9 +32,10 @@ from eidp.db.models import (
     SchoolSite,
     SchoolYearStatus,
 )
+from eidp.fiscal_year import format_fiscal_year_label
+from eidp.review.target_year_status import target_year_overview
 from eidp.scraper.pdf_discovery import _classify_pdf_content, _safe_get
 from eidp.scraper.url_discovery import _is_safe_url
-
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _OUTPUT_DIR = Path("output")
@@ -176,7 +178,7 @@ def submit_operator_url(
 ) -> OperatorUrlSubmission:
     """Validate a manually supplied PDF URL and insert/update SchoolSite."""
     clean_url = url.strip()
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     school = session.get(School, school_id)
     if school is None:
         return OperatorUrlSubmission(
@@ -215,7 +217,7 @@ def submit_operator_url(
             timestamp=timestamp,
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     existing = (
         session.query(SchoolSite)
         .filter(SchoolSite.school_id == school_id, SchoolSite.url == clean_url)
@@ -426,6 +428,31 @@ def page_pipeline_status(session: Session) -> None:
     col4.metric("年度別データ数", stats["dept_yearly_rows"])
 
     st.divider()
+    target_label = format_fiscal_year_label(settings.target_fiscal_year)
+    target = target_year_overview(
+        session,
+        target_fiscal_year=settings.target_fiscal_year,
+        school_type="専門学校",
+    )
+    st.subheader(f"{target_label} 採録状況")
+    st.caption("ここは現在年度の到達度です。旧年度PDFは成果ではなく、再取得待ちとして扱います。")
+    ycols = st.columns(4)
+    ycols[0].metric("対象校", target.active_schools)
+    ycols[1].metric("現在年度PDFあり", target.current_target_schools)
+    ycols[2].metric("旧年度fallback", target.stale_target_documents)
+    ycols[3].metric("要確認キュー", target.review_queue_documents)
+    if target.current_target_documents == 0 and target.stale_target_documents > 0:
+        st.error(
+            f"{target_label} の採録済PDFが 0 件です。旧年度fallbackをExcel成果として扱わず、"
+            "URL追加または週次再取得で現在年度PDFを集めてください。"
+        )
+    elif target.missing_current_target_schools > 0:
+        st.warning(
+            f"{target.missing_current_target_schools} 校は {target_label} のPDFが未採録です。"
+            "URL追加または週次再取得の対象です。"
+        )
+
+    st.divider()
     st.subheader("PDF 取込状態の内訳")
     st.caption(
         "ingested = DBに反映済み / school_mismatch = 校名が合わず未反映 / "
@@ -623,7 +650,6 @@ def _render_url_needed_worklist() -> None:
         return
 
     import csv
-    from collections import defaultdict
 
     # Aggregate by school_id: a single school may appear in many template rows.
     # Some rows have no school_id (school_missing / no_fy_data) — we skip those
@@ -1024,7 +1050,12 @@ def inject_v1_theme() -> None:
 
         /* Title brand */
         .eidp-title { margin-bottom: 24px; display: flex; align-items: baseline; gap: 10px; }
-        .eidp-brand { font-weight: 600 !important; font-size: 20px !important; color: var(--eidp-ink) !important; letter-spacing: -0.01em; }
+        .eidp-brand {
+          font-weight: 600 !important;
+          font-size: 20px !important;
+          color: var(--eidp-ink) !important;
+          letter-spacing: -0.01em;
+        }
         .eidp-brand-sub { font-size: 13px !important; color: var(--eidp-ink-low) !important; }
 
         /* Serif on headings for Muji-flavored touch */
@@ -1167,7 +1198,9 @@ def inject_v1_theme() -> None:
           font-size: 13px;
           color: var(--eidp-ink-mid);
         }
-        .stRadio > div:not([role="radiogroup"]) > div[role="radiogroup"][aria-orientation="horizontal"] > label:has(input:checked) {
+        .stRadio > div:not([role="radiogroup"])
+          > div[role="radiogroup"][aria-orientation="horizontal"]
+          > label:has(input:checked) {
           background: var(--eidp-ink);
           color: #FFFFFF;
         }
@@ -1308,7 +1341,7 @@ def compute_todo_counts(session: Session) -> TodoCounts:
     excel_path = _DEFAULT_COMPETITION
     if excel_path.exists():
         excel_mtime = datetime.fromtimestamp(
-            excel_path.stat().st_mtime, tz=timezone.utc
+            excel_path.stat().st_mtime, tz=UTC
         )
         latest_alias_created = (
             session.query(func.max(SchoolAlias.created_at))
@@ -1323,7 +1356,7 @@ def compute_todo_counts(session: Session) -> TodoCounts:
             excel_stale = False
         else:
             latest_alias_created = _as_utc(latest_alias_created)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             excel_stale = (
                 latest_alias_created > excel_mtime
                 and now - latest_alias_created >= timedelta(minutes=30)
@@ -1343,8 +1376,8 @@ def compute_todo_counts(session: Session) -> TodoCounts:
 
 def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def render_sidebar_todo(session: Session) -> None:
@@ -1588,7 +1621,7 @@ def apply_dept_alias_proposal(
         DepartmentChange(
             department_id=department_id,
             change_type="alias",
-            fiscal_year=datetime.now(timezone.utc).year,
+            fiscal_year=datetime.now(UTC).year,
             old_name=old_name,
             new_name=dept.canonical_name,
             verified=False,
@@ -1701,7 +1734,7 @@ def _render_school_proposals_tab(session: Session) -> None:
                         target_id=p["matched_school_id"],
                         operator_name=st.session_state.get("operator_name", ""),
                         note=reason,
-                        timestamp=datetime.now(timezone.utc).isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                     ),
                     _DEFAULT_PROPOSAL_DECISIONS,
                 )
@@ -1803,7 +1836,9 @@ def _render_school_focus_mode(
           </div>
           <div class="eidp-focus-name">{safe_template_name}</div>
           <div class="eidp-focus-rows">テンプレート内で {safe_template_rows} 行に登場</div>
-          <div class="eidp-focus-divider"><span class="line"></span><span>正しい DB 学校を選択</span><span class="line"></span></div>
+          <div class="eidp-focus-divider">
+            <span class="line"></span><span>正しい DB 学校を選択</span><span class="line"></span>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1872,7 +1907,7 @@ def _render_school_focus_mode(
                         target_id=int(picked["school_id"]),
                         operator_name=st.session_state.get("operator_name", ""),
                         note=reason,
-                        timestamp=datetime.now(timezone.utc).isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                     ),
                     _DEFAULT_PROPOSAL_DECISIONS,
                 )
@@ -1901,7 +1936,7 @@ def _render_school_focus_mode(
                     target_id=None,
                     operator_name=st.session_state.get("operator_name", ""),
                     note="operator deferred (focus mode)",
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
             )
@@ -1983,7 +2018,7 @@ def _render_school_candidate_picker(
                     target_id=int(picked["school_id"]),
                     operator_name=st.session_state.get("operator_name", ""),
                     note=reason,
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
             )
@@ -2012,7 +2047,7 @@ def _render_school_candidate_picker(
                     target_id=None,
                     operator_name=st.session_state.get("operator_name", ""),
                     note="operator deferred — needs more research",
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
             )
@@ -2038,7 +2073,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
-    _DEPT_PROPOSAL_LABEL = {
+    _dept_proposal_label = {
         "dept_alias_existing": "別名追加で即マッチ（候補1つ）",
         "dept_group_candidate": "複数学科の合算行（今期は対応外）",
         "dept_ambiguous": "候補が複数（選択が必要）",
@@ -2053,7 +2088,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
         "dept_truly_missing",
     ]):
         items = by_type.get(ptype, [])
-        cols[idx].metric(_DEPT_PROPOSAL_LABEL.get(ptype, ptype), len(items))
+        cols[idx].metric(_dept_proposal_label.get(ptype, ptype), len(items))
 
     st.divider()
     st.subheader("自動承認OK：一致候補が1つだけの学科")
@@ -2085,7 +2120,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
                         target_id=p["db_dept_ids"][0],
                         operator_name=st.session_state.get("operator_name", ""),
                         note=reason,
-                        timestamp=datetime.now(timezone.utc).isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                     ),
                     _DEFAULT_PROPOSAL_DECISIONS,
                 )
@@ -2108,7 +2143,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
     for ptype, items in by_type.items():
         if ptype == "dept_alias_existing":
             continue
-        st.write(f"**{_DEPT_PROPOSAL_LABEL.get(ptype, ptype)}** — {len(items)}件")
+        st.write(f"**{_dept_proposal_label.get(ptype, ptype)}** — {len(items)}件")
         for p in items[:10]:
             names = " ／ ".join(p.get("db_dept_names", [])[:3])
             st.caption(

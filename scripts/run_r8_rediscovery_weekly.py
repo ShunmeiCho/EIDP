@@ -1,8 +1,8 @@
-"""Weekly R8 rediscovery runner.
+"""Weekly target-year rediscovery runner.
 
 This is the Windows Task Scheduler-facing production entrypoint for
-Sprint 8. It targets schools that already have a target PDF for an older
-fiscal year but no current-FY target PDF, then runs:
+Sprint 8. It targets schools that have a crawlable school_site but no
+current-FY target PDF, then runs:
 
 1. PDF rediscovery for the selected school_site methods.
 2. Ingestion only for documents created during this run.
@@ -102,7 +102,13 @@ def write_last_run(
         "current_fy": summary.get("current_fy"),
         "school_type": summary.get("school_type"),
         "methods": summary.get("methods"),
+        "selection_mode": summary.get("selection_mode"),
         "stale_school_count": int(summary.get("stale_school_count") or 0),
+        "target_missing_school_count": int(
+            summary.get("target_missing_school_count")
+            or summary.get("stale_school_count")
+            or 0
+        ),
         "new_document_count": len(new_document_ids),
         "new_document_ids": new_document_ids,
         "discovery_stats": summary.get("discovery_stats") or {},
@@ -196,6 +202,53 @@ def select_stale_school_ids(
     return eligible_ids
 
 
+def select_target_missing_school_ids(
+    session: Session,
+    *,
+    current_fy: int,
+    methods: list[str] | None,
+    school_type: str | None = "専門学校",
+    limit: int | None = None,
+) -> list[int]:
+    """Return active schools with a crawlable URL and no current-FY target.
+
+    This is intentionally broader than ``select_stale_school_ids``: in a new
+    fiscal-year season the most important schools often have no prior target
+    PDF in DB at all, so limiting the weekly runner to stale schools silently
+    drops the real acquisition queue.
+    """
+    current_target_school_ids = (
+        session.query(Document.school_id)
+        .join(School, School.id == Document.school_id)
+        .filter(
+            School.status == "active",
+            Document.fiscal_year == current_fy,
+            Document.pdf_type == "target",
+            Document.ingest_status == "ingested",
+        )
+        .distinct()
+    )
+
+    site_query = (
+        session.query(SchoolSite.school_id)
+        .join(School, School.id == SchoolSite.school_id)
+        .filter(
+            School.status == "active",
+            or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None)),
+            ~SchoolSite.school_id.in_(current_target_school_ids),
+        )
+    )
+    if school_type:
+        site_query = site_query.filter(School.school_type == school_type)
+    if methods:
+        site_query = site_query.filter(SchoolSite.discovery_method.in_(methods))
+
+    eligible_ids = sorted({int(school_id) for (school_id,) in site_query.all()})
+    if limit is not None:
+        return eligible_ids[:limit]
+    return eligible_ids
+
+
 def _coverage_snapshot(session: Session, current_fy: int, school_type: str | None) -> dict[str, Any]:
     totals = compute_coverage(session, school_type=school_type, fiscal_year=current_fy).totals
     return {
@@ -274,6 +327,7 @@ def run_weekly(
     dry_run: bool,
     lock_path: Path | None = None,
     last_run_path: Path | None = None,
+    stale_only: bool = False,
 ) -> dict[str, Any]:
     """Public entry. Acquires the shared UI lock when ``lock_path`` is
     provided, then delegates to ``_run_weekly_inner``. Splitting the
@@ -291,6 +345,7 @@ def run_weekly(
         limit=limit,
         dry_run=dry_run,
         last_run_path=last_run_path,
+        stale_only=stale_only,
     )
     if lock_path is None:
         return _run_weekly_inner(**inner_kwargs)
@@ -311,6 +366,7 @@ def _run_weekly_inner(
     limit: int | None,
     dry_run: bool,
     last_run_path: Path | None,
+    stale_only: bool = False,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     started_at = datetime.now(UTC)
@@ -321,13 +377,24 @@ def _run_weekly_inner(
 
     session = SessionLocal()
     try:
-        stale_school_ids = select_stale_school_ids(
-            session,
-            current_fy=current_fy,
-            methods=methods,
-            school_type=school_type,
-            limit=limit,
-        )
+        if stale_only:
+            selected_school_ids = select_stale_school_ids(
+                session,
+                current_fy=current_fy,
+                methods=methods,
+                school_type=school_type,
+                limit=limit,
+            )
+            selection_mode = "stale_only"
+        else:
+            selected_school_ids = select_target_missing_school_ids(
+                session,
+                current_fy=current_fy,
+                methods=methods,
+                school_type=school_type,
+                limit=limit,
+            )
+            selection_mode = "target_missing"
         before = _snapshot_reports(session, current_fy, school_type)
 
         max_doc_id_before = session.query(func.max(Document.id)).scalar() or 0
@@ -335,18 +402,20 @@ def _run_weekly_inner(
         ingest_stats: dict[str, int] = {}
         new_document_ids: list[int] = []
 
-        if dry_run or not stale_school_ids:
+        if dry_run or not selected_school_ids:
             session.rollback()
         else:
-            effective_batch_size = max(batch_size, len(stale_school_ids))
+            effective_batch_size = max(batch_size, len(selected_school_ids))
             discovery_stats = run_pdf_discovery(
                 session,
                 storage_dir=storage_dir,
                 batch_size=effective_batch_size,
                 rate_limit=rate_limit,
                 discovery_methods=methods,
-                school_ids=stale_school_ids,
+                school_ids=selected_school_ids,
                 evidence_path=discovery_evidence,
+                target_fiscal_year=current_fy,
+                strict_target_fiscal_year=True,
             )
             session.commit()
 
@@ -377,8 +446,10 @@ def _run_weekly_inner(
             "current_fy": current_fy,
             "school_type": school_type,
             "methods": methods,
-            "stale_school_count": len(stale_school_ids),
-            "school_ids": stale_school_ids,
+            "selection_mode": selection_mode,
+            "stale_school_count": len(selected_school_ids),
+            "target_missing_school_count": len(selected_school_ids),
+            "school_ids": selected_school_ids,
             "new_document_ids": new_document_ids,
             "discovery_stats": discovery_stats,
             "ingest_stats": ingest_stats,
@@ -407,6 +478,7 @@ def _run_weekly_inner(
                 "school_type": school_type,
                 "methods": methods,
                 "stale_school_count": 0,
+                "target_missing_school_count": 0,
                 "new_document_ids": [],
                 "discovery_stats": {},
                 "ingest_stats": {},
@@ -441,6 +513,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-lock", action="store_true")
+    parser.add_argument(
+        "--stale-only",
+        action="store_true",
+        help="Legacy mode: crawl only schools with an older ingested target PDF.",
+    )
     return parser.parse_args()
 
 
@@ -459,6 +536,7 @@ def main() -> None:
         dry_run=args.dry_run,
         lock_path=None if args.no_lock else args.lock_path,
         last_run_path=args.last_run_path,
+        stale_only=args.stale_only,
     )
     # Sprint 8.7: prune BEFORE the final print so a closed-pipe error on
     # stdout doesn't leave the ringbuffer unbounded.
@@ -467,7 +545,9 @@ def main() -> None:
         "summary_path": summary["summary_path"],
         "last_run_path": str(args.last_run_path),
         "dry_run": summary["dry_run"],
+        "selection_mode": summary["selection_mode"],
         "stale_school_count": summary["stale_school_count"],
+        "target_missing_school_count": summary["target_missing_school_count"],
         "new_document_ids": summary["new_document_ids"],
         "discovery_stats": summary["discovery_stats"],
         "ingest_stats": summary["ingest_stats"],

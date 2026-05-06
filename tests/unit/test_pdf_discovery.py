@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -12,6 +13,7 @@ from eidp.scraper.pdf_discovery import (
     PdfCandidate,
     _extract_pdf_links,
     _score_candidate,
+    download_pdf,
     run_pdf_discovery,
 )
 
@@ -178,5 +180,126 @@ def test_run_pdf_discovery_duplicate_only_is_success_not_failed(monkeypatch, tmp
         job = session.query(CrawlJob).one()
         assert job.status == "success"
         assert job.error_message == "all viable candidates already downloaded"
+    finally:
+        session.close()
+
+
+def _make_pdf_bytes(text: str) -> bytes:
+    import fitz  # type: ignore[import-not-found]
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), text, fontsize=10, fontname="japan")
+    data = doc.tobytes()
+    doc.close()
+    return data
+
+
+class _PdfResponse:
+    def __init__(self, content: bytes) -> None:
+        self.content = content
+        self.headers: dict[str, str] = {}
+        self.url = "https://example.ac.jp/r7.pdf"
+        self.request = None
+
+    def raise_for_status(self) -> None:
+        return None
+
+
+def test_download_pdf_rejects_stale_fiscal_year_in_strict_target_mode(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Strict current-FY discovery must not store a clearly older PDF."""
+
+    content = _make_pdf_bytes("令和7年度 修学支援 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/r7.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和7年度 確認申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type in {"target", "unknown"}
+    assert reason == "fiscal_year_mismatch:2025"
+    assert not list((tmp_path / "1").glob("*.pdf"))
+
+
+def test_run_pdf_discovery_skips_duplicate_hash_from_other_school(
+    monkeypatch, tmp_path: Path
+) -> None:
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    duplicate_pdf = tmp_path / "candidate.pdf"
+    duplicate_pdf.write_bytes(b"%PDF-" + b"x" * 2000)
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.add(
+            Document(
+                school_id=99,
+                source_url="https://other.example.ac.jp/r8.pdf",
+                file_hash="sharedhash",
+                file_path="data/pdfs/99/shared.pdf",
+                pdf_type="target",
+                ingest_status="ingested",
+                fiscal_year=2026,
+            )
+        )
+        session.flush()
+
+        candidate = PdfCandidate(
+            pdf_url="https://example.ac.jp/r8.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 確認申請書",
+            score=10.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
+
+        def fake_download(_client, _candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            return str(duplicate_pdf), "sharedhash", 2005, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert stats["downloaded"] == 0
+        assert stats["skipped"] == 1
+        assert stats["failed"] == 0
+        assert session.query(Document).count() == 1
+        # Sprint 8.7.f: cross-school duplicate must surface as ``review`` so
+        # the operator can resolve via alias / reassignment. ``success``
+        # would mislead the queue into thinking this school is covered.
+        job = session.query(CrawlJob).one()
+        assert job.status == "review"
+        assert "other schools" in (job.error_message or "")
+        assert not duplicate_pdf.exists()
+        payload = json.loads(evidence.read_text(encoding="utf-8").strip())
+        assert payload["reason"] == "duplicate_hash_other_school"
+        assert payload["extra"]["existing_school_id"] == "99"
     finally:
         session.close()

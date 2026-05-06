@@ -130,6 +130,25 @@ def test_queue_respects_limit(engine):
         assert len(rows) == 3
 
 
+def test_queue_can_include_ingested_and_filter_target_year(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="FY学校")
+        old_doc = _seed_doc(session, school, status="ingested", file_hash_seed="old", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="ingested", file_hash_seed="target", fiscal_year=2026)
+        review_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="review", fiscal_year=2026)
+        _seed_doc(session, school, status="ocr_pending", file_hash_seed="unknown", fiscal_year=None)
+        session.commit()
+
+        rows = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+            fiscal_year=2026,
+        )
+
+        assert [r.document_id for r in rows] == [target_doc.id, review_doc.id]
+        assert old_doc.id not in {r.document_id for r in rows}
+
+
 # ---------------------------------------------------------------------------
 # PDF preview
 # ---------------------------------------------------------------------------

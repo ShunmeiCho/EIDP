@@ -251,6 +251,8 @@ def list_pending_documents(
     session: Session,
     *,
     statuses: Iterable[str] = QUEUE_STATUSES,
+    fiscal_year: int | None = None,
+    include_unknown_fiscal_year: bool = False,
     limit: int = 200,
 ) -> list[QueueRow]:
     """Return the manual-entry queue, ordered by oldest-first.
@@ -260,14 +262,20 @@ def list_pending_documents(
     budget; the operator can drill in via filters once the basic page
     works.
     """
-    rows = (
+    query = (
         session.query(Document, School)
         .join(School, School.id == Document.school_id)
         .filter(Document.ingest_status.in_(list(statuses)))
         .order_by(Document.id.asc())
-        .limit(limit)
-        .all()
     )
+    if fiscal_year is not None:
+        if include_unknown_fiscal_year:
+            from sqlalchemy import or_
+
+            query = query.filter(or_(Document.fiscal_year == fiscal_year, Document.fiscal_year.is_(None)))
+        else:
+            query = query.filter(Document.fiscal_year == fiscal_year)
+    rows = query.limit(limit).all()
     return [
         QueueRow(
             document_id=doc.id,
@@ -775,13 +783,32 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     import streamlit as st
 
     from eidp.config import settings
+    from eidp.fiscal_year import format_fiscal_year_label
     from eidp.ocr import (
         availability_banner_severity,
         availability_banner_text,
         detect_ocr_availability,
     )
+    from eidp.review.target_year_status import target_year_overview
 
     st.subheader("PDF確認・手入力")
+    target_label = format_fiscal_year_label(settings.target_fiscal_year)
+    target = target_year_overview(
+        session,
+        target_fiscal_year=settings.target_fiscal_year,
+        school_type="専門学校",
+    )
+    mcols = st.columns(4)
+    mcols[0].metric("対象校", target.active_schools)
+    mcols[1].metric(f"{target_label} PDF", target.current_target_schools)
+    mcols[2].metric("旧年度fallback", target.stale_target_documents)
+    mcols[3].metric("要確認", target.review_queue_documents)
+    if target.current_target_documents == 0 and target.stale_target_documents > 0:
+        st.error(
+            f"{target_label} の自動採録は 0 件です。旧年度PDFは参考情報として確認し、"
+            "現在年度PDFは URL追加 または週次再取得で集めてください。"
+        )
+
     status = probe_lock(lock_path)
     if status.held:
         st.warning(
@@ -803,9 +830,25 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     }.get(severity, st.info)
     severity_fn(banner)
 
-    queue = list_pending_documents(session)
+    view = st.radio(
+        "表示範囲",
+        options=["要対応", f"{target_label}のみ", "自動採録済も含める"],
+        horizontal=True,
+    )
+    if view == f"{target_label}のみ":
+        queue = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+            fiscal_year=settings.target_fiscal_year,
+            include_unknown_fiscal_year=True,
+        )
+    elif view == "自動採録済も含める":
+        queue = list_pending_documents(session, statuses=[*QUEUE_STATUSES, "ingested"])
+    else:
+        queue = list_pending_documents(session)
+
     if not queue:
-        st.success("待機中の文書はありません。")
+        st.success("この表示範囲の文書はありません。")
         return
 
     st.caption(f"待機 {len(queue)} 件")
@@ -814,8 +857,16 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         # title so the operator sees worst-case verdict before
         # expanding the row.
         confidence = summarize_confidence_for_document(session, row.document_id)
+        if row.fiscal_year == settings.target_fiscal_year:
+            year_badge = "現在年度"
+        elif row.fiscal_year is None:
+            year_badge = "年度未確定"
+        elif row.fiscal_year < settings.target_fiscal_year:
+            year_badge = "旧年度"
+        else:
+            year_badge = "未来年度"
         title = (
-            f"[{row.ingest_status}] {row.school_name} ({row.prefecture}) "
+            f"[{row.ingest_status} / {year_badge}] {row.school_name} ({row.prefecture}) "
             f"— fy={row.fiscal_year} doc#{row.document_id} | {confidence.summary_line}"
         )
         with st.expander(title):
@@ -825,14 +876,15 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                 _render_pdf_panel(row)
 
             if row.ingest_status not in SAVE_ELIGIBLE_STATUSES:
-                # school_mismatch and other non-eligible statuses are
-                # read-only here. Saving manual data on a mismatched
-                # school would write to the wrong school_id; bind the
-                # document to the correct school first.
-                st.warning(
-                    "この文書は ``school_mismatch`` です。学校マッピングを"
-                    "先に修正してください。手入力は無効化されています。"
-                )
+                if row.ingest_status == "ingested":
+                    st.info("自動採録済です。PDF原本と抽出結果の確認用として表示しています。")
+                elif row.ingest_status == "school_mismatch":
+                    st.warning(
+                        "この文書は ``school_mismatch`` です。学校マッピングを"
+                        "先に修正してください。手入力は無効化されています。"
+                    )
+                else:
+                    st.info("この状態の文書は確認専用です。")
                 continue
 
             with form_col:

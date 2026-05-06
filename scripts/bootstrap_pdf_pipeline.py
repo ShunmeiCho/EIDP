@@ -148,8 +148,10 @@ def step_discover_pdfs(
     batch_size: int,
     rate_limit: float,
     evidence_log: Path | None,
+    allow_stale_fallback: bool = False,
 ) -> dict[str, int]:
     """Step 3: crawl school sites and download disclosure PDFs."""
+    from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.pdf_discovery import run_pdf_discovery
 
@@ -163,6 +165,8 @@ def step_discover_pdfs(
             rate_limit=rate_limit,
             discovery_methods=["prefecture_aggregator"],
             evidence_path=evidence_log,
+            target_fiscal_year=settings.target_fiscal_year,
+            strict_target_fiscal_year=not allow_stale_fallback,
         )
         session.commit()
     except Exception:
@@ -225,6 +229,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-ingest", action="store_true",
                         help="Stop after discover. Useful when ingest will run separately.")
     parser.add_argument(
+        "--allow-stale-fallback",
+        action="store_true",
+        help=(
+            "Allow older-year PDFs to be downloaded when the target fiscal year "
+            "is not confirmed. Default rejects stale fallback candidates."
+        ),
+    )
+    parser.add_argument(
         "--evidence-log", type=Path,
         default=REPO_ROOT / "output" / "discovery_rejections.jsonl",
     )
@@ -262,6 +274,7 @@ def main(argv: list[str] | None = None) -> int:
         batch_size=args.batch_size,
         rate_limit=args.rate_limit,
         evidence_log=args.evidence_log if str(args.evidence_log) else None,
+        allow_stale_fallback=args.allow_stale_fallback,
     )
 
     if args.skip_ingest:

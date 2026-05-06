@@ -5,8 +5,8 @@ needs ``data/prefecture-aggregators/artifacts/{pref}.pdf`` (or
 ``.xlsx``) already on disk before it can extract URLs into school_site.
 
 This script is dev-side: it reads ``data/prefecture-aggregators/seed.csv``,
-selects rows whose parser is registered AND whose ``verified_status`` is
-``spiked`` or ``downloaded`` (i.e. we have a confirmed artifact URL), then
+selects rows whose parser is registered AND whose ``verified_status`` shows
+we have a confirmed artifact URL, then
 downloads each artifact under ``data/prefecture-aggregators/artifacts/``
 using the same idiomatic name the CLI expects.
 
@@ -26,17 +26,18 @@ from pathlib import Path
 import httpx
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from eidp.scraper.prefecture_aggregator import PARSERS  # noqa: E402
+
 SEED_CSV = REPO_ROOT / "data" / "prefecture-aggregators" / "seed.csv"
 ARTIFACT_DIR = REPO_ROOT / "data" / "prefecture-aggregators" / "artifacts"
 
 # Parsers that exist in src/eidp/scraper/prefecture_aggregator.py PARSERS.
-SUPPORTED_PARSERS = frozenset({
-    "tokyo", "kanagawa", "saitama", "miyagi", "fukuoka",
-    "hyogo", "shizuoka", "okinawa",
-})
+SUPPORTED_PARSERS = frozenset(PARSERS)
 
 # verified_status values that indicate the artifact_url is real.
-DOWNLOADABLE_STATUSES = frozenset({"spiked", "downloaded"})
+DOWNLOADABLE_STATUSES = frozenset({"spiked", "downloaded", "url_found"})
 
 
 def load_seed_rows(seed_csv: Path) -> list[dict[str, str]]:

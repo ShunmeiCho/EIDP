@@ -21,6 +21,7 @@ sys.modules["run_r8_rediscovery_weekly"] = module
 spec.loader.exec_module(module)
 
 select_stale_school_ids = module.select_stale_school_ids
+select_target_missing_school_ids = module.select_target_missing_school_ids
 snapshot_reports = module._snapshot_reports
 resolve_weekly_paths = module.resolve_weekly_paths
 write_last_run = module.write_last_run
@@ -114,6 +115,44 @@ def test_select_stale_school_ids_filters_to_current_work_queue() -> None:
         )
 
         assert ids == [1]
+    finally:
+        session.close()
+
+
+def test_select_target_missing_school_ids_includes_never_ingested_schools() -> None:
+    """The weekly runner must crawl every active school missing current FY,
+    not only schools that already had an older-year PDF."""
+    session = _session()
+    try:
+        _school(session, 1)
+        _site(session, 1, "prefecture_aggregator")
+        _doc(session, 10, 1, 2025)
+
+        _school(session, 2)
+        _site(session, 2, "prefecture_aggregator")
+        _doc(session, 20, 2, 2026)
+
+        _school(session, 3)
+        _site(session, 3, "prefecture_aggregator")
+
+        _school(session, 4, "大学")
+        _site(session, 4, "prefecture_aggregator")
+
+        _school(session, 5)
+        _site(session, 5, "web_search")
+
+        _school(session, 6)
+        _site(session, 6, "prefecture_aggregator", http_status=404)
+        session.flush()
+
+        ids = select_target_missing_school_ids(
+            session,
+            current_fy=2026,
+            methods=["prefecture_aggregator"],
+            school_type="専門学校",
+        )
+
+        assert ids == [1, 3]
     finally:
         session.close()
 
