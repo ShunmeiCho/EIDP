@@ -253,6 +253,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         "scripts/first_setup.bat": (
             "runtime\\python\\python.exe",
             "runtime\\uv.exe",
+            "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "uv.exe",
             "venv",
             ".venv\\Scripts\\python.exe",
@@ -269,6 +270,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         ),
         "scripts/launch.bat": (
             ".venv\\Scripts\\python.exe",
+            "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "Start-Process 'http://localhost:8501'",
             "streamlit run",
             "--server.headless true",
@@ -277,6 +279,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         ),
         "scripts/weekly_run.bat": (
             ".venv\\Scripts\\python.exe",
+            "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "Get-Date -Format yyyyMMdd",
             "run_weekly_target_year_discovery.py",
             'set "RC=%ERRORLEVEL%"',

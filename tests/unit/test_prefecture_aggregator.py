@@ -13,6 +13,7 @@ from pathlib import Path
 
 import fitz  # type: ignore[import-not-found]
 import pytest
+from openpyxl import Workbook  # type: ignore[import-untyped]
 
 from eidp.scraper.prefecture_aggregator import (
     PARSERS,
@@ -26,6 +27,7 @@ from eidp.scraper.prefecture_aggregator import (
     parse_5col,
     parse_6col_indexed,
     parse_html_table,
+    parse_osaka_xlsx,
     parse_tokyo,
     recommend_action,
 )
@@ -144,6 +146,28 @@ def _make_8col_tokyo_pdf(path: Path, schools: list[dict]) -> None:
 
     doc.save(str(path))
     doc.close()
+
+
+def _make_osaka_xlsx(path: Path) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "確認校"
+    ws.append(["大阪府が要件を確認した大学等"])
+    ws.append([None, "確認年度", "学校番号", "確認大学等\nの名称", "確認大学等\nの所在地",
+               "設置者の\n名称", "設置者の主たる\n事務所の所在地", "備考"])
+    ws.append([
+        1,
+        "R1",
+        1104,
+        "大阪電子専門学校",
+        "大阪市天王寺区勝山4-5-6",
+        "学校法人木村学園",
+        "大阪市天王寺区勝山4-5-6",
+        "R8.4より学校所在地変更",
+    ])
+    ws["D3"].hyperlink = "https://www.kimura.ac.jp/disclosure/"
+    wb.save(path)
+    wb.close()
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +347,25 @@ def test_parse_tokyo_extracts_url_from_remarks(tmp_path: Path):
     assert parsed[0].pref == "tokyo"
     assert parsed[0].disclosure_url == "https://example.com/tokyo.pdf"
     assert parsed[0].remarks == "https://example.com/tokyo.pdf"
+
+
+# ---------------------------------------------------------------------------
+# Osaka (XLSX, school code + hyperlink on school-name cell)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_osaka_xlsx_extracts_school_code_and_school_name_hyperlink(tmp_path: Path):
+    xlsx = tmp_path / "osaka.xlsx"
+    _make_osaka_xlsx(xlsx)
+
+    parsed = parse_osaka_xlsx(xlsx)
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "osaka"
+    assert parsed[0].school_code == "1104"
+    assert parsed[0].school_name_raw == "大阪電子専門学校"
+    assert parsed[0].disclosure_url == "https://www.kimura.ac.jp/disclosure/"
+    assert parsed[0].remarks == "R8.4より学校所在地変更"
 
 
 # ---------------------------------------------------------------------------

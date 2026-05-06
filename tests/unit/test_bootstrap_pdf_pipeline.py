@@ -146,6 +146,53 @@ def test_step_download_artifacts_uses_html_suffix_and_source_sidecar(tmp_path: P
     )
 
 
+def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, monkeypatch) -> None:
+    progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
+    progress = module.BootstrapProgressWriter(progress_file)
+    calls: list[object] = []
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append("commit")
+
+        def rollback(self) -> None:
+            calls.append("rollback")
+
+        def close(self) -> None:
+            calls.append("close")
+
+    def fake_run_pdf_discovery(session, storage_dir, **kwargs):  # noqa: ANN001
+        calls.append(session)
+        callback = kwargs["progress_callback"]
+        callback({"crawled": 5, "found": 3, "downloaded": 1, "failed": 0, "skipped": 4}, 10)
+        return {"crawled": 10, "found": 4, "downloaded": 2, "failed": 0, "skipped": 8}
+
+    import eidp.config as config_mod
+    import eidp.db.session as db_session
+    import eidp.scraper.pdf_discovery as pdf_discovery
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: FakeSession())
+    monkeypatch.setattr(pdf_discovery, "run_pdf_discovery", fake_run_pdf_discovery)
+    monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
+
+    stats = module.step_discover_pdfs(
+        storage_dir=tmp_path / "pdfs",
+        batch_size=100,
+        rate_limit=0,
+        evidence_log=None,
+        progress=progress,
+    )
+
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+    assert stats["downloaded"] == 2
+    assert payload["status"] == "running"
+    assert payload["current_step"] == 3
+    assert payload["percent"] > 0.45
+    assert "5/10件確認済み" in payload["message"]
+    assert payload["details"]["downloaded"] == 1
+    assert "commit" in calls
+
+
 def test_step_rebuild_status_includes_all_school_types(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
 

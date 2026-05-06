@@ -17,6 +17,7 @@ cd /d "%~dp0\.."
 set "EIDP_APP_ROOT=%CD%"
 set "PYTHONIOENCODING=utf-8"
 set "PYTHONUTF8=1"
+set "PYTHONPATH=%EIDP_APP_ROOT%\src;%PYTHONPATH%"
 
 REM 2. Make sure data/, logs/, output/ exist before any tool writes.
 if not exist "data"        mkdir "data"

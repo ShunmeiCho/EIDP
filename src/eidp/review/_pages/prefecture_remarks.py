@@ -351,7 +351,7 @@ def _render_seed_coverage(seed_csv: Path) -> None:  # pragma: no cover - Streaml
             for row in rows
         ],
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -399,7 +399,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             for row in rows
         ],
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
     if status == "resolved":

@@ -922,7 +922,7 @@ def _render_url_needed_worklist() -> None:
         st.dataframe(
             display_rows,
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
             height=min(40 + 35 * total, 420),
         )
 
@@ -1474,35 +1474,60 @@ def v1_theme_css() -> str:
         }
         [data-testid="stMetricDelta"] svg { display: none; }
 
-        /* Primary button = dark, secondary = outline */
-        .stButton > button {
-          border-radius: 5px;
-          font-size: 13px;
-          font-weight: 500;
-          padding: 6px 14px;
-          transition: background 120ms ease, border 120ms ease;
+        /* Buttons.
+           Streamlit 1.57 identifies button variants with stBaseButton-* data
+           test ids instead of the older kind="primary" attribute. Style both
+           forms so navigation never degrades into plain-text-looking controls. */
+        .stButton > button,
+        button[data-testid^="stBaseButton-"] {
+          border-radius: 6px !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          min-height: 36px !important;
+          padding: 7px 14px !important;
+          border: 1px solid var(--eidp-border-strong) !important;
+          box-shadow: 0 1px 0 color-mix(in srgb, var(--eidp-ink) 8%, transparent) !important;
+          transition: background 120ms ease, border 120ms ease, box-shadow 120ms ease;
+        }
+        section[data-testid="stSidebar"] .stButton > button,
+        section[data-testid="stSidebar"] button[data-testid^="stBaseButton-"] {
+          justify-content: flex-start !important;
+          width: 100% !important;
         }
         .stButton > button[kind="primary"],
-        .stButton > button[kind="primary"] * {
+        .stButton > button[kind="primary"] *,
+        button[data-testid="stBaseButton-primary"],
+        button[data-testid="stBaseButton-primary"] * {
           background: var(--eidp-ink) !important;
           color: var(--eidp-bg) !important;
           border: 1px solid var(--eidp-ink) !important;
         }
-        .stButton > button[kind="primary"]:hover {
+        .stButton > button[kind="primary"]:hover,
+        button[data-testid="stBaseButton-primary"]:hover {
           background: var(--eidp-ink-mid) !important;
           border-color: var(--eidp-ink-mid) !important;
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--eidp-ink) 16%, transparent) !important;
         }
-        .stButton > button:not([kind="primary"]) {
-          background: var(--eidp-surface) !important;
+        .stButton > button:not([kind="primary"]),
+        button[data-testid="stBaseButton-secondary"],
+        button[data-testid="stBaseButton-tertiary"] {
+          background: color-mix(in srgb, var(--eidp-surface) 92%, var(--eidp-ink) 8%) !important;
           color: var(--eidp-ink) !important;
           border: 1px solid var(--eidp-border) !important;
         }
-        .stButton > button:not([kind="primary"]) * { color: var(--eidp-ink) !important; }
-        .stButton > button:not([kind="primary"]):hover {
+        .stButton > button:not([kind="primary"]) *,
+        button[data-testid="stBaseButton-secondary"] *,
+        button[data-testid="stBaseButton-tertiary"] * {
+          color: var(--eidp-ink) !important;
+        }
+        .stButton > button:not([kind="primary"]):hover,
+        button[data-testid="stBaseButton-secondary"]:hover,
+        button[data-testid="stBaseButton-tertiary"]:hover {
           background: var(--eidp-surface-alt) !important;
           border-color: var(--eidp-border-strong) !important;
         }
-        .stButton > button:disabled {
+        .stButton > button:disabled,
+        button[data-testid^="stBaseButton-"]:disabled {
           opacity: 0.4;
           cursor: not-allowed;
         }
@@ -2286,7 +2311,7 @@ def _render_school_focus_mode(
             type="primary",
             disabled=(picked is None),
             key=f"focus_approve_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             if picked is not None:
                 created, reason = apply_school_alias_proposal(
@@ -2321,7 +2346,7 @@ def _render_school_focus_mode(
         if action_cols[1].button(
             "保留",
             key=f"focus_defer_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             _record_decision(
                 ProposalDecision(
@@ -2342,7 +2367,7 @@ def _render_school_focus_mode(
             "← 前へ",
             disabled=(ptr == 0),
             key=f"focus_prev_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state.school_focus_idx = max(0, ptr - 1)
             st.rerun()
@@ -2351,7 +2376,7 @@ def _render_school_focus_mode(
             "スキップ →",
             disabled=(ptr >= total - 1),
             key=f"focus_skip_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state.school_focus_idx = min(ptr + 1, total - 1)
             st.rerun()

@@ -1022,7 +1022,7 @@ def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streaml
                     }
                     for e in evidence_rows
                 ],
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
     if not row.file_path:
@@ -1059,7 +1059,7 @@ def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streaml
         caption = f"{preview.filename} p.{preview.page_index + 1}"
         if preview.page_count:
             caption += f" / {preview.page_count}"
-        st.image(preview.image_png, caption=caption, use_container_width=True)
+        st.image(preview.image_png, caption=caption, width="stretch")
 
 
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin streamlit shell
@@ -1159,7 +1159,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     st.dataframe(
         manual_queue_table(queue[:50], target_fiscal_year=settings.target_fiscal_year),
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
     if len(queue) > 50:
         st.caption("一覧は先頭50件まで表示しています。絞り込みは学校別タスクから行ってください。")

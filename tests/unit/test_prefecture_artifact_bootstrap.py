@@ -13,7 +13,7 @@ sys.modules["download_prefecture_artifacts"] = module
 spec.loader.exec_module(module)
 
 
-def test_artifact_selection_includes_registered_url_found_hokkaido() -> None:
+def test_artifact_selection_includes_registered_supported_artifacts() -> None:
     rows = [
         {
             "pref_key": "hokkaido",
@@ -36,5 +36,6 @@ def test_artifact_selection_includes_registered_url_found_hokkaido() -> None:
     pref_keys = {row["pref_key"] for row in targets}
 
     assert "hokkaido" in module.SUPPORTED_PARSERS
+    assert "osaka" in module.SUPPORTED_PARSERS
     assert "url_found" in module.DOWNLOADABLE_STATUSES
-    assert pref_keys == {"hokkaido"}
+    assert pref_keys == {"hokkaido", "osaka"}

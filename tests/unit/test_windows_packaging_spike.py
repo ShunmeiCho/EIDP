@@ -357,6 +357,12 @@ def test_runtime_bats_use_venv_python(bat_files: dict[str, str], name: str):
     )
 
 
+@pytest.mark.parametrize("name", ["first_setup.bat", "launch.bat", "weekly_run.bat"])
+def test_runtime_bats_prefer_packaged_src_over_stale_wheel(bat_files: dict[str, str], name: str):
+    body = bat_files[name]
+    assert 'set "PYTHONPATH=%EIDP_APP_ROOT%\\src;%PYTHONPATH%"' in body
+
+
 def test_weekly_run_uses_locale_safe_datestamp(bat_files: dict[str, str]):
     """Windows %DATE% is locale-dependent (JP console can include
     separators/day text). The log filename must come from a stable date

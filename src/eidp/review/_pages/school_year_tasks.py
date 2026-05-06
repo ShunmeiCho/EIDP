@@ -1154,7 +1154,7 @@ def _render_task_lanes(summary: SchoolTaskSummary) -> None:
                     lane.button_label,
                     key=f"school_task_lane_{lane.key}",
                     disabled=lane.count == 0,
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.session_state.update(task_lane_prefill(lane))
                     st.rerun()
@@ -1284,7 +1284,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         }
         for row in rows
     ]
-    st.dataframe(table, hide_index=True, use_container_width=True)
+    st.dataframe(table, hide_index=True, width="stretch")
 
     st.subheader("上位タスク詳細")
     for row in rows[:25]:

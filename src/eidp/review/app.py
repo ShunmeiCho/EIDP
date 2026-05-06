@@ -87,7 +87,7 @@ def _render_nav_button(container, page_id: str, label: str) -> None:
         label,
         key=f"nav_{page_id}",
         type="primary" if selected else "secondary",
-        use_container_width=True,
+        width="stretch",
     ):
         _select_page(page_id)
         st.rerun()

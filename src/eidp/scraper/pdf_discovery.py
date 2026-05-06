@@ -15,6 +15,7 @@ import html as html_lib
 import re
 import time
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +33,8 @@ from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 from eidp.scraper.url_discovery import _is_safe_url
 
 log = structlog.get_logger()
+
+PdfDiscoveryProgressCallback = Callable[[dict[str, int], int], None]
 
 
 def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
@@ -691,6 +694,7 @@ def run_pdf_discovery(
     evidence_path: Path | None = None,
     target_fiscal_year: int | None = None,
     strict_target_fiscal_year: bool = False,
+    progress_callback: PdfDiscoveryProgressCallback | None = None,
 ) -> dict[str, int]:
     """Run PDF discovery for schools with verified URLs but no documents.
 
@@ -708,6 +712,10 @@ def run_pdf_discovery(
         strict_target_fiscal_year: when True, downloads are accepted only when
             PDF text confirms ``target_fiscal_year``. URL/anchor text ranks
             candidates but is not evidence strong enough to store a document.
+        progress_callback: optional callback invoked after each crawled school
+            site with a snapshot of stats and the total site count. Used by the
+            Windows operator UI so the long-running crawl does not sit at one
+            frozen percentage.
     """
     stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
     recorder = EvidenceRecorder(evidence_path)
@@ -757,6 +765,8 @@ def run_pdf_discovery(
     )
 
     log.info("pdf_discovery_start", sites=len(sites))
+    if progress_callback is not None:
+        progress_callback(dict(stats), len(sites))
 
     with httpx.Client(
         timeout=30.0,
@@ -802,6 +812,8 @@ def run_pdf_discovery(
                     reason="discovery_error",
                     extra={"error": str(result.error)},
                 ))
+                if progress_callback is not None:
+                    progress_callback(dict(stats), len(sites))
                 time.sleep(rate_limit)
                 continue
 
@@ -815,6 +827,8 @@ def run_pdf_discovery(
                     page_url=site.url,
                     reason="no_candidates_found",
                 ))
+                if progress_callback is not None:
+                    progress_callback(dict(stats), len(sites))
                 time.sleep(rate_limit)
                 continue
 
@@ -841,6 +855,8 @@ def run_pdf_discovery(
                         score=c.score,
                         reason="all_negative_score",
                     ))
+                if progress_callback is not None:
+                    progress_callback(dict(stats), len(sites))
                 time.sleep(rate_limit)
                 continue
 
@@ -992,6 +1008,8 @@ def run_pdf_discovery(
                     stats["failed"] += 1
 
             session.flush()
+            if progress_callback is not None:
+                progress_callback(dict(stats), len(sites))
             time.sleep(rate_limit)
 
     log.info("pdf_discovery_complete", **stats)

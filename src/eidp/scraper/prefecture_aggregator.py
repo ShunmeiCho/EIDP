@@ -415,6 +415,68 @@ def parse_7col_hokkaido(pdf_path: Path, pref: str = "hokkaido") -> list[PrefScho
     return out
 
 
+def _xlsx_cell_text(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _xlsx_school_code(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    text = clean_cell(str(value))
+    return text or None
+
+
+def parse_osaka_xlsx(xlsx_path: Path) -> list[PrefSchool]:
+    """Osaka official index: XLSX with MEXT 学校番号 and hyperlinks on school-name cells.
+
+    Osaka publishes a spreadsheet rather than a table PDF. The useful URL is
+    usually not visible text; it is the hyperlink attached to the school-name
+    cell. Reading the workbook in normal mode preserves those hyperlinks.
+    """
+    from openpyxl import load_workbook  # type: ignore[import-untyped]
+
+    source_url = artifact_source_url(xlsx_path)
+    out: list[PrefSchool] = []
+    wb = load_workbook(xlsx_path, read_only=False, data_only=True)
+    try:
+        for ws in wb.worksheets:
+            for row in ws.iter_rows():
+                cells = list(row)
+                if len(cells) < 8:
+                    continue
+
+                school_code = _xlsx_school_code(cells[2].value)
+                school_name = clean_school_name(_xlsx_cell_text(cells[3].value))
+                if not school_code or not _looks_like_school_name(school_name):
+                    continue
+
+                hyperlink = cells[3].hyperlink.target if cells[3].hyperlink else ""
+                disclosure_url = _absolute_http_url(str(hyperlink), source_url) if hyperlink else None
+                if not disclosure_url:
+                    remarks_text = _xlsx_cell_text(cells[7].value)
+                    disclosure_url = extract_url(remarks_text)
+
+                out.append(PrefSchool(
+                    pref="osaka",
+                    school_name_raw=school_name,
+                    school_name_norm=norm(school_name),
+                    address=_xlsx_cell_text(cells[4].value),
+                    operator_kind="",
+                    operator_name=_xlsx_cell_text(cells[5].value),
+                    operator_address=_xlsx_cell_text(cells[6].value),
+                    disclosure_url=disclosure_url,
+                    school_code=school_code,
+                    remarks=_xlsx_cell_text(cells[7].value),
+                ))
+    finally:
+        wb.close()
+    return out
+
+
 @dataclass
 class _HtmlLink:
     text: str
@@ -638,6 +700,7 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "shizuoka": lambda p: parse_5col(p, "shizuoka"),
     "okinawa": lambda p: parse_5col(p, "okinawa"),
     "hokkaido": parse_7col_hokkaido,
+    "osaka": parse_osaka_xlsx,
     "akita": lambda p: parse_5col(p, "akita"),
     "aomori": lambda p: parse_html_table(p, "aomori"),
     "chiba": lambda p: parse_6col_indexed(p, "chiba"),

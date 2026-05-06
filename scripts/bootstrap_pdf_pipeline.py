@@ -211,6 +211,7 @@ def step_discover_pdfs(
     batch_size: int,
     rate_limit: float,
     evidence_log: Path | None,
+    progress: BootstrapProgressWriter | None = None,
     allow_stale_fallback: bool = False,
 ) -> dict[str, int]:
     """Step 3: crawl school sites and download disclosure PDFs."""
@@ -221,6 +222,25 @@ def step_discover_pdfs(
     storage_dir.mkdir(parents=True, exist_ok=True)
     session = SessionLocal()
     try:
+        def update_progress(stats: dict[str, int], total_sites: int) -> None:
+            if progress is None:
+                return
+            crawled = stats.get("crawled", 0)
+            ratio = (crawled / total_sites) if total_sites else 1.0
+            # Step 3 owns the 45% -> 75% range. Leave 75% for the transition
+            # into ingest so the UI does not imply Step 4 has started early.
+            percent = min(0.74, 0.45 + (0.29 * ratio))
+            progress.write(
+                status="running",
+                current_step=3,
+                percent=percent,
+                message=(
+                    "学校サイトから対象年度PDFを探索しています。"
+                    f"{crawled}/{total_sites}件確認済み / PDF {stats.get('downloaded', 0)}件"
+                ),
+                details={"sites_total": total_sites, **stats},
+            )
+
         stats = run_pdf_discovery(
             session,
             storage_dir,
@@ -230,6 +250,7 @@ def step_discover_pdfs(
             evidence_path=evidence_log,
             target_fiscal_year=settings.target_fiscal_year,
             strict_target_fiscal_year=not allow_stale_fallback,
+            progress_callback=update_progress,
         )
         session.commit()
     except Exception:
@@ -459,6 +480,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         batch_size=args.batch_size,
         rate_limit=args.rate_limit,
         evidence_log=args.evidence_log if str(args.evidence_log) else None,
+        progress=progress,
         allow_stale_fallback=args.allow_stale_fallback,
     )
 
