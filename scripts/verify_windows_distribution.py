@@ -232,6 +232,14 @@ def _reject_text(check: ZipCheck, body: str, member: str, needle: str) -> None:
         check.fail(f"{member} contains forbidden token: {needle}")
 
 
+def _reject_bare_rc_assignment(check: ZipCheck, body: str, member: str) -> None:
+    """Catch stale launcher lines like ``"RC=-1"`` that cmd tries to execute."""
+    for lineno, line in enumerate(body.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith('"RC='):
+            check.fail(f"{member} line {lineno} has bare RC assignment; use set \"RC=%ERRORLEVEL%\"")
+
+
 def _check_bat_common(check: ZipCheck, member: str, body: str) -> None:
     _require_text(check, body, member, 'cd /d "%~dp0\\.."')
     _require_text(check, body, member, 'set "EIDP_APP_ROOT=%CD%"')
@@ -325,6 +333,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         body = _read_zip_text(check, member)
         if body is None:
             continue
+        _reject_bare_rc_assignment(check, body, member)
         if member.startswith("scripts/") and member != "scripts/uninstall.bat":
             _check_bat_common(check, member, body)
         for token in tokens:

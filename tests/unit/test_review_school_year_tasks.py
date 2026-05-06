@@ -438,7 +438,28 @@ def test_bootstrap_progress_stale_when_running_but_lock_released() -> None:
 
     assert reason is not None
     assert "処理ロックは解除されています" in reason
-    assert bootstrap_progress_stale_reason(progress, lock_held=True, now=datetime(2026, 5, 7, 0, 52, 25)) is None
+
+
+def test_bootstrap_progress_warns_when_lock_held_but_not_updating() -> None:
+    progress = BootstrapProgress(
+        status="running",
+        current_step=3,
+        total_steps=5,
+        percent=0.45,
+        message="学校サイトから対象年度PDFを探索しています。",
+        updated_at="2026-05-07T00:47:25",
+    )
+
+    reason = bootstrap_progress_stale_reason(
+        progress,
+        lock_held=True,
+        now=datetime(2026, 5, 7, 0, 52, 25),
+        stale_after_seconds=180,
+    )
+
+    assert reason is not None
+    assert "処理はまだ実行中" in reason
+    assert "診断ログ" in reason
 
 
 def test_start_initial_url_bootstrap_starts_background_process(tmp_path, monkeypatch) -> None:

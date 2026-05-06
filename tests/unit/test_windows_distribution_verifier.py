@@ -279,6 +279,20 @@ def test_verify_core_zip_rejects_stale_launch_bat_contract(tmp_path: Path) -> No
     assert any("scripts/launch.bat missing required token" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_bare_rc_assignment_in_root_launcher(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["EIDP-start.bat"] = entries["EIDP-start.bat"].replace(
+        'set "RC=%ERRORLEVEL%"',
+        '"RC=-1"',
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("bare RC assignment" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_launcher_that_does_not_open_browser(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/launch.bat"] = entries["scripts/launch.bat"].replace(

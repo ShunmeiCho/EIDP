@@ -565,11 +565,14 @@ def bootstrap_progress_stale_reason(
     """Return an operator-facing reason when a running progress file is no longer credible."""
     if progress.status != "running":
         return None
-    if lock_held:
-        return None
 
     updated_at = _parse_progress_datetime(progress.updated_at)
     if updated_at is None:
+        if lock_held:
+            return (
+                "処理は実行中ですが、進行状況の更新時刻を読めません。"
+                "診断ログが増えているか確認してください。"
+            )
         return (
             "進行状況ファイルは実行中のままですが、処理ロックは解除されています。"
             "前回処理が停止した可能性があります。"
@@ -578,6 +581,12 @@ def bootstrap_progress_stale_reason(
     current_time = now or datetime.now(tz=updated_at.tzinfo)
     age = (current_time - updated_at).total_seconds()
     if age >= stale_after_seconds:
+        if lock_held:
+            return (
+                "処理はまだ実行中ですが、進行状況がしばらく更新されていません。"
+                "学校サイトの応答待ち、通信待ち、または大きなPDF確認中の可能性があります。"
+                "数分後に更新しても変わらない場合は診断ログを確認してください。"
+            )
         return (
             "進行状況ファイルは実行中のままですが、処理ロックは解除されています。"
             "前回処理が途中で停止した可能性があります。診断ログを確認して、もう一度開始してください。"
