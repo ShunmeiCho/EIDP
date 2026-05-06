@@ -56,6 +56,14 @@ from download_prefecture_artifacts import (  # noqa: E402
 TOTAL_BOOTSTRAP_STEPS = 5
 
 
+def _bounded_step_percent(start: float, end: float, done: int, total: int) -> float:
+    """Map a per-item stage count into the stage's progress range."""
+    if total <= 0:
+        return end
+    ratio = max(0.0, min(done / total, 1.0))
+    return start + ((end - start) * ratio)
+
+
 class BootstrapProgressWriter:
     """Small JSON status writer for the Streamlit operator UI."""
 
@@ -124,6 +132,7 @@ def step_download_artifacts(
     artifact_dir: Path,
     only: Iterable[str] | None,
     force: bool,
+    progress: BootstrapProgressWriter | None = None,
 ) -> tuple[list[str], list[tuple[str, str]]]:
     """Step 1: ensure each pref artifact is on disk. Returns
     ``(downloaded_or_present, failed)``."""
@@ -133,7 +142,8 @@ def step_download_artifacts(
 
     ok: list[str] = []
     failed: list[tuple[str, str]] = []
-    for row in targets:
+    total = len(targets)
+    for index, row in enumerate(targets, start=1):
         pref = row["pref_key"]
         url = row["artifact_url"]
         dest = artifact_dir / f"{pref}{artifact_suffix(row)}"
@@ -141,6 +151,20 @@ def step_download_artifacts(
             write_source_url_sidecar(dest, url)
             print(f"[step1] {pref}: already on disk ({dest.name})")
             ok.append(pref)
+            if progress is not None:
+                progress.write(
+                    status="running",
+                    current_step=1,
+                    percent=_bounded_step_percent(0.05, 0.25, index, total),
+                    message=f"都道府県公開データを取得しています。{index}/{total}件: {pref}",
+                    details={
+                        "prefectures_total": total,
+                        "prefectures_done": index,
+                        "prefecture": pref,
+                        "prefectures_ok": len(ok),
+                        "prefectures_failed": len(failed),
+                    },
+                )
             continue
         print(f"[step1] {pref}: downloading {url}")
         try:
@@ -150,6 +174,20 @@ def step_download_artifacts(
         except Exception as exc:
             print(f"[step1] {pref}: FAILED {exc}")
             failed.append((pref, str(exc)))
+        if progress is not None:
+            progress.write(
+                status="running",
+                current_step=1,
+                percent=_bounded_step_percent(0.05, 0.25, index, total),
+                message=f"都道府県公開データを取得しています。{index}/{total}件: {pref}",
+                details={
+                    "prefectures_total": total,
+                    "prefectures_done": index,
+                    "prefecture": pref,
+                    "prefectures_ok": len(ok),
+                    "prefectures_failed": len(failed),
+                },
+            )
     return ok, failed
 
 
@@ -158,6 +196,7 @@ def step_aggregate(
     pref_keys: list[str],
     artifact_dir: Path,
     output_dir: Path,
+    progress: BootstrapProgressWriter | None = None,
 ) -> dict[str, dict[str, int]]:
     """Step 2: invoke prefecture-aggregate apply for each prefecture."""
     from eidp.db.session import SessionLocal
@@ -170,7 +209,8 @@ def step_aggregate(
     results: dict[str, dict[str, int]] = {}
     session = SessionLocal()
     try:
-        for pref in pref_keys:
+        total = len(pref_keys)
+        for index, pref in enumerate(pref_keys, start=1):
             artifact = next(
                 (
                     candidate
@@ -185,6 +225,19 @@ def step_aggregate(
             )
             if artifact is None:
                 print(f"[step2] {pref}: skip (no artifact)")
+                if progress is not None:
+                    progress.write(
+                        status="running",
+                        current_step=2,
+                        percent=_bounded_step_percent(0.25, 0.45, index, total),
+                        message=f"都道府県データから学校URLを登録しています。{index}/{total}件: {pref}",
+                        details={
+                            "prefectures_total": total,
+                            "prefectures_done": index,
+                            "prefecture": pref,
+                            "prefectures_aggregated": len(results),
+                        },
+                    )
                 continue
             report = aggregate(session, pref, artifact)
             stats = apply_writer_plan(session, report)
@@ -196,6 +249,23 @@ def step_aggregate(
                 "upgraded": int(stats.get("upgraded", 0)),
                 "skipped": int(stats.get("skipped", 0)),
             }
+            if progress is not None:
+                progress.write(
+                    status="running",
+                    current_step=2,
+                    percent=_bounded_step_percent(0.25, 0.45, index, total),
+                    message=f"都道府県データから学校URLを登録しています。{index}/{total}件: {pref}",
+                    details={
+                        "prefectures_total": total,
+                        "prefectures_done": index,
+                        "prefecture": pref,
+                        "prefectures_aggregated": len(results),
+                        "extracted": int(report.extracted_total),
+                        "matched": int(report.db_matched),
+                        "added": int(stats.get("added", 0)),
+                        "upgraded": int(stats.get("upgraded", 0)),
+                    },
+                )
         session.commit()
     except Exception:
         session.rollback()
@@ -440,6 +510,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         artifact_dir=args.artifact_dir,
         only=only,
         force=args.force_redownload,
+        progress=progress,
     )
     if not ok:
         print("ERROR: no prefecture artifacts available. Cannot proceed.")
@@ -460,6 +531,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         pref_keys=ok,
         artifact_dir=args.artifact_dir,
         output_dir=args.aggregate_output,
+        progress=progress,
     )
 
     if args.skip_discover:

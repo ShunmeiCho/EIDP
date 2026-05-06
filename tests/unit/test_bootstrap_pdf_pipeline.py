@@ -146,6 +146,101 @@ def test_step_download_artifacts_uses_html_suffix_and_source_sidecar(tmp_path: P
     )
 
 
+def test_step_download_artifacts_updates_progress_per_prefecture(tmp_path: Path, monkeypatch) -> None:
+    seed_csv = tmp_path / "seed.csv"
+    seed_csv.write_text(
+        "\n".join([
+            "pref_key,artifact_url,artifact_format,verified_status",
+            "gunma,https://www.pref.gunma.jp/page/12959.html,html,url_found",
+            "ehime,https://www.pref.ehime.jp/list.xlsx,xlsx,url_found",
+        ]),
+        encoding="utf-8",
+    )
+    artifact_dir = tmp_path / "artifacts"
+    progress_file = tmp_path / "logs" / "bootstrap.json"
+    progress = module.BootstrapProgressWriter(progress_file)
+
+    monkeypatch.setattr(module, "SUPPORTED_PARSERS", frozenset({"gunma", "ehime"}))
+
+    def fake_download(url: str, dest: Path) -> None:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"dummy")
+        module.write_source_url_sidecar(dest, url)
+
+    monkeypatch.setattr(module, "download_artifact", fake_download)
+
+    ok, failed = module.step_download_artifacts(
+        seed_csv=seed_csv,
+        artifact_dir=artifact_dir,
+        only=None,
+        force=True,
+        progress=progress,
+    )
+
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+    assert ok == ["gunma", "ehime"]
+    assert failed == []
+    assert payload["current_step"] == 1
+    assert payload["percent"] == 0.25
+    assert "2/2件: ehime" in payload["message"]
+    assert payload["details"]["prefectures_done"] == 2
+    assert payload["details"]["prefectures_ok"] == 2
+
+
+def test_step_aggregate_updates_progress_per_prefecture(tmp_path: Path, monkeypatch) -> None:
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    (artifact_dir / "gunma.html").write_text("<html></html>", encoding="utf-8")
+    (artifact_dir / "ehime.xlsx").write_bytes(b"dummy")
+    progress_file = tmp_path / "logs" / "bootstrap.json"
+    progress = module.BootstrapProgressWriter(progress_file)
+    calls: list[object] = []
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append("commit")
+
+        def rollback(self) -> None:
+            calls.append("rollback")
+
+        def close(self) -> None:
+            calls.append("close")
+
+    def fake_aggregate(session, pref, artifact):  # noqa: ANN001
+        calls.append((session, pref, artifact.name))
+        return SimpleNamespace(extracted_total=3, db_matched=2)
+
+    def fake_apply_writer_plan(session, report):  # noqa: ANN001, ARG001
+        return {"added": 1, "upgraded": 1, "skipped": 1}
+
+    import eidp.db.session as db_session
+    import eidp.scraper.prefecture_aggregator as pa
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(pa, "aggregate", fake_aggregate)
+    monkeypatch.setattr(pa, "apply_writer_plan", fake_apply_writer_plan)
+
+    results = module.step_aggregate(
+        pref_keys=["gunma", "ehime"],
+        artifact_dir=artifact_dir,
+        output_dir=tmp_path / "out",
+        progress=progress,
+    )
+
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+    assert results == {
+        "gunma": {"extracted": 3, "matched": 2, "added": 1, "upgraded": 1, "skipped": 1},
+        "ehime": {"extracted": 3, "matched": 2, "added": 1, "upgraded": 1, "skipped": 1},
+    }
+    assert payload["current_step"] == 2
+    assert payload["percent"] == 0.45
+    assert "2/2件: ehime" in payload["message"]
+    assert payload["details"]["prefectures_aggregated"] == 2
+    assert payload["details"]["added"] == 1
+    assert "commit" in calls
+
+
 def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, monkeypatch) -> None:
     progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
     progress = module.BootstrapProgressWriter(progress_file)
