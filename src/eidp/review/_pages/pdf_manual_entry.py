@@ -30,7 +30,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -40,6 +40,7 @@ from eidp.extraction_confidence import ConfidenceVerdict
 from eidp.pipeline.manual_entry import (
     ALLOWED_METHODS,
     DepartmentEntry,
+    DeptChangeType,
     ManualEntryResult,
     save_manual_entries,
 )
@@ -60,6 +61,7 @@ QUEUE_STATUSES: tuple[str, ...] = (
     "review_pending",
     "school_mismatch",
 )
+MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
 
 
 @dataclass(frozen=True)
@@ -132,6 +134,12 @@ _VERDICT_RANK: dict[ConfidenceVerdict, int] = {
     "auto_flag": 1,
     "auto": 0,
 }
+
+
+def _verdict_rank(verdict: ConfidenceVerdict | None) -> int:
+    if verdict is None:
+        return 0
+    return _VERDICT_RANK.get(verdict, 0)
 
 
 @dataclass(frozen=True)
@@ -225,7 +233,7 @@ def _worst_verdict(panels: list[RowPanel]) -> ConfidenceVerdict | None:
         return None
     return max(
         (p.panel.verdict for p in panels),
-        key=lambda v: _VERDICT_RANK.get(v, 0),
+        key=_verdict_rank,
     )
 
 
@@ -235,7 +243,7 @@ def _summary_line(panels: list[RowPanel], worst: ConfidenceVerdict | None) -> st
     n_total = len(panels)
     n_review = sum(1 for p in panels if p.panel.verdict in ("review_pending", "rejected"))
     # Pick the panel with the worst verdict to render the inline line.
-    target = max(panels, key=lambda p: _VERDICT_RANK.get(p.panel.verdict, 0))
+    target = max(panels, key=lambda p: _verdict_rank(p.panel.verdict))
     base = panel_summary_line(target.panel)
     if n_review > 0:
         return f"{base}  / 要レビュー {n_review}/{n_total}"
@@ -253,6 +261,7 @@ def list_pending_documents(
     statuses: Iterable[str] = QUEUE_STATUSES,
     fiscal_year: int | None = None,
     include_unknown_fiscal_year: bool = False,
+    document_id: int | None = None,
     limit: int = 200,
 ) -> list[QueueRow]:
     """Return the manual-entry queue, ordered by oldest-first.
@@ -268,6 +277,8 @@ def list_pending_documents(
         .filter(Document.ingest_status.in_(list(statuses)))
         .order_by(Document.id.asc())
     )
+    if document_id is not None:
+        query = query.filter(Document.id == document_id)
     if fiscal_year is not None:
         if include_unknown_fiscal_year:
             from sqlalchemy import or_
@@ -289,6 +300,30 @@ def list_pending_documents(
         )
         for doc, school in rows
     ]
+
+
+def coerce_focus_document_id(value: object) -> int | None:
+    if not isinstance(value, int | str):
+        return None
+    try:
+        document_id = int(value)
+    except ValueError:
+        return None
+    return document_id if document_id > 0 else None
+
+
+def prioritize_queue_document(
+    queue: list[QueueRow],
+    *,
+    document_id: int | None,
+) -> list[QueueRow]:
+    """Move the focused document to the top without duplicating it."""
+    if document_id is None:
+        return queue
+    for index, row in enumerate(queue):
+        if row.document_id == document_id:
+            return [row, *queue[:index], *queue[index + 1:]]
+    return queue
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +369,7 @@ def build_pdf_preview(
         return PdfPreview(path=path, exists=True, error=f"page_index must be >= 0; got {page_index}")
 
     try:
-        import fitz  # type: ignore[import-not-found]  # PyMuPDF
+        import fitz  # PyMuPDF
 
         pdf_bytes = path.read_bytes()
         with fitz.open(str(path)) as doc:
@@ -399,7 +434,7 @@ def _coerce_float(value: Any, field_name: str, errors: list[ValidationError], *,
 _VALID_DEPT_CHANGE = {"新設", "廃科", "名称変更", "統合", None, ""}
 
 
-def form_data_to_entries(rows: list[dict]) -> FormValidation:
+def form_data_to_entries(rows: list[dict[str, Any]]) -> FormValidation:
     """Convert the per-department UI form dict list to validated entries.
 
     Each input row is a dict with keys::
@@ -427,13 +462,14 @@ def form_data_to_entries(rows: list[dict]) -> FormValidation:
             ))
             continue
 
-        dept_change = row.get("dept_change") or None
-        if dept_change not in _VALID_DEPT_CHANGE:
+        dept_change_raw = row.get("dept_change") or None
+        if dept_change_raw not in _VALID_DEPT_CHANGE:
             fv.errors.append(ValidationError(
                 field=f"{prefix}.dept_change",
-                message=f"must be one of 新設/廃科/名称変更/統合/None; got {dept_change!r}",
+                message=f"must be one of 新設/廃科/名称変更/統合/None; got {dept_change_raw!r}",
             ))
             continue
+        dept_change = cast("DeptChangeType | None", dept_change_raw)
 
         capacity = _coerce_int(row.get("capacity"), f"{prefix}.capacity", fv.errors)
         enrollment = _coerce_int(row.get("enrollment"), f"{prefix}.enrollment", fv.errors)
@@ -451,7 +487,7 @@ def form_data_to_entries(rows: list[dict]) -> FormValidation:
         duration_years: float | None = None
         if duration_years_raw not in (None, ""):
             try:
-                duration_years = float(duration_years_raw)
+                duration_years = float(str(duration_years_raw))
             except (TypeError, ValueError):
                 fv.errors.append(ValidationError(
                     field=f"{prefix}.duration_years",
@@ -477,7 +513,7 @@ def form_data_to_entries(rows: list[dict]) -> FormValidation:
             dropouts=dropouts,
             dropout_rate=dropout_rate,
             notes=(row.get("notes") or "").strip() or None,
-            dept_change=dept_change if dept_change else None,  # type: ignore[arg-type]
+            dept_change=dept_change,
             old_name=(row.get("old_name") or "").strip() or None,
             related_dept_id=row.get("related_dept_id") or None,
         ))
@@ -497,7 +533,7 @@ def save_with_lock(
     fiscal_year: int,
     entries: list[DepartmentEntry],
     method: str = "manual",
-    confidence_breakdown: dict | None = None,
+    confidence_breakdown: dict[str, Any] | None = None,
     actor: str = "operator",
     reason: str | None = None,
     lock_path: Path,
@@ -567,7 +603,7 @@ def submit_form(
     *,
     document_id: int,
     fiscal_year: int,
-    rows: list[dict],
+    rows: list[dict[str, Any]],
     reason: str | None,
     lock_path: Path,
 ) -> tuple[FormValidation, SaveOutcome | None]:
@@ -641,7 +677,7 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
         )
         reason = st.text_input("操作メモ (reason)", key=f"reason_{row.document_id}")
 
-        form_rows: list[dict] = []
+        form_rows: list[dict[str, Any]] = []
         for i, _ in enumerate(st.session_state[state_key]):
             st.markdown(f"**学科 #{i + 1}**")
             c = st.columns([2, 1, 1, 1, 1, 1, 1])
@@ -703,6 +739,9 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
             return
         if not outcome.ok:
             st.error(f"保存できませんでした: {outcome.error}")
+            return
+        if outcome.result is None:
+            st.error("保存結果を確認できませんでした。再読み込みして確認してください。")
             return
         st.success(
             f"保存しました。学科 {outcome.result.rows_written} 件、"
@@ -846,6 +885,26 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         queue = list_pending_documents(session, statuses=[*QUEUE_STATUSES, "ingested"])
     else:
         queue = list_pending_documents(session)
+
+    focus_document_id = coerce_focus_document_id(st.session_state.get(MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY))
+    if focus_document_id is not None:
+        queue = prioritize_queue_document(queue, document_id=focus_document_id)
+        if not queue or queue[0].document_id != focus_document_id:
+            focused_rows = list_pending_documents(
+                session,
+                statuses=[*QUEUE_STATUSES, "ingested"],
+                document_id=focus_document_id,
+                limit=1,
+            )
+            if focused_rows:
+                queue = [focused_rows[0], *queue]
+        if queue and queue[0].document_id == focus_document_id:
+            st.info(f"学校別タスクから doc#{focus_document_id} を先頭表示しています。")
+            if st.button("通常順に戻す"):
+                st.session_state.pop(MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY, None)
+                st.rerun()
+        else:
+            st.warning(f"doc#{focus_document_id} は現在のPDF確認キューにありません。")
 
     if not queue:
         st.success("この表示範囲の文書はありません。")

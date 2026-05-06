@@ -19,6 +19,7 @@ from eidp.review._pages.school_year_tasks import (
     latest_bootstrap_log,
     latest_bootstrap_progress,
     list_school_year_tasks,
+    manual_entry_prefill_for_row,
     needs_initial_url_bootstrap,
     next_action_for_status,
     read_bootstrap_progress,
@@ -481,6 +482,31 @@ def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_
         assert by_id[2].latest_site_discovery_method == "prefecture_aggregator"
         assert by_id[2].latest_document_id == 21
         assert by_id[2].latest_document_fiscal_year == 2024
+    finally:
+        session.close()
+
+
+def test_manual_entry_prefill_for_row_focuses_latest_document() -> None:
+    session = _session()
+    try:
+        _school(session, 4, name="手入力学校")
+        _status(
+            session,
+            4,
+            pdf_status="confirmed_target",
+            extract_status="parse_failed",
+            blocking_reason="parse_failed",
+        )
+        _doc(session, 40, 4, fy=2026, status="parse_failed")
+        session.commit()
+
+        row = list_school_year_tasks(session, fiscal_year=2026, school_type="専門学校")[0]
+
+        assert row.next_action == "手入力"
+        assert manual_entry_prefill_for_row(row) == {
+            "selected_page": school_year_tasks.MANUAL_ENTRY_PAGE_ID,
+            school_year_tasks.MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY: 40,
+        }
     finally:
         session.close()
 

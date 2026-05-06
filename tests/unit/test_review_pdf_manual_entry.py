@@ -34,8 +34,10 @@ from eidp.review._pages.pdf_manual_entry import (
     QUEUE_STATUSES,
     SaveOutcome,
     build_pdf_preview,
+    coerce_focus_document_id,
     form_data_to_entries,
     list_pending_documents,
+    prioritize_queue_document,
     resolve_pdf_path,
     save_with_lock,
 )
@@ -130,6 +132,19 @@ def test_queue_respects_limit(engine):
         assert len(rows) == 3
 
 
+def test_queue_can_filter_to_one_document(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Doc学校")
+        first = _seed_doc(session, school, status="ocr_pending", file_hash_seed="doc1")
+        second = _seed_doc(session, school, status="parse_failed", file_hash_seed="doc2")
+        session.commit()
+
+        rows = list_pending_documents(session, document_id=second.id)
+
+        assert [r.document_id for r in rows] == [second.id]
+        assert first.id not in {r.document_id for r in rows}
+
+
 def test_queue_can_include_ingested_and_filter_target_year(engine):
     with Session(engine) as session:
         school = _seed_school(session, name="FY学校")
@@ -147,6 +162,22 @@ def test_queue_can_include_ingested_and_filter_target_year(engine):
 
         assert [r.document_id for r in rows] == [target_doc.id, review_doc.id]
         assert old_doc.id not in {r.document_id for r in rows}
+
+
+def test_focus_document_helpers_move_requested_row_to_top(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Focus学校")
+        first = _seed_doc(session, school, status="ocr_pending", file_hash_seed="focus1")
+        second = _seed_doc(session, school, status="parse_failed", file_hash_seed="focus2")
+        session.commit()
+
+        rows = list_pending_documents(session)
+        focused = prioritize_queue_document(rows, document_id=second.id)
+
+        assert coerce_focus_document_id(str(second.id)) == second.id
+        assert coerce_focus_document_id("bad") is None
+        assert [row.document_id for row in focused] == [second.id, first.id]
+        assert prioritize_queue_document(rows, document_id=None) == rows
 
 
 # ---------------------------------------------------------------------------

@@ -93,6 +93,9 @@ SCHOOL_TYPE_FILTER_LABELS = ("すべて", "専門学校", "大学")
 URL_SUBMISSION_PAGE_ID = "url"
 URL_SUBMISSION_QUERY_STATE_KEY = "url_submission_school_query"
 URL_SUBMISSION_SCHOOL_ID_STATE_KEY = "url_submission_school_id"
+MANUAL_ENTRY_PAGE_ID = "manual_entry"
+MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
+MANUAL_ENTRY_ACTIONS = {"OCR/手入力", "手入力", "PDF確認", "前年差分確認"}
 
 BLOCKING_REASON_LABELS: dict[str, str] = {
     "no_url": "URL追加が必要",
@@ -166,6 +169,14 @@ def url_submission_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
         URL_SUBMISSION_QUERY_STATE_KEY: row.school_name,
         URL_SUBMISSION_SCHOOL_ID_STATE_KEY: row.school_id,
     }
+
+
+def manual_entry_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
+    """Return Streamlit session_state values that focus PDF確認・手入力."""
+    payload: dict[str, object] = {"selected_page": MANUAL_ENTRY_PAGE_ID}
+    if row.latest_document_id is not None:
+        payload[MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY] = row.latest_document_id
+    return payload
 
 
 def blocking_reason_label(reason: str | None) -> str:
@@ -1016,6 +1027,13 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                     key=f"url_submission_prefill_{row.school_id}_{row.fiscal_year}",
                 ):
                     st.session_state.update(url_submission_prefill_for_row(row))
+                    st.rerun()
+            if row.next_action in MANUAL_ENTRY_ACTIONS and row.latest_document_id is not None:
+                if st.button(
+                    "このPDFを確認・手入力",
+                    key=f"manual_entry_prefill_{row.school_id}_{row.latest_document_id}",
+                ):
+                    st.session_state.update(manual_entry_prefill_for_row(row))
                     st.rerun()
             st.write(
                 {
