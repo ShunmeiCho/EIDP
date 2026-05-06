@@ -22,12 +22,15 @@ from eidp.review._pages.school_year_tasks import (
     needs_initial_url_bootstrap,
     next_action_for_status,
     read_bootstrap_progress,
+    read_weekly_last_run,
     school_task_summary,
     school_type_from_filter_label,
     site_url_type_label,
     start_initial_url_bootstrap,
+    start_weekly_rediscovery,
     status_label,
     url_submission_prefill_for_row,
+    weekly_command,
 )
 
 
@@ -244,6 +247,17 @@ def test_bootstrap_command_uses_pipeline_script_and_lock_path(tmp_path) -> None:
     ]
 
 
+def test_weekly_command_uses_target_year_runner_for_all_schools(tmp_path) -> None:
+    cmd = weekly_command(tmp_path, python_executable="python.exe")
+
+    assert cmd == [
+        "python.exe",
+        str(tmp_path / "scripts" / "run_weekly_target_year_discovery.py"),
+        "--school-type",
+        "all",
+    ]
+
+
 def test_latest_bootstrap_log_and_progress_return_newest_files(tmp_path) -> None:
     logs = tmp_path / "logs"
     logs.mkdir()
@@ -341,6 +355,45 @@ def test_start_initial_url_bootstrap_starts_background_process(tmp_path, monkeyp
     assert progress.message == "初回取得を準備中です。"
 
 
+def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatch) -> None:
+    script = tmp_path / "scripts" / "run_weekly_target_year_discovery.py"
+    script.parent.mkdir(parents=True)
+    script.write_text("print('weekly')", encoding="utf-8")
+    lock_path = tmp_path / "data" / ".lock"
+    captured: dict[str, object] = {}
+
+    class FakeProcess:
+        pid = 5678
+
+    def fake_popen(cmd, **kwargs):  # noqa: ANN001
+        captured["cmd"] = cmd
+        captured["kwargs"] = kwargs
+        return FakeProcess()
+
+    monkeypatch.setattr(school_year_tasks.subprocess, "Popen", fake_popen)
+
+    result = start_weekly_rediscovery(
+        tmp_path,
+        lock_path=lock_path,
+        python_executable="python.exe",
+        now=datetime(2026, 5, 6, 11, 0, 0),
+    )
+
+    assert result.started is True
+    assert result.pid == 5678
+    assert result.log_path == tmp_path / "logs" / "weekly-rediscovery-20260506-110000.log"
+    assert result.last_run_path == tmp_path / "data" / "output" / "last_run.json"
+    assert captured["cmd"] == [
+        "python.exe",
+        str(script),
+        "--school-type",
+        "all",
+    ]
+    kwargs = captured["kwargs"]
+    assert kwargs["cwd"] == tmp_path
+    assert kwargs["env"]["EIDP_APP_ROOT"] == str(tmp_path)
+
+
 def test_start_initial_url_bootstrap_refuses_when_app_lock_is_held(tmp_path) -> None:
     script = tmp_path / "scripts" / "bootstrap_pdf_pipeline.py"
     script.parent.mkdir(parents=True)
@@ -352,6 +405,42 @@ def test_start_initial_url_bootstrap_refuses_when_app_lock_is_held(tmp_path) -> 
 
     assert result.started is False
     assert "別の処理" in result.message
+
+
+def test_start_weekly_rediscovery_refuses_when_app_lock_is_held(tmp_path) -> None:
+    script = tmp_path / "scripts" / "run_weekly_target_year_discovery.py"
+    script.parent.mkdir(parents=True)
+    script.write_text("print('weekly')", encoding="utf-8")
+    lock_path = tmp_path / "data" / ".lock"
+
+    with acquire_lock(lock_path, owner="bootstrap_pdfs"):
+        result = start_weekly_rediscovery(tmp_path, lock_path=lock_path)
+
+    assert result.started is False
+    assert "別の処理" in result.message
+
+
+def test_read_weekly_last_run_returns_payload_or_none(tmp_path) -> None:
+    assert read_weekly_last_run(tmp_path) is None
+
+    last_run = tmp_path / "data" / "output" / "last_run.json"
+    last_run.parent.mkdir(parents=True)
+    last_run.write_text(
+        json.dumps(
+            {
+                "status": "success",
+                "target_missing_school_count": 10,
+                "new_document_count": 2,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = read_weekly_last_run(tmp_path)
+
+    assert payload is not None
+    assert payload["status"] == "success"
+    assert payload["new_document_count"] == 2
 
 
 def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_context() -> None:

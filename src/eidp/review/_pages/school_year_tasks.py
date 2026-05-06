@@ -70,6 +70,7 @@ class BootstrapLaunchResult:
     message: str
     log_path: Path | None = None
     progress_path: Path | None = None
+    last_run_path: Path | None = None
     pid: int | None = None
 
 
@@ -353,6 +354,21 @@ def latest_bootstrap_progress(app_root: Path) -> BootstrapProgress | None:
     return read_bootstrap_progress(path)
 
 
+def latest_weekly_last_run_path(app_root: Path) -> Path:
+    return app_root / "data" / "output" / "last_run.json"
+
+
+def read_weekly_last_run(app_root: Path) -> dict[str, Any] | None:
+    path = latest_weekly_last_run_path(app_root)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
 def _write_initial_bootstrap_progress(*, progress_path: Path, log_path: Path, started_at: datetime) -> None:
     payload = {
         "status": "running",
@@ -410,6 +426,19 @@ def bootstrap_command(
     if progress_path is not None:
         cmd.extend(["--progress-file", str(progress_path)])
     return cmd
+
+
+def weekly_command(
+    app_root: Path,
+    *,
+    python_executable: str | None = None,
+) -> list[str]:
+    return [
+        python_executable or sys.executable,
+        str(app_root / "scripts" / "run_weekly_target_year_discovery.py"),
+        "--school-type",
+        "all",
+    ]
 
 
 def start_initial_url_bootstrap(
@@ -493,6 +522,78 @@ def start_initial_url_bootstrap(
         message="初回URL/PDF取得を開始しました。完了後、この画面を更新してください。",
         log_path=log_path,
         progress_path=progress_path,
+        pid=proc.pid,
+    )
+
+
+def start_weekly_rediscovery(
+    app_root: Path,
+    *,
+    lock_path: Path,
+    python_executable: str | None = None,
+    now: datetime | None = None,
+) -> BootstrapLaunchResult:
+    """Start the target-fiscal-year weekly runner from the operator UI."""
+    lock_status = probe_lock(lock_path)
+    if lock_status.held:
+        return BootstrapLaunchResult(
+            started=False,
+            message=f"別の処理が実行中です。完了後にもう一度開始してください。owner={lock_status.owner}",
+        )
+
+    script = app_root / "scripts" / "run_weekly_target_year_discovery.py"
+    if not script.is_file():
+        return BootstrapLaunchResult(
+            started=False,
+            message="週次再取得プログラムが見つかりません。ZIPをもう一度展開してください。",
+        )
+
+    logs_dir = app_root / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    started_at = now or datetime.now()
+    log_path = logs_dir / f"weekly-rediscovery-{started_at.strftime('%Y%m%d-%H%M%S')}.log"
+    last_run_path = latest_weekly_last_run_path(app_root)
+
+    env = os.environ.copy()
+    env["EIDP_APP_ROOT"] = str(app_root)
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    cmd = weekly_command(app_root, python_executable=python_executable)
+
+    try:
+        with log_path.open("ab") as stream:
+            if sys.platform == "win32":  # pragma: no cover - covered by Windows VM E2E
+                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
+                    cmd,
+                    cwd=app_root,
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    stdout=stream,
+                    stderr=subprocess.STDOUT,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                )
+            else:
+                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
+                    cmd,
+                    cwd=app_root,
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    stdout=stream,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+    except OSError as exc:
+        return BootstrapLaunchResult(
+            started=False,
+            message=f"週次再取得を開始できませんでした: {exc}",
+            log_path=log_path,
+            last_run_path=last_run_path,
+        )
+    return BootstrapLaunchResult(
+        started=True,
+        message="週次URL/PDF再取得を開始しました。完了後、この画面を更新してください。",
+        log_path=log_path,
+        last_run_path=last_run_path,
         pid=proc.pid,
     )
 
@@ -741,6 +842,75 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
             st.warning(result.message)
 
 
+def _render_weekly_last_run(payload: dict[str, Any]) -> None:
+    import streamlit as st
+
+    status = str(payload.get("status") or "unknown")
+    if status == "success":
+        st.success("前回の週次再取得は完了しています。")
+    elif status == "failed":
+        st.error("前回の週次再取得はエラーで停止しました。")
+    else:
+        st.info(f"前回の週次再取得状態: {status}")
+
+    cols = st.columns(4)
+    cols[0].metric("探索対象", _int_or_default(payload.get("target_missing_school_count"), 0))
+    cols[1].metric("新規PDF", _int_or_default(payload.get("new_document_count"), 0))
+    cols[2].metric("URLなし", _int_or_default(payload.get("no_crawlable_url_school_count"), 0))
+    cols[3].metric("旧年度あり", _int_or_default(payload.get("stale_school_count"), 0))
+
+    meta = []
+    if payload.get("current_fy"):
+        meta.append(f"対象年度: {payload['current_fy']}")
+    if payload.get("started_at"):
+        meta.append(f"開始: {payload['started_at']}")
+    if payload.get("finished_at"):
+        meta.append(f"終了: {payload['finished_at']}")
+    if payload.get("selection_mode"):
+        meta.append(f"探索方式: {payload['selection_mode']}")
+    if meta:
+        st.caption(" / ".join(str(item) for item in meta))
+    if payload.get("summary_path"):
+        st.caption(f"詳細ログ: {payload['summary_path']}")
+    if payload.get("error"):
+        st.caption(f"エラー詳細: {payload['error']}")
+
+
+def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path: Path) -> None:
+    import streamlit as st
+
+    from eidp.config import settings
+
+    app_root = settings.app_root
+    st.subheader("週次URL/PDF再取得")
+    st.caption(
+        "登録済みの情報公開ページや学校ページを入口に、現在の対象年度PDFを再探索します。"
+        "今年登録したページURLは来年度以降も入口として使われます。"
+    )
+    needs_bootstrap = needs_initial_url_bootstrap(summary)
+    if needs_bootstrap:
+        st.info("先に初回URL/PDF取得を実行してください。URL登録後に週次再取得を使えます。")
+
+    last_run = read_weekly_last_run(app_root)
+    if last_run is not None:
+        _render_weekly_last_run(last_run)
+
+    lock_status = probe_lock(lock_path)
+    if st.button(
+        "週次URL/PDF再取得を開始",
+        disabled=lock_status.held or needs_bootstrap,
+    ):
+        result = start_weekly_rediscovery(app_root, lock_path=lock_path)
+        if result.started:
+            st.success(result.message)
+            if result.log_path is not None:
+                st.caption(f"進行ログ: {result.log_path}")
+            if result.last_run_path is not None:
+                st.caption(f"完了後の結果: {result.last_run_path}")
+        else:
+            st.warning(result.message)
+
+
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin Streamlit shell
     import streamlit as st
 
@@ -783,6 +953,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         _render_initial_bootstrap_controls(summary, lock_path=lock_path)
 
     _render_rebuild_button(session, fiscal_year=fiscal_year, school_type=school_type, lock_path=lock_path)
+    _render_weekly_rediscovery_controls(summary, lock_path=lock_path)
 
     st.divider()
     c1, c2, c3, c4 = st.columns([1.2, 1.4, 1.4, 2])
