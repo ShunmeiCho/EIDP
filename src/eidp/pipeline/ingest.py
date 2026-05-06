@@ -20,6 +20,7 @@ from eidp.extraction_confidence import (
     compute_pdf_parse_breakdown,
     thresholds_from_env,
 )
+from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text
 from eidp.pdf.extractor import parse_pdf
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
 
@@ -593,8 +594,7 @@ def ingest_document(
         # Compute current fiscal year dynamically (April-March boundary).
         # Use module-level datetime; a local re-import here would shadow it
         # for the whole function body and break the append-only branches above.
-        now = datetime.now()
-        current_fy = now.year if now.month >= 4 else now.year - 1
+        current_fy = current_fiscal_year()
         doc.is_current_year = (fiscal_year >= current_fy)
 
     session.flush()
@@ -603,8 +603,7 @@ def ingest_document(
 
 
 def _current_jst_fiscal_year() -> int:
-    now = datetime.now(JST)
-    return now.year if now.month >= 4 else now.year - 1
+    return current_fiscal_year(datetime.now(JST))
 
 
 def _has_fiscal_year_candidate(year_str: str) -> bool:
@@ -617,15 +616,14 @@ def _parse_fiscal_year_from_annotation(
     source_url: str | None = None,
     max_fiscal_year: int | None = None,
 ) -> int | None:
-    """Convert '令和7年度' to western year 2025."""
+    """Convert fiscal-year annotations to a western year."""
     if not year_str:
         return None
 
     cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
 
-    m = re.search(r"令和(\d+)", year_str)
-    if m:
-        fiscal_year = 2018 + int(m.group(1))
+    fiscal_year = fiscal_year_from_japanese_era_text(year_str)
+    if fiscal_year is not None:
         return fiscal_year if fiscal_year <= cap else None
     m = re.search(r"(20\d{2})", year_str)
     if m:

@@ -34,7 +34,7 @@ from typing import Any
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
-from eidp.fiscal_year import current_fiscal_year
+from eidp.fiscal_year import JapaneseEra, configure_japanese_eras, current_fiscal_year
 
 
 def resolve_app_root(*, env: dict[str, str] | None = None, cwd: Path | None = None) -> Path:
@@ -77,6 +77,16 @@ class Settings(BaseSettings):
     # explicit operator/admin override.
     target_fiscal_year: int = Field(default_factory=current_fiscal_year)
 
+    # Japanese-era aliases used for operator labels and official-page search
+    # tokens. Western fiscal year integers remain the canonical value. These
+    # settings are intentionally manual so EIDP does not predict future era
+    # changes.
+    fiscal_era_enabled: bool = True
+    fiscal_era_name: str = "令和"
+    fiscal_era_romanized: str = "reiwa"
+    fiscal_era_initial: str = "r"
+    fiscal_era_start_year: int = 2019
+
     # Search API (switch provider by changing search_provider)
     search_provider: str = "duckduckgo"  # duckduckgo | brave | google | serper
     brave_api_key: str = ""
@@ -86,6 +96,16 @@ class Settings(BaseSettings):
 
     # Firecrawl API (for corporation root URL expansion)
     firecrawl_api_key: str = ""
+
+    # OCR runtime settings. Some OCR modules read environment variables
+    # directly, so apply_runtime_env_settings mirrors these values into
+    # ``os.environ`` after Settings is loaded.
+    ocr_auto_enable: str = "auto"  # auto | on | off
+    ocr_min_cpus: int = 2
+    ocr_min_free_ram_mb: int = 4096
+    tesseract_bin: str = ""
+    ocr_provider: str = ""
+    ocr_device: str = ""
 
     model_config = {"env_prefix": "EIDP_", "env_file": ".env", "extra": "ignore"}
 
@@ -98,3 +118,46 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def apply_fiscal_era_settings(config: Settings = settings) -> None:
+    """Apply configured fiscal-year era aliases to helper functions."""
+    if not config.fiscal_era_enabled:
+        configure_japanese_eras(())
+        return
+    era_name = config.fiscal_era_name.strip()
+    era_romanized = config.fiscal_era_romanized.strip().lower()
+    era_initial = config.fiscal_era_initial.strip().lower()
+    if not era_name or not era_romanized or not era_initial:
+        configure_japanese_eras(())
+        return
+    configure_japanese_eras(
+        (
+            JapaneseEra(
+                name=era_name,
+                romanized=era_romanized,
+                initial=era_initial,
+                start_fiscal_year=config.fiscal_era_start_year,
+            ),
+        )
+    )
+
+
+apply_fiscal_era_settings(settings)
+
+
+def apply_runtime_env_settings(config: Settings = settings) -> None:
+    """Mirror settings that legacy runtime helpers read from ``os.environ``."""
+    env_updates = {
+        "EIDP_OCR_AUTO_ENABLE": config.ocr_auto_enable,
+        "EIDP_OCR_MIN_CPUS": str(config.ocr_min_cpus),
+        "EIDP_OCR_MIN_FREE_RAM_MB": str(config.ocr_min_free_ram_mb),
+        "EIDP_TESSERACT_BIN": config.tesseract_bin,
+        "EIDP_OCR_PROVIDER": config.ocr_provider,
+        "EIDP_OCR_DEVICE": config.ocr_device,
+    }
+    for key, value in env_updates.items():
+        os.environ[key] = value
+
+
+apply_runtime_env_settings(settings)

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import structlog
 
+from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text, format_fiscal_year_as_japanese_era
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
 
 log = structlog.get_logger()
@@ -71,22 +72,24 @@ def _extract_school_name(full_text: str) -> str:
 
 
 def _current_jst_fiscal_year() -> int:
-    now = datetime.now(JST)
-    return now.year if now.month >= 4 else now.year - 1
+    return current_fiscal_year(datetime.now(JST))
 
 
-def _format_reiwa_if_allowed(reiwa_year: int, max_fiscal_year: int | None = None) -> str | None:
-    fiscal_year = 2018 + reiwa_year
+def _format_fiscal_year_if_allowed(fiscal_year: int | None, max_fiscal_year: int | None = None) -> str | None:
+    if fiscal_year is None:
+        return None
     cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
-    return f"令和{reiwa_year}年度" if fiscal_year <= cap else None
+    if fiscal_year > cap:
+        return None
+    return format_fiscal_year_as_japanese_era(fiscal_year) or f"{fiscal_year}年度"
 
 
 def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) -> str:
     """Extract fiscal year from PDF text.
 
-    PDFs use date format like "令和７年６月２７日" (full-width digits).
-    After NFKC normalization this becomes "令和7年6月27日".
-    We extract the year number and produce "令和7年度".
+    PDFs often use date format like "令和７年６月２７日" (full-width digits).
+    After NFKC normalization this becomes "令和7年6月27日". The western
+    fiscal year remains the canonical value; era labels are output aliases.
 
     Priority order:
     1. 令和N年度 — direct, highest confidence
@@ -97,18 +100,24 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
     normed = _norm(full_text)
 
     # Pattern 1: 令和N年度 (direct match, highest confidence)
-    m = re.search(r"令和(\d+)年度", normed)
-    if m:
-        fiscal_year = _format_reiwa_if_allowed(int(m.group(1)), max_fiscal_year)
-        if fiscal_year:
-            return fiscal_year
+    fiscal_year = fiscal_year_from_japanese_era_text(
+        normed,
+        include_fiscal_year_labels=True,
+        include_filing_dates=False,
+    )
+    formatted = _format_fiscal_year_if_allowed(fiscal_year, max_fiscal_year)
+    if formatted:
+        return formatted
 
     # Pattern 2: 令和N年M月D日 (filing date, extract year)
-    m = re.search(r"令和(\d+)年\d+月\d+日", normed)
-    if m:
-        fiscal_year = _format_reiwa_if_allowed(int(m.group(1)), max_fiscal_year)
-        if fiscal_year:
-            return fiscal_year
+    fiscal_year = fiscal_year_from_japanese_era_text(
+        normed,
+        include_fiscal_year_labels=False,
+        include_filing_dates=True,
+    )
+    formatted = _format_fiscal_year_if_allowed(fiscal_year, max_fiscal_year)
+    if formatted:
+        return formatted
 
     # Pattern 3: Western filing date "YYYY.M.D" or "YYYY/M/D" pattern
     # These are actual filing dates, not stray year references in policy text
@@ -116,11 +125,9 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
     if filing_dates:
         # Use the first filing date found (typically on the cover page)
         western_year = int(filing_dates[0])
-        reiwa_year = western_year - 2018
-        if reiwa_year > 0:
-            fiscal_year = _format_reiwa_if_allowed(reiwa_year, max_fiscal_year)
-            if fiscal_year:
-                return fiscal_year
+        formatted = _format_fiscal_year_if_allowed(western_year, max_fiscal_year)
+        if formatted:
+            return formatted
 
     # Pattern 4: Most frequent western year (fallback)
     # Exclude future fiscal years to avoid policy references like "2027年度決算"
@@ -130,11 +137,9 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
     valid_years = [int(y) for y in all_years if int(y) <= max_valid_year]
     if valid_years:
         most_common = Counter(valid_years).most_common(1)[0][0]
-        reiwa_year = most_common - 2018
-        if reiwa_year > 0:
-            fiscal_year = _format_reiwa_if_allowed(reiwa_year, max_fiscal_year)
-            if fiscal_year:
-                return fiscal_year
+        formatted = _format_fiscal_year_if_allowed(most_common, max_fiscal_year)
+        if formatted:
+            return formatted
 
     return ""
 

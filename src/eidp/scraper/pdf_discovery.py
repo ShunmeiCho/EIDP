@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.models import CrawlJob, Document, SchoolSite
-from eidp.fiscal_year import fiscal_year_search_tokens
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text, fiscal_year_search_tokens
 from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 from eidp.scraper.url_discovery import _is_safe_url
 
@@ -183,9 +183,13 @@ def _detect_fiscal_year_from_text(text: str) -> int | None:
     normed = unicodedata.normalize("NFKC", text)
 
     # Prefer explicit fiscal-year labels over filing dates.
-    m = re.search(r"令和\s*(\d+)\s*年度", normed)
-    if m:
-        return 2018 + int(m.group(1))
+    fiscal_year = fiscal_year_from_japanese_era_text(
+        normed,
+        include_fiscal_year_labels=True,
+        include_filing_dates=False,
+    )
+    if fiscal_year is not None:
+        return fiscal_year
 
     m = re.search(r"(20\d{2})\s*年度", normed)
     if m:
@@ -193,9 +197,13 @@ def _detect_fiscal_year_from_text(text: str) -> int | None:
 
     # Most application forms carry a filing date on the cover page. In this
     # domain that date is the practical fiscal-year signal for the form.
-    m = re.search(r"令和\s*(\d+)\s*年\s*\d+\s*月\s*\d+\s*日", normed)
-    if m:
-        return 2018 + int(m.group(1))
+    fiscal_year = fiscal_year_from_japanese_era_text(
+        normed,
+        include_fiscal_year_labels=False,
+        include_filing_dates=True,
+    )
+    if fiscal_year is not None:
+        return fiscal_year
 
     return None
 

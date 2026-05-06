@@ -37,6 +37,7 @@ PAGE_FISCAL_YEAR_OVERRIDE = "fiscal_year_override"
 PAGE_EXCEL_PREVIEW = "excel_preview"
 PAGE_AUDIT_LOG = "audit_log"
 PAGE_PREFECTURE_REMARKS = "prefecture_remarks"
+PAGE_SETTINGS = "settings"
 
 QUICK_PAGES = [
     (PAGE_TASKS, "① 学校別タスク"),
@@ -47,6 +48,7 @@ QUICK_PAGES = [
 ]
 
 DETAIL_PAGES = [
+    (PAGE_SETTINGS, "設定"),
     (PAGE_STATUS, "データ状況（詳細）"),
     (PAGE_PROPOSALS, "マッチング提案の確認"),
     (PAGE_URL, "URL追加"),
@@ -602,6 +604,9 @@ def main() -> None:
     elif page == PAGE_PREFECTURE_REMARKS:
         from eidp.review._pages.prefecture_remarks import render as render_prefecture_remarks
         render_prefecture_remarks(session, lock_path=Path(settings.data_dir) / ".lock")
+    elif page == PAGE_SETTINGS:
+        from eidp.review._pages.settings_page import render as render_settings
+        render_settings(session, lock_path=Path(settings.data_dir) / ".lock")
     elif page == PAGE_SCHOOL_CODE:
         _page_review_queue(session)
     elif page == PAGE_HISTORY:

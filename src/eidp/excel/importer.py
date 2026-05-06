@@ -11,6 +11,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias, SchoolYearStatus, SupportRecipient
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text
 
 log = structlog.get_logger()
 
@@ -605,10 +606,9 @@ def _parse_fiscal_year(val: str) -> int | None:
     if m:
         return int(m.group(1))
 
-    # "令和6年度" -> 2024
-    m = re.match(r"令和(\d+)", val)
-    if m:
-        return 2018 + int(m.group(1))
+    fiscal_year = fiscal_year_from_japanese_era_text(val)
+    if fiscal_year is not None:
+        return fiscal_year
 
     return None
 
