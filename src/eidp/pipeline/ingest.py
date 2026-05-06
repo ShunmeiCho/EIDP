@@ -7,7 +7,7 @@ updates school_year_status.
 import re
 import unicodedata
 from collections.abc import Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import structlog
@@ -204,7 +204,7 @@ def ingest_document(
             # Substring match is only trusted for candidates long enough that
             # accidental containment is unlikely. Short aliases (e.g. 'TCA',
             # 'HAL') must match exactly to avoid bleeding into other schools.
-            _MIN_SUBSTR_LEN = 6
+            min_substr_len = 6
 
             def _match_any(parsed: str, candidates: list[str]) -> str | None:
                 # Collapsed forms ignore internal whitespace; rescues common
@@ -216,7 +216,7 @@ def ingest_document(
                         continue
                     if parsed == c or parsed_c == _collapse_ws(c):
                         return c
-                    if len(c) >= _MIN_SUBSTR_LEN and len(parsed) >= _MIN_SUBSTR_LEN:
+                    if len(c) >= min_substr_len and len(parsed) >= min_substr_len:
                         c_collapsed = _collapse_ws(c)
                         if (
                             parsed in c
@@ -252,9 +252,10 @@ def ingest_document(
         source_url=doc.source_url,
     )
 
-    # Fallback: if OCR couldn't extract fiscal_year (happens on scanned PDFs
-    # where 令和 date is rendered as image), infer from download timestamp.
-    # This is a best-effort inference, marked as such in the log.
+    # Do not infer fiscal year from download time. Download timestamps prove
+    # when the file was fetched, not which fiscal-year form the school
+    # published. Missing fiscal-year evidence must remain operator-visible
+    # instead of silently writing data to a guessed year.
     if (
         fiscal_year is None
         and annotation.fiscal_year
@@ -267,12 +268,6 @@ def ingest_document(
             fiscal_year=annotation.fiscal_year,
             source_url=doc.source_url,
         )
-    elif fiscal_year is None:
-        fiscal_year = _infer_fiscal_year_from_download(doc.downloaded_at)
-        if fiscal_year is not None:
-            log.info("fiscal_year_inferred_from_download",
-                     doc_id=doc.id, fiscal_year=fiscal_year,
-                     downloaded_at=str(doc.downloaded_at))
 
     # Quality gate: partial ingest — accept valid depts, skip invalid ones
     # Requirements per dept:
@@ -585,7 +580,7 @@ def ingest_document(
             legacy_status=legacy_status,
             excluded_reason=excluded_reason,
             last_checked=last_checked,
-            collected_at=datetime.now(timezone.utc),
+            collected_at=datetime.now(UTC),
             document_id=doc.id,
             revision=max_sys_rev + 1,
             is_current=True,
@@ -637,50 +632,6 @@ def _parse_fiscal_year_from_annotation(
         fiscal_year = int(m.group(1))
         return fiscal_year if fiscal_year <= cap else None
     return None
-
-
-def _infer_fiscal_year_from_download(downloaded_at) -> int | None:
-    """Fallback: infer fiscal year from document download timestamp.
-
-    Japanese fiscal year: April N to March N+1. Schools publish the
-    annual disclosure PDF (the one we're parsing) typically Jun-Aug,
-    reporting data FROM the fiscal year that just ended.
-
-    downloaded_at is stored as UTC (timezone-aware); convert to JST
-    (UTC+9) before computing the April boundary, otherwise a JST Apr 1
-    download that was Mar 31 UTC would wrongly infer FY (Y-2).
-
-    Download timestamp logic (in JST):
-    - Downloaded Jan-Mar of year Y:  likely reports FY (Y-2) data
-      (FY Y-1 hasn't ended yet; schools publish in summer)
-    - Downloaded Apr-Dec of year Y:  likely reports FY (Y-1) data
-      (FY Y-1 just ended; schools published in summer)
-
-    Example: downloaded 2026-04 JST => FY 2025 (令和7年度).
-             downloaded 2026-02 JST => FY 2024 (令和6年度).
-
-    Plausibility bound: refuse to infer for downloads older than 3
-    years (likely stale data, should be re-downloaded).
-    """
-    if downloaded_at is None:
-        return None
-
-    # Normalize to JST (handles both naive and aware datetimes)
-    if downloaded_at.tzinfo is None:
-        # Assume naive datetimes are UTC (matches upstream default)
-        dt_utc = downloaded_at.replace(tzinfo=timezone.utc)
-    else:
-        dt_utc = downloaded_at
-    dt_jst = dt_utc.astimezone(JST)
-
-    # Plausibility bound: downloads >3 years old are stale, don't infer
-    now_jst = datetime.now(JST)
-    if (now_jst - dt_jst).days > 3 * 365:
-        return None
-
-    if dt_jst.month >= 4:
-        return dt_jst.year - 1
-    return dt_jst.year - 2
 
 
 def run_ingestion(
@@ -793,7 +744,7 @@ def run_ingestion(
             total_stats["processed"] += 1
             for k in ("departments_created", "yearly_upserted", "skipped"):
                 total_stats[k] += stats.get(k, 0)
-        except (OSError, IOError) as e:
+        except OSError as e:
             try:
                 nested.rollback()
             except Exception:

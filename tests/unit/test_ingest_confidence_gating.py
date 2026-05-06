@@ -110,6 +110,44 @@ def test_full_record_lands_with_is_current_true(engine, tmp_path):
         assert breakdown["composite"] == pytest.approx(0.94, abs=1e-4)
 
 
+def test_missing_fiscal_year_does_not_fallback_to_download_time(engine, tmp_path):
+    """Download time is not fiscal-year evidence.
+
+    A parsed table without an explicit fiscal-year label must stay in the
+    review/error surface instead of being written to a guessed year.
+    """
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/no-year.pdf",
+            tmp_path=tmp_path,
+            file_hash="y" * 64,
+        )
+        ann = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="",
+            source_pdf="test.pdf",
+            departments=[
+                DepartmentRecord(name="A学科", capacity=40, enrollment=35),
+            ],
+            support_recipient=None,
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            stats = ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        assert stats["skipped"] == 1
+        assert stats["skip_reason"] == "no_fiscal_year"
+        assert doc.ingest_status == "parse_failed"
+        assert doc.fiscal_year is None
+        assert session.query(DepartmentYearly).count() == 0
+
+
 # ---------------------------------------------------------------------------
 # DepartmentYearly — low-confidence path
 # ---------------------------------------------------------------------------
