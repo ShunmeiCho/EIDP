@@ -188,6 +188,10 @@ def test_first_setup_uses_offline_install(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
     assert "--no-index" in body
     assert "wheelhouse" in body
+    assert "EIDP_WHEEL" in body
+    assert "eidp-*.whl" in body
+    assert "--no-cache" in body
+    assert "--reinstall-package eidp" in body
 
 
 def test_first_setup_registers_weekly_task(bat_files: dict[str, str]):
@@ -244,13 +248,13 @@ def test_first_setup_rebuilds_school_year_tasks(bat_files: dict[str, str]):
 def test_first_setup_does_not_run_aggregate_or_discovery(bat_files: dict[str, str]):
     """Sprint 8.7.e: first_setup.bat must stay OFFLINE. Prefecture
     aggregate, discover-pdfs, ingest-pdfs all need internet access; we
-    push them into bootstrap_pdfs.bat so first_setup remains a clean
-    offline install (works inside corp networks while waiting for proxy
-    approval)."""
+    leave them behind the Streamlit first-run button so first_setup
+    remains a clean offline install (works inside corp networks while
+    waiting for proxy approval)."""
     body = bat_files["first_setup.bat"]
     assert "prefecture-aggregate" not in body, (
         "first_setup.bat must NOT call prefecture-aggregate — that step "
-        "is online and belongs in bootstrap_pdfs.bat"
+        "is online and belongs behind the UI first-run button"
     )
     assert "discover-pdfs" not in body, (
         "first_setup.bat must NOT call discover-pdfs"
@@ -258,8 +262,12 @@ def test_first_setup_does_not_run_aggregate_or_discovery(bat_files: dict[str, st
     assert "ingest-pdfs" not in body, (
         "first_setup.bat must NOT call ingest-pdfs"
     )
-    assert "bootstrap_pdfs.bat" in body, (
-        "first_setup.bat must point operators to bootstrap_pdfs.bat"
+    assert "launch.bat" in body, (
+        "first_setup.bat must point non-technical operators back to the UI"
+    )
+    assert "initial URL/PDF acquisition button" in body, (
+        "first_setup.bat must not require non-technical operators to find "
+        "bootstrap scripts in Explorer"
     )
 
 
@@ -352,6 +360,33 @@ def test_first_setup_calls_db_bootstrap_via_python_module(bat_files: dict[str, s
 # ---------------------------------------------------------------------------
 # pip download command surface
 # ---------------------------------------------------------------------------
+
+
+def test_build_project_wheel_removes_stale_project_wheels(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The wheelhouse must contain one project wheel matching this source tree.
+
+    A stale same-version wheel can otherwise survive long enough for Windows
+    setup to install code that lacks newly added CLI commands.
+    """
+    bw = _load_build_script()
+    stale = tmp_path / "eidp-0.1.0-py3-none-any.whl"
+    stale.write_bytes(b"old")
+
+    def _stub_run(cmd, cwd, check):  # noqa: ANN001
+        assert cmd[:3] == ["uv", "build", "--wheel"]
+        assert cwd == REPO_ROOT
+        assert check is True
+        (tmp_path / "eidp-0.2.0-py3-none-any.whl").write_bytes(b"new")
+
+    monkeypatch.setattr(bw.subprocess, "run", _stub_run)
+
+    wheel = bw.build_project_wheel(repo_root=REPO_ROOT, out_dir=tmp_path)
+
+    assert wheel.name == "eidp-0.2.0-py3-none-any.whl"
+    assert not stale.exists()
 
 
 def test_download_uses_pip_not_uv(monkeypatch: pytest.MonkeyPatch):

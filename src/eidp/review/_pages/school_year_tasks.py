@@ -7,8 +7,14 @@ the operator the next concrete action.
 
 from __future__ import annotations
 
+import json
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -54,6 +60,29 @@ class SchoolTaskRow:
     latest_document_status: str | None
     latest_document_url: str | None
     latest_site_url: str | None
+
+
+@dataclass(frozen=True)
+class BootstrapLaunchResult:
+    started: bool
+    message: str
+    log_path: Path | None = None
+    progress_path: Path | None = None
+    pid: int | None = None
+
+
+@dataclass(frozen=True)
+class BootstrapProgress:
+    status: str
+    current_step: int
+    total_steps: int
+    percent: float
+    message: str
+    started_at: str | None = None
+    updated_at: str | None = None
+    completed_at: str | None = None
+    log_path: str | None = None
+    error: str | None = None
 
 
 REVIEW_OR_PARSE_BLOCKERS = {"ocr_pending", "parse_failed", "not_extracted", "review_required"}
@@ -149,6 +178,220 @@ def school_task_summary(
 def needs_initial_url_bootstrap(summary: SchoolTaskSummary) -> bool:
     """Return True when setup has schools but no known crawl URLs yet."""
     return summary.total > 0 and summary.no_url == summary.total
+
+
+def latest_bootstrap_log(app_root: Path) -> Path | None:
+    logs_dir = app_root / "logs"
+    if not logs_dir.is_dir():
+        return None
+    logs = sorted(logs_dir.glob("bootstrap-pdfs-*.log"), key=lambda path: path.stat().st_mtime)
+    return logs[-1] if logs else None
+
+
+def latest_bootstrap_progress_path(app_root: Path) -> Path | None:
+    logs_dir = app_root / "logs"
+    if not logs_dir.is_dir():
+        return None
+    progress_files = sorted(logs_dir.glob("bootstrap-pdfs-*.json"), key=lambda path: path.stat().st_mtime)
+    return progress_files[-1] if progress_files else None
+
+
+def _float_or_default(value: object, default: float) -> float:
+    if not isinstance(value, int | float | str | bytes | bytearray):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _int_or_default(value: object, default: int) -> int:
+    if not isinstance(value, int | float | str | bytes | bytearray):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def bootstrap_progress_from_payload(payload: dict[str, Any]) -> BootstrapProgress:
+    total_steps = max(_int_or_default(payload.get("total_steps"), 5), 1)
+    current_step = max(_int_or_default(payload.get("current_step"), 0), 0)
+    default_percent = min(current_step / total_steps, 1.0)
+    percent = min(max(_float_or_default(payload.get("percent"), default_percent), 0.0), 1.0)
+    return BootstrapProgress(
+        status=str(payload.get("status") or "unknown"),
+        current_step=min(current_step, total_steps),
+        total_steps=total_steps,
+        percent=percent,
+        message=str(payload.get("message") or "進行状況を確認中"),
+        started_at=str(payload["started_at"]) if payload.get("started_at") else None,
+        updated_at=str(payload["updated_at"]) if payload.get("updated_at") else None,
+        completed_at=str(payload["completed_at"]) if payload.get("completed_at") else None,
+        log_path=str(payload["log_path"]) if payload.get("log_path") else None,
+        error=str(payload["error"]) if payload.get("error") else None,
+    )
+
+
+def read_bootstrap_progress(path: Path) -> BootstrapProgress | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return bootstrap_progress_from_payload(payload)
+
+
+def latest_bootstrap_progress(app_root: Path) -> BootstrapProgress | None:
+    path = latest_bootstrap_progress_path(app_root)
+    if path is None:
+        return None
+    return read_bootstrap_progress(path)
+
+
+def _write_initial_bootstrap_progress(*, progress_path: Path, log_path: Path, started_at: datetime) -> None:
+    payload = {
+        "status": "running",
+        "current_step": 0,
+        "total_steps": 5,
+        "percent": 0.0,
+        "message": "初回取得を準備中です。",
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "updated_at": started_at.isoformat(timespec="seconds"),
+        "log_path": str(log_path),
+    }
+    tmp_path = progress_path.with_suffix(progress_path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(progress_path)
+
+
+def _write_failed_bootstrap_progress(
+    *,
+    progress_path: Path,
+    log_path: Path,
+    started_at: datetime,
+    message: str,
+) -> None:
+    now = datetime.now()
+    payload = {
+        "status": "failed",
+        "current_step": 0,
+        "total_steps": 5,
+        "percent": 0.0,
+        "message": message,
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "updated_at": now.isoformat(timespec="seconds"),
+        "completed_at": now.isoformat(timespec="seconds"),
+        "log_path": str(log_path),
+        "error": message,
+    }
+    tmp_path = progress_path.with_suffix(progress_path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(progress_path)
+
+
+def bootstrap_command(
+    app_root: Path,
+    *,
+    lock_path: Path,
+    progress_path: Path | None = None,
+    python_executable: str | None = None,
+) -> list[str]:
+    cmd = [
+        python_executable or sys.executable,
+        str(app_root / "scripts" / "bootstrap_pdf_pipeline.py"),
+        "--lock-path",
+        str(lock_path),
+    ]
+    if progress_path is not None:
+        cmd.extend(["--progress-file", str(progress_path)])
+    return cmd
+
+
+def start_initial_url_bootstrap(
+    app_root: Path,
+    *,
+    lock_path: Path,
+    python_executable: str | None = None,
+    now: datetime | None = None,
+) -> BootstrapLaunchResult:
+    """Start the online URL/PDF bootstrap in the background from the UI."""
+    lock_status = probe_lock(lock_path)
+    if lock_status.held:
+        return BootstrapLaunchResult(
+            started=False,
+            message=f"別の処理が実行中です。完了後にもう一度開始してください。owner={lock_status.owner}",
+        )
+
+    script = app_root / "scripts" / "bootstrap_pdf_pipeline.py"
+    if not script.is_file():
+        return BootstrapLaunchResult(
+            started=False,
+            message="初回取得プログラムが見つかりません。ZIPをもう一度展開してください。",
+        )
+
+    logs_dir = app_root / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    started_at = now or datetime.now()
+    log_path = logs_dir / f"bootstrap-pdfs-{started_at.strftime('%Y%m%d-%H%M%S')}.log"
+    progress_path = log_path.with_suffix(".json")
+    _write_initial_bootstrap_progress(progress_path=progress_path, log_path=log_path, started_at=started_at)
+
+    env = os.environ.copy()
+    env["EIDP_APP_ROOT"] = str(app_root)
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    cmd = bootstrap_command(
+        app_root,
+        lock_path=lock_path,
+        progress_path=progress_path,
+        python_executable=python_executable,
+    )
+
+    try:
+        with log_path.open("ab") as stream:
+            if sys.platform == "win32":  # pragma: no cover - covered by Windows VM E2E
+                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
+                    cmd,
+                    cwd=app_root,
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    stdout=stream,
+                    stderr=subprocess.STDOUT,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                )
+            else:
+                proc = subprocess.Popen(  # noqa: S603 - command is built from bundled app paths only.
+                    cmd,
+                    cwd=app_root,
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    stdout=stream,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+    except OSError as exc:
+        message = f"初回取得を開始できませんでした: {exc}"
+        _write_failed_bootstrap_progress(
+            progress_path=progress_path,
+            log_path=log_path,
+            started_at=started_at,
+            message=message,
+        )
+        return BootstrapLaunchResult(
+            started=False,
+            message=message,
+            log_path=log_path,
+            progress_path=progress_path,
+        )
+    return BootstrapLaunchResult(
+        started=True,
+        message="初回URL/PDF取得を開始しました。完了後、この画面を更新してください。",
+        log_path=log_path,
+        progress_path=progress_path,
+        pid=proc.pid,
+    )
 
 
 def list_school_year_tasks(
@@ -317,6 +560,82 @@ def _render_rebuild_button(session: Session, *, fiscal_year: int, school_type: s
             st.rerun()
 
 
+def _render_bootstrap_progress(progress: BootstrapProgress) -> None:
+    import streamlit as st
+
+    percent_label = f"{progress.percent:.0%}"
+    step_label = f"{progress.current_step}/{progress.total_steps}"
+    text = f"{percent_label}  {progress.message}（{step_label}）"
+    st.progress(progress.percent, text=text)
+
+    if progress.status == "succeeded":
+        st.success("初回URL/PDF取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。")
+    elif progress.status == "failed":
+        st.error(progress.message)
+        if progress.error:
+            st.caption(f"エラー詳細: {progress.error}")
+    elif progress.status == "running":
+        st.info("初回URL/PDF取得を実行中です。数分おきに進行状況を更新してください。")
+    else:
+        st.info(progress.message)
+
+    meta = []
+    if progress.started_at:
+        meta.append(f"開始: {progress.started_at}")
+    if progress.updated_at:
+        meta.append(f"更新: {progress.updated_at}")
+    if progress.completed_at:
+        meta.append(f"完了: {progress.completed_at}")
+    if meta:
+        st.caption(" / ".join(meta))
+    if progress.log_path:
+        st.caption(f"診断ログ: {progress.log_path}")
+    key_suffix = progress.started_at or progress.updated_at or progress.message
+    if st.button("進行状況を更新", key=f"bootstrap_progress_refresh_{key_suffix}"):
+        st.rerun()
+
+
+def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path: Path) -> None:
+    import streamlit as st
+
+    from eidp.config import settings
+
+    app_root = settings.app_root
+    st.warning(
+        "まだ学校URLの初期取得が終わっていません。"
+        f"{summary.total}校を手作業で追加する状態ではありません。"
+        "下のボタンから初回取得を開始すると、都道府県の公開データから学校URLを登録し、"
+        "対象年度PDFの探索を開始します。"
+    )
+    st.caption("初回取得はオンライン処理です。学校数が多いため、数十分かかることがあります。")
+
+    latest_progress = latest_bootstrap_progress(app_root)
+    if latest_progress is not None:
+        _render_bootstrap_progress(latest_progress)
+
+    latest_log = latest_bootstrap_log(app_root)
+    if latest_log is not None and (latest_progress is None or latest_progress.log_path != str(latest_log)):
+        st.caption(f"最新の初回取得ログ: {latest_log}")
+
+    lock_status = probe_lock(lock_path)
+    if st.button(
+        "初回URL/PDF取得を開始",
+        type="primary",
+        disabled=lock_status.held,
+    ):
+        result = start_initial_url_bootstrap(app_root, lock_path=lock_path)
+        if result.started:
+            st.success(result.message)
+            if result.log_path is not None:
+                st.caption(f"進行状況ログ: {result.log_path}")
+            if result.progress_path is not None:
+                progress = read_bootstrap_progress(result.progress_path)
+                if progress is not None:
+                    _render_bootstrap_progress(progress)
+        else:
+            st.warning(result.message)
+
+
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin Streamlit shell
     import streamlit as st
 
@@ -328,10 +647,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     target_label = format_fiscal_year_label(fiscal_year)
 
     st.header("① 学校別タスク")
-    st.caption(
-        f"{target_label} の学校ごとの進捗です。旧年度PDFは成果に含めず、"
-        "次に何をするかだけを確認します。"
-    )
+    st.caption(f"{target_label} の学校ごとの進捗です。旧年度PDFは成果に含めず、次に何をするかだけを確認します。")
 
     lock_status = probe_lock(lock_path)
     if lock_status.held:
@@ -355,12 +671,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     cols[5].metric("学科変更", summary.dept_change_review)
 
     if needs_initial_url_bootstrap(summary):
-        st.warning(
-            "まだ学校URLの初期取得が終わっていません。"
-            "2418校を手作業で追加する状態ではありません。"
-            "初回だけ `scripts\\bootstrap_pdfs.bat` を実行すると、都道府県集約データから"
-            " 学校URLを登録し、対象年度PDFの探索を開始します。"
-        )
+        _render_initial_bootstrap_controls(summary, lock_path=lock_path)
 
     _render_rebuild_button(session, fiscal_year=fiscal_year, school_type=school_type, lock_path=lock_path)
 

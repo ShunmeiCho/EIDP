@@ -1,15 +1,25 @@
 from __future__ import annotations
 
+import json
+from datetime import datetime
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, SchoolSite
+from eidp.review._pages import school_year_tasks
 from eidp.review._pages.school_year_tasks import (
     SchoolTaskSummary,
+    bootstrap_command,
+    latest_bootstrap_log,
+    latest_bootstrap_progress,
     list_school_year_tasks,
     needs_initial_url_bootstrap,
     next_action_for_status,
+    read_bootstrap_progress,
     school_task_summary,
+    start_initial_url_bootstrap,
 )
 
 
@@ -159,6 +169,134 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
 
     assert needs_initial_url_bootstrap(all_no_url) is True
     assert needs_initial_url_bootstrap(mixed) is False
+
+
+def test_bootstrap_command_uses_pipeline_script_and_lock_path(tmp_path) -> None:
+    cmd = bootstrap_command(
+        tmp_path,
+        lock_path=tmp_path / "data" / ".lock",
+        progress_path=tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json",
+        python_executable="python.exe",
+    )
+
+    assert cmd == [
+        "python.exe",
+        str(tmp_path / "scripts" / "bootstrap_pdf_pipeline.py"),
+        "--lock-path",
+        str(tmp_path / "data" / ".lock"),
+        "--progress-file",
+        str(tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"),
+    ]
+
+
+def test_latest_bootstrap_log_and_progress_return_newest_files(tmp_path) -> None:
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    older = logs / "bootstrap-pdfs-20260506-090000.log"
+    newer = logs / "bootstrap-pdfs-20260506-100000.log"
+    older.write_text("old", encoding="utf-8")
+    newer.write_text("new", encoding="utf-8")
+    progress = logs / "bootstrap-pdfs-20260506-100000.json"
+    progress.write_text(
+        json.dumps(
+            {
+                "status": "running",
+                "current_step": 3,
+                "total_steps": 5,
+                "percent": 0.45,
+                "message": "学校サイトから対象年度PDFを探索しています。",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    assert latest_bootstrap_log(tmp_path) == newer
+    latest_progress = latest_bootstrap_progress(tmp_path)
+    assert latest_progress is not None
+    assert latest_progress.current_step == 3
+    assert latest_progress.percent == 0.45
+    assert latest_progress.message == "学校サイトから対象年度PDFを探索しています。"
+
+
+def test_read_bootstrap_progress_clamps_bad_payload(tmp_path) -> None:
+    progress_path = tmp_path / "progress.json"
+    progress_path.write_text(
+        json.dumps(
+            {
+                "status": "running",
+                "current_step": 99,
+                "total_steps": 5,
+                "percent": 2,
+                "message": "too far",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    progress = read_bootstrap_progress(progress_path)
+
+    assert progress is not None
+    assert progress.current_step == 5
+    assert progress.percent == 1.0
+
+
+def test_start_initial_url_bootstrap_starts_background_process(tmp_path, monkeypatch) -> None:
+    script = tmp_path / "scripts" / "bootstrap_pdf_pipeline.py"
+    script.parent.mkdir(parents=True)
+    script.write_text("print('boot')", encoding="utf-8")
+    lock_path = tmp_path / "data" / ".lock"
+    captured: dict[str, object] = {}
+
+    class FakeProcess:
+        pid = 1234
+
+    def fake_popen(cmd, **kwargs):  # noqa: ANN001
+        captured["cmd"] = cmd
+        captured["kwargs"] = kwargs
+        return FakeProcess()
+
+    monkeypatch.setattr(school_year_tasks.subprocess, "Popen", fake_popen)
+
+    result = start_initial_url_bootstrap(
+        tmp_path,
+        lock_path=lock_path,
+        python_executable="python.exe",
+        now=datetime(2026, 5, 6, 10, 30, 0),
+    )
+
+    assert result.started is True
+    assert result.pid == 1234
+    assert result.log_path == tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.log"
+    assert result.progress_path == tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
+    assert captured["cmd"] == [
+        "python.exe",
+        str(script),
+        "--lock-path",
+        str(lock_path),
+        "--progress-file",
+        str(result.progress_path),
+    ]
+    kwargs = captured["kwargs"]
+    assert kwargs["cwd"] == tmp_path
+    assert kwargs["env"]["EIDP_APP_ROOT"] == str(tmp_path)
+    progress = read_bootstrap_progress(result.progress_path)
+    assert progress is not None
+    assert progress.status == "running"
+    assert progress.message == "初回取得を準備中です。"
+
+
+def test_start_initial_url_bootstrap_refuses_when_app_lock_is_held(tmp_path) -> None:
+    script = tmp_path / "scripts" / "bootstrap_pdf_pipeline.py"
+    script.parent.mkdir(parents=True)
+    script.write_text("print('boot')", encoding="utf-8")
+    lock_path = tmp_path / "data" / ".lock"
+
+    with acquire_lock(lock_path, owner="weekly_runner"):
+        result = start_initial_url_bootstrap(tmp_path, lock_path=lock_path)
+
+    assert result.started is False
+    assert "別の処理" in result.message
 
 
 def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_context() -> None:

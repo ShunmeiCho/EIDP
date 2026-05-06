@@ -108,6 +108,7 @@ def write_last_run(
         "methods": summary.get("methods"),
         "selection_mode": summary.get("selection_mode"),
         "stale_school_count": int(summary.get("stale_school_count") or 0),
+        "no_crawlable_url_school_count": int(summary.get("no_crawlable_url_school_count") or 0),
         "target_missing_school_count": int(
             summary.get("target_missing_school_count")
             or summary.get("stale_school_count")
@@ -251,6 +252,34 @@ def select_target_missing_school_ids(
     if limit is not None:
         return eligible_ids[:limit]
     return eligible_ids
+
+
+def count_no_crawlable_url_schools(
+    session: Session,
+    *,
+    methods: list[str] | None,
+    school_type: str | None = "専門学校",
+) -> int:
+    """Count active schools the weekly runner cannot crawl yet.
+
+    ``target_missing_school_count`` only includes schools with a crawlable
+    SchoolSite. A fresh Windows setup has master schools but no URLs, so this
+    count explains why the runner has nothing to crawl until the UI initial
+    acquisition flow seeds SchoolSite rows.
+    """
+    crawlable_ids = session.query(SchoolSite.school_id).filter(
+        or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None))
+    )
+    if methods:
+        crawlable_ids = crawlable_ids.filter(SchoolSite.discovery_method.in_(methods))
+
+    q = session.query(func.count(School.id)).filter(
+        School.status == "active",
+        ~School.id.in_(crawlable_ids.distinct()),
+    )
+    if school_type:
+        q = q.filter(School.school_type == school_type)
+    return int(q.scalar() or 0)
 
 
 def _coverage_snapshot(session: Session, current_fy: int, school_type: str | None) -> dict[str, Any]:
@@ -414,6 +443,11 @@ def _run_weekly_inner(
             )
         )
         stale_school_count = len(set(selected_school_ids) & stale_reference_ids)
+        no_crawlable_url_school_count = count_no_crawlable_url_schools(
+            session,
+            methods=methods,
+            school_type=school_type,
+        )
         before = _snapshot_reports(session, current_fy, school_type)
 
         max_doc_id_before = session.query(func.max(Document.id)).scalar() or 0
@@ -478,6 +512,7 @@ def _run_weekly_inner(
             "methods": methods,
             "selection_mode": selection_mode,
             "stale_school_count": stale_school_count,
+            "no_crawlable_url_school_count": no_crawlable_url_school_count,
             "target_missing_school_count": len(selected_school_ids),
             "school_ids": selected_school_ids,
             "new_document_ids": new_document_ids,
@@ -509,6 +544,7 @@ def _run_weekly_inner(
                 "school_type": school_type,
                 "methods": methods,
                 "stale_school_count": 0,
+                "no_crawlable_url_school_count": 0,
                 "target_missing_school_count": 0,
                 "new_document_ids": [],
                 "discovery_stats": {},
@@ -578,6 +614,7 @@ def main() -> None:
         "dry_run": summary["dry_run"],
         "selection_mode": summary["selection_mode"],
         "stale_school_count": summary["stale_school_count"],
+        "no_crawlable_url_school_count": summary["no_crawlable_url_school_count"],
         "target_missing_school_count": summary["target_missing_school_count"],
         "new_document_ids": summary["new_document_ids"],
         "discovery_stats": summary["discovery_stats"],

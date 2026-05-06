@@ -57,11 +57,28 @@ if errorlevel 1 (
     echo [first_setup] dependency install failed
     exit /b 1
 )
+
+REM Install eidp itself from the exact bundled wheel file. Installing by
+REM package name can reuse a same-version uv cache entry from an older ZIP.
+set "EIDP_WHEEL="
+for %%F in ("%EIDP_APP_ROOT%\wheelhouse\eidp-*.whl") do (
+    if not exist "%%~fF" (
+        echo [first_setup] ERROR: wheelhouse\eidp-*.whl is missing.
+        exit /b 2
+    )
+    if defined EIDP_WHEEL (
+        echo [first_setup] ERROR: multiple eidp wheels found in wheelhouse.
+        exit /b 2
+    )
+    set "EIDP_WHEEL=%%~fF"
+)
 "%UV_EXE%" pip install ^
     --python "%VENV_PY%" ^
     --no-index ^
     --find-links "%EIDP_APP_ROOT%\wheelhouse" ^
-    eidp
+    --no-cache ^
+    --reinstall-package eidp ^
+    "%EIDP_WHEEL%"
 if errorlevel 1 (
     echo [first_setup] eidp wheel install failed
     exit /b 1
@@ -112,8 +129,7 @@ if errorlevel 1 (
 
 echo [first_setup] complete.
 echo [first_setup] Next steps:
-echo [first_setup]   1. Double-click scripts\bootstrap_pdfs.bat (one-time, online)
-echo [first_setup]      to download prefecture artifacts and discover school PDFs.
-echo [first_setup]   2. Double-click scripts\launch.bat to open the operator UI.
+echo [first_setup]   1. Double-click scripts\launch.bat to open the operator UI.
+echo [first_setup]   2. In the UI, press the initial URL/PDF acquisition button.
 endlocal
 exit /b 0

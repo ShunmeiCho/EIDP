@@ -63,6 +63,8 @@ class WheelhouseError(RuntimeError):
 def build_project_wheel(*, repo_root: Path, out_dir: Path) -> Path:
     """Run ``uv build --wheel`` and return the path of the produced wheel."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    for stale_wheel in out_dir.glob("eidp-*.whl"):
+        stale_wheel.unlink()
     cmd = ["uv", "build", "--wheel", "--out-dir", str(out_dir)]
     print(f"$ {' '.join(cmd)}")
     subprocess.run(cmd, cwd=repo_root, check=True)

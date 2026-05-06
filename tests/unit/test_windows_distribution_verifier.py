@@ -108,6 +108,17 @@ def test_verify_core_zip_requires_project_wheel(tmp_path: Path) -> None:
     assert any("project wheel" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_multiple_project_wheels(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["wheelhouse/eidp-0.2.1-py3-none-any.whl"] = b"wheel"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("multiple project wheels" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_case_insensitive_path_collision(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["docs/Runbooks/eidp-windows.md"] = "# duplicate by case\n"

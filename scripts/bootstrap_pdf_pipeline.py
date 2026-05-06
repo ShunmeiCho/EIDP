@@ -25,9 +25,12 @@ Why not bake artifacts into the ZIP at build time?
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
@@ -40,6 +43,52 @@ from download_prefecture_artifacts import (  # noqa: E402
     download_artifact,
     load_seed_rows,
 )
+
+TOTAL_BOOTSTRAP_STEPS = 5
+
+
+class BootstrapProgressWriter:
+    """Small JSON status writer for the Streamlit operator UI."""
+
+    def __init__(self, path: Path | None) -> None:
+        self.path = path
+        self.started_at = datetime.now()
+
+    def write(
+        self,
+        *,
+        status: str,
+        current_step: int,
+        message: str,
+        percent: float,
+        error: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        if self.path is None:
+            return
+
+        now = datetime.now()
+        payload: dict[str, Any] = {
+            "status": status,
+            "current_step": max(0, min(current_step, TOTAL_BOOTSTRAP_STEPS)),
+            "total_steps": TOTAL_BOOTSTRAP_STEPS,
+            "percent": max(0.0, min(percent, 1.0)),
+            "message": message,
+            "started_at": self.started_at.isoformat(timespec="seconds"),
+            "updated_at": now.isoformat(timespec="seconds"),
+            "log_path": str(self.path.with_suffix(".log")),
+        }
+        if status in {"succeeded", "failed"}:
+            payload["completed_at"] = now.isoformat(timespec="seconds")
+        if error:
+            payload["error"] = error
+        if details:
+            payload["details"] = details
+
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = self.path.with_suffix(self.path.suffix + ".tmp")
+        tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp_path.replace(self.path)
 
 
 def select_artifact_targets(
@@ -123,10 +172,7 @@ def step_aggregate(
                     continue
             report = aggregate(session, pref, artifact)
             stats = apply_writer_plan(session, report)
-            print(
-                f"[step2] {pref}: extracted={report.extracted_total} "
-                f"matched={report.db_matched} applied={stats}"
-            )
+            print(f"[step2] {pref}: extracted={report.extracted_total} matched={report.db_matched} applied={stats}")
             results[pref] = {
                 "extracted": report.extracted_total,
                 "matched": report.db_matched,
@@ -232,27 +278,30 @@ def step_rebuild_status() -> dict[str, int]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pref", default="", help="Comma-separated pref_keys. Empty = every supported.")
-    parser.add_argument("--seed-csv", type=Path,
-                        default=REPO_ROOT / "data" / "prefecture-aggregators" / "seed.csv")
-    parser.add_argument("--artifact-dir", type=Path,
-                        default=REPO_ROOT / "data" / "prefecture-aggregators" / "artifacts")
-    parser.add_argument("--aggregate-output", type=Path,
-                        default=REPO_ROOT / "output" / "pref-aggregator")
-    parser.add_argument("--storage-dir", type=Path,
-                        default=REPO_ROOT / "data" / "pdfs")
+    parser.add_argument("--seed-csv", type=Path, default=REPO_ROOT / "data" / "prefecture-aggregators" / "seed.csv")
     parser.add_argument(
-        "--batch-size", type=int, default=10000,
+        "--artifact-dir", type=Path, default=REPO_ROOT / "data" / "prefecture-aggregators" / "artifacts"
+    )
+    parser.add_argument("--aggregate-output", type=Path, default=REPO_ROOT / "output" / "pref-aggregator")
+    parser.add_argument("--storage-dir", type=Path, default=REPO_ROOT / "data" / "pdfs")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=10000,
         help="Max sites to crawl in step 3 / docs to ingest in step 4. "
-             "Default 10000 = effectively unlimited for v1 corpus (~700 sites). "
-             "Set lower to bound a single bootstrap session.",
+        "Default 10000 = effectively unlimited for v1 corpus (~700 sites). "
+        "Set lower to bound a single bootstrap session.",
     )
     parser.add_argument("--rate-limit", type=float, default=1.5)
-    parser.add_argument("--force-redownload", action="store_true",
-                        help="Re-download prefecture artifacts even if cached.")
-    parser.add_argument("--skip-discover", action="store_true",
-                        help="Stop after aggregate. Useful for offline-only bootstrap.")
-    parser.add_argument("--skip-ingest", action="store_true",
-                        help="Stop after discover. Useful when ingest will run separately.")
+    parser.add_argument(
+        "--force-redownload", action="store_true", help="Re-download prefecture artifacts even if cached."
+    )
+    parser.add_argument(
+        "--skip-discover", action="store_true", help="Stop after aggregate. Useful for offline-only bootstrap."
+    )
+    parser.add_argument(
+        "--skip-ingest", action="store_true", help="Stop after discover. Useful when ingest will run separately."
+    )
     parser.add_argument(
         "--allow-stale-fallback",
         action="store_true",
@@ -262,13 +311,92 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
-        "--evidence-log", type=Path,
+        "--evidence-log",
+        type=Path,
         default=REPO_ROOT / "output" / "discovery_rejections.jsonl",
     )
+    parser.add_argument(
+        "--lock-path",
+        type=Path,
+        default=REPO_ROOT / "data" / ".lock",
+        help="Advisory lock path used to pause UI writes while bootstrap runs.",
+    )
+    parser.add_argument(
+        "--progress-file",
+        type=Path,
+        default=None,
+        help="JSON status file written for the Streamlit operator UI.",
+    )
+    parser.add_argument("--no-lock", action="store_true", help="Developer-only: run without the app lock.")
     args = parser.parse_args(argv)
+    progress = BootstrapProgressWriter(args.progress_file)
 
+    if not args.no_lock:
+        from eidp.db.locking import LockBusyError, acquire_lock
+
+        try:
+            with acquire_lock(args.lock_path, owner="bootstrap_pdfs"):
+                return run_bootstrap_with_progress(args, progress)
+        except LockBusyError as exc:
+            print(f"ERROR: another EIDP process is running: {exc}")
+            progress.write(
+                status="failed",
+                current_step=0,
+                percent=0.0,
+                message="別の処理が実行中のため、初回取得を開始できませんでした。",
+                error=str(exc),
+            )
+            return 5
+    return run_bootstrap_with_progress(args, progress)
+
+
+def run_bootstrap_with_progress(args: argparse.Namespace, progress: BootstrapProgressWriter) -> int:
+    try:
+        progress.write(
+            status="running",
+            current_step=0,
+            percent=0.0,
+            message="初回取得を準備中です。",
+        )
+        rc = run_bootstrap(args, progress=progress)
+    except Exception as exc:
+        progress.write(
+            status="failed",
+            current_step=TOTAL_BOOTSTRAP_STEPS,
+            percent=1.0,
+            message="初回取得中にエラーが発生しました。診断ログを確認してください。",
+            error=str(exc),
+        )
+        raise
+
+    if rc == 0:
+        progress.write(
+            status="succeeded",
+            current_step=TOTAL_BOOTSTRAP_STEPS,
+            percent=1.0,
+            message="初回URL/PDF取得が完了しました。画面を更新してください。",
+        )
+    else:
+        progress.write(
+            status="failed",
+            current_step=TOTAL_BOOTSTRAP_STEPS,
+            percent=1.0,
+            message=f"初回取得が終了コード {rc} で停止しました。診断ログを確認してください。",
+            error=f"exit_code={rc}",
+        )
+    return rc
+
+
+def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter | None = None) -> int:
     only = [p.strip() for p in args.pref.split(",") if p.strip()] or None
 
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=1,
+            percent=0.05,
+            message="都道府県の公開データを取得しています。",
+        )
     print("=== Step 1: download prefecture artifacts ===")
     ok, failed = step_download_artifacts(
         seed_csv=args.seed_csv,
@@ -282,6 +410,14 @@ def main(argv: list[str] | None = None) -> int:
     if failed:
         print(f"WARNING: {len(failed)} prefecture downloads failed; continuing with the rest.")
 
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=2,
+            percent=0.25,
+            message="都道府県データから学校URLを登録しています。",
+            details={"prefectures_ok": len(ok), "prefectures_failed": len(failed)},
+        )
     print("\n=== Step 2: prefecture-aggregate --apply ===")
     aggregate_stats = step_aggregate(
         pref_keys=ok,
@@ -293,6 +429,14 @@ def main(argv: list[str] | None = None) -> int:
         print("\n[skip] Step 3 / 4 — --skip-discover requested.")
         return 0
 
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=3,
+            percent=0.45,
+            message="学校サイトから対象年度PDFを探索しています。",
+            details={"school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values())},
+        )
     print("\n=== Step 3: discover-pdfs ===")
     discovery_stats = step_discover_pdfs(
         storage_dir=args.storage_dir,
@@ -306,11 +450,27 @@ def main(argv: list[str] | None = None) -> int:
         print("\n[skip] Step 4 — --skip-ingest requested.")
         return 0
 
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=4,
+            percent=0.75,
+            message="取得したPDFを読み取り、DBへ登録しています。",
+            details=discovery_stats,
+        )
     print("\n=== Step 4: ingest-pdfs ===")
     ingest_stats = step_ingest(
         batch_size=args.batch_size,
         evidence_log=None,
     )
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=5,
+            percent=0.9,
+            message="学校別タスクを再計算しています。",
+            details=ingest_stats,
+        )
     print("\n=== Step 5: rebuild school fiscal-year status ===")
     status_stats = step_rebuild_status()
 

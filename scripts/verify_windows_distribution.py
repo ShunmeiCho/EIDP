@@ -184,8 +184,12 @@ def _check_wheelhouse(check: ZipCheck, names: set[str], *, require_project: bool
     if rejected:
         check.fail(f"wheelhouse contains rejected wheel names: {rejected[:5]}")
 
-    if require_project and not any(Path(wheel).name.startswith("eidp-") for wheel in wheels):
+    project_wheels = [wheel for wheel in wheels if Path(wheel).name.startswith("eidp-")]
+    check.details["project_wheel_count"] = len(project_wheels)
+    if require_project and not project_wheels:
         check.fail("wheelhouse missing project wheel eidp-*.whl")
+    if require_project and len(project_wheels) > 1:
+        check.fail(f"wheelhouse contains multiple project wheels: {project_wheels[:5]}")
 
 
 def _read_zip_text(check: ZipCheck, member: str) -> str | None:
@@ -234,6 +238,10 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "venv",
             ".venv\\Scripts\\python.exe",
             "--no-index",
+            "--no-cache",
+            "--reinstall-package eidp",
+            "EIDP_WHEEL",
+            "eidp-*.whl",
             "wheelhouse",
             "-m eidp.cli db-bootstrap --sqlite",
             "import-excel",

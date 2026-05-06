@@ -22,6 +22,7 @@ spec.loader.exec_module(module)
 
 select_stale_school_ids = module.select_stale_school_ids
 select_target_missing_school_ids = module.select_target_missing_school_ids
+count_no_crawlable_url_schools = module.count_no_crawlable_url_schools
 snapshot_reports = module._snapshot_reports
 resolve_weekly_paths = module.resolve_weekly_paths
 write_last_run = module.write_last_run
@@ -157,6 +158,30 @@ def test_select_target_missing_school_ids_includes_never_ingested_schools() -> N
         session.close()
 
 
+def test_count_no_crawlable_url_schools_explains_empty_bootstrap_queue() -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        _school(session, 2)
+        _site(session, 2, "prefecture_aggregator")
+        _school(session, 3)
+        _site(session, 3, "prefecture_aggregator", http_status=404)
+        _school(session, 4)
+        _site(session, 4, "operator_manual")
+        _school(session, 5, "大学")
+        session.flush()
+
+        count = count_no_crawlable_url_schools(
+            session,
+            methods=["prefecture_aggregator"],
+            school_type="専門学校",
+        )
+
+        assert count == 3
+    finally:
+        session.close()
+
+
 def test_select_stale_school_ids_can_include_all_methods_and_limit() -> None:
     session = _session()
     try:
@@ -246,6 +271,7 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
         "dry_run": False,
         "current_fy": 2026,
         "stale_school_count": 3,
+        "no_crawlable_url_school_count": 9,
         "new_document_ids": [10, 11],
         "discovery_stats": {"downloaded": 2},
         "ingest_stats": {"processed": 2},
@@ -260,6 +286,7 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     assert payload["run_id"] == "20260505_010203"
     assert payload["current_fy"] == 2026
     assert payload["stale_school_count"] == 3
+    assert payload["no_crawlable_url_school_count"] == 9
     assert payload["new_document_count"] == 2
     assert payload["new_document_ids"] == [10, 11]
     assert payload["summary_path"].endswith("summary.json")
@@ -401,3 +428,4 @@ def test_run_weekly_separates_target_missing_from_stale_count(
     assert summary["selection_mode"] == "target_missing"
     assert summary["target_missing_school_count"] == 2
     assert summary["stale_school_count"] == 1
+    assert summary["no_crawlable_url_school_count"] == 0
