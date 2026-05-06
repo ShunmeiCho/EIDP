@@ -198,6 +198,23 @@ def test_submit_operator_url_accepts_disclosure_page_for_reuse(monkeypatch: pyte
         session.close()
 
 
+def test_operator_url_reuse_notice_explains_disclosure_page_reuse() -> None:
+    level, message = operator_pages.operator_url_reuse_notice("html_page")
+
+    assert level == "success"
+    assert "来年度以降" in message
+    assert "再取得" in message
+
+
+def test_operator_url_reuse_notice_warns_pdf_direct_link_is_this_year_only() -> None:
+    level, message = operator_pages.operator_url_reuse_notice("target")
+
+    assert level == "warning"
+    assert "PDF直リンク" in message
+    assert "今年度" in message
+    assert "情報公開ページURL" in message
+
+
 def test_submit_operator_url_rejects_non_target_without_insert(monkeypatch: pytest.MonkeyPatch) -> None:
     session = _session()
     try:

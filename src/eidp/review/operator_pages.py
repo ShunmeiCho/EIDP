@@ -283,6 +283,25 @@ def submit_operator_url(
     )
 
 
+def operator_url_reuse_notice(classifier: str) -> tuple[str, str]:
+    """Return the operator-facing reuse message for an accepted URL."""
+    if classifier == _ACCEPTED_OPERATOR_PAGE_CLASSIFIER:
+        return (
+            "success",
+            "情報公開ページとして保存しました。来年度以降もこのページを入口にして対象年度PDFを再取得します。",
+        )
+    if classifier in _ACCEPTED_OPERATOR_CLASSIFIERS:
+        return (
+            "warning",
+            "PDF直リンクとして保存しました。今年度の救急取込みには使えますが、来年度以降の入口には弱いです。"
+            "同じ学校の情報公開ページURLも追加してください。",
+        )
+    return (
+        "info",
+        "URLを保存しました。来年度以降も使える入口かどうかは、学校別タスクのURL種別で確認してください。",
+    )
+
+
 def record_operator_submission(result: OperatorUrlSubmission, audit_path: Path) -> None:
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     with audit_path.open("a", encoding="utf-8") as fh:
@@ -929,6 +948,13 @@ URLは登録前に以下のチェックを通します。
             f"Accepted {result.classifier}: SchoolSite {label}"
             f" (site_id={result.site_id}, size={result.size_bytes / 1024:.1f} KB)"
         )
+        notice_level, notice = operator_url_reuse_notice(result.classifier)
+        if notice_level == "success":
+            st.success(notice)
+        elif notice_level == "warning":
+            st.warning(notice)
+        else:
+            st.info(notice)
         st.json(asdict(result))
         if pipeline_result is not None:
             st.subheader("Pipeline result")
