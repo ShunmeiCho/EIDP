@@ -1843,21 +1843,21 @@ def _todo_line(
     if urgent:
         c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
         c2.markdown(
-            f"<div style='text-align:right;color:#5E6AD2;font-weight:600;'>{count}</div>",
+            f"<div style='text-align:right;color:var(--eidp-accent);font-weight:600;'>{count}</div>",
             unsafe_allow_html=True,
         )
     elif done:
         c1.markdown(
-            f"<small style='color:#888'>{label}</small>", unsafe_allow_html=True
+            f"<small style='color:var(--eidp-ink-low)'>{label}</small>", unsafe_allow_html=True
         )
         c2.markdown(
-            f"<div style='text-align:right;color:#1F8B4C;'>{count}</div>",
+            f"<div style='text-align:right;color:var(--eidp-ok);'>{count}</div>",
             unsafe_allow_html=True,
         )
     else:
         c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
         c2.markdown(
-            f"<div style='text-align:right;color:#4E4E52;'>{count}</div>",
+            f"<div style='text-align:right;color:var(--eidp-ink-mid);'>{count}</div>",
             unsafe_allow_html=True,
         )
     if hint:

@@ -24,7 +24,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Show source chain / why a PDF was found | `src/eidp/review/_pages/pdf_manual_entry.py` shows selected PDF, source page, confidence, and discovery evidence log; `school_year_tasks.py` now labels crawl entry source quality. | Mostly covered locally; Windows click-through not revalidated after latest UI. |
 | Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. | Partial: manual entry is reduced, but unsupported prefectures and missing official links still need operator fallback. |
 | Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. | Mostly covered for current pipeline; needs Windows E2E validation with real data after latest branch. |
-| Make PDF確認 usable | `PDF確認・手入力` is now a detail page with target-year queue views, evidence panel, PDF preview/download, lock handling, and manual entry save path. | Improved but not fully product-validated; user still needs final UI test feedback. |
+| Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, and preserved filters. `PDF確認・手入力` remains the detail page with target-year queue views, evidence panel, PDF preview/download, lock handling, and manual entry save path. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. | Covered locally with tests; real seed coverage still partial. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
 | Windows operator delivery | `dist/eidp-windows.zip` rebuilt at commit `0fd1de2`, verifier `ok=true`, `git_dirty=false`, wheelhouse 79 wheels. | Mac-side package verified; Windows-native extraction/start/click-through not done for latest ZIP. |
@@ -32,12 +32,14 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 ## Latest Verification Evidence
 
-- `uv run pytest -q` → `726 passed, 5 warnings`
+- `uv run pytest -q` → `729 passed, 5 warnings`
 - `uv run pytest tests/unit/test_review_prefecture_remarks.py tests/unit/test_review_school_year_tasks.py -q` → `34 passed`
 - `uv run ruff check src/eidp/review/_pages/prefecture_remarks.py tests/unit/test_review_prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py tests/unit/test_review_school_year_tasks.py` → passed
 - `uv run mypy src/eidp/review/_pages/prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py` → passed
 - `uv run pytest tests/unit/test_competition_exporter.py -q` → `11 passed`
 - `uv run mypy src/eidp/excel/competition_exporter.py` → passed
+- `uv run pytest tests/unit/test_review_school_year_tasks.py tests/unit/test_operator_pages.py -q` → `54 passed`
+- `uv run mypy src/eidp/review/_pages/school_year_tasks.py` → passed
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --json` → `ok=true`, `git_commit=0fd1de2420614aaa7248ac1b5b3b27708cb93eb4`, `git_dirty=false`
 
 ## Missing Before Goal Can Be Marked Complete

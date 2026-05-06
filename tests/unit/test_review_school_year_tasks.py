@@ -35,6 +35,9 @@ from eidp.review._pages.school_year_tasks import (
     start_initial_url_bootstrap,
     start_weekly_rediscovery,
     status_label,
+    task_lane_prefill,
+    task_lanes_for_summary,
+    task_progress_label,
     url_submission_prefill_for_row,
     weekly_command,
 )
@@ -177,6 +180,7 @@ def test_school_task_summary_groups_operator_counts() -> None:
         assert summary.excel_ready == 1
         assert summary.needs_action == 4
         assert summary.confirmed_target == 2
+        assert summary.target_pdf_wait == 0
         assert summary.stale_fallback == 1
         assert summary.no_url == 1
         assert summary.review_or_parse == 1
@@ -214,6 +218,7 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
         total=2418,
         excel_ready=0,
         confirmed_target=0,
+        target_pdf_wait=0,
         stale_fallback=0,
         no_url=2418,
         review_or_parse=0,
@@ -225,6 +230,7 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
         total=2418,
         excel_ready=0,
         confirmed_target=0,
+        target_pdf_wait=100,
         stale_fallback=0,
         no_url=100,
         review_or_parse=0,
@@ -237,6 +243,56 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
     assert "確認大学等一覧" in warning
     assert "学校名リンクに埋め込まれたURL" in warning
     assert "専門学校中心" not in warning
+
+
+def test_task_lanes_make_operator_routes_explicit() -> None:
+    summary = SchoolTaskSummary(
+        fiscal_year=2026,
+        school_type=None,
+        total=10,
+        excel_ready=2,
+        confirmed_target=4,
+        target_pdf_wait=3,
+        stale_fallback=1,
+        no_url=2,
+        review_or_parse=1,
+        dept_change_review=1,
+    )
+
+    lanes = {lane.key: lane for lane in task_lanes_for_summary(summary)}
+
+    assert task_progress_label(summary) == "Excel出力可 2/10 校 / 要対応 8 校"
+    assert lanes["no_url"].count == 2
+    assert lanes["no_url"].blocking_reason == "no_url"
+    assert lanes["target_wait"].count == 3
+    assert lanes["target_wait"].blocking_reason == "no_target_pdf"
+    assert lanes["review_or_parse"].page_id == school_year_tasks.MANUAL_ENTRY_PAGE_ID
+    assert lanes["excel_ready"].page_id == school_year_tasks.EXCEL_PREVIEW_PAGE_ID
+
+
+def test_task_lane_prefill_sets_filter_or_page_state() -> None:
+    summary = SchoolTaskSummary(
+        fiscal_year=2026,
+        school_type="専門学校",
+        total=5,
+        excel_ready=1,
+        confirmed_target=1,
+        target_pdf_wait=0,
+        stale_fallback=2,
+        no_url=0,
+        review_or_parse=0,
+        dept_change_review=0,
+    )
+    stale_lane = {lane.key: lane for lane in task_lanes_for_summary(summary)}["stale_pdf"]
+    excel_lane = {lane.key: lane for lane in task_lanes_for_summary(summary)}["excel_ready"]
+
+    assert task_lane_prefill(stale_lane) == {
+        school_year_tasks.TASK_SCOPE_STATE_KEY: "要対応",
+        school_year_tasks.TASK_REASON_STATE_KEY: "stale_pdf_only",
+        school_year_tasks.TASK_PREFECTURE_STATE_KEY: "すべて",
+        school_year_tasks.TASK_SEARCH_STATE_KEY: "",
+    }
+    assert task_lane_prefill(excel_lane) == {"selected_page": school_year_tasks.EXCEL_PREVIEW_PAGE_ID}
 
 
 def test_bootstrap_command_uses_pipeline_script_and_lock_path(tmp_path) -> None:
@@ -697,6 +753,33 @@ def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> 
             == "URLなし学校"
         )
         assert app.session_state[school_year_tasks.URL_SUBMISSION_SCHOOL_ID_STATE_KEY] == 3
+    finally:
+        session.close()
+
+
+def test_task_lane_button_focuses_matching_filter(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        _school(session, 2, name="旧年度学校")
+        _status(session, 2, pdf_status="rejected_stale", blocking_reason="stale_pdf_only")
+        session.commit()
+
+        app = AppTest.from_function(
+            _render_school_tasks_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.run(timeout=15)
+
+        assert not app.exception
+        stale_buttons = [button for button in app.button if button.label == "旧年度のみを表示"]
+        assert len(stale_buttons) == 1
+
+        stale_buttons[0].click().run(timeout=15)
+
+        assert app.session_state[school_year_tasks.TASK_SCOPE_STATE_KEY] == "要対応"
+        assert app.session_state[school_year_tasks.TASK_REASON_STATE_KEY] == "stale_pdf_only"
+        assert app.session_state[school_year_tasks.TASK_PREFECTURE_STATE_KEY] == "すべて"
+        assert app.session_state[school_year_tasks.TASK_SEARCH_STATE_KEY] == ""
     finally:
         session.close()
 

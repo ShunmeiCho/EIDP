@@ -30,6 +30,7 @@ class SchoolTaskSummary:
     total: int
     excel_ready: int
     confirmed_target: int
+    target_pdf_wait: int
     stale_fallback: int
     no_url: int
     review_or_parse: int
@@ -88,6 +89,18 @@ class BootstrapProgress:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class TaskLane:
+    key: str
+    label: str
+    count: int
+    description: str
+    button_label: str
+    scope: str
+    blocking_reason: str | None = None
+    page_id: str | None = None
+
+
 REVIEW_OR_PARSE_BLOCKERS = {"ocr_pending", "parse_failed", "not_extracted", "review_required"}
 SCHOOL_TYPE_FILTER_LABELS = ("すべて", "専門学校", "大学")
 URL_SUBMISSION_PAGE_ID = "url"
@@ -95,8 +108,18 @@ URL_SUBMISSION_QUERY_STATE_KEY = "url_submission_school_query"
 URL_SUBMISSION_SCHOOL_ID_STATE_KEY = "url_submission_school_id"
 MANUAL_ENTRY_PAGE_ID = "manual_entry"
 MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
+EXCEL_PREVIEW_PAGE_ID = "excel_preview"
 MANUAL_ENTRY_ACTIONS = {"OCR/手入力", "手入力", "PDF確認", "前年差分確認"}
 WEEKLY_DISCOVERY_METHODS = ("prefecture_aggregator", "operator_manual")
+TASK_SCOPE_STATE_KEY = "school_task_scope_filter"
+TASK_REASON_STATE_KEY = "school_task_reason_filter"
+TASK_PREFECTURE_STATE_KEY = "school_task_prefecture_filter"
+TASK_SEARCH_STATE_KEY = "school_task_search_filter"
+TASK_SCOPE_LABELS = ("要対応", "Excel出力可", "全校")
+TASK_REASON_ALL_LABEL = "すべて"
+TASK_PREFECTURE_ALL_LABEL = "すべて"
+TASK_SCOPE_TO_CODE = {"要対応": "needs_action", "Excel出力可": "excel_ready", "全校": "all"}
+TASK_CODE_TO_SCOPE_LABEL = {value: key for key, value in TASK_SCOPE_TO_CODE.items()}
 
 BLOCKING_REASON_LABELS: dict[str, str] = {
     "no_url": "URL追加が必要",
@@ -223,6 +246,88 @@ def site_entry_label(
     return "登録ページ入口"
 
 
+def task_progress_label(summary: SchoolTaskSummary) -> str:
+    if summary.total <= 0:
+        return "対象校がありません。"
+    return (
+        f"Excel出力可 {summary.excel_ready}/{summary.total} 校 / "
+        f"要対応 {summary.needs_action} 校"
+    )
+
+
+def task_lanes_for_summary(summary: SchoolTaskSummary) -> list[TaskLane]:
+    """Return the operator's top-level work lanes in recommended order."""
+    return [
+        TaskLane(
+            key="no_url",
+            label="URL入口なし",
+            count=summary.no_url,
+            description="都道府県公式一覧、学校、または法人の情報公開ページを再取得入口として登録します。",
+            button_label="URLなしを表示",
+            scope="needs_action",
+            blocking_reason="no_url",
+        ),
+        TaskLane(
+            key="target_wait",
+            label="対象年度PDF待ち",
+            count=summary.target_pdf_wait,
+            description="登録済み入口から対象年度PDFを再探索します。学校側の公開待ちもここに残ります。",
+            button_label="PDF待ちを表示",
+            scope="needs_action",
+            blocking_reason="no_target_pdf",
+        ),
+        TaskLane(
+            key="stale_pdf",
+            label="旧年度PDFのみ",
+            count=summary.stale_fallback,
+            description="旧年度PDFは成果に含めません。次回再取得、または対象年度PDFの入口確認に回します。",
+            button_label="旧年度のみを表示",
+            scope="needs_action",
+            blocking_reason="stale_pdf_only",
+        ),
+        TaskLane(
+            key="review_or_parse",
+            label="PDF確認・手入力",
+            count=summary.review_or_parse,
+            description="PDF原本、OCR待ち、抽出失敗、前年差分確認をまとめて確認します。",
+            button_label="PDF確認を開く",
+            scope="needs_action",
+            page_id=MANUAL_ENTRY_PAGE_ID,
+        ),
+        TaskLane(
+            key="dept_change",
+            label="学科変更",
+            count=summary.dept_change_review,
+            description="新設、廃科、名称変更、統合再編など、単純転記できない学校を確認します。",
+            button_label="学科変更を表示",
+            scope="needs_action",
+            blocking_reason="dept_change_review",
+        ),
+        TaskLane(
+            key="excel_ready",
+            label="Excel確認へ",
+            count=summary.excel_ready,
+            description="対象年度PDFと抽出が揃った学校だけを Excel プレビューで確認します。",
+            button_label="Excelプレビュー",
+            scope="excel_ready",
+            page_id=EXCEL_PREVIEW_PAGE_ID,
+        ),
+    ]
+
+
+def task_lane_prefill(lane: TaskLane) -> dict[str, object]:
+    """Return Streamlit state that focuses the school task table or another page."""
+    payload: dict[str, object] = {}
+    if lane.page_id is not None:
+        payload["selected_page"] = lane.page_id
+        return payload
+    payload[TASK_SCOPE_STATE_KEY] = TASK_CODE_TO_SCOPE_LABEL.get(lane.scope, "要対応")
+    payload[TASK_REASON_STATE_KEY] = lane.blocking_reason or TASK_REASON_ALL_LABEL
+    payload[TASK_PREFECTURE_STATE_KEY] = TASK_PREFECTURE_ALL_LABEL
+    payload[TASK_SEARCH_STATE_KEY] = ""
+    return payload
+
+
 def is_pdf_site_url(url_type: str | None, url: str | None) -> bool:
     """Return True when a SchoolSite row points directly at a PDF file."""
     normalized_type = (url_type or "").strip().lower()
@@ -302,6 +407,7 @@ def school_task_summary(
     total = 0
     excel_ready = 0
     confirmed_target = 0
+    target_pdf_wait = 0
     stale_fallback = 0
     no_url = 0
     review_or_parse = 0
@@ -318,6 +424,8 @@ def school_task_summary(
             excel_ready += count
         if pdf_status == "confirmed_target":
             confirmed_target += count
+        if blocker == "no_target_pdf":
+            target_pdf_wait += count
         if blocker == "stale_pdf_only":
             stale_fallback += count
         if blocker == "no_url":
@@ -333,6 +441,7 @@ def school_task_summary(
         total=total,
         excel_ready=excel_ready,
         confirmed_target=confirmed_target,
+        target_pdf_wait=target_pdf_wait,
         stale_fallback=stale_fallback,
         no_url=no_url,
         review_or_parse=review_or_parse,
@@ -1026,6 +1135,31 @@ def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path
             st.warning(result.message)
 
 
+def _render_task_lanes(summary: SchoolTaskSummary) -> None:
+    import streamlit as st
+
+    lanes = task_lanes_for_summary(summary)
+    st.subheader("次に進める作業")
+    st.caption(
+        "対象年度の成果に近い順ではなく、詰まりを解消する順に並べています。"
+        "数字を見て、必要なレーンだけ開いてください。"
+    )
+    lane_columns = st.columns(3)
+    for index, lane in enumerate(lanes):
+        with lane_columns[index % 3]:
+            with st.container(border=True):
+                st.metric(lane.label, lane.count)
+                st.caption(lane.description)
+                if st.button(
+                    lane.button_label,
+                    key=f"school_task_lane_{lane.key}",
+                    disabled=lane.count == 0,
+                    use_container_width=True,
+                ):
+                    st.session_state.update(task_lane_prefill(lane))
+                    st.rerun()
+
+
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin Streamlit shell
     import streamlit as st
 
@@ -1063,6 +1197,10 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     cols[3].metric("旧年度fallback", summary.stale_fallback)
     cols[4].metric("URLなし", summary.no_url)
     cols[5].metric("学科変更", summary.dept_change_review)
+    st.progress(
+        summary.excel_ready / summary.total,
+        text=task_progress_label(summary),
+    )
 
     if needs_initial_url_bootstrap(summary):
         _render_initial_bootstrap_controls(summary, lock_path=lock_path)
@@ -1071,23 +1209,46 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     _render_weekly_rediscovery_controls(summary, lock_path=lock_path)
 
     st.divider()
-    c1, c2, c3, c4 = st.columns([1.2, 1.4, 1.4, 2])
-    scope_label = c1.radio("表示", ["要対応", "Excel出力可", "全校"], horizontal=True)
-    scope = {"要対応": "needs_action", "Excel出力可": "excel_ready", "全校": "all"}[scope_label]
+    _render_task_lanes(summary)
 
-    reasons = ["すべて", *_blocking_reason_options(session, fiscal_year=fiscal_year, school_type=school_type)]
+    st.divider()
+    c1, c2, c3, c4 = st.columns([1.2, 1.4, 1.4, 2])
+    if st.session_state.get(TASK_SCOPE_STATE_KEY) not in TASK_SCOPE_LABELS:
+        st.session_state[TASK_SCOPE_STATE_KEY] = "要対応"
+    scope_label = c1.radio(
+        "表示",
+        TASK_SCOPE_LABELS,
+        horizontal=True,
+        key=TASK_SCOPE_STATE_KEY,
+    )
+    scope = TASK_SCOPE_TO_CODE[str(scope_label)]
+
+    reasons = [
+        TASK_REASON_ALL_LABEL,
+        *_blocking_reason_options(session, fiscal_year=fiscal_year, school_type=school_type),
+    ]
+    if st.session_state.get(TASK_REASON_STATE_KEY) not in reasons:
+        st.session_state[TASK_REASON_STATE_KEY] = TASK_REASON_ALL_LABEL
     reason_label = c2.selectbox(
         "理由",
         reasons,
-        format_func=lambda reason: "すべて" if reason == "すべて" else blocking_reason_label(str(reason)),
+        format_func=lambda reason: TASK_REASON_ALL_LABEL
+        if reason == TASK_REASON_ALL_LABEL
+        else blocking_reason_label(str(reason)),
+        key=TASK_REASON_STATE_KEY,
     )
-    blocking_reason = None if reason_label == "すべて" else str(reason_label)
+    blocking_reason = None if reason_label == TASK_REASON_ALL_LABEL else str(reason_label)
 
-    prefectures = ["すべて", *_prefecture_options(session, fiscal_year=fiscal_year, school_type=school_type)]
-    pref_label = c3.selectbox("都道府県", prefectures)
-    prefecture = None if pref_label == "すべて" else pref_label
+    prefectures = [
+        TASK_PREFECTURE_ALL_LABEL,
+        *_prefecture_options(session, fiscal_year=fiscal_year, school_type=school_type),
+    ]
+    if st.session_state.get(TASK_PREFECTURE_STATE_KEY) not in prefectures:
+        st.session_state[TASK_PREFECTURE_STATE_KEY] = TASK_PREFECTURE_ALL_LABEL
+    pref_label = c3.selectbox("都道府県", prefectures, key=TASK_PREFECTURE_STATE_KEY)
+    prefecture = None if pref_label == TASK_PREFECTURE_ALL_LABEL else pref_label
 
-    search = c4.text_input("学校名検索", "")
+    search = c4.text_input("学校名検索", "", key=TASK_SEARCH_STATE_KEY)
 
     rows = list_school_year_tasks(
         session,
