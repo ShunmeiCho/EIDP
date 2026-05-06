@@ -9,8 +9,10 @@
 """
 from __future__ import annotations
 
+import csv
 import hashlib
 import html
+import io
 import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
@@ -138,6 +140,18 @@ class OperatorUrlSubmission:
     operator_name: str
     operator_note: str
     timestamp: str
+
+
+@dataclass(frozen=True)
+class OperatorBulkUrlImportResult:
+    inserted: int
+    updated: int
+    skipped: int
+    errors: list[str]
+
+    @property
+    def accepted(self) -> int:
+        return self.inserted + self.updated
 
 
 def _fetch_pdf_bytes(url: str) -> tuple[int, bytes]:
@@ -311,6 +325,114 @@ def operator_url_kind_label(classifier: str) -> str:
     if classifier in _ACCEPTED_OPERATOR_CLASSIFIERS:
         return "申請書PDF"
     return "URL"
+
+
+def operator_bulk_url_type(url: str, raw_url_type: str = "") -> str:
+    """Classify a bulk-imported operator URL without network access."""
+    normalized = raw_url_type.strip()
+    if normalized:
+        return normalized
+    path = url.lower().split("?", 1)[0].split("#", 1)[0]
+    return "pdf" if path.endswith(".pdf") else "disclosure_page"
+
+
+def _csv_value(row: dict[str, str], *names: str) -> str:
+    for name in names:
+        if name in row and row[name] is not None:
+            return str(row[name]).strip()
+    return ""
+
+
+def _find_school_for_bulk_url_row(session: Session, row: dict[str, str]) -> tuple[School | None, str | None]:
+    school_id = _csv_value(row, "school_id", "id", "学校ID")
+    if school_id:
+        try:
+            school = session.get(School, int(school_id))
+        except ValueError:
+            return None, f"invalid school_id: {school_id}"
+        if school is None:
+            return None, f"school_id not found: {school_id}"
+        return school, None
+
+    school_name = _csv_value(row, "school_name", "学校名", "name")
+    if not school_name:
+        return None, "school_id or school_name is required"
+    matches = session.query(School).filter(School.school_name == school_name).all()
+    if not matches:
+        return None, f"school_name not found: {school_name}"
+    if len(matches) > 1:
+        return None, f"school_name is ambiguous: {school_name}"
+    return matches[0], None
+
+
+def import_operator_url_csv(session: Session, csv_text: str) -> OperatorBulkUrlImportResult:
+    """Bulk-register operator-known school URLs from a CSV upload.
+
+    Supported columns:
+    - ``school_id`` or ``学校ID`` (preferred), or exact ``school_name`` / ``学校名``
+    - ``url`` / ``URL``
+    - optional ``url_type`` / ``URL種別``
+
+    The import intentionally does not fetch every URL; a 700-school university
+    list would make the Streamlit request slow and fragile. Weekly discovery
+    later verifies and crawls rows with ``http_status`` still unknown.
+    """
+    reader = csv.DictReader(io.StringIO(csv_text))
+    if not reader.fieldnames:
+        return OperatorBulkUrlImportResult(inserted=0, updated=0, skipped=0, errors=["CSV header is missing"])
+
+    inserted = 0
+    updated = 0
+    skipped = 0
+    errors: list[str] = []
+    now = datetime.now(UTC)
+    for line_no, row in enumerate(reader, start=2):
+        clean_row = {str(k).strip(): (v or "").strip() for k, v in row.items() if k is not None}
+        url = _csv_value(clean_row, "url", "URL")
+        if not url:
+            skipped += 1
+            errors.append(f"line {line_no}: url is required")
+            continue
+        if not _is_safe_url(url):
+            skipped += 1
+            errors.append(f"line {line_no}: unsafe URL")
+            continue
+
+        school, error = _find_school_for_bulk_url_row(session, clean_row)
+        if error is not None or school is None:
+            skipped += 1
+            errors.append(f"line {line_no}: {error}")
+            continue
+
+        url_type = operator_bulk_url_type(url, _csv_value(clean_row, "url_type", "URL種別"))
+        existing = (
+            session.query(SchoolSite)
+            .filter(SchoolSite.school_id == school.id, SchoolSite.url == url)
+            .first()
+        )
+        if existing is None:
+            session.add(
+                SchoolSite(
+                    school_id=school.id,
+                    url=url,
+                    url_type=url_type,
+                    discovery_method="operator_manual",
+                    confidence=0.8,
+                    verified=False,
+                    last_checked=now,
+                    http_status=None,
+                )
+            )
+            inserted += 1
+            continue
+
+        existing.url_type = existing.url_type or url_type
+        existing.discovery_method = existing.discovery_method or "operator_manual"
+        existing.confidence = max(float(existing.confidence or 0), 0.8)
+        existing.last_checked = now
+        updated += 1
+
+    return OperatorBulkUrlImportResult(inserted=inserted, updated=updated, skipped=skipped, errors=errors)
 
 
 def record_operator_submission(result: OperatorUrlSubmission, audit_path: Path) -> None:
@@ -603,7 +725,8 @@ def page_exports(session: Session) -> None:
     st.subheader("競合校Excel（16シート・テンプレ形式）")
     st.caption(
         "既存の「競合校の在校生数」テンプレートを読み込み、対象年度の数値だけを埋めて"
-        "新しい Excel として保存します。通常の業務員は変更しません。"
+        "新しい Excel として保存します。テンプレート内に対象年度列があればその列を更新し、"
+        "なければ対象年度列を追加します。通常の業務員は変更しません。"
     )
     comp_cols = st.columns(2)
     template_in = comp_cols[0].text_input(
@@ -858,6 +981,42 @@ URLは登録前に以下のチェックを通します。
 検証に失敗した場合はDB登録されません。
             """
         )
+
+    with st.expander("CSV一括登録（学校URLリストがある場合）", expanded=False):
+        st.caption(
+            "大学や専門学校のURLリストを持っている場合は、1件ずつ入力せずCSVで登録できます。"
+            "列は `school_id,url` が最も確実です。`school_name,url` も使えますが、同名校があるとスキップします。"
+            "登録したページURLは来年度以降も週次再取得の入口になります。"
+        )
+        uploaded_csv = st.file_uploader(
+            "URLリストCSV",
+            type=["csv"],
+            key="operator_url_bulk_csv",
+            help="例: school_id,url",
+        )
+        if st.button("CSVを一括登録", disabled=uploaded_csv is None, key="operator_url_bulk_submit"):
+            if uploaded_csv is None:
+                st.error("CSVファイルを選択してください。")
+            else:
+                try:
+                    csv_text = uploaded_csv.getvalue().decode("utf-8-sig")
+                    bulk_result = import_operator_url_csv(session, csv_text)
+                    session.commit()
+                    if bulk_result.accepted:
+                        st.success(
+                            f"URLを{bulk_result.accepted}件登録しました"
+                            f"（新規{bulk_result.inserted} / 更新{bulk_result.updated}）。"
+                        )
+                        st.info("次回の週次再取得から、このURLリストを入口に対象年度PDFを探します。")
+                    else:
+                        st.warning("登録できたURLはありません。CSVの学校ID・学校名・URLを確認してください。")
+                    if bulk_result.errors:
+                        st.warning(f"スキップ: {bulk_result.skipped}件")
+                        with st.expander("スキップ理由", expanded=False):
+                            st.write(bulk_result.errors)
+                except Exception as exc:
+                    session.rollback()
+                    st.error(f"CSV登録に失敗しました: {exc}")
 
     school_query = st.text_input(
         "学校名で検索",

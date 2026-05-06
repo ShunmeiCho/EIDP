@@ -222,6 +222,85 @@ def test_operator_url_kind_label_hides_classifier_codes() -> None:
     assert operator_pages.operator_url_kind_label("future_classifier") == "URL"
 
 
+def test_import_operator_url_csv_inserts_reusable_manual_urls(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = _session()
+    try:
+        session.add_all(
+            [
+                School(
+                    id=100, prefecture="東京", corporation_name="A法人",
+                    school_name="A大学", school_type="大学",
+                ),
+                School(
+                    id=200, prefecture="東京", corporation_name="B法人",
+                    school_name="B専門学校", school_type="専門学校",
+                ),
+            ]
+        )
+        session.flush()
+        monkeypatch.setattr(operator_pages, "_is_safe_url", lambda url: url.startswith("https://"))
+
+        result = operator_pages.import_operator_url_csv(
+            session,
+            "school_id,url\n"
+            "100,https://univ.example.ac.jp/public_info/\n"
+            "200,https://senmon.example.ac.jp/r8.pdf\n",
+        )
+
+        assert result.inserted == 2
+        assert result.updated == 0
+        assert result.skipped == 0
+        sites = session.query(SchoolSite).order_by(SchoolSite.school_id).all()
+        assert [site.discovery_method for site in sites] == ["operator_manual", "operator_manual"]
+        assert [site.url_type for site in sites] == ["disclosure_page", "pdf"]
+        assert [bool(site.verified) for site in sites] == [False, False]
+        assert [site.http_status for site in sites] == [None, None]
+    finally:
+        session.close()
+
+
+def test_import_operator_url_csv_updates_existing_and_reports_skips(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=100, prefecture="東京", corporation_name="A法人",
+                school_name="A大学", school_type="大学",
+            )
+        )
+        session.add(
+            SchoolSite(
+                school_id=100,
+                url="https://univ.example.ac.jp/public_info/",
+                url_type=None,
+                discovery_method=None,
+                confidence=0.1,
+            )
+        )
+        session.flush()
+        monkeypatch.setattr(operator_pages, "_is_safe_url", lambda url: url.startswith("https://"))
+
+        result = operator_pages.import_operator_url_csv(
+            session,
+            "学校名,URL\n"
+            "A大学,https://univ.example.ac.jp/public_info/\n"
+            "不明大学,https://missing.example.ac.jp/public_info/\n"
+            "A大学,not-a-url\n",
+        )
+
+        assert result.inserted == 0
+        assert result.updated == 1
+        assert result.skipped == 2
+        assert any("school_name not found" in error for error in result.errors)
+        assert any("unsafe URL" in error for error in result.errors)
+        site = session.query(SchoolSite).one()
+        assert site.url_type == "disclosure_page"
+        assert site.discovery_method == "operator_manual"
+        assert float(site.confidence) == 0.8
+    finally:
+        session.close()
+
+
 def test_submit_operator_url_rejects_non_target_without_insert(monkeypatch: pytest.MonkeyPatch) -> None:
     session = _session()
     try:
