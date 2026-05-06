@@ -319,7 +319,7 @@ def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path:
         session.add(
             Document(
                 school_id=1,
-                source_url="https://example.ac.jp/r7.pdf",
+                source_url="https://example.ac.jp/old.pdf",
                 file_hash="oldhash",
                 file_path="data/pdfs/1/old.pdf",
                 pdf_type="target",
@@ -330,9 +330,9 @@ def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path:
         session.flush()
 
         old = PdfCandidate(
-            pdf_url="https://example.ac.jp/r7.pdf",
+            pdf_url="https://example.ac.jp/old.pdf",
             page_url="https://example.ac.jp/disclosure/",
-            anchor_text="R7 確認申請書",
+            anchor_text="確認申請書",
             score=10.0,
         )
         new = PdfCandidate(
@@ -346,7 +346,7 @@ def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path:
             return DiscoveryResult(school_id=school_id, candidates=[old, new], best=old)
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
-            if candidate.pdf_url.endswith("r7.pdf"):
+            if candidate.pdf_url.endswith("old.pdf"):
                 return str(tmp_path / "old.pdf"), "oldhash", 2000, "target", None
             return str(tmp_path / "new.pdf"), "newhash", 3000, "target", None
 
@@ -372,7 +372,7 @@ def test_run_pdf_discovery_duplicate_only_is_success_not_failed(monkeypatch, tmp
         session.add(
             Document(
                 school_id=1,
-                source_url="https://example.ac.jp/r7.pdf",
+                source_url="https://example.ac.jp/kakunin.pdf",
                 file_hash="oldhash",
                 file_path="data/pdfs/1/old.pdf",
                 pdf_type="target",
@@ -382,9 +382,9 @@ def test_run_pdf_discovery_duplicate_only_is_success_not_failed(monkeypatch, tmp
         )
         session.flush()
         old = PdfCandidate(
-            pdf_url="https://example.ac.jp/r7.pdf",
+            pdf_url="https://example.ac.jp/kakunin.pdf",
             page_url="https://example.ac.jp/disclosure/",
-            anchor_text="R7 確認申請書",
+            anchor_text="確認申請書",
             score=10.0,
         )
 
@@ -425,13 +425,13 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
         session.add(SchoolSite(school_id=2, url="https://group.example.ac.jp/school-b/", http_status=200))
         session.flush()
 
-        stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/r7-kakunin.pdf"
+        stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/kakunin.pdf"
 
         def fake_discover(_client, school_id: int, url: str) -> DiscoveryResult:
             candidate = PdfCandidate(
                 pdf_url=stale_pdf_url,
                 page_url=url,
-                anchor_text="令和7年度 確認申請書",
+                anchor_text="確認申請書",
                 score=10.0,
             )
             return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
@@ -522,6 +522,67 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
         ]
         assert payloads[0]["reason"] == "pre_filtered_non_target_hint"
         assert payloads[0]["pdf_type"] == "non_target"
+        assert payloads[-1]["reason"] == "accepted_downloaded"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_prefilters_explicit_old_fiscal_year_before_download(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Strong R-era/year labels in links are enough to skip stale PDFs."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        stale = PdfCandidate(
+            pdf_url="https://example.ac.jp/disclosure/s_tf_application_2_r07.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和7年度 修学支援 高等教育 無償化 確認申請 機関要件 様式第2号",
+            score=10.0,
+        )
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/disclosure/kakunin_r08.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 確認申請書",
+            score=9.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[stale, target], best=stale)
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            download_calls.append(candidate.pdf_url)
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+        )
+
+        assert download_calls == ["https://example.ac.jp/disclosure/kakunin_r08.pdf"]
+        assert stats["prefiltered"] == 1
+        assert stats["skipped"] == 1
+        assert stats["downloaded"] == 1
+
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert payloads[0]["reason"] == "fiscal_year_mismatch:2025"
+        assert payloads[0]["pdf_type"] == "target"
+        assert payloads[0]["extra"]["pre_download"] == "true"
         assert payloads[-1]["reason"] == "accepted_downloaded"
     finally:
         session.close()

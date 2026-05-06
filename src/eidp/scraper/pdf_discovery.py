@@ -219,15 +219,59 @@ def _rejection_cache_key(
     )
 
 
-def _pre_download_reject_reason(candidate: PdfCandidate) -> str | None:
-    """Reject adjacent disclosure PDFs that are clearly not confirmation forms."""
-
-    text = unicodedata.normalize(
+def _candidate_hint_text(candidate: PdfCandidate) -> str:
+    return unicodedata.normalize(
         "NFKC",
         f"{candidate.anchor_text} {candidate.pdf_url}",
-    ).lower()
-    if any(token.lower() in text for token in PRE_DOWNLOAD_NEGATIVE_TOKENS):
-        return "pre_filtered_non_target_hint"
+    )
+
+
+def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> int | None:
+    detected = fiscal_year_from_japanese_era_text(
+        text,
+        include_fiscal_year_labels=True,
+        include_filing_dates=False,
+    )
+    if detected is not None:
+        return detected
+
+    western = re.search(r"(?<!\d)(20\d{2})\s*年度", text)
+    if western is not None:
+        return int(western.group(1))
+
+    lowered = text.lower()
+    for year in range(target_year - 8, target_year + 3):
+        if year == target_year:
+            continue
+        for token in fiscal_year_search_tokens(year):
+            if token == str(year):
+                continue
+            token_lower = token.lower()
+            if token_lower.startswith("r"):
+                pattern = rf"(?<![a-z0-9]){re.escape(token_lower)}(?![a-z0-9])"
+                if re.search(pattern, lowered):
+                    return year
+            elif token_lower in lowered:
+                return year
+    return None
+
+
+def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> CachedPdfRejection | None:
+    """Reject adjacent disclosure PDFs that are clearly not current target forms."""
+
+    text = _candidate_hint_text(candidate)
+    lowered = text.lower()
+    if any(token.lower() in lowered for token in PRE_DOWNLOAD_NEGATIVE_TOKENS):
+        return CachedPdfRejection(
+            pdf_type="non_target",
+            reason="pre_filtered_non_target_hint",
+        )
+    detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
+    if detected_year is not None and detected_year != target_year:
+        return CachedPdfRejection(
+            pdf_type="target",
+            reason=f"fiscal_year_mismatch:{detected_year}",
+        )
     return None
 
 
@@ -1062,13 +1106,15 @@ def run_pdf_discovery(
                     ))
                     continue
 
-                pre_download_reason = _pre_download_reject_reason(candidate)
-                if pre_download_reason is not None:
+                pre_download_rejection = _pre_download_rejection(candidate, target_year=target_year)
+                if pre_download_rejection is not None:
                     stats["prefiltered"] += 1
                     stats["skipped"] += 1
+                    if _is_target_year_rejection(pre_download_rejection.reason):
+                        target_year_rejection_seen = True
                     rejected_candidate_cache[cache_key] = CachedPdfRejection(
-                        pdf_type="non_target",
-                        reason=pre_download_reason,
+                        pdf_type=pre_download_rejection.pdf_type,
+                        reason=pre_download_rejection.reason,
                     )
                     recorder.record(RejectionEvidence(
                         school_id=site.school_id,
@@ -1077,8 +1123,8 @@ def run_pdf_discovery(
                         anchor_text=candidate.anchor_text,
                         pattern_type=candidate.pattern_type,
                         score=candidate.score,
-                        reason=pre_download_reason,
-                        pdf_type="non_target",
+                        reason=pre_download_rejection.reason,
+                        pdf_type=pre_download_rejection.pdf_type,
                         extra={"pre_download": "true"},
                     ))
                     continue
