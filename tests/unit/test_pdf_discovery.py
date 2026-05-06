@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -89,6 +90,153 @@ def test_download_attempt_urls_resolves_tmu_download_wrapper(monkeypatch) -> Non
             "?dd=assets%2Ffiles%2Fdownload%2FInformation_disclosure%2F2025_syugakusien_shinseisyo_1.pdf"
         ),
     ]
+
+
+def test_download_attempt_urls_keeps_bare_filename_wrapper_original(monkeypatch) -> None:
+    """Bare filename query values are often parameters for the wrapper itself."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    url = (
+        "https://www.tokyo-nissin.ac.jp/albums/abm.php"
+        "?d=16&f=abm00001256.pdf&n=%E6%94%B9_HP%E5%85%AC%E9%96%8B.pdf"
+    )
+
+    assert _download_attempt_urls(url) == [url]
+
+
+class _AttemptPdfResponse:
+    def __init__(self, url: str, *, status_code: int, content: bytes) -> None:
+        self.text = ""
+        self.status_code = status_code
+        self.headers: dict[str, str] = {}
+        self.url = url
+        self.request = httpx.Request("GET", url)
+        self.content = content
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"HTTP {self.status_code}",
+                request=self.request,
+                response=httpx.Response(self.status_code, request=self.request),
+            )
+
+
+class _AttemptPdfClient:
+    def __init__(self, responses: dict[str, _AttemptPdfResponse]) -> None:
+        self.responses = responses
+        self.calls: list[str] = []
+
+    def get(self, url: str, **_kwargs):  # noqa: ANN001
+        self.calls.append(url)
+        return self.responses[url]
+
+
+def test_download_pdf_continues_after_failed_attempt(monkeypatch, tmp_path: Path) -> None:
+    """A failed resolved URL must not prevent trying the original wrapper URL."""
+
+    bad_url = "https://example.ac.jp/misresolved.pdf"
+    good_url = "https://example.ac.jp/albums/abm.php?d=16&f=abm00001256.pdf"
+    client = _AttemptPdfClient(
+        {
+            bad_url: _AttemptPdfResponse(bad_url, status_code=404, content=b""),
+            good_url: _AttemptPdfResponse(good_url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(pdf_url=good_url, page_url="https://example.ac.jp/disclosure/")
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._download_attempt_urls", lambda _url: [bad_url, good_url])
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+        lambda _content: "様式第2号 機関要件 令和8年度",
+    )
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        123,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert client.calls == [bad_url, good_url]
+    assert candidate.pdf_url == good_url
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size == 2005
+    assert pdf_type == "target"
+    assert reason is None
+
+
+def test_download_pdf_keeps_image_target_hint_for_ocr_queue(monkeypatch, tmp_path: Path) -> None:
+    """Image-only target-looking forms should be retained for OCR/manual review."""
+
+    url = "https://example.ac.jp/albums/abm.php?d=16&f=abm00001256.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="高等教育の修学支援新制度（高等教育無償化）申請書様式第２号",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", lambda _content: "")
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        123,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size == 2005
+    assert pdf_type == "image_only"
+    assert reason is None
+
+
+def test_download_pdf_rejects_image_without_target_hint_in_strict_mode(monkeypatch, tmp_path: Path) -> None:
+    """Generic image PDFs still need target-form evidence before retention."""
+
+    url = "https://example.ac.jp/photo.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="学校案内",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", lambda _content: "")
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        123,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "image_only"
+    assert reason == "target_fiscal_year_not_detected"
 
 
 class _HtmlResponse:

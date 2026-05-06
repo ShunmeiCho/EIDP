@@ -294,6 +294,15 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
     return None
 
 
+def _has_target_application_hint(candidate: PdfCandidate) -> bool:
+    """Return whether link text/URL strongly names the target application form."""
+
+    text = _candidate_hint_text(candidate).lower()
+    system_hint = any(token in text for token in ("修学支援", "高等教育", "無償化"))
+    form_hint = any(token in text for token in ("確認申請", "申請書", "様式第2号", "様式第２号", "様式2号", "機関要件"))
+    return system_hint and form_hint
+
+
 def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> float:
     """Score a PDF candidate by keyword relevance."""
     score = 0.0
@@ -479,6 +488,8 @@ def _pdf_url_from_query_value(url: str) -> str | None:
     for _key, value in parse_qsl(parsed.query, keep_blank_values=True):
         decoded = unquote(value).strip()
         if ".pdf" not in decoded.lower():
+            continue
+        if not decoded.startswith(("http://", "https://", "/")) and "/" not in decoded:
             continue
         candidate_url = urljoin(base, decoded.lstrip("/"))
         if _is_safe_url(candidate_url):
@@ -829,8 +840,12 @@ def download_pdf(
             if not _is_safe_url(download_url):
                 last_reject_reason = "unsafe_resolved_url"
                 continue
-            resp = _safe_get(client, download_url)
-            resp.raise_for_status()
+            try:
+                resp = _safe_get(client, download_url)
+                resp.raise_for_status()
+            except httpx.HTTPError as e:
+                last_reject_reason = f"http_error:{type(e).__name__}"
+                continue
 
             # Check Content-Length before reading body
             content_length = resp.headers.get("content-length")
@@ -878,7 +893,9 @@ def download_pdf(
             target_year = target_fiscal_year or settings.target_fiscal_year
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
-            if detected_fiscal_year is None:
+            if detected_fiscal_year is None and not (
+                pdf_type == "image_only" and _has_target_application_hint(candidate)
+            ):
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
 
         # Storage path: data/pdfs/{school_id}/{hash[:8]}.pdf
