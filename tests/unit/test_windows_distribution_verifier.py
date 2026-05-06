@@ -29,6 +29,49 @@ def _write_zip(path: Path, entries: dict[str, bytes | str]) -> Path:
     return path
 
 
+def _prefecture_seed_csv(*, omit: set[str] | None = None, status: str = "url_found") -> str:
+    omit = omit or set()
+    header = (
+        "pref_key,pref_jp,schools_in_db,index_url,artifact_url,artifact_format,"
+        "table_cols,has_url_col,has_hyperlink_annot,as_of_date,verified_status,notes,"
+        "supplemental_artifact_urls"
+    )
+    rows = [header]
+    for index, pref in enumerate(sorted(module.EXPECTED_PREFECTURE_KEYS), start=1):
+        if pref in omit:
+            continue
+        rows.append(
+            ",".join(
+                [
+                    pref,
+                    f"{pref}県",
+                    "1",
+                    f"https://example.test/{pref}/index",
+                    f"https://example.test/{pref}/artifact.pdf",
+                    "pdf",
+                    "5",
+                    "yes" if index % 2 == 0 else "no",
+                    "yes" if index % 3 == 0 else "no",
+                    "2026-04-01",
+                    status,
+                    "test seed",
+                    "https://example.test/hyogo/extra.pdf" if pref == "hyogo" else "",
+                ]
+            )
+        )
+    return "\n".join(rows) + "\n"
+
+
+def _prefecture_parser_source(*, omit: set[str] | None = None) -> str:
+    omit = omit or set()
+    entries = [
+        f"    {pref!r}: lambda p: [],"
+        for pref in sorted(module.EXPECTED_PREFECTURE_KEYS)
+        if pref not in omit
+    ]
+    return "PARSERS: dict[str, object] = {\n" + "\n".join(entries) + "\n}\n"
+
+
 def _core_entries() -> dict[str, bytes | str]:
     return {
         "BUILD_INFO.json": json.dumps(
@@ -72,7 +115,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/download_prefecture_artifacts.py": (SCRIPTS_DIR / "download_prefecture_artifacts.py").read_text(
             encoding="utf-8"
         ),
-        "data/prefecture-aggregators/seed.csv": "pref_key,pref_jp\nfukuoka,福岡県\n",
+        "data/prefecture-aggregators/seed.csv": _prefecture_seed_csv(),
         "data/url-discovery/discovered-urls-50.csv": (
             "school_name,url\n東京都立大学,https://www.tmu.ac.jp/\n"
         ),
@@ -85,7 +128,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/review/_pages/pdf_manual_entry.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/fiscal_year_override.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/excel_preview.py": "def render(session, *, lock_path): pass\n",
-        "src/eidp/scraper/prefecture_aggregator.py": "PARSERS = {}\n",
+        "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
         "runtime/uv.exe": b"PE",
         "src/eidp/__init__.py": "",
@@ -179,6 +222,40 @@ def test_verify_core_zip_requires_bootstrap_seed_csvs(tmp_path: Path) -> None:
     assert not check.ok
     assert any("data/url-discovery/discovered-urls-50.csv" in error for error in check.errors)
     assert any("data/url-discovery/corporation_domains.csv" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["data/prefecture-aggregators/seed.csv"] = _prefecture_seed_csv(omit={"tokyo"})
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("must contain exactly 47 current prefecture rows" in error for error in check.errors)
+    assert any("tokyo" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_parser_for_every_prefecture_seed(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/prefecture_aggregator.py"] = _prefecture_parser_source(omit={"tokyo"})
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("PARSERS missing seed prefectures" in error and "tokyo" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_downloadable_prefecture_artifacts(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["data/prefecture-aggregators/seed.csv"] = _prefecture_seed_csv(status="todo")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("non-downloadable prefecture statuses" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_settings_page_module(tmp_path: Path) -> None:

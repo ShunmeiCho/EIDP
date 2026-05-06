@@ -1,8 +1,8 @@
 # Active Goal Completion Audit — EIDP Rolling Automation
 
-Date: 2026-05-06
+Date: 2026-05-07
 Branch: `sprint8-handoff-finalize`
-Latest audited commit: `0fd1de2420614aaa7248ac1b5b3b27708cb93eb4`
+Latest audited Windows package commit: `9e4d5f92b5692e8dc35bf76784f72c8e21906094` (`eidp-windows-v64.zip`)
 
 ## Objective Restatement
 
@@ -20,19 +20,23 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | Rolling target fiscal year, not hard-coded R8 | `src/eidp/config.py` uses `settings.target_fiscal_year`; `src/eidp/fiscal_year.py` derives Japanese fiscal year by April boundary and formats `2026年度（令和8年度）`. Production runners are `run_weekly_target_year_discovery.py` and `target_year_acquisition_plan.py`; R8-named scripts left in `scripts/` are compatibility wrappers, and the old R8 simulation script is archived under `deploy/legacy-spike/`. | Mostly covered locally: runtime and active entrypoints are rolling; remaining R8 strings are compatibility wrappers, historical reports/plans, or FY2026 test fixtures. |
-| Start from official government/prefecture indexes where possible | `data/prefecture-aggregators/seed.csv`; `src/eidp/scraper/prefecture_aggregator.py`; recent commits add Chiba/Ibaraki/Tochigi/Kagoshima parser coverage and remark review items. | Partial: strong path exists, but not all 47 prefectures have supported parsers/verified current URLs. |
+| Start from official government/prefecture indexes where possible | `data/prefecture-aggregators/seed.csv`; `src/eidp/scraper/prefecture_aggregator.py`; `scripts/verify_windows_distribution.py` now reads the ZIP seed/parser source and gates 47 prefecture rows, 47 parser registrations, and 47 downloadable official artifact URLs. Latest v64 verifier details: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_with_school_link_signal=37`, `prefecture_seed_supplemental_rows=1`. | Release-gated for nationwide official-index bootstrap presence. Still partial at product-yield level: some official indexes list school universe/remarks but no school-publication URL, so fallback discovery and operator review remain needed. |
 | Show source chain / why a PDF was found | `src/eidp/review/_pages/pdf_manual_entry.py` shows selected PDF, source page, confidence, and discovery evidence log; `school_year_tasks.py` now labels crawl entry source quality. | Mostly covered locally; Windows click-through not revalidated after latest UI. |
-| Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. | Partial: manual entry is reduced, but unsupported prefectures and missing official links still need operator fallback. |
+| Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. Web search now rejects known third-party directory/government-index URLs before registering `school_site`. | Partial: manual entry is reduced, but prefectures without school-publication links and schools whose official page is not discoverable still need operator fallback. |
 | Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. | Mostly covered for current pipeline; needs Windows E2E validation with real data after latest branch. |
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, and preserved filters. `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, focused-doc auto expansion, evidence panel, PDF preview/download, lock handling, and manual entry save path. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
-| Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. | Covered locally with tests; real seed coverage still partial. |
+| Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows.zip` rebuilt at commit `0fd1de2`, verifier `ok=true`, `git_dirty=false`, wheelhouse 79 wheels. | Mac-side package verified; Windows-native extraction/start/click-through not done for latest ZIP. |
+| Windows operator delivery | `dist/eidp-windows.zip` rebuilt as v64 at commit `9e4d5f9`, verifier `ok=true`, `git_dirty=false`, wheelhouse 82 wheels. Remote Windows smoke confirmed SHA256 match, `settings_page.py` present, no stale `"RC=-1"` launcher token, setup exit code 0, DB created, `school_count=2418`, settings/app import OK. | Package and setup smoke covered. Full Windows bootstrap to completion and UI click-through are still not complete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
-- `uv run pytest -q` → `731 passed, 5 warnings`
+- `uv run pytest -q` → `801 passed, 5 warnings`
+- `uv run pytest tests/unit/test_windows_distribution_verifier.py -q` → `34 passed`
+- `uv run ruff check scripts/verify_windows_distribution.py tests/unit/test_windows_distribution_verifier.py` → passed
+- `uv run mypy scripts/verify_windows_distribution.py` → passed
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --json` → `ok=true`, `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, no warnings
 - `uv run pytest tests/unit/test_review_prefecture_remarks.py tests/unit/test_review_school_year_tasks.py -q` → `34 passed`
 - `uv run ruff check src/eidp/review/_pages/prefecture_remarks.py tests/unit/test_review_prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py tests/unit/test_review_school_year_tasks.py` → passed
 - `uv run mypy src/eidp/review/_pages/prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py` → passed
@@ -42,13 +46,15 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 - `uv run mypy src/eidp/review/_pages/school_year_tasks.py` → passed
 - `uv run pytest tests/unit/test_review_pdf_manual_entry.py tests/unit/test_review_pdf_manual_entry_confidence.py -q` → `44 passed, 5 warnings`
 - `uv run mypy src/eidp/review/_pages/pdf_manual_entry.py` → passed
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --json` → `ok=true`, `git_commit=0fd1de2420614aaa7248ac1b5b3b27708cb93eb4`, `git_dirty=false`
+- Windows remote ZIP smoke → SHA256 `6a635a6809c5334bb978cf0a0cec1661e79d18e47333ba2b1951801aa117c701`, `HasSettings=true`, `BadBareRc=[]`, `BuildCommit=9e4d5f92b5692e8dc35bf76784f72c8e21906094`
+- Windows remote setup smoke → `SetupExitCode=0`, `.venv` present, SQLite DB present, `school_count=2418`, `school_fiscal_year_status_count=2418`, settings/app import OK
 
 ## Missing Before Goal Can Be Marked Complete
 
-1. Complete or explicitly gate 47-prefecture official-index coverage.
-   Unsupported/todo prefectures must either gain parser support or show an
-   operator-visible fallback queue.
+1. Validate official-index yield, not just coverage presence.
+   The packaged seed/parser surface is now gated for all 47 prefectures, but
+   some official artifacts do not publish school-publication URLs. Those cases
+   must continue to flow into fallback discovery and operator-visible review.
 2. Run latest ZIP on Windows and verify:
    setup, UI start, initial bootstrap button, weekly rediscovery button,
    official-index coverage page, school task drill-down, PDF確認, and Excel

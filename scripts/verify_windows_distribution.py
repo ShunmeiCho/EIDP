@@ -10,6 +10,8 @@ It does not execute Windows binaries. That remains the Sprint 8.5.b VM gate.
 from __future__ import annotations
 
 import argparse
+import ast
+import csv
 import hashlib
 import importlib.util
 import json
@@ -101,6 +103,61 @@ CORE_REQUIRED_PREFIXES = (
     "migrations/",
     "wheelhouse/",
 )
+
+EXPECTED_PREFECTURE_KEYS = frozenset(
+    {
+        "aichi",
+        "akita",
+        "aomori",
+        "chiba",
+        "ehime",
+        "fukui",
+        "fukuoka",
+        "fukushima",
+        "gifu",
+        "gunma",
+        "hiroshima",
+        "hokkaido",
+        "hyogo",
+        "ibaraki",
+        "ishikawa",
+        "iwate",
+        "kagawa",
+        "kagoshima",
+        "kanagawa",
+        "kochi",
+        "kumamoto",
+        "kyoto",
+        "mie",
+        "miyagi",
+        "miyazaki",
+        "nagano",
+        "nagasaki",
+        "nara",
+        "niigata",
+        "oita",
+        "okayama",
+        "okinawa",
+        "osaka",
+        "saga",
+        "saitama",
+        "shiga",
+        "shimane",
+        "shizuoka",
+        "tochigi",
+        "tokushima",
+        "tokyo",
+        "tottori",
+        "toyama",
+        "wakayama",
+        "yamagata",
+        "yamaguchi",
+        "yamanashi",
+    }
+)
+
+DOWNLOADABLE_PREFECTURE_STATUSES = frozenset({"spiked", "downloaded", "url_found"})
+PREFECTURE_ARTIFACT_FORMATS = frozenset({"pdf", "xlsx", "html", "htm"})
 
 OCR_REQUIRED_EXACT = (
     "ocr-addon/tesseract/tesseract.exe",
@@ -220,6 +277,144 @@ def _read_zip_text(check: ZipCheck, member: str) -> str | None:
     except UnicodeDecodeError as exc:
         check.fail(f"{member} is not UTF-8 text: {exc}")
         return None
+
+
+def _parser_keys_from_source(check: ZipCheck, source: str, member: str) -> set[str]:
+    """Extract parser registry keys from the packaged source file.
+
+    Do not import the local checkout here: the release question is whether
+    the ZIP itself carries parser support for every official seed row.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        check.fail(f"{member} cannot be parsed for prefecture parser registry: {exc}")
+        return set()
+
+    for node in tree.body:
+        value: ast.expr | None = None
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "PARSERS"
+            for target in node.targets
+        ):
+            value = node.value
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == "PARSERS":
+            value = node.value
+        if value is None:
+            continue
+        if not isinstance(value, ast.Dict):
+            check.fail(f"{member} PARSERS must be a literal dict for ZIP verification")
+            return set()
+        keys: set[str] = set()
+        for key_node in value.keys:
+            if isinstance(key_node, ast.Constant) and isinstance(key_node.value, str):
+                keys.add(key_node.value)
+        return keys
+
+    check.fail(f"{member} missing PARSERS registry")
+    return set()
+
+
+def _truthy_csv_value(value: str | None) -> bool:
+    normalized = (value or "").strip().lower()
+    return bool(normalized) and normalized not in {"no", "n/a", "unknown", "tbd", "false", "0"}
+
+
+def _split_artifact_urls(raw: str | None) -> list[str]:
+    return [
+        part.strip()
+        for part in (raw or "").replace("\n", "|").replace(";", "|").split("|")
+        if part.strip()
+    ]
+
+
+def _check_prefecture_seed_contract(check: ZipCheck, names: set[str]) -> None:
+    """Validate the official-prefecture bootstrap surface shipped in the ZIP.
+
+    The product objective depends on starting from the 47 government/prefecture
+    confirmation indexes. A ZIP can be structurally complete while silently
+    shipping a partial seed or missing parser registration, so make that a
+    release gate rather than a report-only observation.
+    """
+    seed_member = "data/prefecture-aggregators/seed.csv"
+    parser_member = "src/eidp/scraper/prefecture_aggregator.py"
+    if seed_member not in names or parser_member not in names:
+        return
+
+    seed_body = _read_zip_text(check, seed_member)
+    parser_body = _read_zip_text(check, parser_member)
+    if seed_body is None or parser_body is None:
+        return
+
+    records = list(csv.DictReader(seed_body.splitlines()))
+    parser_keys = _parser_keys_from_source(check, parser_body, parser_member)
+    if not records or not parser_keys:
+        return
+
+    pref_keys = [(record.get("pref_key") or "").strip() for record in records]
+    pref_key_set = set(pref_keys)
+    duplicates = sorted({pref for pref in pref_keys if pref and pref_keys.count(pref) > 1})
+    if duplicates:
+        check.fail(f"{seed_member} contains duplicate pref_key values: {duplicates}")
+
+    missing_rows = sorted(EXPECTED_PREFECTURE_KEYS - pref_key_set)
+    unexpected_rows = sorted(pref_key_set - EXPECTED_PREFECTURE_KEYS)
+    if missing_rows or unexpected_rows or len(records) != len(EXPECTED_PREFECTURE_KEYS):
+        check.fail(
+            f"{seed_member} must contain exactly {len(EXPECTED_PREFECTURE_KEYS)} current prefecture rows; "
+            f"missing={missing_rows} unexpected={unexpected_rows} actual={len(records)}"
+        )
+
+    unsupported = sorted(pref for pref in pref_key_set if pref and pref not in parser_keys)
+    if unsupported:
+        check.fail(f"{parser_member} PARSERS missing seed prefectures: {unsupported}")
+
+    non_downloadable: list[str] = []
+    missing_artifact_url: list[str] = []
+    bad_artifact_format: list[str] = []
+    with_school_link_signal = 0
+    supplemental_rows = 0
+    school_total = 0
+    for record in records:
+        pref = (record.get("pref_key") or "").strip()
+        artifact_url = (record.get("artifact_url") or "").strip()
+        status = (record.get("verified_status") or "").strip()
+        artifact_format = (record.get("artifact_format") or "").strip().lower()
+        if status not in DOWNLOADABLE_PREFECTURE_STATUSES:
+            non_downloadable.append(f"{pref}:{status or '<blank>'}")
+        if not artifact_url.startswith("http"):
+            missing_artifact_url.append(pref or "<blank>")
+        if artifact_format not in PREFECTURE_ARTIFACT_FORMATS:
+            bad_artifact_format.append(f"{pref}:{artifact_format or '<blank>'}")
+        if _truthy_csv_value(record.get("has_url_col")) or _truthy_csv_value(record.get("has_hyperlink_annot")):
+            with_school_link_signal += 1
+        if any(url.startswith("http") for url in _split_artifact_urls(record.get("supplemental_artifact_urls"))):
+            supplemental_rows += 1
+        raw_school_count = (record.get("schools_in_db") or "").strip()
+        if raw_school_count and raw_school_count.lower() != "unknown":
+            try:
+                school_total += int(raw_school_count)
+            except ValueError:
+                check.warn(f"{seed_member} has non-integer schools_in_db for {pref}")
+
+    if non_downloadable:
+        check.fail(f"{seed_member} has non-downloadable prefecture statuses: {non_downloadable}")
+    if missing_artifact_url:
+        check.fail(f"{seed_member} has missing artifact URLs: {missing_artifact_url}")
+    if bad_artifact_format:
+        check.fail(f"{seed_member} has unsupported artifact formats: {bad_artifact_format}")
+
+    check.details["prefecture_seed_rows"] = len(records)
+    check.details["prefecture_seed_parser_supported"] = len(pref_key_set & parser_keys)
+    check.details["prefecture_seed_downloadable"] = sum(
+        1
+        for record in records
+        if (record.get("verified_status") or "").strip() in DOWNLOADABLE_PREFECTURE_STATUSES
+        and (record.get("artifact_url") or "").strip().startswith("http")
+    )
+    check.details["prefecture_seed_school_rows_total"] = school_total
+    check.details["prefecture_seed_with_school_link_signal"] = with_school_link_signal
+    check.details["prefecture_seed_supplemental_rows"] = supplemental_rows
 
 
 def _require_text(check: ZipCheck, body: str, member: str, needle: str) -> None:
@@ -554,6 +749,7 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_bat_contracts(check, names)
     _check_python_entrypoint_contracts(check, names)
     _check_operator_runbook_contract(check, names)
+    _check_prefecture_seed_contract(check, names)
     _check_build_info(check, names)
 
     check.details["entry_count"] = len(names)
