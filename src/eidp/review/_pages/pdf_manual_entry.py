@@ -87,6 +87,17 @@ class QueueRow:
 
 
 @dataclass(frozen=True)
+class ManualQueueSummary:
+    total: int
+    current_year: int
+    unknown_year: int
+    old_year: int
+    future_year: int
+    save_eligible: int
+    read_only: int
+
+
+@dataclass(frozen=True)
 class DiscoveryEvidenceRow:
     """One candidate decision from output/discovery_rejections.jsonl."""
 
@@ -360,6 +371,84 @@ def manual_queue_view_options(target_label: str) -> dict[str, str]:
     }
 
 
+def year_bucket_label(row: QueueRow, *, target_fiscal_year: int) -> str:
+    if row.fiscal_year == target_fiscal_year:
+        return "対象年度"
+    if row.fiscal_year is None:
+        return "年度未確定"
+    if row.fiscal_year < target_fiscal_year:
+        return "旧年度"
+    return "未来年度"
+
+
+def manual_next_action_for_row(row: QueueRow, *, target_fiscal_year: int) -> tuple[str, str]:
+    """Map a queued document to the operator's next action."""
+    if row.ingest_status == "school_mismatch":
+        return "学校紐付け確認", "学校が合っていない可能性があります。先に学校マッピングを修正します。"
+    if row.fiscal_year is None:
+        return "年度確認", "PDF本文または前年差分で対象年度か確認します。"
+    if row.fiscal_year < target_fiscal_year:
+        return "旧年度診断", "成果には含めず、対象年度PDFの再取得入口を確認します。"
+    if row.fiscal_year > target_fiscal_year:
+        return "年度修正", "対象年度より未来の判定です。年度判定・修正で確認します。"
+    if row.ingest_status == "ocr_pending":
+        return "OCR/手入力", "画像PDFです。OCR可否を確認し、必要なら手入力します。"
+    if row.ingest_status == "parse_failed":
+        return "手入力", "PDFを見ながら学科別数値を入力します。"
+    if row.ingest_status == "review_pending":
+        return "PDF確認", "抽出結果とPDF原本を照合します。"
+    if row.ingest_status == "ingested":
+        return "抽出結果確認", "自動採録済の内容を確認します。"
+    return "確認", "文書状態を確認します。"
+
+
+def manual_queue_summary(rows: list[QueueRow], *, target_fiscal_year: int) -> ManualQueueSummary:
+    current_year = 0
+    unknown_year = 0
+    old_year = 0
+    future_year = 0
+    save_eligible = 0
+    for row in rows:
+        if row.fiscal_year == target_fiscal_year:
+            current_year += 1
+        elif row.fiscal_year is None:
+            unknown_year += 1
+        elif row.fiscal_year < target_fiscal_year:
+            old_year += 1
+        else:
+            future_year += 1
+        if row.ingest_status in SAVE_ELIGIBLE_STATUSES:
+            save_eligible += 1
+    total = len(rows)
+    return ManualQueueSummary(
+        total=total,
+        current_year=current_year,
+        unknown_year=unknown_year,
+        old_year=old_year,
+        future_year=future_year,
+        save_eligible=save_eligible,
+        read_only=max(total - save_eligible, 0),
+    )
+
+
+def manual_queue_table(rows: list[QueueRow], *, target_fiscal_year: int) -> list[dict[str, object]]:
+    """Return compact queue rows for the operator overview table."""
+    table: list[dict[str, object]] = []
+    for row in rows:
+        action, hint = manual_next_action_for_row(row, target_fiscal_year=target_fiscal_year)
+        table.append({
+            "次の作業": action,
+            "年度": year_bucket_label(row, target_fiscal_year=target_fiscal_year),
+            "学校": row.school_name,
+            "都道府県": row.prefecture,
+            "状態": row.ingest_status,
+            "PDF年度": row.fiscal_year,
+            "doc": row.document_id,
+            "理由": hint,
+        })
+    return table
+
+
 def list_documents_for_manual_queue_view(
     session: Session,
     *,
@@ -492,7 +581,7 @@ def build_pdf_preview(
         return PdfPreview(path=path, exists=True, error=f"page_index must be >= 0; got {page_index}")
 
     try:
-        import fitz  # PyMuPDF
+        import fitz  # type: ignore[import-untyped]  # PyMuPDF
 
         pdf_bytes = path.read_bytes()
         with fitz.open(str(path)) as doc:
@@ -1053,25 +1142,41 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         st.success("この表示範囲の文書はありません。PDF確認は学校別タスクから必要な学校を選んで開いてください。")
         return
 
-    st.caption(f"待機 {len(queue)} 件")
+    queue_summary = manual_queue_summary(queue, target_fiscal_year=settings.target_fiscal_year)
+    st.caption(f"待機 {queue_summary.total} 件")
+    qcols = st.columns(5)
+    qcols[0].metric("表示中", queue_summary.total)
+    qcols[1].metric("対象年度", queue_summary.current_year)
+    qcols[2].metric("年度未確定", queue_summary.unknown_year)
+    qcols[3].metric("入力/確認可", queue_summary.save_eligible)
+    qcols[4].metric("確認専用", queue_summary.read_only)
+    if queue_summary.old_year > 0:
+        st.warning(
+            f"この表示には旧年度PDFが {queue_summary.old_year} 件含まれます。"
+            "旧年度PDFは成果に含めず、対象年度PDFの再取得入口を確認してください。"
+        )
+
+    st.dataframe(
+        manual_queue_table(queue[:50], target_fiscal_year=settings.target_fiscal_year),
+        hide_index=True,
+        use_container_width=True,
+    )
+    if len(queue) > 50:
+        st.caption("一覧は先頭50件まで表示しています。絞り込みは学校別タスクから行ってください。")
+
     for row in queue[:20]:
         # Sprint 8.6.d.2 — confidence summary surfaces in the queue
         # title so the operator sees worst-case verdict before
         # expanding the row.
         confidence = summarize_confidence_for_document(session, row.document_id)
-        if row.fiscal_year == settings.target_fiscal_year:
-            year_badge = "現在年度"
-        elif row.fiscal_year is None:
-            year_badge = "年度未確定"
-        elif row.fiscal_year < settings.target_fiscal_year:
-            year_badge = "旧年度"
-        else:
-            year_badge = "未来年度"
+        year_badge = year_bucket_label(row, target_fiscal_year=settings.target_fiscal_year)
+        next_action, action_hint = manual_next_action_for_row(row, target_fiscal_year=settings.target_fiscal_year)
         title = (
-            f"[{row.ingest_status} / {year_badge}] {row.school_name} ({row.prefecture}) "
+            f"[{next_action} / {year_badge}] {row.school_name} ({row.prefecture}) "
             f"— fy={row.fiscal_year} doc#{row.document_id} | {confidence.summary_line}"
         )
-        with st.expander(title):
+        with st.expander(title, expanded=row.document_id == focus_document_id):
+            st.caption(action_hint)
             _render_confidence_breakdown(confidence)
             pdf_col, form_col = st.columns([1, 2])
             with pdf_col:

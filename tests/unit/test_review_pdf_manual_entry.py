@@ -42,6 +42,9 @@ from eidp.review._pages.pdf_manual_entry import (
     latest_discovery_evidence,
     list_documents_for_manual_queue_view,
     list_pending_documents,
+    manual_next_action_for_row,
+    manual_queue_summary,
+    manual_queue_table,
     manual_queue_view_options,
     prioritize_queue_document,
     resolve_pdf_path,
@@ -253,6 +256,64 @@ def test_manual_queue_view_options_keep_stable_keys():
         MANUAL_QUEUE_VIEW_ALL,
     }
     assert options[MANUAL_QUEUE_VIEW_TARGET].startswith("2026年度")
+
+
+def test_manual_queue_summary_and_table_explain_next_actions(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Action学校", pref="神奈川県")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="oldact", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="targetact", fiscal_year=2026)
+        unknown_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="unknownact", fiscal_year=None)
+        ingested_doc = _seed_doc(session, school, status="ingested", file_hash_seed="ingact", fiscal_year=2026)
+        session.commit()
+
+        rows = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+        )
+
+        summary = manual_queue_summary(rows, target_fiscal_year=2026)
+        table = manual_queue_table(rows, target_fiscal_year=2026)
+        actions_by_doc = {int(row["doc"]): row["次の作業"] for row in table}
+        old_doc_id = int(old_doc.id)
+        target_doc_id = int(target_doc.id)
+        unknown_doc_id = int(unknown_doc.id)
+        ingested_doc_id = int(ingested_doc.id)
+
+    assert summary.total == 4
+    assert summary.current_year == 2
+    assert summary.unknown_year == 1
+    assert summary.old_year == 1
+    assert summary.save_eligible == 3
+    assert summary.read_only == 1
+    assert actions_by_doc[old_doc_id] == "旧年度診断"
+    assert actions_by_doc[target_doc_id] == "OCR/手入力"
+    assert actions_by_doc[unknown_doc_id] == "年度確認"
+    assert actions_by_doc[ingested_doc_id] == "抽出結果確認"
+    assert table[0]["年度"] == "旧年度"
+    assert table[0]["学校"] == "Action学校"
+    assert table[0]["都道府県"] == "神奈川県"
+
+
+def test_manual_next_action_prioritizes_school_mismatch_and_future_year(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Mismatch学校")
+        mismatch = _seed_doc(session, school, status="school_mismatch", file_hash_seed="misact", fiscal_year=2026)
+        future = _seed_doc(session, school, status="review_pending", file_hash_seed="futureact", fiscal_year=2027)
+        session.commit()
+
+        rows = list_pending_documents(session)
+        rows_by_id = {row.document_id: row for row in rows}
+        mismatch_id = int(mismatch.id)
+        future_id = int(future.id)
+
+    mismatch_action, mismatch_hint = manual_next_action_for_row(rows_by_id[mismatch_id], target_fiscal_year=2026)
+    future_action, future_hint = manual_next_action_for_row(rows_by_id[future_id], target_fiscal_year=2026)
+
+    assert mismatch_action == "学校紐付け確認"
+    assert "学校マッピング" in mismatch_hint
+    assert future_action == "年度修正"
+    assert "未来" in future_hint
 
 
 def test_focus_document_helpers_move_requested_row_to_top(engine):
