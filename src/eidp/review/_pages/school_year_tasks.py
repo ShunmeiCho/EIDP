@@ -146,6 +146,11 @@ def school_task_summary(
     )
 
 
+def needs_initial_url_bootstrap(summary: SchoolTaskSummary) -> bool:
+    """Return True when setup has schools but no known crawl URLs yet."""
+    return summary.total > 0 and summary.no_url == summary.total
+
+
 def list_school_year_tasks(
     session: Session,
     *,
@@ -348,6 +353,14 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     cols[3].metric("旧年度fallback", summary.stale_fallback)
     cols[4].metric("URLなし", summary.no_url)
     cols[5].metric("学科変更", summary.dept_change_review)
+
+    if needs_initial_url_bootstrap(summary):
+        st.warning(
+            "まだ学校URLの初期取得が終わっていません。"
+            "2418校を手作業で追加する状態ではありません。"
+            "初回だけ `scripts\\bootstrap_pdfs.bat` を実行すると、都道府県集約データから"
+            " 学校URLを登録し、対象年度PDFの探索を開始します。"
+        )
 
     _render_rebuild_button(session, fiscal_year=fiscal_year, school_type=school_type, lock_path=lock_path)
 

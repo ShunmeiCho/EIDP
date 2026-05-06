@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, SchoolSite
 from eidp.review._pages.school_year_tasks import (
+    SchoolTaskSummary,
     list_school_year_tasks,
+    needs_initial_url_bootstrap,
     next_action_for_status,
     school_task_summary,
 )
@@ -129,6 +131,34 @@ def test_school_task_summary_groups_operator_counts() -> None:
         assert summary.dept_change_review == 1
     finally:
         session.close()
+
+
+def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
+    all_no_url = SchoolTaskSummary(
+        fiscal_year=2026,
+        school_type="専門学校",
+        total=2418,
+        excel_ready=0,
+        confirmed_target=0,
+        stale_fallback=0,
+        no_url=2418,
+        review_or_parse=0,
+        dept_change_review=0,
+    )
+    mixed = SchoolTaskSummary(
+        fiscal_year=2026,
+        school_type="専門学校",
+        total=2418,
+        excel_ready=0,
+        confirmed_target=0,
+        stale_fallback=0,
+        no_url=100,
+        review_or_parse=0,
+        dept_change_review=0,
+    )
+
+    assert needs_initial_url_bootstrap(all_no_url) is True
+    assert needs_initial_url_bootstrap(mixed) is False
 
 
 def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_context() -> None:
