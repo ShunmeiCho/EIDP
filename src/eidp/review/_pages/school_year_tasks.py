@@ -246,6 +246,21 @@ def site_entry_label(
     return "登録ページ入口"
 
 
+def discovery_evidence_table_rows(evidence_rows: list[Any]) -> list[dict[str, object]]:
+    """Compact discovery evidence rows for the school task detail panel."""
+    return [
+        {
+            "採否理由": row.reason,
+            "score": row.score,
+            "PDF種別": row.pdf_type or "",
+            "リンク文字": row.anchor_text,
+            "PDF候補": row.pdf_url,
+            "掲載ページ": row.page_url,
+        }
+        for row in evidence_rows
+    ]
+
+
 def task_progress_label(summary: SchoolTaskSummary) -> str:
     if summary.total <= 0:
         return "対象校がありません。"
@@ -1165,6 +1180,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
 
     from eidp.config import settings
     from eidp.fiscal_year import format_fiscal_year_label
+    from eidp.review._pages.pdf_manual_entry import latest_discovery_evidence
 
     fiscal_year = settings.target_fiscal_year
     target_label = format_fiscal_year_label(fiscal_year)
@@ -1329,3 +1345,15 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                     f"最新PDF: doc#{row.latest_document_id} / fy={row.latest_document_fiscal_year} / "
                     f"{row.latest_document_status} / {row.latest_document_url}"
                 )
+            evidence_rows = latest_discovery_evidence(
+                app_root=Path(settings.app_root),
+                school_id=row.school_id,
+                limit=6,
+            )
+            if evidence_rows:
+                with st.expander("PDF探索ログ（候補PDFと採否理由）"):
+                    st.dataframe(
+                        discovery_evidence_table_rows(evidence_rows),
+                        hide_index=True,
+                        width="stretch",
+                    )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from eidp.review._pages.school_year_tasks import (
     SchoolTaskSummary,
     blocking_reason_label,
     bootstrap_command,
+    discovery_evidence_table_rows,
     initial_bootstrap_warning_text,
     is_pdf_site_url,
     latest_bootstrap_log,
@@ -694,6 +696,28 @@ def test_site_entry_label_explains_source_and_reuse_quality() -> None:
         "PDF直リンク（今年度だけ弱い）"
     )
     assert site_entry_label(None, None, None) == "入口なし"
+
+
+def test_discovery_evidence_table_rows_show_candidate_reason_and_source() -> None:
+    rows = discovery_evidence_table_rows([
+        SimpleNamespace(
+            reason="fiscal_year_mismatch:2025",
+            score=3.2,
+            pdf_type="target",
+            anchor_text="2025年度 確認申請書",
+            pdf_url="https://school.example/2025.pdf",
+            page_url="https://school.example/disclosure/",
+        ),
+    ])
+
+    assert rows == [{
+        "採否理由": "fiscal_year_mismatch:2025",
+        "score": 3.2,
+        "PDF種別": "target",
+        "リンク文字": "2025年度 確認申請書",
+        "PDF候補": "https://school.example/2025.pdf",
+        "掲載ページ": "https://school.example/disclosure/",
+    }]
 
 
 def test_pdf_site_url_detection_uses_type_or_url_suffix() -> None:
