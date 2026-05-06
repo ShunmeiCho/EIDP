@@ -85,6 +85,37 @@ NEGATIVE_KEYWORDS = [
     "attachment", "appendix", "添付資料",
 ]
 
+PRE_DOWNLOAD_NEGATIVE_TOKENS = (
+    "実務経験",
+    "授業科目",
+    "jitsumukeiken",
+    "course-subject",
+    "course_subject",
+    "curriculum",
+    "財務",
+    "zaimu",
+    "理事名簿",
+    "rijimeibo",
+    "学校評価",
+    "gakkouuneihyouka",
+    "学校関係者評価",
+    "kankeishahyouka",
+    "外部評価",
+    "gaibuhyouka",
+    "内部評価",
+    "naibuhyouka",
+    "自己点検",
+    "自己評価",
+    "jikohyoka",
+    "evaluation",
+    "シラバス",
+    "syllabus",
+    "卒業認定",
+    "graduation",
+    "成績評価",
+    "grading",
+)
+
 # User-Agent mimicking a real browser (institutional research)
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) EIDP-DataCollector/1.0",
@@ -186,6 +217,18 @@ def _rejection_cache_key(
         target_year if strict_target_fiscal_year else None,
         strict_target_fiscal_year,
     )
+
+
+def _pre_download_reject_reason(candidate: PdfCandidate) -> str | None:
+    """Reject adjacent disclosure PDFs that are clearly not confirmation forms."""
+
+    text = unicodedata.normalize(
+        "NFKC",
+        f"{candidate.anchor_text} {candidate.pdf_url}",
+    ).lower()
+    if any(token.lower() in text for token in PRE_DOWNLOAD_NEGATIVE_TOKENS):
+        return "pre_filtered_non_target_hint"
+    return None
 
 
 def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> float:
@@ -834,6 +877,7 @@ def run_pdf_discovery(
         "failed": 0,
         "skipped": 0,
         "cached_rejections": 0,
+        "prefiltered": 0,
     }
     recorder = EvidenceRecorder(evidence_path)
     target_year = target_fiscal_year or settings.target_fiscal_year
@@ -1015,6 +1059,27 @@ def run_pdf_discovery(
                         reason=cached_rejection.reason,
                         pdf_type=cached_rejection.pdf_type,
                         extra={"cached_rejection": "true"},
+                    ))
+                    continue
+
+                pre_download_reason = _pre_download_reject_reason(candidate)
+                if pre_download_reason is not None:
+                    stats["prefiltered"] += 1
+                    stats["skipped"] += 1
+                    rejected_candidate_cache[cache_key] = CachedPdfRejection(
+                        pdf_type="non_target",
+                        reason=pre_download_reason,
+                    )
+                    recorder.record(RejectionEvidence(
+                        school_id=site.school_id,
+                        pdf_url=candidate.pdf_url,
+                        page_url=candidate.page_url,
+                        anchor_text=candidate.anchor_text,
+                        pattern_type=candidate.pattern_type,
+                        score=candidate.score,
+                        reason=pre_download_reason,
+                        pdf_type="non_target",
+                        extra={"pre_download": "true"},
                     ))
                     continue
 

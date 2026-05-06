@@ -425,20 +425,20 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
         session.add(SchoolSite(school_id=2, url="https://group.example.ac.jp/school-b/", http_status=200))
         session.flush()
 
-        stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/2025-1-01-01-1.pdf"
+        stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/r7-kakunin.pdf"
 
         def fake_discover(_client, school_id: int, url: str) -> DiscoveryResult:
             candidate = PdfCandidate(
                 pdf_url=stale_pdf_url,
                 page_url=url,
-                anchor_text="令和7年度 実務経験のある教員等による授業科目の一覧表",
+                anchor_text="令和7年度 確認申請書",
                 score=10.0,
             )
             return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
             download_calls.append(candidate.pdf_url)
-            return None, None, 0, "non_target", "classified_non_target"
+            return None, None, 0, "target", "fiscal_year_mismatch:2025"
 
         monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
         monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
@@ -460,10 +460,69 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
             for line in evidence.read_text(encoding="utf-8").splitlines()
         ]
         assert [payload["reason"] for payload in payloads] == [
-            "classified_non_target",
-            "classified_non_target",
+            "fiscal_year_mismatch:2025",
+            "fiscal_year_mismatch:2025",
         ]
         assert payloads[1]["extra"]["cached_rejection"] == "true"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Disclosure pages often list adjacent public PDFs before the target form."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        non_target = PdfCandidate(
+            pdf_url="https://example.ac.jp/R7_jitsumukeiken_design.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和7年度 実務経験のある教員等による授業科目の一覧表",
+            score=10.0,
+        )
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/r8-kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 確認申請書",
+            score=9.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[non_target, target], best=non_target)
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            download_calls.append(candidate.pdf_url)
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert download_calls == ["https://example.ac.jp/r8-kakunin.pdf"]
+        assert stats["prefiltered"] == 1
+        assert stats["skipped"] == 1
+        assert stats["downloaded"] == 1
+
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert payloads[0]["reason"] == "pre_filtered_non_target_hint"
+        assert payloads[0]["pdf_type"] == "non_target"
+        assert payloads[-1]["reason"] == "accepted_downloaded"
     finally:
         session.close()
 
