@@ -262,13 +262,32 @@ def test_first_setup_does_not_run_aggregate_or_discovery(bat_files: dict[str, st
     assert "ingest-pdfs" not in body, (
         "first_setup.bat must NOT call ingest-pdfs"
     )
-    assert "launch.bat" in body, (
-        "first_setup.bat must point non-technical operators back to the UI"
+    assert "EIDP-start.bat" in body, (
+        "first_setup.bat must point non-technical operators back to the root UI launcher"
     )
     assert "initial URL/PDF acquisition button" in body, (
         "first_setup.bat must not require non-technical operators to find "
         "bootstrap scripts in Explorer"
     )
+
+
+def test_root_launchers_delegate_to_script_contracts():
+    """The ZIP root must expose app-like double-click entry points so
+    operators do not need to browse into scripts/."""
+    setup = (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8")
+    start = (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8")
+
+    assert 'cd /d "%~dp0"' in setup
+    assert 'call "%~dp0scripts\\first_setup.bat"' in setup
+    assert "EIDP-start.bat" in setup
+    assert "pause" in setup
+    assert "endlocal & exit /b %RC%" in setup
+
+    assert 'cd /d "%~dp0"' in start
+    assert 'call "%~dp0scripts\\launch.bat"' in start
+    assert "EIDP-setup.bat" in start
+    assert "pause" in start
+    assert "endlocal & exit /b %RC%" in start
 
 
 def test_bootstrap_pdfs_bat_invokes_pipeline_script(bat_files: dict[str, str]):
@@ -436,6 +455,8 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     fake_repo = tmp_path / "repo"
     (fake_repo / "src" / "eidp").mkdir(parents=True)
     (fake_repo / "src" / "eidp" / "__init__.py").write_text("", encoding="utf-8")
+    (fake_repo / "EIDP-setup.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "EIDP-start.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts").mkdir()
     (fake_repo / "scripts" / "first_setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "run_weekly_target_year_discovery.py").write_text(
@@ -490,6 +511,13 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     arcs = {arc for _, arc in members}
 
     assert "alembic.ini" in arcs, "alembic.ini must be in the Windows ZIP"
+    assert "EIDP-setup.bat" in arcs, (
+        "root-level setup launcher must be in the Windows ZIP so operators "
+        "do not browse into scripts/"
+    )
+    assert "EIDP-start.bat" in arcs, (
+        "root-level app launcher must be in the Windows ZIP so startup feels app-like"
+    )
     assert "migrations/env.py" in arcs
     assert "migrations/versions/abcd_initial.py" in arcs
     assert "scripts/run_weekly_target_year_discovery.py" in arcs, (

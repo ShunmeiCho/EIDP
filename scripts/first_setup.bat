@@ -129,7 +129,7 @@ if errorlevel 1 (
 
 echo [first_setup] complete.
 echo [first_setup] Next steps:
-echo [first_setup]   1. Double-click scripts\launch.bat to open the operator UI.
+echo [first_setup]   1. Double-click EIDP-start.bat to open the operator UI.
 echo [first_setup]   2. In the UI, press the initial URL/PDF acquisition button.
 endlocal
 exit /b 0

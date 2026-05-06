@@ -33,6 +33,8 @@ class InstallCheck:
 
 
 CORE_FILES = (
+    "EIDP-setup.bat",
+    "EIDP-start.bat",
     "scripts/first_setup.bat",
     "scripts/launch.bat",
     "scripts/weekly_run.bat",
@@ -199,7 +201,7 @@ def validate_install(
     master = root / "data" / "master.xlsx"
     check.details["master_xlsx_present"] = master.is_file()
     if not master.is_file():
-        check.warn("data/master.xlsx is missing; first_setup.bat can continue but master import must be completed")
+        check.warn("data/master.xlsx is missing; EIDP-setup.bat will fail until master.xlsx is present")
 
     if after_setup:
         for rel in SETUP_DIRS:

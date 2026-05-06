@@ -21,7 +21,7 @@ if exist "%VENV_PY%" (
 ) else if exist "%RUNTIME_PY%" (
     set "PY_EXE=%RUNTIME_PY%"
 ) else (
-    echo [validate_install] ERROR: no Python found. Run scripts\first_setup.bat or re-extract the ZIP.
+    echo [validate_install] ERROR: no Python found. Run EIDP-setup.bat or re-extract the ZIP.
     exit /b 2
 )
 

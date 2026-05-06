@@ -4,6 +4,9 @@
 運用環境: 業務員 1 名の Windows PC
 基本操作: ZIP を解凍し、`.bat` ファイルをダブルクリックして使う
 
+通常は `C:\EIDP` 直下の `EIDP-setup.bat` と `EIDP-start.bat` だけを使います。
+`scripts\*.bat` は管理者向けの詳細入口です。
+
 このランブックは Windows 版 EIDP の業務手順です。ターミナル、SSH、SQL の操作は不要です。
 
 ## 対象年度と学校URL
@@ -52,9 +55,9 @@ C:\EIDP
 
 1. `eidp-windows.zip` を受け取ります。
 2. ZIP を `C:\EIDP` に解凍します。
-3. `C:\EIDP\scripts\first_setup.bat` をダブルクリックします。
+3. `C:\EIDP\EIDP-setup.bat` をダブルクリックします。
 4. 黒い画面が開き、初回セットアップが始まります。
-5. 完了したら画面を閉じます。
+5. `Setup completed` と表示されたら、何かキーを押して画面を閉じます。
 
 初回セットアップで行われること:
 
@@ -65,11 +68,11 @@ C:\EIDP
 - `学校別タスク` の初期行を作成します。
 - Windows タスクスケジューラに週次実行を登録します。
 
-もう一度 `first_setup.bat` を実行しても構いません。環境が壊れた場合の修復にも使います。
+もう一度 `EIDP-setup.bat` を実行しても構いません。環境が壊れた場合の修復にも使います。
 
 ## 3. 通常起動
 
-1. `C:\EIDP\scripts\launch.bat` をダブルクリックします。
+1. `C:\EIDP\EIDP-start.bat` をダブルクリックします。
 2. ブラウザで EIDP 画面が開きます。
 3. 開かない場合は、ブラウザで次を開きます。
 
@@ -231,7 +234,7 @@ C:\EIDP\ocr-addon\tessdata\jpn.traineddata
 ```
 
 4. EIDP 画面を開いている場合は閉じます。
-5. `launch.bat` で起動し直します。
+5. `EIDP-start.bat` で起動し直します。
 6. `PDF確認・手入力` ページの OCR 表示を確認します。
 
 OCR 自動実行の目安:
@@ -266,14 +269,14 @@ OCR は補助機能です。低信頼度の結果は自動で手入力キュー�
 
 ### 画面が開かない
 
-1. `launch.bat` をもう一度実行します。
+1. `EIDP-start.bat` をもう一度実行します。
 2. ブラウザで `http://localhost:8501` を開きます。
 3. まだ開かない場合は `logs` フォルダ内の最新ログを確認します。
 
 ### 初回セットアップが失敗した
 
 1. PC を再起動します。
-2. `first_setup.bat` を再実行します。
+2. `EIDP-setup.bat` を再実行します。
 3. 失敗が続く場合は、表示されたエラー画面と `logs` フォルダを管理者へ共有します。
 
 ### Defender または SmartScreen で止まる
@@ -330,7 +333,7 @@ uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip \
 5. 任意 add-on ZIP も同じ場所に置きます。
 6. 検査 JSON の `sha256` を checksum 記録として保管します。
 7. 業務員へ配布場所を伝えます。
-8. 業務員 PC で `first_setup.bat` が完走することを確認します。
+8. 業務員 PC で `EIDP-setup.bat` が完走することを確認します。
 
 配布優先順位:
 
@@ -367,6 +370,8 @@ docs/runbooks/eidp-operator-e2e-template.md
 Windows VM で確認する項目:
 
 - ZIP 解凍
+- `EIDP-setup.bat`
+- `EIDP-start.bat`
 - `first_setup.bat`
 - `launch.bat`
 - `weekly_run.bat`
@@ -447,7 +452,7 @@ Restart-Service sshd
 
 1. ZIP をダウンロード
 2. 解凍（Defender / SmartScreen の警告は最初の 1 回だけ「実行」を選択）
-3. `scripts\first_setup.bat` をダブルクリック → 完了メッセージを待つ
+3. `EIDP-setup.bat` をダブルクリック → 完了メッセージを待つ
 
 それ以上の手作業（CRLF 変換、wheelhouse 追加、`.venv` 削除、ACL 修正など）は、本ランブックを書き終えた時点で全て build pipeline 側で済んでいます。
 業務員に渡る前に管理者側でこの章のチェックリストに従って ZIP の品質を確認してください。

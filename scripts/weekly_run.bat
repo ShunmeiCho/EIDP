@@ -16,7 +16,7 @@ set "PYTHONUTF8=1"
 
 set "VENV_PY=%EIDP_APP_ROOT%\.venv\Scripts\python.exe"
 if not exist "%VENV_PY%" (
-    echo [weekly_run] ERROR: .venv not found. Run scripts\first_setup.bat first.
+    echo [weekly_run] ERROR: .venv not found. Run EIDP-setup.bat first.
     exit /b 2
 )
 

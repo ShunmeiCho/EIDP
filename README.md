@@ -4,8 +4,8 @@ Education Institution Data Pipeline
 
 EIDP automates collection, review, and Excel export of Japanese vocational
 school disclosure data. Sprint 8 targets a one-operator Windows PC deployment:
-extract a ZIP, double-click `.bat` launchers, and operate through the Streamlit
-UI.
+extract a ZIP, double-click root-level `.bat` launchers, and operate through
+the Streamlit UI.
 
 ## For Operators
 
@@ -16,8 +16,8 @@ Use the Windows runbook:
 Normal workflow:
 
 1. Extract `eidp-windows.zip` to `C:\EIDP`.
-2. Run `C:\EIDP\scripts\first_setup.bat` once.
-3. Run `C:\EIDP\scripts\launch.bat` to open the UI.
+2. Run `C:\EIDP\EIDP-setup.bat` once.
+3. Run `C:\EIDP\EIDP-start.bat` to open the UI.
 4. Review PDFs, manual-entry items, fiscal-year corrections, Excel preview, and audit logs
    in the Streamlit sidebar.
 5. Let `weekly_run.bat` run by Windows Task Scheduler, or run it manually when
@@ -28,7 +28,7 @@ Optional OCR:
 - Extract `eidp-ocr-addon-windows.zip` into `C:\EIDP`.
 - Confirm `ocr-addon\tesseract\tesseract.exe` and
   `ocr-addon\tessdata\jpn.traineddata` exist.
-- Restart EIDP with `launch.bat`.
+- Restart EIDP with `EIDP-start.bat`.
 
 Optional Playwright/Chromium:
 
@@ -94,6 +94,8 @@ validation remains the deployment gate. Use:
 
 VM / real-PC validation must cover:
 
+- `EIDP-setup.bat`
+- `EIDP-start.bat`
 - `first_setup.bat`
 - `launch.bat`
 - `weekly_run.bat`

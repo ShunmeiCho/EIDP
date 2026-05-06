@@ -19,7 +19,7 @@ set "PYTHONUTF8=1"
 
 set "VENV_PY=%EIDP_APP_ROOT%\.venv\Scripts\python.exe"
 if not exist "%VENV_PY%" (
-    echo [bootstrap_pdfs] ERROR: .venv missing. Run first_setup.bat first.
+    echo [bootstrap_pdfs] ERROR: .venv missing. Run EIDP-setup.bat first.
     exit /b 2
 )
 

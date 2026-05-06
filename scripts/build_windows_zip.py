@@ -211,6 +211,8 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
     actually building a ZIP.
 
     Layout:
+      EIDP-setup.bat              root-level operator first setup launcher
+      EIDP-start.bat              root-level operator app launcher
       wheelhouse/                  every accepted wheel
       src/eidp/...                 importable source layout
       scripts/*.bat                .bat launchers
@@ -226,6 +228,14 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       pyproject.toml               kept for parity with dev-side config
     """
     members: list[tuple[Path, str]] = []
+
+    # Root-level operator launchers. These make the ZIP feel like an app:
+    # after extraction, the operator can double-click from C:\EIDP without
+    # browsing into scripts/.
+    for name in ("EIDP-setup.bat", "EIDP-start.bat"):
+        launcher = repo_root / name
+        if launcher.is_file():
+            members.append((launcher, name))
 
     # wheelhouse/
     for wheel in sorted(wheelhouse.glob("*.whl")):

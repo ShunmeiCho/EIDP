@@ -64,6 +64,8 @@ class ZipCheck:
 
 
 CORE_REQUIRED_EXACT = (
+    "EIDP-setup.bat",
+    "EIDP-start.bat",
     "README.md",
     "requirements-windows.txt",
     "pyproject.toml",
@@ -231,6 +233,22 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
     or hand-edited ZIP before it reaches the Windows VM gate.
     """
     required_tokens: dict[str, tuple[str, ...]] = {
+        "EIDP-setup.bat": (
+            'cd /d "%~dp0"',
+            'call "%~dp0scripts\\first_setup.bat"',
+            'set "RC=%ERRORLEVEL%"',
+            "EIDP-start.bat",
+            "pause",
+            "endlocal & exit /b %RC%",
+        ),
+        "EIDP-start.bat": (
+            'cd /d "%~dp0"',
+            'call "%~dp0scripts\\launch.bat"',
+            'set "RC=%ERRORLEVEL%"',
+            "EIDP-setup.bat",
+            "pause",
+            "endlocal & exit /b %RC%",
+        ),
         "scripts/first_setup.bat": (
             "runtime\\python\\python.exe",
             "runtime\\uv.exe",
@@ -287,7 +305,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         body = _read_zip_text(check, member)
         if body is None:
             continue
-        if member != "scripts/uninstall.bat":
+        if member.startswith("scripts/") and member != "scripts/uninstall.bat":
             _check_bat_common(check, member, body)
         for token in tokens:
             _require_text(check, body, member, token)
