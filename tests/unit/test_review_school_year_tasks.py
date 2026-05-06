@@ -21,6 +21,7 @@ from eidp.review._pages.school_year_tasks import (
     school_task_summary,
     school_type_from_filter_label,
     start_initial_url_bootstrap,
+    url_submission_prefill_for_row,
 )
 
 
@@ -356,6 +357,11 @@ def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_
         assert [row.school_id for row in rows] == [3, 2]
         by_id = {row.school_id: row for row in rows}
         assert by_id[3].next_action == "URL追加"
+        assert url_submission_prefill_for_row(by_id[3]) == {
+            "selected_page": school_year_tasks.URL_SUBMISSION_PAGE_ID,
+            school_year_tasks.URL_SUBMISSION_QUERY_STATE_KEY: "URLなし学校",
+            school_year_tasks.URL_SUBMISSION_SCHOOL_ID_STATE_KEY: 3,
+        }
         assert by_id[2].next_action == "公示待ち/再取得"
         assert by_id[2].latest_site_url == "https://school2.example/info"
         assert by_id[2].latest_document_id == 21

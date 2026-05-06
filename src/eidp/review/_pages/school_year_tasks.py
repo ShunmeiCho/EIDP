@@ -87,10 +87,22 @@ class BootstrapProgress:
 
 REVIEW_OR_PARSE_BLOCKERS = {"ocr_pending", "parse_failed", "not_extracted", "review_required"}
 SCHOOL_TYPE_FILTER_LABELS = ("すべて", "専門学校", "大学")
+URL_SUBMISSION_PAGE_ID = "url"
+URL_SUBMISSION_QUERY_STATE_KEY = "url_submission_school_query"
+URL_SUBMISSION_SCHOOL_ID_STATE_KEY = "url_submission_school_id"
 
 
 def school_type_from_filter_label(label: str) -> str | None:
     return None if label == "すべて" else label
+
+
+def url_submission_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
+    """Return Streamlit session_state values that prefill URL追加."""
+    return {
+        "selected_page": URL_SUBMISSION_PAGE_ID,
+        URL_SUBMISSION_QUERY_STATE_KEY: row.school_name,
+        URL_SUBMISSION_SCHOOL_ID_STATE_KEY: row.school_id,
+    }
 
 
 def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
@@ -734,6 +746,13 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         title = f"{row.next_action} / {row.prefecture} / {row.school_name} / id={row.school_id}"
         with st.expander(title):
             st.write(row.action_hint)
+            if row.next_action in {"URL追加", "PDF探索", "公示待ち/再取得"}:
+                if st.button(
+                    "この学校のURLを追加",
+                    key=f"url_submission_prefill_{row.school_id}_{row.fiscal_year}",
+                ):
+                    st.session_state.update(url_submission_prefill_for_row(row))
+                    st.rerun()
             st.write(
                 {
                     "url_status": row.url_status,

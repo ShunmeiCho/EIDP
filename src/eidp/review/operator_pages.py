@@ -776,6 +776,20 @@ def search_school_url_options(session: Session, query: str, *, limit: int = 20) 
     return [_format_school_url_option(school) for school in schools]
 
 
+def school_option_index(options: list[SchoolUrlOption], preferred_school_id: object) -> int:
+    """Select the prefilled school when URL追加 is opened from task board."""
+    if not isinstance(preferred_school_id, int | str):
+        return 0
+    try:
+        preferred = int(preferred_school_id)
+    except ValueError:
+        return 0
+    for index, option in enumerate(options):
+        if option.school_id == preferred:
+            return index
+    return 0
+
+
 def page_url_submission(session: Session) -> None:
     st.header("③ URL追加")
     st.caption(
@@ -815,8 +829,10 @@ URLは登録前に以下のチェックを通します。
         "学校名で検索",
         placeholder="例: 東京アニメ / 電子学園 / 東京都",
         help="学校名・法人名・都道府県で候補を探します。内部IDを覚える必要はありません。",
+        key="url_submission_school_query",
     )
     school_options = search_school_url_options(session, school_query)
+    preferred_school_id = st.session_state.get("url_submission_school_id")
     selected_school_id: int | None = None
     if school_query.strip() and not school_options:
         st.warning("一致する学校がありません。学校名、法人名、都道府県の一部で検索し直してください。")
@@ -825,7 +841,9 @@ URLは登録前に以下のチェックを通します。
         selected_school_id = st.selectbox(
             "学校を選択",
             options=[option.school_id for option in school_options],
+            index=school_option_index(school_options, preferred_school_id),
             format_func=lambda school_id: labels_by_id[int(school_id)],
+            key="url_submission_selected_school_id",
         )
         st.caption(f"選択中: {labels_by_id[int(selected_school_id)]}")
     else:

@@ -82,6 +82,18 @@ def test_search_school_url_options_requires_search_term() -> None:
         session.close()
 
 
+def test_school_option_index_prefers_task_board_school_id() -> None:
+    options = [
+        operator_pages.SchoolUrlOption(school_id=100, label="A"),
+        operator_pages.SchoolUrlOption(school_id=200, label="B"),
+    ]
+
+    assert operator_pages.school_option_index(options, 200) == 1
+    assert operator_pages.school_option_index(options, "200") == 1
+    assert operator_pages.school_option_index(options, "missing") == 0
+    assert operator_pages.school_option_index(options, None) == 0
+
+
 def test_submit_operator_url_inserts_verified_school_site(monkeypatch: pytest.MonkeyPatch) -> None:
     session = _session()
     try:
