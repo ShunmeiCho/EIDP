@@ -137,6 +137,55 @@ class DiscoveryResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class CachedPdfRejection:
+    pdf_type: str
+    reason: str
+
+
+def _is_target_year_rejection(reason: str) -> bool:
+    return reason == "target_fiscal_year_not_detected" or reason.startswith("fiscal_year_mismatch:")
+
+
+def _is_cacheable_pdf_rejection(pdf_type: str, reason: str | None) -> bool:
+    """Return whether a rejected candidate is deterministic enough to reuse.
+
+    Do not cache HTTP failures: those are often transient. Cache content-based
+    decisions so corporation/common disclosure pages do not download and parse
+    the same stale PDF once per school.
+    """
+    if reason is None:
+        return False
+    if pdf_type == "non_target":
+        return True
+    if _is_target_year_rejection(reason):
+        return True
+    return reason in {
+        "not_pdf_magic",
+        "target_fiscal_year_not_detected",
+        "too_large_body",
+        "too_large_header",
+        "too_small",
+        "unsafe_resolved_url",
+        "unsafe_url",
+    }
+
+
+def _rejection_cache_key(
+    candidate_url: str,
+    *,
+    target_year: int,
+    strict_target_fiscal_year: bool,
+) -> tuple[str, int | None, bool]:
+    attempt_urls = _download_attempt_urls(candidate_url)
+    canonical_url = attempt_urls[0] if attempt_urls else candidate_url
+    return (
+        canonical_url,
+        target_year if strict_target_fiscal_year else None,
+        strict_target_fiscal_year,
+    )
+
+
 def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> float:
     """Score a PDF candidate by keyword relevance."""
     score = 0.0
@@ -758,9 +807,17 @@ def run_pdf_discovery(
             Windows operator UI so the long-running crawl does not sit at one
             frozen percentage.
     """
-    stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
+    stats = {
+        "crawled": 0,
+        "found": 0,
+        "downloaded": 0,
+        "failed": 0,
+        "skipped": 0,
+        "cached_rejections": 0,
+    }
     recorder = EvidenceRecorder(evidence_path)
     target_year = target_fiscal_year or settings.target_fiscal_year
+    rejected_candidate_cache: dict[tuple[str, int | None, bool], CachedPdfRejection] = {}
 
     # Get school_sites, excluding:
     # - schools with a document for the current target fiscal year
@@ -916,6 +973,31 @@ def run_pdf_discovery(
             cross_school_dup_seen = False
             target_year_rejection_seen = False
             for candidate in viable[:MAX_CANDIDATE_DOWNLOAD_ATTEMPTS]:
+                cache_key = _rejection_cache_key(
+                    candidate.pdf_url,
+                    target_year=target_year,
+                    strict_target_fiscal_year=strict_target_fiscal_year,
+                )
+                cached_rejection = rejected_candidate_cache.get(cache_key)
+                if cached_rejection is not None:
+                    stats["cached_rejections"] += 1
+                    if cached_rejection.pdf_type == "non_target":
+                        stats["skipped"] += 1
+                    if _is_target_year_rejection(cached_rejection.reason):
+                        target_year_rejection_seen = True
+                    recorder.record(RejectionEvidence(
+                        school_id=site.school_id,
+                        pdf_url=candidate.pdf_url,
+                        page_url=candidate.page_url,
+                        anchor_text=candidate.anchor_text,
+                        pattern_type=candidate.pattern_type,
+                        score=candidate.score,
+                        reason=cached_rejection.reason,
+                        pdf_type=cached_rejection.pdf_type,
+                        extra={"cached_rejection": "true"},
+                    ))
+                    continue
+
                 if strict_target_fiscal_year:
                     file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
                         client,
@@ -933,6 +1015,11 @@ def run_pdf_discovery(
                 if pdf_type == "non_target":
                     log.info("non_target_pdf_skipped", school_id=site.school_id, url=candidate.pdf_url)
                     stats["skipped"] += 1
+                    if _is_cacheable_pdf_rejection(pdf_type, reject_reason):
+                        rejected_candidate_cache[cache_key] = CachedPdfRejection(
+                            pdf_type=pdf_type,
+                            reason=reject_reason or "classified_non_target",
+                        )
                     recorder.record(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=candidate.pdf_url,
@@ -947,10 +1034,14 @@ def run_pdf_discovery(
 
                 if file_path is None and reject_reason is not None:
                     if (
-                        reject_reason == "target_fiscal_year_not_detected"
-                        or reject_reason.startswith("fiscal_year_mismatch:")
+                        _is_target_year_rejection(reject_reason)
                     ):
                         target_year_rejection_seen = True
+                    if _is_cacheable_pdf_rejection(pdf_type, reject_reason):
+                        rejected_candidate_cache[cache_key] = CachedPdfRejection(
+                            pdf_type=pdf_type,
+                            reason=reject_reason,
+                        )
                     recorder.record(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=candidate.pdf_url,

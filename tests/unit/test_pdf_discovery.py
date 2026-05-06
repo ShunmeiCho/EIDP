@@ -362,6 +362,64 @@ def test_run_pdf_discovery_duplicate_only_is_success_not_failed(monkeypatch, tmp
         session.close()
 
 
+def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp_path: Path) -> None:
+    """Common corporation sites can expose the same stale PDF for many schools.
+
+    Re-downloading and re-classifying that identical rejected URL for each
+    school makes the Windows bootstrap appear frozen during the PDF crawl.
+    """
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://group.example.ac.jp/school-a/", http_status=200))
+        session.add(SchoolSite(school_id=2, url="https://group.example.ac.jp/school-b/", http_status=200))
+        session.flush()
+
+        stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/2025-1-01-01-1.pdf"
+
+        def fake_discover(_client, school_id: int, url: str) -> DiscoveryResult:
+            candidate = PdfCandidate(
+                pdf_url=stale_pdf_url,
+                page_url=url,
+                anchor_text="令和7年度 実務経験のある教員等による授業科目の一覧表",
+                score=10.0,
+            )
+            return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            download_calls.append(candidate.pdf_url)
+            return None, None, 0, "non_target", "classified_non_target"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert download_calls == [stale_pdf_url]
+        assert stats["cached_rejections"] == 1
+        assert stats["skipped"] == 2
+
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert [payload["reason"] for payload in payloads] == [
+            "classified_non_target",
+            "classified_non_target",
+        ]
+        assert payloads[1]["extra"]["cached_rejection"] == "true"
+    finally:
+        session.close()
+
+
 def _make_pdf_bytes(text: str) -> bytes:
     import fitz  # type: ignore[import-not-found]
 
