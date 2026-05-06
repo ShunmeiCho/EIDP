@@ -455,6 +455,36 @@ def test_bootstrap_progress_exposes_url_search_details(tmp_path) -> None:
     ]
 
 
+def test_bootstrap_progress_exposes_official_index_yield_details(tmp_path) -> None:
+    progress_path = tmp_path / "progress.json"
+    progress_path.write_text(
+        json.dumps(
+            {
+                "status": "succeeded",
+                "current_step": 5,
+                "total_steps": 5,
+                "percent": 1.0,
+                "message": "初回URL/PDF取得が完了しました。",
+                "details": {
+                    "official_index_rows_extracted": 364,
+                    "official_index_rows_matched": 349,
+                    "official_school_sites_added": 40,
+                    "official_school_sites_upgraded": 5,
+                    "official_prefectures_without_new_urls": 1,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    progress = read_bootstrap_progress(progress_path)
+
+    assert progress is not None
+    assert bootstrap_progress_detail_lines(progress) == [
+        "都道府県公式一覧: 抽出 364 / DB照合 349 / URL追加 40 / URL更新 5 / URL増加なし 1県"
+    ]
+
+
 def test_bootstrap_progress_stale_when_running_but_lock_released() -> None:
     progress = BootstrapProgress(
         status="running",

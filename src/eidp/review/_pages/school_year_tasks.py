@@ -644,6 +644,15 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
             suffix.append(f"失敗 {failed}")
         extra = f" / {' / '.join(suffix)}" if suffix else ""
         lines.append(f"都道府県データ: {done}/{total}{extra}")
+    if "official_index_rows_extracted" in details:
+        lines.append(
+            "都道府県公式一覧: "
+            f"抽出 {details.get('official_index_rows_extracted', 0)} / "
+            f"DB照合 {details.get('official_index_rows_matched', 0)} / "
+            f"URL追加 {details.get('official_school_sites_added', 0)} / "
+            f"URL更新 {details.get('official_school_sites_upgraded', 0)} / "
+            f"URL増加なし {details.get('official_prefectures_without_new_urls', 0)}県"
+        )
     if "sites_total" in details:
         crawled = details.get("crawled", 0)
         total = details.get("sites_total", 0)

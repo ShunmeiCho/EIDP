@@ -95,6 +95,36 @@ def test_main_writes_progress_file(tmp_path: Path, monkeypatch) -> None:
     assert payload["log_path"] == str(progress_file.with_suffix(".log"))
 
 
+def test_main_preserves_bootstrap_yield_details_on_success(tmp_path: Path, monkeypatch) -> None:
+    progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
+
+    def fake_run_bootstrap(args, **kwargs):  # noqa: ANN001, ARG001
+        progress = kwargs["progress"]
+        progress.write(
+            status="running",
+            current_step=2,
+            percent=0.45,
+            message="都道府県データから学校URLを登録しています。",
+            details={
+                "official_index_rows_extracted": 12,
+                "official_index_rows_matched": 10,
+                "official_school_sites_added": 4,
+            },
+        )
+        return 0
+
+    monkeypatch.setattr(module, "run_bootstrap", fake_run_bootstrap)
+
+    rc = module.main(["--no-lock", "--progress-file", str(progress_file)])
+
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert payload["status"] == "succeeded"
+    assert payload["details"]["official_index_rows_extracted"] == 12
+    assert payload["details"]["official_index_rows_matched"] == 10
+    assert payload["details"]["official_school_sites_added"] == 4
+
+
 def test_main_marks_progress_failed_for_nonzero_exit(tmp_path: Path, monkeypatch) -> None:
     progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
 
@@ -109,6 +139,38 @@ def test_main_marks_progress_failed_for_nonzero_exit(tmp_path: Path, monkeypatch
     assert rc == 2
     assert payload["status"] == "failed"
     assert payload["error"] == "exit_code=2"
+
+
+def test_aggregate_yield_details_summarizes_official_index_yield() -> None:
+    details = module.aggregate_yield_details({
+        "tokyo": {
+            "extracted": 314,
+            "matched": 300,
+            "added": 40,
+            "upgraded": 5,
+            "skipped": 255,
+            "artifacts": 1,
+        },
+        "saitama": {
+            "extracted": 50,
+            "matched": 49,
+            "added": 0,
+            "upgraded": 0,
+            "skipped": 49,
+            "artifacts": 2,
+        },
+    })
+
+    assert details == {
+        "official_prefectures_aggregated": 2,
+        "official_artifacts_parsed": 3,
+        "official_index_rows_extracted": 364,
+        "official_index_rows_matched": 349,
+        "official_school_sites_added": 40,
+        "official_school_sites_upgraded": 5,
+        "official_index_rows_skipped": 304,
+        "official_prefectures_without_new_urls": 1,
+    }
 
 
 def test_step_download_artifacts_uses_html_suffix_and_source_sidecar(tmp_path: Path, monkeypatch) -> None:

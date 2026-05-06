@@ -73,6 +73,7 @@ class BootstrapProgressWriter:
     def __init__(self, path: Path | None) -> None:
         self.path = path
         self.started_at = datetime.now()
+        self._accumulated_details: dict[str, Any] = {}
 
     def write(
         self,
@@ -103,7 +104,10 @@ class BootstrapProgressWriter:
         if error:
             payload["error"] = error
         if details:
+            self._accumulated_details.update(details)
             payload["details"] = details
+        elif status in {"succeeded", "failed"} and self._accumulated_details:
+            payload["details"] = dict(self._accumulated_details)
 
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = self.path.with_suffix(self.path.suffix + ".tmp")
@@ -275,6 +279,28 @@ def step_aggregate(
     finally:
         session.close()
     return results
+
+
+def aggregate_yield_details(aggregate_stats: dict[str, dict[str, int]]) -> dict[str, int]:
+    """Flatten prefecture aggregation yield into operator progress details."""
+    total_prefs = len(aggregate_stats)
+    no_new_url_prefs = sum(
+        1
+        for stats in aggregate_stats.values()
+        if int(stats.get("matched", 0)) > 0
+        and int(stats.get("added", 0)) == 0
+        and int(stats.get("upgraded", 0)) == 0
+    )
+    return {
+        "official_prefectures_aggregated": total_prefs,
+        "official_artifacts_parsed": sum(int(stats.get("artifacts", 0)) for stats in aggregate_stats.values()),
+        "official_index_rows_extracted": sum(int(stats.get("extracted", 0)) for stats in aggregate_stats.values()),
+        "official_index_rows_matched": sum(int(stats.get("matched", 0)) for stats in aggregate_stats.values()),
+        "official_school_sites_added": sum(int(stats.get("added", 0)) for stats in aggregate_stats.values()),
+        "official_school_sites_upgraded": sum(int(stats.get("upgraded", 0)) for stats in aggregate_stats.values()),
+        "official_index_rows_skipped": sum(int(stats.get("skipped", 0)) for stats in aggregate_stats.values()),
+        "official_prefectures_without_new_urls": no_new_url_prefs,
+    }
 
 
 def provider_ready_for_url_search(
@@ -724,13 +750,14 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         output_dir=args.aggregate_output,
         progress=progress,
     )
+    aggregate_details = aggregate_yield_details(aggregate_stats)
     if progress is not None:
         progress.write(
             status="running",
             current_step=2,
             percent=0.45,
             message="既知URL、法人ドメイン、不足URL検索を補助的に登録しています。",
-            details={"school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values())},
+            details=aggregate_details,
         )
     from eidp.config import settings
 
@@ -788,7 +815,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             percent=0.45,
             message="学校サイトから対象年度PDFを探索しています。",
             details={
-                "school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values()),
+                **aggregate_details,
                 **known_url_stats,
             },
         )
