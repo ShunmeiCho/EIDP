@@ -355,6 +355,15 @@ def test_launch_preserves_streamlit_exit_code_after_endlocal(bat_files: dict[str
     assert "endlocal & exit /b %RC%" in body
 
 
+def test_launch_opens_browser_for_double_click_users(bat_files: dict[str, str]):
+    """EIDP-start.bat should feel app-like: double-clicking must open the UI,
+    not leave a non-technical operator staring at a console."""
+    body = bat_files["launch.bat"]
+    assert "Start-Sleep -Seconds 3" in body
+    assert "Start-Process 'http://localhost:8501'" in body
+    assert "--server.headless true" in body
+
+
 def test_validate_install_bat_runs_packaged_validator(bat_files: dict[str, str]):
     """The VM checklist must be runnable from the extracted ZIP without
     a dev checkout or `uv run`. The wrapper chooses .venv after setup,

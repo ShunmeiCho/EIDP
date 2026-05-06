@@ -211,6 +211,20 @@ def test_verify_core_zip_rejects_stale_launch_bat_contract(tmp_path: Path) -> No
     assert any("scripts/launch.bat missing required token" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_launcher_that_does_not_open_browser(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/launch.bat"] = entries["scripts/launch.bat"].replace(
+        "Start-Process 'http://localhost:8501'",
+        "REM stale launcher missing browser open",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("http://localhost:8501" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_locale_dependent_weekly_bat(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/weekly_run.bat"] = entries["scripts/weekly_run.bat"] + "\nset DATESTAMP=%DATE:~0,8%\n"

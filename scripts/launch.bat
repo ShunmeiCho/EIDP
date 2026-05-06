@@ -20,6 +20,10 @@ if not exist "%VENV_PY%" (
     exit /b 2
 )
 
+REM Open the operator UI in the default browser. Streamlit runs headless below
+REM so we control the browser experience explicitly for double-click users.
+start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Seconds 3; Start-Process 'http://localhost:8501'"
+
 "%VENV_PY%" -m streamlit run ^
     "%EIDP_APP_ROOT%\src\eidp\review\app.py" ^
     --server.port 8501 ^

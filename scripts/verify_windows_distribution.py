@@ -268,7 +268,9 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         ),
         "scripts/launch.bat": (
             ".venv\\Scripts\\python.exe",
+            "Start-Process 'http://localhost:8501'",
             "streamlit run",
+            "--server.headless true",
             'set "RC=%ERRORLEVEL%"',
             "endlocal & exit /b %RC%",
         ),
