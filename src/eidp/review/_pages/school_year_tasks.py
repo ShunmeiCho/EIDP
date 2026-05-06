@@ -115,6 +115,7 @@ WEEKLY_DISCOVERY_METHODS = (
     "prefecture_aggregator",
     "seed_csv",
     "corporation_pattern",
+    "web_search",
     "operator_manual",
 )
 TASK_SCOPE_STATE_KEY = "school_task_scope_filter"
@@ -487,6 +488,7 @@ def initial_bootstrap_warning_text(summary: SchoolTaskSummary) -> str:
         "下のボタンから初回取得を開始すると、対応済みの都道府県の確認大学等一覧から学校URLを登録し、"
         "対象年度PDFの探索を開始します。"
         "一覧PDF内の学校名リンクに埋め込まれたURLも自動で読み取ります。"
+        "一覧にURLが無い学校は、設定された検索 provider で学校の情報公開ページを補完します。"
         "未対応の都道府県や未掲載校だけ、学校別タスクのURL追加から公式の情報公開ページを補足してください。"
     )
 
@@ -624,6 +626,12 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
         lines.append(
             "補助URL登録: "
             f"既知URL {details.get('seed_imported', 0)} / 法人ドメイン推定 {details.get('corporation_inferred', 0)}"
+        )
+    if details.get("search_enabled") or "search_searched" in details:
+        lines.append(
+            "不足URL Web検索: "
+            f"{details.get('search_searched', 0)}校 / 入口候補 {details.get('search_found', 0)} / "
+            f"見つからず {details.get('search_no_result', 0)} / エラー {details.get('search_errors', 0)}"
         )
     return lines
 

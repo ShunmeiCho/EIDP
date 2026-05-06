@@ -58,6 +58,18 @@ def test_runtime_ocr_settings_can_be_pinned_by_env(monkeypatch) -> None:
     assert settings.tesseract_bin == "C:/EIDP/tesseract.exe"
 
 
+def test_runtime_url_search_settings_can_be_pinned_by_env(monkeypatch) -> None:
+    monkeypatch.setenv("EIDP_SEARCH_PROVIDER", "serper")
+    monkeypatch.setenv("EIDP_URL_SEARCH_AUTO_ENABLE", "on")
+    monkeypatch.setenv("EIDP_URL_SEARCH_BATCH_SIZE", "300")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.search_provider == "serper"
+    assert settings.url_search_auto_enable == "on"
+    assert settings.url_search_batch_size == 300
+
+
 def test_env_example_is_windows_sqlite_operator_default() -> None:
     body = Path(".env.example").read_text(encoding="utf-8")
 
@@ -66,6 +78,8 @@ def test_env_example_is_windows_sqlite_operator_default() -> None:
     assert "# EIDP_TARGET_FISCAL_YEAR=2026" in body
     assert "EIDP_FISCAL_ERA_NAME=令和" in body
     assert "EIDP_OCR_AUTO_ENABLE=auto" in body
+    assert "EIDP_URL_SEARCH_AUTO_ENABLE=auto" in body
+    assert "EIDP_URL_SEARCH_BATCH_SIZE=200" in body
     assert "${APP_ROOT}" not in body
     assert not body.splitlines()[0].startswith("EIDP_DATABASE_URL=postgresql"), (
         "operator .env example must not default to the old Venus/Postgres URL"

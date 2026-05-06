@@ -247,6 +247,7 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
     warning = initial_bootstrap_warning_text(all_no_url)
     assert "確認大学等一覧" in warning
     assert "学校名リンクに埋め込まれたURL" in warning
+    assert "検索 provider" in warning
     assert "専門学校中心" not in warning
 
 
@@ -328,6 +329,7 @@ def test_weekly_command_uses_target_year_runner_for_all_schools(tmp_path) -> Non
         "prefecture_aggregator",
         "seed_csv",
         "corporation_pattern",
+        "web_search",
         "operator_manual",
         "--school-type",
         "all",
@@ -416,6 +418,39 @@ def test_bootstrap_progress_exposes_discovery_details(tmp_path) -> None:
     assert progress.details["sites_total"] == 100
     assert bootstrap_progress_detail_lines(progress) == [
         "学校サイト探索: 25/100確認済み / 候補 8 / PDF取得 3 / 失敗 2 / 対象外・旧年度 20"
+    ]
+
+
+def test_bootstrap_progress_exposes_url_search_details(tmp_path) -> None:
+    progress_path = tmp_path / "progress.json"
+    progress_path.write_text(
+        json.dumps(
+            {
+                "status": "running",
+                "current_step": 2,
+                "total_steps": 5,
+                "percent": 0.45,
+                "message": "既知URL、法人ドメイン、不足URL検索を補助的に登録しています。",
+                "details": {
+                    "seed_imported": 5,
+                    "corporation_inferred": 7,
+                    "search_enabled": 1,
+                    "search_searched": 25,
+                    "search_found": 9,
+                    "search_no_result": 15,
+                    "search_errors": 1,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    progress = read_bootstrap_progress(progress_path)
+
+    assert progress is not None
+    assert bootstrap_progress_detail_lines(progress) == [
+        "補助URL登録: 既知URL 5 / 法人ドメイン推定 7",
+        "不足URL Web検索: 25校 / 入口候補 9 / 見つからず 15 / エラー 1",
     ]
 
 
@@ -542,6 +577,7 @@ def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatc
         "prefecture_aggregator",
         "seed_csv",
         "corporation_pattern",
+        "web_search",
         "operator_manual",
         "--school-type",
         "all",

@@ -8,8 +8,8 @@ local SQLite database. It is the production entrypoint behind
             data/prefecture-aggregators/seed.csv
     Step 2  ``eidp prefecture-aggregate --apply`` parses each artifact
             and inserts school_site rows
-    Step 2b known seed URLs and corporation-domain patterns are registered
-            as fallback crawl entry points
+    Step 2b known seed URLs, corporation-domain patterns, and optional Web
+            search are registered as fallback crawl entry points
     Step 3  ``eidp discover-pdfs`` crawls trusted school_site methods and
             downloads PDFs into data/pdfs/
     Step 4  ``eidp ingest-pdfs`` parses downloaded PDFs into
@@ -269,10 +269,66 @@ def step_aggregate(
     return results
 
 
-def step_known_url_discovery(*, seed_url_csv: Path | None) -> dict[str, int]:
-    """Step 2b: register known URL seeds and corporation-domain fallbacks."""
+def provider_ready_for_url_search(
+    *,
+    provider: str,
+    serper_api_key: str = "",
+    brave_api_key: str = "",
+    google_api_key: str = "",
+    google_cx: str = "",
+) -> bool:
+    """Return whether the configured search provider can run without prompting."""
+    normalized = provider.strip().lower()
+    if normalized == "duckduckgo":
+        return True
+    if normalized == "serper":
+        return bool(serper_api_key.strip())
+    if normalized == "brave":
+        return bool(brave_api_key.strip())
+    if normalized == "google":
+        return bool(google_api_key.strip() and google_cx.strip())
+    return False
+
+
+def resolve_url_search_mode(
+    *,
+    configured_mode: str,
+    provider: str,
+    batch_size: int,
+    serper_api_key: str = "",
+    brave_api_key: str = "",
+    google_api_key: str = "",
+    google_cx: str = "",
+) -> tuple[bool, int, str]:
+    """Resolve operator settings into a safe URL-search execution decision."""
+    mode = configured_mode.strip().lower()
+    if mode not in {"auto", "on", "off"}:
+        mode = "auto"
+    bounded_batch_size = max(int(batch_size), 0)
+    if mode == "off" or bounded_batch_size == 0:
+        return False, bounded_batch_size, mode
+    provider_ready = provider_ready_for_url_search(
+        provider=provider,
+        serper_api_key=serper_api_key,
+        brave_api_key=brave_api_key,
+        google_api_key=google_api_key,
+        google_cx=google_cx,
+    )
+    if mode == "on":
+        return True, bounded_batch_size, "on"
+    return provider_ready, bounded_batch_size, "auto_ready" if provider_ready else "auto_not_ready"
+
+
+def step_known_url_discovery(
+    *,
+    seed_url_csv: Path | None,
+    search_missing_urls: bool = False,
+    search_batch_size: int = 0,
+    progress: BootstrapProgressWriter | None = None,
+) -> dict[str, int]:
+    """Step 2b: register known URL seeds, corporation fallbacks, and optional Web search."""
     from eidp.db.session import SessionLocal
-    from eidp.scraper.url_discovery import import_seed_urls, infer_corporation_urls
+    from eidp.scraper.url_discovery import import_seed_urls, infer_corporation_urls, search_and_discover
 
     stats = {
         "seed_imported": 0,
@@ -280,6 +336,11 @@ def step_known_url_discovery(*, seed_url_csv: Path | None) -> dict[str, int]:
         "seed_skipped_existing": 0,
         "corporation_inferred": 0,
         "corporation_skipped_has_url": 0,
+        "search_enabled": 0,
+        "search_searched": 0,
+        "search_found": 0,
+        "search_no_result": 0,
+        "search_errors": 0,
     }
     session = SessionLocal()
     try:
@@ -292,6 +353,44 @@ def step_known_url_discovery(*, seed_url_csv: Path | None) -> dict[str, int]:
         corporation_stats = infer_corporation_urls(session)
         stats["corporation_inferred"] = int(corporation_stats.get("inferred", 0))
         stats["corporation_skipped_has_url"] = int(corporation_stats.get("skipped_has_url", 0))
+        if search_missing_urls and search_batch_size > 0:
+            stats["search_enabled"] = 1
+
+            def update_search_progress(search_stats: dict[str, int], total_schools: int) -> None:
+                if progress is None:
+                    return
+                progress.write(
+                    status="running",
+                    current_step=2,
+                    percent=0.45,
+                    message=(
+                        "不足URLをWeb検索で補完しています。"
+                        f"{search_stats.get('searched', 0)}/{total_schools}校確認済み / "
+                        f"入口候補 {search_stats.get('found', 0)}件"
+                    ),
+                    details={
+                        **stats,
+                        "search_searched": int(search_stats.get("searched", 0)),
+                        "search_found": int(search_stats.get("found", 0)),
+                        "search_no_result": int(search_stats.get("no_result", 0)),
+                        "search_errors": int(search_stats.get("errors", 0)),
+                    },
+                )
+
+            try:
+                search_stats = search_and_discover(
+                    session,
+                    batch_size=search_batch_size,
+                    progress_callback=update_search_progress,
+                )
+            except Exception as exc:
+                stats["search_errors"] += 1
+                print(f"[step2b] web search fallback skipped after error: {exc}")
+            else:
+                stats["search_searched"] = int(search_stats.get("searched", 0))
+                stats["search_found"] = int(search_stats.get("found", 0))
+                stats["search_no_result"] = int(search_stats.get("no_result", 0))
+                stats["search_errors"] = int(search_stats.get("errors", 0))
         session.commit()
     except Exception:
         session.rollback()
@@ -424,6 +523,21 @@ def main(argv: list[str] | None = None) -> int:
         "--skip-known-url-discovery",
         action="store_true",
         help="Skip known seed URL import and corporation-domain fallback registration.",
+    )
+    parser.add_argument(
+        "--url-search",
+        choices=("settings", "auto", "on", "off"),
+        default="settings",
+        help=(
+            "Whether Step 2b should use the configured search provider for schools still missing a URL. "
+            "'settings' reads EIDP_URL_SEARCH_AUTO_ENABLE from .env."
+        ),
+    )
+    parser.add_argument(
+        "--url-search-batch-size",
+        type=int,
+        default=None,
+        help="Override EIDP_URL_SEARCH_BATCH_SIZE for Step 2b. 0 disables the Web search fallback.",
     )
     parser.add_argument(
         "--artifact-dir", type=Path, default=REPO_ROOT / "data" / "prefecture-aggregators" / "artifacts"
@@ -585,9 +699,26 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             status="running",
             current_step=2,
             percent=0.45,
-            message="既知URLと法人ドメインを補助的に登録しています。",
+            message="既知URL、法人ドメイン、不足URL検索を補助的に登録しています。",
             details={"school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values())},
         )
+    from eidp.config import settings
+
+    url_search_mode = str(settings.url_search_auto_enable)
+    if args.url_search != "settings":
+        url_search_mode = args.url_search
+    configured_search_batch_size = (
+        int(settings.url_search_batch_size) if args.url_search_batch_size is None else int(args.url_search_batch_size)
+    )
+    search_missing_urls, search_batch_size, url_search_reason = resolve_url_search_mode(
+        configured_mode=url_search_mode,
+        provider=str(settings.search_provider),
+        batch_size=configured_search_batch_size,
+        serper_api_key=str(settings.serper_api_key),
+        brave_api_key=str(settings.brave_api_key),
+        google_api_key=str(settings.google_api_key),
+        google_cx=str(settings.google_cx),
+    )
     if args.skip_known_url_discovery:
         print("\n[skip] Step 2b — --skip-known-url-discovery requested.")
         known_url_stats = {
@@ -596,10 +727,24 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             "seed_skipped_existing": 0,
             "corporation_inferred": 0,
             "corporation_skipped_has_url": 0,
+            "search_enabled": 0,
+            "search_searched": 0,
+            "search_found": 0,
+            "search_no_result": 0,
+            "search_errors": 0,
         }
     else:
         print("\n=== Step 2b: known URL / corporation fallback discovery ===")
-        known_url_stats = step_known_url_discovery(seed_url_csv=args.seed_url_csv)
+        print(
+            "[step2b] url_search="
+            f"{url_search_reason} provider={settings.search_provider} batch_size={search_batch_size}"
+        )
+        known_url_stats = step_known_url_discovery(
+            seed_url_csv=args.seed_url_csv,
+            search_missing_urls=search_missing_urls,
+            search_batch_size=search_batch_size,
+            progress=progress,
+        )
 
     if args.skip_discover:
         print("\n[skip] Step 3 / 4 — --skip-discover requested.")
@@ -618,6 +763,8 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         )
     print("\n=== Step 3: discover-pdfs ===")
     discovery_methods = [method.strip() for method in args.discovery_methods.split(",") if method.strip()]
+    if known_url_stats.get("search_found", 0) > 0 and "web_search" not in discovery_methods:
+        discovery_methods.append("web_search")
     discovery_stats = step_discover_pdfs(
         storage_dir=args.storage_dir,
         batch_size=args.batch_size,

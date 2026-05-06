@@ -89,6 +89,8 @@ class Settings(BaseSettings):
 
     # Search API (switch provider by changing search_provider)
     search_provider: str = "duckduckgo"  # duckduckgo | brave | google | serper
+    url_search_auto_enable: str = "auto"  # auto | on | off
+    url_search_batch_size: int = 200
     brave_api_key: str = ""
     google_api_key: str = ""
     google_cx: str = ""
@@ -155,6 +157,14 @@ def apply_runtime_env_settings(config: Settings = settings) -> None:
         "EIDP_TESSERACT_BIN": config.tesseract_bin,
         "EIDP_OCR_PROVIDER": config.ocr_provider,
         "EIDP_OCR_DEVICE": config.ocr_device,
+        "EIDP_SEARCH_PROVIDER": config.search_provider,
+        "EIDP_URL_SEARCH_AUTO_ENABLE": config.url_search_auto_enable,
+        "EIDP_URL_SEARCH_BATCH_SIZE": str(config.url_search_batch_size),
+        "EIDP_SERPER_API_KEY": config.serper_api_key,
+        "EIDP_BRAVE_API_KEY": config.brave_api_key,
+        "EIDP_GOOGLE_API_KEY": config.google_api_key,
+        "EIDP_GOOGLE_CX": config.google_cx,
+        "EIDP_FIRECRAWL_API_KEY": config.firecrawl_api_key,
     }
     for key, value in env_updates.items():
         os.environ[key] = value

@@ -298,6 +298,11 @@ def test_step_known_url_discovery_imports_seed_and_corporation_fallbacks(tmp_pat
         calls.append(("corp", session))
         return {"inferred": 4, "skipped_has_url": 5}
 
+    def fake_search_and_discover(session, *, batch_size, progress_callback=None):  # noqa: ANN001
+        _ = progress_callback
+        calls.append(("search", session, batch_size))
+        return {"searched": 10, "found": 6, "no_result": 3, "errors": 1}
+
     import eidp.db.session as db_session
     import eidp.scraper.url_discovery as url_discovery
 
@@ -305,6 +310,7 @@ def test_step_known_url_discovery_imports_seed_and_corporation_fallbacks(tmp_pat
     monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
     monkeypatch.setattr(url_discovery, "import_seed_urls", fake_import_seed_urls)
     monkeypatch.setattr(url_discovery, "infer_corporation_urls", fake_infer_corporation_urls)
+    monkeypatch.setattr(url_discovery, "search_and_discover", fake_search_and_discover)
 
     stats = module.step_known_url_discovery(seed_url_csv=seed_url_csv)
 
@@ -314,10 +320,177 @@ def test_step_known_url_discovery_imports_seed_and_corporation_fallbacks(tmp_pat
         "seed_skipped_existing": 3,
         "corporation_inferred": 4,
         "corporation_skipped_has_url": 5,
+        "search_enabled": 0,
+        "search_searched": 0,
+        "search_found": 0,
+        "search_no_result": 0,
+        "search_errors": 0,
     }
     assert calls[0] == ("seed", fake_session, seed_url_csv)
     assert calls[1] == ("corp", fake_session)
     assert "commit" in calls
+
+
+def test_step_known_url_discovery_runs_search_when_enabled(tmp_path: Path, monkeypatch) -> None:
+    calls: list[object] = []
+    seed_url_csv = tmp_path / "known.csv"
+    seed_url_csv.write_text("school,url\n", encoding="utf-8")
+    progress_file = tmp_path / "logs" / "bootstrap.json"
+    progress = module.BootstrapProgressWriter(progress_file)
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append("commit")
+
+        def rollback(self) -> None:
+            calls.append("rollback")
+
+        def close(self) -> None:
+            calls.append("close")
+
+    def fake_import_seed_urls(session, csv_path):  # noqa: ANN001
+        calls.append(("seed", session, csv_path))
+        return {"imported": 0, "skipped_no_school": 0, "skipped_existing": 0}
+
+    def fake_infer_corporation_urls(session):  # noqa: ANN001
+        calls.append(("corp", session))
+        return {"inferred": 1, "skipped_has_url": 2}
+
+    def fake_search_and_discover(session, *, batch_size, progress_callback=None):  # noqa: ANN001
+        calls.append(("search", session, batch_size))
+        if progress_callback is not None:
+            progress_callback({"searched": 10, "found": 4, "no_result": 5, "errors": 1}, 25)
+        return {"searched": 25, "found": 9, "no_result": 15, "errors": 1}
+
+    import eidp.db.session as db_session
+    import eidp.scraper.url_discovery as url_discovery
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(url_discovery, "import_seed_urls", fake_import_seed_urls)
+    monkeypatch.setattr(url_discovery, "infer_corporation_urls", fake_infer_corporation_urls)
+    monkeypatch.setattr(url_discovery, "search_and_discover", fake_search_and_discover)
+
+    stats = module.step_known_url_discovery(
+        seed_url_csv=seed_url_csv,
+        search_missing_urls=True,
+        search_batch_size=25,
+        progress=progress,
+    )
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+
+    assert stats["corporation_inferred"] == 1
+    assert stats["search_enabled"] == 1
+    assert stats["search_searched"] == 25
+    assert stats["search_found"] == 9
+    assert stats["search_no_result"] == 15
+    assert stats["search_errors"] == 1
+    assert calls[2] == ("search", fake_session, 25)
+    assert "commit" in calls
+    assert payload["current_step"] == 2
+    assert payload["message"].startswith("不足URLをWeb検索で補完しています。")
+    assert payload["details"]["search_searched"] == 10
+    assert payload["details"]["search_found"] == 4
+
+
+def test_resolve_url_search_mode_is_key_aware() -> None:
+    assert module.resolve_url_search_mode(
+        configured_mode="auto",
+        provider="duckduckgo",
+        batch_size=200,
+    ) == (True, 200, "auto_ready")
+    assert module.resolve_url_search_mode(
+        configured_mode="auto",
+        provider="serper",
+        batch_size=200,
+    ) == (False, 200, "auto_not_ready")
+    assert module.resolve_url_search_mode(
+        configured_mode="on",
+        provider="serper",
+        batch_size=200,
+    ) == (True, 200, "on")
+    assert module.resolve_url_search_mode(
+        configured_mode="off",
+        provider="duckduckgo",
+        batch_size=200,
+    ) == (False, 200, "off")
+
+
+def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_path: Path) -> None:
+    calls: dict[str, object] = {}
+
+    def fake_step_download_artifacts(**kwargs):  # noqa: ANN003
+        calls["download"] = kwargs
+        return ["tokyo"], []
+
+    def fake_step_aggregate(**kwargs):  # noqa: ANN003
+        calls["aggregate"] = kwargs
+        return {"tokyo": {"added": 1}}
+
+    def fake_step_known_url_discovery(**kwargs):  # noqa: ANN003
+        calls["known"] = kwargs
+        return {
+            "seed_imported": 0,
+            "seed_skipped_no_school": 0,
+            "seed_skipped_existing": 0,
+            "corporation_inferred": 0,
+            "corporation_skipped_has_url": 0,
+            "search_enabled": 1,
+            "search_searched": 25,
+            "search_found": 2,
+            "search_no_result": 23,
+            "search_errors": 0,
+        }
+
+    def fake_step_discover_pdfs(**kwargs):  # noqa: ANN003
+        calls["discover"] = kwargs
+        return {"downloaded": 0}
+
+    import eidp.config as config_mod
+
+    monkeypatch.setattr(module, "step_download_artifacts", fake_step_download_artifacts)
+    monkeypatch.setattr(module, "step_aggregate", fake_step_aggregate)
+    monkeypatch.setattr(module, "step_known_url_discovery", fake_step_known_url_discovery)
+    monkeypatch.setattr(module, "step_discover_pdfs", fake_step_discover_pdfs)
+    monkeypatch.setattr(config_mod.settings, "url_search_auto_enable", "auto")
+    monkeypatch.setattr(config_mod.settings, "url_search_batch_size", 25)
+    monkeypatch.setattr(config_mod.settings, "search_provider", "duckduckgo")
+    monkeypatch.setattr(config_mod.settings, "serper_api_key", "")
+    monkeypatch.setattr(config_mod.settings, "brave_api_key", "")
+    monkeypatch.setattr(config_mod.settings, "google_api_key", "")
+    monkeypatch.setattr(config_mod.settings, "google_cx", "")
+
+    rc = module.run_bootstrap(
+        SimpleNamespace(
+            pref="",
+            seed_csv=tmp_path / "seed.csv",
+            artifact_dir=tmp_path / "artifacts",
+            force_redownload=False,
+            aggregate_output=tmp_path / "out",
+            skip_known_url_discovery=False,
+            url_search="settings",
+            url_search_batch_size=None,
+            seed_url_csv=tmp_path / "known.csv",
+            skip_discover=False,
+            discovery_methods="prefecture_aggregator,seed_csv,corporation_pattern",
+            storage_dir=tmp_path / "pdfs",
+            batch_size=100,
+            rate_limit=0.0,
+            evidence_log=None,
+            allow_stale_fallback=False,
+            skip_ingest=True,
+        )
+    )
+
+    assert rc == 0
+    assert calls["known"]["search_missing_urls"] is True
+    assert calls["known"]["search_batch_size"] == 25
+    assert calls["discover"]["discovery_methods"] == [
+        "prefecture_aggregator",
+        "seed_csv",
+        "corporation_pattern",
+        "web_search",
+    ]
 
 
 def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, monkeypatch) -> None:

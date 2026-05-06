@@ -88,6 +88,8 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None
         "ocr_provider",
         "ocr_device",
         "search_provider",
+        "url_search_auto_enable",
+        "url_search_batch_size",
         "serper_api_key",
         "brave_api_key",
         "google_api_key",
@@ -111,6 +113,8 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None
             ocr_provider="tesseract",
             ocr_device="cpu",
             search_provider="serper",
+            url_search_auto_enable="on",
+            url_search_batch_size=300,
             serper_api_key="serper-key",
             brave_api_key="",
             google_api_key="",
@@ -127,4 +131,6 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None
     assert updates["EIDP_TARGET_FISCAL_YEAR"] == "2027"
     assert "EIDP_OCR_AUTO_ENABLE=off" in body
     assert "EIDP_SEARCH_PROVIDER=serper" in body
+    assert "EIDP_URL_SEARCH_AUTO_ENABLE=on" in body
+    assert "EIDP_URL_SEARCH_BATCH_SIZE=300" in body
     assert "EIDP_FIRECRAWL_API_KEY=firecrawl-key" in body

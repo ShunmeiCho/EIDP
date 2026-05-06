@@ -31,6 +31,8 @@ SETTING_ENV_KEYS = (
     "EIDP_OCR_PROVIDER",
     "EIDP_OCR_DEVICE",
     "EIDP_SEARCH_PROVIDER",
+    "EIDP_URL_SEARCH_AUTO_ENABLE",
+    "EIDP_URL_SEARCH_BATCH_SIZE",
     "EIDP_SERPER_API_KEY",
     "EIDP_BRAVE_API_KEY",
     "EIDP_GOOGLE_API_KEY",
@@ -97,6 +99,8 @@ def save_operator_settings(
     ocr_provider: str,
     ocr_device: str,
     search_provider: str,
+    url_search_auto_enable: str,
+    url_search_batch_size: int,
     serper_api_key: str,
     brave_api_key: str,
     google_api_key: str,
@@ -118,6 +122,8 @@ def save_operator_settings(
         "EIDP_OCR_PROVIDER": ocr_provider.strip().lower(),
         "EIDP_OCR_DEVICE": ocr_device.strip().lower(),
         "EIDP_SEARCH_PROVIDER": search_provider,
+        "EIDP_URL_SEARCH_AUTO_ENABLE": url_search_auto_enable,
+        "EIDP_URL_SEARCH_BATCH_SIZE": str(url_search_batch_size),
         "EIDP_SERPER_API_KEY": serper_api_key.strip(),
         "EIDP_BRAVE_API_KEY": brave_api_key.strip(),
         "EIDP_GOOGLE_API_KEY": google_api_key.strip(),
@@ -145,6 +151,8 @@ def save_operator_settings(
     settings.ocr_provider = updates["EIDP_OCR_PROVIDER"]
     settings.ocr_device = updates["EIDP_OCR_DEVICE"]
     settings.search_provider = updates["EIDP_SEARCH_PROVIDER"]
+    settings.url_search_auto_enable = updates["EIDP_URL_SEARCH_AUTO_ENABLE"]
+    settings.url_search_batch_size = url_search_batch_size
     settings.serper_api_key = updates["EIDP_SERPER_API_KEY"]
     settings.brave_api_key = updates["EIDP_BRAVE_API_KEY"]
     settings.google_api_key = updates["EIDP_GOOGLE_API_KEY"]
@@ -205,6 +213,11 @@ def _provider_index(provider: str) -> int:
 
 
 def _ocr_mode_index(value: str) -> int:
+    modes = ["auto", "on", "off"]
+    return modes.index(value) if value in modes else 0
+
+
+def _url_search_mode_index(value: str) -> int:
     modes = ["auto", "on", "off"]
     return modes.index(value) if value in modes else 0
 
@@ -325,6 +338,26 @@ def render(_session: object, *, lock_path: Path) -> None:
             "google": "Google Custom Search",
         }[value],
     )
+    url_search_auto_enable = st.selectbox(
+        "不足URLのWeb検索補完",
+        ["auto", "on", "off"],
+        index=_url_search_mode_index(str(settings.url_search_auto_enable)),
+        format_func=lambda value: {
+            "auto": "自動（設定済み provider で実行）",
+            "on": "常に実行",
+            "off": "実行しない",
+        }[value],
+    )
+    url_search_batch_size = int(
+        st.number_input(
+            "Web検索補完の最大校数",
+            min_value=0,
+            max_value=5000,
+            value=int(settings.url_search_batch_size),
+            step=50,
+            disabled=url_search_auto_enable == "off",
+        )
+    )
     api_col1, api_col2 = st.columns(2)
     with api_col1:
         serper_api_key = st.text_input("Serper API key", value=str(settings.serper_api_key), type="password")
@@ -363,6 +396,8 @@ def render(_session: object, *, lock_path: Path) -> None:
             ocr_provider=ocr_provider,
             ocr_device=ocr_device,
             search_provider=search_provider,
+            url_search_auto_enable=url_search_auto_enable,
+            url_search_batch_size=url_search_batch_size,
             serper_api_key=serper_api_key,
             brave_api_key=brave_api_key,
             google_api_key=google_api_key,

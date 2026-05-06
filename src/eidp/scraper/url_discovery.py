@@ -11,6 +11,7 @@ Stores results in school_site table.
 import csv
 import ipaddress
 import socket
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -67,6 +68,7 @@ def _is_safe_url(url: str) -> bool:
             return False
 
     return True
+
 
 def _load_corporation_domains() -> dict[str, str]:
     """Load corporation -> domain mapping from external CSV.
@@ -223,6 +225,7 @@ def search_and_discover(
     session: Session,
     batch_size: int = 100,
     rate_limit_delay: float = 1.0,
+    progress_callback: Callable[[dict[str, int], int], None] | None = None,
 ) -> dict[str, int]:
     """Use search API to discover URLs for schools without any URL.
 
@@ -305,6 +308,8 @@ def search_and_discover(
             stats["no_result"] += 1
 
         stats["searched"] += 1
+        if progress_callback is not None:
+            progress_callback(dict(stats), len(schools_without))
         time.sleep(rate_limit_delay)
 
     session.flush()
