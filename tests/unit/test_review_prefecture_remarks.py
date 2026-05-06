@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from eidp.db.models import Base, ReviewItem, School
+from eidp.review._pages import prefecture_remarks
 from eidp.review._pages.prefecture_remarks import (
     count_pending_prefecture_remark_reviews,
     list_prefecture_remark_reviews,
+    load_prefecture_seed_coverage,
     parse_prefecture_remark_payload,
     prefecture_remark_tag_label,
+    prefecture_seed_status_label,
     resolve_prefecture_remark_review,
 )
 
@@ -64,6 +69,53 @@ def test_parse_prefecture_remark_payload_and_labels() -> None:
     assert remarks == "新規"
     assert prefecture_remark_tag_label("withdrawal") == "辞退/取消/対象外"
     assert parse_prefecture_remark_payload("not-json") == ((), "not-json")
+
+
+def test_prefecture_seed_coverage_summarizes_automation_targets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prefecture_remarks, "SUPPORTED_PREFECTURE_PARSERS", frozenset({"tokyo"}))
+    seed = tmp_path / "seed.csv"
+    seed.write_text(
+        "\n".join([
+            "pref_key,pref_jp,artifact_url,verified_status,has_url_col,has_hyperlink_annot,as_of_date,notes",
+            "tokyo,東京都,https://pref.example/tokyo.pdf,url_found,yes,no,2026-04-01,URLs",
+            "kyoto,京都府,unknown,todo,unknown,unknown,,needs check",
+            "akita,秋田県,https://pref.example/akita.pdf,url_found,no,yes,2025-08-29,links",
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+
+    summary, rows = load_prefecture_seed_coverage(seed)
+
+    assert summary.total == 3
+    assert summary.automatic_targets == 1
+    assert summary.parser_supported == 1
+    assert summary.needs_structure_review == 2
+    assert summary.school_link_signal == 2
+    assert [row.status for row in rows] == ["自動取込対象", "構造確認待ち", "parser未対応"]
+    assert rows[0].school_link_signal is True
+    assert rows[1].school_link_signal is False
+
+
+def test_prefecture_seed_status_label() -> None:
+    assert prefecture_seed_status_label(
+        parser_supported=True,
+        verified_status="url_found",
+        artifact_url="https://pref.example/index.pdf",
+    ) == "自動取込対象"
+    assert prefecture_seed_status_label(
+        parser_supported=False,
+        verified_status="url_found",
+        artifact_url="https://pref.example/index.pdf",
+    ) == "parser未対応"
+    assert prefecture_seed_status_label(
+        parser_supported=False,
+        verified_status="todo",
+        artifact_url="unknown",
+    ) == "構造確認待ち"
 
 
 def test_list_prefecture_remark_reviews_filters_school_type_and_status() -> None:
