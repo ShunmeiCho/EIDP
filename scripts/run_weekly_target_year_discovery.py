@@ -365,6 +365,7 @@ def run_weekly(
     output_dir: Path,
     batch_size: int,
     rate_limit: float,
+    request_timeout: float,
     ingest_batch_size: int,
     limit: int | None,
     dry_run: bool,
@@ -384,6 +385,7 @@ def run_weekly(
         output_dir=output_dir,
         batch_size=batch_size,
         rate_limit=rate_limit,
+        request_timeout=request_timeout,
         ingest_batch_size=ingest_batch_size,
         limit=limit,
         dry_run=dry_run,
@@ -405,6 +407,7 @@ def _run_weekly_inner(
     output_dir: Path,
     batch_size: int,
     rate_limit: float,
+    request_timeout: float,
     ingest_batch_size: int,
     limit: int | None,
     dry_run: bool,
@@ -470,6 +473,7 @@ def _run_weekly_inner(
                 storage_dir=storage_dir,
                 batch_size=effective_batch_size,
                 rate_limit=rate_limit,
+                request_timeout=request_timeout,
                 discovery_methods=methods,
                 school_ids=selected_school_ids,
                 evidence_path=discovery_evidence,
@@ -581,6 +585,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-logs", type=int, default=12)
     parser.add_argument("--batch-size", type=int, default=250)
     parser.add_argument("--rate-limit", type=float, default=1.5)
+    parser.add_argument("--request-timeout", type=float, default=12.0)
     parser.add_argument("--ingest-batch-size", type=int, default=500)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
@@ -603,6 +608,7 @@ def main() -> None:
         output_dir=args.output_dir,
         batch_size=args.batch_size,
         rate_limit=args.rate_limit,
+        request_timeout=args.request_timeout,
         ingest_batch_size=args.ingest_batch_size,
         limit=args.limit,
         dry_run=args.dry_run,

@@ -581,6 +581,7 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
             storage_dir=tmp_path / "pdfs",
             batch_size=100,
             rate_limit=0.0,
+            request_timeout=12.0,
             evidence_log=None,
             url_search_evidence_log=tmp_path / "url_search_evidence.jsonl",
             allow_stale_fallback=False,
@@ -597,6 +598,7 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
         "corporation_pattern",
         "web_search",
     ]
+    assert calls["discover"]["request_timeout"] == 12.0
 
 
 def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, monkeypatch) -> None:
@@ -617,7 +619,20 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
     def fake_run_pdf_discovery(session, storage_dir, **kwargs):  # noqa: ANN001
         calls.append(session)
         callback = kwargs["progress_callback"]
+        calls.append({"request_timeout": kwargs["request_timeout"]})
         callback({"crawled": 5, "found": 3, "downloaded": 1, "failed": 0, "skipped": 4}, 10)
+        callback(
+            {
+                "crawled": 5,
+                "found": 3,
+                "downloaded": 1,
+                "failed": 0,
+                "skipped": 4,
+                "active_index": 6,
+                "active_school_id": 123,
+            },
+            10,
+        )
         return {"crawled": 10, "found": 4, "downloaded": 2, "failed": 0, "skipped": 8}
 
     import eidp.config as config_mod
@@ -632,6 +647,7 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
         storage_dir=tmp_path / "pdfs",
         batch_size=100,
         rate_limit=0,
+        request_timeout=12,
         evidence_log=None,
         discovery_methods=["prefecture_aggregator", "seed_csv", "corporation_pattern"],
         progress=progress,
@@ -643,8 +659,11 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
     assert payload["current_step"] == 3
     assert payload["percent"] > 0.45
     assert "5/10件確認済み" in payload["message"]
+    assert "6件目を確認中" in payload["message"]
     assert payload["details"]["downloaded"] == 1
+    assert payload["details"]["active_school_id"] == 123
     assert "commit" in calls
+    assert {"request_timeout": 12} in calls
 
 
 def test_step_rebuild_status_includes_all_school_types(monkeypatch) -> None:

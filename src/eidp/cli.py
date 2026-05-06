@@ -236,6 +236,7 @@ def discover_pdfs(
     storage_dir: Path = typer.Option(Path("data/pdfs"), help="PDF storage directory"),
     batch_size: int = typer.Option(50, help="Number of sites to crawl"),
     rate_limit: float = typer.Option(1.0, help="Seconds between requests"),
+    request_timeout: float = typer.Option(30.0, help="Per HTTP request timeout in seconds"),
     discovery_method: str = typer.Option(
         "", help="Comma-separated list of school_site.discovery_method values to "
                  "restrict crawling to. E.g. 'prefecture_aggregator' to crawl only "
@@ -265,7 +266,7 @@ def discover_pdfs(
     try:
         stats = run_pdf_discovery(
             session, storage_dir,
-            batch_size=batch_size, rate_limit=rate_limit,
+            batch_size=batch_size, rate_limit=rate_limit, request_timeout=request_timeout,
             discovery_methods=methods,
             school_ids=school_filter,
             evidence_path=evidence_path,

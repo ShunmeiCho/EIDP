@@ -292,6 +292,7 @@ def test_parse_args_defaults_to_configured_target_fiscal_year(
         "operator_manual",
     ]
     assert args.school_type == "all"
+    assert args.request_timeout == 12.0
 
 
 def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
@@ -390,6 +391,7 @@ def test_run_weekly_respects_shared_lock(tmp_path: Path, monkeypatch: pytest.Mon
                 output_dir=tmp_path / "data" / "output" / "target-year-discovery",
                 batch_size=10,
                 rate_limit=1.5,
+                request_timeout=12.0,
                 ingest_batch_size=10,
                 limit=None,
                 dry_run=True,
@@ -414,6 +416,7 @@ def test_run_weekly_writes_last_run_json_under_lock(
         output_dir=tmp_path / "data" / "output" / "target-year-discovery",
         batch_size=10,
         rate_limit=1.5,
+        request_timeout=12.0,
         ingest_batch_size=10,
         limit=None,
         dry_run=True,
@@ -452,6 +455,7 @@ def test_run_weekly_separates_target_missing_from_stale_count(
         output_dir=tmp_path / "data" / "output" / "target-year-discovery",
         batch_size=10,
         rate_limit=1.5,
+        request_timeout=12.0,
         ingest_batch_size=10,
         limit=None,
         dry_run=True,

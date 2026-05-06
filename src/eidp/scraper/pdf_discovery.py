@@ -729,6 +729,7 @@ def run_pdf_discovery(
     storage_dir: Path,
     batch_size: int = 50,
     rate_limit: float = 1.0,
+    request_timeout: float = 30.0,
     discovery_methods: list[str] | None = None,
     school_ids: list[int] | None = None,
     evidence_path: Path | None = None,
@@ -809,11 +810,20 @@ def run_pdf_discovery(
         progress_callback(dict(stats), len(sites))
 
     with httpx.Client(
-        timeout=30.0,
+        timeout=max(float(request_timeout), 1.0),
         follow_redirects=False,
         headers=HEADERS,
     ) as client:
-        for site in sites:
+        for index, site in enumerate(sites, start=1):
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        **stats,
+                        "active_index": index,
+                        "active_school_id": int(site.school_id),
+                    },
+                    len(sites),
+                )
             # Create crawl job
             job = CrawlJob(
                 school_id=site.school_id,

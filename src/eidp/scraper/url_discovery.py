@@ -30,6 +30,17 @@ log = structlog.get_logger()
 
 SEARCH_RESULT_MIN_CONFIDENCE = 0.65
 
+THIRD_PARTY_DIRECTORY_HOST_SUFFIXES = (
+    "best-shingaku.net",
+    "korekarashinro.jp",
+    "manabi.benesse.ne.jp",
+    "minkou.jp",
+    "nicjp.niad.ac.jp",
+    "shingakunet.com",
+    "shinronavi.com",
+    "studyplus.jp",
+)
+
 # SSRF prevention: only allow http(s) to public hosts
 _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}
 
@@ -98,6 +109,28 @@ def _load_corporation_domains() -> dict[str, str]:
 
     log.info("corporation_domains_loaded", count=len(domains), path=str(csv_path))
     return domains
+
+
+def _host_matches_suffix(host: str, suffix: str) -> bool:
+    return host == suffix or host.endswith(f".{suffix}")
+
+
+def _untrusted_search_host_reason(url: str) -> str | None:
+    """Reject search hits that are not reusable school/corporation entrances.
+
+    Government and third-party directory pages can be useful evidence for
+    humans, but registering them as ``school_site`` poisons the PDF crawler:
+    it crawls catalog pages instead of each institution's own disclosure page.
+    Prefecture/government sources belong in ``prefecture_aggregator``.
+    """
+    host = (urlparse(url).hostname or "").lower().lstrip("www.")
+    if not host:
+        return "missing_host"
+    if any(_host_matches_suffix(host, suffix) for suffix in THIRD_PARTY_DIRECTORY_HOST_SUFFIXES):
+        return "third_party_directory_domain"
+    if host.endswith(".go.jp") or host.endswith(".lg.jp"):
+        return "government_index_domain"
+    return None
 
 # Common disclosure page path patterns
 DISCLOSURE_PATHS = [
@@ -297,22 +330,41 @@ def search_and_discover(
                     break
 
                 if results:
-                    # Find the best result (prefer .ac.jp domains and title matches)
-                    best = _pick_best_result(results, school)
-                    if best is not None:
-                        confidence = _score_search_result(best, school)
-                        if not _is_safe_url(best.url):
+                    trusted_results: list[SearchResult] = []
+                    for result in results:
+                        confidence = _score_search_result(result, school)
+                        if not _is_safe_url(result.url):
                             evidence.record(_url_search_evidence(
                                 school=school,
                                 provider=provider_name,
                                 query=query,
                                 decision="rejected",
                                 reason="unsafe_url",
-                                result=best,
+                                result=result,
                                 score=confidence,
                             ))
-                            time.sleep(rate_limit_delay)
                             continue
+                        if untrusted_reason := _untrusted_search_host_reason(result.url):
+                            evidence.record(_url_search_evidence(
+                                school=school,
+                                provider=provider_name,
+                                query=query,
+                                decision="rejected",
+                                reason=untrusted_reason,
+                                result=result,
+                                score=confidence,
+                            ))
+                            continue
+                        trusted_results.append(result)
+
+                    if not trusted_results:
+                        time.sleep(rate_limit_delay)
+                        continue
+
+                    # Find the best trusted result (prefer .ac.jp domains and title matches)
+                    best = _pick_best_result(trusted_results, school)
+                    if best is not None:
+                        confidence = _score_search_result(best, school)
                         if confidence < SEARCH_RESULT_MIN_CONFIDENCE:
                             log.info(
                                 "search_result_rejected_low_confidence",

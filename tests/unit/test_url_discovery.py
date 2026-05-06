@@ -182,6 +182,119 @@ def test_search_and_discover_rejects_low_confidence_results(tmp_path: Path, monk
         session.close()
 
 
+def test_search_and_discover_skips_third_party_directories_when_official_result_exists(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import time as time_module
+
+    class FakeProvider:
+        def name(self) -> str:
+            return "fake"
+
+        def search(self, query: str, count: int = 5) -> list[SearchResult]:
+            return [
+                SearchResult(
+                    title="日本語専門学校 | 資料請求",
+                    url="https://shingakunet.com/gakko/SC000001/",
+                    description="日本語専門学校の学校情報",
+                ),
+                SearchResult(
+                    title="日本語専門学校 情報公開",
+                    url="https://example.ac.jp/disclosure/",
+                    description="高等教育の修学支援新制度",
+                ),
+            ]
+
+    import eidp.scraper.search_provider as search_provider
+
+    monkeypatch.setattr(search_provider, "create_provider", lambda **_kwargs: FakeProvider())
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda url: True)
+    monkeypatch.setattr(time_module, "sleep", lambda _seconds: None)
+
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="東京都",
+                corporation_name="学校法人テスト",
+                school_name="日本語専門学校",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.commit()
+
+        evidence_path = tmp_path / "url_search_evidence.jsonl"
+        stats = url_discovery.search_and_discover(session, batch_size=1, evidence_path=evidence_path)
+        site = session.query(SchoolSite).one()
+        evidence_rows = [
+            json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines()
+        ]
+
+        assert stats == {"searched": 1, "found": 1, "no_result": 0, "errors": 0}
+        assert site.url == "https://example.ac.jp/disclosure/"
+        assert any(row["reason"] == "third_party_directory_domain" for row in evidence_rows)
+        assert evidence_rows[-1]["decision"] == "accepted"
+        assert evidence_rows[-1]["result_url"] == "https://example.ac.jp/disclosure/"
+    finally:
+        session.close()
+
+
+def test_search_and_discover_rejects_government_index_as_school_site(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import time as time_module
+
+    class FakeProvider:
+        def name(self) -> str:
+            return "fake"
+
+        def search(self, query: str, count: int = 5) -> list[SearchResult]:
+            return [
+                SearchResult(
+                    title="日本語専門学校 修学支援対象校",
+                    url="https://www.mext.go.jp/a_menu/koutou/hutankeigen/index.htm",
+                    description="日本語専門学校 高等教育の修学支援新制度",
+                )
+            ]
+
+    import eidp.scraper.search_provider as search_provider
+
+    monkeypatch.setattr(search_provider, "create_provider", lambda **_kwargs: FakeProvider())
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda url: True)
+    monkeypatch.setattr(time_module, "sleep", lambda _seconds: None)
+
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="東京都",
+                corporation_name="学校法人テスト",
+                school_name="日本語専門学校",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.commit()
+
+        evidence_path = tmp_path / "url_search_evidence.jsonl"
+        stats = url_discovery.search_and_discover(session, batch_size=1, evidence_path=evidence_path)
+        evidence_rows = [
+            json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines()
+        ]
+
+        assert stats == {"searched": 1, "found": 0, "no_result": 1, "errors": 0}
+        assert session.query(SchoolSite).count() == 0
+        assert {row["reason"] for row in evidence_rows} == {"government_index_domain"}
+        assert {row["decision"] for row in evidence_rows} == {"rejected"}
+    finally:
+        session.close()
+
+
 def test_search_and_discover_accepts_corporation_description_match(monkeypatch) -> None:
     import time as time_module
 
