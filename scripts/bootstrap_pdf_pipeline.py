@@ -41,6 +41,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+
+def _configure_utf8_stdio(stdout: Any = sys.stdout, stderr: Any = sys.stderr) -> None:
+    """Keep Windows manual runs from crashing on Japanese log text."""
+
+    for stream in (stdout, stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
+_configure_utf8_stdio()
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 sys.path.insert(0, str(REPO_ROOT / "src"))

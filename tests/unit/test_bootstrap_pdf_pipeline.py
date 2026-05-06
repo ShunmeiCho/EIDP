@@ -17,6 +17,24 @@ sys.modules["bootstrap_pdf_pipeline"] = module
 spec.loader.exec_module(module)
 
 
+class _FakeStream:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, str]] = []
+
+    def reconfigure(self, **kwargs: str) -> None:
+        self.calls.append(kwargs)
+
+
+def test_configure_utf8_stdio_sets_replace_errors() -> None:
+    stdout = _FakeStream()
+    stderr = _FakeStream()
+
+    module._configure_utf8_stdio(stdout, stderr)
+
+    assert stdout.calls == [{"encoding": "utf-8", "errors": "replace"}]
+    assert stderr.calls == [{"encoding": "utf-8", "errors": "replace"}]
+
+
 def test_main_holds_app_lock_around_bootstrap(tmp_path: Path, monkeypatch) -> None:
     calls: list[Path] = []
     lock_path = tmp_path / "data" / ".lock"

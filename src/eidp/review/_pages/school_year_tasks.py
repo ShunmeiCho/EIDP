@@ -1133,7 +1133,7 @@ def _blocking_reason_options(session: Session, *, fiscal_year: int, school_type:
 def _render_rebuild_button(session: Session, *, fiscal_year: int, school_type: str | None, lock_path: Path) -> None:
     import streamlit as st
 
-    if st.button("年度タスクを再計算", type="primary"):
+    if st.button("年度タスクを再計算", type="primary", width="stretch"):
         from eidp.pipeline.school_fiscal_year_status import rebuild_school_fiscal_year_status
 
         try:
@@ -1194,7 +1194,7 @@ def _render_bootstrap_progress(progress: BootstrapProgress, *, lock_held: bool |
     if progress.log_path:
         st.caption(f"診断ログ: {progress.log_path}")
     key_suffix = progress.started_at or progress.updated_at or progress.message
-    if st.button("進行状況を更新", key=f"bootstrap_progress_refresh_{key_suffix}"):
+    if st.button("進行状況を更新", key=f"bootstrap_progress_refresh_{key_suffix}", width="stretch"):
         st.rerun()
 
 
@@ -1220,6 +1220,7 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
         "初回URL/PDF取得を開始",
         type="primary",
         disabled=lock_status.held,
+        width="stretch",
     ):
         result = start_initial_url_bootstrap(app_root, lock_path=lock_path)
         if result.started:
@@ -1290,7 +1291,9 @@ def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path
     lock_status = probe_lock(lock_path)
     if st.button(
         "週次URL/PDF再取得を開始",
+        type="primary",
         disabled=lock_status.held or needs_bootstrap,
+        width="stretch",
     ):
         result = start_weekly_rediscovery(app_root, lock_path=lock_path)
         if result.started:
