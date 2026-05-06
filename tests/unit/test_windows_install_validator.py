@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -46,7 +47,20 @@ def _setup_artifacts(root: Path) -> None:
     for rel in module.SETUP_DIRS:
         _mkdir(root, rel)
     for rel in module.SETUP_FILES:
-        _write(root, rel, b"sqlite" if rel.endswith(".sqlite3") else b"PE")
+        if rel.endswith(".sqlite3"):
+            _write_sqlite_schema(root / Path(*rel.split("/")))
+        else:
+            _write(root, rel, b"PE")
+
+
+def _write_sqlite_schema(path: Path, *, omit: str | None = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as conn:
+        for table in module.SQLITE_REQUIRED_TABLES:
+            if table == omit:
+                continue
+            conn.execute(f"CREATE TABLE {table} (id INTEGER PRIMARY KEY)")
+        conn.commit()
 
 
 def _weekly_artifacts(root: Path) -> None:
@@ -59,6 +73,12 @@ def _weekly_artifacts(root: Path) -> None:
                 "run_id": "20260505_010203",
                 "started_at": "2026-05-05T01:02:03+00:00",
                 "finished_at": "2026-05-05T01:02:10+00:00",
+                "current_fy": 2026,
+                "selection_mode": "target_missing",
+                "target_missing_school_count": 7,
+                "new_document_count": 2,
+                "discovery_stats": {"downloaded": 2},
+                "ingest_stats": {"processed": 2},
             }
         ),
     )
@@ -102,6 +122,31 @@ def test_validate_after_setup_accepts_setup_artifacts(tmp_path: Path) -> None:
     check = module.validate_install(root, after_setup=True)
 
     assert check.ok, check.errors
+    assert "school_fiscal_year_status" in check.details["sqlite_required_tables_present"]
+
+
+def test_validate_after_setup_rejects_sqlite_missing_school_fiscal_year_status(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    db_path = root / "data" / "eidp.sqlite3"
+    db_path.unlink()
+    _write_sqlite_schema(db_path, omit="school_fiscal_year_status")
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert any("school_fiscal_year_status" in error for error in check.errors)
+
+
+def test_validate_after_setup_rejects_unreadable_sqlite(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _write(root, "data/eidp.sqlite3", b"not sqlite")
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert any("readable SQLite" in error for error in check.errors)
 
 
 def test_validate_after_weekly_requires_last_run_and_log(tmp_path: Path) -> None:
@@ -140,6 +185,12 @@ def test_validate_after_weekly_rejects_bad_last_run_status(tmp_path: Path) -> No
                 "run_id": "20260505_010203",
                 "started_at": "2026-05-05T01:02:03+00:00",
                 "finished_at": "2026-05-05T01:02:10+00:00",
+                "current_fy": 2026,
+                "selection_mode": "target_missing",
+                "target_missing_school_count": 7,
+                "new_document_count": 2,
+                "discovery_stats": {},
+                "ingest_stats": {},
             }
         ),
     )
@@ -163,6 +214,12 @@ def test_validate_after_weekly_rejects_failed_last_run(tmp_path: Path) -> None:
                 "run_id": "20260505_010203",
                 "started_at": "2026-05-05T01:02:03+00:00",
                 "finished_at": "2026-05-05T01:02:10+00:00",
+                "current_fy": 2026,
+                "selection_mode": "target_missing",
+                "target_missing_school_count": 7,
+                "new_document_count": 2,
+                "discovery_stats": {},
+                "ingest_stats": {},
             }
         ),
     )
@@ -171,6 +228,44 @@ def test_validate_after_weekly_rejects_failed_last_run(tmp_path: Path) -> None:
 
     assert not check.ok
     assert any("status must be success" in error for error in check.errors)
+
+
+def test_validate_after_weekly_requires_target_year_runner_keys(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    _write(
+        root,
+        "data/output/last_run.json",
+        json.dumps(
+            {
+                "status": "success",
+                "run_id": "20260505_010203",
+                "started_at": "2026-05-05T01:02:03+00:00",
+                "finished_at": "2026-05-05T01:02:10+00:00",
+            }
+        ),
+    )
+
+    check = module.validate_install(root, after_weekly=True)
+
+    assert not check.ok
+    assert any("current_fy" in error for error in check.errors)
+    assert any("target_missing_school_count" in error for error in check.errors)
+
+
+def test_validate_after_weekly_rejects_invalid_selection_mode(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload["selection_mode"] = "r8_legacy"
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_weekly=True)
+
+    assert not check.ok
+    assert any("selection_mode" in error for error in check.errors)
 
 
 def test_validate_optional_ocr_addon(tmp_path: Path) -> None:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -70,6 +71,22 @@ LAST_RUN_REQUIRED_KEYS = (
     "run_id",
     "started_at",
     "finished_at",
+    "current_fy",
+    "selection_mode",
+    "target_missing_school_count",
+    "new_document_count",
+    "discovery_stats",
+    "ingest_stats",
+)
+
+SQLITE_REQUIRED_TABLES = (
+    "school",
+    "school_site",
+    "document",
+    "department",
+    "department_yearly",
+    "school_fiscal_year_status",
+    "manual_action_log",
 )
 
 
@@ -105,6 +122,27 @@ def _load_last_run(check: InstallCheck, path: Path) -> dict[str, Any] | None:
         check.fail("last_run.json must contain a JSON object")
         return None
     return payload
+
+
+def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
+    if not db_path.is_file():
+        check.fail("missing setup file: data/eidp.sqlite3")
+        return
+    try:
+        with sqlite3.connect(db_path) as conn:
+            rows = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+    except sqlite3.Error as exc:
+        check.fail(f"data/eidp.sqlite3 is not a readable SQLite DB: {exc}")
+        return
+
+    tables = {str(name) for (name,) in rows}
+    check.details["sqlite_table_count"] = len(tables)
+    check.details["sqlite_required_tables_present"] = sorted(tables & set(SQLITE_REQUIRED_TABLES))
+    for table in SQLITE_REQUIRED_TABLES:
+        if table not in tables:
+            check.fail(f"data/eidp.sqlite3 missing required table: {table}")
 
 
 def validate_install(
@@ -149,6 +187,7 @@ def validate_install(
         for rel in SETUP_FILES:
             if not _exists_file(root, rel):
                 check.fail(f"missing setup file: {rel}")
+        _validate_sqlite_schema(check, root / "data" / "eidp.sqlite3")
 
     if after_weekly:
         last_run = _load_last_run(check, root / "data" / "output" / "last_run.json")
@@ -159,6 +198,11 @@ def validate_install(
                     check.fail(f"last_run.json missing key: {key}")
             if last_run.get("status") != "success":
                 check.fail("last_run.json status must be success for the weekly validation gate")
+            if last_run.get("selection_mode") not in {"target_missing", "stale_only"}:
+                check.fail("last_run.json selection_mode must be target_missing or stale_only")
+            for key in ("target_missing_school_count", "new_document_count"):
+                if key in last_run and not isinstance(last_run.get(key), int):
+                    check.fail(f"last_run.json {key} must be an integer")
 
         logs_dir = root / "logs"
         run_logs = sorted(logs_dir.glob("run-*.log")) if logs_dir.is_dir() else []

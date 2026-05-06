@@ -75,6 +75,7 @@ C:\Program Files\EIDP
 
 - `.venv\Scripts\python.exe` が存在する
 - `data\eidp.sqlite3` が存在する
+- `data\eidp.sqlite3` に `school_fiscal_year_status` テーブルがある
 - `data\master.xlsx` が存在する、または master import 済みである
 - `wheelhouse\` からオフライン install されている
 - `runtime\python\python.exe` が存在する
@@ -100,17 +101,19 @@ C:\Program Files\EIDP
 
 確認項目:
 
-- 12 ページが表示される
+- サイドバー上部に `業務員クイック` が表示される
+- `学校別タスク` が最初のページとして表示される
 - `PDF確認・手入力` が表示される
 - `年度判定・修正` が表示される
 - `Excel プレビュー` が表示される
 - `監査ログ` が表示される
+- `詳細 operator` は折りたたみ表示で、旧 `データ状況` は詳細側にある
 - 日本語が文字化けしていない
 
 合格条件:
 
 - Streamlit が起動する
-- operator ページが表示される
+- 学校別タスク page が表示される
 - UTF-8 関連の文字化けがない
 
 ## 3. Stage 3 — Weekly + Lock + last_run
@@ -138,6 +141,8 @@ C:\Program Files\EIDP
 - `%DATE%` ロケールに依存しない日付ファイル名になっている
 - `data\output\last_run.json` が作成される
 - `last_run.json` に `status=success`、`run_id`、`started_at`、`finished_at` がある
+- `last_run.json` に `current_fy`、`selection_mode`、`target_missing_school_count` がある
+- `selection_mode` は通常 `target_missing`
 - Excel は自動生成されない
 
 合格条件:
