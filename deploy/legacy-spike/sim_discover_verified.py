@@ -1,5 +1,9 @@
-"""Read-only simulation of `discover-pdfs` on the verified prefecture
+"""Legacy read-only simulation of `discover-pdfs` on the verified prefecture
 aggregator URLs.
+
+Archived from ``scripts/`` after the production path moved to rolling
+target-year discovery. This file is kept only to preserve Sprint 1
+investigation reproducibility; it is not included in the Windows operator ZIP.
 
 Uses the **real** production pipeline `discover_pdfs_for_site`
 (includes sub-page following) so results match what
@@ -17,7 +21,7 @@ Output:
 - stdout summary
 
 Usage:
-    uv run python scripts/sim_discover_verified.py \\
+    uv run python deploy/legacy-spike/sim_discover_verified.py \\
         [--input output/pref-aggregator/url-verification-{ts}.json]
 """
 

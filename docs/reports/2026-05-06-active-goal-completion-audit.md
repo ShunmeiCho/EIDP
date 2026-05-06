@@ -19,7 +19,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| Rolling target fiscal year, not hard-coded R8 | `src/eidp/config.py` uses `settings.target_fiscal_year`; `src/eidp/fiscal_year.py` derives Japanese fiscal year by April boundary and formats `2026年度（令和8年度）`. | Partial: runtime target is rolling; remaining R8 naming debt is tracked in `docs/plans/2026-05-06-v1.1-rolling-target-fy-charter.md` R-0. |
+| Rolling target fiscal year, not hard-coded R8 | `src/eidp/config.py` uses `settings.target_fiscal_year`; `src/eidp/fiscal_year.py` derives Japanese fiscal year by April boundary and formats `2026年度（令和8年度）`. Production runners are `run_weekly_target_year_discovery.py` and `target_year_acquisition_plan.py`; R8-named scripts left in `scripts/` are compatibility wrappers, and the old R8 simulation script is archived under `deploy/legacy-spike/`. | Mostly covered locally: runtime and active entrypoints are rolling; remaining R8 strings are compatibility wrappers, historical reports/plans, or FY2026 test fixtures. |
 | Start from official government/prefecture indexes where possible | `data/prefecture-aggregators/seed.csv`; `src/eidp/scraper/prefecture_aggregator.py`; recent commits add Chiba/Ibaraki/Tochigi/Kagoshima parser coverage and remark review items. | Partial: strong path exists, but not all 47 prefectures have supported parsers/verified current URLs. |
 | Show source chain / why a PDF was found | `src/eidp/review/_pages/pdf_manual_entry.py` shows selected PDF, source page, confidence, and discovery evidence log; `school_year_tasks.py` now labels crawl entry source quality. | Mostly covered locally; Windows click-through not revalidated after latest UI. |
 | Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. | Partial: manual entry is reduced, but unsupported prefectures and missing official links still need operator fallback. |
@@ -53,8 +53,9 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
    setup, UI start, initial bootstrap button, weekly rediscovery button,
    official-index coverage page, school task drill-down, PDF確認, and Excel
    preview.
-3. Finish R-0 naming debt or document every remaining legacy R8 occurrence as
-   compatibility-only.
+3. Keep R-0 naming debt controlled: compatibility wrappers and historical
+   reports may keep R8 wording, but new production entrypoints must use
+   target-year naming.
 4. Decide university scope: keep as gated pilot for v1.1, or start the v1.2
    parser/discovery track.
 5. Validate the UI with real operator feedback; current tests prove wiring and
