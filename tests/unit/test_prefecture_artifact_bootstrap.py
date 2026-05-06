@@ -47,8 +47,8 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
         },
         {
             "pref_key": "hiroshima",
-            "verified_status": "decentralized",
-            "artifact_url": "unknown",
+            "verified_status": "url_found",
+            "artifact_url": "https://www.pref.hiroshima.lg.jp/soshiki/44/605623.html",
         },
     ]
 
@@ -61,5 +61,14 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
     assert "niigata" in module.SUPPORTED_PARSERS
     assert "yamagata" in module.SUPPORTED_PARSERS
     assert "kumamoto" in module.SUPPORTED_PARSERS
+    assert "hiroshima" in module.SUPPORTED_PARSERS
     assert "url_found" in module.DOWNLOADABLE_STATUSES
-    assert pref_keys == {"hokkaido", "osaka", "aichi", "niigata", "yamagata", "kumamoto"}
+    assert pref_keys == {
+        "hokkaido",
+        "osaka",
+        "aichi",
+        "niigata",
+        "yamagata",
+        "kumamoto",
+        "hiroshima",
+    }

@@ -867,6 +867,7 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "tottori": lambda p: parse_html_table(p, "tottori"),
     "yamaguchi": lambda p: parse_html_table(p, "yamaguchi"),
     "oita": lambda p: parse_html_table(p, "oita"),
+    "hiroshima": lambda p: parse_html_table(p, "hiroshima"),
 }
 
 
@@ -901,6 +902,7 @@ PREF_KEY_TO_DB = {
     "oita": "大分県",
     "yamagata": "山形県",
     "kumamoto": "熊本県",
+    "hiroshima": "広島県",
 }
 
 
