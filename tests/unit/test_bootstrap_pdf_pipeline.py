@@ -146,6 +146,40 @@ def test_step_download_artifacts_uses_html_suffix_and_source_sidecar(tmp_path: P
     )
 
 
+def test_step_download_artifacts_removes_stale_sibling_when_current_artifact_exists(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    seed_csv = tmp_path / "seed.csv"
+    seed_csv.write_text(
+        "\n".join([
+            "pref_key,artifact_url,artifact_format,verified_status",
+            "shizuoka,https://www.pref.shizuoka.jp/kodomokyoiku/school/1002740/1018809.html,html,url_found",
+        ]),
+        encoding="utf-8",
+    )
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    (artifact_dir / "shizuoka.html").write_text("<html></html>", encoding="utf-8")
+    (artifact_dir / "shizuoka.pdf").write_bytes(b"%PDF-stale")
+    (artifact_dir / "shizuoka.pdf.url").write_text("https://old.example/shizuoka.pdf\n", encoding="utf-8")
+
+    monkeypatch.setattr(module, "SUPPORTED_PARSERS", frozenset({"shizuoka"}))
+
+    ok, failed = module.step_download_artifacts(
+        seed_csv=seed_csv,
+        artifact_dir=artifact_dir,
+        only=None,
+        force=False,
+    )
+
+    assert ok == ["shizuoka"]
+    assert failed == []
+    assert (artifact_dir / "shizuoka.html").is_file()
+    assert not (artifact_dir / "shizuoka.pdf").exists()
+    assert not (artifact_dir / "shizuoka.pdf.url").exists()
+
+
 def test_step_download_artifacts_updates_progress_per_prefecture(tmp_path: Path, monkeypatch) -> None:
     seed_csv = tmp_path / "seed.csv"
     seed_csv.write_text(

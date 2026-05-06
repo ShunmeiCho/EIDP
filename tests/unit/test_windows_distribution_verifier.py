@@ -79,6 +79,13 @@ def _core_entries() -> dict[str, bytes | str]:
         "data/url-discovery/corporation_domains.csv": (
             "corporation_name,domain\n東京都公立大学法人,tmu.ac.jp\n"
         ),
+        "src/eidp/review/app.py": "PAGE_SETTINGS = 'settings'\n",
+        "src/eidp/review/_pages/settings_page.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/school_year_tasks.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/pdf_manual_entry.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/fiscal_year_override.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/excel_preview.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/scraper/prefecture_aggregator.py": "PARSERS = {}\n",
         "runtime/python/python.exe": b"PE",
         "runtime/uv.exe": b"PE",
         "src/eidp/__init__.py": "",
@@ -172,6 +179,17 @@ def test_verify_core_zip_requires_bootstrap_seed_csvs(tmp_path: Path) -> None:
     assert not check.ok
     assert any("data/url-discovery/discovered-urls-50.csv" in error for error in check.errors)
     assert any("data/url-discovery/corporation_domains.csv" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_settings_page_module(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries.pop("src/eidp/review/_pages/settings_page.py")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/review/_pages/settings_page.py" in error for error in check.errors)
 
 
 def test_verify_core_zip_validates_bootstrap_pipeline_contract(tmp_path: Path) -> None:

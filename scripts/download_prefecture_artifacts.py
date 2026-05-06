@@ -27,7 +27,7 @@ import httpx
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from eidp.scraper.prefecture_aggregator import PARSERS  # noqa: E402
+from eidp.scraper.prefecture_aggregator import ARTIFACT_SUFFIXES, PARSERS  # noqa: E402
 
 SEED_CSV = REPO_ROOT / "data" / "prefecture-aggregators" / "seed.csv"
 ARTIFACT_DIR = REPO_ROOT / "data" / "prefecture-aggregators" / "artifacts"
@@ -70,6 +70,16 @@ def write_source_url_sidecar(dest: Path, url: str) -> None:
     dest.with_suffix(dest.suffix + ".url").write_text(url + "\n", encoding="utf-8")
 
 
+def remove_stale_sibling_artifacts(dest: Path) -> None:
+    """Remove older same-pref artifacts with different suffixes."""
+    for suffix in ARTIFACT_SUFFIXES:
+        sibling = dest.with_suffix(suffix)
+        if sibling == dest:
+            continue
+        sibling.unlink(missing_ok=True)
+        sibling.with_suffix(sibling.suffix + ".url").unlink(missing_ok=True)
+
+
 def download_artifact(url: str, dest: Path, *, timeout: float = 60.0) -> None:
     """Stream-download a single artifact. Overwrites existing files."""
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -77,6 +87,7 @@ def download_artifact(url: str, dest: Path, *, timeout: float = 60.0) -> None:
         response = client.get(url)
         response.raise_for_status()
         dest.write_bytes(response.content)
+    remove_stale_sibling_artifacts(dest)
     write_source_url_sidecar(dest, str(response.url))
 
 
@@ -122,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         url = row["artifact_url"]
         dest = args.artifact_dir / f"{pref}{artifact_suffix(row)}"
         if dest.exists() and not args.force:
+            remove_stale_sibling_artifacts(dest)
             write_source_url_sidecar(dest, url)
             print(f"[skip] {pref} → {dest.name} already exists")
             continue

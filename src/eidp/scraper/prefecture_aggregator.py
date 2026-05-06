@@ -967,7 +967,7 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "miyagi": lambda p: parse_5col(p, "miyagi"),
     "fukuoka": lambda p: parse_5col(p, "fukuoka"),
     "hyogo": lambda p: parse_5col(p, "hyogo"),
-    "shizuoka": lambda p: parse_5col(p, "shizuoka"),
+    "shizuoka": lambda p: parse_html_table(p, "shizuoka"),
     "okinawa": lambda p: parse_5col(p, "okinawa"),
     "hokkaido": parse_7col_hokkaido,
     "osaka": parse_osaka_xlsx,
@@ -1009,6 +1009,27 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "saga": lambda p: parse_html_table(p, "saga"),
     "nagasaki": lambda p: parse_html_table(p, "nagasaki"),
 }
+
+ARTIFACT_SUFFIXES: tuple[str, ...] = (".pdf", ".xlsx", ".html")
+
+
+def resolve_prefecture_artifact(artifact_dir: Path, pref: str) -> Path | None:
+    """Return the current artifact for ``pref`` when multiple suffixes exist.
+
+    Prefecture source formats can change year to year. Operator machines may
+    keep an old ``{pref}.pdf`` after seed.csv moves that prefecture to HTML or
+    XLSX, so choosing a hard-coded suffix order can silently parse stale data.
+    The downloader overwrites the current source; use the newest sibling as the
+    best local signal.
+    """
+    candidates = [
+        artifact_dir / f"{pref}{suffix}"
+        for suffix in ARTIFACT_SUFFIXES
+        if (artifact_dir / f"{pref}{suffix}").is_file()
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: (path.stat().st_mtime_ns, path.name))
 
 
 # Mapping pref-key (URL-safe) -> Japanese prefecture name as stored on

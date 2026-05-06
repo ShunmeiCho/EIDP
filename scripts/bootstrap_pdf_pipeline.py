@@ -52,6 +52,7 @@ from download_prefecture_artifacts import (  # noqa: E402
     artifact_suffix,
     download_artifact,
     load_seed_rows,
+    remove_stale_sibling_artifacts,
     write_source_url_sidecar,
 )
 
@@ -150,6 +151,7 @@ def step_download_artifacts(
         url = row["artifact_url"]
         dest = artifact_dir / f"{pref}{artifact_suffix(row)}"
         if dest.exists() and not force:
+            remove_stale_sibling_artifacts(dest)
             write_source_url_sidecar(dest, url)
             print(f"[step1] {pref}: already on disk ({dest.name})")
             ok.append(pref)
@@ -205,6 +207,7 @@ def step_aggregate(
     from eidp.scraper.prefecture_aggregator import (
         aggregate,
         apply_writer_plan,
+        resolve_prefecture_artifact,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -213,18 +216,7 @@ def step_aggregate(
     try:
         total = len(pref_keys)
         for index, pref in enumerate(pref_keys, start=1):
-            artifact = next(
-                (
-                    candidate
-                    for candidate in (
-                        artifact_dir / f"{pref}.pdf",
-                        artifact_dir / f"{pref}.xlsx",
-                        artifact_dir / f"{pref}.html",
-                    )
-                    if candidate.is_file()
-                ),
-                None,
-            )
+            artifact = resolve_prefecture_artifact(artifact_dir, pref)
             if artifact is None:
                 print(f"[step2] {pref}: skip (no artifact)")
                 if progress is not None:

@@ -436,6 +436,7 @@ def prefecture_aggregate(
         PARSERS,
         aggregate,
         apply_writer_plan,
+        resolve_prefecture_artifact,
     )
 
     dry_run = not apply
@@ -449,18 +450,7 @@ def prefecture_aggregate(
     session = SessionLocal()
     try:
         for p in requested:
-            artifact = next(
-                (
-                    candidate
-                    for candidate in (
-                        artifact_dir / f"{p}.pdf",
-                        artifact_dir / f"{p}.xlsx",
-                        artifact_dir / f"{p}.html",
-                    )
-                    if candidate.exists()
-                ),
-                None,
-            )
+            artifact = resolve_prefecture_artifact(artifact_dir, p)
             if artifact is None:
                 typer.echo(f"[skip] {p}: artifact missing at {artifact_dir / f'{p}.pdf'}")
                 continue

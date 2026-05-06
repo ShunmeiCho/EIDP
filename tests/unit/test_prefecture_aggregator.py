@@ -35,6 +35,7 @@ from eidp.scraper.prefecture_aggregator import (
     parse_xlsx_index,
     parse_yamagata,
     recommend_action,
+    resolve_prefecture_artifact,
 )
 
 # ---------------------------------------------------------------------------
@@ -760,6 +761,40 @@ def test_parse_dispatches_via_registry(tmp_path: Path):
     assert len(parsed) == 1
     assert parsed[0].pref == "miyagi"
     assert parsed[0].disclosure_url == "https://example.com/miyagi/r8.pdf"
+
+
+def test_parse_dispatches_shizuoka_html_index_via_registry(tmp_path: Path):
+    html = tmp_path / "shizuoka.html"
+    html.write_text(
+        """
+        <ul>
+          <li><a href="https://example.ac.jp/disclosure/">静岡テスト専門学校 （外部リンク）</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+    html.with_suffix(".html.url").write_text(
+        "https://www.pref.shizuoka.jp/kodomokyoiku/school/1002740/1018809.html\n",
+        encoding="utf-8",
+    )
+
+    parsed = parse("shizuoka", html)
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "shizuoka"
+    assert parsed[0].school_name_raw == "静岡テスト専門学校"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+
+
+def test_resolve_prefecture_artifact_uses_newest_suffix(tmp_path: Path):
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    old_pdf = artifact_dir / "shizuoka.pdf"
+    new_html = artifact_dir / "shizuoka.html"
+    old_pdf.write_bytes(b"%PDF-old")
+    new_html.write_text("<html></html>", encoding="utf-8")
+
+    assert resolve_prefecture_artifact(artifact_dir, "shizuoka") == new_html
 
 
 def test_parse_unknown_pref_raises():

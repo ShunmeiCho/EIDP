@@ -85,6 +85,13 @@ CORE_REQUIRED_EXACT = (
     "data/prefecture-aggregators/seed.csv",
     "data/url-discovery/discovered-urls-50.csv",
     "data/url-discovery/corporation_domains.csv",
+    "src/eidp/review/app.py",
+    "src/eidp/review/_pages/settings_page.py",
+    "src/eidp/review/_pages/school_year_tasks.py",
+    "src/eidp/review/_pages/pdf_manual_entry.py",
+    "src/eidp/review/_pages/fiscal_year_override.py",
+    "src/eidp/review/_pages/excel_preview.py",
+    "src/eidp/scraper/prefecture_aggregator.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
 )
