@@ -181,7 +181,44 @@ def _extract_pdf_sample_text(content: bytes) -> str:
     return sample_text
 
 
-def _detect_fiscal_year_from_text(text: str) -> int | None:
+_FILING_DATE_CONTEXT_RE = re.compile(r"(提出日|提出年月日|申請日|申請年月日|届出日|届出年月日|作成日|作成年月日)")
+_FILING_DATE_REJECT_CONTEXT_RE = re.compile(r"(から|まで|任期|期間|在任|現職|前職|卒業|終了|修了)")
+
+
+def _within_detectable_year(fiscal_year: int | None, max_fiscal_year: int | None) -> int | None:
+    if fiscal_year is None:
+        return None
+    if max_fiscal_year is not None and fiscal_year > max_fiscal_year:
+        return None
+    return fiscal_year
+
+
+def _detect_contextual_filing_year(normed_text: str, *, max_fiscal_year: int | None) -> int | None:
+    """Return a filing-date year only when the local line clearly describes filing.
+
+    Target application PDFs often carry a cover-page filing date, but the same
+    PDFs also contain future dates for officer terms or accreditation periods.
+    Treating every era date as the document year makes valid older PDFs look
+    like impossible future-year PDFs, so this fallback accepts only dated lines
+    with explicit filing context.
+    """
+    for line in normed_text.splitlines():
+        if not _FILING_DATE_CONTEXT_RE.search(line):
+            continue
+        if _FILING_DATE_REJECT_CONTEXT_RE.search(line):
+            continue
+        fiscal_year = fiscal_year_from_japanese_era_text(
+            line,
+            include_fiscal_year_labels=False,
+            include_filing_dates=True,
+        )
+        fiscal_year = _within_detectable_year(fiscal_year, max_fiscal_year)
+        if fiscal_year is not None:
+            return fiscal_year
+    return None
+
+
+def _detect_fiscal_year_from_text(text: str, *, max_fiscal_year: int | None = None) -> int | None:
     """Best-effort fiscal-year detector for disclosure PDFs."""
     normed = unicodedata.normalize("NFKC", text)
 
@@ -199,12 +236,9 @@ def _detect_fiscal_year_from_text(text: str) -> int | None:
         return int(m.group(1))
 
     # Most application forms carry a filing date on the cover page. In this
-    # domain that date is the practical fiscal-year signal for the form.
-    fiscal_year = fiscal_year_from_japanese_era_text(
-        normed,
-        include_fiscal_year_labels=False,
-        include_filing_dates=True,
-    )
+    # domain that date is useful only when the surrounding text says it is a
+    # filing/submission date; future term dates are not fiscal-year evidence.
+    fiscal_year = _detect_contextual_filing_year(normed, max_fiscal_year=max_fiscal_year)
     if fiscal_year is not None:
         return fiscal_year
 
@@ -654,7 +688,13 @@ def download_pdf(
         try:
             sample_text = _extract_pdf_sample_text(content)
             pdf_type = _classify_pdf_sample_text(sample_text)
-            detected_fiscal_year = _detect_fiscal_year_from_text(sample_text)
+            max_detectable_year = None
+            if strict_target_fiscal_year:
+                max_detectable_year = target_fiscal_year or settings.target_fiscal_year
+            detected_fiscal_year = _detect_fiscal_year_from_text(
+                sample_text,
+                max_fiscal_year=max_detectable_year,
+            )
         except Exception as e:
             log.warning("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
             pdf_type = "unknown"

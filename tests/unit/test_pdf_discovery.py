@@ -11,6 +11,7 @@ from eidp.scraper.pdf_discovery import (
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
     DiscoveryResult,
     PdfCandidate,
+    _detect_fiscal_year_from_text,
     _download_attempt_urls,
     _extract_pdf_links,
     _score_candidate,
@@ -383,6 +384,26 @@ class _PdfResponse:
         return None
 
 
+def test_detect_fiscal_year_ignores_future_term_dates_without_filing_context() -> None:
+    text = (
+        "様式第2号 高等教育の修学支援新制度 確認申請書\n"
+        "役員の任期 令和7年4月1日から令和11年3月31日まで\n"
+        "機関要件 学科名 生徒総定員"
+    )
+
+    assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) is None
+
+
+def test_detect_fiscal_year_uses_contextual_filing_date() -> None:
+    text = (
+        "様式第2号 高等教育の修学支援新制度 確認申請書\n"
+        "提出日 令和8年6月1日\n"
+        "機関要件 学科名 生徒総定員"
+    )
+
+    assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) == 2026
+
+
 def test_download_pdf_rejects_stale_fiscal_year_in_strict_target_mode(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -415,6 +436,42 @@ def test_download_pdf_rejects_stale_fiscal_year_in_strict_target_mode(
     assert file_size == 0
     assert pdf_type in {"target", "unknown"}
     assert reason == "fiscal_year_mismatch:2025"
+    assert not list((tmp_path / "1").glob("*.pdf"))
+
+
+def test_download_pdf_does_not_treat_future_term_date_as_pdf_year(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes(
+        "様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員\n"
+        "役員の任期 令和7年4月1日から令和11年3月31日まで"
+    )
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/syugakusien.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="確認申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "target_fiscal_year_not_detected"
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
