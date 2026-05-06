@@ -21,6 +21,7 @@ import argparse
 import csv
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 
@@ -63,6 +64,43 @@ def artifact_suffix(row: dict[str, str]) -> str:
     if fmt in {"html", "htm"}:
         return ".html"
     return ".pdf"
+
+
+def artifact_suffix_from_url(url: str, *, fallback: str = ".pdf") -> str:
+    """Infer the local artifact suffix from a URL path."""
+    suffix = Path(urlparse(url).path).suffix.lower()
+    if suffix in {".pdf", ".xlsx", ".html", ".htm"}:
+        return ".html" if suffix == ".htm" else suffix
+    return fallback
+
+
+def supplemental_artifact_urls(row: dict[str, str]) -> list[str]:
+    """Return optional extra artifacts listed for a prefecture.
+
+    Most prefectures publish one current artifact. Some publish cumulative
+    deltas from multiple confirmation dates on the same official index page.
+    ``supplemental_artifact_urls`` keeps those prefectures machine-readable
+    without changing the parser API or requiring manual downloads.
+    """
+    raw = row.get("supplemental_artifact_urls") or ""
+    values = re_split_artifact_urls(raw)
+    return [value for value in values if value.startswith("http")]
+
+
+def re_split_artifact_urls(raw: str) -> list[str]:
+    return [part.strip() for part in raw.replace("\n", "|").replace(";", "|").split("|") if part.strip()]
+
+
+def artifact_download_targets(row: dict[str, str]) -> list[tuple[str, str]]:
+    """Return ``(url, local_filename)`` targets for a seed row."""
+    pref = row["pref_key"]
+    primary_url = row["artifact_url"]
+    primary_suffix = artifact_suffix(row)
+    targets = [(primary_url, f"{pref}{primary_suffix}")]
+    for index, url in enumerate(supplemental_artifact_urls(row), start=1):
+        suffix = artifact_suffix_from_url(url, fallback=primary_suffix)
+        targets.append((url, f"{pref}__{index:02d}{suffix}"))
+    return targets
 
 
 def write_source_url_sidecar(dest: Path, url: str) -> None:
@@ -130,21 +168,21 @@ def main(argv: list[str] | None = None) -> int:
     failures: list[tuple[str, str]] = []
     for row in targets:
         pref = row["pref_key"]
-        url = row["artifact_url"]
-        dest = args.artifact_dir / f"{pref}{artifact_suffix(row)}"
-        if dest.exists() and not args.force:
-            remove_stale_sibling_artifacts(dest)
-            write_source_url_sidecar(dest, url)
-            print(f"[skip] {pref} → {dest.name} already exists")
-            continue
-        print(f"[get ] {pref}: {url} → {dest.name}")
-        try:
-            download_artifact(url, dest)
-            size_kb = dest.stat().st_size / 1024
-            print(f"[ok  ] {pref}: {size_kb:.1f} KB")
-        except Exception as exc:
-            print(f"[fail] {pref}: {exc}")
-            failures.append((pref, str(exc)))
+        for url, filename in artifact_download_targets(row):
+            dest = args.artifact_dir / filename
+            if dest.exists() and not args.force:
+                remove_stale_sibling_artifacts(dest)
+                write_source_url_sidecar(dest, url)
+                print(f"[skip] {pref} → {dest.name} already exists")
+                continue
+            print(f"[get ] {pref}: {url} → {dest.name}")
+            try:
+                download_artifact(url, dest)
+                size_kb = dest.stat().st_size / 1024
+                print(f"[ok  ] {pref}: {size_kb:.1f} KB")
+            except Exception as exc:
+                print(f"[fail] {pref}: {exc}")
+                failures.append((pref, str(exc)))
 
     if failures:
         print("\nFailures:")

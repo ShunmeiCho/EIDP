@@ -436,7 +436,7 @@ def prefecture_aggregate(
         PARSERS,
         aggregate,
         apply_writer_plan,
-        resolve_prefecture_artifact,
+        resolve_prefecture_artifacts,
     )
 
     dry_run = not apply
@@ -450,26 +450,28 @@ def prefecture_aggregate(
     session = SessionLocal()
     try:
         for p in requested:
-            artifact = resolve_prefecture_artifact(artifact_dir, p)
-            if artifact is None:
+            artifacts = resolve_prefecture_artifacts(artifact_dir, p)
+            if not artifacts:
                 typer.echo(f"[skip] {p}: artifact missing at {artifact_dir / f'{p}.pdf'}")
                 continue
 
-            report = aggregate(session, p, artifact)
-            out_path = output_dir / f"{p}.json"
-            out_path.write_text(
-                json.dumps(report.__dict__, ensure_ascii=False, indent=2, default=str),
-                encoding="utf-8",
-            )
-            typer.echo(
-                f"[{p}] extracted={report.extracted_total} "
-                f"matched={report.db_matched} unmatched={report.db_unmatched} "
-                f"actions={report.action_distribution} → {out_path}"
-            )
+            for artifact in artifacts:
+                report = aggregate(session, p, artifact)
+                suffix = "" if len(artifacts) == 1 else f"__{artifact.stem.removeprefix(p).strip('_') or 'primary'}"
+                out_path = output_dir / f"{p}{suffix}.json"
+                out_path.write_text(
+                    json.dumps(report.__dict__, ensure_ascii=False, indent=2, default=str),
+                    encoding="utf-8",
+                )
+                typer.echo(
+                    f"[{p}/{artifact.name}] extracted={report.extracted_total} "
+                    f"matched={report.db_matched} unmatched={report.db_unmatched} "
+                    f"actions={report.action_distribution} → {out_path}"
+                )
 
-            if not dry_run:
-                stats = apply_writer_plan(session, report)
-                typer.echo(f"[{p}] applied: {stats}")
+                if not dry_run:
+                    stats = apply_writer_plan(session, report)
+                    typer.echo(f"[{p}/{artifact.name}] applied: {stats}")
 
         if not dry_run:
             session.commit()

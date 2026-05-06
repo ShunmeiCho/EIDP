@@ -1032,6 +1032,29 @@ def resolve_prefecture_artifact(artifact_dir: Path, pref: str) -> Path | None:
     return max(candidates, key=lambda path: (path.stat().st_mtime_ns, path.name))
 
 
+def resolve_prefecture_artifacts(artifact_dir: Path, pref: str) -> list[Path]:
+    """Return all current artifacts for a prefecture.
+
+    Most prefectures have a single ``{pref}.pdf`` / ``.xlsx`` / ``.html``.
+    Some official index pages publish multiple delta artifacts instead of one
+    cumulative table. Those are cached as ``{pref}__NN.ext`` and should be
+    parsed before the primary artifact so older full/delta sources can seed
+    reusable URLs before the latest supplement is applied.
+    """
+    primary = resolve_prefecture_artifact(artifact_dir, pref)
+    extras: list[Path] = []
+    for suffix in ARTIFACT_SUFFIXES:
+        extras.extend(sorted(artifact_dir.glob(f"{pref}__*{suffix}")))
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for path in [*sorted(extras), primary]:
+        if path is None or path in seen:
+            continue
+        out.append(path)
+        seen.add(path)
+    return out
+
+
 # Mapping pref-key (URL-safe) -> Japanese prefecture name as stored on
 # School.prefecture.
 PREF_KEY_TO_DB = {

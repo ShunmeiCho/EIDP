@@ -221,6 +221,50 @@ def test_step_download_artifacts_updates_progress_per_prefecture(tmp_path: Path,
     assert payload["details"]["prefectures_ok"] == 2
 
 
+def test_step_download_artifacts_downloads_supplemental_prefecture_artifacts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    seed_csv = tmp_path / "seed.csv"
+    seed_csv.write_text(
+        "\n".join([
+            "pref_key,artifact_url,artifact_format,verified_status,supplemental_artifact_urls",
+            (
+                "hyogo,https://pref.example/latest.pdf,pdf,url_found,"
+                "https://pref.example/r1.pdf|https://pref.example/r2.pdf"
+            ),
+        ]),
+        encoding="utf-8",
+    )
+    artifact_dir = tmp_path / "artifacts"
+    downloaded: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(module, "SUPPORTED_PARSERS", frozenset({"hyogo"}))
+
+    def fake_download(url: str, dest: Path) -> None:
+        downloaded.append((url, dest.name))
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"dummy")
+        module.write_source_url_sidecar(dest, url)
+
+    monkeypatch.setattr(module, "download_artifact", fake_download)
+
+    ok, failed = module.step_download_artifacts(
+        seed_csv=seed_csv,
+        artifact_dir=artifact_dir,
+        only=None,
+        force=True,
+    )
+
+    assert ok == ["hyogo"]
+    assert failed == []
+    assert downloaded == [
+        ("https://pref.example/latest.pdf", "hyogo.pdf"),
+        ("https://pref.example/r1.pdf", "hyogo__01.pdf"),
+        ("https://pref.example/r2.pdf", "hyogo__02.pdf"),
+    ]
+
+
 def test_step_aggregate_updates_progress_per_prefecture(tmp_path: Path, monkeypatch) -> None:
     artifact_dir = tmp_path / "artifacts"
     artifact_dir.mkdir()
@@ -264,14 +308,62 @@ def test_step_aggregate_updates_progress_per_prefecture(tmp_path: Path, monkeypa
 
     payload = json.loads(progress_file.read_text(encoding="utf-8"))
     assert results == {
-        "gunma": {"extracted": 3, "matched": 2, "added": 1, "upgraded": 1, "skipped": 1},
-        "ehime": {"extracted": 3, "matched": 2, "added": 1, "upgraded": 1, "skipped": 1},
+        "gunma": {"extracted": 3, "matched": 2, "added": 1, "upgraded": 1, "skipped": 1, "artifacts": 1},
+        "ehime": {"extracted": 3, "matched": 2, "added": 1, "upgraded": 1, "skipped": 1, "artifacts": 1},
     }
     assert payload["current_step"] == 2
     assert payload["percent"] == 0.45
     assert "2/2件: ehime" in payload["message"]
     assert payload["details"]["prefectures_aggregated"] == 2
     assert payload["details"]["added"] == 1
+    assert "commit" in calls
+
+
+def test_step_aggregate_merges_supplemental_prefecture_artifacts(tmp_path: Path, monkeypatch) -> None:
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    (artifact_dir / "hyogo__01.pdf").write_bytes(b"%PDF-old")
+    (artifact_dir / "hyogo.pdf").write_bytes(b"%PDF-current")
+    calls: list[object] = []
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append("commit")
+
+        def rollback(self) -> None:
+            calls.append("rollback")
+
+        def close(self) -> None:
+            calls.append("close")
+
+    def fake_aggregate(session, pref, artifact):  # noqa: ANN001
+        calls.append((session, pref, artifact.name))
+        return SimpleNamespace(extracted_total=10 if "__" in artifact.stem else 1, db_matched=8)
+
+    def fake_apply_writer_plan(session, report):  # noqa: ANN001, ARG001
+        return {"added": 2, "upgraded": 0, "skipped": 6}
+
+    import eidp.db.session as db_session
+    import eidp.scraper.prefecture_aggregator as pa
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(pa, "aggregate", fake_aggregate)
+    monkeypatch.setattr(pa, "apply_writer_plan", fake_apply_writer_plan)
+
+    results = module.step_aggregate(
+        pref_keys=["hyogo"],
+        artifact_dir=artifact_dir,
+        output_dir=tmp_path / "out",
+    )
+
+    assert results == {
+        "hyogo": {"extracted": 11, "matched": 16, "added": 4, "upgraded": 0, "skipped": 12, "artifacts": 2}
+    }
+    assert calls[:2] == [
+        (fake_session, "hyogo", "hyogo__01.pdf"),
+        (fake_session, "hyogo", "hyogo.pdf"),
+    ]
     assert "commit" in calls
 
 

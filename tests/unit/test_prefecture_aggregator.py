@@ -36,6 +36,7 @@ from eidp.scraper.prefecture_aggregator import (
     parse_yamagata,
     recommend_action,
     resolve_prefecture_artifact,
+    resolve_prefecture_artifacts,
 )
 
 # ---------------------------------------------------------------------------
@@ -795,6 +796,19 @@ def test_resolve_prefecture_artifact_uses_newest_suffix(tmp_path: Path):
     new_html.write_text("<html></html>", encoding="utf-8")
 
     assert resolve_prefecture_artifact(artifact_dir, "shizuoka") == new_html
+
+
+def test_resolve_prefecture_artifacts_includes_supplemental_files_first(tmp_path: Path):
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    primary = artifact_dir / "hyogo.pdf"
+    supplemental = artifact_dir / "hyogo__01.pdf"
+    unrelated = artifact_dir / "hyogo_old.pdf"
+    primary.write_bytes(b"%PDF-current")
+    supplemental.write_bytes(b"%PDF-old")
+    unrelated.write_bytes(b"%PDF-unrelated")
+
+    assert resolve_prefecture_artifacts(artifact_dir, "hyogo") == [supplemental, primary]
 
 
 def test_parse_unknown_pref_raises():

@@ -198,3 +198,32 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
         "saga",
         "nagasaki",
     }
+
+
+def test_artifact_download_targets_include_supplemental_urls() -> None:
+    row = {
+        "pref_key": "hyogo",
+        "artifact_url": "https://pref.example/current.pdf",
+        "artifact_format": "pdf",
+        "supplemental_artifact_urls": "https://pref.example/r1.pdf|https://pref.example/r2.xlsx",
+    }
+
+    assert module.artifact_download_targets(row) == [
+        ("https://pref.example/current.pdf", "hyogo.pdf"),
+        ("https://pref.example/r1.pdf", "hyogo__01.pdf"),
+        ("https://pref.example/r2.xlsx", "hyogo__02.xlsx"),
+    ]
+
+
+def test_artifact_download_targets_ignore_blank_supplemental_values() -> None:
+    row = {
+        "pref_key": "tokyo",
+        "artifact_url": "https://pref.example/current",
+        "artifact_format": "pdf",
+        "supplemental_artifact_urls": " | not-a-url | https://pref.example/r1.htm",
+    }
+
+    assert module.artifact_download_targets(row) == [
+        ("https://pref.example/current", "tokyo.pdf"),
+        ("https://pref.example/r1.htm", "tokyo__01.html"),
+    ]

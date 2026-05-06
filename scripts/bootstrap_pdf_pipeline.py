@@ -49,7 +49,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from download_prefecture_artifacts import (  # noqa: E402
     DOWNLOADABLE_STATUSES,
     SUPPORTED_PARSERS,
-    artifact_suffix,
+    artifact_download_targets,
     download_artifact,
     load_seed_rows,
     remove_stale_sibling_artifacts,
@@ -148,36 +148,25 @@ def step_download_artifacts(
     total = len(targets)
     for index, row in enumerate(targets, start=1):
         pref = row["pref_key"]
-        url = row["artifact_url"]
-        dest = artifact_dir / f"{pref}{artifact_suffix(row)}"
-        if dest.exists() and not force:
-            remove_stale_sibling_artifacts(dest)
-            write_source_url_sidecar(dest, url)
-            print(f"[step1] {pref}: already on disk ({dest.name})")
+        pref_ok = False
+        for url, filename in artifact_download_targets(row):
+            dest = artifact_dir / filename
+            if dest.exists() and not force:
+                remove_stale_sibling_artifacts(dest)
+                write_source_url_sidecar(dest, url)
+                print(f"[step1] {pref}: already on disk ({dest.name})")
+                pref_ok = True
+                continue
+            print(f"[step1] {pref}: downloading {url}")
+            try:
+                download_artifact(url, dest)
+                print(f"[step1] {pref}: ok ({dest.name}, {dest.stat().st_size // 1024} KB)")
+                pref_ok = True
+            except Exception as exc:
+                print(f"[step1] {pref}: FAILED {url}: {exc}")
+                failed.append((pref, f"{url}: {exc}"))
+        if pref_ok:
             ok.append(pref)
-            if progress is not None:
-                progress.write(
-                    status="running",
-                    current_step=1,
-                    percent=_bounded_step_percent(0.05, 0.25, index, total),
-                    message=f"都道府県公開データを取得しています。{index}/{total}件: {pref}",
-                    details={
-                        "prefectures_total": total,
-                        "prefectures_done": index,
-                        "prefecture": pref,
-                        "prefectures_ok": len(ok),
-                        "prefectures_failed": len(failed),
-                    },
-                )
-            continue
-        print(f"[step1] {pref}: downloading {url}")
-        try:
-            download_artifact(url, dest)
-            print(f"[step1] {pref}: ok ({dest.stat().st_size // 1024} KB)")
-            ok.append(pref)
-        except Exception as exc:
-            print(f"[step1] {pref}: FAILED {exc}")
-            failed.append((pref, str(exc)))
         if progress is not None:
             progress.write(
                 status="running",
@@ -207,7 +196,7 @@ def step_aggregate(
     from eidp.scraper.prefecture_aggregator import (
         aggregate,
         apply_writer_plan,
-        resolve_prefecture_artifact,
+        resolve_prefecture_artifacts,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -216,8 +205,8 @@ def step_aggregate(
     try:
         total = len(pref_keys)
         for index, pref in enumerate(pref_keys, start=1):
-            artifact = resolve_prefecture_artifact(artifact_dir, pref)
-            if artifact is None:
+            artifacts = resolve_prefecture_artifacts(artifact_dir, pref)
+            if not artifacts:
                 print(f"[step2] {pref}: skip (no artifact)")
                 if progress is not None:
                     progress.write(
@@ -231,17 +220,35 @@ def step_aggregate(
                             "prefecture": pref,
                             "prefectures_aggregated": len(results),
                         },
-                    )
+                )
                 continue
-            report = aggregate(session, pref, artifact)
-            stats = apply_writer_plan(session, report)
-            print(f"[step2] {pref}: extracted={report.extracted_total} matched={report.db_matched} applied={stats}")
+            merged = {
+                "extracted": 0,
+                "matched": 0,
+                "added": 0,
+                "upgraded": 0,
+                "skipped": 0,
+                "artifacts": len(artifacts),
+            }
+            for artifact in artifacts:
+                report = aggregate(session, pref, artifact)
+                stats = apply_writer_plan(session, report)
+                print(
+                    f"[step2] {pref}/{artifact.name}: "
+                    f"extracted={report.extracted_total} matched={report.db_matched} applied={stats}"
+                )
+                merged["extracted"] += int(report.extracted_total)
+                merged["matched"] += int(report.db_matched)
+                merged["added"] += int(stats.get("added", 0))
+                merged["upgraded"] += int(stats.get("upgraded", 0))
+                merged["skipped"] += int(stats.get("skipped", 0))
             results[pref] = {
-                "extracted": report.extracted_total,
-                "matched": report.db_matched,
-                "added": int(stats.get("added", 0)),
-                "upgraded": int(stats.get("upgraded", 0)),
-                "skipped": int(stats.get("skipped", 0)),
+                "extracted": merged["extracted"],
+                "matched": merged["matched"],
+                "added": merged["added"],
+                "upgraded": merged["upgraded"],
+                "skipped": merged["skipped"],
+                "artifacts": merged["artifacts"],
             }
             if progress is not None:
                 progress.write(
@@ -254,10 +261,11 @@ def step_aggregate(
                         "prefectures_done": index,
                         "prefecture": pref,
                         "prefectures_aggregated": len(results),
-                        "extracted": int(report.extracted_total),
-                        "matched": int(report.db_matched),
-                        "added": int(stats.get("added", 0)),
-                        "upgraded": int(stats.get("upgraded", 0)),
+                        "artifacts": merged["artifacts"],
+                        "extracted": merged["extracted"],
+                        "matched": merged["matched"],
+                        "added": merged["added"],
+                        "upgraded": merged["upgraded"],
                     },
                 )
         session.commit()
