@@ -61,11 +61,13 @@ class PrefectureSeedCoverageSummary:
     parser_supported: int
     needs_structure_review: int
     school_link_signal: int
+    no_school_link_signal: int
     known_school_total: int
     automatic_target_schools: int
     parser_unsupported_schools: int
     structure_review_schools: int
     url_review_schools: int
+    no_school_link_signal_schools: int
     unknown_school_rows: int
     supplemental_artifact_rows: int
 
@@ -153,7 +155,7 @@ def load_prefecture_seed_coverage(
         with seed_csv.open("r", encoding="utf-8") as fh:
             records = list(csv.DictReader(fh))
     except OSError:
-        return PrefectureSeedCoverageSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), []
+        return PrefectureSeedCoverageSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), []
 
     for record in records:
         pref_key = (record.get("pref_key") or "").strip()
@@ -195,11 +197,13 @@ def load_prefecture_seed_coverage(
         parser_supported=sum(1 for row in rows if row.parser_supported),
         needs_structure_review=sum(1 for row in rows if not row.automatic_target),
         school_link_signal=sum(1 for row in rows if row.school_link_signal),
+        no_school_link_signal=sum(1 for row in rows if not row.school_link_signal),
         known_school_total=sum(row.schools_in_db or 0 for row in rows),
         automatic_target_schools=sum(row.schools_in_db or 0 for row in rows if row.automatic_target),
         parser_unsupported_schools=sum(row.schools_in_db or 0 for row in rows if row.status == "parser未対応"),
         structure_review_schools=sum(row.schools_in_db or 0 for row in rows if row.status == "構造確認待ち"),
         url_review_schools=sum(row.schools_in_db or 0 for row in rows if row.status == "URL確認待ち"),
+        no_school_link_signal_schools=sum(row.schools_in_db or 0 for row in rows if not row.school_link_signal),
         unknown_school_rows=sum(1 for row in rows if row.schools_in_db is None),
         supplemental_artifact_rows=sum(1 for row in rows if row.supplemental_artifacts > 0),
     )
@@ -344,9 +348,17 @@ def _render_seed_coverage(seed_csv: Path) -> None:  # pragma: no cover - Streaml
     school_cols = st.columns(4)
     school_cols[0].metric("seed内 学校数", summary.known_school_total)
     school_cols[1].metric("自動対象校", summary.automatic_target_schools)
-    school_cols[2].metric("parser未対応校", summary.parser_unsupported_schools)
+    school_cols[2].metric("URL信号なし校", summary.no_school_link_signal_schools)
     school_cols[3].metric("学校数 unknown", summary.unknown_school_rows)
-    st.metric("複数公式ファイルの都道府県", summary.supplemental_artifact_rows)
+    signal_cols = st.columns(3)
+    signal_cols[0].metric("URL信号あり", summary.school_link_signal)
+    signal_cols[1].metric("URL信号なし", summary.no_school_link_signal)
+    signal_cols[2].metric("複数公式ファイル", summary.supplemental_artifact_rows)
+    if summary.no_school_link_signal:
+        st.info(
+            "URL信号なしの都道府県は、公式一覧から学校URLを直接登録できない可能性があります。"
+            "学校別タスクのURLなし行と補助検索の証跡を確認してください。"
+        )
     st.caption(
         "ここは初回URL/PDF取得の入口 coverage です。"
         "自動取込対象は seed URL から公式一覧を取得し、学校名リンクやURL列を解析できます。"

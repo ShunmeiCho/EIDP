@@ -101,10 +101,12 @@ def test_prefecture_seed_coverage_summarizes_automation_targets(
     assert summary.parser_supported == 1
     assert summary.needs_structure_review == 2
     assert summary.school_link_signal == 2
+    assert summary.no_school_link_signal == 1
     assert summary.known_school_total == 360
     assert summary.automatic_target_schools == 314
     assert summary.structure_review_schools == 46
     assert summary.parser_unsupported_schools == 0
+    assert summary.no_school_link_signal_schools == 46
     assert summary.unknown_school_rows == 1
     assert summary.supplemental_artifact_rows == 1
     assert [row.status for row in rows] == ["自動取込対象", "構造確認待ち", "parser未対応"]
