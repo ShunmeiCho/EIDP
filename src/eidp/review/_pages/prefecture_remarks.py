@@ -43,6 +43,7 @@ class PrefectureRemarkReviewRow:
 class PrefectureSeedCoverageRow:
     pref_key: str
     prefecture: str
+    schools_in_db: int | None
     status: str
     parser_supported: bool
     automatic_target: bool
@@ -59,6 +60,12 @@ class PrefectureSeedCoverageSummary:
     parser_supported: int
     needs_structure_review: int
     school_link_signal: int
+    known_school_total: int
+    automatic_target_schools: int
+    parser_unsupported_schools: int
+    structure_review_schools: int
+    url_review_schools: int
+    unknown_school_rows: int
 
 
 SCHOOL_TYPE_FILTER_LABELS = ("すべて", "専門学校", "大学")
@@ -100,6 +107,16 @@ def _truthy_seed_value(value: str | None) -> bool:
     return bool(normalized) and normalized not in {"no", "n/a", "unknown", "tbd", "false", "0"}
 
 
+def _parse_seed_school_count(value: str | None) -> int | None:
+    raw = (value or "").strip()
+    if not raw or raw.lower() == "unknown":
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
 def prefecture_seed_status_label(
     *,
     parser_supported: bool,
@@ -125,7 +142,7 @@ def load_prefecture_seed_coverage(
         with seed_csv.open("r", encoding="utf-8") as fh:
             records = list(csv.DictReader(fh))
     except OSError:
-        return PrefectureSeedCoverageSummary(0, 0, 0, 0, 0), []
+        return PrefectureSeedCoverageSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), []
 
     for record in records:
         pref_key = (record.get("pref_key") or "").strip()
@@ -140,14 +157,17 @@ def load_prefecture_seed_coverage(
         school_link_signal = _truthy_seed_value(record.get("has_url_col")) or _truthy_seed_value(
             record.get("has_hyperlink_annot")
         )
+        schools_in_db = _parse_seed_school_count(record.get("schools_in_db"))
+        status = prefecture_seed_status_label(
+            parser_supported=parser_supported,
+            verified_status=verified_status,
+            artifact_url=artifact_url,
+        )
         rows.append(PrefectureSeedCoverageRow(
             pref_key=pref_key,
             prefecture=(record.get("pref_jp") or pref_key).strip(),
-            status=prefecture_seed_status_label(
-                parser_supported=parser_supported,
-                verified_status=verified_status,
-                artifact_url=artifact_url,
-            ),
+            schools_in_db=schools_in_db,
+            status=status,
             parser_supported=parser_supported,
             automatic_target=automatic_target,
             school_link_signal=school_link_signal,
@@ -162,6 +182,12 @@ def load_prefecture_seed_coverage(
         parser_supported=sum(1 for row in rows if row.parser_supported),
         needs_structure_review=sum(1 for row in rows if not row.automatic_target),
         school_link_signal=sum(1 for row in rows if row.school_link_signal),
+        known_school_total=sum(row.schools_in_db or 0 for row in rows),
+        automatic_target_schools=sum(row.schools_in_db or 0 for row in rows if row.automatic_target),
+        parser_unsupported_schools=sum(row.schools_in_db or 0 for row in rows if row.status == "parser未対応"),
+        structure_review_schools=sum(row.schools_in_db or 0 for row in rows if row.status == "構造確認待ち"),
+        url_review_schools=sum(row.schools_in_db or 0 for row in rows if row.status == "URL確認待ち"),
+        unknown_school_rows=sum(1 for row in rows if row.schools_in_db is None),
     )
     return summary, rows
 
@@ -301,6 +327,11 @@ def _render_seed_coverage(seed_csv: Path) -> None:  # pragma: no cover - Streaml
     cols[1].metric("自動取込対象", summary.automatic_targets)
     cols[2].metric("parser対応", summary.parser_supported)
     cols[3].metric("構造確認待ち", summary.needs_structure_review)
+    school_cols = st.columns(4)
+    school_cols[0].metric("seed内 学校数", summary.known_school_total)
+    school_cols[1].metric("自動対象校", summary.automatic_target_schools)
+    school_cols[2].metric("parser未対応校", summary.parser_unsupported_schools)
+    school_cols[3].metric("学校数 unknown", summary.unknown_school_rows)
     st.caption(
         "ここは初回URL/PDF取得の入口 coverage です。"
         "自動取込対象は seed URL から公式一覧を取得し、学校名リンクやURL列を解析できます。"
@@ -309,6 +340,7 @@ def _render_seed_coverage(seed_csv: Path) -> None:  # pragma: no cover - Streaml
         [
             {
                 "都道府県": row.prefecture,
+                "学校数": row.schools_in_db if row.schools_in_db is not None else "unknown",
                 "状態": row.status,
                 "parser": "あり" if row.parser_supported else "なし",
                 "学校URL信号": "あり" if row.school_link_signal else "なし",
