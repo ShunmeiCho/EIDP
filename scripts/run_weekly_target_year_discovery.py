@@ -47,7 +47,7 @@ from eidp.reports.extraction import compute_extraction  # noqa: E402
 from eidp.reports.gaps import compute_gaps  # noqa: E402
 from eidp.scraper.pdf_discovery import run_pdf_discovery  # noqa: E402
 
-DEFAULT_METHODS = ("prefecture_aggregator",)
+DEFAULT_METHODS = ("prefecture_aggregator", "operator_manual")
 
 
 @dataclass(frozen=True)

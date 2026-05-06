@@ -96,6 +96,7 @@ URL_SUBMISSION_SCHOOL_ID_STATE_KEY = "url_submission_school_id"
 MANUAL_ENTRY_PAGE_ID = "manual_entry"
 MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
 MANUAL_ENTRY_ACTIONS = {"OCR/手入力", "手入力", "PDF確認", "前年差分確認"}
+WEEKLY_DISCOVERY_METHODS = ("prefecture_aggregator", "operator_manual")
 
 BLOCKING_REASON_LABELS: dict[str, str] = {
     "no_url": "URL追加が必要",
@@ -477,6 +478,8 @@ def weekly_command(
     return [
         python_executable or sys.executable,
         str(app_root / "scripts" / "run_weekly_target_year_discovery.py"),
+        "--methods",
+        *WEEKLY_DISCOVERY_METHODS,
         "--school-type",
         "all",
     ]

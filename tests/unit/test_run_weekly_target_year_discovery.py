@@ -158,6 +158,29 @@ def test_select_target_missing_school_ids_includes_never_ingested_schools() -> N
         session.close()
 
 
+def test_default_methods_include_operator_manual_urls() -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        _site(session, 1, "prefecture_aggregator")
+        _school(session, 2)
+        _site(session, 2, "operator_manual")
+        _school(session, 3)
+        _site(session, 3, "web_search")
+        session.flush()
+
+        ids = select_target_missing_school_ids(
+            session,
+            current_fy=2026,
+            methods=list(module.DEFAULT_METHODS),
+            school_type="専門学校",
+        )
+
+        assert ids == [1, 2]
+    finally:
+        session.close()
+
+
 def test_count_no_crawlable_url_schools_explains_empty_bootstrap_queue() -> None:
     session = _session()
     try:
@@ -258,6 +281,7 @@ def test_parse_args_defaults_to_configured_target_fiscal_year(
     args = module.parse_args()
 
     assert args.current_fy == 2027
+    assert args.methods == ["prefecture_aggregator", "operator_manual"]
     assert args.school_type == "all"
 
 

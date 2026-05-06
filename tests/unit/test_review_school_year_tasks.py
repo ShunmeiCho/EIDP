@@ -256,6 +256,9 @@ def test_weekly_command_uses_target_year_runner_for_all_schools(tmp_path) -> Non
     assert cmd == [
         "python.exe",
         str(tmp_path / "scripts" / "run_weekly_target_year_discovery.py"),
+        "--methods",
+        "prefecture_aggregator",
+        "operator_manual",
         "--school-type",
         "all",
     ]
@@ -389,6 +392,9 @@ def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatc
     assert captured["cmd"] == [
         "python.exe",
         str(script),
+        "--methods",
+        "prefecture_aggregator",
+        "operator_manual",
         "--school-type",
         "all",
     ]
