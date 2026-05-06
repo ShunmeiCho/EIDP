@@ -36,7 +36,7 @@ from typing import Any, cast
 from sqlalchemy.orm import Session
 
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
-from eidp.db.models import Department, DepartmentYearly, Document, School, SupportRecipient
+from eidp.db.models import Department, DepartmentYearly, Document, School, SchoolSite, SupportRecipient
 from eidp.extraction_confidence import ConfidenceVerdict
 from eidp.pipeline.manual_entry import (
     ALLOWED_METHODS,
@@ -103,12 +103,28 @@ class DiscoveryEvidenceRow:
 
     pdf_url: str
     page_url: str
+    site_url: str
+    discovery_method: str
+    target_fiscal_year: str
     reason: str
     anchor_text: str
     pattern_type: str
     score: float
     pdf_type: str | None
     timestamp: str
+
+
+@dataclass(frozen=True)
+class SchoolSiteEvidenceRow:
+    """One registered crawl entry point for a school."""
+
+    url: str
+    url_type: str
+    discovery_method: str
+    confidence: float | None
+    verified: bool
+    http_status: int | None
+    last_checked: str
 
 
 @dataclass(frozen=True)
@@ -524,9 +540,15 @@ def latest_discovery_evidence(
                 continue
             if source_url and payload.get("reason") == "accepted_downloaded" and payload.get("pdf_url") != source_url:
                 continue
+            extra = payload.get("extra")
+            if not isinstance(extra, dict):
+                extra = {}
             rows.append(DiscoveryEvidenceRow(
                 pdf_url=str(payload.get("pdf_url") or ""),
                 page_url=str(payload.get("page_url") or ""),
+                site_url=str(extra.get("site_url") or ""),
+                discovery_method=str(extra.get("discovery_method") or ""),
+                target_fiscal_year=str(extra.get("target_fiscal_year") or ""),
                 reason=str(payload.get("reason") or ""),
                 anchor_text=str(payload.get("anchor_text") or ""),
                 pattern_type=str(payload.get("pattern_type") or ""),
@@ -536,6 +558,41 @@ def latest_discovery_evidence(
             ))
 
     return list(reversed(rows[-limit:]))
+
+
+def list_school_site_evidence(
+    session: Session,
+    *,
+    school_id: int,
+    limit: int = 20,
+) -> list[SchoolSiteEvidenceRow]:
+    """Return registered URL entry points for the selected school.
+
+    Operators need to know whether a PDF came from a prefecture official
+    index, a hand-entered URL, a corporation-domain fallback, or generic web
+    search. This helper keeps that trace visible on the PDF confirmation page.
+    """
+    if limit <= 0:
+        return []
+    rows = (
+        session.query(SchoolSite)
+        .filter(SchoolSite.school_id == school_id)
+        .order_by(SchoolSite.verified.desc(), SchoolSite.confidence.desc().nullslast(), SchoolSite.id.asc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        SchoolSiteEvidenceRow(
+            url=site.url,
+            url_type=site.url_type or "",
+            discovery_method=site.discovery_method or "",
+            confidence=float(site.confidence) if site.confidence is not None else None,
+            verified=bool(site.verified),
+            http_status=site.http_status,
+            last_checked=site.last_checked.isoformat(timespec="seconds") if site.last_checked else "",
+        )
+        for site in rows
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -987,7 +1044,7 @@ def _render_confidence_breakdown(  # pragma: no cover - thin streamlit shell
         st.table(panel_to_table_rows(row_panel.panel))
 
 
-def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streamlit shell
+def _render_pdf_panel(session: Session, row: QueueRow) -> None:  # pragma: no cover - thin streamlit shell
     """Render source metadata plus lazy PDF preview/download controls."""
     import streamlit as st
 
@@ -1003,6 +1060,27 @@ def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streaml
         st.write(f"PDFリンク掲載ページ: {row.discovered_from}")
     confidence_label = row.confidence if row.confidence is not None else "(なし)"
     st.write(f"判定: pdf_type={row.pdf_type or '(未分類)'} / confidence={confidence_label}")
+
+    site_rows = list_school_site_evidence(session, school_id=row.school_id)
+    if site_rows:
+        with st.expander("学校URL登録元（探索入口）", expanded=False):
+            st.dataframe(
+                [
+                    {
+                        "method": site.discovery_method,
+                        "type": site.url_type,
+                        "verified": site.verified,
+                        "confidence": site.confidence,
+                        "http": site.http_status,
+                        "last_checked": site.last_checked,
+                        "url": site.url,
+                    }
+                    for site in site_rows
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+
     evidence_rows = latest_discovery_evidence(
         app_root=Path(settings.app_root),
         school_id=row.school_id,
@@ -1016,7 +1094,10 @@ def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streaml
                         "reason": e.reason,
                         "score": e.score,
                         "pdf_type": e.pdf_type or "",
+                        "method": e.discovery_method,
+                        "target_fy": e.target_fiscal_year,
                         "anchor": e.anchor_text,
+                        "site_url": e.site_url,
                         "pdf_url": e.pdf_url,
                         "page_url": e.page_url,
                     }
@@ -1180,7 +1261,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             _render_confidence_breakdown(confidence)
             pdf_col, form_col = st.columns([1, 2])
             with pdf_col:
-                _render_pdf_panel(row)
+                _render_pdf_panel(session, row)
 
             if row.ingest_status not in SAVE_ELIGIBLE_STATUSES:
                 if row.ingest_status == "ingested":

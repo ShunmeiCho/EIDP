@@ -7,7 +7,7 @@ Or directly: streamlit run src/eidp/review/app.py
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, Protocol, cast
 
 import streamlit as st
 from sqlalchemy import func
@@ -44,11 +44,10 @@ QUICK_PAGES = [
     (PAGE_MANUAL_ENTRY, "② PDF確認・手入力"),
     (PAGE_FISCAL_YEAR_OVERRIDE, "③ 年度判定・修正"),
     (PAGE_EXCEL_PREVIEW, "④ Excel プレビュー"),
-    (PAGE_AUDIT_LOG, "⑤ 監査ログ"),
+    (PAGE_SETTINGS, "⑤ 設定（年度・OCR・API）"),
 ]
 
 DETAIL_PAGES = [
-    (PAGE_SETTINGS, "設定"),
     (PAGE_STATUS, "データ状況（詳細）"),
     (PAGE_PROPOSALS, "マッチング提案の確認"),
     (PAGE_URL, "URL追加"),
@@ -56,9 +55,15 @@ DETAIL_PAGES = [
     (PAGE_GAPS, "マッチング漏れ一覧"),
     (PAGE_REJECTIONS, "除外PDF履歴"),
     (PAGE_PREFECTURE_REMARKS, "都道府県公式インデックス"),
+    (PAGE_AUDIT_LOG, "監査ログ"),
     (PAGE_SCHOOL_CODE, "学校コード確認"),
     (PAGE_HISTORY, "処理履歴"),
 ]
+
+
+class ButtonContainer(Protocol):
+    def button(self, *args: Any, **kwargs: Any) -> bool:
+        ...
 
 
 def _get_session() -> Session:
@@ -72,7 +77,7 @@ def _select_page(page_id: str) -> None:
     st.session_state.selected_page = page_id
 
 
-def _render_nav_button(container, page_id: str, label: str) -> None:
+def _render_nav_button(container: ButtonContainer, page_id: str, label: str) -> None:
     """Render a navigation button into ``container`` (the sidebar root or
     a sidebar expander).
 

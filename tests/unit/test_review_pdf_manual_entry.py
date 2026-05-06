@@ -28,6 +28,7 @@ from eidp.db.models import (
     DepartmentYearly,
     Document,
     School,
+    SchoolSite,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.review._pages.pdf_manual_entry import (
@@ -42,6 +43,7 @@ from eidp.review._pages.pdf_manual_entry import (
     latest_discovery_evidence,
     list_documents_for_manual_queue_view,
     list_pending_documents,
+    list_school_site_evidence,
     manual_next_action_for_row,
     manual_queue_summary,
     manual_queue_table,
@@ -349,7 +351,10 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
                 '{"school_id": 1, "pdf_url": "https://example.ac.jp/r8.pdf", '
                 '"page_url": "https://example.ac.jp/disclosure/", "reason": "accepted_downloaded", '
                 '"anchor_text": "2026年度", "pattern_type": "direct", "score": 9.0, '
-                '"pdf_type": "target", "timestamp": "2026-05-06T00:01:00Z"}'
+                '"pdf_type": "target", '
+                '"extra": {"site_url": "https://example.ac.jp/disclosure/", '
+                '"discovery_method": "prefecture_aggregator", "target_fiscal_year": "2026"}, '
+                '"timestamp": "2026-05-06T00:01:00Z"}'
             ),
             (
                 '{"school_id": 2, "pdf_url": "https://other.ac.jp/r8.pdf", '
@@ -368,7 +373,48 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
     assert len(rows) == 2
     assert rows[0].reason == "accepted_downloaded"
     assert rows[0].pdf_url == "https://example.ac.jp/r8.pdf"
+    assert rows[0].site_url == "https://example.ac.jp/disclosure/"
+    assert rows[0].discovery_method == "prefecture_aggregator"
+    assert rows[0].target_fiscal_year == "2026"
     assert rows[1].reason == "fiscal_year_mismatch:2025"
+
+
+def test_list_school_site_evidence_exposes_registered_entry_points(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Trace学校")
+        session.add_all([
+            SchoolSite(
+                school_id=school.id,
+                url="https://example.ac.jp/disclosure/",
+                url_type="disclosure",
+                discovery_method="prefecture_aggregator",
+                confidence=0.95,
+                verified=True,
+                http_status=200,
+                last_checked=datetime(2026, 5, 6, 0, 0, tzinfo=UTC),
+            ),
+            SchoolSite(
+                school_id=school.id,
+                url="https://example.ac.jp/",
+                url_type="homepage",
+                discovery_method="web_search",
+                confidence=0.50,
+                verified=False,
+                http_status=200,
+            ),
+        ])
+        session.commit()
+
+        rows = list_school_site_evidence(session, school_id=school.id)
+
+    assert len(rows) == 2
+    assert rows[0].url == "https://example.ac.jp/disclosure/"
+    assert rows[0].discovery_method == "prefecture_aggregator"
+    assert rows[0].url_type == "disclosure"
+    assert rows[0].confidence == 0.95
+    assert rows[0].verified is True
+    assert rows[0].last_checked.startswith("2026-05-06T00:00:00")
+    assert rows[1].discovery_method == "web_search"
 
 
 # ---------------------------------------------------------------------------
