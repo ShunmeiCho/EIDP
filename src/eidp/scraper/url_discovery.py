@@ -27,6 +27,8 @@ from eidp.scraper.search_provider import SearchResult
 
 log = structlog.get_logger()
 
+SEARCH_RESULT_MIN_CONFIDENCE = 0.65
+
 # SSRF prevention: only allow http(s) to public hosts
 _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}
 
@@ -288,6 +290,15 @@ def search_and_discover(
                 best = _pick_best_result(results, school)
                 if best and _is_safe_url(best.url):
                     confidence = _score_search_result(best, school)
+                    if confidence < SEARCH_RESULT_MIN_CONFIDENCE:
+                        log.info(
+                            "search_result_rejected_low_confidence",
+                            school=school.school_name,
+                            url=best.url,
+                            confidence=confidence,
+                        )
+                        time.sleep(rate_limit_delay)
+                        continue
                     site = SchoolSite(
                         school_id=school.id,
                         url=best.url,
@@ -380,15 +391,20 @@ def _score_search_result(result: SearchResult, school: "School") -> float:
     score = 0.5
     title = result.title
     url = result.url
+    description = result.description
 
     # Name match in title
     if school.school_name in title:
         score = 0.9
+    elif school.school_name in description:
+        score = 0.8
     elif school.corporation_name and school.corporation_name in title:
         score = 0.7
+    elif school.corporation_name and school.corporation_name in description:
+        score = 0.65
 
     # Keyword match
-    if any(kw in title for kw in ["情報公開", "公開情報", "学校情報", "機関要件"]):
+    if any(kw in f"{title} {description}" for kw in ["情報公開", "公開情報", "学校情報", "機関要件"]):
         score = min(score + 0.1, 0.99)
 
     # Domain preference

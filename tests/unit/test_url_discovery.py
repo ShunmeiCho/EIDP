@@ -116,6 +116,102 @@ def test_search_and_discover_registers_best_result(monkeypatch) -> None:
         session.close()
 
 
+def test_search_and_discover_rejects_low_confidence_results(monkeypatch) -> None:
+    import time as time_module
+
+    class FakeProvider:
+        queries: list[str] = []
+
+        def name(self) -> str:
+            return "fake"
+
+        def search(self, query: str, count: int = 5) -> list[SearchResult]:
+            self.queries.append(query)
+            return [
+                SearchResult(
+                    title="一般的なお知らせ",
+                    url="https://unrelated.example/news/",
+                    description="学校とは無関係のページ",
+                )
+            ]
+
+    provider = FakeProvider()
+
+    import eidp.scraper.search_provider as search_provider
+
+    monkeypatch.setattr(search_provider, "create_provider", lambda **_kwargs: provider)
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda url: True)
+    monkeypatch.setattr(time_module, "sleep", lambda _seconds: None)
+
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="東京都",
+                corporation_name="学校法人テスト",
+                school_name="日本語専門学校",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.commit()
+
+        stats = url_discovery.search_and_discover(session, batch_size=1)
+
+        assert stats == {"searched": 1, "found": 0, "no_result": 1, "errors": 0}
+        assert session.query(SchoolSite).count() == 0
+        assert provider.queries == url_discovery.search_queries_for_school(session.get(School, 1))
+    finally:
+        session.close()
+
+
+def test_search_and_discover_accepts_corporation_description_match(monkeypatch) -> None:
+    import time as time_module
+
+    class FakeProvider:
+        def name(self) -> str:
+            return "fake"
+
+        def search(self, query: str, count: int = 5) -> list[SearchResult]:
+            return [
+                SearchResult(
+                    title="情報公開",
+                    url="https://corp.example/disclosure/",
+                    description="学校法人テストが公開する高等教育の修学支援新制度",
+                )
+            ]
+
+    import eidp.scraper.search_provider as search_provider
+
+    monkeypatch.setattr(search_provider, "create_provider", lambda **_kwargs: FakeProvider())
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda url: True)
+    monkeypatch.setattr(time_module, "sleep", lambda _seconds: None)
+
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="東京都",
+                corporation_name="学校法人テスト",
+                school_name="東京デザイン学院",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.commit()
+
+        stats = url_discovery.search_and_discover(session, batch_size=1)
+        site = session.query(SchoolSite).one()
+
+        assert stats == {"searched": 1, "found": 1, "no_result": 0, "errors": 0}
+        assert site.url == "https://corp.example/disclosure/"
+        assert site.confidence >= url_discovery.SEARCH_RESULT_MIN_CONFIDENCE
+    finally:
+        session.close()
+
+
 def test_search_queries_use_university_terms_for_universities() -> None:
     school = School(
         id=1,
