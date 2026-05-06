@@ -31,6 +31,7 @@ from eidp.scraper.prefecture_aggregator import (
     parse_html_table,
     parse_osaka_xlsx,
     parse_tokyo,
+    parse_yamagata,
     recommend_action,
 )
 
@@ -278,6 +279,43 @@ def test_parse_13col_niigata_reads_sparse_visual_columns(monkeypatch, tmp_path: 
     assert parsed[0].school_name_raw == "新潟県立看護大学"
     assert parsed[0].operator_name == "公立大学法人新潟県立看護大学"
     assert parsed[0].disclosure_url == "https://example.jp/disclosure/"
+
+
+def test_parse_yamagata_attaches_following_url_row(monkeypatch, tmp_path: Path):
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["確 認 大 学 等", None, "設 置 者", None, "備考"],
+                    ["山形テスト専門学校", "山形市1", "学校法人山形", "山形市2", "令和8年4月1日確認"],
+                    [
+                        "確認申請書を公表するホームページアドレス",
+                        None,
+                        "https://example.ac.jp/disclosure/",
+                        None,
+                        None,
+                    ],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+
+    parsed = parse_yamagata(tmp_path / "yamagata.pdf")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "yamagata"
+    assert parsed[0].school_name_raw == "山形テスト専門学校"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+    assert parsed[0].remarks == "令和8年4月1日確認"
 
 
 def test_recommend_action():

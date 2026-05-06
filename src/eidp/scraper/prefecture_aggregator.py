@@ -456,6 +456,60 @@ def parse_13col_niigata(pdf_path: Path) -> list[PrefSchool]:
     return out
 
 
+def parse_yamagata(pdf_path: Path) -> list[PrefSchool]:
+    """Yamagata official PDF: 5-column school rows followed by URL rows.
+
+    The table renders each school as one row, then puts
+    ``確認申請書を公表するホームページアドレス`` on the next row with the URL
+    in a separate cell. A plain 5-column parser would keep the school rows but
+    drop those URLs, so this parser carries the latest school forward.
+    """
+    out: list[PrefSchool] = []
+    last_index: int | None = None
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables():
+                for row in table:
+                    if not row or len(row) < 5 or is_header(row):
+                        continue
+
+                    marker = clean_cell(row[0])
+                    if "確認申請書を公表するホームページアドレス" in marker:
+                        url = extract_url(" ".join(cell or "" for cell in row))
+                        if url and last_index is not None:
+                            current = out[last_index]
+                            out[last_index] = PrefSchool(
+                                pref=current.pref,
+                                school_name_raw=current.school_name_raw,
+                                school_name_norm=current.school_name_norm,
+                                address=current.address,
+                                operator_kind=current.operator_kind,
+                                operator_name=current.operator_name,
+                                operator_address=current.operator_address,
+                                disclosure_url=url,
+                                school_code=current.school_code,
+                                remarks=current.remarks,
+                            )
+                        continue
+
+                    school_name = clean_school_name(row[0])
+                    if not _looks_like_school_name(school_name):
+                        continue
+                    out.append(PrefSchool(
+                        pref="yamagata",
+                        school_name_raw=school_name,
+                        school_name_norm=norm(school_name),
+                        address=(row[1] or "").strip(),
+                        operator_kind="",
+                        operator_name=(row[2] or "").strip(),
+                        operator_address=(row[3] or "").strip(),
+                        disclosure_url=extract_url(row[4]),
+                        remarks=(row[4] or "").strip(),
+                    ))
+                    last_index = len(out) - 1
+    return out
+
+
 def _xlsx_cell_text(value: object) -> str:
     if value is None:
         return ""
@@ -797,6 +851,8 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "osaka": parse_osaka_xlsx,
     "aichi": parse_aichi_index,
     "niigata": parse_13col_niigata,
+    "yamagata": parse_yamagata,
+    "kumamoto": lambda p: parse_5col(p, "kumamoto"),
     "akita": lambda p: parse_5col(p, "akita"),
     "aomori": lambda p: parse_html_table(p, "aomori"),
     "chiba": lambda p: parse_6col_indexed(p, "chiba"),
@@ -843,6 +899,8 @@ PREF_KEY_TO_DB = {
     "tottori": "鳥取県",
     "yamaguchi": "山口県",
     "oita": "大分県",
+    "yamagata": "山形県",
+    "kumamoto": "熊本県",
 }
 
 
