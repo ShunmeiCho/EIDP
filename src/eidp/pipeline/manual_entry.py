@@ -45,7 +45,6 @@ from eidp.db.models import (
     Document,
 )
 
-
 ManualMethod = Literal["manual", "ocr_tesseract"]
 DeptChangeType = Literal["新設", "廃科", "名称変更", "統合"]
 
@@ -244,7 +243,7 @@ def save_manual_entries(
 
     # 8.4.a.1: fiscal_year coherence. If the Document already has a
     # fiscal_year and the caller supplies a different one, refuse — that
-    # is a R8-override situation and must go through
+    # is a fiscal-year override situation and must go through
     # ``pipeline.fiscal_year_override.override_fiscal_year`` so all four
     # tables move atomically. If the Document has no fiscal_year yet
     # (typical for ocr_pending / parse_failed first manual confirmation),

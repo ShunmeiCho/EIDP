@@ -107,6 +107,6 @@ VM / real-PC validation must cover:
 Venus cron/systemd operation is archived, not live:
 
 - legacy assets: `deploy/legacy-venus/`
-- archived runbook: [EIDP R8 Rediscovery Weekly Runbook](docs/runbooks/eidp-r8-rediscovery.md)
+- archived runbook: [legacy target-year rediscovery runbook](docs/runbooks/eidp-r8-rediscovery.md)
 
 The active deployment target is Windows PC.

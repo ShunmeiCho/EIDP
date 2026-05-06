@@ -16,7 +16,7 @@ local SQLite database. It is the production entrypoint behind
     Step 5  rebuild ``SchoolFiscalYearStatus`` rows for the operator UI.
 
 Why not bake artifacts into the ZIP at build time?
-    Prefectures publish new disclosures every fiscal year (R8, R9, ...).
+    Prefectures publish new disclosures every fiscal year.
     A ZIP that ships pre-downloaded artifacts is frozen against the
     build date. Running the pipeline on the operator PC keeps the data
     fresh.

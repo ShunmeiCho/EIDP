@@ -1,7 +1,7 @@
 """Business-user fiscal year override (Sprint 8.2.c.2).
 
-When the operator UI re-classifies a Document's fiscal year (e.g. confirming a
-PDF as 令和8年度 / FY2026 after the parser guessed 令和7年度 / FY2025), four
+When the operator UI re-classifies a Document's fiscal year (for example,
+confirming the target年度 PDF after the parser guessed the previous year), four
 tables must move together so coverage and Excel agree afterwards:
 
   1. ``department_yearly``       (Department × fiscal_year × revision)

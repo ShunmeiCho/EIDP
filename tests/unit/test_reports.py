@@ -168,7 +168,7 @@ def test_coverage_target_pdf_excludes_non_target_and_failed() -> None:
 
 def test_coverage_target_pdf_distinguishes_any_fy_vs_current_fy() -> None:
     """Reviewer fix: target_pdf_rate must split any-FY (discovery health)
-    vs current-FY (R8 coverage); they were conflated before."""
+    vs current-FY target coverage; they were conflated before."""
     s = _session()
     _school(s, 1, "東京")  # only 2025 target → counts in any_fy, not current_fy
     _school(s, 2, "東京")  # has 2026 target → counts in both

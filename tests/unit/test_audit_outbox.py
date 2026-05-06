@@ -66,7 +66,7 @@ def test_log_manual_action_serialises_old_value_and_new_value_as_json(engine):
             target_id=1,
             old_value={"fiscal_year": 2025},
             new_value={"fiscal_year": 2026},
-            reason="business user identified PDF as 令和8",
+            reason="business user identified PDF as the target fiscal year",
         )
         session.commit()
 

@@ -146,8 +146,8 @@ def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None 
         if kw.lower() in text:
             score -= 3.0
 
-    # Bonus for configured target-year references. EIDP is not R8-specific;
-    # R8 is just FY2026 when target_fiscal_year=2026.
+    # Bonus for configured target-year references. EIDP is a rolling
+    # target-fiscal-year system, not a single Reiwa-year crawler.
     if any(token.lower() in text for token in fiscal_year_search_tokens(target_year)):
         score += 3.0
     if any(token.lower() in text for token in fiscal_year_search_tokens(target_year - 1)):

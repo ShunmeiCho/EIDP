@@ -12,7 +12,7 @@ The contract owner pinned in v6:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -61,7 +61,7 @@ def _seed(session: Session, *, fiscal_year: int = 2026) -> tuple[School, Documen
         content_type="image",  # the typical manual-entry trigger
         fiscal_year=fiscal_year,
         ingest_status="ocr_pending",
-        downloaded_at=datetime.now(timezone.utc),
+        downloaded_at=datetime.now(UTC),
     )
     session.add(doc)
     session.flush()
@@ -320,7 +320,7 @@ def test_invalid_method_raises(engine):
 def test_fiscal_year_mismatch_raises(engine):
     """Sprint 8.4.a.1 — if doc.fiscal_year is set and differs from the
     requested fiscal_year, refuse and direct the operator to the
-    R8-override flow (which moves all four tables atomically)."""
+    fiscal-year override flow (which moves all four tables atomically)."""
     with Session(engine) as session:
         _, doc = _seed(session, fiscal_year=2025)
         session.commit()
@@ -352,7 +352,7 @@ def test_fiscal_year_backfill_when_document_has_none(engine):
             content_type="image",
             fiscal_year=None,
             ingest_status="ocr_pending",
-            downloaded_at=datetime.now(timezone.utc),
+            downloaded_at=datetime.now(UTC),
         )
         session.add(doc)
         session.commit()
@@ -498,7 +498,7 @@ def test_nfkc_normalisation_collapses_fullwidth_aliases(engine):
     must resolve to the SAME Department, not create two.
 
     Sprint 8.4.a.1 made fiscal_year-mismatch on a single Document a hard
-    error (same PDF cannot be both R7 and R8 — that needs override). So
+    error (same PDF cannot be both the previous and target year — that needs override). So
     we use two separate documents, one per fiscal year, to exercise the
     NFKC dedup path."""
     with Session(engine) as session:
@@ -514,7 +514,7 @@ def test_nfkc_normalisation_collapses_fullwidth_aliases(engine):
             content_type="image",
             fiscal_year=2027,
             ingest_status="ocr_pending",
-            downloaded_at=datetime.now(timezone.utc),
+            downloaded_at=datetime.now(UTC),
         )
         session.add(doc2)
         session.commit()
