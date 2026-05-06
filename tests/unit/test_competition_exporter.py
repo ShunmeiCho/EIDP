@@ -35,32 +35,32 @@ def _empty_template(path: Path) -> None:
     wb.save(path)
 
 
-def _seed_target_year_data(session: Session, fiscal_year: int) -> None:
+def _seed_target_year_data(session: Session, fiscal_year: int, *, school_id: int = 1) -> None:
     school = School(
-        id=1,
+        id=school_id,
         prefecture="東京",
-        corporation_name="C1",
-        school_name="S1",
+        corporation_name=f"C{school_id}",
+        school_name=f"S{school_id}",
         school_type="専門学校",
         status="active",
     )
     session.add(school)
     session.flush()
     doc = Document(
-        id=1,
+        id=school_id,
         school_id=school.id,
-        source_url="https://example.test/doc.pdf",
+        source_url=f"https://example.test/{school_id}.pdf",
         fiscal_year=fiscal_year,
         ingest_status="ingested",
         pdf_type="target",
     )
     session.add(doc)
-    dept = Department(id=1, school_id=school.id, canonical_name="D1")
+    dept = Department(id=school_id, school_id=school.id, canonical_name=f"D{school_id}")
     session.add(dept)
     session.flush()
     session.add(
         DepartmentYearly(
-            id=1,
+            id=school_id,
             department_id=dept.id,
             document_id=doc.id,
             fiscal_year=fiscal_year,
@@ -151,12 +151,9 @@ def test_competition_export_defaults_to_configured_target_fiscal_year(
     output = tmp_path / "out.xlsx"
     _empty_template(template)
     _seed_target_year_data(session, 2027)
+    _seed_target_year_data(session, 2025, school_id=2)
+    _seed_target_year_data(session, 2025, school_id=3)
     monkeypatch.setattr(competition_exporter.settings, "target_fiscal_year", 2027)
-    monkeypatch.setattr(
-        competition_exporter,
-        "auto_select_fiscal_year",
-        lambda _session: pytest.fail("business export must not auto-select fiscal year"),
-    )
 
     try:
         result = export_competition_workbook(session, template, output)

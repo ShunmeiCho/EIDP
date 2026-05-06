@@ -19,9 +19,8 @@ from pathlib import Path
 from typing import cast
 
 import structlog
-from openpyxl import load_workbook
-from openpyxl.worksheet.worksheet import Worksheet
-from sqlalchemy import func as sql_func
+from openpyxl import load_workbook  # type: ignore[import-untyped]
+from openpyxl.worksheet.worksheet import Worksheet  # type: ignore[import-untyped]
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
@@ -543,32 +542,6 @@ def _diagnose_gap(
         return "dept_unmatched", f"db_dept_count={dept_count}"
 
     return "no_fy_data", ""
-
-
-def auto_select_fiscal_year(session: Session) -> int:
-    """Pick the fiscal year with the most DepartmentYearly coverage.
-
-    Preferred signal for 担当者 reports where 最新 really means 'the most
-    populated year in DB', not a calendar projection.
-    """
-    rows = (
-        session.query(
-            DepartmentYearly.fiscal_year,
-            sql_func.count(DepartmentYearly.id),
-        )
-        .filter(
-            DepartmentYearly.document_id.isnot(None),
-            DepartmentYearly.is_current.is_(True),
-        )
-        .group_by(DepartmentYearly.fiscal_year)
-        .order_by(sql_func.count(DepartmentYearly.id).desc())
-        .all()
-    )
-    if rows:
-        return int(rows[0][0])
-    # Fallback to calendar year if DB is empty
-    from datetime import datetime
-    return datetime.now().year
 
 
 def _append_year_columns_to_block(

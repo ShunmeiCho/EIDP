@@ -26,7 +26,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. | Mostly covered for current pipeline; needs Windows E2E validation with real data after latest branch. |
 | Make PDF確認 usable | `PDF確認・手入力` is now a detail page with target-year queue views, evidence panel, PDF preview/download, lock handling, and manual entry save path. | Improved but not fully product-validated; user still needs final UI test feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. | Covered locally with tests; real seed coverage still partial. |
-| Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; admin export page warns on non-target FY. | Partial: operator preview protected; full competition-export business lock needs dedicated audit before release. |
+| Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
 | Windows operator delivery | `dist/eidp-windows.zip` rebuilt at commit `0fd1de2`, verifier `ok=true`, `git_dirty=false`, wheelhouse 79 wheels. | Mac-side package verified; Windows-native extraction/start/click-through not done for latest ZIP. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
@@ -36,6 +36,8 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 - `uv run pytest tests/unit/test_review_prefecture_remarks.py tests/unit/test_review_school_year_tasks.py -q` → `34 passed`
 - `uv run ruff check src/eidp/review/_pages/prefecture_remarks.py tests/unit/test_review_prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py tests/unit/test_review_school_year_tasks.py` → passed
 - `uv run mypy src/eidp/review/_pages/prefecture_remarks.py src/eidp/review/_pages/school_year_tasks.py` → passed
+- `uv run pytest tests/unit/test_competition_exporter.py -q` → `11 passed`
+- `uv run mypy src/eidp/excel/competition_exporter.py` → passed
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --json` → `ok=true`, `git_commit=0fd1de2420614aaa7248ac1b5b3b27708cb93eb4`, `git_dirty=false`
 
 ## Missing Before Goal Can Be Marked Complete
@@ -49,11 +51,9 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
    preview.
 3. Finish R-0 naming debt or document every remaining legacy R8 occurrence as
    compatibility-only.
-4. Audit competition Excel export so business output cannot silently use a
-   non-target fiscal year.
-5. Decide university scope: keep as gated pilot for v1.1, or start the v1.2
+4. Decide university scope: keep as gated pilot for v1.1, or start the v1.2
    parser/discovery track.
-6. Validate the UI with real operator feedback; current tests prove wiring and
+5. Validate the UI with real operator feedback; current tests prove wiring and
    business rules, not usability under real workload.
 
 ## Current Conclusion
@@ -63,5 +63,5 @@ official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
 The active goal is **not complete**. The main remaining blockers are nationwide
-coverage, latest Windows E2E validation, final Excel target-FY audit, and the
+coverage, latest Windows E2E validation, real operator UI validation, and the
 explicit university rollout decision.
