@@ -66,6 +66,19 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/validate_windows_install.py": (SCRIPTS_DIR / "validate_windows_install.py").read_text(
             encoding="utf-8"
         ),
+        "scripts/bootstrap_pdf_pipeline.py": (SCRIPTS_DIR / "bootstrap_pdf_pipeline.py").read_text(
+            encoding="utf-8"
+        ),
+        "scripts/download_prefecture_artifacts.py": (SCRIPTS_DIR / "download_prefecture_artifacts.py").read_text(
+            encoding="utf-8"
+        ),
+        "data/prefecture-aggregators/seed.csv": "pref_key,pref_jp\nfukuoka,福岡県\n",
+        "data/url-discovery/discovered-urls-50.csv": (
+            "school_name,url\n東京都立大学,https://www.tmu.ac.jp/\n"
+        ),
+        "data/url-discovery/corporation_domains.csv": (
+            "corporation_name,domain\n東京都公立大学法人,tmu.ac.jp\n"
+        ),
         "runtime/python/python.exe": b"PE",
         "runtime/uv.exe": b"PE",
         "src/eidp/__init__.py": "",
@@ -146,6 +159,33 @@ def test_verify_core_zip_requires_project_wheel(tmp_path: Path) -> None:
 
     assert not check.ok
     assert any("project wheel" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_bootstrap_seed_csvs(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries.pop("data/url-discovery/discovered-urls-50.csv")
+    entries.pop("data/url-discovery/corporation_domains.csv")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("data/url-discovery/discovered-urls-50.csv" in error for error in check.errors)
+    assert any("data/url-discovery/corporation_domains.csv" in error for error in check.errors)
+
+
+def test_verify_core_zip_validates_bootstrap_pipeline_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/bootstrap_pdf_pipeline.py"] = entries["scripts/bootstrap_pdf_pipeline.py"].replace(
+        "prefecture_aggregator,seed_csv,corporation_pattern",
+        "prefecture_aggregator",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("prefecture_aggregator,seed_csv,corporation_pattern" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_multiple_project_wheels(tmp_path: Path) -> None:

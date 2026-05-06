@@ -541,6 +541,23 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     # Artifacts directory must NOT be in the ZIP (downloaded at runtime).
     (fake_repo / "data" / "prefecture-aggregators" / "artifacts").mkdir(parents=True, exist_ok=True)
     (fake_repo / "data" / "prefecture-aggregators" / "artifacts" / "fukuoka.pdf").write_bytes(b"%PDF-fake")
+    # Sprint 8.7.f: bootstrap Step 2b also depends on known URL and
+    # corporation-domain seed CSVs. These are static seed inputs and must
+    # be shipped, unlike downloaded artifact PDFs.
+    (fake_repo / "data" / "url-discovery").mkdir(parents=True, exist_ok=True)
+    (fake_repo / "data" / "url-discovery" / "discovered-urls-50.csv").write_text(
+        "school_name,url\n東京都立大学,https://www.tmu.ac.jp/\n",
+        encoding="utf-8",
+    )
+    (fake_repo / "data" / "url-discovery" / "corporation_domains.csv").write_text(
+        "corporation_name,domain\n東京都公立大学法人,tmu.ac.jp\n",
+        encoding="utf-8",
+    )
+    # Developer-only fixture must stay out of the operator ZIP.
+    (fake_repo / "data" / "url-discovery" / "test-schools-50.csv").write_text(
+        "school_name\nfixture only\n",
+        encoding="utf-8",
+    )
     # Bootstrap pipeline scripts must be in the ZIP.
     (fake_repo / "scripts" / "bootstrap_pdf_pipeline.py").write_text("print('boot')", encoding="utf-8")
     (fake_repo / "scripts" / "bootstrap_pdfs.bat").write_text("@echo off", encoding="utf-8")
@@ -585,6 +602,17 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "data/prefecture-aggregators/seed.csv" in arcs, (
         "Sprint 8.7.e: prefecture seed.csv carries artifact URLs and "
         "must be in the ZIP for bootstrap_pdfs.bat to use"
+    )
+    assert "data/url-discovery/discovered-urls-50.csv" in arcs, (
+        "Sprint 8.7.f: known school URL seeds must be in the ZIP so "
+        "bootstrap_pdf_pipeline.py Step 2b can register fallback crawl entry points"
+    )
+    assert "data/url-discovery/corporation_domains.csv" in arcs, (
+        "Sprint 8.7.f: corporation-domain fallbacks must be in the ZIP so "
+        "schools without prefecture-provided URLs still get deterministic discovery seeds"
+    )
+    assert "data/url-discovery/test-schools-50.csv" not in arcs, (
+        "Developer-only URL discovery fixtures must not ship in the operator ZIP"
     )
     artifact_arcs = {
         a for a in arcs

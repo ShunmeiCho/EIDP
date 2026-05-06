@@ -80,6 +80,11 @@ CORE_REQUIRED_EXACT = (
     "scripts/run_weekly_target_year_discovery.py",
     "scripts/run_r8_rediscovery_weekly.py",
     "scripts/validate_windows_install.py",
+    "scripts/bootstrap_pdf_pipeline.py",
+    "scripts/download_prefecture_artifacts.py",
+    "data/prefecture-aggregators/seed.csv",
+    "data/url-discovery/discovered-urls-50.csv",
+    "data/url-discovery/corporation_domains.csv",
     "runtime/python/python.exe",
     "runtime/uv.exe",
 )
@@ -339,6 +344,13 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "prune_run_logs",
             "run_pdf_discovery",
             "run_ingestion",
+        ),
+        "scripts/bootstrap_pdf_pipeline.py": (
+            "Step 2b",
+            "known URL / corporation fallback discovery",
+            "discovered-urls-50.csv",
+            "prefecture_aggregator,seed_csv,corporation_pattern",
+            "progress_callback",
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
