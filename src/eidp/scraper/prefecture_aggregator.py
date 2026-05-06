@@ -162,7 +162,10 @@ def _looks_like_school_name(text: str) -> bool:
         return False
     if any(token in normalized for token in ("確認大学等", "学校名", "名称", "所在地", "設置者")):
         return False
-    return any(token in normalized for token in ("大学", "短期大学", "専門学校", "高等専門学校", "大学校", "学院"))
+    if any(token in normalized for token in ("修学支援", "支援制度", "奨学資金", "奨学金")):
+        return False
+    school_tokens = ("大学", "短期大学", "専門学校", "高等専門学校", "大学校", "学院", "カレッジ")
+    return any(token in normalized for token in school_tokens)
 
 
 def clean_school_name(text: str | None) -> str:
@@ -172,6 +175,8 @@ def clean_school_name(text: str | None) -> str:
     cleaned = unicodedata.normalize("NFKC", text)
     cleaned = cleaned.replace("​", "")
     cleaned = cleaned.replace("＜外部リンク＞", "")
+    cleaned = cleaned.replace("(外部リンク)", "")
+    cleaned = cleaned.replace("（外部リンク）", "")
     cleaned = cleaned.replace("(外部サイトへリンク)", "")
     cleaned = cleaned.replace("（外部サイトへリンク）", "")
     cleaned = re.sub(r"\s+", "", cleaned)
@@ -762,6 +767,7 @@ def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None)
 
     out: list[PrefSchool] = []
     seen: set[tuple[str, str | None]] = set()
+    first_row_by_name: dict[str, int] = {}
 
     for table in extractor.tables:
         headers: list[str] = []
@@ -797,6 +803,8 @@ def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None)
             if key in seen:
                 continue
             seen.add(key)
+            name_key = norm(school_name)
+            first_row_by_name.setdefault(name_key, len(out))
 
             out.append(PrefSchool(
                 pref=pref,
@@ -815,10 +823,17 @@ def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None)
             continue
         url = _absolute_http_url(link.href, source_url)
         school_name = clean_school_name(link.text)
+        name_key = norm(school_name)
+        existing_index = first_row_by_name.get(name_key)
+        if existing_index is not None:
+            if url and out[existing_index].disclosure_url is None:
+                out[existing_index].disclosure_url = url
+            continue
         key = (norm(school_name), url)
         if key in seen:
             continue
         seen.add(key)
+        first_row_by_name.setdefault(name_key, len(out))
         out.append(PrefSchool(
             pref=pref,
             school_name_raw=school_name,
@@ -860,9 +875,12 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "gunma": lambda p: parse_html_table(p, "gunma"),
     "ibaraki": lambda p: parse_5col(p, "ibaraki"),
     "tochigi": lambda p: parse_html_table(p, "tochigi"),
+    "kyoto": lambda p: parse_5col(p, "kyoto"),
     "kagoshima": lambda p: parse_html_table(p, "kagoshima"),
     "miyazaki": lambda p: parse_html_table(p, "miyazaki"),
     "nagano": lambda p: parse_html_table(p, "nagano"),
+    "iwate": lambda p: parse_html_table(p, "iwate"),
+    "toyama": lambda p: parse_html_table(p, "toyama"),
     "wakayama": lambda p: parse_html_table(p, "wakayama"),
     "tottori": lambda p: parse_html_table(p, "tottori"),
     "yamaguchi": lambda p: parse_html_table(p, "yamaguchi"),
@@ -893,9 +911,12 @@ PREF_KEY_TO_DB = {
     "gunma": "群馬県",
     "ibaraki": "茨城県",
     "tochigi": "栃木県",
+    "kyoto": "京都府",
     "kagoshima": "鹿児島県",
     "miyazaki": "宮崎県",
     "nagano": "長野県",
+    "iwate": "岩手県",
+    "toyama": "富山県",
     "wakayama": "和歌山県",
     "tottori": "鳥取県",
     "yamaguchi": "山口県",

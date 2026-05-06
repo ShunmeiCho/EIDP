@@ -50,6 +50,21 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
             "verified_status": "url_found",
             "artifact_url": "https://www.pref.hiroshima.lg.jp/soshiki/44/605623.html",
         },
+        {
+            "pref_key": "kyoto",
+            "verified_status": "url_found",
+            "artifact_url": "https://www.pref.kyoto.jp/bunkyo/documents/taisyoukou-itiran070924.pdf",
+        },
+        {
+            "pref_key": "iwate",
+            "verified_status": "url_found",
+            "artifact_url": "https://www.pref.iwate.jp/kyouikubunka/kyouiku/1031406/1032859.html",
+        },
+        {
+            "pref_key": "toyama",
+            "verified_status": "url_found",
+            "artifact_url": "https://www.pref.toyama.jp/1119/kurashi/kyouiku/gakkou/shuugakushien/kj00020807.html",
+        },
     ]
 
     targets = module.select_targets(rows)
@@ -62,6 +77,9 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
     assert "yamagata" in module.SUPPORTED_PARSERS
     assert "kumamoto" in module.SUPPORTED_PARSERS
     assert "hiroshima" in module.SUPPORTED_PARSERS
+    assert "kyoto" in module.SUPPORTED_PARSERS
+    assert "iwate" in module.SUPPORTED_PARSERS
+    assert "toyama" in module.SUPPORTED_PARSERS
     assert "url_found" in module.DOWNLOADABLE_STATUSES
     assert pref_keys == {
         "hokkaido",
@@ -71,4 +89,7 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
         "yamagata",
         "kumamoto",
         "hiroshima",
+        "kyoto",
+        "iwate",
+        "toyama",
     }

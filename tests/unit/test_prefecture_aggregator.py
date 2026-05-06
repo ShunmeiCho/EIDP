@@ -504,6 +504,63 @@ def test_parse_html_table_uses_homepage_cell_link_when_name_is_plain_text(tmp_pa
     assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
 
 
+def test_parse_html_table_cleans_external_link_suffix_and_college_names(tmp_path: Path):
+    html = tmp_path / "iwate.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>所在地</th><th>設置者</th><th>設置者所在地</th><th>備考</th></tr>
+          <tr>
+            <td><a href="https://college.example/disclosure/">北日本テストカレッジ(外部リンク)</a></td>
+            <td>岩手県盛岡市1</td>
+            <td>学校法人北日本</td>
+            <td>岩手県盛岡市2</td>
+            <td></td>
+          </tr>
+        </table>
+        <ul>
+          <li><a href="https://www.pref.example/support/">大学生等への修学支援制度</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "iwate")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "北日本テストカレッジ"
+    assert parsed[0].disclosure_url == "https://college.example/disclosure/"
+
+
+def test_parse_html_table_merges_anchor_fallback_into_existing_school_row(tmp_path: Path):
+    html = tmp_path / "toyama.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>所在地</th><th>設置者</th><th>設置者所在地</th><th>備考</th></tr>
+          <tr>
+            <td>富山テスト専門学校</td>
+            <td>富山県富山市1</td>
+            <td>学校法人富山</td>
+            <td>富山県富山市2</td>
+            <td></td>
+          </tr>
+        </table>
+        <ul>
+          <li><a href="https://toyama.example/disclosure/">富山テスト専門学校</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "toyama")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "富山テスト専門学校"
+    assert parsed[0].address == "富山県富山市1"
+    assert parsed[0].disclosure_url == "https://toyama.example/disclosure/"
+
+
 def test_parse_html_table_falls_back_to_school_name_anchor_list(tmp_path: Path):
     html = tmp_path / "oita.html"
     html.write_text(
