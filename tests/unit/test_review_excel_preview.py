@@ -176,6 +176,58 @@ def test_count_unmatched_and_gap_basic(engine):
     assert counts.has_target_year_data is True
 
 
+def test_count_unmatched_and_gap_can_cover_universities(engine):
+    with Session(engine) as session:
+        _seed(session)
+        university = School(
+            prefecture="東京都",
+            corporation_name="法人U",
+            school_name="U大学",
+            school_type="大学",
+            status="active",
+        )
+        session.add(university)
+        session.flush()
+        doc = Document(
+            school_id=university.id,
+            source_url="https://example.com/u.pdf",
+            file_hash=("u" * 64),
+            pdf_type="target",
+            content_type="text",
+            fiscal_year=2026,
+            ingest_status="ingested",
+            downloaded_at=datetime.now(UTC),
+        )
+        session.add(doc)
+        session.flush()
+        dept = Department(school_id=university.id, canonical_name="U学部")
+        session.add(dept)
+        session.flush()
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                document_id=doc.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                enrollment=30,
+                capacity=40,
+                graduates=5,
+                extraction_method="pdf_parse",
+            )
+        )
+        session.commit()
+
+        specialty = count_unmatched_and_gap(session, school_type="専門学校")
+        all_schools = count_unmatched_and_gap(session, school_type=None)
+
+    assert specialty.total_schools == 2
+    assert specialty.target_yearly_rows == 1
+    assert all_schools.total_schools == 3
+    assert all_schools.target_pdf_schools == 2
+    assert all_schools.target_yearly_rows == 2
+
+
 def test_count_excludes_inactive_schools(engine):
     with Session(engine) as session:
         _seed(session)

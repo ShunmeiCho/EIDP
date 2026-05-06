@@ -43,6 +43,7 @@ from eidp.excel.exporter import (
 )
 from eidp.fiscal_year import format_fiscal_year_label
 from eidp.reports.coverage import ExportGapReport, gap_report_for_export
+from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
 from eidp.review.target_year_status import target_year_overview
 
 # Sheets the master workbook carries, in display order.
@@ -172,9 +173,9 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     target = target_year_overview(
         session,
         target_fiscal_year=settings.target_fiscal_year,
-        school_type="専門学校",
+        school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
     )
-    st.caption(f"対象年度: {target_label}")
+    st.caption(f"対象年度: {target_label} / 対象範囲: {OPERATOR_SCHOOL_SCOPE_LABEL}")
     target_cols = st.columns(4)
     target_cols[0].metric("対象年度PDFあり", target.current_target_schools)
     target_cols[1].metric("旧年度fallback", target.stale_target_documents)
@@ -186,7 +187,11 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             "先に週次再取得またはURL追加を行ってください。"
         )
 
-    export_gap = count_unmatched_and_gap(session, fiscal_year=settings.target_fiscal_year, school_type="専門学校")
+    export_gap = count_unmatched_and_gap(
+        session,
+        fiscal_year=settings.target_fiscal_year,
+        school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
+    )
     cols = st.columns(4)
     cols[0].metric("現在年度PDF採録率", f"{export_gap.target_pdf_rate:.0%}")
     cols[1].metric("抽出済み学校", export_gap.extracted_schools)

@@ -49,6 +49,7 @@ from eidp.review.confidence_panels import (
     build_panel,
     panel_summary_line,
 )
+from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
 
 # Statuses we surface in the manual-entry queue. Mirrors
 # ``manual_entry._QUEUED_INGEST_STATUSES`` plus ``school_mismatch`` which
@@ -835,8 +836,9 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     target = target_year_overview(
         session,
         target_fiscal_year=settings.target_fiscal_year,
-        school_type="専門学校",
+        school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
     )
+    st.caption(f"対象範囲: {OPERATOR_SCHOOL_SCOPE_LABEL}")
     mcols = st.columns(4)
     mcols[0].metric("対象校", target.active_schools)
     mcols[1].metric(f"{target_label} PDF", target.current_target_schools)

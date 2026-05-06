@@ -33,6 +33,7 @@ from eidp.db.models import (
     SchoolYearStatus,
 )
 from eidp.fiscal_year import format_fiscal_year_label
+from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
 from eidp.review.target_year_status import target_year_overview
 from eidp.scraper.pdf_discovery import _classify_pdf_content, _safe_get
 from eidp.scraper.url_discovery import _is_safe_url
@@ -451,10 +452,13 @@ def page_pipeline_status(session: Session) -> None:
     target = target_year_overview(
         session,
         target_fiscal_year=settings.target_fiscal_year,
-        school_type="専門学校",
+        school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
     )
     st.subheader(f"{target_label} 採録状況")
-    st.caption("ここは現在年度の到達度です。旧年度PDFは成果ではなく、再取得待ちとして扱います。")
+    st.caption(
+        f"ここは {OPERATOR_SCHOOL_SCOPE_LABEL} の現在年度到達度です。"
+        "旧年度PDFは成果ではなく、再取得待ちとして扱います。"
+    )
     ycols = st.columns(4)
     ycols[0].metric("対象校", target.active_schools)
     ycols[1].metric("現在年度PDFあり", target.current_target_schools)
@@ -1500,7 +1504,7 @@ def render_sidebar_todo(session: Session) -> None:
         target = school_task_summary(
             session,
             fiscal_year=settings.target_fiscal_year,
-            school_type="専門学校",
+            school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
         )
     except Exception:
         target = None

@@ -74,5 +74,12 @@ def test_target_year_overview_surfaces_current_vs_stale_gap() -> None:
         assert overview.stale_target_schools == 1
         assert overview.review_queue_documents == 2
         assert overview.missing_current_target_schools == 2
+
+        all_overview = target_year_overview(session, target_fiscal_year=2026, school_type=None)
+
+        assert all_overview.active_schools == 4
+        assert all_overview.current_target_schools == 2
+        assert all_overview.current_target_documents == 2
+        assert all_overview.missing_current_target_schools == 2
     finally:
         session.close()
