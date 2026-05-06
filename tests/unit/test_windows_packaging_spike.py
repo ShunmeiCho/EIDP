@@ -271,6 +271,16 @@ def test_first_setup_rebuilds_school_year_tasks(bat_files: dict[str, str]):
     assert "school year task rebuild failed" in body
 
 
+def test_first_setup_runs_after_setup_validator(bat_files: dict[str, str]):
+    """A non-technical operator should not reach the UI with a half-broken
+    install. first_setup must run the packaged after-setup validator
+    before printing completion."""
+    body = bat_files["first_setup.bat"]
+
+    assert 'call "%EIDP_APP_ROOT%\\scripts\\validate_install.bat" --after-setup' in body
+    assert "after-setup validation failed" in body
+
+
 def test_first_setup_does_not_run_aggregate_or_discovery(bat_files: dict[str, str]):
     """Sprint 8.7.e: first_setup.bat must stay OFFLINE. Prefecture
     aggregate, discover-pdfs, ingest-pdfs all need internet access; we

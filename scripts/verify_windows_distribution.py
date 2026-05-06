@@ -272,6 +272,8 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "import-excel",
             "rebuild-school-year-tasks",
             "schtasks",
+            "validate_install.bat",
+            "--after-setup",
         ),
         "scripts/launch.bat": (
             ".venv\\Scripts\\python.exe",

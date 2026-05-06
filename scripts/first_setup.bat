@@ -128,6 +128,15 @@ if errorlevel 1 (
     echo [first_setup] WARNING: schtasks registration failed; operator may need to run weekly_run.bat manually.
 )
 
+REM 10. Run the same after-setup validator used by the VM/operator gate.
+REM     This catches broken extracted installs before the operator opens
+REM     a confusing half-working UI.
+call "%EIDP_APP_ROOT%\scripts\validate_install.bat" --after-setup
+if errorlevel 1 (
+    echo [first_setup] after-setup validation failed
+    exit /b 1
+)
+
 echo [first_setup] complete.
 echo [first_setup] Next steps:
 echo [first_setup]   1. Double-click EIDP-start.bat to open the operator UI.
