@@ -112,6 +112,41 @@ def test_sitemap_urls_for_site_filters_same_domain_disclosure_pages(monkeypatch)
     assert urls == ["https://example.ac.jp/school/public_info/"]
 
 
+def test_sitemap_urls_for_site_follows_robots_sitemap_index(monkeypatch) -> None:
+    """WordPress-style sites often advertise sitemap_index.xml only in robots.txt."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse(
+                "User-agent: *\nDisallow:\nSitemap: https://example.ac.jp/sitemap_index.xml\n",
+                url="https://example.ac.jp/robots.txt",
+            ),
+            "https://example.ac.jp/sitemap_index.xml": _HtmlResponse(
+                """
+                <sitemapindex>
+                  <sitemap><loc>https://example.ac.jp/page-sitemap.xml</loc></sitemap>
+                </sitemapindex>
+                """,
+                url="https://example.ac.jp/sitemap_index.xml",
+            ),
+            "https://example.ac.jp/page-sitemap.xml": _HtmlResponse(
+                """
+                <urlset>
+                  <url><loc>https://example.ac.jp/about/valuation/</loc></url>
+                  <url><loc>https://example.ac.jp/news/</loc></url>
+                </urlset>
+                """,
+                url="https://example.ac.jp/page-sitemap.xml",
+            ),
+        }
+    )
+
+    urls = _sitemap_urls_for_site(client, "https://example.ac.jp/")
+
+    assert urls == ["https://example.ac.jp/about/valuation/"]
+
+
 def test_discover_pdfs_uses_sitemap_when_site_has_no_disclosure_links(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)

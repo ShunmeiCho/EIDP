@@ -99,10 +99,12 @@ SITEMAP_PAGE_KEYWORDS = (
     "koukai",
     "joho",
     "jyoho",
+    "kakunin",
     "shugaku",
     "syugaku",
     "support",
     "kikanyouken",
+    "valuation",
     "情報公開",
     "公開情報",
     "修学支援",
@@ -325,35 +327,94 @@ def _sitemap_urls_for_site(
     parsed = urlparse(site_url)
     if not parsed.scheme or not parsed.netloc:
         return []
-    sitemap_url = f"{parsed.scheme}://{parsed.netloc}/sitemap.xml"
-    if not _is_safe_url(sitemap_url):
-        return []
-
-    try:
-        resp = _safe_get(client, sitemap_url)
-    except httpx.HTTPError:
-        return []
-    if resp.status_code != 200:
-        return []
 
     urls: list[str] = []
+    sitemap_urls = _sitemap_entry_urls_for_site(client, site_url)
+    sitemap_seen: set[str] = set()
+    sitemap_queue = list(sitemap_urls)
     seen: set[str] = set()
-    for loc in _extract_sitemap_locs(resp.text):
-        loc_url = urljoin(sitemap_url, loc)
-        loc_parsed = urlparse(loc_url)
-        if loc_parsed.netloc != parsed.netloc or not _is_safe_url(loc_url):
+
+    while sitemap_queue and len(urls) < limit:
+        sitemap_url = sitemap_queue.pop(0)
+        if sitemap_url in sitemap_seen or not _is_safe_url(sitemap_url):
             continue
-        if loc_url in seen:
+        sitemap_seen.add(sitemap_url)
+        try:
+            resp = _safe_get(client, sitemap_url)
+        except httpx.HTTPError:
             continue
-        text = html_lib.unescape(loc_url).lower()
-        if loc_parsed.path.lower().endswith(".xml"):
+        if resp.status_code != 200:
             continue
-        if any(keyword.lower() in text for keyword in SITEMAP_PAGE_KEYWORDS):
-            seen.add(loc_url)
-            urls.append(loc_url)
-            if len(urls) >= limit:
-                break
+
+        for loc in _extract_sitemap_locs(resp.text):
+            loc_url = urljoin(sitemap_url, loc)
+            loc_parsed = urlparse(loc_url)
+            if loc_parsed.netloc != parsed.netloc or not _is_safe_url(loc_url):
+                continue
+            if loc_url in seen:
+                continue
+            text = html_lib.unescape(loc_url).lower()
+            if loc_parsed.path.lower().endswith(".xml"):
+                if len(sitemap_seen) + len(sitemap_queue) < 12:
+                    sitemap_queue.append(loc_url)
+                continue
+            if any(keyword.lower() in text for keyword in SITEMAP_PAGE_KEYWORDS):
+                seen.add(loc_url)
+                urls.append(loc_url)
+                if len(urls) >= limit:
+                    break
     return urls
+
+
+def _sitemap_entry_urls_for_site(client: httpx.Client, site_url: str) -> list[str]:
+    """Return sitemap URLs advertised by a site.
+
+    Many school/corporation sites expose ``/sitemap_index.xml`` only via
+    robots.txt, not at ``/sitemap.xml``. Treat robots Sitemap directives as
+    the primary low-cost discovery hint, while keeping the conventional root
+    sitemap as a fallback.
+    """
+    parsed = urlparse(site_url)
+    if not parsed.scheme or not parsed.netloc:
+        return []
+
+    entries: list[str] = []
+    seen: set[str] = set()
+
+    def add(url: str) -> None:
+        resolved = urljoin(site_url, url.strip())
+        if not resolved or resolved in seen or not _is_safe_url(resolved):
+            return
+        entry_parsed = urlparse(resolved)
+        if entry_parsed.netloc != parsed.netloc:
+            return
+        seen.add(resolved)
+        entries.append(resolved)
+
+    robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+    if _is_safe_url(robots_url):
+        try:
+            robots_resp = _safe_get(client, robots_url)
+        except httpx.HTTPError:
+            robots_resp = None
+        if robots_resp is not None and robots_resp.status_code == 200:
+            for sitemap_url in _extract_robots_sitemaps(robots_resp.text):
+                add(sitemap_url)
+
+    add(f"{parsed.scheme}://{parsed.netloc}/sitemap.xml")
+    return entries
+
+
+def _extract_robots_sitemaps(robots_txt: str) -> list[str]:
+    sitemaps: list[str] = []
+    for line in robots_txt.splitlines():
+        stripped = line.strip()
+        if not stripped.lower().startswith("sitemap:"):
+            continue
+        sitemap = stripped.split(":", 1)[1].strip()
+        if sitemap:
+            sitemaps.append(sitemap)
+    return sitemaps
 
 
 def _extract_sitemap_locs(xml: str) -> list[str]:
