@@ -31,12 +31,10 @@ from pathlib import Path
 from typing import Any
 
 import openpyxl
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.locking import probe_lock
-from eidp.db.models import Department, DepartmentYearly, School, SchoolYearStatus
 from eidp.excel.exporter import (
     _write_gakka,
     _write_sairoku,
@@ -44,6 +42,7 @@ from eidp.excel.exporter import (
     _write_zaiseki,
 )
 from eidp.fiscal_year import format_fiscal_year_label
+from eidp.reports.coverage import ExportGapReport, gap_report_for_export
 from eidp.review.target_year_status import target_year_overview
 
 # Sheets the master workbook carries, in display order.
@@ -63,14 +62,6 @@ class PreviewWorkbook:
         buf = io.BytesIO()
         self.workbook.save(buf)
         return buf.getvalue()
-
-
-@dataclass
-class CoverageGapCounts:
-    schools_total: int
-    schools_with_any_data: int
-    schools_unmatched: int          # in current code: schools without any DepartmentYearly
-    students_missing_year: int      # SchoolYearStatus rows where status != 'collected'
 
 
 # ---------------------------------------------------------------------------
@@ -139,42 +130,24 @@ def format_sheet_preview(
 # ---------------------------------------------------------------------------
 
 
-def count_unmatched_and_gap(session: Session) -> CoverageGapCounts:
-    """Aggregate counts the operator wants to see before downloading.
+def count_unmatched_and_gap(
+    session: Session,
+    *,
+    fiscal_year: int | None = None,
+    school_type: str | None = "専門学校",
+) -> ExportGapReport:
+    """Return target-FY export readiness counters.
 
-    * ``schools_total`` — every active school.
-    * ``schools_with_any_data`` — schools with ≥ 1 current DepartmentYearly.
-    * ``schools_unmatched`` — schools_total − schools_with_any_data.
-    * ``students_missing_year`` — SchoolYearStatus current-revision rows
-      whose status is NOT ``collected`` (partial / support_only / etc.),
-      i.e. years where the picture is incomplete.
-
-    Sprint 8.2.1 read-path filters apply transitively via the
-    is_current=True scope.
+    Historical data can remain in the workbook, but readiness must be based on
+    the configured target fiscal year. Otherwise a school with only old-year
+    rows would make the preview look safe when the current-year task is still
+    incomplete.
     """
-    schools_total = session.query(func.count(School.id)).filter(School.status == "active").scalar() or 0
-
-    schools_with_data = (
-        session.query(func.count(func.distinct(Department.school_id)))
-        .join(DepartmentYearly, DepartmentYearly.department_id == Department.id)
-        .filter(DepartmentYearly.is_current.is_(True))
-        .scalar()
-        or 0
-    )
-
-    students_missing_year = (
-        session.query(func.count(SchoolYearStatus.id))
-        .filter(SchoolYearStatus.is_current.is_(True))
-        .filter(SchoolYearStatus.status != "collected")
-        .scalar()
-        or 0
-    )
-
-    return CoverageGapCounts(
-        schools_total=schools_total,
-        schools_with_any_data=schools_with_data,
-        schools_unmatched=max(0, schools_total - schools_with_data),
-        students_missing_year=students_missing_year,
+    target_fiscal_year = fiscal_year if fiscal_year is not None else settings.target_fiscal_year
+    return gap_report_for_export(
+        session,
+        fiscal_year=target_fiscal_year,
+        school_type=school_type,
     )
 
 
@@ -213,19 +186,38 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             "先に週次再取得またはURL追加を行ってください。"
         )
 
-    counts = count_unmatched_and_gap(session)
+    export_gap = count_unmatched_and_gap(session, fiscal_year=settings.target_fiscal_year, school_type="専門学校")
     cols = st.columns(4)
-    cols[0].metric("学校 総数", counts.schools_total)
-    cols[1].metric("データあり", counts.schools_with_any_data)
-    cols[2].metric("データなし", counts.schools_unmatched)
-    cols[3].metric("年度不足", counts.students_missing_year)
+    cols[0].metric("現在年度PDF採録率", f"{export_gap.target_pdf_rate:.0%}")
+    cols[1].metric("抽出済み学校", export_gap.extracted_schools)
+    cols[2].metric("Excel出力可", export_gap.excel_ready_schools)
+    cols[3].metric("Excel対象行", export_gap.target_yearly_rows)
+    gap_cols = st.columns(4)
+    gap_cols[0].metric("URLなし", export_gap.no_url_schools)
+    gap_cols[1].metric("旧年度fallback校", export_gap.stale_fallback_schools)
+    gap_cols[2].metric("未採録校", export_gap.missing_target_pdf_schools)
+    gap_cols[3].metric("対象校", export_gap.total_schools)
 
-    if st.button("プレビュー workbook を生成", type="primary"):
+    if not export_gap.has_target_year_data:
+        st.error(
+            f"{target_label} の在籍者数など転記対象データが 0 件です。"
+            "旧年度データを成果としてダウンロードしないでください。"
+            "先に学校別タスクでURL取得、PDF確認、年度修正を進めてください。"
+        )
+    elif export_gap.excel_ready_schools < export_gap.total_schools:
+        st.warning(
+            f"{target_label} は未完了です。"
+            f"Excel出力可 {export_gap.excel_ready_schools}/{export_gap.total_schools} 校の状態で出力します。"
+        )
+
+    can_generate = export_gap.has_target_year_data
+    if st.button("プレビュー workbook を生成", type="primary", disabled=not can_generate):
         with st.spinner("生成中..."):
             preview = build_preview_workbook(session)
             st.session_state["excel_preview_bytes"] = preview.to_bytes()
             st.session_state["excel_preview_counts"] = preview.counts
             st.session_state["excel_preview_workbook"] = preview.workbook
+            st.session_state["excel_preview_gap"] = export_gap
         st.rerun()
 
     if "excel_preview_workbook" in st.session_state:

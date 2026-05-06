@@ -8,8 +8,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import eidp.excel.competition_exporter as competition_exporter
-from eidp.db.models import Base
+from eidp.db.models import Base, Department, DepartmentYearly, Document, School
 from eidp.excel.competition_exporter import (
+    TargetFiscalYearDataMissingError,
     YearColumns,
     _append_year_columns_to_block,
     _group_triplets_into_blocks,
@@ -32,6 +33,44 @@ def _empty_template(path: Path) -> None:
     wb = Workbook()
     wb.active.title = "empty"
     wb.save(path)
+
+
+def _seed_target_year_data(session: Session, fiscal_year: int) -> None:
+    school = School(
+        id=1,
+        prefecture="東京",
+        corporation_name="C1",
+        school_name="S1",
+        school_type="専門学校",
+        status="active",
+    )
+    session.add(school)
+    session.flush()
+    doc = Document(
+        id=1,
+        school_id=school.id,
+        source_url="https://example.test/doc.pdf",
+        fiscal_year=fiscal_year,
+        ingest_status="ingested",
+        pdf_type="target",
+    )
+    session.add(doc)
+    dept = Department(id=1, school_id=school.id, canonical_name="D1")
+    session.add(dept)
+    session.flush()
+    session.add(
+        DepartmentYearly(
+            id=1,
+            department_id=dept.id,
+            document_id=doc.id,
+            fiscal_year=fiscal_year,
+            revision=1,
+            is_current=True,
+            enrollment=10,
+            capacity=20,
+        )
+    )
+    session.flush()
 
 
 def _build_category_sheet() -> Workbook:
@@ -111,6 +150,7 @@ def test_competition_export_defaults_to_configured_target_fiscal_year(
     template = tmp_path / "template.xlsx"
     output = tmp_path / "out.xlsx"
     _empty_template(template)
+    _seed_target_year_data(session, 2027)
     monkeypatch.setattr(competition_exporter.settings, "target_fiscal_year", 2027)
     monkeypatch.setattr(
         competition_exporter,
@@ -124,6 +164,24 @@ def test_competition_export_defaults_to_configured_target_fiscal_year(
         session.close()
 
     assert result["fiscal_year"] == 2027
+    assert result["target_yearly_rows"] == 1
+
+
+def test_competition_export_rejects_empty_target_year_business_export(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _empty_session()
+    template = tmp_path / "template.xlsx"
+    output = tmp_path / "out.xlsx"
+    _empty_template(template)
+    monkeypatch.setattr(competition_exporter.settings, "target_fiscal_year", 2027)
+
+    try:
+        with pytest.raises(TargetFiscalYearDataMissingError):
+            export_competition_workbook(session, template, output)
+    finally:
+        session.close()
 
 
 def test_competition_export_explicit_year_is_admin_backcompat(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -50,7 +50,7 @@ def _seed(session: Session) -> None:
         file_hash=("a" * 64),
         pdf_type="target", content_type="text",
         fiscal_year=2026, ingest_status="ingested",
-        downloaded_at=datetime.now(timezone.utc),
+        downloaded_at=datetime.now(UTC),
     )
     session.add(doc)
     session.flush()
@@ -168,10 +168,12 @@ def test_count_unmatched_and_gap_basic(engine):
         session.commit()
         counts = count_unmatched_and_gap(session)
 
-    assert counts.schools_total == 2          # A + B
-    assert counts.schools_with_any_data == 1  # only A
-    assert counts.schools_unmatched == 1      # B has no data
-    assert counts.students_missing_year == 1  # B's status='partial' not collected
+    assert counts.total_schools == 2
+    assert counts.target_pdf_schools == 1
+    assert counts.missing_target_pdf_schools == 1
+    assert counts.extracted_schools == 1
+    assert counts.target_yearly_rows == 1
+    assert counts.has_target_year_data is True
 
 
 def test_count_excludes_inactive_schools(engine):
@@ -183,24 +185,30 @@ def test_count_excludes_inactive_schools(engine):
         session.commit()
 
         counts = count_unmatched_and_gap(session)
-        assert counts.schools_total == 1
-        assert counts.schools_unmatched == 0
+        assert counts.total_schools == 1
+        assert counts.missing_target_pdf_schools == 0
 
 
-def test_count_uses_current_revision_only(engine):
-    """Sprint 8.2.1 contract — the gap counter must filter
-    is_current=True so a demoted historical 'partial' revision doesn't
-    inflate students_missing_year."""
+def test_count_uses_current_target_yearly_rows_only(engine):
+    """Export readiness ignores non-current yearly rows."""
     with Session(engine) as session:
         _seed(session)
-        # Add a NON-current 'partial' row for school A. Should be ignored.
-        a = session.query(School).filter(School.school_name == "A学校").one()
-        session.add(SchoolYearStatus(
-            school_id=a.id, fiscal_year=2025,
-            revision=1, is_current=False, status="partial",
-        ))
+        b = session.query(School).filter(School.school_name == "B学校").one()
+        dept = Department(school_id=b.id, canonical_name="B学科")
+        session.add(dept)
+        session.flush()
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=False,
+                enrollment=999,
+                capacity=999,
+            )
+        )
         session.commit()
 
         counts = count_unmatched_and_gap(session)
-        # Only B's current 'partial' row counts.
-        assert counts.students_missing_year == 1
+        assert counts.target_yearly_rows == 1
+        assert counts.extracted_schools == 1

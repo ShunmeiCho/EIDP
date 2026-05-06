@@ -33,8 +33,13 @@ from eidp.db.models import (
     School,
     SchoolAlias,
 )
+from eidp.reports.coverage import gap_report_for_export
 
 log = structlog.get_logger(__name__)
+
+
+class TargetFiscalYearDataMissingError(RuntimeError):
+    """Raised when a business export would silently produce an empty target year."""
 
 _ENROLLMENT_HEADER_TEXT = "在籍数"
 _INTL_HEADER_TEXT = "留学生"
@@ -647,9 +652,16 @@ def export_competition_workbook(
     if not template_path.exists():
         raise FileNotFoundError(f"template not found: {template_path}")
 
+    business_target_export = fiscal_year is None
     if fiscal_year is None:
         fiscal_year = settings.target_fiscal_year
         log.info("target_fiscal_year_selected", fiscal_year=fiscal_year)
+    export_gap = gap_report_for_export(session, fiscal_year=fiscal_year, school_type="専門学校")
+    if business_target_export and not export_gap.has_target_year_data:
+        raise TargetFiscalYearDataMissingError(
+            f"target fiscal year {fiscal_year} has no DepartmentYearly rows; "
+            "run target-year acquisition/review before business export"
+        )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(template_path, output_path)
@@ -776,4 +788,8 @@ def export_competition_workbook(
         "cells_written": cells_written,
         "ratio_cells_written": ratio_cells_written,
         "fiscal_year": fiscal_year,
+        "target_yearly_rows": export_gap.target_yearly_rows,
+        "excel_ready_schools": export_gap.excel_ready_schools,
+        "target_pdf_schools": export_gap.target_pdf_schools,
+        "total_schools": export_gap.total_schools,
     }

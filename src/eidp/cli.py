@@ -696,7 +696,7 @@ def export_competition_excel(
     ),
     fiscal_year: int = typer.Option(
         0,
-        help="Fiscal year column to add/update; 0 = auto-pick year with most DB data",
+        help="Fiscal year column to add/update; 0 = configured target fiscal year",
     ),
     gap_report: Path = typer.Option(
         Path("output/競合校gap-report.csv"),
@@ -719,6 +719,8 @@ def export_competition_excel(
         typer.echo(f"  unmatched:          {stats['unmatched']}")
         typer.echo(f"  cells_written:      {stats['cells_written']}")
         typer.echo(f"  ratio_cells:        {stats['ratio_cells_written']}")
+        typer.echo(f"  target_yearly_rows: {stats.get('target_yearly_rows', 0)}")
+        typer.echo(f"  excel_ready_schools:{stats.get('excel_ready_schools', 0)}")
         if stats["unmatched"]:
             typer.echo(f"  gap report:         {gap_report}")
     finally:

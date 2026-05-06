@@ -575,9 +575,15 @@ def page_exports(session: Session) -> None:
         step=1,
         key="comp_fy",
     )
+    selected_fy = int(fy_pick)
+    if selected_fy != settings.target_fiscal_year:
+        st.warning(
+            "対象年度以外の出力は管理者向けの履歴/検証用途です。"
+            "通常業務の成果物は対象年度で出力してください。"
+        )
     if st.button("競合校Excelを生成", type="primary", key="btn_comp"):
         try:
-            fy = int(fy_pick)
+            fy = None if selected_fy == settings.target_fiscal_year else selected_fy
             template_path = sample_path(template_in, (".xlsx",))
             comp_path = output_path(comp_out, (".xlsx",))
             gap_path = output_path(gap_out, (".csv",))

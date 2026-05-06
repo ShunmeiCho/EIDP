@@ -15,12 +15,14 @@ from eidp.db.models import (
     DepartmentYearly,
     Document,
     School,
+    SchoolFiscalYearStatus,
     SchoolSite,
 )
 from eidp.reports import (
     compute_coverage,
     compute_extraction,
     compute_gaps,
+    gap_report_for_export,
 )
 from eidp.reports.coverage import current_fiscal_year
 
@@ -190,6 +192,74 @@ def test_coverage_extraction_requires_capacity_not_null() -> None:
     rep = compute_coverage(s, school_type="専門学校", fiscal_year=2026)
     assert rep.totals.schools_with_current_fy_doc == 1
     assert rep.totals.schools_with_current_fy_extracted == 0
+
+
+def test_gap_report_for_export_uses_target_fy_not_historical_data() -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    _school(s, 2, "東京")
+    s.add(SchoolSite(school_id=1, url="https://a", verified=True))
+    _doc(s, 10, 1, 2025, "ingested", pdf_type="target")
+    d1 = _dept(s, 100, 1)
+    _yearly(s, 1000, d1.id, 2025, document_id=10, capacity=80)
+    s.add(
+        SchoolFiscalYearStatus(
+            school_id=1,
+            fiscal_year=2026,
+            url_status="pref_url",
+            pdf_status="rejected_stale",
+            extract_status="none",
+            blocking_reason="stale_pdf_only",
+            evidence_level="pdf_text",
+            excel_ready=False,
+        )
+    )
+    s.flush()
+
+    rep = gap_report_for_export(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.total_schools == 2
+    assert rep.schools_with_url == 1
+    assert rep.no_url_schools == 1
+    assert rep.target_pdf_schools == 0
+    assert rep.stale_fallback_schools == 1
+    assert rep.missing_target_pdf_schools == 2
+    assert rep.extracted_schools == 0
+    assert rep.excel_ready_schools == 0
+    assert rep.target_yearly_rows == 0
+    assert rep.has_target_year_data is False
+
+
+def test_gap_report_for_export_counts_ready_target_year_data() -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    s.add(SchoolSite(school_id=1, url="https://a", verified=True))
+    _doc(s, 9, 1, 2025, "ingested", pdf_type="target")
+    _doc(s, 10, 1, 2026, "ingested", pdf_type="target")
+    d1 = _dept(s, 100, 1)
+    _yearly(s, 1000, d1.id, 2026, document_id=10, capacity=80)
+    s.add(
+        SchoolFiscalYearStatus(
+            school_id=1,
+            fiscal_year=2026,
+            url_status="pref_url",
+            pdf_status="confirmed_target",
+            extract_status="parsed",
+            evidence_level="pdf_text",
+            excel_ready=True,
+        )
+    )
+    s.flush()
+
+    rep = gap_report_for_export(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.target_pdf_schools == 1
+    assert rep.stale_fallback_schools == 0
+    assert rep.extracted_schools == 1
+    assert rep.excel_ready_schools == 1
+    assert rep.target_yearly_rows == 1
+    assert rep.target_pdf_rate == pytest.approx(1.0)
+    assert rep.excel_ready_rate == pytest.approx(1.0)
 
 
 # --- extraction ------------------------------------------------------------
