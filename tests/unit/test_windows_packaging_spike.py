@@ -229,6 +229,18 @@ def test_first_setup_uses_existing_cli_command_for_master(bat_files: dict[str, s
     assert "import-excel" in body, "use eidp import-excel for master.xlsx"
 
 
+def test_first_setup_rebuilds_school_year_tasks(bat_files: dict[str, str]):
+    """The first UI screen is 学校別タスク, so setup must prebuild it.
+
+    Otherwise a clean Windows install passes schema validation but the
+    operator lands on "初回は再計算してください", which breaks the
+    ZIP解凍 -> ダブルクリック promise.
+    """
+    body = bat_files["first_setup.bat"]
+    assert "rebuild-school-year-tasks" in body
+    assert "school year task rebuild failed" in body
+
+
 def test_first_setup_does_not_run_aggregate_or_discovery(bat_files: dict[str, str]):
     """Sprint 8.7.e: first_setup.bat must stay OFFLINE. Prefecture
     aggregate, discover-pdfs, ingest-pdfs all need internet access; we

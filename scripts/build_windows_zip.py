@@ -285,8 +285,8 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
                 members.append((path, arcname))
 
     # data/master.xlsx — bootstrap school + department + support_recipient
-    # rows so the operator's first launch.bat shows a populated UI instead
-    # of 12 empty pages. first_setup.bat calls `eidp import-excel` against
+    # rows so the operator's first launch.bat shows a populated task board.
+    # first_setup.bat calls `eidp import-excel` against
     # this file. Discovered live on the 2026-05-06 Win VM dry run: a
     # schema-OK DB without master rows leaves every page blank, which
     # breaks the "ZIP unzip → it works" promise.

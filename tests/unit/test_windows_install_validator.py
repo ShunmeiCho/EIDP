@@ -138,6 +138,22 @@ def test_validate_after_setup_rejects_sqlite_missing_school_fiscal_year_status(t
     assert any("school_fiscal_year_status" in error for error in check.errors)
 
 
+def test_validate_after_setup_rejects_empty_school_year_tasks_when_schools_exist(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    db_path = root / "data" / "eidp.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("INSERT INTO school (id) VALUES (1)")
+        conn.commit()
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert check.details["school_count"] == 1
+    assert check.details["school_fiscal_year_status_count"] == 0
+    assert any("no school_fiscal_year_status rows" in error for error in check.errors)
+
+
 def test_validate_after_setup_rejects_unreadable_sqlite(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)

@@ -237,6 +237,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "wheelhouse",
             "-m eidp.cli db-bootstrap --sqlite",
             "import-excel",
+            "rebuild-school-year-tasks",
             "schtasks",
         ),
         "scripts/launch.bat": (

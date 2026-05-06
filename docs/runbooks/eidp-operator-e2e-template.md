@@ -45,6 +45,7 @@ Updated: 2026-05-06
 | `.venv` 作成 | `.venv\Scripts\python.exe` が存在 | pass / fail | |
 | DB bootstrap | `data\eidp.sqlite3` が存在 | pass / fail | |
 | master import | 学校マスタが取り込まれる | pass / fail | |
+| 年度タスク初期生成 | `school_fiscal_year_status` に行がある | pass / fail | |
 | Task Scheduler | `EIDP Weekly Run` が登録される | pass / fail | |
 | `launch.bat` | Streamlit 起動 | pass / fail | |
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |

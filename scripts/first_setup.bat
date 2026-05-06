@@ -75,8 +75,8 @@ if errorlevel 1 (
 )
 
 REM 7. Import the master school list. CLI command is import-excel.
-REM    master.xlsx is mandatory for v1: without it the UI shows 12 empty
-REM    pages and the operator has no entry point. Fail loud rather than
+REM    master.xlsx is mandatory for v1: without it the task board is empty
+REM    and the operator has no entry point. Fail loud rather than
 REM    quietly continuing — discovered on the 2026-05-06 Win VM dry run.
 if not exist "%EIDP_APP_ROOT%\data\master.xlsx" (
     echo [first_setup] ERROR: data\master.xlsx is missing.
@@ -93,7 +93,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 8. Register weekly Task Scheduler entry (Mondays 02:00 local).
+REM 8. Build the initial school x target-year task board so the first UI
+REM    launch has actionable rows without requiring the operator to press
+REM    "年度タスクを再計算".
+"%VENV_PY%" -m eidp.cli rebuild-school-year-tasks
+if errorlevel 1 (
+    echo [first_setup] school year task rebuild failed
+    exit /b 1
+)
+
+REM 9. Register weekly Task Scheduler entry (Mondays 02:00 local).
 schtasks /Create /F /SC WEEKLY /D MON /ST 02:00 ^
     /TN "EIDP Weekly Run" ^
     /TR "\"%EIDP_APP_ROOT%\scripts\weekly_run.bat\"" >nul

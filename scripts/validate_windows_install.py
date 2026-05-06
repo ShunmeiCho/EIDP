@@ -140,9 +140,30 @@ def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
     tables = {str(name) for (name,) in rows}
     check.details["sqlite_table_count"] = len(tables)
     check.details["sqlite_required_tables_present"] = sorted(tables & set(SQLITE_REQUIRED_TABLES))
+    missing_tables = []
     for table in SQLITE_REQUIRED_TABLES:
         if table not in tables:
+            missing_tables.append(table)
             check.fail(f"data/eidp.sqlite3 missing required table: {table}")
+    if missing_tables:
+        return
+
+    try:
+        school_count = int(conn.execute("SELECT COUNT(*) FROM school").fetchone()[0] or 0)
+        task_count = int(
+            conn.execute("SELECT COUNT(*) FROM school_fiscal_year_status").fetchone()[0] or 0
+        )
+    except sqlite3.Error as exc:
+        check.fail(f"data/eidp.sqlite3 cannot count setup rows: {exc}")
+        return
+
+    check.details["school_count"] = school_count
+    check.details["school_fiscal_year_status_count"] = task_count
+    if school_count > 0 and task_count == 0:
+        check.fail(
+            "data/eidp.sqlite3 has schools but no school_fiscal_year_status rows; "
+            "run first_setup.bat or rebuild-school-year-tasks"
+        )
 
 
 def validate_install(

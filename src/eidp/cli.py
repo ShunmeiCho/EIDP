@@ -346,6 +346,49 @@ def db_bootstrap(
 
 
 @app.command()
+def rebuild_school_year_tasks(
+    fiscal_year: int | None = typer.Option(
+        None,
+        help="Target fiscal year. Defaults to settings.target_fiscal_year.",
+    ),
+    school_type: str | None = typer.Option(
+        "専門学校",
+        help="School type to rebuild. Use empty string to rebuild every active school.",
+    ),
+) -> None:
+    """Rebuild the operator-facing school x target-year task table."""
+    from eidp.config import settings
+    from eidp.db.session import SessionLocal
+    from eidp.pipeline.school_fiscal_year_status import rebuild_school_fiscal_year_status
+
+    target_fy = fiscal_year or settings.target_fiscal_year
+    normalized_school_type = school_type.strip() if school_type else None
+    if not normalized_school_type:
+        normalized_school_type = None
+
+    session = SessionLocal()
+    try:
+        stats = rebuild_school_fiscal_year_status(
+            session,
+            fiscal_year=target_fy,
+            school_type=normalized_school_type,
+        )
+        session.commit()
+        typer.echo(
+            "School year tasks rebuilt: "
+            f"fiscal_year={target_fy} "
+            f"school_type={normalized_school_type or 'all'} "
+            f"rebuilt={stats.rebuilt} "
+            f"excel_ready={stats.excel_ready}"
+        )
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
 def prefecture_aggregate(
     pref: str = typer.Option(
         ...,

@@ -76,6 +76,7 @@ C:\Program Files\EIDP
 - `.venv\Scripts\python.exe` が存在する
 - `data\eidp.sqlite3` が存在する
 - `data\eidp.sqlite3` に `school_fiscal_year_status` テーブルがある
+- `school_fiscal_year_status` に初期タスク行がある
 - `data\master.xlsx` が存在する、または master import 済みである
 - `wheelhouse\` からオフライン install されている
 - `runtime\python\python.exe` が存在する
