@@ -33,6 +33,7 @@ class InstallCheck:
 
 
 CORE_FILES = (
+    "BUILD_INFO.json",
     "EIDP-setup.bat",
     "EIDP-start.bat",
     "scripts/first_setup.bat",
@@ -42,11 +43,16 @@ CORE_FILES = (
     "scripts/validate_install.bat",
     "scripts/run_weekly_target_year_discovery.py",
     "scripts/run_r8_rediscovery_weekly.py",
+    "scripts/bootstrap_pdf_pipeline.py",
+    "scripts/download_prefecture_artifacts.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
     "requirements-windows.txt",
     "alembic.ini",
     "docs/runbooks/eidp-windows.md",
+    "data/prefecture-aggregators/seed.csv",
+    "data/url-discovery/discovered-urls-50.csv",
+    "data/url-discovery/corporation_domains.csv",
 )
 
 CORE_DIRS = (

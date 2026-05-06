@@ -105,6 +105,25 @@ def test_validate_core_install_requires_project_wheel(tmp_path: Path) -> None:
     assert any("project wheel" in error for error in check.errors)
 
 
+def test_validate_core_install_requires_bootstrap_and_version_files(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    for rel in (
+        "BUILD_INFO.json",
+        "scripts/bootstrap_pdf_pipeline.py",
+        "data/url-discovery/discovered-urls-50.csv",
+        "data/url-discovery/corporation_domains.csv",
+    ):
+        (root / Path(*rel.split("/"))).unlink()
+
+    check = module.validate_install(root)
+
+    assert not check.ok
+    assert any("BUILD_INFO.json" in error for error in check.errors)
+    assert any("scripts/bootstrap_pdf_pipeline.py" in error for error in check.errors)
+    assert any("data/url-discovery/discovered-urls-50.csv" in error for error in check.errors)
+    assert any("data/url-discovery/corporation_domains.csv" in error for error in check.errors)
+
+
 def test_validate_after_setup_requires_venv_and_sqlite(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
 
