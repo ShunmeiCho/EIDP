@@ -35,6 +35,53 @@ def test_output_path_rejects_wrong_suffix() -> None:
         operator_pages.output_path("output/test.txt", (".xlsx",))
 
 
+def test_search_school_url_options_searches_names_corporations_and_prefecture() -> None:
+    session = _session()
+    try:
+        session.add_all(
+            [
+                School(
+                    id=100,
+                    prefecture="東京",
+                    corporation_name="滋慶",
+                    school_name="東京アニメ",
+                    school_type="専門学校",
+                ),
+                School(
+                    id=200,
+                    prefecture="神奈川",
+                    corporation_name="電子学園",
+                    school_name="日本電子大学",
+                    school_type="大学",
+                ),
+            ]
+        )
+        session.flush()
+
+        by_name = operator_pages.search_school_url_options(session, "アニメ")
+        by_corporation = operator_pages.search_school_url_options(session, "電子学園")
+        by_prefecture = operator_pages.search_school_url_options(session, "神奈川")
+
+        assert [option.school_id for option in by_name] == [100]
+        assert [option.school_id for option in by_corporation] == [200]
+        assert [option.school_id for option in by_prefecture] == [200]
+        assert "ID 100" in by_name[0].label
+        assert "専門学校" in by_name[0].label
+    finally:
+        session.close()
+
+
+def test_search_school_url_options_requires_search_term() -> None:
+    session = _session()
+    try:
+        session.add(School(id=100, prefecture="東京", corporation_name="滋慶", school_name="東京アニメ"))
+        session.flush()
+
+        assert operator_pages.search_school_url_options(session, "  ") == []
+    finally:
+        session.close()
+
+
 def test_submit_operator_url_inserts_verified_school_site(monkeypatch: pytest.MonkeyPatch) -> None:
     session = _session()
     try:

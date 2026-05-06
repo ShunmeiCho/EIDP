@@ -18,7 +18,7 @@ from pathlib import Path
 
 import httpx
 import streamlit as st
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
@@ -56,6 +56,12 @@ _DEFAULT_PROPOSAL_DECISIONS = _OUTPUT_DIR / "proposal_decisions.jsonl"
 _MAX_OPERATOR_PDF_SIZE = 50 * 1024 * 1024
 _ACCEPTED_OPERATOR_CLASSIFIERS = {"target", "image_only"}
 _ACCEPTED_OPERATOR_PAGE_CLASSIFIER = "html_page"
+
+
+@dataclass(frozen=True)
+class SchoolUrlOption:
+    school_id: int
+    label: str
 
 
 class PathPolicyError(ValueError):
@@ -713,8 +719,9 @@ def _render_url_needed_worklist() -> None:
         expanded=True,
     ):
         st.caption(
-            "下の表から school_id を確認し、フォームに入力して「登録 + 検証」してください。"
-            "原因が「古い年度のみ」なら最新年度のPDF URL、「PDFがない」なら任意の申請書URL を探します。"
+            "下の学校名を検索欄に入れて候補を選び、「登録 + 検証」してください。"
+            "原因が「古い年度のみ」なら最新年度の情報公開ページまたはPDF URL、"
+            "「PDFがない」なら学校・法人の情報公開ページを探します。"
         )
         # Compact table — column labels in Japanese
         display_rows = [
@@ -735,6 +742,40 @@ def _render_url_needed_worklist() -> None:
         )
 
 
+def _format_school_url_option(school: School) -> SchoolUrlOption:
+    details = [school.prefecture]
+    if school.corporation_name:
+        details.append(school.corporation_name)
+    if school.school_type:
+        details.append(school.school_type)
+    return SchoolUrlOption(
+        school_id=school.id,
+        label=f"{school.school_name}（{' / '.join(details)} / ID {school.id}）",
+    )
+
+
+def search_school_url_options(session: Session, query: str, *, limit: int = 20) -> list[SchoolUrlOption]:
+    """Return school choices for the URL submission UI."""
+    term = query.strip()
+    if not term:
+        return []
+    pattern = f"%{term}%"
+    schools = (
+        session.query(School)
+        .filter(
+            or_(
+                School.school_name.like(pattern),
+                School.corporation_name.like(pattern),
+                School.prefecture.like(pattern),
+            )
+        )
+        .order_by(School.prefecture.asc(), School.school_name.asc(), School.id.asc())
+        .limit(limit)
+        .all()
+    )
+    return [_format_school_url_option(school) for school in schools]
+
+
 def page_url_submission(session: Session) -> None:
     st.header("③ URL追加")
     st.caption(
@@ -752,10 +793,11 @@ def page_url_submission(session: Session) -> None:
 - 学校または法人の公式サイトで情報公開ページ、または対象年度の申請書PDFを見つけた時
 
 **操作手順**：
-1. 学校ID（`school.id`）を入力 — データ状況ページで確認できます
-2. 情報公開ページURL、または申請書PDFのURLを貼り付け
-3. 担当者名を入力（監査用）
-4. 「登録 + 検証」を押す
+1. 学校名・法人名・都道府県で検索
+2. 候補から学校を選択
+3. 情報公開ページURL、または申請書PDFのURLを貼り付け
+4. 担当者名を入力（監査用）
+5. 「登録 + 検証」を押す
 
 **自動チェック**：
 URLは登録前に以下のチェックを通します。
@@ -769,8 +811,27 @@ URLは登録前に以下のチェックを通します。
             """
         )
 
+    school_query = st.text_input(
+        "学校名で検索",
+        placeholder="例: 東京アニメ / 電子学園 / 東京都",
+        help="学校名・法人名・都道府県で候補を探します。内部IDを覚える必要はありません。",
+    )
+    school_options = search_school_url_options(session, school_query)
+    selected_school_id: int | None = None
+    if school_query.strip() and not school_options:
+        st.warning("一致する学校がありません。学校名、法人名、都道府県の一部で検索し直してください。")
+    elif school_options:
+        labels_by_id = {option.school_id: option.label for option in school_options}
+        selected_school_id = st.selectbox(
+            "学校を選択",
+            options=[option.school_id for option in school_options],
+            format_func=lambda school_id: labels_by_id[int(school_id)],
+        )
+        st.caption(f"選択中: {labels_by_id[int(selected_school_id)]}")
+    else:
+        st.info("まず学校名・法人名・都道府県の一部を入力して、登録先の学校を選択してください。")
+
     with st.form("operator_url_submission"):
-        school_id = st.number_input("学校ID（school.id）", min_value=1, step=1, value=1)
         url = st.text_input(
             "情報公開ページまたは申請書PDFのURL",
             placeholder="https://example.ac.jp/school/public_info/",
@@ -786,7 +847,11 @@ URLは登録前に以下のチェックを通します。
             value=False,
             help="オンにするとURL登録 → PDFダウンロード → DB反映まで一気に実行します。",
         )
-        submitted = st.form_submit_button("登録 + 検証", type="primary")
+        submitted = st.form_submit_button(
+            "登録 + 検証",
+            type="primary",
+            disabled=selected_school_id is None,
+        )
 
     if not submitted:
         st.info(
@@ -797,9 +862,12 @@ URLは登録前に以下のチェックを通します。
 
     audit_path = output_path(_DEFAULT_OPERATOR_SUBMISSIONS, (".jsonl",))
     try:
+        if selected_school_id is None:
+            st.error("登録先の学校を選択してください。")
+            return
         result = submit_operator_url(
             session,
-            school_id=int(school_id),
+            school_id=int(selected_school_id),
             url=url,
             operator_name=operator_name,
             operator_note=operator_note,
@@ -815,7 +883,7 @@ URLは登録前に以下のチェックを通します。
         if run_now:
             pipeline_result = run_operator_discovery_ingest(
                 session,
-                school_id=int(school_id),
+                school_id=int(selected_school_id),
                 source_url=url.strip(),
                 storage_dir=resolve_allowed_path(
                     _DEFAULT_PDF_STORAGE,
