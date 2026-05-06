@@ -7,6 +7,7 @@ annual operation and official-page search.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -35,6 +36,13 @@ SETTING_ENV_KEYS = (
     "EIDP_GOOGLE_API_KEY",
     "EIDP_GOOGLE_CX",
     "EIDP_FIRECRAWL_API_KEY",
+)
+
+BUILD_INFO_DISPLAY_KEYS = (
+    "git_commit",
+    "git_branch",
+    "built_at_utc",
+    "git_dirty",
 )
 
 
@@ -164,6 +172,33 @@ def validate_operator_settings(
     return errors
 
 
+def read_build_info(app_root: Path) -> dict[str, str]:
+    """Read Windows ZIP build metadata for operator version checks."""
+    path = app_root / "BUILD_INFO.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key in BUILD_INFO_DISPLAY_KEYS:
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            out[key] = value
+    return out
+
+
+def build_info_summary(build_info: dict[str, str]) -> str:
+    """Return a compact build label safe for Streamlit captions."""
+    commit = build_info.get("git_commit", "")
+    commit_label = commit[:7] if len(commit) >= 7 else commit or "unknown"
+    branch = build_info.get("git_branch") or "unknown"
+    dirty = build_info.get("git_dirty") or "unknown"
+    built_at = build_info.get("built_at_utc") or "unknown"
+    return f"commit={commit_label} / branch={branch} / dirty={dirty} / built={built_at}"
+
+
 def _provider_index(provider: str) -> int:
     providers = ["duckduckgo", "serper", "brave", "google"]
     return providers.index(provider) if provider in providers else 0
@@ -185,6 +220,11 @@ def render(_session: object, *, lock_path: Path) -> None:
 
     env_path = Path(settings.app_root) / ".env"
     st.info(f"保存先: {env_path}")
+
+    build_info = read_build_info(Path(settings.app_root))
+    if build_info:
+        st.subheader("バージョン")
+        st.caption(build_info_summary(build_info))
 
     target_fiscal_year = int(
         st.number_input(

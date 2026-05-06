@@ -3,7 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from eidp.config import apply_fiscal_era_settings, apply_runtime_env_settings, settings
-from eidp.review._pages.settings_page import save_operator_settings, update_env_text, validate_operator_settings
+from eidp.review._pages.settings_page import (
+    build_info_summary,
+    read_build_info,
+    save_operator_settings,
+    update_env_text,
+    validate_operator_settings,
+)
 
 
 def test_update_env_text_updates_existing_keys_and_appends_missing() -> None:
@@ -32,6 +38,38 @@ def test_validate_operator_settings_requires_alias_fields_when_enabled() -> None
     )
 
     assert len(errors) == 3
+
+
+def test_read_build_info_returns_display_fields(tmp_path: Path) -> None:
+    (tmp_path / "BUILD_INFO.json").write_text(
+        """
+        {
+          "app": "EIDP",
+          "git_commit": "48d860a829b294719ed2f781f4d509a10e844c6b",
+          "git_branch": "sprint8-handoff-finalize",
+          "git_dirty": "false",
+          "built_at_utc": "2026-05-06T18:02:34+00:00",
+          "ignored": 123
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    info = read_build_info(tmp_path)
+
+    assert info == {
+        "git_commit": "48d860a829b294719ed2f781f4d509a10e844c6b",
+        "git_branch": "sprint8-handoff-finalize",
+        "built_at_utc": "2026-05-06T18:02:34+00:00",
+        "git_dirty": "false",
+    }
+    assert build_info_summary(info).startswith("commit=48d860a")
+
+
+def test_read_build_info_tolerates_missing_or_invalid_file(tmp_path: Path) -> None:
+    assert read_build_info(tmp_path) == {}
+    (tmp_path / "BUILD_INFO.json").write_text("{bad json", encoding="utf-8")
+    assert read_build_info(tmp_path) == {}
 
 
 def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None:
