@@ -23,26 +23,26 @@ aomori,青森県,unknown,https://www.pref.aomori.lg.jp/soshiki/kodomo/kenmin/kou
 iwate,岩手県,32,https://www.pref.iwate.jp/kyouikubunka/kyouiku/1031406/1032859.html,https://www.pref.iwate.jp/kyouikubunka/kyouiku/1031406/1032859.html,html,html,link,no,2025-08-29,url_found,"official HTML school list; school-name links point to disclosure/home pages"
 akita,秋田県,unknown,https://www.pref.akita.lg.jp/pages/archive/44408,https://www.pref.akita.lg.jp/uploads/public/archive_0000044408_00/250829_kouhyou.pdf,pdf,5,no,yes,2025-08-29,url_found,"PDF names are clickable links to publication pages"
 yamagata,山形県,16,https://www.pref.yamagata.jp/020023/bunkyo/kyoiku/shingakushien/syugakusien.html,https://www.pref.yamagata.jp/documents/1116/syuugakusiensinseido_taisyoukikan_20260417.pdf,pdf,5+url-row,yes,no,2026-04-17,url_found,"official R8 PDF; school rows followed by disclosure URL rows"
-fukushima,福島県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+fukushima,福島県,25,https://www.pref.fukushima.lg.jp/sec/01135b/shigaku36.html,https://www.pref.fukushima.lg.jp/uploaded/attachment/705531.pdf,pdf,8,yes,no,2025-08-29,url_found,"official 8-column PDF; URL column points to disclosure/home pages"
 toyama,富山県,14,https://www.pref.toyama.jp/1119/kurashi/kyouiku/gakkou/shuugakushien/kj00020807.html,https://www.pref.toyama.jp/1119/kurashi/kyouiku/gakkou/shuugakushien/kj00020807.html,html,html,link,no,2025-07-31,url_found,"official R8 HTML confirmation list; school-name links point to disclosure/home pages"
-ishikawa,石川県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+ishikawa,石川県,27,https://www.pref.ishikawa.lg.jp/soumu/index.html,https://www.pref.ishikawa.lg.jp/soumu/documents/2026_kikanyoukenkakunin20260401.pdf,pdf,5,no,no,2026-04-01,url_found,"official R8 confirmation list; no disclosure URL column"
 fukui,福井県,unknown,https://www.pref.fukui.lg.jp/doc/daishi/koutoukyouikusyugakushien_d/fil/R7kotokyoiku_taisyoko.pdf,https://www.pref.fukui.lg.jp/doc/daishi/koutoukyouikusyugakushien_d/fil/R7kotokyoiku_taisyoko.pdf,pdf,5,no,yes,2025-08-29,url_found,"School-name links to confirmation application PDFs"
-yamanashi,山梨県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-gifu,岐阜県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-mie,三重県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-shiga,滋賀県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-nara,奈良県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+yamanashi,山梨県,16,https://www.pref.yamanashi.jp/shigaku-kgk/koutousyuugaku/ichiran.html,https://www.pref.yamanashi.jp/shigaku-kgk/koutousyuugaku/ichiran.html,html,html,link,no,2025-08-01,url_found,"official HTML confirmation list; school-name links point to disclosure/home pages"
+gifu,岐阜県,13,https://www.pref.gifu.lg.jp/page/22667.html,https://www.pref.gifu.lg.jp/page/22667.html,html,html,link,no,2025-08-29,url_found,"official HTML confirmation list; school-name links point to disclosure/home pages"
+mie,三重県,13,https://www.pref.mie.lg.jp/TOPICS/m0001500204.htm,https://www.pref.mie.lg.jp/common/content/001153973.pdf,pdf,5,partial,yes,unknown,url_found,"official PDF confirmation list; partial disclosure URLs via remarks/annotations"
+shiga,滋賀県,9,https://www.pref.shiga.lg.jp/ippan/kosodatekyouiku/kyouiku/315960.html,https://www.pref.shiga.lg.jp/file/attachment/5557400.pdf,pdf,5,partial,yes,2025-08-29,url_found,"official PDF confirmation list; only partial disclosure URL signal"
+nara,奈良県,14,https://www.pref.nara.lg.jp/n056/53083.html,https://www.pref.nara.lg.jp/n056/53083.html,html,html,no,no,2025-08-26,url_found,"official HTML confirmation list; no disclosure URL column"
 wakayama,和歌山県,unknown,https://www.pref.wakayama.lg.jp/prefg/022100/gakkou/koutou_syuugakusien.html,https://www.pref.wakayama.lg.jp/prefg/022100/gakkou/koutou_syuugakusien.html,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
 tottori,鳥取県,unknown,https://www.pref.tottori.lg.jp/287627.htm,https://www.pref.tottori.lg.jp/287627.htm,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
-shimane,島根県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-okayama,岡山県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+shimane,島根県,14,https://www.pref.shimane.lg.jp/education/kyoiku/shugaku_shien/list/taishoukikan.html,https://www.pref.shimane.lg.jp/education/kyoiku/shugaku_shien/list/taishoukikan.html,html,html,link,no,2025-08-08,url_found,"official HTML confirmation list; cancellation table excluded"
+okayama,岡山県,35,https://www.pref.okayama.jp/page/626761.html,https://www.pref.okayama.jp/page/626761.html,html,html,link,no,2025-08-25,url_found,"official HTML confirmation list; school-name links point to disclosure/home pages"
 yamaguchi,山口県,unknown,https://www.pref.yamaguchi.lg.jp/soshiki/3/11969.html,https://www.pref.yamaguchi.lg.jp/soshiki/3/11969.html,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
-tokushima,徳島県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-kagawa,香川県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-ehime,愛媛県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-kochi,高知県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-saga,佐賀県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-nagasaki,長崎県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+tokushima,徳島県,7,https://www.pref.tokushima.lg.jp/ippannokata/kyoiku/gakkokyoiku/5020151/,https://www.pref.tokushima.lg.jp/file/attachment/1008445.pdf,pdf,5,no,no,2025-08-06,url_found,"official PDF confirmation list; no disclosure URL column"
+kagawa,香川県,17,https://www.pref.kagawa.lg.jp/somugakuji/sigaku/keigen/w1mhal190827170447.html,https://www.pref.kagawa.lg.jp/somugakuji/sigaku/keigen/w1mhal190827170447.html,html,html,link,no,2026-04-01,url_found,"official R8 HTML confirmation list; school-name links point to disclosure/home pages"
+ehime,愛媛県,27,https://www.pref.ehime.jp/page/5124.html,https://www.pref.ehime.jp/uploaded/attachment/156605.xlsx,xlsx,8,yes,n/a,2025-08-31,url_found,"official XLSX confirmation list; URL/hyperlink column points to disclosure/home pages"
+kochi,高知県,19,https://www.pref.kochi.lg.jp/doc/hutankeigen/,https://www.pref.kochi.lg.jp/doc/hutankeigen/,html,html,link,no,2024-08-15,url_found,"official HTML confirmation list; old R6 page, school-name links point to disclosure/home pages"
+saga,佐賀県,15,https://www.pref.saga.lg.jp/kiji00370455/index.html,https://www.pref.saga.lg.jp/kiji00370455/index.html,html,html,link,no,2026-04-01,url_found,"official HTML confirmation list; school-name links point to disclosure/home pages"
+nagasaki,長崎県,17,https://www.pref.nagasaki.jp/doc/page-679908.html,https://www.pref.nagasaki.jp/doc/page-679908.html,html,html,link,no,2025-08-06,url_found,"official HTML confirmation list; school-name links point to disclosure/home pages"
 oita,大分県,unknown,https://www.pref.oita.jp/soshiki/11830/koutoukyouiku.html,https://www.pref.oita.jp/soshiki/11830/koutoukyouiku.html,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
 miyazaki,宮崎県,unknown,https://www.pref.miyazaki.lg.jp/miyazaki-bunkashinko/kyoikukosodate/kyoiku/20190821115530.html,https://www.pref.miyazaki.lg.jp/miyazaki-bunkashinko/kyoikukosodate/kyoiku/20190821115530.html,html,html,link,no,2025-08-05,url_found,HTML official index candidate
 kagoshima,鹿児島県,unknown,https://www.pref.kagoshima.jp/ab04/kyoiku-bunka/school/josei/kakunindaigakutou.html,https://www.pref.kagoshima.jp/ab04/kyoiku-bunka/school/josei/kakunindaigakutou.html,html,html,link,no,2025-08-29,url_found,"23 rows parsed; school-name links point to disclosure/home pages"

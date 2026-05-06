@@ -28,9 +28,11 @@ from eidp.scraper.prefecture_aggregator import (
     parse_6col_indexed,
     parse_13col_niigata,
     parse_aichi_index,
+    parse_fukushima_8col,
     parse_html_table,
     parse_osaka_xlsx,
     parse_tokyo,
+    parse_xlsx_index,
     parse_yamagata,
     recommend_action,
 )
@@ -169,6 +171,26 @@ def _make_osaka_xlsx(path: Path) -> None:
         "R8.4より学校所在地変更",
     ])
     ws["D3"].hyperlink = "https://www.kimura.ac.jp/disclosure/"
+    wb.save(path)
+    wb.close()
+
+
+def _make_generic_xlsx_index(path: Path) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "確認校"
+    ws.append(["", "", "確認大学等の名称", "所在地", "設置者の名称", "設置者所在地", "確認日", "備考"])
+    ws.append([
+        "",
+        1,
+        "愛媛テスト専門学校",
+        "愛媛県松山市1",
+        "学校法人愛媛",
+        "愛媛県松山市2",
+        "2025-08-31",
+        "情報公開ページ",
+    ])
+    ws["H2"].hyperlink = "https://example.ac.jp/disclosure/"
     wb.save(path)
     wb.close()
 
@@ -408,6 +430,54 @@ def test_parse_5col_text_url_in_remarks_takes_priority_over_annotation(monkeypat
     assert parsed[0].disclosure_url == "https://example.com/text-priority.pdf"
 
 
+def test_parse_fukushima_8col_reads_url_column(monkeypatch, tmp_path: Path):
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    [
+                        "No",
+                        "確認大学等の名称",
+                        "確認大学等の所在地",
+                        "設置者の名称",
+                        "設置者所在地",
+                        "公表URL",
+                        "確認日",
+                        "備考",
+                    ],
+                    [
+                        "1",
+                        "福島テスト専門学校",
+                        "福島県福島市1",
+                        "学校法人福島",
+                        "福島県福島市2",
+                        "https://example.ac.jp/disclosure/",
+                        "2025-08-29",
+                        "令和8年度新規認定校",
+                    ],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+
+    parsed = parse_fukushima_8col(tmp_path / "fukushima.pdf")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "fukushima"
+    assert parsed[0].school_name_raw == "福島テスト専門学校"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+    assert parsed[0].remarks == "令和8年度新規認定校"
+
+
 # ---------------------------------------------------------------------------
 # Tokyo (8col, URL as plain text)
 # ---------------------------------------------------------------------------
@@ -446,6 +516,21 @@ def test_parse_osaka_xlsx_extracts_school_code_and_school_name_hyperlink(tmp_pat
     assert parsed[0].school_name_raw == "大阪電子専門学校"
     assert parsed[0].disclosure_url == "https://www.kimura.ac.jp/disclosure/"
     assert parsed[0].remarks == "R8.4より学校所在地変更"
+
+
+def test_parse_xlsx_index_extracts_remarks_hyperlink(tmp_path: Path):
+    xlsx = tmp_path / "ehime.xlsx"
+    _make_generic_xlsx_index(xlsx)
+    xlsx.with_suffix(".xlsx.url").write_text("https://www.pref.ehime.jp/uploaded/attachment/156605.xlsx\n")
+
+    parsed = parse_xlsx_index(xlsx, "ehime")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "ehime"
+    assert parsed[0].school_name_raw == "愛媛テスト専門学校"
+    assert parsed[0].address == "愛媛県松山市1"
+    assert parsed[0].operator_name == "学校法人愛媛"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
 
 
 # ---------------------------------------------------------------------------
@@ -530,6 +615,59 @@ def test_parse_html_table_cleans_external_link_suffix_and_college_names(tmp_path
     assert len(parsed) == 1
     assert parsed[0].school_name_raw == "北日本テストカレッジ"
     assert parsed[0].disclosure_url == "https://college.example/disclosure/"
+
+
+def test_parse_html_table_ignores_support_program_links(tmp_path: Path):
+    html = tmp_path / "yamanashi.html"
+    html.write_text(
+        """
+        <ul>
+          <li><a href="https://pref.example/support/">大学生等への修学支援制度</a></li>
+          <li><a href="https://example.ac.jp/disclosure/">山梨テスト学院（外部サイト）</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "yamanashi")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "山梨テスト学院"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+
+
+def test_parse_html_table_excludes_cancellation_table_anchors(tmp_path: Path):
+    html = tmp_path / "shimane.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>所在地</th><th>設置者</th><th>設置者所在地</th></tr>
+          <tr>
+            <td><a href="https://active.example/disclosure/">島根テスト専門学校</a></td>
+            <td>島根県松江市1</td>
+            <td>学校法人島根</td>
+            <td>島根県松江市2</td>
+          </tr>
+        </table>
+        <table>
+          <tr><th>確認取消日</th><th>根拠規定</th><th>確認大学等の名称</th></tr>
+          <tr>
+            <td>2025-08-01</td>
+            <td>確認の取消</td>
+            <td><a href="https://withdrawn.example/">取消テスト専門学校</a></td>
+          </tr>
+        </table>
+        <ul>
+          <li><a href="https://withdrawn.example/">取消テスト専門学校</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "shimane")
+
+    assert [row.school_name_raw for row in parsed] == ["島根テスト専門学校"]
+    assert parsed[0].disclosure_url == "https://active.example/disclosure/"
 
 
 def test_parse_html_table_merges_anchor_fallback_into_existing_school_row(tmp_path: Path):

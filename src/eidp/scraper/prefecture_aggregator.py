@@ -162,7 +162,23 @@ def _looks_like_school_name(text: str) -> bool:
         return False
     if any(token in normalized for token in ("確認大学等", "学校名", "名称", "所在地", "設置者")):
         return False
-    if any(token in normalized for token in ("修学支援", "支援制度", "奨学資金", "奨学金")):
+    non_school_tokens = (
+        "修学支援",
+        "支援制度",
+        "奨学資金",
+        "奨学金",
+        "対象機関",
+        "確認の取消",
+        "確認取消",
+        "公表",
+        "資料",
+        "制度",
+        "支援課",
+        "大学関係",
+        "問い合わせ",
+        "一覧",
+    )
+    if any(token in normalized for token in non_school_tokens):
         return False
     school_tokens = ("大学", "短期大学", "専門学校", "高等専門学校", "大学校", "学院", "カレッジ")
     return any(token in normalized for token in school_tokens)
@@ -177,6 +193,8 @@ def clean_school_name(text: str | None) -> str:
     cleaned = cleaned.replace("＜外部リンク＞", "")
     cleaned = cleaned.replace("(外部リンク)", "")
     cleaned = cleaned.replace("（外部リンク）", "")
+    cleaned = cleaned.replace("(外部サイト)", "")
+    cleaned = cleaned.replace("（外部サイト）", "")
     cleaned = cleaned.replace("(外部サイトへリンク)", "")
     cleaned = cleaned.replace("（外部サイトへリンク）", "")
     cleaned = re.sub(r"\s+", "", cleaned)
@@ -192,7 +210,9 @@ def clean_cell(cell: str | None) -> str:
 def is_header(row: Sequence[str | None]) -> bool:
     """Detect repeated header / pref note rows we want to skip."""
     joined = "".join(str(c) for c in row if c)
-    return any(k in joined for k in ("確認大学等", "学 校 名", "学校名"))
+    return any(k in joined for k in ("確認大学等", "学 校 名", "学校名")) or (
+        "名称" in joined and "所在地" in joined and "設置者" in joined
+    )
 
 
 def classify_url_quality(url: str | None) -> str:
@@ -395,6 +415,38 @@ def parse_6col_indexed(pdf_path: Path, pref: str) -> list[PrefSchool]:
     return out
 
 
+def parse_fukushima_8col(pdf_path: Path) -> list[PrefSchool]:
+    """Fukushima official PDF: numbered 8-col table with a URL column.
+
+    Layout:
+      [No, school_name, address, operator_name, operator_address,
+       disclosure_url, confirmation_date, remarks]
+    """
+    out: list[PrefSchool] = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables():
+                for row in table:
+                    if not row or len(row) < 8 or is_header(row):
+                        continue
+                    school_name = clean_school_name(row[1])
+                    if not _looks_like_school_name(school_name):
+                        continue
+                    remarks = (row[7] or "").strip()
+                    out.append(PrefSchool(
+                        pref="fukushima",
+                        school_name_raw=school_name,
+                        school_name_norm=norm(school_name),
+                        address=(row[2] or "").strip(),
+                        operator_kind="",
+                        operator_name=(row[3] or "").strip(),
+                        operator_address=(row[4] or "").strip(),
+                        disclosure_url=extract_url(row[5]),
+                        remarks=remarks,
+                    ))
+    return out
+
+
 def parse_7col_hokkaido(pdf_path: Path, pref: str = "hokkaido") -> list[PrefSchool]:
     """Hokkaido style: 7-col table, URL in col[5] (ホームページURL column)."""
     out: list[PrefSchool] = []
@@ -571,6 +623,50 @@ def parse_osaka_xlsx(xlsx_path: Path) -> list[PrefSchool]:
                     disclosure_url=disclosure_url,
                     school_code=school_code,
                     remarks=_xlsx_cell_text(cells[7].value),
+                ))
+    finally:
+        wb.close()
+    return out
+
+
+def parse_xlsx_index(xlsx_path: Path, pref: str) -> list[PrefSchool]:
+    """Generic prefecture XLSX index: school rows with URL in the remarks cell.
+
+    Used for compact spreadsheets like Ehime:
+      [blank, row_no, school_name, address, operator_name, operator_address,
+       confirmation_date, remarks_or_url]
+    """
+    from openpyxl import load_workbook
+
+    source_url = artifact_source_url(xlsx_path)
+    out: list[PrefSchool] = []
+    wb = load_workbook(xlsx_path, read_only=False, data_only=True)
+    try:
+        for ws in wb.worksheets:
+            for row in ws.iter_rows():
+                cells = list(row)
+                if len(cells) < 8:
+                    continue
+                school_name = clean_school_name(_xlsx_cell_text(cells[2].value))
+                if not _looks_like_school_name(school_name):
+                    continue
+
+                hyperlink = cells[7].hyperlink.target if cells[7].hyperlink else ""
+                disclosure_url = _absolute_http_url(str(hyperlink), source_url) if hyperlink else None
+                remarks = _xlsx_cell_text(cells[7].value)
+                if not disclosure_url:
+                    disclosure_url = extract_url(remarks)
+
+                out.append(PrefSchool(
+                    pref=pref,
+                    school_name_raw=school_name,
+                    school_name_norm=norm(school_name),
+                    address=_xlsx_cell_text(cells[3].value),
+                    operator_kind="",
+                    operator_name=_xlsx_cell_text(cells[4].value),
+                    operator_address=_xlsx_cell_text(cells[5].value),
+                    disclosure_url=disclosure_url,
+                    remarks=remarks,
                 ))
     finally:
         wb.close()
@@ -768,6 +864,7 @@ def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None)
     out: list[PrefSchool] = []
     seen: set[tuple[str, str | None]] = set()
     first_row_by_name: dict[str, int] = {}
+    excluded_anchor_names: set[str] = set()
 
     for table in extractor.tables:
         headers: list[str] = []
@@ -775,6 +872,14 @@ def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None)
             texts = [cell.text for cell in cells]
             if is_header(texts):
                 headers = texts
+                continue
+            if headers and any(token in "".join(headers) for token in ("根拠規定", "取消")):
+                for cell in cells:
+                    for link in cell.links:
+                        if _looks_like_school_name(link.text):
+                            excluded_anchor_names.add(norm(clean_school_name(link.text)))
+                    if _looks_like_school_name(cell.text):
+                        excluded_anchor_names.add(norm(clean_school_name(cell.text)))
                 continue
 
             school_idx: int | None = None
@@ -824,6 +929,8 @@ def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None)
         url = _absolute_http_url(link.href, source_url)
         school_name = clean_school_name(link.text)
         name_key = norm(school_name)
+        if name_key in excluded_anchor_names:
+            continue
         existing_index = first_row_by_name.get(name_key)
         if existing_index is not None:
             if url and out[existing_index].disclosure_url is None:
@@ -886,6 +993,21 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "yamaguchi": lambda p: parse_html_table(p, "yamaguchi"),
     "oita": lambda p: parse_html_table(p, "oita"),
     "hiroshima": lambda p: parse_html_table(p, "hiroshima"),
+    "fukushima": parse_fukushima_8col,
+    "ishikawa": lambda p: parse_5col(p, "ishikawa"),
+    "yamanashi": lambda p: parse_html_table(p, "yamanashi"),
+    "gifu": lambda p: parse_html_table(p, "gifu"),
+    "mie": lambda p: parse_5col(p, "mie"),
+    "shiga": lambda p: parse_5col(p, "shiga"),
+    "nara": lambda p: parse_html_table(p, "nara"),
+    "shimane": lambda p: parse_html_table(p, "shimane"),
+    "okayama": lambda p: parse_html_table(p, "okayama"),
+    "tokushima": lambda p: parse_5col(p, "tokushima"),
+    "kagawa": lambda p: parse_html_table(p, "kagawa"),
+    "ehime": lambda p: parse_xlsx_index(p, "ehime"),
+    "kochi": lambda p: parse_html_table(p, "kochi"),
+    "saga": lambda p: parse_html_table(p, "saga"),
+    "nagasaki": lambda p: parse_html_table(p, "nagasaki"),
 }
 
 
@@ -924,6 +1046,21 @@ PREF_KEY_TO_DB = {
     "yamagata": "山形県",
     "kumamoto": "熊本県",
     "hiroshima": "広島県",
+    "fukushima": "福島県",
+    "ishikawa": "石川県",
+    "yamanashi": "山梨県",
+    "gifu": "岐阜県",
+    "mie": "三重県",
+    "shiga": "滋賀県",
+    "nara": "奈良県",
+    "shimane": "島根県",
+    "okayama": "岡山県",
+    "tokushima": "徳島県",
+    "kagawa": "香川県",
+    "ehime": "愛媛県",
+    "kochi": "高知県",
+    "saga": "佐賀県",
+    "nagasaki": "長崎県",
 }
 
 
