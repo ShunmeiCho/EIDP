@@ -16,10 +16,11 @@ local SQLite database. It is the production entrypoint behind
     Step 5  rebuild ``SchoolFiscalYearStatus`` rows for the operator UI.
 
 Scope note:
-    The prefecture-aggregator layer is currently a vocational-school-centered
-    bootstrap. It does not claim full coverage for universities. University
-    URLs that remain missing should be handled through the operator URL追加
-    flow or a separate university discovery pilot.
+    The prefecture-aggregator layer starts from official prefectural
+    確認大学等 index artifacts. Those artifacts may include universities,
+    prefectural vocational schools, and private vocational schools. Coverage
+    still depends on which prefectures have a supported parser and a current
+    artifact URL in ``data/prefecture-aggregators/seed.csv``.
 
 Why not bake artifacts into the ZIP at build time?
     Prefectures publish new disclosures every fiscal year.
@@ -46,8 +47,10 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from download_prefecture_artifacts import (  # noqa: E402
     DOWNLOADABLE_STATUSES,
     SUPPORTED_PARSERS,
+    artifact_suffix,
     download_artifact,
     load_seed_rows,
+    write_source_url_sidecar,
 )
 
 TOTAL_BOOTSTRAP_STEPS = 5
@@ -133,9 +136,9 @@ def step_download_artifacts(
     for row in targets:
         pref = row["pref_key"]
         url = row["artifact_url"]
-        suffix = ".xlsx" if row.get("artifact_format") == "xlsx" else ".pdf"
-        dest = artifact_dir / f"{pref}{suffix}"
+        dest = artifact_dir / f"{pref}{artifact_suffix(row)}"
         if dest.exists() and not force:
+            write_source_url_sidecar(dest, url)
             print(f"[step1] {pref}: already on disk ({dest.name})")
             ok.append(pref)
             continue
@@ -168,14 +171,21 @@ def step_aggregate(
     session = SessionLocal()
     try:
         for pref in pref_keys:
-            artifact = artifact_dir / f"{pref}.pdf"
-            if not artifact.is_file():
-                xlsx = artifact_dir / f"{pref}.xlsx"
-                if xlsx.is_file():
-                    artifact = xlsx
-                else:
-                    print(f"[step2] {pref}: skip (no artifact)")
-                    continue
+            artifact = next(
+                (
+                    candidate
+                    for candidate in (
+                        artifact_dir / f"{pref}.pdf",
+                        artifact_dir / f"{pref}.xlsx",
+                        artifact_dir / f"{pref}.html",
+                    )
+                    if candidate.is_file()
+                ),
+                None,
+            )
+            if artifact is None:
+                print(f"[step2] {pref}: skip (no artifact)")
+                continue
             report = aggregate(session, pref, artifact)
             stats = apply_writer_plan(session, report)
             print(f"[step2] {pref}: extracted={report.extracted_total} matched={report.db_matched} applied={stats}")
@@ -421,7 +431,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             status="running",
             current_step=2,
             percent=0.25,
-            message="都道府県データから専門学校中心の学校URLを登録しています。",
+            message="都道府県データから学校URLを登録しています。",
             details={"prefectures_ok": len(ok), "prefectures_failed": len(failed)},
         )
     print("\n=== Step 2: prefecture-aggregate --apply ===")

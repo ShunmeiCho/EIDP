@@ -232,8 +232,9 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
     assert needs_initial_url_bootstrap(all_no_url) is True
     assert needs_initial_url_bootstrap(mixed) is False
     warning = initial_bootstrap_warning_text(all_no_url)
-    assert "専門学校中心" in warning
-    assert "大学は未取得が残る前提" in warning
+    assert "確認大学等一覧" in warning
+    assert "学校名リンクに埋め込まれたURL" in warning
+    assert "専門学校中心" not in warning
 
 
 def test_bootstrap_command_uses_pipeline_script_and_lock_path(tmp_path) -> None:

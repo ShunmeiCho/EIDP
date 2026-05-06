@@ -27,6 +27,7 @@ and refuses the save attempt. Read-only listing is unaffected.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -63,6 +64,9 @@ QUEUE_STATUSES: tuple[str, ...] = (
     "school_mismatch",
 )
 MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
+MANUAL_QUEUE_VIEW_TARGET = "target_year"
+MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED = "target_year_with_ingested"
+MANUAL_QUEUE_VIEW_ALL = "all_documents"
 
 
 @dataclass(frozen=True)
@@ -77,6 +81,23 @@ class QueueRow:
     ingest_status: str
     file_path: str | None
     source_url: str
+    discovered_from: str | None
+    pdf_type: str | None
+    confidence: float | None
+
+
+@dataclass(frozen=True)
+class DiscoveryEvidenceRow:
+    """One candidate decision from output/discovery_rejections.jsonl."""
+
+    pdf_url: str
+    page_url: str
+    reason: str
+    anchor_text: str
+    pattern_type: str
+    score: float
+    pdf_type: str | None
+    timestamp: str
 
 
 @dataclass(frozen=True)
@@ -298,6 +319,9 @@ def list_pending_documents(
             ingest_status=doc.ingest_status or "",
             file_path=doc.file_path,
             source_url=doc.source_url,
+            discovered_from=doc.discovered_from,
+            pdf_type=doc.pdf_type,
+            confidence=float(doc.confidence) if doc.confidence is not None else None,
         )
         for doc, school in rows
     ]
@@ -325,6 +349,104 @@ def prioritize_queue_document(
         if row.document_id == document_id:
             return [row, *queue[:index], *queue[index + 1:]]
     return queue
+
+
+def manual_queue_view_options(target_label: str) -> dict[str, str]:
+    """Return operator-facing queue labels keyed by stable view ids."""
+    return {
+        MANUAL_QUEUE_VIEW_TARGET: f"{target_label}の要確認だけ",
+        MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED: f"{target_label}の自動採録済も含める",
+        MANUAL_QUEUE_VIEW_ALL: "全年の診断表示",
+    }
+
+
+def list_documents_for_manual_queue_view(
+    session: Session,
+    *,
+    view: str,
+    target_fiscal_year: int,
+    focus_document_id: int | None = None,
+) -> list[QueueRow]:
+    """Return the PDF確認 queue for the selected operator view.
+
+    The default view intentionally hides old-year PDFs. Stale documents are
+    useful diagnostics, but showing them as the normal queue makes operators
+    think they must manually fix every old PDF.
+    """
+    if view == MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED:
+        queue = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+            fiscal_year=target_fiscal_year,
+            include_unknown_fiscal_year=True,
+        )
+    elif view == MANUAL_QUEUE_VIEW_ALL:
+        queue = list_pending_documents(session, statuses=[*QUEUE_STATUSES, "ingested"])
+    else:
+        queue = list_pending_documents(
+            session,
+            fiscal_year=target_fiscal_year,
+            include_unknown_fiscal_year=True,
+        )
+
+    if focus_document_id is None:
+        return queue
+
+    queue = prioritize_queue_document(queue, document_id=focus_document_id)
+    if queue and queue[0].document_id == focus_document_id:
+        return queue
+
+    focused_rows = list_pending_documents(
+        session,
+        statuses=[*QUEUE_STATUSES, "ingested"],
+        document_id=focus_document_id,
+        limit=1,
+    )
+    if focused_rows:
+        return [focused_rows[0], *queue]
+    return queue
+
+
+def latest_discovery_evidence(
+    *,
+    app_root: Path,
+    school_id: int,
+    source_url: str | None = None,
+    limit: int = 8,
+) -> list[DiscoveryEvidenceRow]:
+    """Read recent discovery evidence for a school/source URL.
+
+    The JSONL file records both accepted and rejected candidates. This helper is
+    intentionally best-effort; malformed lines are skipped so a bad log cannot
+    break the operator page.
+    """
+    path = app_root / "output" / "discovery_rejections.jsonl"
+    if limit <= 0 or not path.is_file():
+        return []
+
+    rows: list[DiscoveryEvidenceRow] = []
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if payload.get("school_id") != school_id:
+                continue
+            if source_url and payload.get("reason") == "accepted_downloaded" and payload.get("pdf_url") != source_url:
+                continue
+            rows.append(DiscoveryEvidenceRow(
+                pdf_url=str(payload.get("pdf_url") or ""),
+                page_url=str(payload.get("page_url") or ""),
+                reason=str(payload.get("reason") or ""),
+                anchor_text=str(payload.get("anchor_text") or ""),
+                pattern_type=str(payload.get("pattern_type") or ""),
+                score=float(payload.get("score") or 0.0),
+                pdf_type=payload.get("pdf_type"),
+                timestamp=str(payload.get("timestamp") or ""),
+            ))
+
+    return list(reversed(rows[-limit:]))
 
 
 # ---------------------------------------------------------------------------
@@ -780,7 +902,40 @@ def _render_pdf_panel(row: QueueRow) -> None:  # pragma: no cover - thin streaml
     """Render source metadata plus lazy PDF preview/download controls."""
     import streamlit as st
 
-    st.write(f"source_url: {row.source_url}")
+    from eidp.config import settings
+
+    st.markdown("**取得経路**")
+    st.caption(
+        "都道府県一覧から登録した学校URLを起点に、学校/法人ページ内のPDF候補をスコアリングし、"
+        "対象年度がPDF本文で確認できたものだけを保存します。"
+    )
+    st.write(f"選択PDF: {row.source_url}")
+    if row.discovered_from:
+        st.write(f"PDFリンク掲載ページ: {row.discovered_from}")
+    confidence_label = row.confidence if row.confidence is not None else "(なし)"
+    st.write(f"判定: pdf_type={row.pdf_type or '(未分類)'} / confidence={confidence_label}")
+    evidence_rows = latest_discovery_evidence(
+        app_root=Path(settings.app_root),
+        school_id=row.school_id,
+        source_url=row.source_url,
+    )
+    if evidence_rows:
+        with st.expander("探索ログ（候補PDFと採否理由）"):
+            st.dataframe(
+                [
+                    {
+                        "reason": e.reason,
+                        "score": e.score,
+                        "pdf_type": e.pdf_type or "",
+                        "anchor": e.anchor_text,
+                        "pdf_url": e.pdf_url,
+                        "page_url": e.page_url,
+                    }
+                    for e in evidence_rows
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
     if not row.file_path:
         st.warning("PDF ファイルが保存されていません。source_url から原本を確認してください。")
         return
@@ -871,35 +1026,21 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     }.get(severity, st.info)
     severity_fn(banner)
 
-    view = st.radio(
+    view_options = manual_queue_view_options(target_label)
+    selected_view_label = st.radio(
         "表示範囲",
-        options=["要対応", f"{target_label}のみ", "自動採録済も含める"],
+        options=list(view_options.values()),
         horizontal=True,
     )
-    if view == f"{target_label}のみ":
-        queue = list_pending_documents(
-            session,
-            statuses=[*QUEUE_STATUSES, "ingested"],
-            fiscal_year=settings.target_fiscal_year,
-            include_unknown_fiscal_year=True,
-        )
-    elif view == "自動採録済も含める":
-        queue = list_pending_documents(session, statuses=[*QUEUE_STATUSES, "ingested"])
-    else:
-        queue = list_pending_documents(session)
-
+    selected_view = next(key for key, label in view_options.items() if label == selected_view_label)
     focus_document_id = coerce_focus_document_id(st.session_state.get(MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY))
+    queue = list_documents_for_manual_queue_view(
+        session,
+        view=selected_view,
+        target_fiscal_year=settings.target_fiscal_year,
+        focus_document_id=focus_document_id,
+    )
     if focus_document_id is not None:
-        queue = prioritize_queue_document(queue, document_id=focus_document_id)
-        if not queue or queue[0].document_id != focus_document_id:
-            focused_rows = list_pending_documents(
-                session,
-                statuses=[*QUEUE_STATUSES, "ingested"],
-                document_id=focus_document_id,
-                limit=1,
-            )
-            if focused_rows:
-                queue = [focused_rows[0], *queue]
         if queue and queue[0].document_id == focus_document_id:
             st.info(f"学校別タスクから doc#{focus_document_id} を先頭表示しています。")
             if st.button("通常順に戻す"):
@@ -909,7 +1050,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             st.warning(f"doc#{focus_document_id} は現在のPDF確認キューにありません。")
 
     if not queue:
-        st.success("この表示範囲の文書はありません。")
+        st.success("この表示範囲の文書はありません。PDF確認は学校別タスクから必要な学校を選んで開いてください。")
         return
 
     st.caption(f"待機 {len(queue)} 件")

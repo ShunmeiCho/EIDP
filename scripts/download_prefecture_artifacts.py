@@ -1,8 +1,8 @@
-"""Download prefecture-aggregator artifact PDFs/XLSX into the repo.
+"""Download prefecture-aggregator artifact PDFs/XLSX/HTML into the repo.
 
 Sprint 8.7.e — bootstrap automation gate. ``eidp prefecture-aggregate``
 needs ``data/prefecture-aggregators/artifacts/{pref}.pdf`` (or
-``.xlsx``) already on disk before it can extract URLs into school_site.
+``.xlsx``/``.html``) already on disk before it can extract URLs into school_site.
 
 This script is dev-side: it reads ``data/prefecture-aggregators/seed.csv``,
 selects rows whose parser is registered AND whose ``verified_status`` shows
@@ -56,6 +56,21 @@ def select_targets(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     ]
 
 
+def artifact_suffix(row: dict[str, str]) -> str:
+    """Return the cache suffix for a seed row artifact."""
+    fmt = row.get("artifact_format", "").strip().lower()
+    if fmt == "xlsx":
+        return ".xlsx"
+    if fmt in {"html", "htm"}:
+        return ".html"
+    return ".pdf"
+
+
+def write_source_url_sidecar(dest: Path, url: str) -> None:
+    """Record artifact source URL so HTML parsers can resolve relative links."""
+    dest.with_suffix(dest.suffix + ".url").write_text(url + "\n", encoding="utf-8")
+
+
 def download_artifact(url: str, dest: Path, *, timeout: float = 60.0) -> None:
     """Stream-download a single artifact. Overwrites existing files."""
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -63,6 +78,7 @@ def download_artifact(url: str, dest: Path, *, timeout: float = 60.0) -> None:
         response = client.get(url)
         response.raise_for_status()
         dest.write_bytes(response.content)
+    write_source_url_sidecar(dest, str(response.url))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -105,9 +121,9 @@ def main(argv: list[str] | None = None) -> int:
     for row in targets:
         pref = row["pref_key"]
         url = row["artifact_url"]
-        suffix = ".xlsx" if row.get("artifact_format") == "xlsx" else ".pdf"
-        dest = args.artifact_dir / f"{pref}{suffix}"
+        dest = args.artifact_dir / f"{pref}{artifact_suffix(row)}"
         if dest.exists() and not args.force:
+            write_source_url_sidecar(dest, url)
             print(f"[skip] {pref} → {dest.name} already exists")
             continue
         print(f"[get ] {pref}: {url} → {dest.name}")

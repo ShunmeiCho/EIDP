@@ -31,12 +31,18 @@ from eidp.db.models import (
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.review._pages.pdf_manual_entry import (
+    MANUAL_QUEUE_VIEW_ALL,
+    MANUAL_QUEUE_VIEW_TARGET,
+    MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
     QUEUE_STATUSES,
     SaveOutcome,
     build_pdf_preview,
     coerce_focus_document_id,
     form_data_to_entries,
+    latest_discovery_evidence,
+    list_documents_for_manual_queue_view,
     list_pending_documents,
+    manual_queue_view_options,
     prioritize_queue_document,
     resolve_pdf_path,
     save_with_lock,
@@ -69,11 +75,13 @@ def _seed_doc(
     doc = Document(
         school_id=school.id,
         source_url=f"https://example.com/{file_hash_seed}.pdf",
+        discovered_from=f"https://example.com/{file_hash_seed}/page.html",
         file_hash=(file_hash_seed.ljust(64, "0"))[:64],
         pdf_type="target",
         content_type="image",
         fiscal_year=fiscal_year,
         ingest_status=status,
+        confidence=0.82,
         downloaded_at=datetime.now(UTC),
     )
     session.add(doc)
@@ -119,6 +127,9 @@ def test_queue_carries_school_join_and_metadata(engine):
         assert r.prefecture == "大阪府"
         assert r.fiscal_year == 2026
         assert r.source_url.endswith("b.pdf")
+        assert r.discovered_from and r.discovered_from.endswith("/b/page.html")
+        assert r.pdf_type == "target"
+        assert r.confidence == 0.82
 
 
 def test_queue_respects_limit(engine):
@@ -164,6 +175,86 @@ def test_queue_can_include_ingested_and_filter_target_year(engine):
         assert old_doc.id not in {r.document_id for r in rows}
 
 
+def test_manual_queue_default_hides_old_year_documents(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Default学校")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="old", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="target", fiscal_year=2026)
+        unknown_doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="unknown", fiscal_year=None)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET,
+            target_fiscal_year=2026,
+        )
+
+        assert [row.document_id for row in rows] == [target_doc.id, unknown_doc.id]
+        assert old_doc.id not in {row.document_id for row in rows}
+
+
+def test_manual_queue_target_with_ingested_still_filters_old_year(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Ingested学校")
+        old_doc = _seed_doc(session, school, status="ingested", file_hash_seed="oldi", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="ingested", file_hash_seed="targeti", fiscal_year=2026)
+        review_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="reviewi", fiscal_year=2026)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
+            target_fiscal_year=2026,
+        )
+
+        assert [row.document_id for row in rows] == [target_doc.id, review_doc.id]
+        assert old_doc.id not in {row.document_id for row in rows}
+
+
+def test_manual_queue_all_view_is_explicit_diagnostics(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="All学校")
+        old_doc = _seed_doc(session, school, status="ingested", file_hash_seed="oldall", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="targetall", fiscal_year=2026)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_ALL,
+            target_fiscal_year=2026,
+        )
+
+        assert [row.document_id for row in rows] == [old_doc.id, target_doc.id]
+
+
+def test_manual_queue_focus_document_can_surface_school_task_selection(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="FocusView学校")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="focusold", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="focustarget", fiscal_year=2026)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET,
+            target_fiscal_year=2026,
+            focus_document_id=old_doc.id,
+        )
+
+        assert [row.document_id for row in rows] == [old_doc.id, target_doc.id]
+
+
+def test_manual_queue_view_options_keep_stable_keys():
+    options = manual_queue_view_options("2026年度（令和8年度）")
+
+    assert set(options) == {
+        MANUAL_QUEUE_VIEW_TARGET,
+        MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
+        MANUAL_QUEUE_VIEW_ALL,
+    }
+    assert options[MANUAL_QUEUE_VIEW_TARGET].startswith("2026年度")
+
+
 def test_focus_document_helpers_move_requested_row_to_top(engine):
     with Session(engine) as session:
         school = _seed_school(session, name="Focus学校")
@@ -178,6 +269,45 @@ def test_focus_document_helpers_move_requested_row_to_top(engine):
         assert coerce_focus_document_id("bad") is None
         assert [row.document_id for row in focused] == [second.id, first.id]
         assert prioritize_queue_document(rows, document_id=None) == rows
+
+
+def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Path):
+    out = tmp_path / "output"
+    out.mkdir()
+    log = out / "discovery_rejections.jsonl"
+    log.write_text(
+        "\n".join([
+            "{bad json",
+            (
+                '{"school_id": 1, "pdf_url": "https://example.ac.jp/old.pdf", '
+                '"page_url": "https://example.ac.jp/", "reason": "fiscal_year_mismatch:2025", '
+                '"anchor_text": "2025年度", "pattern_type": "direct", "score": 3.0, '
+                '"pdf_type": "target", "timestamp": "2026-05-06T00:00:00Z"}'
+            ),
+            (
+                '{"school_id": 1, "pdf_url": "https://example.ac.jp/r8.pdf", '
+                '"page_url": "https://example.ac.jp/disclosure/", "reason": "accepted_downloaded", '
+                '"anchor_text": "2026年度", "pattern_type": "direct", "score": 9.0, '
+                '"pdf_type": "target", "timestamp": "2026-05-06T00:01:00Z"}'
+            ),
+            (
+                '{"school_id": 2, "pdf_url": "https://other.ac.jp/r8.pdf", '
+                '"page_url": "https://other.ac.jp/", "reason": "accepted_downloaded"}'
+            ),
+        ]),
+        encoding="utf-8",
+    )
+
+    rows = latest_discovery_evidence(
+        app_root=tmp_path,
+        school_id=1,
+        source_url="https://example.ac.jp/r8.pdf",
+    )
+
+    assert len(rows) == 2
+    assert rows[0].reason == "accepted_downloaded"
+    assert rows[0].pdf_url == "https://example.ac.jp/r8.pdf"
+    assert rows[1].reason == "fiscal_year_mismatch:2025"
 
 
 # ---------------------------------------------------------------------------

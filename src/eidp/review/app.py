@@ -111,6 +111,25 @@ def _render_sidebar_navigation() -> str:
     return str(st.session_state.selected_page)
 
 
+def _build_info_caption(app_root: Path) -> str:
+    build_info_path = app_root / "BUILD_INFO.json"
+    try:
+        payload = json.loads(build_info_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "build: source checkout"
+    if not isinstance(payload, dict):
+        return "build: unknown"
+    commit = str(payload.get("git_commit") or "unknown")
+    short_commit = commit[:7] if commit != "unknown" else "unknown"
+    branch = str(payload.get("git_branch") or "unknown")
+    dirty = " dirty" if str(payload.get("git_dirty") or "").lower() == "true" else ""
+    built_at = str(payload.get("built_at_utc") or "")
+    parts = [f"build: {short_commit}{dirty}", f"branch: {branch}"]
+    if built_at:
+        parts.append(f"built: {built_at}")
+    return " / ".join(parts)
+
+
 def _commit(session: Session) -> None:
     try:
         session.commit()
@@ -615,6 +634,7 @@ def main() -> None:
     st.sidebar.caption(
         "① 学校別タスク → URL追加/PDF確認 → 年度修正 → Excel確認"
     )
+    st.sidebar.caption(_build_info_caption(settings.app_root))
 
 
 if __name__ == "__main__":

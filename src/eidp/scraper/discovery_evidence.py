@@ -1,21 +1,21 @@
-"""Persistent evidence trail for PDF discovery rejections.
+"""Persistent evidence trail for PDF discovery decisions.
 
 discover-pdfs deletes/skips a lot of candidate URLs (non_target classification,
 HTTP errors, attachment-keyword negative scores). Without a permanent record,
 debugging cases like 滋慶 — where every candidate gets rejected and the school
 ends up with no document — is blind work.
 
-This recorder appends one JSON line per rejection to a file so a later
+This recorder appends one JSON line per decision to a file so a later
 investigation can grep `school_id` and reconstruct what URLs were attempted,
-their scores, anchor text, and the rejection reason.
+their scores, anchor text, and the accepted/rejected reason.
 """
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterable
 
 import structlog
 
@@ -24,7 +24,7 @@ log = structlog.get_logger()
 
 @dataclass(frozen=True)
 class RejectionEvidence:
-    """One rejected (or never-tried) PDF candidate captured for debug."""
+    """One accepted, rejected, or never-tried PDF candidate captured for debug."""
 
     school_id: int
     pdf_url: str
@@ -36,7 +36,7 @@ class RejectionEvidence:
     pdf_type: str | None = None
     extra: dict[str, str] = field(default_factory=dict)
     timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
 
@@ -75,7 +75,7 @@ class EvidenceRecorder:
         finally:
             self._fh = None
 
-    def __enter__(self) -> "EvidenceRecorder":
+    def __enter__(self) -> EvidenceRecorder:
         return self
 
     def __exit__(self, *_args) -> None:

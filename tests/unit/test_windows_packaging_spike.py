@@ -127,6 +127,32 @@ def test_accepted_wheel_suffixes_includes_pure_python(tmp_path: Path):
     assert "-py2.py3-none-any.whl" in bw.ACCEPTED_WHEEL_SUFFIXES
 
 
+def test_build_info_records_commit_branch_and_tracked_dirty_state(tmp_path: Path, monkeypatch):
+    bw = _load_build_script()
+
+    calls: list[tuple[str, ...]] = []
+
+    def fake_git_output(_repo_root: Path, *args: str) -> str:
+        calls.append(args)
+        if args == ("rev-parse", "HEAD"):
+            return "b" * 40
+        if args == ("rev-parse", "--abbrev-ref", "HEAD"):
+            return "release/test"
+        if args == ("status", "--porcelain", "--untracked-files=no"):
+            return " M src/eidp/review/app.py"
+        return ""
+
+    monkeypatch.setattr(bw, "_git_output", fake_git_output)
+
+    info = bw.build_info(tmp_path)
+
+    assert info["app"] == "EIDP"
+    assert info["git_commit"] == "b" * 40
+    assert info["git_branch"] == "release/test"
+    assert info["git_dirty"] == "true"
+    assert ("status", "--porcelain", "--untracked-files=no") in calls
+
+
 # ---------------------------------------------------------------------------
 # .bat skeleton static review
 # ---------------------------------------------------------------------------

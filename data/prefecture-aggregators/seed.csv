@@ -1,7 +1,7 @@
 pref_key,pref_jp,schools_in_db,index_url,artifact_url,artifact_format,table_cols,has_url_col,has_hyperlink_annot,as_of_date,verified_status,notes
 tokyo,東京都,314,https://www.seikatubunka.metro.tokyo.lg.jp/shigaku/hogosha/seido/specializedtrainingschool/0000001326/0000001341,https://www.seikatubunka.metro.tokyo.lg.jp/documents/d/seikatubunka/12syugakushien_kakuninko_ichiran_260401_1341,pdf,8,yes,no,2026-04-01,spiked,"258 schools, 140 disclosure URLs"
-kanagawa,神奈川県,88,https://www.pref.kanagawa.jp/docs/v3e/kikanyouken.html,https://www.pref.kanagawa.jp/documents/53286/r7ichiran.pdf,pdf,5,yes,no,2025-08-29,spiked,"76 schools, 45 disclosure URLs"
-saitama,埼玉県,71,https://www.pref.saitama.lg.jp/a0204/syugakusien.html,https://www.pref.saitama.lg.jp/documents/158556/r080401kikanyokenlist.pdf,pdf,5,no,yes,2026-04-01,spiked,"60 schools, 36 disclosure URLs via annotation"
+kanagawa,神奈川県,88,https://www.pref.kanagawa.jp/docs/v3e/kikanyouken.html,https://www.pref.kanagawa.jp/documents/53286/r7ichiran.pdf,pdf,5,yes,no,2025-08-29,spiked,"76 schools, 75 disclosure URLs"
+saitama,埼玉県,71,https://www.pref.saitama.lg.jp/a0204/syugakusien.html,https://www.pref.saitama.lg.jp/documents/158556/r080401kikanyokenlist.pdf,pdf,5,no,yes,2026-04-01,spiked,"60 schools, 60 disclosure URLs via school-name hyperlink annotations"
 osaka,大阪府,176,https://www.pref.osaka.lg.jp/o180160/shigaku/senkaku-site/koutoukyouikusinseid.html,https://www.pref.osaka.lg.jp/documents/10619/v6_r8kakuninkou_2602.xlsx,xlsx,8,no,n/a,2026-02,spiked,"139 schools with MEXT 学校番号 gold-standard match"
 fukuoka,福岡県,141,https://www.pref.fukuoka.lg.jp/contents/hutankeigen.html,https://www.pref.fukuoka.lg.jp/uploaded/life/785834_62622782_misc.pdf,pdf,5,TBD,no,2025-08-29,downloaded,Excel version also at 785834_62622783_misc.xlsx
 hokkaido,北海道,140,https://www.pref.hokkaido.lg.jp/sm/gkj/senkakukakuninkou.html,https://www.pref.hokkaido.lg.jp/fs/1/3/0/9/9/6/4/7/_/機関要件確認校ホームページ掲載リスト(R8.3.16現在).pdf,pdf,TBD,yes,TBD,2026-03-16,url_found,Title explicitly says 'homepage list'
@@ -14,35 +14,35 @@ okinawa,沖縄県,56,https://www.pref.okinawa.jp/site/somu/somushi/20190920.html
 hiroshima,広島県,54,https://www.pref.hiroshima.lg.jp/soshiki/44/605623.html,unknown,unknown,unknown,unknown,unknown,unknown,decentralized,"Hiroshima publishes individual 様式第2号 per school, not aggregate list"
 chiba,千葉県,78,https://www.pref.chiba.lg.jp/gakuji/shiritsutou/shiritsugakkou/index.html,unknown,unknown,unknown,unknown,unknown,unknown,index_only,Private school directory found but specific 確認大学等 list TBD
 ibaraki,茨城県,50,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-gunma,群馬県,47,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+gunma,群馬県,47,https://www.pref.gunma.jp/page/12959.html,https://www.pref.gunma.jp/page/12959.html,html,html,partial,no,2025-08-29,url_found,"43 rows parsed; 3 public-school links visible, private-school URLs not published in this page"
 tochigi,栃木県,46,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 kyoto,京都府,46,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 kumamoto,熊本県,44,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-nagano,長野県,44,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-aomori,青森県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+nagano,長野県,44,https://www.pref.nagano.lg.jp/ken-manabi/kyoiku/gakko/shiritsu/senshu/kakunin.html,https://www.pref.nagano.lg.jp/ken-manabi/kyoiku/gakko/shiritsu/senshu/kakunin.html,html,html,link,no,unknown,url_found,"HTML page; school-name links / official index structure"
+aomori,青森県,unknown,https://www.pref.aomori.lg.jp/soshiki/kodomo/kenmin/koutoukyouikumushouka-1ran.html,https://www.pref.aomori.lg.jp/soshiki/kodomo/kenmin/koutoukyouikumushouka-1ran.html,html,html,link,no,unknown,url_found,HTML official index candidate
 iwate,岩手県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-akita,秋田県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+akita,秋田県,unknown,https://www.pref.akita.lg.jp/pages/archive/44408,https://www.pref.akita.lg.jp/uploads/public/archive_0000044408_00/250829_kouhyou.pdf,pdf,5,no,yes,2025-08-29,url_found,"PDF names are clickable links to publication pages"
 yamagata,山形県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 fukushima,福島県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 toyama,富山県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 ishikawa,石川県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-fukui,福井県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+fukui,福井県,unknown,https://www.pref.fukui.lg.jp/doc/daishi/koutoukyouikusyugakushien_d/fil/R7kotokyoiku_taisyoko.pdf,https://www.pref.fukui.lg.jp/doc/daishi/koutoukyouikusyugakushien_d/fil/R7kotokyoiku_taisyoko.pdf,pdf,5,no,yes,2025-08-29,url_found,"School-name links to confirmation application PDFs"
 yamanashi,山梨県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 gifu,岐阜県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 mie,三重県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 shiga,滋賀県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 nara,奈良県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-wakayama,和歌山県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-tottori,鳥取県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+wakayama,和歌山県,unknown,https://www.pref.wakayama.lg.jp/prefg/022100/gakkou/koutou_syuugakusien.html,https://www.pref.wakayama.lg.jp/prefg/022100/gakkou/koutou_syuugakusien.html,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
+tottori,鳥取県,unknown,https://www.pref.tottori.lg.jp/287627.htm,https://www.pref.tottori.lg.jp/287627.htm,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
 shimane,島根県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 okayama,岡山県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-yamaguchi,山口県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+yamaguchi,山口県,unknown,https://www.pref.yamaguchi.lg.jp/soshiki/3/11969.html,https://www.pref.yamaguchi.lg.jp/soshiki/3/11969.html,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
 tokushima,徳島県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 kagawa,香川県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 ehime,愛媛県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 kochi,高知県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 saga,佐賀県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
 nagasaki,長崎県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-oita,大分県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
-miyazaki,宮崎県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed
+oita,大分県,unknown,https://www.pref.oita.jp/soshiki/11830/koutoukyouiku.html,https://www.pref.oita.jp/soshiki/11830/koutoukyouiku.html,html,html,link,no,unknown,url_found,"HTML page; official index candidate"
+miyazaki,宮崎県,unknown,https://www.pref.miyazaki.lg.jp/miyazaki-bunkashinko/kyoikukosodate/kyoiku/20190821115530.html,https://www.pref.miyazaki.lg.jp/miyazaki-bunkashinko/kyoikukosodate/kyoiku/20190821115530.html,html,html,link,no,2025-08-05,url_found,HTML official index candidate
 kagoshima,鹿児島県,unknown,unknown,unknown,unknown,unknown,unknown,unknown,unknown,todo,需手动 seed

@@ -47,6 +47,17 @@ def test_output_path_rejects_wrong_suffix() -> None:
         operator_pages.output_path("output/test.txt", (".xlsx",))
 
 
+def test_v1_theme_css_uses_streamlit_theme_tokens() -> None:
+    css = operator_pages.v1_theme_css()
+
+    assert "--eidp-bg: var(--background-color)" in css
+    assert "--eidp-ink: var(--text-color)" in css
+    assert "--eidp-accent: var(--primary-color)" in css
+    assert "#FAFAFA" not in css
+    assert "#FFFFFF" not in css
+    assert "#000000" not in css
+
+
 def test_search_school_url_options_searches_names_corporations_and_prefecture() -> None:
     session = _session()
     try:

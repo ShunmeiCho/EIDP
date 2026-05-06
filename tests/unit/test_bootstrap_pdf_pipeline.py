@@ -111,6 +111,41 @@ def test_main_marks_progress_failed_for_nonzero_exit(tmp_path: Path, monkeypatch
     assert payload["error"] == "exit_code=2"
 
 
+def test_step_download_artifacts_uses_html_suffix_and_source_sidecar(tmp_path: Path, monkeypatch) -> None:
+    seed_csv = tmp_path / "seed.csv"
+    seed_csv.write_text(
+        "\n".join([
+            "pref_key,artifact_url,artifact_format,verified_status",
+            "gunma,https://www.pref.gunma.jp/page/12959.html,html,url_found",
+        ]),
+        encoding="utf-8",
+    )
+    artifact_dir = tmp_path / "artifacts"
+
+    monkeypatch.setattr(module, "SUPPORTED_PARSERS", frozenset({"gunma"}))
+
+    def fake_download(url: str, dest: Path) -> None:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text("<html></html>", encoding="utf-8")
+        module.write_source_url_sidecar(dest, url)
+
+    monkeypatch.setattr(module, "download_artifact", fake_download)
+
+    ok, failed = module.step_download_artifacts(
+        seed_csv=seed_csv,
+        artifact_dir=artifact_dir,
+        only=None,
+        force=False,
+    )
+
+    assert ok == ["gunma"]
+    assert failed == []
+    assert (artifact_dir / "gunma.html").is_file()
+    assert (artifact_dir / "gunma.html.url").read_text(encoding="utf-8").strip() == (
+        "https://www.pref.gunma.jp/page/12959.html"
+    )
+
+
 def test_step_rebuild_status_includes_all_school_types(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
 

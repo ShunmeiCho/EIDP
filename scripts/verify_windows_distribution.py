@@ -64,6 +64,7 @@ class ZipCheck:
 
 
 CORE_REQUIRED_EXACT = (
+    "BUILD_INFO.json",
     "EIDP-setup.bat",
     "EIDP-start.bat",
     "README.md",
@@ -378,6 +379,32 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         _reject_text(check, body, member, token)
 
 
+def _check_build_info(check: ZipCheck, names: set[str]) -> None:
+    if "BUILD_INFO.json" not in names:
+        return
+    if not zipfile.is_zipfile(check.path):
+        return
+    with zipfile.ZipFile(check.path) as zf:
+        try:
+            payload = json.loads(zf.read("BUILD_INFO.json").decode("utf-8"))
+        except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            check.fail(f"BUILD_INFO.json is not valid JSON: {exc}")
+            return
+    if not isinstance(payload, dict):
+        check.fail("BUILD_INFO.json must contain an object")
+        return
+    for key in ("app", "built_at_utc", "git_commit", "git_branch", "git_dirty"):
+        value = payload.get(key)
+        if not isinstance(value, str) or not value:
+            check.fail(f"BUILD_INFO.json missing string field: {key}")
+    if payload.get("app") != "EIDP":
+        check.fail("BUILD_INFO.json app must be EIDP")
+    commit = payload.get("git_commit")
+    if isinstance(commit, str) and commit != "unknown" and len(commit) != 40:
+        check.fail("BUILD_INFO.json git_commit must be a full 40-character commit hash or unknown")
+    check.details["build_info"] = payload
+
+
 def _read_manifest(check: ZipCheck, member: str) -> dict[str, Any] | None:
     if not zipfile.is_zipfile(check.path):
         return None
@@ -494,6 +521,7 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_bat_contracts(check, names)
     _check_python_entrypoint_contracts(check, names)
     _check_operator_runbook_contract(check, names)
+    _check_build_info(check, names)
 
     check.details["entry_count"] = len(names)
     check.details["has_runtime"] = (

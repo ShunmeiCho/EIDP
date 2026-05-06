@@ -26,9 +26,11 @@ works on Windows" — this script only proves the assets are well-formed.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -196,6 +198,7 @@ def assemble_zip(
     members = collect_zip_members(repo_root=repo_root, wheelhouse=wheelhouse)
 
     with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("BUILD_INFO.json", json.dumps(build_info(repo_root), ensure_ascii=False, indent=2))
         for src, arc in members:
             if arc.endswith(".bat"):
                 # Windows cmd.exe needs CRLF; rewrite on-the-fly.
@@ -203,6 +206,36 @@ def assemble_zip(
             else:
                 zf.write(src, arc)
     return out_zip
+
+
+def _git_output(repo_root: Path, *args: str) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=repo_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return proc.stdout.strip()
+
+
+def build_info(repo_root: Path) -> dict[str, str]:
+    """Build metadata shown in the operator UI and checked during handoff."""
+    commit = _git_output(repo_root, "rev-parse", "HEAD")
+    branch = _git_output(repo_root, "rev-parse", "--abbrev-ref", "HEAD")
+    dirty = "true" if _git_output(repo_root, "status", "--porcelain", "--untracked-files=no") else "false"
+    return {
+        "app": "EIDP",
+        "built_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "git_commit": commit or "unknown",
+        "git_branch": branch or "unknown",
+        "git_dirty": dirty,
+    }
 
 
 def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path, str]]:

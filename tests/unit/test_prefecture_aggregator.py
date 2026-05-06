@@ -17,16 +17,17 @@ import pytest
 from eidp.scraper.prefecture_aggregator import (
     PARSERS,
     PREF_KEY_TO_DB,
+    classify_prefecture_remarks,
     classify_url_quality,
     extract_pdf_annotation_links,
     extract_url,
     norm,
     parse,
     parse_5col,
+    parse_html_table,
     parse_tokyo,
     recommend_action,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers — generate minimal PDFs at test time
@@ -170,6 +171,13 @@ def test_classify_url_quality():
     assert classify_url_quality("https://example.com/") == "homepage"
 
 
+def test_classify_prefecture_remarks_keeps_school_change_signals():
+    assert classify_prefecture_remarks("令和8年度新規認定校") == ["new_accreditation"]
+    assert classify_prefecture_remarks("令和7年4月 名称変更（旧校名: A専門学校）") == ["name_change"]
+    assert classify_prefecture_remarks("確認の取消しをした大学等") == ["withdrawal"]
+    assert classify_prefecture_remarks("統合再編予定") == ["merger_reorg"]
+
+
 def test_recommend_action():
     assert recommend_action("none", []) == "noop"
     assert recommend_action("direct_pdf", []) == "add"
@@ -278,6 +286,81 @@ def test_parse_tokyo_extracts_url_from_remarks(tmp_path: Path):
     assert len(parsed) == 1
     assert parsed[0].pref == "tokyo"
     assert parsed[0].disclosure_url == "https://example.com/tokyo.pdf"
+    assert parsed[0].remarks == "https://example.com/tokyo.pdf"
+
+
+# ---------------------------------------------------------------------------
+# HTML official index pages
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_table_uses_school_name_link_and_remarks(tmp_path: Path):
+    html = tmp_path / "gunma.html"
+    html.write_text(
+        """
+        <html><body>
+          <table>
+            <tr><th>学校名</th><th>所在地</th><th>設置者</th><th>設置者所在地</th><th>備考</th></tr>
+            <tr>
+              <td><a href="/school/disclosure/">群馬テスト専門学校</a></td>
+              <td>群馬県前橋市1</td>
+              <td>学校法人群馬</td>
+              <td>群馬県前橋市2</td>
+              <td>令和8年度新規認定校</td>
+            </tr>
+          </table>
+        </body></html>
+        """,
+        encoding="utf-8",
+    )
+    html.with_suffix(".html.url").write_text("https://www.pref.gunma.jp/page/12959.html\n", encoding="utf-8")
+
+    parsed = parse_html_table(html, "gunma")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "群馬テスト専門学校"
+    assert parsed[0].disclosure_url == "https://www.pref.gunma.jp/school/disclosure/"
+    assert parsed[0].remarks == "令和8年度新規認定校"
+
+
+def test_parse_html_table_uses_homepage_cell_link_when_name_is_plain_text(tmp_path: Path):
+    html = tmp_path / "nagano.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>申請書を公表する予定のホームページアドレス</th></tr>
+          <tr>
+            <td>長野テスト大学</td>
+            <td><a href="https://example.ac.jp/disclosure/">情報公開</a></td>
+          </tr>
+        </table>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "nagano")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "長野テスト大学"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+
+
+def test_parse_html_table_falls_back_to_school_name_anchor_list(tmp_path: Path):
+    html = tmp_path / "oita.html"
+    html.write_text(
+        """
+        <ul>
+          <li><a href="https://example.ac.jp/kikanyouken/">大分テスト大学</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "oita")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "大分テスト大学"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/kikanyouken/"
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +425,12 @@ def test_match_school_exact_then_nfkc_then_substring(db_session):
 
     s1 = School(prefecture="埼玉県", corporation_name="学校法人A", school_name="埼玉専門学校", status="active")
     s2 = School(prefecture="埼玉県", corporation_name="学校法人B", school_name="ＮＦＫＣ専門学校", status="active")
-    s3 = School(prefecture="埼玉県", corporation_name="学校法人C", school_name="さいたまテクノロジー専門学校", status="active")
+    s3 = School(
+        prefecture="埼玉県",
+        corporation_name="学校法人C",
+        school_name="さいたまテクノロジー専門学校",
+        status="active",
+    )
     db_session.add_all([s1, s2, s3])
     db_session.commit()
 
@@ -494,6 +582,52 @@ def test_apply_writer_plan_skips_review_and_noop(db_session):
     db_session.commit()
     assert stats == {"added": 0, "upgraded": 0, "skipped": 2}
     assert db_session.query(SchoolSite).count() == 0
+
+
+def test_apply_writer_plan_creates_review_item_for_prefecture_remarks(db_session):
+    from eidp.db.models import ReviewItem, School
+    from eidp.scraper.prefecture_aggregator import PrefReport, apply_writer_plan
+
+    school = School(
+        prefecture="長野県",
+        corporation_name="学校法人N",
+        school_name="長野テスト専門学校",
+        status="active",
+    )
+    db_session.add(school)
+    db_session.commit()
+
+    report = PrefReport(pref="nagano", pdf_path="(synthetic)")
+    report.records = [{
+        "db_school_id": school.id,
+        "db_school_name": school.school_name,
+        "pdf_school_name": school.school_name,
+        "pdf_school_code": None,
+        "pdf_address": "",
+        "pdf_operator": "",
+        "pref_url": "https://example.ac.jp/disclosure/",
+        "pref_remarks": "令和8年度新規認定校",
+        "pref_remark_tags": ["new_accreditation"],
+        "pref_has_school_change_signal": True,
+        "url_quality": "disclosure",
+        "match_strategy": "exact",
+        "existing_urls": [],
+        "existing_url_quality": [],
+        "is_new_url_candidate": True,
+        "quality_upgrade_candidate": False,
+        "recommended_action": "add",
+    }]
+
+    stats = apply_writer_plan(db_session, report)
+    db_session.commit()
+
+    assert stats["added"] == 1
+    assert stats["review_items"] == 1
+    item = db_session.query(ReviewItem).one()
+    assert item.item_type == "prefecture_remark"
+    assert item.reference_id == school.id
+    assert item.evidence_url == "https://example.ac.jp/disclosure/"
+    assert "新規認定校" in (item.proposal_value or "")
 
 
 def test_aggregate_dispatches_parse_and_match(monkeypatch, db_session, tmp_path):

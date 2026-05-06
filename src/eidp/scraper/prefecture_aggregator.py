@@ -7,15 +7,16 @@ read-only investigation; this module is the production path consumed by
 What this module does
 ---------------------
 For each Japanese prefecture's official aggregation artifact
-(typically a PDF or XLSX listing every 専門学校 in scope of the
-高等教育の修学支援新制度), parse out:
+(typically a PDF or XLSX listing 確認大学等 in that prefecture:
+universities, prefectural vocational schools, and private vocational schools
+in scope of the 高等教育の修学支援新制度), parse out:
 
   * school_name (raw + NFKC-normalized)
   * address / operator metadata
-  * disclosure URL — including hidden URLs that live as PDF
-    hyperlink annotations on the school name cell (Saitama, partial
-    Aichi). pdfplumber's text-extraction silently misses those, so
-    we use PyMuPDF's ``page.get_links()`` to recover them.
+  * disclosure URL — including hidden URLs that live as PDF hyperlink
+    annotations on the school name cell (Saitama / Miyagi style).
+    pdfplumber's text-extraction silently misses those, so we use
+    PyMuPDF's ``page.get_links()`` to recover them.
   * MEXT 学校番号 when the prefecture publishes one (Osaka).
 
 Match each parsed school to the existing ``school`` row by:
@@ -39,11 +40,15 @@ Out of scope for 8.3.a
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import pdfplumber
 
@@ -63,6 +68,7 @@ class PrefSchool:
     operator_address: str
     disclosure_url: str | None
     school_code: str | None = None  # MEXT 学校番号 (Osaka has it)
+    remarks: str = ""
 
 
 @dataclass
@@ -125,13 +131,50 @@ def extract_url(cell: str | None) -> str | None:
     return m.group(0) if m else None
 
 
+def _source_url_sidecar(artifact_path: Path) -> Path:
+    return artifact_path.with_suffix(artifact_path.suffix + ".url")
+
+
+def artifact_source_url(artifact_path: Path) -> str | None:
+    """Return the original download URL recorded next to a cached artifact."""
+    sidecar = _source_url_sidecar(artifact_path)
+    if not sidecar.is_file():
+        return None
+    raw = sidecar.read_text(encoding="utf-8").strip()
+    parsed = urlparse(raw)
+    if parsed.scheme in {"http", "https"}:
+        return raw
+    return None
+
+
+def _looks_like_school_name(text: str) -> bool:
+    normalized = norm(text)
+    if not normalized or normalized.isdigit() or len(normalized) < 4:
+        return False
+    if any(token in normalized for token in ("確認大学等", "学校名", "名称", "所在地", "設置者")):
+        return False
+    return any(token in normalized for token in ("大学", "短期大学", "専門学校", "高等専門学校", "大学校", "学院"))
+
+
+def clean_school_name(text: str | None) -> str:
+    """Normalize visible school-name text from official index artifacts."""
+    if not text:
+        return ""
+    cleaned = unicodedata.normalize("NFKC", text)
+    cleaned = cleaned.replace("＜外部リンク＞", "")
+    cleaned = cleaned.replace("(外部サイトへリンク)", "")
+    cleaned = cleaned.replace("（外部サイトへリンク）", "")
+    cleaned = re.sub(r"\s+", "", cleaned)
+    return cleaned.strip()
+
+
 def clean_cell(cell: str | None) -> str:
     if not cell:
         return ""
     return re.sub(r"\s+", "", unicodedata.normalize("NFKC", cell).replace("​", "")).strip()
 
 
-def is_header(row: list[str | None]) -> bool:
+def is_header(row: Sequence[str | None]) -> bool:
     """Detect repeated header / pref note rows we want to skip."""
     joined = "".join(str(c) for c in row if c)
     return any(k in joined for k in ("確認大学等", "学 校 名", "学校名"))
@@ -147,6 +190,24 @@ def classify_url_quality(url: str | None) -> str:
     if any(k in lo for k in _DISCLOSURE_KEYWORDS):
         return "disclosure"
     return "homepage"
+
+
+def classify_prefecture_remarks(remarks: str | None) -> list[str]:
+    """Classify useful 備考 signals from official prefecture index artifacts."""
+    text = norm(remarks)
+    if not text:
+        return []
+
+    tags: list[str] = []
+    if "新規" in text and ("認定" in text or "追加" in text):
+        tags.append("new_accreditation")
+    if any(token in text for token in ("名称変更", "校名変更", "改称", "旧称", "旧校名")):
+        tags.append("name_change")
+    if any(token in text for token in ("取消", "辞退", "廃止", "対象外", "満たさなく")):
+        tags.append("withdrawal")
+    if any(token in text for token in ("統合", "再編", "合併")):
+        tags.append("merger_reorg")
+    return tags
 
 
 _QUALITY_RANK = {"direct_pdf": 3, "disclosure": 2, "homepage": 1, "none": 0}
@@ -222,8 +283,8 @@ def parse_tokyo(pdf_path: Path) -> list[PrefSchool]:
                 for row in table:
                     if not row or len(row) < 8 or is_header(row):
                         continue
-                    school_name = (row[2] or "").strip()
-                    if not school_name or school_name.isdigit():
+                    school_name = clean_school_name(row[2])
+                    if not _looks_like_school_name(school_name):
                         continue
                     out.append(PrefSchool(
                         pref="tokyo",
@@ -234,6 +295,7 @@ def parse_tokyo(pdf_path: Path) -> list[PrefSchool]:
                         operator_name=(row[5] or "").strip(),
                         operator_address=(row[6] or "").strip(),
                         disclosure_url=extract_url(row[7]),
+                        remarks=(row[7] or "").strip(),
                     ))
     return out
 
@@ -255,8 +317,8 @@ def parse_5col(pdf_path: Path, pref: str) -> list[PrefSchool]:
                 for row in table:
                     if not row or len(row) < 5 or is_header(row):
                         continue
-                    school_name = (row[0] or "").strip()
-                    if not school_name:
+                    school_name = clean_school_name(row[0])
+                    if not _looks_like_school_name(school_name):
                         continue
 
                     url = extract_url(row[4])
@@ -272,6 +334,7 @@ def parse_5col(pdf_path: Path, pref: str) -> list[PrefSchool]:
                         operator_name=(row[2] or "").strip(),
                         operator_address=(row[3] or "").strip(),
                         disclosure_url=url,
+                        remarks=(row[4] or "").strip(),
                     ))
     return out
 
@@ -285,8 +348,8 @@ def parse_7col_hokkaido(pdf_path: Path, pref: str = "hokkaido") -> list[PrefScho
                 for row in table:
                     if not row or len(row) < 7 or is_header(row):
                         continue
-                    school_name = (row[0] or "").strip()
-                    if not school_name or "確認大学" in school_name:
+                    school_name = clean_school_name(row[0])
+                    if not _looks_like_school_name(school_name) or "確認大学" in school_name:
                         continue
                     out.append(PrefSchool(
                         pref=pref,
@@ -297,7 +360,216 @@ def parse_7col_hokkaido(pdf_path: Path, pref: str = "hokkaido") -> list[PrefScho
                         operator_name=(row[2] or "").strip(),
                         operator_address=(row[3] or "").strip(),
                         disclosure_url=extract_url(row[5]),
+                        remarks=(row[6] or "").strip(),
                     ))
+    return out
+
+
+@dataclass
+class _HtmlLink:
+    text: str
+    href: str
+
+
+@dataclass
+class _HtmlCell:
+    text: str
+    links: list[_HtmlLink] = field(default_factory=list)
+
+
+class _TableLinkExtractor(HTMLParser):
+    """Extract HTML tables plus anchor text/hrefs from prefecture index pages."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tables: list[list[list[_HtmlCell]]] = []
+        self.all_links: list[_HtmlLink] = []
+        self._table: list[list[_HtmlCell]] | None = None
+        self._row: list[_HtmlCell] | None = None
+        self._cell_text: list[str] | None = None
+        self._cell_links: list[_HtmlLink] | None = None
+        self._anchor_href: str | None = None
+        self._anchor_text: list[str] | None = None
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        if tag in {"script", "style"}:
+            self._skip_depth += 1
+            return
+        if self._skip_depth:
+            return
+        if tag == "table":
+            self._table = []
+        elif tag == "tr" and self._table is not None:
+            self._row = []
+        elif tag in {"td", "th"} and self._row is not None:
+            self._cell_text = []
+            self._cell_links = []
+        elif tag == "a":
+            href = dict(attrs).get("href")
+            if href:
+                self._anchor_href = href
+                self._anchor_text = []
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth:
+            return
+        if self._cell_text is not None:
+            self._cell_text.append(data)
+        if self._anchor_text is not None:
+            self._anchor_text.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if tag in {"script", "style"} and self._skip_depth:
+            self._skip_depth -= 1
+            return
+        if self._skip_depth:
+            return
+        if tag == "a" and self._anchor_href is not None:
+            text = _clean_html_text("".join(self._anchor_text or []))
+            link = _HtmlLink(text=text, href=self._anchor_href)
+            self.all_links.append(link)
+            if self._cell_links is not None:
+                self._cell_links.append(link)
+            self._anchor_href = None
+            self._anchor_text = None
+        elif tag in {"td", "th"} and self._row is not None and self._cell_text is not None:
+            self._row.append(_HtmlCell(
+                text=_clean_html_text("".join(self._cell_text)),
+                links=list(self._cell_links or []),
+            ))
+            self._cell_text = None
+            self._cell_links = None
+        elif tag == "tr" and self._table is not None and self._row is not None:
+            if any(cell.text or cell.links for cell in self._row):
+                self._table.append(self._row)
+            self._row = None
+        elif tag == "table" and self._table is not None:
+            if self._table:
+                self.tables.append(self._table)
+            self._table = None
+
+
+def _clean_html_text(value: str) -> str:
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", value)).strip()
+
+
+def _absolute_http_url(href: str, base_url: str | None) -> str | None:
+    href = href.strip()
+    if not href or href.startswith("#"):
+        return None
+    parsed = urlparse(href)
+    if parsed.scheme and parsed.scheme not in {"http", "https"}:
+        return None
+    candidate = urljoin(base_url, href) if base_url else href
+    parsed_candidate = urlparse(candidate)
+    if parsed_candidate.scheme in {"http", "https"} and parsed_candidate.netloc:
+        return candidate
+    return None
+
+
+def _cell_url(cell: _HtmlCell, base_url: str | None) -> str | None:
+    for link in cell.links:
+        url = _absolute_http_url(link.href, base_url)
+        if url:
+            return url
+    return extract_url(cell.text)
+
+
+def _row_remarks(headers: list[str], cells: list[_HtmlCell]) -> str:
+    texts = [cell.text for cell in cells]
+    if headers and len(headers) == len(texts):
+        for idx, header in enumerate(headers):
+            if "備考" in norm(header):
+                return texts[idx]
+    tagged = [text for text in texts if classify_prefecture_remarks(text)]
+    return " / ".join(tagged)
+
+
+def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None) -> list[PrefSchool]:
+    """Generic official-index HTML parser.
+
+    Some prefectures publish the 確認大学等 index directly as an HTML table/list
+    where the school name itself is a hyperlink. This parser turns those rows
+    into the same PrefSchool shape as the PDF table parsers.
+    """
+    source_url = base_url or artifact_source_url(html_path)
+    html = html_path.read_text(encoding="utf-8", errors="replace")
+    extractor = _TableLinkExtractor()
+    extractor.feed(html)
+
+    out: list[PrefSchool] = []
+    seen: set[tuple[str, str | None]] = set()
+
+    for table in extractor.tables:
+        headers: list[str] = []
+        for cells in table:
+            texts = [cell.text for cell in cells]
+            if is_header(texts):
+                headers = texts
+                continue
+
+            school_idx: int | None = None
+            school_name = ""
+            for idx, cell in enumerate(cells):
+                link_name = next(
+                    (clean_school_name(link.text) for link in cell.links if _looks_like_school_name(link.text)),
+                    "",
+                )
+                if link_name:
+                    school_idx = idx
+                    school_name = link_name
+                    break
+                if _looks_like_school_name(cell.text):
+                    school_idx = idx
+                    school_name = clean_school_name(cell.text)
+                    break
+            if school_idx is None:
+                continue
+
+            row_url = _cell_url(cells[school_idx], source_url)
+            if not row_url:
+                row_url = next((_cell_url(cell, source_url) for cell in cells if _cell_url(cell, source_url)), None)
+
+            key = (norm(school_name), row_url)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            out.append(PrefSchool(
+                pref=pref,
+                school_name_raw=school_name,
+                school_name_norm=norm(school_name),
+                address=texts[school_idx + 1] if len(texts) > school_idx + 1 else "",
+                operator_kind="",
+                operator_name=texts[school_idx + 2] if len(texts) > school_idx + 2 else "",
+                operator_address=texts[school_idx + 3] if len(texts) > school_idx + 3 else "",
+                disclosure_url=row_url,
+                remarks=_row_remarks(headers, cells),
+            ))
+
+    for link in extractor.all_links:
+        if not _looks_like_school_name(link.text):
+            continue
+        url = _absolute_http_url(link.href, source_url)
+        school_name = clean_school_name(link.text)
+        key = (norm(school_name), url)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(PrefSchool(
+            pref=pref,
+            school_name_raw=school_name,
+            school_name_norm=norm(school_name),
+            address="",
+            operator_kind="",
+            operator_name="",
+            operator_address="",
+            disclosure_url=url,
+        ))
+
     return out
 
 
@@ -316,6 +588,16 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "shizuoka": lambda p: parse_5col(p, "shizuoka"),
     "okinawa": lambda p: parse_5col(p, "okinawa"),
     "hokkaido": parse_7col_hokkaido,
+    "akita": lambda p: parse_5col(p, "akita"),
+    "aomori": lambda p: parse_html_table(p, "aomori"),
+    "fukui": lambda p: parse_5col(p, "fukui"),
+    "gunma": lambda p: parse_html_table(p, "gunma"),
+    "miyazaki": lambda p: parse_html_table(p, "miyazaki"),
+    "nagano": lambda p: parse_html_table(p, "nagano"),
+    "wakayama": lambda p: parse_html_table(p, "wakayama"),
+    "tottori": lambda p: parse_html_table(p, "tottori"),
+    "yamaguchi": lambda p: parse_html_table(p, "yamaguchi"),
+    "oita": lambda p: parse_html_table(p, "oita"),
 }
 
 
@@ -334,6 +616,16 @@ PREF_KEY_TO_DB = {
     "hokkaido": "北海道",
     "niigata": "新潟県",
     "aichi": "愛知県",
+    "akita": "秋田県",
+    "aomori": "青森県",
+    "fukui": "福井県",
+    "gunma": "群馬県",
+    "miyazaki": "宮崎県",
+    "nagano": "長野県",
+    "wakayama": "和歌山県",
+    "tottori": "鳥取県",
+    "yamaguchi": "山口県",
+    "oita": "大分県",
 }
 
 
@@ -476,6 +768,7 @@ def build_report(
 
         url_quality = classify_url_quality(r.pref_school.disclosure_url)
         quality_dist[url_quality] = quality_dist.get(url_quality, 0) + 1
+        remark_tags = classify_prefecture_remarks(r.pref_school.remarks)
 
         existing_urls = site_index.get(r.db_school_id, []) if r.db_school_id else []
         if existing_urls:
@@ -511,6 +804,9 @@ def build_report(
             "pdf_address": r.pref_school.address,
             "pdf_operator": r.pref_school.operator_name,
             "pref_url": r.pref_school.disclosure_url,
+            "pref_remarks": r.pref_school.remarks,
+            "pref_remark_tags": remark_tags,
+            "pref_has_school_change_signal": bool(remark_tags),
             "url_quality": url_quality,
             "match_strategy": r.match_strategy,
             "existing_urls": existing_urls,
@@ -553,13 +849,45 @@ def apply_writer_plan(session, report: PrefReport) -> dict[str, int]:
     Caller is responsible for ``session.commit()`` so we sit inside a
     larger transaction if needed.
     """
-    from eidp.db.models import SchoolSite
+    from eidp.db.models import ReviewItem, SchoolSite
 
     stats = {"added": 0, "upgraded": 0, "skipped": 0}
     for record in report.records:
         action = record["recommended_action"]
         school_id = record["db_school_id"]
         new_url = record["pref_url"]
+        remark_tags = record.get("pref_remark_tags") or []
+        remarks = record.get("pref_remarks") or ""
+
+        if school_id and remark_tags:
+            existing_item = (
+                session.query(ReviewItem)
+                .filter(
+                    ReviewItem.item_type == "prefecture_remark",
+                    ReviewItem.reference_table == "school",
+                    ReviewItem.reference_id == school_id,
+                    ReviewItem.status == "pending",
+                    ReviewItem.evidence_url == new_url,
+                )
+                .first()
+            )
+            if existing_item is None:
+                session.add(ReviewItem(
+                    item_type="prefecture_remark",
+                    reference_id=school_id,
+                    reference_table="school",
+                    status="pending",
+                    priority=2,
+                    proposal_value=json.dumps(
+                        {"tags": remark_tags, "remarks": remarks},
+                        ensure_ascii=False,
+                    ),
+                    proposal_reason="都道府県の確認大学等一覧の備考欄に注意信号があります。",
+                    proposal_source="prefecture_aggregator",
+                    evidence_url=new_url,
+                ))
+                stats["review_items"] = stats.get("review_items", 0) + 1
+
         if action == "noop" or action == "review" or not school_id or not new_url:
             stats["skipped"] += 1
             continue

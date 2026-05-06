@@ -11,6 +11,7 @@ from eidp.scraper.pdf_discovery import (
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
     DiscoveryResult,
     PdfCandidate,
+    _download_attempt_urls,
     _extract_pdf_links,
     _score_candidate,
     _sitemap_urls_for_site,
@@ -68,6 +69,25 @@ def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
     assert "&amp;" not in candidates[0].pdf_url
     assert candidates[0].pattern_type == "cache_busted"
     assert "高等教育の修学支援新制度" in candidates[0].anchor_text
+
+
+def test_download_attempt_urls_resolves_tmu_download_wrapper(monkeypatch) -> None:
+    """TMU-style download wrappers carry the real PDF path in a query value."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    urls = _download_attempt_urls(
+        "https://www.tmu.ac.jp/extra/download.html"
+        "?dd=assets%2Ffiles%2Fdownload%2FInformation_disclosure%2F2025_syugakusien_shinseisyo_1.pdf"
+    )
+
+    assert urls == [
+        "https://www.tmu.ac.jp/assets/files/download/Information_disclosure/2025_syugakusien_shinseisyo_1.pdf",
+        (
+            "https://www.tmu.ac.jp/extra/download.html"
+            "?dd=assets%2Ffiles%2Fdownload%2FInformation_disclosure%2F2025_syugakusien_shinseisyo_1.pdf"
+        ),
+    ]
 
 
 class _HtmlResponse:
@@ -179,6 +199,50 @@ def test_discover_pdfs_uses_sitemap_when_site_has_no_disclosure_links(monkeypatc
     assert result.best is not None
     assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
     assert result.best.page_url == "https://example.ac.jp/school/public_info/"
+
+
+def test_discover_pdfs_uses_sitemap_even_when_root_has_stale_pdf(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/docs/r7-kakunin.pdf">令和7年度 確認申請書</a>
+                </html>
+                """,
+                url="https://example.ac.jp/",
+            ),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse(
+                """
+                <urlset>
+                  <url><loc>https://example.ac.jp/school/public_info/</loc></url>
+                </urlset>
+                """,
+                url="https://example.ac.jp/sitemap.xml",
+            ),
+            "https://example.ac.jp/school/public_info/": _HtmlResponse(
+                """
+                <a href="/docs/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://example.ac.jp/school/public_info/",
+            ),
+        }
+    )
+
+    result = discover_pdfs_for_site(client, 1, "https://example.ac.jp/")
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
+    assert {candidate.pdf_url for candidate in result.candidates} == {
+        "https://example.ac.jp/docs/r7-kakunin.pdf",
+        "https://example.ac.jp/docs/r8-kakunin.pdf",
+    }
 
 
 def test_discovery_attempt_window_reaches_buried_confirmation_pdf() -> None:
@@ -352,6 +416,111 @@ def test_download_pdf_rejects_stale_fiscal_year_in_strict_target_mode(
     assert pdf_type in {"target", "unknown"}
     assert reason == "fiscal_year_mismatch:2025"
     assert not list((tmp_path / "1").glob("*.pdf"))
+
+
+def test_download_pdf_rejects_url_only_target_hint_in_strict_target_mode(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """URL/anchor hints rank candidates but must not prove the PDF fiscal year."""
+
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/2026/r8-kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和8年度 確認申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "target_fiscal_year_not_detected"
+    assert not list((tmp_path / "1").glob("*.pdf"))
+
+
+def test_download_pdf_accepts_pdf_text_target_year_in_strict_target_mode(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("令和8年度 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/r8-kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="確認申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert Path(file_path).is_file()
+
+
+def test_download_pdf_uses_resolved_download_wrapper_url(monkeypatch, tmp_path: Path) -> None:
+    content = _make_pdf_bytes("令和8年度 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    wrapper_url = (
+        "https://www.tmu.ac.jp/extra/download.html"
+        "?dd=assets%2Ffiles%2Fdownload%2FInformation_disclosure%2F2026_syugakusien_shinseisyo_1.pdf"
+    )
+    direct_url = "https://www.tmu.ac.jp/assets/files/download/Information_disclosure/2026_syugakusien_shinseisyo_1.pdf"
+    candidate = PdfCandidate(
+        pdf_url=wrapper_url,
+        page_url="https://www.tmu.ac.jp/kyouikujouhoutop/arbitrary-matter/22202.html",
+        anchor_text="令和8年度 確認申請書",
+    )
+    called_urls: list[str] = []
+
+    def fake_safe_get(_client, url: str) -> _PdfResponse:  # noqa: ANN001
+        called_urls.append(url)
+        return _PdfResponse(content)
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._safe_get", fake_safe_get)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, _file_hash, _file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert called_urls == [direct_url]
+    assert candidate.pdf_url == direct_url
+    assert pdf_type == "target"
+    assert reason is None
 
 
 def test_run_pdf_discovery_skips_duplicate_hash_from_other_school(

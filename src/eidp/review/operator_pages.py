@@ -1325,30 +1325,27 @@ def page_rejections() -> None:
 # V1 theme injection — pull Streamlit close to the Linear-style mockup
 # ---------------------------------------------------------------------------
 
-def inject_v1_theme() -> None:
-    """Inject the V1 Linear-shell design tokens into Streamlit.
+def v1_theme_css() -> str:
+    """Return theme-aware CSS for the operator console.
 
-    Streamlit's default theme is generic SaaS. This override pulls it
-    toward the mockup担当者 reviewed: #FAFAFA bg, Inter sans, Source Serif
-    display, dense metrics, dark primary buttons, pill-style horizontal
-    radio, sidebar with proper border. Call once from app.py main().
+    The first V1 pass hard-coded a light palette and broke Streamlit's native
+    Light/Dark switch. Keep the layout polish, but bind colors to Streamlit's
+    own theme variables so operator preference changes remain readable.
     """
-    st.markdown(
-        """
-        <style>
+    return """
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
         :root {
-          --eidp-bg: #FAFAFA;
-          --eidp-surface: #FFFFFF;
-          --eidp-surface-alt: #F3F3F3;
-          --eidp-ink: #0C0C0D;
-          --eidp-ink-mid: #4E4E52;
-          --eidp-ink-low: #8C8C92;
-          --eidp-border: #E5E7EB;
-          --eidp-border-strong: #D1D1D6;
-          --eidp-accent: #5E6AD2;
-          --eidp-accent-soft: #EEF0FB;
+          --eidp-bg: var(--background-color);
+          --eidp-surface: var(--secondary-background-color);
+          --eidp-surface-alt: color-mix(in srgb, var(--secondary-background-color) 86%, var(--text-color) 14%);
+          --eidp-ink: var(--text-color);
+          --eidp-ink-mid: color-mix(in srgb, var(--text-color) 72%, var(--background-color) 28%);
+          --eidp-ink-low: color-mix(in srgb, var(--text-color) 50%, var(--background-color) 50%);
+          --eidp-border: color-mix(in srgb, var(--text-color) 18%, transparent);
+          --eidp-border-strong: color-mix(in srgb, var(--text-color) 28%, transparent);
+          --eidp-accent: var(--primary-color);
+          --eidp-accent-soft: color-mix(in srgb, var(--primary-color) 18%, var(--background-color) 82%);
           --eidp-ok: #1F8B4C;
           --eidp-warn: #A65A00;
           --eidp-danger: #B42318;
@@ -1487,10 +1484,13 @@ def inject_v1_theme() -> None:
         .stButton > button[kind="primary"],
         .stButton > button[kind="primary"] * {
           background: var(--eidp-ink) !important;
-          color: #FFFFFF !important;
+          color: var(--eidp-bg) !important;
           border: 1px solid var(--eidp-ink) !important;
         }
-        .stButton > button[kind="primary"]:hover { background: #000000 !important; border-color: #000 !important; }
+        .stButton > button[kind="primary"]:hover {
+          background: var(--eidp-ink-mid) !important;
+          border-color: var(--eidp-ink-mid) !important;
+        }
         .stButton > button:not([kind="primary"]) {
           background: var(--eidp-surface) !important;
           color: var(--eidp-ink) !important;
@@ -1543,7 +1543,7 @@ def inject_v1_theme() -> None:
           > div[role="radiogroup"][aria-orientation="horizontal"]
           > label:has(input:checked) {
           background: var(--eidp-ink);
-          color: #FFFFFF;
+          color: var(--eidp-bg);
         }
 
         /* Progress bar */
@@ -1604,10 +1604,12 @@ def inject_v1_theme() -> None:
 
         /* Checkbox */
         .stCheckbox label { font-size: 13px; color: var(--eidp-ink-mid); }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """
+
+
+def inject_v1_theme() -> None:
+    """Inject the V1 Streamlit theme override once from app.py main()."""
+    st.markdown(f"<style>{v1_theme_css()}</style>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------

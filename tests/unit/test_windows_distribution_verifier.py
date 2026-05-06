@@ -31,6 +31,15 @@ def _write_zip(path: Path, entries: dict[str, bytes | str]) -> Path:
 
 def _core_entries() -> dict[str, bytes | str]:
     return {
+        "BUILD_INFO.json": json.dumps(
+            {
+                "app": "EIDP",
+                "built_at_utc": "2026-05-06T12:00:00+00:00",
+                "git_commit": "a" * 40,
+                "git_branch": "test",
+                "git_dirty": "false",
+            }
+        ),
         "EIDP-setup.bat": (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8"),
         "EIDP-start.bat": (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8"),
         "README.md": "# EIDP\n",
@@ -76,6 +85,7 @@ def test_verify_core_zip_accepts_complete_distribution(tmp_path: Path) -> None:
     assert check.details["wheel_count"] == 2
     assert check.details["size_bytes"] == zip_path.stat().st_size
     assert check.details["sha256"] == hashlib.sha256(zip_path.read_bytes()).hexdigest()
+    assert check.details["build_info"]["git_commit"] == "a" * 40
 
 
 def test_verify_core_zip_requires_runtime(tmp_path: Path) -> None:

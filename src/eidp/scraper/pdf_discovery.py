@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qsl, unquote, urljoin, urlparse
 
 import httpx
 import structlog
@@ -165,34 +165,6 @@ def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None 
     return score
 
 
-def _candidate_has_fiscal_year_hint(candidate: PdfCandidate, fiscal_year: int) -> bool:
-    """Return True when URL/anchor explicitly mention ``fiscal_year``."""
-    text = (candidate.anchor_text + " " + candidate.pdf_url).lower()
-    return any(token.lower() in text for token in fiscal_year_search_tokens(fiscal_year))
-
-
-def _detect_fiscal_year_from_candidate_hint(
-    candidate: PdfCandidate,
-    *,
-    target_fiscal_year: int,
-) -> int | None:
-    """Best-effort fiscal-year detector from URL/anchor text.
-
-    Text extracted from the PDF body is authoritative. This helper is a fallback
-    for image PDFs or parser failures so strict current-FY mode can still reject
-    obvious R7/2025 URLs instead of silently storing them.
-    """
-    if _candidate_has_fiscal_year_hint(candidate, target_fiscal_year):
-        return target_fiscal_year
-    for fiscal_year in range(target_fiscal_year - 1, 2018, -1):
-        if _candidate_has_fiscal_year_hint(candidate, fiscal_year):
-            return fiscal_year
-    for fiscal_year in range(target_fiscal_year + 1, target_fiscal_year + 3):
-        if _candidate_has_fiscal_year_hint(candidate, fiscal_year):
-            return fiscal_year
-    return None
-
-
 def _extract_pdf_sample_text(content: bytes) -> str:
     """Extract a small text sample from the first pages of a PDF."""
     import io
@@ -290,27 +262,80 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
     return candidates
 
 
+def _pdf_url_from_query_value(url: str) -> str | None:
+    """Resolve download-wrapper URLs whose query contains the real PDF path.
+
+    Tokyo Metropolitan University exposes links like
+    ``/extra/download.html?dd=assets%2F...%2Ffile.pdf``. The wrapper returns
+    HTML, while the query value points to the actual PDF on the same host.
+    """
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.netloc or ".pdf" not in parsed.query.lower():
+        return None
+
+    base = f"{parsed.scheme}://{parsed.netloc}/"
+    for _key, value in parse_qsl(parsed.query, keep_blank_values=True):
+        decoded = unquote(value).strip()
+        if ".pdf" not in decoded.lower():
+            continue
+        candidate_url = urljoin(base, decoded.lstrip("/"))
+        if _is_safe_url(candidate_url):
+            return candidate_url
+    return None
+
+
+def _download_attempt_urls(url: str) -> list[str]:
+    """Return candidate download URLs, preferring resolved direct PDFs."""
+    urls: list[str] = []
+    resolved = _pdf_url_from_query_value(url)
+    if resolved:
+        urls.append(resolved)
+    if url not in urls:
+        urls.append(url)
+    return urls
+
+
 def _find_subpage_links(html: str, base_url: str) -> list[str]:
     """Find disclosure subpage links to follow (two-tier pattern)."""
     subpages: list[str] = []
-    keywords = ["情報公開", "公開情報", "修学支援", "高等教育", "無償化", "確認申請"]
+    seen: set[str] = set()
+    keywords = [
+        "情報公開",
+        "公開情報",
+        "教育情報",
+        "公表",
+        "修学支援",
+        "高等教育",
+        "無償化",
+        "確認申請",
+        "機関要件",
+        "disclosure",
+        "public",
+        "public_info",
+        "arbitrary-matter",
+        "kyouikujouhou",
+        "kikanyouken",
+        "valuation",
+    ]
 
     for m in re.finditer(
         r'<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
         html, re.IGNORECASE | re.DOTALL,
     ):
-        href = m.group(1)
-        text = re.sub(r"<[^>]+>", "", m.group(2)).strip()
+        href = html_lib.unescape(m.group(1))
+        text = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
+        haystack = f"{text} {href}".lower()
 
-        if any(kw in text for kw in keywords) and not href.endswith(".pdf"):
+        if any(kw.lower() in haystack for kw in keywords) and not href.lower().endswith(".pdf"):
             url = urljoin(base_url, href)
             parsed = urlparse(url)
             base_parsed = urlparse(base_url)
             # Only follow links on the same domain
-            if parsed.netloc == base_parsed.netloc or not parsed.netloc:
+            if (parsed.netloc == base_parsed.netloc or not parsed.netloc) and url not in seen:
+                seen.add(url)
                 subpages.append(url)
 
-    return subpages[:5]  # Limit to 5 subpages
+    return subpages[:12]  # Keep bounded while covering dense institutional navs.
 
 
 def _sitemap_urls_for_site(
@@ -425,6 +450,16 @@ def _extract_sitemap_locs(xml: str) -> list[str]:
     ]
 
 
+def _append_unique_candidates(target: list[PdfCandidate], additions: list[PdfCandidate]) -> None:
+    """Append candidates not already present by PDF URL."""
+    seen = {candidate.pdf_url for candidate in target}
+    for candidate in additions:
+        if candidate.pdf_url in seen:
+            continue
+        seen.add(candidate.pdf_url)
+        target.append(candidate)
+
+
 def discover_pdfs_for_site(
     client: httpx.Client,
     school_id: int,
@@ -490,27 +525,32 @@ def discover_pdfs_for_site(
                     sub_resp = _safe_get(client, sub_url)
                     if sub_resp.status_code == 200:
                         sub_candidates = _extract_pdf_links(sub_resp.text, sub_url)
-                        candidates.extend(sub_candidates)
+                        _append_unique_candidates(candidates, sub_candidates)
                 except httpx.HTTPError:
                     continue
 
-        if not candidates:
-            for sitemap_url in _sitemap_urls_for_site(client, site_url):
-                if sitemap_url.lower().split("?", 1)[0].endswith(".pdf"):
-                    candidates.append(PdfCandidate(
+        # Sitemap discovery is not just a last resort. Many school homepages
+        # expose stale PDFs on the visible page while the current disclosure page
+        # is only reachable through sitemap.xml / robots Sitemap entries.
+        for sitemap_url in _sitemap_urls_for_site(client, site_url):
+            if sitemap_url.lower().split("?", 1)[0].endswith(".pdf"):
+                _append_unique_candidates(
+                    candidates,
+                    [PdfCandidate(
                         pdf_url=sitemap_url,
                         page_url=sitemap_url,
                         anchor_text="sitemap",
                         pattern_type="sitemap_pdf",
-                    ))
-                    continue
-                try:
-                    time.sleep(1.0)
-                    sitemap_resp = _safe_get(client, sitemap_url)
-                    if sitemap_resp.status_code == 200:
-                        candidates.extend(_extract_pdf_links(sitemap_resp.text, sitemap_url))
-                except httpx.HTTPError:
-                    continue
+                    )],
+                )
+                continue
+            try:
+                time.sleep(1.0)
+                sitemap_resp = _safe_get(client, sitemap_url)
+                if sitemap_resp.status_code == 200:
+                    _append_unique_candidates(candidates, _extract_pdf_links(sitemap_resp.text, sitemap_url))
+            except httpx.HTTPError:
+                continue
 
         # Score all candidates
         for c in candidates:
@@ -564,25 +604,37 @@ def download_pdf(
     if not _is_safe_url(candidate.pdf_url):
         return None, None, 0, "unknown", "unsafe_url"
     try:
-        resp = _safe_get(client, candidate.pdf_url)
-        resp.raise_for_status()
+        last_reject_reason = "unknown"
+        for download_url in _download_attempt_urls(candidate.pdf_url):
+            if not _is_safe_url(download_url):
+                last_reject_reason = "unsafe_resolved_url"
+                continue
+            resp = _safe_get(client, download_url)
+            resp.raise_for_status()
 
-        # Check Content-Length before reading body
-        content_length = resp.headers.get("content-length")
-        if content_length and int(content_length) > max_pdf_size:
-            log.warning("pdf_too_large", url=candidate.pdf_url, size=content_length)
-            return None, None, 0, "unknown", "too_large_header"
+            # Check Content-Length before reading body
+            content_length = resp.headers.get("content-length")
+            if content_length and int(content_length) > max_pdf_size:
+                log.warning("pdf_too_large", url=download_url, size=content_length)
+                return None, None, 0, "unknown", "too_large_header"
 
-        content = resp.content
-        if len(content) > max_pdf_size:
-            log.warning("pdf_too_large_actual", url=candidate.pdf_url, size=len(content))
-            return None, None, 0, "unknown", "too_large_body"
-        if len(content) < 1000:  # Too small to be a real PDF
-            return None, None, 0, "unknown", "too_small"
+            content = resp.content
+            if len(content) > max_pdf_size:
+                log.warning("pdf_too_large_actual", url=download_url, size=len(content))
+                return None, None, 0, "unknown", "too_large_body"
+            if len(content) < 1000:  # Too small to be a real PDF
+                last_reject_reason = "too_small"
+                continue
 
-        # Verify it's actually a PDF
-        if not content[:5] == b"%PDF-":
-            return None, None, 0, "unknown", "not_pdf_magic"
+            # Verify it's actually a PDF
+            if not content[:5] == b"%PDF-":
+                last_reject_reason = "not_pdf_magic"
+                continue
+
+            candidate.pdf_url = download_url
+            break
+        else:
+            return None, None, 0, "unknown", last_reject_reason
 
         file_hash = hashlib.sha256(content).hexdigest()
         file_size = len(content)
@@ -598,17 +650,9 @@ def download_pdf(
 
         if strict_target_fiscal_year:
             target_year = target_fiscal_year or settings.target_fiscal_year
-            if detected_fiscal_year is None:
-                detected_fiscal_year = _detect_fiscal_year_from_candidate_hint(
-                    candidate,
-                    target_fiscal_year=target_year,
-                )
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
-            if (
-                detected_fiscal_year is None
-                and not _candidate_has_fiscal_year_hint(candidate, target_year)
-            ):
+            if detected_fiscal_year is None:
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
 
         # Storage path: data/pdfs/{school_id}/{hash[:8]}.pdf
@@ -654,7 +698,8 @@ def run_pdf_discovery(
         target_fiscal_year: fiscal year to treat as current. Defaults to
             ``settings.target_fiscal_year``.
         strict_target_fiscal_year: when True, downloads are accepted only when
-            PDF text or URL/anchor evidence confirms ``target_fiscal_year``.
+            PDF text confirms ``target_fiscal_year``. URL/anchor text ranks
+            candidates but is not evidence strong enough to store a document.
     """
     stats = {"crawled": 0, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
     recorder = EvidenceRecorder(evidence_path)
@@ -891,6 +936,21 @@ def run_pdf_discovery(
                         )
                         session.add(doc)
                         stats["downloaded"] += 1
+                        recorder.record(RejectionEvidence(
+                            school_id=site.school_id,
+                            pdf_url=candidate.pdf_url,
+                            page_url=candidate.page_url,
+                            anchor_text=candidate.anchor_text,
+                            pattern_type=candidate.pattern_type,
+                            score=candidate.score,
+                            reason="accepted_downloaded",
+                            pdf_type=pdf_type,
+                            extra={
+                                "site_url": site.url,
+                                "discovery_method": site.discovery_method or "",
+                                "target_fiscal_year": str(target_year),
+                            },
+                        ))
 
                     job.status = "success"
                     job.finished_at = datetime.now(UTC)
