@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
+from streamlit.testing.v1 import AppTest
 
 from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, SchoolSite
@@ -26,9 +29,19 @@ from eidp.review._pages.school_year_tasks import (
 
 
 def _session() -> Session:
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     return Session(engine)
+
+
+def _render_school_tasks_for_test(session, lock_path):  # noqa: ANN001, ANN201
+    from eidp.review._pages import school_year_tasks as tasks
+
+    tasks.render(session, lock_path=lock_path)
 
 
 def _school(
@@ -366,6 +379,35 @@ def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_
         assert by_id[2].latest_site_url == "https://school2.example/info"
         assert by_id[2].latest_document_id == 21
         assert by_id[2].latest_document_fiscal_year == 2024
+    finally:
+        session.close()
+
+
+def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        _school(session, 3, name="URLなし学校")
+        _status(session, 3, url_status="no_url", blocking_reason="no_url")
+        session.commit()
+
+        app = AppTest.from_function(
+            _render_school_tasks_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.run(timeout=5)
+
+        assert not app.exception
+        url_buttons = [button for button in app.button if button.label == "この学校のURLを追加"]
+        assert len(url_buttons) == 1
+
+        url_buttons[0].click().run(timeout=5)
+
+        assert app.session_state["selected_page"] == school_year_tasks.URL_SUBMISSION_PAGE_ID
+        assert (
+            app.session_state[school_year_tasks.URL_SUBMISSION_QUERY_STATE_KEY]
+            == "URLなし学校"
+        )
+        assert app.session_state[school_year_tasks.URL_SUBMISSION_SCHOOL_ID_STATE_KEY] == 3
     finally:
         session.close()
 

@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
+from streamlit.testing.v1 import AppTest
 from typer.testing import CliRunner
 
 from eidp.cli import app
@@ -17,9 +19,19 @@ from eidp.review import operator_pages
 
 
 def _session() -> Session:
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     return Session(engine)
+
+
+def _render_url_submission_for_test(session):  # noqa: ANN001, ANN201
+    from eidp.review import operator_pages as pages
+
+    pages.page_url_submission(session)
 
 
 def test_output_path_allows_output_and_rejects_traversal() -> None:
@@ -92,6 +104,33 @@ def test_school_option_index_prefers_task_board_school_id() -> None:
     assert operator_pages.school_option_index(options, "200") == 1
     assert operator_pages.school_option_index(options, "missing") == 0
     assert operator_pages.school_option_index(options, None) == 0
+
+
+def test_url_submission_page_prefills_school_from_task_board_state() -> None:
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=100,
+                prefecture="東京",
+                corporation_name="滋慶",
+                school_name="東京アニメ",
+                school_type="専門学校",
+            )
+        )
+        session.flush()
+
+        app = AppTest.from_function(_render_url_submission_for_test, args=(session,))
+        app.session_state["url_submission_school_query"] = "東京アニメ"
+        app.session_state["url_submission_school_id"] = 100
+        app.run(timeout=5)
+
+        assert not app.exception
+        assert app.text_input[0].value == "東京アニメ"
+        assert app.selectbox[0].value == 100
+        assert any("選択中: 東京アニメ" in caption.value for caption in app.caption)
+    finally:
+        session.close()
 
 
 def test_submit_operator_url_inserts_verified_school_site(monkeypatch: pytest.MonkeyPatch) -> None:
