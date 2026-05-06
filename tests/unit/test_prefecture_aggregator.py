@@ -26,6 +26,8 @@ from eidp.scraper.prefecture_aggregator import (
     parse,
     parse_5col,
     parse_6col_indexed,
+    parse_13col_niigata,
+    parse_aichi_index,
     parse_html_table,
     parse_osaka_xlsx,
     parse_tokyo,
@@ -238,6 +240,46 @@ def test_parse_6col_indexed_skips_category_headings(monkeypatch, tmp_path: Path)
     assert parsed[1].remarks == "新規"
 
 
+def test_parse_13col_niigata_reads_sparse_visual_columns(monkeypatch, tmp_path: Path):
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["", "確認大学等", "", "", "確認大学等", "", "", "設置者の", "", "", "設置者の主たる", "", "備考"],
+                    [
+                        None, "の名称", None, None, "の所在地", None, None,
+                        "名称", None, None, "事務所の所在地", None, None,
+                    ],
+                    [
+                        "新潟県立看護大\n学", None, None,
+                        "上越市新南町\n240", None, None,
+                        "公立大学法人新\n潟県立看護大学", None, None,
+                        "上越市新南町240", None, None,
+                        "令和8年度新規認定校 https://example.jp/disclosure/",
+                    ],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+
+    parsed = parse_13col_niigata(tmp_path / "niigata.pdf")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "niigata"
+    assert parsed[0].school_name_raw == "新潟県立看護大学"
+    assert parsed[0].operator_name == "公立大学法人新潟県立看護大学"
+    assert parsed[0].disclosure_url == "https://example.jp/disclosure/"
+
+
 def test_recommend_action():
     assert recommend_action("none", []) == "noop"
     assert recommend_action("direct_pdf", []) == "add"
@@ -440,6 +482,31 @@ def test_parse_html_table_falls_back_to_school_name_anchor_list(tmp_path: Path):
     assert len(parsed) == 1
     assert parsed[0].school_name_raw == "大分テスト大学"
     assert parsed[0].disclosure_url == "https://example.ac.jp/kikanyouken/"
+
+
+def test_parse_aichi_index_uses_school_anchor_range(tmp_path: Path):
+    html = tmp_path / "aichi.html"
+    html.write_text(
+        """
+        <html><body>
+          <a href="/top/">県トップ</a>
+          <a href="https://www.aichi-pu.ac.jp/disclosure/index.html">愛知県立大学</a>
+          <a href="https://example.ac.jp/r8.pdf">愛知テスト専門学校 [PDFファイル/123KB]</a>
+          <a href="https://get.adobe.com/jp/reader/">Adobe Reader</a>
+          <a href="https://example.invalid/after">後続リンク大学</a>
+        </body></html>
+        """,
+        encoding="utf-8",
+    )
+    html.with_suffix(".html.url").write_text(
+        "https://www.pref.aichi.jp/soshiki/shigaku/kikanyoukenkakunin.html\n",
+        encoding="utf-8",
+    )
+
+    parsed = parse_aichi_index(html)
+
+    assert [row.school_name_raw for row in parsed] == ["愛知県立大学", "愛知テスト専門学校"]
+    assert parsed[1].disclosure_url == "https://example.ac.jp/r8.pdf"
 
 
 # ---------------------------------------------------------------------------

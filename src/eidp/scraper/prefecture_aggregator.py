@@ -170,6 +170,7 @@ def clean_school_name(text: str | None) -> str:
     if not text:
         return ""
     cleaned = unicodedata.normalize("NFKC", text)
+    cleaned = cleaned.replace("​", "")
     cleaned = cleaned.replace("＜外部リンク＞", "")
     cleaned = cleaned.replace("(外部サイトへリンク)", "")
     cleaned = cleaned.replace("（外部サイトへリンク）", "")
@@ -415,6 +416,46 @@ def parse_7col_hokkaido(pdf_path: Path, pref: str = "hokkaido") -> list[PrefScho
     return out
 
 
+def parse_13col_niigata(pdf_path: Path) -> list[PrefSchool]:
+    """Niigata official PDF: visual 5-column table extracted as 13 narrow columns.
+
+    pdfplumber splits each visual column into repeated narrow cells:
+      col[0]  school name
+      col[3]  school address
+      col[6]  operator name
+      col[9]  operator address
+      col[12] remarks / URL
+    """
+    out: list[PrefSchool] = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables():
+                for row in table:
+                    if not row or len(row) < 13:
+                        continue
+                    joined = clean_cell("".join(c or "" for c in row))
+                    if not joined or "確認大学等" in joined or joined in {"の名称", "備考"}:
+                        continue
+
+                    school_name = clean_school_name(row[0])
+                    if not _looks_like_school_name(school_name):
+                        continue
+
+                    remarks = clean_cell(row[12])
+                    out.append(PrefSchool(
+                        pref="niigata",
+                        school_name_raw=school_name,
+                        school_name_norm=norm(school_name),
+                        address=clean_cell(row[3]),
+                        operator_kind="",
+                        operator_name=clean_cell(row[6]),
+                        operator_address=clean_cell(row[9]),
+                        disclosure_url=extract_url(remarks),
+                        remarks=remarks,
+                    ))
+    return out
+
+
 def _xlsx_cell_text(value: object) -> str:
     if value is None:
         return ""
@@ -600,6 +641,59 @@ def _row_remarks(headers: list[str], cells: list[_HtmlCell]) -> str:
     return " / ".join(tagged)
 
 
+def _clean_anchor_school_label(value: str) -> str:
+    value = re.sub(r"\s*\[PDFファイル[／/][^]]+\]", "", value)
+    return clean_school_name(value)
+
+
+def parse_aichi_index(html_path: Path) -> list[PrefSchool]:
+    """Aichi official index page: one school-name anchor per disclosure page/PDF.
+
+    The Aichi seed originally pointed at a single downloaded school PDF. The
+    durable prefecture path is the official index HTML, which carries the
+    school-specific public disclosure links as anchors.
+    """
+    source_url = artifact_source_url(html_path) or "https://www.pref.aichi.jp/soshiki/shigaku/kikanyoukenkakunin.html"
+    html = html_path.read_text(encoding="utf-8", errors="replace")
+    extractor = _TableLinkExtractor()
+    extractor.feed(html)
+
+    out: list[PrefSchool] = []
+    seen: set[tuple[str, str | None]] = set()
+    in_school_list = False
+    for link in extractor.all_links:
+        school_name = _clean_anchor_school_label(link.text)
+        url = _absolute_http_url(link.href, source_url)
+        if school_name == "愛知県立大学":
+            in_school_list = True
+        if not in_school_list:
+            continue
+        if url and "get.adobe.com" in url:
+            break
+        # Aichi's official list includes legitimate school names that do not
+        # contain the usual suffix tokens (for example HAL名古屋 / 名古屋医専).
+        # Once we are inside the official school-anchor range, keep those rows
+        # unless the anchor is obviously empty/non-school navigation.
+        if not url or len(norm(school_name)) < 4 or school_name.isdigit():
+            continue
+
+        key = (norm(school_name), url)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(PrefSchool(
+            pref="aichi",
+            school_name_raw=school_name,
+            school_name_norm=norm(school_name),
+            address="",
+            operator_kind="",
+            operator_name="",
+            operator_address="",
+            disclosure_url=url,
+        ))
+    return out
+
+
 def parse_html_table(html_path: Path, pref: str, *, base_url: str | None = None) -> list[PrefSchool]:
     """Generic official-index HTML parser.
 
@@ -701,6 +795,8 @@ PARSERS: dict[str, Callable[[Path], list[PrefSchool]]] = {
     "okinawa": lambda p: parse_5col(p, "okinawa"),
     "hokkaido": parse_7col_hokkaido,
     "osaka": parse_osaka_xlsx,
+    "aichi": parse_aichi_index,
+    "niigata": parse_13col_niigata,
     "akita": lambda p: parse_5col(p, "akita"),
     "aomori": lambda p: parse_html_table(p, "aomori"),
     "chiba": lambda p: parse_6col_indexed(p, "chiba"),

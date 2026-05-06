@@ -26,6 +26,16 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
             "artifact_url": "https://www.pref.osaka.lg.jp/r8.xlsx",
         },
         {
+            "pref_key": "aichi",
+            "verified_status": "downloaded",
+            "artifact_url": "https://www.pref.aichi.jp/soshiki/shigaku/kikanyoukenkakunin.html",
+        },
+        {
+            "pref_key": "niigata",
+            "verified_status": "downloaded",
+            "artifact_url": "https://www.pref.niigata.lg.jp/r7.pdf",
+        },
+        {
             "pref_key": "hiroshima",
             "verified_status": "decentralized",
             "artifact_url": "unknown",
@@ -37,5 +47,7 @@ def test_artifact_selection_includes_registered_supported_artifacts() -> None:
 
     assert "hokkaido" in module.SUPPORTED_PARSERS
     assert "osaka" in module.SUPPORTED_PARSERS
+    assert "aichi" in module.SUPPORTED_PARSERS
+    assert "niigata" in module.SUPPORTED_PARSERS
     assert "url_found" in module.DOWNLOADABLE_STATUSES
-    assert pref_keys == {"hokkaido", "osaka"}
+    assert pref_keys == {"hokkaido", "osaka", "aichi", "niigata"}
