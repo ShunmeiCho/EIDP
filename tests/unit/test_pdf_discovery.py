@@ -106,8 +106,10 @@ class _HtmlResponse:
 class _HtmlClient:
     def __init__(self, pages: dict[str, _HtmlResponse]) -> None:
         self.pages = pages
+        self.calls: list[str] = []
 
     def get(self, url: str, **_kwargs):  # noqa: ANN001
+        self.calls.append(url)
         return self.pages.get(url, _HtmlResponse("", status_code=404, url=url))
 
 
@@ -243,6 +245,52 @@ def test_discover_pdfs_uses_sitemap_even_when_root_has_stale_pdf(monkeypatch) ->
     assert {candidate.pdf_url for candidate in result.candidates} == {
         "https://example.ac.jp/docs/r7-kakunin.pdf",
         "https://example.ac.jp/docs/r8-kakunin.pdf",
+    }
+
+
+def test_discover_pdfs_respects_extra_page_budget(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse(
+                """
+                <a href="/public/one/">情報公開 1</a>
+                <a href="/public/two/">情報公開 2</a>
+                <a href="/public/three/">情報公開 3</a>
+                """,
+                url="https://example.ac.jp/",
+            ),
+            "https://example.ac.jp/public/one/": _HtmlResponse(
+                '<a href="/docs/one.pdf">令和8年度 確認申請書</a>',
+                url="https://example.ac.jp/public/one/",
+            ),
+            "https://example.ac.jp/public/two/": _HtmlResponse(
+                '<a href="/docs/two.pdf">令和8年度 確認申請書</a>',
+                url="https://example.ac.jp/public/two/",
+            ),
+            "https://example.ac.jp/public/three/": _HtmlResponse(
+                '<a href="/docs/three.pdf">令和8年度 確認申請書</a>',
+                url="https://example.ac.jp/public/three/",
+            ),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://example.ac.jp/",
+        max_extra_pages=2,
+        max_elapsed_seconds=999,
+    )
+
+    assert "https://example.ac.jp/public/one/" in client.calls
+    assert "https://example.ac.jp/public/two/" in client.calls
+    assert "https://example.ac.jp/public/three/" not in client.calls
+    assert {candidate.pdf_url for candidate in result.candidates} == {
+        "https://example.ac.jp/docs/one.pdf",
+        "https://example.ac.jp/docs/two.pdf",
     }
 
 

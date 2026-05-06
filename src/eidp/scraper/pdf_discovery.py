@@ -93,6 +93,8 @@ HEADERS = {
 }
 
 MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
+MAX_DISCOVERY_EXTRA_PAGES = 6
+MAX_DISCOVERY_ELAPSED_SECONDS = 45.0
 SITEMAP_PAGE_KEYWORDS = (
     "disclosure",
     "public",
@@ -443,6 +445,9 @@ def _sitemap_urls_for_site(
     This is a conservative fallback for schools whose information-disclosure
     page is indexed in the sitemap but not linked from the supplied site URL.
     """
+    if limit <= 0:
+        return []
+
     parsed = urlparse(site_url)
     if not parsed.scheme or not parsed.netloc:
         return []
@@ -559,9 +564,18 @@ def discover_pdfs_for_site(
     school_id: int,
     site_url: str,
     max_depth: int = 2,
+    max_extra_pages: int = MAX_DISCOVERY_EXTRA_PAGES,
+    max_elapsed_seconds: float = MAX_DISCOVERY_ELAPSED_SECONDS,
 ) -> DiscoveryResult:
     """Discover PDF candidates from a school site URL."""
     result = DiscoveryResult(school_id=school_id)
+    started_at = time.monotonic()
+    extra_pages_fetched = 0
+
+    def extra_page_budget_remaining() -> int:
+        if max_elapsed_seconds > 0 and time.monotonic() - started_at >= max_elapsed_seconds:
+            return 0
+        return max(max_extra_pages - extra_pages_fetched, 0)
 
     try:
         # SSRF validation: reject internal/metadata URLs
@@ -612,10 +626,13 @@ def discover_pdfs_for_site(
         if max_depth > 0:
             subpages = _find_subpage_links(html, site_url)
             for sub_url in subpages:
+                if extra_page_budget_remaining() <= 0:
+                    break
                 if not _is_safe_url(sub_url):
                     continue
                 try:
                     time.sleep(1.0)  # Per-request delay
+                    extra_pages_fetched += 1
                     sub_resp = _safe_get(client, sub_url)
                     if sub_resp.status_code == 200:
                         sub_candidates = _extract_pdf_links(sub_resp.text, sub_url)
@@ -626,7 +643,9 @@ def discover_pdfs_for_site(
         # Sitemap discovery is not just a last resort. Many school homepages
         # expose stale PDFs on the visible page while the current disclosure page
         # is only reachable through sitemap.xml / robots Sitemap entries.
-        for sitemap_url in _sitemap_urls_for_site(client, site_url):
+        for sitemap_url in _sitemap_urls_for_site(client, site_url, limit=extra_page_budget_remaining()):
+            if extra_page_budget_remaining() <= 0:
+                break
             if sitemap_url.lower().split("?", 1)[0].endswith(".pdf"):
                 _append_unique_candidates(
                     candidates,
@@ -640,6 +659,7 @@ def discover_pdfs_for_site(
                 continue
             try:
                 time.sleep(1.0)
+                extra_pages_fetched += 1
                 sitemap_resp = _safe_get(client, sitemap_url)
                 if sitemap_resp.status_code == 200:
                     _append_unique_candidates(candidates, _extract_pdf_links(sitemap_resp.text, sitemap_url))
