@@ -16,7 +16,9 @@ import io
 import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
+from ipaddress import ip_address
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 import streamlit as st
@@ -343,6 +345,31 @@ def _csv_value(row: dict[str, str], *names: str) -> str:
     return ""
 
 
+def is_storable_operator_url(url: str) -> bool:
+    """Return True when a URL is safe to store for later discovery.
+
+    Bulk CSV import must not do DNS/HTTP work in the Streamlit request. This
+    structural check blocks obvious SSRF targets; the weekly discovery runner
+    still applies the stricter network-aware ``_is_safe_url`` before fetching.
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return False
+    if hostname in {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}:
+        return False
+    try:
+        ip = ip_address(hostname)
+    except ValueError:
+        return "." in hostname
+    return not (ip.is_private or ip.is_loopback or ip.is_link_local)
+
+
 def _find_school_for_bulk_url_row(session: Session, row: dict[str, str]) -> tuple[School | None, str | None]:
     school_id = _csv_value(row, "school_id", "id", "学校ID")
     if school_id:
@@ -393,7 +420,7 @@ def import_operator_url_csv(session: Session, csv_text: str) -> OperatorBulkUrlI
             skipped += 1
             errors.append(f"line {line_no}: url is required")
             continue
-        if not _is_safe_url(url):
+        if not is_storable_operator_url(url):
             skipped += 1
             errors.append(f"line {line_no}: unsafe URL")
             continue

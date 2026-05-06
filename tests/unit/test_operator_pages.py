@@ -222,7 +222,15 @@ def test_operator_url_kind_label_hides_classifier_codes() -> None:
     assert operator_pages.operator_url_kind_label("future_classifier") == "URL"
 
 
-def test_import_operator_url_csv_inserts_reusable_manual_urls(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_is_storable_operator_url_avoids_network_dependent_dns_checks() -> None:
+    assert operator_pages.is_storable_operator_url("https://univ.example.ac.jp/public_info/")
+    assert operator_pages.is_storable_operator_url("https://senmon.example.ac.jp/r8.pdf")
+    assert not operator_pages.is_storable_operator_url("http://localhost/public_info/")
+    assert not operator_pages.is_storable_operator_url("http://127.0.0.1/public_info/")
+    assert not operator_pages.is_storable_operator_url("not-a-url")
+
+
+def test_import_operator_url_csv_inserts_reusable_manual_urls() -> None:
     session = _session()
     try:
         session.add_all(
@@ -238,7 +246,6 @@ def test_import_operator_url_csv_inserts_reusable_manual_urls(monkeypatch: pytes
             ]
         )
         session.flush()
-        monkeypatch.setattr(operator_pages, "_is_safe_url", lambda url: url.startswith("https://"))
 
         result = operator_pages.import_operator_url_csv(
             session,
@@ -259,7 +266,7 @@ def test_import_operator_url_csv_inserts_reusable_manual_urls(monkeypatch: pytes
         session.close()
 
 
-def test_import_operator_url_csv_updates_existing_and_reports_skips(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_import_operator_url_csv_updates_existing_and_reports_skips() -> None:
     session = _session()
     try:
         session.add(
@@ -278,7 +285,6 @@ def test_import_operator_url_csv_updates_existing_and_reports_skips(monkeypatch:
             )
         )
         session.flush()
-        monkeypatch.setattr(operator_pages, "_is_safe_url", lambda url: url.startswith("https://"))
 
         result = operator_pages.import_operator_url_csv(
             session,
