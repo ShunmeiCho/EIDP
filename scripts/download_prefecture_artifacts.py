@@ -10,10 +10,9 @@ we have a confirmed artifact URL, then
 downloads each artifact under ``data/prefecture-aggregators/artifacts/``
 using the same idiomatic name the CLI expects.
 
-We deliberately keep this offline-friendly for the operator PC: the
-ZIP build folds the resulting artifacts into ``data/...artifacts/``
-inside the ZIP, so first_setup.bat can run ``eidp
-prefecture-aggregate --apply`` with no network.
+The Windows ZIP ships only seed.csv, not downloaded artifacts. The operator
+bootstrap downloads current prefecture artifacts at runtime so the app is not
+frozen to the ZIP build date when prefectures publish a new annual list.
 """
 
 from __future__ import annotations

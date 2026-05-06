@@ -44,8 +44,8 @@ def match_mext(
     dry_run: bool = typer.Option(False, help="Show matches without writing to DB"),
 ) -> None:
     """Match schools against MEXT school codes (Step 3)."""
-    from eidp.matcher.school_matcher import apply_matches, match_schools
     from eidp.db.session import SessionLocal
+    from eidp.matcher.school_matcher import apply_matches, match_schools
 
     session = SessionLocal()
     try:
@@ -89,7 +89,8 @@ def reconcile(
 ) -> None:
     """Reconcile unmatched schools against target institution list (Step 4)."""
     from eidp.db.session import SessionLocal
-    from eidp.matcher.reconciler import apply_reconciliation, reconcile as do_reconcile
+    from eidp.matcher.reconciler import apply_reconciliation
+    from eidp.matcher.reconciler import reconcile as do_reconcile
 
     session = SessionLocal()
     try:
@@ -142,7 +143,11 @@ def verify_identity(
         if result["pass"]:
             typer.echo("\nGATE: PASS")
         else:
-            typer.echo(f"\nGATE: FAIL (truly_unresolved={result['truly_unresolved']}, target_gap={result['target_list_gap']})")
+            typer.echo(
+                "\nGATE: FAIL "
+                f"(truly_unresolved={result['truly_unresolved']}, "
+                f"target_gap={result['target_list_gap']})"
+            )
     except Exception:
         session.rollback()
         raise
@@ -192,7 +197,10 @@ def discover_urls(
             "duckduckgo": True,  # no key needed
         }
         if settings.search_provider not in provider_key_map:
-            typer.echo(f"ERROR: Unknown search_provider '{settings.search_provider}'. Valid: {list(provider_key_map.keys())}")
+            typer.echo(
+                f"ERROR: Unknown search_provider '{settings.search_provider}'. "
+                f"Valid: {list(provider_key_map.keys())}"
+            )
             raise typer.Exit(1)
         provider_has_key = provider_key_map[settings.search_provider]
         if provider_has_key:
@@ -392,17 +400,25 @@ def rebuild_school_year_tasks(
 def prefecture_aggregate(
     pref: str = typer.Option(
         ...,
-        help="Comma-separated prefecture keys (e.g. 'tokyo,kanagawa,saitama,miyagi'). Use 'all' for every registered parser.",
+        help=(
+            "Comma-separated prefecture keys "
+            "(e.g. 'tokyo,kanagawa,saitama,miyagi'). "
+            "Use 'all' for every registered parser."
+        ),
     ),
     artifact_dir: Path = typer.Option(
         Path("data/prefecture-aggregators/artifacts"),
-        help="Directory holding {pref}.pdf or {pref}.xlsx artifacts.",
+        help="Directory holding {pref}.pdf, {pref}.xlsx, or {pref}.html artifacts.",
     ),
     output_dir: Path = typer.Option(
         Path("output/pref-aggregator"),
         help="Where to write the per-prefecture writer-plan JSONs.",
     ),
-    apply: bool = typer.Option(False, "--apply", help="Persist the writer-plan via SchoolSite inserts/upgrades. Required for any DB write."),
+    apply: bool = typer.Option(
+        False,
+        "--apply",
+        help="Persist the writer-plan via SchoolSite inserts/upgrades. Required for any DB write.",
+    ),
 ) -> None:
     """Run the prefecture aggregator: parse → match → writer-plan, optionally apply.
 
@@ -433,15 +449,21 @@ def prefecture_aggregate(
     session = SessionLocal()
     try:
         for p in requested:
-            artifact = artifact_dir / f"{p}.pdf"
-            if not artifact.exists():
-                # Try .xlsx (Osaka)
-                xlsx = artifact_dir / f"{p}.xlsx"
-                if xlsx.exists():
-                    artifact = xlsx
-                else:
-                    typer.echo(f"[skip] {p}: artifact missing at {artifact}")
-                    continue
+            artifact = next(
+                (
+                    candidate
+                    for candidate in (
+                        artifact_dir / f"{p}.pdf",
+                        artifact_dir / f"{p}.xlsx",
+                        artifact_dir / f"{p}.html",
+                    )
+                    if candidate.exists()
+                ),
+                None,
+            )
+            if artifact is None:
+                typer.echo(f"[skip] {p}: artifact missing at {artifact_dir / f'{p}.pdf'}")
+                continue
 
             report = aggregate(session, p, artifact)
             out_path = output_dir / f"{p}.json"
@@ -505,13 +527,24 @@ def db_info() -> None:
     """Show database statistics."""
     from sqlalchemy import func
 
-    from eidp.db.models import CrawlJob, Department, DepartmentYearly, Document, School, SchoolAlias, SchoolSite, SchoolYearStatus, SupportRecipient
+    from eidp.db.models import (
+        CrawlJob,
+        Department,
+        DepartmentYearly,
+        Document,
+        School,
+        SchoolAlias,
+        SchoolSite,
+        SchoolYearStatus,
+        SupportRecipient,
+    )
     from eidp.db.session import SessionLocal
 
     session = SessionLocal()
     try:
         typer.echo(f"Schools:            {session.query(func.count(School.id)).scalar()}")
-        typer.echo(f"  with school_code: {session.query(func.count(School.id)).filter(School.school_code.isnot(None)).scalar()}")
+        school_code_count = session.query(func.count(School.id)).filter(School.school_code.isnot(None)).scalar()
+        typer.echo(f"  with school_code: {school_code_count}")
         typer.echo(f"Departments:        {session.query(func.count(Department.id)).scalar()}")
         typer.echo(f"DepartmentYearly:   {session.query(func.count(DepartmentYearly.id)).scalar()}")
         typer.echo(f"SchoolYearStatus:   {session.query(func.count(SchoolYearStatus.id)).scalar()}")
@@ -561,7 +594,7 @@ def weekly_update(
     Designed for crontab: 0 2 * * 1 .venv/bin/eidp weekly-update
     """
     from eidp.db.session import SessionLocal
-    from eidp.scraper.url_discovery import verify_urls_sync, get_discovery_stats
+    from eidp.scraper.url_discovery import get_discovery_stats, verify_urls_sync
 
     session = SessionLocal()
     try:

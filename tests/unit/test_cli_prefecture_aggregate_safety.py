@@ -16,6 +16,7 @@ This test file pins the new contract:
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import fitz  # type: ignore[import-not-found]
@@ -83,11 +84,11 @@ def patched_session(monkeypatch, sqlite_db_url):
     bound to our temp SQLite, AND wrap the resulting Session so we can
     count commit() / rollback() / apply_writer_plan() invocations."""
     engine = create_engine(sqlite_db_url, future=True)
-    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    session_local = sessionmaker(bind=engine, expire_on_commit=False)
 
     counters = {"commit": 0, "rollback": 0, "apply": 0}
 
-    real_session_factory = SessionLocal
+    real_session_factory = session_local
 
     class CountingSession(Session):
         def commit(self):  # type: ignore[override]
@@ -98,13 +99,13 @@ def patched_session(monkeypatch, sqlite_db_url):
             counters["rollback"] += 1
             return super().rollback()
 
-    SessionLocal_counting = sessionmaker(
+    session_local_counting = sessionmaker(
         bind=engine, expire_on_commit=False, class_=CountingSession,
     )
 
     # Patch the *symbol* `SessionLocal` resolved inside the CLI command.
     import eidp.db.session as session_mod
-    monkeypatch.setattr(session_mod, "SessionLocal", SessionLocal_counting)
+    monkeypatch.setattr(session_mod, "SessionLocal", session_local_counting)
 
     # Patch apply_writer_plan to count invocations without touching DB.
     import eidp.scraper.prefecture_aggregator as agg_mod
@@ -119,12 +120,16 @@ def patched_session(monkeypatch, sqlite_db_url):
 
 
 def _invoke(args: list[str], output_dir: Path, artifact_dir: Path) -> object:
+    return _invoke_pref("saitama", args, output_dir, artifact_dir)
+
+
+def _invoke_pref(pref: str, args: list[str], output_dir: Path, artifact_dir: Path) -> object:
     runner = CliRunner()
     return runner.invoke(
         app,
         [
             "prefecture-aggregate",
-            "--pref", "saitama",
+            "--pref", pref,
             "--artifact-dir", str(artifact_dir),
             "--output-dir", str(output_dir),
             *args,
@@ -148,6 +153,39 @@ def test_default_invocation_is_strict_dry_run(patched_session, artifact_dir, out
     assert patched_session["rollback"] >= 1
     # Writer-plan JSON should still be emitted.
     assert (output_dir / "saitama.json").exists()
+
+
+def test_cli_accepts_html_prefecture_artifacts(monkeypatch, patched_session, tmp_path: Path, output_dir: Path) -> None:
+    """HTML-type prefecture pages are first-class aggregator artifacts."""
+    artifact_dir = tmp_path / "html-artifacts"
+    artifact_dir.mkdir()
+    (artifact_dir / "gunma.html").write_text("<html><table></table></html>", encoding="utf-8")
+    seen: list[tuple[str, str]] = []
+
+    def fake_aggregate(_session, pref: str, artifact: Path):  # noqa: ANN001
+        seen.append((pref, artifact.name))
+        return SimpleNamespace(
+            pref=pref,
+            pdf_path=str(artifact),
+            extracted_total=1,
+            db_matched=1,
+            db_unmatched=0,
+            action_distribution={"noop": 1},
+            writer_plan=[],
+            review_items=[],
+        )
+
+    import eidp.scraper.prefecture_aggregator as agg_mod
+
+    monkeypatch.setattr(agg_mod, "aggregate", fake_aggregate)
+
+    result = _invoke_pref("gunma", [], output_dir, artifact_dir)
+
+    assert result.exit_code == 0, result.output
+    assert seen == [("gunma", "gunma.html")]
+    assert (output_dir / "gunma.json").exists()
+    assert patched_session["commit"] == 0
+    assert patched_session["rollback"] >= 1
 
 
 def test_apply_invocation_calls_apply_writer_plan_and_commits(patched_session, artifact_dir, output_dir):
