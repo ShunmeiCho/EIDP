@@ -298,9 +298,15 @@ def test_step_known_url_discovery_imports_seed_and_corporation_fallbacks(tmp_pat
         calls.append(("corp", session))
         return {"inferred": 4, "skipped_has_url": 5}
 
-    def fake_search_and_discover(session, *, batch_size, progress_callback=None):  # noqa: ANN001
+    def fake_search_and_discover(  # noqa: ANN001
+        session,
+        *,
+        batch_size,
+        evidence_path=None,
+        progress_callback=None,
+    ):
         _ = progress_callback
-        calls.append(("search", session, batch_size))
+        calls.append(("search", session, batch_size, evidence_path))
         return {"searched": 10, "found": 6, "no_result": 3, "errors": 1}
 
     import eidp.db.session as db_session
@@ -356,8 +362,14 @@ def test_step_known_url_discovery_runs_search_when_enabled(tmp_path: Path, monke
         calls.append(("corp", session))
         return {"inferred": 1, "skipped_has_url": 2}
 
-    def fake_search_and_discover(session, *, batch_size, progress_callback=None):  # noqa: ANN001
-        calls.append(("search", session, batch_size))
+    def fake_search_and_discover(  # noqa: ANN001
+        session,
+        *,
+        batch_size,
+        evidence_path=None,
+        progress_callback=None,
+    ):
+        calls.append(("search", session, batch_size, evidence_path))
         if progress_callback is not None:
             progress_callback({"searched": 10, "found": 4, "no_result": 5, "errors": 1}, 25)
         return {"searched": 25, "found": 9, "no_result": 15, "errors": 1}
@@ -375,6 +387,7 @@ def test_step_known_url_discovery_runs_search_when_enabled(tmp_path: Path, monke
         seed_url_csv=seed_url_csv,
         search_missing_urls=True,
         search_batch_size=25,
+        url_search_evidence_log=tmp_path / "url-search.jsonl",
         progress=progress,
     )
     payload = json.loads(progress_file.read_text(encoding="utf-8"))
@@ -385,7 +398,7 @@ def test_step_known_url_discovery_runs_search_when_enabled(tmp_path: Path, monke
     assert stats["search_found"] == 9
     assert stats["search_no_result"] == 15
     assert stats["search_errors"] == 1
-    assert calls[2] == ("search", fake_session, 25)
+    assert calls[2] == ("search", fake_session, 25, tmp_path / "url-search.jsonl")
     assert "commit" in calls
     assert payload["current_step"] == 2
     assert payload["message"].startswith("不足URLをWeb検索で補完しています。")
@@ -477,6 +490,7 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
             batch_size=100,
             rate_limit=0.0,
             evidence_log=None,
+            url_search_evidence_log=tmp_path / "url_search_evidence.jsonl",
             allow_stale_fallback=False,
             skip_ingest=True,
         )

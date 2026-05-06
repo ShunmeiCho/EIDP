@@ -25,6 +25,7 @@ from eidp.review._pages.school_year_tasks import (
     is_pdf_site_url,
     latest_bootstrap_log,
     latest_bootstrap_progress,
+    latest_url_search_evidence,
     list_school_year_tasks,
     manual_entry_prefill_for_row,
     needs_initial_url_bootstrap,
@@ -842,6 +843,53 @@ def test_discovery_evidence_table_rows_show_candidate_reason_and_source() -> Non
         "リンク文字": "2025年度 確認申請書",
         "PDF候補": "https://school.example/2025.pdf",
         "掲載ページ": "https://school.example/disclosure/",
+    }]
+
+
+def test_latest_url_search_evidence_reads_school_rows(tmp_path: Path) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "url_search_evidence.jsonl").write_text(
+        json.dumps(
+            {
+                "school_id": 1,
+                "school_name": "東京テスト大学",
+                "provider": "fake",
+                "query": "東京テスト大学 情報公開",
+                "result_url": "https://example.edu/disclosure/",
+                "result_title": "情報公開",
+                "score": 0.95,
+                "decision": "accepted",
+                "reason": "registered_school_site",
+                "timestamp": "2026-05-07T00:00:00+00:00",
+            },
+            ensure_ascii=False,
+        )
+        + "\n"
+        + json.dumps(
+            {
+                "school_id": 2,
+                "query": "別学校 情報公開",
+                "decision": "rejected",
+                "reason": "low_confidence",
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rows = latest_url_search_evidence(app_root=tmp_path, school_id=1)
+
+    assert rows == [{
+        "採否": "accepted",
+        "理由": "registered_school_site",
+        "score": 0.95,
+        "query": "東京テスト大学 情報公開",
+        "候補URL": "https://example.edu/disclosure/",
+        "候補タイトル": "情報公開",
+        "provider": "fake",
+        "時刻": "2026-05-07T00:00:00+00:00",
     }]
 
 

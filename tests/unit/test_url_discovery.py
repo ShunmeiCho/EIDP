@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -70,7 +71,7 @@ def test_load_corporation_domains_reads_utf8_sig_csv(tmp_path: Path, monkeypatch
     assert domains == {"学校法人テスト": "https://corp.example"}
 
 
-def test_search_and_discover_registers_best_result(monkeypatch) -> None:
+def test_search_and_discover_registers_best_result(tmp_path: Path, monkeypatch) -> None:
     import time as time_module
 
     class FakeProvider:
@@ -105,18 +106,25 @@ def test_search_and_discover_registers_best_result(monkeypatch) -> None:
         )
         session.commit()
 
-        stats = url_discovery.search_and_discover(session, batch_size=1)
+        evidence_path = tmp_path / "url_search_evidence.jsonl"
+        stats = url_discovery.search_and_discover(session, batch_size=1, evidence_path=evidence_path)
         site = session.query(SchoolSite).one()
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[0])
 
         assert stats == {"searched": 1, "found": 1, "no_result": 0, "errors": 0}
         assert site.url == "https://example.edu/disclosure/"
         assert site.discovery_method == "web_search"
         assert site.confidence > 0.9
+        assert evidence["school_id"] == 1
+        assert evidence["query"] == "日本語専門学校 情報公開 高等教育 修学支援"
+        assert evidence["result_url"] == "https://example.edu/disclosure/"
+        assert evidence["decision"] == "accepted"
+        assert evidence["reason"] == "registered_school_site"
     finally:
         session.close()
 
 
-def test_search_and_discover_rejects_low_confidence_results(monkeypatch) -> None:
+def test_search_and_discover_rejects_low_confidence_results(tmp_path: Path, monkeypatch) -> None:
     import time as time_module
 
     class FakeProvider:
@@ -157,11 +165,19 @@ def test_search_and_discover_rejects_low_confidence_results(monkeypatch) -> None
         )
         session.commit()
 
-        stats = url_discovery.search_and_discover(session, batch_size=1)
+        evidence_path = tmp_path / "url_search_evidence.jsonl"
+        stats = url_discovery.search_and_discover(session, batch_size=1, evidence_path=evidence_path)
+        evidence_rows = [
+            json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines()
+        ]
 
         assert stats == {"searched": 1, "found": 0, "no_result": 1, "errors": 0}
         assert session.query(SchoolSite).count() == 0
         assert provider.queries == url_discovery.search_queries_for_school(session.get(School, 1))
+        assert len(evidence_rows) == len(provider.queries)
+        assert {row["decision"] for row in evidence_rows} == {"rejected"}
+        assert {row["reason"] for row in evidence_rows} == {"low_confidence"}
+        assert all(row["result_url"] == "https://unrelated.example/news/" for row in evidence_rows)
     finally:
         session.close()
 

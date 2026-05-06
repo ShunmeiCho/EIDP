@@ -23,6 +23,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from eidp.db.models import School, SchoolSite
+from eidp.scraper.discovery_evidence import EvidenceRecorder, UrlSearchEvidence
 from eidp.scraper.search_provider import SearchResult
 
 log = structlog.get_logger()
@@ -228,6 +229,7 @@ def search_and_discover(
     batch_size: int = 100,
     rate_limit_delay: float = 1.0,
     progress_callback: Callable[[dict[str, int], int], None] | None = None,
+    evidence_path: Path | None = None,
 ) -> dict[str, int]:
     """Use search API to discover URLs for schools without any URL.
 
@@ -267,63 +269,135 @@ def search_and_discover(
         .all()
     )
 
-    log.info("search_discovery_start", provider=provider.name(), schools=len(schools_without))
+    provider_name = provider.name()
+    log.info("search_discovery_start", provider=provider_name, schools=len(schools_without))
 
-    for school in schools_without:
-        # Cascading query strategy — try specific first, broaden on failure
-        queries = search_queries_for_school(school)
+    with EvidenceRecorder(evidence_path) as evidence:
+        for school in schools_without:
+            # Cascading query strategy — try specific first, broaden on failure
+            queries = search_queries_for_school(school)
 
-        found = False
-        had_error = False
-        for query in queries:
-            try:
-                results = provider.search(query, count=3)
-            except Exception as e:
-                log.warning("search_error", school=school.school_name, error=str(e))
-                stats["errors"] += 1
-                had_error = True
-                time.sleep(rate_limit_delay)
-                break
-
-            if results:
-                # Find the best result (prefer .ac.jp domains and title matches)
-                best = _pick_best_result(results, school)
-                if best and _is_safe_url(best.url):
-                    confidence = _score_search_result(best, school)
-                    if confidence < SEARCH_RESULT_MIN_CONFIDENCE:
-                        log.info(
-                            "search_result_rejected_low_confidence",
-                            school=school.school_name,
-                            url=best.url,
-                            confidence=confidence,
-                        )
-                        time.sleep(rate_limit_delay)
-                        continue
-                    site = SchoolSite(
-                        school_id=school.id,
-                        url=best.url,
-                        url_type="school" if school.school_name in best.url else "corporation_subpage",
-                        discovery_method="web_search",
-                        confidence=confidence,
-                    )
-                    session.add(site)
-                    stats["found"] += 1
-                    found = True
+            found = False
+            had_error = False
+            for query in queries:
+                try:
+                    results = provider.search(query, count=3)
+                except Exception as e:
+                    log.warning("search_error", school=school.school_name, error=str(e))
+                    evidence.record(_url_search_evidence(
+                        school=school,
+                        provider=provider_name,
+                        query=query,
+                        decision="error",
+                        reason=str(e),
+                    ))
+                    stats["errors"] += 1
+                    had_error = True
+                    time.sleep(rate_limit_delay)
                     break
 
+                if results:
+                    # Find the best result (prefer .ac.jp domains and title matches)
+                    best = _pick_best_result(results, school)
+                    if best is not None:
+                        confidence = _score_search_result(best, school)
+                        if not _is_safe_url(best.url):
+                            evidence.record(_url_search_evidence(
+                                school=school,
+                                provider=provider_name,
+                                query=query,
+                                decision="rejected",
+                                reason="unsafe_url",
+                                result=best,
+                                score=confidence,
+                            ))
+                            time.sleep(rate_limit_delay)
+                            continue
+                        if confidence < SEARCH_RESULT_MIN_CONFIDENCE:
+                            log.info(
+                                "search_result_rejected_low_confidence",
+                                school=school.school_name,
+                                url=best.url,
+                                confidence=confidence,
+                            )
+                            evidence.record(_url_search_evidence(
+                                school=school,
+                                provider=provider_name,
+                                query=query,
+                                decision="rejected",
+                                reason="low_confidence",
+                                result=best,
+                                score=confidence,
+                            ))
+                            time.sleep(rate_limit_delay)
+                            continue
+                        site = SchoolSite(
+                            school_id=school.id,
+                            url=best.url,
+                            url_type="school" if school.school_name in best.url else "corporation_subpage",
+                            discovery_method="web_search",
+                            confidence=confidence,
+                        )
+                        session.add(site)
+                        evidence.record(_url_search_evidence(
+                            school=school,
+                            provider=provider_name,
+                            query=query,
+                            decision="accepted",
+                            reason="registered_school_site",
+                            result=best,
+                            score=confidence,
+                        ))
+                        stats["found"] += 1
+                        found = True
+                        break
+                else:
+                    evidence.record(_url_search_evidence(
+                        school=school,
+                        provider=provider_name,
+                        query=query,
+                        decision="no_result",
+                        reason="provider_returned_no_results",
+                    ))
+                time.sleep(rate_limit_delay)
+
+            if not found and not had_error:
+                stats["no_result"] += 1
+
+            stats["searched"] += 1
+            if progress_callback is not None:
+                progress_callback(dict(stats), len(schools_without))
             time.sleep(rate_limit_delay)
-
-        if not found and not had_error:
-            stats["no_result"] += 1
-
-        stats["searched"] += 1
-        if progress_callback is not None:
-            progress_callback(dict(stats), len(schools_without))
-        time.sleep(rate_limit_delay)
 
     session.flush()
     log.info("search_discovery_complete", **stats)
     return stats
+
+
+def _url_search_evidence(
+    *,
+    school: "School",
+    provider: str,
+    query: str,
+    decision: str,
+    reason: str,
+    result: SearchResult | None = None,
+    score: float = 0.0,
+) -> UrlSearchEvidence:
+    return UrlSearchEvidence(
+        school_id=int(school.id),
+        school_name=school.school_name or "",
+        school_type=school.school_type or "",
+        corporation_name=school.corporation_name or "",
+        provider=provider,
+        query=query,
+        result_url=result.url if result is not None else "",
+        result_title=result.title if result is not None else "",
+        result_description=result.description if result is not None else "",
+        score=score,
+        decision=decision,
+        reason=reason,
+    )
 
 
 def search_queries_for_school(school: "School") -> list[str]:

@@ -52,6 +52,7 @@ _DEFAULT_MASTER = _OUTPUT_DIR / "専門学校無償化情報公開まとめ.xlsx
 _DEFAULT_COMPETITION = _OUTPUT_DIR / "競合校の在校生数.xlsx"
 _DEFAULT_COMPETITION_GAP = _OUTPUT_DIR / "競合校gap-report.csv"
 _DEFAULT_REJECTIONS = _OUTPUT_DIR / "discovery_rejections.jsonl"
+_DEFAULT_URL_SEARCH_EVIDENCE = _OUTPUT_DIR / "url_search_evidence.jsonl"
 _DEFAULT_INGEST_REJECTIONS = _OUTPUT_DIR / "ingest_rejections.jsonl"
 _DEFAULT_OPERATOR_SUBMISSIONS = _OUTPUT_DIR / "operator_url_submissions.jsonl"
 _DEFAULT_PDF_STORAGE = _DATA_DIR / "pdfs"
@@ -1320,6 +1321,71 @@ def page_rejections() -> None:
     ]
     st.write(f"表示件数: {len(shown)} 件")
     st.dataframe(shown, hide_index=True)
+
+    st.divider()
+    st.subheader("URL検索履歴")
+    st.caption(
+        "都道府県公式一覧や既知URLで入口が埋まらなかった学校について、"
+        "Web検索 fallback が試した query と採否理由を確認します。"
+    )
+    url_log_path = st.text_input(
+        "URL検索履歴ファイルのパス",
+        value=str(_DEFAULT_URL_SEARCH_EVIDENCE),
+        key="url_search_evidence_path",
+    )
+    try:
+        url_path = output_path(url_log_path, (".jsonl",))
+    except PathPolicyError as exc:
+        st.error(f"パス不正: {exc}")
+        return
+    if not url_path.exists():
+        st.info(f"URL検索履歴ファイルがありません: `{url_path}`")
+        return
+
+    url_limit = st.slider(
+        "URL検索の最新N件を表示", 10, 2000, 300, 10, key="url_search_evidence_limit",
+    )
+    url_records = _tail_jsonl(url_path, url_limit)
+    if not url_records:
+        st.info("URL検索履歴が空です。")
+        return
+
+    decisions = sorted({str(r.get("decision") or "?") for r in url_records})
+    selected_decisions = st.multiselect(
+        "URL検索の採否で絞り込み",
+        decisions,
+        default=decisions,
+        key="url_search_decision_filter",
+    )
+    school_text = st.text_input(
+        "URL検索履歴を学校名/学校ID/queryで絞り込み",
+        key="url_search_text_filter",
+    ).strip()
+    url_shown = [
+        {
+            "採否": r.get("decision", ""),
+            "理由": r.get("reason", ""),
+            "score": r.get("score", 0),
+            "学校ID": r.get("school_id", ""),
+            "学校": r.get("school_name", ""),
+            "種別": r.get("school_type", ""),
+            "query": r.get("query", ""),
+            "候補URL": r.get("result_url", ""),
+            "候補タイトル": r.get("result_title", ""),
+            "provider": r.get("provider", ""),
+            "時刻": r.get("timestamp", ""),
+        }
+        for r in url_records
+        if str(r.get("decision") or "?") in selected_decisions
+        and (
+            not school_text
+            or school_text in str(r.get("school_name") or "")
+            or school_text == str(r.get("school_id") or "")
+            or school_text in str(r.get("query") or "")
+        )
+    ]
+    st.write(f"URL検索表示件数: {len(url_shown)} 件")
+    st.dataframe(url_shown, hide_index=True)
 
 
 # ---------------------------------------------------------------------------

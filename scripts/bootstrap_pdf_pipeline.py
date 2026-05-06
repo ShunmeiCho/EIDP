@@ -324,6 +324,7 @@ def step_known_url_discovery(
     seed_url_csv: Path | None,
     search_missing_urls: bool = False,
     search_batch_size: int = 0,
+    url_search_evidence_log: Path | None = None,
     progress: BootstrapProgressWriter | None = None,
 ) -> dict[str, int]:
     """Step 2b: register known URL seeds, corporation fallbacks, and optional Web search."""
@@ -381,6 +382,7 @@ def step_known_url_discovery(
                 search_stats = search_and_discover(
                     session,
                     batch_size=search_batch_size,
+                    evidence_path=url_search_evidence_log,
                     progress_callback=update_search_progress,
                 )
             except Exception as exc:
@@ -584,6 +586,12 @@ def main(argv: list[str] | None = None) -> int:
         default=REPO_ROOT / "output" / "discovery_rejections.jsonl",
     )
     parser.add_argument(
+        "--url-search-evidence-log",
+        type=Path,
+        default=REPO_ROOT / "output" / "url_search_evidence.jsonl",
+        help="Append-only JSONL evidence for Web-search URL discovery decisions.",
+    )
+    parser.add_argument(
         "--lock-path",
         type=Path,
         default=REPO_ROOT / "data" / ".lock",
@@ -743,6 +751,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             seed_url_csv=args.seed_url_csv,
             search_missing_urls=search_missing_urls,
             search_batch_size=search_batch_size,
+            url_search_evidence_log=args.url_search_evidence_log,
             progress=progress,
         )
 

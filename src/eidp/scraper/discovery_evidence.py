@@ -1,4 +1,4 @@
-"""Persistent evidence trail for PDF discovery decisions.
+"""Persistent evidence trail for discovery decisions.
 
 discover-pdfs deletes/skips a lot of candidate URLs (non_target classification,
 HTTP errors, attachment-keyword negative scores). Without a permanent record,
@@ -40,6 +40,27 @@ class RejectionEvidence:
     )
 
 
+@dataclass(frozen=True)
+class UrlSearchEvidence:
+    """One Web-search decision used while looking for a school disclosure page."""
+
+    school_id: int
+    school_name: str = ""
+    school_type: str = ""
+    corporation_name: str = ""
+    provider: str = ""
+    query: str = ""
+    result_url: str = ""
+    result_title: str = ""
+    result_description: str = ""
+    score: float = 0.0
+    decision: str = ""
+    reason: str = ""
+    timestamp: str = field(
+        default_factory=lambda: datetime.now(UTC).isoformat()
+    )
+
+
 class EvidenceRecorder:
     """Append-only JSONL writer. Never raises into the caller."""
 
@@ -54,7 +75,7 @@ class EvidenceRecorder:
                 log.warning("evidence_recorder_open_failed", path=str(path), error=str(e))
                 self._fh = None
 
-    def record(self, evidence: RejectionEvidence) -> None:
+    def record(self, evidence: RejectionEvidence | UrlSearchEvidence) -> None:
         if self._fh is None:
             return
         try:
@@ -63,7 +84,7 @@ class EvidenceRecorder:
         except OSError as e:
             log.warning("evidence_recorder_write_failed", error=str(e))
 
-    def record_many(self, items: Iterable[RejectionEvidence]) -> None:
+    def record_many(self, items: Iterable[RejectionEvidence | UrlSearchEvidence]) -> None:
         for item in items:
             self.record(item)
 
@@ -78,5 +99,5 @@ class EvidenceRecorder:
     def __enter__(self) -> EvidenceRecorder:
         return self
 
-    def __exit__(self, *_args) -> None:
+    def __exit__(self, *_args: object) -> None:
         self.close()

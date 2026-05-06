@@ -272,6 +272,39 @@ def discovery_evidence_table_rows(evidence_rows: list[Any]) -> list[dict[str, ob
     ]
 
 
+def latest_url_search_evidence(
+    *,
+    app_root: Path,
+    school_id: int,
+    limit: int = 6,
+) -> list[dict[str, object]]:
+    """Read recent Web-search URL discovery evidence for one school."""
+    path = app_root / "output" / "url_search_evidence.jsonl"
+    if limit <= 0 or not path.is_file():
+        return []
+
+    rows: list[dict[str, object]] = []
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if payload.get("school_id") != school_id:
+                continue
+            rows.append({
+                "採否": payload.get("decision", ""),
+                "理由": payload.get("reason", ""),
+                "score": payload.get("score", 0),
+                "query": payload.get("query", ""),
+                "候補URL": payload.get("result_url", ""),
+                "候補タイトル": payload.get("result_title", ""),
+                "provider": payload.get("provider", ""),
+                "時刻": payload.get("timestamp", ""),
+            })
+    return list(reversed(rows[-limit:]))
+
+
 def task_progress_label(summary: SchoolTaskSummary) -> str:
     if summary.total <= 0:
         return "対象校がありません。"
@@ -1451,6 +1484,14 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                 site_kind = site_url_type_label(row.latest_site_url_type, row.latest_site_url)
                 method = row.latest_site_discovery_method or "不明"
                 st.caption(f"取得入口: {source_label} / {site_kind} / 登録方法={method} / {row.latest_site_url}")
+            url_evidence_rows = latest_url_search_evidence(
+                app_root=Path(settings.app_root),
+                school_id=row.school_id,
+                limit=6,
+            )
+            if url_evidence_rows:
+                with st.expander("URL検索ログ（queryと採否理由）"):
+                    st.dataframe(url_evidence_rows, hide_index=True, width="stretch")
             if row.latest_document_url:
                 st.caption(
                     f"最新PDF: doc#{row.latest_document_id} / fy={row.latest_document_fiscal_year} / "
