@@ -215,6 +215,13 @@ def test_operator_url_reuse_notice_warns_pdf_direct_link_is_this_year_only() -> 
     assert "情報公開ページURL" in message
 
 
+def test_operator_url_kind_label_hides_classifier_codes() -> None:
+    assert operator_pages.operator_url_kind_label("html_page") == "情報公開ページ"
+    assert operator_pages.operator_url_kind_label("target") == "申請書PDF"
+    assert operator_pages.operator_url_kind_label("image_only") == "画像PDF"
+    assert operator_pages.operator_url_kind_label("future_classifier") == "URL"
+
+
 def test_submit_operator_url_rejects_non_target_without_insert(monkeypatch: pytest.MonkeyPatch) -> None:
     session = _session()
     try:

@@ -302,6 +302,17 @@ def operator_url_reuse_notice(classifier: str) -> tuple[str, str]:
     )
 
 
+def operator_url_kind_label(classifier: str) -> str:
+    """Return a short Japanese label for an accepted operator URL."""
+    if classifier == _ACCEPTED_OPERATOR_PAGE_CLASSIFIER:
+        return "情報公開ページ"
+    if classifier == "image_only":
+        return "画像PDF"
+    if classifier in _ACCEPTED_OPERATOR_CLASSIFIERS:
+        return "申請書PDF"
+    return "URL"
+
+
 def record_operator_submission(result: OperatorUrlSubmission, audit_path: Path) -> None:
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     with audit_path.open("a", encoding="utf-8") as fh:
@@ -943,11 +954,12 @@ URLは登録前に以下のチェックを通します。
             record_operator_submission(result, audit_path)
         except OSError as exc:
             st.warning(f"Accepted, but audit log write failed: {exc}")
-        label = "created" if result.site_created else "verified existing"
+        label = "新規登録" if result.site_created else "登録済みURLを再確認"
+        url_kind = operator_url_kind_label(result.classifier)
         st.success(
-            f"Accepted {result.classifier}: SchoolSite {label}"
-            f" (site_id={result.site_id}, size={result.size_bytes / 1024:.1f} KB)"
+            f"{url_kind}を{label}しました。"
         )
+        st.caption(f"URL ID: {result.site_id} / サイズ: {result.size_bytes / 1024:.1f} KB")
         notice_level, notice = operator_url_reuse_notice(result.classifier)
         if notice_level == "success":
             st.success(notice)
@@ -955,7 +967,8 @@ URLは登録前に以下のチェックを通します。
             st.warning(notice)
         else:
             st.info(notice)
-        st.json(asdict(result))
+        with st.expander("登録詳細（診断用）", expanded=False):
+            st.json(asdict(result))
         if pipeline_result is not None:
             st.subheader("Pipeline result")
             st.json(pipeline_result)
