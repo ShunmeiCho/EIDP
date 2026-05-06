@@ -81,11 +81,14 @@ def test_prefecture_seed_coverage_summarizes_automation_targets(
         "\n".join([
             (
                 "pref_key,pref_jp,schools_in_db,artifact_url,verified_status,has_url_col,"
-                "has_hyperlink_annot,as_of_date,notes"
+                "has_hyperlink_annot,as_of_date,notes,supplemental_artifact_urls"
             ),
             "tokyo,東京都,314,https://pref.example/tokyo.pdf,url_found,yes,no,2026-04-01,URLs",
             "kyoto,京都府,46,unknown,todo,unknown,unknown,,needs check",
-            "akita,秋田県,unknown,https://pref.example/akita.pdf,url_found,no,yes,2025-08-29,links",
+            (
+                "akita,秋田県,unknown,https://pref.example/akita.pdf,url_found,no,yes,2025-08-29,"
+                "links,https://pref.example/akita-old.pdf|https://pref.example/akita-extra.pdf"
+            ),
         ])
         + "\n",
         encoding="utf-8",
@@ -103,8 +106,10 @@ def test_prefecture_seed_coverage_summarizes_automation_targets(
     assert summary.structure_review_schools == 46
     assert summary.parser_unsupported_schools == 0
     assert summary.unknown_school_rows == 1
+    assert summary.supplemental_artifact_rows == 1
     assert [row.status for row in rows] == ["自動取込対象", "構造確認待ち", "parser未対応"]
     assert [row.schools_in_db for row in rows] == [314, 46, None]
+    assert [row.supplemental_artifacts for row in rows] == [0, 0, 2]
     assert rows[0].school_link_signal is True
     assert rows[1].school_link_signal is False
 
