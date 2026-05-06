@@ -9,10 +9,12 @@ Stores results in school_site table.
 """
 
 import csv
-import re
-from collections import defaultdict
+import ipaddress
+import socket
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
@@ -20,6 +22,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from eidp.db.models import School, SchoolSite
+from eidp.scraper.search_provider import SearchResult
 
 log = structlog.get_logger()
 
@@ -33,10 +36,6 @@ def _is_safe_url(url: str) -> bool:
     Performs DNS resolution to block rebinding-style hostnames (e.g.
     169.254.169.254.nip.io) that resolve to private/metadata IPs.
     """
-    from urllib.parse import urlparse
-    import ipaddress
-    import socket
-
     try:
         parsed = urlparse(url)
     except Exception:
@@ -84,7 +83,7 @@ def _load_corporation_domains() -> dict[str, str]:
         log.warning("corporation_domains_csv_not_found", path=str(csv_path))
         return domains
 
-    with open(csv_path) as f:
+    with csv_path.open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             corp = row.get("corporation_name", "").strip()
@@ -126,7 +125,7 @@ def import_seed_urls(
     """Import pre-discovered URLs from the 50-school CSV into school_site."""
     stats = {"imported": 0, "skipped_no_school": 0, "skipped_existing": 0}
 
-    with open(csv_path) as f:
+    with csv_path.open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             prefecture = row.get("prefecture", "").strip()
@@ -314,12 +313,10 @@ def search_and_discover(
 
 
 def _pick_best_result(
-    results: list,
+    results: list[SearchResult],
     school: "School",
-) -> object | None:
+) -> SearchResult | None:
     """Pick the best search result for a school, preferring .ac.jp domains."""
-    from eidp.scraper.search_provider import SearchResult
-
     scored: list[tuple[float, SearchResult]] = []
     for r in results:
         score = _score_search_result(r, school)
@@ -329,11 +326,11 @@ def _pick_best_result(
     return scored[0][1] if scored else None
 
 
-def _score_search_result(result: object, school: "School") -> float:
+def _score_search_result(result: SearchResult, school: "School") -> float:
     """Score a search result for relevance to the target school."""
     score = 0.5
-    title = getattr(result, "title", "")
-    url = getattr(result, "url", "")
+    title = result.title
+    url = result.url
 
     # Name match in title
     if school.school_name in title:
@@ -394,7 +391,6 @@ async def verify_urls_async(
                     if not location:
                         final_status = resp.status_code
                         break
-                    from urllib.parse import urljoin
                     location = urljoin(str(resp.url), location)
                     if location in visited or not _is_safe_url(location):
                         log.warning("ssrf_or_loop_blocked", url=location, origin=site.url)
@@ -443,11 +439,9 @@ def verify_urls_sync(
         headers={"User-Agent": "EIDP-DataCollector/1.0 (institutional research)"},
     ) as client:
         for site in unverified:
-            from datetime import datetime, timezone
-
             if not _is_safe_url(site.url):
                 site.http_status = -2
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = datetime.now(UTC)
                 stats["failed"] += 1
                 stats["checked"] += 1
                 log.warning("ssrf_blocked_verify", url=site.url, school_id=site.school_id)
@@ -466,7 +460,6 @@ def verify_urls_sync(
                     if not location:
                         final_status = resp.status_code
                         break
-                    from urllib.parse import urljoin
                     location = urljoin(str(resp.url), location)
                     if location in visited or not _is_safe_url(location):
                         log.warning("ssrf_or_loop_blocked", url=location, origin=site.url)
@@ -482,19 +475,19 @@ def verify_urls_sync(
                     final_status = resp.status_code
                 site.http_status = final_status
                 site.verified = final_status == 200
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = datetime.now(UTC)
                 if final_status == 200:
-                    site.verified_at = datetime.now(timezone.utc)
+                    site.verified_at = datetime.now(UTC)
                     stats["ok"] += 1
                 else:
                     stats["failed"] += 1
             except httpx.TimeoutException:
                 site.http_status = 0
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = datetime.now(UTC)
                 stats["timeout"] += 1
             except httpx.HTTPError:
                 site.http_status = -1
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = datetime.now(UTC)
                 stats["failed"] += 1
             stats["checked"] += 1
 
@@ -511,41 +504,54 @@ def get_discovery_stats(session: Session) -> dict[str, int | str]:
     - unverified_root: corporation root or unchecked URL
     - total coverage: any URL (inflated, includes roots)
     """
-    total_schools = session.query(func.count(School.id)).scalar() or 0
+    total_schools = int(session.query(func.count(School.id)).scalar() or 0)
     schools_with_url = (
-        session.query(func.count(func.distinct(SchoolSite.school_id))).scalar() or 0
+        int(session.query(func.count(func.distinct(SchoolSite.school_id))).scalar() or 0)
     )
 
     # Verified school-specific disclosure pages (the real coverage number)
     verified_disclosure = (
-        session.query(func.count(func.distinct(SchoolSite.school_id)))
-        .filter(
-            SchoolSite.http_status == 200,
-            SchoolSite.url_type != "corporation",
+        int(
+            session.query(func.count(func.distinct(SchoolSite.school_id)))
+            .filter(
+                SchoolSite.http_status == 200,
+                SchoolSite.url_type != "corporation",
+            )
+            .scalar()
+            or 0
         )
-        .scalar() or 0
     )
 
     # Unverified or corporation-root-only schools
     verified_any = (
-        session.query(func.count(func.distinct(SchoolSite.school_id)))
-        .filter(SchoolSite.http_status == 200)
-        .scalar() or 0
+        int(
+            session.query(func.count(func.distinct(SchoolSite.school_id)))
+            .filter(SchoolSite.http_status == 200)
+            .scalar()
+            or 0
+        )
     )
 
     corp_only = (
-        session.query(func.count(func.distinct(SchoolSite.school_id)))
-        .filter(SchoolSite.url_type == "corporation")
-        .scalar() or 0
+        int(
+            session.query(func.count(func.distinct(SchoolSite.school_id)))
+            .filter(SchoolSite.url_type == "corporation")
+            .scalar()
+            or 0
+        )
     )
 
     unverified = (
-        session.query(func.count(SchoolSite.id))
-        .filter(SchoolSite.http_status.is_(None))
-        .scalar() or 0
+        int(
+            session.query(func.count(SchoolSite.id))
+            .filter(SchoolSite.http_status.is_(None))
+            .scalar()
+            or 0
+        )
     )
 
-    pct = lambda n: f"{n / total_schools * 100:.1f}%" if total_schools > 0 else "0%"
+    def pct(n: int) -> str:
+        return f"{n / total_schools * 100:.1f}%" if total_schools > 0 else "0%"
 
     return {
         "total_schools": total_schools,
