@@ -229,10 +229,12 @@ def search_and_discover(
 ) -> dict[str, int]:
     """Use search API to discover URLs for schools without any URL.
 
-    Uses cascading query strategy:
-    1. "{school_name} 情報公開 高等教育無償化" (most specific)
-    2. "{school_name} 情報公開" (broader)
-    3. "{school_name} 専門学校" (find school homepage)
+    Uses a cascading query strategy tuned by school type:
+    1. target disclosure terms
+    2. target application-form terms
+    3. generic disclosure page terms
+    4. corporation + school terms
+    5. school homepage terms using 大学 / 専門学校 / 短期大学 / etc.
     """
     import time
 
@@ -267,11 +269,7 @@ def search_and_discover(
 
     for school in schools_without:
         # Cascading query strategy — try specific first, broaden on failure
-        queries = [
-            f"{school.school_name} 情報公開 高等教育無償化",
-            f"{school.school_name} 情報公開",
-            f"{school.school_name} 専門学校",
-        ]
+        queries = search_queries_for_school(school)
 
         found = False
         had_error = False
@@ -315,6 +313,52 @@ def search_and_discover(
     session.flush()
     log.info("search_discovery_complete", **stats)
     return stats
+
+
+def search_queries_for_school(school: "School") -> list[str]:
+    """Build school-type aware search queries for reusable disclosure URLs."""
+    school_name = school.school_name.strip()
+    corporation_name = (school.corporation_name or "").strip()
+    kind = _institution_kind_token(school)
+    queries = [
+        f"{school_name} 情報公開 高等教育 修学支援",
+        f"{school_name} 確認申請書 様式第2号",
+        f"{school_name} 情報公開",
+    ]
+    if corporation_name:
+        queries.append(f"{corporation_name} {school_name} 情報公開")
+    if kind and kind not in school_name:
+        queries.append(f"{school_name} {kind}")
+    else:
+        queries.append(f"{school_name} 公式")
+    return _dedupe_preserve_order(queries)
+
+
+def _institution_kind_token(school: "School") -> str:
+    """Return a homepage-search institution token without assuming every school is vocational."""
+    text = f"{school.school_type or ''} {school.school_name}"
+    if "高等専門学校" in text:
+        return "高等専門学校"
+    if "短期大学" in text:
+        return "短期大学"
+    if "専門学校" in text or "専修学校" in text:
+        return "専門学校"
+    if "大学校" in text:
+        return "大学校"
+    if "大学" in text:
+        return "大学"
+    return "学校"
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        normalized = " ".join(value.split())
+        if normalized and normalized not in seen:
+            out.append(normalized)
+            seen.add(normalized)
+    return out
 
 
 def _pick_best_result(

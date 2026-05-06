@@ -114,3 +114,60 @@ def test_search_and_discover_registers_best_result(monkeypatch) -> None:
         assert site.confidence > 0.9
     finally:
         session.close()
+
+
+def test_search_queries_use_university_terms_for_universities() -> None:
+    school = School(
+        id=1,
+        prefecture="東京都",
+        corporation_name="公立大学法人テスト",
+        school_name="東京都立大学",
+        school_type="大学",
+        status="active",
+    )
+
+    queries = url_discovery.search_queries_for_school(school)
+
+    assert "東京都立大学 情報公開 高等教育 修学支援" in queries
+    assert "東京都立大学 確認申請書 様式第2号" in queries
+    assert "公立大学法人テスト 東京都立大学 情報公開" in queries
+    assert all("専門学校" not in query for query in queries)
+    assert queries[-1] == "東京都立大学 公式"
+
+
+def test_search_queries_keep_vocational_homepage_terms_for_senmon() -> None:
+    school = School(
+        id=1,
+        prefecture="東京都",
+        corporation_name="学校法人テスト",
+        school_name="東京デザイン学院",
+        school_type="専門学校",
+        status="active",
+    )
+
+    queries = url_discovery.search_queries_for_school(school)
+
+    assert "東京デザイン学院 専門学校" in queries
+    assert "学校法人テスト 東京デザイン学院 情報公開" in queries
+
+
+def test_search_queries_support_junior_college_and_kosen_terms() -> None:
+    junior_college = School(
+        id=1,
+        prefecture="東京都",
+        corporation_name="学校法人テスト",
+        school_name="東京短期カレッジ",
+        school_type="短期大学",
+        status="active",
+    )
+    kosen = School(
+        id=2,
+        prefecture="東京都",
+        corporation_name="学校法人テスト",
+        school_name="東京工業高専",
+        school_type="高等専門学校",
+        status="active",
+    )
+
+    assert "東京短期カレッジ 短期大学" in url_discovery.search_queries_for_school(junior_college)
+    assert "東京工業高専 高等専門学校" in url_discovery.search_queries_for_school(kosen)
