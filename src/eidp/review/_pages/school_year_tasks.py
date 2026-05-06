@@ -110,7 +110,12 @@ MANUAL_ENTRY_PAGE_ID = "manual_entry"
 MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
 EXCEL_PREVIEW_PAGE_ID = "excel_preview"
 MANUAL_ENTRY_ACTIONS = {"OCR/手入力", "手入力", "PDF確認", "前年差分確認"}
-WEEKLY_DISCOVERY_METHODS = ("prefecture_aggregator", "operator_manual")
+WEEKLY_DISCOVERY_METHODS = (
+    "prefecture_aggregator",
+    "seed_csv",
+    "corporation_pattern",
+    "operator_manual",
+)
 TASK_SCOPE_STATE_KEY = "school_task_scope_filter"
 TASK_REASON_STATE_KEY = "school_task_reason_filter"
 TASK_PREFECTURE_STATE_KEY = "school_task_prefecture_filter"
@@ -241,6 +246,10 @@ def site_entry_label(
     method = (discovery_method or "").strip().lower()
     if method == "prefecture_aggregator":
         return "都道府県公式一覧の入口"
+    if method == "seed_csv":
+        return "既知URLシードの入口"
+    if method == "corporation_pattern":
+        return "法人ドメイン推定の入口"
     if method == "operator_manual":
         return "手動登録ページ入口"
     return "登録ページ入口"

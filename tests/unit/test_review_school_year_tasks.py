@@ -323,6 +323,8 @@ def test_weekly_command_uses_target_year_runner_for_all_schools(tmp_path) -> Non
         str(tmp_path / "scripts" / "run_weekly_target_year_discovery.py"),
         "--methods",
         "prefecture_aggregator",
+        "seed_csv",
+        "corporation_pattern",
         "operator_manual",
         "--school-type",
         "all",
@@ -459,6 +461,8 @@ def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatc
         str(script),
         "--methods",
         "prefecture_aggregator",
+        "seed_csv",
+        "corporation_pattern",
         "operator_manual",
         "--school-type",
         "all",
@@ -690,6 +694,12 @@ def test_site_url_type_label_explains_future_year_reuse() -> None:
 def test_site_entry_label_explains_source_and_reuse_quality() -> None:
     assert site_entry_label("prefecture_aggregator", "disclosure_page", "https://school.example/info/") == (
         "都道府県公式一覧の入口"
+    )
+    assert site_entry_label("seed_csv", "disclosure_page", "https://school.example/info/") == (
+        "既知URLシードの入口"
+    )
+    assert site_entry_label("corporation_pattern", "homepage", "https://school.example/") == (
+        "法人ドメイン推定の入口"
     )
     assert site_entry_label("operator_manual", "homepage", "https://school.example/") == "手動登録ページ入口"
     assert site_entry_label("operator_manual", "pdf", "https://school.example/r8.pdf") == (

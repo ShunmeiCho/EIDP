@@ -158,7 +158,7 @@ def test_select_target_missing_school_ids_includes_never_ingested_schools() -> N
         session.close()
 
 
-def test_default_methods_include_operator_manual_urls() -> None:
+def test_default_methods_include_reusable_bootstrap_and_operator_urls() -> None:
     session = _session()
     try:
         _school(session, 1)
@@ -167,6 +167,10 @@ def test_default_methods_include_operator_manual_urls() -> None:
         _site(session, 2, "operator_manual")
         _school(session, 3)
         _site(session, 3, "web_search")
+        _school(session, 4)
+        _site(session, 4, "seed_csv")
+        _school(session, 5)
+        _site(session, 5, "corporation_pattern")
         session.flush()
 
         ids = select_target_missing_school_ids(
@@ -176,7 +180,7 @@ def test_default_methods_include_operator_manual_urls() -> None:
             school_type="専門学校",
         )
 
-        assert ids == [1, 2]
+        assert ids == [1, 2, 4, 5]
     finally:
         session.close()
 
@@ -281,7 +285,12 @@ def test_parse_args_defaults_to_configured_target_fiscal_year(
     args = module.parse_args()
 
     assert args.current_fy == 2027
-    assert args.methods == ["prefecture_aggregator", "operator_manual"]
+    assert args.methods == [
+        "prefecture_aggregator",
+        "seed_csv",
+        "corporation_pattern",
+        "operator_manual",
+    ]
     assert args.school_type == "all"
 
 
