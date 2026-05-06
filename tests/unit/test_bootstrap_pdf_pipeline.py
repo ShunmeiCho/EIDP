@@ -663,6 +663,86 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
     assert calls["discover"]["request_timeout"] == 12.0
 
 
+def test_skip_discover_progress_preserves_known_url_yield(monkeypatch, tmp_path: Path) -> None:
+    def fake_step_download_artifacts(**kwargs):  # noqa: ANN003
+        return ["tokyo"], []
+
+    def fake_step_aggregate(**kwargs):  # noqa: ANN003
+        return {
+            "tokyo": {
+                "extracted": 12,
+                "matched": 10,
+                "added": 4,
+                "upgraded": 1,
+                "skipped": 6,
+                "artifacts": 1,
+            }
+        }
+
+    def fake_step_known_url_discovery(**kwargs):  # noqa: ANN003
+        return {
+            "seed_imported": 3,
+            "seed_skipped_no_school": 0,
+            "seed_skipped_existing": 1,
+            "corporation_inferred": 5,
+            "corporation_skipped_has_url": 2,
+            "search_enabled": 0,
+            "search_searched": 0,
+            "search_found": 0,
+            "search_no_result": 0,
+            "search_errors": 0,
+        }
+
+    import eidp.config as config_mod
+
+    monkeypatch.setattr(module, "step_download_artifacts", fake_step_download_artifacts)
+    monkeypatch.setattr(module, "step_aggregate", fake_step_aggregate)
+    monkeypatch.setattr(module, "step_known_url_discovery", fake_step_known_url_discovery)
+    monkeypatch.setattr(config_mod.settings, "url_search_auto_enable", "off")
+    monkeypatch.setattr(config_mod.settings, "url_search_batch_size", 0)
+    monkeypatch.setattr(config_mod.settings, "search_provider", "duckduckgo")
+    monkeypatch.setattr(config_mod.settings, "serper_api_key", "")
+    monkeypatch.setattr(config_mod.settings, "brave_api_key", "")
+    monkeypatch.setattr(config_mod.settings, "google_api_key", "")
+    monkeypatch.setattr(config_mod.settings, "google_cx", "")
+
+    progress_file = tmp_path / "logs" / "bootstrap.json"
+    progress = module.BootstrapProgressWriter(progress_file)
+
+    rc = module.run_bootstrap_with_progress(
+        SimpleNamespace(
+            pref="",
+            seed_csv=tmp_path / "seed.csv",
+            artifact_dir=tmp_path / "artifacts",
+            force_redownload=False,
+            aggregate_output=tmp_path / "out",
+            skip_known_url_discovery=False,
+            url_search="settings",
+            url_search_batch_size=None,
+            seed_url_csv=tmp_path / "known.csv",
+            skip_discover=True,
+            discovery_methods="prefecture_aggregator,seed_csv,corporation_pattern",
+            storage_dir=tmp_path / "pdfs",
+            batch_size=100,
+            rate_limit=0.0,
+            request_timeout=12.0,
+            evidence_log=None,
+            url_search_evidence_log=tmp_path / "url_search_evidence.jsonl",
+            allow_stale_fallback=False,
+            skip_ingest=True,
+        ),
+        progress,
+    )
+
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert payload["status"] == "succeeded"
+    assert payload["details"]["official_index_rows_extracted"] == 12
+    assert payload["details"]["official_school_sites_added"] == 4
+    assert payload["details"]["seed_imported"] == 3
+    assert payload["details"]["corporation_inferred"] == 5
+
+
 def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, monkeypatch) -> None:
     progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
     progress = module.BootstrapProgressWriter(progress_file)

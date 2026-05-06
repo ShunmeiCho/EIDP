@@ -803,6 +803,15 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             url_search_evidence_log=args.url_search_evidence_log,
             progress=progress,
         )
+    post_url_details = {**aggregate_details, **known_url_stats}
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=2,
+            percent=0.45,
+            message="公式一覧、既知URL、法人ドメインの入口登録が完了しました。",
+            details=post_url_details,
+        )
 
     if args.skip_discover:
         print("\n[skip] Step 3 / 4 — --skip-discover requested.")
@@ -814,10 +823,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             current_step=3,
             percent=0.45,
             message="学校サイトから対象年度PDFを探索しています。",
-            details={
-                **aggregate_details,
-                **known_url_stats,
-            },
+            details=post_url_details,
         )
     print("\n=== Step 3: discover-pdfs ===")
     discovery_methods = [method.strip() for method in args.discovery_methods.split(",") if method.strip()]
