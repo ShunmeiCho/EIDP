@@ -1,5 +1,5 @@
 @echo off
-REM Sprint 8.5.a — weekly R8 rediscovery runner for Task Scheduler.
+REM Weekly target-fiscal-year discovery runner for Task Scheduler.
 REM Sprint 8.5.a.1 — runs from the .venv created by first_setup.bat.
 REM
 REM Same EIDP_APP_ROOT / encoding contract as launch.bat. Writes a
@@ -27,7 +27,7 @@ if "%DATESTAMP%"=="" set "DATESTAMP=unknown-date"
 set "LOGFILE=%EIDP_APP_ROOT%\logs\run-%DATESTAMP%.log"
 
 echo [weekly_run] start %DATE% %TIME% >> "%LOGFILE%"
-"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\run_r8_rediscovery_weekly.py" >> "%LOGFILE%" 2>&1
+"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\run_weekly_target_year_discovery.py" >> "%LOGFILE%" 2>&1
 set "RC=%ERRORLEVEL%"
 echo [weekly_run] end %DATE% %TIME% rc=%RC% >> "%LOGFILE%"
 

@@ -204,5 +204,6 @@ def test_action_types_and_target_tables_are_pinned():
     action_type without surfacing it in the UI shows up in code review."""
     assert "manual_entry" in ACTION_TYPES
     assert "fiscal_year_override" in ACTION_TYPES
+    assert "r8_override" in ACTION_TYPES
     assert "department_yearly" in TARGET_TABLES
     assert "document" in TARGET_TABLES

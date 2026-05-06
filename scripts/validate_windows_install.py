@@ -37,6 +37,7 @@ CORE_FILES = (
     "scripts/weekly_run.bat",
     "scripts/uninstall.bat",
     "scripts/validate_install.bat",
+    "scripts/run_weekly_target_year_discovery.py",
     "scripts/run_r8_rediscovery_weekly.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",

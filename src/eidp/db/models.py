@@ -33,7 +33,9 @@ class School(Base):
     school_type: Mapped[str | None] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
         UniqueConstraint("prefecture", "corporation_name", "school_name", name="uq_school_natural_key"),
@@ -43,6 +45,7 @@ class School(Base):
     sites: Mapped[list["SchoolSite"]] = relationship(back_populates="school")
     departments: Mapped[list["Department"]] = relationship(back_populates="school")
     year_statuses: Mapped[list["SchoolYearStatus"]] = relationship(back_populates="school")
+    fiscal_year_statuses: Mapped[list["SchoolFiscalYearStatus"]] = relationship(back_populates="school")
     aliases: Mapped[list["SchoolAlias"]] = relationship(back_populates="school")
     support_recipients: Mapped[list["SupportRecipient"]] = relationship(back_populates="school")
 
@@ -93,11 +96,11 @@ class Document(Base):
     file_hash: Mapped[str | None] = mapped_column(String(64))
     file_size: Mapped[int | None] = mapped_column(Integer)
     fiscal_year: Mapped[int | None] = mapped_column(Integer)
-    fiscal_year_override: Mapped[int | None] = mapped_column(Integer)  # set by 8.2.c override UI; effective_fiscal_year() reads
+    fiscal_year_override: Mapped[int | None] = mapped_column(Integer)
     is_current_year: Mapped[bool | None] = mapped_column(Boolean)
     content_type: Mapped[str | None] = mapped_column(String(20))
     pdf_type: Mapped[str | None] = mapped_column(String(30))  # target, non_target, image_only, unknown
-    ingest_status: Mapped[str | None] = mapped_column(String(30))  # pending, ingested, school_mismatch, parse_failed, transient_error, review_pending, ocr_pending
+    ingest_status: Mapped[str | None] = mapped_column(String(30))
     confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -183,7 +186,7 @@ class DepartmentYearly(Base):
     dropout_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
     extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     extraction_method: Mapped[str | None] = mapped_column(String(20))
-    confidence_breakdown: Mapped[str | None] = mapped_column(Text)  # 8.2.c: JSON: {f1_extraction, f2_completeness, f3_yoy_sanity, method, weights}
+    confidence_breakdown: Mapped[str | None] = mapped_column(Text)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -235,6 +238,38 @@ class SchoolYearStatus(Base):
     )
 
     school: Mapped["School"] = relationship(back_populates="year_statuses")
+
+
+class SchoolFiscalYearStatus(Base):
+    """Operator-facing School x target fiscal year progress row.
+
+    This denormalized table is rebuilt from source-of-truth tables so the UI can
+    show one task row per school instead of making operators reason from a raw
+    document queue.
+    """
+
+    __tablename__ = "school_fiscal_year_status"
+
+    school_id: Mapped[int] = mapped_column(ForeignKey("school.id"), primary_key=True)
+    fiscal_year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    url_status: Mapped[str] = mapped_column(String(30), nullable=False, default="unknown")
+    pdf_status: Mapped[str] = mapped_column(String(30), nullable=False, default="none")
+    extract_status: Mapped[str] = mapped_column(String(30), nullable=False, default="none")
+    yoy_diff_status: Mapped[str] = mapped_column(String(30), nullable=False, default="unchecked")
+    excel_ready: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    blocking_reason: Mapped[str | None] = mapped_column(Text)
+    evidence_level: Mapped[str] = mapped_column(String(30), nullable=False, default="none")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_school_fy_status_fy_pdf", "fiscal_year", "pdf_status"),
+        Index("idx_school_fy_status_fy_ready", "fiscal_year", "excel_ready"),
+        {"comment": "Denormalized School x fiscal-year operator task status"},
+    )
+
+    school: Mapped["School"] = relationship(back_populates="fiscal_year_statuses")
 
 
 class SchoolAlias(Base):
@@ -349,8 +384,8 @@ class ManualActionLog(Base):
     action_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)  # UUID4
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     actor: Mapped[str] = mapped_column(String(50), nullable=False, default="operator")
-    action_type: Mapped[str] = mapped_column(String(50), nullable=False)  # fiscal_year_override / manual_entry / r8_override / dept_change
-    target_table: Mapped[str] = mapped_column(String(50), nullable=False)  # document / department_yearly / support_recipient / school_year_status
+    action_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_table: Mapped[str] = mapped_column(String(50), nullable=False)
     target_id: Mapped[int | None] = mapped_column(Integer)
     document_id: Mapped[int | None] = mapped_column(ForeignKey("document.id"))
     old_value: Mapped[str | None] = mapped_column(Text)  # JSON

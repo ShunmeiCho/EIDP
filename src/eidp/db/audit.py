@@ -43,8 +43,8 @@ def log_manual_action(
     Parameters
     ----------
     action_type :
-        e.g. ``"fiscal_year_override"``, ``"manual_entry"``, ``"r8_override"``,
-        ``"dept_change"``.
+        e.g. ``"fiscal_year_override"``, ``"manual_entry"``, ``"dept_change"``.
+        Historical DBs may still contain ``"r8_override"`` rows.
     target_table :
         Table whose row was changed: ``"document"``, ``"department_yearly"``,
         ``"support_recipient"``, or ``"school_year_status"``.

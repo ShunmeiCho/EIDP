@@ -9,8 +9,8 @@ exists" with "the target document was successfully ingested":
                           stale, non-target, parse_failed, school_mismatch)
 - target_pdf_any_fy    — at least one Document with pdf_type='target' AND
                           ingest_status='ingested', any fiscal year. This
-                          is a "discovery health" indicator, NOT R8 coverage.
-- target_pdf_current_fy — same but fiscal_year=fy. **This is the R8/current-FY
+                          is a "discovery health" indicator, NOT target-FY coverage.
+- target_pdf_current_fy — same but fiscal_year=fy. **This is the target-FY
                            coverage metric.** Use this when reporting business
                            progress against the 70% goal.
 - current_fy_doc       — Document with fiscal_year=fy AND ingest_status='ingested'
@@ -65,7 +65,7 @@ class PrefectureCoverage:
 
     @property
     def target_pdf_current_fy_rate(self) -> float:
-        """The headline R8/current-FY coverage metric."""
+        """The headline target-FY coverage metric."""
         return (
             self.schools_with_target_pdf_current_fy / self.schools_total
             if self.schools_total

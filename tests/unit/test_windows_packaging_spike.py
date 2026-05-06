@@ -165,7 +165,7 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
 
 @pytest.mark.parametrize("name", ["first_setup.bat", "launch.bat", "weekly_run.bat", "validate_install.bat"])
 def test_python_bat_forces_utf8(bat_files: dict[str, str], name: str):
-    """Streamlit logs and run_r8_rediscovery_weekly print Japanese.
+    """Streamlit logs and run_weekly_target_year_discovery print Japanese.
     Default Windows console is cp932 in JP, which corrupts text and
     breaks downstream log scrapers. first_setup also runs Python CLI
     commands that may read/write Japanese data. v6 Constraint #6
@@ -382,7 +382,7 @@ def test_download_uses_pip_not_uv(monkeypatch: pytest.MonkeyPatch):
 
 def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     """Owner finding 8.5.a P0/P1: the ZIP manifest was missing
-    alembic.ini, migrations/, and run_r8_rediscovery_weekly.py.
+    alembic.ini, migrations/, and the weekly target-year runner.
     Recreate a faux repo and assert the new collector picks them up."""
     bw = _load_build_script()
 
@@ -391,8 +391,11 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "src" / "eidp" / "__init__.py").write_text("", encoding="utf-8")
     (fake_repo / "scripts").mkdir()
     (fake_repo / "scripts" / "first_setup.bat").write_text("@echo off", encoding="utf-8")
-    (fake_repo / "scripts" / "run_r8_rediscovery_weekly.py").write_text(
+    (fake_repo / "scripts" / "run_weekly_target_year_discovery.py").write_text(
         "print('weekly')", encoding="utf-8",
+    )
+    (fake_repo / "scripts" / "run_r8_rediscovery_weekly.py").write_text(
+        "from run_weekly_target_year_discovery import main\n", encoding="utf-8",
     )
     (fake_repo / "scripts" / "validate_windows_install.py").write_text(
         "print('validate')", encoding="utf-8",
@@ -442,8 +445,11 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "alembic.ini" in arcs, "alembic.ini must be in the Windows ZIP"
     assert "migrations/env.py" in arcs
     assert "migrations/versions/abcd_initial.py" in arcs
-    assert "scripts/run_r8_rediscovery_weekly.py" in arcs, (
+    assert "scripts/run_weekly_target_year_discovery.py" in arcs, (
         "weekly_run.bat depends on this Python entrypoint"
+    )
+    assert "scripts/run_r8_rediscovery_weekly.py" in arcs, (
+        "legacy Task Scheduler entries depend on this compatibility wrapper"
     )
     assert "scripts/validate_windows_install.py" in arcs, (
         "Windows VM checklist depends on this validation entrypoint"

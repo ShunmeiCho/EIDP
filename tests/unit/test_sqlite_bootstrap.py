@@ -20,7 +20,7 @@ SchoolYearStatus are not exercised here.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -34,7 +34,6 @@ from eidp.db.sqlite_bootstrap import (
     create_null_safe_dept_index,
     is_sqlite,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -72,6 +71,7 @@ def test_bootstrap_creates_all_core_tables(bootstrapped_engine):
         "department",
         "department_yearly",
         "document",
+        "school_fiscal_year_status",
         "alembic_version",  # populated by stamp head
     }
     missing = expected_subset - tables
@@ -215,7 +215,7 @@ def _insert_minimal_school_doc_dept(session: Session) -> tuple[int, int]:
         source_url="https://example.com/test.pdf",
         fiscal_year=2026,
         ingest_status="ingested",
-        downloaded_at=datetime.now(timezone.utc),
+        downloaded_at=datetime.now(UTC),
     )
     session.add(doc)
     session.flush()

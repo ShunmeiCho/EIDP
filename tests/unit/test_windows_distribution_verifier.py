@@ -40,6 +40,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/weekly_run.bat": (SCRIPTS_DIR / "weekly_run.bat").read_text(encoding="utf-8"),
         "scripts/uninstall.bat": (SCRIPTS_DIR / "uninstall.bat").read_text(encoding="utf-8"),
         "scripts/validate_install.bat": (SCRIPTS_DIR / "validate_install.bat").read_text(encoding="utf-8"),
+        "scripts/run_weekly_target_year_discovery.py": (
+            SCRIPTS_DIR / "run_weekly_target_year_discovery.py"
+        ).read_text(encoding="utf-8"),
         "scripts/run_r8_rediscovery_weekly.py": (
             SCRIPTS_DIR / "run_r8_rediscovery_weekly.py"
         ).read_text(encoding="utf-8"),
@@ -200,8 +203,8 @@ def test_verify_core_zip_rejects_stale_validator_missing_playwright_flag(tmp_pat
 
 def test_verify_core_zip_rejects_weekly_runner_export_excel(tmp_path: Path) -> None:
     entries = _core_entries()
-    entries["scripts/run_r8_rediscovery_weekly.py"] = (
-        entries["scripts/run_r8_rediscovery_weekly.py"] + "\nexport_excel()\n"
+    entries["scripts/run_weekly_target_year_discovery.py"] = (
+        entries["scripts/run_weekly_target_year_discovery.py"] + "\nexport_excel()\n"
     )
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 

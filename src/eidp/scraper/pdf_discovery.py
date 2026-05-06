@@ -90,6 +90,26 @@ HEADERS = {
 }
 
 MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
+SITEMAP_PAGE_KEYWORDS = (
+    "disclosure",
+    "public",
+    "public_info",
+    "info",
+    "information",
+    "koukai",
+    "joho",
+    "jyoho",
+    "shugaku",
+    "syugaku",
+    "support",
+    "kikanyouken",
+    "情報公開",
+    "公開情報",
+    "修学支援",
+    "高等教育",
+    "無償化",
+    "機関要件",
+)
 
 
 @dataclass
@@ -291,6 +311,59 @@ def _find_subpage_links(html: str, base_url: str) -> list[str]:
     return subpages[:5]  # Limit to 5 subpages
 
 
+def _sitemap_urls_for_site(
+    client: httpx.Client,
+    site_url: str,
+    *,
+    limit: int = 5,
+) -> list[str]:
+    """Return same-domain disclosure-like URLs from ``/sitemap.xml``.
+
+    This is a conservative fallback for schools whose information-disclosure
+    page is indexed in the sitemap but not linked from the supplied site URL.
+    """
+    parsed = urlparse(site_url)
+    if not parsed.scheme or not parsed.netloc:
+        return []
+    sitemap_url = f"{parsed.scheme}://{parsed.netloc}/sitemap.xml"
+    if not _is_safe_url(sitemap_url):
+        return []
+
+    try:
+        resp = _safe_get(client, sitemap_url)
+    except httpx.HTTPError:
+        return []
+    if resp.status_code != 200:
+        return []
+
+    urls: list[str] = []
+    seen: set[str] = set()
+    for loc in _extract_sitemap_locs(resp.text):
+        loc_url = urljoin(sitemap_url, loc)
+        loc_parsed = urlparse(loc_url)
+        if loc_parsed.netloc != parsed.netloc or not _is_safe_url(loc_url):
+            continue
+        if loc_url in seen:
+            continue
+        text = html_lib.unescape(loc_url).lower()
+        if loc_parsed.path.lower().endswith(".xml"):
+            continue
+        if any(keyword.lower() in text for keyword in SITEMAP_PAGE_KEYWORDS):
+            seen.add(loc_url)
+            urls.append(loc_url)
+            if len(urls) >= limit:
+                break
+    return urls
+
+
+def _extract_sitemap_locs(xml: str) -> list[str]:
+    return [
+        html_lib.unescape(match.group(1).strip())
+        for match in re.finditer(r"<loc>\s*(.*?)\s*</loc>", xml, re.IGNORECASE | re.DOTALL)
+        if match.group(1).strip()
+    ]
+
+
 def discover_pdfs_for_site(
     client: httpx.Client,
     school_id: int,
@@ -357,6 +430,24 @@ def discover_pdfs_for_site(
                     if sub_resp.status_code == 200:
                         sub_candidates = _extract_pdf_links(sub_resp.text, sub_url)
                         candidates.extend(sub_candidates)
+                except httpx.HTTPError:
+                    continue
+
+        if not candidates:
+            for sitemap_url in _sitemap_urls_for_site(client, site_url):
+                if sitemap_url.lower().split("?", 1)[0].endswith(".pdf"):
+                    candidates.append(PdfCandidate(
+                        pdf_url=sitemap_url,
+                        page_url=sitemap_url,
+                        anchor_text="sitemap",
+                        pattern_type="sitemap_pdf",
+                    ))
+                    continue
+                try:
+                    time.sleep(1.0)
+                    sitemap_resp = _safe_get(client, sitemap_url)
+                    if sitemap_resp.status_code == 200:
+                        candidates.extend(_extract_pdf_links(sitemap_resp.text, sitemap_url))
                 except httpx.HTTPError:
                     continue
 

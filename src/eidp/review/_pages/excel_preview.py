@@ -34,6 +34,7 @@ import openpyxl
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.locking import probe_lock
 from eidp.db.models import Department, DepartmentYearly, School, SchoolYearStatus
 from eidp.excel.exporter import (
@@ -42,7 +43,8 @@ from eidp.excel.exporter import (
     _write_taisho_hiritu,
     _write_zaiseki,
 )
-
+from eidp.fiscal_year import format_fiscal_year_label
+from eidp.review.target_year_status import target_year_overview
 
 # Sheets the master workbook carries, in display order.
 SHEET_ORDER: tuple[str, ...] = ("採録状況", "対象比率", "学科別", "在籍のみ抜粋")
@@ -191,6 +193,24 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         st.info(
             f"週次処理中 (owner={status.owner})。"
             " このページは読み取り専用です。"
+        )
+
+    target_label = format_fiscal_year_label(settings.target_fiscal_year)
+    target = target_year_overview(
+        session,
+        target_fiscal_year=settings.target_fiscal_year,
+        school_type="専門学校",
+    )
+    st.caption(f"対象年度: {target_label}")
+    target_cols = st.columns(4)
+    target_cols[0].metric("対象年度PDFあり", target.current_target_schools)
+    target_cols[1].metric("旧年度fallback", target.stale_target_documents)
+    target_cols[2].metric("未採録校", target.missing_current_target_schools)
+    target_cols[3].metric("要確認キュー", target.review_queue_documents)
+    if target.current_target_documents == 0 and target.stale_target_documents > 0:
+        st.warning(
+            f"{target_label} のPDFが未採録です。旧年度fallbackはExcel成果として扱わず、"
+            "先に週次再取得またはURL追加を行ってください。"
         )
 
     counts = count_unmatched_and_gap(session)

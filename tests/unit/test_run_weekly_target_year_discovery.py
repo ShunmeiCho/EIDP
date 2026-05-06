@@ -12,12 +12,12 @@ from sqlalchemy.orm import Session
 from eidp.db.locking import LockBusyError, acquire_lock
 from eidp.db.models import Base, Department, DepartmentYearly, Document, School, SchoolSite
 
-script = Path(__file__).resolve().parents[2] / "scripts" / "run_r8_rediscovery_weekly.py"
-spec = importlib.util.spec_from_file_location("run_r8_rediscovery_weekly", script)
+script = Path(__file__).resolve().parents[2] / "scripts" / "run_weekly_target_year_discovery.py"
+spec = importlib.util.spec_from_file_location("run_weekly_target_year_discovery", script)
 assert spec is not None
 module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
-sys.modules["run_r8_rediscovery_weekly"] = module
+sys.modules["run_weekly_target_year_discovery"] = module
 spec.loader.exec_module(module)
 
 select_stale_school_ids = module.select_stale_school_ids
@@ -218,7 +218,7 @@ def test_resolve_weekly_paths_anchors_to_app_root(tmp_path: Path) -> None:
     paths = resolve_weekly_paths(tmp_path)
 
     assert paths.storage_dir == tmp_path / "data" / "pdfs"
-    assert paths.output_dir == tmp_path / "data" / "output" / "r8-rediscovery-weekly"
+    assert paths.output_dir == tmp_path / "data" / "output" / "target-year-discovery"
     assert paths.last_run_path == tmp_path / "data" / "output" / "last_run.json"
     assert paths.lock_path == tmp_path / "data" / ".lock"
     assert paths.logs_dir == tmp_path / "logs"
@@ -227,7 +227,7 @@ def test_resolve_weekly_paths_anchors_to_app_root(tmp_path: Path) -> None:
 def test_parse_args_defaults_to_configured_target_fiscal_year(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["run_r8_rediscovery_weekly.py"])
+    monkeypatch.setattr(sys, "argv", ["run_weekly_target_year_discovery.py"])
     monkeypatch.setattr(module.settings, "target_fiscal_year", 2027)
 
     args = module.parse_args()
@@ -326,7 +326,7 @@ def test_run_weekly_respects_shared_lock(tmp_path: Path, monkeypatch: pytest.Mon
                 methods=["prefecture_aggregator"],
                 school_type="専門学校",
                 storage_dir=tmp_path / "data" / "pdfs",
-                output_dir=tmp_path / "data" / "output" / "r8-rediscovery-weekly",
+                output_dir=tmp_path / "data" / "output" / "target-year-discovery",
                 batch_size=10,
                 rate_limit=1.5,
                 ingest_batch_size=10,
@@ -350,7 +350,7 @@ def test_run_weekly_writes_last_run_json_under_lock(
         methods=["prefecture_aggregator"],
         school_type="専門学校",
         storage_dir=tmp_path / "data" / "pdfs",
-        output_dir=tmp_path / "data" / "output" / "r8-rediscovery-weekly",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
         batch_size=10,
         rate_limit=1.5,
         ingest_batch_size=10,
@@ -365,3 +365,39 @@ def test_run_weekly_writes_last_run_json_under_lock(
     assert payload["status"] == "success"
     assert payload["run_id"] == summary["run_id"]
     assert payload["dry_run"] is True
+
+
+def test_run_weekly_separates_target_missing_from_stale_count(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Default weekly work queue includes never-ingested schools, but stale
+    fallback count must remain a narrower diagnostic so the UI does not present
+    all target-missing schools as old-year fallback."""
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    _school(session, 1)
+    _site(session, 1, "prefecture_aggregator")
+    _doc(session, 10, 1, 2025)
+    _school(session, 2)
+    _site(session, 2, "prefecture_aggregator")
+    session.commit()
+
+    summary = run_weekly(
+        current_fy=2026,
+        methods=["prefecture_aggregator"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=10,
+        rate_limit=1.5,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=True,
+        lock_path=None,
+        last_run_path=None,
+    )
+
+    assert summary["selection_mode"] == "target_missing"
+    assert summary["target_missing_school_count"] == 2
+    assert summary["stale_school_count"] == 1

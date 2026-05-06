@@ -23,6 +23,7 @@ from eidp.review import operator_pages
 # Session helpers
 # ---------------------------------------------------------------------------
 
+PAGE_TASKS = "school_tasks"
 PAGE_STATUS = "status"
 PAGE_PROPOSALS = "proposals"
 PAGE_URL = "url"
@@ -37,7 +38,7 @@ PAGE_EXCEL_PREVIEW = "excel_preview"
 PAGE_AUDIT_LOG = "audit_log"
 
 QUICK_PAGES = [
-    (PAGE_STATUS, "① データ状況"),
+    (PAGE_TASKS, "① 学校別タスク"),
     (PAGE_MANUAL_ENTRY, "② PDF確認・手入力"),
     (PAGE_FISCAL_YEAR_OVERRIDE, "③ 年度判定・修正"),
     (PAGE_EXCEL_PREVIEW, "④ Excel プレビュー"),
@@ -45,6 +46,7 @@ QUICK_PAGES = [
 ]
 
 DETAIL_PAGES = [
+    (PAGE_STATUS, "データ状況（詳細）"),
     (PAGE_PROPOSALS, "マッチング提案の確認"),
     (PAGE_URL, "URL追加"),
     (PAGE_EXPORTS, "Excel出力（管理者向け）"),
@@ -90,7 +92,7 @@ def _render_nav_button(container, page_id: str, label: str) -> None:
 def _render_sidebar_navigation() -> str:
     page_ids = {page_id for page_id, _label in QUICK_PAGES + DETAIL_PAGES}
     if "selected_page" not in st.session_state or st.session_state.selected_page not in page_ids:
-        st.session_state.selected_page = PAGE_STATUS
+        st.session_state.selected_page = PAGE_TASKS
 
     st.sidebar.divider()
     st.sidebar.markdown("**業務員クイック**")
@@ -561,7 +563,10 @@ def main() -> None:
 
     page = _render_sidebar_navigation()
 
-    if page == PAGE_STATUS:
+    if page == PAGE_TASKS:
+        from eidp.review._pages.school_year_tasks import render as render_school_year_tasks
+        render_school_year_tasks(session, lock_path=Path(settings.data_dir) / ".lock")
+    elif page == PAGE_STATUS:
         operator_pages.page_pipeline_status(session)
     elif page == PAGE_PROPOSALS:
         operator_pages.page_proposals_review(session)
@@ -608,7 +613,7 @@ def main() -> None:
     st.sidebar.divider()
     st.sidebar.caption("週次運用フロー")
     st.sidebar.caption(
-        "① 状況確認 → ② 提案承認 → ③ URL追加 → ④ Excel出力 → ⑤ 漏れ確認"
+        "① 学校別タスク → URL追加/PDF確認 → 年度修正 → Excel確認"
     )
 
 

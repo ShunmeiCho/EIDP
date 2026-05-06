@@ -93,6 +93,7 @@ class QueueDepth:
 ACTION_TYPES: tuple[str, ...] = (
     "manual_entry",
     "fiscal_year_override",
+    "r8_override",  # legacy Sprint 8.x rows; new writes use fiscal_year_override.
     "dept_change",
 )
 

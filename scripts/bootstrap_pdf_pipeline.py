@@ -13,6 +13,7 @@ local SQLite database. It is the production entrypoint behind
     Step 4  ``eidp ingest-pdfs`` parses downloaded PDFs into
             ``DepartmentYearly`` / ``SchoolYearStatus`` / ``SupportRecipient``
             rows, gated by the confidence thresholds.
+    Step 5  rebuild ``SchoolFiscalYearStatus`` rows for the operator UI.
 
 Why not bake artifacts into the ZIP at build time?
     Prefectures publish new disclosures every fiscal year (R8, R9, ...).
@@ -33,7 +34,7 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(SCRIPTS_DIR))
 
-from download_prefecture_artifacts import (  # type: ignore[import-not-found]  # noqa: E402
+from download_prefecture_artifacts import (  # noqa: E402
     DOWNLOADABLE_STATUSES,
     SUPPORTED_PARSERS,
     download_artifact,
@@ -204,6 +205,30 @@ def step_ingest(
     return stats
 
 
+def step_rebuild_status() -> dict[str, int]:
+    """Step 5: rebuild School x target fiscal-year status rows for the UI."""
+    from eidp.config import settings
+    from eidp.db.session import SessionLocal
+    from eidp.pipeline.school_fiscal_year_status import rebuild_school_fiscal_year_status
+
+    session = SessionLocal()
+    try:
+        stats = rebuild_school_fiscal_year_status(
+            session,
+            fiscal_year=settings.target_fiscal_year,
+            school_type="専門学校",
+        )
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+    out = {"rebuilt": stats.rebuilt, "excel_ready": stats.excel_ready}
+    print(f"[step5] {out}")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pref", default="", help="Comma-separated pref_keys. Empty = every supported.")
@@ -286,12 +311,15 @@ def main(argv: list[str] | None = None) -> int:
         batch_size=args.batch_size,
         evidence_log=None,
     )
+    print("\n=== Step 5: rebuild school fiscal-year status ===")
+    status_stats = step_rebuild_status()
 
     print("\n=== Bootstrap pipeline summary ===")
     print(f"  prefectures: {len(ok)} ok / {len(failed)} failed")
     print(f"  aggregate:   {sum(s.get('added', 0) for s in aggregate_stats.values())} school_sites added")
     print(f"  discover:    {discovery_stats}")
     print(f"  ingest:      {ingest_stats}")
+    print(f"  status:      {status_stats}")
     return 0
 
 

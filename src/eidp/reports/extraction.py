@@ -1,6 +1,6 @@
 """Fiscal-year extraction rate + prev-year delta outliers.
 
-Acceptance criterion #2: 令和8年度数値抽出率 ≥ 95% **of ingested PDFs**.
+Acceptance criterion #2: target-fiscal-year 数値抽出率 ≥ 95% **of ingested PDFs**.
 
 This is intentionally narrower than "of discovered PDFs": a PDF that is
 discovered but not yet ingested (parse_failed / pending / transient) is

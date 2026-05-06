@@ -13,6 +13,8 @@ from eidp.scraper.pdf_discovery import (
     PdfCandidate,
     _extract_pdf_links,
     _score_candidate,
+    _sitemap_urls_for_site,
+    discover_pdfs_for_site,
     download_pdf,
     run_pdf_discovery,
 )
@@ -66,6 +68,82 @@ def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
     assert "&amp;" not in candidates[0].pdf_url
     assert candidates[0].pattern_type == "cache_busted"
     assert "高等教育の修学支援新制度" in candidates[0].anchor_text
+
+
+class _HtmlResponse:
+    def __init__(self, text: str, *, status_code: int = 200, url: str = "https://example.ac.jp/") -> None:
+        self.text = text
+        self.status_code = status_code
+        self.headers: dict[str, str] = {}
+        self.url = url
+        self.request = None
+
+    def raise_for_status(self) -> None:
+        return None
+
+
+class _HtmlClient:
+    def __init__(self, pages: dict[str, _HtmlResponse]) -> None:
+        self.pages = pages
+
+    def get(self, url: str, **_kwargs):  # noqa: ANN001
+        return self.pages.get(url, _HtmlResponse("", status_code=404, url=url))
+
+
+def test_sitemap_urls_for_site_filters_same_domain_disclosure_pages(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse(
+                """
+                <urlset>
+                  <url><loc>https://example.ac.jp/school/public_info/</loc></url>
+                  <url><loc>https://example.ac.jp/news/</loc></url>
+                  <url><loc>https://other.example.jp/disclosure/</loc></url>
+                </urlset>
+                """,
+                url="https://example.ac.jp/sitemap.xml",
+            )
+        }
+    )
+
+    urls = _sitemap_urls_for_site(client, "https://example.ac.jp/")
+
+    assert urls == ["https://example.ac.jp/school/public_info/"]
+
+
+def test_discover_pdfs_uses_sitemap_when_site_has_no_disclosure_links(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse("<html><a href='/news/'>news</a></html>"),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse(
+                """
+                <urlset>
+                  <url><loc>https://example.ac.jp/school/public_info/</loc></url>
+                </urlset>
+                """,
+                url="https://example.ac.jp/sitemap.xml",
+            ),
+            "https://example.ac.jp/school/public_info/": _HtmlResponse(
+                """
+                <a href="/docs/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://example.ac.jp/school/public_info/",
+            ),
+        }
+    )
+
+    result = discover_pdfs_for_site(client, 1, "https://example.ac.jp/")
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
+    assert result.best.page_url == "https://example.ac.jp/school/public_info/"
 
 
 def test_discovery_attempt_window_reaches_buried_confirmation_pdf() -> None:

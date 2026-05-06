@@ -74,6 +74,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/weekly_run.bat",
     "scripts/uninstall.bat",
     "scripts/validate_install.bat",
+    "scripts/run_weekly_target_year_discovery.py",
     "scripts/run_r8_rediscovery_weekly.py",
     "scripts/validate_windows_install.py",
     "runtime/python/python.exe",
@@ -247,7 +248,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         "scripts/weekly_run.bat": (
             ".venv\\Scripts\\python.exe",
             "Get-Date -Format yyyyMMdd",
-            "run_r8_rediscovery_weekly.py",
+            "run_weekly_target_year_discovery.py",
             'set "RC=%ERRORLEVEL%"',
             "endlocal & exit /b %RC%",
         ),
@@ -298,7 +299,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "--require-playwright-addon",
             "last_run.json status must be success",
         ),
-        "scripts/run_r8_rediscovery_weekly.py": (
+        "scripts/run_weekly_target_year_discovery.py": (
             "acquire_lock",
             "last_run.json",
             "write_last_run",
@@ -308,7 +309,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
-        "scripts/run_r8_rediscovery_weekly.py": ("export_excel",),
+        "scripts/run_weekly_target_year_discovery.py": ("export_excel",),
     }
 
     for member, tokens in required_tokens.items():

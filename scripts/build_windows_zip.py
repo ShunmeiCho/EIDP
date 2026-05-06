@@ -212,7 +212,8 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       wheelhouse/                  every accepted wheel
       src/eidp/...                 importable source layout
       scripts/*.bat                .bat launchers
-      scripts/run_r8_rediscovery_weekly.py   weekly runner
+      scripts/run_weekly_target_year_discovery.py weekly runner
+      scripts/run_r8_rediscovery_weekly.py        backward-compatible wrapper
       scripts/validate_windows_install.py    VM/operator evidence checker
       scripts/validate_install.bat           VM/operator wrapper for the checker
       alembic.ini                  required by db-bootstrap
@@ -244,6 +245,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
         for path in sorted(scripts_root.glob("*.bat")):
             members.append((path, f"scripts/{path.name}"))
         for name in (
+            "run_weekly_target_year_discovery.py",
             "run_r8_rediscovery_weekly.py",
             "validate_windows_install.py",
             "bootstrap_pdf_pipeline.py",
@@ -305,7 +307,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
     # (artifact URLs, parser keys, verified status). The operator PC
     # downloads the per-prefecture artifact PDFs at runtime via
     # `bootstrap_pdfs.bat` so the ZIP isn't frozen against the date it
-    # was packed — when prefectures publish new R8 / R9 PDFs the
+    # was packed — when prefectures publish new target-year PDFs the
     # operator picks them up automatically without a new ZIP build.
     #
     # Artifacts/ is intentionally NOT in the ZIP. They live in the

@@ -569,15 +569,15 @@ def page_exports(session: Session) -> None:
         key="comp_gap",
     )
     fy_pick = st.number_input(
-        "対象年度（0 = データ量が最大の年を自動選択）",
-        min_value=0,
-        value=0,
+        f"対象年度（通常は {format_fiscal_year_label(settings.target_fiscal_year)}）",
+        min_value=2019,
+        value=settings.target_fiscal_year,
         step=1,
         key="comp_fy",
     )
     if st.button("競合校Excelを生成", type="primary", key="btn_comp"):
         try:
-            fy = None if int(fy_pick) == 0 else int(fy_pick)
+            fy = int(fy_pick)
             template_path = sample_path(template_in, (".xlsx",))
             comp_path = output_path(comp_out, (".xlsx",))
             gap_path = output_path(gap_out, (".csv",))
@@ -1385,6 +1385,18 @@ def render_sidebar_todo(session: Session) -> None:
 
     Called from app.py AFTER the page radio so it always stays visible.
     """
+    target_needs_action = 0
+    try:
+        from eidp.review._pages.school_year_tasks import school_task_summary
+
+        target = school_task_summary(
+            session,
+            fiscal_year=settings.target_fiscal_year,
+            school_type="専門学校",
+        )
+    except Exception:
+        target = None
+
     try:
         counts = compute_todo_counts(session)
     except Exception as exc:  # pragma: no cover — UI must never crash
@@ -1393,6 +1405,27 @@ def render_sidebar_todo(session: Session) -> None:
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("**今週のやること**")
+    if target is not None and target.total > 0:
+        target_needs_action = target.needs_action
+        _todo_line(
+            "対象年度 要対応",
+            target.needs_action,
+            hint="① 学校別タスク",
+            urgent=target.needs_action > 0,
+        )
+        _todo_line(
+            "Excel出力可",
+            target.excel_ready,
+            hint="④ Excel",
+            urgent=False,
+            done=True,
+        )
+        _todo_line(
+            "旧年度fallback",
+            target.stale_fallback,
+            hint="① 再取得",
+            urgent=target.stale_fallback > 0,
+        )
 
     total_pending = (
         counts.pending_ambiguous + counts.pending_branch + counts.pending_dept
@@ -1400,19 +1433,19 @@ def render_sidebar_todo(session: Session) -> None:
     _todo_line(
         "候補が複数で要承認",
         counts.pending_ambiguous,
-        hint="② 学校タブ",
+        hint="詳細: 提案",
         urgent=counts.pending_ambiguous > 0,
     )
     _todo_line(
         "分校扱い（要確認）",
         counts.pending_branch,
-        hint="② 学校タブ",
+        hint="詳細: 提案",
         urgent=False,
     )
     _todo_line(
         "学科の別名承認",
         counts.pending_dept,
-        hint="② 学科タブ",
+        hint="詳細: 提案",
         urgent=counts.pending_dept > 0,
     )
     _todo_line(
@@ -1431,7 +1464,7 @@ def render_sidebar_todo(session: Session) -> None:
 
     if counts.excel_stale:
         st.sidebar.warning("新しい承認あり · ④ で再出力推奨", icon="⚠️")
-    elif total_pending == 0 and counts.url_needed == 0:
+    elif total_pending == 0 and counts.url_needed == 0 and target_needs_action == 0:
         st.sidebar.success("今週のTODOは完了", icon="✅")
 
 

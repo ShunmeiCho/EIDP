@@ -1,0 +1,365 @@
+"""Rebuild denormalized School x fiscal-year operator status rows."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from eidp.db.models import (
+    Department,
+    DepartmentChange,
+    DepartmentYearly,
+    Document,
+    School,
+    SchoolFiscalYearStatus,
+    SchoolSite,
+)
+from eidp.fiscal_year_evidence import fiscal_year_evidence_for_document
+
+REVIEW_STATUSES: tuple[str, ...] = (
+    "ocr_pending",
+    "parse_failed",
+    "review_pending",
+    "school_mismatch",
+)
+YOY_COMPARE_FIELDS: tuple[str, ...] = (
+    "capacity",
+    "enrollment",
+    "intl_students",
+    "graduates",
+    "advanced",
+    "employed",
+    "other",
+    "prev_enrollment",
+    "dropouts",
+    "dropout_rate",
+)
+
+
+@dataclass(frozen=True)
+class SchoolFiscalYearStatusStats:
+    fiscal_year: int
+    school_type: str | None
+    rebuilt: int
+    excel_ready: int
+
+
+def _url_status(sites: list[SchoolSite]) -> str:
+    crawlable = [s for s in sites if s.http_status == 200 or s.http_status is None]
+    if not crawlable:
+        return "no_url"
+    if any(s.discovery_method == "prefecture_aggregator" for s in crawlable):
+        return "pref_url"
+    if any(s.discovery_method == "operator_manual" for s in crawlable):
+        return "operator_url"
+    return "unknown"
+
+
+def _pdf_status(docs: list[Document], fiscal_year: int) -> str:
+    if any(
+        d.fiscal_year == fiscal_year and d.pdf_type == "target" and d.ingest_status == "ingested"
+        for d in docs
+    ):
+        return "confirmed_target"
+    if any(d.ingest_status == "ocr_pending" for d in docs):
+        return "image_pending"
+    if any(
+        d.pdf_type == "target"
+        and d.fiscal_year is not None
+        and d.fiscal_year < fiscal_year
+        and d.ingest_status == "ingested"
+        for d in docs
+    ):
+        return "rejected_stale"
+    if docs:
+        return "discovered"
+    return "none"
+
+
+def _extract_status(docs: list[Document], has_current_rows: bool) -> str:
+    if has_current_rows:
+        if any(d.ingest_status == "review_pending" for d in docs):
+            return "manual_entered"
+        return "parsed"
+    if any(d.ingest_status == "ocr_pending" for d in docs):
+        return "ocr_pending"
+    if any(d.ingest_status == "parse_failed" for d in docs):
+        return "parse_failed"
+    return "none"
+
+
+def _evidence_level(docs: list[Document], fiscal_year: int, pdf_status: str) -> str:
+    evidences = [
+        fiscal_year_evidence_for_document(doc, target_fiscal_year=fiscal_year)
+        for doc in docs
+        if doc.pdf_type == "target"
+    ]
+    if not evidences:
+        return "none"
+
+    # Parsed/operator mismatch outranks URL hints in product behavior: a stale
+    # PDF must not become target-FY evidence just because the URL path contains
+    # the target year.
+    if pdf_status == "rejected_stale" and any(e.level == "conflict" for e in evidences):
+        return "conflict"
+
+    return max(evidences, key=lambda e: e.rank).level
+
+
+def _current_yearly_by_school(
+    session: Session,
+    *,
+    school_ids: list[int],
+    fiscal_year: int,
+) -> dict[tuple[int, int], list[tuple[Department, DepartmentYearly]]]:
+    rows = (
+        session.query(Department, DepartmentYearly)
+        .join(DepartmentYearly, DepartmentYearly.department_id == Department.id)
+        .filter(
+            Department.school_id.in_(school_ids),
+            DepartmentYearly.fiscal_year.in_((fiscal_year, fiscal_year - 1)),
+            DepartmentYearly.is_current.is_(True),
+        )
+        .all()
+    )
+    by_school_year: dict[tuple[int, int], list[tuple[Department, DepartmentYearly]]] = {}
+    for dept, yearly in rows:
+        by_school_year.setdefault((dept.school_id, yearly.fiscal_year), []).append((dept, yearly))
+    return by_school_year
+
+
+def _unverified_department_change_school_ids(
+    session: Session,
+    *,
+    school_ids: list[int],
+    fiscal_year: int,
+) -> set[int]:
+    return {
+        int(school_id)
+        for (school_id,) in (
+            session.query(Department.school_id)
+            .join(DepartmentChange, DepartmentChange.department_id == Department.id)
+            .filter(
+                Department.school_id.in_(school_ids),
+                DepartmentChange.fiscal_year == fiscal_year,
+                DepartmentChange.verified.is_(False),
+            )
+            .distinct()
+            .all()
+        )
+    }
+
+
+def _yearly_snapshot(row: DepartmentYearly) -> tuple[object, ...]:
+    return tuple(getattr(row, field) for field in YOY_COMPARE_FIELDS)
+
+
+def _yoy_diff_status(
+    *,
+    current_rows: list[tuple[Department, DepartmentYearly]],
+    previous_rows: list[tuple[Department, DepartmentYearly]],
+) -> str:
+    """Classify target-year rows against the prior fiscal year.
+
+    A perfect match is suspicious during the target-year acquisition season:
+    it may mean the school has not updated the disclosure PDF yet. Any numeric
+    value change or department set change is enough to mark the school as
+    having a previous-year difference.
+    """
+    if not current_rows:
+        return "unchecked"
+    if not previous_rows:
+        return "new_school"
+
+    current = {dept.id: _yearly_snapshot(yearly) for dept, yearly in current_rows}
+    previous = {dept.id: _yearly_snapshot(yearly) for dept, yearly in previous_rows}
+    if set(current) != set(previous):
+        return "partial_diff"
+    if any(current[dept_id] != previous[dept_id] for dept_id in current):
+        return "partial_diff"
+    return "identical_to_prev_fy"
+
+
+def _blocking_reason(
+    *,
+    url_status: str,
+    pdf_status: str,
+    extract_status: str,
+    excel_ready: bool,
+) -> str | None:
+    if excel_ready:
+        return None
+    if pdf_status == "none":
+        if url_status == "no_url":
+            return "no_url"
+        return "no_target_pdf"
+    if pdf_status == "rejected_stale":
+        return "stale_pdf_only"
+    if pdf_status == "image_pending":
+        return "ocr_pending"
+    if extract_status == "parse_failed":
+        return "parse_failed"
+    if extract_status == "none":
+        return "not_extracted"
+    return "review_required"
+
+
+def rebuild_school_fiscal_year_status(
+    session: Session,
+    *,
+    fiscal_year: int,
+    school_type: str | None = "専門学校",
+) -> SchoolFiscalYearStatusStats:
+    """Rebuild one ``SchoolFiscalYearStatus`` row per active school.
+
+    Source-of-truth rows remain ``SchoolSite``, ``Document``, and
+    ``DepartmentYearly``. This table is a denormalized operator task surface so
+    UI pages can answer "what should happen next for this school?" without
+    re-implementing fragile ad hoc joins.
+    """
+    school_q = session.query(School).filter(School.status == "active")
+    if school_type is not None:
+        school_q = school_q.filter(School.school_type == school_type)
+    schools = school_q.order_by(School.id).all()
+    school_ids = [s.id for s in schools]
+    if not school_ids:
+        return SchoolFiscalYearStatusStats(
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            rebuilt=0,
+            excel_ready=0,
+        )
+
+    sites_by_school: dict[int, list[SchoolSite]] = {sid: [] for sid in school_ids}
+    for site in session.query(SchoolSite).filter(SchoolSite.school_id.in_(school_ids)).all():
+        sites_by_school.setdefault(site.school_id, []).append(site)
+
+    docs_by_school: dict[int, list[Document]] = {sid: [] for sid in school_ids}
+    for doc in session.query(Document).filter(Document.school_id.in_(school_ids)).all():
+        docs_by_school.setdefault(doc.school_id, []).append(doc)
+
+    yearly_by_school = _current_yearly_by_school(
+        session,
+        school_ids=school_ids,
+        fiscal_year=fiscal_year,
+    )
+    dept_change_review_school_ids = _unverified_department_change_school_ids(
+        session,
+        school_ids=school_ids,
+        fiscal_year=fiscal_year,
+    )
+
+    extracted_school_ids = {
+        int(sid)
+        for (sid,) in (
+            session.query(Department.school_id)
+            .join(DepartmentYearly, DepartmentYearly.department_id == Department.id)
+            .filter(
+                Department.school_id.in_(school_ids),
+                DepartmentYearly.fiscal_year == fiscal_year,
+                DepartmentYearly.is_current.is_(True),
+                DepartmentYearly.capacity.is_not(None),
+            )
+            .distinct()
+            .all()
+        )
+    }
+
+    ready_count = 0
+    for school in schools:
+        docs = docs_by_school.get(school.id, [])
+        url_status = _url_status(sites_by_school.get(school.id, []))
+        pdf_status = _pdf_status(docs, fiscal_year)
+        extract_status = _extract_status(docs, school.id in extracted_school_ids)
+        yoy_diff_status = _yoy_diff_status(
+            current_rows=yearly_by_school.get((school.id, fiscal_year), []),
+            previous_rows=yearly_by_school.get((school.id, fiscal_year - 1), []),
+        )
+        evidence_level = _evidence_level(docs, fiscal_year, pdf_status)
+        if yoy_diff_status == "partial_diff" and evidence_level not in {"conflict", "operator_override"}:
+            evidence_level = "prev_year_diff"
+        has_dept_change_review = school.id in dept_change_review_school_ids
+        excel_ready = (
+            pdf_status == "confirmed_target"
+            and extract_status == "parsed"
+            and evidence_level in {"pdf_text", "prev_year_diff", "operator_override"}
+            and yoy_diff_status != "identical_to_prev_fy"
+            and not has_dept_change_review
+        )
+        if excel_ready:
+            ready_count += 1
+
+        row = session.get(SchoolFiscalYearStatus, (school.id, fiscal_year))
+        if row is None:
+            row = SchoolFiscalYearStatus(school_id=school.id, fiscal_year=fiscal_year)
+            session.add(row)
+        row.url_status = url_status
+        row.pdf_status = pdf_status
+        row.extract_status = extract_status
+        row.yoy_diff_status = yoy_diff_status
+        row.evidence_level = evidence_level
+        row.excel_ready = excel_ready
+        blocking_reason = _blocking_reason(
+            url_status=url_status,
+            pdf_status=pdf_status,
+            extract_status=extract_status,
+            excel_ready=excel_ready,
+        )
+        if has_dept_change_review and pdf_status == "confirmed_target" and extract_status == "parsed":
+            blocking_reason = "dept_change_review"
+        row.blocking_reason = blocking_reason
+
+    session.flush()
+    return SchoolFiscalYearStatusStats(
+        fiscal_year=fiscal_year,
+        school_type=school_type,
+        rebuilt=len(schools),
+        excel_ready=ready_count,
+    )
+
+
+def school_fiscal_year_status_counts(
+    session: Session,
+    *,
+    fiscal_year: int,
+    school_type: str | None = "専門学校",
+) -> dict[str, int]:
+    """Return compact counts for dashboard / Excel-readiness surfaces."""
+    q = (
+        session.query(
+            SchoolFiscalYearStatus.pdf_status,
+            SchoolFiscalYearStatus.extract_status,
+            SchoolFiscalYearStatus.excel_ready,
+            func.count(SchoolFiscalYearStatus.school_id),
+        )
+        .join(School, School.id == SchoolFiscalYearStatus.school_id)
+        .filter(SchoolFiscalYearStatus.fiscal_year == fiscal_year)
+    )
+    if school_type is not None:
+        q = q.filter(School.school_type == school_type)
+
+    counts: dict[str, int] = {
+        "total": 0,
+        "confirmed_target": 0,
+        "stale_or_old": 0,
+        "review_or_parse": 0,
+        "excel_ready": 0,
+    }
+    for pdf_status, extract_status, excel_ready, n in q.group_by(
+        SchoolFiscalYearStatus.pdf_status,
+        SchoolFiscalYearStatus.extract_status,
+        SchoolFiscalYearStatus.excel_ready,
+    ):
+        count = int(n or 0)
+        counts["total"] += count
+        if pdf_status == "confirmed_target":
+            counts["confirmed_target"] += count
+        if pdf_status == "rejected_stale":
+            counts["stale_or_old"] += count
+        if extract_status in REVIEW_STATUSES or pdf_status in {"image_pending", "discovered"}:
+            counts["review_or_parse"] += count
+        if excel_ready:
+            counts["excel_ready"] += count
+    return counts

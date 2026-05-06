@@ -4,18 +4,34 @@ from pathlib import Path
 
 import pytest
 from openpyxl import Workbook
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
+import eidp.excel.competition_exporter as competition_exporter
+from eidp.db.models import Base
 from eidp.excel.competition_exporter import (
-    _norm,
+    YearColumns,
     _append_year_columns_to_block,
     _group_triplets_into_blocks,
-    YearColumns,
+    _norm,
+    export_competition_workbook,
     parse_sheet_schema,
     parse_template,
 )
 
-
 SAMPLE_TEMPLATE = Path(__file__).resolve().parents[2] / "sample" / "20250826更新版_競合校の在校生数.xlsx"
+
+
+def _empty_session() -> Session:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    return Session(engine)
+
+
+def _empty_template(path: Path) -> None:
+    wb = Workbook()
+    wb.active.title = "empty"
+    wb.save(path)
 
 
 def _build_category_sheet() -> Workbook:
@@ -84,6 +100,48 @@ def test_group_triplets_keeps_consecutive_years_in_one_block() -> None:
     ]
     groups = _group_triplets_into_blocks(triplets)
     assert len(groups) == 1
+
+
+def test_competition_export_defaults_to_configured_target_fiscal_year(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Business exports must not silently choose the old year with more DB rows."""
+    session = _empty_session()
+    template = tmp_path / "template.xlsx"
+    output = tmp_path / "out.xlsx"
+    _empty_template(template)
+    monkeypatch.setattr(competition_exporter.settings, "target_fiscal_year", 2027)
+    monkeypatch.setattr(
+        competition_exporter,
+        "auto_select_fiscal_year",
+        lambda _session: pytest.fail("business export must not auto-select fiscal year"),
+    )
+
+    try:
+        result = export_competition_workbook(session, template, output)
+    finally:
+        session.close()
+
+    assert result["fiscal_year"] == 2027
+
+
+def test_competition_export_explicit_year_is_admin_backcompat(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _empty_session()
+    template = tmp_path / "template.xlsx"
+    output = tmp_path / "out.xlsx"
+    _empty_template(template)
+    monkeypatch.setattr(competition_exporter.settings, "target_fiscal_year", 2027)
+
+    try:
+        result = export_competition_workbook(session, template, output, fiscal_year=2025)
+    finally:
+        session.close()
+
+    assert result["fiscal_year"] == 2025
 
 
 @pytest.mark.skipif(not SAMPLE_TEMPLATE.exists(), reason="sample template absent")

@@ -1,4 +1,4 @@
-# EIDP R8 Rediscovery Weekly Runbook
+# EIDP Legacy Target-Year Rediscovery Weekly Runbook
 
 > Archived 2026-05-05 — Venus crontab/systemd operation is no longer the
 > target deployment path. Use `docs/runbooks/eidp-windows.md` for Sprint 8
@@ -7,7 +7,7 @@
 
 ## Purpose
 
-Sprint 4 proved that one-time stale rediscovery has zero R8 yield before the
+Sprint 4 proved that one-time stale rediscovery has zero target-year yield before the
 5-6月 publication peak. Sprint 7 converts that waiting period into a weekly
 scheduled job:
 
@@ -15,7 +15,7 @@ scheduled job:
 2. Revisit trusted `prefecture_aggregator` URLs.
 3. Ingest only documents downloaded during the same run.
 4. Write a JSON summary and rejection evidence under
-   `output/r8-rediscovery-weekly/`.
+   `output/target-year-discovery/` in the renamed Windows runner.
 
 ## Scheduling Choice
 
@@ -36,7 +36,7 @@ cd ~/workspace/EIDP
 git status --short
 git pull --ff-only
 .venv/bin/python -c "import sys, eidp; assert sys.prefix.endswith('/.venv'), sys.prefix; print('venv ok:', sys.prefix)"
-.venv/bin/python scripts/run_r8_rediscovery_weekly.py --dry-run --limit 5
+.venv/bin/python scripts/run_weekly_target_year_discovery.py --dry-run --limit 5
 ```
 
 The dry run is read-only against the database and should print a summary path,
@@ -65,7 +65,7 @@ Cron daemon survives reboot — `systemctl status cron` should show `active`.
 ### Manual smoke (real DB writes; owner authorization required)
 
 ```bash
-.venv/bin/python scripts/run_r8_rediscovery_weekly.py --limit 10
+.venv/bin/python scripts/run_weekly_target_year_discovery.py --limit 10
 ```
 
 Or invoke the cron wrapper directly with the same flock/log/marker semantics:
@@ -113,9 +113,9 @@ Each run writes:
 
 - `logs/r8-rediscovery/run-{utc-ts}.log`           — wrapper stdout/stderr (12-week ring buffer)
 - `logs/r8-rediscovery/.last_failure`              — only present on non-zero exit
-- `output/r8-rediscovery-weekly/{run_id}-summary.json`
-- `output/r8-rediscovery-weekly/{run_id}-discovery-rejections.jsonl`
-- `output/r8-rediscovery-weekly/{run_id}-ingest-rejections.jsonl`
+- `output/target-year-discovery/{run_id}-summary.json`
+- `output/target-year-discovery/{run_id}-discovery-rejections.jsonl`
+- `output/target-year-discovery/{run_id}-ingest-rejections.jsonl`
 
 The summary contains before/after snapshots for coverage, PDF gaps, extraction,
 new document IDs, discovery stats, ingest stats, and deltas.
@@ -128,8 +128,8 @@ new document IDs, discovery stats, ingest stats, and deltas.
 .venv/bin/python -m eidp report extraction --fy 2026
 ```
 
-Expect `target_FY2026` to rise only when schools have actually published R8
-PDFs. A zero-delta weekly run is valid during the pre-peak period.
+Expect `target_FY2026` to rise only when schools have actually published
+FY2026（令和8年度） PDFs. A zero-delta weekly run is valid during the pre-peak period.
 
 ## Recovery
 

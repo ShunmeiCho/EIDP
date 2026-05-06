@@ -16,6 +16,7 @@ import shutil
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import cast
 
 import structlog
 from openpyxl import load_workbook
@@ -23,6 +24,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import func as sql_func
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import (
     Department,
     DepartmentChange,
@@ -345,19 +347,20 @@ class CompetitionMatcher:
 
         # Dept-level alias index from DepartmentChange(change_type='alias').
         # Join to Department to scope alias to its school for safety.
-        dept_alias_rows = (
+        dept_alias_rows = cast(
+            list[tuple[DepartmentChange, Department]],
             self.session.query(DepartmentChange, Department)
             .join(Department, Department.id == DepartmentChange.department_id)
             .filter(DepartmentChange.change_type == "alias")
-            .all()
+            .all(),
         )
         for change, dept in dept_alias_rows:
             if not change.old_name:
                 continue
-            key = (dept.school_id, _norm(change.old_name))
+            dept_alias_key = (dept.school_id, _norm(change.old_name))
             # First-wins is safe here: same (school, old_name) shouldn't map
             # to two departments. If it does, operator review should catch it.
-            self._dept_alias_index.setdefault(key, dept.id)
+            self._dept_alias_index.setdefault(dept_alias_key, dept.id)
 
     def _depts_for_school(self, school_id: int) -> list[Department]:
         if school_id not in self._dept_cache:
@@ -527,7 +530,12 @@ def _diagnose_gap(
 
     # School has data for this FY but dept-level aggregation failed
     if result.template_row.dept_name and not result.department_ids:
-        return "dept_unmatched", f"db_dept_count={len(session.query(Department).filter(Department.school_id == result.school_id).all())}"
+        dept_count = len(
+            session.query(Department)
+            .filter(Department.school_id == result.school_id)
+            .all()
+        )
+        return "dept_unmatched", f"db_dept_count={dept_count}"
 
     return "no_fy_data", ""
 
@@ -632,14 +640,16 @@ def export_competition_workbook(
 ) -> dict[str, int]:
     """Generate the 競合校の在校生数 workbook for the given fiscal year.
 
-    fiscal_year=None → pick the year with the most DB coverage.
+    ``fiscal_year=None`` uses ``settings.target_fiscal_year`` for the business
+    path. Historical exports must pass an explicit year; never silently choose
+    the most-populated old year.
     """
     if not template_path.exists():
         raise FileNotFoundError(f"template not found: {template_path}")
 
     if fiscal_year is None:
-        fiscal_year = auto_select_fiscal_year(session)
-        log.info("auto_fiscal_year_selected", fiscal_year=fiscal_year)
+        fiscal_year = settings.target_fiscal_year
+        log.info("target_fiscal_year_selected", fiscal_year=fiscal_year)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(template_path, output_path)

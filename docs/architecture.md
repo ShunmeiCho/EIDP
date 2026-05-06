@@ -10,7 +10,7 @@ operator receives a ZIP, extracts it, runs `.bat` files by double-clicking, and
 uses the Streamlit UI to complete the four business steps:
 
 1. PDF collection
-2. R8 fiscal-year judgment
+2. Target fiscal-year judgment
 3. Database transcription from PDF / OCR / manual input
 4. Weekly Excel aggregation
 
@@ -62,7 +62,7 @@ The prefecture aggregator uses parse -> match -> writer-plan -> apply. Writes
 to `school_site` use `discovery_method='prefecture_aggregator'` so this source
 stays distinct from historical discovery methods.
 
-### Step 2: R8 Judgment
+### Step 2: Target-Year Judgment
 
 Automatic extraction records a physical `Document.fiscal_year`. Operator
 correction uses `pipeline/fiscal_year_override.py`.
@@ -99,7 +99,9 @@ Ordinary number corrections update `DepartmentYearly` and audit only.
 
 ### Step 4: Weekly Excel Aggregation
 
-`weekly_run.bat` launches `scripts/run_r8_rediscovery_weekly.py`.
+`weekly_run.bat` launches `scripts/run_weekly_target_year_discovery.py`.
+`scripts/run_r8_rediscovery_weekly.py` remains as a compatibility wrapper for
+older Task Scheduler entries and archived validation notes.
 
 The weekly runner does:
 
@@ -277,7 +279,7 @@ Stage 5: Windows VM OCR add-on
 
 Stage 6: operator PC E2E
 
-- one real R8 cycle
+- one real target-year cycle
 - KPI collection
 - owner and operator sign-off
 
