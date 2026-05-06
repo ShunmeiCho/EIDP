@@ -14,9 +14,12 @@ from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, SchoolSite
 from eidp.review._pages import school_year_tasks
 from eidp.review._pages.school_year_tasks import (
+    BootstrapProgress,
     SchoolTaskSummary,
     blocking_reason_label,
     bootstrap_command,
+    bootstrap_progress_detail_lines,
+    bootstrap_progress_stale_reason,
     discovery_evidence_table_rows,
     initial_bootstrap_warning_text,
     is_pdf_site_url,
@@ -381,6 +384,61 @@ def test_read_bootstrap_progress_clamps_bad_payload(tmp_path) -> None:
     assert progress is not None
     assert progress.current_step == 5
     assert progress.percent == 1.0
+
+
+def test_bootstrap_progress_exposes_discovery_details(tmp_path) -> None:
+    progress_path = tmp_path / "progress.json"
+    progress_path.write_text(
+        json.dumps(
+            {
+                "status": "running",
+                "current_step": 3,
+                "total_steps": 5,
+                "percent": 0.52,
+                "message": "学校サイトから対象年度PDFを探索しています。",
+                "details": {
+                    "sites_total": 100,
+                    "crawled": 25,
+                    "found": 8,
+                    "downloaded": 3,
+                    "failed": 2,
+                    "skipped": 20,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    progress = read_bootstrap_progress(progress_path)
+
+    assert progress is not None
+    assert progress.details is not None
+    assert progress.details["sites_total"] == 100
+    assert bootstrap_progress_detail_lines(progress) == [
+        "学校サイト探索: 25/100確認済み / 候補 8 / PDF取得 3 / 失敗 2 / 対象外・旧年度 20"
+    ]
+
+
+def test_bootstrap_progress_stale_when_running_but_lock_released() -> None:
+    progress = BootstrapProgress(
+        status="running",
+        current_step=3,
+        total_steps=5,
+        percent=0.45,
+        message="学校サイトから対象年度PDFを探索しています。",
+        updated_at="2026-05-07T00:47:25",
+    )
+
+    reason = bootstrap_progress_stale_reason(
+        progress,
+        lock_held=False,
+        now=datetime(2026, 5, 7, 0, 52, 25),
+        stale_after_seconds=180,
+    )
+
+    assert reason is not None
+    assert "処理ロックは解除されています" in reason
+    assert bootstrap_progress_stale_reason(progress, lock_held=True, now=datetime(2026, 5, 7, 0, 52, 25)) is None
 
 
 def test_start_initial_url_bootstrap_starts_background_process(tmp_path, monkeypatch) -> None:

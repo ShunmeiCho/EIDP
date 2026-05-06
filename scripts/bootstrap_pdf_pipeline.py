@@ -619,7 +619,10 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             current_step=3,
             percent=0.45,
             message="学校サイトから対象年度PDFを探索しています。",
-            details={"school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values())},
+            details={
+                "school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values()),
+                **known_url_stats,
+            },
         )
     print("\n=== Step 3: discover-pdfs ===")
     discovery_methods = [method.strip() for method in args.discovery_methods.split(",") if method.strip()]

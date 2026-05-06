@@ -87,6 +87,7 @@ class BootstrapProgress:
     completed_at: str | None = None
     log_path: str | None = None
     error: str | None = None
+    details: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -529,6 +530,7 @@ def bootstrap_progress_from_payload(payload: dict[str, Any]) -> BootstrapProgres
     current_step = max(_int_or_default(payload.get("current_step"), 0), 0)
     default_percent = min(current_step / total_steps, 1.0)
     percent = min(max(_float_or_default(payload.get("percent"), default_percent), 0.0), 1.0)
+    details = payload.get("details")
     return BootstrapProgress(
         status=str(payload.get("status") or "unknown"),
         current_step=min(current_step, total_steps),
@@ -540,7 +542,81 @@ def bootstrap_progress_from_payload(payload: dict[str, Any]) -> BootstrapProgres
         completed_at=str(payload["completed_at"]) if payload.get("completed_at") else None,
         log_path=str(payload["log_path"]) if payload.get("log_path") else None,
         error=str(payload["error"]) if payload.get("error") else None,
+        details=details if isinstance(details, dict) else None,
     )
+
+
+def _parse_progress_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def bootstrap_progress_stale_reason(
+    progress: BootstrapProgress,
+    *,
+    lock_held: bool,
+    now: datetime | None = None,
+    stale_after_seconds: int = 180,
+) -> str | None:
+    """Return an operator-facing reason when a running progress file is no longer credible."""
+    if progress.status != "running":
+        return None
+    if lock_held:
+        return None
+
+    updated_at = _parse_progress_datetime(progress.updated_at)
+    if updated_at is None:
+        return (
+            "進行状況ファイルは実行中のままですが、処理ロックは解除されています。"
+            "前回処理が停止した可能性があります。"
+        )
+
+    current_time = now or datetime.now(tz=updated_at.tzinfo)
+    age = (current_time - updated_at).total_seconds()
+    if age >= stale_after_seconds:
+        return (
+            "進行状況ファイルは実行中のままですが、処理ロックは解除されています。"
+            "前回処理が途中で停止した可能性があります。診断ログを確認して、もう一度開始してください。"
+        )
+    return None
+
+
+def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
+    details = progress.details or {}
+    lines: list[str] = []
+    if "prefectures_total" in details:
+        done = details.get("prefectures_done", 0)
+        total = details.get("prefectures_total", 0)
+        ok = details.get("prefectures_ok")
+        failed = details.get("prefectures_failed")
+        suffix = []
+        if ok is not None:
+            suffix.append(f"成功 {ok}")
+        if failed is not None:
+            suffix.append(f"失敗 {failed}")
+        extra = f" / {' / '.join(suffix)}" if suffix else ""
+        lines.append(f"都道府県データ: {done}/{total}{extra}")
+    if "sites_total" in details:
+        crawled = details.get("crawled", 0)
+        total = details.get("sites_total", 0)
+        found = details.get("found", 0)
+        downloaded = details.get("downloaded", 0)
+        failed = details.get("failed", 0)
+        skipped = details.get("skipped", 0)
+        lines.append(
+            f"学校サイト探索: {crawled}/{total}確認済み / 候補 {found} / PDF取得 {downloaded} / "
+            f"失敗 {failed} / 対象外・旧年度 {skipped}"
+        )
+    if "seed_imported" in details or "corporation_inferred" in details:
+        lines.append(
+            "補助URL登録: "
+            f"既知URL {details.get('seed_imported', 0)} / 法人ドメイン推定 {details.get('corporation_inferred', 0)}"
+        )
+    return lines
 
 
 def read_bootstrap_progress(path: Path) -> BootstrapProgress | None:
@@ -1019,7 +1095,7 @@ def _render_rebuild_button(session: Session, *, fiscal_year: int, school_type: s
             st.rerun()
 
 
-def _render_bootstrap_progress(progress: BootstrapProgress) -> None:
+def _render_bootstrap_progress(progress: BootstrapProgress, *, lock_held: bool | None = None) -> None:
     import streamlit as st
 
     percent_label = f"{progress.percent:.0%}"
@@ -1027,16 +1103,25 @@ def _render_bootstrap_progress(progress: BootstrapProgress) -> None:
     text = f"{percent_label}  {progress.message}（{step_label}）"
     st.progress(progress.percent, text=text)
 
+    stale_reason = None
+    if lock_held is not None:
+        stale_reason = bootstrap_progress_stale_reason(progress, lock_held=lock_held)
+
     if progress.status == "succeeded":
         st.success("初回URL/PDF取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。")
     elif progress.status == "failed":
         st.error(progress.message)
         if progress.error:
             st.caption(f"エラー詳細: {progress.error}")
+    elif stale_reason:
+        st.warning(stale_reason)
     elif progress.status == "running":
         st.info("初回URL/PDF取得を実行中です。数分おきに進行状況を更新してください。")
     else:
         st.info(progress.message)
+
+    for line in bootstrap_progress_detail_lines(progress):
+        st.caption(line)
 
     meta = []
     if progress.started_at:
@@ -1060,18 +1145,18 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
     from eidp.config import settings
 
     app_root = settings.app_root
+    lock_status = probe_lock(lock_path)
     st.warning(initial_bootstrap_warning_text(summary))
     st.caption("初回取得はオンライン処理です。学校数が多いため、数十分かかることがあります。")
 
     latest_progress = latest_bootstrap_progress(app_root)
     if latest_progress is not None:
-        _render_bootstrap_progress(latest_progress)
+        _render_bootstrap_progress(latest_progress, lock_held=lock_status.held)
 
     latest_log = latest_bootstrap_log(app_root)
     if latest_log is not None and (latest_progress is None or latest_progress.log_path != str(latest_log)):
         st.caption(f"最新の初回取得ログ: {latest_log}")
 
-    lock_status = probe_lock(lock_path)
     if st.button(
         "初回URL/PDF取得を開始",
         type="primary",
@@ -1085,7 +1170,7 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
             if result.progress_path is not None:
                 progress = read_bootstrap_progress(result.progress_path)
                 if progress is not None:
-                    _render_bootstrap_progress(progress)
+                    _render_bootstrap_progress(progress, lock_held=probe_lock(lock_path).held)
         else:
             st.warning(result.message)
 
