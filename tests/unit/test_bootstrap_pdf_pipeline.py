@@ -241,6 +241,51 @@ def test_step_aggregate_updates_progress_per_prefecture(tmp_path: Path, monkeypa
     assert "commit" in calls
 
 
+def test_step_known_url_discovery_imports_seed_and_corporation_fallbacks(tmp_path: Path, monkeypatch) -> None:
+    calls: list[object] = []
+    seed_url_csv = tmp_path / "known.csv"
+    seed_url_csv.write_text("school,url\n", encoding="utf-8")
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append("commit")
+
+        def rollback(self) -> None:
+            calls.append("rollback")
+
+        def close(self) -> None:
+            calls.append("close")
+
+    def fake_import_seed_urls(session, csv_path):  # noqa: ANN001
+        calls.append(("seed", session, csv_path))
+        return {"imported": 2, "skipped_no_school": 1, "skipped_existing": 3}
+
+    def fake_infer_corporation_urls(session):  # noqa: ANN001
+        calls.append(("corp", session))
+        return {"inferred": 4, "skipped_has_url": 5}
+
+    import eidp.db.session as db_session
+    import eidp.scraper.url_discovery as url_discovery
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(url_discovery, "import_seed_urls", fake_import_seed_urls)
+    monkeypatch.setattr(url_discovery, "infer_corporation_urls", fake_infer_corporation_urls)
+
+    stats = module.step_known_url_discovery(seed_url_csv=seed_url_csv)
+
+    assert stats == {
+        "seed_imported": 2,
+        "seed_skipped_no_school": 1,
+        "seed_skipped_existing": 3,
+        "corporation_inferred": 4,
+        "corporation_skipped_has_url": 5,
+    }
+    assert calls[0] == ("seed", fake_session, seed_url_csv)
+    assert calls[1] == ("corp", fake_session)
+    assert "commit" in calls
+
+
 def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, monkeypatch) -> None:
     progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
     progress = module.BootstrapProgressWriter(progress_file)
@@ -275,6 +320,7 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
         batch_size=100,
         rate_limit=0,
         evidence_log=None,
+        discovery_methods=["prefecture_aggregator", "seed_csv", "corporation_pattern"],
         progress=progress,
     )
 

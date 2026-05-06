@@ -8,8 +8,10 @@ local SQLite database. It is the production entrypoint behind
             data/prefecture-aggregators/seed.csv
     Step 2  ``eidp prefecture-aggregate --apply`` parses each artifact
             and inserts school_site rows
-    Step 3  ``eidp discover-pdfs --discovery-method prefecture_aggregator``
-            crawls each school site and downloads PDFs into data/pdfs/
+    Step 2b known seed URLs and corporation-domain patterns are registered
+            as fallback crawl entry points
+    Step 3  ``eidp discover-pdfs`` crawls trusted school_site methods and
+            downloads PDFs into data/pdfs/
     Step 4  ``eidp ingest-pdfs`` parses downloaded PDFs into
             ``DepartmentYearly`` / ``SchoolYearStatus`` / ``SupportRecipient``
             rows, gated by the confidence thresholds.
@@ -275,12 +277,46 @@ def step_aggregate(
     return results
 
 
+def step_known_url_discovery(*, seed_url_csv: Path | None) -> dict[str, int]:
+    """Step 2b: register known URL seeds and corporation-domain fallbacks."""
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.url_discovery import import_seed_urls, infer_corporation_urls
+
+    stats = {
+        "seed_imported": 0,
+        "seed_skipped_no_school": 0,
+        "seed_skipped_existing": 0,
+        "corporation_inferred": 0,
+        "corporation_skipped_has_url": 0,
+    }
+    session = SessionLocal()
+    try:
+        if seed_url_csv is not None and seed_url_csv.is_file():
+            seed_stats = import_seed_urls(session, seed_url_csv)
+            stats["seed_imported"] = int(seed_stats.get("imported", 0))
+            stats["seed_skipped_no_school"] = int(seed_stats.get("skipped_no_school", 0))
+            stats["seed_skipped_existing"] = int(seed_stats.get("skipped_existing", 0))
+
+        corporation_stats = infer_corporation_urls(session)
+        stats["corporation_inferred"] = int(corporation_stats.get("inferred", 0))
+        stats["corporation_skipped_has_url"] = int(corporation_stats.get("skipped_has_url", 0))
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+    print(f"[step2b] {stats}")
+    return stats
+
+
 def step_discover_pdfs(
     *,
     storage_dir: Path,
     batch_size: int,
     rate_limit: float,
     evidence_log: Path | None,
+    discovery_methods: list[str],
     progress: BootstrapProgressWriter | None = None,
     allow_stale_fallback: bool = False,
 ) -> dict[str, int]:
@@ -316,7 +352,7 @@ def step_discover_pdfs(
             storage_dir,
             batch_size=batch_size,
             rate_limit=rate_limit,
-            discovery_methods=["prefecture_aggregator"],
+            discovery_methods=discovery_methods,
             evidence_path=evidence_log,
             target_fiscal_year=settings.target_fiscal_year,
             strict_target_fiscal_year=not allow_stale_fallback,
@@ -387,6 +423,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pref", default="", help="Comma-separated pref_keys. Empty = every supported.")
     parser.add_argument("--seed-csv", type=Path, default=REPO_ROOT / "data" / "prefecture-aggregators" / "seed.csv")
     parser.add_argument(
+        "--seed-url-csv",
+        type=Path,
+        default=REPO_ROOT / "data" / "url-discovery" / "discovered-urls-50.csv",
+        help="Known school URL CSV imported before PDF discovery.",
+    )
+    parser.add_argument(
+        "--skip-known-url-discovery",
+        action="store_true",
+        help="Skip known seed URL import and corporation-domain fallback registration.",
+    )
+    parser.add_argument(
         "--artifact-dir", type=Path, default=REPO_ROOT / "data" / "prefecture-aggregators" / "artifacts"
     )
     parser.add_argument("--aggregate-output", type=Path, default=REPO_ROOT / "output" / "pref-aggregator")
@@ -415,6 +462,14 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Allow older-year PDFs to be downloaded when the target fiscal year "
             "is not confirmed. Default rejects stale fallback candidates."
+        ),
+    )
+    parser.add_argument(
+        "--discovery-methods",
+        default="prefecture_aggregator,seed_csv,corporation_pattern",
+        help=(
+            "Comma-separated school_site.discovery_method values crawled in Step 3. "
+            "Default includes official prefecture URLs plus known seed/corporation fallbacks."
         ),
     )
     parser.add_argument(
@@ -533,6 +588,26 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         output_dir=args.aggregate_output,
         progress=progress,
     )
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=2,
+            percent=0.45,
+            message="既知URLと法人ドメインを補助的に登録しています。",
+            details={"school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values())},
+        )
+    if args.skip_known_url_discovery:
+        print("\n[skip] Step 2b — --skip-known-url-discovery requested.")
+        known_url_stats = {
+            "seed_imported": 0,
+            "seed_skipped_no_school": 0,
+            "seed_skipped_existing": 0,
+            "corporation_inferred": 0,
+            "corporation_skipped_has_url": 0,
+        }
+    else:
+        print("\n=== Step 2b: known URL / corporation fallback discovery ===")
+        known_url_stats = step_known_url_discovery(seed_url_csv=args.seed_url_csv)
 
     if args.skip_discover:
         print("\n[skip] Step 3 / 4 — --skip-discover requested.")
@@ -547,11 +622,13 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             details={"school_sites_added": sum(s.get("added", 0) for s in aggregate_stats.values())},
         )
     print("\n=== Step 3: discover-pdfs ===")
+    discovery_methods = [method.strip() for method in args.discovery_methods.split(",") if method.strip()]
     discovery_stats = step_discover_pdfs(
         storage_dir=args.storage_dir,
         batch_size=args.batch_size,
         rate_limit=args.rate_limit,
         evidence_log=args.evidence_log if str(args.evidence_log) else None,
+        discovery_methods=discovery_methods,
         progress=progress,
         allow_stale_fallback=args.allow_stale_fallback,
     )
@@ -587,6 +664,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
     print("\n=== Bootstrap pipeline summary ===")
     print(f"  prefectures: {len(ok)} ok / {len(failed)} failed")
     print(f"  aggregate:   {sum(s.get('added', 0) for s in aggregate_stats.values())} school_sites added")
+    print(f"  known URLs:  {known_url_stats}")
     print(f"  discover:    {discovery_stats}")
     print(f"  ingest:      {ingest_stats}")
     print(f"  status:      {status_stats}")
