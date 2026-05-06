@@ -258,6 +258,7 @@ def test_parse_args_defaults_to_configured_target_fiscal_year(
     args = module.parse_args()
 
     assert args.current_fy == 2027
+    assert args.school_type == "all"
 
 
 def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:

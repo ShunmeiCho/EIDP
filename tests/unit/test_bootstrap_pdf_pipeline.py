@@ -4,6 +4,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 from eidp.db.locking import acquire_lock, probe_lock
 
@@ -108,3 +109,35 @@ def test_main_marks_progress_failed_for_nonzero_exit(tmp_path: Path, monkeypatch
     assert rc == 2
     assert payload["status"] == "failed"
     assert payload["error"] == "exit_code=2"
+
+
+def test_step_rebuild_status_includes_all_school_types(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append({"commit": True})
+
+        def rollback(self) -> None:
+            calls.append({"rollback": True})
+
+        def close(self) -> None:
+            calls.append({"close": True})
+
+    def fake_rebuild(session, *, fiscal_year, school_type):  # noqa: ANN001
+        calls.append({"session": session, "fiscal_year": fiscal_year, "school_type": school_type})
+        return SimpleNamespace(rebuilt=3, excel_ready=1)
+
+    import eidp.config as config_mod
+    import eidp.db.session as db_session
+    import eidp.pipeline.school_fiscal_year_status as status_mod
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(status_mod, "rebuild_school_fiscal_year_status", fake_rebuild)
+    monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
+
+    result = module.step_rebuild_status()
+
+    assert result == {"rebuilt": 3, "excel_ready": 1}
+    assert calls[0] == {"session": fake_session, "fiscal_year": 2026, "school_type": None}

@@ -86,6 +86,11 @@ class BootstrapProgress:
 
 
 REVIEW_OR_PARSE_BLOCKERS = {"ocr_pending", "parse_failed", "not_extracted", "review_required"}
+SCHOOL_TYPE_FILTER_LABELS = ("すべて", "専門学校", "大学")
+
+
+def school_type_from_filter_label(label: str) -> str | None:
+    return None if label == "すべて" else label
 
 
 def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
@@ -643,11 +648,15 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     from eidp.fiscal_year import format_fiscal_year_label
 
     fiscal_year = settings.target_fiscal_year
-    school_type = "専門学校"
     target_label = format_fiscal_year_label(fiscal_year)
 
     st.header("① 学校別タスク")
-    st.caption(f"{target_label} の学校ごとの進捗です。旧年度PDFは成果に含めず、次に何をするかだけを確認します。")
+    school_type_label = st.selectbox("対象", SCHOOL_TYPE_FILTER_LABELS, index=0)
+    school_type = school_type_from_filter_label(school_type_label)
+    st.caption(
+        f"{target_label} の学校ごとの進捗です。旧年度PDFは成果に含めず、"
+        f"{school_type_label} の次に何をするかだけを確認します。"
+    )
 
     lock_status = probe_lock(lock_path)
     if lock_status.held:

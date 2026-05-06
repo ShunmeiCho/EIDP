@@ -567,7 +567,7 @@ def parse_args() -> argparse.Namespace:
     paths = resolve_weekly_paths()
     parser.add_argument("--current-fy", type=int, default=settings.target_fiscal_year)
     parser.add_argument("--methods", nargs="+", default=list(DEFAULT_METHODS))
-    parser.add_argument("--school-type", default="専門学校")
+    parser.add_argument("--school-type", default="all")
     parser.add_argument("--storage-dir", type=Path, default=paths.storage_dir)
     parser.add_argument("--output-dir", type=Path, default=paths.output_dir)
     parser.add_argument("--last-run-path", type=Path, default=paths.last_run_path)
@@ -593,7 +593,7 @@ def main() -> None:
     summary = run_weekly(
         current_fy=args.current_fy,
         methods=args.methods,
-        school_type=args.school_type,
+        school_type=None if args.school_type == "all" else args.school_type,
         storage_dir=args.storage_dir,
         output_dir=args.output_dir,
         batch_size=args.batch_size,

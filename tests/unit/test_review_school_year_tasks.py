@@ -19,6 +19,7 @@ from eidp.review._pages.school_year_tasks import (
     next_action_for_status,
     read_bootstrap_progress,
     school_task_summary,
+    school_type_from_filter_label,
     start_initial_url_bootstrap,
 )
 
@@ -29,14 +30,21 @@ def _session() -> Session:
     return Session(engine)
 
 
-def _school(session: Session, school_id: int, *, name: str, pref: str = "東京") -> School:
+def _school(
+    session: Session,
+    school_id: int,
+    *,
+    name: str,
+    pref: str = "東京",
+    school_type: str = "専門学校",
+) -> School:
     school = School(
         id=school_id,
         school_code=f"S{school_id}",
         prefecture=pref,
         corporation_name=f"法人{school_id}",
         school_name=name,
-        school_type="専門学校",
+        school_type=school_type,
         status="active",
     )
     session.add(school)
@@ -139,6 +147,28 @@ def test_school_task_summary_groups_operator_counts() -> None:
         assert summary.no_url == 1
         assert summary.review_or_parse == 1
         assert summary.dept_change_review == 1
+    finally:
+        session.close()
+
+
+def test_school_task_summary_can_include_universities_or_filter_to_them() -> None:
+    session = _session()
+    try:
+        _school(session, 1, name="専門A", school_type="専門学校")
+        _school(session, 2, name="大学B", school_type="大学")
+        _status(session, 1, blocking_reason="no_target_pdf")
+        _status(session, 2, blocking_reason="no_url", url_status="no_url")
+        session.commit()
+
+        all_summary = school_task_summary(session, fiscal_year=2026, school_type=None)
+        university_summary = school_task_summary(session, fiscal_year=2026, school_type="大学")
+
+        assert all_summary.total == 2
+        assert all_summary.no_url == 1
+        assert university_summary.total == 1
+        assert university_summary.no_url == 1
+        assert school_type_from_filter_label("すべて") is None
+        assert school_type_from_filter_label("大学") == "大学"
     finally:
         session.close()
 

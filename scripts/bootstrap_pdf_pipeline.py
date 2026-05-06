@@ -262,7 +262,7 @@ def step_rebuild_status() -> dict[str, int]:
         stats = rebuild_school_fiscal_year_status(
             session,
             fiscal_year=settings.target_fiscal_year,
-            school_type="専門学校",
+            school_type=None,
         )
         session.commit()
     except Exception:
