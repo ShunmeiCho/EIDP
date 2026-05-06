@@ -34,7 +34,12 @@ def _core_entries() -> dict[str, bytes | str]:
         "requirements-windows.txt": "structlog\n",
         "pyproject.toml": "[project]\nname='eidp'\n",
         "alembic.ini": "[alembic]\n",
-        "docs/runbooks/eidp-windows.md": "# runbook\n",
+        "docs/runbooks/eidp-windows.md": (
+            "# runbook\n"
+            "業務員クイック\n"
+            "学校別タスク\n"
+            "詳細 operator\n"
+        ),
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
         "scripts/weekly_run.bat": (SCRIPTS_DIR / "weekly_run.bat").read_text(encoding="utf-8"),
@@ -212,6 +217,22 @@ def test_verify_core_zip_rejects_weekly_runner_export_excel(tmp_path: Path) -> N
 
     assert not check.ok
     assert any("export_excel" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_stale_operator_runbook(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-windows.md"] = (
+        "# runbook\n"
+        "画面左のサイドバーに 12 ページが表示されます。\n"
+        "データ状況\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("学校別タスク" in error for error in check.errors)
+    assert any("12 ページ" in error for error in check.errors)
 
 
 def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:

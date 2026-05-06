@@ -324,6 +324,31 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             _reject_text(check, body, member, token)
 
 
+def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
+    """Catch stale operator-facing instructions in the packaged runbook.
+
+    The Windows ZIP can pass structural checks while still shipping old
+    navigation guidance. That is a release blocker because the target user
+    launches from the runbook, not from the source tree.
+    """
+    member = "docs/runbooks/eidp-windows.md"
+    if member not in names:
+        return
+    body = _read_zip_text(check, member)
+    if body is None:
+        return
+    for token in (
+        "業務員クイック",
+        "学校別タスク",
+        "詳細 operator",
+    ):
+        _require_text(check, body, member, token)
+    for token in (
+        "画面左のサイドバーに 12 ページ",
+    ):
+        _reject_text(check, body, member, token)
+
+
 def _read_manifest(check: ZipCheck, member: str) -> dict[str, Any] | None:
     if not zipfile.is_zipfile(check.path):
         return None
@@ -439,6 +464,7 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_wheelhouse(check, names, require_project=True)
     _check_bat_contracts(check, names)
     _check_python_entrypoint_contracts(check, names)
+    _check_operator_runbook_contract(check, names)
 
     check.details["entry_count"] = len(names)
     check.details["has_runtime"] = (
