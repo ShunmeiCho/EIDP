@@ -1,7 +1,7 @@
 # EIDP Windows VM 検証チェックリスト
 
 Status: Sprint 8.5.b / 8.7 validation gate
-Updated: 2026-05-05
+Updated: 2026-05-06
 
 このチェックリストは、`eidp-windows.zip` を Windows VM でオフライン検証するための実行手順です。
 

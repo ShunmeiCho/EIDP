@@ -1,7 +1,7 @@
 # EIDP 業務員 PC E2E 記録テンプレート
 
 Status: Stage 6 / v1.0 release candidate evidence template
-Updated: 2026-05-05
+Updated: 2026-05-06
 
 このテンプレートは、業務員の実 PC で 1 サイクル実行した結果を記録するためのものです。
 ここが未記入のままでは、EIDP Windows 版を v1.0 と判定しません。
@@ -47,7 +47,8 @@ Updated: 2026-05-05
 | master import | 学校マスタが取り込まれる | pass / fail | |
 | Task Scheduler | `EIDP Weekly Run` が登録される | pass / fail | |
 | `launch.bat` | Streamlit 起動 | pass / fail | |
-| 12 ページ表示 | operator 4 ページを含む | pass / fail | |
+| `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
+| `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
 ## 4. 4 工程 E2E
 
