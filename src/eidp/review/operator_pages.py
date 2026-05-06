@@ -31,6 +31,7 @@ from eidp.db.models import (
     DepartmentChange,
     DepartmentYearly,
     Document,
+    ReviewItem,
     School,
     SchoolAlias,
     SchoolSite,
@@ -1621,6 +1622,7 @@ class TodoCounts:
     pending_ambiguous: int  # ② で人間の判断待ち（候補複数）
     pending_branch: int     # ② 分校要注意で未処理
     pending_dept: int       # ② 学科タブで未処理
+    pending_prefecture_remarks: int  # 都道府県公式一覧の備考確認
     url_needed: int         # ③ URL追加が必要（school_no_document / old_year）
     auto_approved: int      # 自動承認済（先週処理）
     excel_stale: bool       # Excel再出力推奨（最新承認がExcelより新しい）
@@ -1655,6 +1657,13 @@ def compute_todo_counts(session: Session) -> TodoCounts:
         # types are read-only so don't count as担当者 work.
         if ptype == "dept_alias_existing":
             pending_dept += 1
+
+    pending_prefecture_remarks = (
+        session.query(func.count(ReviewItem.id))
+        .filter(ReviewItem.item_type == "prefecture_remark", ReviewItem.status == "pending")
+        .scalar()
+        or 0
+    )
 
     # URL needed: count from gap report
     url_needed = 0
@@ -1711,6 +1720,7 @@ def compute_todo_counts(session: Session) -> TodoCounts:
         pending_ambiguous=pending_ambiguous,
         pending_branch=pending_branch,
         pending_dept=pending_dept,
+        pending_prefecture_remarks=int(pending_prefecture_remarks),
         url_needed=url_needed,
         auto_approved=auto_approved,
         excel_stale=excel_stale,
@@ -1771,7 +1781,10 @@ def render_sidebar_todo(session: Session) -> None:
         )
 
     total_pending = (
-        counts.pending_ambiguous + counts.pending_branch + counts.pending_dept
+        counts.pending_ambiguous
+        + counts.pending_branch
+        + counts.pending_dept
+        + counts.pending_prefecture_remarks
     )
     _todo_line(
         "候補が複数で要承認",
@@ -1790,6 +1803,12 @@ def render_sidebar_todo(session: Session) -> None:
         counts.pending_dept,
         hint="詳細: 提案",
         urgent=counts.pending_dept > 0,
+    )
+    _todo_line(
+        "公式備考レビュー",
+        counts.pending_prefecture_remarks,
+        hint="詳細: 公式インデックス",
+        urgent=counts.pending_prefecture_remarks > 0,
     )
     _todo_line(
         "URL追加が必要",
