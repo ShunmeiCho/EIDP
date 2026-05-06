@@ -156,6 +156,7 @@ SITE_URL_TYPE_LABELS: dict[str, str] = {
     "direct_pdf": "PDF直リンク",
     "pdf": "PDF直リンク",
 }
+PDF_SITE_URL_TYPES = {"direct_pdf", "pdf"}
 
 
 def school_type_from_filter_label(label: str) -> str | None:
@@ -194,13 +195,21 @@ def status_label(labels: dict[str, str], code: str | None) -> str:
 def site_url_type_label(url_type: str | None, url: str | None) -> str:
     """Explain whether the registered URL is reusable for future fiscal years."""
     normalized_type = (url_type or "").strip().lower()
-    lowered_url = (url or "").strip().lower()
     base = SITE_URL_TYPE_LABELS.get(normalized_type)
     if base is None:
-        base = "PDF直リンク" if lowered_url.endswith(".pdf") else "ページURL"
+        base = "PDF直リンク" if is_pdf_site_url(url_type, url) else "ページURL"
     if base == "PDF直リンク":
         return "PDF直リンク（対象年度ごとに更新確認が必要）"
     return f"{base}（来年度以降も再取得入口として再利用）"
+
+
+def is_pdf_site_url(url_type: str | None, url: str | None) -> bool:
+    """Return True when a SchoolSite row points directly at a PDF file."""
+    normalized_type = (url_type or "").strip().lower()
+    if normalized_type in PDF_SITE_URL_TYPES:
+        return True
+    cleaned_url = (url or "").strip().lower().split("?", 1)[0].split("#", 1)[0]
+    return cleaned_url.endswith(".pdf")
 
 
 def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
@@ -227,6 +236,27 @@ def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
     if reason in {"not_extracted", "review_required"}:
         return "PDF確認", "抽出結果とPDF原本を確認"
     return "確認", "状態を確認"
+
+
+def next_action_for_row(status: SchoolFiscalYearStatus, site: SchoolSite | None) -> tuple[str, str]:
+    """Map status plus registered URL shape into operator language.
+
+    A direct PDF URL can unblock this year's emergency ingestion, but it is a
+    weak long-lived crawl entry for next fiscal year. Route current-year gaps
+    with only a PDF direct link back to URL追加 so operators add a reusable
+    disclosure/homepage URL instead of repeatedly replacing yearly PDF links.
+    """
+    action, hint = next_action_for_status(status)
+    if (
+        site is not None
+        and is_pdf_site_url(site.url_type, site.url)
+        and status.blocking_reason in {"no_target_pdf", "stale_pdf_only"}
+    ):
+        return (
+            "URL追加",
+            "PDF直リンクだけでは来年度以降の再取得入口になりません。学校または法人の情報公開ページURLを追加",
+        )
+    return action, hint
 
 
 def school_task_summary(
@@ -656,9 +686,9 @@ def list_school_year_tasks(
 
     rows: list[SchoolTaskRow] = []
     for status, school in pairs:
-        action, hint = next_action_for_status(status)
         doc = docs_by_school.get(school.id)
         site = sites_by_school.get(school.id)
+        action, hint = next_action_for_row(status, site)
         rows.append(
             SchoolTaskRow(
                 school_id=school.id,
@@ -708,20 +738,25 @@ def _latest_documents_by_school(session: Session, school_ids: list[int]) -> dict
 def _latest_sites_by_school(session: Session, school_ids: list[int]) -> dict[int, SchoolSite]:
     if not school_ids:
         return {}
-    latest_site_ids = [
-        int(site_id)
-        for (site_id,) in (
-            session.query(func.max(SchoolSite.id))
-            .filter(SchoolSite.school_id.in_(school_ids))
-            .group_by(SchoolSite.school_id)
-            .all()
-        )
-        if site_id is not None
-    ]
-    if not latest_site_ids:
-        return {}
-    sites = session.query(SchoolSite).filter(SchoolSite.id.in_(latest_site_ids)).all()
-    return {site.school_id: site for site in sites}
+    sites = (
+        session.query(SchoolSite)
+        .filter(SchoolSite.school_id.in_(school_ids))
+        .order_by(SchoolSite.id.desc())
+        .all()
+    )
+    latest_by_school: dict[int, SchoolSite] = {}
+    reusable_by_school: dict[int, SchoolSite] = {}
+    for site in sites:
+        latest_by_school.setdefault(site.school_id, site)
+        if site.http_status not in (None, 200):
+            continue
+        if is_pdf_site_url(site.url_type, site.url):
+            continue
+        reusable_by_school.setdefault(site.school_id, site)
+    return {
+        school_id: reusable_by_school.get(school_id) or latest
+        for school_id, latest in latest_by_school.items()
+    }
 
 
 def _prefecture_options(session: Session, *, fiscal_year: int, school_type: str | None) -> list[str]:

@@ -854,6 +854,10 @@ URLは登録前に以下のチェックを通します。
         st.info("まず学校名・法人名・都道府県の一部を入力して、登録先の学校を選択してください。")
 
     with st.form("operator_url_submission"):
+        st.info(
+            "できるだけ PDF 直リンクではなく、学校または法人の情報公開ページURLを登録してください。"
+            "ページURLは来年度以降も再取得の入口として使えます。"
+        )
         url = st.text_input(
             "情報公開ページまたは申請書PDFのURL",
             placeholder="https://example.ac.jp/school/public_info/",

@@ -16,11 +16,13 @@ from eidp.review._pages.school_year_tasks import (
     SchoolTaskSummary,
     blocking_reason_label,
     bootstrap_command,
+    is_pdf_site_url,
     latest_bootstrap_log,
     latest_bootstrap_progress,
     list_school_year_tasks,
     manual_entry_prefill_for_row,
     needs_initial_url_bootstrap,
+    next_action_for_row,
     next_action_for_status,
     read_bootstrap_progress,
     read_weekly_last_run,
@@ -486,6 +488,42 @@ def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_
         session.close()
 
 
+def test_pdf_direct_link_without_reusable_page_routes_back_to_url_addition() -> None:
+    session = _session()
+    try:
+        _school(session, 5, name="PDF直リンク学校")
+        _status(session, 5, pdf_status="rejected_stale", blocking_reason="stale_pdf_only")
+        _site(session, 5, "https://school5.example/r8.pdf", url_type="pdf", discovery_method="operator_manual")
+        session.commit()
+
+        row = list_school_year_tasks(session, fiscal_year=2026, school_type="専門学校")[0]
+
+        assert row.next_action == "URL追加"
+        assert "情報公開ページURL" in row.action_hint
+        assert row.latest_site_url == "https://school5.example/r8.pdf"
+        assert row.latest_site_url_type == "pdf"
+    finally:
+        session.close()
+
+
+def test_task_context_prefers_reusable_page_over_newer_pdf_direct_link() -> None:
+    session = _session()
+    try:
+        _school(session, 6, name="入口あり学校")
+        _status(session, 6, pdf_status="rejected_stale", blocking_reason="stale_pdf_only")
+        _site(session, 6, "https://school6.example/public_info/", url_type="disclosure_page")
+        _site(session, 6, "https://school6.example/r8.pdf", url_type="pdf", discovery_method="operator_manual")
+        session.commit()
+
+        row = list_school_year_tasks(session, fiscal_year=2026, school_type="専門学校")[0]
+
+        assert row.next_action == "公示待ち/再取得"
+        assert row.latest_site_url == "https://school6.example/public_info/"
+        assert row.latest_site_url_type == "disclosure_page"
+    finally:
+        session.close()
+
+
 def test_manual_entry_prefill_for_row_focuses_latest_document() -> None:
     session = _session()
     try:
@@ -530,6 +568,41 @@ def test_site_url_type_label_explains_future_year_reuse() -> None:
     assert site_url_type_label(None, "https://school.example/info") == (
         "ページURL（来年度以降も再取得入口として再利用）"
     )
+    assert site_url_type_label(None, "https://school.example/r8.pdf?download=1") == (
+        "PDF直リンク（対象年度ごとに更新確認が必要）"
+    )
+
+
+def test_pdf_site_url_detection_uses_type_or_url_suffix() -> None:
+    assert is_pdf_site_url("pdf", "https://school.example/public_info/")
+    assert is_pdf_site_url(None, "https://school.example/r8.pdf#page=1")
+    assert not is_pdf_site_url("disclosure_page", "https://school.example/public_info/")
+
+
+def test_row_action_uses_pdf_site_context_for_long_term_reuse() -> None:
+    status = SchoolFiscalYearStatus(
+        school_id=1,
+        fiscal_year=2026,
+        url_status="operator_url",
+        pdf_status="rejected_stale",
+        extract_status="none",
+        yoy_diff_status="unchecked",
+        excel_ready=False,
+        blocking_reason="stale_pdf_only",
+        evidence_level="conflict",
+    )
+    site = SchoolSite(
+        school_id=1,
+        url="https://school.example/r8.pdf",
+        url_type="pdf",
+        discovery_method="operator_manual",
+        http_status=200,
+    )
+
+    action, hint = next_action_for_row(status, site)
+
+    assert action == "URL追加"
+    assert "来年度以降" in hint
 
 
 def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> None:
