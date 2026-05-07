@@ -13,9 +13,15 @@ import re
 from pathlib import Path
 
 import streamlit as st
+from sqlalchemy.orm import Session
 
 from eidp.config import apply_fiscal_era_settings, apply_runtime_env_settings, settings
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.fiscal_year import JapaneseEra, format_fiscal_year_label
+from eidp.pipeline.school_fiscal_year_status import (
+    SchoolFiscalYearStatusStats,
+    rebuild_school_fiscal_year_status,
+)
 
 SETTING_ENV_KEYS = (
     "EIDP_TARGET_FISCAL_YEAR",
@@ -162,6 +168,22 @@ def save_operator_settings(
     return updates
 
 
+def maybe_rebuild_school_year_tasks_after_target_change(
+    session: Session,
+    *,
+    old_target_fiscal_year: int,
+    target_fiscal_year: int,
+) -> SchoolFiscalYearStatusStats | None:
+    """Rebuild the operator task table when the operational year changes."""
+    if int(old_target_fiscal_year) == int(target_fiscal_year):
+        return None
+    return rebuild_school_fiscal_year_status(
+        session,
+        fiscal_year=int(target_fiscal_year),
+        school_type=None,
+    )
+
+
 def validate_operator_settings(
     *,
     fiscal_era_enabled: bool,
@@ -224,7 +246,7 @@ def _url_search_mode_index(value: str) -> int:
 
 def render(_session: object, *, lock_path: Path) -> None:
     """Top-level Streamlit render for the settings page."""
-    _ = lock_path
+    session = _session if isinstance(_session, Session) else None
     st.header("設定")
     st.caption(
         "対象年度と、政府・学校ページで使われる和暦検索名を確認します。"
@@ -238,6 +260,14 @@ def render(_session: object, *, lock_path: Path) -> None:
     if build_info:
         st.subheader("バージョン")
         st.caption(build_info_summary(build_info))
+
+    old_target_fiscal_year = int(settings.target_fiscal_year)
+    lock_status = probe_lock(lock_path)
+    if lock_status.held:
+        st.warning(
+            "初回取得または週次処理中のため、設定保存は一時停止しています。"
+            "処理完了後にもう一度保存してください。"
+        )
 
     target_fiscal_year = int(
         st.number_input(
@@ -380,28 +410,53 @@ def render(_session: object, *, lock_path: Path) -> None:
     for error in errors:
         st.error(error)
 
-    if st.button("設定を保存", type="primary", disabled=bool(errors)):
-        save_operator_settings(
-            env_path,
-            target_fiscal_year=target_fiscal_year,
-            fiscal_era_enabled=fiscal_era_enabled,
-            fiscal_era_name=fiscal_era_name,
-            fiscal_era_romanized=fiscal_era_romanized,
-            fiscal_era_initial=fiscal_era_initial,
-            fiscal_era_start_year=fiscal_era_start_year,
-            ocr_auto_enable=ocr_auto_enable,
-            ocr_min_cpus=ocr_min_cpus,
-            ocr_min_free_ram_mb=ocr_min_free_ram_mb,
-            tesseract_bin=tesseract_bin,
-            ocr_provider=ocr_provider,
-            ocr_device=ocr_device,
-            search_provider=search_provider,
-            url_search_auto_enable=url_search_auto_enable,
-            url_search_batch_size=url_search_batch_size,
-            serper_api_key=serper_api_key,
-            brave_api_key=brave_api_key,
-            google_api_key=google_api_key,
-            google_cx=google_cx,
-            firecrawl_api_key=firecrawl_api_key,
-        )
-        st.success("保存しました。この画面を再読み込みするとサイドバーにも反映されます。")
+    if st.button("設定を保存", type="primary", disabled=bool(errors) or lock_status.held):
+        if session is None:
+            st.error("DB セッションが取得できません。アプリを再起動してから保存してください。")
+            return
+        try:
+            with acquire_lock(lock_path, owner="ui_settings"):
+                save_operator_settings(
+                    env_path,
+                    target_fiscal_year=target_fiscal_year,
+                    fiscal_era_enabled=fiscal_era_enabled,
+                    fiscal_era_name=fiscal_era_name,
+                    fiscal_era_romanized=fiscal_era_romanized,
+                    fiscal_era_initial=fiscal_era_initial,
+                    fiscal_era_start_year=fiscal_era_start_year,
+                    ocr_auto_enable=ocr_auto_enable,
+                    ocr_min_cpus=ocr_min_cpus,
+                    ocr_min_free_ram_mb=ocr_min_free_ram_mb,
+                    tesseract_bin=tesseract_bin,
+                    ocr_provider=ocr_provider,
+                    ocr_device=ocr_device,
+                    search_provider=search_provider,
+                    url_search_auto_enable=url_search_auto_enable,
+                    url_search_batch_size=url_search_batch_size,
+                    serper_api_key=serper_api_key,
+                    brave_api_key=brave_api_key,
+                    google_api_key=google_api_key,
+                    google_cx=google_cx,
+                    firecrawl_api_key=firecrawl_api_key,
+                )
+                rebuild_stats = maybe_rebuild_school_year_tasks_after_target_change(
+                    session,
+                    old_target_fiscal_year=old_target_fiscal_year,
+                    target_fiscal_year=target_fiscal_year,
+                )
+                session.commit()
+        except LockBusyError:
+            session.rollback()
+            st.error("別の処理が実行中です。完了後にもう一度保存してください。")
+            return
+        except Exception:
+            session.rollback()
+            raise
+
+        if rebuild_stats is not None:
+            st.success(
+                "保存しました。対象年度が変わったため、年度タスクも再計算しました。"
+                f"対象校 {rebuild_stats.rebuilt} 校 / Excel出力可 {rebuild_stats.excel_ready} 校"
+            )
+        else:
+            st.success("保存しました。この画面を再読み込みするとサイドバーにも反映されます。")

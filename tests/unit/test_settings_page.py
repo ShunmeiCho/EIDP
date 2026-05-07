@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
+
 from eidp.config import apply_fiscal_era_settings, apply_runtime_env_settings, settings
+from eidp.db.models import Base, School, SchoolFiscalYearStatus
 from eidp.review._pages.settings_page import (
     build_info_summary,
+    maybe_rebuild_school_year_tasks_after_target_change,
     read_build_info,
     save_operator_settings,
     update_env_text,
@@ -134,3 +140,83 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None
     assert "EIDP_URL_SEARCH_AUTO_ENABLE=on" in body
     assert "EIDP_URL_SEARCH_BATCH_SIZE=300" in body
     assert "EIDP_FIRECRAWL_API_KEY=firecrawl-key" in body
+
+
+def test_target_year_change_rebuilds_school_task_rows_for_all_school_types() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add_all(
+            [
+                School(
+                    id=1,
+                    school_code="S1",
+                    prefecture="東京都",
+                    corporation_name="法人1",
+                    school_name="専門学校テスト",
+                    school_type="専門学校",
+                    status="active",
+                ),
+                School(
+                    id=2,
+                    school_code="U1",
+                    prefecture="東京都",
+                    corporation_name="法人2",
+                    school_name="大学テスト",
+                    school_type="大学",
+                    status="active",
+                ),
+            ]
+        )
+        session.add(
+            SchoolFiscalYearStatus(
+                school_id=1,
+                fiscal_year=2026,
+                url_status="no_url",
+                pdf_status="none",
+                extract_status="none",
+                yoy_diff_status="unchecked",
+                evidence_level="none",
+                excel_ready=False,
+                blocking_reason="no_url",
+            )
+        )
+        session.commit()
+
+        stats = maybe_rebuild_school_year_tasks_after_target_change(
+            session,
+            old_target_fiscal_year=2026,
+            target_fiscal_year=2027,
+        )
+        session.commit()
+
+        assert stats is not None
+        assert stats.rebuilt == 2
+        assert (
+            session.query(SchoolFiscalYearStatus)
+            .filter(SchoolFiscalYearStatus.fiscal_year == 2027)
+            .count()
+            == 2
+        )
+
+
+def test_target_year_unchanged_does_not_rebuild_school_task_rows() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        assert (
+            maybe_rebuild_school_year_tasks_after_target_change(
+                session,
+                old_target_fiscal_year=2026,
+                target_fiscal_year=2026,
+            )
+            is None
+        )
