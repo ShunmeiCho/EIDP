@@ -2,7 +2,7 @@
 
 Date: 2026-05-07
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `b3821f4e77c7207860ca6b6f2a67acb84b1c9c44` (`eidp-windows-v80.zip`)
+Latest audited Windows package commit: `83db29bc2608be04dd21ad554760e46f26c34f48` (`eidp-windows-v81.zip`)
 
 ## Objective Restatement
 
@@ -27,12 +27,15 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, and preserved filters. `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, focused-doc auto expansion, evidence panel, PDF preview/download, lock handling, and manual entry save path. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows.zip` rebuilt as v80 at commit `b3821f4`, verifier `ok=true`, `git_dirty=false`, SHA256 `4d7b291b2b67fbcfd1e82643f995a6e2dcbe47e1206320d4ca888e1b3b24c253`, wheelhouse 82 wheels. Latest package includes the current operator runbook, settings page, and UI-first weekly rediscovery guidance. Latest Mac smoke confirms Streamlit starts, settings page imports, and Settings navigation has zero exceptions against an isolated SQLite DB. Remote Windows smoke is still only proven through v73: SHA256 match, clean setup exit code 0, `school_count=2418`, `school_fiscal_year_status_count=2418`, official-index yield, and bounded Step 3 cache/prefilter behavior. | Latest package is locally verified and ready for Windows transfer. Full Windows PDF crawl/ingest and UI click-through are still not complete on v80. |
+| Windows operator delivery | `dist/eidp-windows-v81.zip` rebuilt at commit `83db29b`, verifier `ok=true`, `git_dirty=false`, SHA256 `db4d4e81cfd13a8eddc2a7e30a79b23682536ecdde008d80e0877ec1961af2e7`, wheelhouse 82 wheels. Latest package includes the current operator runbook, settings page, UI-first weekly rediscovery guidance, browser-proven non-transparent action buttons, and bootstrap progress rejection breakdowns. Latest Mac smoke confirms Streamlit starts, settings page imports, Settings navigation has zero exceptions, and Chrome headless rendering shows `初回URL/PDF取得を開始` as a real styled button. Remote Windows smoke is still only proven through v73: SHA256 match, clean setup exit code 0, `school_count=2418`, `school_fiscal_year_status_count=2418`, official-index yield, and bounded Step 3 cache/prefilter behavior. | Latest package is locally verified and ready for Windows transfer. Full Windows PDF crawl/ingest and UI click-through are still not complete on v81. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
-- `uv run pytest -q` → `820 passed, 5 warnings`
+- `uv run pytest -q` → `821 passed, 5 warnings`
+- `uv run pytest tests/unit/test_operator_pages.py tests/unit/test_review_school_year_tasks.py -q` → `62 passed`
+- Chrome headless CDP smoke on isolated Streamlit app → HTTP `200`, home page rendered, `初回URL/PDF取得を開始` computed style changed from transparent to `rgb(0, 0, 0)` background / `rgb(255, 255, 255)` text, screenshot captured at `_temp/ui-smoke-20260507-120558/ui-smoke-home-rendered.png`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v81.zip` → `OK core`, `git_commit=83db29bc2608be04dd21ad554760e46f26c34f48`, `git_dirty=false`, `sha256=db4d4e81cfd13a8eddc2a7e30a79b23682536ecdde008d80e0877ec1961af2e7`, `entry_count=2992`, `wheel_count=82`, `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`
 - `uv run pytest tests/unit/test_settings_page.py -q` → `7 passed`
 - `uv run pytest tests/unit/test_review_app.py tests/unit/test_review_school_year_tasks.py tests/unit/test_windows_packaging_spike.py tests/unit/test_windows_distribution_verifier.py -q` → `131 passed`
 - `uv run pytest tests/unit/test_windows_packaging_spike.py tests/unit/test_windows_distribution_verifier.py tests/unit/test_windows_install_validator.py -q` → `106 passed`
@@ -89,7 +92,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
    showing actual target-year PDF yield, stale rejection counts, and fallback
    search counts. The bounded Mac smoke proves the chain runs and rejects
    old-year candidates, but it does not prove full target-year PDF yield.
-2. Run latest v80 ZIP on Windows and verify:
+2. Run latest v81 ZIP on Windows and verify:
    setup, UI start, initial bootstrap button, weekly rediscovery button,
    official-index coverage page, school task drill-down, PDF確認, and Excel
    preview.
