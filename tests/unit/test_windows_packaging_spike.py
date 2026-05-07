@@ -12,6 +12,7 @@ asset is well-formed; Windows side proves it actually runs.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import sys
 from pathlib import Path
@@ -151,6 +152,19 @@ def test_build_info_records_commit_branch_and_tracked_dirty_state(tmp_path: Path
     assert info["git_branch"] == "release/test"
     assert info["git_dirty"] == "true"
     assert ("status", "--porcelain", "--untracked-files=no") in calls
+
+
+def test_write_sha256_sidecar_records_relative_repo_path(tmp_path: Path):
+    bw = _load_build_script()
+    artifact = tmp_path / "dist" / "eidp-windows.zip"
+    artifact.parent.mkdir()
+    artifact.write_bytes(b"zip payload")
+
+    sidecar = bw.write_sha256_sidecar(artifact, repo_root=tmp_path)
+
+    expected = hashlib.sha256(b"zip payload").hexdigest()
+    assert sidecar == tmp_path / "dist" / "eidp-windows.zip.sha256"
+    assert sidecar.read_text(encoding="utf-8") == f"{expected}  dist/eidp-windows.zip\n"
 
 
 # ---------------------------------------------------------------------------

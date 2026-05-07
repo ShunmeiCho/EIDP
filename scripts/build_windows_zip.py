@@ -33,6 +33,12 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from _packaging_lib import sha256_file  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REQUIREMENTS = REPO_ROOT / "requirements-windows.txt"
 DEFAULT_WHEELHOUSE = REPO_ROOT / "dist" / "wheelhouse"
@@ -206,6 +212,29 @@ def assemble_zip(
             else:
                 zf.write(src, arc)
     return out_zip
+
+
+def _sidecar_display_path(path: Path, *, repo_root: Path) -> str:
+    """Return a portable path for checksum sidecars.
+
+    Absolute paths make handoff archives machine-specific. If the artifact
+    lives under the repo root, record a relative path like ``dist/foo.zip``.
+    """
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def write_sha256_sidecar(path: Path, *, repo_root: Path = REPO_ROOT) -> Path:
+    """Write ``<artifact>.sha256`` beside the ZIP and return its path."""
+    sidecar = path.with_suffix(path.suffix + ".sha256")
+    digest = sha256_file(path)
+    sidecar.write_text(
+        f"{digest}  {_sidecar_display_path(path, repo_root=repo_root)}\n",
+        encoding="utf-8",
+    )
+    return sidecar
 
 
 def _git_output(repo_root: Path, *args: str) -> str:
@@ -446,8 +475,10 @@ def main(argv: list[str] | None = None) -> int:
         if not args.skip_master:
             assert_master_xlsx_present(REPO_ROOT)
         out = assemble_zip(out_zip=args.out_zip, repo_root=REPO_ROOT, wheelhouse=args.wheelhouse)
+        sidecar = write_sha256_sidecar(out, repo_root=REPO_ROOT)
         size_mb = out.stat().st_size / 1024 / 1024
         print(f"OK: wrote {out} ({size_mb:.1f} MB)")
+        print(f"OK: wrote checksum sidecar {sidecar}")
     return 0
 
 
