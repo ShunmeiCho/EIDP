@@ -1501,6 +1501,10 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         f"{target_label} の学校ごとの進捗です。旧年度PDFは成果に含めず、"
         f"{school_type_label} の次に何をするかだけを確認します。"
     )
+    st.info(
+        f"{target_label} の確認申請書PDFは、多くの学校で6〜8月ごろ順次公開されます。"
+        "公開前の学校は「対象年度PDF待ち」に残し、旧年度PDF・募集要項・学生向け申請書は成果に含めません。"
+    )
     settings_col, _spacer = st.columns([1, 3])
     with settings_col:
         if st.button(
