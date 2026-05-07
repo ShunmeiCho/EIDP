@@ -143,6 +143,8 @@ class DiscoveryEvidenceRow:
     pattern_type: str
     score: float
     pdf_type: str | None
+    detected_fiscal_year: str
+    year_evidence: str
     timestamp: str
 
 
@@ -612,6 +614,8 @@ def latest_discovery_evidence(
                 pattern_type=str(payload.get("pattern_type") or ""),
                 score=float(payload.get("score") or 0.0),
                 pdf_type=payload.get("pdf_type"),
+                detected_fiscal_year=str(extra.get("detected_fiscal_year") or ""),
+                year_evidence=str(extra.get("year_evidence") or ""),
                 timestamp=str(payload.get("timestamp") or ""),
             ))
 
@@ -697,6 +701,8 @@ def discovery_evidence_table_rows(evidence_rows: list[DiscoveryEvidenceRow]) -> 
             "PDF種別": row.pdf_type or "",
             "入口の由来": discovery_method_label(row.discovery_method),
             "対象年度": row.target_fiscal_year,
+            "年度根拠": year_evidence_label(row.year_evidence),
+            "PDF本文年度": row.detected_fiscal_year,
             "リンク文字": row.anchor_text,
             "入口URL": row.site_url,
             "掲載ページ": row.page_url,
@@ -704,6 +710,18 @@ def discovery_evidence_table_rows(evidence_rows: list[DiscoveryEvidenceRow]) -> 
         }
         for row in evidence_rows
     ]
+
+
+def year_evidence_label(value: str | None) -> str:
+    """Human-readable source of a candidate's fiscal-year evidence."""
+
+    labels = {
+        "pdf_text": "PDF本文",
+        "url_hint": "リンク文字/URL",
+        "target_application_no_year": "対象申請書候補（年度未確認）",
+        "none": "年度根拠なし",
+    }
+    return labels.get((value or "").strip(), value or "")
 
 
 def _has_target_year_hint(text: str, *, target_fiscal_year: int) -> bool:
@@ -734,6 +752,15 @@ def fiscal_year_evidence_summary(
         ),
         None,
     )
+    if accepted and accepted.year_evidence == "pdf_text":
+        return f"年度根拠: PDF本文で {target_label} を確認しています。"
+    if accepted and accepted.year_evidence == "url_hint":
+        return (
+            f"年度根拠: PDF本文に年度は見つかっていません。"
+            f"リンク文字またはURLの {target_label} ヒントで候補として保持しています。"
+        )
+    if accepted and accepted.year_evidence == "target_application_no_year":
+        return "年度根拠: 対象申請書候補ですが年度は未確認です。OCRまたは手入力で確認してください。"
     hint_text = " ".join(
         part
         for part in (

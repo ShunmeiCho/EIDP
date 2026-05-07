@@ -418,7 +418,8 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
                 '"anchor_text": "2026年度", "pattern_type": "direct", "score": 9.0, '
                 '"pdf_type": "target", '
                 '"extra": {"site_url": "https://example.ac.jp/disclosure/", '
-                '"discovery_method": "prefecture_aggregator", "target_fiscal_year": "2026"}, '
+                '"discovery_method": "prefecture_aggregator", "target_fiscal_year": "2026", '
+                '"detected_fiscal_year": "", "year_evidence": "url_hint"}, '
                 '"timestamp": "2026-05-06T00:01:00Z"}'
             ),
             (
@@ -441,6 +442,7 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
     assert rows[0].site_url == "https://example.ac.jp/disclosure/"
     assert rows[0].discovery_method == "prefecture_aggregator"
     assert rows[0].target_fiscal_year == "2026"
+    assert rows[0].year_evidence == "url_hint"
     assert rows[1].reason == "fiscal_year_mismatch:2025"
 
 
@@ -519,6 +521,8 @@ def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
             pattern_type="direct",
             score=9.0,
             pdf_type="target",
+            detected_fiscal_year="2026",
+            year_evidence="pdf_text",
             timestamp="2026-05-06T00:01:00Z",
         )
     ]
@@ -530,6 +534,8 @@ def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
     candidate_row = discovery_evidence_table_rows(evidence)[0]
     assert candidate_row["採否"] == "採用してPDF保存"
     assert candidate_row["入口の由来"] == "都道府県公式一覧"
+    assert candidate_row["年度根拠"] == "PDF本文"
+    assert candidate_row["PDF本文年度"] == "2026"
     assert discovery_reason_label("fiscal_year_mismatch:2025") == "旧年度/別年度のため保留 (2025)"
 
 
@@ -559,6 +565,8 @@ def test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints() ->
             pattern_type="direct",
             score=9.0,
             pdf_type="target",
+            detected_fiscal_year="",
+            year_evidence="url_hint",
             timestamp="2026-05-06T00:01:00Z",
         )
     ]

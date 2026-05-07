@@ -176,6 +176,8 @@ class PdfCandidate:
     anchor_text: str = ""
     pattern_type: str = ""  # direct, wordpress, cache_busted, embed
     score: float = 0.0
+    detected_fiscal_year: int | None = None
+    year_evidence: str = ""
 
 
 @dataclass
@@ -894,6 +896,7 @@ def download_pdf(
                 sample_text,
                 max_fiscal_year=max_detectable_year,
             )
+            candidate.detected_fiscal_year = detected_fiscal_year
         except Exception as e:
             log.warning("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
             pdf_type = "unknown"
@@ -914,6 +917,16 @@ def download_pdf(
                 pdf_type == "target" and _has_target_year_hint(candidate, target_year=target_year)
             ):
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
+            if detected_fiscal_year == target_year:
+                candidate.year_evidence = "pdf_text"
+            elif _has_target_year_hint(candidate, target_year=target_year):
+                candidate.year_evidence = "url_hint"
+            elif pdf_type == "image_only" and _has_target_application_hint(candidate):
+                candidate.year_evidence = "target_application_no_year"
+            else:
+                candidate.year_evidence = "none"
+        elif detected_fiscal_year is not None:
+            candidate.year_evidence = "pdf_text"
 
         # Storage path: data/pdfs/{school_id}/{hash[:8]}.pdf
         school_dir = storage_dir / str(school_id)
@@ -1299,6 +1312,8 @@ def run_pdf_discovery(
                                 "site_url": site.url,
                                 "discovery_method": site.discovery_method or "",
                                 "target_fiscal_year": str(target_year),
+                                "detected_fiscal_year": str(candidate.detected_fiscal_year or ""),
+                                "year_evidence": candidate.year_evidence,
                             },
                         ))
 

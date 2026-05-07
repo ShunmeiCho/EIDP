@@ -686,6 +686,8 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
             download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = None
+            candidate.year_evidence = "url_hint"
             return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
 
         monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
@@ -711,6 +713,8 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
         assert payloads[0]["reason"] == "pre_filtered_non_target_hint"
         assert payloads[0]["pdf_type"] == "non_target"
         assert payloads[-1]["reason"] == "accepted_downloaded"
+        assert payloads[-1]["extra"]["year_evidence"] == "url_hint"
+        assert payloads[-1]["extra"]["detected_fiscal_year"] == ""
     finally:
         session.close()
 
@@ -748,6 +752,8 @@ def test_run_pdf_discovery_prefilters_encoded_non_target_query_before_download(
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
             download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = 2026
+            candidate.year_evidence = "pdf_text"
             return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
 
         monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
@@ -802,6 +808,8 @@ def test_run_pdf_discovery_prefilters_explicit_old_fiscal_year_before_download(
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
             download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = 2026
+            candidate.year_evidence = "pdf_text"
             return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
 
         monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
@@ -829,6 +837,8 @@ def test_run_pdf_discovery_prefilters_explicit_old_fiscal_year_before_download(
         assert payloads[0]["pdf_type"] == "target"
         assert payloads[0]["extra"]["pre_download"] == "true"
         assert payloads[-1]["reason"] == "accepted_downloaded"
+        assert payloads[-1]["extra"]["year_evidence"] == "pdf_text"
+        assert payloads[-1]["extra"]["detected_fiscal_year"] == "2026"
     finally:
         session.close()
 
@@ -979,6 +989,8 @@ def test_download_pdf_accepts_url_target_hint_when_body_is_target_form(
     assert pdf_type == "target"
     assert reason is None
     assert Path(file_path).is_file()
+    assert candidate.detected_fiscal_year is None
+    assert candidate.year_evidence == "url_hint"
 
 
 def test_download_pdf_rejects_url_target_hint_when_body_is_not_target_form(
@@ -1047,6 +1059,8 @@ def test_download_pdf_accepts_pdf_text_target_year_in_strict_target_mode(
     assert pdf_type == "target"
     assert reason is None
     assert Path(file_path).is_file()
+    assert candidate.detected_fiscal_year == 2026
+    assert candidate.year_evidence == "pdf_text"
 
 
 def test_download_pdf_uses_resolved_download_wrapper_url(monkeypatch, tmp_path: Path) -> None:
