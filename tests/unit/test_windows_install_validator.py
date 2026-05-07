@@ -32,7 +32,22 @@ def _mkdir(root: Path, rel: str) -> None:
 
 def _core_install(root: Path) -> Path:
     for rel in module.CORE_FILES:
-        _write(root, rel, b"PE" if rel.endswith(".exe") else "")
+        if rel == "BUILD_INFO.json":
+            _write(
+                root,
+                rel,
+                json.dumps(
+                    {
+                        "app": "EIDP",
+                        "built_at_utc": "2026-05-07T04:33:48+00:00",
+                        "git_commit": "830ae68ce7242fd0c34b8794b02e0a8ce27139fc",
+                        "git_branch": "sprint8-handoff-finalize",
+                        "git_dirty": "false",
+                    }
+                ),
+            )
+        else:
+            _write(root, rel, b"PE" if rel.endswith(".exe") else "")
     for rel in module.CORE_DIRS:
         _mkdir(root, rel)
     _write(root, "src/eidp/__init__.py", "")
@@ -93,6 +108,32 @@ def test_validate_core_install_accepts_unzipped_layout(tmp_path: Path) -> None:
     assert check.ok, check.errors
     assert check.details["wheel_count"] == 2
     assert check.details["master_xlsx_present"] is True
+    assert check.details["build_commit"] == "830ae68ce7242fd0c34b8794b02e0a8ce27139fc"
+    assert check.details["build_branch"] == "sprint8-handoff-finalize"
+    assert check.details["build_dirty"] == "false"
+
+
+def test_validate_core_install_rejects_bad_build_info(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _write(
+        root,
+        "BUILD_INFO.json",
+        json.dumps(
+            {
+                "app": "Wrong",
+                "built_at_utc": "2026-05-07T04:33:48+00:00",
+                "git_commit": "short",
+                "git_branch": "sprint8-handoff-finalize",
+                "git_dirty": "false",
+            }
+        ),
+    )
+
+    check = module.validate_install(root)
+
+    assert not check.ok
+    assert any("app must be EIDP" in error for error in check.errors)
+    assert any("full 40-character commit" in error for error in check.errors)
 
 
 def test_validate_core_install_requires_project_wheel(tmp_path: Path) -> None:

@@ -108,6 +108,14 @@ SQLITE_REQUIRED_TABLES = (
     "manual_action_log",
 )
 
+BUILD_INFO_REQUIRED_KEYS = (
+    "app",
+    "built_at_utc",
+    "git_commit",
+    "git_branch",
+    "git_dirty",
+)
+
 
 def _posix_rel(path: str) -> Path:
     return Path(*path.split("/"))
@@ -126,6 +134,35 @@ def _count_wheels(root: Path) -> int:
     if not wheelhouse.is_dir():
         return 0
     return len(list(wheelhouse.glob("*.whl")))
+
+
+def _validate_build_info(check: InstallCheck, path: Path) -> None:
+    if not path.is_file():
+        return
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        check.fail(f"BUILD_INFO.json is not readable UTF-8 JSON: {exc}")
+        return
+    if not isinstance(payload, dict):
+        check.fail("BUILD_INFO.json must contain a JSON object")
+        return
+
+    for key in BUILD_INFO_REQUIRED_KEYS:
+        value = payload.get(key)
+        if not isinstance(value, str) or not value:
+            check.fail(f"BUILD_INFO.json missing string field: {key}")
+
+    if payload.get("app") != "EIDP":
+        check.fail("BUILD_INFO.json app must be EIDP")
+    commit = payload.get("git_commit")
+    if isinstance(commit, str) and commit != "unknown" and len(commit) != 40:
+        check.fail("BUILD_INFO.json git_commit must be a full 40-character commit hash or unknown")
+
+    check.details["build_commit"] = payload.get("git_commit")
+    check.details["build_branch"] = payload.get("git_branch")
+    check.details["build_dirty"] = payload.get("git_dirty")
+    check.details["built_at_utc"] = payload.get("built_at_utc")
 
 
 def _load_last_run(check: InstallCheck, path: Path) -> dict[str, Any] | None:
@@ -207,6 +244,7 @@ def validate_install(
     for rel in CORE_DIRS:
         if not _exists_dir(root, rel):
             check.fail(f"missing core directory: {rel}")
+    _validate_build_info(check, root / "BUILD_INFO.json")
 
     wheel_count = _count_wheels(root)
     check.details["wheel_count"] = wheel_count

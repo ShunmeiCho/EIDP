@@ -573,6 +573,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
     required_tokens: dict[str, tuple[str, ...]] = {
         "scripts/validate_windows_install.py": (
             "CORE_FILES",
+            "build_commit",
             "scripts/validate_install.bat",
             "--after-setup",
             "--after-weekly",
