@@ -14,6 +14,7 @@ from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, SchoolSite
 from eidp.review._pages import school_year_tasks
 from eidp.review._pages.school_year_tasks import (
+    SETTINGS_PAGE_ID,
     BootstrapProgress,
     SchoolTaskSummary,
     blocking_reason_label,
@@ -40,6 +41,7 @@ from eidp.review._pages.school_year_tasks import (
     school_task_summary,
     school_type_from_filter_label,
     select_task_document,
+    settings_page_prefill,
     site_entry_label,
     site_url_type_label,
     start_initial_url_bootstrap,
@@ -1079,6 +1081,31 @@ def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> 
             == "URLなし学校"
         )
         assert app.session_state[school_year_tasks.URL_SUBMISSION_SCHOOL_ID_STATE_KEY] == 3
+    finally:
+        session.close()
+
+
+def test_task_board_settings_button_opens_settings_page(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        _school(session, 3, name="URLなし学校")
+        _status(session, 3, url_status="no_url", blocking_reason="no_url")
+        session.commit()
+
+        app = AppTest.from_function(
+            _render_school_tasks_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.run(timeout=15)
+
+        assert not app.exception
+        settings_buttons = [button for button in app.button if button.label == "設定を開く（年度・OCR・API）"]
+        assert len(settings_buttons) == 1
+
+        settings_buttons[0].click().run(timeout=15)
+
+        assert app.session_state["selected_page"] == SETTINGS_PAGE_ID
+        assert settings_page_prefill() == {"selected_page": SETTINGS_PAGE_ID}
     finally:
         session.close()
 

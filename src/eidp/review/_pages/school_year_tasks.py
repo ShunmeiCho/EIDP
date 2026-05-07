@@ -112,6 +112,7 @@ URL_SUBMISSION_SCHOOL_ID_STATE_KEY = "url_submission_school_id"
 MANUAL_ENTRY_PAGE_ID = "manual_entry"
 MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
 EXCEL_PREVIEW_PAGE_ID = "excel_preview"
+SETTINGS_PAGE_ID = "settings"
 MANUAL_ENTRY_ACTIONS = {"OCR/手入力", "手入力", "PDF確認", "前年差分確認"}
 WEEKLY_DISCOVERY_METHODS = (
     "prefecture_aggregator",
@@ -212,6 +213,11 @@ def manual_entry_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
     if row.latest_document_id is not None:
         payload[MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY] = row.latest_document_id
     return payload
+
+
+def settings_page_prefill() -> dict[str, object]:
+    """Return Streamlit session_state values that open the operator settings page."""
+    return {"selected_page": SETTINGS_PAGE_ID}
 
 
 def blocking_reason_label(reason: str | None) -> str:
@@ -1495,6 +1501,15 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         f"{target_label} の学校ごとの進捗です。旧年度PDFは成果に含めず、"
         f"{school_type_label} の次に何をするかだけを確認します。"
     )
+    settings_col, _spacer = st.columns([1, 3])
+    with settings_col:
+        if st.button(
+            "設定を開く（年度・OCR・API）",
+            key="school_tasks_open_settings",
+            width="stretch",
+        ):
+            st.session_state.update(settings_page_prefill())
+            st.rerun()
 
     lock_status = probe_lock(lock_path)
     if lock_status.held:
