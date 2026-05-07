@@ -1111,6 +1111,27 @@ def test_task_board_settings_button_opens_settings_page(tmp_path: Path) -> None:
         session.close()
 
 
+def test_task_board_explains_target_year_publication_window(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        _school(session, 3, name="URLなし学校")
+        _status(session, 3, url_status="no_url", blocking_reason="no_url")
+        session.commit()
+
+        app = AppTest.from_function(
+            _render_school_tasks_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.run(timeout=15)
+
+        assert not app.exception
+        info_texts = [str(info.value) for info in app.info]
+        assert any("6〜8月ごろ順次公開" in text for text in info_texts)
+        assert any("旧年度PDF・募集要項・学生向け申請書は成果に含めません" in text for text in info_texts)
+    finally:
+        session.close()
+
+
 def test_task_board_surfaces_package_identity_caption(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     from eidp.config import settings
 
