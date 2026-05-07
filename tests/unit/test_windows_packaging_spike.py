@@ -284,6 +284,9 @@ def test_first_setup_has_concurrent_run_lock(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
 
     assert '.setup.lock' in body
+    assert "SETUP_LOCK_STALE_HOURS=2" in body
+    assert "Removed stale setup lock" in body
+    assert "Remove-Item -LiteralPath $p -Recurse -Force" in body
     assert 'mkdir "%SETUP_LOCK_DIR%"' in body
     assert "setup is already running in this folder" in body
     assert 'rmdir "%SETUP_LOCK_DIR%"' in body

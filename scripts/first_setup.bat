@@ -27,7 +27,14 @@ if not exist "data\audit"  mkdir "data\audit"
 if not exist "logs"        mkdir "logs"
 
 REM 3. Prevent two setup runs from clearing .venv at the same time.
+REM    If setup crashed and left a lock behind, recover it after a short
+REM    TTL so non-technical operators do not have to delete hidden folders.
 set "SETUP_LOCK_DIR=%EIDP_APP_ROOT%\.setup.lock"
+set "SETUP_LOCK_STALE_HOURS=2"
+if exist "%SETUP_LOCK_DIR%" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $p=$env:SETUP_LOCK_DIR; if (Test-Path -LiteralPath $p) { $age=(Get-Date)-(Get-Item -LiteralPath $p).LastWriteTime; if ($age.TotalHours -ge [double]$env:SETUP_LOCK_STALE_HOURS) { Remove-Item -LiteralPath $p -Recurse -Force; exit 0 }; exit 1 }; exit 0"
+    if not errorlevel 1 echo [first_setup] Removed stale setup lock older than %SETUP_LOCK_STALE_HOURS% hours.
+)
 mkdir "%SETUP_LOCK_DIR%" 2>nul
 if errorlevel 1 (
     echo [first_setup] ERROR: setup is already running in this folder.

@@ -469,6 +469,8 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "runtime\\python\\python.exe",
             "runtime\\uv.exe",
             ".setup.lock",
+            "SETUP_LOCK_STALE_HOURS=2",
+            "Removed stale setup lock",
             "setup is already running in this folder",
             "endlocal & exit /b %SETUP_RC%",
             "PYTHONPATH=%EIDP_APP_ROOT%\\src",
