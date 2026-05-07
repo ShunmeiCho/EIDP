@@ -1083,6 +1083,40 @@ def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> 
         session.close()
 
 
+def test_task_board_surfaces_package_identity_caption(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    from eidp.config import settings
+
+    (tmp_path / "BUILD_INFO.json").write_text(
+        json.dumps(
+            {
+                "git_commit": "d4f096873ee04b9d851e919868e6e3877117e898",
+                "git_branch": "sprint8-handoff-finalize",
+                "git_dirty": "false",
+                "built_at_utc": "2026-05-07T04:25:04+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings, "app_root", tmp_path)
+    session = _session()
+    try:
+        _school(session, 3, name="URLなし学校")
+        _status(session, 3, url_status="no_url", blocking_reason="no_url")
+        session.commit()
+
+        app = AppTest.from_function(
+            _render_school_tasks_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.run(timeout=15)
+
+        assert not app.exception
+        captions = [str(caption.value) for caption in app.caption]
+        assert any("実行中のパッケージ: commit=d4f0968" in caption for caption in captions)
+    finally:
+        session.close()
+
+
 def test_task_lane_button_focuses_matching_filter(tmp_path: Path) -> None:
     session = _session()
     try:
