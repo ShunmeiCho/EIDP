@@ -32,6 +32,7 @@ from eidp.db.models import (
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.review._pages.pdf_manual_entry import (
+    MANUAL_ACTION_FILTER_ALL,
     MANUAL_QUEUE_VIEW_ALL,
     MANUAL_QUEUE_VIEW_TARGET,
     MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
@@ -45,11 +46,13 @@ from eidp.review._pages.pdf_manual_entry import (
     discovery_evidence_table_rows,
     discovery_reason_label,
     discovery_trace_summary,
+    filter_manual_queue_by_action,
     form_data_to_entries,
     latest_discovery_evidence,
     list_documents_for_manual_queue_view,
     list_pending_documents,
     list_school_site_evidence,
+    manual_action_filter_options,
     manual_next_action_for_row,
     manual_queue_summary,
     manual_queue_table,
@@ -302,6 +305,60 @@ def test_manual_queue_summary_and_table_explain_next_actions(engine):
     assert table[0]["年度"] == "旧年度"
     assert table[0]["学校"] == "Action学校"
     assert table[0]["都道府県"] == "神奈川県"
+
+
+def test_manual_action_filter_options_and_filter_queue_by_lane(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Lane学校")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="oldlane", fiscal_year=2025)
+        ocr_doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="ocrlane", fiscal_year=2026)
+        review_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="reviewlane", fiscal_year=2026)
+        ingested_doc = _seed_doc(session, school, status="ingested", file_hash_seed="inglane", fiscal_year=2026)
+        session.commit()
+
+        rows = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+        )
+        row_ids = {row.document_id for row in rows}
+        old_doc_id = int(old_doc.id)
+        ocr_doc_id = int(ocr_doc.id)
+        review_doc_id = int(review_doc.id)
+        ingested_doc_id = int(ingested_doc.id)
+
+    options = manual_action_filter_options(rows, target_fiscal_year=2026)
+    assert options == [
+        MANUAL_ACTION_FILTER_ALL,
+        "OCR/手入力",
+        "PDF確認",
+        "抽出結果確認",
+        "旧年度診断",
+    ]
+
+    ocr_rows = filter_manual_queue_by_action(
+        rows,
+        target_fiscal_year=2026,
+        action_filter="OCR/手入力",
+    )
+    assert [row.document_id for row in ocr_rows] == [ocr_doc_id]
+
+    old_rows = filter_manual_queue_by_action(
+        rows,
+        target_fiscal_year=2026,
+        action_filter="旧年度診断",
+    )
+    assert [row.document_id for row in old_rows] == [old_doc_id]
+    assert filter_manual_queue_by_action(
+        rows,
+        target_fiscal_year=2026,
+        action_filter=MANUAL_ACTION_FILTER_ALL,
+    ) == rows
+    assert row_ids == {
+        old_doc_id,
+        ocr_doc_id,
+        review_doc_id,
+        ingested_doc_id,
+    }
 
 
 def test_manual_next_action_prioritizes_school_mismatch_and_future_year(engine):

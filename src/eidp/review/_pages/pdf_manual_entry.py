@@ -12,6 +12,7 @@ The render function is a thin Streamlit shell. The testable surface
 lives in pure helpers:
 
   * ``list_pending_documents`` — queue query.
+  * ``filter_manual_queue_by_action`` — operator lane filter.
   * ``build_pdf_preview``      — local PDF → first-page PNG + download bytes.
   * ``form_data_to_entries``   — UI dict → ``DepartmentEntry`` list,
     with validation that mirrors ``save_manual_entries`` constraints
@@ -67,6 +68,18 @@ MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
 MANUAL_QUEUE_VIEW_TARGET = "target_year"
 MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED = "target_year_with_ingested"
 MANUAL_QUEUE_VIEW_ALL = "all_documents"
+MANUAL_ACTION_FILTER_ALL = "すべて"
+MANUAL_ACTION_FILTER_ORDER: tuple[str, ...] = (
+    "学校紐付け確認",
+    "年度確認",
+    "年度修正",
+    "OCR/手入力",
+    "手入力",
+    "PDF確認",
+    "抽出結果確認",
+    "旧年度診断",
+    "確認",
+)
 
 DISCOVERY_METHOD_LABELS: dict[str, str] = {
     "prefecture_aggregator": "都道府県公式一覧",
@@ -481,6 +494,32 @@ def manual_queue_table(rows: list[QueueRow], *, target_fiscal_year: int) -> list
             "理由": hint,
         })
     return table
+
+
+def manual_action_filter_options(rows: list[QueueRow], *, target_fiscal_year: int) -> list[str]:
+    """Return stable action-lane labels present in the current PDF queue."""
+    present = {
+        manual_next_action_for_row(row, target_fiscal_year=target_fiscal_year)[0]
+        for row in rows
+    }
+    ordered = [action for action in MANUAL_ACTION_FILTER_ORDER if action in present]
+    extras = sorted(present.difference(MANUAL_ACTION_FILTER_ORDER))
+    return [MANUAL_ACTION_FILTER_ALL, *ordered, *extras]
+
+
+def filter_manual_queue_by_action(
+    rows: list[QueueRow],
+    *,
+    target_fiscal_year: int,
+    action_filter: str,
+) -> list[QueueRow]:
+    """Keep only rows matching the selected operator action lane."""
+    if action_filter == MANUAL_ACTION_FILTER_ALL:
+        return rows
+    return [
+        row for row in rows
+        if manual_next_action_for_row(row, target_fiscal_year=target_fiscal_year)[0] == action_filter
+    ]
 
 
 def list_documents_for_manual_queue_view(
@@ -1322,8 +1361,20 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         st.success("この表示範囲の文書はありません。PDF確認は学校別タスクから必要な学校を選んで開いてください。")
         return
 
-    queue_summary = manual_queue_summary(queue, target_fiscal_year=settings.target_fiscal_year)
-    st.caption(f"待機 {queue_summary.total} 件")
+    action_options = manual_action_filter_options(queue, target_fiscal_year=settings.target_fiscal_year)
+    selected_action = st.selectbox(
+        "作業レーン",
+        options=action_options,
+        help="今やる作業の種類だけに絞ります。迷ったら「すべて」のままで大丈夫です。",
+    )
+    visible_queue = filter_manual_queue_by_action(
+        queue,
+        target_fiscal_year=settings.target_fiscal_year,
+        action_filter=selected_action,
+    )
+
+    queue_summary = manual_queue_summary(visible_queue, target_fiscal_year=settings.target_fiscal_year)
+    st.caption(f"表示 {queue_summary.total} / 待機 {len(queue)} 件")
     qcols = st.columns(5)
     qcols[0].metric("表示中", queue_summary.total)
     qcols[1].metric("対象年度", queue_summary.current_year)
@@ -1337,14 +1388,14 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         )
 
     st.dataframe(
-        manual_queue_table(queue[:50], target_fiscal_year=settings.target_fiscal_year),
+        manual_queue_table(visible_queue[:50], target_fiscal_year=settings.target_fiscal_year),
         hide_index=True,
         width="stretch",
     )
-    if len(queue) > 50:
+    if len(visible_queue) > 50:
         st.caption("一覧は先頭50件まで表示しています。絞り込みは学校別タスクから行ってください。")
 
-    for row in queue[:20]:
+    for row in visible_queue[:20]:
         # Sprint 8.6.d.2 — confidence summary surfaces in the queue
         # title so the operator sees worst-case verdict before
         # expanding the row.
