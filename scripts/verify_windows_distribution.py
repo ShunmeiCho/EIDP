@@ -602,6 +602,9 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "業務員クイック",
         "学校別タスク",
         "詳細 operator",
+        "週次URL/PDF再取得",
+        "対象年度を変更して保存すると、学校別タスクも同時に再計算されます",
+        "scripts\\weekly_run.bat` は管理者向けの復旧入口",
     ):
         _require_text(check, body, member, token)
     for token in (
