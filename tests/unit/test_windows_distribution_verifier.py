@@ -128,9 +128,12 @@ def _core_entries() -> dict[str, bytes | str]:
             "corporation_name,domain\n東京都公立大学法人,tmu.ac.jp\n"
         ),
         "src/eidp/review/app.py": "PAGE_SETTINGS = 'settings'\n",
+        "src/eidp/review/operator_pages.py": "def inject_v1_theme(): pass\n",
+        "src/eidp/review/_pages/audit_log.py": "def render(session, *, lock_path, jsonl_path): pass\n",
         "src/eidp/review/_pages/settings_page.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/school_year_tasks.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/pdf_manual_entry.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/prefecture_remarks.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/fiscal_year_override.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/excel_preview.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
@@ -274,6 +277,24 @@ def test_verify_core_zip_requires_settings_page_module(tmp_path: Path) -> None:
 
     assert not check.ok
     assert any("src/eidp/review/_pages/settings_page.py" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_all_navigated_operator_modules(tmp_path: Path) -> None:
+    entries = _core_entries()
+    for rel in (
+        "src/eidp/review/operator_pages.py",
+        "src/eidp/review/_pages/audit_log.py",
+        "src/eidp/review/_pages/prefecture_remarks.py",
+    ):
+        entries.pop(rel)
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/review/operator_pages.py" in error for error in check.errors)
+    assert any("src/eidp/review/_pages/audit_log.py" in error for error in check.errors)
+    assert any("src/eidp/review/_pages/prefecture_remarks.py" in error for error in check.errors)
 
 
 def test_verify_core_zip_validates_bootstrap_pipeline_contract(tmp_path: Path) -> None:

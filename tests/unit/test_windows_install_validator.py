@@ -124,6 +124,25 @@ def test_validate_core_install_requires_bootstrap_and_version_files(tmp_path: Pa
     assert any("data/url-discovery/corporation_domains.csv" in error for error in check.errors)
 
 
+def test_validate_core_install_requires_operator_route_modules(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    for rel in (
+        "src/eidp/review/operator_pages.py",
+        "src/eidp/review/_pages/audit_log.py",
+        "src/eidp/review/_pages/prefecture_remarks.py",
+        "src/eidp/review/_pages/settings_page.py",
+    ):
+        (root / Path(*rel.split("/"))).unlink()
+
+    check = module.validate_install(root)
+
+    assert not check.ok
+    assert any("src/eidp/review/operator_pages.py" in error for error in check.errors)
+    assert any("src/eidp/review/_pages/audit_log.py" in error for error in check.errors)
+    assert any("src/eidp/review/_pages/prefecture_remarks.py" in error for error in check.errors)
+    assert any("src/eidp/review/_pages/settings_page.py" in error for error in check.errors)
+
+
 def test_validate_after_setup_requires_venv_and_sqlite(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
 
