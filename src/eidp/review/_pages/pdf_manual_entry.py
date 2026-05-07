@@ -39,6 +39,7 @@ from sqlalchemy.orm import Session
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Department, DepartmentYearly, Document, School, SchoolSite, SupportRecipient
 from eidp.extraction_confidence import ConfidenceVerdict
+from eidp.fiscal_year import fiscal_year_search_tokens, format_fiscal_year_label
 from eidp.pipeline.manual_entry import (
     ALLOWED_METHODS,
     DepartmentEntry,
@@ -705,6 +706,55 @@ def discovery_evidence_table_rows(evidence_rows: list[DiscoveryEvidenceRow]) -> 
     ]
 
 
+def _has_target_year_hint(text: str, *, target_fiscal_year: int) -> bool:
+    lowered = text.lower()
+    return any(token.lower() in lowered for token in fiscal_year_search_tokens(target_fiscal_year))
+
+
+def fiscal_year_evidence_summary(
+    row: QueueRow,
+    evidence_rows: list[DiscoveryEvidenceRow],
+    *,
+    target_fiscal_year: int,
+) -> str:
+    """Explain whether the PDF's fiscal year came from body text or link evidence."""
+
+    target_label = format_fiscal_year_label(target_fiscal_year)
+    if row.fiscal_year == target_fiscal_year:
+        return f"年度根拠: PDF本文で {target_label} を確認しています。"
+    if row.fiscal_year is not None:
+        detected_label = format_fiscal_year_label(row.fiscal_year)
+        return f"年度根拠: PDF本文は {detected_label} です。対象年度と異なるため年度確認が必要です。"
+
+    accepted = next(
+        (
+            evidence
+            for evidence in evidence_rows
+            if evidence.reason == "accepted_downloaded" and evidence.pdf_url == row.source_url
+        ),
+        None,
+    )
+    hint_text = " ".join(
+        part
+        for part in (
+            row.source_url,
+            row.discovered_from,
+            accepted.anchor_text if accepted else "",
+            accepted.page_url if accepted else "",
+            accepted.pdf_url if accepted else "",
+        )
+        if part
+    )
+    if _has_target_year_hint(hint_text, target_fiscal_year=target_fiscal_year):
+        return (
+            f"年度根拠: PDF本文に年度は見つかっていません。"
+            f"リンク文字またはURLの {target_label} ヒントで候補として保持しています。"
+        )
+    if row.pdf_type == "image_only":
+        return "年度根拠: PDF本文から年度を読めません。OCRまたは手入力で確認してください。"
+    return "年度根拠: 対象年度を確認できていません。リンク文字とPDF本文を確認してください。"
+
+
 def discovery_trace_summary(
     row: QueueRow,
     *,
@@ -1220,9 +1270,16 @@ def _render_pdf_panel(session: Session, row: QueueRow) -> None:  # pragma: no co
     st.markdown("**取得経路**")
     st.caption(
         "都道府県一覧から登録した学校URLを起点に、学校/法人ページ内のPDF候補をスコアリングし、"
-        "対象年度がPDF本文で確認できたものだけを保存します。"
+        "PDF本文・リンク文字・URLの年度根拠を分けて表示します。URL年度だけでは成果にしません。"
     )
     st.info(discovery_trace_summary(row, site_rows=site_rows, evidence_rows=evidence_rows))
+    st.write(
+        fiscal_year_evidence_summary(
+            row,
+            evidence_rows,
+            target_fiscal_year=settings.target_fiscal_year,
+        )
+    )
     st.write(f"PDF原本URL: {row.source_url}")
     if row.discovered_from:
         st.write(f"PDF掲載ページ: {row.discovered_from}")

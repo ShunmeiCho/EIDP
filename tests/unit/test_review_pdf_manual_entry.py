@@ -47,6 +47,7 @@ from eidp.review._pages.pdf_manual_entry import (
     discovery_reason_label,
     discovery_trace_summary,
     filter_manual_queue_by_action,
+    fiscal_year_evidence_summary,
     form_data_to_entries,
     latest_discovery_evidence,
     list_documents_for_manual_queue_view,
@@ -530,6 +531,56 @@ def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
     assert candidate_row["採否"] == "採用してPDF保存"
     assert candidate_row["入口の由来"] == "都道府県公式一覧"
     assert discovery_reason_label("fiscal_year_mismatch:2025") == "旧年度/別年度のため保留 (2025)"
+
+
+def test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints() -> None:
+    base_row = QueueRow(
+        document_id=10,
+        school_id=1,
+        school_name="Example",
+        prefecture="東京",
+        fiscal_year=None,
+        ingest_status="ocr_pending",
+        file_path="data/pdfs/1/r8.pdf",
+        source_url="https://example.ac.jp/r8.pdf",
+        discovered_from="https://example.ac.jp/disclosure/",
+        pdf_type="target",
+        confidence=0.72,
+    )
+    evidence = [
+        DiscoveryEvidenceRow(
+            pdf_url="https://example.ac.jp/r8.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            site_url="https://example.ac.jp/disclosure/",
+            discovery_method="prefecture_aggregator",
+            target_fiscal_year="2026",
+            reason="accepted_downloaded",
+            anchor_text="2026年度 確認申請書",
+            pattern_type="direct",
+            score=9.0,
+            pdf_type="target",
+            timestamp="2026-05-06T00:01:00Z",
+        )
+    ]
+
+    link_hint_summary = fiscal_year_evidence_summary(base_row, evidence, target_fiscal_year=2026)
+    assert "PDF本文に年度は見つかっていません" in link_hint_summary
+    assert "リンク文字またはURL" in link_hint_summary
+
+    body_summary = fiscal_year_evidence_summary(
+        QueueRow(**{**base_row.__dict__, "fiscal_year": 2026}),
+        evidence,
+        target_fiscal_year=2026,
+    )
+    assert "PDF本文で 2026年度" in body_summary
+
+    conflict_summary = fiscal_year_evidence_summary(
+        QueueRow(**{**base_row.__dict__, "fiscal_year": 2025}),
+        evidence,
+        target_fiscal_year=2026,
+    )
+    assert "PDF本文は 2025年度" in conflict_summary
+    assert "対象年度と異なる" in conflict_summary
 
 
 # ---------------------------------------------------------------------------
