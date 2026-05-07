@@ -32,8 +32,9 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 ## Latest Verification Evidence
 
-- `uv run pytest -q` → `832 passed, 5 warnings`
+- `uv run pytest -q` → `833 passed, 5 warnings`
 - `uv run pytest tests/unit/test_review_school_year_tasks.py tests/unit/test_settings_page.py -q` → `52 passed`
+- `uv run pytest tests/unit/test_review_school_year_tasks.py -q` → `46 passed`, including a Streamlit AppTest proving the task-board package identity caption renders
 - `uv run ruff check src/eidp/review/_pages/school_year_tasks.py tests/unit/test_review_school_year_tasks.py` → passed
 - `uv run mypy src/eidp/review/_pages/school_year_tasks.py` → passed
 - `uv run pytest tests/unit/test_windows_install_validator.py tests/unit/test_windows_distribution_verifier.py -q` → `55 passed`
