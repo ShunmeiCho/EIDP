@@ -754,7 +754,7 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
         found = details.get("found", 0)
         downloaded = details.get("downloaded", 0)
         failed = details.get("failed", 0)
-        skipped = details.get("skipped", 0)
+        skipped = details.get("discovery_skipped", details.get("skipped", 0))
         prefiltered = details.get("prefiltered")
         cached_rejections = details.get("cached_rejections")
         lines.append(

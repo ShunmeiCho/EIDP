@@ -83,6 +83,25 @@ def _bounded_step_percent(start: float, end: float, done: int, total: int) -> fl
     return start + ((end - start) * ratio)
 
 
+def ingest_progress_details(stats: dict[str, int]) -> dict[str, int]:
+    """Namespace ingest counters so they do not overwrite discovery counters.
+
+    The progress writer accumulates details across steps. Step 3 and Step 4
+    both produce a ``skipped`` key, but the operator cares about Step 3's
+    rejected/old-year PDF count while acquisition is being diagnosed. Keep
+    the ingest value available under ``ingest_*`` without hiding discovery.
+    """
+    return {f"ingest_{key}": int(value) for key, value in stats.items()}
+
+
+def discovery_progress_details(total_sites: int, stats: dict[str, int]) -> dict[str, int]:
+    """Return progress details with a stable discovery rejection counter."""
+    details = {"sites_total": total_sites, **stats}
+    if "skipped" in stats:
+        details["discovery_skipped"] = int(stats["skipped"])
+    return details
+
+
 class BootstrapProgressWriter:
     """Small JSON status writer for the Streamlit operator UI."""
 
@@ -500,7 +519,7 @@ def step_discover_pdfs(
                     "学校サイトから対象年度PDFを探索しています。"
                     f"{crawled}/{total_sites}件確認済み{active_note} / PDF {stats.get('downloaded', 0)}件"
                 ),
-                details={"sites_total": total_sites, **stats},
+                details=discovery_progress_details(total_sites, stats),
             )
 
         stats = run_pdf_discovery(
@@ -515,6 +534,8 @@ def step_discover_pdfs(
             strict_target_fiscal_year=not allow_stale_fallback,
             progress_callback=update_progress,
         )
+        if "skipped" in stats:
+            stats["discovery_skipped"] = int(stats["skipped"])
         session.commit()
     except Exception:
         session.rollback()
@@ -889,7 +910,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             current_step=5,
             percent=0.9,
             message="学校別タスクを再計算しています。",
-            details=ingest_stats,
+            details=ingest_progress_details(ingest_stats),
         )
     print("\n=== Step 5: rebuild school fiscal-year status ===")
     status_stats = step_rebuild_status()

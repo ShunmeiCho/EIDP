@@ -143,6 +143,55 @@ def test_main_preserves_bootstrap_yield_details_on_success(tmp_path: Path, monke
     assert payload["details"]["official_school_sites_added"] == 4
 
 
+def test_progress_preserves_discovery_skipped_after_ingest(tmp_path: Path) -> None:
+    progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
+    progress = module.BootstrapProgressWriter(progress_file)
+
+    progress.write(
+        status="running",
+        current_step=3,
+        percent=0.74,
+        message="学校サイトから対象年度PDFを探索しています。",
+        details=module.discovery_progress_details(
+            30,
+            {
+                "crawled": 30,
+                "found": 25,
+                "downloaded": 0,
+                "failed": 3,
+                "skipped": 226,
+                "prefiltered": 116,
+                "cached_rejections": 24,
+            },
+        ),
+    )
+    progress.write(
+        status="running",
+        current_step=5,
+        percent=0.9,
+        message="学校別タスクを再計算しています。",
+        details=module.ingest_progress_details(
+            {
+                "processed": 0,
+                "departments_created": 0,
+                "yearly_upserted": 0,
+                "skipped": 0,
+            }
+        ),
+    )
+    progress.write(
+        status="succeeded",
+        current_step=5,
+        percent=1.0,
+        message="初回URL/PDF取得が完了しました。画面を更新してください。",
+    )
+
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+    assert payload["details"]["skipped"] == 226
+    assert payload["details"]["discovery_skipped"] == 226
+    assert payload["details"]["ingest_skipped"] == 0
+
+
 def test_main_marks_progress_failed_for_nonzero_exit(tmp_path: Path, monkeypatch) -> None:
     progress_file = tmp_path / "logs" / "bootstrap-pdfs-20260506-103000.json"
 
