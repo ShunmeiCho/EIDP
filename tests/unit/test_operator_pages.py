@@ -55,6 +55,7 @@ def test_v1_theme_css_uses_streamlit_theme_tokens() -> None:
     assert "--eidp-accent: var(--primary-color)" in css
     assert 'button[data-testid="stBaseButton-primary"]' in css
     assert 'button[data-testid="stBaseButton-secondary"]' in css
+    assert '.stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"])' in css
     assert "#FAFAFA" not in css
     assert "#FFFFFF" not in css
     assert "#000000" not in css

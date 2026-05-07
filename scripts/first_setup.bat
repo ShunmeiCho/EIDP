@@ -155,6 +155,9 @@ schtasks /Create /F /SC WEEKLY /D MON /ST 02:00 ^
     /TR "\"%EIDP_APP_ROOT%\scripts\weekly_run.bat\"" >nul
 if errorlevel 1 (
     echo [first_setup] WARNING: schtasks registration failed; operator may need to run weekly_run.bat manually.
+    > "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" echo Task Scheduler registration failed during setup. Use the UI weekly rediscovery button, or run setup as a user allowed to create scheduled tasks.
+) else (
+    if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" del "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" >nul 2>nul
 )
 
 REM 11. Run the same after-setup validator used by the VM/operator gate.

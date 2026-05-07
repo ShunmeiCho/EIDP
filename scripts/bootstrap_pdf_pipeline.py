@@ -69,6 +69,10 @@ from download_prefecture_artifacts import (  # noqa: E402
 )
 
 TOTAL_BOOTSTRAP_STEPS = 5
+URL_SEARCH_PERCENT_START = 0.45
+URL_SEARCH_PERCENT_END = 0.60
+PDF_DISCOVERY_PERCENT_START = URL_SEARCH_PERCENT_END
+PDF_DISCOVERY_PERCENT_END = 0.75
 
 
 def _bounded_step_percent(start: float, end: float, done: int, total: int) -> float:
@@ -406,18 +410,24 @@ def step_known_url_discovery(
             def update_search_progress(search_stats: dict[str, int], total_schools: int) -> None:
                 if progress is None:
                     return
+                searched = int(search_stats.get("searched", 0))
                 progress.write(
                     status="running",
                     current_step=2,
-                    percent=0.45,
+                    percent=_bounded_step_percent(
+                        URL_SEARCH_PERCENT_START,
+                        URL_SEARCH_PERCENT_END,
+                        searched,
+                        total_schools,
+                    ),
                     message=(
                         "不足URLをWeb検索で補完しています。"
-                        f"{search_stats.get('searched', 0)}/{total_schools}校確認済み / "
+                        f"{searched}/{total_schools}校確認済み / "
                         f"入口候補 {search_stats.get('found', 0)}件"
                     ),
                     details={
                         **stats,
-                        "search_searched": int(search_stats.get("searched", 0)),
+                        "search_searched": searched,
                         "search_found": int(search_stats.get("found", 0)),
                         "search_no_result": int(search_stats.get("no_result", 0)),
                         "search_errors": int(search_stats.get("errors", 0)),
@@ -474,9 +484,13 @@ def step_discover_pdfs(
             crawled = stats.get("crawled", 0)
             active_index = stats.get("active_index", 0)
             ratio = (crawled / total_sites) if total_sites else 1.0
-            # Step 3 owns the 45% -> 75% range. Leave 75% for the transition
+            # Step 3 owns the 60% -> 75% range. Leave 75% for the transition
             # into ingest so the UI does not imply Step 4 has started early.
-            percent = min(0.74, 0.45 + (0.29 * ratio))
+            percent = min(
+                PDF_DISCOVERY_PERCENT_END - 0.01,
+                PDF_DISCOVERY_PERCENT_START
+                + ((PDF_DISCOVERY_PERCENT_END - PDF_DISCOVERY_PERCENT_START - 0.01) * ratio),
+            )
             active_note = f"（{active_index}件目を確認中）" if active_index and active_index > crawled else ""
             progress.write(
                 status="running",
@@ -767,7 +781,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         progress.write(
             status="running",
             current_step=2,
-            percent=0.45,
+            percent=URL_SEARCH_PERCENT_START,
             message="既知URL、法人ドメイン、不足URL検索を補助的に登録しています。",
             details=aggregate_details,
         )
@@ -820,7 +834,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         progress.write(
             status="running",
             current_step=2,
-            percent=0.45,
+            percent=URL_SEARCH_PERCENT_END if known_url_stats.get("search_enabled", 0) else URL_SEARCH_PERCENT_START,
             message="公式一覧、既知URL、法人ドメインの入口登録が完了しました。",
             details=post_url_details,
         )
@@ -833,7 +847,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         progress.write(
             status="running",
             current_step=3,
-            percent=0.45,
+            percent=PDF_DISCOVERY_PERCENT_START,
             message="学校サイトから対象年度PDFを探索しています。",
             details=post_url_details,
         )

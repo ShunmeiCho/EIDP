@@ -573,6 +573,7 @@ def test_step_known_url_discovery_runs_search_when_enabled(tmp_path: Path, monke
     assert calls[2] == ("search", fake_session, 25, tmp_path / "url-search.jsonl")
     assert "commit" in calls
     assert payload["current_step"] == 2
+    assert 0.45 < payload["percent"] < 0.60
     assert payload["message"].startswith("不足URLをWeb検索で補完しています。")
     assert payload["details"]["search_searched"] == 10
     assert payload["details"]["search_found"] == 4
@@ -817,7 +818,7 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
     assert stats["downloaded"] == 2
     assert payload["status"] == "running"
     assert payload["current_step"] == 3
-    assert payload["percent"] > 0.45
+    assert payload["percent"] > 0.60
     assert "5/10件確認済み" in payload["message"]
     assert "6件目を確認中" in payload["message"]
     assert payload["details"]["downloaded"] == 1

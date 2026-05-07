@@ -1574,19 +1574,19 @@ def v1_theme_css() -> str:
           border-color: var(--eidp-ink-mid) !important;
           box-shadow: 0 2px 8px color-mix(in srgb, var(--eidp-ink) 16%, transparent) !important;
         }
-        .stButton > button:not([kind="primary"]),
+        .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]),
         button[data-testid="stBaseButton-secondary"],
         button[data-testid="stBaseButton-tertiary"] {
           background: color-mix(in srgb, var(--eidp-surface) 92%, var(--eidp-ink) 8%) !important;
           color: var(--eidp-ink) !important;
           border: 1px solid var(--eidp-border) !important;
         }
-        .stButton > button:not([kind="primary"]) *,
+        .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]) *,
         button[data-testid="stBaseButton-secondary"] *,
         button[data-testid="stBaseButton-tertiary"] * {
           color: var(--eidp-ink) !important;
         }
-        .stButton > button:not([kind="primary"]):hover,
+        .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]):hover,
         button[data-testid="stBaseButton-secondary"]:hover,
         button[data-testid="stBaseButton-tertiary"]:hover {
           background: var(--eidp-surface-alt) !important;

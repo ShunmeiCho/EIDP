@@ -33,6 +33,7 @@ from eidp.review._pages.school_year_tasks import (
     next_action_for_status,
     read_bootstrap_progress,
     read_weekly_last_run,
+    read_weekly_task_registration_warning,
     school_task_summary,
     school_type_from_filter_label,
     select_task_document,
@@ -46,6 +47,7 @@ from eidp.review._pages.school_year_tasks import (
     task_progress_label,
     url_submission_prefill_for_row,
     weekly_command,
+    weekly_task_registration_warning_path,
 )
 
 
@@ -665,6 +667,16 @@ def test_read_weekly_last_run_returns_payload_or_none(tmp_path) -> None:
     assert payload is not None
     assert payload["status"] == "success"
     assert payload["new_document_count"] == 2
+
+
+def test_weekly_task_registration_warning_reads_setup_marker(tmp_path) -> None:
+    path = weekly_task_registration_warning_path(tmp_path)
+    path.parent.mkdir(parents=True)
+    path.write_text("Task Scheduler registration failed during setup.\n", encoding="utf-8")
+
+    assert path == tmp_path / "data" / "weekly-task-registration-warning.txt"
+    assert read_weekly_task_registration_warning(tmp_path) == "Task Scheduler registration failed during setup."
+    assert read_weekly_task_registration_warning(tmp_path / "missing") is None
 
 
 def test_list_school_year_tasks_defaults_to_actionable_rows_and_enriches_latest_context() -> None:
