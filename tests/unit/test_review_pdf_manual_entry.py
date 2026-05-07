@@ -1,8 +1,7 @@
 """Sprint 8.4.c.1 — PDF確認・手入力 page helper regression.
 
-The Streamlit render shell is intentionally thin and not unit-tested
-here (it exercises through the running app). This file pins the
-*pure* helper contracts the page depends on:
+Most tests here pin the *pure* helper contracts the page depends on,
+with one Streamlit AppTest smoke for the render shell:
 
   * list_pending_documents — queue projection (statuses, ordering, JOIN).
   * form_data_to_entries   — UI dict → DepartmentEntry, with validation
@@ -15,15 +14,19 @@ here (it exercises through the running app). This file pins the
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
+from streamlit.testing.v1 import AppTest
 
 from eidp.db.locking import acquire_lock
 from eidp.db.models import (
+    Base,
     Department,
     DepartmentYearly,
     Document,
@@ -33,6 +36,7 @@ from eidp.db.models import (
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.review._pages.pdf_manual_entry import (
     MANUAL_ACTION_FILTER_ALL,
+    MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY,
     MANUAL_QUEUE_VIEW_ALL,
     MANUAL_QUEUE_VIEW_TARGET,
     MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
@@ -103,6 +107,12 @@ def _seed_doc(
     session.add(doc)
     session.flush()
     return doc
+
+
+def _render_pdf_manual_entry_for_test(session, lock_path):  # noqa: ANN001, ANN201
+    from eidp.review._pages.pdf_manual_entry import render
+
+    render(session, lock_path=lock_path)
 
 
 # ---------------------------------------------------------------------------
@@ -589,6 +599,86 @@ def test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints() ->
     )
     assert "PDF本文は 2025年度" in conflict_summary
     assert "対象年度と異なる" in conflict_summary
+
+
+def test_render_page_smoke_with_focused_discovery_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the real Streamlit shell for a focused PDF review row.
+
+    Most tests in this module pin pure helpers. This smoke covers the wiring
+    between ``render`` -> queue selection -> PDF panel -> OCR availability ->
+    discovery-evidence JSONL, which is where packaging regressions have shown
+    up in the operator app.
+    """
+    from eidp.config import settings
+    db_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
+    Base.metadata.create_all(db_engine)
+    session = Session(db_engine)
+    try:
+        school = _seed_school(session, name="Render学校")
+        session.add(
+            SchoolSite(
+                school_id=school.id,
+                url="https://example.ac.jp/disclosure/",
+                url_type="disclosure",
+                discovery_method="prefecture_aggregator",
+                confidence=0.95,
+                verified=True,
+                http_status=200,
+            )
+        )
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="render", fiscal_year=None)
+        session.commit()
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        (output_dir / "discovery_rejections.jsonl").write_text(
+            json.dumps(
+                {
+                    "school_id": school.id,
+                    "pdf_url": doc.source_url,
+                    "page_url": "https://example.ac.jp/disclosure/",
+                    "reason": "accepted_downloaded",
+                    "anchor_text": "2026年度 確認申請書",
+                    "pattern_type": "direct",
+                    "score": 9.0,
+                    "pdf_type": "target",
+                    "extra": {
+                        "site_url": "https://example.ac.jp/disclosure/",
+                        "discovery_method": "prefecture_aggregator",
+                        "target_fiscal_year": "2026",
+                        "detected_fiscal_year": "",
+                        "year_evidence": "url_hint",
+                    },
+                    "timestamp": "2026-05-06T00:01:00Z",
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        monkeypatch.setattr(settings, "app_root", tmp_path)
+        monkeypatch.setattr(settings, "target_fiscal_year", 2026)
+
+        app = AppTest.from_function(
+            _render_pdf_manual_entry_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.session_state[MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY] = doc.id
+
+        app.run(timeout=15)
+
+        assert not app.exception
+        assert any("PDF確認・手入力" in str(item.value) for item in app.subheader)
+        assert any("PDF候補を採用" in str(item.value) for item in app.info)
+    finally:
+        session.close()
+        db_engine.dispose()
 
 
 # ---------------------------------------------------------------------------
