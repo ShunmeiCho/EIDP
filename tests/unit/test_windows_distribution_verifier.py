@@ -94,6 +94,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "# runbook\n"
             "業務員クイック\n"
             "学校別タスク\n"
+            "実行中のパッケージ\n"
             "詳細 operator\n"
             "週次URL/PDF再取得\n"
             "対象年度を変更して保存すると、学校別タスクも同時に再計算されます\n"
