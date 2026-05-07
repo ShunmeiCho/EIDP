@@ -36,9 +36,15 @@ from eidp.review._pages.pdf_manual_entry import (
     MANUAL_QUEUE_VIEW_TARGET,
     MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
     QUEUE_STATUSES,
+    DiscoveryEvidenceRow,
+    QueueRow,
     SaveOutcome,
+    SchoolSiteEvidenceRow,
     build_pdf_preview,
     coerce_focus_document_id,
+    discovery_evidence_table_rows,
+    discovery_reason_label,
+    discovery_trace_summary,
     form_data_to_entries,
     latest_discovery_evidence,
     list_documents_for_manual_queue_view,
@@ -51,6 +57,7 @@ from eidp.review._pages.pdf_manual_entry import (
     prioritize_queue_document,
     resolve_pdf_path,
     save_with_lock,
+    school_site_evidence_table_rows,
 )
 
 
@@ -415,6 +422,57 @@ def test_list_school_site_evidence_exposes_registered_entry_points(engine):
     assert rows[0].verified is True
     assert rows[0].last_checked.startswith("2026-05-06T00:00:00")
     assert rows[1].discovery_method == "web_search"
+
+
+def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
+    row = QueueRow(
+        document_id=10,
+        school_id=1,
+        school_name="Trace学校",
+        prefecture="東京都",
+        fiscal_year=2026,
+        ingest_status="ocr_pending",
+        file_path="data/pdfs/1/r8.pdf",
+        source_url="https://example.ac.jp/r8.pdf",
+        discovered_from="https://example.ac.jp/disclosure/",
+        pdf_type="image_only",
+        confidence=0.72,
+    )
+    sites = [
+        SchoolSiteEvidenceRow(
+            url="https://example.ac.jp/disclosure/",
+            url_type="disclosure",
+            discovery_method="prefecture_aggregator",
+            confidence=0.95,
+            verified=True,
+            http_status=200,
+            last_checked="2026-05-06T00:00:00",
+        )
+    ]
+    evidence = [
+        DiscoveryEvidenceRow(
+            pdf_url="https://example.ac.jp/r8.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            site_url="https://example.ac.jp/disclosure/",
+            discovery_method="prefecture_aggregator",
+            target_fiscal_year="2026",
+            reason="accepted_downloaded",
+            anchor_text="2026年度 確認申請書",
+            pattern_type="direct",
+            score=9.0,
+            pdf_type="target",
+            timestamp="2026-05-06T00:01:00Z",
+        )
+    ]
+
+    assert discovery_trace_summary(row, site_rows=sites, evidence_rows=evidence) == (
+        "都道府県公式一覧で入口URLを登録 -> PDF掲載ページを確認 -> PDF候補を採用 -> 2026年度として判定"
+    )
+    assert school_site_evidence_table_rows(sites)[0]["入口の由来"] == "都道府県公式一覧"
+    candidate_row = discovery_evidence_table_rows(evidence)[0]
+    assert candidate_row["採否"] == "採用してPDF保存"
+    assert candidate_row["入口の由来"] == "都道府県公式一覧"
+    assert discovery_reason_label("fiscal_year_mismatch:2025") == "旧年度/別年度のため保留 (2025)"
 
 
 # ---------------------------------------------------------------------------

@@ -68,6 +68,24 @@ MANUAL_QUEUE_VIEW_TARGET = "target_year"
 MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED = "target_year_with_ingested"
 MANUAL_QUEUE_VIEW_ALL = "all_documents"
 
+DISCOVERY_METHOD_LABELS: dict[str, str] = {
+    "prefecture_aggregator": "都道府県公式一覧",
+    "seed_csv": "既知URLシード",
+    "corporation_pattern": "法人ドメイン推定",
+    "web_search": "Web検索",
+    "operator_manual": "手動登録",
+}
+
+DISCOVERY_REASON_LABELS: dict[str, str] = {
+    "accepted_downloaded": "採用してPDF保存",
+    "fiscal_year_mismatch": "旧年度/別年度のため保留",
+    "target_fiscal_year_not_detected": "対象年度を確認できず保留",
+    "pre_filtered_non_target_hint": "別資料と判定して除外",
+    "not_pdf_magic": "PDFではないため除外",
+    "unsafe_url": "安全でないURLとして除外",
+    "unsafe_resolved_url": "安全でない転送先として除外",
+}
+
 
 @dataclass(frozen=True)
 class QueueRow:
@@ -595,6 +613,109 @@ def list_school_site_evidence(
     ]
 
 
+def discovery_method_label(method: str | None) -> str:
+    """Return an operator-facing label for a URL/PDF discovery method."""
+    normalized = (method or "").strip().lower()
+    if not normalized:
+        return "登録元不明"
+    return DISCOVERY_METHOD_LABELS.get(normalized, normalized)
+
+
+def discovery_reason_label(reason: str | None) -> str:
+    """Return an operator-facing label for a PDF candidate decision."""
+    normalized = (reason or "").strip()
+    if not normalized:
+        return "理由なし"
+    if normalized.startswith("fiscal_year_mismatch:"):
+        year = normalized.split(":", 1)[1]
+        return f"旧年度/別年度のため保留 ({year})"
+    return DISCOVERY_REASON_LABELS.get(normalized, normalized)
+
+
+def school_site_evidence_table_rows(site_rows: list[SchoolSiteEvidenceRow]) -> list[dict[str, object]]:
+    """Convert school-site evidence into columns a non-technical operator can scan."""
+    return [
+        {
+            "入口の由来": discovery_method_label(site.discovery_method),
+            "URL種別": site.url_type or "未分類",
+            "確認済": site.verified,
+            "信頼度": site.confidence,
+            "HTTP": site.http_status,
+            "最終確認": site.last_checked,
+            "入口URL": site.url,
+        }
+        for site in site_rows
+    ]
+
+
+def discovery_evidence_table_rows(evidence_rows: list[DiscoveryEvidenceRow]) -> list[dict[str, object]]:
+    """Convert discovery JSONL rows into an explainable PDF-candidate table."""
+    return [
+        {
+            "採否": discovery_reason_label(row.reason),
+            "score": row.score,
+            "PDF種別": row.pdf_type or "",
+            "入口の由来": discovery_method_label(row.discovery_method),
+            "対象年度": row.target_fiscal_year,
+            "リンク文字": row.anchor_text,
+            "入口URL": row.site_url,
+            "掲載ページ": row.page_url,
+            "PDF候補": row.pdf_url,
+        }
+        for row in evidence_rows
+    ]
+
+
+def discovery_trace_summary(
+    row: QueueRow,
+    *,
+    site_rows: list[SchoolSiteEvidenceRow],
+    evidence_rows: list[DiscoveryEvidenceRow],
+) -> str:
+    """Return one concise explanation of how the selected PDF was found.
+
+    Operators should not need to mentally join DB columns and JSONL logs. This
+    summary states the chain in the same order the crawler used it:
+    registered entry point -> PDF listing page -> selected PDF -> year result.
+    """
+    accepted = next(
+        (
+            evidence
+            for evidence in evidence_rows
+            if evidence.reason == "accepted_downloaded" and evidence.pdf_url == row.source_url
+        ),
+        None,
+    )
+    if accepted is None:
+        accepted = next((evidence for evidence in evidence_rows if evidence.reason == "accepted_downloaded"), None)
+
+    site = None
+    if accepted is not None and accepted.site_url:
+        site = next((candidate for candidate in site_rows if candidate.url == accepted.site_url), None)
+    if site is None and site_rows:
+        site = site_rows[0]
+
+    chain: list[str] = []
+    if site is not None:
+        chain.append(f"{discovery_method_label(site.discovery_method)}で入口URLを登録")
+    else:
+        chain.append("登録済みURLから探索")
+
+    listing_page = row.discovered_from or (accepted.page_url if accepted else "")
+    if listing_page:
+        chain.append("PDF掲載ページを確認")
+
+    if row.source_url:
+        chain.append("PDF候補を採用")
+
+    if row.fiscal_year is None:
+        chain.append("年度未確定")
+    else:
+        chain.append(f"{row.fiscal_year}年度として判定")
+
+    return " -> ".join(chain)
+
+
 # ---------------------------------------------------------------------------
 # PDF preview
 # ---------------------------------------------------------------------------
@@ -1050,59 +1171,37 @@ def _render_pdf_panel(session: Session, row: QueueRow) -> None:  # pragma: no co
 
     from eidp.config import settings
 
-    st.markdown("**取得経路**")
-    st.caption(
-        "都道府県一覧から登録した学校URLを起点に、学校/法人ページ内のPDF候補をスコアリングし、"
-        "対象年度がPDF本文で確認できたものだけを保存します。"
-    )
-    st.write(f"選択PDF: {row.source_url}")
-    if row.discovered_from:
-        st.write(f"PDFリンク掲載ページ: {row.discovered_from}")
-    confidence_label = row.confidence if row.confidence is not None else "(なし)"
-    st.write(f"判定: pdf_type={row.pdf_type or '(未分類)'} / confidence={confidence_label}")
-
     site_rows = list_school_site_evidence(session, school_id=row.school_id)
-    if site_rows:
-        with st.expander("学校URL登録元（探索入口）", expanded=False):
-            st.dataframe(
-                [
-                    {
-                        "method": site.discovery_method,
-                        "type": site.url_type,
-                        "verified": site.verified,
-                        "confidence": site.confidence,
-                        "http": site.http_status,
-                        "last_checked": site.last_checked,
-                        "url": site.url,
-                    }
-                    for site in site_rows
-                ],
-                width="stretch",
-                hide_index=True,
-            )
-
     evidence_rows = latest_discovery_evidence(
         app_root=Path(settings.app_root),
         school_id=row.school_id,
         source_url=row.source_url,
     )
+
+    st.markdown("**取得経路**")
+    st.caption(
+        "都道府県一覧から登録した学校URLを起点に、学校/法人ページ内のPDF候補をスコアリングし、"
+        "対象年度がPDF本文で確認できたものだけを保存します。"
+    )
+    st.info(discovery_trace_summary(row, site_rows=site_rows, evidence_rows=evidence_rows))
+    st.write(f"PDF原本URL: {row.source_url}")
+    if row.discovered_from:
+        st.write(f"PDF掲載ページ: {row.discovered_from}")
+    confidence_label = row.confidence if row.confidence is not None else "(なし)"
+    st.write(f"判定: pdf_type={row.pdf_type or '(未分類)'} / confidence={confidence_label}")
+
+    if site_rows:
+        with st.expander("学校URL登録元（探索入口）", expanded=False):
+            st.dataframe(
+                school_site_evidence_table_rows(site_rows),
+                width="stretch",
+                hide_index=True,
+            )
+
     if evidence_rows:
         with st.expander("探索ログ（候補PDFと採否理由）"):
             st.dataframe(
-                [
-                    {
-                        "reason": e.reason,
-                        "score": e.score,
-                        "pdf_type": e.pdf_type or "",
-                        "method": e.discovery_method,
-                        "target_fy": e.target_fiscal_year,
-                        "anchor": e.anchor_text,
-                        "site_url": e.site_url,
-                        "pdf_url": e.pdf_url,
-                        "page_url": e.page_url,
-                    }
-                    for e in evidence_rows
-                ],
+                discovery_evidence_table_rows(evidence_rows),
                 width="stretch",
                 hide_index=True,
             )
