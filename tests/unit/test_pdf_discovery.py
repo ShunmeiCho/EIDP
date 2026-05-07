@@ -239,6 +239,46 @@ def test_download_pdf_rejects_image_without_target_hint_in_strict_mode(monkeypat
     assert reason == "target_fiscal_year_not_detected"
 
 
+def test_download_pdf_rejects_image_with_target_year_but_no_target_form_hint(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A target-year admission guide is not a target confirmation form."""
+
+    url = "https://example.ac.jp/wp-content/uploads/2025/05/2026-admission-guide.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://example.ac.jp/application-guidelines/",
+        anchor_text="社会人・医療機関推薦選抜 募集要項",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+        lambda _content: "2026年度 社会人・医療機関推薦選抜募集要項 (cid:1234)",
+    )
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        123,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "image_only"
+    assert reason == "target_application_not_detected"
+    assert not list((tmp_path / "123").glob("*.pdf"))
+
+
 class _HtmlResponse:
     def __init__(self, text: str, *, status_code: int = 200, url: str = "https://example.ac.jp/") -> None:
         self.text = text

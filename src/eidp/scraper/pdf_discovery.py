@@ -218,6 +218,7 @@ def _is_cacheable_pdf_rejection(pdf_type: str, reason: str | None) -> bool:
         "too_large_body",
         "too_large_header",
         "too_small",
+        "target_application_not_detected",
         "unsafe_resolved_url",
         "unsafe_url",
     }
@@ -901,6 +902,12 @@ def download_pdf(
             target_year = target_fiscal_year or settings.target_fiscal_year
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
+            if (
+                detected_fiscal_year == target_year
+                and pdf_type == "image_only"
+                and not _has_target_application_hint(candidate)
+            ):
+                return None, None, 0, pdf_type, "target_application_not_detected"
             if detected_fiscal_year is None and not (
                 pdf_type == "image_only" and _has_target_application_hint(candidate)
             ) and not (
@@ -953,8 +960,9 @@ def run_pdf_discovery(
         target_fiscal_year: fiscal year to treat as current. Defaults to
             ``settings.target_fiscal_year``.
         strict_target_fiscal_year: when True, downloads are accepted only when
-            PDF text confirms ``target_fiscal_year``. URL/anchor text ranks
-            candidates but is not evidence strong enough to store a document.
+            PDF text or a body-confirmed target form plus URL/anchor evidence
+            confirms ``target_fiscal_year``. Year-like text alone is not enough
+            for image-only or ambiguous non-target application guides.
         progress_callback: optional callback invoked after each crawled school
             site with a snapshot of stats and the total site count. Used by the
             Windows operator UI so the long-running crawl does not sit at one

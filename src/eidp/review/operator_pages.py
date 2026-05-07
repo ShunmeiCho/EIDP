@@ -1251,6 +1251,8 @@ def page_rejections() -> None:
         st.markdown(
             """
 - **classified_non_target** → 内容分類で申請書でないと判定
+- **target_application_not_detected** → 対象年度らしいが確認申請書ではない募集要項・案内等
+- **target_fiscal_year_not_detected / fiscal_year_mismatch** → 対象年度の確認が取れない、または旧年度
 - **no_candidates_found** → そもそもPDFリンクが見つからなかった
 - **all_negative_score** → 候補はあったが全て除外キーワード該当
 - **http_error / too_small / not_pdf_magic** → HTTPまたはファイル形式の問題
