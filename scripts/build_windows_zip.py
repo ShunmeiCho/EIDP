@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -235,6 +236,22 @@ def write_sha256_sidecar(path: Path, *, repo_root: Path = REPO_ROOT) -> Path:
         encoding="utf-8",
     )
     return sidecar
+
+
+def copy_latest_alias(
+    source_zip: Path,
+    *,
+    latest_zip: Path = DEFAULT_OUT_ZIP,
+    repo_root: Path = REPO_ROOT,
+) -> Path:
+    """Copy ``source_zip`` to the generic latest ZIP path and refresh its sidecar."""
+    source_resolved = source_zip.resolve()
+    latest_resolved = latest_zip.resolve()
+    latest_zip.parent.mkdir(parents=True, exist_ok=True)
+    if source_resolved != latest_resolved:
+        shutil.copyfile(source_zip, latest_zip)
+    write_sha256_sidecar(latest_zip, repo_root=repo_root)
+    return latest_zip
 
 
 def _git_output(repo_root: Path, *args: str) -> str:
@@ -460,6 +477,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="Build a ZIP without data/master.xlsx. Use when "
                              "a downstream pipeline injects master.xlsx after "
                              "build. Production ZIPs always include master.")
+    parser.add_argument("--latest-alias", action="store_true",
+                        help="Also refresh dist/eidp-windows.zip and its "
+                             ".sha256 sidecar from --out-zip. Use for handoff "
+                             "builds with a versioned output name.")
     args = parser.parse_args(argv)
 
     if not args.skip_download:
@@ -479,6 +500,9 @@ def main(argv: list[str] | None = None) -> int:
         size_mb = out.stat().st_size / 1024 / 1024
         print(f"OK: wrote {out} ({size_mb:.1f} MB)")
         print(f"OK: wrote checksum sidecar {sidecar}")
+        if args.latest_alias:
+            latest = copy_latest_alias(out, latest_zip=DEFAULT_OUT_ZIP, repo_root=REPO_ROOT)
+            print(f"OK: refreshed latest alias {latest}")
     return 0
 
 

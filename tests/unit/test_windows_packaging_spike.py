@@ -167,6 +167,24 @@ def test_write_sha256_sidecar_records_relative_repo_path(tmp_path: Path):
     assert sidecar.read_text(encoding="utf-8") == f"{expected}  dist/eidp-windows.zip\n"
 
 
+def test_copy_latest_alias_copies_zip_and_refreshes_sidecar(tmp_path: Path):
+    bw = _load_build_script()
+    source = tmp_path / "dist" / "eidp-windows-v102.zip"
+    latest = tmp_path / "dist" / "eidp-windows.zip"
+    source.parent.mkdir()
+    source.write_bytes(b"new zip")
+    latest.write_bytes(b"old zip")
+
+    result = bw.copy_latest_alias(source, latest_zip=latest, repo_root=tmp_path)
+
+    expected = hashlib.sha256(b"new zip").hexdigest()
+    assert result == latest
+    assert latest.read_bytes() == b"new zip"
+    assert (tmp_path / "dist" / "eidp-windows.zip.sha256").read_text(encoding="utf-8") == (
+        f"{expected}  dist/eidp-windows.zip\n"
+    )
+
+
 # ---------------------------------------------------------------------------
 # .bat skeleton static review
 # ---------------------------------------------------------------------------
