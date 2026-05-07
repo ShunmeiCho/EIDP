@@ -50,9 +50,10 @@ def test_output_path_rejects_wrong_suffix() -> None:
 def test_v1_theme_css_uses_streamlit_theme_tokens() -> None:
     css = operator_pages.v1_theme_css()
 
-    assert "--eidp-bg: var(--background-color)" in css
-    assert "--eidp-ink: var(--text-color)" in css
-    assert "--eidp-accent: var(--primary-color)" in css
+    assert "--eidp-bg: var(--background-color, Canvas)" in css
+    assert "--eidp-ink: var(--text-color, CanvasText)" in css
+    assert "--eidp-accent: var(--primary-color, AccentColor)" in css
+    assert "color-scheme: light dark" in css
     assert 'button[data-testid="stBaseButton-primary"]' in css
     assert 'button[data-testid="stBaseButton-secondary"]' in css
     assert '.stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"])' in css

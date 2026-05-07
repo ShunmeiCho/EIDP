@@ -661,10 +661,19 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
         downloaded = details.get("downloaded", 0)
         failed = details.get("failed", 0)
         skipped = details.get("skipped", 0)
+        prefiltered = details.get("prefiltered")
+        cached_rejections = details.get("cached_rejections")
         lines.append(
             f"学校サイト探索: {crawled}/{total}確認済み / 候補 {found} / PDF取得 {downloaded} / "
             f"失敗 {failed} / 対象外・旧年度 {skipped}"
         )
+        rejection_breakdown: list[str] = []
+        if prefiltered is not None:
+            rejection_breakdown.append(f"事前除外 {prefiltered}")
+        if cached_rejections is not None:
+            rejection_breakdown.append(f"既知除外 {cached_rejections}")
+        if rejection_breakdown:
+            lines.append(f"除外内訳: {' / '.join(rejection_breakdown)}")
     if "seed_imported" in details or "corporation_inferred" in details:
         lines.append(
             "補助URL登録: "

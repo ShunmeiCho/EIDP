@@ -408,6 +408,8 @@ def test_bootstrap_progress_exposes_discovery_details(tmp_path) -> None:
                     "downloaded": 3,
                     "failed": 2,
                     "skipped": 20,
+                    "prefiltered": 7,
+                    "cached_rejections": 4,
                 },
             }
         ),
@@ -420,7 +422,8 @@ def test_bootstrap_progress_exposes_discovery_details(tmp_path) -> None:
     assert progress.details is not None
     assert progress.details["sites_total"] == 100
     assert bootstrap_progress_detail_lines(progress) == [
-        "学校サイト探索: 25/100確認済み / 候補 8 / PDF取得 3 / 失敗 2 / 対象外・旧年度 20"
+        "学校サイト探索: 25/100確認済み / 候補 8 / PDF取得 3 / 失敗 2 / 対象外・旧年度 20",
+        "除外内訳: 事前除外 7 / 既知除外 4",
     ]
 
 

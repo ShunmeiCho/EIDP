@@ -1397,22 +1397,33 @@ def v1_theme_css() -> str:
 
     The first V1 pass hard-coded a light palette and broke Streamlit's native
     Light/Dark switch. Keep the layout polish, but bind colors to Streamlit's
-    own theme variables so operator preference changes remain readable.
+    own theme variables with system-color fallbacks. Some Streamlit releases do
+    not expose the theme variables as public CSS custom properties, so every
+    variable use must stay valid even when ``--text-color`` etc. are absent.
     """
     return """
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
         :root {
-          --eidp-bg: var(--background-color);
-          --eidp-surface: var(--secondary-background-color);
-          --eidp-surface-alt: color-mix(in srgb, var(--secondary-background-color) 86%, var(--text-color) 14%);
-          --eidp-ink: var(--text-color);
-          --eidp-ink-mid: color-mix(in srgb, var(--text-color) 72%, var(--background-color) 28%);
-          --eidp-ink-low: color-mix(in srgb, var(--text-color) 50%, var(--background-color) 50%);
-          --eidp-border: color-mix(in srgb, var(--text-color) 18%, transparent);
-          --eidp-border-strong: color-mix(in srgb, var(--text-color) 28%, transparent);
-          --eidp-accent: var(--primary-color);
-          --eidp-accent-soft: color-mix(in srgb, var(--primary-color) 18%, var(--background-color) 82%);
+          color-scheme: light dark;
+          --eidp-bg: var(--background-color, Canvas);
+          --eidp-surface: var(--secondary-background-color, color-mix(in srgb, Canvas 94%, CanvasText 6%));
+          --eidp-surface-alt: color-mix(
+            in srgb,
+            var(--secondary-background-color, Canvas) 86%,
+            var(--text-color, CanvasText) 14%
+          );
+          --eidp-ink: var(--text-color, CanvasText);
+          --eidp-ink-mid: color-mix(in srgb, var(--text-color, CanvasText) 72%, var(--background-color, Canvas) 28%);
+          --eidp-ink-low: color-mix(in srgb, var(--text-color, CanvasText) 50%, var(--background-color, Canvas) 50%);
+          --eidp-border: color-mix(in srgb, var(--text-color, CanvasText) 18%, transparent);
+          --eidp-border-strong: color-mix(in srgb, var(--text-color, CanvasText) 28%, transparent);
+          --eidp-accent: var(--primary-color, AccentColor);
+          --eidp-accent-soft: color-mix(
+            in srgb,
+            var(--primary-color, AccentColor) 18%,
+            var(--background-color, Canvas) 82%
+          );
           --eidp-ok: #1F8B4C;
           --eidp-warn: #A65A00;
           --eidp-danger: #B42318;
@@ -1701,7 +1712,7 @@ def v1_theme_css() -> str:
 
 def inject_v1_theme() -> None:
     """Inject the V1 Streamlit theme override once from app.py main()."""
-    st.markdown(f"<style>{v1_theme_css()}</style>", unsafe_allow_html=True)
+    st.html(f"<style>{v1_theme_css()}</style>")
 
 
 # ---------------------------------------------------------------------------
