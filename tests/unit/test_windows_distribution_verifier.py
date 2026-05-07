@@ -85,6 +85,7 @@ def _core_entries() -> dict[str, bytes | str]:
         ),
         "EIDP-setup.bat": (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8"),
         "EIDP-start.bat": (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8"),
+        "EIDP-diagnose.bat": (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8"),
         "README.md": "# EIDP\n",
         "requirements-windows.txt": "structlog\n",
         "pyproject.toml": "[project]\nname='eidp'\n",
@@ -101,6 +102,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
         "scripts/weekly_run.bat": (SCRIPTS_DIR / "weekly_run.bat").read_text(encoding="utf-8"),
+        "scripts/diagnose.bat": (SCRIPTS_DIR / "diagnose.bat").read_text(encoding="utf-8"),
         "scripts/uninstall.bat": (SCRIPTS_DIR / "uninstall.bat").read_text(encoding="utf-8"),
         "scripts/validate_install.bat": (SCRIPTS_DIR / "validate_install.bat").read_text(encoding="utf-8"),
         "scripts/run_weekly_target_year_discovery.py": (
@@ -169,6 +171,7 @@ def test_verify_core_zip_requires_root_launchers(tmp_path: Path) -> None:
     entries = _core_entries()
     entries.pop("EIDP-setup.bat")
     entries.pop("EIDP-start.bat")
+    entries.pop("EIDP-diagnose.bat")
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
@@ -176,6 +179,7 @@ def test_verify_core_zip_requires_root_launchers(tmp_path: Path) -> None:
     assert not check.ok
     assert any("EIDP-setup.bat" in error for error in check.errors)
     assert any("EIDP-start.bat" in error for error in check.errors)
+    assert any("EIDP-diagnose.bat" in error for error in check.errors)
 
 
 def test_verify_core_zip_validates_root_launcher_contract(tmp_path: Path) -> None:

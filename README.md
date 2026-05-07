@@ -22,6 +22,9 @@ Normal workflow:
    in the Streamlit sidebar.
 5. Let `weekly_run.bat` run by Windows Task Scheduler, or run it manually when
    instructed.
+6. If setup, startup, or URL/PDF acquisition fails, run
+   `C:\EIDP\EIDP-diagnose.bat` and share the generated `logs\diagnostics-*.txt`
+   with the administrator.
 
 Optional OCR:
 

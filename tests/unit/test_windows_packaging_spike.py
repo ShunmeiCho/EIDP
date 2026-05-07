@@ -164,7 +164,7 @@ def bat_files() -> dict[str, str]:
     out: dict[str, str] = {}
     for name in (
         "first_setup.bat", "launch.bat", "weekly_run.bat",
-        "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
+        "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
     ):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
@@ -174,11 +174,14 @@ def bat_files() -> dict[str, str]:
 def test_bat_skeletons_all_present(bat_files: dict[str, str]):
     assert set(bat_files.keys()) == {
         "first_setup.bat", "launch.bat", "weekly_run.bat",
-        "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
+        "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
     }
 
 
-@pytest.mark.parametrize("name", ["first_setup.bat", "launch.bat", "weekly_run.bat", "validate_install.bat"])
+@pytest.mark.parametrize(
+    "name",
+    ["first_setup.bat", "launch.bat", "weekly_run.bat", "diagnose.bat", "validate_install.bat"],
+)
 def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
     """All write-capable launchers MUST cd to the script parent so
     EIDP_APP_ROOT is anchored regardless of who invoked them
@@ -189,7 +192,10 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
     assert 'set "EIDP_APP_ROOT=%CD%"' in body, f"{name} must export EIDP_APP_ROOT"
 
 
-@pytest.mark.parametrize("name", ["first_setup.bat", "launch.bat", "weekly_run.bat", "validate_install.bat"])
+@pytest.mark.parametrize(
+    "name",
+    ["first_setup.bat", "launch.bat", "weekly_run.bat", "diagnose.bat", "validate_install.bat"],
+)
 def test_python_bat_forces_utf8(bat_files: dict[str, str], name: str):
     """Streamlit logs and run_weekly_target_year_discovery print Japanese.
     Default Windows console is cp932 in JP, which corrupts text and
@@ -334,6 +340,7 @@ def test_root_launchers_delegate_to_script_contracts():
     operators do not need to browse into scripts/."""
     setup = (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8")
     start = (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8")
+    diagnose = (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8")
 
     assert 'cd /d "%~dp0"' in setup
     assert 'call "%~dp0scripts\\first_setup.bat"' in setup
@@ -346,6 +353,26 @@ def test_root_launchers_delegate_to_script_contracts():
     assert "EIDP-setup.bat" in start
     assert "pause" in start
     assert "endlocal & exit /b %RC%" in start
+
+    assert 'cd /d "%~dp0"' in diagnose
+    assert 'call "%~dp0scripts\\diagnose.bat"' in diagnose
+    assert "Diagnostics collected" in diagnose
+    assert "pause" in diagnose
+    assert "endlocal & exit /b %RC%" in diagnose
+
+
+def test_diagnose_bat_collects_operator_evidence_without_mutating_data(bat_files: dict[str, str]):
+    body = bat_files["diagnose.bat"]
+
+    assert "diagnostics-%DIAG_STAMP%.txt" in body
+    assert "validate_windows_install.py" in body
+    assert "--after-setup" in body
+    assert "BUILD_INFO.json" in body
+    assert "last_run.json" in body
+    assert "latest bootstrap progress" in body
+    assert "latest bootstrap log tail" in body
+    assert "del " not in body.lower()
+    assert "rmdir" not in body.lower()
 
 
 def test_bootstrap_pdfs_bat_invokes_pipeline_script(bat_files: dict[str, str]):
@@ -530,8 +557,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "src" / "eidp" / "__init__.py").write_text("", encoding="utf-8")
     (fake_repo / "EIDP-setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-start.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "EIDP-diagnose.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts").mkdir()
     (fake_repo / "scripts" / "first_setup.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "scripts" / "diagnose.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "run_weekly_target_year_discovery.py").write_text(
         "print('weekly')", encoding="utf-8",
     )
@@ -608,6 +637,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "EIDP-start.bat" in arcs, (
         "root-level app launcher must be in the Windows ZIP so startup feels app-like"
     )
+    assert "EIDP-diagnose.bat" in arcs, (
+        "root-level diagnostics launcher must be in the Windows ZIP so operators "
+        "can collect evidence without browsing into scripts/"
+    )
     assert "migrations/env.py" in arcs
     assert "migrations/versions/abcd_initial.py" in arcs
     assert "scripts/run_weekly_target_year_discovery.py" in arcs, (
@@ -623,6 +656,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "Windows VM checklist must run the validator from the extracted ZIP"
     )
     assert "scripts/first_setup.bat" in arcs
+    assert "scripts/diagnose.bat" in arcs
     assert "wheelhouse/structlog-25.0.0-py3-none-any.whl" in arcs
     assert "docs/runbooks/eidp-windows.md" in arcs
     assert "README.md" in arcs
