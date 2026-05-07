@@ -7,6 +7,8 @@ the operator the next concrete action.
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import os
 import subprocess
@@ -271,6 +273,69 @@ def discovery_evidence_table_rows(evidence_rows: list[Any]) -> list[dict[str, ob
         }
         for row in evidence_rows
     ]
+
+
+def school_task_source_chain_csv(rows: list[SchoolTaskRow]) -> str:
+    """Return a CSV audit export for the visible task rows.
+
+    The UI table is good for scanning, but the operator also needs a durable
+    handoff artifact that explains where each crawl entry/PDF came from.
+    """
+    fieldnames = [
+        "fiscal_year",
+        "school_id",
+        "prefecture",
+        "school_name",
+        "next_action",
+        "blocking_reason",
+        "entry_source",
+        "entry_kind",
+        "entry_discovery_method",
+        "entry_url",
+        "pdf_document_id",
+        "pdf_fiscal_year",
+        "pdf_status",
+        "pdf_url",
+        "url_status",
+        "extract_status",
+        "yoy_diff_status",
+        "evidence_level",
+        "excel_ready",
+    ]
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(
+            {
+                "fiscal_year": row.fiscal_year,
+                "school_id": row.school_id,
+                "prefecture": row.prefecture,
+                "school_name": row.school_name,
+                "next_action": row.next_action,
+                "blocking_reason": blocking_reason_label(row.blocking_reason),
+                "entry_source": site_entry_label(
+                    row.latest_site_discovery_method,
+                    row.latest_site_url_type,
+                    row.latest_site_url,
+                ),
+                "entry_kind": site_url_type_label(row.latest_site_url_type, row.latest_site_url)
+                if row.latest_site_url
+                else "",
+                "entry_discovery_method": row.latest_site_discovery_method or "",
+                "entry_url": row.latest_site_url or "",
+                "pdf_document_id": row.latest_document_id or "",
+                "pdf_fiscal_year": row.latest_document_fiscal_year or "",
+                "pdf_status": row.latest_document_status or "",
+                "pdf_url": row.latest_document_url or "",
+                "url_status": status_label(URL_STATUS_LABELS, row.url_status),
+                "extract_status": status_label(EXTRACT_STATUS_LABELS, row.extract_status),
+                "yoy_diff_status": status_label(YOY_DIFF_STATUS_LABELS, row.yoy_diff_status),
+                "evidence_level": status_label(EVIDENCE_LEVEL_LABELS, row.evidence_level),
+                "excel_ready": "true" if row.excel_ready else "false",
+            }
+        )
+    return buffer.getvalue()
 
 
 def latest_url_search_evidence(
@@ -1506,6 +1571,13 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         for row in rows
     ]
     st.dataframe(table, hide_index=True, width="stretch")
+    st.download_button(
+        "表示中の出典チェーンCSVを保存",
+        data=school_task_source_chain_csv(rows),
+        file_name=f"school-task-source-chain-{fiscal_year}.csv",
+        mime="text/csv",
+        width="stretch",
+    )
 
     st.subheader("上位タスク詳細")
     for row in rows[:25]:

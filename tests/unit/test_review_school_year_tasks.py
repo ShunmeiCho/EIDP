@@ -35,6 +35,7 @@ from eidp.review._pages.school_year_tasks import (
     read_bootstrap_progress,
     read_weekly_last_run,
     read_weekly_task_registration_warning,
+    school_task_source_chain_csv,
     school_task_summary,
     school_type_from_filter_label,
     select_task_document,
@@ -902,6 +903,39 @@ def test_discovery_evidence_table_rows_show_candidate_reason_and_source() -> Non
         "PDF候補": "https://school.example/2025.pdf",
         "掲載ページ": "https://school.example/disclosure/",
     }]
+
+
+def test_school_task_source_chain_csv_exports_visible_row_evidence() -> None:
+    row = school_year_tasks.SchoolTaskRow(
+        school_id=12,
+        prefecture="東京",
+        school_name="東京テスト専門学校",
+        fiscal_year=2026,
+        url_status="operator_url",
+        pdf_status="rejected_stale",
+        extract_status="none",
+        yoy_diff_status="unchecked",
+        evidence_level="conflict",
+        excel_ready=False,
+        blocking_reason="stale_pdf_only",
+        next_action="公示待ち/再取得",
+        action_hint="対象年度PDFを待つ",
+        latest_document_id=99,
+        latest_document_fiscal_year=2025,
+        latest_document_status="review_pending",
+        latest_document_url="https://school.example/r7.pdf",
+        latest_site_url="https://school.example/public_info/",
+        latest_site_url_type="disclosure_page",
+        latest_site_discovery_method="prefecture_aggregator",
+    )
+
+    csv_body = school_task_source_chain_csv([row])
+
+    assert "school_id,prefecture,school_name" in csv_body
+    assert "東京テスト専門学校" in csv_body
+    assert "都道府県公式一覧の入口" in csv_body
+    assert "情報公開ページ（来年度以降も再取得入口として再利用）" in csv_body
+    assert "https://school.example/r7.pdf" in csv_body
 
 
 def test_latest_url_search_evidence_reads_school_rows(tmp_path: Path) -> None:
