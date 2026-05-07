@@ -18,6 +18,7 @@ from eidp.review._pages.school_year_tasks import (
     SchoolTaskSummary,
     blocking_reason_label,
     bootstrap_command,
+    bootstrap_progress_auto_refresh_html,
     bootstrap_progress_detail_lines,
     bootstrap_progress_stale_reason,
     discovery_evidence_table_rows,
@@ -488,6 +489,18 @@ def test_bootstrap_progress_exposes_official_index_yield_details(tmp_path) -> No
     assert bootstrap_progress_detail_lines(progress) == [
         "都道府県公式一覧: 抽出 364 / DB照合 349 / URL追加 40 / URL更新 5 / URL増加なし 1県"
     ]
+
+
+def test_bootstrap_progress_auto_refresh_html_uses_bounded_delay() -> None:
+    too_fast = bootstrap_progress_auto_refresh_html(seconds=1)
+    normal = bootstrap_progress_auto_refresh_html(seconds=20)
+    too_slow = bootstrap_progress_auto_refresh_html(seconds=999)
+
+    assert "5000" in too_fast
+    assert "20秒ごとに自動更新" in normal
+    assert "20000" in normal
+    assert "300000" in too_slow
+    assert "window.location.reload()" in normal
 
 
 def test_bootstrap_progress_stale_when_running_but_lock_released() -> None:

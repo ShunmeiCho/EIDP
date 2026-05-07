@@ -688,6 +688,22 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
     return lines
 
 
+def bootstrap_progress_auto_refresh_html(seconds: int = 20) -> str:
+    """Return a safe auto-refresh snippet for long-running bootstrap progress."""
+    safe_seconds = min(max(seconds, 5), 300)
+    delay_ms = safe_seconds * 1000
+    return f"""
+    <div style="font-size: 12px; opacity: 0.68; margin: 0.25rem 0 0.5rem;">
+      {safe_seconds}秒ごとに自動更新します。すぐ確認する場合は下のボタンを押してください。
+    </div>
+    <script>
+      window.setTimeout(function () {{
+        window.location.reload();
+      }}, {delay_ms});
+    </script>
+    """
+
+
 def read_bootstrap_progress(path: Path) -> BootstrapProgress | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -1198,7 +1214,7 @@ def _render_bootstrap_progress(progress: BootstrapProgress, *, lock_held: bool |
     elif stale_reason:
         st.warning(stale_reason)
     elif progress.status == "running":
-        st.info("初回URL/PDF取得を実行中です。数分おきに進行状況を更新してください。")
+        st.info("初回URL/PDF取得を実行中です。この画面は自動で進行状況を更新します。")
     else:
         st.info(progress.message)
 
@@ -1216,6 +1232,8 @@ def _render_bootstrap_progress(progress: BootstrapProgress, *, lock_held: bool |
         st.caption(" / ".join(meta))
     if progress.log_path:
         st.caption(f"診断ログ: {progress.log_path}")
+    if progress.status == "running":
+        st.html(bootstrap_progress_auto_refresh_html(), unsafe_allow_javascript=True)
     key_suffix = progress.started_at or progress.updated_at or progress.message
     if st.button("進行状況を更新", key=f"bootstrap_progress_refresh_{key_suffix}", width="stretch"):
         st.rerun()
