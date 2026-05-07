@@ -468,6 +468,9 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         "scripts/first_setup.bat": (
             "runtime\\python\\python.exe",
             "runtime\\uv.exe",
+            ".setup.lock",
+            "setup is already running in this folder",
+            "endlocal & exit /b %SETUP_RC%",
             "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "uv.exe",
             "venv",

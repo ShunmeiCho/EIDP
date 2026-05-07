@@ -249,6 +249,10 @@ def test_first_setup_creates_isolated_venv(bat_files: dict[str, str]):
         "wheelhouse-installed packages"
     )
     assert "--python" in body, "uv pip install must target the venv via --python"
+    assert "--clear" not in body, (
+        "first_setup must not delete an existing .venv because Windows can "
+        "hold .venv\\Scripts files open while the app is running"
+    )
 
 
 def test_first_setup_uses_existing_cli_command_for_master(bat_files: dict[str, str]):
@@ -269,6 +273,21 @@ def test_first_setup_rebuilds_school_year_tasks(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
     assert "rebuild-school-year-tasks" in body
     assert "school year task rebuild failed" in body
+
+
+def test_first_setup_has_concurrent_run_lock(bat_files: dict[str, str]):
+    """Re-running setup in the same extracted folder while another setup is
+    clearing .venv can corrupt the install on Windows. first_setup must
+    acquire a local lock before mutating .venv and must clean it up before
+    exiting.
+    """
+    body = bat_files["first_setup.bat"]
+
+    assert '.setup.lock' in body
+    assert 'mkdir "%SETUP_LOCK_DIR%"' in body
+    assert "setup is already running in this folder" in body
+    assert 'rmdir "%SETUP_LOCK_DIR%"' in body
+    assert "endlocal & exit /b %SETUP_RC%" in body
 
 
 def test_first_setup_runs_after_setup_validator(bat_files: dict[str, str]):
@@ -353,7 +372,7 @@ def test_first_setup_fails_loud_when_master_missing(bat_files: dict[str, str]):
         "missing — fail loud so the operator notices"
     )
     assert "ERROR: data\\master.xlsx is missing" in body
-    assert "exit /b 3" in body, (
+    assert "SETUP_RC=3" in body, (
         "first_setup must surface a distinct exit code (3) when master "
         "is missing so Task Scheduler / VM validator can detect it"
     )

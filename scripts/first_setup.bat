@@ -26,29 +26,50 @@ if not exist "data\output" mkdir "data\output"
 if not exist "data\audit"  mkdir "data\audit"
 if not exist "logs"        mkdir "logs"
 
-REM 3. Use the bundled python-build-standalone runtime so we never
+REM 3. Prevent two setup runs from clearing .venv at the same time.
+set "SETUP_LOCK_DIR=%EIDP_APP_ROOT%\.setup.lock"
+mkdir "%SETUP_LOCK_DIR%" 2>nul
+if errorlevel 1 (
+    echo [first_setup] ERROR: setup is already running in this folder.
+    echo [first_setup] Wait until the other setup window finishes, then run setup again.
+    endlocal & exit /b 4
+)
+set "SETUP_RC=0"
+
+REM 4. Use the bundled python-build-standalone runtime so we never
 REM    depend on whatever Python the operator might have installed.
 set "RUNTIME_PY=%EIDP_APP_ROOT%\runtime\python\python.exe"
 set "UV_EXE=%EIDP_APP_ROOT%\runtime\uv.exe"
 if not exist "%RUNTIME_PY%" (
     echo [first_setup] ERROR: runtime\python\python.exe is missing. Re-extract the ZIP.
-    exit /b 2
+    set "SETUP_RC=2"
+    goto :finish
 )
 if not exist "%UV_EXE%" (
     echo [first_setup] ERROR: runtime\uv.exe is missing. Re-extract the ZIP.
-    exit /b 2
+    set "SETUP_RC=2"
+    goto :finish
 )
 
-REM 4. Create an isolated venv. Use --clear so re-running first_setup.bat
-REM    after a partial failure (or to refresh deps) is safe and idempotent.
-"%UV_EXE%" venv ".venv" --python "%RUNTIME_PY%" --clear
-if errorlevel 1 (
-    echo [first_setup] uv venv failed
-    exit /b 1
-)
+REM 5. Create an isolated venv if needed. Do not clear an existing venv:
+REM    Windows may keep .venv\Scripts files locked while the UI is still
+REM    running. Dependency refresh happens through the offline install steps.
 set "VENV_PY=%EIDP_APP_ROOT%\.venv\Scripts\python.exe"
+if not exist "%VENV_PY%" (
+    "%UV_EXE%" venv ".venv" --python "%RUNTIME_PY%"
+    if errorlevel 1 (
+        echo [first_setup] uv venv failed
+        set "SETUP_RC=1"
+        goto :finish
+    )
+)
+if not exist "%VENV_PY%" (
+    echo [first_setup] venv python missing after creation
+    set "SETUP_RC=1"
+    goto :finish
+)
 
-REM 5. Offline install from the bundled wheelhouse into the venv.
+REM 6. Offline install from the bundled wheelhouse into the venv.
 "%UV_EXE%" pip install ^
     --python "%VENV_PY%" ^
     --no-index ^
@@ -56,7 +77,8 @@ REM 5. Offline install from the bundled wheelhouse into the venv.
     --requirement "%EIDP_APP_ROOT%\requirements-windows.txt"
 if errorlevel 1 (
     echo [first_setup] dependency install failed
-    exit /b 1
+    set "SETUP_RC=1"
+    goto :finish
 )
 
 REM Install eidp itself from the exact bundled wheel file. Installing by
@@ -65,11 +87,13 @@ set "EIDP_WHEEL="
 for %%F in ("%EIDP_APP_ROOT%\wheelhouse\eidp-*.whl") do (
     if not exist "%%~fF" (
         echo [first_setup] ERROR: wheelhouse\eidp-*.whl is missing.
-        exit /b 2
+        set "SETUP_RC=2"
+        goto :finish
     )
     if defined EIDP_WHEEL (
         echo [first_setup] ERROR: multiple eidp wheels found in wheelhouse.
-        exit /b 2
+        set "SETUP_RC=2"
+        goto :finish
     )
     set "EIDP_WHEEL=%%~fF"
 )
@@ -82,17 +106,19 @@ for %%F in ("%EIDP_APP_ROOT%\wheelhouse\eidp-*.whl") do (
     "%EIDP_WHEEL%"
 if errorlevel 1 (
     echo [first_setup] eidp wheel install failed
-    exit /b 1
+    set "SETUP_RC=1"
+    goto :finish
 )
 
-REM 6. Bootstrap the SQLite database (idempotent).
+REM 7. Bootstrap the SQLite database (idempotent).
 "%VENV_PY%" -m eidp.cli db-bootstrap --sqlite
 if errorlevel 1 (
     echo [first_setup] db-bootstrap failed
-    exit /b 1
+    set "SETUP_RC=1"
+    goto :finish
 )
 
-REM 7. Import the master school list. CLI command is import-excel.
+REM 8. Import the master school list. CLI command is import-excel.
 REM    master.xlsx is mandatory for v1: without it the task board is empty
 REM    and the operator has no entry point. Fail loud rather than
 REM    quietly continuing — discovered on the 2026-05-06 Win VM dry run.
@@ -102,25 +128,28 @@ if not exist "%EIDP_APP_ROOT%\data\master.xlsx" (
     echo [first_setup] Re-extract the ZIP, or place a master Excel at
     echo [first_setup]   %EIDP_APP_ROOT%\data\master.xlsx
     echo [first_setup] and re-run this script.
-    exit /b 3
+    set "SETUP_RC=3"
+    goto :finish
 )
 "%VENV_PY%" -m eidp.cli import-excel ^
     "%EIDP_APP_ROOT%\data\master.xlsx"
 if errorlevel 1 (
     echo [first_setup] master import failed
-    exit /b 1
+    set "SETUP_RC=1"
+    goto :finish
 )
 
-REM 8. Build the initial school x target-year task board so the first UI
+REM 9. Build the initial school x target-year task board so the first UI
 REM    launch has actionable rows without requiring the operator to press
 REM    "年度タスクを再計算".
 "%VENV_PY%" -m eidp.cli rebuild-school-year-tasks
 if errorlevel 1 (
     echo [first_setup] school year task rebuild failed
-    exit /b 1
+    set "SETUP_RC=1"
+    goto :finish
 )
 
-REM 9. Register weekly Task Scheduler entry (Mondays 02:00 local).
+REM 10. Register weekly Task Scheduler entry (Mondays 02:00 local).
 schtasks /Create /F /SC WEEKLY /D MON /ST 02:00 ^
     /TN "EIDP Weekly Run" ^
     /TR "\"%EIDP_APP_ROOT%\scripts\weekly_run.bat\"" >nul
@@ -128,18 +157,22 @@ if errorlevel 1 (
     echo [first_setup] WARNING: schtasks registration failed; operator may need to run weekly_run.bat manually.
 )
 
-REM 10. Run the same after-setup validator used by the VM/operator gate.
+REM 11. Run the same after-setup validator used by the VM/operator gate.
 REM     This catches broken extracted installs before the operator opens
 REM     a confusing half-working UI.
 call "%EIDP_APP_ROOT%\scripts\validate_install.bat" --after-setup
 if errorlevel 1 (
     echo [first_setup] after-setup validation failed
-    exit /b 1
+    set "SETUP_RC=1"
+    goto :finish
 )
 
 echo [first_setup] complete.
 echo [first_setup] Next steps:
 echo [first_setup]   1. Double-click EIDP-start.bat to open the operator UI.
 echo [first_setup]   2. In the UI, press the initial URL/PDF acquisition button.
-endlocal
-exit /b 0
+set "SETUP_RC=0"
+
+:finish
+if defined SETUP_LOCK_DIR if exist "%SETUP_LOCK_DIR%" rmdir "%SETUP_LOCK_DIR%" >nul 2>nul
+endlocal & exit /b %SETUP_RC%
