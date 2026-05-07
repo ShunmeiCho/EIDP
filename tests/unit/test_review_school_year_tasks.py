@@ -32,6 +32,7 @@ from eidp.review._pages.school_year_tasks import (
     needs_initial_url_bootstrap,
     next_action_for_row,
     next_action_for_status,
+    operator_build_label,
     read_bootstrap_progress,
     read_weekly_last_run,
     read_weekly_task_registration_warning,
@@ -267,6 +268,29 @@ def test_url_search_config_summary_surfaces_current_provider_and_limit() -> None
     assert url_search_config_summary(mode="on", provider="", batch_size=0) == (
         "不足URL Web検索: 常に実行 / provider=未設定"
     )
+
+
+def test_operator_build_label_surfaces_packaged_commit(tmp_path: Path) -> None:
+    (tmp_path / "BUILD_INFO.json").write_text(
+        json.dumps(
+            {
+                "git_commit": "37e7e81fb6a3038bc4d80e619fab66daf6a50109",
+                "git_branch": "sprint8-handoff-finalize",
+                "git_dirty": "false",
+                "built_at_utc": "2026-05-07T04:15:55+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert operator_build_label(tmp_path) == (
+        "実行中のパッケージ: commit=37e7e81 / branch=sprint8-handoff-finalize / "
+        "dirty=false / built=2026-05-07T04:15:55+00:00"
+    )
+
+
+def test_operator_build_label_hidden_for_source_checkout(tmp_path: Path) -> None:
+    assert operator_build_label(tmp_path) is None
 
 
 def test_task_lanes_make_operator_routes_explicit() -> None:

@@ -605,6 +605,16 @@ def url_search_config_summary(*, mode: str, provider: str, batch_size: int) -> s
     return f"不足URL Web検索: {mode_label} / provider={provider_label} / 最大 {batch_size} 校"
 
 
+def operator_build_label(app_root: Path) -> str | None:
+    """Return package identity for screenshots of the main task board."""
+    from eidp.review._pages.settings_page import build_info_summary, read_build_info
+
+    build_info = read_build_info(app_root)
+    if not build_info:
+        return None
+    return f"実行中のパッケージ: {build_info_summary(build_info)}"
+
+
 def latest_bootstrap_log(app_root: Path) -> Path | None:
     logs_dir = app_root / "logs"
     if not logs_dir.is_dir():
@@ -1476,6 +1486,9 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     target_label = format_fiscal_year_label(fiscal_year)
 
     st.header("① 学校別タスク")
+    build_label = operator_build_label(Path(settings.app_root))
+    if build_label:
+        st.caption(build_label)
     school_type_label = st.selectbox("対象", SCHOOL_TYPE_FILTER_LABELS, index=0)
     school_type = school_type_from_filter_label(school_type_label)
     st.caption(
