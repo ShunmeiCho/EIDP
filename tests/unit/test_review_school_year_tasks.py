@@ -47,6 +47,7 @@ from eidp.review._pages.school_year_tasks import (
     task_lane_prefill,
     task_lanes_for_summary,
     task_progress_label,
+    url_search_config_summary,
     url_submission_prefill_for_row,
     weekly_command,
     weekly_task_registration_warning_path,
@@ -254,6 +255,18 @@ def test_initial_url_bootstrap_hint_only_when_every_school_has_no_url() -> None:
     assert "学校名リンクに埋め込まれたURL" in warning
     assert "検索 provider" in warning
     assert "専門学校中心" not in warning
+
+
+def test_url_search_config_summary_surfaces_current_provider_and_limit() -> None:
+    assert url_search_config_summary(mode="auto", provider="duckduckgo", batch_size=200) == (
+        "不足URL Web検索: 自動 / provider=duckduckgo / 最大 200 校"
+    )
+    assert url_search_config_summary(mode="off", provider="serper", batch_size=5000) == (
+        "不足URL Web検索: 実行しない / provider=serper"
+    )
+    assert url_search_config_summary(mode="on", provider="", batch_size=0) == (
+        "不足URL Web検索: 常に実行 / provider=未設定"
+    )
 
 
 def test_task_lanes_make_operator_routes_explicit() -> None:

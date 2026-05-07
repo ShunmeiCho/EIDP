@@ -592,6 +592,19 @@ def initial_bootstrap_warning_text(summary: SchoolTaskSummary) -> str:
     )
 
 
+def url_search_config_summary(*, mode: str, provider: str, batch_size: int) -> str:
+    """Return a short operator caption for the current URL search fallback setting."""
+    mode_label = {
+        "auto": "自動",
+        "on": "常に実行",
+        "off": "実行しない",
+    }.get(mode, mode or "未設定")
+    provider_label = provider or "未設定"
+    if mode == "off" or batch_size <= 0:
+        return f"不足URL Web検索: {mode_label} / provider={provider_label}"
+    return f"不足URL Web検索: {mode_label} / provider={provider_label} / 最大 {batch_size} 校"
+
+
 def latest_bootstrap_log(app_root: Path) -> Path | None:
     logs_dir = app_root / "logs"
     if not logs_dir.is_dir():
@@ -1313,6 +1326,13 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
     lock_status = probe_lock(lock_path)
     st.warning(initial_bootstrap_warning_text(summary))
     st.caption("初回取得はオンライン処理です。学校数が多いため、数十分かかることがあります。")
+    st.caption(
+        url_search_config_summary(
+            mode=str(settings.url_search_auto_enable),
+            provider=str(settings.search_provider),
+            batch_size=int(settings.url_search_batch_size),
+        )
+    )
 
     latest_progress = latest_bootstrap_progress(app_root)
     if latest_progress is not None:
