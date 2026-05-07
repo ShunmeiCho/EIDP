@@ -303,6 +303,14 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
     return system_hint and form_hint
 
 
+def _has_target_year_hint(candidate: PdfCandidate, *, target_year: int) -> bool:
+    """Return whether URL/anchor text explicitly names the target fiscal year."""
+    return _fiscal_year_from_strong_candidate_hint(
+        _candidate_hint_text(candidate),
+        target_year=target_year,
+    ) == target_year
+
+
 def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> float:
     """Score a PDF candidate by keyword relevance."""
     score = 0.0
@@ -895,6 +903,8 @@ def download_pdf(
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
             if detected_fiscal_year is None and not (
                 pdf_type == "image_only" and _has_target_application_hint(candidate)
+            ) and not (
+                pdf_type == "target" and _has_target_year_hint(candidate, target_year=target_year)
             ):
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
 

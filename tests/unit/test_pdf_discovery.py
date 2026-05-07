@@ -906,10 +906,10 @@ def test_download_pdf_does_not_treat_future_term_date_as_pdf_year(
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
-def test_download_pdf_rejects_url_only_target_hint_in_strict_target_mode(
+def test_download_pdf_accepts_url_target_hint_when_body_is_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:
-    """URL/anchor hints rank candidates but must not prove the PDF fiscal year."""
+    """URL/anchor year hints are enough to retain a body-confirmed target form."""
 
     content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
     candidate = PdfCandidate(
@@ -933,10 +933,45 @@ def test_download_pdf_rejects_url_only_target_hint_in_strict_target_mode(
         strict_target_fiscal_year=True,
     )
 
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert Path(file_path).is_file()
+
+
+def test_download_pdf_rejects_url_target_hint_when_body_is_not_target_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """R8 in the URL is not enough for student forms, syllabi, or other PDFs."""
+
+    content = _make_pdf_bytes("大学等における修学の支援に関する法律による 授業料等減免 A様式1 申請者")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/2026/applicationform-r8.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和8年度 授業料等減免申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
     assert file_path is None
     assert file_hash is None
     assert file_size == 0
-    assert pdf_type == "target"
+    assert pdf_type == "non_target"
     assert reason == "target_fiscal_year_not_detected"
     assert not list((tmp_path / "1").glob("*.pdf"))
 
