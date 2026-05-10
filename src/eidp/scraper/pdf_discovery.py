@@ -361,6 +361,9 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         filename_year = re.search(r"(?<!\d)(20\d{2})(?!\d)", text)
         if filename_year is not None:
             return int(filename_year.group(1))
+        serial_filename_year = re.search(r"(?<!\d)(20\d{2})(?=\d{2,4}[^/\s]*\.pdf\b)", text, re.IGNORECASE)
+        if serial_filename_year is not None:
+            return int(serial_filename_year.group(1))
         era_year = fiscal_year_from_japanese_era_text(
             text,
             include_fiscal_year_labels=False,

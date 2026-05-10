@@ -111,6 +111,21 @@ def test_pre_download_prioritizes_stale_target_form_year_over_evaluation_path() 
     assert rejection.reason == "fiscal_year_mismatch:2025"
 
 
+def test_pre_download_detects_stale_year_prefix_serial_filename_for_target_form() -> None:
+    candidate = PdfCandidate(
+        pdf_url="http://www.atg-web.ac.jp/img/educational/2025007.pdf",
+        page_url="http://www.atg-web.ac.jp/educational/practice.php",
+        anchor_text="７. 大学等における修学の支援に関する確認申請書",
+        score=3.5,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2025"
+
+
 def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
     html = """
     <a href="/albums/abm.php?d=16&amp;f=abm00001256.pdf&amp;n=%E6%94%B9.pdf">
