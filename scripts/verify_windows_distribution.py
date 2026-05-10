@@ -90,6 +90,8 @@ CORE_REQUIRED_EXACT = (
     "data/prefecture-aggregators/seed.csv",
     "data/url-discovery/discovered-urls-50.csv",
     "data/url-discovery/corporation_domains.csv",
+    "data/discovery-gold-set/README.md",
+    "data/discovery-gold-set/schema.json",
     "src/eidp/review/app.py",
     "src/eidp/review/operator_pages.py",
     "src/eidp/review/_pages/audit_log.py",
@@ -108,6 +110,7 @@ CORE_REQUIRED_PREFIXES = (
     "src/eidp/",
     "migrations/",
     "wheelhouse/",
+    "data/discovery-gold-set/entries/",
 )
 
 EXPECTED_PREFECTURE_KEYS = frozenset(

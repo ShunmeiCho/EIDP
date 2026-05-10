@@ -722,6 +722,23 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "school_name\nfixture only\n",
         encoding="utf-8",
     )
+    # Discovery gold-set demonstrations are small deterministic release
+    # fixtures. They should travel with the ZIP so bounded acquisition
+    # regressions can be evaluated from the handed-off artifact.
+    gold_entries = fake_repo / "data" / "discovery-gold-set" / "entries"
+    gold_entries.mkdir(parents=True, exist_ok=True)
+    (fake_repo / "data" / "discovery-gold-set" / "README.md").write_text(
+        "# Discovery Gold Set\n",
+        encoding="utf-8",
+    )
+    (fake_repo / "data" / "discovery-gold-set" / "schema.json").write_text(
+        '{"title": "test discovery gold-set schema"}\n',
+        encoding="utf-8",
+    )
+    (gold_entries / "sample.json").write_text(
+        '{"entry_id": "sample", "outcome": "no_target_candidate_found"}\n',
+        encoding="utf-8",
+    )
     # Bootstrap pipeline scripts must be in the ZIP.
     (fake_repo / "scripts" / "bootstrap_pdf_pipeline.py").write_text("print('boot')", encoding="utf-8")
     (fake_repo / "scripts" / "bootstrap_pdfs.bat").write_text("@echo off", encoding="utf-8")
@@ -783,6 +800,12 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "data/url-discovery/corporation_domains.csv" in arcs, (
         "Sprint 8.7.f: corporation-domain fallbacks must be in the ZIP so "
         "schools without prefecture-provided URLs still get deterministic discovery seeds"
+    )
+    assert "data/discovery-gold-set/README.md" in arcs
+    assert "data/discovery-gold-set/schema.json" in arcs
+    assert "data/discovery-gold-set/entries/sample.json" in arcs, (
+        "Discovery gold-set entries must ship so bounded crawler regression "
+        "evaluation can be reproduced from the Windows handoff artifact"
     )
     assert "data/url-discovery/test-schools-50.csv" not in arcs, (
         "Developer-only URL discovery fixtures must not ship in the operator ZIP"

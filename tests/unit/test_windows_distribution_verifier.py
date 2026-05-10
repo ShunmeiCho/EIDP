@@ -135,6 +135,11 @@ def _core_entries() -> dict[str, bytes | str]:
         "data/url-discovery/corporation_domains.csv": (
             "corporation_name,domain\n東京都公立大学法人,tmu.ac.jp\n"
         ),
+        "data/discovery-gold-set/README.md": "# Discovery Gold Set\n",
+        "data/discovery-gold-set/schema.json": '{"title": "test discovery gold-set schema"}\n',
+        "data/discovery-gold-set/entries/sample.json": (
+            '{"entry_id": "sample", "outcome": "no_target_candidate_found"}\n'
+        ),
         "src/eidp/review/app.py": "PAGE_SETTINGS = 'settings'\n",
         "src/eidp/review/operator_pages.py": "def inject_v1_theme(): pass\n",
         "src/eidp/review/_pages/audit_log.py": "def render(session, *, lock_path, jsonl_path): pass\n",
@@ -240,6 +245,19 @@ def test_verify_core_zip_requires_bootstrap_seed_csvs(tmp_path: Path) -> None:
     assert not check.ok
     assert any("data/url-discovery/discovered-urls-50.csv" in error for error in check.errors)
     assert any("data/url-discovery/corporation_domains.csv" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_discovery_gold_set(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries.pop("data/discovery-gold-set/schema.json")
+    entries.pop("data/discovery-gold-set/entries/sample.json")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("data/discovery-gold-set/schema.json" in error for error in check.errors)
+    assert any("data/discovery-gold-set/entries/" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:

@@ -458,6 +458,17 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
         if seed.is_file():
             members.append((seed, f"data/url-discovery/{name}"))
 
+    # data/discovery-gold-set/ — bounded acquisition demonstrations used by
+    # release/debug flows to evaluate crawler regressions without broad live
+    # crawling. These are tiny deterministic JSON fixtures, unlike downloaded
+    # prefecture artifacts, so they should travel with the handoff ZIP.
+    discovery_gold_root = repo_root / "data" / "discovery-gold-set"
+    if discovery_gold_root.is_dir():
+        for path in discovery_gold_root.rglob("*"):
+            if path.is_file() and "__pycache__" not in path.parts:
+                arcname = "data/discovery-gold-set/" + path.relative_to(discovery_gold_root).as_posix()
+                members.append((path, arcname))
+
     # top-level files
     for name in ("README.md", "requirements-windows.txt", "pyproject.toml"):
         candidate = repo_root / name
