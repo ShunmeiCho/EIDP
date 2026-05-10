@@ -3,7 +3,66 @@
 Date: 2026-05-07
 Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `06926abc476616824919fe1e5ceba2374a621b98` (`eidp-windows-v143.zip`)
+Latest audited Windows package commit: `6ad13d36d27695af907ad06ed6951bb5fa0e6261` (`eidp-windows-v144.zip`)
+
+## 2026-05-11 v144 Update
+
+v144 is a narrow follow-up to the v143 bounded RCA. It does not change strict
+FY2026 success criteria; it improves stale target-form classification when a
+school publishes a target confirmation form under a compact year-plus-serial PDF
+filename.
+
+- Root cause from the v143 45-school bounded non-Sanko rerun: school `864`
+  exposed `http://www.atg-web.ac.jp/img/educational/2025007.pdf` with anchor
+  text `大学等における修学の支援に関する確認申請書`. v143 still classified it as
+  `target_fiscal_year_not_detected` because the year hint parser only accepted
+  standalone `2025`, not `2025` followed by a serial number in the filename.
+- `_fiscal_year_from_strong_candidate_hint` now accepts a `20xx` prefix followed
+  by a short serial suffix before `.pdf`, but only inside the existing strong
+  target-form context. This keeps role lists, syllabi, admission guides, and
+  non-target files on the existing negative path.
+- Regression coverage:
+  `test_pre_download_detects_stale_year_prefix_serial_filename_for_target_form`.
+  The new test failed before the patch and passes after the patch.
+- Local verification:
+  focused pre-download tests → `3 passed`;
+  `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py`
+  → passed;
+  `uv run mypy src/eidp/scraper/pdf_discovery.py` → passed;
+  `uv run pytest tests/unit/test_pdf_discovery.py -q` →
+  `48 passed, 5 warnings`;
+  `uv run pytest tests/unit -q` → `1030 passed, 5 warnings`.
+- Core ZIP: `dist/eidp-windows-v144.zip`
+- Latest alias: `dist/eidp-windows.zip`
+- Core ZIP SHA256:
+  `4198cd6aca579196a3a5fb3fb1f55ec0a2df97a3a72b544f0d7195e4d45d9c68`
+- Core verifier with unchanged `dist/eidp-playwright-addon-windows-v106.zip`:
+  `OK core`, `OK playwright-addon`,
+  `git_commit=6ad13d36d27695af907ad06ed6951bb5fa0e6261`,
+  `git_dirty=false`, `entry_count=3016`, `wheel_count=78`,
+  47 prefecture seed rows/parser registrations/downloadable artifact URLs,
+  `discovery_gold_set_entries=12`, and add-on SHA256
+  `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows remote extraction/setup smoke on host alias `win`: copied
+  `eidp-windows-v144.zip`, verified the same SHA256, expanded into
+  `C:\EIDP-v144-6ad13d3`, and ran `scripts\first_setup.bat`. The setup
+  completed offline wheelhouse install, SQLite bootstrap, master Excel import,
+  and FY2026 task rebuild. The bundled validator reported `OK install`,
+  `build_commit=6ad13d36d27695af907ad06ed6951bb5fa0e6261`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required SQLite tables present, and
+  `wheel_count=78`.
+- Windows packaged regression for school `864`: inserted the official-index
+  `SchoolSite`, ran packaged `discover-pdfs` with strict FY2026, and confirmed
+  `2025007.pdf` is now rejected as
+  `reason="fiscal_year_mismatch:2025"`, `pdf_type="target"`, with
+  `extra={"pre_download": "true"}`. The one-school summary reported
+  `crawled=1`, `found=1`, `downloaded=0`, `failed=0`, and
+  `publication_lag_or_old_target_pdf=1`.
+
+v144 improves one more latest-public old-year target-form path. It still keeps
+the PDF out of `document` and out of Excel because it is not the configured
+strict target FY2026 form.
 
 ## 2026-05-11 v143 Update
 
@@ -67,6 +126,15 @@ publication-lag evidence instead of no-candidate or non-target noise.
   `rejection_reason_target_fiscal_year_not_detected=2`. The copied evidence
   summary reported `evidence rows=34`, `schools with evidence=4`, and
   `publication_lag_or_old_target_pdf=4`.
+- Windows v143 bounded non-Sanko rerun on the same 45-school sample used in the
+  v139 RCA ended with `crawled=45`, `found=41`, `downloaded=0`, `failed=7`,
+  `skipped=159`, `cached_rejections=82`, and `prefiltered=67`. The evidence
+  summary reported `publication_lag_or_old_target_pdf=34`,
+  `target_form_without_year_evidence=4`, `tls_certificate_verify_failed=4`, and
+  `non_target_candidates_only=3`. Compared with the v141-resummarized v139
+  evidence, all 13 remaining `site_fetch_error_only` schools moved into
+  `publication_lag_or_old_target_pdf`; four certificate-chain failures remained
+  TLS-gated, and strict FY2026 downloads remained `0`.
 
 v143 improves evidence quality and operator actionability for stale official
 index rows. It still records `downloaded=0` for strict FY2026 because the found
@@ -589,13 +657,34 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v143.zip` rebuilt at commit `06926abc476616824919fe1e5ceba2374a621b98`, verifier `OK core`, `git_dirty=false`, SHA256 `58183771364d50f319c7a72587e79aa79afa385d9181ce54490f378013472241`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v143 smoke on a fresh `C:\EIDP-v143-06926ab` extraction proved SHA256 match, setup exit success, `school_count=2418`, `school_fiscal_year_status_count=2418`, and required SQLite tables. The bounded non-Sanko v139 strict FY2026 acquisition RCA crawled 45 official-index sites with `downloaded=0`, `publication_lag_or_old_target_pdf=22`, `site_fetch_error_only=17`, `target_form_without_year_evidence=4`, and `non_target_candidates_only=2`; v140 fixes the stale 404 portion of `site_fetch_error_only`; v141 classifies four TLS certificate-chain failures separately without disabling TLS verification; and v143 turns four stale `nag.ac.jp` official-index entries from no-candidate/non-target ambiguity into `publication_lag_or_old_target_pdf=4` via bounded school-homepage fallback and stale target-form classification. | Latest v143 package/setup and targeted stale-root homepage rerun are verified. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and real target-FY PDF/Excel flow remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v144.zip` rebuilt at commit `6ad13d36d27695af907ad06ed6951bb5fa0e6261`, verifier `OK core`, `git_dirty=false`, SHA256 `4198cd6aca579196a3a5fb3fb1f55ec0a2df97a3a72b544f0d7195e4d45d9c68`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v144 smoke on a fresh `C:\EIDP-v144-6ad13d3` extraction proved SHA256 match, setup exit success, `school_count=2418`, `school_fiscal_year_status_count=2418`, and required SQLite tables. The bounded non-Sanko v139 strict FY2026 acquisition RCA crawled 45 official-index sites with `downloaded=0`, `publication_lag_or_old_target_pdf=22`, `site_fetch_error_only=17`, `target_form_without_year_evidence=4`, and `non_target_candidates_only=2`; v140 fixes the stale 404 portion of `site_fetch_error_only`; v141 classifies four TLS certificate-chain failures separately without disabling TLS verification; v143 moves all 13 remaining generic site-fetch rows into `publication_lag_or_old_target_pdf`; and v144 proves a compact target-form filename like `2025007.pdf` is also classified as publication-lag instead of no-year. | Latest v144 package/setup and school-864 packaged regression are verified. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and real target-FY PDF/Excel flow remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
 - `sprint8-handoff-finalize` remains the active handoff branch; `main` is
   intentionally unchanged until the yield gate is met.
+- `uv run pytest tests/unit/test_pdf_discovery.py::test_pre_download_detects_stale_year_prefix_serial_filename_for_target_form -q`
+  failed before the v144 patch because `2025007.pdf` under a strong target-form
+  anchor returned no pre-download rejection.
+- Focused v144 pre-download tests, Ruff, mypy, `uv run pytest tests/unit/test_pdf_discovery.py -q`,
+  and `uv run pytest tests/unit -q` after the serial-filename patch →
+  `3 passed`, Ruff passed, mypy passed, `48 passed, 5 warnings`, and
+  `1030 passed, 5 warnings`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v144.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=6ad13d36d27695af907ad06ed6951bb5fa0e6261`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, core SHA256 `4198cd6aca579196a3a5fb3fb1f55ec0a2df97a3a72b544f0d7195e4d45d9c68`, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows v144 clean extraction/setup smoke →
+  SHA256 matched on Windows, `C:\EIDP-v144-6ad13d3` extracted cleanly,
+  `first_setup.bat` completed, validator reported `OK install`,
+  `build_commit=6ad13d36d27695af907ad06ed6951bb5fa0e6261`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required tables present, and
+  `wheel_count=78`.
+- Windows v144 school-864 packaged regression →
+  `2025007.pdf` under anchor `大学等における修学の支援に関する確認申請書`
+  is now evidence row `reason=fiscal_year_mismatch:2025`,
+  `pdf_type=target`, `extra.pre_download=true`; one-school summary was
+  `crawled=1`, `found=1`, `downloaded=0`, `failed=0`, and
+  `publication_lag_or_old_target_pdf=1`.
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py`,
   `uv run mypy src/eidp/scraper/pdf_discovery.py`,
   `uv run pytest tests/unit/test_pdf_discovery.py -q`, and
@@ -621,6 +710,15 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   `rejection_reason_target_fiscal_year_not_detected=2`. The copied evidence
   summary reported `evidence rows=34`, `schools with evidence=4`, and
   `publication_lag_or_old_target_pdf=4`.
+- Windows v143 bounded non-Sanko 45-school rerun →
+  `crawled=45`, `found=41`, `downloaded=0`, `failed=7`,
+  `rejection_reason_fiscal_year_mismatch=190`,
+  `rejection_reason_discovery_error=4`, and evidence buckets
+  `publication_lag_or_old_target_pdf=34`,
+  `target_form_without_year_evidence=4`,
+  `tls_certificate_verify_failed=4`, `non_target_candidates_only=3`.
+  Diffing against the v141-resummarized v139 evidence showed 13 schools moved
+  from generic site-fetch failure to publication-lag evidence.
 - `uv run pytest tests/unit/test_discovery_evidence_summary.py tests/unit/test_school_fiscal_year_status.py tests/unit/test_review_school_year_tasks.py -q`
   after the TLS classification change → `69 passed`.
 - `uv run pytest tests/unit -q` after the TLS classification change →
@@ -872,7 +970,7 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v143 is the current locally and
+The active goal is **not complete**. v144 is the current locally and
 Windows-smoke verified handoff candidate, and the branch is backed up remotely.
 The latest bounded non-Sanko Windows acquisition RCA still proves strict FY2026
 yield below the ship gate: `0/45` target downloads despite official-index
@@ -883,6 +981,9 @@ certificate-chain failures into an auditable `site_error` without relaxing TLS
 verification, and v143 proves the remaining `nag.ac.jp` stale official-index
 rows can move past 404/no-candidate ambiguity into
 `publication_lag_or_old_target_pdf` evidence via bounded school-homepage
-fallback. The main remaining blockers are target-year yield/policy, deeper
-navigation beyond official-index entry pages, broader Windows E2E validation,
-real operator UI validation, and the explicit university rollout decision.
+fallback. The v143 45-school rerun also moves the remaining 13 generic
+site-fetch failures from the v139 bounded RCA into publication-lag evidence,
+while v144 closes one serial-filename no-year edge (`2025007.pdf`).
+The main remaining blockers are target-year yield/policy, the few target forms
+without usable year evidence, broader Windows E2E validation, real operator UI
+validation, and the explicit university rollout decision.
