@@ -583,6 +583,69 @@ def _pdf_candidate_dedupe_key(url: str) -> str:
     return parsed._replace(path=unquote(parsed.path)).geturl()
 
 
+def _html_text(fragment: str) -> str:
+    text = html_lib.unescape(re.sub(r"<[^>]+>", " ", fragment))
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _enclosing_html_block(html: str, start: int, end: int) -> tuple[str, int, int, str] | None:
+    """Return the closest simple HTML block containing an anchor match."""
+
+    prefix = html[:start]
+    for tag in ("p", "li", "tr"):
+        open_matches = list(re.finditer(rf"<{tag}\b[^>]*>", prefix, re.IGNORECASE))
+        if not open_matches:
+            continue
+        open_match = open_matches[-1]
+        if re.search(rf"</{tag}\s*>", prefix[open_match.end():], re.IGNORECASE):
+            continue
+        close_match = re.search(rf"</{tag}\s*>", html[end:], re.IGNORECASE)
+        if close_match is None:
+            continue
+        close_end = end + close_match.end()
+        return tag, open_match.start(), close_end, html[open_match.start():close_end]
+    return None
+
+
+def _previous_html_block_text(html: str, before: int, tag: str) -> str:
+    previous_blocks = list(
+        re.finditer(rf"<{tag}\b[^>]*>.*?</{tag}\s*>", html[:before], re.IGNORECASE | re.DOTALL)
+    )
+    for previous in reversed(previous_blocks):
+        text = _html_text(previous.group(0))
+        if text:
+            return text
+    return ""
+
+
+def _has_fiscal_year_context(text: str) -> bool:
+    normalized = unicodedata.normalize("NFKC", text)
+    return bool(re.search(r"(令和\s*\d+|20\d{2}\s*年度|(?<![a-z0-9])r0?\d{1,2}(?![a-z0-9]))", normalized.lower()))
+
+
+def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
+    """Return anchor text plus nearby fiscal-year context when the CMS splits it.
+
+    Some CMS pages, notably Goope, render a year header in one paragraph and the
+    PDF link in the next paragraph. Keeping that adjacent context lets strict
+    discovery classify old target forms as publication-lag evidence instead of
+    sending them to the target-year-unverified manual queue.
+    """
+
+    anchor = _html_text(match.group(2))
+    parts = [anchor] if anchor else []
+    block = _enclosing_html_block(html, match.start(), match.end())
+    if block is not None:
+        tag, block_start, _, block_fragment = block
+        current_text = _html_text(block_fragment)
+        if current_text and _has_fiscal_year_context(current_text) and current_text not in parts:
+            parts.append(current_text)
+        previous_text = _previous_html_block_text(html, block_start, tag)
+        if previous_text and _has_fiscal_year_context(previous_text):
+            parts.append(previous_text)
+    return " ".join(dict.fromkeys(part for part in parts if part))
+
+
 def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
     """Extract PDF link candidates from HTML using 4 patterns."""
     candidates: list[PdfCandidate] = []
@@ -598,7 +661,7 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
         dedupe_key = _pdf_candidate_dedupe_key(url)
         if dedupe_key not in seen_urls:
             seen_urls.add(dedupe_key)
-            anchor = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
+            anchor = _pdf_anchor_context_text(html, m)
             pattern = "cache_busted" if "?" in href else "direct"
             if "/wp-content/" in url:
                 pattern = "wordpress"

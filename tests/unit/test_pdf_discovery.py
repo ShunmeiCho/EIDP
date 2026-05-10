@@ -1538,6 +1538,39 @@ def test_download_pdf_rejects_stale_reiwa_year_from_anchor_when_body_has_no_year
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
+def test_download_pdf_rejects_stale_year_from_adjacent_html_context(
+    monkeypatch, tmp_path: Path
+) -> None:
+    html = """
+    <p><span>◆2025年度(令和7年度)</span></p>
+    <p><a href="https://cdn.goope.jp/42190/250702074943-68646607e0c51.pdf">確認申請様式</a></p>
+    """
+    candidate = _extract_pdf_links(html, "https://r.goope.jp/penginweb/menu/c370087")[0]
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2025"
+    assert not list((tmp_path / "1").glob("*.pdf"))
+
+
 def test_download_pdf_accepts_url_target_hint_when_body_is_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:
