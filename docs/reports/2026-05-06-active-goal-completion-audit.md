@@ -35,6 +35,12 @@ unchanged pending real Windows yield acceptance.
   target-form mismatches across FY2025-FY2020.
 - FY2025 control run on the same Tokyo auto set: 3 target confirmation PDFs were
   accepted into `document`, all Sanko 2025 `yoshiki2025.pdf` forms.
+- Cross-prefecture 25-school URL crawl control (神奈川/大阪/愛知/福岡/北海道):
+  23 auto-registered, 2 queued for review, 0 errors. Strict FY2026 discovery on
+  those 23 schools / 40 registered URLs downloaded 0 target PDFs; FY2025 control
+  downloaded 15 target PDFs. This is the strongest current evidence that the
+  URL-discovery layer works for common Sanko patterns, while the public latest
+  confirmation forms in this sample are still FY2025, not FY2026.
 
 Interpretation: v136 closes the packaging, URL crawl, Scrapling static-html, URL
 review, and review-metric issues found in the v134 audit. The remaining release
@@ -98,6 +104,16 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 - Windows v136 FY2025 control run for the Tokyo auto set →
   `downloaded=3`; DB rows were inserted for school IDs 17, 18, and 19 using
   Sanko `yoshiki2025.pdf` target confirmation forms.
+- Windows v136 cross-prefecture 25-school URL crawl →
+  `attempted=25`, `auto_registered=23`, `review_enqueued=2`, `errors=0`.
+- Windows v136 strict FY2026 PDF discovery for those 23 auto schools →
+  `crawled=40`, `found=34`, `downloaded=0`, `failed=2`, `skipped=332`;
+  evidence rows: `classified_non_target=230`, `pre_filtered_non_target_hint=40`,
+  stale `fiscal_year_mismatch:*` rows = 61, `target_fiscal_year_not_detected=9`,
+  and `no_candidates_found=6`.
+- Windows v136 FY2025 control run for the same cross-prefecture auto set →
+  `downloaded=15`, all accepted target PDFs were Sanko latest-public FY2025
+  forms.
 - `uv run pytest -q` → `841 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_review_pdf_manual_entry.py -q` → `70 passed, 5 warnings`, including a Streamlit AppTest focused PDF確認 render smoke with discovery JSONL evidence
 - `uv run ruff check tests/unit/test_review_pdf_manual_entry.py src/eidp/review/_pages/pdf_manual_entry.py src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` → passed

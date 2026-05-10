@@ -1,0 +1,56 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "sanko-yokohama-sweets-publication-lag-2026",
+  "school": {
+    "school_id": 74,
+    "school_name": "横浜スイーツ＆カフェ専門学校",
+    "prefecture": "神奈川県",
+    "corporation_name": "学校法人三幸学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Determine whether a visible Sanko disclosure page has a true FY2026 confirmation form or only a stale latest-public form.",
+    "search_queries": [
+      "横浜スイーツ＆カフェ専門学校 情報公開",
+      "横浜スイーツ＆カフェ専門学校 機関要件確認申請書"
+    ],
+    "steps": [
+      "Open https://www.sanko.ac.jp/yokohama-sweets/ and the derived disclosure page.",
+      "Inspect the disclosure and guidelines pages for the confirmation form anchor.",
+      "Observe that the latest target-form candidate is yoshiki2025.pdf with anchor text 2025年度.",
+      "Run strict FY2026 discovery and record fiscal_year_mismatch:2025 instead of accepting it.",
+      "Run FY2025 control only as proof that the crawler can acquire the latest public form."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.sanko.ac.jp/yokohama-sweets",
+    "disclosure_url": "https://www.sanko.ac.jp/disclosure/yokohama-sweets",
+    "pdf_url": "https://www.sanko.ac.jp/disclosure/yokohama-sweets/docs/yoshiki2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "sanko_disclosure",
+    "reusable_rules": [
+      "Treat a visible 2025年度/yoshiki2025.pdf form as latest-public evidence, not as FY2026 success.",
+      "Surface publication-lag schools separately so the operator can distinguish crawler failure from public-site lag.",
+      "Keep the rejection evidence because it explains why no FY2026 document row exists."
+    ],
+    "anti_patterns": [
+      "Do not loosen strict mode to accept stale forms.",
+      "Do not send schoolinfo, timetable, course-list, or school-guide PDFs to the PDF parser as target candidates.",
+      "Do not infer FY2026 from a 2026 disclosure directory when the actual confirmation-form URL or anchor says 2025."
+    ]
+  },
+  "evidence": {
+    "source_kind": "windows_v136_jsonl",
+    "source_paths": [
+      "_temp/win-v136-evidence/v136-crosspref25-kanagawa-url.jsonl",
+      "_temp/win-v136-evidence/v136-crosspref25-pdf.jsonl",
+      "_temp/win-v136-evidence/v136-crosspref25-pdf-target2025.jsonl"
+    ],
+    "notes": "Windows v136 strict FY2026 rejected this school's visible target form as fiscal_year_mismatch:2025; FY2025 control accepted it."
+  }
+}

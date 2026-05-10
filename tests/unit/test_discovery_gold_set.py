@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+GOLD_SET_DIR = Path(__file__).resolve().parents[2] / "data" / "discovery-gold-set"
+ENTRY_DIR = GOLD_SET_DIR / "entries"
+
+
+def _load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_discovery_gold_set_schema_and_prototypes_exist() -> None:
+    assert (GOLD_SET_DIR / "schema.json").is_file()
+    assert (GOLD_SET_DIR / "README.md").is_file()
+
+    entries = sorted(ENTRY_DIR.glob("*.json"))
+    assert len(entries) >= 2
+
+
+def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
+    entries = [_load_json(path) for path in sorted(ENTRY_DIR.glob("*.json"))]
+
+    accepted = [entry for entry in entries if entry["outcome"] == "accepted_target_pdf"]
+    assert accepted, "prototype set needs at least one successful discovery path"
+
+    for entry in entries:
+        assert entry["schema_version"] == "discovery-gold-set/v0.1"
+        assert entry["school"]["school_id"] > 0
+        assert entry["target_fiscal_year"] >= 2025
+        assert entry["outcome"] in {
+            "accepted_target_pdf",
+            "publication_lag_latest_public",
+            "no_target_candidate_found",
+            "needs_operator_review",
+        }
+        assert entry["manual_demonstration"]["operator_goal"]
+        assert entry["manual_demonstration"]["steps"]
+        assert entry["automation_pattern"]["reusable_rules"]
+        assert entry["evidence"]["source_kind"] in {"windows_v136_jsonl", "manual_web", "operator_review"}
+
+        if entry["outcome"] == "accepted_target_pdf":
+            assert entry["expected_result"]["pdf_url"].endswith(".pdf")
+            assert entry["expected_result"]["pdf_type"] == "target"
+            assert entry["expected_result"]["fiscal_year"] == entry["target_fiscal_year"]

@@ -1,0 +1,55 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "sanko-osaka-med-2025",
+  "school": {
+    "school_id": 22,
+    "school_name": "大阪医療秘書福祉&IT専門学校",
+    "prefecture": "大阪府",
+    "corporation_name": "学校法人三幸学園"
+  },
+  "target_fiscal_year": 2025,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find the public confirmation application form for the latest public year on a Sanko disclosure site.",
+    "search_queries": [
+      "大阪医療秘書福祉&IT専門学校 情報公開",
+      "大阪医療秘書福祉&IT専門学校 修学支援 確認申請書"
+    ],
+    "steps": [
+      "Open the school top page https://www.sanko.ac.jp/osaka-med/.",
+      "Prefer the /disclosure/{school-slug}/ page when the site exposes it.",
+      "Look for an anchor labeled 2025年度 or a URL ending in docs/yoshiki2025.pdf.",
+      "Reject schoolinfo, subject-list, officer-list, and donation PDFs as adjacent disclosure material.",
+      "Accept the PDF only after body classification marks it as the target confirmation form and the fiscal year matches the target."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.sanko.ac.jp/osaka-med",
+    "disclosure_url": "https://www.sanko.ac.jp/disclosure/osaka-med",
+    "pdf_url": "https://www.sanko.ac.jp/disclosure/osaka-med/docs/yoshiki2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "sanko_disclosure",
+    "reusable_rules": [
+      "For Sanko schools, derive candidate disclosure pages from /disclosure/{school-slug}/ and the school /guidelines/ page.",
+      "Prioritize anchors containing 20XX年度 when the PDF filename is yoshiki20XX.pdf.",
+      "Use the year in the anchor or URL as a strong fiscal-year hint, then verify the PDF body classifies as the target confirmation form."
+    ],
+    "anti_patterns": [
+      "schoolinfo.pdf is school information, not the confirmation form.",
+      "役員名簿, 授業科目, 実務経験, and 寄付 PDFs are adjacent disclosures and should be pre-filtered.",
+      "Do not count FY2025 forms as FY2026 target-year success."
+    ]
+  },
+  "evidence": {
+    "source_kind": "windows_v136_jsonl",
+    "source_paths": [
+      "_temp/win-v136-evidence/v136-crosspref25-osaka-url.jsonl",
+      "_temp/win-v136-evidence/v136-crosspref25-pdf-target2025.jsonl"
+    ],
+    "notes": "Windows v136 FY2025 control accepted this PDF for school_id 22."
+  }
+}
