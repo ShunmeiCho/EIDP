@@ -26,12 +26,23 @@ unchanged pending real Windows yield acceptance.
 - FY2025 control run on the same 5 schools: 4 target confirmation PDFs were
   accepted into `document`, proving the URL/PDF chain can download and classify
   the public latest target forms when the sites publish FY2025 material.
+- Tokyo 10-school URL crawl control: 9 auto-registered, 1 queued for review,
+  0 errors. The auto set includes both non-Sanko schools (日本工学院, 東京モード学園,
+  HAL東京, 首都医校) and Sanko schools.
+- Strict FY2026 PDF discovery on the Tokyo auto set: `downloaded=0` across
+  9 schools / 15 registered URLs. Evidence contained 105 rejection rows:
+  `classified_non_target=48`, `pre_filtered_non_target_hint=29`, and 20 stale
+  target-form mismatches across FY2025-FY2020.
+- FY2025 control run on the same Tokyo auto set: 3 target confirmation PDFs were
+  accepted into `document`, all Sanko 2025 `yoshiki2025.pdf` forms.
 
 Interpretation: v136 closes the packaging, URL crawl, Scrapling static-html, URL
 review, and review-metric issues found in the v134 audit. The remaining release
 gate is not packaging readiness; it is target-year policy/yield. The sampled
 Sanko pages currently expose 2025 confirmation forms, while strict FY2026 mode
-correctly refuses to count those stale forms as success.
+correctly refuses to count those stale forms as success. Non-Sanko Tokyo
+schools in the small sample did not expose target confirmation candidates on the
+pages discovered by the crawler.
 
 ## Objective Restatement
 
@@ -77,6 +88,16 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 - Windows v136 FY2025 control run for the same 5-school sample → 4 target
   confirmation PDFs accepted into `document`, proving the acquisition chain works
   for the public latest year while strict FY2026 refuses stale success.
+- Windows v136 Tokyo 10-school URL crawl →
+  `attempted=10`, `auto_registered=9`, `review_enqueued=1`, `errors=0`.
+  Auto results included 4 non-Sanko schools and 5 Sanko schools.
+- Windows v136 strict FY2026 PDF discovery for the Tokyo auto set →
+  `crawled=15`, `found=11`, `downloaded=0`, `failed=1`, `skipped=100`;
+  evidence rows: `classified_non_target=48`, `pre_filtered_non_target_hint=29`,
+  stale `fiscal_year_mismatch:*` rows = 20, and `no_candidates_found=4`.
+- Windows v136 FY2025 control run for the Tokyo auto set →
+  `downloaded=3`; DB rows were inserted for school IDs 17, 18, and 19 using
+  Sanko `yoshiki2025.pdf` target confirmation forms.
 - `uv run pytest -q` → `841 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_review_pdf_manual_entry.py -q` → `70 passed, 5 warnings`, including a Streamlit AppTest focused PDF確認 render smoke with discovery JSONL evidence
 - `uv run ruff check tests/unit/test_review_pdf_manual_entry.py src/eidp/review/_pages/pdf_manual_entry.py src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` → passed
