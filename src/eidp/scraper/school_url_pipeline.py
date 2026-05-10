@@ -29,7 +29,6 @@ from eidp.scraper.scrapling_fetcher import (
     scrapling_available,
 )
 from eidp.scraper.search_provider import create_provider
-from eidp.scraper.url_discovery import search_queries_for_school
 
 log = structlog.get_logger()
 
@@ -44,6 +43,8 @@ class SchoolUrlCrawlEvidence:
     score: float
     outcome: str
     skipped_reason: str
+    queries: list[str]
+    candidates: list[dict[str, object]]
     notes: list[str]
     dry_run: bool = False
 
@@ -114,7 +115,7 @@ def run_school_url_auto_crawl(
                     school_id=int(school.id),
                     school_name=school.school_name,
                     prefecture=school.prefecture,
-                    queries=search_queries_for_school(school),
+                    queries=_school_website_queries_for_school(school),
                 )
                 if dry_run:
                     outcome = _dry_run_outcome(discovery)
@@ -139,6 +140,8 @@ def run_school_url_auto_crawl(
                 score=discovery.best.score if discovery.best is not None else 0.0,
                 outcome=outcome.decision,
                 skipped_reason=outcome.skipped_reason or "",
+                queries=list(discovery.queries),
+                candidates=_candidate_evidence(discovery),
                 notes=list(discovery.notes),
                 dry_run=dry_run,
             ))
@@ -197,6 +200,42 @@ def _default_serp_fetcher() -> SearchProviderSerpFetcher:
     return SearchProviderSerpFetcher(provider)
 
 
+def _school_website_queries_for_school(school: School) -> list[str]:
+    """Build official-site-first queries for SchoolSite auto-completion.
+
+    This step wants a stable homepage or disclosure section, not a one-off
+    PDF/form URL. Keep homepage-intent queries ahead of target-form queries
+    so noisy SERPs are less likely to auto-register admissions/news/PDF paths.
+    """
+    school_name = school.school_name.strip()
+    corporation_name = (school.corporation_name or "").strip()
+    queries = [
+        f"{school_name} 公式サイト",
+        f"{school_name} 公式",
+        f"{school_name} ホームページ",
+    ]
+    if corporation_name:
+        queries.append(f"{corporation_name} {school_name} 公式")
+    queries.extend([
+        f"{school_name} 情報公開",
+        f"{school_name} 高等教育 修学支援",
+        f"{school_name} 確認申請書 様式第2号",
+    ])
+    return _dedupe_preserve_order(queries)
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        normalized = value.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return deduped
+
+
 def _default_crawl_throttle() -> CrawlThrottle:
     min_jitter = max(0.0, settings.school_url_crawl_min_jitter)
     max_jitter = max(min_jitter, settings.school_url_crawl_max_jitter)
@@ -237,6 +276,20 @@ def _accumulate_outcome(
         stats["circuit_open"] += 1
     else:
         stats["rejected"] += 1
+
+
+def _candidate_evidence(discovery: object) -> list[dict[str, object]]:
+    candidates = getattr(discovery, "candidates", ())
+    rows: list[dict[str, object]] = []
+    for candidate in candidates:
+        rows.append({
+            "url": str(getattr(candidate, "candidate_url", "")),
+            "score": float(getattr(candidate, "score", 0.0) or 0.0),
+            "decision": str(getattr(candidate, "decision", "")),
+            "breakdown": dict(getattr(candidate, "breakdown", {}) or {}),
+            "notes": list(getattr(candidate, "notes", ()) or ()),
+        })
+    return rows
 
 
 class _EvidenceWriter:

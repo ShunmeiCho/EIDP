@@ -126,6 +126,60 @@ def test_run_school_url_auto_crawl_dry_run_writes_no_rows(tmp_path: Path) -> Non
         session.close()
 
 
+class RejectOnlySerpFetcher:
+    def search(self, query: str, *, max_results: int = 5) -> list[SerpHit]:  # noqa: ARG002
+        return [
+            SerpHit(
+                url="https://unrelated.example/news/",
+                title="Unrelated news",
+                snippet="オープンキャンパス",
+            )
+        ]
+
+
+def test_run_school_url_auto_crawl_evidence_records_rejected_candidates(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        _seed_school(session)
+        evidence_path = tmp_path / "reject.jsonl"
+
+        stats = run_school_url_auto_crawl(
+            session,
+            batch_size=1,
+            dry_run=True,
+            evidence_path=evidence_path,
+            serp_fetcher=RejectOnlySerpFetcher(),
+            page_fetcher=FakePageFetcher(),
+        )
+
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[0])
+
+        assert stats["attempted"] == 1
+        assert stats["rejected"] == 1
+        assert evidence["decision"] == "reject"
+        assert evidence["candidate_url"] == ""
+        assert evidence["queries"] == [
+            "東京デザイン専門学校 公式サイト",
+            "東京デザイン専門学校 公式",
+            "東京デザイン専門学校 ホームページ",
+            "学校法人東京デザイン 東京デザイン専門学校 公式",
+            "東京デザイン専門学校 情報公開",
+            "東京デザイン専門学校 高等教育 修学支援",
+            "東京デザイン専門学校 確認申請書 様式第2号",
+        ]
+        assert evidence["candidates"] == [
+            {
+                "url": "https://unrelated.example/news/",
+                "score": -2.0,
+                "decision": "reject",
+                "breakdown": {"low_value_path": -2.0},
+                "notes": ["low_value_path"],
+            }
+        ]
+    finally:
+        session.close()
+
+
 def test_run_school_url_auto_crawl_skips_when_scrapling_missing(monkeypatch) -> None:
     import eidp.scraper.school_url_pipeline as pipeline
 
