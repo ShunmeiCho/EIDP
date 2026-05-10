@@ -104,6 +104,12 @@ class Settings(BaseSettings):
     school_url_crawl_batch_size: int = 25
     school_url_crawl_fetch_mode: str = "static"  # static | dynamic | stealthy
 
+    # Optional rendered-HTML fallback for PDF discovery. This is separate
+    # from school URL discovery: once a SchoolSite is known, some disclosure
+    # pages still hide the current PDF behind JavaScript tabs.
+    pdf_discovery_rendered_html_auto_enable: str = "auto"  # auto | on | off
+    pdf_discovery_rendered_html_fetch_mode: str = "dynamic"  # dynamic | stealthy | static
+
     # Firecrawl API (for corporation root URL expansion)
     firecrawl_api_key: str = ""
 
@@ -175,6 +181,8 @@ def apply_runtime_env_settings(config: Settings = settings) -> None:
         "EIDP_SCHOOL_URL_CRAWL_AUTO_ENABLE": config.school_url_crawl_auto_enable,
         "EIDP_SCHOOL_URL_CRAWL_BATCH_SIZE": str(config.school_url_crawl_batch_size),
         "EIDP_SCHOOL_URL_CRAWL_FETCH_MODE": config.school_url_crawl_fetch_mode,
+        "EIDP_PDF_DISCOVERY_RENDERED_HTML_AUTO_ENABLE": config.pdf_discovery_rendered_html_auto_enable,
+        "EIDP_PDF_DISCOVERY_RENDERED_HTML_FETCH_MODE": config.pdf_discovery_rendered_html_fetch_mode,
         "EIDP_FIRECRAWL_API_KEY": config.firecrawl_api_key,
     }
     for key, value in env_updates.items():

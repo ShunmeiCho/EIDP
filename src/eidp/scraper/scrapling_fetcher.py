@@ -80,6 +80,29 @@ class ScraplingPageFetcher:
             return session.get(url, stealthy_headers=True)
 
 
+@dataclass(frozen=True)
+class ScraplingHtmlFetcher:
+    """Fetch rendered HTML with Scrapling for PDF link extraction."""
+
+    mode: ScraplingFetchMode = "dynamic"
+    disable_resources: bool = True
+    headless: bool = True
+    network_idle: bool = True
+
+    def fetch_html(self, url: str) -> str | None:
+        page = ScraplingPageFetcher(
+            mode=self.mode,
+            disable_resources=self.disable_resources,
+            headless=self.headless,
+            network_idle=self.network_idle,
+        )._fetch_page(url)
+        status = int(getattr(page, "status", 0) or 0)
+        body_excerpt = _body_excerpt(page)
+        if is_block_signal(status_code=status, body_excerpt=body_excerpt):
+            return None
+        return _page_html(page)
+
+
 def _selector_first_text(page: Any, selector: str) -> str:
     try:
         value = page.css(selector).get()
@@ -106,3 +129,36 @@ def _body_excerpt(page: Any, *, limit: int = 4000) -> str:
             values = []
         body = " ".join(str(v).strip() for v in values if str(v).strip())
     return body[:limit]
+
+
+def _page_html(page: Any) -> str:
+    for attr in ("html", "content"):
+        value = getattr(page, attr, None)
+        if isinstance(value, str) and value.strip():
+            return value
+        if callable(value):
+            try:
+                rendered = value()
+            except Exception:
+                rendered = None
+            if isinstance(rendered, str) and rendered.strip():
+                return rendered
+
+    try:
+        html_value = page.css("html").get()
+    except Exception:
+        html_value = None
+    if html_value:
+        return str(html_value)
+
+    get_value = getattr(page, "get", None)
+    if callable(get_value):
+        try:
+            rendered = get_value()
+        except Exception:
+            rendered = None
+        if isinstance(rendered, str) and rendered.strip():
+            return rendered
+
+    rendered = str(page)
+    return rendered if rendered and rendered != object.__str__(page) else ""

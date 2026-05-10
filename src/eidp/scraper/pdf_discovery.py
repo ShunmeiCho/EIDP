@@ -19,7 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 from urllib.parse import parse_qsl, unquote, urljoin, urlparse
 
 import httpx
@@ -31,6 +31,7 @@ from eidp.db.models import CrawlJob, Document, SchoolSite
 from eidp.fiscal_year import fiscal_year_from_japanese_era_text, fiscal_year_search_tokens
 from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 from eidp.scraper.url_discovery import _is_safe_url
+from eidp.scraper.url_normalization import normalize_candidate_url
 
 log = structlog.get_logger()
 
@@ -145,6 +146,7 @@ HEADERS = {
 MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
 MAX_DISCOVERY_EXTRA_PAGES = 6
 MAX_DISCOVERY_ELAPSED_SECONDS = 45.0
+MAX_RENDERED_DISCOVERY_PAGES = 3
 SITEMAP_PAGE_KEYWORDS = (
     "disclosure",
     "public",
@@ -195,6 +197,10 @@ class DiscoveryResult:
 class CachedPdfRejection:
     pdf_type: str
     reason: str
+
+
+class RenderedHtmlFetcher(Protocol):
+    def fetch_html(self, url: str) -> str | None: ...
 
 
 def _is_target_year_rejection(reason: str) -> bool:
@@ -695,12 +701,99 @@ def _extract_sitemap_locs(xml: str) -> list[str]:
 
 def _append_unique_candidates(target: list[PdfCandidate], additions: list[PdfCandidate]) -> None:
     """Append candidates not already present by PDF URL."""
-    seen = {candidate.pdf_url for candidate in target}
+    seen = {normalize_candidate_url(candidate.pdf_url) for candidate in target}
     for candidate in additions:
-        if candidate.pdf_url in seen:
+        candidate_key = normalize_candidate_url(candidate.pdf_url)
+        if candidate_key in seen:
             continue
-        seen.add(candidate.pdf_url)
+        seen.add(candidate_key)
         target.append(candidate)
+
+
+def _needs_rendered_html_fallback(candidates: list[PdfCandidate], *, target_fiscal_year: int) -> bool:
+    """Return whether JS-rendered HTML may add missing current-year candidates."""
+
+    if not candidates:
+        return True
+    return not any(_has_target_year_hint(candidate, target_year=target_fiscal_year) for candidate in candidates)
+
+
+def _default_rendered_html_fetcher() -> RenderedHtmlFetcher | None:
+    mode = settings.pdf_discovery_rendered_html_auto_enable.strip().lower()
+    if mode == "off":
+        return None
+
+    try:
+        from eidp.scraper.scrapling_fetcher import (
+            ScraplingFetchMode,
+            ScraplingHtmlFetcher,
+            scrapling_available,
+        )
+    except Exception as exc:
+        log.warning("rendered_html_fetcher_import_failed", error=str(exc), error_type=type(exc).__name__)
+        return None
+
+    if not scrapling_available():
+        if mode == "on":
+            log.warning("rendered_html_fetcher_unavailable", mode=mode)
+        return None
+
+    fetch_mode = settings.pdf_discovery_rendered_html_fetch_mode.strip().lower()
+    if fetch_mode not in {"static", "dynamic", "stealthy"}:
+        fetch_mode = "dynamic"
+    return ScraplingHtmlFetcher(mode=cast(ScraplingFetchMode, fetch_mode))
+
+
+def _append_rendered_html_candidates(
+    candidates: list[PdfCandidate],
+    *,
+    page_urls: list[str],
+    rendered_html_fetcher: RenderedHtmlFetcher,
+    max_pages: int = MAX_RENDERED_DISCOVERY_PAGES,
+    max_elapsed_seconds: float = MAX_DISCOVERY_ELAPSED_SECONDS,
+    started_at: float | None = None,
+) -> int:
+    """Fetch rendered HTML pages and append PDF candidates found after JS execution."""
+
+    fetched = 0
+    queue = list(page_urls)
+    seen_pages: set[str] = set()
+    started = started_at if started_at is not None else time.monotonic()
+
+    while queue and fetched < max_pages:
+        if max_elapsed_seconds > 0 and time.monotonic() - started >= max_elapsed_seconds:
+            break
+        page_url = queue.pop(0)
+        page_key = normalize_candidate_url(page_url)
+        if page_key in seen_pages or not _is_safe_url(page_url):
+            continue
+        seen_pages.add(page_key)
+
+        try:
+            html = rendered_html_fetcher.fetch_html(page_url)
+        except Exception as exc:
+            log.warning(
+                "rendered_html_fetch_failed",
+                url=page_url,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+            continue
+        fetched += 1
+        if not html:
+            continue
+
+        _append_unique_candidates(candidates, _extract_pdf_links(html, page_url))
+
+        for sub_url in _find_subpage_links(html, page_url):
+            sub_key = normalize_candidate_url(sub_url)
+            if sub_key in seen_pages or any(normalize_candidate_url(queued) == sub_key for queued in queue):
+                continue
+            if len(queue) + fetched >= max_pages:
+                break
+            queue.append(sub_url)
+
+    return fetched
 
 
 def discover_pdfs_for_site(
@@ -710,11 +803,14 @@ def discover_pdfs_for_site(
     max_depth: int = 2,
     max_extra_pages: int = MAX_DISCOVERY_EXTRA_PAGES,
     max_elapsed_seconds: float = MAX_DISCOVERY_ELAPSED_SECONDS,
+    rendered_html_fetcher: RenderedHtmlFetcher | None = None,
+    target_fiscal_year: int | None = None,
 ) -> DiscoveryResult:
     """Discover PDF candidates from a school site URL."""
     result = DiscoveryResult(school_id=school_id)
     started_at = time.monotonic()
     extra_pages_fetched = 0
+    target_year = target_fiscal_year or settings.target_fiscal_year
 
     def extra_page_budget_remaining() -> int:
         if max_elapsed_seconds > 0 and time.monotonic() - started_at >= max_elapsed_seconds:
@@ -767,6 +863,7 @@ def discover_pdfs_for_site(
 
         # Always try subpage links (two-tier pattern)
         # Even if root has PDFs, target docs may be on subpages
+        subpages: list[str] = []
         if max_depth > 0:
             subpages = _find_subpage_links(html, site_url)
             for sub_url in subpages:
@@ -787,6 +884,7 @@ def discover_pdfs_for_site(
         # Sitemap discovery is not just a last resort. Many school homepages
         # expose stale PDFs on the visible page while the current disclosure page
         # is only reachable through sitemap.xml / robots Sitemap entries.
+        sitemap_page_urls: list[str] = []
         for sitemap_url in _sitemap_urls_for_site(client, site_url, limit=extra_page_budget_remaining()):
             if extra_page_budget_remaining() <= 0:
                 break
@@ -801,6 +899,7 @@ def discover_pdfs_for_site(
                     )],
                 )
                 continue
+            sitemap_page_urls.append(sitemap_url)
             try:
                 time.sleep(1.0)
                 extra_pages_fetched += 1
@@ -810,9 +909,29 @@ def discover_pdfs_for_site(
             except httpx.HTTPError:
                 continue
 
+        if _needs_rendered_html_fallback(candidates, target_fiscal_year=target_year):
+            fetcher = rendered_html_fetcher or _default_rendered_html_fetcher()
+            if fetcher is not None:
+                rendered_page_urls = [site_url, *subpages, *sitemap_page_urls]
+                rendered_seen: set[str] = set()
+                unique_rendered_page_urls: list[str] = []
+                for url in rendered_page_urls:
+                    key = normalize_candidate_url(url)
+                    if key in rendered_seen:
+                        continue
+                    rendered_seen.add(key)
+                    unique_rendered_page_urls.append(url)
+                _append_rendered_html_candidates(
+                    candidates,
+                    page_urls=unique_rendered_page_urls,
+                    rendered_html_fetcher=fetcher,
+                    max_elapsed_seconds=max_elapsed_seconds,
+                    started_at=started_at,
+                )
+
         # Score all candidates
         for c in candidates:
-            _score_candidate(c)
+            _score_candidate(c, target_fiscal_year=target_year)
 
         # Sort by score descending
         candidates.sort(key=lambda c: c.score, reverse=True)
@@ -1100,7 +1219,12 @@ def run_pdf_discovery(
                 result.candidates = [candidate]
                 result.best = candidate
             else:
-                result = discover_pdfs_for_site(client, site.school_id, site.url)
+                result = discover_pdfs_for_site(
+                    client,
+                    site.school_id,
+                    site.url,
+                    target_fiscal_year=target_year,
+                )
             stats["crawled"] += 1
 
             if result.error:

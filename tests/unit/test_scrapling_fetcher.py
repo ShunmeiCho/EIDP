@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from eidp.scraper.scrapling_fetcher import ScraplingPageFetcher, SearchProviderSerpFetcher
+from eidp.scraper.scrapling_fetcher import ScraplingHtmlFetcher, ScraplingPageFetcher, SearchProviderSerpFetcher
 from eidp.scraper.search_provider import SearchResult
 
 
@@ -63,6 +63,25 @@ class FakePage:
         return FakeSelector()
 
 
+class FakeHtmlPage:
+    status = 200
+    url = "https://www.tokyo-design.ac.jp/disclosure/"
+    html = """
+    <html>
+      <body>
+        <a href="/docs/r8-kakunin.pdf">令和8年度 確認申請書</a>
+      </body>
+    </html>
+    """
+
+    def css(self, selector: str) -> FakeSelector:
+        if selector == "body":
+            return FakeSelector()
+        if selector == "body ::text":
+            return FakeSelector(all_values=["令和8年度", "確認申請書"])
+        return FakeSelector()
+
+
 def test_search_provider_serp_fetcher_adapts_results() -> None:
     fetcher = SearchProviderSerpFetcher(FakeProvider())
 
@@ -92,3 +111,27 @@ def test_scrapling_page_fetcher_maps_static_page(monkeypatch) -> None:
     assert page.title == "東京デザイン専門学校 公式サイト"
     assert "修学支援" in page.body_excerpt
     assert page.blocked is False
+
+
+def test_scrapling_html_fetcher_returns_rendered_html(monkeypatch) -> None:
+    import eidp.scraper.scrapling_fetcher as module
+
+    class FakeDynamicFetcher:
+        @staticmethod
+        def fetch(url: str, *, disable_resources: bool = True) -> FakeHtmlPage:
+            assert url == "https://www.tokyo-design.ac.jp/disclosure/"
+            assert disable_resources is True
+            return FakeHtmlPage()
+
+    monkeypatch.setattr(module, "scrapling_available", lambda: True)
+    monkeypatch.setattr(
+        module.importlib,
+        "import_module",
+        lambda name: SimpleNamespace(DynamicFetcher=FakeDynamicFetcher),
+    )
+    fetcher = ScraplingHtmlFetcher(mode="dynamic")
+
+    html = fetcher.fetch_html("https://www.tokyo-design.ac.jp/disclosure/")
+
+    assert html is not None
+    assert "r8-kakunin.pdf" in html

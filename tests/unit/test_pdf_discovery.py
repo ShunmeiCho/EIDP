@@ -301,6 +301,16 @@ class _HtmlClient:
         return self.pages.get(url, _HtmlResponse("", status_code=404, url=url))
 
 
+class _RenderedHtmlFetcher:
+    def __init__(self, pages: dict[str, str]) -> None:
+        self.pages = pages
+        self.calls: list[str] = []
+
+    def fetch_html(self, url: str) -> str | None:
+        self.calls.append(url)
+        return self.pages.get(url)
+
+
 def test_sitemap_urls_for_site_filters_same_domain_disclosure_pages(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
     client = _HtmlClient(
@@ -436,6 +446,88 @@ def test_discover_pdfs_uses_sitemap_even_when_root_has_stale_pdf(monkeypatch) ->
     }
 
 
+def test_discover_pdfs_uses_rendered_html_when_static_candidates_are_stale(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/docs/r7-kakunin.pdf">令和7年度 確認申請書</a>
+                </html>
+                """,
+                url="https://example.ac.jp/",
+            ),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+    rendered = _RenderedHtmlFetcher(
+        {
+            "https://example.ac.jp/": """
+                <html>
+                  <a href="/docs/r8-kakunin.pdf">
+                    令和8年度 高等教育の修学支援新制度 確認申請書
+                  </a>
+                </html>
+            """,
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://example.ac.jp/",
+        rendered_html_fetcher=rendered,
+        target_fiscal_year=2026,
+    )
+
+    assert rendered.calls == ["https://example.ac.jp/"]
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
+    assert {candidate.pdf_url for candidate in result.candidates} == {
+        "https://example.ac.jp/docs/r7-kakunin.pdf",
+        "https://example.ac.jp/docs/r8-kakunin.pdf",
+    }
+
+
+def test_discover_pdfs_follows_subpage_revealed_by_rendered_html(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse("<html><main id='app'></main></html>", url="https://example.ac.jp/"),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+    rendered = _RenderedHtmlFetcher(
+        {
+            "https://example.ac.jp/": '<a href="/public/">情報公開</a>',
+            "https://example.ac.jp/public/": """
+                <a href="/docs/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+            """,
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://example.ac.jp/",
+        rendered_html_fetcher=rendered,
+        target_fiscal_year=2026,
+    )
+
+    assert rendered.calls == ["https://example.ac.jp/", "https://example.ac.jp/public/"]
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
+
+
 def test_discover_pdfs_respects_extra_page_budget(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
@@ -530,7 +622,7 @@ def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path:
             score=9.0,
         )
 
-        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
             return DiscoveryResult(school_id=school_id, candidates=[old, new], best=old)
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
@@ -576,7 +668,7 @@ def test_run_pdf_discovery_duplicate_only_is_success_not_failed(monkeypatch, tmp
             score=10.0,
         )
 
-        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
             return DiscoveryResult(school_id=school_id, candidates=[old], best=old)
 
         def fake_download(_client, _candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
@@ -615,7 +707,7 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
 
         stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/kakunin.pdf"
 
-        def fake_discover(_client, school_id: int, url: str) -> DiscoveryResult:
+        def fake_discover(_client, school_id: int, url: str, **_kwargs: object) -> DiscoveryResult:
             candidate = PdfCandidate(
                 pdf_url=stale_pdf_url,
                 page_url=url,
@@ -682,7 +774,7 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
             score=9.0,
         )
 
-        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
             return DiscoveryResult(school_id=school_id, candidates=[non_target, target], best=non_target)
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
@@ -749,7 +841,7 @@ def test_run_pdf_discovery_prefilters_encoded_non_target_query_before_download(
             score=9.0,
         )
 
-        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
             return DiscoveryResult(school_id=school_id, candidates=[non_target, target], best=non_target)
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
@@ -805,7 +897,7 @@ def test_run_pdf_discovery_prefilters_explicit_old_fiscal_year_before_download(
             score=9.0,
         )
 
-        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
             return DiscoveryResult(school_id=school_id, candidates=[stale, target], best=stale)
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
@@ -1131,7 +1223,7 @@ def test_run_pdf_discovery_skips_duplicate_hash_from_other_school(
             score=10.0,
         )
 
-        def fake_discover(_client, school_id: int, _url: str) -> DiscoveryResult:
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
             return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
 
         def fake_download(_client, _candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
