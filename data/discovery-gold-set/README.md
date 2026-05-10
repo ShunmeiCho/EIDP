@@ -29,6 +29,16 @@ discovery run:
 uv run eidp discovery-gold-run-plan --json
 ```
 
+`discover-pdfs` reads candidate sites from the database, so seed the committed
+gold-set school sites before running the bounded PDF discovery pass. The command
+is a dry-run by default:
+
+```bash
+uv run eidp seed-discovery-gold-sites --gold-set-dir data/discovery-gold-set
+uv run eidp seed-discovery-gold-sites --gold-set-dir data/discovery-gold-set --apply
+uv run eidp discover-pdfs --discovery-method discovery_gold_set --evidence-log _temp/discovery-gold-evidence.jsonl
+```
+
 To evaluate crawler or agent output against the gold set, write one JSON object
 per line with `entry_id`, `outcome`, `pdf_url`, `fiscal_year`, and
 `strict_target_year_success`, then run:
@@ -41,6 +51,17 @@ Existing `discover-pdfs` evidence logs can be evaluated directly:
 
 ```bash
 uv run eidp eval-discovery-gold --pdf-evidence path/to/discovery-evidence.jsonl --json
+```
+
+For root-cause analysis outside the gold-set entries, summarize a discovery
+evidence log into school-level buckets:
+
+```bash
+uv run eidp summarize-discovery-evidence \
+  --evidence-log path/to/discovery-evidence.jsonl \
+  --prefecture 埼玉県 \
+  --discovery-method prefecture_aggregator \
+  --json
 ```
 
 Use `--fail-on-regression` in CI or release checks when missing, unexpected, or

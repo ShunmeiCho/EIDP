@@ -17,6 +17,9 @@ class DiscoveryGoldEntry:
 
     entry_id: str
     school_id: int
+    school_name: str
+    prefecture: str
+    corporation_name: str
     target_fiscal_year: int
     outcome: str
     school_url: str
@@ -126,6 +129,9 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
             DiscoveryGoldEntry(
                 entry_id=str(payload["entry_id"]),
                 school_id=int(payload["school"]["school_id"]),
+                school_name=str(payload["school"]["school_name"]),
+                prefecture=str(payload["school"]["prefecture"]),
+                corporation_name=str(payload["school"].get("corporation_name") or ""),
                 target_fiscal_year=int(payload["target_fiscal_year"]),
                 outcome=str(payload["outcome"]),
                 school_url=str(expected_result.get("school_url") or ""),
@@ -137,6 +143,54 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
             )
         )
     return entries
+
+
+def seed_discovery_gold_sites(session: Any, entries: list[DiscoveryGoldEntry], *, apply: bool) -> dict[str, int | bool]:
+    """Seed gold-set schools and disclosure sites into a DB session."""
+
+    from eidp.db.models import School, SchoolSite
+
+    stats: dict[str, int | bool] = {
+        "applied": apply,
+        "schools_to_create": 0,
+        "sites_to_add": 0,
+        "sites_existing": 0,
+    }
+    for entry in entries:
+        school = session.get(School, entry.school_id)
+        if school is None:
+            stats["schools_to_create"] = int(stats["schools_to_create"]) + 1
+            if apply:
+                session.add(
+                    School(
+                        id=entry.school_id,
+                        prefecture=entry.prefecture,
+                        corporation_name=entry.corporation_name,
+                        school_name=entry.school_name,
+                        school_type="専門学校",
+                        status="active",
+                    )
+                )
+
+        site_url = normalize_candidate_url(entry.disclosure_url or entry.school_url)
+        if _school_site_exists(session, school_id=entry.school_id, url=site_url):
+            stats["sites_existing"] = int(stats["sites_existing"]) + 1
+            continue
+
+        stats["sites_to_add"] = int(stats["sites_to_add"]) + 1
+        if apply:
+            session.add(
+                SchoolSite(
+                    school_id=entry.school_id,
+                    url=site_url,
+                    url_type="disclosure",
+                    discovery_method="discovery_gold_set",
+                    confidence=0.99,
+                    verified=True,
+                    http_status=200,
+                )
+            )
+    return stats
 
 
 def build_discovery_gold_run_plan(entries: list[DiscoveryGoldEntry]) -> list[DiscoveryGoldRunPlanItem]:
@@ -357,3 +411,10 @@ def _int_or_none(value: object) -> int | None:
         return int(str(value))
     except ValueError:
         return None
+
+
+def _school_site_exists(session: Any, *, school_id: int, url: str) -> bool:
+    from eidp.db.models import SchoolSite
+
+    rows = session.query(SchoolSite).filter(SchoolSite.school_id == school_id).all()
+    return any(normalize_candidate_url(str(row.url)) == url for row in rows)

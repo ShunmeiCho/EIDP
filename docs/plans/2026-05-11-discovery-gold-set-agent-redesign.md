@@ -92,6 +92,12 @@ Phase 4 should evaluate discovery against the gold set before Windows release.
 The bounded run inputs are emitted by `uv run eidp discovery-gold-run-plan
 --json`; this keeps the next test run scoped to the committed demonstrations
 instead of ad hoc broad crawling.
+Because `discover-pdfs` reads `SchoolSite` rows from the database, the bridge
+command is `uv run eidp seed-discovery-gold-sites --gold-set-dir
+data/discovery-gold-set --apply`. It writes `discovery_method=
+"discovery_gold_set"` sites from the committed demonstrations, after which the
+bounded pass can run with `uv run eidp discover-pdfs --discovery-method
+discovery_gold_set --evidence-log _temp/discovery-gold-evidence.jsonl`.
 The local comparison surface is `uv run eidp eval-discovery-gold --predictions
 path/to/predictions.jsonl --json`; crawler or agent output must match gold-set
 entry IDs, outcomes, PDF URLs, fiscal years, and strict target-year decisions
@@ -102,6 +108,30 @@ evidence JSONL can also be evaluated with `--pdf-evidence`, which maps
 prediction buckets. CI or release checks should add `--fail-on-regression` so
 missing, unexpected, or mismatched predictions return a non-zero exit code
 instead of only printing a report.
+
+The Saitama root-cause check should use the evidence summary command before
+changing crawler heuristics:
+
+```bash
+uv run eidp summarize-discovery-evidence \
+  --evidence-log _temp/saitama-rca-current/logs/prefecture_pdf_evidence.jsonl \
+  --prefecture 埼玉県 \
+  --discovery-method prefecture_aggregator \
+  --json
+```
+
+The 2026-05-11 current-code replay against a copied v92 Saitama DB crawled all
+51 `prefecture_aggregator` school sites and produced 423 evidence rows:
+
+- 40 schools: `publication_lag_or_old_target_pdf`
+- 5 schools: `site_fetch_error_only`
+- 3 schools: `non_target_candidates_only`
+- 2 schools: `target_form_without_year_evidence`
+- 1 school: `no_pdf_candidates`
+
+This means the immediate Saitama bottleneck is not official-index URL ingress.
+The dominant bucket is latest-public or old-year target PDFs, while strict
+FY2026 correctly downloads 0.
 
 Phase 5 should run the bounded Windows yield gate again and compare:
 

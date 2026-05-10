@@ -905,6 +905,35 @@ def discovery_gold_run_plan(
         typer.echo(f"  {item.entry_id}: school_id={item.school_id} site_url={item.site_url}")
 
 
+@app.command("seed-discovery-gold-sites")
+def seed_discovery_gold_sites(
+    gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
+    apply: bool = typer.Option(False, "--apply", help="Write missing schools and SchoolSite rows to the DB"),
+) -> None:
+    """Seed discovery gold-set disclosure sites into the configured DB."""
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.discovery_gold_set import (
+        load_discovery_gold_entries,
+    )
+    from eidp.scraper.discovery_gold_set import (
+        seed_discovery_gold_sites as seed_sites,
+    )
+
+    session = SessionLocal()
+    try:
+        stats = seed_sites(session, load_discovery_gold_entries(gold_set_dir), apply=apply)
+        if apply:
+            session.commit()
+        else:
+            session.rollback()
+        typer.echo(json.dumps(stats, ensure_ascii=False, indent=2, sort_keys=True))
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 @app.command("eval-discovery-gold")
 def eval_discovery_gold(
     predictions: Path | None = typer.Option(None, help="JSONL predictions to compare against the discovery gold set"),
@@ -964,6 +993,50 @@ def _discovery_gold_gate_failed(report: object) -> bool:
         or int(getattr(report, "missing_entries", 0)) > 0
         or int(getattr(report, "unexpected_predictions", 0)) > 0
     )
+
+
+@app.command("summarize-discovery-evidence")
+def summarize_discovery_evidence(
+    evidence_log: Path = typer.Option(..., help="discover-pdfs evidence JSONL to summarize"),
+    prefecture: str = typer.Option("", help="Optional DB scope: school.prefecture"),
+    discovery_method: str = typer.Option("", help="Optional DB scope: school_site.discovery_method"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
+) -> None:
+    """Summarize PDF discovery evidence into school-level RCA buckets."""
+    from eidp.scraper.discovery_evidence_summary import (
+        load_pdf_discovery_evidence,
+        load_pdf_discovery_site_scope,
+        render_pdf_discovery_evidence_summary,
+        summarize_pdf_discovery_evidence,
+    )
+
+    rows = load_pdf_discovery_evidence(evidence_log)
+    site_scope = None
+    if prefecture or discovery_method:
+        from eidp.db.session import SessionLocal
+
+        session = SessionLocal()
+        try:
+            site_scope = load_pdf_discovery_site_scope(
+                session,
+                prefecture=prefecture,
+                discovery_method=discovery_method,
+            )
+        finally:
+            session.close()
+
+    summary = summarize_pdf_discovery_evidence(rows, site_scope=site_scope)
+    if output_json:
+        typer.echo(render_pdf_discovery_evidence_summary(summary))
+        return
+
+    typer.echo("Discovery evidence summary:")
+    typer.echo(f"  evidence rows:         {summary.evidence_rows}")
+    typer.echo(f"  schools with evidence: {summary.schools_with_evidence}")
+    typer.echo(f"  site scope schools:    {summary.site_scope_schools}")
+    typer.echo("  school buckets:")
+    for bucket, count in summary.school_bucket_counts.items():
+        typer.echo(f"    {bucket}: {count}")
 
 
 @report_app.command("coverage")
