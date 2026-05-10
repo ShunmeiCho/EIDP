@@ -204,6 +204,44 @@ def test_negative_tld_subtracts_one():
     assert s.breakdown.get("domain_tld") == pytest.approx(-1.0)
 
 
+def test_news_path_with_disclosure_signal_requires_review():
+    s = _score(
+        "https://www.siw.ac.jp/archives/news/2657",
+        school="さいたまIT・WEB専門学校",
+        pref="埼玉県",
+        title="さいたまIT・WEB専門学校 高等教育修学支援新制度のお知らせ",
+        excerpt="本校の情報公開と修学支援制度に関する公式のお知らせです。",
+    )
+    assert s.score >= 4.0
+    assert s.decision == "review"
+    assert s.breakdown.get("low_value_path") < 0
+
+
+def test_admission_download_path_with_strong_school_signal_requires_review():
+    s = _score(
+        "https://www.omiya-kaikeihoritsu.ac.jp/admission_information/form_download/",
+        school="東京IT会計公務員専門学校大宮校",
+        pref="埼玉県",
+        title="東京IT会計公務員専門学校大宮校 公式サイト",
+        excerpt="公式サイトの情報公開、修学支援、入学願書ダウンロードはこちら。",
+    )
+    assert s.score >= 4.0
+    assert s.decision == "review"
+    assert s.breakdown.get("low_value_path") < 0
+
+
+def test_disclosure_path_keeps_auto_when_school_identity_is_strong():
+    s = _score(
+        "https://www.sanko.ac.jp/disclosure/omiya-sweets/",
+        school="大宮スイーツ＆カフェ専門学校",
+        pref="埼玉県",
+        title="大宮スイーツ＆カフェ専門学校 情報公開",
+        excerpt="高等教育修学支援新制度の機関要件確認申請書を公表しています。",
+    )
+    assert s.decision == "auto"
+    assert "low_value_path" not in s.breakdown
+
+
 def test_url_score_is_frozen_dataclass():
     s = _score("https://example.ac.jp/")
     with pytest.raises((AttributeError, Exception)):

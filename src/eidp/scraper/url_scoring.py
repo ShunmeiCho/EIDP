@@ -98,6 +98,17 @@ _DISCLOSURE_KEYWORDS: Final = (
 
 _OFFICIAL_WORDS: Final = ("公式", "official", "公式サイト", "公式ホームページ")
 
+_LOW_VALUE_PATH_PENALTIES: Final = (
+    ("form_download", -3.0),
+    ("admission", -3.0),
+    ("/admis", -3.0),
+    ("application", -3.0),
+    ("/archives/news", -2.0),
+    ("/news", -2.0),
+    ("/event", -2.0),
+    ("opencampus", -2.0),
+)
+
 _DEFAULT_AUTO_THRESHOLD: Final = 6.0
 _DEFAULT_REVIEW_THRESHOLD: Final = 4.0
 
@@ -399,6 +410,17 @@ def score_school_url_candidate(
     # "公式" word.
     if excerpt and any(w.lower() in excerpt.lower() for w in _OFFICIAL_WORDS):
         breakdown["official_word"] = 0.5
+
+    # News, event, and admissions/download pages are often official but are
+    # poor stable SchoolSite anchors for target-year PDF discovery. Keep them
+    # reviewable when other signals are strong; do not auto-register them.
+    path_penalty = 0.0
+    for marker, penalty in _LOW_VALUE_PATH_PENALTIES:
+        if marker in path:
+            path_penalty = min(path_penalty, penalty)
+    if path_penalty:
+        breakdown["low_value_path"] = path_penalty
+        notes.append("low_value_path")
 
     score = sum(breakdown.values())
 
