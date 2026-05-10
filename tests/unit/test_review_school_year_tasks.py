@@ -25,6 +25,7 @@ from eidp.review._pages.school_year_tasks import (
     discovery_evidence_stale_target_notice,
     discovery_evidence_table_rows,
     discovery_rejection_reason_summary,
+    filter_rows_by_discovery_evidence_bucket,
     initial_bootstrap_warning_text,
     is_pdf_site_url,
     latest_bootstrap_log,
@@ -44,6 +45,7 @@ from eidp.review._pages.school_year_tasks import (
     school_type_from_filter_label,
     school_year_discovery_evidence_bucket_by_school,
     school_year_discovery_evidence_bucket_label,
+    school_year_discovery_evidence_bucket_options,
     school_year_discovery_evidence_summary,
     school_year_discovery_evidence_summary_notice,
     select_task_document,
@@ -306,6 +308,63 @@ def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candida
         assert school_year_discovery_evidence_bucket_label("publication_lag_or_old_target_pdf") == (
             "旧年度候補あり"
         )
+        assert school_year_discovery_evidence_bucket_options(summary) == [
+            "non_target_candidates_only",
+            "publication_lag_or_old_target_pdf",
+        ]
+
+        rows = [
+            school_year_tasks.SchoolTaskRow(
+                school_id=1,
+                prefecture="埼玉県",
+                school_name="学校1",
+                fiscal_year=2026,
+                url_status="pref_url",
+                pdf_status="none",
+                extract_status="none",
+                yoy_diff_status="unchecked",
+                evidence_level="none",
+                excel_ready=False,
+                blocking_reason="no_target_pdf",
+                next_action="PDF探索",
+                action_hint="",
+                latest_document_id=None,
+                latest_document_fiscal_year=None,
+                latest_document_status=None,
+                latest_document_url=None,
+                latest_site_url="https://a/",
+                latest_site_url_type="disclosure",
+                latest_site_discovery_method="prefecture_aggregator",
+            ),
+            school_year_tasks.SchoolTaskRow(
+                school_id=2,
+                prefecture="埼玉県",
+                school_name="学校2",
+                fiscal_year=2026,
+                url_status="pref_url",
+                pdf_status="none",
+                extract_status="none",
+                yoy_diff_status="unchecked",
+                evidence_level="none",
+                excel_ready=False,
+                blocking_reason="no_target_pdf",
+                next_action="PDF探索",
+                action_hint="",
+                latest_document_id=None,
+                latest_document_fiscal_year=None,
+                latest_document_status=None,
+                latest_document_url=None,
+                latest_site_url="https://b/",
+                latest_site_url_type="disclosure",
+                latest_site_discovery_method="prefecture_aggregator",
+            ),
+        ]
+        filtered = filter_rows_by_discovery_evidence_bucket(
+            rows,
+            school_year_discovery_evidence_bucket_by_school(summary),
+            "publication_lag_or_old_target_pdf",
+        )
+        assert [row.school_id for row in filtered] == [1]
     finally:
         session.close()
 
@@ -447,6 +506,7 @@ def test_task_lane_prefill_sets_filter_or_page_state() -> None:
         school_year_tasks.TASK_SCOPE_STATE_KEY: "要対応",
         school_year_tasks.TASK_REASON_STATE_KEY: "stale_pdf_only",
         school_year_tasks.TASK_PREFECTURE_STATE_KEY: "すべて",
+        school_year_tasks.TASK_DISCOVERY_EVIDENCE_STATE_KEY: "",
         school_year_tasks.TASK_SEARCH_STATE_KEY: "",
     }
     assert task_lane_prefill(excel_lane) == {"selected_page": school_year_tasks.EXCEL_PREVIEW_PAGE_ID}

@@ -128,9 +128,11 @@ TASK_SCOPE_STATE_KEY = "school_task_scope_filter"
 TASK_REASON_STATE_KEY = "school_task_reason_filter"
 TASK_PREFECTURE_STATE_KEY = "school_task_prefecture_filter"
 TASK_SEARCH_STATE_KEY = "school_task_search_filter"
+TASK_DISCOVERY_EVIDENCE_STATE_KEY = "school_task_discovery_evidence_filter"
 TASK_SCOPE_LABELS = ("要対応", "Excel出力可", "全校")
 TASK_REASON_ALL_LABEL = "すべて"
 TASK_PREFECTURE_ALL_LABEL = "すべて"
+TASK_DISCOVERY_EVIDENCE_ALL_LABEL = "すべて"
 TASK_SCOPE_TO_CODE = {"要対応": "needs_action", "Excel出力可": "excel_ready", "全校": "all"}
 TASK_CODE_TO_SCOPE_LABEL = {value: key for key, value in TASK_SCOPE_TO_CODE.items()}
 
@@ -492,6 +494,7 @@ def task_lane_prefill(lane: TaskLane) -> dict[str, object]:
     payload[TASK_SCOPE_STATE_KEY] = TASK_CODE_TO_SCOPE_LABEL.get(lane.scope, "要対応")
     payload[TASK_REASON_STATE_KEY] = lane.blocking_reason or TASK_REASON_ALL_LABEL
     payload[TASK_PREFECTURE_STATE_KEY] = TASK_PREFECTURE_ALL_LABEL
+    payload[TASK_DISCOVERY_EVIDENCE_STATE_KEY] = ""
     payload[TASK_SEARCH_STATE_KEY] = ""
     return payload
 
@@ -682,6 +685,30 @@ def school_year_discovery_evidence_bucket_label(bucket: str | None) -> str:
         "non_target_candidates_only": "対象外候補のみ",
     }
     return labels.get(bucket or "", "")
+
+
+def school_year_discovery_evidence_bucket_options(
+    summary: PdfDiscoveryEvidenceSummary | None,
+) -> list[str]:
+    """Return bucket codes available in the current discovery evidence summary."""
+    if summary is None:
+        return []
+    return sorted(
+        bucket
+        for bucket in summary.school_bucket_counts
+        if bucket != "no_evidence" and school_year_discovery_evidence_bucket_label(bucket)
+    )
+
+
+def filter_rows_by_discovery_evidence_bucket(
+    rows: list[SchoolTaskRow],
+    bucket_by_school: dict[int, str],
+    selected_bucket: str,
+) -> list[SchoolTaskRow]:
+    """Filter task rows by recent PDF discovery evidence bucket."""
+    if not selected_bucket:
+        return rows
+    return [row for row in rows if bucket_by_school.get(row.school_id) == selected_bucket]
 
 
 def needs_initial_url_bootstrap(summary: SchoolTaskSummary) -> bool:
@@ -1719,7 +1746,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     _render_task_lanes(summary)
 
     st.divider()
-    c1, c2, c3, c4 = st.columns([1.2, 1.4, 1.4, 2])
+    c1, c2, c3, c4, c5 = st.columns([1.1, 1.25, 1.25, 1.45, 2])
     if st.session_state.get(TASK_SCOPE_STATE_KEY) not in TASK_SCOPE_LABELS:
         st.session_state[TASK_SCOPE_STATE_KEY] = "要対応"
     scope_label = c1.radio(
@@ -1755,7 +1782,22 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     pref_label = c3.selectbox("都道府県", prefectures, key=TASK_PREFECTURE_STATE_KEY)
     prefecture = None if pref_label == TASK_PREFECTURE_ALL_LABEL else pref_label
 
-    search = c4.text_input("学校名検索", "", key=TASK_SEARCH_STATE_KEY)
+    evidence_bucket_options = [
+        "",
+        *school_year_discovery_evidence_bucket_options(evidence_summary),
+    ]
+    if st.session_state.get(TASK_DISCOVERY_EVIDENCE_STATE_KEY) not in evidence_bucket_options:
+        st.session_state[TASK_DISCOVERY_EVIDENCE_STATE_KEY] = ""
+    selected_evidence_bucket = c4.selectbox(
+        "PDF探索ログ",
+        evidence_bucket_options,
+        format_func=lambda bucket: TASK_DISCOVERY_EVIDENCE_ALL_LABEL
+        if not bucket
+        else school_year_discovery_evidence_bucket_label(str(bucket)),
+        key=TASK_DISCOVERY_EVIDENCE_STATE_KEY,
+    )
+
+    search = c5.text_input("学校名検索", "", key=TASK_SEARCH_STATE_KEY)
 
     rows = list_school_year_tasks(
         session,
@@ -1765,6 +1807,11 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         blocking_reason=blocking_reason,
         prefecture=prefecture,
         search=search,
+    )
+    rows = filter_rows_by_discovery_evidence_bucket(
+        rows,
+        evidence_bucket_by_school,
+        str(selected_evidence_bucket),
     )
     st.caption(f"表示 {len(rows)} 件")
     if not rows:
