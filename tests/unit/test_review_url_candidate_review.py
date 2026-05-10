@@ -153,6 +153,18 @@ def test_approve_url_candidate_creates_school_site_and_audit(session: Session) -
     assert audit.target_id == site.id
 
 
+def test_approve_url_candidate_can_store_disclosure_url_type(session: Session) -> None:
+    _seed_url_candidate(session)
+
+    approve_url_candidate(session, item_id=10, url_type="disclosure", actor="operator")
+
+    site = session.query(SchoolSite).one()
+    audit = session.query(ManualActionLog).one()
+
+    assert site.url_type == "disclosure"
+    assert json.loads(audit.new_value)["url_type"] == "disclosure"
+
+
 def test_approve_manual_required_candidate_requires_operator_url(session: Session) -> None:
     _seed_manual_required_url_candidate(session)
 

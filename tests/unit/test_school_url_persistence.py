@@ -191,6 +191,26 @@ def test_auto_normalizes_url_before_idempotency_check(session: Session):
     assert outcome.school_site_id == existing.id
 
 
+def test_auto_normalizes_duplicate_path_slashes_before_idempotency_check(session: Session):
+    _seed_school(session)
+    existing = SchoolSite(
+        school_id=1,
+        url="https://www.test.ac.jp/foo/bar",
+        discovery_method="operator_manual",
+    )
+    session.add(existing)
+    session.flush()
+
+    discovery = _make_discovery(decision="auto", best_url="https://www.test.ac.jp/foo//bar/#top")
+    outcome = persist_discovery(session, discovery)
+    session.commit()
+
+    sites = session.query(SchoolSite).filter(SchoolSite.school_id == 1).all()
+    assert len(sites) == 1
+    assert outcome.skipped_reason == "school_site_already_exists"
+    assert outcome.school_site_id == existing.id
+
+
 def test_review_inserts_review_item_with_proposal_payload(session: Session):
     _seed_school(session)
     discovery = _make_discovery(

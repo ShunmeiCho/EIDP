@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 
@@ -24,7 +25,7 @@ def normalize_candidate_url(url: str) -> str:
     elif scheme == "http" and netloc.endswith(":80"):
         netloc = netloc[:-3]
 
-    path = parsed.path or ""
+    path = re.sub(r"/+", "/", parsed.path or "")
     if path == "/":
         path = ""
     elif path.endswith("/"):

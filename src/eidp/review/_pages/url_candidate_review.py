@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import streamlit as st
 from sqlalchemy.orm import Session
@@ -16,6 +16,13 @@ from eidp.db.audit import log_manual_action
 from eidp.db.models import ReviewItem, School, SchoolSite
 from eidp.scraper.school_url_persistence import REVIEW_ITEM_TYPE, REVIEW_PROPOSAL_SOURCE
 from eidp.scraper.url_normalization import normalize_candidate_url
+
+URL_TYPE_CHOICES: Final = ("school", "disclosure", "corporation")
+URL_TYPE_LABELS: Final = {
+    "school": "学校トップ",
+    "disclosure": "情報公開ページ",
+    "corporation": "法人ページ",
+}
 
 
 @dataclass(frozen=True)
@@ -151,6 +158,7 @@ def approve_url_candidate(
     *,
     item_id: int,
     url_override: str | None = None,
+    url_type: str = "school",
     actor: str = "operator",
 ) -> UrlCandidateActionOutcome:
     item = _pending_url_candidate(session, item_id)
@@ -162,19 +170,25 @@ def approve_url_candidate(
     if not isinstance(raw_url, str) or not raw_url.strip():
         return UrlCandidateActionOutcome(item_id=item_id, decision="missing", skipped_reason="missing_url")
     url = normalize_candidate_url(raw_url)
+    if url_type not in URL_TYPE_CHOICES:
+        return UrlCandidateActionOutcome(item_id=item_id, decision="missing", skipped_reason="invalid_url_type")
 
     site = _existing_site(session, int(item.reference_id), url)
+    old_value: dict[str, object] | None = None
     if site is None:
         site = SchoolSite(
             school_id=int(item.reference_id),
             url=url,
-            url_type="school",
+            url_type=url_type,
             discovery_method=REVIEW_PROPOSAL_SOURCE,
             confidence=item.confidence,
             verified=False,
         )
         session.add(site)
         session.flush()
+    elif site.url_type != url_type:
+        old_value = {"school_id": item.reference_id, "url": url, "url_type": site.url_type}
+        site.url_type = url_type
 
     now = datetime.now(UTC)
     item.status = "resolved"
@@ -187,8 +201,13 @@ def approve_url_candidate(
         action_type="url_candidate_approved",
         target_table="school_site",
         target_id=site.id,
-        old_value=None,
-        new_value={"school_id": item.reference_id, "url": url, "review_item_id": item.id},
+        old_value=old_value,
+        new_value={
+            "school_id": item.reference_id,
+            "url": url,
+            "url_type": url_type,
+            "review_item_id": item.id,
+        },
         reason="Operator approved Scrapling URL candidate",
         actor=actor,
     )
@@ -274,9 +293,21 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
                 value=row.url,
                 key=f"url_candidate_edit_{row.item_id}",
             )
+            selected_url_type = st.radio(
+                "URL種別",
+                options=URL_TYPE_CHOICES,
+                format_func=lambda key: URL_TYPE_LABELS.get(key, key),
+                horizontal=True,
+                key=f"url_candidate_type_{row.item_id}",
+            )
             action_cols = st.columns(2)
             if action_cols[0].button("承認", key=f"url_candidate_approve_{row.item_id}"):
-                approve_url_candidate(session, item_id=row.item_id, url_override=edited_url)
+                approve_url_candidate(
+                    session,
+                    item_id=row.item_id,
+                    url_override=edited_url,
+                    url_type=selected_url_type,
+                )
                 session.commit()
                 st.rerun()
             reject_notes = st.text_input(
