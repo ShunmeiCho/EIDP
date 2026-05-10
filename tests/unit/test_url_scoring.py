@@ -230,6 +230,19 @@ def test_admission_download_path_with_strong_school_signal_requires_review():
     assert s.breakdown.get("low_value_path") < 0
 
 
+def test_enter_path_with_strong_school_signal_requires_review():
+    s = _score(
+        "https://www.siw.ac.jp/enter",
+        school="さいたまIT・WEB専門学校",
+        pref="埼玉県",
+        title="さいたまIT・WEB専門学校 入学案内",
+        excerpt="公式サイトの情報公開、修学支援、入学案内はこちら。",
+    )
+    assert s.score >= 4.0
+    assert s.decision == "review"
+    assert s.breakdown.get("low_value_path") < 0
+
+
 def test_disclosure_path_keeps_auto_when_school_identity_is_strong():
     s = _score(
         "https://www.sanko.ac.jp/disclosure/omiya-sweets/",

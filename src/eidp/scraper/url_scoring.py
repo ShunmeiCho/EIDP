@@ -102,6 +102,7 @@ _LOW_VALUE_PATH_PENALTIES: Final = (
     ("form_download", -3.0),
     ("admission", -3.0),
     ("/admis", -3.0),
+    ("/enter", -2.0),
     ("application", -3.0),
     ("/archives/news", -2.0),
     ("/news", -2.0),
