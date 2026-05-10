@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.models import CrawlJob, Document, SchoolSite
-from eidp.fiscal_year import fiscal_year_from_japanese_era_text, fiscal_year_search_tokens
+from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text, fiscal_year_search_tokens
 from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 from eidp.scraper.url_discovery import _is_safe_url
 from eidp.scraper.url_normalization import normalize_candidate_url
@@ -1459,6 +1459,16 @@ def run_pdf_discovery(
                             file_path=file_path,
                             file_hash=file_hash,
                             file_size=file_size,
+                            fiscal_year=target_year if strict_target_fiscal_year else candidate.detected_fiscal_year,
+                            is_current_year=(
+                                target_year >= current_fiscal_year()
+                                if strict_target_fiscal_year
+                                else (
+                                    candidate.detected_fiscal_year >= current_fiscal_year()
+                                    if candidate.detected_fiscal_year is not None
+                                    else None
+                                )
+                            ),
                             content_type=content_type,
                             pdf_type=pdf_type,
                             confidence=min(candidate.score / 10.0, 0.99),

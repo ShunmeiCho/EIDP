@@ -248,17 +248,26 @@ def ingest_document(
                 return stats
 
     # Determine fiscal year early — needed for both dept and support_recipient paths
-    fiscal_year = _parse_fiscal_year_from_annotation(
+    parsed_fiscal_year = _parse_fiscal_year_from_annotation(
         annotation.fiscal_year,
         source_url=doc.source_url,
     )
+    fiscal_year = doc.fiscal_year or parsed_fiscal_year
+    if doc.fiscal_year is not None and parsed_fiscal_year is not None and doc.fiscal_year != parsed_fiscal_year:
+        log.info(
+            "prevalidated_fiscal_year_preserved",
+            doc_id=doc.id,
+            document_fiscal_year=doc.fiscal_year,
+            parsed_fiscal_year=parsed_fiscal_year,
+            source_url=doc.source_url,
+        )
 
     # Do not infer fiscal year from download time. Download timestamps prove
     # when the file was fetched, not which fiscal-year form the school
     # published. Missing fiscal-year evidence must remain operator-visible
     # instead of silently writing data to a guessed year.
     if (
-        fiscal_year is None
+        parsed_fiscal_year is None
         and annotation.fiscal_year
         and _has_fiscal_year_candidate(annotation.fiscal_year)
     ):

@@ -148,6 +148,41 @@ def test_missing_fiscal_year_does_not_fallback_to_download_time(engine, tmp_path
         assert session.query(DepartmentYearly).count() == 0
 
 
+def test_ingest_preserves_prevalidated_document_fiscal_year(engine, tmp_path):
+    """Strict discovery year evidence must beat stale dates inside the PDF body."""
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/target-2025.pdf",
+            tmp_path=tmp_path,
+            file_hash="z" * 64,
+        )
+        doc.fiscal_year = 2025
+        ann = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="令和3年度",
+            source_pdf="test.pdf",
+            departments=[
+                DepartmentRecord(name="A学科", capacity=40, enrollment=35, graduates=30),
+            ],
+            support_recipient=None,
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            stats = ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        assert stats["yearly_upserted"] == 1
+        assert doc.fiscal_year == 2025
+        yearly = session.query(DepartmentYearly).one()
+        assert yearly.fiscal_year == 2025
+
+
 # ---------------------------------------------------------------------------
 # DepartmentYearly — low-confidence path
 # ---------------------------------------------------------------------------

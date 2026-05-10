@@ -813,6 +813,57 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
         session.close()
 
 
+def test_run_pdf_discovery_sets_target_year_on_strict_downloaded_document(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Strict discovery has already proven the target year; persist it immediately."""
+
+    session = _session()
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/r8-kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 確認申請書",
+            score=9.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[target], best=target)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            candidate.detected_fiscal_year = None
+            candidate.year_evidence = "url_hint"
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        assert stats["downloaded"] == 1
+        doc = session.query(Document).one()
+        assert doc.fiscal_year == 2026
+        assert doc.is_current_year is True
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_prefilters_encoded_non_target_query_before_download(
     monkeypatch, tmp_path: Path
 ) -> None:
