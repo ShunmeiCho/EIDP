@@ -352,6 +352,9 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
 def _stale_fiscal_year_from_candidate_hint(candidate: PdfCandidate, *, target_year: int) -> int | None:
     """Return a past year from URL/anchor hints for rejection diagnostics only."""
 
+    if _has_target_year_hint(candidate, target_year=target_year):
+        return None
+
     text = _candidate_hint_text(candidate)
     for match in re.finditer(r"(?<!\d)(20\d{2})(?!\d)", text):
         year = int(match.group(1))
@@ -385,7 +388,10 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
     text = _candidate_hint_text(candidate).lower()
     system_hint = any(token in text for token in ("修学支援", "高等教育", "無償化"))
     form_hint = any(token in text for token in ("確認申請", "申請書", "様式第2号", "様式第２号", "様式2号", "機関要件"))
-    return system_hint and form_hint
+    strong_form_hint = "機関要件" in text and any(
+        token in text for token in ("確認申請", "様式第2号", "様式第２号", "様式2号")
+    )
+    return (system_hint and form_hint) or strong_form_hint
 
 
 def _has_target_year_hint(candidate: PdfCandidate, *, target_year: int) -> bool:

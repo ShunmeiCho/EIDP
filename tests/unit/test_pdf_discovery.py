@@ -230,6 +230,41 @@ def test_download_pdf_keeps_image_target_hint_for_ocr_queue(monkeypatch, tmp_pat
     assert reason is None
 
 
+def test_download_pdf_keeps_image_with_strong_form_year_anchor(monkeypatch, tmp_path: Path) -> None:
+    """Opaque WordPress PDFs may carry the target-year evidence only in anchor text."""
+
+    url = "https://example.ac.jp/wp-content/uploads/2025/07/b1b74768f7ce7b4c01670b76f27bb275.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://example.ac.jp/2025/07/18/information/",
+        anchor_text="令和８年度機関要件確認申請書20250718（様式第２号）",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", lambda _content: "")
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        123,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size == 2005
+    assert pdf_type == "image_only"
+    assert reason is None
+    assert candidate.year_evidence == "url_hint"
+
+
 def test_download_pdf_rejects_image_without_target_hint_in_strict_mode(monkeypatch, tmp_path: Path) -> None:
     """Generic image PDFs still need target-form evidence before retention."""
 
