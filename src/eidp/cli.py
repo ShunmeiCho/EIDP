@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import typer
 
@@ -224,6 +224,56 @@ def discover_urls(
         typer.echo("\nURL Discovery Stats:")
         for k, v in stats.items():
             typer.echo(f"  {k}: {v}")
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command()
+def crawl_school_urls(
+    limit: int = typer.Option(25, "--limit", min=1, help="Maximum URL-missing schools to process."),
+    school_id: int | None = typer.Option(None, "--school-id", help="Restrict to one school id."),
+    prefecture: str | None = typer.Option(None, "--prefecture", help="Restrict to one prefecture name."),
+    fetch_mode: str = typer.Option(
+        "static",
+        "--fetch-mode",
+        help="Scrapling fetch mode: static, dynamic, or stealthy.",
+    ),
+    evidence_log: Path = typer.Option(
+        Path("output/school_url_crawl_evidence.jsonl"),
+        "--evidence-log",
+        help="Append-only JSONL evidence output.",
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Run discovery without writing DB rows."),
+) -> None:
+    """Find school website URLs for schools still missing SchoolSite rows (v104)."""
+    if fetch_mode not in {"static", "dynamic", "stealthy"}:
+        typer.echo("ERROR: --fetch-mode must be one of: static, dynamic, stealthy")
+        raise typer.Exit(1)
+
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.school_url_pipeline import run_school_url_auto_crawl
+    from eidp.scraper.scrapling_fetcher import ScraplingFetchMode
+
+    session = SessionLocal()
+    try:
+        fetch_mode_value = cast(ScraplingFetchMode, fetch_mode)
+        stats = run_school_url_auto_crawl(
+            session,
+            batch_size=limit,
+            school_id=school_id,
+            prefecture=prefecture,
+            dry_run=dry_run,
+            evidence_path=evidence_log,
+            fetch_mode=fetch_mode_value,
+        )
+        if dry_run:
+            session.rollback()
+        else:
+            session.commit()
+        typer.echo(json.dumps(stats, ensure_ascii=False, indent=2, sort_keys=True))
     except Exception:
         session.rollback()
         raise

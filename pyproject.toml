@@ -35,6 +35,12 @@ scraper-playwright = [
     "scrapy>=2.14,<3.0",
     "playwright>=1.58",
 ]
+# Scrapling fetchers — optional add-on used by the v104 school URL
+# auto-crawl fallback. Kept outside the Windows core ZIP so operators can
+# still run the official-index path without Chromium/browser dependencies.
+scraper-scrapling = [
+    "scrapling[fetchers]>=0.4.7,<1.0",
+]
 # Combined scraper kept as compatibility alias for existing callers
 # still installing ``eidp[scraper]``.
 scraper = [

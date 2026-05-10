@@ -1,0 +1,235 @@
+"""Run school website URL auto-discovery and persist outcomes.
+
+The pipeline is the packaged entrypoint used by both the CLI and the Windows
+bootstrap script. It deliberately keeps the batch bounded and uses optional
+Scrapling adapters so a core install can skip cleanly when the add-on is not
+present.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Callable
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+import structlog
+from sqlalchemy.orm import Session
+
+from eidp.config import settings
+from eidp.db.models import School, SchoolSite
+from eidp.scraper.anti_detection import CrawlThrottle
+from eidp.scraper.school_url_persistence import PersistenceOutcome, persist_discovery
+from eidp.scraper.school_website_crawl import PageFetcher, SchoolUrlCrawler, SerpFetcher
+from eidp.scraper.scrapling_fetcher import (
+    ScraplingFetchMode,
+    ScraplingPageFetcher,
+    ScraplingUnavailableError,
+    SearchProviderSerpFetcher,
+    scrapling_available,
+)
+from eidp.scraper.search_provider import create_provider
+from eidp.scraper.url_discovery import search_queries_for_school
+
+log = structlog.get_logger()
+
+
+@dataclass(frozen=True)
+class SchoolUrlCrawlEvidence:
+    school_id: int
+    school_name: str
+    prefecture: str
+    decision: str
+    candidate_url: str
+    score: float
+    outcome: str
+    skipped_reason: str
+    notes: list[str]
+
+
+SchoolUrlProgressCallback = Callable[[dict[str, int], int], None]
+
+
+def run_school_url_auto_crawl(
+    session: Session,
+    *,
+    batch_size: int = 25,
+    school_id: int | None = None,
+    prefecture: str | None = None,
+    dry_run: bool = False,
+    evidence_path: Path | None = None,
+    progress_callback: SchoolUrlProgressCallback | None = None,
+    serp_fetcher: SerpFetcher | None = None,
+    page_fetcher: PageFetcher | None = None,
+    fetch_mode: ScraplingFetchMode = "static",
+) -> dict[str, int]:
+    """Discover official school URLs for active schools still missing SchoolSite rows."""
+
+    stats = {
+        "attempted": 0,
+        "auto_registered": 0,
+        "auto_existing": 0,
+        "review_enqueued": 0,
+        "review_existing": 0,
+        "dry_run_auto": 0,
+        "dry_run_review": 0,
+        "rejected": 0,
+        "no_candidates": 0,
+        "circuit_open": 0,
+        "errors": 0,
+        "unavailable": 0,
+    }
+    bounded_batch_size = max(int(batch_size), 0)
+    schools = _schools_without_url(
+        session,
+        bounded_batch_size,
+        school_id=school_id,
+        prefecture=prefecture,
+    )
+    if not schools:
+        return stats
+    if page_fetcher is None and not scrapling_available():
+        stats["unavailable"] = 1
+        return stats
+
+    try:
+        crawler = SchoolUrlCrawler(
+            serp_fetcher=serp_fetcher or _default_serp_fetcher(),
+            page_fetcher=page_fetcher or ScraplingPageFetcher(mode=fetch_mode),
+            throttle=CrawlThrottle(),
+        )
+    except ScraplingUnavailableError:
+        stats["unavailable"] = 1
+        return stats
+
+    evidence_writer = _EvidenceWriter(evidence_path)
+    try:
+        for school in schools:
+            stats["attempted"] += 1
+            try:
+                discovery = crawler.discover_for(
+                    school_id=int(school.id),
+                    school_name=school.school_name,
+                    prefecture=school.prefecture,
+                    queries=search_queries_for_school(school),
+                )
+                if dry_run:
+                    outcome = _dry_run_outcome(discovery)
+                else:
+                    outcome = persist_discovery(session, discovery)
+            except ScraplingUnavailableError:
+                stats["unavailable"] = 1
+                break
+            except Exception as exc:
+                stats["errors"] += 1
+                log.warning("school_url_auto_crawl_failed", school_id=school.id, error=str(exc))
+                continue
+
+            _accumulate_outcome(stats, discovery_decision=discovery.decision, skipped_reason=outcome.skipped_reason)
+            evidence_writer.write(SchoolUrlCrawlEvidence(
+                school_id=int(school.id),
+                school_name=school.school_name,
+                prefecture=school.prefecture,
+                decision=discovery.decision,
+                candidate_url=discovery.best.candidate_url if discovery.best is not None else "",
+                score=discovery.best.score if discovery.best is not None else 0.0,
+                outcome=outcome.decision,
+                skipped_reason=outcome.skipped_reason or "",
+                notes=list(discovery.notes),
+            ))
+            if progress_callback is not None:
+                progress_callback(dict(stats), len(schools))
+    finally:
+        evidence_writer.close()
+
+    session.flush()
+    log.info("school_url_auto_crawl_complete", **stats)
+    return stats
+
+
+def _schools_without_url(
+    session: Session,
+    batch_size: int,
+    *,
+    school_id: int | None = None,
+    prefecture: str | None = None,
+) -> list[School]:
+    if batch_size <= 0:
+        return []
+    schools_with_url = session.query(SchoolSite.school_id).distinct()
+    query = session.query(School).filter(~School.id.in_(schools_with_url)).filter(School.status == "active")
+    if school_id is not None:
+        query = query.filter(School.id == school_id)
+    if prefecture:
+        query = query.filter(School.prefecture == prefecture)
+    return query.order_by(School.prefecture.asc(), School.id.asc()).limit(batch_size).all()
+
+
+def _dry_run_outcome(discovery: object) -> PersistenceOutcome:
+    return PersistenceOutcome(
+        school_id=int(getattr(discovery, "school_id", 0)),
+        decision=str(getattr(discovery, "decision", "unknown")),
+        skipped_reason="dry_run",
+    )
+
+
+def _default_serp_fetcher() -> SearchProviderSerpFetcher:
+    api_key_map = {
+        "brave": settings.brave_api_key,
+        "google": settings.google_api_key,
+        "serper": settings.serper_api_key,
+        "duckduckgo": "",
+    }
+    provider = create_provider(
+        provider_name=settings.search_provider,
+        api_key=api_key_map.get(settings.search_provider, ""),
+        google_cx=settings.google_cx,
+    )
+    return SearchProviderSerpFetcher(provider)
+
+
+def _accumulate_outcome(
+    stats: dict[str, int],
+    *,
+    discovery_decision: str,
+    skipped_reason: str | None,
+) -> None:
+    if discovery_decision == "auto":
+        if skipped_reason == "dry_run":
+            stats["dry_run_auto"] += 1
+        elif skipped_reason:
+            stats["auto_existing"] += 1
+        else:
+            stats["auto_registered"] += 1
+    elif discovery_decision == "review":
+        if skipped_reason == "dry_run":
+            stats["dry_run_review"] += 1
+        elif skipped_reason:
+            stats["review_existing"] += 1
+        else:
+            stats["review_enqueued"] += 1
+    elif discovery_decision == "no_candidates":
+        stats["no_candidates"] += 1
+    elif discovery_decision == "circuit_open":
+        stats["circuit_open"] += 1
+    else:
+        stats["rejected"] += 1
+
+
+class _EvidenceWriter:
+    def __init__(self, path: Path | None) -> None:
+        self._path = path
+        self._fh = None
+        if path is not None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self._fh = path.open("a", encoding="utf-8")
+
+    def write(self, evidence: SchoolUrlCrawlEvidence) -> None:
+        if self._fh is None:
+            return
+        self._fh.write(json.dumps(asdict(evidence), ensure_ascii=False, default=str) + "\n")
+
+    def close(self) -> None:
+        if self._fh is not None:
+            self._fh.close()
+            self._fh = None

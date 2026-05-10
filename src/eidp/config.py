@@ -96,6 +96,14 @@ class Settings(BaseSettings):
     google_cx: str = ""
     serper_api_key: str = ""
 
+    # Optional Scrapling-backed school website URL completion. This is a
+    # bounded fallback for schools still missing SchoolSite rows after the
+    # official prefecture index, seed CSV, corporation patterns, and regular
+    # search provider have run.
+    school_url_crawl_auto_enable: str = "auto"  # auto | on | off
+    school_url_crawl_batch_size: int = 25
+    school_url_crawl_fetch_mode: str = "static"  # static | dynamic | stealthy
+
     # Firecrawl API (for corporation root URL expansion)
     firecrawl_api_key: str = ""
 
@@ -164,6 +172,9 @@ def apply_runtime_env_settings(config: Settings = settings) -> None:
         "EIDP_BRAVE_API_KEY": config.brave_api_key,
         "EIDP_GOOGLE_API_KEY": config.google_api_key,
         "EIDP_GOOGLE_CX": config.google_cx,
+        "EIDP_SCHOOL_URL_CRAWL_AUTO_ENABLE": config.school_url_crawl_auto_enable,
+        "EIDP_SCHOOL_URL_CRAWL_BATCH_SIZE": str(config.school_url_crawl_batch_size),
+        "EIDP_SCHOOL_URL_CRAWL_FETCH_MODE": config.school_url_crawl_fetch_mode,
         "EIDP_FIRECRAWL_API_KEY": config.firecrawl_api_key,
     }
     for key, value in env_updates.items():

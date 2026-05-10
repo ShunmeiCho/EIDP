@@ -70,8 +70,10 @@ from download_prefecture_artifacts import (  # noqa: E402
 
 TOTAL_BOOTSTRAP_STEPS = 5
 URL_SEARCH_PERCENT_START = 0.45
-URL_SEARCH_PERCENT_END = 0.60
-PDF_DISCOVERY_PERCENT_START = URL_SEARCH_PERCENT_END
+URL_SEARCH_PERCENT_END = 0.56
+SCHOOL_URL_CRAWL_PERCENT_START = URL_SEARCH_PERCENT_END
+SCHOOL_URL_CRAWL_PERCENT_END = 0.60
+PDF_DISCOVERY_PERCENT_START = SCHOOL_URL_CRAWL_PERCENT_END
 PDF_DISCOVERY_PERCENT_END = 0.75
 
 
@@ -388,6 +390,45 @@ def resolve_url_search_mode(
     return provider_ready, bounded_batch_size, "auto_ready" if provider_ready else "auto_not_ready"
 
 
+def resolve_school_url_crawl_mode(
+    *,
+    configured_mode: str,
+    provider: str,
+    batch_size: int,
+    scrapling_installed: bool,
+    serper_api_key: str = "",
+    brave_api_key: str = "",
+    google_api_key: str = "",
+    google_cx: str = "",
+) -> tuple[bool, int, str]:
+    """Resolve whether the optional Scrapling-backed URL crawl should run."""
+    mode = configured_mode.strip().lower()
+    if mode not in {"auto", "on", "off"}:
+        mode = "auto"
+    bounded_batch_size = max(int(batch_size), 0)
+    if mode == "off" or bounded_batch_size == 0:
+        return False, bounded_batch_size, mode
+    provider_ready = provider_ready_for_url_search(
+        provider=provider,
+        serper_api_key=serper_api_key,
+        brave_api_key=brave_api_key,
+        google_api_key=google_api_key,
+        google_cx=google_cx,
+    )
+    ready = scrapling_installed and provider_ready
+    if mode == "on":
+        if ready:
+            return True, bounded_batch_size, "on_ready"
+        if not scrapling_installed:
+            return False, bounded_batch_size, "on_scrapling_not_installed"
+        return False, bounded_batch_size, "on_search_provider_not_ready"
+    if ready:
+        return True, bounded_batch_size, "auto_ready"
+    if not scrapling_installed:
+        return False, bounded_batch_size, "auto_scrapling_not_installed"
+    return False, bounded_batch_size, "auto_search_provider_not_ready"
+
+
 def step_known_url_discovery(
     *,
     seed_url_csv: Path | None,
@@ -475,6 +516,89 @@ def step_known_url_discovery(
     finally:
         session.close()
     print(f"[step2b] {stats}")
+    return stats
+
+
+def step_school_url_auto_crawl(
+    *,
+    enabled: bool,
+    batch_size: int,
+    evidence_log: Path | None = None,
+    fetch_mode: str = "static",
+    progress: BootstrapProgressWriter | None = None,
+) -> dict[str, int]:
+    """Step 2c: bounded Scrapling-backed completion for schools still missing URLs."""
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.school_url_pipeline import run_school_url_auto_crawl
+
+    stats = {
+        "school_url_crawl_enabled": 1 if enabled else 0,
+        "school_url_crawl_attempted": 0,
+        "school_url_crawl_auto_registered": 0,
+        "school_url_crawl_auto_existing": 0,
+        "school_url_crawl_review_enqueued": 0,
+        "school_url_crawl_review_existing": 0,
+        "school_url_crawl_dry_run_auto": 0,
+        "school_url_crawl_dry_run_review": 0,
+        "school_url_crawl_rejected": 0,
+        "school_url_crawl_no_candidates": 0,
+        "school_url_crawl_circuit_open": 0,
+        "school_url_crawl_errors": 0,
+        "school_url_crawl_unavailable": 0,
+    }
+    if not enabled or batch_size <= 0:
+        print(f"[step2c] {stats}")
+        return stats
+
+    session = SessionLocal()
+    try:
+        def update_crawl_progress(crawl_stats: dict[str, int], total_schools: int) -> None:
+            if progress is None:
+                return
+            attempted = int(crawl_stats.get("attempted", 0))
+            progress.write(
+                status="running",
+                current_step=2,
+                percent=_bounded_step_percent(
+                    SCHOOL_URL_CRAWL_PERCENT_START,
+                    SCHOOL_URL_CRAWL_PERCENT_END,
+                    attempted,
+                    total_schools,
+                ),
+                message=(
+                    "不足URLを学校公式サイト探索で補完しています。"
+                    f"{attempted}/{total_schools}校確認済み / "
+                    f"自動登録 {crawl_stats.get('auto_registered', 0)}件 / "
+                    f"確認候補 {crawl_stats.get('review_enqueued', 0)}件"
+                ),
+                details={
+                    **stats,
+                    "school_url_crawl_attempted": attempted,
+                    "school_url_crawl_auto_registered": int(crawl_stats.get("auto_registered", 0)),
+                    "school_url_crawl_review_enqueued": int(crawl_stats.get("review_enqueued", 0)),
+                    "school_url_crawl_rejected": int(crawl_stats.get("rejected", 0)),
+                    "school_url_crawl_no_candidates": int(crawl_stats.get("no_candidates", 0)),
+                    "school_url_crawl_errors": int(crawl_stats.get("errors", 0)),
+                    "school_url_crawl_unavailable": int(crawl_stats.get("unavailable", 0)),
+                },
+            )
+
+        crawl_stats = run_school_url_auto_crawl(
+            session,
+            batch_size=batch_size,
+            evidence_path=evidence_log,
+            progress_callback=update_crawl_progress,
+            fetch_mode=fetch_mode if fetch_mode in {"static", "dynamic", "stealthy"} else "static",
+        )
+        for key, value in crawl_stats.items():
+            stats[f"school_url_crawl_{key}"] = int(value)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+    print(f"[step2c] {stats}")
     return stats
 
 
@@ -687,6 +811,39 @@ def main(argv: list[str] | None = None) -> int:
         help="Append-only JSONL evidence for Web-search URL discovery decisions.",
     )
     parser.add_argument(
+        "--school-url-crawl",
+        choices=("settings", "auto", "on", "off"),
+        default="settings",
+        help=(
+            "Whether Step 2c should use the optional Scrapling-backed school website crawler for "
+            "schools still missing URLs. 'settings' reads EIDP_SCHOOL_URL_CRAWL_AUTO_ENABLE."
+        ),
+    )
+    parser.add_argument(
+        "--school-url-crawl-batch-size",
+        type=int,
+        default=None,
+        help=(
+            "Override EIDP_SCHOOL_URL_CRAWL_BATCH_SIZE for Step 2c. "
+            "0 disables the school website URL crawler."
+        ),
+    )
+    parser.add_argument(
+        "--school-url-crawl-fetch-mode",
+        choices=("settings", "static", "dynamic", "stealthy"),
+        default="settings",
+        help=(
+            "Scrapling fetch mode for Step 2c. static = HTTP/TLS impersonation, "
+            "dynamic = Playwright, stealthy = browser stealth."
+        ),
+    )
+    parser.add_argument(
+        "--school-url-crawl-evidence-log",
+        type=Path,
+        default=REPO_ROOT / "output" / "school_url_crawl_evidence.jsonl",
+        help="Append-only JSONL evidence for Scrapling-backed school URL crawl decisions.",
+    )
+    parser.add_argument(
         "--lock-path",
         type=Path,
         default=REPO_ROOT / "data" / ".lock",
@@ -823,6 +980,34 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         google_api_key=str(settings.google_api_key),
         google_cx=str(settings.google_cx),
     )
+    school_url_crawl_arg = getattr(args, "school_url_crawl", "settings")
+    school_url_crawl_mode = str(settings.school_url_crawl_auto_enable)
+    if school_url_crawl_arg != "settings":
+        school_url_crawl_mode = str(school_url_crawl_arg)
+    school_url_crawl_batch_size_arg = getattr(args, "school_url_crawl_batch_size", None)
+    configured_school_url_crawl_batch_size = (
+        int(settings.school_url_crawl_batch_size)
+        if school_url_crawl_batch_size_arg is None
+        else int(school_url_crawl_batch_size_arg)
+    )
+    from eidp.scraper.scrapling_fetcher import scrapling_available
+
+    school_url_crawl_enabled, school_url_crawl_batch_size, school_url_crawl_reason = resolve_school_url_crawl_mode(
+        configured_mode=school_url_crawl_mode,
+        provider=str(settings.search_provider),
+        batch_size=configured_school_url_crawl_batch_size,
+        scrapling_installed=scrapling_available(),
+        serper_api_key=str(settings.serper_api_key),
+        brave_api_key=str(settings.brave_api_key),
+        google_api_key=str(settings.google_api_key),
+        google_cx=str(settings.google_cx),
+    )
+    school_url_crawl_fetch_mode_arg = getattr(args, "school_url_crawl_fetch_mode", "settings")
+    school_url_crawl_fetch_mode = (
+        str(settings.school_url_crawl_fetch_mode)
+        if school_url_crawl_fetch_mode_arg == "settings"
+        else str(school_url_crawl_fetch_mode_arg)
+    )
     if args.skip_known_url_discovery:
         print("\n[skip] Step 2b — --skip-known-url-discovery requested.")
         known_url_stats = {
@@ -850,12 +1035,37 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             url_search_evidence_log=args.url_search_evidence_log,
             progress=progress,
         )
-    post_url_details = {**aggregate_details, **known_url_stats}
     if progress is not None:
         progress.write(
             status="running",
             current_step=2,
-            percent=URL_SEARCH_PERCENT_END if known_url_stats.get("search_enabled", 0) else URL_SEARCH_PERCENT_START,
+            percent=SCHOOL_URL_CRAWL_PERCENT_START,
+            message="不足URLの学校公式サイト探索を確認しています。",
+            details={**aggregate_details, **known_url_stats},
+        )
+    print("\n=== Step 2c: school website URL auto-crawl ===")
+    print(
+        "[step2c] school_url_crawl="
+        f"{school_url_crawl_reason} provider={settings.search_provider} "
+        f"batch_size={school_url_crawl_batch_size} fetch_mode={school_url_crawl_fetch_mode}"
+    )
+    school_url_crawl_stats = step_school_url_auto_crawl(
+        enabled=school_url_crawl_enabled,
+        batch_size=school_url_crawl_batch_size,
+        evidence_log=getattr(
+            args,
+            "school_url_crawl_evidence_log",
+            REPO_ROOT / "output" / "school_url_crawl_evidence.jsonl",
+        ),
+        fetch_mode=school_url_crawl_fetch_mode,
+        progress=progress,
+    )
+    post_url_details = {**aggregate_details, **known_url_stats, **school_url_crawl_stats}
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=2,
+            percent=PDF_DISCOVERY_PERCENT_START,
             message="公式一覧、既知URL、法人ドメインの入口登録が完了しました。",
             details=post_url_details,
         )
@@ -876,6 +1086,11 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
     discovery_methods = [method.strip() for method in args.discovery_methods.split(",") if method.strip()]
     if known_url_stats.get("search_found", 0) > 0 and "web_search" not in discovery_methods:
         discovery_methods.append("web_search")
+    if (
+        school_url_crawl_stats.get("school_url_crawl_auto_registered", 0) > 0
+        and "scrapling_stealth" not in discovery_methods
+    ):
+        discovery_methods.append("scrapling_stealth")
     discovery_stats = step_discover_pdfs(
         storage_dir=args.storage_dir,
         batch_size=args.batch_size,
@@ -919,6 +1134,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
     print(f"  prefectures: {len(ok)} ok / {len(failed)} failed")
     print(f"  aggregate:   {sum(s.get('added', 0) for s in aggregate_stats.values())} school_sites added")
     print(f"  known URLs:  {known_url_stats}")
+    print(f"  school URL crawl: {school_url_crawl_stats}")
     print(f"  discover:    {discovery_stats}")
     print(f"  ingest:      {ingest_stats}")
     print(f"  status:      {status_stats}")

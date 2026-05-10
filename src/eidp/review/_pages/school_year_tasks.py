@@ -779,6 +779,17 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
             f"{details.get('search_searched', 0)}校 / 入口候補 {details.get('search_found', 0)} / "
             f"見つからず {details.get('search_no_result', 0)} / エラー {details.get('search_errors', 0)}"
         )
+    if details.get("school_url_crawl_enabled") or "school_url_crawl_attempted" in details:
+        lines.append(
+            "学校公式サイト探索: "
+            f"{details.get('school_url_crawl_attempted', 0)}校 / "
+            f"自動登録 {details.get('school_url_crawl_auto_registered', 0)} / "
+            f"確認候補 {details.get('school_url_crawl_review_enqueued', 0)} / "
+            f"候補なし {details.get('school_url_crawl_no_candidates', 0)} / "
+            f"エラー {details.get('school_url_crawl_errors', 0)}"
+        )
+        if details.get("school_url_crawl_unavailable"):
+            lines.append("学校公式サイト探索: Scrapling add-on が未導入のためスキップしました。")
     return lines
 
 

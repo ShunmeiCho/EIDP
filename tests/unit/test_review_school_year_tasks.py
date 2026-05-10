@@ -502,6 +502,37 @@ def test_bootstrap_progress_exposes_url_search_details(tmp_path) -> None:
     ]
 
 
+def test_bootstrap_progress_exposes_school_url_crawl_details(tmp_path) -> None:
+    progress_path = tmp_path / "progress.json"
+    progress_path.write_text(
+        json.dumps(
+            {
+                "status": "running",
+                "current_step": 2,
+                "total_steps": 5,
+                "percent": 0.58,
+                "message": "不足URLの学校公式サイト探索を確認しています。",
+                "details": {
+                    "school_url_crawl_enabled": 1,
+                    "school_url_crawl_attempted": 10,
+                    "school_url_crawl_auto_registered": 3,
+                    "school_url_crawl_review_enqueued": 2,
+                    "school_url_crawl_no_candidates": 4,
+                    "school_url_crawl_errors": 1,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    progress = read_bootstrap_progress(progress_path)
+
+    assert progress is not None
+    assert bootstrap_progress_detail_lines(progress) == [
+        "学校公式サイト探索: 10校 / 自動登録 3 / 確認候補 2 / 候補なし 4 / エラー 1",
+    ]
+
+
 def test_bootstrap_progress_exposes_official_index_yield_details(tmp_path) -> None:
     progress_path = tmp_path / "progress.json"
     progress_path.write_text(

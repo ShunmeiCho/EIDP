@@ -651,6 +651,33 @@ def test_resolve_url_search_mode_is_key_aware() -> None:
     ) == (False, 200, "off")
 
 
+def test_resolve_school_url_crawl_mode_requires_scrapling_and_provider() -> None:
+    assert module.resolve_school_url_crawl_mode(
+        configured_mode="auto",
+        provider="duckduckgo",
+        batch_size=25,
+        scrapling_installed=True,
+    ) == (True, 25, "auto_ready")
+    assert module.resolve_school_url_crawl_mode(
+        configured_mode="auto",
+        provider="duckduckgo",
+        batch_size=25,
+        scrapling_installed=False,
+    ) == (False, 25, "auto_scrapling_not_installed")
+    assert module.resolve_school_url_crawl_mode(
+        configured_mode="on",
+        provider="serper",
+        batch_size=25,
+        scrapling_installed=True,
+    ) == (False, 25, "on_search_provider_not_ready")
+    assert module.resolve_school_url_crawl_mode(
+        configured_mode="off",
+        provider="duckduckgo",
+        batch_size=25,
+        scrapling_installed=True,
+    ) == (False, 25, "off")
+
+
 def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_path: Path) -> None:
     calls: dict[str, object] = {}
 
@@ -681,14 +708,38 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
         calls["discover"] = kwargs
         return {"downloaded": 0}
 
+    def fake_step_school_url_auto_crawl(**kwargs):  # noqa: ANN003
+        calls["school_url_crawl"] = kwargs
+        return {
+            "school_url_crawl_enabled": 1,
+            "school_url_crawl_attempted": 3,
+            "school_url_crawl_auto_registered": 1,
+            "school_url_crawl_auto_existing": 0,
+            "school_url_crawl_review_enqueued": 1,
+            "school_url_crawl_review_existing": 0,
+            "school_url_crawl_dry_run_auto": 0,
+            "school_url_crawl_dry_run_review": 0,
+            "school_url_crawl_rejected": 1,
+            "school_url_crawl_no_candidates": 0,
+            "school_url_crawl_circuit_open": 0,
+            "school_url_crawl_errors": 0,
+            "school_url_crawl_unavailable": 0,
+        }
+
     import eidp.config as config_mod
+    import eidp.scraper.scrapling_fetcher as scrapling_fetcher
 
     monkeypatch.setattr(module, "step_download_artifacts", fake_step_download_artifacts)
     monkeypatch.setattr(module, "step_aggregate", fake_step_aggregate)
     monkeypatch.setattr(module, "step_known_url_discovery", fake_step_known_url_discovery)
+    monkeypatch.setattr(module, "step_school_url_auto_crawl", fake_step_school_url_auto_crawl)
     monkeypatch.setattr(module, "step_discover_pdfs", fake_step_discover_pdfs)
+    monkeypatch.setattr(scrapling_fetcher, "scrapling_available", lambda: True)
     monkeypatch.setattr(config_mod.settings, "url_search_auto_enable", "auto")
     monkeypatch.setattr(config_mod.settings, "url_search_batch_size", 25)
+    monkeypatch.setattr(config_mod.settings, "school_url_crawl_auto_enable", "auto")
+    monkeypatch.setattr(config_mod.settings, "school_url_crawl_batch_size", 25)
+    monkeypatch.setattr(config_mod.settings, "school_url_crawl_fetch_mode", "static")
     monkeypatch.setattr(config_mod.settings, "search_provider", "duckduckgo")
     monkeypatch.setattr(config_mod.settings, "serper_api_key", "")
     monkeypatch.setattr(config_mod.settings, "brave_api_key", "")
@@ -714,6 +765,10 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
             request_timeout=12.0,
             evidence_log=None,
             url_search_evidence_log=tmp_path / "url_search_evidence.jsonl",
+            school_url_crawl="settings",
+            school_url_crawl_batch_size=None,
+            school_url_crawl_fetch_mode="settings",
+            school_url_crawl_evidence_log=tmp_path / "school_url_crawl_evidence.jsonl",
             allow_stale_fallback=False,
             skip_ingest=True,
         )
@@ -727,7 +782,10 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
         "seed_csv",
         "corporation_pattern",
         "web_search",
+        "scrapling_stealth",
     ]
+    assert calls["school_url_crawl"]["enabled"] is True
+    assert calls["school_url_crawl"]["batch_size"] == 25
     assert calls["discover"]["request_timeout"] == 12.0
 
 
