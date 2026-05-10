@@ -210,7 +210,7 @@ def test_bootstrap_progress_detail_lines_include_rejection_reason_counts() -> No
 def test_school_task_summary_groups_operator_counts() -> None:
     session = _session()
     try:
-        for school_id in range(1, 5):
+        for school_id in range(1, 6):
             _school(session, school_id, name=f"学校{school_id}")
         _status(
             session,
@@ -224,10 +224,17 @@ def test_school_task_summary_groups_operator_counts() -> None:
         _status(session, 2, pdf_status="rejected_stale", blocking_reason="stale_pdf_only")
         _status(session, 3, url_status="no_url", blocking_reason="no_url")
         _status(session, 4, pdf_status="image_pending", extract_status="ocr_pending", blocking_reason="ocr_pending")
-        _school(session, 5, name="学校5")
         _status(
             session,
             5,
+            pdf_status="publication_lag",
+            evidence_level="publication_lag",
+            blocking_reason="publication_lag_latest_public",
+        )
+        _school(session, 6, name="学校6")
+        _status(
+            session,
+            6,
             pdf_status="confirmed_target",
             extract_status="parsed",
             blocking_reason="dept_change_review",
@@ -236,12 +243,13 @@ def test_school_task_summary_groups_operator_counts() -> None:
 
         summary = school_task_summary(session, fiscal_year=2026, school_type="専門学校")
 
-        assert summary.total == 5
+        assert summary.total == 6
         assert summary.excel_ready == 1
-        assert summary.needs_action == 4
+        assert summary.needs_action == 5
         assert summary.confirmed_target == 2
         assert summary.target_pdf_wait == 0
         assert summary.stale_fallback == 1
+        assert summary.publication_lag == 1
         assert summary.no_url == 1
         assert summary.review_or_parse == 1
         assert summary.dept_change_review == 1
@@ -1509,5 +1517,25 @@ def test_next_action_surfaces_department_change_review() -> None:
 
         assert action == "学科変更確認"
         assert "名称変更" in hint
+    finally:
+        session.close()
+
+
+def test_next_action_surfaces_publication_lag_review() -> None:
+    session = _session()
+    try:
+        _school(session, 1, name="学校")
+        row = _status(
+            session,
+            1,
+            pdf_status="publication_lag",
+            evidence_level="publication_lag",
+            blocking_reason="publication_lag_latest_public",
+        )
+
+        action, hint = next_action_for_status(row)
+
+        assert action == "公示待ち/再取得"
+        assert "成果扱い" in hint
     finally:
         session.close()

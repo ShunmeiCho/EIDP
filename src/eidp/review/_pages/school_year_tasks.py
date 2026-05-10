@@ -38,6 +38,7 @@ class SchoolTaskSummary:
     no_url: int
     review_or_parse: int
     dept_change_review: int
+    publication_lag: int = 0
 
     @property
     def needs_action(self) -> int:
@@ -139,6 +140,7 @@ TASK_CODE_TO_SCOPE_LABEL = {value: key for key, value in TASK_SCOPE_TO_CODE.item
 BLOCKING_REASON_LABELS: dict[str, str] = {
     "no_url": "URL追加が必要",
     "no_target_pdf": "対象年度PDF待ち",
+    "publication_lag_latest_public": "旧年度候補あり",
     "stale_pdf_only": "旧年度PDFのみ",
     "ocr_pending": "OCR/手入力待ち",
     "parse_failed": "手入力待ち",
@@ -157,6 +159,7 @@ URL_STATUS_LABELS: dict[str, str] = {
 PDF_STATUS_LABELS: dict[str, str] = {
     "none": "PDFなし",
     "confirmed_target": "対象年度PDFあり",
+    "publication_lag": "旧年度候補あり",
     "rejected_stale": "旧年度PDFのみ",
     "image_pending": "画像PDF/OCR待ち",
     "discovered": "PDF候補あり",
@@ -456,6 +459,15 @@ def task_lanes_for_summary(summary: SchoolTaskSummary) -> list[TaskLane]:
             blocking_reason="stale_pdf_only",
         ),
         TaskLane(
+            key="publication_lag",
+            label="旧年度候補あり",
+            count=summary.publication_lag,
+            description="旧年度または公開待ちの確認申請書候補があります。成果には含めず、対象年度PDFを再確認します。",
+            button_label="旧年度候補を表示",
+            scope="needs_action",
+            blocking_reason="publication_lag_latest_public",
+        ),
+        TaskLane(
             key="review_or_parse",
             label="PDF確認・手入力",
             count=summary.review_or_parse,
@@ -521,6 +533,8 @@ def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
         return "URL追加", "学校または法人の情報公開ページを登録"
     if reason == "no_target_pdf":
         return "PDF探索", "週次再取得、または見つけたPDF URLを追加"
+    if reason == "publication_lag_latest_public":
+        return "公示待ち/再取得", "旧年度候補は成果扱いせず、対象年度PDFの公開を再確認"
     if reason == "stale_pdf_only":
         return "公示待ち/再取得", "旧年度PDFは成果扱いせず、対象年度PDFを再確認"
     if reason == "ocr_pending":
@@ -546,7 +560,7 @@ def next_action_for_row(status: SchoolFiscalYearStatus, site: SchoolSite | None)
     if (
         site is not None
         and is_pdf_site_url(site.url_type, site.url)
-        and status.blocking_reason in {"no_target_pdf", "stale_pdf_only"}
+        and status.blocking_reason in {"no_target_pdf", "publication_lag_latest_public", "stale_pdf_only"}
     ):
         return (
             "URL追加",
@@ -580,6 +594,7 @@ def school_task_summary(
     confirmed_target = 0
     target_pdf_wait = 0
     stale_fallback = 0
+    publication_lag = 0
     no_url = 0
     review_or_parse = 0
     dept_change_review = 0
@@ -597,6 +612,8 @@ def school_task_summary(
             confirmed_target += count
         if blocker == "no_target_pdf":
             target_pdf_wait += count
+        if blocker == "publication_lag_latest_public":
+            publication_lag += count
         if blocker == "stale_pdf_only":
             stale_fallback += count
         if blocker == "no_url":
@@ -617,6 +634,7 @@ def school_task_summary(
         no_url=no_url,
         review_or_parse=review_or_parse,
         dept_change_review=dept_change_review,
+        publication_lag=publication_lag,
     )
 
 
@@ -1459,6 +1477,7 @@ def _render_rebuild_button(session: Session, *, fiscal_year: int, school_type: s
                     session,
                     fiscal_year=fiscal_year,
                     school_type=school_type,
+                    discovery_evidence_path=Path("output") / "discovery_rejections.jsonl",
                 )
                 session.commit()
         except LockBusyError as exc:

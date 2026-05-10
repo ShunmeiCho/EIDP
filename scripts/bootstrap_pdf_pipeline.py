@@ -719,7 +719,7 @@ def step_ingest(
     return stats
 
 
-def step_rebuild_status() -> dict[str, int]:
+def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, int]:
     """Step 5: rebuild School x target fiscal-year status rows for the UI."""
     from eidp.config import settings
     from eidp.db.session import SessionLocal
@@ -731,6 +731,7 @@ def step_rebuild_status() -> dict[str, int]:
             session,
             fiscal_year=settings.target_fiscal_year,
             school_type=None,
+            discovery_evidence_path=evidence_log,
         )
         session.commit()
     except Exception:
@@ -1148,7 +1149,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             details=ingest_progress_details(ingest_stats),
         )
     print("\n=== Step 5: rebuild school fiscal-year status ===")
-    status_stats = step_rebuild_status()
+    status_stats = step_rebuild_status(evidence_log=args.evidence_log if str(args.evidence_log) else None)
 
     print("\n=== Bootstrap pipeline summary ===")
     print(f"  prefectures: {len(ok)} ok / {len(failed)} failed")

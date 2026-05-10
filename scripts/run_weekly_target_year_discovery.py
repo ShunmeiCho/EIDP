@@ -504,6 +504,7 @@ def _run_weekly_inner(
                 session,
                 fiscal_year=current_fy,
                 school_type=school_type,
+                discovery_evidence_path=discovery_evidence,
             )
             status_stats = {
                 "rebuilt": rebuilt.rebuilt,

@@ -181,6 +181,7 @@ def maybe_rebuild_school_year_tasks_after_target_change(
         session,
         fiscal_year=int(target_fiscal_year),
         school_type=None,
+        discovery_evidence_path=Path("output") / "discovery_rejections.jsonl",
     )
 
 

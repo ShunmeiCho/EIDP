@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -195,6 +196,8 @@ def _blocking_reason(
         if url_status == "no_url":
             return "no_url"
         return "no_target_pdf"
+    if pdf_status == "publication_lag":
+        return "publication_lag_latest_public"
     if pdf_status == "rejected_stale":
         return "stale_pdf_only"
     if pdf_status == "image_pending":
@@ -206,11 +209,29 @@ def _blocking_reason(
     return "review_required"
 
 
+def _publication_lag_school_ids(discovery_evidence_path: Path | None) -> set[int]:
+    if discovery_evidence_path is None or not discovery_evidence_path.is_file():
+        return set()
+
+    from eidp.scraper.discovery_evidence_summary import (
+        load_pdf_discovery_evidence,
+        summarize_pdf_discovery_evidence,
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(discovery_evidence_path))
+    return {
+        school_summary.school_id
+        for school_summary in summary.school_summaries
+        if school_summary.bucket == "publication_lag_or_old_target_pdf"
+    }
+
+
 def rebuild_school_fiscal_year_status(
     session: Session,
     *,
     fiscal_year: int,
     school_type: str | None = "専門学校",
+    discovery_evidence_path: Path | None = None,
 ) -> SchoolFiscalYearStatusStats:
     """Rebuild one ``SchoolFiscalYearStatus`` row per active school.
 
@@ -250,6 +271,7 @@ def rebuild_school_fiscal_year_status(
         school_ids=school_ids,
         fiscal_year=fiscal_year,
     )
+    publication_lag_school_ids = _publication_lag_school_ids(discovery_evidence_path)
 
     extracted_school_ids = {
         int(sid)
@@ -272,12 +294,16 @@ def rebuild_school_fiscal_year_status(
         docs = docs_by_school.get(school.id, [])
         url_status = _url_status(sites_by_school.get(school.id, []))
         pdf_status = _pdf_status(docs, fiscal_year)
+        if pdf_status == "none" and school.id in publication_lag_school_ids:
+            pdf_status = "publication_lag"
         extract_status = _extract_status(docs, school.id in extracted_school_ids)
         yoy_diff_status = _yoy_diff_status(
             current_rows=yearly_by_school.get((school.id, fiscal_year), []),
             previous_rows=yearly_by_school.get((school.id, fiscal_year - 1), []),
         )
         evidence_level = _evidence_level(docs, fiscal_year, pdf_status)
+        if pdf_status == "publication_lag":
+            evidence_level = "publication_lag"
         if yoy_diff_status == "partial_diff" and evidence_level not in {"conflict", "operator_override"}:
             evidence_level = "prev_year_diff"
         has_dept_change_review = school.id in dept_change_review_school_ids
@@ -356,7 +382,7 @@ def school_fiscal_year_status_counts(
         counts["total"] += count
         if pdf_status == "confirmed_target":
             counts["confirmed_target"] += count
-        if pdf_status == "rejected_stale":
+        if pdf_status in {"publication_lag", "rejected_stale"}:
             counts["stale_or_old"] += count
         if extract_status in REVIEW_STATUSES or pdf_status in {"image_pending", "discovered"}:
             counts["review_or_parse"] += count

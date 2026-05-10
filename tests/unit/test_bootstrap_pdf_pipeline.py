@@ -955,8 +955,9 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
     assert {"request_timeout": 12} in calls
 
 
-def test_step_rebuild_status_includes_all_school_types(monkeypatch) -> None:
+def test_step_rebuild_status_includes_all_school_types_and_discovery_evidence(monkeypatch, tmp_path) -> None:
     calls: list[dict[str, object]] = []
+    evidence_log = tmp_path / "discovery.jsonl"
 
     class FakeSession:
         def commit(self) -> None:
@@ -968,8 +969,15 @@ def test_step_rebuild_status_includes_all_school_types(monkeypatch) -> None:
         def close(self) -> None:
             calls.append({"close": True})
 
-    def fake_rebuild(session, *, fiscal_year, school_type):  # noqa: ANN001
-        calls.append({"session": session, "fiscal_year": fiscal_year, "school_type": school_type})
+    def fake_rebuild(session, *, fiscal_year, school_type, discovery_evidence_path):  # noqa: ANN001
+        calls.append(
+            {
+                "session": session,
+                "fiscal_year": fiscal_year,
+                "school_type": school_type,
+                "discovery_evidence_path": discovery_evidence_path,
+            }
+        )
         return SimpleNamespace(rebuilt=3, excel_ready=1)
 
     import eidp.config as config_mod
@@ -981,7 +989,12 @@ def test_step_rebuild_status_includes_all_school_types(monkeypatch) -> None:
     monkeypatch.setattr(status_mod, "rebuild_school_fiscal_year_status", fake_rebuild)
     monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
 
-    result = module.step_rebuild_status()
+    result = module.step_rebuild_status(evidence_log=evidence_log)
 
     assert result == {"rebuilt": 3, "excel_ready": 1}
-    assert calls[0] == {"session": fake_session, "fiscal_year": 2026, "school_type": None}
+    assert calls[0] == {
+        "session": fake_session,
+        "fiscal_year": 2026,
+        "school_type": None,
+        "discovery_evidence_path": evidence_log,
+    }

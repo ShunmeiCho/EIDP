@@ -5,6 +5,34 @@ Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
 Latest audited Windows package commit: `5a4aeb825e516410875d31ddf1e4c4fddab448e0` (`eidp-windows-v138.zip`)
 
+## 2026-05-11 Post-v138 Local Update
+
+The v138 discovery-evidence RCA showed that publication-lag / old-year target
+forms are the dominant bounded-smoke blocker. Local code now consumes the PDF
+discovery evidence JSONL during task rebuild and surfaces those schools as an
+operator-visible review/wait state instead of leaving them indistinguishable
+from generic `no_target_pdf`.
+
+- `school_fiscal_year_status` rebuild maps evidence bucket
+  `publication_lag_or_old_target_pdf` to `pdf_status="publication_lag"`,
+  `evidence_level="publication_lag"`, and
+  `blocking_reason="publication_lag_latest_public"`.
+- This is not a target-FY success path: `excel_ready` remains false and the
+  status is counted under `stale_or_old`, not `confirmed_target`.
+- Production rebuild entrypoints now pass the evidence log into status rebuild:
+  bootstrap Step 5, weekly discovery, CLI `rebuild-school-year-tasks`, the
+  settings target-FY rebuild, and the Streamlit task-page rebuild button.
+- The task board now has a dedicated `旧年度候補あり` lane and next action
+  `公示待ち/再取得`, with copy that explicitly says these candidates are not
+  treated as target-FY success.
+- Verification for this local update: focused TDD tests for status rebuild,
+  bootstrap evidence wiring, and task-board labels; `uv run pytest tests/unit`
+  passed `1023` tests, and Ruff passed on the touched code/test files.
+
+This update has not yet been repackaged into a Windows ZIP after v138, and the
+Windows UI click-through still needs a fresh smoke. It reduces operator
+ambiguity, but it does not change the strict FY2026 yield denominator.
+
 ## 2026-05-11 v138 Update
 
 v138 refreshes the core Windows package after two Saitama-RCA-driven PDF
@@ -249,7 +277,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Start from official government/prefecture indexes where possible | `data/prefecture-aggregators/seed.csv`; `src/eidp/scraper/prefecture_aggregator.py`; `scripts/verify_windows_distribution.py` now reads the ZIP seed/parser source and gates 47 prefecture rows, 47 parser registrations, and 47 downloadable official artifact URLs. Latest v102 verifier details: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_with_school_link_signal=37`, `prefecture_seed_supplemental_rows=1`, `prefecture_seed_school_rows_total=2148`. Windows bounded bootstrap smoke on v73 downloaded/parsed all 47 official indexes and produced `official_index_rows_extracted=1948`, `official_index_rows_matched=1770`, `official_school_sites_added=1306`, plus 48 seed URLs and 295 corporation-pattern URLs before the 25-site PDF crawl. Latest Mac Saitama smoke parsed the official Saitama index into 58 extracted rows, 51 matched school rows, and 51 official school-site URLs before crawling 80 sites. | Release-gated for nationwide official-index bootstrap presence, and official-index URL yield is proven on Windows through Step 2b from v73. Latest v102 still needs Windows revalidation. Full target-year PDF crawling/ingestion still has to prove PDF yield. |
 | Show source chain / why a PDF was found | `src/eidp/review/_pages/pdf_manual_entry.py` shows selected PDF, source page, confidence, and discovery evidence log; `school_year_tasks.py` now labels crawl entry source quality. | Mostly covered locally; Windows click-through not revalidated after latest UI. |
 | Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. Web search now rejects known third-party directory/government-index URLs before registering `school_site`. Initial-bootstrap completion now preserves official-index yield details (`official_index_rows_extracted`, `official_index_rows_matched`, URL added/upgraded counts, and no-new-URL prefectures) for the operator UI. | Partial: manual entry is reduced and the reason for low yield is more visible, but prefectures without school-publication links and schools whose official page is not discoverable still need fallback discovery/operator review. |
-| Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. `pdf_discovery.py` also pre-filters clear non-target public documents, decoded wrapper-URL filenames, and explicit stale fiscal-year link hints such as `令和7年度`, `r07`, and `2025年度` before download, while preserving post-download target-year checks for ambiguous confirmation forms. v94 additionally accepts a PDF whose body classifies as the target confirmation form when the target-year evidence appears in the official URL or anchor text instead of the PDF body; URL-year evidence alone still cannot save non-target PDFs such as student A forms or syllabi. v95 tightens the remaining image-only edge: target-year text alone no longer admits ambiguous image-only admission guides unless the URL/anchor strongly names the target confirmation form. | Mostly covered for current pipeline; bounded Windows Step 3 smoke proved `prefiltered=87` and `cached_rejections=46` on 25 real sites. Mac Saitama 80-site diagnostic smoke exposed one false positive admission guide (`2026syakai-isikai.pdf`), then strict school-id 780 retest after the v95 fix produced `downloaded=0` and `target_application_not_detected`. Full Windows PDF crawl/ingest still needs validation. |
+| Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. `pdf_discovery.py` also pre-filters clear non-target public documents, decoded wrapper-URL filenames, and explicit stale fiscal-year link hints such as `令和7年度`, `r07`, and `2025年度` before download, while preserving post-download target-year checks for ambiguous confirmation forms. v94 additionally accepts a PDF whose body classifies as the target confirmation form when the target-year evidence appears in the official URL or anchor text instead of the PDF body; URL-year evidence alone still cannot save non-target PDFs such as student A forms or syllabi. v95 tightens the remaining image-only edge: target-year text alone no longer admits ambiguous image-only admission guides unless the URL/anchor strongly names the target confirmation form. Post-v138 local code also turns evidence bucket `publication_lag_or_old_target_pdf` into `pdf_status="publication_lag"` / `blocking_reason="publication_lag_latest_public"` for operator review, while keeping `excel_ready=false`. | Mostly covered locally and with bounded Windows v138 crawl evidence. The publication-lag UI/status state is covered locally but is not yet repackaged or Windows-click-through verified. |
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
@@ -260,6 +288,8 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 - `sprint8-handoff-finalize` remains the active handoff branch; `main` is
   intentionally unchanged until the yield gate is met.
+- `uv run pytest tests/unit` after the post-v138 publication-lag status/UI
+  wiring → `1023 passed`.
 - `uv run pytest tests/unit` after the v138 PDF discovery fixes →
   `1021 passed`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v138.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=5a4aeb825e516410875d31ddf1e4c4fddab448e0`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
@@ -411,7 +441,10 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
    `publication_lag_or_old_target_pdf`. The goal cannot be marked complete until
    either FY2026/R8 forms are publicly available at sufficient yield, or the
    product explicitly accepts a publication-lag policy that records latest-public
-   FY2025 forms separately from true target-FY success.
+   FY2025 forms separately from true target-FY success. Post-v138 local code
+   now implements that separate reviewable status, but it still needs Windows
+   packaging/UI smoke and does not by itself satisfy the strict target-FY yield
+   gate.
 2. Validate full Windows bootstrap yield beyond the Sanko-heavy sample.
    v138 includes a 60-site Windows PDF crawl/ingest smoke, and v137 includes a
    targeted 51-site Saitama official-index RCA. These show official-index URL

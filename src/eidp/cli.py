@@ -421,6 +421,10 @@ def rebuild_school_year_tasks(
         "専門学校",
         help="School type to rebuild. Use empty string to rebuild every active school.",
     ),
+    discovery_evidence_log: Path = typer.Option(
+        Path("output/discovery_rejections.jsonl"),
+        help="PDF discovery evidence JSONL used to mark publication-lag target candidates.",
+    ),
 ) -> None:
     """Rebuild the operator-facing school x target-year task table."""
     from eidp.config import settings
@@ -438,6 +442,7 @@ def rebuild_school_year_tasks(
             session,
             fiscal_year=target_fy,
             school_type=normalized_school_type,
+            discovery_evidence_path=discovery_evidence_log,
         )
         session.commit()
         typer.echo(

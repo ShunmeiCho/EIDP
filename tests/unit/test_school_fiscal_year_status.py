@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -449,5 +451,61 @@ def test_rebuild_blocks_excel_ready_when_department_change_is_unverified() -> No
         assert row.extract_status == "parsed"
         assert row.excel_ready is False
         assert row.blocking_reason == "dept_change_review"
+    finally:
+        session.close()
+
+
+def test_rebuild_marks_publication_lag_evidence_as_review_state(tmp_path) -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        session.add(
+            SchoolSite(
+                school_id=1,
+                url="https://s1.example/disclosure",
+                discovery_method="prefecture_aggregator",
+                http_status=200,
+            )
+        )
+        evidence_path = tmp_path / "discovery.jsonl"
+        evidence_path.write_text(
+            json.dumps(
+                {
+                    "school_id": 1,
+                    "reason": "fiscal_year_mismatch:2025",
+                    "pdf_type": "target",
+                    "pdf_url": "https://s1.example/r7/application.pdf",
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        session.commit()
+
+        rebuild_school_fiscal_year_status(
+            session,
+            fiscal_year=2026,
+            school_type="専門学校",
+            discovery_evidence_path=evidence_path,
+        )
+        session.commit()
+
+        row = session.get(SchoolFiscalYearStatus, (1, 2026))
+        assert row is not None
+        assert row.url_status == "pref_url"
+        assert row.pdf_status == "publication_lag"
+        assert row.extract_status == "none"
+        assert row.evidence_level == "publication_lag"
+        assert row.excel_ready is False
+        assert row.blocking_reason == "publication_lag_latest_public"
+
+        counts = school_fiscal_year_status_counts(
+            session,
+            fiscal_year=2026,
+            school_type="専門学校",
+        )
+        assert counts["stale_or_old"] == 1
+        assert counts["excel_ready"] == 0
     finally:
         session.close()
