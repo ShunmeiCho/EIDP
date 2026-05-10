@@ -155,6 +155,7 @@ HEADERS = {
 
 MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
 MAX_DISCOVERY_EXTRA_PAGES = 6
+SITEMAP_DISCOVERY_RESERVED_PAGES = 2
 MAX_DISCOVERY_ELAPSED_SECONDS = 45.0
 MAX_RENDERED_DISCOVERY_PAGES = 3
 SITEMAP_PAGE_KEYWORDS = (
@@ -170,6 +171,7 @@ SITEMAP_PAGE_KEYWORDS = (
     "shugaku",
     "syugaku",
     "support",
+    "school-support",
     "kikanyouken",
     "valuation",
     "情報公開",
@@ -181,10 +183,14 @@ SITEMAP_PAGE_KEYWORDS = (
 )
 DERIVED_DISCLOSURE_PATHS = (
     "/disclosure/{slug}",
+    "{path}/information",
+    "{path}/school-support",
     "{path}/guidelines",
     "{path}/disclosure",
     "{path}/public",
     "{path}/public_info",
+    "/information/",
+    "/school-support/",
     "/disclosure/",
     "/guidelines/",
     "/public/",
@@ -967,7 +973,8 @@ def discover_pdfs_for_site(
                 except httpx.HTTPError:
                     continue
 
-        for derived_url in _derived_disclosure_page_urls(site_url, limit=extra_page_budget_remaining()):
+        derived_budget = max(extra_page_budget_remaining() - SITEMAP_DISCOVERY_RESERVED_PAGES, 0)
+        for derived_url in _derived_disclosure_page_urls(site_url, limit=derived_budget):
             if extra_page_budget_remaining() <= 0:
                 break
             if not _is_safe_url(derived_url):

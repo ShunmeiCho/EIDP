@@ -464,6 +464,42 @@ def test_discover_pdfs_tries_derived_disclosure_pages_from_school_slug(monkeypat
     assert "https://www.sanko.ac.jp/disclosure/omiya-med" in client.calls
 
 
+def test_discover_pdfs_tries_gold_set_derived_support_pages(monkeypatch) -> None:
+    """Gold-set traces include root-level school-support/information pages."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse("<html><a href='/news/'>news</a></html>"),
+            "https://example.ac.jp/school-support/": _HtmlResponse(
+                """
+                <a href="/files/school_support_R8.pdf">
+                  令和８年度 機関要件確認申請書 様式第２号
+                </a>
+                """,
+                url="https://example.ac.jp/school-support/",
+            ),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://example.ac.jp/",
+        rendered_html_fetcher=_RenderedHtmlFetcher({}),
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/files/school_support_R8.pdf"
+    assert result.best.page_url == "https://example.ac.jp/school-support/"
+    assert "https://example.ac.jp/school-support/" in client.calls
+
+
 def test_discover_pdfs_uses_sitemap_even_when_root_has_stale_pdf(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
