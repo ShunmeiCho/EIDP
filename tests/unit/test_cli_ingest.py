@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from eidp.cli import app
+from eidp.cli import _configure_utf8_stdio, app
+
+
+class FakeStream:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, str]] = []
+
+    def reconfigure(self, **kwargs: str) -> None:
+        self.calls.append(kwargs)
 
 
 class FakeSession:
@@ -19,6 +27,16 @@ class FakeSession:
 
     def close(self) -> None:
         self.closed = True
+
+
+def test_configure_utf8_stdio_sets_replace_errors() -> None:
+    stdout = FakeStream()
+    stderr = FakeStream()
+
+    _configure_utf8_stdio(stdout, stderr)
+
+    assert stdout.calls == [{"encoding": "utf-8", "errors": "replace"}]
+    assert stderr.calls == [{"encoding": "utf-8", "errors": "replace"}]
 
 
 def test_ingest_pdfs_forwards_document_ids(monkeypatch) -> None:

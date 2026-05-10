@@ -3,13 +3,26 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import typer
 
 if TYPE_CHECKING:
     from eidp.reports.coverage import PrefectureCoverage
+
+
+def _configure_utf8_stdio(stdout: Any = sys.stdout, stderr: Any = sys.stderr) -> None:
+    """Keep Windows console code pages from crashing Japanese CLI logs."""
+
+    for stream in (stdout, stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
+_configure_utf8_stdio()
 
 app = typer.Typer(name="eidp", help="Education Institution Data Pipeline")
 report_app = typer.Typer(name="report", help="Acceptance-criteria reports")
