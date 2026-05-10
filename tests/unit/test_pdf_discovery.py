@@ -12,6 +12,7 @@ from eidp.scraper.pdf_discovery import (
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
     DiscoveryResult,
     PdfCandidate,
+    _append_unique_candidates,
     _detect_fiscal_year_from_text,
     _download_attempt_urls,
     _extract_pdf_links,
@@ -111,6 +112,47 @@ def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
     assert "&amp;" not in candidates[0].pdf_url
     assert candidates[0].pattern_type == "cache_busted"
     assert "高等教育の修学支援新制度" in candidates[0].anchor_text
+
+
+def test_extract_pdf_links_deduplicates_encoded_and_unencoded_paths() -> None:
+    encoded_path = (
+        "/wp-content/uploads/2025/07/"
+        "%E8%A3%9C%E6%AD%A3%E2%9E%85%E7%A2%BA%E8%AA%8D%E7%94%B3%E8%AB%8B%E6%9B%B8"
+        "%EF%BC%88%E6%A7%98%E5%BC%8F%E7%AC%AC2%E5%8F%B7%EF%BC%89.pdf"
+    )
+    html = f"""
+    <a href="/wp-content/uploads/2025/07/補正➅確認申請書（様式第2号）.pdf">raw</a>
+    <a href="{encoded_path}">encoded</a>
+    """
+
+    candidates = _extract_pdf_links(html, "https://www.saitama-cmcc.ac.jp/school/disclosure/")
+
+    assert [candidate.anchor_text for candidate in candidates] == ["raw"]
+
+
+def test_append_unique_candidates_deduplicates_encoded_and_unencoded_paths() -> None:
+    target = [
+        PdfCandidate(
+            pdf_url="https://example.ac.jp/wp-content/uploads/2025/07/補正➅確認申請書（様式第2号）.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="raw",
+        )
+    ]
+    additions = [
+        PdfCandidate(
+            pdf_url=(
+                "https://example.ac.jp/wp-content/uploads/2025/07/"
+                "%E8%A3%9C%E6%AD%A3%E2%9E%85%E7%A2%BA%E8%AA%8D%E7%94%B3%E8%AB%8B%E6%9B%B8"
+                "%EF%BC%88%E6%A7%98%E5%BC%8F%E7%AC%AC2%E5%8F%B7%EF%BC%89.pdf"
+            ),
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="encoded",
+        )
+    ]
+
+    _append_unique_candidates(target, additions)
+
+    assert [candidate.anchor_text for candidate in target] == ["raw"]
 
 
 def test_download_attempt_urls_resolves_tmu_download_wrapper(monkeypatch) -> None:

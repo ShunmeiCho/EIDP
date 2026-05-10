@@ -532,6 +532,16 @@ def _classify_pdf_sample_text(sample_text: str) -> str:
     return "non_target"
 
 
+def _pdf_candidate_dedupe_key(url: str) -> str:
+    """Return a stable key for duplicate PDF links without changing download URL."""
+
+    normalized = normalize_candidate_url(url)
+    parsed = urlparse(normalized)
+    if not parsed.scheme or not parsed.netloc:
+        return normalized
+    return parsed._replace(path=unquote(parsed.path)).geturl()
+
+
 def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
     """Extract PDF link candidates from HTML using 4 patterns."""
     candidates: list[PdfCandidate] = []
@@ -544,8 +554,9 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
     ):
         href = html_lib.unescape(m.group(1))
         url = urljoin(base_url, href)
-        if url not in seen_urls:
-            seen_urls.add(url)
+        dedupe_key = _pdf_candidate_dedupe_key(url)
+        if dedupe_key not in seen_urls:
+            seen_urls.add(dedupe_key)
             anchor = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
             pattern = "cache_busted" if "?" in href else "direct"
             if "/wp-content/" in url:
@@ -563,8 +574,9 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
             ):
                 href = html_lib.unescape(m.group(1))
                 url = urljoin(base_url, href)
-                if url not in seen_urls:
-                    seen_urls.add(url)
+                dedupe_key = _pdf_candidate_dedupe_key(url)
+                if dedupe_key not in seen_urls:
+                    seen_urls.add(dedupe_key)
                     candidates.append(PdfCandidate(
                         pdf_url=url, page_url=base_url, anchor_text="", pattern_type="embed",
                     ))
@@ -799,9 +811,9 @@ def _extract_sitemap_locs(xml: str) -> list[str]:
 
 def _append_unique_candidates(target: list[PdfCandidate], additions: list[PdfCandidate]) -> None:
     """Append candidates not already present by PDF URL."""
-    seen = {normalize_candidate_url(candidate.pdf_url) for candidate in target}
+    seen = {_pdf_candidate_dedupe_key(candidate.pdf_url) for candidate in target}
     for candidate in additions:
-        candidate_key = normalize_candidate_url(candidate.pdf_url)
+        candidate_key = _pdf_candidate_dedupe_key(candidate.pdf_url)
         if candidate_key in seen:
             continue
         seen.add(candidate_key)
