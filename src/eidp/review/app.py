@@ -37,6 +37,7 @@ PAGE_FISCAL_YEAR_OVERRIDE = "fiscal_year_override"
 PAGE_EXCEL_PREVIEW = "excel_preview"
 PAGE_AUDIT_LOG = "audit_log"
 PAGE_PREFECTURE_REMARKS = "prefecture_remarks"
+PAGE_URL_CANDIDATE_REVIEW = "url_candidate_review"
 PAGE_SETTINGS = "settings"
 
 QUICK_PAGES = [
@@ -55,6 +56,7 @@ DETAIL_PAGES = [
     (PAGE_GAPS, "マッチング漏れ一覧"),
     (PAGE_REJECTIONS, "除外PDF履歴"),
     (PAGE_PREFECTURE_REMARKS, "都道府県公式インデックス"),
+    (PAGE_URL_CANDIDATE_REVIEW, "URL候補レビュー"),
     (PAGE_AUDIT_LOG, "監査ログ"),
     (PAGE_SCHOOL_CODE, "学校コード確認"),
     (PAGE_HISTORY, "処理履歴"),
@@ -609,6 +611,9 @@ def main() -> None:
     elif page == PAGE_PREFECTURE_REMARKS:
         from eidp.review._pages.prefecture_remarks import render as render_prefecture_remarks
         render_prefecture_remarks(session, lock_path=Path(settings.data_dir) / ".lock")
+    elif page == PAGE_URL_CANDIDATE_REVIEW:
+        from eidp.review._pages.url_candidate_review import render as render_url_candidate_review
+        render_url_candidate_review(session, lock_path=Path(settings.data_dir) / ".lock")
     elif page == PAGE_SETTINGS:
         from eidp.review._pages.settings_page import render as render_settings
         render_settings(session, lock_path=Path(settings.data_dir) / ".lock")

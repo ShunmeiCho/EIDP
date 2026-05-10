@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import json
 
-from eidp.review.app import DETAIL_PAGES, PAGE_AUDIT_LOG, PAGE_SETTINGS, QUICK_PAGES, _build_info_caption
+from eidp.review.app import (
+    DETAIL_PAGES,
+    PAGE_AUDIT_LOG,
+    PAGE_SETTINGS,
+    PAGE_URL_CANDIDATE_REVIEW,
+    QUICK_PAGES,
+    _build_info_caption,
+)
 
 
 def test_build_info_caption_reads_packaged_commit(tmp_path):
@@ -53,4 +60,5 @@ def test_settings_is_visible_in_quick_navigation():
 
     assert PAGE_SETTINGS in quick_ids
     assert PAGE_SETTINGS not in detail_ids
+    assert PAGE_URL_CANDIDATE_REVIEW in detail_ids
     assert PAGE_AUDIT_LOG in detail_ids
