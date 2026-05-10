@@ -402,6 +402,43 @@ def test_discover_pdfs_uses_sitemap_when_site_has_no_disclosure_links(monkeypatc
     assert result.best.page_url == "https://example.ac.jp/school/public_info/"
 
 
+def test_discover_pdfs_tries_derived_disclosure_pages_from_school_slug(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://www.sanko.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.sanko.ac.jp/omiya-med": _HtmlResponse(
+                "<html><a href='/news/'>news</a></html>",
+                url="https://www.sanko.ac.jp/omiya-med",
+            ),
+            "https://www.sanko.ac.jp/disclosure/omiya-med": _HtmlResponse(
+                """
+                <a href="/docs/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://www.sanko.ac.jp/disclosure/omiya-med",
+            ),
+            "https://www.sanko.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://www.sanko.ac.jp/omiya-med",
+        rendered_html_fetcher=_RenderedHtmlFetcher({}),
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://www.sanko.ac.jp/docs/r8-kakunin.pdf"
+    assert result.best.page_url == "https://www.sanko.ac.jp/disclosure/omiya-med"
+    assert "https://www.sanko.ac.jp/disclosure/omiya-med" in client.calls
+
+
 def test_discover_pdfs_uses_sitemap_even_when_root_has_stale_pdf(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)

@@ -169,6 +169,17 @@ SITEMAP_PAGE_KEYWORDS = (
     "無償化",
     "機関要件",
 )
+DERIVED_DISCLOSURE_PATHS = (
+    "/disclosure/{slug}",
+    "{path}/guidelines",
+    "{path}/disclosure",
+    "{path}/public",
+    "{path}/public_info",
+    "/disclosure/",
+    "/guidelines/",
+    "/public/",
+    "/public_info/",
+)
 
 
 @dataclass
@@ -617,6 +628,38 @@ def _find_subpage_links(html: str, base_url: str) -> list[str]:
     return subpages[:12]  # Keep bounded while covering dense institutional navs.
 
 
+def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]:
+    """Return conservative same-host disclosure URL guesses from a school homepage URL."""
+
+    parsed = urlparse(site_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return []
+
+    path = parsed.path.rstrip("/")
+    raw_segments = [segment for segment in path.split("/") if segment]
+    slug = raw_segments[-1] if raw_segments else ""
+    root = f"{parsed.scheme}://{parsed.netloc}"
+    path_or_root = path or ""
+    seen: set[str] = {normalize_candidate_url(site_url)}
+    urls: list[str] = []
+
+    for pattern in DERIVED_DISCLOSURE_PATHS:
+        if "{slug}" in pattern and not slug:
+            continue
+        if "{path}" in pattern and not path_or_root:
+            continue
+        candidate_path = pattern.format(slug=slug, path=path_or_root)
+        candidate_url = urljoin(root + "/", candidate_path.lstrip("/"))
+        key = normalize_candidate_url(candidate_url)
+        if key in seen:
+            continue
+        seen.add(key)
+        urls.append(candidate_url)
+        if len(urls) >= limit:
+            break
+    return urls
+
+
 def _sitemap_urls_for_site(
     client: httpx.Client,
     site_url: str,
@@ -913,6 +956,20 @@ def discover_pdfs_for_site(
                         _append_unique_candidates(candidates, sub_candidates)
                 except httpx.HTTPError:
                     continue
+
+        for derived_url in _derived_disclosure_page_urls(site_url, limit=extra_page_budget_remaining()):
+            if extra_page_budget_remaining() <= 0:
+                break
+            if not _is_safe_url(derived_url):
+                continue
+            try:
+                time.sleep(1.0)
+                extra_pages_fetched += 1
+                derived_resp = _safe_get(client, derived_url)
+                if derived_resp.status_code == 200:
+                    _append_unique_candidates(candidates, _extract_pdf_links(derived_resp.text, derived_url))
+            except httpx.HTTPError:
+                continue
 
         # Sitemap discovery is not just a last resort. Many school homepages
         # expose stale PDFs on the visible page while the current disclosure page
