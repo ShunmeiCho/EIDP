@@ -16,7 +16,7 @@ def test_discovery_gold_set_schema_and_prototypes_exist() -> None:
     assert (GOLD_SET_DIR / "README.md").is_file()
 
     entries = sorted(ENTRY_DIR.glob("*.json"))
-    assert len(entries) >= 2
+    assert len(entries) >= 5
 
 
 def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
@@ -24,6 +24,9 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
 
     accepted = [entry for entry in entries if entry["outcome"] == "accepted_target_pdf"]
     assert accepted, "prototype set needs at least one successful discovery path"
+    assert any(entry["target_fiscal_year"] == 2026 for entry in accepted)
+    assert any(entry["evidence"]["source_kind"] == "manual_web" for entry in entries)
+    assert len({entry["entry_id"] for entry in entries}) == len(entries)
 
     for entry in entries:
         assert entry["schema_version"] == "discovery-gold-set/v0.1"

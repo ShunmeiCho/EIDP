@@ -49,6 +49,13 @@ The initial prototype entries are:
 - `sanko-osaka-med-2025.json`: accepted FY2025 target confirmation form.
 - `sanko-yokohama-sweets-publication-lag-2026.json`: strict FY2026 rejection
   with FY2025 latest-public control success.
+- `ecole-matsue-nutrition-2026.json`: accepted FY2026 form from a dedicated
+  school-support page with a `令和８年度` anchor.
+- `kokufuku-shin-kokusai-fukushi-2026.json`: accepted FY2026 form from a
+  WordPress disclosure post where the PDF filename is opaque and the anchor
+  context carries the year.
+- `ncad-niigata-design-2025.json`: accepted FY2025 form from a structured
+  information page that also contains adjacent 役員名簿 and 授業科目 PDFs.
 
 ## Implementation Direction
 

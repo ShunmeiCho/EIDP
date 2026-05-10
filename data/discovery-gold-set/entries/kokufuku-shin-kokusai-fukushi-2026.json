@@ -1,0 +1,54 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "kokufuku-shin-kokusai-fukushi-2026",
+  "school": {
+    "school_id": 836,
+    "school_name": "専門学校新国際福祉カレッジ",
+    "prefecture": "千葉県",
+    "corporation_name": "阿弥陀寺教育学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find a FY2026 target confirmation form embedded in a dated WordPress information post.",
+    "search_queries": [
+      "専門学校新国際福祉カレッジ 機関要件確認申請書",
+      "専門学校新国際福祉カレッジ 令和8年度 様式第2号"
+    ],
+    "steps": [
+      "Open the 2025-07-18 information disclosure post.",
+      "Scroll to the section 大学等における修学の支援に関する法律第7条第1項の確認に係る情報.",
+      "Prefer the link labeled 令和８年度機関要件確認申請書20250718（様式第２号）.",
+      "Ignore adjacent 令和７年度 and 令和６年度 links unless running a stale-year control.",
+      "Accept the WordPress upload PDF only for FY2026 strict mode."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://kokufuku.ac.jp/",
+    "disclosure_url": "https://kokufuku.ac.jp/2025/07/18/%E3%80%90%E6%83%85%E5%A0%B1%E5%85%AC%E9%96%8B%E3%80%91%E5%AD%A6%E6%A0%A1%E6%83%85%E5%A0%B1%E3%81%AE%E5%85%AC%E9%96%8B%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6/",
+    "pdf_url": "https://kokufuku.ac.jp/wp-content/uploads/2025/07/b1b74768f7ce7b4c01670b76f27bb275.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "wordpress_disclosure_post",
+    "reusable_rules": [
+      "Search results may land on a dated information post rather than a stable /information page.",
+      "Within WordPress posts, section headings around 修学の支援 and 機関要件 are stronger signals than opaque upload filenames.",
+      "When multiple Reiwa-year target-form links appear, choose the exact requested fiscal year and keep older links as stale controls."
+    ],
+    "anti_patterns": [
+      "Do not choose adjacent 事業計画, 役員名簿, 財務, or 自己評価 PDFs from the same post.",
+      "Do not infer the year from the /uploads/2025/ path; use the visible 令和８年度 anchor text."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://kokufuku.ac.jp/2025/07/18/%E3%80%90%E6%83%85%E5%A0%B1%E5%85%AC%E9%96%8B%E3%80%91%E5%AD%A6%E6%A0%A1%E6%83%85%E5%A0%B1%E3%81%AE%E5%85%AC%E9%96%8B%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6/",
+      "https://kokufuku.ac.jp/wp-content/uploads/2025/07/b1b74768f7ce7b4c01670b76f27bb275.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-11 found the FY2026 link text in a WordPress disclosure post; the PDF URL itself is opaque and needs anchor-context evidence."
+  }
+}

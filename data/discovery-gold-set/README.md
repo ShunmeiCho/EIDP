@@ -15,3 +15,10 @@ captures:
 `entries/*.json` are intentionally small and append-only. A future discovery
 agent should learn from these demonstrations, then emit structured candidates
 that can be compared with this gold set.
+
+Current v0.1 seed coverage:
+
+- Sanko disclosure pages with stale latest-public FY2025 controls.
+- Dedicated school-support pages with Reiwa-year anchors.
+- WordPress disclosure posts with opaque upload PDF filenames.
+- Structured information pages with many adjacent non-target PDFs.
