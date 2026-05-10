@@ -99,7 +99,7 @@ def run_school_url_auto_crawl(
         crawler = SchoolUrlCrawler(
             serp_fetcher=serp_fetcher or _default_serp_fetcher(),
             page_fetcher=page_fetcher or ScraplingPageFetcher(mode=fetch_mode),
-            throttle=CrawlThrottle(),
+            throttle=_default_crawl_throttle(),
         )
     except ScraplingUnavailableError:
         stats["unavailable"] = 1
@@ -195,6 +195,16 @@ def _default_serp_fetcher() -> SearchProviderSerpFetcher:
         google_cx=settings.google_cx,
     )
     return SearchProviderSerpFetcher(provider)
+
+
+def _default_crawl_throttle() -> CrawlThrottle:
+    min_jitter = max(0.0, settings.school_url_crawl_min_jitter)
+    max_jitter = max(min_jitter, settings.school_url_crawl_max_jitter)
+    return CrawlThrottle(
+        min_seconds_per_domain=max(0.0, settings.school_url_crawl_min_seconds_per_domain),
+        min_jitter=min_jitter,
+        max_jitter=max_jitter,
+    )
 
 
 def _accumulate_outcome(

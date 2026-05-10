@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import Base, ManualActionLog, School, SchoolSite
 from eidp.scraper.school_url_errors import ScraplingUnavailableError
-from eidp.scraper.school_url_pipeline import _accumulate_outcome, _schools_without_url, run_school_url_auto_crawl
+from eidp.scraper.school_url_pipeline import (
+    _accumulate_outcome,
+    _default_crawl_throttle,
+    _schools_without_url,
+    run_school_url_auto_crawl,
+)
 from eidp.scraper.school_website_crawl import FetchedPage, SchoolUrlDiscovery, SerpHit
 
 
@@ -194,6 +199,34 @@ def test_run_school_url_auto_crawl_honors_prefecture_filter() -> None:
         assert stats["attempted"] == 0
     finally:
         session.close()
+
+
+def test_default_crawl_throttle_uses_school_url_specific_settings(monkeypatch) -> None:
+    import eidp.scraper.school_url_pipeline as pipeline
+
+    monkeypatch.setattr(pipeline.settings, "school_url_crawl_min_seconds_per_domain", 5.0)
+    monkeypatch.setattr(pipeline.settings, "school_url_crawl_min_jitter", 0.5)
+    monkeypatch.setattr(pipeline.settings, "school_url_crawl_max_jitter", 1.5)
+
+    throttle = _default_crawl_throttle()
+
+    assert throttle.min_seconds_per_domain == 5.0
+    assert throttle.min_jitter == 0.5
+    assert throttle.max_jitter == 1.5
+
+
+def test_default_crawl_throttle_clamps_reversed_jitter_settings(monkeypatch) -> None:
+    import eidp.scraper.school_url_pipeline as pipeline
+
+    monkeypatch.setattr(pipeline.settings, "school_url_crawl_min_seconds_per_domain", -1.0)
+    monkeypatch.setattr(pipeline.settings, "school_url_crawl_min_jitter", 3.0)
+    monkeypatch.setattr(pipeline.settings, "school_url_crawl_max_jitter", 1.0)
+
+    throttle = _default_crawl_throttle()
+
+    assert throttle.min_seconds_per_domain == 0.0
+    assert throttle.min_jitter == 3.0
+    assert throttle.max_jitter == 3.0
 
 
 def test_schools_without_url_uses_outer_join_not_subquery() -> None:
