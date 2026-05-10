@@ -42,6 +42,8 @@ from eidp.review._pages.school_year_tasks import (
     school_task_source_chain_csv,
     school_task_summary,
     school_type_from_filter_label,
+    school_year_discovery_evidence_bucket_by_school,
+    school_year_discovery_evidence_bucket_label,
     school_year_discovery_evidence_summary,
     school_year_discovery_evidence_summary_notice,
     select_task_document,
@@ -296,6 +298,13 @@ def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candida
         assert school_year_discovery_evidence_summary_notice(summary, target_fiscal_year=2026) == (
             "PDF探索ログ: 旧年度または公開待ちの確認申請書候補が 1校あります。"
             "これは2026年度成果には含めず、学校側の更新待ちとして再取得対象に残します。"
+        )
+        assert school_year_discovery_evidence_bucket_by_school(summary) == {
+            1: "publication_lag_or_old_target_pdf",
+            2: "non_target_candidates_only",
+        }
+        assert school_year_discovery_evidence_bucket_label("publication_lag_or_old_target_pdf") == (
+            "旧年度候補あり"
         )
     finally:
         session.close()

@@ -649,6 +649,33 @@ def school_year_discovery_evidence_summary_notice(
     )
 
 
+def school_year_discovery_evidence_bucket_by_school(
+    summary: PdfDiscoveryEvidenceSummary | None,
+) -> dict[int, str]:
+    """Return recent discovery evidence bucket by school id."""
+    if summary is None:
+        return {}
+    return {
+        school_summary.school_id: school_summary.bucket
+        for school_summary in summary.school_summaries
+        if school_summary.bucket != "no_evidence"
+    }
+
+
+def school_year_discovery_evidence_bucket_label(bucket: str | None) -> str:
+    """Return compact table label for recent discovery evidence buckets."""
+    labels = {
+        "accepted_target_pdf": "取得済",
+        "publication_lag_or_old_target_pdf": "旧年度候補あり",
+        "target_form_without_year_evidence": "年度未確認候補",
+        "no_pdf_candidates": "候補なし",
+        "site_fetch_error_only": "入口取得エラー",
+        "mixed_with_site_fetch_error": "一部取得エラー",
+        "non_target_candidates_only": "対象外候補のみ",
+    }
+    return labels.get(bucket or "", "")
+
+
 def needs_initial_url_bootstrap(summary: SchoolTaskSummary) -> bool:
     """Return True when setup has schools but no known crawl URLs yet."""
     return summary.total > 0 and summary.no_url == summary.total
@@ -1672,6 +1699,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     )
     if evidence_notice:
         st.info(evidence_notice)
+    evidence_bucket_by_school = school_year_discovery_evidence_bucket_by_school(evidence_summary)
 
     if needs_initial_url_bootstrap(summary):
         _render_initial_bootstrap_controls(summary, lock_path=lock_path)
@@ -1748,6 +1776,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             ),
             "URL": status_label(URL_STATUS_LABELS, row.url_status),
             "PDF": status_label(PDF_STATUS_LABELS, row.pdf_status),
+            "PDF探索ログ": school_year_discovery_evidence_bucket_label(evidence_bucket_by_school.get(row.school_id)),
             "抽出": status_label(EXTRACT_STATUS_LABELS, row.extract_status),
             "証拠": status_label(EVIDENCE_LEVEL_LABELS, row.evidence_level),
             "最新PDF年度": row.latest_document_fiscal_year,
