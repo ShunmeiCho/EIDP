@@ -358,6 +358,9 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*度)", text)
         if western_year is not None:
             return int(western_year.group(1))
+        filename_year = re.search(r"(?<!\d)(20\d{2})(?!\d)", text)
+        if filename_year is not None:
+            return int(filename_year.group(1))
         era_year = fiscal_year_from_japanese_era_text(
             text,
             include_fiscal_year_labels=False,
@@ -400,16 +403,16 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
 
     text = _candidate_hint_text(candidate)
     lowered = text.lower()
+    detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
+    if detected_year is not None and detected_year != target_year and _has_target_application_hint(candidate):
+        return CachedPdfRejection(
+            pdf_type="target",
+            reason=f"fiscal_year_mismatch:{detected_year}",
+        )
     if any(token.lower() in lowered for token in PRE_DOWNLOAD_NEGATIVE_TOKENS):
         return CachedPdfRejection(
             pdf_type="non_target",
             reason="pre_filtered_non_target_hint",
-        )
-    detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
-    if detected_year is not None and detected_year != target_year:
-        return CachedPdfRejection(
-            pdf_type="target",
-            reason=f"fiscal_year_mismatch:{detected_year}",
         )
     return None
 
@@ -418,7 +421,7 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
     """Return whether link text/URL strongly names the target application form."""
 
     text = _candidate_hint_text(candidate).lower()
-    system_hint = any(token in text for token in ("修学支援", "高等教育", "無償化"))
+    system_hint = any(token in text for token in ("修学支援", "修学の支援", "高等教育", "無償化"))
     form_hint = any(token in text for token in ("確認申請", "申請書", "様式第2号", "様式第２号", "様式2号", "機関要件"))
     strong_form_hint = "機関要件" in text and any(
         token in text for token in ("確認申請", "様式第2号", "様式第２号", "様式2号")

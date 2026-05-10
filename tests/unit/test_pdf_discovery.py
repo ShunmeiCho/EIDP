@@ -96,6 +96,21 @@ def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
         assert rejection.pdf_type == "non_target"
 
 
+def test_pre_download_prioritizes_stale_target_form_year_over_evaluation_path() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://ndac.ac.jp/about/evaluation/uploads/info-2025.pdf",
+        page_url="https://ndac.ac.jp/about/evaluation/",
+        anchor_text="大学等における修学の支援に関する法律第７条第１項 確認申請書",
+        score=3.5,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2025"
+
+
 def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
     html = """
     <a href="/albums/abm.php?d=16&amp;f=abm00001256.pdf&amp;n=%E6%94%B9.pdf">
