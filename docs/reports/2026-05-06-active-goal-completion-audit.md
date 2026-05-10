@@ -3,7 +3,55 @@
 Date: 2026-05-07
 Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `2f5b8e46163b8dd50cc6a081ffaff5b408d604f4` (`eidp-windows-v139.zip`)
+Latest audited Windows package commit: `06c94d63d6b01fc54499793451d4b4a3d55fd5ed` (`eidp-windows-v140.zip`)
+
+## 2026-05-11 v140 Update
+
+v140 packages the post-RCA stale official-index URL fallback.
+
+- Root cause from the v139 non-Sanko RCA: 9 of the 17
+  `site_fetch_error_only` rows were stale
+  `https://www.all-japan.ac.jp/disclosure/` official-index URLs returning 404,
+  even though the same-origin root page still linked the live disclosure page.
+- `pdf_discovery.py` now retries the same-origin root page when the registered
+  official-index URL returns 404/410 below root. The fallback is intentionally
+  narrow: it does not ignore arbitrary HTTP failures, does not cross origin, and
+  does not relax TLS verification.
+- Regression coverage: `test_discover_pdfs_falls_back_to_origin_root_when_registered_path_is_404`.
+- Local verification:
+  `uv run pytest tests/unit/test_pdf_discovery.py -q` → `44 passed`;
+  `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` → passed;
+  `uv run mypy src/eidp/scraper/pdf_discovery.py` → passed;
+  `uv run pytest tests/unit -q` → `1024 passed`.
+- Live local probe against `https://www.all-japan.ac.jp/disclosure/` confirmed
+  `pdf_discovery_root_fallback`, `result.error=None`, `candidates=626`, and a
+  repair of the stale official-index URL into a crawlable disclosure surface.
+- Core ZIP: `dist/eidp-windows-v140.zip`
+- Latest alias: `dist/eidp-windows.zip`
+- Core ZIP SHA256: `b8256b3e4e62741f98b36c339152a3b477d905426398d4603bc5e43bc5e8ddb6`
+- Core verifier with unchanged `dist/eidp-playwright-addon-windows-v106.zip`:
+  `OK core`, `OK playwright-addon`,
+  `git_commit=06c94d63d6b01fc54499793451d4b4a3d55fd5ed`,
+  `git_dirty=false`, `entry_count=3016`, `wheel_count=78`,
+  47 prefecture seed rows/parser registrations/downloadable artifact URLs, and
+  add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows remote extraction/setup smoke on host alias `win`: copied
+  `eidp-windows-v140.zip`, verified the same SHA256, expanded into
+  `C:\EIDP-v140-06c94d6`, and ran `scripts\first_setup.bat`. The setup
+  completed offline wheelhouse install, SQLite bootstrap, master Excel import,
+  and FY2026 task rebuild. The bundled validator reported `OK install`,
+  `build_commit=06c94d63d6b01fc54499793451d4b4a3d55fd5ed`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required SQLite tables present, and
+  `wheel_count=78`.
+- Windows packaged live fallback smoke from `C:\EIDP-v140-06c94d6` against
+  `https://www.all-japan.ac.jp/disclosure/` confirmed
+  `pdf_discovery_root_fallback`, `error=None`, `candidates=626`, and a best
+  candidate from the repaired disclosure surface.
+
+v140 improves stale official-index URL recovery but does not change the strict
+FY2026 yield gate by itself. The remaining TLS-chain failures and true
+publication-lag / old-year target PDFs remain separate work or policy decisions.
 
 ## 2026-05-11 v139 Update
 
@@ -394,13 +442,21 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v139.zip` rebuilt at commit `2f5b8e46163b8dd50cc6a081ffaff5b408d604f4`, verifier `OK core`, `git_dirty=false`, SHA256 `35a67aca553d279ce834da26cde970985623ba95d587d1be0fa27655be7c6534`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v139 smoke on a fresh `C:\EIDP-v139-2f5b8e4` extraction proved SHA256 match, setup exit success, `school_count=2418`, `school_fiscal_year_status_count=2418`, required SQLite tables, publication-lag packaged CLI status rebuild, packaged Streamlit server HTTP 200, and a read-only browser click-through. The latest bounded non-Sanko v139 strict FY2026 acquisition RCA crawled 45 official-index sites with `downloaded=0`, `publication_lag_or_old_target_pdf=22`, `site_fetch_error_only=17`, `target_form_without_year_evidence=4`, and `non_target_candidates_only=2`. | Latest v139 package/setup/status/UI/browser and bounded acquisition RCA are verified. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and real target-FY PDF/Excel flow remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v140.zip` rebuilt at commit `06c94d63d6b01fc54499793451d4b4a3d55fd5ed`, verifier `OK core`, `git_dirty=false`, SHA256 `b8256b3e4e62741f98b36c339152a3b477d905426398d4603bc5e43bc5e8ddb6`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v140 smoke on a fresh `C:\EIDP-v140-06c94d6` extraction proved SHA256 match, setup exit success, `school_count=2418`, `school_fiscal_year_status_count=2418`, required SQLite tables, and packaged stale-URL root fallback against `all-japan.ac.jp/disclosure/`. The bounded non-Sanko v139 strict FY2026 acquisition RCA crawled 45 official-index sites with `downloaded=0`, `publication_lag_or_old_target_pdf=22`, `site_fetch_error_only=17`, `target_form_without_year_evidence=4`, and `non_target_candidates_only=2`; v140 specifically fixes the stale 404 portion of `site_fetch_error_only`. | Latest v140 package/setup/fallback smoke and latest bounded acquisition RCA are verified. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and real target-FY PDF/Excel flow remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
 - `sprint8-handoff-finalize` remains the active handoff branch; `main` is
   intentionally unchanged until the yield gate is met.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v140.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=06c94d63d6b01fc54499793451d4b4a3d55fd5ed`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, core SHA256 `b8256b3e4e62741f98b36c339152a3b477d905426398d4603bc5e43bc5e8ddb6`, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows v140 clean extraction/setup/fallback smoke →
+  SHA256 matched on Windows, `C:\EIDP-v140-06c94d6` extracted cleanly,
+  `first_setup.bat` completed, validator reported `OK install`,
+  `school_count=2418`, `school_fiscal_year_status_count=2418`, required
+  tables present, and the packaged live probe of
+  `https://www.all-japan.ac.jp/disclosure/` produced
+  `pdf_discovery_root_fallback`, `error=None`, and `candidates=626`.
 - `uv run pytest tests/unit` after the post-v138 publication-lag status/UI
   wiring → `1023 passed`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v139.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=2f5b8e46163b8dd50cc6a081ffaff5b408d604f4`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, core SHA256 `35a67aca553d279ce834da26cde970985623ba95d587d1be0fa27655be7c6534`, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
@@ -616,11 +672,12 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v139 is the current locally and
+The active goal is **not complete**. v140 is the current locally and
 Windows-smoke verified handoff candidate, and the branch is backed up remotely.
 The latest bounded non-Sanko Windows acquisition RCA still proves strict FY2026
 yield below the ship gate: `0/45` target downloads despite official-index
 `SchoolSite` coverage, with the dominant blockers split between publication-lag
-old-year target forms and fetch/navigation failures. The main remaining
+old-year target forms and fetch/navigation failures. v140 fixes the stale
+same-origin 404 portion of that fetch/navigation bucket, but the main remaining
 blockers are target-year yield/policy, broader Windows E2E validation, real
 operator UI validation, and the explicit university rollout decision.
