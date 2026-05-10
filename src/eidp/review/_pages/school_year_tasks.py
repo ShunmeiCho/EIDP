@@ -310,7 +310,11 @@ def discovery_evidence_stale_target_notice(evidence_rows: list[Any]) -> str | No
     return f"旧年度の確認申請書候補あり: {' / '.join(parts)}。対象年度PDFは未取得です。"
 
 
-def school_task_source_chain_csv(rows: list[SchoolTaskRow]) -> str:
+def school_task_source_chain_csv(
+    rows: list[SchoolTaskRow],
+    *,
+    discovery_evidence_buckets: dict[int, str] | None = None,
+) -> str:
     """Return a CSV audit export for the visible task rows.
 
     The UI table is good for scanning, but the operator also needs a durable
@@ -327,6 +331,7 @@ def school_task_source_chain_csv(rows: list[SchoolTaskRow]) -> str:
         "entry_kind",
         "entry_discovery_method",
         "entry_url",
+        "pdf_discovery_evidence",
         "pdf_document_id",
         "pdf_fiscal_year",
         "pdf_status",
@@ -359,6 +364,9 @@ def school_task_source_chain_csv(rows: list[SchoolTaskRow]) -> str:
                 else "",
                 "entry_discovery_method": row.latest_site_discovery_method or "",
                 "entry_url": row.latest_site_url or "",
+                "pdf_discovery_evidence": school_year_discovery_evidence_bucket_label(
+                    (discovery_evidence_buckets or {}).get(row.school_id)
+                ),
                 "pdf_document_id": row.latest_document_id or "",
                 "pdf_fiscal_year": row.latest_document_fiscal_year or "",
                 "pdf_status": row.latest_document_status or "",
@@ -1787,7 +1795,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     st.dataframe(table, hide_index=True, width="stretch")
     st.download_button(
         "表示中の出典チェーンCSVを保存",
-        data=school_task_source_chain_csv(rows),
+        data=school_task_source_chain_csv(rows, discovery_evidence_buckets=evidence_bucket_by_school),
         file_name=f"school-task-source-chain-{fiscal_year}.csv",
         mime="text/csv",
         width="stretch",

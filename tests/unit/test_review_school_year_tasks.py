@@ -1132,12 +1132,16 @@ def test_school_task_source_chain_csv_exports_visible_row_evidence() -> None:
         latest_site_discovery_method="prefecture_aggregator",
     )
 
-    csv_body = school_task_source_chain_csv([row])
+    csv_body = school_task_source_chain_csv(
+        [row],
+        discovery_evidence_buckets={12: "publication_lag_or_old_target_pdf"},
+    )
 
     assert "school_id,prefecture,school_name" in csv_body
     assert "東京テスト専門学校" in csv_body
     assert "都道府県公式一覧の入口" in csv_body
     assert "情報公開ページ（来年度以降も再取得入口として再利用）" in csv_body
+    assert "旧年度候補あり" in csv_body
     assert "https://school.example/r7.pdf" in csv_body
 
 
