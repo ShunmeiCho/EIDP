@@ -39,6 +39,21 @@ def test_confirmation_application_attachment_is_ranked_below_main_pdf() -> None:
     assert _score_candidate(main) > _score_candidate(attachment)
 
 
+def test_confirmation_application_japanese_attachment_is_ranked_below_main_pdf() -> None:
+    main = PdfCandidate(
+        pdf_url="https://example.ac.jp/data/2025/kakunin_shinsei.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="確認申請書(様式第2号)",
+    )
+    attachment = PdfCandidate(
+        pdf_url="https://example.ac.jp/data/2025/kakunin2025_bessi.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="確認申請書(様式第2号の4別紙)",
+    )
+
+    assert _score_candidate(main) > _score_candidate(attachment)
+
+
 def test_score_candidate_uses_configured_target_fiscal_year() -> None:
     target = PdfCandidate(
         pdf_url="https://example.ac.jp/r9.pdf",
