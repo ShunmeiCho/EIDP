@@ -8,8 +8,9 @@ from pathlib import Path
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Base, ManualActionLog, School, SchoolSite
+from eidp.db.models import Base, ManualActionLog, ReviewItem, School, SchoolSite
 from eidp.scraper.school_url_errors import ScraplingUnavailableError
+from eidp.scraper.school_url_persistence import REVIEW_ITEM_TYPE, REVIEW_PROPOSAL_SOURCE
 from eidp.scraper.school_url_pipeline import (
     _accumulate_outcome,
     _default_crawl_throttle,
@@ -328,6 +329,30 @@ def test_schools_without_url_uses_outer_join_not_subquery() -> None:
         select_sql = " ".join(statements)
         assert "LEFT OUTER JOIN" in select_sql.upper()
         assert "NOT IN" not in select_sql.upper()
+    finally:
+        session.close()
+
+
+def test_schools_without_url_skips_pending_url_candidate_review_items() -> None:
+    session = _session()
+    try:
+        _seed_school(session, school_id=1)
+        _seed_school(session, school_id=2, school_name="東京デザイン第二専門学校")
+        session.add(
+            ReviewItem(
+                item_type=REVIEW_ITEM_TYPE,
+                reference_table="school",
+                reference_id=1,
+                status="pending",
+                proposal_source=REVIEW_PROPOSAL_SOURCE,
+                proposal_value='{"manual_required": true}',
+            )
+        )
+        session.commit()
+
+        schools = _schools_without_url(session, batch_size=10)
+
+        assert [school.id for school in schools] == [2]
     finally:
         session.close()
 

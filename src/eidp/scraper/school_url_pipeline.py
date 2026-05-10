@@ -17,10 +17,15 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
-from eidp.db.models import School, SchoolSite
+from eidp.db.models import ReviewItem, School, SchoolSite
 from eidp.scraper.anti_detection import CrawlThrottle
 from eidp.scraper.school_url_errors import ScraplingUnavailableError
-from eidp.scraper.school_url_persistence import PersistenceOutcome, persist_discovery
+from eidp.scraper.school_url_persistence import (
+    REVIEW_ITEM_TYPE,
+    REVIEW_PROPOSAL_SOURCE,
+    PersistenceOutcome,
+    persist_discovery,
+)
 from eidp.scraper.school_website_crawl import PageFetcher, SchoolUrlCrawler, SerpFetcher
 from eidp.scraper.scrapling_fetcher import (
     ScraplingFetchMode,
@@ -167,7 +172,16 @@ def _schools_without_url(
     query = (
         session.query(School)
         .outerjoin(SchoolSite, SchoolSite.school_id == School.id)
+        .outerjoin(
+            ReviewItem,
+            (ReviewItem.reference_table == "school")
+            & (ReviewItem.reference_id == School.id)
+            & (ReviewItem.item_type == REVIEW_ITEM_TYPE)
+            & (ReviewItem.proposal_source == REVIEW_PROPOSAL_SOURCE)
+            & (ReviewItem.status == "pending"),
+        )
         .filter(SchoolSite.id.is_(None))
+        .filter(ReviewItem.id.is_(None))
         .filter(School.status == "active")
     )
     if school_id is not None:
