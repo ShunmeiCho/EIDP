@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 
 from eidp.scraper.discovery_gold_set import (
+    build_discovery_gold_run_plan,
     load_discovery_gold_entries,
+    render_discovery_gold_run_plan,
     render_discovery_gold_summary,
     summarize_discovery_gold_entries,
 )
@@ -39,3 +41,27 @@ def test_render_discovery_gold_summary_outputs_json_safe_payload() -> None:
     assert decoded["outcome_counts"]["needs_operator_review"] == 4
     assert decoded["strict_target_year_successes"] == 4
     assert "dense_information_page" in decoded["site_families"]
+
+
+def test_build_discovery_gold_run_plan_emits_bounded_pdf_discovery_inputs() -> None:
+    entries = load_discovery_gold_entries(GOLD_SET_DIR)
+
+    plan = build_discovery_gold_run_plan(entries)
+
+    assert len(plan) == 10
+    ecole = next(item for item in plan if item.entry_id == "ecole-matsue-nutrition-2026")
+    assert ecole.school_id == 1721
+    assert ecole.site_url == "https://www.ecole-cpb.com/school-support"
+    assert ecole.target_fiscal_year == 2026
+    assert ecole.expected_outcome == "accepted_target_pdf"
+    assert ecole.expected_pdf_url == "https://www.ecole-cpb.com/files/school_support_R8.pdf"
+
+
+def test_render_discovery_gold_run_plan_outputs_json_array() -> None:
+    payload = render_discovery_gold_run_plan(build_discovery_gold_run_plan(load_discovery_gold_entries(GOLD_SET_DIR)))
+
+    decoded = json.loads(payload)
+
+    assert len(decoded) == 10
+    assert decoded[0]["entry_id"] == "ast-kansai-ika-review-2026"
+    assert decoded[0]["site_url"] == "https://www.kmc.ast.ac.jp/jyouhoukokai/"

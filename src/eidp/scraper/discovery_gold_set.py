@@ -19,6 +19,8 @@ class DiscoveryGoldEntry:
     school_id: int
     target_fiscal_year: int
     outcome: str
+    school_url: str
+    disclosure_url: str
     pdf_url: str
     fiscal_year: int | None
     strict_target_year_success: bool
@@ -34,6 +36,28 @@ class DiscoveryGoldPrediction:
     pdf_url: str
     fiscal_year: int | None
     strict_target_year_success: bool
+
+
+@dataclass(frozen=True)
+class DiscoveryGoldRunPlanItem:
+    """One bounded input for a discovery gold-set PDF run."""
+
+    entry_id: str
+    school_id: int
+    site_url: str
+    target_fiscal_year: int
+    expected_outcome: str
+    expected_pdf_url: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "entry_id": self.entry_id,
+            "school_id": self.school_id,
+            "site_url": self.site_url,
+            "target_fiscal_year": self.target_fiscal_year,
+            "expected_outcome": self.expected_outcome,
+            "expected_pdf_url": self.expected_pdf_url,
+        }
 
 
 @dataclass(frozen=True)
@@ -104,6 +128,8 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
                 school_id=int(payload["school"]["school_id"]),
                 target_fiscal_year=int(payload["target_fiscal_year"]),
                 outcome=str(payload["outcome"]),
+                school_url=str(expected_result.get("school_url") or ""),
+                disclosure_url=str(expected_result.get("disclosure_url") or ""),
                 pdf_url=str(expected_result.get("pdf_url") or ""),
                 fiscal_year=int(fiscal_year) if fiscal_year is not None else None,
                 strict_target_year_success=bool(expected_result.get("strict_target_year_success", False)),
@@ -111,6 +137,25 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
             )
         )
     return entries
+
+
+def build_discovery_gold_run_plan(entries: list[DiscoveryGoldEntry]) -> list[DiscoveryGoldRunPlanItem]:
+    """Build bounded PDF discovery run inputs from the gold set."""
+
+    plan: list[DiscoveryGoldRunPlanItem] = []
+    for entry in entries:
+        site_url = entry.disclosure_url or entry.school_url
+        plan.append(
+            DiscoveryGoldRunPlanItem(
+                entry_id=entry.entry_id,
+                school_id=entry.school_id,
+                site_url=site_url,
+                target_fiscal_year=entry.target_fiscal_year,
+                expected_outcome=entry.outcome,
+                expected_pdf_url=entry.pdf_url,
+            )
+        )
+    return plan
 
 
 def summarize_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> DiscoveryGoldSummary:
@@ -134,6 +179,12 @@ def render_discovery_gold_summary(summary: DiscoveryGoldSummary) -> str:
     """Render a deterministic JSON payload for CLI and audit logs."""
 
     return json.dumps(summary.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def render_discovery_gold_run_plan(plan: list[DiscoveryGoldRunPlanItem]) -> str:
+    """Render bounded run-plan inputs as deterministic JSON."""
+
+    return json.dumps([item.to_dict() for item in plan], ensure_ascii=False, indent=2, sort_keys=True)
 
 
 def load_discovery_gold_predictions(predictions_path: Path) -> list[DiscoveryGoldPrediction]:

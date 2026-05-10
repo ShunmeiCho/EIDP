@@ -89,6 +89,9 @@ Phase 3 should convert repeated patterns into a deterministic agent:
 - emit reviewable evidence for operator UI.
 
 Phase 4 should evaluate discovery against the gold set before Windows release.
+The bounded run inputs are emitted by `uv run eidp discovery-gold-run-plan
+--json`; this keeps the next test run scoped to the committed demonstrations
+instead of ad hoc broad crawling.
 The local comparison surface is `uv run eidp eval-discovery-gold --predictions
 path/to/predictions.jsonl --json`; crawler or agent output must match gold-set
 entry IDs, outcomes, PDF URLs, fiscal years, and strict target-year decisions

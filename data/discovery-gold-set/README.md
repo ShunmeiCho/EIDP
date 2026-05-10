@@ -22,6 +22,13 @@ To inspect the current release-relevant buckets locally:
 uv run eidp discovery-gold-set --json
 ```
 
+To emit the bounded school/site inputs that should be used for a gold-set PDF
+discovery run:
+
+```bash
+uv run eidp discovery-gold-run-plan --json
+```
+
 To evaluate crawler or agent output against the gold set, write one JSON object
 per line with `entry_id`, `outcome`, `pdf_url`, `fiscal_year`, and
 `strict_target_year_success`, then run:

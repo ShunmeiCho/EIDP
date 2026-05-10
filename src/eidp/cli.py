@@ -883,6 +883,28 @@ def discovery_gold_set(
         typer.echo(f"    {outcome}: {count}")
 
 
+@app.command("discovery-gold-run-plan")
+def discovery_gold_run_plan(
+    gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
+) -> None:
+    """Emit bounded PDF discovery inputs from the discovery gold set."""
+    from eidp.scraper.discovery_gold_set import (
+        build_discovery_gold_run_plan,
+        load_discovery_gold_entries,
+        render_discovery_gold_run_plan,
+    )
+
+    plan = build_discovery_gold_run_plan(load_discovery_gold_entries(gold_set_dir))
+    if output_json:
+        typer.echo(render_discovery_gold_run_plan(plan))
+        return
+
+    typer.echo(f"Discovery gold run plan: {len(plan)} entries")
+    for item in plan:
+        typer.echo(f"  {item.entry_id}: school_id={item.school_id} site_url={item.site_url}")
+
+
 @app.command("eval-discovery-gold")
 def eval_discovery_gold(
     predictions: Path | None = typer.Option(None, help="JSONL predictions to compare against the discovery gold set"),

@@ -21,3 +21,16 @@ def test_discovery_gold_set_cli_outputs_summary_json() -> None:
     assert payload["total_entries"] == 10
     assert payload["outcome_counts"]["publication_lag_latest_public"] == 2
     assert payload["operator_review_entries"] == 4
+
+
+def test_discovery_gold_run_plan_cli_outputs_json_array() -> None:
+    result = CliRunner().invoke(
+        app,
+        ["discovery-gold-run-plan", "--gold-set-dir", str(GOLD_SET_DIR), "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert len(payload) == 10
+    assert payload[0]["entry_id"] == "ast-kansai-ika-review-2026"
+    assert payload[0]["site_url"] == "https://www.kmc.ast.ac.jp/jyouhoukokai/"
