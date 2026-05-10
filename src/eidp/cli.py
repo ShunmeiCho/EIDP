@@ -307,6 +307,7 @@ def discover_pdfs(
     ),
 ) -> None:
     """Discover and download PDFs from school disclosure pages (Step 8)."""
+    from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.pdf_discovery import run_pdf_discovery
 
@@ -324,6 +325,8 @@ def discover_pdfs(
             discovery_methods=methods,
             school_ids=school_filter,
             evidence_path=evidence_path,
+            target_fiscal_year=settings.target_fiscal_year,
+            strict_target_fiscal_year=True,
         )
         session.commit()
         typer.echo("\nPDF Discovery Results:")
@@ -640,6 +643,7 @@ def weekly_update(
     Idempotent: safe to run multiple times. Skips already-processed items.
     Designed for crontab: 0 2 * * 1 .venv/bin/eidp weekly-update
     """
+    from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.url_discovery import get_discovery_stats, verify_urls_sync
 
@@ -657,7 +661,14 @@ def weekly_update(
         typer.echo("\n[2/4] Discovering PDFs...")
         from eidp.scraper.pdf_discovery import run_pdf_discovery
         storage_dir.mkdir(parents=True, exist_ok=True)
-        pdf_stats = run_pdf_discovery(session, storage_dir, batch_size=pdf_batch, rate_limit=1.5)
+        pdf_stats = run_pdf_discovery(
+            session,
+            storage_dir,
+            batch_size=pdf_batch,
+            rate_limit=1.5,
+            target_fiscal_year=settings.target_fiscal_year,
+            strict_target_fiscal_year=True,
+        )
         session.commit()
         typer.echo(f"  {pdf_stats}")
 
