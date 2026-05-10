@@ -22,3 +22,9 @@ Current v0.1 seed coverage:
 - Dedicated school-support pages with Reiwa-year anchors.
 - WordPress disclosure posts with opaque upload PDF filenames.
 - Structured information pages with many adjacent non-target PDFs.
+- Dense information pages where the target-form anchor is surrounded by
+  adjacent school-evaluation, syllabus, and teacher-list PDFs.
+- University-affiliated vocational school tuition or school-information pages
+  that expose target-looking support PDFs without reliable target-year proof.
+- Direct `jyouhoukokai` PDFs whose body proves the target-form shape but whose
+  URL and anchor context require operator review before strict FY acceptance.

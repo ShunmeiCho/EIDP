@@ -1,0 +1,54 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "nihon-u-dental-hygienist-publication-lag-2026",
+  "school": {
+    "school_id": 494,
+    "school_name": "日本大学歯学部附属歯科衛生専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "日本大学"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Find the visible support-system PDF and classify it as latest-public evidence, not strict FY2026 success.",
+    "search_queries": [
+      "日本大学歯学部附属歯科衛生専門学校 高等教育 修学支援",
+      "日本大学歯学部附属歯科衛生専門学校 機関要件確認申請書"
+    ],
+    "steps": [
+      "Open the tuition and scholarship page under campus-life.",
+      "Scroll to 高等教育の修学支援新制度について.",
+      "Open the anchor for 機関要件確認申請書様式第2号関係.",
+      "Verify the PDF body contains the school name and 様式第２号.",
+      "Reject it as strict FY2026 success because the linked PDF path is 2025_study-support_01.pdf."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.dent.nihon-u.ac.jp/hyg/",
+    "disclosure_url": "https://www.dent.nihon-u.ac.jp/hyg/campus-life/tuition/",
+    "pdf_url": "https://www.dent.nihon-u.ac.jp/hyg/pdf/campus-life/tuition/2025_study-support_01.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "university_affiliated_school_tuition_page",
+    "reusable_rules": [
+      "Search tuition or scholarship pages for 高等教育の修学支援新制度 when no separate 情報公開 page appears.",
+      "Use the PDF filename year as stale latest-public evidence when the target fiscal year is newer.",
+      "Preserve stale target-form evidence for operator visibility without counting it as strict target-year success."
+    ],
+    "anti_patterns": [
+      "Do not downgrade a valid target-form PDF to non-target merely because it is stale.",
+      "Do not accept a 2025 filename as FY2026 even when the page is currently linked."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.dent.nihon-u.ac.jp/hyg/campus-life/tuition/",
+      "https://www.dent.nihon-u.ac.jp/hyg/pdf/campus-life/tuition/2025_study-support_01.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-11 found the support-system anchor on the tuition page and verified the 2025 PDF body contains 日本大学歯学部附属歯科衛生専門学校 and 様式第２号."
+  }
+}

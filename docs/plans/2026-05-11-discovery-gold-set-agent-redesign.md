@@ -56,6 +56,19 @@ The initial prototype entries are:
   context carries the year.
 - `ncad-niigata-design-2025.json`: accepted FY2025 form from a structured
   information page that also contains adjacent 役員名簿 and 授業科目 PDFs.
+- `bit-toyama-information-business-review-2026.json`: target-looking form from
+  a dense information page, routed to operator review because FY2026 is not
+  proven.
+- `nihon-u-dental-hygienist-publication-lag-2026.json`: visible latest-public
+  target form is a FY2025 PDF on a tuition/support page, so strict FY2026
+  remains rejected.
+- `nihon-u-matsudo-dental-hygienist-review-2026.json`: stable
+  `higher_education_support.pdf` link proves target-form shape but has no
+  reliable fiscal-year evidence.
+- `ast-kansai-keiri-review-2026.json`: direct AST `jyouhoukokai` PDF for
+  関西経理専門学校 needs review because the target-form body is yearless.
+- `ast-kansai-ika-review-2026.json`: direct AST `jyouhoukokai` PDF for
+  関西医科専門学校 follows the same yearless target-form review pattern.
 
 ## Implementation Direction
 

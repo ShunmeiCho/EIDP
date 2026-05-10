@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ast-kansai-keiri-review-2026",
+  "school": {
+    "school_id": 1532,
+    "school_name": "関西経理専門学校",
+    "prefecture": "大阪府",
+    "corporation_name": "大阪学院大学"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Find whether the AST disclosure PDF is a target form while preserving strict target-year discipline.",
+    "search_queries": [
+      "関西経理専門学校 機関要件確認申請書",
+      "関西経理専門学校 様式第2号"
+    ],
+    "steps": [
+      "Open the AST school public disclosure PDF under /jyouhoukokai/pdf/.",
+      "Verify the PDF body starts with 様式第２号 and the school name 関西経理専門学校.",
+      "Observe that kbc_yosiki2.pdf has no fiscal-year token in the filename.",
+      "Queue the PDF for operator review because the PDF is target-looking but not proven to be FY2026."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.kbc.ast.ac.jp/",
+    "disclosure_url": "https://www.kbc.ast.ac.jp/jyouhoukokai/",
+    "pdf_url": "https://www.kbc.ast.ac.jp/jyouhoukokai/pdf/kbc_yosiki2.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "ast_jyouhoukokai_direct_pdf",
+    "reusable_rules": [
+      "For AST-family sites, inspect /jyouhoukokai/ and linked *_yosiki2.pdf files before broad crawling.",
+      "Use 様式第２号 plus exact school-name match as target-form evidence.",
+      "When fiscal-year evidence is absent, emit needs_operator_review with the verified direct PDF URL."
+    ],
+    "anti_patterns": [
+      "Do not use corporation-level URLs from the PDF body as the school disclosure page.",
+      "Do not count a target-looking, yearless PDF as strict FY2026 success."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.kbc.ast.ac.jp/jyouhoukokai/pdf/kbc_yosiki2.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-11 verified the direct PDF body contains 関西経理専門学校 and 様式第２号, but the URL and opening text did not establish FY2026."
+  }
+}

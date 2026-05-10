@@ -1,0 +1,54 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "nihon-u-matsudo-dental-hygienist-review-2026",
+  "school": {
+    "school_id": 819,
+    "school_name": "日本大学松戸歯学部附属歯科衛生専門学校",
+    "prefecture": "千葉県",
+    "corporation_name": "日本大学"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Find a target-looking support PDF on a school information page and keep it review-bound when the year is unclear.",
+    "search_queries": [
+      "日本大学松戸歯学部附属歯科衛生専門学校 高等教育 修学支援",
+      "日本大学松戸歯学部附属歯科衛生専門学校 機関要件確認申請書"
+    ],
+    "steps": [
+      "Open the school information page under /college/info/purpose.html.",
+      "Locate the 高等教育の修学支援新制度 section.",
+      "Open the PDF anchor labeled 機関要件確認申請書様式第2号関係.",
+      "Verify the PDF body contains the school name and 様式第２号.",
+      "Queue the candidate for operator review because the PDF URL is stable and yearless."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.mascat.nihon-u.ac.jp/college/",
+    "disclosure_url": "https://www.mascat.nihon-u.ac.jp/college/info/purpose.html",
+    "pdf_url": "https://www.mascat.nihon-u.ac.jp/data/pdf/college/info/higher_education_support.pdf?1=",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "university_affiliated_school_info_page",
+    "reusable_rules": [
+      "Inspect pages under /college/info/ for 高等教育の修学支援新制度 anchors.",
+      "Keep query strings on stable PDF URLs when they are part of the published link.",
+      "Route yearless higher_education_support PDFs to operator review after target-form body verification."
+    ],
+    "anti_patterns": [
+      "Do not assume a stable PDF URL is current-year evidence.",
+      "Do not treat adjacent 学校関係者評価 PDFs as equivalent candidates."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.mascat.nihon-u.ac.jp/college/info/purpose.html",
+      "https://www.mascat.nihon-u.ac.jp/data/pdf/college/info/higher_education_support.pdf?1="
+    ],
+    "notes": "Manual web trace on 2026-05-11 found the school information page anchor and verified the PDF body contains 日本大学松戸歯学部附属歯科衛生専門学校 and 様式第２号."
+  }
+}
