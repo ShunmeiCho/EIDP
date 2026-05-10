@@ -130,6 +130,22 @@ Interpretation:
   target-FY ship gate until FY2026 forms are public at sufficient coverage or
   the product formally accepts a latest-public publication-lag workflow.
 
+Follow-up fix from this RCA:
+
+- The 17 `site_fetch_error_only` rows were inspected. They were not one bucket:
+  nine were stale `https://www.all-japan.ac.jp/disclosure/` official-index
+  URLs returning 404 even though the same-origin root page still links the live
+  disclosure page; four were stale `nag.ac.jp` / `akademeia21.com` 404s; four
+  were TLS certificate-chain failures on public school sites.
+- `pdf_discovery.py` now retries a same-origin root page when the registered
+  official-index URL returns 404/410 below root. This is deliberately narrow:
+  it does not ignore arbitrary HTTP errors and does not change TLS verification.
+- Fixture regression: a stale `/old/disclosure/` path returning 404 now falls
+  back to `/`, follows the root `情報公開` link, and finds the target PDF.
+- Live verification against `https://www.all-japan.ac.jp/disclosure/` confirmed
+  the fallback logs `pdf_discovery_root_fallback`, clears `result.error`, and
+  discovers `626` PDF candidates from the current disclosure surface.
+
 ## 2026-05-11 v138 Update
 
 v138 refreshes the core Windows package after two Saitama-RCA-driven PDF
@@ -410,6 +426,14 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   `target_form_without_year_evidence=4`, and `non_target_candidates_only=2`.
   Rebuilding FY2026 status from that evidence produced `publication_lag=22`
   and `no_target_pdf=23` within the sample.
+- Post-RCA stale official-index URL fix →
+  `uv run pytest tests/unit/test_pdf_discovery.py -q` passed `44` tests,
+  `uv run ruff check src/eidp/scraper/pdf_discovery.py
+  tests/unit/test_pdf_discovery.py` passed, `uv run mypy
+  src/eidp/scraper/pdf_discovery.py` passed, and `uv run pytest tests/unit -q`
+  passed `1024` tests. A live probe of
+  `https://www.all-japan.ac.jp/disclosure/` confirmed same-origin root fallback
+  and `626` discovered candidates.
 - `uv run pytest tests/unit` after the v138 PDF discovery fixes →
   `1021 passed`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v138.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=5a4aeb825e516410875d31ddf1e4c4fddab448e0`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.

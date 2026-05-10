@@ -408,6 +408,17 @@ class _HtmlResponse:
         return None
 
 
+class _RaisingHtmlResponse(_HtmlResponse):
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            request = httpx.Request("GET", str(self.url))
+            raise httpx.HTTPStatusError(
+                f"HTTP {self.status_code}",
+                request=request,
+                response=httpx.Response(self.status_code, request=request),
+            )
+
+
 class _HtmlClient:
     def __init__(self, pages: dict[str, _HtmlResponse]) -> None:
         self.pages = pages
@@ -517,6 +528,57 @@ def test_discover_pdfs_uses_sitemap_when_site_has_no_disclosure_links(monkeypatc
     assert result.best is not None
     assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
     assert result.best.page_url == "https://example.ac.jp/school/public_info/"
+
+
+def test_discover_pdfs_falls_back_to_origin_root_when_registered_path_is_404(monkeypatch) -> None:
+    """Official indexes can contain stale disclosure paths while the root nav still links the live page."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/old/disclosure/": _RaisingHtmlResponse(
+                """
+                <html>
+                  <a href="/about/disclosure/">情報公開</a>
+                </html>
+                """,
+                status_code=404,
+                url="https://example.ac.jp/old/disclosure/",
+            ),
+            "https://example.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/about/disclosure/">情報公開</a>
+                </html>
+                """,
+                url="https://example.ac.jp/",
+            ),
+            "https://example.ac.jp/about/disclosure/": _HtmlResponse(
+                """
+                <a href="/files/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://example.ac.jp/about/disclosure/",
+            ),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://example.ac.jp/old/disclosure/",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/files/r8-kakunin.pdf"
+    assert "https://example.ac.jp/" in client.calls
+    assert "https://example.ac.jp/about/disclosure/" in client.calls
 
 
 def test_discover_pdfs_tries_derived_disclosure_pages_from_school_slug(monkeypatch) -> None:

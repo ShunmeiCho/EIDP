@@ -71,6 +71,38 @@ def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
         "Too many redirects", request=resp.request, response=resp
     )
 
+
+def _origin_root_url(url: str) -> str | None:
+    """Return the same-origin root URL when ``url`` points below root."""
+
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    if parsed.path in {"", "/"} and not parsed.query and not parsed.fragment:
+        return None
+    return f"{parsed.scheme}://{parsed.netloc}/"
+
+
+def _main_page_response_with_root_fallback(client: httpx.Client, site_url: str) -> tuple[httpx.Response, str]:
+    """Fetch the registered page, falling back to origin root for stale 404 paths."""
+
+    resp = _safe_get(client, site_url)
+    try:
+        resp.raise_for_status()
+        return resp, site_url
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else 0
+        if status_code not in {404, 410}:
+            raise
+        root_url = _origin_root_url(site_url)
+        if root_url is None or not _is_safe_url(root_url):
+            raise
+        root_resp = _safe_get(client, root_url)
+        root_resp.raise_for_status()
+        log.info("pdf_discovery_root_fallback", original_url=site_url, fallback_url=root_url, status_code=status_code)
+        return root_resp, root_url
+
+
 # Keywords that indicate the target document (高等教育修学支援新制度 確認申請書)
 POSITIVE_KEYWORDS = [
     "修学支援", "高等教育", "無償化", "確認申請", "機関要件",
@@ -958,8 +990,7 @@ def discover_pdfs_for_site(
         time.sleep(1.0)  # Per-request delay (design: max 1 req/sec per domain)
 
         # Fetch main page (with safe redirect following)
-        resp = _safe_get(client, site_url)
-        resp.raise_for_status()
+        resp, site_url = _main_page_response_with_root_fallback(client, site_url)
         html = resp.text
 
         # Short/truncated HTML retry (TCA pattern)
