@@ -89,6 +89,10 @@ Phase 3 should convert repeated patterns into a deterministic agent:
 - emit reviewable evidence for operator UI.
 
 Phase 4 should evaluate discovery against the gold set before Windows release.
+The local comparison surface is `uv run eidp eval-discovery-gold --predictions
+path/to/predictions.jsonl --json`; crawler or agent output must match gold-set
+entry IDs, outcomes, PDF URLs, fiscal years, and strict target-year decisions
+before a Windows yield run is treated as meaningful.
 
 Phase 5 should run the bounded Windows yield gate again and compare:
 

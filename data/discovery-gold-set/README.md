@@ -22,6 +22,14 @@ To inspect the current release-relevant buckets locally:
 uv run eidp discovery-gold-set --json
 ```
 
+To evaluate crawler or agent output against the gold set, write one JSON object
+per line with `entry_id`, `outcome`, `pdf_url`, `fiscal_year`, and
+`strict_target_year_success`, then run:
+
+```bash
+uv run eidp eval-discovery-gold --predictions path/to/predictions.jsonl --json
+```
+
 Current v0.1 seed coverage:
 
 - Sanko disclosure pages with stale latest-public FY2025 controls.

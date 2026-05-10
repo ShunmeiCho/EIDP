@@ -883,6 +883,34 @@ def discovery_gold_set(
         typer.echo(f"    {outcome}: {count}")
 
 
+@app.command("eval-discovery-gold")
+def eval_discovery_gold(
+    predictions: Path = typer.Option(..., help="JSONL predictions to compare against the discovery gold set"),
+    gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
+) -> None:
+    """Evaluate crawler or agent predictions against discovery gold-set entries."""
+    from eidp.scraper.discovery_gold_set import (
+        evaluate_discovery_gold_predictions,
+        load_discovery_gold_entries,
+        load_discovery_gold_predictions,
+        render_discovery_gold_eval_report,
+    )
+
+    entries = load_discovery_gold_entries(gold_set_dir)
+    predicted = load_discovery_gold_predictions(predictions)
+    report = evaluate_discovery_gold_predictions(entries, predicted)
+    if output_json:
+        typer.echo(render_discovery_gold_eval_report(report))
+        return
+
+    typer.echo(f"Discovery gold evaluation: {report.exact_matches}/{report.total_gold_entries} exact")
+    typer.echo(f"  predictions: {report.predicted_entries}")
+    typer.echo(f"  failed:      {report.failed_predictions}")
+    typer.echo(f"  missing:     {report.missing_entries}")
+    typer.echo(f"  unexpected:  {report.unexpected_predictions}")
+
+
 @report_app.command("coverage")
 def report_coverage(
     school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),
