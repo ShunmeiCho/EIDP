@@ -28,7 +28,8 @@ start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Second
 "%VENV_PY%" -m streamlit run ^
     "%EIDP_APP_ROOT%\src\eidp\review\app.py" ^
     --server.port 8501 ^
-    --server.headless true
+    --server.headless true ^
+    --browser.gatherUsageStats false
 set "RC=%ERRORLEVEL%"
 
 endlocal & exit /b %RC%

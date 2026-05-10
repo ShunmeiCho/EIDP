@@ -67,6 +67,7 @@ class ZipCheck:
 
 CORE_REQUIRED_EXACT = (
     "BUILD_INFO.json",
+    ".streamlit/config.toml",
     "EIDP-setup.bat",
     "EIDP-start.bat",
     "EIDP-diagnose.bat",
@@ -260,6 +261,22 @@ def _check_wheelhouse(check: ZipCheck, names: set[str], *, require_project: bool
     ]
     if rejected:
         check.fail(f"wheelhouse contains rejected wheel names: {rejected[:5]}")
+
+    by_distribution: dict[str, list[str]] = {}
+    for wheel in wheels:
+        distribution = Path(wheel).name.split("-", 1)[0].lower().replace("_", "-")
+        by_distribution.setdefault(distribution, []).append(wheel)
+    duplicates = {
+        distribution: values
+        for distribution, values in by_distribution.items()
+        if len(values) > 1
+    }
+    if duplicates:
+        sample = {
+            distribution: values[:5]
+            for distribution, values in sorted(duplicates.items())[:5]
+        }
+        check.fail(f"wheelhouse contains duplicate distributions: {sample}")
 
     project_wheels = [wheel for wheel in wheels if Path(wheel).name.startswith("eidp-")]
     check.details["project_wheel_count"] = len(project_wheels)
@@ -509,6 +526,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "Start-Process 'http://localhost:8501'",
             "streamlit run",
             "--server.headless true",
+            "--browser.gatherUsageStats false",
             'set "RC=%ERRORLEVEL%"',
             "endlocal & exit /b %RC%",
         ),

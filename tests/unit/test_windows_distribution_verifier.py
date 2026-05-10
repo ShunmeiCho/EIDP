@@ -83,6 +83,13 @@ def _core_entries() -> dict[str, bytes | str]:
                 "git_dirty": "false",
             }
         ),
+        ".streamlit/config.toml": (
+            "[server]\n"
+            "headless = true\n"
+            "\n"
+            "[browser]\n"
+            "gatherUsageStats = false\n"
+        ),
         "EIDP-setup.bat": (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8"),
         "EIDP-start.bat": (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8"),
         "EIDP-diagnose.bat": (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8"),
@@ -321,6 +328,17 @@ def test_verify_core_zip_rejects_multiple_project_wheels(tmp_path: Path) -> None
 
     assert not check.ok
     assert any("multiple project wheels" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_duplicate_dependency_wheels(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["wheelhouse/structlog-25.6.0-py3-none-any.whl"] = b"wheel"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("duplicate distributions" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_case_insensitive_path_collision(tmp_path: Path) -> None:

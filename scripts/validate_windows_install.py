@@ -34,6 +34,7 @@ class InstallCheck:
 
 CORE_FILES = (
     "BUILD_INFO.json",
+    ".streamlit/config.toml",
     "EIDP-setup.bat",
     "EIDP-start.bat",
     "EIDP-diagnose.bat",
@@ -134,6 +135,21 @@ def _count_wheels(root: Path) -> int:
     if not wheelhouse.is_dir():
         return 0
     return len(list(wheelhouse.glob("*.whl")))
+
+
+def _duplicate_wheel_distributions(root: Path) -> dict[str, list[str]]:
+    wheelhouse = root / "wheelhouse"
+    if not wheelhouse.is_dir():
+        return {}
+    by_distribution: dict[str, list[str]] = {}
+    for wheel in sorted(wheelhouse.glob("*.whl")):
+        distribution = wheel.name.split("-", 1)[0].lower().replace("_", "-")
+        by_distribution.setdefault(distribution, []).append(wheel.name)
+    return {
+        distribution: wheels
+        for distribution, wheels in by_distribution.items()
+        if len(wheels) > 1
+    }
 
 
 def _validate_build_info(check: InstallCheck, path: Path) -> None:
@@ -252,6 +268,10 @@ def validate_install(
         check.fail("wheelhouse contains no wheels")
     if not any(path.name.startswith("eidp-") for path in (root / "wheelhouse").glob("*.whl")):
         check.fail("wheelhouse missing project wheel eidp-*.whl")
+    duplicate_wheels = _duplicate_wheel_distributions(root)
+    check.details["duplicate_wheel_distributions"] = duplicate_wheels
+    if duplicate_wheels:
+        check.fail(f"wheelhouse contains duplicate distributions: {duplicate_wheels}")
 
     master = root / "data" / "master.xlsx"
     check.details["master_xlsx_present"] = master.is_file()

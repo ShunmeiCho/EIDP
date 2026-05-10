@@ -146,6 +146,16 @@ def test_validate_core_install_requires_project_wheel(tmp_path: Path) -> None:
     assert any("project wheel" in error for error in check.errors)
 
 
+def test_validate_core_install_rejects_duplicate_dependency_wheels(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _write(root, "wheelhouse/structlog-25.6.0-py3-none-any.whl", b"wheel")
+
+    check = module.validate_install(root)
+
+    assert not check.ok
+    assert any("duplicate distributions" in error for error in check.errors)
+
+
 def test_validate_core_install_requires_bootstrap_and_version_files(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     for rel in (

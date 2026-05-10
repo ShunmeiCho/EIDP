@@ -83,6 +83,24 @@ def build_project_wheel(*, repo_root: Path, out_dir: Path) -> Path:
     return wheels[-1]
 
 
+def reset_wheelhouse(wheelhouse: Path) -> None:
+    """Remove stale wheelhouse contents before a fresh dependency download.
+
+    ``pip download`` does not prune older versions that are already in the
+    destination directory. Without an explicit reset, a later ZIP can carry
+    both old and new versions of the same distribution, leaving the operator
+    install dependent on resolver tie-breaking.
+    """
+    wheelhouse.mkdir(parents=True, exist_ok=True)
+    for child in wheelhouse.iterdir():
+        if child.name == ".gitignore":
+            continue
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
 def download_windows_wheels(
     *,
     requirements: Path,
@@ -149,6 +167,22 @@ def verify_wheelhouse(wheelhouse: Path) -> list[Path]:
         )
     if not accepted:
         raise WheelhouseError(f"wheelhouse is empty: {wheelhouse}")
+
+    by_distribution: dict[str, list[Path]] = {}
+    for wheel in accepted:
+        distribution = wheel.name.split("-", 1)[0].lower().replace("_", "-")
+        by_distribution.setdefault(distribution, []).append(wheel)
+    duplicates = {
+        distribution: wheels
+        for distribution, wheels in by_distribution.items()
+        if len(wheels) > 1
+    }
+    if duplicates:
+        details = "\n".join(
+            f"  {distribution}: {', '.join(wheel.name for wheel in wheels)}"
+            for distribution, wheels in sorted(duplicates.items())
+        )
+        raise WheelhouseError(f"wheelhouse contains duplicate distributions:\n{details}")
     return accepted
 
 
@@ -317,6 +351,12 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
         if launcher.is_file():
             members.append((launcher, name))
 
+    # Streamlit config belongs at the app root. It keeps the operator UI in
+    # headless/light mode and disables first-run telemetry prompts.
+    streamlit_config = repo_root / ".streamlit" / "config.toml"
+    if streamlit_config.is_file():
+        members.append((streamlit_config, ".streamlit/config.toml"))
+
     # wheelhouse/
     for wheel in sorted(wheelhouse.glob("*.whl")):
         members.append((wheel, f"wheelhouse/{wheel.name}"))
@@ -484,6 +524,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if not args.skip_download:
+        reset_wheelhouse(args.wheelhouse)
         build_project_wheel(repo_root=REPO_ROOT, out_dir=args.wheelhouse)
         download_windows_wheels(requirements=args.requirements, dest=args.wheelhouse)
 

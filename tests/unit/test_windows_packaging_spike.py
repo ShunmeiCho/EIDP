@@ -105,6 +105,17 @@ def test_verify_wheelhouse_rejects_unexpected_files(tmp_path: Path):
         bw.verify_wheelhouse(wh)
 
 
+def test_verify_wheelhouse_rejects_duplicate_distribution_versions(tmp_path: Path):
+    bw = _load_build_script()
+    wh = tmp_path / "wh"
+    wh.mkdir()
+    _make_empty_wheel(wh / "gitpython-3.1.49-py3-none-any.whl")
+    _make_empty_wheel(wh / "gitpython-3.1.50-py3-none-any.whl")
+
+    with pytest.raises(bw.WheelhouseError, match="duplicate distributions"):
+        bw.verify_wheelhouse(wh)
+
+
 def test_verify_wheelhouse_rejects_empty_directory(tmp_path: Path):
     bw = _load_build_script()
     wh = tmp_path / "wh"
@@ -613,6 +624,11 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "README.md").write_text("# EIDP", encoding="utf-8")
     (fake_repo / "requirements-windows.txt").write_text("structlog\n", encoding="utf-8")
     (fake_repo / "pyproject.toml").write_text("[project]\nname='eidp'\n", encoding="utf-8")
+    (fake_repo / ".streamlit").mkdir(parents=True)
+    (fake_repo / ".streamlit" / "config.toml").write_text(
+        "[server]\nheadless = true\n[browser]\ngatherUsageStats = false\n",
+        encoding="utf-8",
+    )
 
     wheelhouse = tmp_path / "wh"
     wheelhouse.mkdir()
@@ -672,6 +688,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "EIDP-diagnose.bat" in arcs, (
         "root-level diagnostics launcher must be in the Windows ZIP so operators "
         "can collect evidence without browsing into scripts/"
+    )
+    assert ".streamlit/config.toml" in arcs, (
+        "Streamlit config must ship at app root to keep the operator UI headless "
+        "and telemetry-free"
     )
     assert "migrations/env.py" in arcs
     assert "migrations/versions/abcd_initial.py" in arcs
