@@ -1,8 +1,37 @@
 # Active Goal Completion Audit — EIDP Rolling Automation
 
 Date: 2026-05-07
+Latest update: 2026-05-10
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `3dc8aa98ba7e19b4813449858eb56ad25e4ea3c6` (`eidp-windows-v102.zip`)
+Latest audited Windows package commit: `b63664c613fd51fdc783912d9e1c82d83afde377` (`eidp-windows-v136.zip`)
+
+## 2026-05-10 v136 Update
+
+v136 is now the current Windows handoff candidate on `sprint8-handoff-finalize`.
+The branch has been pushed to `origin/sprint8-handoff-finalize`; `main` remains
+unchanged pending real Windows yield acceptance.
+
+- Core ZIP: `dist/eidp-windows-v136.zip`
+- Core ZIP SHA256: `6a712770fabdd00bd724deafb6de63f7806198df50d632630eb6608a4d83096a`
+- Playwright/Scrapling add-on: `dist/eidp-playwright-addon-windows-v106.zip`
+- Add-on SHA256: `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`
+- Windows setup/validator: passed on a clean v136 extraction; validator reported
+  `errors=[]`, `warnings=[]`, `school_count=2418`, and
+  `school_fiscal_year_status_count=2418`.
+- Saitama 5-school URL crawl: `attempted=5`, `auto_registered=5`, `errors=0`,
+  with 5 `school` URLs and 10 auxiliary `disclosure` URLs registered.
+- Strict FY2026 PDF discovery on the same 5 schools: `downloaded=0`. Evidence
+  rows were all rejected as non-target or stale, led by `classified_non_target=102`
+  and `fiscal_year_mismatch:2025=10`.
+- FY2025 control run on the same 5 schools: 4 target confirmation PDFs were
+  accepted into `document`, proving the URL/PDF chain can download and classify
+  the public latest target forms when the sites publish FY2025 material.
+
+Interpretation: v136 closes the packaging, URL crawl, Scrapling static-html, URL
+review, and review-metric issues found in the v134 audit. The remaining release
+gate is not packaging readiness; it is target-year policy/yield. The sampled
+Sanko pages currently expose 2025 confirmation forms, while strict FY2026 mode
+correctly refuses to count those stale forms as success.
 
 ## Objective Restatement
 
@@ -32,6 +61,22 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 ## Latest Verification Evidence
 
+- `git push origin sprint8-handoff-finalize` → remote branch updated to
+  `b63664c613fd51fdc783912d9e1c82d83afde377`; `main` intentionally unchanged.
+- `uv run pytest -q` after the v136 URL-review fixes → `986 passed, 5 warnings`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v136.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `git_commit=b63664c613fd51fdc783912d9e1c82d83afde377`, `git_dirty=false`, `entry_count=3000`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`
+- Windows v136 clean extraction/setup/validator → `errors=[]`, `warnings=[]`,
+  `school_count=2418`, `school_fiscal_year_status_count=2418`, required tables
+  present, duplicate wheel distributions `{}`.
+- Windows v136 Saitama 5-school URL crawl → `attempted=5`,
+  `auto_registered=5`, `errors=0`, `unavailable=0`; database check found 5
+  `school` URLs plus 10 `disclosure` URLs for the 5 sampled schools.
+- Windows v136 strict FY2026 PDF discovery for the same 5-school sample →
+  `downloaded=0`; rejection evidence was dominated by `classified_non_target=102`
+  and stale-year buckets such as `fiscal_year_mismatch:2025=10`.
+- Windows v136 FY2025 control run for the same 5-school sample → 4 target
+  confirmation PDFs accepted into `document`, proving the acquisition chain works
+  for the public latest year while strict FY2026 refuses stale success.
 - `uv run pytest -q` → `841 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_review_pdf_manual_entry.py -q` → `70 passed, 5 warnings`, including a Streamlit AppTest focused PDF確認 render smoke with discovery JSONL evidence
 - `uv run ruff check tests/unit/test_review_pdf_manual_entry.py src/eidp/review/_pages/pdf_manual_entry.py src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` → passed
@@ -126,22 +171,28 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 ## Missing Before Goal Can Be Marked Complete
 
-1. Validate target-year PDF yield with a full real bootstrap run.
-   Official-index URL yield is now proven through Step 2b. The next proof needs
-   a complete Windows initial acquisition run through PDF crawl and ingest,
-   showing actual target-year PDF yield, stale rejection counts, and fallback
-   search counts. The bounded Mac smoke proves the chain runs and rejects
-   old-year candidates, but it does not prove full target-year PDF yield.
-2. Run latest v102 ZIP on Windows and verify:
-   setup, UI start, initial bootstrap button, weekly rediscovery button,
-   official-index coverage page, school task drill-down, PDF確認, and Excel
-   preview.
-3. Keep R-0 naming debt controlled: compatibility wrappers and historical
+1. Decide and validate the target-year acceptance policy.
+   v136 proves the URL crawl and PDF chain can acquire published FY2025 target
+   confirmation PDFs on the sampled Saitama schools, while strict FY2026 mode
+   correctly rejects those stale FY2025 forms. The goal cannot be marked
+   complete until either FY2026/R8 forms are publicly available at sufficient
+   yield, or the product explicitly accepts a publication-lag policy that records
+   latest-public FY2025 forms separately from true target-FY success.
+2. Validate full Windows bootstrap yield beyond the Sanko-heavy sample.
+   The next proof needs a broader Windows initial acquisition run through PDF
+   crawl and ingest, showing true target-FY PDF yield, stale rejection counts,
+   fallback search counts, and review workload. Current v136 evidence is enough
+   for packaging/URL-crawl readiness, not enough for the 60-70% automation gate.
+3. Run the latest v136 UI flow on Windows and verify:
+   UI start, initial bootstrap button, weekly rediscovery button, URL candidate
+   review, official-index coverage page, school task drill-down, PDF確認, and
+   Excel preview.
+4. Keep R-0 naming debt controlled: compatibility wrappers and historical
    reports may keep R8 wording, but new production entrypoints must use
    target-year naming.
-4. Decide university scope: keep as gated pilot for v1.1, or start the v1.2
+5. Decide university scope: keep as gated pilot for v1.1, or start the v1.2
    parser/discovery track.
-5. Validate the UI with real operator feedback; current tests prove wiring and
+6. Validate the UI with real operator feedback; current tests prove wiring and
    business rules, not usability under real workload.
 
 ## Current Conclusion
@@ -150,6 +201,8 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. The main remaining blockers are nationwide
-coverage, latest Windows E2E validation, real operator UI validation, and the
-explicit university rollout decision.
+The active goal is **not complete**. v136 is the strongest Windows handoff
+candidate so far, and the branch is backed up remotely, but strict FY2026 yield
+is still unproven on real sites. The main remaining blockers are target-year
+yield/policy, broader Windows E2E validation, real operator UI validation, and
+the explicit university rollout decision.
