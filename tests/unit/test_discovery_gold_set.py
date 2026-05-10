@@ -28,6 +28,8 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     assert any(entry["evidence"]["source_kind"] == "manual_web" for entry in entries)
     assert any(entry["outcome"] == "needs_operator_review" for entry in entries)
     assert any(entry["outcome"] == "publication_lag_latest_public" for entry in entries)
+    assert any(entry["outcome"] == "no_target_candidate_found" for entry in entries)
+    assert any(entry["evidence"]["source_kind"] == "saitama_rca_jsonl" for entry in entries)
     assert len({entry["entry_id"] for entry in entries}) == len(entries)
 
     for entry in entries:
@@ -43,7 +45,12 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
         assert entry["manual_demonstration"]["operator_goal"]
         assert entry["manual_demonstration"]["steps"]
         assert entry["automation_pattern"]["reusable_rules"]
-        assert entry["evidence"]["source_kind"] in {"windows_v136_jsonl", "manual_web", "operator_review"}
+        assert entry["evidence"]["source_kind"] in {
+            "windows_v136_jsonl",
+            "manual_web",
+            "operator_review",
+            "saitama_rca_jsonl",
+        }
 
         if entry["outcome"] == "accepted_target_pdf":
             assert entry["expected_result"]["pdf_url"].endswith(".pdf")

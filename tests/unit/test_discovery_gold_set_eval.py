@@ -36,11 +36,11 @@ def test_evaluate_discovery_predictions_flags_missing_and_mismatched_entries() -
 
     report = evaluate_discovery_gold_predictions(entries, predictions)
 
-    assert report.total_gold_entries == 10
+    assert report.total_gold_entries == 12
     assert report.predicted_entries == 2
     assert report.exact_matches == 1
     assert report.failed_predictions == 1
-    assert report.missing_entries == 8
+    assert report.missing_entries == 10
     assert report.unexpected_predictions == 0
     assert report.failures[0]["entry_id"] == "nihon-u-dental-hygienist-publication-lag-2026"
     assert report.failures[0]["reasons"] == [
@@ -115,6 +115,22 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
                 ),
                 json.dumps(
                     {
+                        "school_id": 760,
+                        "pdf_url": "https://www.i-heiseigakuen.ac.jp/kokai/",
+                        "reason": "no_candidates_found",
+                        "pdf_type": None,
+                    }
+                ),
+                json.dumps(
+                    {
+                        "school_id": 763,
+                        "pdf_url": "https://odhs.info/app-def/S-101/html/koutou202507.pdf?20250711",
+                        "reason": "target_fiscal_year_not_detected",
+                        "pdf_type": "image_only",
+                    }
+                ),
+                json.dumps(
+                    {
                         "school_id": 999999,
                         "pdf_url": "https://example.invalid/ignored.pdf",
                         "reason": "accepted_downloaded",
@@ -140,6 +156,13 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
             strict_target_year_success=True,
         ),
         DiscoveryGoldPrediction(
+            entry_id="iruma-kango-no-candidates-2026",
+            outcome="no_target_candidate_found",
+            pdf_url="",
+            fiscal_year=None,
+            strict_target_year_success=False,
+        ),
+        DiscoveryGoldPrediction(
             entry_id="nihon-u-dental-hygienist-publication-lag-2026",
             outcome="publication_lag_latest_public",
             pdf_url="https://www.dent.nihon-u.ac.jp/hyg/pdf/campus-life/tuition/2025_study-support_01.pdf",
@@ -150,6 +173,13 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
             entry_id="nihon-u-matsudo-dental-hygienist-review-2026",
             outcome="needs_operator_review",
             pdf_url="https://www.mascat.nihon-u.ac.jp/data/pdf/college/info/higher_education_support.pdf?1=",
+            fiscal_year=None,
+            strict_target_year_success=False,
+        ),
+        DiscoveryGoldPrediction(
+            entry_id="omiya-dental-hygienist-image-review-2026",
+            outcome="needs_operator_review",
+            pdf_url="https://odhs.info/app-def/S-101/html/koutou202507.pdf?20250711",
             fiscal_year=None,
             strict_target_year_success=False,
         ),
@@ -172,6 +202,6 @@ def test_render_discovery_gold_eval_report_outputs_json_payload() -> None:
 
     payload = json.loads(render_discovery_gold_eval_report(report))
 
-    assert payload["total_gold_entries"] == 10
+    assert payload["total_gold_entries"] == 12
     assert payload["exact_matches"] == 1
-    assert payload["missing_entries"] == 9
+    assert payload["missing_entries"] == 11

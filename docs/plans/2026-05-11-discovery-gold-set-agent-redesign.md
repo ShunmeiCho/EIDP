@@ -69,6 +69,12 @@ The initial prototype entries are:
   関西経理専門学校 needs review because the target-form body is yearless.
 - `ast-kansai-ika-review-2026.json`: direct AST `jyouhoukokai` PDF for
   関西医科専門学校 follows the same yearless target-form review pattern.
+- `iruma-kango-no-candidates-2026.json`: Saitama official-index disclosure URL
+  crawls successfully but emits `no_candidates_found`, proving this bucket is a
+  first-class manual-required outcome.
+- `omiya-dental-hygienist-image-review-2026.json`: Saitama official-index URL
+  exposes an image-only target-looking PDF that remains review-bound because
+  strict FY2026 evidence is not text-detectable.
 
 ## Implementation Direction
 

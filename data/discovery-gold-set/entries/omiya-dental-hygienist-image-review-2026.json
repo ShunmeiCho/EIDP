@@ -1,0 +1,53 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "omiya-dental-hygienist-image-review-2026",
+  "school": {
+    "school_id": 763,
+    "school_name": "大宮歯科衛生士専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "大宮歯科医師会（社団）"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Capture a target-looking image-only support PDF that strict discovery cannot accept without year evidence.",
+    "search_queries": [
+      "大宮歯科衛生士専門学校 修学支援",
+      "大宮歯科衛生士専門学校 機関要件確認申請書"
+    ],
+    "steps": [
+      "Start from the Saitama official-index disclosure URL http://odhs.info/app-def/S-101/html/support.",
+      "Follow the anchor 本校の申請内容について to the cache-busted PDF koutou202507.pdf?20250711.",
+      "Classify it as a target-looking image-only PDF candidate.",
+      "Route it to operator review because strict FY2026 evidence was not detected from text, URL, or anchor context."
+    ]
+  },
+  "expected_result": {
+    "school_url": "http://odhs.info/",
+    "disclosure_url": "http://odhs.info/app-def/S-101/html/support",
+    "pdf_url": "https://odhs.info/app-def/S-101/html/koutou202507.pdf?20250711",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "image_only_target_form_candidate",
+    "reusable_rules": [
+      "Keep cache-busted PDF URLs when the published anchor points to them.",
+      "Treat image-only target-form candidates as review-bound unless OCR or page context proves the target fiscal year.",
+      "Surface target_fiscal_year_not_detected separately from non-target PDFs so the operator can decide whether OCR/manual review is worthwhile."
+    ],
+    "anti_patterns": [
+      "Do not accept an image-only support PDF as strict FY2026 success without target-year evidence.",
+      "Do not discard it as non-target only because text extraction failed."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/saitama-rca-current/logs/prefecture_pdf_evidence.jsonl",
+      "_temp/saitama-rca-current/logs/saitama_rca_summary.json"
+    ],
+    "notes": "Current-code Saitama RCA on 2026-05-11 produced target_fiscal_year_not_detected with pdf_type=image_only for school_id 763."
+  }
+}

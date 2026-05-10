@@ -79,3 +79,8 @@ Current v0.1 seed coverage:
   that expose target-looking support PDFs without reliable target-year proof.
 - Direct `jyouhoukokai` PDFs whose body proves the target-form shape but whose
   URL and anchor context require operator review before strict FY acceptance.
+- Official-index disclosure pages that crawl successfully but expose no PDF
+  candidates, so the operator sees a true manual-required case rather than a
+  hidden crawler error.
+- Image-only support PDFs that look target-related but must remain in review
+  until OCR or page context proves the target fiscal year.
