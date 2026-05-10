@@ -76,11 +76,21 @@ Package evidence:
   `excel_ready=1`, `pdf_status_counts=[('confirmed_target', 1), ('image_pending', 2), ('none', 2415)]`,
   and top blocking reasons were `no_url=1523`, `no_target_pdf=892`,
   `ocr_pending=2`.
+- Windows remote discovery-evidence RCA on the same 60-site v138 smoke:
+  `evidence_rows=429`, `schools_with_evidence=60`, `site_scope_schools=60`.
+  School buckets were `accepted_target_pdf=3`,
+  `publication_lag_or_old_target_pdf=44`,
+  `target_form_without_year_evidence=5`, `site_fetch_error_only=3`,
+  `non_target_candidates_only=3`, and `no_pdf_candidates=2`. This means 44/60
+  schools had a target-form-looking PDF for another/publication-lag year, while
+  strict FY2026 correctly refused to count it as success.
 
 Interpretation: v138 is the current packaged handoff candidate for the
 candidate-ranking/dedupe fixes. It now has Windows extraction/setup/add-on
 smoke coverage and a matching bounded PDF crawl/ingest yield smoke. The bounded
-strict FY2026 yield remains far below the 60-70% automation gate.
+strict FY2026 yield remains far below the 60-70% automation gate, and the RCA
+shows the dominant blocker is publication lag / old-year target forms rather
+than missing official-index URL ingestion.
 
 ## 2026-05-11 v137 Update
 
@@ -266,6 +276,10 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   `classified_non_target=122`, `pre_filtered_non_target_hint=135`,
   `target_fiscal_year_not_detected=12`, then ingest `processed=3`,
   `yearly_upserted=4`, `skipped=2`, and task rebuild `excel_ready=1`.
+- Windows v138 discovery-evidence RCA for the same 60-site scope →
+  `accepted_target_pdf=3`, `publication_lag_or_old_target_pdf=44`,
+  `target_form_without_year_evidence=5`, `site_fetch_error_only=3`,
+  `non_target_candidates_only=3`, and `no_pdf_candidates=2`.
 - Windows v136 Saitama 5-school URL crawl → `attempted=5`,
   `auto_registered=5`, `errors=0`, `unavailable=0`; database check found 5
   `school` URLs plus 10 `disclosure` URLs for the 5 sampled schools.
@@ -392,10 +406,12 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 1. Decide and validate the target-year acceptance policy.
    v137/v136 prove the URL crawl and PDF chain can acquire published FY2025 target
    confirmation PDFs on the sampled Saitama schools, while strict FY2026 mode
-   correctly rejects those stale FY2025 forms. The goal cannot be marked
-   complete until either FY2026/R8 forms are publicly available at sufficient
-   yield, or the product explicitly accepts a publication-lag policy that records
-   latest-public FY2025 forms separately from true target-FY success.
+   correctly rejects those stale FY2025 forms. v138 extends this with a 60-site
+   Windows RCA where 44/60 schools fall into
+   `publication_lag_or_old_target_pdf`. The goal cannot be marked complete until
+   either FY2026/R8 forms are publicly available at sufficient yield, or the
+   product explicitly accepts a publication-lag policy that records latest-public
+   FY2025 forms separately from true target-FY success.
 2. Validate full Windows bootstrap yield beyond the Sanko-heavy sample.
    v138 includes a 60-site Windows PDF crawl/ingest smoke, and v137 includes a
    targeted 51-site Saitama official-index RCA. These show official-index URL
