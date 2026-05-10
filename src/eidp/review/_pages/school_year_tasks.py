@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Document, School, SchoolFiscalYearStatus, SchoolSite
+from eidp.scraper.discovery_evidence_summary import PdfDiscoveryEvidenceSummary
 
 
 @dataclass(frozen=True)
@@ -605,6 +606,46 @@ def school_task_summary(
         no_url=no_url,
         review_or_parse=review_or_parse,
         dept_change_review=dept_change_review,
+    )
+
+
+def school_year_discovery_evidence_summary(
+    session: Session,
+    *,
+    app_root: Path,
+    school_type: str | None = "専門学校",
+) -> PdfDiscoveryEvidenceSummary | None:
+    """Summarize recent PDF discovery evidence for the visible school type."""
+    from eidp.scraper.discovery_evidence_summary import (
+        load_pdf_discovery_evidence,
+        load_pdf_discovery_site_scope,
+        summarize_pdf_discovery_evidence,
+    )
+
+    evidence_path = app_root / "output" / "discovery_rejections.jsonl"
+    if not evidence_path.is_file():
+        return None
+    site_scope = load_pdf_discovery_site_scope(session, school_type=school_type)
+    return summarize_pdf_discovery_evidence(
+        load_pdf_discovery_evidence(evidence_path),
+        site_scope=site_scope,
+    )
+
+
+def school_year_discovery_evidence_summary_notice(
+    summary: PdfDiscoveryEvidenceSummary | None,
+    *,
+    target_fiscal_year: int,
+) -> str | None:
+    """Operator-facing notice for strict-mode publication-lag evidence."""
+    if summary is None:
+        return None
+    count = summary.school_bucket_counts.get("publication_lag_or_old_target_pdf", 0)
+    if count <= 0:
+        return None
+    return (
+        f"PDF探索ログ: 旧年度または公開待ちの確認申請書候補が {count}校あります。"
+        f"これは{target_fiscal_year}年度成果には含めず、学校側の更新待ちとして再取得対象に残します。"
     )
 
 
@@ -1620,6 +1661,17 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         summary.excel_ready / summary.total,
         text=task_progress_label(summary),
     )
+    evidence_summary = school_year_discovery_evidence_summary(
+        session,
+        app_root=Path(settings.app_root),
+        school_type=school_type,
+    )
+    evidence_notice = school_year_discovery_evidence_summary_notice(
+        evidence_summary,
+        target_fiscal_year=fiscal_year,
+    )
+    if evidence_notice:
+        st.info(evidence_notice)
 
     if needs_initial_url_bootstrap(summary):
         _render_initial_bootstrap_controls(summary, lock_path=lock_path)

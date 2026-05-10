@@ -87,6 +87,7 @@ def load_pdf_discovery_site_scope(
     *,
     prefecture: str = "",
     discovery_method: str = "",
+    school_type: str | None = None,
 ) -> list[EvidenceScopeSite]:
     """Load expected crawlable school sites from the configured DB."""
 
@@ -97,6 +98,8 @@ def load_pdf_discovery_site_scope(
         query = query.filter(School.prefecture == prefecture)
     if discovery_method:
         query = query.filter(SchoolSite.discovery_method == discovery_method)
+    if school_type is not None:
+        query = query.filter(School.school_type == school_type)
 
     return [
         EvidenceScopeSite(

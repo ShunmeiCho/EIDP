@@ -132,3 +132,43 @@ def test_summarize_discovery_evidence_cli_reads_configured_db_scope(tmp_path: Pa
         "no_evidence": 1,
         "publication_lag_or_old_target_pdf": 1,
     }
+
+
+def test_load_pdf_discovery_site_scope_can_filter_school_type() -> None:
+    from eidp.scraper.discovery_evidence_summary import load_pdf_discovery_site_scope
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add_all(
+            [
+                School(
+                    id=1,
+                    school_name="A",
+                    prefecture="埼玉県",
+                    corporation_name="法人A",
+                    school_type="専門学校",
+                    status="active",
+                ),
+                School(
+                    id=2,
+                    school_name="B",
+                    prefecture="埼玉県",
+                    corporation_name="法人B",
+                    school_type="大学",
+                    status="active",
+                ),
+                SchoolSite(school_id=1, url="https://a/", discovery_method="prefecture_aggregator"),
+                SchoolSite(school_id=2, url="https://b/", discovery_method="prefecture_aggregator"),
+            ]
+        )
+        session.commit()
+
+        scope = load_pdf_discovery_site_scope(
+            session,
+            prefecture="埼玉県",
+            discovery_method="prefecture_aggregator",
+            school_type="専門学校",
+        )
+
+    assert [site.school_id for site in scope] == [1]

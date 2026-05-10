@@ -42,6 +42,8 @@ from eidp.review._pages.school_year_tasks import (
     school_task_source_chain_csv,
     school_task_summary,
     school_type_from_filter_label,
+    school_year_discovery_evidence_summary,
+    school_year_discovery_evidence_summary_notice,
     select_task_document,
     settings_page_prefill,
     site_entry_label,
@@ -239,6 +241,62 @@ def test_school_task_summary_groups_operator_counts() -> None:
         assert summary.no_url == 1
         assert summary.review_or_parse == 1
         assert summary.dept_change_review == 1
+    finally:
+        session.close()
+
+
+def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candidates(tmp_path: Path) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "discovery_rejections.jsonl").write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "reason": "fiscal_year_mismatch:2025",
+                        "pdf_type": "target",
+                        "pdf_url": "https://a/2025.pdf",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "school_id": 2,
+                        "reason": "classified_non_target",
+                        "pdf_type": "non_target",
+                        "pdf_url": "https://b/non-target.pdf",
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    session = _session()
+    try:
+        _school(session, 1, name="学校1", pref="埼玉県")
+        _school(session, 2, name="学校2", pref="埼玉県")
+        _school(session, 3, name="大学1", pref="埼玉県", school_type="大学")
+        _site(session, 1, "https://a/")
+        _site(session, 2, "https://b/")
+        _site(session, 3, "https://c/")
+        session.commit()
+
+        summary = school_year_discovery_evidence_summary(
+            session,
+            app_root=tmp_path,
+            school_type="専門学校",
+        )
+
+        assert summary is not None
+        assert summary.site_scope_schools == 2
+        assert summary.school_bucket_counts == {
+            "non_target_candidates_only": 1,
+            "publication_lag_or_old_target_pdf": 1,
+        }
+        assert school_year_discovery_evidence_summary_notice(summary, target_fiscal_year=2026) == (
+            "PDF探索ログ: 旧年度または公開待ちの確認申請書候補が 1校あります。"
+            "これは2026年度成果には含めず、学校側の更新待ちとして再取得対象に残します。"
+        )
     finally:
         session.close()
 
