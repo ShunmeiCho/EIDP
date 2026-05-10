@@ -7,7 +7,7 @@ import httpx
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Base, CrawlJob, Document, SchoolSite
+from eidp.db.models import Base, CrawlJob, Document, School, SchoolSite
 from eidp.scraper.pdf_discovery import (
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
     DiscoveryResult,
@@ -581,6 +581,64 @@ def test_discover_pdfs_falls_back_to_origin_root_when_registered_path_is_404(mon
     assert "https://example.ac.jp/about/disclosure/" in client.calls
 
 
+def test_discover_pdfs_follows_school_named_homepage_from_umbrella_root(monkeypatch) -> None:
+    """Stale official-index group URLs can recover via a school-named external homepage link."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://group.example/robots.txt": _HtmlResponse("", status_code=404),
+            "https://group.example/old/nsb.html": _RaisingHtmlResponse(
+                "<html>stale</html>",
+                status_code=404,
+                url="https://group.example/old/nsb.html",
+            ),
+            "https://group.example/": _HtmlResponse(
+                """
+                <html>
+                  <a href="https://school.example/">名古屋ビジネス・アカデミー</a>
+                  <a href="https://other.example/">別の学校</a>
+                </html>
+                """,
+                url="https://group.example/",
+            ),
+            "https://school.example/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/about/evaluation/">情報公開</a>
+                </html>
+                """,
+                url="https://school.example/",
+            ),
+            "https://school.example/about/evaluation/": _HtmlResponse(
+                """
+                <a href="/docs/info-2025.pdf">
+                  大学等における修学の支援に関する法律第7条第1項 確認申請書
+                </a>
+                """,
+                url="https://school.example/about/evaluation/",
+            ),
+            "https://group.example/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://group.example/old/nsb.html",
+        school_name="専門学校名古屋ビジネス・アカデミー",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://school.example/docs/info-2025.pdf"
+    assert "https://school.example/" in client.calls
+    assert "https://school.example/about/evaluation/" in client.calls
+    assert "https://other.example/" not in client.calls
+
+
 def test_discover_pdfs_tries_derived_disclosure_pages_from_school_slug(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
@@ -836,6 +894,37 @@ def _session() -> Session:
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     return Session(engine)
+
+
+def test_run_pdf_discovery_passes_school_name_to_site_crawler(monkeypatch, tmp_path: Path) -> None:
+    session = _session()
+    seen: dict[str, str] = {}
+
+    def fake_discover(_client, _school_id, _site_url, **kwargs):  # noqa: ANN001
+        seen["school_name"] = kwargs.get("school_name", "")
+        return DiscoveryResult(school_id=1)
+
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="愛知県",
+                corporation_name="法人",
+                school_name="専門学校名古屋ビジネス・アカデミー",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=1, url="https://group.example/old/nsb.html", http_status=200))
+        session.flush()
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=1, rate_limit=0)
+
+        assert stats["crawled"] == 1
+        assert seen["school_name"] == "専門学校名古屋ビジネス・アカデミー"
+    finally:
+        session.close()
 
 
 def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path: Path) -> None:

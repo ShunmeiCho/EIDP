@@ -694,6 +694,68 @@ def _find_subpage_links(html: str, base_url: str) -> list[str]:
     return subpages[:12]  # Keep bounded while covering dense institutional navs.
 
 
+_EXTERNAL_SCHOOL_LINK_BLOCKED_HOST_PARTS = (
+    "facebook.",
+    "instagram.",
+    "youtube.",
+    "youtu.be",
+    "x.com",
+    "twitter.",
+    "line.me",
+    "google.",
+)
+
+
+def _school_link_label(text: str) -> str:
+    normalized = unicodedata.normalize("NFKC", text).lower()
+    normalized = normalized.replace("専門学校", "")
+    return re.sub(r"[\s　・･\-ー–—_/／|｜()（）［］\\[\\]{}]+", "", normalized)
+
+
+def _school_name_matches_link(text: str, school_name: str) -> bool:
+    school_label = _school_link_label(school_name)
+    link_label = _school_link_label(text)
+    return len(school_label) >= 4 and school_label in link_label
+
+
+def _find_school_homepage_links(html: str, base_url: str, school_name: str, *, limit: int = 3) -> list[str]:
+    """Find school-named external homepage links from umbrella/corporation roots."""
+
+    if not school_name or limit <= 0:
+        return []
+
+    base_parsed = urlparse(base_url)
+    links: list[str] = []
+    seen: set[str] = set()
+    for m in re.finditer(
+        r'<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        href = html_lib.unescape(m.group(1))
+        if href.lower().endswith(".pdf"):
+            continue
+        text = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
+        if not _school_name_matches_link(f"{text} {href}", school_name):
+            continue
+        url = urljoin(base_url, href)
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            continue
+        if parsed.netloc == base_parsed.netloc:
+            continue
+        if any(blocked in parsed.netloc.lower() for blocked in _EXTERNAL_SCHOOL_LINK_BLOCKED_HOST_PARTS):
+            continue
+        key = normalize_candidate_url(url)
+        if key in seen or not _is_safe_url(url):
+            continue
+        seen.add(key)
+        links.append(url)
+        if len(links) >= limit:
+            break
+    return links
+
+
 def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]:
     """Return conservative same-host disclosure URL guesses from a school homepage URL."""
 
@@ -947,6 +1009,7 @@ def discover_pdfs_for_site(
     max_elapsed_seconds: float = MAX_DISCOVERY_ELAPSED_SECONDS,
     rendered_html_fetcher: RenderedHtmlFetcher | None = None,
     target_fiscal_year: int | None = None,
+    school_name: str = "",
 ) -> DiscoveryResult:
     """Discover PDF candidates from a school site URL."""
     result = DiscoveryResult(school_id=school_id)
@@ -1022,6 +1085,39 @@ def discover_pdfs_for_site(
                 except httpx.HTTPError:
                     continue
 
+        school_homepage_page_urls: list[str] = []
+        if max_depth > 0 and not candidates and school_name:
+            for homepage_url in _find_school_homepage_links(html, site_url, school_name):
+                if extra_page_budget_remaining() <= 0:
+                    break
+                try:
+                    time.sleep(1.0)
+                    extra_pages_fetched += 1
+                    homepage_resp = _safe_get(client, homepage_url)
+                    if homepage_resp.status_code != 200:
+                        continue
+                    homepage_base_url = str(homepage_resp.url or homepage_url)
+                    school_homepage_page_urls.append(homepage_base_url)
+                    homepage_html = homepage_resp.text
+                    _append_unique_candidates(candidates, _extract_pdf_links(homepage_html, homepage_base_url))
+                    for sub_url in _find_subpage_links(homepage_html, homepage_base_url):
+                        if extra_page_budget_remaining() <= 0:
+                            break
+                        if not _is_safe_url(sub_url):
+                            continue
+                        try:
+                            time.sleep(1.0)
+                            extra_pages_fetched += 1
+                            sub_resp = _safe_get(client, sub_url)
+                            if sub_resp.status_code == 200:
+                                sub_base_url = str(sub_resp.url or sub_url)
+                                school_homepage_page_urls.append(sub_base_url)
+                                _append_unique_candidates(candidates, _extract_pdf_links(sub_resp.text, sub_base_url))
+                        except httpx.HTTPError:
+                            continue
+                except httpx.HTTPError:
+                    continue
+
         derived_budget = max(extra_page_budget_remaining() - SITEMAP_DISCOVERY_RESERVED_PAGES, 0)
         for derived_url in _derived_disclosure_page_urls(site_url, limit=derived_budget):
             if extra_page_budget_remaining() <= 0:
@@ -1068,7 +1164,7 @@ def discover_pdfs_for_site(
         if _needs_rendered_html_fallback(candidates, target_fiscal_year=target_year):
             fetcher = rendered_html_fetcher or _default_rendered_html_fetcher()
             if fetcher is not None:
-                rendered_page_urls = [site_url, *subpages, *sitemap_page_urls]
+                rendered_page_urls = [site_url, *subpages, *school_homepage_page_urls, *sitemap_page_urls]
                 rendered_seen: set[str] = set()
                 unique_rendered_page_urls: list[str] = []
                 for url in rendered_page_urls:
@@ -1384,6 +1480,7 @@ def run_pdf_discovery(
                     client,
                     site.school_id,
                     site.url,
+                    school_name=site.school.school_name if site.school is not None else "",
                     target_fiscal_year=target_year,
                 )
             stats["crawled"] += 1
