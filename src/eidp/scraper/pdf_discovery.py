@@ -1060,6 +1060,8 @@ def download_pdf(
 
         if strict_target_fiscal_year:
             target_year = target_fiscal_year or settings.target_fiscal_year
+            if pdf_type == "non_target":
+                return None, None, 0, "non_target", "classified_non_target"
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
             if (

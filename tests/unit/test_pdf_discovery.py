@@ -1211,7 +1211,11 @@ def test_download_pdf_accepts_reiwa_year_anchor_when_body_is_target_form(
 def test_download_pdf_rejects_url_target_hint_when_body_is_not_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:
-    """R8 in the URL is not enough for student forms, syllabi, or other PDFs."""
+    """R8 in the URL is not enough for student forms, syllabi, or other PDFs.
+
+    Non-target bodies must be classified as non-target instead of inflating the
+    strict target-year rejection bucket.
+    """
 
     content = _make_pdf_bytes("大学等における修学の支援に関する法律による 授業料等減免 A様式1 申請者")
     candidate = PdfCandidate(
@@ -1239,7 +1243,7 @@ def test_download_pdf_rejects_url_target_hint_when_body_is_not_target_form(
     assert file_hash is None
     assert file_size == 0
     assert pdf_type == "non_target"
-    assert reason == "target_fiscal_year_not_detected"
+    assert reason == "classified_non_target"
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
