@@ -15,6 +15,7 @@ from eidp.scraper.pdf_discovery import (
     _detect_fiscal_year_from_text,
     _download_attempt_urls,
     _extract_pdf_links,
+    _pre_download_rejection,
     _score_candidate,
     _sitemap_urls_for_site,
     discover_pdfs_for_site,
@@ -53,6 +54,30 @@ def test_score_candidate_uses_configured_target_fiscal_year() -> None:
     assert _score_candidate(target, target_fiscal_year=2027) > _score_candidate(
         previous, target_fiscal_year=2027
     )
+
+
+def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
+    token_cases = [
+        ("https://example.ac.jp/disclosure/yakuinmeibo.pdf", "役員名簿"),
+        ("https://example.ac.jp/disclosure/schoolinfo.pdf", "学校情報"),
+        ("https://example.ac.jp/disclosure/gakkouinfo.pdf", "学校紹介"),
+        ("https://example.ac.jp/disclosure/school-guide.pdf", "学校案内"),
+        ("https://example.ac.jp/disclosure/schoolguide.pdf", "School Guide"),
+    ]
+
+    for url, anchor_text in token_cases:
+        candidate = PdfCandidate(
+            pdf_url=url,
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text=anchor_text,
+            score=10.0,
+        )
+
+        rejection = _pre_download_rejection(candidate, target_year=2026)
+
+        assert rejection is not None, url
+        assert rejection.reason == "pre_filtered_non_target_hint"
+        assert rejection.pdf_type == "non_target"
 
 
 def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
