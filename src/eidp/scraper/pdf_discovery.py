@@ -394,6 +394,9 @@ def _stale_fiscal_year_from_candidate_hint(candidate: PdfCandidate, *, target_ye
         return None
 
     text = _candidate_hint_text(candidate)
+    detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
+    if detected_year is not None and target_year - 8 <= detected_year < target_year:
+        return detected_year
     for match in re.finditer(r"(?<!\d)(20\d{2})(?!\d)", text):
         year = int(match.group(1))
         if target_year - 8 <= year < target_year:
