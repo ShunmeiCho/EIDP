@@ -97,30 +97,35 @@ The current RCA database contains 71 Saitama schools and 51
 are `url_type="disclosure"`. That proves Layer 0 is present for this bounded
 RCA: the official-index URLs are entering the database.
 
-The 51-site strict FY2026 PDF discovery evidence shows the break is Layer 1:
+The 2026-05-11 current-code 51-site strict FY2026 PDF discovery replay shows
+the break is Layer 1:
 
 - `crawled=51`
-- `found=45`
-- `downloaded=0`
+- `found=49`
+- `downloaded=1`
 - `failed=7`
-- `skipped=399`
-- `cached_rejections=24`
-- `prefiltered=216`
-- `Document` rows after the RCA: `0`
-- all 51 scoped schools remain `pdf_status="none"`,
-  `blocking_reason="no_target_pdf"`
+- `skipped=348`
+- `cached_rejections=38`
+- `prefiltered=134`
+- `Document` rows after the RCA: `1`
+- ingest of that document created 2 current FY2026 `DepartmentYearly` rows
+  with `extraction_confidence=0.94` and one `school_fiscal_year_status`
+  `excel_ready=1` row.
 
 School-level buckets:
 
-- 40 schools: `publication_lag_or_old_target_pdf`
-- 5 schools: `site_fetch_error_only`
-- 3 schools: `non_target_candidates_only`
-- 2 schools: `target_form_without_year_evidence`
+- 1 school: `accepted_target_pdf`
+- 34 schools: `publication_lag_or_old_target_pdf`
+- 8 schools: `non_target_candidates_only`
+- 6 schools: `target_form_without_year_evidence`
+- 1 school: `site_fetch_error_only`
 - 1 school: `no_pdf_candidates`
 
 This means the current Saitama bottleneck is not official-index URL ingress. It
-is official URL to strict target-FY PDF acquisition, dominated by latest-public
-old-year target forms and a smaller set of fetch/no-candidate/review cases.
+is official URL to strict target-FY PDF acquisition. Current code can acquire at
+least one true strict FY2026 target form from the official-index chain, but the
+dominant bucket remains latest-public old-year target forms and review/manual
+cases, far below the 60-70% ship gate.
 
 ## Implementation Direction
 

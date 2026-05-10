@@ -5,6 +5,48 @@ Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
 Latest audited Windows package commit: `7407f36f71156283cf67c45199abf2b085ab8baf` (`eidp-windows-v145.zip`)
 
+## 2026-05-11 Current-Code Saitama Official-Index RCA
+
+After the discovery gold-set plan correction, a bounded current-code replay was
+run against a copied Saitama RCA SQLite database, limited to the 51
+`prefecture_aggregator` school-site rows. This did not run SERP discovery or
+nationwide crawling.
+
+- Source DB copy: `_temp/saitama-current51-rerun-20260511-071951/data/eidp.sqlite3`
+- Evidence log: `_temp/saitama-current51-rerun-20260511-071951/logs/evidence.jsonl`
+- Command scope: `eidp discover-pdfs --discovery-method
+  prefecture_aggregator --batch-size 60 --rate-limit 0.5
+  --request-timeout 15`
+- Discovery result: `crawled=51`, `found=49`, `downloaded=1`, `failed=7`,
+  `skipped=348`, `cached_rejections=38`, and `prefiltered=134`.
+- Evidence summary: `evidence_rows=450`, `schools_with_evidence=51`,
+  `site_scope_schools=51`.
+- School-level buckets: `accepted_target_pdf=1`,
+  `publication_lag_or_old_target_pdf=34`, `target_form_without_year_evidence=6`,
+  `non_target_candidates_only=8`, `site_fetch_error_only=1`, and
+  `no_pdf_candidates=1`.
+- The accepted target PDF was for school `95` (`さいたまIT・WEB専門学校`):
+  `https://www.siw.ac.jp/wp-content/themes/bsc/dist/images/information/shugakushien_shinsei2025-1-2.pdf`.
+  Although the URL/anchor contains 2025, the PDF text contains the current
+  target-year evidence (`令和8` / `2026`), so strict mode accepted it with
+  `year_evidence="pdf_text"`.
+- `ingest-pdfs --document-id 1` parsed the downloaded PDF, preserved the
+  prevalidated document fiscal year 2026 despite a parsed stale-year artifact,
+  and created 2 FY2026 `DepartmentYearly` rows with
+  `extraction_confidence=0.94`.
+- `rebuild-school-year-tasks --fiscal-year 2026 --school-type 専門学校
+  --discovery-evidence-log ...` produced `excel_ready=1`. The Saitama scoped
+  rows now include one `confirmed_target/parsed` school, 34 publication-lag
+  schools, 6 target-year-unverified schools, and the remaining no-target rows.
+
+Interpretation: the current code no longer supports the older "Saitama 51
+official URLs always produce 0 downloads" statement. It proves the official
+index chain can reach a true strict FY2026 target form and an Excel-ready parsed
+row, but the measured rate is still only `1/51` for this bounded Saitama set.
+The goal remains far below the 60-70% strict target-FY ship gate. The dominant
+work is still Layer 1 improvement and operator review handling for publication
+lag, target-year-unverified, and non-target-only cases.
+
 ## 2026-05-11 v145 Update
 
 v145 keeps the v144 strict acquisition behavior and improves the operator task
