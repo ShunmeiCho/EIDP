@@ -273,7 +273,7 @@ def test_first_setup_installs_optional_playwright_addon_when_extracted(bat_files
     body = bat_files["first_setup.bat"]
     assert "playwright-addon\\wheelhouse" in body
     assert "--find-links \"%EIDP_APP_ROOT%\\playwright-addon\\wheelhouse\"" in body
-    assert "scrapling" in body
+    assert "scrapling[fetchers]" in body
     assert "playwright" in body
 
 

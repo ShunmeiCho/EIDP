@@ -129,7 +129,7 @@ if exist "%PLAYWRIGHT_ADDON_WHEELHOUSE%" (
         --no-index ^
         --find-links "%EIDP_APP_ROOT%\playwright-addon\wheelhouse" ^
         --no-cache ^
-        scrapling playwright
+        "scrapling[fetchers]" playwright
     if errorlevel 1 (
         echo [first_setup] optional Playwright/Scrapling add-on install failed
         set "SETUP_RC=1"
