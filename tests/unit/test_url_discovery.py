@@ -376,6 +376,23 @@ def test_search_queries_keep_vocational_homepage_terms_for_senmon() -> None:
     assert "学校法人テスト 東京デザイン学院 情報公開" in queries
 
 
+def test_search_queries_add_ampersand_variant_for_and_named_schools() -> None:
+    school = School(
+        id=1,
+        prefecture="埼玉県",
+        corporation_name="三幸学園",
+        school_name="大宮みらいAIアンドIT専門学校",
+        school_type="専門学校",
+        status="active",
+    )
+
+    queries = url_discovery.search_queries_for_school(school)
+
+    assert "大宮みらいAI&IT専門学校 情報公開" in queries
+    assert "三幸学園 大宮みらいAI&IT専門学校 情報公開" in queries
+    assert "大宮みらいAI&IT専門学校 公式" in queries
+
+
 def test_search_queries_support_junior_college_and_kosen_terms() -> None:
     junior_college = School(
         id=1,

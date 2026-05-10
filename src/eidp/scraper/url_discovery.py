@@ -457,6 +457,7 @@ def search_queries_for_school(school: "School") -> list[str]:
     school_name = school.school_name.strip()
     corporation_name = (school.corporation_name or "").strip()
     kind = _institution_kind_token(school)
+    name_variants = _school_name_query_variants(school_name)
     queries = [
         f"{school_name} 情報公開 高等教育 修学支援",
         f"{school_name} 確認申請書 様式第2号",
@@ -468,7 +469,28 @@ def search_queries_for_school(school: "School") -> list[str]:
         queries.append(f"{school_name} {kind}")
     else:
         queries.append(f"{school_name} 公式")
+    for variant in name_variants[1:]:
+        queries.append(f"{variant} 情報公開")
+        if corporation_name:
+            queries.append(f"{corporation_name} {variant} 情報公開")
+        queries.append(f"{variant} 公式")
     return _dedupe_preserve_order(queries)
+
+
+def _school_name_query_variants(school_name: str) -> list[str]:
+    variants = [school_name]
+    replacements = (
+        ("アンド", "&"),
+        ("アンド", "＆"),
+        ("＆", "&"),
+        ("＆", "アンド"),
+        ("&", "＆"),
+        ("&", "アンド"),
+    )
+    for old, new in replacements:
+        if old in school_name:
+            variants.append(school_name.replace(old, new))
+    return _dedupe_preserve_order(variants)
 
 
 def _institution_kind_token(school: "School") -> str:
