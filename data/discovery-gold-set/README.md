@@ -16,6 +16,12 @@ captures:
 agent should learn from these demonstrations, then emit structured candidates
 that can be compared with this gold set.
 
+To inspect the current release-relevant buckets locally:
+
+```bash
+uv run eidp discovery-gold-set --json
+```
+
 Current v0.1 seed coverage:
 
 - Sanko disclosure pages with stale latest-public FY2025 controls.

@@ -856,6 +856,33 @@ def eval_pdf(
     print_eval_report(results)
 
 
+@app.command("discovery-gold-set")
+def discovery_gold_set(
+    gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
+) -> None:
+    """Summarize discovery demonstration coverage."""
+    from eidp.scraper.discovery_gold_set import (
+        load_discovery_gold_entries,
+        render_discovery_gold_summary,
+        summarize_discovery_gold_entries,
+    )
+
+    entries = load_discovery_gold_entries(gold_set_dir)
+    summary = summarize_discovery_gold_entries(entries)
+    if output_json:
+        typer.echo(render_discovery_gold_summary(summary))
+        return
+
+    typer.echo(f"Discovery gold set: {summary.total_entries} entries")
+    typer.echo(f"  strict target-year success: {summary.strict_target_year_successes}")
+    typer.echo(f"  operator review:            {summary.operator_review_entries}")
+    typer.echo(f"  publication lag:            {summary.publication_lag_entries}")
+    typer.echo("  outcomes:")
+    for outcome, count in summary.outcome_counts.items():
+        typer.echo(f"    {outcome}: {count}")
+
+
 @report_app.command("coverage")
 def report_coverage(
     school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),
