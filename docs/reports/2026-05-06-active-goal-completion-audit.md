@@ -45,14 +45,58 @@ packaged JSON entries instead of checking filenames only.
   `scrapling_available=True`, `PLAYWRIGHT_BROWSERS_PATH` pointed to
   `playwright-addon\ms-playwright`, and bundled Chromium launched headless
   against a `data:` page with `playwright_title=eidp-ok`.
+- Windows remote official-index ingestion smoke for Tokyo/Kanagawa/Saitama:
+  `bootstrap_pdf_pipeline.py --pref saitama,tokyo,kanagawa --url-search off
+  --school-url-crawl off --batch-size 1 --skip-discover` completed the
+  official-index URL stages. Results: Tokyo `extracted=243`, `matched=232`,
+  `added=232`; Kanagawa `extracted=76`, `matched=71`, `added=70`; Saitama
+  `extracted=58`, `matched=51`, `added=51`. Step 2b added 50 seed URLs and
+  498 corporation-pattern URLs.
+- Windows remote strict FY2026 60-site PDF discovery smoke with the `.bat`
+  equivalent UTF-8 environment (`PYTHONIOENCODING=utf-8`, `PYTHONUTF8=1`):
+  `crawled=60`, `found=55`, `downloaded=3`, `failed=6`, `skipped=389`,
+  `cached_rejections=46`, and `prefiltered=217`. Rejection leaders were
+  `fiscal_year_mismatch=154`, `classified_non_target=121`,
+  `pre_filtered_non_target_hint=132`, and
+  `target_fiscal_year_not_detected=13`.
+- Windows remote ingest/status smoke on those 3 downloaded PDFs:
+  `ingest-pdfs` processed 3 documents; 1 target PDF was parsed and made
+  Excel-ready, while 2 image-only PDFs were parked as `ocr_pending` because the
+  OCR add-on is not installed in the core+Playwright package. The parsed target
+  row was 東京呉竹医療専門学校 (`pdf_type=target`, `ingest_status=ingested`,
+  `yearly_count_for_doc=4`, `support_count_for_doc=1`). After rebuilding
+  FY2026 task status, coverage totals were `schools_total=2418`,
+  `schools_with_url=895`, `schools_with_any_pdf=3`,
+  `schools_with_target_pdf_current_fy=1`, and
+  `schools_with_current_fy_extracted=1`.
+- Windows remote Saitama Layer 0 -> Layer 1 RCA on the 51
+  `prefecture_aggregator` Saitama URLs: Saitama official-index URL ingestion
+  is present (`SAITAMA_PREF_SITES=51`, `SAITAMA_DOCUMENTS=0` before the run).
+  A targeted strict FY2026 `discover-pdfs` run over those 51 school IDs
+  completed with `crawled=51`, `found=45`, `downloaded=0`, `failed=7`,
+  `skipped=399`, `cached_rejections=31`, and `prefiltered=214`. Evidence
+  buckets for the 51 schools were: `publication_lag_or_old_target_pdf=40`,
+  `site_fetch_error_only=5`, `non_target_candidates_only=3`,
+  `target_form_without_year_evidence=2`, and `no_pdf_candidates=1`. Reason
+  leaders were `fiscal_year_mismatch=186`, `classified_non_target=140`,
+  `pre_filtered_non_target_hint=89`, and
+  `target_fiscal_year_not_detected=10`.
+- Windows direct PowerShell caveat: a direct `eidp discover-pdfs` SSH invocation
+  without UTF-8 environment variables crashed while logging a Japanese URL with
+  `UnicodeEncodeError: 'gbk' codec can't encode character`. The packaged
+  `.bat` paths set `PYTHONIOENCODING=utf-8` and `PYTHONUTF8=1`, and the same
+  command succeeded once those variables were set manually.
 
 Interpretation: v137 moves the handoff package from "core ZIP verified" to
 "core ZIP, discovery gold-set contract, extracted Windows setup, and optional
-Scrapling/Playwright browser add-on verified". This improves release-handoff
-confidence but does not close the product yield gate. The active goal still
-requires a broader Windows acquisition run that proves true target-FY PDF
-automation reaches the 60-70% line, or an explicit publication-lag policy that
-keeps latest-public stale forms separate from target-FY success.
+Scrapling/Playwright browser add-on verified, plus bounded Windows acquisition
+RCA". The Saitama RCA confirms the current break is primarily Layer 1
+(official URL -> strict target-FY PDF), not Layer 0 official-index URL
+ingestion. This improves release-handoff confidence but does not close the
+product yield gate. The active goal still requires either a broader Windows
+acquisition run that proves true target-FY PDF automation reaches the 60-70%
+line, or an explicit publication-lag policy that keeps latest-public stale forms
+separate from target-FY success.
 
 ## 2026-05-10 v136 Update
 
@@ -265,10 +309,13 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
    yield, or the product explicitly accepts a publication-lag policy that records
    latest-public FY2025 forms separately from true target-FY success.
 2. Validate full Windows bootstrap yield beyond the Sanko-heavy sample.
-   The next proof needs a broader Windows initial acquisition run through PDF
-   crawl and ingest, showing true target-FY PDF yield, stale rejection counts,
-   fallback search counts, and review workload. Current v137 evidence is enough
-   for packaging/URL-crawl readiness, not enough for the 60-70% automation gate.
+   v137 now includes a 60-site Windows PDF crawl/ingest smoke and a targeted
+   51-site Saitama official-index RCA. These show official-index URL ingestion
+   works, but strict FY2026 target-PDF acquisition remains far below the
+   60-70% automation gate. The next proof needs a broader Windows initial
+   acquisition run or a product decision that treats latest-public FY2025
+   publication-lag forms as a separate reviewable state rather than target-FY
+   success.
 3. Run the latest v137 UI flow on Windows and verify:
    UI start, initial bootstrap button, weekly rediscovery button, URL candidate
    review, official-index coverage page, school task drill-down, PDF確認, and
