@@ -559,6 +559,53 @@ def test_build_project_wheel_removes_stale_project_wheels(
     assert not stale.exists()
 
 
+def test_skip_download_still_refreshes_project_wheel(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """``--skip-download`` must not reuse a stale same-version project wheel.
+
+    The flag is a dependency-download optimization for handoff rebuilds; it
+    must still rebuild ``eidp`` itself so BUILD_INFO and installed code match.
+    """
+    bw = _load_build_script()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+    (wheelhouse / "structlog-25.0.0-py3-none-any.whl").write_bytes(b"dep")
+
+    calls: list[str] = []
+
+    def _stub_reset(_wheelhouse: Path) -> None:
+        calls.append("reset")
+
+    def _stub_build_project_wheel(*, repo_root: Path, out_dir: Path) -> Path:
+        calls.append("build")
+        assert repo_root == REPO_ROOT
+        assert out_dir == wheelhouse
+        wheel = wheelhouse / "eidp-0.2.0-py3-none-any.whl"
+        wheel.write_bytes(b"project")
+        return wheel
+
+    def _stub_download_windows_wheels(**_kwargs):  # noqa: ANN003
+        calls.append("download")
+
+    monkeypatch.setattr(bw, "reset_wheelhouse", _stub_reset)
+    monkeypatch.setattr(bw, "build_project_wheel", _stub_build_project_wheel)
+    monkeypatch.setattr(bw, "download_windows_wheels", _stub_download_windows_wheels)
+
+    rc = bw.main([
+        "--wheelhouse",
+        str(wheelhouse),
+        "--out-zip",
+        str(tmp_path / "eidp-windows.zip"),
+        "--skip-download",
+        "--skip-zip",
+    ])
+
+    assert rc == 0
+    assert calls == ["build"]
+
+
 def test_download_uses_pip_not_uv(monkeypatch: pytest.MonkeyPatch):
     """Owner finding 8.5.a P0: ``uv pip download`` does not exist.
     download_windows_wheels must shell out to ``python -m pip

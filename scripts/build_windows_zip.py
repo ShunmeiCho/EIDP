@@ -506,7 +506,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--wheelhouse", type=Path, default=DEFAULT_WHEELHOUSE)
     parser.add_argument("--out-zip", type=Path, default=DEFAULT_OUT_ZIP)
     parser.add_argument("--skip-download", action="store_true",
-                        help="Skip pip download — verify and assemble only")
+                        help="Skip dependency download; still rebuild the EIDP project wheel")
     parser.add_argument("--skip-zip", action="store_true",
                         help="Skip assembling the ZIP — useful in CI")
     parser.add_argument("--skip-runtime", action="store_true",
@@ -523,7 +523,9 @@ def main(argv: list[str] | None = None) -> int:
                              "builds with a versioned output name.")
     args = parser.parse_args(argv)
 
-    if not args.skip_download:
+    if args.skip_download:
+        build_project_wheel(repo_root=REPO_ROOT, out_dir=args.wheelhouse)
+    else:
         reset_wheelhouse(args.wheelhouse)
         build_project_wheel(repo_root=REPO_ROOT, out_dir=args.wheelhouse)
         download_windows_wheels(requirements=args.requirements, dest=args.wheelhouse)
