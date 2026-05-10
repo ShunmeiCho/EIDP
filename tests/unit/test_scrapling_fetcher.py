@@ -43,23 +43,30 @@ class FakeSelector:
 
 
 class FakeSession:
+    def __init__(self) -> None:
+        self._page = FakePage()
+
     def __enter__(self) -> FakeSession:
         return self
 
     def __exit__(self, *_args: object) -> None:
+        self._page.closed = True
         return None
 
     def get(self, url: str, *, stealthy_headers: bool = False) -> object:
         assert stealthy_headers is True
         assert url == "https://www.tokyo-design.ac.jp/"
-        return FakePage()
+        return self._page
 
 
 class FakePage:
     status = 200
     url = "https://www.tokyo-design.ac.jp/"
+    closed = False
 
     def css(self, selector: str) -> FakeSelector:
+        if self.closed:
+            raise RuntimeError("page parsed after session closed")
         if selector == "title::text":
             return FakeSelector(first="東京デザイン専門学校 公式サイト")
         if selector == "body":

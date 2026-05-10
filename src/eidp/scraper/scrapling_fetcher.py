@@ -70,37 +70,29 @@ class ScraplingPageFetcher:
     network_idle: bool = True
 
     def fetch(self, url: str) -> FetchedPage | None:
+        if self.mode == "static":
+            return self._fetch_static(url)
         page = self._fetch_page(url)
-        status = int(getattr(page, "status", 0) or 0)
-        title = _selector_first_text(page, "title::text")
-        body_excerpt = _body_excerpt(page)
-        final_url = str(getattr(page, "url", "") or url)
-        return FetchedPage(
-            url=final_url,
-            status_code=status,
-            title=title,
-            body_excerpt=body_excerpt,
-            blocked=is_block_signal(status_code=status, body_excerpt=body_excerpt),
-        )
+        return _fetched_page_from_scrapling_page(page, fallback_url=url)
+
+    def _fetch_static(self, url: str) -> FetchedPage:
+        fetchers = _load_scrapling_fetchers()
+        session_cls = getattr(fetchers, "FetcherSession")
+        with session_cls(impersonate="chrome") as session:
+            page = session.get(url, stealthy_headers=True)
+            return _fetched_page_from_scrapling_page(page, fallback_url=url)
 
     def _fetch_page(self, url: str) -> Any:
-        if not scrapling_available():
-            raise ScraplingUnavailableError(
-                "Scrapling is not installed. Install the scraper-scrapling add-on to use school URL auto-crawl."
-            )
+        fetchers = _load_scrapling_fetchers()
         if self.mode in {"dynamic", "stealthy"}:
             _ensure_playwright_browsers_path()
-        fetchers = importlib.import_module("scrapling.fetchers")
         if self.mode == "dynamic":
             dynamic_fetcher = getattr(fetchers, "DynamicFetcher")
             return dynamic_fetcher.fetch(url, disable_resources=self.disable_resources)
         if self.mode == "stealthy":
             stealthy_fetcher = getattr(fetchers, "StealthyFetcher")
             return stealthy_fetcher.fetch(url, headless=self.headless, network_idle=self.network_idle)
-
-        session_cls = getattr(fetchers, "FetcherSession")
-        with session_cls(impersonate="chrome") as session:
-            return session.get(url, stealthy_headers=True)
+        return self._fetch_static(url)
 
 
 @dataclass(frozen=True)
@@ -134,6 +126,28 @@ def _selector_first_text(page: Any, selector: str) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _load_scrapling_fetchers() -> Any:
+    if not scrapling_available():
+        raise ScraplingUnavailableError(
+            "Scrapling is not installed. Install the scraper-scrapling add-on to use school URL auto-crawl."
+        )
+    return importlib.import_module("scrapling.fetchers")
+
+
+def _fetched_page_from_scrapling_page(page: Any, *, fallback_url: str) -> FetchedPage:
+    status = int(getattr(page, "status", 0) or 0)
+    title = _selector_first_text(page, "title::text")
+    body_excerpt = _body_excerpt(page)
+    final_url = str(getattr(page, "url", "") or fallback_url)
+    return FetchedPage(
+        url=final_url,
+        status_code=status,
+        title=title,
+        body_excerpt=body_excerpt,
+        blocked=is_block_signal(status_code=status, body_excerpt=body_excerpt),
+    )
 
 
 def _body_excerpt(page: Any, *, limit: int = 4000) -> str:
