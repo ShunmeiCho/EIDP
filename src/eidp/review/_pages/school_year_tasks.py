@@ -106,7 +106,13 @@ class TaskLane:
     page_id: str | None = None
 
 
-REVIEW_OR_PARSE_BLOCKERS = {"ocr_pending", "parse_failed", "not_extracted", "review_required"}
+REVIEW_OR_PARSE_BLOCKERS = {
+    "ocr_pending",
+    "parse_failed",
+    "not_extracted",
+    "review_required",
+    "target_year_unverified",
+}
 SCHOOL_TYPE_FILTER_LABELS = ("すべて", "専門学校", "大学")
 URL_SUBMISSION_PAGE_ID = "url"
 URL_SUBMISSION_QUERY_STATE_KEY = "url_submission_school_query"
@@ -141,6 +147,7 @@ BLOCKING_REASON_LABELS: dict[str, str] = {
     "no_url": "URL追加が必要",
     "no_target_pdf": "対象年度PDF待ち",
     "publication_lag_latest_public": "旧年度候補あり",
+    "target_year_unverified": "年度未確認候補",
     "tls_certificate_verify_failed": "証明書エラー",
     "stale_pdf_only": "旧年度PDFのみ",
     "ocr_pending": "OCR/手入力待ち",
@@ -161,6 +168,7 @@ PDF_STATUS_LABELS: dict[str, str] = {
     "none": "PDFなし",
     "confirmed_target": "対象年度PDFあり",
     "publication_lag": "旧年度候補あり",
+    "target_year_unverified": "年度未確認候補",
     "site_error": "入口取得エラー",
     "rejected_stale": "旧年度PDFのみ",
     "image_pending": "画像PDF/OCR待ち",
@@ -191,6 +199,7 @@ EVIDENCE_LEVEL_LABELS: dict[str, str] = {
     "prev_year_diff": "前年差分で確認",
     "operator_override": "担当者確認済",
     "tls_certificate_verify_failed": "証明書エラー",
+    "target_year_unverified": "年度未確認候補",
 }
 
 SITE_URL_TYPE_LABELS: dict[str, str] = {
@@ -538,6 +547,8 @@ def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
         return "PDF探索", "週次再取得、または見つけたPDF URLを追加"
     if reason == "publication_lag_latest_public":
         return "公示待ち/再取得", "旧年度候補は成果扱いせず、対象年度PDFの公開を再確認"
+    if reason == "target_year_unverified":
+        return "PDF確認", "確認申請書候補はありますが対象年度を読めません。PDF本文/OCR/公開年度を確認"
     if reason == "tls_certificate_verify_failed":
         return "証明書確認", "学校サイトの証明書チェーンが不完全です。管理者判断で取得方法を確認"
     if reason == "stale_pdf_only":

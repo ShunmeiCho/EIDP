@@ -198,6 +198,8 @@ def _blocking_reason(
         return "no_target_pdf"
     if pdf_status == "publication_lag":
         return "publication_lag_latest_public"
+    if pdf_status == "target_year_unverified":
+        return "target_year_unverified"
     if pdf_status == "site_error":
         return "tls_certificate_verify_failed"
     if pdf_status == "rejected_stale":
@@ -300,6 +302,8 @@ def rebuild_school_fiscal_year_status(
         if pdf_status == "none":
             if evidence_bucket == "publication_lag_or_old_target_pdf":
                 pdf_status = "publication_lag"
+            elif evidence_bucket == "target_form_without_year_evidence":
+                pdf_status = "target_year_unverified"
             elif evidence_bucket == "tls_certificate_verify_failed":
                 pdf_status = "site_error"
         extract_status = _extract_status(docs, school.id in extracted_school_ids)
@@ -310,6 +314,8 @@ def rebuild_school_fiscal_year_status(
         evidence_level = _evidence_level(docs, fiscal_year, pdf_status)
         if pdf_status == "publication_lag":
             evidence_level = "publication_lag"
+        if pdf_status == "target_year_unverified":
+            evidence_level = "target_year_unverified"
         if pdf_status == "site_error":
             evidence_level = "tls_certificate_verify_failed"
         if yoy_diff_status == "partial_diff" and evidence_level not in {"conflict", "operator_override"}:
@@ -392,7 +398,11 @@ def school_fiscal_year_status_counts(
             counts["confirmed_target"] += count
         if pdf_status in {"publication_lag", "rejected_stale"}:
             counts["stale_or_old"] += count
-        if extract_status in REVIEW_STATUSES or pdf_status in {"image_pending", "discovered"}:
+        if extract_status in REVIEW_STATUSES or pdf_status in {
+            "image_pending",
+            "discovered",
+            "target_year_unverified",
+        }:
             counts["review_or_parse"] += count
         if excel_ready:
             counts["excel_ready"] += count

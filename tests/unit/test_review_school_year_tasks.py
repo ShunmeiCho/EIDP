@@ -1097,8 +1097,10 @@ def test_operator_labels_hide_internal_status_codes() -> None:
     assert blocking_reason_label("no_url") == "URL追加が必要"
     assert blocking_reason_label("stale_pdf_only") == "旧年度PDFのみ"
     assert blocking_reason_label("tls_certificate_verify_failed") == "証明書エラー"
+    assert blocking_reason_label("target_year_unverified") == "年度未確認候補"
     assert blocking_reason_label(None) == "対応なし"
     assert status_label(school_year_tasks.PDF_STATUS_LABELS, "confirmed_target") == "対象年度PDFあり"
+    assert status_label(school_year_tasks.PDF_STATUS_LABELS, "target_year_unverified") == "年度未確認候補"
     assert status_label(school_year_tasks.EVIDENCE_LEVEL_LABELS, "operator_override") == "担当者確認済"
     assert status_label(school_year_tasks.EVIDENCE_LEVEL_LABELS, "future_code") == "future_code"
 
@@ -1541,5 +1543,25 @@ def test_next_action_surfaces_publication_lag_review() -> None:
 
         assert action == "公示待ち/再取得"
         assert "成果扱い" in hint
+    finally:
+        session.close()
+
+
+def test_next_action_surfaces_target_year_unverified_review() -> None:
+    session = _session()
+    try:
+        _school(session, 1, name="学校")
+        row = _status(
+            session,
+            1,
+            pdf_status="target_year_unverified",
+            evidence_level="target_year_unverified",
+            blocking_reason="target_year_unverified",
+        )
+
+        action, hint = next_action_for_status(row)
+
+        assert action == "PDF確認"
+        assert "年度" in hint
     finally:
         session.close()
