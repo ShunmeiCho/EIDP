@@ -455,10 +455,19 @@ def score_school_url_candidate(
 
 
 def best_candidate(scores: list[UrlScore]) -> UrlScore | None:
-    """Return the highest-scoring candidate, or None if none reached review."""
+    """Return the strongest actionable candidate.
+
+    Prefer auto-safe candidates over review-only candidates. Review caps such
+    as private-school ``.lg.jp`` hits can still carry high evidence scores,
+    but they should not block a lower-scoring official school-domain URL from
+    being registered automatically.
+    """
     if not scores:
         return None
-    eligible = [s for s in scores if s.decision in {"auto", "review"}]
-    if not eligible:
-        return None
-    return max(eligible, key=lambda s: s.score)
+    auto = [s for s in scores if s.decision == "auto"]
+    if auto:
+        return max(auto, key=lambda s: s.score)
+    review = [s for s in scores if s.decision == "review"]
+    if review:
+        return max(review, key=lambda s: s.score)
+    return None

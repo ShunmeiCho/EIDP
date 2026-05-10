@@ -162,6 +162,24 @@ def test_best_candidate_picks_highest_eligible():
     assert best.candidate_url == a.candidate_url
 
 
+def test_best_candidate_prefers_auto_over_higher_scoring_review():
+    review = UrlScore(
+        candidate_url="https://www.city.saitama.lg.jp/001/915/index.html",
+        score=8.0,
+        decision="review",
+    )
+    auto = UrlScore(
+        candidate_url="https://www.siw.ac.jp/school",
+        score=6.0,
+        decision="auto",
+    )
+
+    best = best_candidate([review, auto])
+
+    assert best is not None
+    assert best.candidate_url == auto.candidate_url
+
+
 def test_best_candidate_returns_none_when_all_rejected():
     a = _score("https://www.shingakunet.com/")
     b = _score("https://www.facebook.com/x")
