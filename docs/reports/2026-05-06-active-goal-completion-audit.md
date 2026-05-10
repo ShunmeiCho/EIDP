@@ -127,8 +127,8 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 ## Latest Verification Evidence
 
-- `git push origin sprint8-handoff-finalize` → remote branch updated to
-  `b63664c613fd51fdc783912d9e1c82d83afde377`; `main` intentionally unchanged.
+- `git push origin sprint8-handoff-finalize` → remote branch updated through
+  `5037944`; `main` intentionally unchanged.
 - `uv run pytest -q` after the v136 URL-review fixes → `986 passed, 5 warnings`
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v136.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `git_commit=b63664c613fd51fdc783912d9e1c82d83afde377`, `git_dirty=false`, `entry_count=3000`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`
 - Windows v136 clean extraction/setup/validator → `errors=[]`, `warnings=[]`,
