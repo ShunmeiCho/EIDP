@@ -48,6 +48,15 @@ v140 packages the post-RCA stale official-index URL fallback.
   `https://www.all-japan.ac.jp/disclosure/` confirmed
   `pdf_discovery_root_fallback`, `error=None`, `candidates=626`, and a best
   candidate from the repaired disclosure surface.
+- Windows targeted acquisition rerun for the 9 affected all-japan schools
+  (`school_id=303,304,305,307,308,309,310,311,312`) confirmed the operational
+  effect: all 9 stale official-index URLs logged `pdf_discovery_root_fallback`,
+  `discover-pdfs` ended with `crawled=9`, `found=9`, `failed=0`,
+  `downloaded=0`, `cached_rejections=80`, and
+  `rejection_reason_fiscal_year_mismatch=90`. The copied evidence summary
+  bucketed all 9 schools as `publication_lag_or_old_target_pdf`, replacing the
+  previous `discovery_error` classification with an operator-actionable
+  latest-public/old-year result.
 
 v140 improves stale official-index URL recovery but does not change the strict
 FY2026 yield gate by itself. The remaining TLS-chain failures and true
@@ -457,6 +466,11 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   tables present, and the packaged live probe of
   `https://www.all-japan.ac.jp/disclosure/` produced
   `pdf_discovery_root_fallback`, `error=None`, and `candidates=626`.
+- Windows v140 targeted all-japan rerun →
+  after Osaka/Aichi official-index bootstrap, the 9 affected all-japan school
+  IDs crawled with `failed=0` and `downloaded=0`; evidence rows were
+  `fiscal_year_mismatch:2025=90`, and the summary bucketed all 9 schools as
+  `publication_lag_or_old_target_pdf` instead of `discovery_error`.
 - `uv run pytest tests/unit` after the post-v138 publication-lag status/UI
   wiring → `1023 passed`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v139.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=2f5b8e46163b8dd50cc6a081ffaff5b408d604f4`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, core SHA256 `35a67aca553d279ce834da26cde970985623ba95d587d1be0fa27655be7c6534`, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
