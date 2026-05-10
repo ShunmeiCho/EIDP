@@ -72,6 +72,23 @@ def _prefecture_parser_source(*, omit: set[str] | None = None) -> str:
     return "PARSERS: dict[str, object] = {\n" + "\n".join(entries) + "\n}\n"
 
 
+def _discovery_gold_entry(entry_id: str, outcome: str) -> str:
+    return json.dumps(
+        {
+            "schema_version": "discovery-gold-set/v0.1",
+            "entry_id": entry_id,
+            "outcome": outcome,
+            "school": {"school_id": 1, "school_name": "学校", "prefecture": "東京都"},
+            "target_fiscal_year": 2026,
+            "manual_demonstration": {"operator_goal": "test", "steps": ["open page"]},
+            "expected_result": {"pdf_url": "", "pdf_type": "", "fiscal_year": None},
+            "automation_pattern": {"reusable_rules": ["test rule"]},
+            "evidence": {"source_kind": "manual_web", "source_paths": ["https://example.test/"]},
+        },
+        ensure_ascii=False,
+    ) + "\n"
+
+
 def _core_entries() -> dict[str, bytes | str]:
     return {
         "BUILD_INFO.json": json.dumps(
@@ -137,8 +154,21 @@ def _core_entries() -> dict[str, bytes | str]:
         ),
         "data/discovery-gold-set/README.md": "# Discovery Gold Set\n",
         "data/discovery-gold-set/schema.json": '{"title": "test discovery gold-set schema"}\n',
-        "data/discovery-gold-set/entries/sample.json": (
-            '{"entry_id": "sample", "outcome": "no_target_candidate_found"}\n'
+        "data/discovery-gold-set/entries/accepted.json": _discovery_gold_entry(
+            "accepted",
+            "accepted_target_pdf",
+        ),
+        "data/discovery-gold-set/entries/review.json": _discovery_gold_entry(
+            "review",
+            "needs_operator_review",
+        ),
+        "data/discovery-gold-set/entries/no-target.json": _discovery_gold_entry(
+            "no-target",
+            "no_target_candidate_found",
+        ),
+        "data/discovery-gold-set/entries/publication-lag.json": _discovery_gold_entry(
+            "publication-lag",
+            "publication_lag_latest_public",
         ),
         "src/eidp/review/app.py": "PAGE_SETTINGS = 'settings'\n",
         "src/eidp/review/operator_pages.py": "def inject_v1_theme(): pass\n",
@@ -250,7 +280,9 @@ def test_verify_core_zip_requires_bootstrap_seed_csvs(tmp_path: Path) -> None:
 def test_verify_core_zip_requires_discovery_gold_set(tmp_path: Path) -> None:
     entries = _core_entries()
     entries.pop("data/discovery-gold-set/schema.json")
-    entries.pop("data/discovery-gold-set/entries/sample.json")
+    for name in list(entries):
+        if name.startswith("data/discovery-gold-set/entries/"):
+            entries.pop(name)
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
@@ -258,6 +290,44 @@ def test_verify_core_zip_requires_discovery_gold_set(tmp_path: Path) -> None:
     assert not check.ok
     assert any("data/discovery-gold-set/schema.json" in error for error in check.errors)
     assert any("data/discovery-gold-set/entries/" in error for error in check.errors)
+
+
+def test_verify_core_zip_reports_discovery_gold_set_summary(tmp_path: Path) -> None:
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", _core_entries())
+
+    check = module.verify_core_zip(zip_path)
+
+    assert check.ok, check.errors
+    assert check.details["discovery_gold_set_entries"] == 4
+    assert check.details["discovery_gold_set_outcomes"] == {
+        "accepted_target_pdf": 1,
+        "needs_operator_review": 1,
+        "no_target_candidate_found": 1,
+        "publication_lag_latest_public": 1,
+    }
+
+
+def test_verify_core_zip_rejects_invalid_discovery_gold_set_json(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["data/discovery-gold-set/entries/accepted.json"] = "{not json"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("invalid discovery gold-set JSON" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_release_relevant_discovery_gold_outcomes(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries.pop("data/discovery-gold-set/entries/publication-lag.json")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("missing discovery gold-set outcomes" in error for error in check.errors)
+    assert any("publication_lag_latest_public" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:

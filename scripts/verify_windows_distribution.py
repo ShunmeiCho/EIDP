@@ -167,6 +167,14 @@ EXPECTED_PREFECTURE_KEYS = frozenset(
 
 DOWNLOADABLE_PREFECTURE_STATUSES = frozenset({"spiked", "downloaded", "url_found"})
 PREFECTURE_ARTIFACT_FORMATS = frozenset({"pdf", "xlsx", "html", "htm"})
+DISCOVERY_GOLD_REQUIRED_OUTCOMES = frozenset(
+    {
+        "accepted_target_pdf",
+        "needs_operator_review",
+        "no_target_candidate_found",
+        "publication_lag_latest_public",
+    }
+)
 
 OCR_REQUIRED_EXACT = (
     "ocr-addon/tesseract/tesseract.exe",
@@ -440,6 +448,60 @@ def _check_prefecture_seed_contract(check: ZipCheck, names: set[str]) -> None:
     check.details["prefecture_seed_school_rows_total"] = school_total
     check.details["prefecture_seed_with_school_link_signal"] = with_school_link_signal
     check.details["prefecture_seed_supplemental_rows"] = supplemental_rows
+
+
+def _read_zip_json(check: ZipCheck, member: str, *, label: str) -> dict[str, Any] | None:
+    body = _read_zip_text(check, member)
+    if body is None:
+        return None
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        check.fail(f"{member} invalid {label} JSON: {exc}")
+        return None
+    if not isinstance(payload, dict):
+        check.fail(f"{member} {label} JSON must contain an object")
+        return None
+    return payload
+
+
+def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None:
+    schema_member = "data/discovery-gold-set/schema.json"
+    if schema_member not in names:
+        return
+    _read_zip_json(check, schema_member, label="discovery gold-set schema")
+
+    entry_members = sorted(
+        name
+        for name in names
+        if name.startswith("data/discovery-gold-set/entries/") and name.endswith(".json")
+    )
+    if not entry_members:
+        return
+
+    outcome_counts: dict[str, int] = {}
+    for member in entry_members:
+        payload = _read_zip_json(check, member, label="discovery gold-set")
+        if payload is None:
+            continue
+        schema_version = payload.get("schema_version")
+        if schema_version != "discovery-gold-set/v0.1":
+            check.fail(f"{member} has unsupported discovery gold-set schema_version: {schema_version!r}")
+        entry_id = payload.get("entry_id")
+        if not isinstance(entry_id, str) or not entry_id:
+            check.fail(f"{member} missing discovery gold-set entry_id")
+        outcome = payload.get("outcome")
+        if not isinstance(outcome, str) or not outcome:
+            check.fail(f"{member} missing discovery gold-set outcome")
+            continue
+        outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+
+    missing = sorted(DISCOVERY_GOLD_REQUIRED_OUTCOMES - set(outcome_counts))
+    if missing:
+        check.fail(f"missing discovery gold-set outcomes: {missing}")
+
+    check.details["discovery_gold_set_entries"] = len(entry_members)
+    check.details["discovery_gold_set_outcomes"] = dict(sorted(outcome_counts.items()))
 
 
 def _require_text(check: ZipCheck, body: str, member: str, needle: str) -> None:
@@ -806,6 +868,7 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_python_entrypoint_contracts(check, names)
     _check_operator_runbook_contract(check, names)
     _check_prefecture_seed_contract(check, names)
+    _check_discovery_gold_set_contract(check, names)
     _check_build_info(check, names)
 
     check.details["entry_count"] = len(names)
