@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 from eidp.scraper.anti_detection import is_block_signal
@@ -24,6 +26,25 @@ def scrapling_available() -> bool:
     """Return whether the optional Scrapling package is importable."""
 
     return importlib.util.find_spec("scrapling") is not None
+
+
+def _ensure_playwright_browsers_path(*, app_root: Path | None = None) -> None:
+    """Point Playwright/Patchright at the extracted Windows add-on browser cache."""
+
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return
+
+    root = app_root
+    if root is None:
+        try:
+            from eidp.config import settings
+        except Exception:
+            return
+        root = settings.app_root
+
+    browsers_dir = Path(root) / "playwright-addon" / "ms-playwright"
+    if browsers_dir.is_dir():
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_dir)
 
 
 @dataclass(frozen=True)
@@ -67,6 +88,8 @@ class ScraplingPageFetcher:
             raise ScraplingUnavailableError(
                 "Scrapling is not installed. Install the scraper-scrapling add-on to use school URL auto-crawl."
             )
+        if self.mode in {"dynamic", "stealthy"}:
+            _ensure_playwright_browsers_path()
         fetchers = importlib.import_module("scrapling.fetchers")
         if self.mode == "dynamic":
             dynamic_fetcher = getattr(fetchers, "DynamicFetcher")

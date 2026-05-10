@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 
-from eidp.scraper.scrapling_fetcher import ScraplingHtmlFetcher, ScraplingPageFetcher, SearchProviderSerpFetcher
+from eidp.scraper.scrapling_fetcher import (
+    ScraplingHtmlFetcher,
+    ScraplingPageFetcher,
+    SearchProviderSerpFetcher,
+    _ensure_playwright_browsers_path,
+)
 from eidp.scraper.search_provider import SearchResult
 
 
@@ -135,3 +141,14 @@ def test_scrapling_html_fetcher_returns_rendered_html(monkeypatch) -> None:
 
     assert html is not None
     assert "r8-kakunin.pdf" in html
+
+
+def test_ensure_playwright_browsers_path_uses_extracted_addon(monkeypatch, tmp_path) -> None:
+    app_root = tmp_path / "EIDP"
+    browsers = app_root / "playwright-addon" / "ms-playwright"
+    browsers.mkdir(parents=True)
+    monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
+
+    _ensure_playwright_browsers_path(app_root=app_root)
+
+    assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == str(browsers)
