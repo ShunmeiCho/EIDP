@@ -5,17 +5,20 @@ Branch: `sprint8-handoff-finalize`
 
 ## Decision
 
-Discovery should move from broad speculative crawling to:
+Discovery should move from broad speculative crawling to a layered flow:
 
-1. manual or Codex-assisted demonstrations,
-2. structured gold-set entries,
-3. reusable discovery patterns,
-4. agent/pipeline implementation,
-5. Windows yield verification.
+1. prefecture/government official indexes as the primary URL source,
+2. operator-manual evidence where the official index is absent or stale,
+3. corporation/CMS pattern candidates with body validation,
+4. bounded same-site graph crawl,
+5. SERP as the last fallback, never as the main data source.
 
-The ingest layer already follows this shape through `data/gold-set/` and the
-PDF evaluation harness. The discovery layer did not, which made URL/PDF
-discovery depend on heuristics before enough successful examples existed.
+Manual or Codex-assisted demonstrations remain important, but their role is
+pattern discovery and regression evaluation, not replacing the official-index
+chain. The ingest layer already follows this shape through `data/gold-set/` and
+the PDF evaluation harness; the discovery layer now has the matching
+`data/discovery-gold-set/` surface and should use it to evaluate proposed
+crawler/agent behavior before broad Windows yield runs.
 
 ## Current Evidence
 
@@ -31,18 +34,20 @@ Windows v136 samples show the split clearly:
 This means the crawler can often find official Sanko disclosure paths and can
 download target confirmation PDFs when the public latest form is FY2025. Strict
 FY2026 correctly refuses those stale forms. The remaining work is not just more
-crawling; it is learning and encoding successful discovery demonstrations,
-publication-lag classification, and operator review paths.
+crawling; it is first proving where the official-index chain breaks, then using
+gold-set demonstrations to prevent regressions while improving that layer.
 
-## New Artifact
+## Existing Artifact
 
 `data/discovery-gold-set/` is the discovery-side counterpart to
 `data/gold-set/`.
 
 - `schema.json` defines the v0.1 entry shape.
 - `entries/*.json` records manual/Codex-assisted demonstrations.
-- Entries distinguish true target-year success from latest-public
-  publication-lag evidence.
+- Entries distinguish true target-year success, latest-public publication-lag
+  evidence, no-candidate outcomes, and operator-review cases. The schema is
+  already richer than a minimal URL/PDF list and should be reused rather than
+  replaced.
 
 The initial prototype entries are:
 
@@ -76,18 +81,66 @@ The initial prototype entries are:
   exposes an image-only target-looking PDF that remains review-bound because
   strict FY2026 evidence is not text-detectable.
 
+## P0 Root-Cause Direction
+
+The immediate P0 is the Saitama official-index RCA, not adding more manual
+gold-set entries. The official Saitama artifact already shows:
+
+- `extracted_total=60`
+- `extracted_with_url=60`
+- `db_matched=53`
+- `new_url_candidates=53`
+- URL quality: `disclosure=36`, `homepage=24`
+
+The current RCA database contains 71 Saitama schools and 51
+`SchoolSite(discovery_method="prefecture_aggregator")` rows for Saitama. All 51
+are `url_type="disclosure"`. That proves Layer 0 is present for this bounded
+RCA: the official-index URLs are entering the database.
+
+The 51-site strict FY2026 PDF discovery evidence shows the break is Layer 1:
+
+- `crawled=51`
+- `found=45`
+- `downloaded=0`
+- `failed=7`
+- `skipped=399`
+- `cached_rejections=24`
+- `prefiltered=216`
+- `Document` rows after the RCA: `0`
+- all 51 scoped schools remain `pdf_status="none"`,
+  `blocking_reason="no_target_pdf"`
+
+School-level buckets:
+
+- 40 schools: `publication_lag_or_old_target_pdf`
+- 5 schools: `site_fetch_error_only`
+- 3 schools: `non_target_candidates_only`
+- 2 schools: `target_form_without_year_evidence`
+- 1 school: `no_pdf_candidates`
+
+This means the current Saitama bottleneck is not official-index URL ingress. It
+is official URL to strict target-FY PDF acquisition, dominated by latest-public
+old-year target forms and a smaller set of fetch/no-candidate/review cases.
+
 ## Implementation Direction
 
-Phase 1 is complete when the repository has a schema and prototype entries.
+Phase 1 is already complete: the repository has the discovery gold-set schema,
+prototype entries, and evaluation commands.
 
-Phase 2 should use Codex/Claude-assisted web work to collect 20-30 entries:
+Phase 2 should expand the existing entries to 40-60 stratified cases, not a
+flat 20-30 sample. If the goal is to claim 75%+ discovery automation, collect
+80-120 cases. Stratify by both `site_family` and `outcome`:
 
-- accepted target PDF,
-- publication lag,
+- accepted strict target-FY PDF,
+- publication lag / latest-public old-year target form,
 - no target candidate found,
-- needs operator review.
+- needs operator review,
+- target form without reliable year evidence,
+- site fetch/TLS/robots failure,
+- non-target candidates only.
 
-Phase 3 should convert repeated patterns into a deterministic agent:
+Phase 3 should convert repeated patterns into deterministic candidate
+generators plus body/evidence validation, not treat URL templates as truth:
 
 - derive known site-family disclosure pages,
 - separate stale latest-public forms from target-year success,
@@ -145,6 +198,10 @@ Phase 5 should run the bounded Windows yield gate again and compare:
 - stale latest-public rate,
 - no-candidate rate,
 - review workload.
+
+Operator UI capture also needs to preserve three fields when a human finds a
+PDF manually: the URL, the path used to find it, and the result label. A bare
+`SchoolSite` insert is not enough to train or evaluate the discovery agent.
 
 ## Non-Goals
 
