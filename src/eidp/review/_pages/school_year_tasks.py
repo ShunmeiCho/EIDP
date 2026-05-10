@@ -284,6 +284,31 @@ def discovery_evidence_table_rows(evidence_rows: list[Any]) -> list[dict[str, ob
     ]
 
 
+def discovery_evidence_stale_target_notice(evidence_rows: list[Any]) -> str | None:
+    """Return an operator-facing notice when discovery found only stale target forms."""
+    if any(str(getattr(row, "reason", "")) == "accepted_downloaded" for row in evidence_rows):
+        return None
+
+    counts: dict[int, int] = {}
+    for row in evidence_rows:
+        reason = str(getattr(row, "reason", ""))
+        pdf_type = getattr(row, "pdf_type", None)
+        if pdf_type != "target" or not reason.startswith("fiscal_year_mismatch:"):
+            continue
+        raw_year = reason.removeprefix("fiscal_year_mismatch:").strip()
+        try:
+            year = int(raw_year)
+        except ValueError:
+            continue
+        counts[year] = counts.get(year, 0) + 1
+
+    if not counts:
+        return None
+
+    parts = [f"{year}年度 {count}件" for year, count in sorted(counts.items(), reverse=True)]
+    return f"旧年度の確認申請書候補あり: {' / '.join(parts)}。対象年度PDFは未取得です。"
+
+
 def school_task_source_chain_csv(rows: list[SchoolTaskRow]) -> str:
     """Return a CSV audit export for the visible task rows.
 
@@ -1744,6 +1769,9 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                 limit=6,
             )
             if evidence_rows:
+                stale_notice = discovery_evidence_stale_target_notice(evidence_rows)
+                if stale_notice:
+                    st.warning(stale_notice)
                 with st.expander("PDF探索ログ（候補PDFと採否理由）"):
                     st.dataframe(
                         discovery_evidence_table_rows(evidence_rows),

@@ -22,6 +22,7 @@ from eidp.review._pages.school_year_tasks import (
     bootstrap_progress_auto_refresh_html,
     bootstrap_progress_detail_lines,
     bootstrap_progress_stale_reason,
+    discovery_evidence_stale_target_notice,
     discovery_evidence_table_rows,
     discovery_rejection_reason_summary,
     initial_bootstrap_warning_text,
@@ -1018,6 +1019,26 @@ def test_discovery_evidence_table_rows_show_candidate_reason_and_source() -> Non
         "PDF候補": "https://school.example/2025.pdf",
         "掲載ページ": "https://school.example/disclosure/",
     }]
+
+
+def test_discovery_evidence_stale_target_notice_summarizes_old_year_target_candidates() -> None:
+    notice = discovery_evidence_stale_target_notice([
+        SimpleNamespace(reason="classified_non_target", pdf_type="non_target"),
+        SimpleNamespace(reason="fiscal_year_mismatch:2025", pdf_type="target"),
+        SimpleNamespace(reason="fiscal_year_mismatch:2025", pdf_type="target"),
+        SimpleNamespace(reason="fiscal_year_mismatch:2024", pdf_type="target"),
+    ])
+
+    assert notice == "旧年度の確認申請書候補あり: 2025年度 2件 / 2024年度 1件。対象年度PDFは未取得です。"
+
+
+def test_discovery_evidence_stale_target_notice_hides_when_current_pdf_was_accepted() -> None:
+    notice = discovery_evidence_stale_target_notice([
+        SimpleNamespace(reason="fiscal_year_mismatch:2025", pdf_type="target"),
+        SimpleNamespace(reason="accepted_downloaded", pdf_type="target"),
+    ])
+
+    assert notice is None
 
 
 def test_school_task_source_chain_csv_exports_visible_row_evidence() -> None:
