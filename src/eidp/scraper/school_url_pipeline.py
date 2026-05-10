@@ -82,6 +82,9 @@ def run_school_url_auto_crawl(
         "review_no_candidate": 0,
         "dry_run_auto": 0,
         "dry_run_review": 0,
+        "dry_run_manual_required": 0,
+        "manual_required_enqueued": 0,
+        "manual_required_existing": 0,
         "rejected": 0,
         "no_candidates": 0,
         "circuit_open": 0,
@@ -304,8 +307,13 @@ def _accumulate_outcome(
             stats["review_existing"] += 1
         else:
             stats["review_enqueued"] += 1
-    elif discovery_decision == "no_candidates":
-        stats["no_candidates"] += 1
+    elif discovery_decision in {"reject", "no_candidates"}:
+        if skipped_reason == "dry_run":
+            stats["dry_run_manual_required"] += 1
+        elif skipped_reason and "already_pending" in skipped_reason:
+            stats["manual_required_existing"] += 1
+        else:
+            stats["manual_required_enqueued"] += 1
     elif discovery_decision == "circuit_open":
         stats["circuit_open"] += 1
     else:

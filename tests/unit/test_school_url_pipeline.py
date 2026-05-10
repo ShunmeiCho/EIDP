@@ -163,7 +163,6 @@ def test_run_school_url_auto_crawl_evidence_records_rejected_candidates(tmp_path
         stats = run_school_url_auto_crawl(
             session,
             batch_size=1,
-            dry_run=True,
             evidence_path=evidence_path,
             serp_fetcher=RejectOnlySerpFetcher(),
             page_fetcher=FakePageFetcher(),
@@ -172,7 +171,8 @@ def test_run_school_url_auto_crawl_evidence_records_rejected_candidates(tmp_path
         evidence = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[0])
 
         assert stats["attempted"] == 1
-        assert stats["rejected"] == 1
+        assert stats["manual_required_enqueued"] == 1
+        assert stats["rejected"] == 0
         assert evidence["decision"] == "reject"
         assert evidence["candidate_url"] == ""
         assert evidence["queries"] == [
@@ -366,9 +366,12 @@ def test_accumulate_outcome_separates_auto_without_best_candidate() -> None:
         "review_existing": 0,
         "dry_run_auto": 0,
         "dry_run_review": 0,
+        "dry_run_manual_required": 0,
         "rejected": 0,
         "no_candidates": 0,
         "circuit_open": 0,
+        "manual_required_enqueued": 0,
+        "manual_required_existing": 0,
     }
 
     _accumulate_outcome(
@@ -379,3 +382,34 @@ def test_accumulate_outcome_separates_auto_without_best_candidate() -> None:
 
     assert stats["auto_no_candidate"] == 1
     assert stats["auto_existing"] == 0
+
+
+def test_accumulate_outcome_reports_manual_required_queue() -> None:
+    stats = {
+        "auto_registered": 0,
+        "auto_existing": 0,
+        "auto_no_candidate": 0,
+        "review_enqueued": 0,
+        "review_existing": 0,
+        "review_no_candidate": 0,
+        "dry_run_auto": 0,
+        "dry_run_review": 0,
+        "dry_run_manual_required": 0,
+        "rejected": 0,
+        "no_candidates": 0,
+        "circuit_open": 0,
+        "manual_required_enqueued": 0,
+        "manual_required_existing": 0,
+    }
+
+    _accumulate_outcome(stats, discovery_decision="reject", skipped_reason=None)
+    _accumulate_outcome(
+        stats,
+        discovery_decision="no_candidates",
+        skipped_reason="manual_required_already_pending",
+    )
+
+    assert stats["manual_required_enqueued"] == 1
+    assert stats["manual_required_existing"] == 1
+    assert stats["rejected"] == 0
+    assert stats["no_candidates"] == 0

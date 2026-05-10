@@ -816,7 +816,7 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
             f"{details.get('school_url_crawl_attempted', 0)}校 / "
             f"自動登録 {details.get('school_url_crawl_auto_registered', 0)} / "
             f"確認候補 {details.get('school_url_crawl_review_enqueued', 0)} / "
-            f"候補なし {details.get('school_url_crawl_no_candidates', 0)} / "
+            f"手入力キュー {details.get('school_url_crawl_manual_required_enqueued', 0)} / "
             f"エラー {details.get('school_url_crawl_errors', 0)}"
         )
         if details.get("school_url_crawl_unavailable"):

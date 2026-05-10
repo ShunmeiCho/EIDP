@@ -394,7 +394,7 @@ def _existing_review_item(
 
 
 def _existing_manual_required_item(session: Session, school_id: int) -> ReviewItem | None:
-    rows = (
+    return (
         session.query(ReviewItem)
         .filter(
             ReviewItem.item_type == REVIEW_ITEM_TYPE,
@@ -403,16 +403,9 @@ def _existing_manual_required_item(session: Session, school_id: int) -> ReviewIt
             ReviewItem.proposal_source == REVIEW_PROPOSAL_SOURCE,
             ReviewItem.status == "pending",
         )
-        .all()
+        .order_by(ReviewItem.id.asc())
+        .first()
     )
-    for row in rows:
-        try:
-            payload = json.loads(row.proposal_value or "{}")
-        except json.JSONDecodeError:
-            continue
-        if isinstance(payload, dict) and payload.get("manual_required") is True:
-            return row
-    return None
 
 
 def _existing_school_site(

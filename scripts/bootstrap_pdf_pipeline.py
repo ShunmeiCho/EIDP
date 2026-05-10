@@ -542,6 +542,9 @@ def step_school_url_auto_crawl(
         "school_url_crawl_review_no_candidate": 0,
         "school_url_crawl_dry_run_auto": 0,
         "school_url_crawl_dry_run_review": 0,
+        "school_url_crawl_dry_run_manual_required": 0,
+        "school_url_crawl_manual_required_enqueued": 0,
+        "school_url_crawl_manual_required_existing": 0,
         "school_url_crawl_rejected": 0,
         "school_url_crawl_no_candidates": 0,
         "school_url_crawl_circuit_open": 0,
@@ -580,7 +583,8 @@ def step_school_url_auto_crawl(
                     "不足URLを学校公式サイト探索で補完しています。"
                     f"{attempted}/{total_schools}校確認済み / "
                     f"自動登録 {crawl_stats.get('auto_registered', 0)}件 / "
-                    f"確認候補 {crawl_stats.get('review_enqueued', 0)}件"
+                    f"確認候補 {crawl_stats.get('review_enqueued', 0)}件 / "
+                    f"手入力キュー {crawl_stats.get('manual_required_enqueued', 0)}件"
                 ),
                 details={
                     **stats,
@@ -589,6 +593,12 @@ def step_school_url_auto_crawl(
                     "school_url_crawl_auto_no_candidate": int(crawl_stats.get("auto_no_candidate", 0)),
                     "school_url_crawl_review_enqueued": int(crawl_stats.get("review_enqueued", 0)),
                     "school_url_crawl_review_no_candidate": int(crawl_stats.get("review_no_candidate", 0)),
+                    "school_url_crawl_manual_required_enqueued": int(
+                        crawl_stats.get("manual_required_enqueued", 0)
+                    ),
+                    "school_url_crawl_manual_required_existing": int(
+                        crawl_stats.get("manual_required_existing", 0)
+                    ),
                     "school_url_crawl_rejected": int(crawl_stats.get("rejected", 0)),
                     "school_url_crawl_no_candidates": int(crawl_stats.get("no_candidates", 0)),
                     "school_url_crawl_errors": int(crawl_stats.get("errors", 0)),

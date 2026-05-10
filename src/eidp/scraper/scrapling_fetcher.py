@@ -14,12 +14,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+import structlog
+
 from eidp.scraper.anti_detection import is_block_signal
 from eidp.scraper.school_url_errors import ScraplingUnavailableError
 from eidp.scraper.school_website_crawl import FetchedPage, SerpHit
 from eidp.scraper.search_provider import SearchProvider
 
 ScraplingFetchMode = Literal["static", "dynamic", "stealthy"]
+log = structlog.get_logger()
 
 
 def scrapling_available() -> bool:
@@ -105,6 +108,9 @@ class ScraplingHtmlFetcher:
     network_idle: bool = True
 
     def fetch_html(self, url: str) -> str | None:
+        if self.mode == "static":
+            log.warning("scrapling_html_static_unsupported", url=url)
+            return None
         page = ScraplingPageFetcher(
             mode=self.mode,
             disable_resources=self.disable_resources,

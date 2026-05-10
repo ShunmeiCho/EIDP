@@ -150,6 +150,22 @@ def test_scrapling_html_fetcher_returns_rendered_html(monkeypatch) -> None:
     assert "r8-kakunin.pdf" in html
 
 
+def test_scrapling_html_fetcher_rejects_static_mode_without_fake_html(monkeypatch) -> None:
+    import eidp.scraper.scrapling_fetcher as module
+
+    monkeypatch.setattr(module, "scrapling_available", lambda: True)
+    monkeypatch.setattr(
+        module.importlib,
+        "import_module",
+        lambda name: SimpleNamespace(FetcherSession=lambda impersonate: FakeSession()),
+    )
+    fetcher = ScraplingHtmlFetcher(mode="static")
+
+    html = fetcher.fetch_html("https://www.tokyo-design.ac.jp/")
+
+    assert html is None
+
+
 def test_ensure_playwright_browsers_path_uses_extracted_addon(monkeypatch, tmp_path) -> None:
     app_root = tmp_path / "EIDP"
     browsers = app_root / "playwright-addon" / "ms-playwright"

@@ -390,6 +390,49 @@ def test_manual_required_review_item_is_idempotent(session: Session):
     assert second.skipped_reason == "manual_required_already_pending"
 
 
+def test_manual_required_reuses_existing_pending_url_candidate(session: Session):
+    _seed_school(session)
+    review_discovery = SchoolUrlDiscovery(
+        school_id=1,
+        school_name="テスト専門学校",
+        queries=("テスト専門学校 公式",),
+        candidates=(
+            UrlScore(
+                candidate_url="https://example.ac.jp/",
+                score=5.0,
+                decision="review",
+                breakdown={"domain_tld": 3.0},
+                notes=(),
+            ),
+        ),
+        best=UrlScore(
+            candidate_url="https://example.ac.jp/",
+            score=5.0,
+            decision="review",
+            breakdown={"domain_tld": 3.0},
+            notes=(),
+        ),
+        decision="review",
+    )
+    manual_discovery = SchoolUrlDiscovery(
+        school_id=1,
+        school_name="テスト専門学校",
+        queries=("テスト専門学校 情報公開",),
+        candidates=(),
+        best=None,
+        decision="no_candidates",
+    )
+
+    review = persist_discovery(session, review_discovery)
+    session.commit()
+    manual = persist_discovery(session, manual_discovery)
+    session.commit()
+
+    assert session.query(ReviewItem).count() == 1
+    assert manual.review_item_id == review.review_item_id
+    assert manual.skipped_reason == "manual_required_already_pending"
+
+
 def test_auto_without_best_is_skipped_safely(session: Session):
     _seed_school(session)
     discovery = SchoolUrlDiscovery(
