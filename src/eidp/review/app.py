@@ -14,6 +14,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
+from eidp.db.audit import log_manual_action
 from eidp.db.models import ReviewItem, School, SchoolAlias
 from eidp.db.session import SessionLocal
 from eidp.fiscal_year import format_fiscal_year_label
@@ -241,6 +242,7 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
         )
         return
 
+    old_code = school.school_code
     school.school_code = code
 
     # Create alias if the candidate name differs
@@ -263,6 +265,20 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
     item.resolution = "approved"
     item.resolved_value = code
     item.resolved_at = datetime.now(UTC)
+    log_manual_action(
+        session,
+        action_type="school_code_approved",
+        target_table="school",
+        target_id=school.id,
+        old_value={"school_code": old_code, "review_item_id": item.id},
+        new_value={
+            "school_code": code,
+            "candidate_name": candidate_name,
+            "review_item_id": item.id,
+            "resolution": "approved",
+        },
+        reason=item.proposal_reason or "Operator approved MEXT school code",
+    )
     _commit(session)
 
 
@@ -290,11 +306,25 @@ def _approve_with_correction(
         )
         return
 
+    old_code = school.school_code
     school.school_code = corrected_code
     item.status = "resolved"
     item.resolution = "corrected"
     item.resolved_value = corrected_code
     item.resolved_at = datetime.now(UTC)
+    log_manual_action(
+        session,
+        action_type="school_code_corrected",
+        target_table="school",
+        target_id=school.id,
+        old_value={"school_code": old_code, "review_item_id": item.id},
+        new_value={
+            "school_code": corrected_code,
+            "review_item_id": item.id,
+            "resolution": "corrected",
+        },
+        reason="Operator corrected MEXT school code",
+    )
     _commit(session)
 
 
@@ -305,12 +335,35 @@ def _reject_item(session: Session, item: ReviewItem, notes: str = "") -> None:
     item.resolved_at = datetime.now(UTC)
     if notes:
         item.notes = notes
+    log_manual_action(
+        session,
+        action_type="school_code_rejected",
+        target_table="review_item",
+        target_id=item.id,
+        old_value={"status": "pending", "proposal_value": item.proposal_value},
+        new_value={
+            "status": "resolved",
+            "resolution": "rejected",
+            "school_id": item.reference_id,
+        },
+        reason=notes or "Operator rejected MEXT school code proposal",
+    )
     _commit(session)
 
 
 def _skip_item(session: Session, item: ReviewItem) -> None:
     """Skip: lower priority so it appears later."""
+    old_priority = item.priority
     item.priority = min(item.priority + 2, 10)
+    log_manual_action(
+        session,
+        action_type="school_code_skipped",
+        target_table="review_item",
+        target_id=item.id,
+        old_value={"priority": old_priority, "status": item.status},
+        new_value={"priority": item.priority, "status": item.status},
+        reason="Operator skipped MEXT school code proposal",
+    )
     _commit(session)
 
 
