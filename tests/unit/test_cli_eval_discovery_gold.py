@@ -78,6 +78,38 @@ def test_eval_discovery_gold_cli_accepts_pdf_evidence_log(tmp_path: Path) -> Non
     assert payload["exact_matches"] == 1
 
 
+def test_eval_discovery_gold_cli_can_fail_on_incomplete_predictions(tmp_path: Path) -> None:
+    predictions_path = tmp_path / "predictions.jsonl"
+    predictions_path.write_text(
+        json.dumps(
+            {
+                "entry_id": "ecole-matsue-nutrition-2026",
+                "outcome": "accepted_target_pdf",
+                "pdf_url": "https://www.ecole-cpb.com/files/school_support_R8.pdf",
+                "fiscal_year": 2026,
+                "strict_target_year_success": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "eval-discovery-gold",
+            "--gold-set-dir",
+            str(GOLD_SET_DIR),
+            "--predictions",
+            str(predictions_path),
+            "--fail-on-regression",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Discovery gold gate failed" in result.output
+    assert "missing:     9" in result.output
+
+
 def test_eval_discovery_gold_cli_requires_one_input_mode(tmp_path: Path) -> None:
     predictions_path = tmp_path / "predictions.jsonl"
     predictions_path.write_text("", encoding="utf-8")

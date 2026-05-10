@@ -892,6 +892,11 @@ def eval_discovery_gold(
     ),
     gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
     output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
+    fail_on_regression: bool = typer.Option(
+        False,
+        "--fail-on-regression",
+        help="Exit non-zero when predictions are missing, unexpected, or mismatched",
+    ),
 ) -> None:
     """Evaluate crawler or agent predictions against discovery gold-set entries."""
     from eidp.scraper.discovery_gold_set import (
@@ -917,6 +922,8 @@ def eval_discovery_gold(
     report = evaluate_discovery_gold_predictions(entries, predicted)
     if output_json:
         typer.echo(render_discovery_gold_eval_report(report))
+        if fail_on_regression and _discovery_gold_gate_failed(report):
+            raise typer.Exit(1)
         return
 
     typer.echo(f"Discovery gold evaluation: {report.exact_matches}/{report.total_gold_entries} exact")
@@ -924,6 +931,17 @@ def eval_discovery_gold(
     typer.echo(f"  failed:      {report.failed_predictions}")
     typer.echo(f"  missing:     {report.missing_entries}")
     typer.echo(f"  unexpected:  {report.unexpected_predictions}")
+    if fail_on_regression and _discovery_gold_gate_failed(report):
+        typer.echo("Discovery gold gate failed")
+        raise typer.Exit(1)
+
+
+def _discovery_gold_gate_failed(report: object) -> bool:
+    return (
+        int(getattr(report, "failed_predictions", 0)) > 0
+        or int(getattr(report, "missing_entries", 0)) > 0
+        or int(getattr(report, "unexpected_predictions", 0)) > 0
+    )
 
 
 @report_app.command("coverage")

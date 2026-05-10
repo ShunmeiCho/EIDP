@@ -96,7 +96,9 @@ before a Windows yield run is treated as meaningful. Existing `discover-pdfs`
 evidence JSONL can also be evaluated with `--pdf-evidence`, which maps
 `accepted_downloaded`, `fiscal_year_mismatch:*`,
 `target_fiscal_year_not_detected`, and `no_candidates_found` into the gold-set
-prediction buckets.
+prediction buckets. CI or release checks should add `--fail-on-regression` so
+missing, unexpected, or mismatched predictions return a non-zero exit code
+instead of only printing a report.
 
 Phase 5 should run the bounded Windows yield gate again and compare:
 

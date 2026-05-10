@@ -36,6 +36,9 @@ Existing `discover-pdfs` evidence logs can be evaluated directly:
 uv run eidp eval-discovery-gold --pdf-evidence path/to/discovery-evidence.jsonl --json
 ```
 
+Use `--fail-on-regression` in CI or release checks when missing, unexpected, or
+mismatched predictions should block the run.
+
 Current v0.1 seed coverage:
 
 - Sanko disclosure pages with stale latest-public FY2025 controls.
