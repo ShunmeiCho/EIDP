@@ -16,6 +16,7 @@ class DiscoveryGoldEntry:
     """A single manual discovery demonstration."""
 
     entry_id: str
+    school_id: int
     target_fiscal_year: int
     outcome: str
     pdf_url: str
@@ -100,6 +101,7 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
         entries.append(
             DiscoveryGoldEntry(
                 entry_id=str(payload["entry_id"]),
+                school_id=int(payload["school"]["school_id"]),
                 target_fiscal_year=int(payload["target_fiscal_year"]),
                 outcome=str(payload["outcome"]),
                 pdf_url=str(expected_result.get("pdf_url") or ""),
@@ -155,6 +157,37 @@ def load_discovery_gold_predictions(predictions_path: Path) -> list[DiscoveryGol
     return predictions
 
 
+def load_discovery_gold_predictions_from_pdf_evidence(
+    evidence_path: Path,
+    entries: list[DiscoveryGoldEntry],
+) -> list[DiscoveryGoldPrediction]:
+    """Convert existing discover-pdfs evidence JSONL into gold-set predictions."""
+
+    entries_by_school_id = {entry.school_id: entry for entry in entries}
+    predictions_by_entry_id: dict[str, tuple[int, DiscoveryGoldPrediction]] = {}
+
+    for line in evidence_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        payload = json.loads(line)
+        school_id = _int_or_none(payload.get("school_id"))
+        if school_id is None:
+            continue
+        entry = entries_by_school_id.get(school_id)
+        if entry is None:
+            continue
+
+        prediction = _prediction_from_pdf_evidence_payload(entry, payload)
+        if prediction is None:
+            continue
+        priority = _prediction_priority(prediction.outcome)
+        current = predictions_by_entry_id.get(prediction.entry_id)
+        if current is None or priority > current[0]:
+            predictions_by_entry_id[prediction.entry_id] = (priority, prediction)
+
+    return [item[1] for item in sorted(predictions_by_entry_id.values(), key=lambda item: item[1].entry_id)]
+
+
 def evaluate_discovery_gold_predictions(
     entries: list[DiscoveryGoldEntry],
     predictions: list[DiscoveryGoldPrediction],
@@ -207,3 +240,69 @@ def render_discovery_gold_eval_report(report: DiscoveryGoldEvalReport) -> str:
     """Render a deterministic JSON evaluation report."""
 
     return json.dumps(report.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def _prediction_from_pdf_evidence_payload(
+    entry: DiscoveryGoldEntry,
+    payload: dict[str, Any],
+) -> DiscoveryGoldPrediction | None:
+    reason = str(payload.get("reason") or "")
+    pdf_url = str(payload.get("pdf_url") or "")
+    if reason == "accepted_downloaded":
+        raw_extra = payload.get("extra")
+        extra: dict[str, Any] = raw_extra if isinstance(raw_extra, dict) else {}
+        fiscal_year = _int_or_none(extra.get("target_fiscal_year")) or _int_or_none(extra.get("detected_fiscal_year"))
+        return DiscoveryGoldPrediction(
+            entry_id=entry.entry_id,
+            outcome="accepted_target_pdf",
+            pdf_url=pdf_url,
+            fiscal_year=fiscal_year,
+            strict_target_year_success=True,
+        )
+
+    if reason.startswith("fiscal_year_mismatch:"):
+        return DiscoveryGoldPrediction(
+            entry_id=entry.entry_id,
+            outcome="publication_lag_latest_public",
+            pdf_url=pdf_url,
+            fiscal_year=_int_or_none(reason.split(":", 1)[1]),
+            strict_target_year_success=False,
+        )
+
+    if reason == "target_fiscal_year_not_detected":
+        return DiscoveryGoldPrediction(
+            entry_id=entry.entry_id,
+            outcome="needs_operator_review",
+            pdf_url=pdf_url,
+            fiscal_year=None,
+            strict_target_year_success=False,
+        )
+
+    if reason == "no_candidates_found":
+        return DiscoveryGoldPrediction(
+            entry_id=entry.entry_id,
+            outcome="no_target_candidate_found",
+            pdf_url="",
+            fiscal_year=None,
+            strict_target_year_success=False,
+        )
+
+    return None
+
+
+def _prediction_priority(outcome: str) -> int:
+    return {
+        "accepted_target_pdf": 4,
+        "publication_lag_latest_public": 3,
+        "needs_operator_review": 2,
+        "no_target_candidate_found": 1,
+    }.get(outcome, 0)
+
+
+def _int_or_none(value: object) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(str(value))
+    except ValueError:
+        return None

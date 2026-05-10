@@ -30,6 +30,12 @@ per line with `entry_id`, `outcome`, `pdf_url`, `fiscal_year`, and
 uv run eidp eval-discovery-gold --predictions path/to/predictions.jsonl --json
 ```
 
+Existing `discover-pdfs` evidence logs can be evaluated directly:
+
+```bash
+uv run eidp eval-discovery-gold --pdf-evidence path/to/discovery-evidence.jsonl --json
+```
+
 Current v0.1 seed coverage:
 
 - Sanko disclosure pages with stale latest-public FY2025 controls.

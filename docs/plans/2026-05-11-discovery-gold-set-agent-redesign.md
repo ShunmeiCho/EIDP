@@ -92,7 +92,11 @@ Phase 4 should evaluate discovery against the gold set before Windows release.
 The local comparison surface is `uv run eidp eval-discovery-gold --predictions
 path/to/predictions.jsonl --json`; crawler or agent output must match gold-set
 entry IDs, outcomes, PDF URLs, fiscal years, and strict target-year decisions
-before a Windows yield run is treated as meaningful.
+before a Windows yield run is treated as meaningful. Existing `discover-pdfs`
+evidence JSONL can also be evaluated with `--pdf-evidence`, which maps
+`accepted_downloaded`, `fiscal_year_mismatch:*`,
+`target_fiscal_year_not_detected`, and `no_candidates_found` into the gold-set
+prediction buckets.
 
 Phase 5 should run the bounded Windows yield gate again and compare:
 

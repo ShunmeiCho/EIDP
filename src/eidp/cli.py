@@ -885,7 +885,11 @@ def discovery_gold_set(
 
 @app.command("eval-discovery-gold")
 def eval_discovery_gold(
-    predictions: Path = typer.Option(..., help="JSONL predictions to compare against the discovery gold set"),
+    predictions: Path | None = typer.Option(None, help="JSONL predictions to compare against the discovery gold set"),
+    pdf_evidence: Path | None = typer.Option(
+        None,
+        help="discover-pdfs evidence JSONL to convert into predictions before evaluation",
+    ),
     gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
     output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
 ) -> None:
@@ -894,11 +898,22 @@ def eval_discovery_gold(
         evaluate_discovery_gold_predictions,
         load_discovery_gold_entries,
         load_discovery_gold_predictions,
+        load_discovery_gold_predictions_from_pdf_evidence,
         render_discovery_gold_eval_report,
     )
 
     entries = load_discovery_gold_entries(gold_set_dir)
-    predicted = load_discovery_gold_predictions(predictions)
+    if predictions is None and pdf_evidence is None:
+        typer.echo("Either --predictions or --pdf-evidence is required.", err=True)
+        raise typer.Exit(2)
+    if predictions is not None and pdf_evidence is not None:
+        typer.echo("Use only one of --predictions or --pdf-evidence.", err=True)
+        raise typer.Exit(2)
+    if predictions is not None:
+        predicted = load_discovery_gold_predictions(predictions)
+    else:
+        assert pdf_evidence is not None
+        predicted = load_discovery_gold_predictions_from_pdf_evidence(pdf_evidence, entries)
     report = evaluate_discovery_gold_predictions(entries, predicted)
     if output_json:
         typer.echo(render_discovery_gold_eval_report(report))
