@@ -536,8 +536,10 @@ def step_school_url_auto_crawl(
         "school_url_crawl_attempted": 0,
         "school_url_crawl_auto_registered": 0,
         "school_url_crawl_auto_existing": 0,
+        "school_url_crawl_auto_no_candidate": 0,
         "school_url_crawl_review_enqueued": 0,
         "school_url_crawl_review_existing": 0,
+        "school_url_crawl_review_no_candidate": 0,
         "school_url_crawl_dry_run_auto": 0,
         "school_url_crawl_dry_run_review": 0,
         "school_url_crawl_rejected": 0,
@@ -547,6 +549,15 @@ def step_school_url_auto_crawl(
         "school_url_crawl_unavailable": 0,
     }
     if not enabled or batch_size <= 0:
+        if progress is not None:
+            reason = "disabled" if not enabled else "batch_size_zero"
+            progress.write(
+                status="running",
+                current_step=2,
+                percent=SCHOOL_URL_CRAWL_PERCENT_END,
+                message=f"不足URLの学校公式サイト探索をスキップしました（{reason}）。",
+                details=stats,
+            )
         print(f"[step2c] {stats}")
         return stats
 
@@ -575,7 +586,9 @@ def step_school_url_auto_crawl(
                     **stats,
                     "school_url_crawl_attempted": attempted,
                     "school_url_crawl_auto_registered": int(crawl_stats.get("auto_registered", 0)),
+                    "school_url_crawl_auto_no_candidate": int(crawl_stats.get("auto_no_candidate", 0)),
                     "school_url_crawl_review_enqueued": int(crawl_stats.get("review_enqueued", 0)),
+                    "school_url_crawl_review_no_candidate": int(crawl_stats.get("review_no_candidate", 0)),
                     "school_url_crawl_rejected": int(crawl_stats.get("rejected", 0)),
                     "school_url_crawl_no_candidates": int(crawl_stats.get("no_candidates", 0)),
                     "school_url_crawl_errors": int(crawl_stats.get("errors", 0)),
@@ -793,10 +806,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--discovery-methods",
-        default="prefecture_aggregator,seed_csv,corporation_pattern",
+        default="prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
         help=(
             "Comma-separated school_site.discovery_method values crawled in Step 3. "
-            "Default includes official prefecture URLs plus known seed/corporation fallbacks."
+            "Default includes official prefecture URLs plus known seed/corporation/auto-crawl fallbacks."
         ),
     )
     parser.add_argument(
@@ -1086,10 +1099,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
     discovery_methods = [method.strip() for method in args.discovery_methods.split(",") if method.strip()]
     if known_url_stats.get("search_found", 0) > 0 and "web_search" not in discovery_methods:
         discovery_methods.append("web_search")
-    if (
-        school_url_crawl_stats.get("school_url_crawl_auto_registered", 0) > 0
-        and "scrapling_stealth" not in discovery_methods
-    ):
+    if "scrapling_stealth" not in discovery_methods:
         discovery_methods.append("scrapling_stealth")
     discovery_stats = step_discover_pdfs(
         storage_dir=args.storage_dir,

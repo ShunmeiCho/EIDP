@@ -375,6 +375,7 @@ def test_weekly_command_uses_target_year_runner_for_all_schools(tmp_path) -> Non
         "corporation_pattern",
         "web_search",
         "operator_manual",
+        "scrapling_stealth",
         "--school-type",
         "all",
     ]
@@ -700,6 +701,7 @@ def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatc
         "corporation_pattern",
         "web_search",
         "operator_manual",
+        "scrapling_stealth",
         "--school-type",
         "all",
     ]
@@ -950,6 +952,9 @@ def test_site_entry_label_explains_source_and_reuse_quality() -> None:
     assert site_entry_label("operator_manual", "homepage", "https://school.example/") == "手動登録ページ入口"
     assert site_entry_label("operator_manual", "pdf", "https://school.example/r8.pdf") == (
         "PDF直リンク（今年度だけ弱い）"
+    )
+    assert site_entry_label("scrapling_stealth", "homepage", "https://school.example/") == (
+        "学校公式サイト自動発見の入口"
     )
     assert site_entry_label(None, None, None) == "入口なし"
 

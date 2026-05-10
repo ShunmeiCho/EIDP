@@ -117,6 +117,26 @@ if errorlevel 1 (
     goto :finish
 )
 
+REM 6b. Optional browser crawler add-on. If the operator has extracted
+REM     eidp-playwright-addon-windows.zip into the app root, install its
+REM     offline wheels into the same venv. Running setup again after extracting
+REM     the add-on is safe because we do not delete .venv above.
+set "PLAYWRIGHT_ADDON_WHEELHOUSE=%EIDP_APP_ROOT%\playwright-addon\wheelhouse"
+if exist "%PLAYWRIGHT_ADDON_WHEELHOUSE%" (
+    echo [first_setup] installing optional Playwright/Scrapling add-on wheels
+    "%UV_EXE%" pip install ^
+        --python "%VENV_PY%" ^
+        --no-index ^
+        --find-links "%EIDP_APP_ROOT%\playwright-addon\wheelhouse" ^
+        --no-cache ^
+        scrapling playwright
+    if errorlevel 1 (
+        echo [first_setup] optional Playwright/Scrapling add-on install failed
+        set "SETUP_RC=1"
+        goto :finish
+    )
+)
+
 REM 7. Bootstrap the SQLite database (idempotent).
 "%VENV_PY%" -m eidp.cli db-bootstrap --sqlite
 if errorlevel 1 (

@@ -31,6 +31,7 @@ def _fixture_layout(tmp_path: Path) -> tuple[Path, Path]:
     wheelhouse = tmp_path / "wheelhouse-src"
     wheelhouse.mkdir()
     (wheelhouse / "playwright-1.58.0-py3-none-win_amd64.whl").write_bytes(b"wheel")
+    (wheelhouse / "scrapling-0.4.7-py3-none-any.whl").write_bytes(b"scrapling")
     (wheelhouse / "greenlet-3.2.0-cp312-cp312-win_amd64.whl").write_bytes(b"greenlet")
     (wheelhouse / "notes.txt").write_text("ignored", encoding="utf-8")
 
@@ -51,6 +52,7 @@ def test_collect_playwright_addon_members_matches_expected_layout(tmp_path: Path
     arcs = {arc for _, arc in members}
 
     assert "playwright-addon/wheelhouse/playwright-1.58.0-py3-none-win_amd64.whl" in arcs
+    assert "playwright-addon/wheelhouse/scrapling-0.4.7-py3-none-any.whl" in arcs
     assert "playwright-addon/wheelhouse/greenlet-3.2.0-cp312-cp312-win_amd64.whl" in arcs
     assert "playwright-addon/ms-playwright/chromium-1234/chrome-win/chrome.exe" in arcs
     assert "playwright-addon/ms-playwright/chromium-1234/chrome-win/chrome.dll" in arcs
@@ -84,6 +86,15 @@ def test_playwright_addon_requires_wheel(tmp_path: Path) -> None:
         wheel.unlink()
 
     with pytest.raises(PlaywrightAddonError, match="playwright wheel"):
+        collect_playwright_addon_members(wheelhouse=wheelhouse, browsers_dir=browsers)
+
+
+def test_playwright_addon_requires_scrapling_wheel(tmp_path: Path) -> None:
+    wheelhouse, browsers = _fixture_layout(tmp_path)
+    for wheel in wheelhouse.glob("scrapling-*.whl"):
+        wheel.unlink()
+
+    with pytest.raises(PlaywrightAddonError, match="scrapling wheel"):
         collect_playwright_addon_members(wheelhouse=wheelhouse, browsers_dir=browsers)
 
 

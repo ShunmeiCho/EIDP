@@ -34,6 +34,8 @@ from typing import Protocol
 import structlog
 
 from eidp.scraper.anti_detection import CrawlThrottle, is_block_signal
+from eidp.scraper.school_url_errors import ScraplingUnavailableError
+from eidp.scraper.url_normalization import normalize_candidate_url
 from eidp.scraper.url_scoring import (
     UrlScore,
     UrlScoreThresholds,
@@ -139,9 +141,10 @@ class SchoolUrlCrawler:
                 continue
 
             for hit in hits:
-                if hit.url in seen_urls:
+                url_key = normalize_candidate_url(hit.url)
+                if url_key in seen_urls:
                     continue
-                seen_urls.add(hit.url)
+                seen_urls.add(url_key)
                 ranked.append(score_school_url_candidate(
                     candidate_url=hit.url,
                     school_name=school_name,
@@ -183,10 +186,10 @@ class SchoolUrlCrawler:
 
         # Combine: prefer rescored entries (richer signal), fall back to
         # SERP-only entries for candidates we could not fetch.
-        rescored_urls = {s.candidate_url for s in rescored}
+        rescored_urls = {normalize_candidate_url(s.candidate_url) for s in rescored}
         combined: list[UrlScore] = list(rescored)
         for s in ranked:
-            if s.candidate_url in rescored_urls:
+            if normalize_candidate_url(s.candidate_url) in rescored_urls:
                 continue
             combined.append(s)
 
@@ -217,6 +220,8 @@ class SchoolUrlCrawler:
     def _safe_fetch(self, url: str) -> FetchedPage | None:
         try:
             return self.page_fetcher.fetch(url)
+        except ScraplingUnavailableError:
+            raise
         except Exception as exc:
             log.warning("page_fetch_failed", url=url, error=str(exc))
             self.throttle.record_failure(url)

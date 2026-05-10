@@ -52,6 +52,7 @@ DEFAULT_METHODS = (
     "seed_csv",
     "corporation_pattern",
     "operator_manual",
+    "scrapling_stealth",
 )
 
 

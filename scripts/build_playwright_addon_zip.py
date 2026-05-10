@@ -1,13 +1,13 @@
-"""Build the optional Playwright/Chromium add-on ZIP.
+"""Build the optional Playwright/Chromium/Scrapling add-on ZIP.
 
-The Windows core package is HTTP-first. Playwright is kept outside the core ZIP
-because the Python package and browser payload are large and not required for
-the standard prefecture-aggregator flow.
+The Windows core package is HTTP-first. Playwright, Chromium, and Scrapling are
+kept outside the core ZIP because the Python packages and browser payload are
+large and not required for the standard prefecture-aggregator flow.
 
 This script packages already-prepared assets; it does not download Chromium or
 resolve wheels. Release engineering should prepare:
 
-* a wheelhouse containing the Playwright Windows wheels;
+* a wheelhouse containing the Playwright and Scrapling Windows wheels;
 * an ``ms-playwright`` browser directory containing Chromium.
 
 The resulting ZIP layout is:
@@ -57,6 +57,8 @@ def collect_playwright_addon_members(
     wheels = sorted(wheelhouse.glob("*.whl"))
     if not any(path.name.startswith("playwright-") for path in wheels):
         raise PlaywrightAddonError(f"missing playwright wheel in {wheelhouse}")
+    if not any(path.name.startswith("scrapling-") for path in wheels):
+        raise PlaywrightAddonError(f"missing scrapling wheel in {wheelhouse}")
     if not _has_chromium_executable(browsers_dir):
         raise PlaywrightAddonError(f"missing Chromium chrome.exe under {browsers_dir}")
 
@@ -74,6 +76,7 @@ def build_manifest(members: list[tuple[Path, str]]) -> dict[str, Any]:
         "layout_version": 1,
         "required": {
             "wheelhouse": "playwright-addon/wheelhouse",
+            "scrapling": "playwright-addon/wheelhouse/scrapling-*.whl",
             "browsers": "playwright-addon/ms-playwright",
         },
         "files": [

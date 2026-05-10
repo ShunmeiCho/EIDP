@@ -68,16 +68,23 @@ def test_academic_tld_with_name_token_is_auto():
     assert "disclosure_keyword" in s.breakdown
 
 
-def test_kanji_only_name_on_romanized_host_falls_short_of_match():
-    # Documents the current limitation: kanji-only school names do not
-    # match romanized hostnames because we do not run kanji->romaji
-    # transliteration. Operators land in the manual review queue here.
+def test_kanji_area_name_matches_romanized_host():
     s = _score(
         "https://www.tokyo-design.ac.jp/",
         school="東京デザイン専門学校",
         pref="東京都",
     )
-    assert "domain_name_match" not in s.breakdown
+    assert s.breakdown.get("domain_name_match") == pytest.approx(2.0)
+    assert "name_token=tokyo-design" in s.notes
+
+
+def test_katakana_alias_matches_english_host_token():
+    s = _score(
+        "https://saitama-it-tech.ac.jp/",
+        school="埼玉ITテック専門学校",
+        pref="埼玉県",
+    )
+    assert s.breakdown.get("domain_name_match") == pytest.approx(2.0)
 
 
 def test_neutral_jp_with_disclosure_excerpt_falls_to_review():

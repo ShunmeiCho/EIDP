@@ -678,6 +678,24 @@ def test_resolve_school_url_crawl_mode_requires_scrapling_and_provider() -> None
     ) == (False, 25, "off")
 
 
+def test_step_school_url_auto_crawl_writes_progress_when_disabled(tmp_path: Path) -> None:
+    progress_file = tmp_path / "logs" / "bootstrap.json"
+    progress = module.BootstrapProgressWriter(progress_file)
+
+    stats = module.step_school_url_auto_crawl(
+        enabled=False,
+        batch_size=25,
+        progress=progress,
+    )
+
+    payload = json.loads(progress_file.read_text(encoding="utf-8"))
+    assert stats["school_url_crawl_enabled"] == 0
+    assert payload["status"] == "running"
+    assert payload["percent"] == module.SCHOOL_URL_CRAWL_PERCENT_END
+    assert "スキップ" in payload["message"]
+    assert payload["details"]["school_url_crawl_enabled"] == 0
+
+
 def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_path: Path) -> None:
     calls: dict[str, object] = {}
 

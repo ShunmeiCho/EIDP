@@ -13,14 +13,11 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from eidp.scraper.anti_detection import is_block_signal
+from eidp.scraper.school_url_errors import ScraplingUnavailableError
 from eidp.scraper.school_website_crawl import FetchedPage, SerpHit
 from eidp.scraper.search_provider import SearchProvider
 
 ScraplingFetchMode = Literal["static", "dynamic", "stealthy"]
-
-
-class ScraplingUnavailableError(RuntimeError):
-    """Raised when the optional Scrapling runtime is not installed."""
 
 
 def scrapling_available() -> bool:

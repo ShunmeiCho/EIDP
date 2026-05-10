@@ -19,12 +19,12 @@ from sqlalchemy.orm import Session
 from eidp.config import settings
 from eidp.db.models import School, SchoolSite
 from eidp.scraper.anti_detection import CrawlThrottle
+from eidp.scraper.school_url_errors import ScraplingUnavailableError
 from eidp.scraper.school_url_persistence import PersistenceOutcome, persist_discovery
 from eidp.scraper.school_website_crawl import PageFetcher, SchoolUrlCrawler, SerpFetcher
 from eidp.scraper.scrapling_fetcher import (
     ScraplingFetchMode,
     ScraplingPageFetcher,
-    ScraplingUnavailableError,
     SearchProviderSerpFetcher,
     scrapling_available,
 )
@@ -45,6 +45,7 @@ class SchoolUrlCrawlEvidence:
     outcome: str
     skipped_reason: str
     notes: list[str]
+    dry_run: bool = False
 
 
 SchoolUrlProgressCallback = Callable[[dict[str, int], int], None]
@@ -69,8 +70,10 @@ def run_school_url_auto_crawl(
         "attempted": 0,
         "auto_registered": 0,
         "auto_existing": 0,
+        "auto_no_candidate": 0,
         "review_enqueued": 0,
         "review_existing": 0,
+        "review_no_candidate": 0,
         "dry_run_auto": 0,
         "dry_run_review": 0,
         "rejected": 0,
@@ -118,6 +121,7 @@ def run_school_url_auto_crawl(
                 else:
                     outcome = persist_discovery(session, discovery)
             except ScraplingUnavailableError:
+                stats["attempted"] -= 1
                 stats["unavailable"] = 1
                 break
             except Exception as exc:
@@ -129,13 +133,14 @@ def run_school_url_auto_crawl(
             evidence_writer.write(SchoolUrlCrawlEvidence(
                 school_id=int(school.id),
                 school_name=school.school_name,
-                prefecture=school.prefecture,
+                prefecture=school.prefecture or "",
                 decision=discovery.decision,
                 candidate_url=discovery.best.candidate_url if discovery.best is not None else "",
                 score=discovery.best.score if discovery.best is not None else 0.0,
                 outcome=outcome.decision,
                 skipped_reason=outcome.skipped_reason or "",
                 notes=list(discovery.notes),
+                dry_run=dry_run,
             ))
             if progress_callback is not None:
                 progress_callback(dict(stats), len(schools))
@@ -156,8 +161,12 @@ def _schools_without_url(
 ) -> list[School]:
     if batch_size <= 0:
         return []
-    schools_with_url = session.query(SchoolSite.school_id).distinct()
-    query = session.query(School).filter(~School.id.in_(schools_with_url)).filter(School.status == "active")
+    query = (
+        session.query(School)
+        .outerjoin(SchoolSite, SchoolSite.school_id == School.id)
+        .filter(SchoolSite.id.is_(None))
+        .filter(School.status == "active")
+    )
     if school_id is not None:
         query = query.filter(School.id == school_id)
     if prefecture:
@@ -197,6 +206,8 @@ def _accumulate_outcome(
     if discovery_decision == "auto":
         if skipped_reason == "dry_run":
             stats["dry_run_auto"] += 1
+        elif skipped_reason == "auto_without_best_candidate":
+            stats["auto_no_candidate"] += 1
         elif skipped_reason:
             stats["auto_existing"] += 1
         else:
@@ -204,6 +215,8 @@ def _accumulate_outcome(
     elif discovery_decision == "review":
         if skipped_reason == "dry_run":
             stats["dry_run_review"] += 1
+        elif skipped_reason == "review_without_best_candidate":
+            stats["review_no_candidate"] += 1
         elif skipped_reason:
             stats["review_existing"] += 1
         else:
@@ -228,6 +241,7 @@ class _EvidenceWriter:
         if self._fh is None:
             return
         self._fh.write(json.dumps(asdict(evidence), ensure_ascii=False, default=str) + "\n")
+        self._fh.flush()
 
     def close(self) -> None:
         if self._fh is not None:

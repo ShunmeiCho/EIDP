@@ -393,8 +393,21 @@ def test_validate_optional_playwright_addon(tmp_path: Path) -> None:
 
     _mkdir(root, "playwright-addon/ms-playwright")
     _mkdir(root, "playwright-addon/wheelhouse")
+    _write(root, "playwright-addon/wheelhouse/playwright-1.58.0-py3-none-win_amd64.whl", b"wheel")
+    _write(root, "playwright-addon/wheelhouse/scrapling-0.4.7-py3-none-any.whl", b"wheel")
     present = module.validate_install(root, require_playwright_addon=True)
     assert present.ok, present.errors
+
+
+def test_validate_optional_playwright_addon_requires_scrapling_and_playwright_wheels(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _mkdir(root, "playwright-addon/ms-playwright")
+    _mkdir(root, "playwright-addon/wheelhouse")
+
+    missing_wheels = module.validate_install(root, require_playwright_addon=True)
+    assert not missing_wheels.ok
+    assert any("playwright-*.whl" in error for error in missing_wheels.errors)
+    assert any("scrapling-*.whl" in error for error in missing_wheels.errors)
 
 
 def test_cli_json_returns_nonzero_for_missing_setup_artifacts(tmp_path: Path, capsys) -> None:  # noqa: ANN001

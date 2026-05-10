@@ -120,6 +120,7 @@ WEEKLY_DISCOVERY_METHODS = (
     "corporation_pattern",
     "web_search",
     "operator_manual",
+    "scrapling_stealth",
 )
 WEEKLY_TASK_REGISTRATION_WARNING_FILE = Path("data") / "weekly-task-registration-warning.txt"
 TASK_SCOPE_STATE_KEY = "school_task_scope_filter"
@@ -261,6 +262,8 @@ def site_entry_label(
         return "既知URLシードの入口"
     if method == "corporation_pattern":
         return "法人ドメイン推定の入口"
+    if method == "scrapling_stealth":
+        return "学校公式サイト自動発見の入口"
     if method == "operator_manual":
         return "手動登録ページ入口"
     return "登録ページ入口"

@@ -117,6 +117,7 @@ class CrawlThrottle:
             return ThrottleDecision(False, 0.0, "invalid_url")
         now = self._now()
         with self._lock:
+            self._prune_expired_quarantines(now)
             if len(self._quarantined) >= self.max_quarantined_domains:
                 return ThrottleDecision(False, 0.0, "global_circuit_breaker")
             state = self._state.setdefault(host, _DomainState())
@@ -139,6 +140,8 @@ class CrawlThrottle:
             state = self._state.setdefault(host, _DomainState())
             state.last_request_at = now
             state.consecutive_failures = 0
+            state.quarantined_until = 0.0
+            self._quarantined.discard(host)
 
     def record_failure(self, url: str, *, blocked: bool = False) -> str | None:
         """Record a failure. Returns the quarantine reason when this call
@@ -164,11 +167,27 @@ class CrawlThrottle:
 
     def quarantined_domains(self) -> tuple[str, ...]:
         with self._lock:
+            self._prune_expired_quarantines(self._now())
             return tuple(sorted(self._quarantined))
 
     def is_circuit_open(self) -> bool:
         with self._lock:
+            self._prune_expired_quarantines(self._now())
             return len(self._quarantined) >= self.max_quarantined_domains
+
+    def _prune_expired_quarantines(self, now: float) -> None:
+        """Drop cooldown entries whose deadline has passed.
+
+        Must be called with ``_lock`` held. Without this cleanup the global
+        circuit breaker never reopens after cooldown expiry.
+        """
+        for host in tuple(self._quarantined):
+            state = self._state.get(host)
+            if state is None or state.quarantined_until <= now:
+                self._quarantined.discard(host)
+                if state is not None:
+                    state.quarantined_until = 0.0
+                    state.consecutive_failures = 0
 
 
 def stealthy_request_headers(
@@ -218,7 +237,7 @@ def is_block_signal(*, status_code: int | None, body_excerpt: str | None) -> boo
     Akamai, and similar CDNs all expose recognisable strings when they serve
     a challenge page rather than the requested content.
     """
-    if status_code in {403, 429, 503}:
+    if status_code in {403, 418, 429, 503}:
         return True
     if not body_excerpt:
         return False

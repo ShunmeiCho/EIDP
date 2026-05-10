@@ -319,6 +319,12 @@ def validate_install(
             check.fail("missing Playwright add-on directory: playwright-addon/ms-playwright")
         if not _exists_dir(root, "playwright-addon/wheelhouse"):
             check.fail("missing Playwright add-on directory: playwright-addon/wheelhouse")
+        addon_wheelhouse = root / "playwright-addon" / "wheelhouse"
+        if addon_wheelhouse.is_dir():
+            if not any(addon_wheelhouse.glob("playwright-*.whl")):
+                check.fail("missing Playwright add-on wheel: playwright-addon/wheelhouse/playwright-*.whl")
+            if not any(addon_wheelhouse.glob("scrapling-*.whl")):
+                check.fail("missing Playwright add-on wheel: playwright-addon/wheelhouse/scrapling-*.whl")
 
     return check
 

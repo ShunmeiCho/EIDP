@@ -22,7 +22,8 @@ VM:
 
 - `eidp-windows.zip`
 - 任意: `eidp-ocr-addon-windows.zip`
-- 任意: `eidp-playwright-addon-windows.zip`
+- 任意: `eidp-playwright-addon-windows.zip`（Playwright / Chromium /
+  Scrapling）
 
 VM に渡す前の Mac preflight:
 
@@ -223,9 +224,11 @@ C:\Program Files\EIDP\ocr-addon\tessdata\jpn.traineddata
 
 手順:
 
-1. Playwright add-on なしで UI を起動する。
+1. Playwright/Scrapling add-on なしで UI を起動する。
 2. PDF discovery が HTTP-first で動くことを確認する。
 3. 必要時だけ `eidp-playwright-addon-windows.zip` を解凍する。
+4. 解凍後に `EIDP-setup.bat` を再実行し、add-on wheel を `.venv` に
+   オフライン install する。
 
 機械検査:
 
@@ -235,9 +238,10 @@ C:\Program Files\EIDP\ocr-addon\tessdata\jpn.traineddata
 
 確認項目:
 
-- Playwright/Chromium 不在で core UI が落ちない
+- Playwright/Chromium/Scrapling 不在で core UI が落ちない
 - 不在時は警告表示に留まる
 - add-on 展開後、`playwright-addon\ms-playwright\` が存在する
+- add-on 展開後、`playwright-addon\wheelhouse\scrapling-*.whl` が存在する
 
 合格条件:
 

@@ -67,3 +67,10 @@ def test_crawl_school_urls_rejects_bad_fetch_mode() -> None:
 
     assert result.exit_code == 1
     assert "--fetch-mode must be one of" in result.output
+
+
+def test_crawl_school_urls_help_explains_dry_run_still_fetches_network() -> None:
+    result = CliRunner().invoke(app, ["crawl-school-urls", "--help"])
+
+    assert result.exit_code == 0
+    assert "fetches network" in result.output

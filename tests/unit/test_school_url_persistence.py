@@ -88,7 +88,8 @@ def test_auto_inserts_school_site_with_expected_metadata(session: Session):
     session.commit()
 
     site = session.query(SchoolSite).filter(SchoolSite.school_id == 1).one()
-    assert site.url == "https://www.test.ac.jp/"
+    assert site.url == "https://www.test.ac.jp"
+    assert site.url_type == "school"
     assert site.discovery_method == DISCOVERY_METHOD
     assert float(site.confidence) == AUTO_CONFIDENCE
     assert site.verified is False
@@ -109,7 +110,7 @@ def test_auto_writes_manual_action_log_audit(session: Session):
     assert log.target_table == "school_site"
     assert log.actor == DISCOVERY_METHOD
     payload = json.loads(log.new_value)
-    assert payload["url"] == "https://www.test.ac.jp/"
+    assert payload["url"] == "https://www.test.ac.jp"
     assert payload["score"] == pytest.approx(8.0)
 
 
@@ -124,6 +125,26 @@ def test_auto_is_idempotent_on_existing_school_site(session: Session):
     session.flush()
 
     discovery = _make_discovery(decision="auto")
+    outcome = persist_discovery(session, discovery)
+    session.commit()
+
+    sites = session.query(SchoolSite).filter(SchoolSite.school_id == 1).all()
+    assert len(sites) == 1
+    assert outcome.skipped_reason == "school_site_already_exists"
+    assert outcome.school_site_id == existing.id
+
+
+def test_auto_normalizes_url_before_idempotency_check(session: Session):
+    _seed_school(session)
+    existing = SchoolSite(
+        school_id=1,
+        url="https://www.test.ac.jp",
+        discovery_method="operator_manual",
+    )
+    session.add(existing)
+    session.flush()
+
+    discovery = _make_discovery(decision="auto", best_url="https://www.test.ac.jp/#top")
     outcome = persist_discovery(session, discovery)
     session.commit()
 
@@ -153,9 +174,9 @@ def test_review_inserts_review_item_with_proposal_payload(session: Session):
     assert item.reference_id == 1
     assert item.status == "pending"
     assert item.proposal_source == REVIEW_PROPOSAL_SOURCE
-    assert item.evidence_url == "https://design-tokyo.jp/"
+    assert item.evidence_url == "https://design-tokyo.jp"
     payload = json.loads(item.proposal_value)
-    assert payload["url"] == "https://design-tokyo.jp/"
+    assert payload["url"] == "https://design-tokyo.jp"
     assert payload["score"] == pytest.approx(4.5)
     assert "breakdown" in payload
     assert payload["alternates"] == []
@@ -180,6 +201,24 @@ def test_review_is_idempotent_on_pending_review_item(session: Session):
     assert len(items) == 1
     assert outcome2.skipped_reason == "review_item_already_pending"
     assert outcome2.review_item_id == items[0].id
+
+
+def test_review_normalizes_url_before_dedup(session: Session):
+    _seed_school(session)
+    persist_discovery(session, _make_discovery(
+        decision="review", best_url="https://design-tokyo.jp/#top", best_score=4.5,
+    ))
+    session.commit()
+
+    outcome2 = persist_discovery(session, _make_discovery(
+        decision="review", best_url="https://design-tokyo.jp/", best_score=4.5,
+    ))
+    session.commit()
+
+    items = session.query(ReviewItem).all()
+    assert len(items) == 1
+    assert items[0].evidence_url == "https://design-tokyo.jp"
+    assert outcome2.skipped_reason == "review_item_already_pending"
 
 
 def test_review_re_inserts_after_resolution(session: Session):

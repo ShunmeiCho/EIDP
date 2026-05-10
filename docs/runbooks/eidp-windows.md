@@ -39,6 +39,8 @@ PC:
 
 - `eidp-windows.zip` — 必須
 - `eidp-ocr-addon-windows.zip` — 任意。画像 PDF を OCR で読み取る場合だけ使います
+- `eidp-playwright-addon-windows.zip` — 任意。学校公式サイトの自動 URL 補完で
+  Scrapling/Chromium を使う場合だけ使います
 
 配布元:
 
@@ -382,7 +384,8 @@ C:\EIDP\ocr-addon\tessdata\jpn.traineddata
 
 1. `eidp-windows.zip` を作成します。
 2. 必要に応じて `eidp-ocr-addon-windows.zip` と
-   `eidp-playwright-addon-windows.zip` も作成します。
+   `eidp-playwright-addon-windows.zip` も作成します。後者は Playwright、
+   Chromium、Scrapling の wheel を含みます。
 3. 配布前検査を実行します。
 
 ```text
@@ -444,6 +447,7 @@ Windows VM で確認する項目:
 - Excel 出力
 - Excel 占有エラー
 - OCR add-on
+- Playwright/Scrapling add-on
 - Defender / SmartScreen
 
 ## 14. 既知の問題と対処（2026-05-06 Win VM 試運転で発見）

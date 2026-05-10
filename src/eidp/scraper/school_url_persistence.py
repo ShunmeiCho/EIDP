@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session
 from eidp.db.audit import log_manual_action
 from eidp.db.models import ReviewItem, SchoolSite
 from eidp.scraper.school_website_crawl import SchoolUrlDiscovery
+from eidp.scraper.url_normalization import normalize_candidate_url
 from eidp.scraper.url_scoring import UrlScore
 
 log = structlog.get_logger()
@@ -92,14 +93,8 @@ def _persist_auto(
             skipped_reason="auto_without_best_candidate",
         )
 
-    existing = (
-        session.query(SchoolSite)
-        .filter(
-            SchoolSite.school_id == discovery.school_id,
-            SchoolSite.url == best.candidate_url,
-        )
-        .one_or_none()
-    )
+    candidate_url = normalize_candidate_url(best.candidate_url)
+    existing = _existing_school_site(session, discovery.school_id, candidate_url)
     if existing is not None:
         return PersistenceOutcome(
             school_id=discovery.school_id,
@@ -110,8 +105,8 @@ def _persist_auto(
 
     site = SchoolSite(
         school_id=discovery.school_id,
-        url=best.candidate_url,
-        url_type="disclosure_or_homepage",
+        url=candidate_url,
+        url_type="school",
         discovery_method=DISCOVERY_METHOD,
         confidence=AUTO_CONFIDENCE,
         verified=False,
@@ -126,7 +121,7 @@ def _persist_auto(
         target_id=site.id,
         old_value=None,
         new_value={
-            "url": best.candidate_url,
+            "url": candidate_url,
             "score": best.score,
             "breakdown": best.breakdown,
         },
@@ -157,7 +152,8 @@ def _persist_review(
             skipped_reason="review_without_best_candidate",
         )
 
-    existing = _existing_review_item(session, discovery.school_id, best.candidate_url)
+    candidate_url = normalize_candidate_url(best.candidate_url)
+    existing = _existing_review_item(session, discovery.school_id, candidate_url)
     if existing is not None:
         return PersistenceOutcome(
             school_id=discovery.school_id,
@@ -175,7 +171,7 @@ def _persist_review(
         confidence=_score_to_confidence(best.score),
         proposal_value=json.dumps(
             {
-                "url": best.candidate_url,
+                "url": candidate_url,
                 "score": best.score,
                 "decision": best.decision,
                 "breakdown": best.breakdown,
@@ -193,7 +189,7 @@ def _persist_review(
             f"score below auto threshold."
         ),
         proposal_source=REVIEW_PROPOSAL_SOURCE,
-        evidence_url=best.candidate_url,
+        evidence_url=candidate_url,
     )
     session.add(item)
     session.flush()
@@ -204,7 +200,7 @@ def _persist_review(
         target_table="review_item",
         target_id=item.id,
         old_value=None,
-        new_value={"url": best.candidate_url, "score": best.score},
+        new_value={"url": candidate_url, "score": best.score},
         reason=(
             f"Pending review for school_id={discovery.school_id}: "
             f"score={best.score:.2f}"
@@ -225,18 +221,35 @@ def _existing_review_item(
     school_id: int,
     candidate_url: str,
 ) -> ReviewItem | None:
-    return (
+    normalized_url = normalize_candidate_url(candidate_url)
+    rows = (
         session.query(ReviewItem)
         .filter(
             ReviewItem.item_type == REVIEW_ITEM_TYPE,
             ReviewItem.reference_table == "school",
             ReviewItem.reference_id == school_id,
             ReviewItem.proposal_source == REVIEW_PROPOSAL_SOURCE,
-            ReviewItem.evidence_url == candidate_url,
             ReviewItem.status == "pending",
         )
-        .first()
+        .all()
     )
+    for row in rows:
+        if normalize_candidate_url(str(row.evidence_url or "")) == normalized_url:
+            return row
+    return None
+
+
+def _existing_school_site(
+    session: Session,
+    school_id: int,
+    candidate_url: str,
+) -> SchoolSite | None:
+    normalized_url = normalize_candidate_url(candidate_url)
+    rows = session.query(SchoolSite).filter(SchoolSite.school_id == school_id).all()
+    for row in rows:
+        if normalize_candidate_url(str(row.url or "")) == normalized_url:
+            return row
+    return None
 
 
 def _summarize_candidate(c: UrlScore) -> dict[str, object]:

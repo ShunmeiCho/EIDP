@@ -109,6 +109,41 @@ def test_quarantined_domain_is_refused_until_cooldown_elapses():
     assert decision.reason.startswith("domain_cooldown")
 
 
+def test_quarantine_expires_and_clears_global_circuit_membership():
+    clock = _ManualClock()
+    throttle = _make_throttle(
+        clock=clock,
+        cooldown_seconds=1.0,
+        max_quarantined_domains=1,
+    )
+    throttle.record_failure("https://x.example.ac.jp/", blocked=True)
+    assert throttle.is_circuit_open() is True
+
+    clock.advance(1.1)
+    decision = throttle.acquire("https://x.example.ac.jp/page")
+
+    assert decision.proceed is True
+    assert decision.reason == "ok"
+    assert throttle.is_circuit_open() is False
+    assert throttle.quarantined_domains() == ()
+
+
+def test_global_circuit_ignores_expired_quarantines_before_new_domain_check():
+    clock = _ManualClock()
+    throttle = _make_throttle(
+        clock=clock,
+        cooldown_seconds=1.0,
+        max_quarantined_domains=1,
+    )
+    throttle.record_failure("https://x.example.ac.jp/", blocked=True)
+
+    clock.advance(1.1)
+    decision = throttle.acquire("https://fresh.example.ac.jp/")
+
+    assert decision.proceed is True
+    assert decision.reason == "ok"
+
+
 def test_global_circuit_breaker_blocks_all_when_too_many_quarantined():
     throttle = _make_throttle(max_quarantined_domains=2)
     throttle.record_failure("https://a.example.ac.jp/", blocked=True)

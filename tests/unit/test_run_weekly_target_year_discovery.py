@@ -290,6 +290,7 @@ def test_parse_args_defaults_to_configured_target_fiscal_year(
         "seed_csv",
         "corporation_pattern",
         "operator_manual",
+        "scrapling_stealth",
     ]
     assert args.school_type == "all"
     assert args.request_timeout == 12.0

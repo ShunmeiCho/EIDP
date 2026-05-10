@@ -308,7 +308,7 @@ def test_verify_core_zip_requires_all_navigated_operator_modules(tmp_path: Path)
 def test_verify_core_zip_validates_bootstrap_pipeline_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/bootstrap_pdf_pipeline.py"] = entries["scripts/bootstrap_pdf_pipeline.py"].replace(
-        "prefecture_aggregator,seed_csv,corporation_pattern",
+        "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
         "prefecture_aggregator",
     )
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
@@ -316,7 +316,10 @@ def test_verify_core_zip_validates_bootstrap_pipeline_contract(tmp_path: Path) -
     check = module.verify_core_zip(zip_path)
 
     assert not check.ok
-    assert any("prefecture_aggregator,seed_csv,corporation_pattern" in error for error in check.errors)
+    assert any(
+        "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth" in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_rejects_multiple_project_wheels(tmp_path: Path) -> None:
@@ -661,6 +664,7 @@ def test_verify_ocr_addon_rejects_duplicate_manifest_path(tmp_path: Path) -> Non
 
 def test_verify_playwright_addon_accepts_chromium_and_wheel(tmp_path: Path) -> None:
     wheel = b"wheel"
+    scrapling_wheel = b"scrapling"
     chrome = b"PE"
     manifest = {
         "layout_version": 1,
@@ -669,6 +673,11 @@ def test_verify_playwright_addon_accepts_chromium_and_wheel(tmp_path: Path) -> N
                 "path": "playwright-addon/wheelhouse/playwright-1.58.0-py3-none-win_amd64.whl",
                 "size": len(wheel),
                 "sha256": hashlib.sha256(wheel).hexdigest(),
+            },
+            {
+                "path": "playwright-addon/wheelhouse/scrapling-0.4.7-py3-none-any.whl",
+                "size": len(scrapling_wheel),
+                "sha256": hashlib.sha256(scrapling_wheel).hexdigest(),
             },
             {
                 "path": "playwright-addon/ms-playwright/chromium-1234/chrome-win/chrome.exe",
@@ -681,6 +690,7 @@ def test_verify_playwright_addon_accepts_chromium_and_wheel(tmp_path: Path) -> N
         tmp_path / "eidp-playwright-addon-windows.zip",
         {
             "playwright-addon/wheelhouse/playwright-1.58.0-py3-none-win_amd64.whl": wheel,
+            "playwright-addon/wheelhouse/scrapling-0.4.7-py3-none-any.whl": scrapling_wheel,
             "playwright-addon/ms-playwright/chromium-1234/chrome-win/chrome.exe": chrome,
             "playwright-addon/MANIFEST.json": json.dumps(manifest),
         },
@@ -689,7 +699,7 @@ def test_verify_playwright_addon_accepts_chromium_and_wheel(tmp_path: Path) -> N
     check = module.verify_playwright_addon_zip(zip_path)
 
     assert check.ok, check.errors
-    assert check.details["manifest_files"] == 2
+    assert check.details["manifest_files"] == 3
 
 
 def test_verify_playwright_addon_requires_chrome_exe(tmp_path: Path) -> None:
@@ -697,6 +707,7 @@ def test_verify_playwright_addon_requires_chrome_exe(tmp_path: Path) -> None:
         tmp_path / "eidp-playwright-addon-windows.zip",
         {
             "playwright-addon/wheelhouse/playwright-1.58.0-py3-none-win_amd64.whl": b"wheel",
+            "playwright-addon/wheelhouse/scrapling-0.4.7-py3-none-any.whl": b"scrapling",
             "playwright-addon/ms-playwright/chromium-1234/chrome-win/chrome.dll": b"dll",
             "playwright-addon/MANIFEST.json": json.dumps({"layout_version": 1, "files": []}),
         },
@@ -706,6 +717,22 @@ def test_verify_playwright_addon_requires_chrome_exe(tmp_path: Path) -> None:
 
     assert not check.ok
     assert any("chrome.exe" in error for error in check.errors)
+
+
+def test_verify_playwright_addon_requires_scrapling_wheel(tmp_path: Path) -> None:
+    zip_path = _write_zip(
+        tmp_path / "eidp-playwright-addon-windows.zip",
+        {
+            "playwright-addon/wheelhouse/playwright-1.58.0-py3-none-win_amd64.whl": b"wheel",
+            "playwright-addon/ms-playwright/chromium-1234/chrome-win/chrome.exe": b"PE",
+            "playwright-addon/MANIFEST.json": json.dumps({"layout_version": 1, "files": []}),
+        },
+    )
+
+    check = module.verify_playwright_addon_zip(zip_path)
+
+    assert not check.ok
+    assert any("scrapling-*.whl" in error for error in check.errors)
 
 
 def test_cli_returns_nonzero_for_failed_distribution(tmp_path: Path, capsys) -> None:  # noqa: ANN001

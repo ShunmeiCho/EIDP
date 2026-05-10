@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Base, ManualActionLog, School, SchoolSite
-from eidp.scraper.school_url_pipeline import run_school_url_auto_crawl
-from eidp.scraper.school_website_crawl import FetchedPage, SerpHit
+from eidp.scraper.school_url_errors import ScraplingUnavailableError
+from eidp.scraper.school_url_pipeline import _accumulate_outcome, _schools_without_url, run_school_url_auto_crawl
+from eidp.scraper.school_website_crawl import FetchedPage, SchoolUrlDiscovery, SerpHit
 
 
 class FakeSerpFetcher:
@@ -34,19 +35,29 @@ class FakePageFetcher:
         )
 
 
+class MissingScraplingPageFetcher:
+    def fetch(self, url: str) -> FetchedPage:
+        raise ScraplingUnavailableError(f"missing optional runtime for {url}")
+
+
+class MissingRuntimeCrawler:
+    def discover_for(self, **_kwargs: object) -> SchoolUrlDiscovery:
+        raise ScraplingUnavailableError("scrapling missing after startup")
+
+
 def _session() -> Session:
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     return Session(engine)
 
 
-def _seed_school(session: Session, *, school_id: int = 1) -> None:
+def _seed_school(session: Session, *, school_id: int = 1, school_name: str = "東京デザイン専門学校") -> None:
     session.add(
         School(
             id=school_id,
             prefecture="東京都",
             corporation_name="学校法人東京デザイン",
-            school_name="東京デザイン専門学校",
+            school_name=school_name,
             status="active",
         )
     )
@@ -74,7 +85,7 @@ def test_run_school_url_auto_crawl_persists_auto_result(tmp_path: Path) -> None:
 
         assert stats["attempted"] == 1
         assert stats["auto_registered"] == 1
-        assert site.url == "https://www.tokyo-design.ac.jp/"
+        assert site.url == "https://www.tokyo-design.ac.jp"
         assert site.discovery_method == "scrapling_stealth"
         assert log.action_type == "url_auto_discovery"
         assert evidence["decision"] == "auto"
@@ -83,24 +94,29 @@ def test_run_school_url_auto_crawl_persists_auto_result(tmp_path: Path) -> None:
         session.close()
 
 
-def test_run_school_url_auto_crawl_dry_run_writes_no_rows() -> None:
+def test_run_school_url_auto_crawl_dry_run_writes_no_rows(tmp_path: Path) -> None:
     session = _session()
     try:
         _seed_school(session)
+        evidence_path = tmp_path / "dry-run.jsonl"
 
         stats = run_school_url_auto_crawl(
             session,
             batch_size=1,
             dry_run=True,
+            evidence_path=evidence_path,
             serp_fetcher=FakeSerpFetcher(),
             page_fetcher=FakePageFetcher(),
         )
         session.commit()
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[0])
 
         assert stats["attempted"] == 1
         assert stats["dry_run_auto"] == 1
         assert session.query(SchoolSite).count() == 0
         assert session.query(ManualActionLog).count() == 0
+        assert evidence["dry_run"] is True
+        assert evidence["skipped_reason"] == "dry_run"
     finally:
         session.close()
 
@@ -114,6 +130,47 @@ def test_run_school_url_auto_crawl_skips_when_scrapling_missing(monkeypatch) -> 
         monkeypatch.setattr(pipeline, "scrapling_available", lambda: False)
 
         stats = run_school_url_auto_crawl(session, batch_size=1)
+
+        assert stats["attempted"] == 0
+        assert stats["unavailable"] == 1
+    finally:
+        session.close()
+
+
+def test_run_school_url_auto_crawl_stops_when_page_runtime_disappears() -> None:
+    session = _session()
+    try:
+        _seed_school(session)
+
+        stats = run_school_url_auto_crawl(
+            session,
+            batch_size=1,
+            serp_fetcher=FakeSerpFetcher(),
+            page_fetcher=MissingScraplingPageFetcher(),
+        )
+
+        assert stats["attempted"] == 0
+        assert stats["unavailable"] == 1
+        assert stats["auto_registered"] == 0
+        assert session.query(SchoolSite).count() == 0
+    finally:
+        session.close()
+
+
+def test_run_school_url_auto_crawl_does_not_count_unavailable_school_as_attempted(monkeypatch) -> None:
+    import eidp.scraper.school_url_pipeline as pipeline
+
+    session = _session()
+    try:
+        _seed_school(session)
+        monkeypatch.setattr(pipeline, "SchoolUrlCrawler", lambda **_kwargs: MissingRuntimeCrawler())
+
+        stats = run_school_url_auto_crawl(
+            session,
+            batch_size=1,
+            serp_fetcher=FakeSerpFetcher(),
+            page_fetcher=FakePageFetcher(),
+        )
 
         assert stats["attempted"] == 0
         assert stats["unavailable"] == 1
@@ -138,3 +195,59 @@ def test_run_school_url_auto_crawl_honors_prefecture_filter() -> None:
     finally:
         session.close()
 
+
+def test_schools_without_url_uses_outer_join_not_subquery() -> None:
+    session = _session()
+    statements: list[str] = []
+    try:
+        _seed_school(session, school_id=1)
+        _seed_school(session, school_id=2, school_name="東京デザイン第二専門学校")
+        session.add(
+            SchoolSite(
+                school_id=1,
+                url="https://www.tokyo-design.ac.jp/",
+                discovery_method="operator_manual",
+            )
+        )
+        session.commit()
+
+        def capture_statement(conn, cursor, statement, parameters, context, executemany):  # noqa: ANN001, ARG001
+            statements.append(statement)
+
+        assert session.bind is not None
+        event.listen(session.bind, "before_cursor_execute", capture_statement)
+        try:
+            schools = _schools_without_url(session, batch_size=10)
+        finally:
+            event.remove(session.bind, "before_cursor_execute", capture_statement)
+
+        assert [school.id for school in schools] == [2]
+        select_sql = " ".join(statements)
+        assert "LEFT OUTER JOIN" in select_sql.upper()
+        assert "NOT IN" not in select_sql.upper()
+    finally:
+        session.close()
+
+
+def test_accumulate_outcome_separates_auto_without_best_candidate() -> None:
+    stats = {
+        "auto_registered": 0,
+        "auto_existing": 0,
+        "auto_no_candidate": 0,
+        "review_enqueued": 0,
+        "review_existing": 0,
+        "dry_run_auto": 0,
+        "dry_run_review": 0,
+        "rejected": 0,
+        "no_candidates": 0,
+        "circuit_open": 0,
+    }
+
+    _accumulate_outcome(
+        stats,
+        discovery_decision="auto",
+        skipped_reason="auto_without_best_candidate",
+    )
+
+    assert stats["auto_no_candidate"] == 1
+    assert stats["auto_existing"] == 0

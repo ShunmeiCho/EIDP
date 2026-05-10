@@ -611,7 +611,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "Step 2b",
             "known URL / corporation fallback discovery",
             "discovered-urls-50.csv",
-            "prefecture_aggregator,seed_csv,corporation_pattern",
+            "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
             "progress_callback",
         ),
     }
@@ -852,6 +852,13 @@ def verify_playwright_addon_zip(path: Path) -> ZipCheck:
         for name in names
     ):
         check.fail("playwright add-on missing playwright-*.whl")
+    if not any(
+        name.startswith("playwright-addon/wheelhouse/")
+        and Path(name).name.startswith("scrapling-")
+        and name.endswith(".whl")
+        for name in names
+    ):
+        check.fail("playwright add-on missing scrapling-*.whl")
 
     _check_manifest_integrity(
         check,

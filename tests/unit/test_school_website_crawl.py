@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from eidp.scraper.anti_detection import CrawlThrottle
+from eidp.scraper.school_url_errors import ScraplingUnavailableError
 from eidp.scraper.school_website_crawl import (
     FetchedPage,
     SchoolUrlCrawler,
@@ -80,6 +81,40 @@ def test_discover_for_auto_accepts_official_school_site_after_page_fetch() -> No
     assert result.candidates[0].breakdown["disclosure_keyword"] == pytest.approx(1.0)
 
 
+def test_discover_for_deduplicates_normalized_urls_before_fetching() -> None:
+    page_fetcher = FakePageFetcher({
+        "https://www.tokyo-design.ac.jp/": FetchedPage(
+            url="https://www.tokyo-design.ac.jp/",
+            status_code=200,
+            title="東京デザイン専門学校 公式サイト",
+            body_excerpt="情報公開 高等教育 修学支援 機関要件",
+        ),
+    })
+    crawler = SchoolUrlCrawler(
+        serp_fetcher=FakeSerpFetcher({
+            "東京デザイン専門学校 公式サイト": [
+                SerpHit(url="https://www.tokyo-design.ac.jp/", title="東京デザイン専門学校"),
+                SerpHit(url="https://www.tokyo-design.ac.jp#top", title="東京デザイン専門学校"),
+                SerpHit(url="https://www.tokyo-design.ac.jp", title="東京デザイン専門学校"),
+            ],
+        }),
+        page_fetcher=page_fetcher,
+        throttle=_throttle(),
+        sleep=lambda _seconds: None,
+    )
+
+    result = crawler.discover_for(
+        school_id=1,
+        school_name="東京デザイン専門学校",
+        prefecture="東京都",
+        queries=["東京デザイン専門学校 公式サイト"],
+    )
+
+    assert result.decision == "auto"
+    assert page_fetcher.calls == ["https://www.tokyo-design.ac.jp/"]
+    assert len(result.candidates) == 1
+
+
 def test_discover_for_returns_review_for_medium_confidence_serp_only_candidate() -> None:
     url = "https://design-tokyo.jp/"
     crawler = SchoolUrlCrawler(
@@ -104,6 +139,28 @@ def test_discover_for_returns_review_for_medium_confidence_serp_only_candidate()
     assert result.best is not None
     assert result.best.candidate_url == url
     assert "serp_error" not in " ".join(result.notes)
+
+
+def test_discover_for_raises_when_optional_runtime_is_unavailable() -> None:
+    url = "https://www.tokyo-design.ac.jp/"
+    crawler = SchoolUrlCrawler(
+        serp_fetcher=FakeSerpFetcher({
+            "東京デザイン専門学校 公式サイト": [
+                SerpHit(url=url, title="東京デザイン専門学校"),
+            ],
+        }),
+        page_fetcher=FakePageFetcher({url: ScraplingUnavailableError("scrapling missing")}),
+        throttle=_throttle(),
+        sleep=lambda _seconds: None,
+    )
+
+    with pytest.raises(ScraplingUnavailableError):
+        crawler.discover_for(
+            school_id=1,
+            school_name="東京デザイン専門学校",
+            prefecture="東京都",
+            queries=["東京デザイン専門学校 公式サイト"],
+        )
 
 
 def test_discover_for_skips_blacklisted_third_party_without_fetching() -> None:

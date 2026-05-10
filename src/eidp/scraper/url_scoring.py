@@ -124,6 +124,39 @@ _NAME_SUFFIX_TOKENS: Final = (
     "大学", "学院", "学園", "校",
 )
 
+_KANJI_TOKEN_ALIASES: Final = {
+    "北海道": ("hokkaido",),
+    "青森": ("aomori",), "岩手": ("iwate",), "宮城": ("miyagi",), "秋田": ("akita",),
+    "山形": ("yamagata",), "福島": ("fukushima",), "茨城": ("ibaraki",), "栃木": ("tochigi",),
+    "群馬": ("gunma",), "埼玉": ("saitama",), "千葉": ("chiba",), "東京": ("tokyo",),
+    "神奈川": ("kanagawa",), "新潟": ("niigata",), "富山": ("toyama",), "石川": ("ishikawa",),
+    "福井": ("fukui",), "山梨": ("yamanashi",), "長野": ("nagano",), "岐阜": ("gifu",),
+    "静岡": ("shizuoka",), "愛知": ("aichi",), "三重": ("mie",), "滋賀": ("shiga",),
+    "京都": ("kyoto",), "大阪": ("osaka",), "兵庫": ("hyogo",), "奈良": ("nara",),
+    "和歌山": ("wakayama",), "鳥取": ("tottori",), "島根": ("shimane",), "岡山": ("okayama",),
+    "広島": ("hiroshima",), "山口": ("yamaguchi",), "徳島": ("tokushima",), "香川": ("kagawa",),
+    "愛媛": ("ehime",), "高知": ("kochi",), "福岡": ("fukuoka",), "佐賀": ("saga",),
+    "長崎": ("nagasaki",), "熊本": ("kumamoto",), "大分": ("oita",), "宮崎": ("miyazaki",),
+    "鹿児島": ("kagoshima",), "沖縄": ("okinawa",),
+}
+
+_KATAKANA_TOKEN_ALIASES: Final = {
+    "デザイン": ("design",),
+    "テック": ("tech",),
+    "ビューティ": ("beauty",),
+    "ビジネス": ("business",),
+    "カレッジ": ("college",),
+    "コンピュータ": ("computer",),
+    "アニメ": ("anime",),
+    "ゲーム": ("game",),
+    "ホテル": ("hotel",),
+    "トラベル": ("travel",),
+    "メディカル": ("medical",),
+    "リハビリ": ("rehab", "rehabilitation"),
+    "ファッション": ("fashion",),
+    "ミュージック": ("music",),
+}
+
 
 @dataclass(frozen=True)
 class UrlScoreThresholds:
@@ -211,7 +244,46 @@ def _romaji_tokens(school_name: str) -> tuple[str, ...]:
     """Lowercase ASCII tokens already inside the school name."""
     base = _normalize(school_name)
     parts = re.findall(r"[A-Za-z][A-Za-z0-9]+", base)
-    return tuple(p.lower() for p in parts if len(p) >= 3)
+    return tuple(p.lower() for p in parts if len(p) >= 2)
+
+
+def _hostname_match_tokens(school_name: str) -> tuple[str, ...]:
+    tokens: list[str] = []
+    # ASCII brand tokens already present in the school name are strong enough
+    # on their own (e.g. "TDG", "ABK"). Japanese aliases are noisier: single
+    # tokens such as "tokyo" or "design" match many unrelated sites, so use
+    # them only as adjacent combinations from the school name.
+    tokens.extend(_romaji_tokens(school_name))
+
+    alias_groups = [_hostname_aliases_for_name_token(token) for token in _name_tokens(school_name)]
+    for start in range(len(alias_groups)):
+        parts: list[str] = []
+        for group in alias_groups[start : start + 3]:
+            if not group:
+                break
+            parts.append(group[0])
+            if len(parts) >= 2:
+                tokens.append("-".join(parts))
+                tokens.append("".join(parts))
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for token in tokens:
+        normalized = token.lower()
+        if len(normalized) < 2 or normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return tuple(deduped)
+
+
+def _hostname_aliases_for_name_token(token: str) -> tuple[str, ...]:
+    ascii_tokens = tuple(t.lower() for t in re.findall(r"[A-Za-z][A-Za-z0-9]+", token) if len(t) >= 2)
+    return (
+        *ascii_tokens,
+        *_KANJI_TOKEN_ALIASES.get(token, ()),
+        *_KATAKANA_TOKEN_ALIASES.get(token, ()),
+    )
 
 
 def _host_suffix_match(host: str, suffix: str) -> bool:
@@ -280,11 +352,11 @@ def score_school_url_candidate(
 
     # School-name token in hostname.
     name_tokens = _name_tokens(school_name)
-    romaji_tokens = _romaji_tokens(school_name)
+    host_match_tokens = _hostname_match_tokens(school_name)
     name_match = 0.0
     matched_tokens: list[str] = []
-    for token in name_tokens + romaji_tokens:
-        if token.lower() in host:
+    for token in host_match_tokens:
+        if token in host:
             name_match = 2.0
             matched_tokens.append(token)
             break
@@ -297,9 +369,9 @@ def score_school_url_candidate(
     if prefecture:
         pref_norm = _normalize(prefecture)
         pref_romaji = _PREFECTURE_ROMAJI.get(pref_norm)
-        if pref_norm and pref_norm in host + path:
+        if pref_romaji and pref_romaji in host + path:
             pref_bonus = 1.0
-        elif pref_romaji and pref_romaji in host + path:
+        elif pref_norm and pref_norm in host + path:
             pref_bonus = 1.0
     if pref_bonus:
         breakdown["prefecture_in_url"] = pref_bonus

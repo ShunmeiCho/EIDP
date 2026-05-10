@@ -246,7 +246,11 @@ def crawl_school_urls(
         "--evidence-log",
         help="Append-only JSONL evidence output.",
     ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Run discovery without writing DB rows."),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Dry-run fetches network; DB writes are rolled back.",
+    ),
 ) -> None:
     """Find school website URLs for schools still missing SchoolSite rows (v104)."""
     if fetch_mode not in {"static", "dynamic", "stealthy"}:

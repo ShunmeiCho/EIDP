@@ -269,6 +269,14 @@ def test_first_setup_uses_offline_install(bat_files: dict[str, str]):
     assert "--reinstall-package eidp" in body
 
 
+def test_first_setup_installs_optional_playwright_addon_when_extracted(bat_files: dict[str, str]):
+    body = bat_files["first_setup.bat"]
+    assert "playwright-addon\\wheelhouse" in body
+    assert "--find-links \"%EIDP_APP_ROOT%\\playwright-addon\\wheelhouse\"" in body
+    assert "scrapling" in body
+    assert "playwright" in body
+
+
 def test_first_setup_registers_weekly_task(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
     assert "schtasks" in body
