@@ -322,6 +322,17 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
     return None
 
 
+def _stale_fiscal_year_from_candidate_hint(candidate: PdfCandidate, *, target_year: int) -> int | None:
+    """Return a past year from URL/anchor hints for rejection diagnostics only."""
+
+    text = _candidate_hint_text(candidate)
+    for match in re.finditer(r"(?<!\d)(20\d{2})(?!\d)", text):
+        year = int(match.group(1))
+        if target_year - 8 <= year < target_year:
+            return year
+    return None
+
+
 def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> CachedPdfRejection | None:
     """Reject adjacent disclosure PDFs that are clearly not current target forms."""
 
@@ -1064,6 +1075,9 @@ def download_pdf(
                 return None, None, 0, "non_target", "classified_non_target"
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
+            stale_hint_year = _stale_fiscal_year_from_candidate_hint(candidate, target_year=target_year)
+            if detected_fiscal_year is None and stale_hint_year is not None:
+                return None, None, 0, pdf_type, f"fiscal_year_mismatch:{stale_hint_year}"
             if (
                 detected_fiscal_year == target_year
                 and pdf_type == "image_only"
