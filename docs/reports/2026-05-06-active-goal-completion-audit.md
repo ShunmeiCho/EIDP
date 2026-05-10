@@ -64,6 +64,13 @@ bounded non-Sanko acquisition RCA.
   SQLite directly. The row became
   `(1, 'pref_url', 'site_error', 'tls_certificate_verify_failed',
   'tls_certificate_verify_failed', 0)`.
+- Windows targeted rerun for the four remaining `nag.ac.jp/evaluation/*.html`
+  stale-entry schools (`school_id=164,165,166,167`) confirmed that the packaged
+  v141 root fallback also clears those stale 404s: `discover-pdfs` logged
+  `pdf_discovery_root_fallback` for all four, ended with `crawled=4`,
+  `failed=0`, `downloaded=0`, and
+  `rejection_reason_no_candidates_found=4`. These rows are now a bounded
+  `no_pdf_candidates` / deeper navigation problem, not a fetch-error class.
 
 v141 does not weaken TLS verification and does not change the strict FY2026
 yield gate. It turns one more silent/ambiguous acquisition failure class into
@@ -535,6 +542,12 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   tables present, and a packaged synthetic TLS evidence rebuild produced
   `(1, 'pref_url', 'site_error', 'tls_certificate_verify_failed',
   'tls_certificate_verify_failed', 0)`.
+- Windows v141 targeted `nag.ac.jp` stale-entry rerun →
+  after inserting the four official-index `SchoolSite` rows for school IDs
+  `164,165,166,167`, packaged `discover-pdfs` logged
+  `pdf_discovery_root_fallback` for all four stale `/evaluation/*.html` URLs
+  and ended with `crawled=4`, `found=0`, `downloaded=0`, `failed=0`, and
+  `rejection_reason_no_candidates_found=4`.
 - Re-summarizing the v139 bounded non-Sanko evidence after v141 code changes →
   `publication_lag_or_old_target_pdf=22`,
   `site_fetch_error_only=13`, `tls_certificate_verify_failed=4`,
@@ -775,6 +788,9 @@ yield below the ship gate: `0/45` target downloads despite official-index
 old-year target forms and fetch/navigation failures. v140 fixes the stale
 same-origin 404 portion of that fetch/navigation bucket, and v141 turns TLS
 certificate-chain failures into an auditable `site_error` without relaxing TLS
-verification. The main remaining blockers are target-year yield/policy, broader
-Windows E2E validation, real operator UI validation, and the explicit
+verification. A v141 targeted rerun also proves the remaining `nag.ac.jp`
+stale-entry rows no longer fail as 404s, but fall through to
+`no_candidates_found` after root fallback. The main remaining blockers are
+target-year yield/policy, deeper navigation beyond official-index entry pages,
+broader Windows E2E validation, real operator UI validation, and the explicit
 university rollout decision.
