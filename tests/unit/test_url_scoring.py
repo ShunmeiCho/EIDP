@@ -213,6 +213,32 @@ def test_disclosure_keyword_only_present_when_excerpt_supplied():
     assert "disclosure_keyword" not in s.breakdown
 
 
+def test_stable_official_homepage_path_can_auto_without_disclosure_keyword():
+    s = _score(
+        "https://www.scw.ac.jp/",
+        school="埼玉コンピュータ＆医療事務専門学校",
+        pref="埼玉県",
+        title="埼玉コンピュータ＆医療事務専門学校 公式サイト",
+        excerpt="学校紹介、学科紹介、入試情報を掲載しています。",
+    )
+
+    assert s.decision == "auto"
+    assert s.breakdown.get("stable_homepage_path") == pytest.approx(1.0)
+
+
+def test_deep_official_subpage_without_disclosure_stays_review():
+    s = _score(
+        "https://www.sanko.ac.jp/omiya-med/other/graduate/",
+        school="大宮医療秘書専門学校",
+        pref="埼玉県",
+        title="大宮医療秘書専門学校 卒業生の方へ",
+        excerpt="卒業生向けの各種証明書手続きです。",
+    )
+
+    assert s.decision == "review"
+    assert "stable_homepage_path" not in s.breakdown
+
+
 def test_negative_tld_subtracts_one():
     s = _score(
         "https://example.com/",

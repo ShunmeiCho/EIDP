@@ -314,6 +314,15 @@ def _looks_publicly_operated_school(school_name: str) -> bool:
     return any(marker in normalized for marker in _PUBLIC_SCHOOL_NAME_MARKERS)
 
 
+def _is_stable_homepage_path(path: str) -> bool:
+    if any(marker in path for marker, _penalty in _LOW_VALUE_PATH_PENALTIES):
+        return False
+    segments = [segment for segment in path.strip("/").split("/") if segment]
+    if len(segments) > 1:
+        return False
+    return not any("." in segment for segment in segments)
+
+
 def score_school_url_candidate(
     *,
     candidate_url: str,
@@ -434,6 +443,12 @@ def score_school_url_candidate(
     if path_penalty:
         breakdown["low_value_path"] = path_penalty
         notes.append("low_value_path")
+
+    # A clean official homepage or one-segment school root is a stable anchor
+    # for later PDF discovery even when the homepage itself does not mention
+    # the disclosure keywords.
+    if tld_bonus >= 3.0 and title_bonus >= 1.0 and not path_penalty and _is_stable_homepage_path(path):
+        breakdown["stable_homepage_path"] = 1.0
 
     score = sum(breakdown.values())
 
