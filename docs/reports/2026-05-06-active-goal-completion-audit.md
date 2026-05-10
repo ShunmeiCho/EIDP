@@ -47,6 +47,31 @@ The goal remains far below the 60-70% strict target-FY ship gate. The dominant
 work is still Layer 1 improvement and operator review handling for publication
 lag, target-year-unverified, and non-target-only cases.
 
+Follow-up from the same school `95` E2E: the accepted PDF initially created
+duplicate department rows because the Excel master stored the course label as
+`工業` while the PDF parser emitted `工業専門課程`. `ingest.py` now normalizes
+PDF-side specialized-course labels such as `工業専門課程` to the master field
+label before the existing full natural-key lookup. The name-only fallback
+remains disabled.
+
+- Regression coverage:
+  `test_pdf_course_name_specialized_suffix_matches_existing_field_department`.
+  The test failed before the patch with `departments_created=1` and passes
+  after the patch with `departments_created=0`.
+- Local focused verification:
+  `uv run pytest tests/unit/test_ingest_confidence_gating.py
+  tests/unit/test_normal_ingest_appendonly.py tests/unit/test_manual_entry_contract.py -q`
+  → `47 passed`;
+  `uv run ruff check src/eidp/pipeline/ingest.py
+  tests/unit/test_ingest_confidence_gating.py` → passed.
+- Real-PDF E2E replay for school `95` after the patch:
+  `discover-pdfs` → `downloaded=1`; `ingest-pdfs --document-id 1` →
+  `departments_created=0`, `yearly_upserted=2`;
+  `rebuild-school-year-tasks` → `excel_ready=1`; `export-excel` succeeded.
+  The generated workbook contains 2 `さいたまIT・WEB専門学校` rows in `学科別`
+  and `在籍のみ抜粋`, not the previous 4-row split, and the 2026 values are
+  written onto the existing `工業` rows.
+
 ## 2026-05-11 v145 Update
 
 v145 keeps the v144 strict acquisition behavior and improves the operator task

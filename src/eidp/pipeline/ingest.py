@@ -35,6 +35,33 @@ def _norm(s: str) -> str:
     return unicodedata.normalize("NFKC", s).strip()
 
 
+_SPECIALIZED_COURSE_FIELDS = {
+    "工業",
+    "農業",
+    "医療",
+    "衛生",
+    "教育・社会福祉",
+    "商業実務",
+    "服飾・家政",
+    "文化・教養",
+}
+
+
+def _normalize_pdf_course_name(course_name: str | None) -> str | None:
+    """Normalize PDF-side 課程名 to the field labels used by the Excel master."""
+
+    course = _norm(course_name or "")
+    if not course:
+        return None
+    compact = re.sub(r"\s+", "", course)
+    suffix = "専門課程"
+    if compact.endswith(suffix):
+        field = compact[: -len(suffix)]
+        if field in _SPECIALIZED_COURSE_FIELDS:
+            return field
+    return compact
+
+
 def _collapse_ws(s: str) -> str:
     """Same as _norm but also strips ALL internal whitespace.
 
@@ -321,6 +348,7 @@ def ingest_document(
         return stats
 
     for dept_record in valid_depts:
+        course_name = _normalize_pdf_course_name(dept_record.course_name)
         # Find or create department — match full natural key to avoid collapsing
         # same-name departments with different course_type/duration
         dept = (
@@ -329,7 +357,7 @@ def ingest_document(
                 Department.school_id == doc.school_id,
                 Department.canonical_name == _norm(dept_record.name),
                 Department.course_type == (dept_record.day_or_evening if dept_record.day_or_evening else None),
-                Department.course_name == (dept_record.course_name if dept_record.course_name else None),
+                Department.course_name == course_name,
                 Department.duration_years == dept_record.duration_years,
             )
             .first()
@@ -342,7 +370,7 @@ def ingest_document(
             dept = Department(
                 school_id=doc.school_id,
                 canonical_name=_norm(dept_record.name),
-                course_name=dept_record.course_name if dept_record.course_name else None,
+                course_name=course_name,
                 course_type=dept_record.day_or_evening if dept_record.day_or_evening else None,
                 duration_years=dept_record.duration_years,
             )

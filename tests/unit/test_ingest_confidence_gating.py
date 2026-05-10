@@ -12,6 +12,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from eidp.db.models import (
+    Department,
     DepartmentYearly,
     Document,
     School,
@@ -181,6 +182,55 @@ def test_ingest_preserves_prevalidated_document_fiscal_year(engine, tmp_path):
         assert doc.fiscal_year == 2025
         yearly = session.query(DepartmentYearly).one()
         assert yearly.fiscal_year == 2025
+
+
+def test_pdf_course_name_specialized_suffix_matches_existing_field_department(engine, tmp_path):
+    """PDFs often spell the course as 工業専門課程 while the Excel master stores 工業.
+
+    The full natural-key guard should stay in place, but the PDF-side course
+    label must be normalized before lookup so the target-year row lands on the
+    existing department instead of creating a duplicate Excel row.
+    """
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        existing = Department(
+            school_id=school.id,
+            canonical_name="情報技術科",
+            course_name="工業",
+            course_type="昼",
+            duration_years=2,
+        )
+        session.add(existing)
+        session.flush()
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/target.pdf",
+            tmp_path=tmp_path,
+            file_hash="x" * 64,
+        )
+        doc.fiscal_year = 2026
+        ann = _annotation(dept_record=DepartmentRecord(
+            name="情報技術科",
+            course_name="工業専門課程",
+            day_or_evening="昼",
+            duration_years=2,
+            capacity=80,
+            enrollment=80,
+            graduates=24,
+        ))
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            stats = ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        assert stats["departments_created"] == 0
+        assert session.query(Department).count() == 1
+        yearly = session.query(DepartmentYearly).one()
+        assert yearly.department_id == existing.id
+        assert yearly.fiscal_year == 2026
+        assert yearly.enrollment == 80
 
 
 # ---------------------------------------------------------------------------
