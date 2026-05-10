@@ -30,10 +30,33 @@ Package evidence:
   `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
 - Local regression gates for the code changes: `uv run pytest tests/unit`
   passed `1021` tests, and Ruff passed on the touched PDF discovery files.
+- Windows remote extraction/setup smoke on host alias `win`: copied
+  `eidp-windows-v138.zip`, verified the same SHA256, expanded into the fresh
+  directory `C:\EIDP-v138-5a4aeb8`, and ran
+  `scripts\validate_windows_install.py` from the bundled runtime. Pre-setup
+  validation reported `errors=[]`, `warnings=[]`, `build_commit=5a4aeb825e516410875d31ddf1e4c4fddab448e0`,
+  `master_xlsx_present=True`, and `wheel_count=78`.
+- Windows remote first setup smoke in `C:\EIDP-v138-5a4aeb8`:
+  `scripts\first_setup.bat` completed with offline wheelhouse install, SQLite
+  bootstrap, master Excel import, and FY2026 task rebuild. The after-setup
+  validator reported `errors=[]`, `warnings=[]`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_table_count=15`, and the
+  required tables `school`, `school_site`, `document`, `department`,
+  `department_yearly`, `manual_action_log`, and `school_fiscal_year_status`.
+- Windows remote add-on smoke: extracted unchanged
+  `eidp-playwright-addon-windows-v106.zip` into the v138 directory, re-ran
+  `first_setup.bat`, and confirmed offline installation of
+  `scrapling==0.4.7` and `playwright==1.58.0`. The add-on validator
+  `--require-playwright-addon` passed with `errors=[]` and `warnings=[]`.
+- Windows remote browser smoke: with `EIDP_APP_ROOT=C:\EIDP-v138-5a4aeb8`,
+  `scrapling_available=True`, `PLAYWRIGHT_BROWSERS_PATH` pointed to
+  `C:\EIDP-v138-5a4aeb8\playwright-addon\ms-playwright`, and bundled Chromium
+  launched headless against a `data:` page with `playwright_title=eidp-ok`.
 
 Interpretation: v138 is the current packaged handoff candidate for the
-candidate-ranking/dedupe fixes. It has Mac-side ZIP verifier coverage, but has
-not yet replaced the v137 remote Windows extraction/setup/yield smoke evidence.
+candidate-ranking/dedupe fixes. It now has Windows extraction/setup/add-on
+smoke coverage, but has not yet replaced the v137 remote PDF crawl/ingest yield
+evidence.
 
 ## 2026-05-11 v137 Update
 
@@ -196,18 +219,20 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v138.zip` rebuilt at commit `5a4aeb825e516410875d31ddf1e4c4fddab448e0`, verifier `ok=true`, `git_dirty=false`, SHA256 `304fd6147d39e7631793861fd79c98e53df6dde1a43e6eee17af9b464c10e0c7`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows smoke has so far been run on the previous v137 extraction (`C:\EIDP-v137-c9bb155`), proving SHA256 match, setup exit success, `school_count=2418`, `school_fiscal_year_status_count=2418`, required SQLite tables, optional Scrapling/Playwright wheel install, and bundled Chromium headless launch through `PLAYWRIGHT_BROWSERS_PATH`. | Latest v138 package and optional browser add-on are locally verified. v138 still needs Windows extraction/setup smoke; full Windows PDF crawl/ingest yield and UI click-through remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v138.zip` rebuilt at commit `5a4aeb825e516410875d31ddf1e4c4fddab448e0`, verifier `ok=true`, `git_dirty=false`, SHA256 `304fd6147d39e7631793861fd79c98e53df6dde1a43e6eee17af9b464c10e0c7`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v138 smoke on a fresh `C:\EIDP-v138-5a4aeb8` extraction proved SHA256 match, setup exit success, `school_count=2418`, `school_fiscal_year_status_count=2418`, required SQLite tables, optional Scrapling/Playwright wheel install, and bundled Chromium headless launch through `PLAYWRIGHT_BROWSERS_PATH`. | Latest v138 package and optional browser add-on are locally and Windows-smoke verified. Full Windows PDF crawl/ingest yield and UI click-through remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
-- `git push origin sprint8-handoff-finalize` → remote branch updated through
-  `5037944`; `main` intentionally unchanged.
-- `uv run pytest -q` after the v136 URL-review fixes → `986 passed, 5 warnings`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v136.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `git_commit=b63664c613fd51fdc783912d9e1c82d83afde377`, `git_dirty=false`, `entry_count=3000`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`
-- Windows v136 clean extraction/setup/validator → `errors=[]`, `warnings=[]`,
-  `school_count=2418`, `school_fiscal_year_status_count=2418`, required tables
-  present, duplicate wheel distributions `{}`.
+- `sprint8-handoff-finalize` remains the active handoff branch; `main` is
+  intentionally unchanged until the yield gate is met.
+- `uv run pytest tests/unit` after the v138 PDF discovery fixes →
+  `1021 passed`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v138.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=5a4aeb825e516410875d31ddf1e4c4fddab448e0`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows v138 clean extraction/setup/add-on/browser smoke →
+  `errors=[]`, `warnings=[]`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required tables present,
+  `scrapling_version=0.4.7`, and `playwright_title=eidp-ok`.
 - Windows v136 Saitama 5-school URL crawl → `attempted=5`,
   `auto_registered=5`, `errors=0`, `unavailable=0`; database check found 5
   `school` URLs plus 10 `disclosure` URLs for the 5 sampled schools.
@@ -364,9 +389,8 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v138 is the current locally verified
-Windows handoff candidate, and the branch is backed up remotely, but strict
-FY2026 yield is still unproven on real sites and v138 still needs Windows
-extraction/setup smoke. The main remaining blockers are target-year
-yield/policy, broader Windows E2E validation, real operator UI validation, and
-the explicit university rollout decision.
+The active goal is **not complete**. v138 is the current locally and
+Windows-smoke verified handoff candidate, and the branch is backed up remotely,
+but strict FY2026 yield is still unproven on real sites. The main remaining
+blockers are target-year yield/policy, broader Windows E2E validation, real
+operator UI validation, and the explicit university rollout decision.
