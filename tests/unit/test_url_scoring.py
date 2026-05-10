@@ -242,6 +242,32 @@ def test_disclosure_path_keeps_auto_when_school_identity_is_strong():
     assert "low_value_path" not in s.breakdown
 
 
+def test_local_government_domain_for_private_school_requires_review():
+    s = _score(
+        "https://www.city.saitama.lg.jp/001/915/index.html",
+        school="さいたまIT・WEB専門学校",
+        pref="埼玉県",
+        title="さいたまIT・WEB専門学校 高等教育修学支援新制度",
+        excerpt="公式の情報公開ページです。修学支援制度の対象機関を掲載しています。",
+    )
+    assert s.score >= 6.0
+    assert s.decision == "review"
+    assert "local_government_requires_review" in s.notes
+
+
+def test_local_government_domain_for_public_school_can_stay_auto():
+    s = _score(
+        "https://www.city.saitama.lg.jp/kango/001/index.html",
+        school="さいたま市立高等看護学院",
+        pref="埼玉県",
+        title="さいたま市立高等看護学院",
+        excerpt="公式の情報公開ページです。修学支援制度の対象機関を掲載しています。",
+    )
+    assert s.score >= 6.0
+    assert s.decision == "auto"
+    assert "local_government_requires_review" not in s.notes
+
+
 def test_url_score_is_frozen_dataclass():
     s = _score("https://example.ac.jp/")
     with pytest.raises((AttributeError, Exception)):

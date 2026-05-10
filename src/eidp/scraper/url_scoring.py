@@ -109,6 +109,13 @@ _LOW_VALUE_PATH_PENALTIES: Final = (
     ("opencampus", -2.0),
 )
 
+_PUBLIC_SCHOOL_NAME_MARKERS: Final = (
+    "国立", "公立",
+    "都立", "道立", "府立", "県立",
+    "市立", "町立", "村立",
+    "県農業大学校",
+)
+
 _DEFAULT_AUTO_THRESHOLD: Final = 6.0
 _DEFAULT_REVIEW_THRESHOLD: Final = 4.0
 
@@ -301,6 +308,11 @@ def _host_suffix_match(host: str, suffix: str) -> bool:
     return host == suffix or host.endswith("." + suffix)
 
 
+def _looks_publicly_operated_school(school_name: str) -> bool:
+    normalized = _normalize(school_name)
+    return any(marker in normalized for marker in _PUBLIC_SCHOOL_NAME_MARKERS)
+
+
 def score_school_url_candidate(
     *,
     candidate_url: str,
@@ -430,6 +442,10 @@ def score_school_url_candidate(
         decision = "review"
     else:
         decision = "reject"
+
+    if decision == "auto" and host.endswith(".lg.jp") and not _looks_publicly_operated_school(school_name):
+        decision = "review"
+        notes.append("local_government_requires_review")
 
     return UrlScore(
         candidate_url=candidate_url, score=score, decision=decision,
