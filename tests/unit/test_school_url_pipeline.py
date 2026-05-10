@@ -13,6 +13,7 @@ from eidp.scraper.school_url_errors import ScraplingUnavailableError
 from eidp.scraper.school_url_pipeline import (
     _accumulate_outcome,
     _default_crawl_throttle,
+    _school_website_queries_for_school,
     _schools_without_url,
     run_school_url_auto_crawl,
 )
@@ -67,6 +68,21 @@ def _seed_school(session: Session, *, school_id: int = 1, school_name: str = "�
         )
     )
     session.flush()
+
+
+def test_school_website_queries_include_common_school_name_variants() -> None:
+    school = School(
+        id=41,
+        prefecture="埼玉県",
+        corporation_name="三幸学園",
+        school_name="大宮ビューティ＆ブライダル専門学校",
+        status="active",
+    )
+
+    queries = _school_website_queries_for_school(school)
+
+    assert "大宮ビューティー＆ブライダル専門学校 公式サイト" in queries
+    assert "三幸学園 大宮ビューティー＆ブライダル専門学校 公式" in queries
 
 
 def test_run_school_url_auto_crawl_persists_auto_result(tmp_path: Path) -> None:

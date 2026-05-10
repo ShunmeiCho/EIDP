@@ -209,19 +209,39 @@ def _school_website_queries_for_school(school: School) -> list[str]:
     """
     school_name = school.school_name.strip()
     corporation_name = (school.corporation_name or "").strip()
-    queries = [
-        f"{school_name} 公式サイト",
-        f"{school_name} 公式",
-        f"{school_name} ホームページ",
-    ]
-    if corporation_name:
-        queries.append(f"{corporation_name} {school_name} 公式")
+    school_name_variants = _school_name_query_variants(school_name)
+    queries: list[str] = []
+    for name_variant in school_name_variants:
+        queries.extend([
+            f"{name_variant} 公式サイト",
+            f"{name_variant} 公式",
+        ])
+        if name_variant == school_name:
+            queries.append(f"{name_variant} ホームページ")
+        if corporation_name:
+            queries.append(f"{corporation_name} {name_variant} 公式")
     queries.extend([
         f"{school_name} 情報公開",
         f"{school_name} 高等教育 修学支援",
         f"{school_name} 確認申請書 様式第2号",
     ])
     return _dedupe_preserve_order(queries)
+
+
+def _school_name_query_variants(school_name: str) -> list[str]:
+    """Return lightweight search variants for common official-name drift."""
+
+    variants = [school_name]
+    replacements = (
+        ("ビューティ＆", "ビューティー＆"),
+        ("ビューティ&", "ビューティー&"),
+        ("＆", "&"),
+        ("&", "＆"),
+    )
+    for source, replacement in replacements:
+        if source in school_name:
+            variants.append(school_name.replace(source, replacement))
+    return _dedupe_preserve_order(variants)
 
 
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
