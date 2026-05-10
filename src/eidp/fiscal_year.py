@@ -148,7 +148,13 @@ def fiscal_year_search_tokens(
                 f"{era.romanized}{era_year}",
             ]
         )
+        if era_year == 1:
+            tokens.append(f"{era.name}元")
     return tuple(tokens)
+
+
+def _parse_era_year(value: str) -> int:
+    return 1 if value == "元" else int(value)
 
 
 def fiscal_year_from_japanese_era_text(
@@ -168,11 +174,11 @@ def fiscal_year_from_japanese_era_text(
     for era in sorted(_eras_or_active(eras), key=lambda item: item.start_fiscal_year, reverse=True):
         escaped_name = re.escape(era.name)
         if include_fiscal_year_labels:
-            m = re.search(rf"{escaped_name}\s*(\d+)\s*年度", normed)
+            m = re.search(rf"{escaped_name}\s*(\d+|元)\s*年度", normed)
             if m:
-                return era.fiscal_year_for_era_year(int(m.group(1)))
+                return era.fiscal_year_for_era_year(_parse_era_year(m.group(1)))
         if include_filing_dates:
-            m = re.search(rf"{escaped_name}\s*(\d+)\s*年\s*\d+\s*月\s*\d+\s*日", normed)
+            m = re.search(rf"{escaped_name}\s*(\d+|元)\s*年\s*\d+\s*月\s*\d+\s*日", normed)
             if m:
-                return era.fiscal_year_for_era_year(int(m.group(1)))
+                return era.fiscal_year_for_era_year(_parse_era_year(m.group(1)))
     return None

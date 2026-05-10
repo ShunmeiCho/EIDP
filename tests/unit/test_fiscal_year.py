@@ -35,6 +35,8 @@ def test_fiscal_year_search_tokens_roll_with_target_year() -> None:
 def test_fiscal_year_from_japanese_era_text_parses_labels_and_dates() -> None:
     assert fiscal_year_from_japanese_era_text("令和8年度 確認申請書") == 2026
     assert fiscal_year_from_japanese_era_text("令和8年6月1日 提出") == 2026
+    assert fiscal_year_from_japanese_era_text("令和元年度 確認申請書") == 2019
+    assert fiscal_year_from_japanese_era_text("令和元年6月1日 提出") == 2019
     assert (
         fiscal_year_from_japanese_era_text(
             "令和8年6月1日 提出",
@@ -54,9 +56,11 @@ def test_era_alias_layer_can_be_reconfigured_for_future_era() -> None:
 
     assert format_fiscal_year_label(2010, eras=eras) == "2010年度（BetaEra1年度）"
     assert fiscal_year_from_japanese_era_text("BetaEra2年度 確認申請書", eras=eras) == 2011
+    assert fiscal_year_from_japanese_era_text("BetaEra元年度 確認申請書", eras=eras) == 2010
 
     tokens = fiscal_year_search_tokens(2010, eras=eras)
     assert "2010" in tokens
     assert "BetaEra1" in tokens
+    assert "BetaEra元" in tokens
     assert "b1" in tokens
     assert "a11" not in tokens

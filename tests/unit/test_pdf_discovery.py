@@ -1538,6 +1538,41 @@ def test_download_pdf_rejects_stale_reiwa_year_from_anchor_when_body_has_no_year
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
+def test_download_pdf_rejects_reiwa_first_year_anchor_for_image_only_target(
+    monkeypatch, tmp_path: Path
+) -> None:
+    url = "https://example.ac.jp/school/pdf/0703.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="3．令和元年度確認申請書",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", lambda _content: "")
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "image_only"
+    assert reason == "fiscal_year_mismatch:2019"
+    assert not list((tmp_path / "1").glob("*.pdf"))
+
+
 def test_download_pdf_rejects_stale_year_from_adjacent_html_context(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -1569,6 +1604,17 @@ def test_download_pdf_rejects_stale_year_from_adjacent_html_context(
     assert pdf_type == "target"
     assert reason == "fiscal_year_mismatch:2025"
     assert not list((tmp_path / "1").glob("*.pdf"))
+
+
+def test_extract_pdf_links_does_not_append_previous_year_when_anchor_has_year() -> None:
+    html = """
+    <p><a href="/docs/r6.pdf">9．令和6年度確認申請書</a></p>
+    <p><a href="/docs/r7.pdf">10．令和7年度確認申請書</a></p>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/")
+
+    assert candidates[1].anchor_text == "10．令和7年度確認申請書"
 
 
 def test_download_pdf_accepts_url_target_hint_when_body_is_target_form(
