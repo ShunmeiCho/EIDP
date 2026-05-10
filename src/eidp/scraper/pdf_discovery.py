@@ -271,6 +271,7 @@ def _candidate_hint_text(candidate: PdfCandidate) -> str:
 
 
 def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> int | None:
+    text = unicodedata.normalize("NFKC", text)
     detected = fiscal_year_from_japanese_era_text(
         text,
         include_fiscal_year_labels=True,
@@ -283,10 +284,31 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
     if western is not None:
         return int(western.group(1))
 
+    strong_form_context = any(
+        token in text
+        for token in (
+            "確認申請",
+            "更新確認申請",
+            "機関要件",
+            "様式第2号",
+            "様式第２号",
+            "様式2号",
+        )
+    )
+    if strong_form_context:
+        western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*度)", text)
+        if western_year is not None:
+            return int(western_year.group(1))
+        era_year = fiscal_year_from_japanese_era_text(
+            text,
+            include_fiscal_year_labels=False,
+            include_filing_dates=True,
+        )
+        if era_year is not None:
+            return era_year
+
     lowered = text.lower()
     for year in range(target_year - 8, target_year + 3):
-        if year == target_year:
-            continue
         for token in fiscal_year_search_tokens(year):
             if token == str(year):
                 continue
