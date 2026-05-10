@@ -115,6 +115,51 @@ def test_discover_for_deduplicates_normalized_urls_before_fetching() -> None:
     assert len(result.candidates) == 1
 
 
+def test_discover_for_fetches_only_one_candidate_per_host() -> None:
+    urls = [
+        "https://www.tokyo-design.ac.jp/",
+        "https://www.tokyo-design.ac.jp/disclosure/",
+        "https://www.tokyo-design.ac.jp/about/",
+    ]
+    page_fetcher = FakePageFetcher({
+        url: FetchedPage(
+            url=url,
+            status_code=200,
+            title="東京デザイン専門学校 公式サイト",
+            body_excerpt="情報公開 高等教育 修学支援 機関要件",
+        )
+        for url in urls
+    })
+    sleeps: list[float] = []
+    crawler = SchoolUrlCrawler(
+        serp_fetcher=FakeSerpFetcher({
+            "東京デザイン専門学校 公式サイト": [
+                SerpHit(url=url, title="東京デザイン専門学校 公式サイト", snippet="情報公開")
+                for url in urls
+            ],
+        }),
+        page_fetcher=page_fetcher,
+        throttle=CrawlThrottle(
+            min_seconds_per_domain=30.0,
+            min_jitter=0.0,
+            max_jitter=0.0,
+        ),
+        sleep=sleeps.append,
+    )
+
+    result = crawler.discover_for(
+        school_id=1,
+        school_name="東京デザイン専門学校",
+        prefecture="東京都",
+        queries=["東京デザイン専門学校 公式サイト"],
+    )
+
+    assert result.decision == "auto"
+    assert page_fetcher.calls == ["https://www.tokyo-design.ac.jp/"]
+    assert sleeps == [0.0]
+    assert len(result.candidates) == 3
+
+
 def test_discover_for_returns_review_for_medium_confidence_serp_only_candidate() -> None:
     url = "https://design-tokyo.jp/"
     crawler = SchoolUrlCrawler(

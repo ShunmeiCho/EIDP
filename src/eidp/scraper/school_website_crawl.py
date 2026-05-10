@@ -33,7 +33,7 @@ from typing import Protocol
 
 import structlog
 
-from eidp.scraper.anti_detection import CrawlThrottle, is_block_signal
+from eidp.scraper.anti_detection import CrawlThrottle, domain_of, is_block_signal
 from eidp.scraper.school_url_errors import ScraplingUnavailableError
 from eidp.scraper.url_normalization import normalize_candidate_url
 from eidp.scraper.url_scoring import (
@@ -156,10 +156,16 @@ class SchoolUrlCrawler:
 
         ranked.sort(key=lambda s: s.score, reverse=True)
         rescored: list[UrlScore] = []
+        fetched_hosts: set[str] = set()
         for cand in ranked[: self.max_pages_to_fetch]:
             if cand.decision == "reject":
                 # Hard-blacklisted; do not fetch.
                 continue
+            host = domain_of(cand.candidate_url)
+            if host and host in fetched_hosts:
+                continue
+            if host:
+                fetched_hosts.add(host)
             throttle_decision = self.throttle.acquire(cand.candidate_url)
             if not throttle_decision.proceed:
                 notes.append(f"throttle_skip:{throttle_decision.reason}")
