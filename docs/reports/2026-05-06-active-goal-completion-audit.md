@@ -1,9 +1,58 @@
 # Active Goal Completion Audit — EIDP Rolling Automation
 
 Date: 2026-05-07
-Latest update: 2026-05-10
+Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `b63664c613fd51fdc783912d9e1c82d83afde377` (`eidp-windows-v136.zip`)
+Latest audited Windows package commit: `c9bb155ff6e98979275296980b8f942e6a0b4e87` (`eidp-windows-v137.zip`)
+
+## 2026-05-11 v137 Update
+
+v137 refreshes the Windows handoff package after adding discovery gold-set
+packaging and verifier contract checks. The ZIP now carries the deterministic
+`data/discovery-gold-set/` regression surface and the verifier parses the
+packaged JSON entries instead of checking filenames only.
+
+- Core ZIP: `dist/eidp-windows-v137.zip`
+- Latest alias: `dist/eidp-windows.zip`
+- Core ZIP SHA256: `17f76efe01c56ce5042fcc81928e533059feafa0b15508723b42dbbdeda5aefe`
+- Core verifier: `OK core`, `git_commit=c9bb155ff6e98979275296980b8f942e6a0b4e87`,
+  `git_dirty=false`, `entry_count=3016`, `wheel_count=78`,
+  `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
+  `prefecture_seed_downloadable=47`,
+  `discovery_gold_set_entries=12`, and discovery gold-set outcomes
+  `accepted_target_pdf=4`, `needs_operator_review=5`,
+  `no_target_candidate_found=1`, `publication_lag_latest_public=2`.
+- Playwright/Scrapling add-on: `dist/eidp-playwright-addon-windows-v106.zip`
+- Add-on SHA256: `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`
+- Combined verifier: `OK core` and `OK playwright-addon`; the add-on verifier
+  reported `entry_count=637` and `manifest_files=636`.
+- Windows remote extraction smoke on host alias `win`: copied
+  `eidp-windows-v137.zip`, verified the same SHA256, expanded into the fresh
+  directory `C:\EIDP-v137-c9bb155`, and ran
+  `scripts\validate_windows_install.py` from the bundled runtime. Result:
+  `OK install`, `build_commit=c9bb155ff6e98979275296980b8f942e6a0b4e87`,
+  `build_dirty=false`, `master_xlsx_present=True`, and `wheel_count=78`.
+- Windows remote first setup smoke in `C:\EIDP-v137-c9bb155`: `scripts\first_setup.bat`
+  completed with offline wheelhouse install, SQLite bootstrap, master Excel
+  import, and task rebuild. Validator reported `errors=[]`, `warnings=[]`,
+  `school_count=2418`, `school_fiscal_year_status_count=2418`,
+  `sqlite_table_count=15`, and required tables including `school_site`,
+  `document`, `department_yearly`, and `manual_action_log`.
+- Windows remote add-on smoke: extracted the Playwright/Scrapling add-on into
+  the same fresh directory, re-ran `first_setup.bat`, and confirmed offline
+  installation of `scrapling==0.4.7` and `playwright==1.58.0`.
+- Windows remote browser smoke: with `EIDP_APP_ROOT=C:\EIDP-v137-c9bb155`,
+  `scrapling_available=True`, `PLAYWRIGHT_BROWSERS_PATH` pointed to
+  `playwright-addon\ms-playwright`, and bundled Chromium launched headless
+  against a `data:` page with `playwright_title=eidp-ok`.
+
+Interpretation: v137 moves the handoff package from "core ZIP verified" to
+"core ZIP, discovery gold-set contract, extracted Windows setup, and optional
+Scrapling/Playwright browser add-on verified". This improves release-handoff
+confidence but does not close the product yield gate. The active goal still
+requires a broader Windows acquisition run that proves true target-FY PDF
+automation reaches the 60-70% line, or an explicit publication-lag policy that
+keeps latest-public stale forms separate from target-FY success.
 
 ## 2026-05-10 v136 Update
 
@@ -73,7 +122,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v102.zip` rebuilt at commit `3dc8aa9`, verifier `ok=true`, `git_dirty=false`, SHA256 `7ac5512fa81838289eb5e6e773f4ad30bedb1e166eb8f8f230f36ee15db294a5`, wheelhouse 82 wheels. `--latest-alias` refreshed `dist/eidp-windows.zip` to the same SHA256 and build info in the same command, and the builder writes `.sha256` sidecars automatically with portable relative paths. Latest package includes the current operator runbook, settings page, task-board settings shortcut, UI-first weekly rediscovery guidance, browser-proven non-transparent action buttons, bootstrap progress rejection breakdowns that preserve Step 3 discovery rejections after Step 4 ingest, URL-search provider/mode/limit visibility and package identity visibility on the task board, PDF確認 action-lane filtering and fiscal-year evidence summaries, crawler JSONL `year_evidence` / `detected_fiscal_year` fields surfaced in PDF確認, school-task source-chain CSV export, one-click `EIDP-diagnose.bat` diagnostics collection, 20-second auto-refresh while initial bootstrap is running, automatic recovery of stale Windows setup locks older than two hours, hardened ZIP/extracted-install gates for every navigated Streamlit route module, packaged runbook guidance that makes the package identity line the first screenshot check, install-validator build identity fields for diagnostics-only feedback, conservative URL/anchor target-year evidence for target confirmation forms whose PDF body omits the year, the v95 image-only false-positive guard for target-year admission guides, and AppTest coverage that locks the rolling 6-8 month publication-window guidance plus focused PDF確認 discovery-evidence rendering. Latest Mac smoke confirms Streamlit starts, settings page imports, Settings navigation has zero exceptions, task-board settings shortcut is covered by AppTest, Chrome headless rendering shows `初回URL/PDF取得を開始` as a real styled button, the task board explains the rolling 6-8 month publication window, PDF確認 focused evidence render has zero AppTest exceptions, and extracted v102 install validation passes. Remote Windows smoke is still only proven through v73: SHA256 match, clean setup exit code 0, `school_count=2418`, `school_fiscal_year_status_count=2418`, official-index yield, and bounded Step 3 cache/prefilter behavior. | Latest package is locally verified and ready for Windows transfer. Full Windows PDF crawl/ingest and UI click-through are still not complete on v102. |
+| Windows operator delivery | `dist/eidp-windows-v137.zip` rebuilt at commit `c9bb155ff6e98979275296980b8f942e6a0b4e87`, verifier `ok=true`, `git_dirty=false`, SHA256 `17f76efe01c56ce5042fcc81928e533059feafa0b15508723b42dbbdeda5aefe`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows smoke on a clean `C:\EIDP-v137-c9bb155` extraction proved SHA256 match, setup exit success, `school_count=2418`, `school_fiscal_year_status_count=2418`, required SQLite tables, optional Scrapling/Playwright wheel install, and bundled Chromium headless launch through `PLAYWRIGHT_BROWSERS_PATH`. | Latest package and optional browser add-on are locally verified and Windows-extracted/setup verified. Full Windows PDF crawl/ingest yield and UI click-through are still not complete on v137. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
@@ -209,7 +258,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 ## Missing Before Goal Can Be Marked Complete
 
 1. Decide and validate the target-year acceptance policy.
-   v136 proves the URL crawl and PDF chain can acquire published FY2025 target
+   v137/v136 prove the URL crawl and PDF chain can acquire published FY2025 target
    confirmation PDFs on the sampled Saitama schools, while strict FY2026 mode
    correctly rejects those stale FY2025 forms. The goal cannot be marked
    complete until either FY2026/R8 forms are publicly available at sufficient
@@ -218,9 +267,9 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 2. Validate full Windows bootstrap yield beyond the Sanko-heavy sample.
    The next proof needs a broader Windows initial acquisition run through PDF
    crawl and ingest, showing true target-FY PDF yield, stale rejection counts,
-   fallback search counts, and review workload. Current v136 evidence is enough
+   fallback search counts, and review workload. Current v137 evidence is enough
    for packaging/URL-crawl readiness, not enough for the 60-70% automation gate.
-3. Run the latest v136 UI flow on Windows and verify:
+3. Run the latest v137 UI flow on Windows and verify:
    UI start, initial bootstrap button, weekly rediscovery button, URL candidate
    review, official-index coverage page, school task drill-down, PDF確認, and
    Excel preview.
@@ -238,7 +287,7 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v136 is the strongest Windows handoff
+The active goal is **not complete**. v137 is the strongest Windows handoff
 candidate so far, and the branch is backed up remotely, but strict FY2026 yield
 is still unproven on real sites. The main remaining blockers are target-year
 yield/policy, broader Windows E2E validation, real operator UI validation, and
