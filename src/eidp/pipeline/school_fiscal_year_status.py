@@ -198,6 +198,8 @@ def _blocking_reason(
         return "no_target_pdf"
     if pdf_status == "publication_lag":
         return "publication_lag_latest_public"
+    if pdf_status == "site_error":
+        return "tls_certificate_verify_failed"
     if pdf_status == "rejected_stale":
         return "stale_pdf_only"
     if pdf_status == "image_pending":
@@ -209,9 +211,9 @@ def _blocking_reason(
     return "review_required"
 
 
-def _publication_lag_school_ids(discovery_evidence_path: Path | None) -> set[int]:
+def _discovery_evidence_school_buckets(discovery_evidence_path: Path | None) -> dict[int, str]:
     if discovery_evidence_path is None or not discovery_evidence_path.is_file():
-        return set()
+        return {}
 
     from eidp.scraper.discovery_evidence_summary import (
         load_pdf_discovery_evidence,
@@ -220,9 +222,9 @@ def _publication_lag_school_ids(discovery_evidence_path: Path | None) -> set[int
 
     summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(discovery_evidence_path))
     return {
-        school_summary.school_id
+        school_summary.school_id: school_summary.bucket
         for school_summary in summary.school_summaries
-        if school_summary.bucket == "publication_lag_or_old_target_pdf"
+        if school_summary.bucket != "no_evidence"
     }
 
 
@@ -271,7 +273,7 @@ def rebuild_school_fiscal_year_status(
         school_ids=school_ids,
         fiscal_year=fiscal_year,
     )
-    publication_lag_school_ids = _publication_lag_school_ids(discovery_evidence_path)
+    discovery_evidence_buckets = _discovery_evidence_school_buckets(discovery_evidence_path)
 
     extracted_school_ids = {
         int(sid)
@@ -294,8 +296,12 @@ def rebuild_school_fiscal_year_status(
         docs = docs_by_school.get(school.id, [])
         url_status = _url_status(sites_by_school.get(school.id, []))
         pdf_status = _pdf_status(docs, fiscal_year)
-        if pdf_status == "none" and school.id in publication_lag_school_ids:
-            pdf_status = "publication_lag"
+        evidence_bucket = discovery_evidence_buckets.get(school.id)
+        if pdf_status == "none":
+            if evidence_bucket == "publication_lag_or_old_target_pdf":
+                pdf_status = "publication_lag"
+            elif evidence_bucket == "tls_certificate_verify_failed":
+                pdf_status = "site_error"
         extract_status = _extract_status(docs, school.id in extracted_school_ids)
         yoy_diff_status = _yoy_diff_status(
             current_rows=yearly_by_school.get((school.id, fiscal_year), []),
@@ -304,6 +310,8 @@ def rebuild_school_fiscal_year_status(
         evidence_level = _evidence_level(docs, fiscal_year, pdf_status)
         if pdf_status == "publication_lag":
             evidence_level = "publication_lag"
+        if pdf_status == "site_error":
+            evidence_level = "tls_certificate_verify_failed"
         if yoy_diff_status == "partial_diff" and evidence_level not in {"conflict", "operator_override"}:
             evidence_level = "prev_year_diff"
         has_dept_change_review = school.id in dept_change_review_school_ids

@@ -316,6 +316,9 @@ def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candida
         assert school_year_discovery_evidence_bucket_label("publication_lag_or_old_target_pdf") == (
             "旧年度候補あり"
         )
+        assert school_year_discovery_evidence_bucket_label("tls_certificate_verify_failed") == (
+            "証明書エラー"
+        )
         assert school_year_discovery_evidence_bucket_options(summary) == [
             "non_target_candidates_only",
             "publication_lag_or_old_target_pdf",
@@ -1093,6 +1096,7 @@ def test_manual_entry_prefill_for_row_focuses_latest_document() -> None:
 def test_operator_labels_hide_internal_status_codes() -> None:
     assert blocking_reason_label("no_url") == "URL追加が必要"
     assert blocking_reason_label("stale_pdf_only") == "旧年度PDFのみ"
+    assert blocking_reason_label("tls_certificate_verify_failed") == "証明書エラー"
     assert blocking_reason_label(None) == "対応なし"
     assert status_label(school_year_tasks.PDF_STATUS_LABELS, "confirmed_target") == "対象年度PDFあり"
     assert status_label(school_year_tasks.EVIDENCE_LEVEL_LABELS, "operator_override") == "担当者確認済"

@@ -44,6 +44,31 @@ def test_summarize_pdf_discovery_evidence_buckets_school_outcomes(tmp_path: Path
     assert summary.pdf_type_counts["target"] == 2
 
 
+def test_summarize_pdf_discovery_evidence_buckets_tls_certificate_failures(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 1,
+                "reason": "discovery_error",
+                "pdf_url": "https://tls.example/",
+                "extra": {
+                    "error": (
+                        "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "
+                        "unable to get local issuer certificate (_ssl.c:1010)"
+                    )
+                },
+            }
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    assert summary.school_bucket_counts == {"tls_certificate_verify_failed": 1}
+    assert summary.school_summaries[0].bucket == "tls_certificate_verify_failed"
+
+
 def test_summarize_pdf_discovery_evidence_includes_scope_sites_without_evidence(tmp_path: Path) -> None:
     evidence_path = tmp_path / "evidence.jsonl"
     _write_jsonl(

@@ -172,6 +172,10 @@ def _classify_school_bucket(rows: list[dict[str, Any]]) -> str:
         return "target_form_without_year_evidence"
     if any(str(row.get("reason") or "") == "no_candidates_found" for row in rows):
         return "no_pdf_candidates"
+    if all(str(row.get("reason") or "") == "discovery_error" for row in rows) and any(
+        _is_tls_certificate_verify_failure(row) for row in rows
+    ):
+        return "tls_certificate_verify_failed"
     if all(str(row.get("reason") or "") == "discovery_error" for row in rows):
         return "site_fetch_error_only"
     if any(str(row.get("reason") or "") == "discovery_error" for row in rows):
@@ -184,6 +188,15 @@ def _is_old_year_target(row: dict[str, Any]) -> bool:
         str(row.get("reason") or "").startswith("fiscal_year_mismatch:")
         and str(row.get("pdf_type") or "") == "target"
     )
+
+
+def _is_tls_certificate_verify_failure(row: dict[str, Any]) -> bool:
+    extra = row.get("extra")
+    error = ""
+    if isinstance(extra, dict):
+        error = str(extra.get("error") or "")
+    haystack = f"{row.get('reason') or ''} {error}".lower()
+    return "certificate_verify_failed" in haystack or "certificate verify failed" in haystack
 
 
 def _reason_counter(rows: list[dict[str, Any]]) -> Counter[str]:

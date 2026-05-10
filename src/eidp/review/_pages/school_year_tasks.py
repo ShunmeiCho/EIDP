@@ -141,6 +141,7 @@ BLOCKING_REASON_LABELS: dict[str, str] = {
     "no_url": "URL追加が必要",
     "no_target_pdf": "対象年度PDF待ち",
     "publication_lag_latest_public": "旧年度候補あり",
+    "tls_certificate_verify_failed": "証明書エラー",
     "stale_pdf_only": "旧年度PDFのみ",
     "ocr_pending": "OCR/手入力待ち",
     "parse_failed": "手入力待ち",
@@ -160,6 +161,7 @@ PDF_STATUS_LABELS: dict[str, str] = {
     "none": "PDFなし",
     "confirmed_target": "対象年度PDFあり",
     "publication_lag": "旧年度候補あり",
+    "site_error": "入口取得エラー",
     "rejected_stale": "旧年度PDFのみ",
     "image_pending": "画像PDF/OCR待ち",
     "discovered": "PDF候補あり",
@@ -188,6 +190,7 @@ EVIDENCE_LEVEL_LABELS: dict[str, str] = {
     "pdf_text": "PDF本文で確認",
     "prev_year_diff": "前年差分で確認",
     "operator_override": "担当者確認済",
+    "tls_certificate_verify_failed": "証明書エラー",
 }
 
 SITE_URL_TYPE_LABELS: dict[str, str] = {
@@ -535,6 +538,8 @@ def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
         return "PDF探索", "週次再取得、または見つけたPDF URLを追加"
     if reason == "publication_lag_latest_public":
         return "公示待ち/再取得", "旧年度候補は成果扱いせず、対象年度PDFの公開を再確認"
+    if reason == "tls_certificate_verify_failed":
+        return "証明書確認", "学校サイトの証明書チェーンが不完全です。管理者判断で取得方法を確認"
     if reason == "stale_pdf_only":
         return "公示待ち/再取得", "旧年度PDFは成果扱いせず、対象年度PDFを再確認"
     if reason == "ocr_pending":
@@ -696,6 +701,7 @@ def school_year_discovery_evidence_bucket_label(bucket: str | None) -> str:
     labels = {
         "accepted_target_pdf": "取得済",
         "publication_lag_or_old_target_pdf": "旧年度候補あり",
+        "tls_certificate_verify_failed": "証明書エラー",
         "target_form_without_year_evidence": "年度未確認候補",
         "no_pdf_candidates": "候補なし",
         "site_fetch_error_only": "入口取得エラー",
