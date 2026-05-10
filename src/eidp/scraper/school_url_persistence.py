@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Final
+from urllib.parse import urlparse
 
 import structlog
 from sqlalchemy.orm import Session
@@ -52,6 +53,18 @@ REVIEW_PRIORITY: Final = 2
 ACTION_AUTO_REGISTER: Final = "url_auto_discovery"
 ACTION_REVIEW_ENQUEUE: Final = "url_candidate_proposed"
 ACTION_MANUAL_REQUIRED: Final = "url_candidate_manual_required"
+
+_AUXILIARY_DISCLOSURE_PATH_MARKERS: Final = (
+    "disclosure",
+    "public",
+    "public_info",
+    "jyouhou",
+    "johokokai",
+    "guidelines",
+    "kikanyouken",
+    "shugakushien",
+    "kyufu",
+)
 
 
 @dataclass(frozen=True)
@@ -134,6 +147,7 @@ def _persist_auto(
         ),
         actor=DISCOVERY_METHOD,
     )
+    _persist_auxiliary_school_sites(session, discovery, primary_url=candidate_url)
 
     return PersistenceOutcome(
         school_id=discovery.school_id,
@@ -141,6 +155,75 @@ def _persist_auto(
         school_site_id=site.id,
         audit_log_id=audit.id,
     )
+
+
+def _persist_auxiliary_school_sites(
+    session: Session,
+    discovery: SchoolUrlDiscovery,
+    *,
+    primary_url: str,
+) -> None:
+    for candidate in _auxiliary_disclosure_candidates(discovery, primary_url=primary_url):
+        candidate_url = normalize_candidate_url(candidate.candidate_url)
+        if _existing_school_site(session, discovery.school_id, candidate_url) is not None:
+            continue
+        site = SchoolSite(
+            school_id=discovery.school_id,
+            url=candidate_url,
+            url_type="disclosure",
+            discovery_method=DISCOVERY_METHOD,
+            confidence=_score_to_confidence(candidate.score),
+            verified=False,
+        )
+        session.add(site)
+        session.flush()
+        log_manual_action(
+            session,
+            action_type=ACTION_AUTO_REGISTER,
+            target_table="school_site",
+            target_id=site.id,
+            old_value=None,
+            new_value={
+                "url": candidate_url,
+                "url_type": "disclosure",
+                "score": candidate.score,
+                "breakdown": candidate.breakdown,
+            },
+            reason=(
+                f"Auto-found auxiliary disclosure URL by {DISCOVERY_METHOD}: "
+                f"score={candidate.score:.2f}, decision={candidate.decision}"
+            ),
+            actor=DISCOVERY_METHOD,
+        )
+
+
+def _auxiliary_disclosure_candidates(
+    discovery: SchoolUrlDiscovery,
+    *,
+    primary_url: str,
+) -> tuple[UrlScore, ...]:
+    primary = urlparse(primary_url)
+    primary_host = (primary.hostname or "").lower()
+    primary_key = normalize_candidate_url(primary_url)
+    candidates: list[UrlScore] = []
+    seen: set[str] = {primary_key}
+    for candidate in discovery.candidates:
+        if candidate.decision == "reject":
+            continue
+        candidate_key = normalize_candidate_url(candidate.candidate_url)
+        if candidate_key in seen:
+            continue
+        parsed = urlparse(candidate_key)
+        if (parsed.hostname or "").lower() != primary_host:
+            continue
+        path = (parsed.path or "").lower()
+        if not any(marker in path for marker in _AUXILIARY_DISCLOSURE_PATH_MARKERS):
+            continue
+        seen.add(candidate_key)
+        candidates.append(candidate)
+        if len(candidates) >= 3:
+            break
+    return tuple(candidates)
 
 
 def _persist_review(

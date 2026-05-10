@@ -100,6 +100,42 @@ def test_auto_inserts_school_site_with_expected_metadata(session: Session):
     assert outcome.audit_log_id is not None
 
 
+def test_auto_persists_same_host_disclosure_candidate(session: Session):
+    _seed_school(session)
+    discovery = _make_discovery(
+        decision="auto",
+        best_url="https://www.test.ac.jp/",
+        extras=[
+            UrlScore(
+                candidate_url="https://www.test.ac.jp/disclosure/",
+                score=5.0,
+                decision="review",
+                breakdown={"domain_tld": 3.0, "page_title_match": 2.0},
+                notes=(),
+            ),
+            UrlScore(
+                candidate_url="https://www.example-u.ac.jp/disclosure/",
+                score=5.0,
+                decision="review",
+                breakdown={"domain_tld": 3.0, "disclosure_keyword": 1.0},
+                notes=(),
+            ),
+        ],
+    )
+
+    persist_discovery(session, discovery)
+    session.commit()
+
+    sites = session.query(SchoolSite).order_by(SchoolSite.url.asc()).all()
+    audits = session.query(ManualActionLog).order_by(ManualActionLog.id.asc()).all()
+
+    assert [(site.url, site.url_type) for site in sites] == [
+        ("https://www.test.ac.jp", "school"),
+        ("https://www.test.ac.jp/disclosure", "disclosure"),
+    ]
+    assert [audit.action_type for audit in audits] == ["url_auto_discovery", "url_auto_discovery"]
+
+
 def test_auto_writes_manual_action_log_audit(session: Session):
     _seed_school(session)
     discovery = _make_discovery(decision="auto")
