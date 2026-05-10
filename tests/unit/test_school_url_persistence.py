@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import Base, ManualActionLog, ReviewItem, School, SchoolSite
 from eidp.scraper.school_url_persistence import (
+    ACTION_MANUAL_REQUIRED,
     AUTO_CONFIDENCE,
     DISCOVERY_METHOD,
     REVIEW_ITEM_TYPE,
@@ -269,8 +270,7 @@ def test_review_payload_includes_alternates(session: Session):
     assert payload["alternates"][0]["url"].startswith("https://alt")
 
 
-@pytest.mark.parametrize("decision", ["reject", "circuit_open", "no_candidates"])
-def test_non_actionable_decisions_write_nothing(session: Session, decision: str):
+def test_circuit_open_writes_nothing(session: Session):
     _seed_school(session)
     discovery = SchoolUrlDiscovery(
         school_id=1,
@@ -278,7 +278,7 @@ def test_non_actionable_decisions_write_nothing(session: Session, decision: str)
         queries=("q",),
         candidates=(),
         best=None,
-        decision=decision,
+        decision="circuit_open",
     )
     outcome = persist_discovery(session, discovery)
     session.commit()
@@ -286,8 +286,72 @@ def test_non_actionable_decisions_write_nothing(session: Session, decision: str)
     assert session.query(SchoolSite).count() == 0
     assert session.query(ReviewItem).count() == 0
     assert session.query(ManualActionLog).count() == 0
-    assert outcome.decision == decision
-    assert outcome.skipped_reason == f"non_actionable:{decision}"
+    assert outcome.decision == "circuit_open"
+    assert outcome.skipped_reason == "non_actionable:circuit_open"
+
+
+@pytest.mark.parametrize("decision", ["reject", "no_candidates"])
+def test_manual_required_decisions_enqueue_review_item(session: Session, decision: str):
+    _seed_school(session)
+    discovery = SchoolUrlDiscovery(
+        school_id=1,
+        school_name="テスト専門学校",
+        queries=("テスト専門学校 公式",),
+        candidates=(
+            UrlScore(
+                candidate_url="https://third-party.example/school",
+                score=-5.0,
+                decision="reject",
+                breakdown={"third_party_directory": -5.0},
+                notes=("blacklisted_third_party_directory",),
+            ),
+        ),
+        best=None,
+        decision=decision,
+    )
+
+    outcome = persist_discovery(session, discovery)
+    session.commit()
+
+    assert session.query(SchoolSite).count() == 0
+    item = session.query(ReviewItem).one()
+    audit = session.query(ManualActionLog).one()
+    payload = json.loads(item.proposal_value)
+
+    assert item.item_type == REVIEW_ITEM_TYPE
+    assert item.reference_table == "school"
+    assert item.reference_id == 1
+    assert item.status == "pending"
+    assert item.proposal_source == REVIEW_PROPOSAL_SOURCE
+    assert item.evidence_url is None
+    assert payload["url"] == ""
+    assert payload["decision"] == decision
+    assert payload["manual_required"] is True
+    assert payload["queries"] == ["テスト専門学校 公式"]
+    assert payload["alternates"][0]["url"] == "https://third-party.example/school"
+    assert outcome.review_item_id == item.id
+    assert audit.action_type == ACTION_MANUAL_REQUIRED
+
+
+def test_manual_required_review_item_is_idempotent(session: Session):
+    _seed_school(session)
+    discovery = SchoolUrlDiscovery(
+        school_id=1,
+        school_name="テスト専門学校",
+        queries=("テスト専門学校 公式",),
+        candidates=(),
+        best=None,
+        decision="no_candidates",
+    )
+
+    first = persist_discovery(session, discovery)
+    session.commit()
+    second = persist_discovery(session, discovery)
+    session.commit()
+
+    assert session.query(ReviewItem).count() == 1
+    assert first.review_item_id == second.review_item_id
+    assert second.skipped_reason == "manual_required_already_pending"
 
 
 def test_auto_without_best_is_skipped_safely(session: Session):

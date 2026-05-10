@@ -11,9 +11,9 @@ Decision contract (must stay aligned with v1.1 charter):
                      'scrapling_stealth', confidence=0.85), audit
 * "review"        -> insert ReviewItem(item_type='url_candidate',
                      status='pending', priority=2), audit
-* "reject"        -> no DB write, only structured log
+* "reject"        -> insert manual-required ReviewItem, audit
 * "circuit_open"  -> no DB write
-* "no_candidates" -> no DB write
+* "no_candidates" -> insert manual-required ReviewItem, audit
 
 Idempotency:
 
@@ -51,6 +51,7 @@ REVIEW_PRIORITY: Final = 2
 
 ACTION_AUTO_REGISTER: Final = "url_auto_discovery"
 ACTION_REVIEW_ENQUEUE: Final = "url_candidate_proposed"
+ACTION_MANUAL_REQUIRED: Final = "url_candidate_manual_required"
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,8 @@ def persist_discovery(
         return _persist_auto(session, discovery)
     if discovery.decision == "review":
         return _persist_review(session, discovery)
+    if discovery.decision in {"reject", "no_candidates"}:
+        return _persist_manual_required(session, discovery)
     return PersistenceOutcome(
         school_id=discovery.school_id,
         decision=discovery.decision,
@@ -216,6 +219,74 @@ def _persist_review(
     )
 
 
+def _persist_manual_required(
+    session: Session,
+    discovery: SchoolUrlDiscovery,
+) -> PersistenceOutcome:
+    existing = _existing_manual_required_item(session, discovery.school_id)
+    if existing is not None:
+        return PersistenceOutcome(
+            school_id=discovery.school_id,
+            decision=discovery.decision,
+            review_item_id=existing.id,
+            skipped_reason="manual_required_already_pending",
+        )
+
+    item = ReviewItem(
+        item_type=REVIEW_ITEM_TYPE,
+        reference_table="school",
+        reference_id=discovery.school_id,
+        status="pending",
+        priority=REVIEW_PRIORITY + 1,
+        confidence=0.0,
+        proposal_value=json.dumps(
+            {
+                "url": "",
+                "score": 0.0,
+                "decision": discovery.decision,
+                "manual_required": True,
+                "queries": list(discovery.queries),
+                "notes": list(discovery.notes),
+                "alternates": [_summarize_candidate(c) for c in discovery.candidates][:5],
+            },
+            ensure_ascii=False,
+        ),
+        proposal_reason=(
+            f"Manual URL required after {DISCOVERY_METHOD} returned "
+            f"{discovery.decision}."
+        ),
+        proposal_source=REVIEW_PROPOSAL_SOURCE,
+        evidence_url=None,
+    )
+    session.add(item)
+    session.flush()
+
+    audit = log_manual_action(
+        session,
+        action_type=ACTION_MANUAL_REQUIRED,
+        target_table="review_item",
+        target_id=item.id,
+        old_value=None,
+        new_value={
+            "school_id": discovery.school_id,
+            "decision": discovery.decision,
+            "queries": list(discovery.queries),
+        },
+        reason=(
+            f"Manual URL entry required for school_id={discovery.school_id}: "
+            f"{discovery.decision}"
+        ),
+        actor=REVIEW_PROPOSAL_SOURCE,
+    )
+
+    return PersistenceOutcome(
+        school_id=discovery.school_id,
+        decision=discovery.decision,
+        review_item_id=item.id,
+        audit_log_id=audit.id,
+    )
+
+
 def _existing_review_item(
     session: Session,
     school_id: int,
@@ -235,6 +306,28 @@ def _existing_review_item(
     )
     for row in rows:
         if normalize_candidate_url(str(row.evidence_url or "")) == normalized_url:
+            return row
+    return None
+
+
+def _existing_manual_required_item(session: Session, school_id: int) -> ReviewItem | None:
+    rows = (
+        session.query(ReviewItem)
+        .filter(
+            ReviewItem.item_type == REVIEW_ITEM_TYPE,
+            ReviewItem.reference_table == "school",
+            ReviewItem.reference_id == school_id,
+            ReviewItem.proposal_source == REVIEW_PROPOSAL_SOURCE,
+            ReviewItem.status == "pending",
+        )
+        .all()
+    )
+    for row in rows:
+        try:
+            payload = json.loads(row.proposal_value or "{}")
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict) and payload.get("manual_required") is True:
             return row
     return None
 

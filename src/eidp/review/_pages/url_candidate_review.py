@@ -27,6 +27,8 @@ class UrlCandidateReviewRow:
     url: str
     score: float | None
     confidence: float | None
+    decision: str | None
+    manual_required: bool
     breakdown: dict[str, object]
     notes: list[str]
     alternates: list[dict[str, object]]
@@ -67,19 +69,23 @@ def _proposal_dict(item: ReviewItem) -> dict[str, Any]:
 def _row_from_item(item: ReviewItem, school: School) -> UrlCandidateReviewRow | None:
     proposal = _proposal_dict(item)
     raw_url = proposal.get("url") or item.evidence_url
-    if not isinstance(raw_url, str) or not raw_url.strip():
+    manual_required = proposal.get("manual_required") is True
+    if (not isinstance(raw_url, str) or not raw_url.strip()) and not manual_required:
         return None
     breakdown = proposal.get("breakdown")
     notes = proposal.get("notes")
     alternates = proposal.get("alternates")
+    decision = proposal.get("decision")
     return UrlCandidateReviewRow(
         item_id=int(item.id),
         school_id=int(school.id),
         school_name=school.school_name,
         prefecture=school.prefecture or "",
-        url=normalize_candidate_url(raw_url),
+        url=normalize_candidate_url(raw_url) if isinstance(raw_url, str) and raw_url.strip() else "",
         score=_as_float(proposal.get("score")),
         confidence=_as_float(item.confidence),
+        decision=str(decision) if decision is not None else None,
+        manual_required=manual_required,
         breakdown=breakdown if isinstance(breakdown, dict) else {},
         notes=[str(note) for note in notes] if isinstance(notes, list) else [],
         alternates=[
@@ -249,8 +255,11 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
         with st.container(border=True):
             st.subheader(row.school_name)
             st.caption(f"{row.prefecture} / school_id={row.school_id}")
-            st.link_button("候補URLを開く", row.url)
-            st.code(row.url, language=None)
+            if row.manual_required:
+                st.warning("自動URL候補が見つかりませんでした。URLを手入力して承認してください。")
+            if row.url:
+                st.link_button("候補URLを開く", row.url)
+                st.code(row.url, language=None)
             cols = st.columns(3)
             cols[0].metric("score", "-" if row.score is None else f"{row.score:.2f}")
             cols[1].metric("confidence", "-" if row.confidence is None else f"{row.confidence:.2f}")
