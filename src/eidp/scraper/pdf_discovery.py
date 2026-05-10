@@ -226,6 +226,22 @@ def _is_cacheable_pdf_rejection(pdf_type: str, reason: str | None) -> bool:
     }
 
 
+def _rejection_reason_stat_key(reason: str) -> str:
+    """Return the stable stats key used for operator-facing rejection counts."""
+    normalized = (reason or "unknown").strip() or "unknown"
+    if normalized.startswith("fiscal_year_mismatch:"):
+        normalized = "fiscal_year_mismatch"
+    normalized = re.sub(r"[^0-9A-Za-z_]+", "_", normalized).strip("_").lower()
+    return f"rejection_reason_{normalized or 'unknown'}"
+
+
+def _increment_rejection_reason(stats: dict[str, int], reason: str) -> None:
+    if reason == "accepted_downloaded":
+        return
+    key = _rejection_reason_stat_key(reason)
+    stats[key] = int(stats.get(key, 0)) + 1
+
+
 def _rejection_cache_key(
     candidate_url: str,
     *,
@@ -991,6 +1007,11 @@ def run_pdf_discovery(
         "prefiltered": 0,
     }
     recorder = EvidenceRecorder(evidence_path)
+
+    def record_discovery_evidence(evidence: RejectionEvidence) -> None:
+        _increment_rejection_reason(stats, evidence.reason)
+        recorder.record(evidence)
+
     target_year = target_fiscal_year or settings.target_fiscal_year
     rejected_candidate_cache: dict[tuple[str, int | None, bool], CachedPdfRejection] = {}
 
@@ -1087,7 +1108,7 @@ def run_pdf_discovery(
                 job.error_message = result.error
                 job.finished_at = datetime.now(UTC)
                 stats["failed"] += 1
-                recorder.record(RejectionEvidence(
+                record_discovery_evidence(RejectionEvidence(
                     school_id=site.school_id,
                     pdf_url=site.url,
                     page_url=site.url,
@@ -1103,7 +1124,7 @@ def run_pdf_discovery(
                 job.status = "success"
                 job.finished_at = datetime.now(UTC)
                 stats["skipped"] += 1
-                recorder.record(RejectionEvidence(
+                record_discovery_evidence(RejectionEvidence(
                     school_id=site.school_id,
                     pdf_url=site.url,
                     page_url=site.url,
@@ -1128,7 +1149,7 @@ def run_pdf_discovery(
                 job.finished_at = datetime.now(UTC)
                 stats["failed"] += 1
                 for c in result.candidates:
-                    recorder.record(RejectionEvidence(
+                    record_discovery_evidence(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=c.pdf_url,
                         page_url=c.page_url,
@@ -1160,7 +1181,7 @@ def run_pdf_discovery(
                         stats["skipped"] += 1
                     if _is_target_year_rejection(cached_rejection.reason):
                         target_year_rejection_seen = True
-                    recorder.record(RejectionEvidence(
+                    record_discovery_evidence(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=candidate.pdf_url,
                         page_url=candidate.page_url,
@@ -1183,7 +1204,7 @@ def run_pdf_discovery(
                         pdf_type=pre_download_rejection.pdf_type,
                         reason=pre_download_rejection.reason,
                     )
-                    recorder.record(RejectionEvidence(
+                    record_discovery_evidence(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=candidate.pdf_url,
                         page_url=candidate.page_url,
@@ -1218,7 +1239,7 @@ def run_pdf_discovery(
                             pdf_type=pdf_type,
                             reason=reject_reason or "classified_non_target",
                         )
-                    recorder.record(RejectionEvidence(
+                    record_discovery_evidence(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=candidate.pdf_url,
                         page_url=candidate.page_url,
@@ -1240,7 +1261,7 @@ def run_pdf_discovery(
                             pdf_type=pdf_type,
                             reason=reject_reason,
                         )
-                    recorder.record(RejectionEvidence(
+                    record_discovery_evidence(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=candidate.pdf_url,
                         page_url=candidate.page_url,
@@ -1267,7 +1288,7 @@ def run_pdf_discovery(
                         else:
                             reason = "duplicate_hash"
                         Path(file_path).unlink(missing_ok=True)
-                        recorder.record(RejectionEvidence(
+                        record_discovery_evidence(RejectionEvidence(
                             school_id=site.school_id,
                             pdf_url=candidate.pdf_url,
                             page_url=candidate.page_url,
@@ -1299,7 +1320,7 @@ def run_pdf_discovery(
                         )
                         session.add(doc)
                         stats["downloaded"] += 1
-                        recorder.record(RejectionEvidence(
+                        record_discovery_evidence(RejectionEvidence(
                             school_id=site.school_id,
                             pdf_url=candidate.pdf_url,
                             page_url=candidate.page_url,

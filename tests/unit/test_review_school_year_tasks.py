@@ -23,6 +23,7 @@ from eidp.review._pages.school_year_tasks import (
     bootstrap_progress_detail_lines,
     bootstrap_progress_stale_reason,
     discovery_evidence_table_rows,
+    discovery_rejection_reason_summary,
     initial_bootstrap_warning_text,
     is_pdf_site_url,
     latest_bootstrap_log,
@@ -159,6 +160,44 @@ def _doc(
             ingest_status=status,
         )
     )
+
+
+def test_discovery_rejection_reason_summary_labels_top_reasons() -> None:
+    summary = discovery_rejection_reason_summary(
+        {
+            "rejection_reason_target_fiscal_year_not_detected": 4,
+            "rejection_reason_pre_filtered_non_target_hint": 2,
+            "rejection_reason_fiscal_year_mismatch": 1,
+            "rejection_reason_target_application_not_detected": 0,
+        }
+    )
+
+    assert summary == "対象年度不明 4 / 対象外ヒント 2 / 旧年度 1"
+
+
+def test_bootstrap_progress_detail_lines_include_rejection_reason_counts() -> None:
+    progress = BootstrapProgress(
+        status="running",
+        current_step=3,
+        total_steps=5,
+        percent=0.7,
+        message="PDF探索中",
+        details={
+            "sites_total": 5,
+            "crawled": 5,
+            "found": 4,
+            "downloaded": 0,
+            "failed": 0,
+            "skipped": 3,
+            "prefiltered": 2,
+            "rejection_reason_target_fiscal_year_not_detected": 2,
+            "rejection_reason_target_application_not_detected": 1,
+        },
+    )
+
+    lines = bootstrap_progress_detail_lines(progress)
+
+    assert "除外理由: 対象年度不明 2 / 申請書ではない 1" in lines
 
 
 def test_school_task_summary_groups_operator_counts() -> None:

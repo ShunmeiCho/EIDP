@@ -771,6 +771,9 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
             rejection_breakdown.append(f"既知除外 {cached_rejections}")
         if rejection_breakdown:
             lines.append(f"除外内訳: {' / '.join(rejection_breakdown)}")
+        rejection_reasons = discovery_rejection_reason_summary(details)
+        if rejection_reasons:
+            lines.append(f"除外理由: {rejection_reasons}")
     if "seed_imported" in details or "corporation_inferred" in details:
         lines.append(
             "補助URL登録: "
@@ -794,6 +797,45 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
         if details.get("school_url_crawl_unavailable"):
             lines.append("学校公式サイト探索: Scrapling add-on が未導入のためスキップしました。")
     return lines
+
+
+DISCOVERY_REJECTION_REASON_LABELS = {
+    "target_fiscal_year_not_detected": "対象年度不明",
+    "fiscal_year_mismatch": "旧年度",
+    "target_application_not_detected": "申請書ではない",
+    "pre_filtered_non_target_hint": "対象外ヒント",
+    "classified_non_target": "対象外PDF",
+    "no_candidates_found": "PDF候補なし",
+    "all_negative_score": "低スコア",
+    "duplicate_hash": "重複PDF",
+    "duplicate_hash_other_school": "他校重複",
+}
+
+
+def discovery_rejection_reason_summary(details: dict[str, object], *, limit: int = 3) -> str:
+    counts: list[tuple[str, int]] = []
+    prefix = "rejection_reason_"
+    for key, value in details.items():
+        if not key.startswith(prefix):
+            continue
+        if isinstance(value, bool):
+            count = int(value)
+        elif isinstance(value, int):
+            count = value
+        elif isinstance(value, str):
+            try:
+                count = int(value)
+            except ValueError:
+                continue
+        else:
+            continue
+        if count <= 0:
+            continue
+        reason = key.removeprefix(prefix)
+        label = DISCOVERY_REJECTION_REASON_LABELS.get(reason, reason)
+        counts.append((label, count))
+    counts.sort(key=lambda item: item[1], reverse=True)
+    return " / ".join(f"{label} {count}" for label, count in counts[:limit])
 
 
 def bootstrap_progress_auto_refresh_html(seconds: int = 20) -> str:

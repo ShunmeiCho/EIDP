@@ -642,6 +642,7 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
         assert download_calls == [stale_pdf_url]
         assert stats["cached_rejections"] == 1
         assert stats["skipped"] == 2
+        assert stats["rejection_reason_fiscal_year_mismatch"] == 2
 
         payloads = [
             json.loads(line)
@@ -705,6 +706,7 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
         assert stats["prefiltered"] == 1
         assert stats["skipped"] == 1
         assert stats["downloaded"] == 1
+        assert stats["rejection_reason_pre_filtered_non_target_hint"] == 1
 
         payloads = [
             json.loads(line)
