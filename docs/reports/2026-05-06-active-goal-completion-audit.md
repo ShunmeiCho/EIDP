@@ -55,6 +55,16 @@ from generic `no_target_pdf`.
   `C:\EIDP-v139-2f5b8e4`; the server reported `Local URL:
   http://localhost:8501`, and an independent Windows `Invoke-WebRequest` probe
   against `http://localhost:8501/` returned HTTP `200`.
+- Windows UI click-through smoke through SSH port forwarding
+  (`127.0.0.1:18501 -> win:8501`) rendered the packaged Streamlit app in a
+  browser and verified the main operator pages without pressing execution
+  buttons: `① 学校別タスク`, `② PDF確認・手入力`, `③ 年度判定・修正`,
+  `④ Excel プレビュー`, `⑤ 設定（年度・OCR・API）`, `URL候補レビュー`,
+  and `都道府県公式インデックス`. The task board showed
+  `commit=2f5b8e4`, the publication-lag alert for 1 school, the
+  `旧年度候補あり` lane, and after clicking `旧年度候補を表示` the filtered
+  result `公示待ち/再取得 / 東京都 / 日本工学院専門学校 / id=1`.
+  Excel preview stayed disabled because target-FY transfer rows are still zero.
 
 v139 reduces operator ambiguity around latest-public old-year forms, but it
 does not change the strict FY2026 yield denominator or make stale forms
@@ -326,6 +336,11 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   `(school_id=1, pdf_status=publication_lag, evidence_level=publication_lag,
   excel_ready=0, blocking_reason=publication_lag_latest_public)`, and the
   packaged Streamlit server returned HTTP `200` on `http://localhost:8501/`.
+- Windows v139 Browser click-through smoke via SSH tunnel →
+  settings page displayed `commit=2f5b8e4`; PDF confirmation, year correction,
+  Excel preview, URL candidate review, and prefecture official-index pages
+  rendered; `旧年度候補あり` filtered to one `公示待ち/再取得` task; Excel
+  workbook generation remained disabled for zero target-FY rows.
 - `uv run pytest tests/unit` after the v138 PDF discovery fixes →
   `1021 passed`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v138.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip` → `OK core`, `OK playwright-addon`, `git_commit=5a4aeb825e516410875d31ddf1e4c4fddab448e0`, `git_dirty=false`, `entry_count=3016`, `wheel_count=78`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
@@ -488,11 +503,11 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
    acquisition run or a product decision that treats latest-public FY2025
    publication-lag forms as a separate reviewable state rather than target-FY
    success.
-3. Run the latest v139 UI flow on Windows and verify:
-   UI start, initial bootstrap button, weekly rediscovery button, URL candidate
-   review, official-index coverage page, school task drill-down, PDF確認, and
-   Excel preview. v139 has only a server-start HTTP 200 smoke so far, not a
-   full operator click-through.
+3. Run the latest v139 UI flow on Windows against a real acquisition result.
+   v139 now has a browser click-through for read-only navigation and the
+   publication-lag lane. Still missing: clicking the initial bootstrap button,
+   weekly rediscovery button, PDF review drill-down with real downloaded target
+   PDFs, and Excel preview after target-FY rows exist.
 4. Keep R-0 naming debt controlled: compatibility wrappers and historical
    reports may keep R8 wording, but new production entrypoints must use
    target-year naming.
