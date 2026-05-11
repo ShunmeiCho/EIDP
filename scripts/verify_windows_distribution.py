@@ -103,6 +103,7 @@ CORE_REQUIRED_EXACT = (
     "src/eidp/review/_pages/prefecture_remarks.py",
     "src/eidp/review/_pages/fiscal_year_override.py",
     "src/eidp/review/_pages/excel_preview.py",
+    "src/eidp/review/school_scope.py",
     "src/eidp/scraper/prefecture_aggregator.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
@@ -705,6 +706,10 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '@app.command("eval-discovery-gold")',
             "--fail-on-regression",
             "_discovery_gold_gate_failed",
+        ),
+        "src/eidp/review/school_scope.py": (
+            'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"',
+            'OPERATOR_SCHOOL_SCOPE_LABEL = "専門学校"',
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {

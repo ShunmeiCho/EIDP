@@ -185,6 +185,10 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/review/_pages/prefecture_remarks.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/fiscal_year_override.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/excel_preview.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/school_scope.py": (
+            'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"\n'
+            'OPERATOR_SCHOOL_SCOPE_LABEL = "専門学校"\n'
+        ),
         "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
@@ -348,6 +352,21 @@ def test_verify_core_zip_requires_discovery_gold_eval_regression_gate(tmp_path: 
     assert not check.ok
     assert any("src/eidp/cli.py missing required token" in error for error in check.errors)
     assert any("--fail-on-regression" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_operator_scope_vocational_only(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/review/school_scope.py"] = (
+        "OPERATOR_SCHOOL_TYPE_SCOPE: str | None = None\n"
+        'OPERATOR_SCHOOL_SCOPE_LABEL = "大学・専門学校"\n'
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/review/school_scope.py missing required token" in error for error in check.errors)
+    assert any('OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"' in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:
