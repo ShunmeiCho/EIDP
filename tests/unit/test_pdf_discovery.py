@@ -153,6 +153,32 @@ def test_pre_download_detects_stale_renewal_confirmation_application_year() -> N
     assert rejection.reason == "fiscal_year_mismatch:2025"
 
 
+def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/files/2025-renewal-confirmation-application.pdf",
+        page_url="https://example.ac.jp/international/",
+        anchor_text="Visa renewal confirmation application",
+        score=1.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_keeps_english_renewal_form_with_support_system_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/files/2026-renewal-confirmation-application.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="Higher education tuition support renewal confirmation application",
+        score=1.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
 def test_pre_download_detects_stale_year_prefix_serial_filename_for_target_form() -> None:
     candidate = PdfCandidate(
         pdf_url="http://www.atg-web.ac.jp/img/educational/2025007.pdf",
