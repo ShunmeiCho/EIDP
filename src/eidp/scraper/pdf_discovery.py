@@ -502,6 +502,55 @@ def _has_target_application_url_hint(candidate: PdfCandidate) -> bool:
     )
 
 
+def _has_site_family_non_target_url(candidate: PdfCandidate) -> bool:
+    """Return whether the URL is a known disclosure-family non-target shape.
+
+    These patterns are intentionally host-scoped and run only after target-form
+    hints have had a chance to keep the candidate. They capture stable public
+    disclosure sub-documents that otherwise require a download before being
+    classified as non-target.
+    """
+
+    parsed = urlparse(_candidate_url_hint_text(candidate))
+    host = parsed.netloc.lower()
+    path = parsed.path.lower()
+    filename = Path(path).name
+
+    if host == "www.o-hara.ac.jp" and re.search(
+        r"/about/joho/pdf/\d{4}-\d-\d{2}-\d{2}-\d\.pdf$",
+        path,
+    ):
+        return True
+
+    if host == "www.sanko.ac.jp":
+        if re.search(r"/disclosure/[^/]+/docs/", path) and not re.fullmatch(r"yoshiki\d{4}\.pdf", filename):
+            return True
+        if "/pdf/share/disclosure/measure/japanese/" in path and (
+            re.fullmatch(r"r\d+_hokoku\.pdf", filename) or "teikitenkenhokoku" in filename
+        ):
+            return True
+
+    if host == "kanto-koudai.com" and re.search(r"/school/johokokai/j\d{4}_\d{2}(?:_\d{2})?\.pdf$", path):
+        return True
+
+    if host == "www.yoshikawa-fukushi.ac.jp" and re.search(
+        r"/about/pdf/\d{4}-\d{2}-\d(?:-\d)?(?:-\d)?\.pdf$",
+        path,
+    ):
+        return True
+
+    if host == "www.hondacollege.ac.jp" and re.search(r"/about/disclosure/pdf/htece_report_\d{2}\.pdf$", path):
+        return True
+
+    if host == "www.arsnet.ac.jp" and re.search(r"/uploads/20\d{2}/\d{2}/r\d+_\d[a-z]\d_\d{4}\.pdf$", path):
+        return True
+
+    if host == "www.saitama-cmcc.ac.jp" and re.search(r"/uploads/20\d{2}/\d{2}/\d[a-z]\d{2}\.pdf$", path):
+        return True
+
+    return False
+
+
 def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> int | None:
     text = unicodedata.normalize("NFKC", text)
     detected = fiscal_year_from_japanese_era_text(
@@ -600,6 +649,11 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
         )
     if _has_target_application_hint(candidate):
         return None
+    if _has_site_family_non_target_url(candidate):
+        return CachedPdfRejection(
+            pdf_type="non_target",
+            reason="pre_filtered_non_target_hint",
+        )
     if any(token.lower() in lowered for token in PRE_DOWNLOAD_NEGATIVE_TOKENS):
         return CachedPdfRejection(
             pdf_type="non_target",

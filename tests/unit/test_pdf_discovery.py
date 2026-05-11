@@ -152,6 +152,62 @@ def test_pre_download_keeps_target_form_when_subject_path_has_target_hint() -> N
     assert rejection is None
 
 
+def test_pre_download_rejects_site_family_non_target_url_shapes() -> None:
+    token_cases = [
+        ("https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-1.pdf", "PDF"),
+        ("https://www.sanko.ac.jp/disclosure/omiya-med/docs/medical_01.pdf", "1年"),
+        ("https://www.sanko.ac.jp/disclosure/omiya-child/docs/6ad4bff0e8b03e4996305e4aeac1b0ef515aaa56.pdf", "保育科"),
+        ("https://www.sanko.ac.jp/pdf/share/disclosure/measure/japanese/tokyo/r4_hokoku.pdf", "報告書"),
+        ("https://www.sanko.ac.jp/pdf/share/disclosure/measure/japanese/tokyo/r4_teikitenkenhokoku.pdf", "点検報告書"),
+        ("https://kanto-koudai.com/school/johokokai/j2024_31.pdf", "授業計画（一級自動車整備科）"),
+        ("https://kanto-koudai.com/school/johokokai/j2024_02_02.pdf", "学校関係者評価報告"),
+        ("https://www.yoshikawa-fukushi.ac.jp/about/pdf/2025-09-2-1.pdf", "委員会報告書"),
+        ("https://www.hondacollege.ac.jp/honda_e/about/disclosure/pdf/htece_report_08.pdf", "学生納付金・修学支援"),
+        ("https://www.arsnet.ac.jp/school/wp/wp-content/uploads/2026/04/R8_1A1_0420.pdf", "大学併修コース"),
+        ("https://www.saitama-cmcc.ac.jp/wp-content/uploads/2026/04/1A01.pdf", "HR"),
+    ]
+
+    for url, anchor_text in token_cases:
+        candidate = PdfCandidate(
+            pdf_url=url,
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text=anchor_text,
+            score=10.0,
+        )
+
+        rejection = _pre_download_rejection(candidate, target_year=2026)
+
+        assert rejection is not None, url
+        assert rejection.reason == "pre_filtered_non_target_hint"
+        assert rejection.pdf_type == "non_target"
+
+
+def test_pre_download_site_family_guard_keeps_sanko_target_form_shape() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.sanko.ac.jp/disclosure/osaka-med/docs/yoshiki2026.pdf",
+        page_url="https://www.sanko.ac.jp/disclosure/osaka-med/",
+        anchor_text="2026年度",
+        score=10.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_site_family_guard_keeps_local_target_application_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.sanko.ac.jp/disclosure/omiya-med/docs/shugakushien_shinsei2026.pdf",
+        page_url="https://www.sanko.ac.jp/disclosure/omiya-med/",
+        anchor_text="令和8年度 高等教育の修学支援新制度 確認申請書",
+        score=10.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
 def test_pre_download_rejects_subject_pdf_with_adjacent_target_context() -> None:
     candidate = PdfCandidate(
         pdf_url="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/subject_kango.pdf",
