@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `b4b6324a9ad506ba832286dbc306fee1465be9b5` (`eidp-windows-v233.zip`)
+Latest audited Windows package commit: `f5d7f542638adcff1a606fbe8fc1092443d71230` (`eidp-windows-v234.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -64,6 +64,10 @@ was correctly reclassified as `publication_lag_latest_public`. A bounded
 current-code replay against the official 東京モード学園 homepage produced
 `no_candidates_found`, and that case is now tracked as
 `tokyo-mode-gakuen-no-candidates-2026`.
+The v234 package closes a rendered-HTML false-negative edge: a static
+current-year non-target PDF such as `2026年度 学校案内` no longer suppresses
+the JS-rendered fallback that may reveal the real
+`令和8年度 高等教育の修学支援新制度 確認申請書` candidate.
 
 During this RCA, a classification defect was found in
 `discovery_evidence_summary.py`: old-year `image_only` PDFs with both system
@@ -1504,16 +1508,31 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Windows operator delivery | `dist/eidp-windows-v232.zip` rebuilt at commit `db84f5ca22a2ed3018e9fcb03153a4c1a231219e`, verifier `OK core`, `git_dirty=false`, SHA256 `33e14cefa01c75ea2f84ce149ac943939c998a34761aaa1ffed3fa8cd289bc64`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the SQLite-backed `--require-ship-gate` validator, diagnostics that preserve strict bootstrap/weekly ship-gate return codes with delayed `%ERRORLEVEL%` capture, the `import-excel` `invalid_year` warning surface, RCA packet rows that preserve `school_id` for Codex/manual follow-up, same-origin WordPress Download Manager PDF candidate extraction for `wpdmdl` links, root fallback when a registered school publication URL resolves to non-HTML content, school-specific disclosure-link prioritization for dense corporation roots, stricter year-evidence filtering that ignores non-filing `完成年度` labels, a `職業実践専門課程等の基本情報` non-target guard, list-item year-context isolation, stale full-form range pre-filtering, support-only image PDF review-bound routing, and per-link `div` context isolation. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v232 smoke on a fresh `C:\Users\cyo20\EIDP-v232-db84f5c` extraction proves setup success: `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `department_change` void columns present, and `uq_document_file_hash` present. A v230 targeted replay for school `72` produced `downloaded=0`, `rejection_reason_pre_filtered_non_target_hint=3`, and no `document` row for that school. A v231 targeted replay for school `793` produced `downloaded=0`, `rejection_reason_fiscal_year_mismatch=5`, `rejection_reason_pre_filtered_non_target_hint=5`, and evidence rows for `2-1_2-4.pdf` as `fiscal_year_mismatch:2025` with `pre_download=true`. A full real bounded Saitama official-index acquisition on fresh `C:\Users\cyo20\EIDP-v231-full-e42df2b` produced official-index `extracted=58`, `matched=51`, `added=51`, crawl `found=50`, `downloaded=2`, `failed=5`, `skipped=391`, `prefiltered=198`, ingest `processed=2`, `yearly_upserted=7`, and rebuild `target_pdf_auto_acquired_count=2`, `target_pdf_auto_yield_pct=0.1`, `ship_gate_status=below_gate`; the `--require-ship-gate` validator correctly returned rc `1`. | Latest v232 package verifier, Windows clean extraction/setup smoke, school `72` false-positive replay, school `793` stale-year context replay, and full real Saitama bounded acquisition all passed mechanically. Deployment is healthy, but real strict automation yield remains far below the 60-70% ship gate. Execution-button UI E2E, broader real-workload yield, and remaining false-negative RCA are still incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
-Update: v233 supersedes v232 for packaged artifact verification and setup
-smoke. The
-v233 ZIP at commit `b4b6324a9ad506ba832286dbc306fee1465be9b5` verifies with
-SHA256 `b153232ec8809ca1efee065420e1fa3b4bfc252e8dd8fd85a39eb0e95462d092`,
-3,027 entries, 78 wheels, and 17 discovery gold-set entries covering all five
-release-relevant outcomes. Remote Windows setup smoke is now proven on the
-v233 extraction `C:\Users\cyo20\EIDP-v233-b4b6324`.
+Update: v234 supersedes v233 for packaged artifact verification. The v234 ZIP
+at commit `f5d7f542638adcff1a606fbe8fc1092443d71230` verifies with SHA256
+`d640d4ac3d41cc27e2019726a72be60adb0bc9ecac08a4bd05a9a5dc883ba762`, 3,027
+entries, 78 wheels, and 17 discovery gold-set entries covering all five
+release-relevant outcomes. Remote Windows setup smoke remains proven on the
+v233 extraction `C:\Users\cyo20\EIDP-v233-b4b6324`; v234 has the same setup
+surface and a Python-only discovery fallback change.
 
 ## Latest Verification Evidence
 
+- 2026-05-12 v234 Windows package refresh →
+  commit `f5d7f542638adcff1a606fbe8fc1092443d71230` packages the rendered-HTML
+  fallback fix. Static current-year PDFs that do not have a target application
+  hint no longer block JS-rendered discovery. Verification:
+  `uv run pytest tests/unit/test_pdf_discovery.py -q` → `79 passed, 5
+  warnings`; `uv run pytest tests/unit -q` → `1180 passed, 5 warnings`;
+  `uv run ruff check src/eidp/scraper/pdf_discovery.py
+  tests/unit/test_pdf_discovery.py` → all checks passed. The v234 ZIP
+  `dist/eidp-windows-v234.zip` verifies with SHA256
+  `d640d4ac3d41cc27e2019726a72be60adb0bc9ecac08a4bd05a9a5dc883ba762`,
+  3,027 entries, 78 wheels, 17 discovery gold-set entries, and BUILD_INFO
+  `git_commit=f5d7f542638adcff1a606fbe8fc1092443d71230`,
+  `git_dirty=false`; `dist/eidp-windows.zip` has the same SHA256. Extracted
+  package validation on `_temp/v234-extract-6E9hl5` returned `ok=true`,
+  `master_xlsx_present=true`, and `wheel_count=78`.
 - 2026-05-12 v233 Windows package refresh →
   commit `b4b6324a9ad506ba832286dbc306fee1465be9b5` packages the restored
   `no_target_candidate_found` gold-set coverage. A bounded current-code replay
@@ -2572,7 +2591,9 @@ image PDFs from being mislabeled as old target publication-lag evidence or
 pre-filtered due to sibling-link text. The v228 school `95` false positive is
 also rejected because its only 2026 body evidence was `完成年度`. v233 restores
 `no_target_candidate_found` coverage in the packaged discovery gold set after
-the 入間看護 entry was reclassified to publication-lag. The deployment layer is
+the 入間看護 entry was reclassified to publication-lag. v234 keeps JS-rendered
+fallback active when static HTML only exposes current-year non-target PDFs.
+The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
 log/progress capture, non-release validator, and `diagnose.bat` all pass), but
