@@ -76,6 +76,9 @@ uv run eidp discovery-rca-packet \
   --json
 ```
 
+Use `--prompt` on the same command to emit a copy-paste Codex investigation
+prompt instead of the raw packet JSON.
+
 For a prioritized list of schools to hand to Codex next:
 
 ```bash

@@ -1069,12 +1069,17 @@ def discovery_rca_packet(
         help="Optional discover-pdfs evidence JSONL used to fill latest_bucket.",
     ),
     known_operator_note: str = typer.Option("", help="Optional operator note to preserve in the packet"),
+    output_prompt: bool = typer.Option(False, "--prompt", help="Emit a copy-paste Codex RCA prompt"),
     output_json: bool = typer.Option(False, "--json", help="Emit JSON input packet"),
 ) -> None:
     """Build a read-only single-school RCA packet for Codex-assisted discovery."""
     from eidp.config import settings
     from eidp.db.session import SessionLocal
-    from eidp.scraper.discovery_rca_packet import build_single_school_rca_packet, render_single_school_rca_packet
+    from eidp.scraper.discovery_rca_packet import (
+        build_single_school_rca_packet,
+        render_single_school_rca_packet,
+        render_single_school_rca_prompt,
+    )
 
     session = SessionLocal()
     try:
@@ -1093,6 +1098,9 @@ def discovery_rca_packet(
 
     if output_json:
         typer.echo(render_single_school_rca_packet(packet))
+        return
+    if output_prompt:
+        typer.echo(render_single_school_rca_prompt(packet))
         return
 
     typer.echo(f"RCA packet for school_id={packet['school_id']}: {packet['school_name']}")

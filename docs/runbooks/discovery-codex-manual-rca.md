@@ -41,6 +41,10 @@ uv run eidp discovery-rca-packet \
   --school-id 95 \
   --evidence-log path/to/evidence.jsonl \
   --json
+uv run eidp discovery-rca-packet \
+  --school-id 95 \
+  --evidence-log path/to/evidence.jsonl \
+  --prompt
 uv run eidp discovery-rca-batch-plan \
   --evidence-log path/to/evidence.jsonl \
   --prefecture 埼玉県 \
@@ -287,6 +291,9 @@ uv run eidp discovery-rca-packet \
   --known-operator-note "optional note" \
   --json
 ```
+
+Use `--prompt` instead of `--json` when you want a copy-paste Codex prompt
+with the packet embedded.
 
 When you have a full evidence log and need to choose the next schools to
 investigate, generate a prioritized batch first:

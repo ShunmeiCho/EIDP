@@ -151,6 +151,24 @@ def render_single_school_rca_batch_plan(plan: dict[str, Any]) -> str:
     return json.dumps(plan, ensure_ascii=False, indent=2, sort_keys=True)
 
 
+def render_single_school_rca_prompt(packet: dict[str, Any]) -> str:
+    """Render a copy-paste Codex prompt for one RCA packet."""
+    packet_json = render_single_school_rca_packet(packet)
+    return f"""Investigate this EIDP school as a single-school RCA packet. Do not run broad SERP crawling.
+
+Input:
+{packet_json}
+
+Tasks:
+1. Classify the failure layer before searching.
+2. Check official-index and registered SchoolSite URLs first.
+3. Check bounded same-domain disclosure/public-info paths before named-school search.
+4. Inspect candidate PDF body/OCR evidence before accepting target FY.
+5. Return exactly one Required Output Block JSON object.
+6. If this should enter data/discovery-gold-set, draft the entry fields and explain the reusable rule and anti-pattern.
+"""
+
+
 def render_single_school_rca_packet(packet: dict[str, Any]) -> str:
     """Render a deterministic JSON packet."""
     return json.dumps(packet, ensure_ascii=False, indent=2, sort_keys=True)
