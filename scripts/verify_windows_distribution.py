@@ -105,6 +105,8 @@ CORE_REQUIRED_EXACT = (
     "src/eidp/review/_pages/excel_preview.py",
     "src/eidp/review/school_scope.py",
     "src/eidp/excel/exporter.py",
+    "src/eidp/db/audit.py",
+    "src/eidp/db/audit_outbox.py",
     "src/eidp/scraper/prefecture_aggregator.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
@@ -718,6 +720,19 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "_exportable_confidence_sql",
             "export_quality_warnings",
             "confidence<0.70",
+        ),
+        "src/eidp/db/audit.py": (
+            "ManualActionLog",
+            "def log_manual_action",
+            "action_id=str(uuid.uuid4())",
+            "session.flush()",
+        ),
+        "src/eidp/db/audit_outbox.py": (
+            'DEFAULT_OUTBOX_PATH = Path("data/audit/manual-actions.jsonl")',
+            "def flush_audit_outbox",
+            "ManualActionLog",
+            "jsonl_exported_at",
+            "jsonl_export_error",
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {

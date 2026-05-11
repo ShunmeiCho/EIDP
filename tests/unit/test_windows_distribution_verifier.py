@@ -196,6 +196,20 @@ def _core_entries() -> dict[str, bytes | str]:
             "def export_quality_warnings(session): pass\n"
             "confidence<0.70\n"
         ),
+        "src/eidp/db/audit.py": (
+            "from eidp.db.models import ManualActionLog\n"
+            "def log_manual_action(session):\n"
+            "    action_id=str(uuid.uuid4())\n"
+            "    row = ManualActionLog()\n"
+            "    session.flush()\n"
+        ),
+        "src/eidp/db/audit_outbox.py": (
+            "DEFAULT_OUTBOX_PATH = Path(\"data/audit/manual-actions.jsonl\")\n"
+            "def flush_audit_outbox(session):\n"
+            "    ManualActionLog\n"
+            "    jsonl_exported_at\n"
+            "    jsonl_export_error\n"
+        ),
         "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
@@ -389,6 +403,20 @@ def test_verify_core_zip_requires_excel_confidence_export_gate(tmp_path: Path) -
     assert not check.ok
     assert any("src/eidp/excel/exporter.py missing required token" in error for error in check.errors)
     assert any("EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_manual_action_audit_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/db/audit.py"] = "def log_manual_action(session): pass\n"
+    entries["src/eidp/db/audit_outbox.py"] = "def flush_audit_outbox(session): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/db/audit.py missing required token" in error for error in check.errors)
+    assert any("src/eidp/db/audit_outbox.py missing required token" in error for error in check.errors)
+    assert any("ManualActionLog" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:
