@@ -389,7 +389,13 @@ def _parse_department_section(
                 if re.match(r"^\(?\s*\d+(?:\.\d+)?\s*%", stripped):
                     break
                 person_nums = re.findall(r"(\d+)\s*人", data_line)
+                person_unit_count = data_line.count("人")
                 if person_nums:
+                    if len(person_nums) < 3 and person_unit_count >= 4:
+                        graduates = int(person_nums[0])
+                        if len(person_nums) >= 2:
+                            employed = int(person_nums[1])
+                        break
                     grad_nums.extend(int(n) for n in person_nums)
                 # Accumulate until we have 4 values, then break
                 if len(grad_nums) >= 4:
@@ -413,6 +419,12 @@ def _parse_department_section(
                 if any(skip in data_line for skip in ["直近", "自営業", "状況を記載"]):
                     continue
                 person_nums = re.findall(r"(\d+)\s*人", data_line)
+                person_unit_count = data_line.count("人")
+                if 0 < len(person_nums) < 3 and person_unit_count >= 4:
+                    graduates = int(person_nums[0])
+                    if len(person_nums) >= 2:
+                        employed = int(person_nums[1])
+                    break
                 if len(person_nums) >= 3:
                     graduates = int(person_nums[0])
                     advanced = int(person_nums[1])
