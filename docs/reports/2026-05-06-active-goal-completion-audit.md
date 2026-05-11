@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `864ae148d0d4bc75abb1800298daa71191b2dfdd` (`eidp-windows-v235.zip`)
+Latest audited Windows package commit: `2e90d7c540c88704dbf4f617597530f888f36ea1` (`eidp-windows-v236.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -73,6 +73,10 @@ Saitama evidence family: pre-filtered adjacent PDFs such as current-year news,
 open-campus, entrance-exam, and student `A様式1` application forms no longer
 consume the bounded top-10 download attempts before a lower-ranked target form
 can be tried.
+The v236 package closes the next same-family network waste edge found in the
+v235 Windows evidence: English `subject_*.pdf` / `subject-*.pdf` disclosure
+files, which are usually syllabus/course-list PDFs, are now rejected before
+download unless the link also carries a target confirmation-form hint.
 
 A fresh Windows v235 package replay was then run on
 `C:\Users\cyo20\EIDP-v235-864ae14` from the shipped ZIP
@@ -112,6 +116,16 @@ validation passed; after-bootstrap diagnostics were intentionally not applicable
 to this bounded developer replay because it invoked `bootstrap_pdf_pipeline.py`
 directly with a custom progress file rather than the UI/batch wrapper that writes
 `logs/bootstrap-pdfs-*`.
+
+For v236 packaging, `scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v236.zip --latest-alias` produced a clean ZIP with SHA256
+`6048c334385cc2c3cc2393ee5209e2c78d2f0fb84139f536c2109cc08aec4bef`.
+Both `dist/eidp-windows-v236.zip` and `dist/eidp-windows.zip` passed
+`scripts/verify_windows_distribution.py --json` with `git_dirty=false`,
+`entry_count=3027`, `wheel_count=78`, 17 discovery gold-set entries, and 47
+downloadable supported prefecture seeds. A local extracted-install validation
+also passed, and the extracted source contains the `subject_` / `subject-`
+pre-download tokens.
 
 During this RCA, a classification defect was found in
 `discovery_evidence_summary.py`: old-year `image_only` PDFs with both system
