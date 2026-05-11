@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `d90d0a16d382d87f51ae3ecce433198a087eb748` (`eidp-windows-v152.zip`)
+Latest audited Windows package commit: `910afadeaf77002f541b5e1bc4ccb8870a56122f` (`eidp-windows-v153.zip`)
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
@@ -285,6 +285,75 @@ far below the 60-70% automation target.
   `看護専門課程` / `第一学科` with `extraction_confidence=0.64` and
   `is_current=False`. This proves packaged acquisition, not Excel readiness,
   for school `757`.
+
+## 2026-05-11 v153 Update
+
+v153 keeps the v152 strict acquisition behavior and fixes the next school `757`
+ingest issue: the PDF spells the course field as `看護専門課程`, while the
+Excel master stores the same department under the broader field `医療`. The
+PDF-side course normalization now maps the exact field alias `看護` to `医療`
+before full natural-key Department lookup. This prevents a duplicate
+Department row for the accepted school `757` target PDF, but it still does not
+make the row Excel-ready because the parsed data confidence remains below the
+0.70 gate.
+
+- Code change: `_normalize_pdf_course_name` now maps `看護専門課程` to the
+  master field label `医療`. The existing no-name-only-fallback guard remains
+  unchanged.
+- Regression coverage:
+  `test_pdf_nursing_course_name_matches_existing_medical_field_department`.
+  The test failed before the patch with `departments_created=1` and passes
+  after the patch with `departments_created=0`. The existing
+  `工業専門課程` normalization test also remains green.
+- Local verification:
+  `uv run pytest tests/unit/test_ingest_confidence_gating.py -q -k
+  "nursing_course_name or specialized_suffix"` → `2 passed`;
+  `uv run ruff check src/eidp/pipeline/ingest.py
+  tests/unit/test_ingest_confidence_gating.py` → passed;
+  `uv run pytest tests/unit/test_ingest_confidence_gating.py
+  tests/unit/test_normal_ingest_appendonly.py
+  tests/unit/test_manual_entry_contract.py -q` → `48 passed`;
+  `uv run pytest tests/unit -q` → `1045 passed, 5 warnings`.
+- Known type-check caveat:
+  `uv run mypy src/eidp/pipeline/ingest.py` still reports existing strict
+  typing debt around the mixed-type `stats` dictionary; those errors are not
+  introduced by this alias patch and were not broadened in this small fix.
+- Real-site replay on a copied Saitama RCA DB:
+  `_temp/saitama-school757-ingest-medical-alias-20260511-101321` produced
+  `discover-pdfs` `downloaded=1`; `ingest-pdfs --document-id 2` completed with
+  `processed=1`, `departments_created=0`, and `yearly_upserted=1`. The only
+  school `757` Department remains `(course_name="医療",
+  canonical_name="第一学科")`, and the FY2026 yearly row is attached to that
+  Department with `extraction_confidence=0.64` and `is_current=False`.
+- Core ZIP: `dist/eidp-windows-v153.zip`
+- Latest alias: `dist/eidp-windows.zip`
+- Core ZIP SHA256:
+  `76b4e9420732ac287423bf492d9f0f69ff60c0532b08ea1576d7f111f07f5930`
+- Core verifier with unchanged `dist/eidp-playwright-addon-windows-v106.zip`:
+  `OK core`, `OK playwright-addon`,
+  `git_commit=910afadeaf77002f541b5e1bc4ccb8870a56122f`,
+  `git_dirty=false`, `entry_count=3018`, `wheel_count=78`,
+  `project_wheel_count=1`, `discovery_gold_set_entries=14`,
+  47 prefecture seed rows/parser registrations/downloadable artifact URLs,
+  `prefecture_seed_school_rows_total=2148`, and add-on SHA256
+  `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows remote extraction/setup smoke on host alias `win`: copied
+  `eidp-windows-v153.zip`, verified the same SHA256, expanded into
+  `C:\EIDP-v153-910afad`, and ran `scripts\first_setup.bat`. The bundled
+  validator reported `OK install`,
+  `build_commit=910afadeaf77002f541b5e1bc4ccb8870a56122f`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required SQLite tables present, and
+  `wheel_count=78`. A separate `scripts\validate_windows_install.py . --json`
+  run returned `ok=true` with no errors or warnings.
+- Windows packaged school `757` strict discovery + ingest smoke:
+  after Saitama official-index apply (`extracted=58`, `matched=51`,
+  `added=51`), `discover-pdfs --discovery-method prefecture_aggregator
+  --school-id 757` produced `downloaded=1`, and
+  `ingest-pdfs --document-id 1` produced `processed=1`,
+  `departments_created=0`, and `yearly_upserted=1`. The document remains
+  `review_pending`, and the FY2026 yearly row remains non-current with
+  `extraction_confidence=0.64`.
 
 ## 2026-05-11 v146 Update
 
@@ -1260,17 +1329,42 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Start from official government/prefecture indexes where possible | `data/prefecture-aggregators/seed.csv`; `src/eidp/scraper/prefecture_aggregator.py`; `scripts/verify_windows_distribution.py` now reads the ZIP seed/parser source and gates 47 prefecture rows, 47 parser registrations, and 47 downloadable official artifact URLs. Latest verifier details include `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_with_school_link_signal=37`, `prefecture_seed_supplemental_rows=1`, `prefecture_seed_school_rows_total=2148`. Windows bounded bootstrap smoke on v73 downloaded/parsed all 47 official indexes and produced `official_index_rows_extracted=1948`, `official_index_rows_matched=1770`, `official_school_sites_added=1306`, plus 48 seed URLs and 295 corporation-pattern URLs before the 25-site PDF crawl. Latest Windows v138 three-pref smoke produced Tokyo `added=232`, Kanagawa `added=70`, and Saitama `added=51`. | Release-gated for nationwide official-index bootstrap presence, and official-index URL yield is proven through Windows smokes. Full target-year PDF crawling/ingestion still has to prove 60-70% strict-FY yield. |
 | Show source chain / why a PDF was found | `src/eidp/review/_pages/pdf_manual_entry.py` shows selected PDF, source page, confidence, and discovery evidence log; `school_year_tasks.py` now labels crawl entry source quality. | Mostly covered locally; Windows click-through not revalidated after latest UI. |
 | Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. Web search now rejects known third-party directory/government-index URLs before registering `school_site`. Initial-bootstrap completion now preserves official-index yield details (`official_index_rows_extracted`, `official_index_rows_matched`, URL added/upgraded counts, and no-new-URL prefectures) for the operator UI. | Partial: manual entry is reduced and the reason for low yield is more visible, but prefectures without school-publication links and schools whose official page is not discoverable still need fallback discovery/operator review. |
-| Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. `pdf_discovery.py` also pre-filters clear non-target public documents, decoded wrapper-URL filenames, and explicit stale fiscal-year link hints such as `令和7年度`, `r07`, and `2025年度` before download, while preserving post-download target-year checks for ambiguous confirmation forms. v94 additionally accepts a PDF whose body classifies as the target confirmation form when the target-year evidence appears in the official URL or anchor text instead of the PDF body; URL-year evidence alone still cannot save non-target PDFs such as student A forms or syllabi. v95 tightens the remaining image-only edge: target-year text alone no longer admits ambiguous image-only admission guides unless the URL/anchor strongly names the target confirmation form. v139 also turns evidence bucket `publication_lag_or_old_target_pdf` into `pdf_status="publication_lag"` / `blocking_reason="publication_lag_latest_public"` for operator review, while keeping `excel_ready=false`. v152 can also accept a body-confirmed yearless target form when the source `SchoolSite` is a current prefecture official-index disclosure URL, recording `year_evidence=prefecture_index_current_year`; the same PDF remains review/reject-bound from untrusted sources. | Covered locally and packaged through v152. Windows v139 CLI smoke proved the publication-lag status row; Windows v152 packaged smoke proves school `757` moves from review to accepted target via `prefecture_index_current_year`, while remaining `review_pending` after ingest because of course-label extraction mismatch. |
+| Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. `pdf_discovery.py` also pre-filters clear non-target public documents, decoded wrapper-URL filenames, and explicit stale fiscal-year link hints such as `令和7年度`, `r07`, and `2025年度` before download, while preserving post-download target-year checks for ambiguous confirmation forms. v94 additionally accepts a PDF whose body classifies as the target confirmation form when the target-year evidence appears in the official URL or anchor text instead of the PDF body; URL-year evidence alone still cannot save non-target PDFs such as student A forms or syllabi. v95 tightens the remaining image-only edge: target-year text alone no longer admits ambiguous image-only admission guides unless the URL/anchor strongly names the target confirmation form. v139 also turns evidence bucket `publication_lag_or_old_target_pdf` into `pdf_status="publication_lag"` / `blocking_reason="publication_lag_latest_public"` for operator review, while keeping `excel_ready=false`. v152 can also accept a body-confirmed yearless target form when the source `SchoolSite` is a current prefecture official-index disclosure URL, recording `year_evidence=prefecture_index_current_year`; the same PDF remains review/reject-bound from untrusted sources. | Covered locally and packaged through v153. Windows v139 CLI smoke proved the publication-lag status row; Windows v153 packaged smoke proves school `757` moves from review to accepted target via `prefecture_index_current_year`, while remaining `review_pending` after ingest because parsed yearly confidence is still 0.64. |
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v152.zip` rebuilt at commit `d90d0a16d382d87f51ae3ecce433198a087eb748`, verifier `OK core`, `git_dirty=false`, SHA256 `1b91ee2dd1ac577a45f5d5afa8cdd4c747c5c57544c0c7ad47839a7eb0e58afb`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, and 14 packaged discovery gold-set entries. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v152 smoke on a fresh `C:\EIDP-v152-d90d0a1` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), and school `757` packaged discovery accepts `study_support_system.pdf` with `year_evidence=prefecture_index_current_year`. v150 remains the packaged proof for school `95` target-PDF-to-Excel, while v152 supersedes v151 for current Windows delivery because it includes the official-index trusted year-evidence rule. | Latest v152 package verifier and Windows extraction/setup/Saitama official-index/school-757 discovery/ingest smoke are green. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E, broader real-workload yield, and school `757` extraction normalization remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v153.zip` rebuilt at commit `910afadeaf77002f541b5e1bc4ccb8870a56122f`, verifier `OK core`, `git_dirty=false`, SHA256 `76b4e9420732ac287423bf492d9f0f69ff60c0532b08ea1576d7f111f07f5930`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, and 14 packaged discovery gold-set entries. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v153 smoke on a fresh `C:\EIDP-v153-910afad` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), school `757` packaged discovery accepts `study_support_system.pdf` with `year_evidence=prefecture_index_current_year`, and school `757` packaged ingest now attaches the FY2026 yearly row to the existing `医療` / `第一学科` Department without creating a duplicate. v150 remains the packaged proof for school `95` target-PDF-to-Excel, while v153 supersedes v152 for current Windows delivery because it includes the nursing-course alias fix. | Latest v153 package verifier and Windows extraction/setup/Saitama official-index/school-757 discovery/ingest smoke are green. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E, broader real-workload yield, and school `757` confidence/OCR extraction remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
 - `sprint8-handoff-finalize` remains the active handoff branch; `main` is
   intentionally unchanged until the yield gate is met.
+- `uv run pytest tests/unit/test_ingest_confidence_gating.py -q -k "nursing_course_name or specialized_suffix"` → `2 passed`; `uv run ruff check src/eidp/pipeline/ingest.py tests/unit/test_ingest_confidence_gating.py` → passed; `uv run pytest tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_manual_entry_contract.py -q` → `48 passed`; `uv run pytest tests/unit -q` → `1045 passed, 5 warnings`.
+- Current-code school `757` ingest replay →
+  `_temp/saitama-school757-ingest-medical-alias-20260511-101321` produced
+  strict discovery `downloaded=1`, then `ingest-pdfs --document-id 2`
+  produced `processed=1`, `departments_created=0`, and `yearly_upserted=1`.
+  The existing Department remains `(course_name="医療",
+  canonical_name="第一学科")`, and the FY2026 yearly row is attached to that
+  Department with `extraction_confidence=0.64` / `is_current=False`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v153.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip --json` → `OK core`, `OK playwright-addon`, `git_commit=910afadeaf77002f541b5e1bc4ccb8870a56122f`, `git_dirty=false`, `entry_count=3018`, `wheel_count=78`, `project_wheel_count=1`, `discovery_gold_set_entries=14`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, core SHA256 `76b4e9420732ac287423bf492d9f0f69ff60c0532b08ea1576d7f111f07f5930`, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows v153 clean extraction/setup smoke →
+  SHA256 matched on Windows, `C:\EIDP-v153-910afad` extracted cleanly,
+  `first_setup.bat` completed, the setup validator reported `OK install`,
+  `build_commit=910afadeaf77002f541b5e1bc4ccb8870a56122f`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required tables present, and
+  `wheel_count=78`. A standalone
+  `scripts\validate_windows_install.py . --json` run returned `ok=true` with
+  no errors or warnings.
+- Windows v153 packaged Saitama official-index and school `757` smoke →
+  Saitama apply produced `extracted=58`, `matched=51`, `added=51`, and
+  `review_items=2`. `discover-pdfs --discovery-method prefecture_aggregator
+  --school-id 757` produced `downloaded=1`; `ingest-pdfs --document-id 1`
+  produced `processed=1`, `departments_created=0`, and `yearly_upserted=1`.
+  The document remains `review_pending` and the FY2026 yearly row has
+  `extraction_confidence=0.64`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v152.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip --json` → `OK core`, `OK playwright-addon`, `git_commit=d90d0a16d382d87f51ae3ecce433198a087eb748`, `git_dirty=false`, `entry_count=3018`, `wheel_count=78`, `project_wheel_count=1`, `discovery_gold_set_entries=14`, `discovery_gold_set_outcomes={"accepted_target_pdf": 6, "needs_operator_review": 5, "no_target_candidate_found": 1, "publication_lag_latest_public": 2}`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, core SHA256 `1b91ee2dd1ac577a45f5d5afa8cdd4c747c5c57544c0c7ad47839a7eb0e58afb`, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
 - Windows v152 clean extraction/setup smoke →
   SHA256 matched on Windows, `C:\EIDP-v152-d90d0a1` extracted cleanly,
@@ -1769,7 +1863,7 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v152 is the current locally and
+The active goal is **not complete**. v153 is the current locally and
 Windows-verified ZIP candidate, and the branch is backed up remotely.
 The latest bounded non-Sanko Windows acquisition RCA still proves strict FY2026
 yield below the ship gate: `0/45` target downloads despite official-index
@@ -1808,7 +1902,10 @@ trusted year-evidence rule, and the Windows package smoke proves school `757`
 now accepts a body-confirmed, yearless target form via
 `year_evidence=prefecture_index_current_year`. This moves the bounded Saitama
 strict target count from `1/51` to `2/51`, but school `757` still requires
-extraction review because of a course-label mismatch. The main remaining
-blockers are target-year yield/policy, extraction normalization for
-review-bound accepted PDFs, real operator UI validation, and the explicit
+extraction review because the parsed yearly confidence is only `0.64`. v153
+keeps the same acquisition result and prevents school `757` from creating a
+duplicate Department by normalizing `看護専門課程` to the existing master field
+`医療`; however, the row is still non-current and not Excel-ready. The main
+remaining blockers are target-year yield/policy, extraction/OCR improvement for
+low-confidence accepted PDFs, real operator UI validation, and the explicit
 university rollout decision.
