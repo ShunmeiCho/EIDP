@@ -863,6 +863,24 @@ def test_verify_core_zip_rejects_diagnose_without_weekly_validation(tmp_path: Pa
     assert any("--after-weekly" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_diagnose_without_strict_ship_gate_validation(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/diagnose.bat"] = (
+        entries["scripts/diagnose.bat"]
+        .replace(" --require-ship-gate", "")
+        .replace("validate_after_bootstrap_ship_gate_rc", "validate_after_bootstrap_rc")
+        .replace("validate_after_weekly_ship_gate_rc", "validate_after_weekly_rc")
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("--require-ship-gate" in error for error in check.errors)
+    assert any("validate_after_bootstrap_ship_gate_rc" in error for error in check.errors)
+    assert any("validate_after_weekly_ship_gate_rc" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_weekly_runner_export_excel(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/run_weekly_target_year_discovery.py"] = (

@@ -80,6 +80,20 @@ if exist "%VENV_PY%" (
 )
 >> "%DIAG_FILE%" echo.
 
+>> "%DIAG_FILE%" echo [validate_install after-bootstrap require-ship-gate]
+if exist "%VENV_PY%" (
+    if defined HAS_BOOTSTRAP_PROGRESS (
+        "%VENV_PY%" "%EIDP_APP_ROOT%\scripts\validate_windows_install.py" "%EIDP_APP_ROOT%" --after-setup --after-bootstrap --require-ship-gate >> "%DIAG_FILE%" 2>&1
+        set "VALIDATE_BOOTSTRAP_SHIP_GATE_RC=%ERRORLEVEL%"
+        >> "%DIAG_FILE%" echo validate_after_bootstrap_ship_gate_rc=!VALIDATE_BOOTSTRAP_SHIP_GATE_RC!
+    ) else (
+        >> "%DIAG_FILE%" echo skipped; no bootstrap progress file found
+    )
+) else (
+    >> "%DIAG_FILE%" echo skipped; .venv Python is missing
+)
+>> "%DIAG_FILE%" echo.
+
 >> "%DIAG_FILE%" echo [weekly task registration warning]
 if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" (
     type "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" >> "%DIAG_FILE%"
@@ -102,6 +116,20 @@ if exist "%VENV_PY%" (
         "%VENV_PY%" "%EIDP_APP_ROOT%\scripts\validate_windows_install.py" "%EIDP_APP_ROOT%" --after-setup --after-weekly >> "%DIAG_FILE%" 2>&1
         set "VALIDATE_WEEKLY_RC=%ERRORLEVEL%"
         >> "%DIAG_FILE%" echo validate_after_weekly_rc=!VALIDATE_WEEKLY_RC!
+    ) else (
+        >> "%DIAG_FILE%" echo skipped; no last_run.json found
+    )
+) else (
+    >> "%DIAG_FILE%" echo skipped; .venv Python is missing
+)
+>> "%DIAG_FILE%" echo.
+
+>> "%DIAG_FILE%" echo [validate_install after-weekly require-ship-gate]
+if exist "%VENV_PY%" (
+    if exist "%EIDP_APP_ROOT%\data\output\last_run.json" (
+        "%VENV_PY%" "%EIDP_APP_ROOT%\scripts\validate_windows_install.py" "%EIDP_APP_ROOT%" --after-setup --after-weekly --require-ship-gate >> "%DIAG_FILE%" 2>&1
+        set "VALIDATE_WEEKLY_SHIP_GATE_RC=%ERRORLEVEL%"
+        >> "%DIAG_FILE%" echo validate_after_weekly_ship_gate_rc=!VALIDATE_WEEKLY_SHIP_GATE_RC!
     ) else (
         >> "%DIAG_FILE%" echo skipped; no last_run.json found
     )
