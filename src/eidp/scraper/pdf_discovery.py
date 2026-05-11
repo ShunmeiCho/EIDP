@@ -401,6 +401,41 @@ def _candidate_hint_text(candidate: PdfCandidate) -> str:
     )
 
 
+def _candidate_url_hint_text(candidate: PdfCandidate) -> str:
+    return unicodedata.normalize("NFKC", unquote(candidate.pdf_url)).lower()
+
+
+def _has_subject_pdf_url(candidate: PdfCandidate) -> bool:
+    filename = Path(urlparse(_candidate_url_hint_text(candidate)).path).name
+    return "subject_" in filename or "subject-" in filename
+
+
+def _has_target_application_url_hint(candidate: PdfCandidate) -> bool:
+    text = _candidate_url_hint_text(candidate)
+    return any(
+        token in text
+        for token in (
+            "修学支援",
+            "高等教育",
+            "無償化",
+            "確認申請",
+            "更新確認申請",
+            "機関要件",
+            "様式第2号",
+            "様式第２号",
+            "様式2号",
+            "academic_support",
+            "shugakushien",
+            "syugakusien",
+            "kakunin",
+            "shinsei",
+            "koushinshinsei",
+            "koushin-shinsei",
+            "kikanyoken",
+        )
+    )
+
+
 def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> int | None:
     text = unicodedata.normalize("NFKC", text)
     detected = fiscal_year_from_japanese_era_text(
@@ -483,6 +518,11 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
     lowered = text.lower()
     detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
     if "a様式1" in lowered or "対象者の認定に関する申請書" in lowered:
+        return CachedPdfRejection(
+            pdf_type="non_target",
+            reason="pre_filtered_non_target_hint",
+        )
+    if _has_subject_pdf_url(candidate) and not _has_target_application_url_hint(candidate):
         return CachedPdfRejection(
             pdf_type="non_target",
             reason="pre_filtered_non_target_hint",

@@ -126,6 +126,25 @@ def test_pre_download_keeps_target_form_when_subject_path_has_target_hint() -> N
     assert rejection is None
 
 
+def test_pre_download_rejects_subject_pdf_with_adjacent_target_context() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/subject_kango.pdf",
+        page_url="https://www.all-japan.ac.jp/about/disclosure/",
+        anchor_text=(
+            "動物看護学科（3年制） "
+            'href="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/academic_support.pdf" '
+            "2025年修学支援新制度様式2号 実務教員の授業科目"
+        ),
+        score=5.5,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.reason == "pre_filtered_non_target_hint"
+    assert rejection.pdf_type == "non_target"
+
+
 def test_pre_download_rejects_current_year_news_without_target_hint() -> None:
     candidate = PdfCandidate(
         pdf_url="https://example.ac.jp/files/news/2026/05/open-campus-thanks.pdf",
