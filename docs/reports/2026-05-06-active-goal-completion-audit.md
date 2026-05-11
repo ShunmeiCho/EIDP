@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `433b864684144ebf576e405b68ee419840d5ab4f` (`eidp-windows-v233.zip`)
+Latest audited Windows package commit: `b4b6324a9ad506ba832286dbc306fee1465be9b5` (`eidp-windows-v233.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -1505,8 +1505,8 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 Update: v233 supersedes v232 for packaged artifact verification only. The
-v233 ZIP at commit `433b864684144ebf576e405b68ee419840d5ab4f` verifies with
-SHA256 `c53a8a3d4db1c6e095dd92aefe980efe65bc6784dec3cf2c06fbdb8536298530`,
+v233 ZIP at commit `b4b6324a9ad506ba832286dbc306fee1465be9b5` verifies with
+SHA256 `b153232ec8809ca1efee065420e1fa3b4bfc252e8dd8fd85a39eb0e95462d092`,
 3,027 entries, 78 wheels, and 17 discovery gold-set entries covering all five
 release-relevant outcomes. Remote Windows setup smoke remains latest-proven on
 the v232 extraction until v233 is run on the Windows host.
@@ -1514,7 +1514,7 @@ the v232 extraction until v233 is run on the Windows host.
 ## Latest Verification Evidence
 
 - 2026-05-12 v233 Windows package refresh →
-  commit `433b864684144ebf576e405b68ee419840d5ab4f` packages the restored
+  commit `b4b6324a9ad506ba832286dbc306fee1465be9b5` packages the restored
   `no_target_candidate_found` gold-set coverage. A bounded current-code replay
   seeded `東京モード学園` (`https://www.mode.ac.jp/tokyo`) and produced
   `no_candidates_found`; the new
@@ -1525,7 +1525,7 @@ the v232 extraction until v233 is run on the Windows host.
   focused gold-set tests → `23 passed`; `uv run ruff check` on the touched
   gold-set/test files → all checks passed. The v233 ZIP
   `dist/eidp-windows-v233.zip` verifies with SHA256
-  `c53a8a3d4db1c6e095dd92aefe980efe65bc6784dec3cf2c06fbdb8536298530`,
+  `b153232ec8809ca1efee065420e1fa3b4bfc252e8dd8fd85a39eb0e95462d092`,
   3,027 entries, 78 wheels, 17 discovery gold-set entries, and BUILD_INFO
   `git_dirty=false`; `dist/eidp-windows.zip` has the same SHA256.
 - 2026-05-12 v232 Windows package refresh →
