@@ -24,6 +24,7 @@ from eidp.excel.importer import (
     YEAR_BLOCK_FIELDS_NO_BIKO,
     YEAR_BLOCK_FIELDS_WITH_BIKO,
     SchoolResolver,
+    _parse_fiscal_year,
     import_gakka,
     import_taisho_hiritu,
 )
@@ -190,6 +191,42 @@ def test_taisho_hiritu_reimport_with_changed_content_creates_revision_2(engine):
         assert [r.revision for r in rows] == [1, 2]
         assert [r.is_current for r in rows] == [False, True]
         assert rows[1].annual_total == 120
+
+
+def test_taisho_hiritu_skips_unrealistic_future_fiscal_year(engine):
+    with Session(engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="テスト法人",
+            school_name="テスト専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.commit()
+
+        resolver = SchoolResolver(session)
+        resolver.build()
+        ws = _build_taisho_hiritu_ws([
+            {
+                "year": "2099年度",
+                "prefecture": "東京都",
+                "corp": "テスト法人",
+                "school": "テスト専門学校",
+                "annual_total": 100,
+                "grand_total": 100,
+            },
+        ])
+
+        stats = import_taisho_hiritu(ws, session, resolver)
+
+        assert stats["rows"] == 0
+        assert session.query(SupportRecipient).count() == 0
+
+
+def test_parse_fiscal_year_rejects_unrealistic_future_era_label() -> None:
+    assert _parse_fiscal_year("令和99年度", max_fiscal_year=2027) is None
+    assert _parse_fiscal_year("令和9年度", max_fiscal_year=2027) == 2027
 
 
 def test_gakka_reimport_with_changed_excel_content_creates_revision_2(engine):

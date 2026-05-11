@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias, SchoolYearStatus, SupportRecipient
 from eidp.department_normalization import normalize_course_name
-from eidp.fiscal_year import fiscal_year_from_japanese_era_text
+from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text
 
 log = structlog.get_logger()
 
@@ -636,7 +636,19 @@ def import_taisho_hiritu(
     return stats
 
 
-def _parse_fiscal_year(val: str) -> int | None:
+def _import_fiscal_year_upper_bound(max_fiscal_year: int | None) -> int:
+    return max_fiscal_year if max_fiscal_year is not None else current_fiscal_year() + 1
+
+
+def _bounded_import_fiscal_year(year: int | None, *, max_fiscal_year: int | None = None) -> int | None:
+    if year is None:
+        return None
+    if year > _import_fiscal_year_upper_bound(max_fiscal_year):
+        return None
+    return year
+
+
+def _parse_fiscal_year(val: str, *, max_fiscal_year: int | None = None) -> int | None:
     """Parse fiscal year from various formats."""
     import re
 
@@ -645,11 +657,11 @@ def _parse_fiscal_year(val: str) -> int | None:
     # "2024年度" or just "2024"
     m = re.search(r"(20\d{2})", val)
     if m:
-        return int(m.group(1))
+        return _bounded_import_fiscal_year(int(m.group(1)), max_fiscal_year=max_fiscal_year)
 
     fiscal_year = fiscal_year_from_japanese_era_text(val)
     if fiscal_year is not None:
-        return fiscal_year
+        return _bounded_import_fiscal_year(fiscal_year, max_fiscal_year=max_fiscal_year)
 
     return None
 
