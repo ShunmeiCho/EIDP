@@ -218,6 +218,16 @@ def _core_entries() -> dict[str, bytes | str]:
             "prefecture_index_current_year\n"
             "trusted_year_evidence if strict_target_fiscal_year else \"\"\n"
         ),
+        "src/eidp/pipeline/ingest.py": (
+            "DepartmentYearly\n"
+            "SupportRecipient\n"
+            "compute_pdf_parse_breakdown\n"
+            "breakdown_to_json\n"
+            "revision=next_revision\n"
+            "is_current=is_current_row\n"
+            "support_recipient_review_pending\n"
+            'doc.ingest_status = "review_pending"\n'
+        ),
         "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
@@ -437,6 +447,18 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert not check.ok
     assert any("src/eidp/scraper/pdf_discovery.py missing required token" in error for error in check.errors)
     assert any("target_fiscal_year_not_detected" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/pipeline/ingest.py"] = "def ingest_document(): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/pipeline/ingest.py missing required token" in error for error in check.errors)
+    assert any("compute_pdf_parse_breakdown" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:

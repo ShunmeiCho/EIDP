@@ -108,6 +108,7 @@ CORE_REQUIRED_EXACT = (
     "src/eidp/db/audit.py",
     "src/eidp/db/audit_outbox.py",
     "src/eidp/scraper/pdf_discovery.py",
+    "src/eidp/pipeline/ingest.py",
     "src/eidp/scraper/prefecture_aggregator.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
@@ -742,6 +743,16 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "target_application_not_detected",
             "prefecture_index_current_year",
             'trusted_year_evidence if strict_target_fiscal_year else ""',
+        ),
+        "src/eidp/pipeline/ingest.py": (
+            "DepartmentYearly",
+            "SupportRecipient",
+            "compute_pdf_parse_breakdown",
+            "breakdown_to_json",
+            "revision=next_revision",
+            "is_current=is_current_row",
+            "support_recipient_review_pending",
+            'doc.ingest_status = "review_pending"',
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
