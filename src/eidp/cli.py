@@ -65,6 +65,18 @@ def _echo_excel_export_results(output: Path, results: dict[str, int]) -> None:
             typer.echo(f"  {name}: {count}")
 
 
+def _echo_import_excel_results(results: dict[str, dict[str, int]]) -> None:
+    """Print import stats and make silent-row-drop counters visible."""
+    for sheet, stats in results.items():
+        typer.echo(f"  {sheet}: {stats}")
+        invalid_year = int(stats.get("invalid_year") or 0)
+        if invalid_year:
+            typer.echo(
+                f"WARNING: {sheet} skipped {invalid_year} rows with unsupported fiscal year values.",
+                err=True,
+            )
+
+
 def _exit_report_db_error(exc: SQLAlchemyError, *, output_json: bool) -> NoReturn:
     message = (
         "report query failed; database is not initialized or the schema is incomplete. "
@@ -103,8 +115,7 @@ def import_excel(
         try:
             results = import_all(excel_path, session)
             session.commit()
-            for sheet, stats in results.items():
-                typer.echo(f"  {sheet}: {stats}")
+            _echo_import_excel_results(results)
             typer.echo("Import complete.")
         except Exception:
             session.rollback()

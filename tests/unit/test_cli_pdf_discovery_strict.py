@@ -179,6 +179,36 @@ def test_import_excel_refuses_when_app_lock_is_held(monkeypatch, tmp_path: Path)
     assert fake_session.closed is False
 
 
+def test_import_excel_surfaces_invalid_year_warning(monkeypatch, tmp_path: Path) -> None:
+    fake_session = FakeSession()
+    data_dir = tmp_path / "data"
+
+    import eidp.config as config_mod
+    import eidp.db.session as db_session
+    import eidp.excel.importer as importer
+
+    monkeypatch.setattr(config_mod.settings, "data_dir", data_dir)
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(
+        importer,
+        "import_all",
+        lambda *_args, **_kwargs: {
+            "採録状況": {"rows": 1},
+            "対象比率": {"rows": 0, "invalid_year": 2},
+        },
+    )
+
+    result = CliRunner().invoke(app, ["import-excel", str(tmp_path / "master.xlsx")])
+
+    assert result.exit_code == 0, result.output
+    assert "対象比率: {'rows': 0, 'invalid_year': 2}" in result.output
+    assert "WARNING: 対象比率 skipped 2 rows with unsupported fiscal year values." in result.output
+    assert "Import complete." in result.output
+    assert fake_session.commits == 1
+    assert fake_session.rollbacks == 0
+    assert fake_session.closed is True
+
+
 def test_export_excel_prints_quality_warnings_separately(monkeypatch, tmp_path: Path) -> None:
     fake_session = FakeSession()
 
