@@ -125,6 +125,34 @@ def test_pre_download_prioritizes_stale_target_form_year_over_evaluation_path() 
     assert rejection.reason == "fiscal_year_mismatch:2025"
 
 
+def test_pre_download_keeps_renewal_confirmation_application_on_evaluation_path() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.saijidai.ac.jp/sys/wp-content/themes/saijidai/pdf/evaluation/koutoumusyou.pdf",
+        page_url="https://www.saijidai.ac.jp/info/evaluation/",
+        anchor_text="更新確認申請書",
+        score=2.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_detects_stale_renewal_confirmation_application_year() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/wp-content/uploads/2025/06/2025koushinshinseisyo.pdf",
+        page_url="https://example.ac.jp/assessment/",
+        anchor_text="2025年度 更新確認申請書(PDF形式)",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2025"
+
+
 def test_pre_download_detects_stale_year_prefix_serial_filename_for_target_form() -> None:
     candidate = PdfCandidate(
         pdf_url="http://www.atg-web.ac.jp/img/educational/2025007.pdf",
