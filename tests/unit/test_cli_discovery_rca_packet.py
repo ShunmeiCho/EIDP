@@ -476,6 +476,39 @@ def test_discovery_rca_outcome_validate_accepts_required_output_block(tmp_path: 
     assert "accepted_target_pdf" in result.output
 
 
+def test_discovery_rca_outcome_validate_allows_no_search_trace_for_layer_1(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "layer1-no-search.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 95,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "accepted_target_pdf",
+                "source_page_url": "https://www.siw.ac.jp/information",
+                "candidate_pdf_url": "https://www.siw.ac.jp/information/shugakushien.pdf",
+                "anchor_text": "修学支援新制度 機関要件確認申請書",
+                "fiscal_year_evidence": "PDF body contains 2026年度",
+                "target_form_evidence": "PDF body contains 機関要件確認申請書",
+                "negative_evidence": "",
+                "checked_paths": ["https://www.siw.ac.jp/information"],
+                "operator_action": "none",
+                "gold_set_entry_recommended": True,
+                "candidate_rule": "same-domain disclosure page exposes target form PDF",
+                "anti_pattern": "do not accept third-party directory pages as truth",
+                "confidence": "high",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "OK discovery RCA outcome" in result.output
+
+
 def test_discovery_rca_outcome_validate_rejects_relative_traversal_input() -> None:
     result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", "../outside.json"])
 

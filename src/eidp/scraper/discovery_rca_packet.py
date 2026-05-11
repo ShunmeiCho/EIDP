@@ -20,7 +20,6 @@ RCA_OUTCOME_REQUIRED_FIELDS = (
     "target_form_evidence",
     "negative_evidence",
     "checked_paths",
-    "search_queries_used",
     "operator_action",
     "gold_set_entry_recommended",
     "candidate_rule",
@@ -247,7 +246,8 @@ Tasks:
 3. Check bounded same-domain disclosure/public-info paths before named-school search.
 4. Inspect candidate PDF body/OCR evidence before accepting target FY.
 5. Return exactly one Required Output Block JSON object.
-6. If this should enter data/discovery-gold-set, draft the entry fields and explain the reusable rule and anti-pattern.
+6. Include search_queries_used only when the layer is layer_3_operator_or_search_fallback.
+7. If this should enter data/discovery-gold-set, draft the entry fields and explain the reusable rule and anti-pattern.
 """
 
 
@@ -449,7 +449,7 @@ def _validate_rca_outcome_semantics(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if not _has_nonblank_string(payload["checked_paths"]):
         errors.append("checked_paths must contain at least one investigated URL or local evidence path")
-    if layer == "layer_3_operator_or_search_fallback" and not _has_nonblank_string(payload["search_queries_used"]):
+    if layer == "layer_3_operator_or_search_fallback" and not _has_nonblank_string(payload.get("search_queries_used")):
         errors.append("layer_3_operator_or_search_fallback requires search_queries_used")
     if layer == "layer_0_official_index_handoff":
         if outcome != "no_target_candidate_found":
