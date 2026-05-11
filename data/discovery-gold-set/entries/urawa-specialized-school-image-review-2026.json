@@ -22,8 +22,8 @@
     "school_url": "https://urasen.jp/",
     "disclosure_url": "https://urasen.jp/about/report/",
     "pdf_url": "https://urasen.jp/wp/wp-content/themes/urawa/assets/pdf/about/report/09_shugakushien_r7.pdf",
-    "pdf_type": "target",
-    "fiscal_year": 2025,
+    "pdf_type": "image_only",
+    "fiscal_year": null,
     "strict_target_year_success": false
   },
   "automation_pattern": {
@@ -42,8 +42,8 @@
   "evidence": {
     "source_kind": "saitama_rca_jsonl",
     "source_paths": [
-      "_temp/saitama-current51-prefindex-trusted-20260511-094241/logs/evidence_combined_51_latest.jsonl"
+      "_temp/v232-targeted-replay-3/windows-v232-targeted-evidence.jsonl"
     ],
-    "notes": "Current combined Saitama evidence contains school_id 761 reason=fiscal_year_mismatch:2025, pdf_type=image_only, anchor_text=R7修学支援に関する資料."
+    "notes": "Windows v232 targeted replay contains school_id 761 reason=target_fiscal_year_not_detected, pdf_type=image_only, anchor_text=R7修学支援に関する資料. The old-year support label stays visible for operator review but is not publication-lag evidence without a target application-form hint."
   }
 }

@@ -22,15 +22,14 @@ def test_summarize_discovery_gold_entries_tracks_release_relevant_buckets() -> N
     assert summary.total_entries == 16
     assert summary.target_fiscal_year_counts == {2025: 2, 2026: 14}
     assert summary.outcome_counts == {
-        "accepted_target_pdf": 6,
+        "accepted_target_pdf": 5,
         "needs_operator_review": 6,
-        "no_target_candidate_found": 1,
-        "publication_lag_latest_public": 2,
+        "publication_lag_latest_public": 4,
         "site_fetch_error": 1,
     }
-    assert summary.strict_target_year_successes == 6
+    assert summary.strict_target_year_successes == 5
     assert summary.operator_review_entries == 6
-    assert summary.publication_lag_entries == 2
+    assert summary.publication_lag_entries == 4
 
 
 def test_render_discovery_gold_summary_outputs_json_safe_payload() -> None:
@@ -41,9 +40,9 @@ def test_render_discovery_gold_summary_outputs_json_safe_payload() -> None:
 
     assert decoded["total_entries"] == 16
     assert decoded["outcome_counts"]["needs_operator_review"] == 6
-    assert decoded["outcome_counts"]["no_target_candidate_found"] == 1
+    assert decoded["outcome_counts"]["publication_lag_latest_public"] == 4
     assert decoded["outcome_counts"]["site_fetch_error"] == 1
-    assert decoded["strict_target_year_successes"] == 6
+    assert decoded["strict_target_year_successes"] == 5
     assert "dense_information_page" in decoded["site_families"]
 
 

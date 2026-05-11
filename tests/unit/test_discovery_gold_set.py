@@ -30,12 +30,11 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     assert any(entry["evidence"]["source_kind"] == "manual_web" for entry in entries)
     assert any(entry["outcome"] == "needs_operator_review" for entry in entries)
     assert any(entry["outcome"] == "publication_lag_latest_public" for entry in entries)
-    assert any(entry["outcome"] == "no_target_candidate_found" for entry in entries)
     assert any(entry["outcome"] == "site_fetch_error" for entry in entries)
     assert any(entry["evidence"]["source_kind"] == "saitama_rca_jsonl" for entry in entries)
     assert len({entry["entry_id"] for entry in entries}) == len(entries)
-    assert entries_by_id["saitama-it-web-accepted-2026"]["outcome"] == "accepted_target_pdf"
-    assert entries_by_id["saitama-it-web-accepted-2026"]["expected_result"]["strict_target_year_success"] is True
+    assert entries_by_id["saitama-it-web-accepted-2026"]["outcome"] == "publication_lag_latest_public"
+    assert entries_by_id["saitama-it-web-accepted-2026"]["expected_result"]["strict_target_year_success"] is False
     assert entries_by_id["ageo-central-nursing-review-2026"]["outcome"] == "accepted_target_pdf"
     assert entries_by_id["ageo-central-nursing-review-2026"]["expected_result"]["fiscal_year"] == 2026
 

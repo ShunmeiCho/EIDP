@@ -8,9 +8,9 @@
     "corporation_name": "入間平成学園"
   },
   "target_fiscal_year": 2026,
-  "outcome": "no_target_candidate_found",
+  "outcome": "publication_lag_latest_public",
   "manual_demonstration": {
-    "operator_goal": "Preserve a bounded official-index case where the registered disclosure page exposes no PDF candidates.",
+    "operator_goal": "Preserve a bounded official-index case where the registered disclosure page exposes only old-year target-form download-manager PDFs.",
     "search_queries": [
       "入間看護専門学校 情報公開",
       "入間看護専門学校 機関要件確認申請書"
@@ -18,36 +18,36 @@
     "steps": [
       "Start from the Saitama official-index disclosure URL https://www.i-heiseigakuen.ac.jp/kokai/.",
       "Run strict FY2026 PDF discovery from the prefecture_aggregator SchoolSite.",
-      "Record the no_candidates_found evidence row instead of treating the site as crawler success.",
-      "Keep the school in the operator-visible manual queue because no target confirmation PDF was discoverable from the official entry."
+      "Follow the WordPress Download Manager wrapper for 様式２（R6年度分申請）.",
+      "Reject it from strict FY2026 success as an old-year target form.",
+      "Keep the school in the operator-visible publication-lag/manual queue because no target FY2026 confirmation PDF was discoverable from the official entry."
     ]
   },
   "expected_result": {
     "school_url": "https://www.i-heiseigakuen.ac.jp/",
     "disclosure_url": "https://www.i-heiseigakuen.ac.jp/kokai/",
-    "pdf_url": "",
-    "pdf_type": "",
-    "fiscal_year": null,
+    "pdf_url": "https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471",
+    "pdf_type": "target",
+    "fiscal_year": 2024,
     "strict_target_year_success": false
   },
   "automation_pattern": {
-    "site_family": "official_index_disclosure_no_pdf",
+    "site_family": "wordpress_download_manager_old_year_target_form",
     "reusable_rules": [
-      "Treat no_candidates_found as a first-class discovery outcome when the official-index URL was crawled successfully.",
-      "Do not continue into unbounded SERP fallback from a bounded gold-set run.",
-      "Surface the school as manual-required with the official disclosure URL attached."
+      "Treat same-origin WordPress Download Manager wrappers as PDF candidates.",
+      "Classify old-year target-form wrappers as publication-lag evidence instead of target-FY success.",
+      "Surface the school as manual-required with the official disclosure URL and old-year PDF attached."
     ],
     "anti_patterns": [
-      "Do not count an official-index URL as PDF acquisition success when it exposes no PDF candidates.",
+      "Do not count an official-index URL as PDF acquisition success when it exposes only old-year PDFs.",
       "Do not fabricate a PDF URL from the school root page."
     ]
   },
   "evidence": {
     "source_kind": "saitama_rca_jsonl",
     "source_paths": [
-      "_temp/saitama-rca-current/logs/prefecture_pdf_evidence.jsonl",
-      "_temp/saitama-rca-current/logs/saitama_rca_summary.json"
+      "_temp/v231-windows-evidence/full-saitama/bootstrap-v231-saitama-real.jsonl"
     ],
-    "notes": "Current-code Saitama RCA on 2026-05-11 crawled the prefecture_aggregator URL and produced one no_candidates_found evidence row for school_id 760."
+    "notes": "Windows v231 full Saitama replay crawled the prefecture_aggregator URL and produced fiscal_year_mismatch:2024 for the same-origin WPDMDL 様式２（R6年度分申請） wrapper."
   }
 }

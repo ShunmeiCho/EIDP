@@ -31,5 +31,8 @@ def normalize_candidate_url(url: str) -> str:
     elif path.endswith("/"):
         path = path.rstrip("/")
 
-    query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=True)), doseq=True)
+    query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    if any(key.lower() == "wpdmdl" for key, _ in query_pairs):
+        query_pairs = [(key, value) for key, value in query_pairs if key.lower() != "refresh"]
+    query = urlencode(sorted(query_pairs), doseq=True)
     return urlunparse((scheme, netloc, path, "", query, ""))
