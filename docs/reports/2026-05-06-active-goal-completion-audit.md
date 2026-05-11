@@ -1471,6 +1471,49 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 
 ## Latest Verification Evidence
 
+- 2026-05-11 v211 local package refresh →
+  commit `aec802a3f05fab00128d86435af0ef65e21aebab` keeps the operator UI
+  school scope vocational-only (`専門学校`) so the Streamlit task board, PDF
+  manual-entry page, and Excel preview denominators match the current v1
+  ship-gate scope instead of mixing universities into the operator denominator.
+  Verification: `uv run pytest tests/unit/test_review_school_scope.py
+  tests/unit/test_target_year_status.py tests/unit/test_review_excel_preview.py
+  tests/unit/test_review_pdf_manual_entry.py
+  tests/unit/test_review_school_year_tasks.py -q` → `111 passed`; `uv run ruff
+  check src/eidp/review/school_scope.py
+  tests/unit/test_review_school_scope.py` → passed; `uv run pytest tests/unit
+  -q` → `1131 passed, 5 warnings`.
+- v211 Windows ZIP artifacts were rebuilt locally at commit
+  `aec802a3f05fab00128d86435af0ef65e21aebab`: `dist/eidp-windows-v211.zip`
+  and latest alias `dist/eidp-windows.zip` both have SHA256
+  `9e386ee1c7a793d13fc96e7236517e2ba8d3d56a4ac226b7f0da1090d2b8f98c`.
+  `uv run python scripts/verify_windows_distribution.py
+  dist/eidp-windows-v211.zip --json` and the same command for
+  `dist/eidp-windows.zip` both returned `ok=true`, `errors=[]`, and
+  `warnings=[]`, with 47 prefecture seed rows, 47 parser registrations, 47
+  downloadable official artifact URLs, 2,148 official seed school rows, 78
+  wheels, and 16 packaged discovery gold-set entries. An extracted-install
+  check at `_temp/verify-v211-install-aec802a-20260511174307` returned
+  `ok=true`, `errors=[]`, and `warnings=[]`.
+- `uv run eidp discovery-gold-set --json` currently reports `total_entries=16`,
+  `strict_target_year_successes=6`, `operator_review_entries=6`,
+  `publication_lag_entries=2`, and outcome counts
+  `accepted_target_pdf=6`, `needs_operator_review=6`,
+  `publication_lag_latest_public=2`, `no_target_candidate_found=1`, and
+  `site_fetch_error=1`. This is useful as a regression surface, but it is not a
+  substitute for the 60-70% real strict-FY yield gate.
+- Security-only review of `sprint8-handoff-finalize` reported no HIGH or
+  MEDIUM security vulnerabilities across subprocess use, unsafe
+  deserialization, SQL injection, SSRF, path traversal, Streamlit HTML, XXE,
+  hardcoded secrets, RCA prompt-injection defenses, gold-set JSON loading, and
+  Windows batch/PowerShell quoting. This review explicitly excludes
+  operational/data-loss risks such as SQLite upgrade paths, integrity checks,
+  and atomic writes, which remain tracked outside the security surface.
+- Current blocker remains real Windows validation for the latest package:
+  `nc -G 3 -vz 192.168.0.9 22` still times out from macOS, so v211 has not yet
+  replaced the older v154 Windows extraction/setup/Saitama E2E smoke as the
+  latest real Windows proof. The active goal therefore remains incomplete until
+  Windows connectivity and a broader strict target-FY yield run are restored.
 - `sprint8-handoff-finalize` remains the active handoff branch; `main` is
   intentionally unchanged until the yield gate is met.
 - `uv run pytest tests/unit/test_pdf_parser_regression.py -q -k "blank_advanced"` → `1 passed`; `uv run pytest tests/unit/test_pdf_parser_regression.py -q` → `9 passed`; `uv run ruff check src/eidp/pdf/extractor.py tests/unit/test_pdf_parser_regression.py` → passed; real school `757` parse now returns `graduates=86` and confidence composite `0.94`; `uv run pytest tests/unit/test_pdf_parser_regression.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_manual_entry_contract.py -q` → `57 passed`; `uv run pytest tests/unit -q` → `1046 passed, 5 warnings`.
