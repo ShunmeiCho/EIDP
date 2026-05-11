@@ -17,23 +17,26 @@ one structured outcome label (`accepted_target_pdf`,
 `no_target_candidate_found`, or site/infrastructure failure) and, when useful,
 be promoted into an existing `data/discovery-gold-set/entries/*.json` entry.
 
-A current Saitama 51-school evidence view was rebuilt from the v228 Windows
-bounded acquisition run and the v229 package-level school `95` correction. This
-proves Layer 0 is intact for the bounded Saitama sample: all 51 scoped schools
-have `prefecture_aggregator` disclosure URLs. Layer 1 remains the bottleneck:
+A current Saitama 51-school evidence view was rebuilt from the full v229
+Windows bounded acquisition run. This proves Layer 0 is intact for the bounded
+Saitama sample: all 51 scoped schools have `prefecture_aggregator` disclosure
+URLs. Layer 1 remains the bottleneck, and the final DB/status count is stricter
+than the discovery evidence bucket:
 
-- `accepted_target_pdf=2`
-- `publication_lag_or_old_target_pdf=40`
+- discovery-stage `accepted_target_pdf=3` / `accepted_downloaded=3`
+  (schools `72`, `757`, `784`)
+- final `target_pdf_auto_acquired_count=2` and `excel_ready=2`
+  (schools `757`, `784`; school `72` downloaded but ended as `school_mismatch`)
+- `publication_lag_or_old_target_pdf=39`
 - `non_target_candidates_only=8`
 - `site_fetch_error_only=1`
 - `no_pdf_candidates=0`
-- `target_form_without_year_evidence=0`
 
 The v229 correction is intentionally conservative: school `95`
 (`さいたまIT・WEB専門学校`) had been accepted in v228 because the PDF body
 contained `完成年度は2026年度`. That is a program completion year, not filing or
-target-FY evidence. v229 now rejects that stale `2025年度申請書（様式第2号）`
-candidate as `fiscal_year_mismatch:2025`.
+target-FY evidence. The full v229 run now rejects that stale
+`2025年度申請書（様式第2号）` candidate as `fiscal_year_mismatch:2025`.
 
 During this RCA, a classification defect was found in
 `discovery_evidence_summary.py`: old-year `image_only` PDFs with both system
@@ -1471,7 +1474,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v229.zip` rebuilt at commit `a9baf02d9277685e93f39290075d05de5c81d51e`, verifier `OK core`, `git_dirty=false`, SHA256 `ad2120d5f12df8e8c32c10f7bbe9a7ab9e19c73856d963c01fafd6b5b0d25a37`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the SQLite-backed `--require-ship-gate` validator, diagnostics that preserve strict bootstrap/weekly ship-gate return codes with delayed `%ERRORLEVEL%` capture, the `import-excel` `invalid_year` warning surface, RCA packet rows that preserve `school_id` for Codex/manual follow-up, same-origin WordPress Download Manager PDF candidate extraction for `wpdmdl` links, root fallback when a registered school publication URL resolves to non-HTML content, school-specific disclosure-link prioritization for dense corporation roots, and stricter year-evidence filtering that ignores non-filing `完成年度` labels. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v229 smoke on a fresh `C:\Users\cyo20\EIDP-v229-a9baf02` extraction proves setup success: `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `department_change` void columns present, and `uq_document_file_hash` present. The latest full real bounded Saitama official-index acquisition run remains v228: official-index `extracted=58`, `matched=51`, `added=51`, crawl `found=50`, `downloaded=3`, `failed=5`, `skipped=364`, `prefiltered=158`, ingest `processed=3`, `yearly_upserted=9`, and rebuild `target_pdf_auto_acquired_count=3`, `target_pdf_auto_yield_pct=0.1`, `ship_gate_status=below_gate`. A v229 package-level targeted replay for school `95` invalidates one of those v228 accepted rows: `shugakushien_shinsei2025-1-2.pdf` is now rejected as `fiscal_year_mismatch:2025` because the only 2026 body evidence was `完成年度`, not target-FY filing evidence. | Latest v229 package verifier and Windows clean extraction/setup smoke are green. Deployment is healthy, but real strict automation yield remains far below the 60-70% ship gate; after the v229 correction, the bounded Saitama strict accepted count is effectively at most `2/51` until a full v229 acquisition rerun confirms the new count. Execution-button UI E2E, broader real-workload yield, and remaining false-negative RCA are still incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v229.zip` rebuilt at commit `a9baf02d9277685e93f39290075d05de5c81d51e`, verifier `OK core`, `git_dirty=false`, SHA256 `ad2120d5f12df8e8c32c10f7bbe9a7ab9e19c73856d963c01fafd6b5b0d25a37`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the SQLite-backed `--require-ship-gate` validator, diagnostics that preserve strict bootstrap/weekly ship-gate return codes with delayed `%ERRORLEVEL%` capture, the `import-excel` `invalid_year` warning surface, RCA packet rows that preserve `school_id` for Codex/manual follow-up, same-origin WordPress Download Manager PDF candidate extraction for `wpdmdl` links, root fallback when a registered school publication URL resolves to non-HTML content, school-specific disclosure-link prioritization for dense corporation roots, and stricter year-evidence filtering that ignores non-filing `完成年度` labels. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v229 smoke on a fresh `C:\Users\cyo20\EIDP-v229-a9baf02` extraction proves setup success: `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `department_change` void columns present, and `uq_document_file_hash` present. A full real bounded Saitama official-index acquisition on the same extraction produced official-index `extracted=58`, `matched=51`, crawl `found=50`, `downloaded=3`, `failed=5`, `skipped=371`, `prefiltered=163`, ingest `processed=3`, `yearly_upserted=7`, and rebuild `target_pdf_auto_acquired_count=2`, `target_pdf_auto_yield_pct=0.1`, `ship_gate_status=below_gate`. The v229 full run confirms school `95` is now rejected as `fiscal_year_mismatch:2025`; the third downloaded PDF, school `72`, is not counted as auto-acquired because ingest ended `school_mismatch`. | Latest v229 package verifier, Windows clean extraction/setup smoke, and full bounded Saitama acquisition all ran successfully. Deployment is healthy, but real strict automation yield remains far below the 60-70% ship gate. Execution-button UI E2E, broader real-workload yield, and remaining false-negative RCA are still incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
@@ -1502,6 +1505,16 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   `data\output\v229-school95.jsonl` records
   `shugakushien_shinsei2025-1-2.pdf` as
   `fiscal_year_mismatch:2025` instead of the v228 false-positive accepted row.
+  A full remote Windows bounded Saitama official-index acquisition on the same
+  extraction then completed successfully with evidence
+  `data\output\bootstrap-v229-saitama-real.jsonl`: official-index
+  `extracted=58`, `matched=51`, crawl `found=50`, `downloaded=3`,
+  `failed=5`, `skipped=371`, `prefiltered=163`, ingest `processed=3`,
+  `yearly_upserted=7`, and status rebuild
+  `target_pdf_auto_acquired_count=2`, `target_pdf_auto_yield_pct=0.1`,
+  `ship_gate_status=below_gate`. The packaged validator returned `ok=true`
+  without `--require-ship-gate`; with `--require-ship-gate` it correctly
+  returned rc `1` because the strict yield is below the 60% product gate.
 - 2026-05-12 v228 Windows package refresh →
   commit `3148000df5d9c2568365f95cc9dd2c3eaaa1c066` packages bounded
   school-specific disclosure-link prioritization for dense corporation roots,
@@ -2398,12 +2411,12 @@ are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 The active goal is **not complete**. v229 is the current verifier-clean and
 Windows setup-verified ZIP candidate. The latest real bounded Windows
 acquisition RCA still proves strict FY2026 yield below the ship gate: the
-v228 Saitama official-index run covered `51` official-index school URLs, found
-PDF candidates on `50` sites, and accepted `3` PDFs before the v229 school `95`
-correction. v229 proves that one of those accepted rows was a stale 2025 link
-whose only 2026 body evidence was `完成年度`; until a full v229 rerun is
-completed, the effective bounded Saitama strict success count is at most
-`2/51`. The deployment layer is healthy
+v229 Saitama official-index run covered `51` official-index school URLs, found
+PDF candidates on `50` sites, downloaded `3` PDFs, and counted only `2` schools
+as current target-PDF auto acquired after ingest/status rebuild. The third
+downloaded PDF was school `72`, which ended `school_mismatch`, and the v228
+school `95` false positive is now rejected because its only 2026 body evidence
+was `完成年度`. The deployment layer is healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
 log/progress capture, non-release validator, and `diagnose.bat` all pass), but
 the product gate correctly fails with `ship_gate_status=below_gate` and
