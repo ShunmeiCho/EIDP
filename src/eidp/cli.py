@@ -1160,36 +1160,68 @@ def discovery_rca_batch_plan(
 
 @app.command("discovery-rca-outcome-validate")
 def discovery_rca_outcome_validate(
-    input_path: Path = typer.Option(..., "--input", help="Path to one Required Output Block JSON file"),
+    input_path: Path = typer.Option(
+        ...,
+        "--input",
+        help="Path to one Required Output Block JSON file, or a directory of *.json outcome files",
+    ),
 ) -> None:
     """Validate a Codex-assisted single-school RCA output block."""
     import json
 
     from eidp.scraper.discovery_rca_packet import validate_single_school_rca_outcome
 
-    try:
-        payload = json.loads(input_path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        typer.echo(f"failed to read {input_path}: {exc}", err=True)
-        raise typer.Exit(1) from exc
-    except json.JSONDecodeError as exc:
-        typer.echo(f"invalid JSON in {input_path}: {exc}", err=True)
-        raise typer.Exit(1) from exc
-
-    if not isinstance(payload, dict):
-        typer.echo("RCA outcome must be one JSON object", err=True)
+    is_directory = input_path.is_dir()
+    input_files = sorted(input_path.glob("*.json")) if is_directory else [input_path]
+    if not input_files:
+        typer.echo(f"no JSON outcome files found in {input_path}", err=True)
         raise typer.Exit(1)
 
-    errors = validate_single_school_rca_outcome(payload)
-    if errors:
-        typer.echo("Invalid discovery RCA outcome:", err=True)
-        for error in errors:
-            typer.echo(f"  - {error}", err=True)
+    valid_count = 0
+    failed = False
+    last_payload: dict[str, object] | None = None
+    for path in input_files:
+        label = path.name if is_directory else str(path)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            typer.echo(f"failed to read {label}: {exc}", err=True)
+            failed = True
+            continue
+        except json.JSONDecodeError as exc:
+            typer.echo(f"invalid JSON in {label}: {exc}", err=True)
+            failed = True
+            continue
+
+        if not isinstance(payload, dict):
+            typer.echo(f"Invalid discovery RCA outcome: {label}", err=True)
+            typer.echo("  - RCA outcome must be one JSON object", err=True)
+            failed = True
+            continue
+
+        errors = validate_single_school_rca_outcome(payload)
+        if errors:
+            typer.echo(f"Invalid discovery RCA outcome: {label}", err=True)
+            for error in errors:
+                typer.echo(f"  - {error}", err=True)
+            failed = True
+            continue
+        valid_count += 1
+        last_payload = payload
+
+    if failed:
         raise typer.Exit(1)
 
+    if is_directory:
+        typer.echo(f"OK discovery RCA outcomes: files={valid_count}")
+        return
+
+    assert last_payload is not None
     typer.echo(
         "OK discovery RCA outcome: "
-        f"school_id={payload['school_id']} outcome={payload['outcome']} layer={payload['layer']}"
+        f"school_id={last_payload['school_id']} "
+        f"outcome={last_payload['outcome']} "
+        f"layer={last_payload['layer']}"
     )
 
 

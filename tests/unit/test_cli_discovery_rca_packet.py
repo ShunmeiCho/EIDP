@@ -418,3 +418,73 @@ def test_discovery_rca_outcome_validate_rejects_drifting_output_block(tmp_path: 
     assert "invalid layer: broad_serp_search" in result.output
     assert "invalid outcome: found_maybe" in result.output
     assert "checked_paths must be a list" in result.output
+
+
+def test_discovery_rca_outcome_validate_accepts_output_directory(tmp_path: Path) -> None:
+    for school_id, outcome in [(95, "accepted_target_pdf"), (96, "needs_operator_review")]:
+        (tmp_path / f"{school_id}.json").write_text(
+            json.dumps(
+                {
+                    "school_id": school_id,
+                    "target_fiscal_year": 2026,
+                    "layer": "layer_1_pdf_discovery",
+                    "outcome": outcome,
+                    "source_page_url": f"https://example.ac.jp/{school_id}/",
+                    "candidate_pdf_url": "",
+                    "anchor_text": "",
+                    "fiscal_year_evidence": "",
+                    "target_form_evidence": "候補PDFあり",
+                    "negative_evidence": "",
+                    "checked_paths": [f"https://example.ac.jp/{school_id}/"],
+                    "search_queries_used": [],
+                    "operator_action": "review_pdf" if outcome == "needs_operator_review" else "none",
+                    "gold_set_entry_recommended": False,
+                    "candidate_rule": "",
+                    "anti_pattern": "",
+                    "confidence": "medium",
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "OK discovery RCA outcomes: files=2" in result.output
+
+
+def test_discovery_rca_outcome_validate_rejects_output_directory_with_bad_file(tmp_path: Path) -> None:
+    (tmp_path / "95.json").write_text(
+        json.dumps(
+            {
+                "school_id": 95,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "accepted_target_pdf",
+                "source_page_url": "https://example.ac.jp/",
+                "candidate_pdf_url": "",
+                "anchor_text": "",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "PDF body contains 機関要件確認申請書",
+                "negative_evidence": "",
+                "checked_paths": ["https://example.ac.jp/"],
+                "search_queries_used": [],
+                "operator_action": "none",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "medium",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "bad.json").write_text('{"school_id": 96, "layer": "broad_serp"}', encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "Invalid discovery RCA outcome: bad.json" in result.output
+    assert "missing required field: target_fiscal_year" in result.output
+    assert "invalid layer: broad_serp" in result.output

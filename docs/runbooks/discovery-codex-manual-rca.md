@@ -364,6 +364,13 @@ the finding into the gold set or a crawler rule:
 uv run eidp discovery-rca-outcome-validate --input path/to/rca-outcome.json
 ```
 
+For a batch plan, save each school result as one JSON file in the same
+directory and validate the directory:
+
+```bash
+uv run eidp discovery-rca-outcome-validate --input path/to/rca-outcomes/
+```
+
 ```json
 {
   "school_id": 0,
