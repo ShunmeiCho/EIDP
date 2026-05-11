@@ -381,6 +381,7 @@ def _int_or_none(value: object) -> int | None:
 def _compact_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
     extra = row.get("extra")
     return {
+        "school_id": _int_or_none(row.get("school_id")),
         "reason": str(row.get("reason") or ""),
         "pdf_type": str(row.get("pdf_type") or ""),
         "pdf_url": str(row.get("pdf_url") or ""),

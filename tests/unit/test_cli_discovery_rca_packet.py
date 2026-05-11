@@ -120,6 +120,7 @@ def test_discovery_rca_packet_cli_outputs_single_school_input_packet(tmp_path: P
         "latest_evidence_top_reasons": [["target_fiscal_year_not_detected", 1]],
         "latest_evidence_rows": [
             {
+                "school_id": 95,
                 "reason": "target_fiscal_year_not_detected",
                 "pdf_type": "target",
                 "pdf_url": "https://www.siw.ac.jp/information/shugakushien.pdf",
@@ -367,6 +368,7 @@ def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path,
     ]
     assert [item["packet"]["school_id"] for item in payload["items"]] == [2, 3, 4, 5, 1]
     assert payload["items"][0]["packet"]["official_index_url"] == "https://b.example.ac.jp/kokai/"
+    assert payload["items"][0]["packet"]["latest_evidence_rows"][0]["school_id"] == 2
 
 
 def test_discovery_rca_batch_plan_can_include_copy_paste_prompts(tmp_path: Path, monkeypatch) -> None:
