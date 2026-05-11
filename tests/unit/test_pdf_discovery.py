@@ -83,6 +83,9 @@ def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
         ("https://example.ac.jp/disclosure/shokugyouzissen_sweets.pdf", "職業実践専門課程"),
         ("https://example.ac.jp/disclosure/2026/subject_it-business.pdf", "ITビジネス学科"),
         ("https://example.ac.jp/disclosure/2026/subject-houritsu.pdf", "法律学科"),
+        ("https://example.ac.jp/disclosure/2026/info_it-business.pdf", "ITビジネス学科"),
+        ("https://example.ac.jp/disclosure/2026/grade_manage.pdf", "厳格かつ適正な成績管理"),
+        ("https://example.ac.jp/disclosure/2026/goal_policies.pdf", "専門課程の教育目標"),
     ]
 
     for url, anchor_text in token_cases:
