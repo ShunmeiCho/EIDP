@@ -24,7 +24,8 @@ def upgrade() -> None:
 
     # Preserve rows on existing databases while making future inserts safe:
     # the first row per content hash keeps the hash, later duplicate rows lose
-    # only the derived hash metadata so the unique index can be created.
+    # the derived hash metadata and leave the ingest queue so the unique index
+    # can be created without reprocessing duplicate PDFs.
     conn.execute(sa.text("""
         WITH duplicate_hashes AS (
             SELECT
@@ -37,7 +38,12 @@ def upgrade() -> None:
             WHERE file_hash IS NOT NULL
         )
         UPDATE document
-        SET file_hash = NULL
+        SET
+            file_hash = NULL,
+            ingest_status = CASE
+                WHEN ingest_status IN ('non_target', 'permanent_error', 'no_file') THEN ingest_status
+                ELSE 'school_mismatch'
+            END
         WHERE id IN (
             SELECT id FROM duplicate_hashes WHERE rn > 1
         )

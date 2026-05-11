@@ -38,6 +38,11 @@ ON department (
 )
 """
 
+_DOCUMENT_FILE_HASH_UNIQUE_INDEX_DDL = """
+CREATE UNIQUE INDEX IF NOT EXISTS uq_document_file_hash
+ON document (file_hash)
+"""
+
 _SQLITE_PRAGMAS = (
     "PRAGMA journal_mode=WAL",
     "PRAGMA foreign_keys=ON",
@@ -162,6 +167,47 @@ def create_null_safe_dept_index(engine: Engine) -> None:
         conn.commit()
 
 
+def ensure_sqlite_document_file_hash_index(engine: Engine) -> None:
+    """Clean legacy duplicate document hashes and enforce global hash uniqueness.
+
+    Older Windows SQLite installs may have been created before
+    ``Document.file_hash`` became globally unique. ``create_all(checkfirst=True)``
+    is not a reliable migration mechanism for indexes on existing tables, so the
+    bootstrap path must explicitly enforce this contract.
+    """
+    if not is_sqlite(engine):
+        return
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(document)")).mappings().all()
+        if not rows:
+            return
+        conn.execute(text("""
+            WITH duplicate_hashes AS (
+                SELECT
+                    id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY file_hash
+                        ORDER BY id
+                    ) AS rn
+                FROM document
+                WHERE file_hash IS NOT NULL
+            )
+            UPDATE document
+            SET
+                file_hash = NULL,
+                ingest_status = CASE
+                    WHEN ingest_status IN ('non_target', 'permanent_error', 'no_file') THEN ingest_status
+                    ELSE 'school_mismatch'
+                END
+            WHERE id IN (
+                SELECT id FROM duplicate_hashes WHERE rn > 1
+            )
+        """))
+        conn.execute(text("DROP INDEX IF EXISTS ix_document_file_hash"))
+        conn.execute(text("DROP INDEX IF EXISTS uq_document_file_hash"))
+        conn.execute(text(_DOCUMENT_FILE_HASH_UNIQUE_INDEX_DDL))
+
+
 def stamp_alembic_head(engine: Engine, alembic_ini: Path | None = None) -> None:
     """Mark the database as being at alembic ``head`` revision.
 
@@ -218,5 +264,6 @@ def bootstrap_sqlite(engine: Engine, *, alembic_ini: Path | None = None) -> None
     Base.metadata.create_all(engine, checkfirst=True)
     ensure_sqlite_additive_columns(engine)
     create_null_safe_dept_index(engine)
+    ensure_sqlite_document_file_hash_index(engine)
     apply_sqlite_pragmas(engine)
     stamp_alembic_head(engine, alembic_ini=alembic_ini)

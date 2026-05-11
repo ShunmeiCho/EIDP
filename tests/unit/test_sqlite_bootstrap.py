@@ -25,10 +25,11 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, func, inspect, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from eidp.db import sqlite_bootstrap
-from eidp.db.models import Department, DepartmentChange, DepartmentYearly, Document, School
+from eidp.db.models import Base, Department, DepartmentChange, DepartmentYearly, Document, School
 from eidp.db.sqlite_bootstrap import (
     apply_sqlite_pragmas,
     bootstrap_sqlite,
@@ -324,8 +325,6 @@ def test_document_file_hash_is_globally_unique(bootstrapped_engine):
     must match that contract so concurrent workers cannot both pass the
     select-before-insert check and insert duplicate document rows.
     """
-    from sqlalchemy.exc import IntegrityError
-
     with Session(bootstrapped_engine) as session:
         school_a = School(
             prefecture="東京都",
@@ -363,6 +362,74 @@ def test_document_file_hash_is_globally_unique(bootstrapped_engine):
                 file_hash=shared_hash,
                 fiscal_year=2026,
                 ingest_status="ingested",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.commit()
+
+
+def test_bootstrap_demotes_legacy_duplicate_document_hashes_before_unique_index(sqlite_engine):
+    """Existing operator SQLite DBs may predate the global hash unique index.
+
+    Bootstrap must clean those rows before creating the index; otherwise the
+    upgrade either fails or leaves duplicate PDF rows eligible for ingestion.
+    """
+
+    Base.metadata.create_all(sqlite_engine, checkfirst=True)
+    with sqlite_engine.begin() as conn:
+        conn.execute(text("DROP INDEX IF EXISTS uq_document_file_hash"))
+        conn.execute(text("DROP INDEX IF EXISTS ix_document_file_hash"))
+
+    with Session(sqlite_engine) as session:
+        school_a = School(
+            prefecture="東京都",
+            corporation_name="法人A",
+            school_name="A専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        school_b = School(
+            prefecture="東京都",
+            corporation_name="法人B",
+            school_name="B専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add_all([school_a, school_b])
+        session.flush()
+        shared_hash = "b" * 64
+        session.add_all([
+            Document(
+                school_id=school_a.id,
+                source_url="https://a.example.ac.jp/r8.pdf",
+                file_hash=shared_hash,
+                fiscal_year=2026,
+                ingest_status="ingested",
+            ),
+            Document(
+                school_id=school_b.id,
+                source_url="https://b.example.ac.jp/r8.pdf",
+                file_hash=shared_hash,
+                fiscal_year=2026,
+                ingest_status="pending",
+            ),
+        ])
+        session.commit()
+
+    bootstrap_sqlite(sqlite_engine)
+
+    with Session(sqlite_engine) as session:
+        docs = session.query(Document).order_by(Document.id).all()
+        assert [doc.file_hash for doc in docs] == ["b" * 64, None]
+        assert [doc.ingest_status for doc in docs] == ["ingested", "school_mismatch"]
+
+        session.add(
+            Document(
+                school_id=docs[1].school_id,
+                source_url="https://b.example.ac.jp/r8-copy.pdf",
+                file_hash="b" * 64,
+                fiscal_year=2026,
+                ingest_status="pending",
             )
         )
         with pytest.raises(IntegrityError):
