@@ -236,6 +236,50 @@ def test_gakka_reimport_with_changed_excel_content_creates_revision_2(engine):
         assert rows[1].extraction_method == "excel_import"
 
 
+def test_gakka_import_normalizes_specialized_course_suffix_to_field_label(engine):
+    """Excel master and PDF parser must use the same Department natural key.
+
+    Some master rows carry ``医療専門課程`` while PDF ingest normalizes the
+    same concept to ``医療``. Import must normalize too, otherwise the next
+    target-FY PDF creates a parallel Department instead of attaching yearly
+    data to the master row.
+    """
+    with Session(engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="テスト法人",
+            school_name="テスト専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.commit()
+
+        resolver = SchoolResolver(session)
+        resolver.build()
+        import_gakka(
+            _build_gakka_ws([
+                {
+                    "year": 2026,
+                    "prefecture": "東京都",
+                    "corp": "テスト法人",
+                    "school": "テスト専門学校",
+                    "course_name": "医療専門課程",
+                    "department": "第一学科",
+                    "duration": 3,
+                    "capacity": 40,
+                    "enrollment": 80,
+                }
+            ]),
+            session,
+            resolver,
+        )
+        session.commit()
+
+        dept = session.query(Department).filter(Department.school_id == school.id).one()
+        assert dept.course_name == "医療"
+
+
 def test_gakka_reimport_does_not_overwrite_pdf_current_revision(engine):
     with Session(engine) as session:
         school = School(

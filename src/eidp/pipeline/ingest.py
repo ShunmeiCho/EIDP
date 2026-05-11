@@ -14,6 +14,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, Document, SchoolYearStatus, SupportRecipient
+from eidp.department_normalization import normalize_course_name
 from eidp.extraction_confidence import (
     breakdown_to_json,
     classify,
@@ -35,37 +36,10 @@ def _norm(s: str) -> str:
     return unicodedata.normalize("NFKC", s).strip()
 
 
-_SPECIALIZED_COURSE_FIELDS = {
-    "工業",
-    "農業",
-    "医療",
-    "衛生",
-    "教育・社会福祉",
-    "商業実務",
-    "服飾・家政",
-    "文化・教養",
-}
-
-
-_PDF_COURSE_FIELD_ALIASES = {
-    "看護": "医療",
-}
-
-
 def _normalize_pdf_course_name(course_name: str | None) -> str | None:
     """Normalize PDF-side 課程名 to the field labels used by the Excel master."""
 
-    course = _norm(course_name or "")
-    if not course:
-        return None
-    compact = re.sub(r"\s+", "", course)
-    suffix = "専門課程"
-    if compact.endswith(suffix):
-        field = compact[: -len(suffix)]
-        field = _PDF_COURSE_FIELD_ALIASES.get(field, field)
-        if field in _SPECIALIZED_COURSE_FIELDS:
-            return field
-    return compact
+    return normalize_course_name(course_name)
 
 
 def _collapse_ws(s: str) -> str:

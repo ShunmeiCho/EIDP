@@ -11,6 +11,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias, SchoolYearStatus, SupportRecipient
+from eidp.department_normalization import normalize_course_name
 from eidp.fiscal_year import fiscal_year_from_japanese_era_text
 
 log = structlog.get_logger()
@@ -408,7 +409,7 @@ def import_gakka(
         prefecture = _safe_str(row[0])
         corp_name = _safe_str(row[1])
         school_name = _safe_str(row[2])
-        course_name = _safe_str(row[3])  # 課程名
+        course_name = normalize_course_name(_safe_str(row[3])) or ""  # 課程名
         dept_name = _safe_str(row[4])    # 学科名
         day_night = _safe_str(row[5])    # 昼夜
         duration_raw = _safe_float(row[6])   # 年限 (supports 1.5, 2.4 etc.)
