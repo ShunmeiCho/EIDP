@@ -88,6 +88,7 @@ def build_single_school_rca_batch_plan(
     discovery_method: str = "",
     limit: int = 10,
     known_operator_note: str = "",
+    include_prompts: bool = False,
 ) -> dict[str, Any]:
     """Build a prioritized list of single-school RCA packets."""
     from eidp.scraper.discovery_evidence_summary import (
@@ -127,14 +128,15 @@ def build_single_school_rca_batch_plan(
             evidence_log=evidence_log,
             known_operator_note=known_operator_note,
         )
-        items.append(
-            {
-                "priority": _bucket_priority(school_summary.bucket),
-                "bucket": school_summary.bucket,
-                "candidate_count": school_summary.candidate_count,
-                "packet": packet,
-            }
-        )
+        item = {
+            "priority": _bucket_priority(school_summary.bucket),
+            "bucket": school_summary.bucket,
+            "candidate_count": school_summary.candidate_count,
+            "packet": packet,
+        }
+        if include_prompts:
+            item["prompt"] = render_single_school_rca_prompt(packet)
+        items.append(item)
 
     return {
         "target_fiscal_year": int(target_fiscal_year),

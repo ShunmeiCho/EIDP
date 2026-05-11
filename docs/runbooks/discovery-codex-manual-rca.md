@@ -50,6 +50,7 @@ uv run eidp discovery-rca-batch-plan \
   --prefecture 埼玉県 \
   --discovery-method prefecture_aggregator \
   --limit 10 \
+  --include-prompts \
   --json
 ```
 
@@ -304,6 +305,7 @@ uv run eidp discovery-rca-batch-plan \
   --prefecture 埼玉県 \
   --discovery-method prefecture_aggregator \
   --limit 10 \
+  --include-prompts \
   --json
 ```
 

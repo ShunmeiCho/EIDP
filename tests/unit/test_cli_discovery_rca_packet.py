@@ -268,3 +268,74 @@ def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path,
     ]
     assert [item["packet"]["school_id"] for item in payload["items"]] == [2, 3]
     assert payload["items"][0]["packet"]["official_index_url"] == "https://b.example.ac.jp/kokai/"
+
+
+def test_discovery_rca_batch_plan_can_include_copy_paste_prompts(tmp_path: Path, monkeypatch) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 2,
+                "reason": "target_fiscal_year_not_detected",
+                "pdf_type": "target",
+                "pdf_url": "https://b.example.ac.jp/support.pdf",
+            }
+        ],
+    )
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(
+            School(
+                id=2,
+                school_name="B専門学校",
+                prefecture="埼玉県",
+                corporation_name="法人B",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(
+            SchoolSite(
+                school_id=2,
+                url="https://b.example.ac.jp/kokai/",
+                url_type="disclosure",
+                discovery_method="prefecture_aggregator",
+                confidence=0.9,
+                verified=True,
+            )
+        )
+        session.commit()
+
+    import eidp.db.session as db_session
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: Session(engine))
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-rca-batch-plan",
+            "--evidence-log",
+            str(evidence_path),
+            "--prefecture",
+            "埼玉県",
+            "--discovery-method",
+            "prefecture_aggregator",
+            "--target-fiscal-year",
+            "2026",
+            "--limit",
+            "1",
+            "--include-prompts",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert len(payload["items"]) == 1
+    prompt = payload["items"][0]["prompt"]
+    assert "Investigate this EIDP school as a single-school RCA packet." in prompt
+    assert "Do not run broad SERP crawling." in prompt
+    assert '"school_id": 2' in prompt
+    assert '"latest_bucket": "target_form_without_year_evidence"' in prompt

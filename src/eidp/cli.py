@@ -1122,6 +1122,7 @@ def discovery_rca_batch_plan(
     discovery_method: str = typer.Option("", help="Optional DB scope: school_site.discovery_method"),
     limit: int = typer.Option(10, help="Maximum number of RCA packet items to emit"),
     known_operator_note: str = typer.Option("", help="Optional operator note copied into every packet"),
+    include_prompts: bool = typer.Option(False, "--include-prompts", help="Embed copy-paste Codex prompts per item"),
     output_json: bool = typer.Option(False, "--json", help="Emit JSON batch plan"),
 ) -> None:
     """Build a prioritized read-only batch of single-school RCA packets."""
@@ -1142,6 +1143,7 @@ def discovery_rca_batch_plan(
             discovery_method=discovery_method,
             limit=limit,
             known_operator_note=known_operator_note,
+            include_prompts=include_prompts,
         )
     finally:
         session.close()
