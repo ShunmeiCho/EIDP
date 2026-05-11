@@ -367,16 +367,22 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     if target_missing <= 0:
         return {
             "target_pdf_auto_acquired_count": acquired,
+            "target_pdf_auto_denominator_count": 0,
+            "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
             "target_pdf_auto_yield_pct": None,
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+            "ship_gate_metric_basis": "weekly_missing_school_acquisition",
             "ship_gate_status": "not_measured",
         }
 
     yield_pct = round(acquired / target_missing * 100.0, 1)
     return {
         "target_pdf_auto_acquired_count": acquired,
+        "target_pdf_auto_denominator_count": target_missing,
+        "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
         "target_pdf_auto_yield_pct": yield_pct,
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+        "ship_gate_metric_basis": "weekly_missing_school_acquisition",
         "ship_gate_status": "pass" if yield_pct >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate",
     }
 

@@ -340,8 +340,11 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     assert payload["stale_school_count"] == 3
     assert payload["no_crawlable_url_school_count"] == 9
     assert payload["target_pdf_auto_acquired_count"] == 6
+    assert payload["target_pdf_auto_denominator_count"] == 10
+    assert payload["target_pdf_auto_denominator_scope"] == "target_missing_schools_before_run"
     assert payload["target_pdf_auto_yield_pct"] == 60.0
     assert payload["ship_gate_auto_yield_pct"] == 60.0
+    assert payload["ship_gate_metric_basis"] == "weekly_missing_school_acquisition"
     assert payload["ship_gate_status"] == "pass"
     assert payload["new_document_count"] == 2
     assert payload["new_document_ids"] == [10, 11]

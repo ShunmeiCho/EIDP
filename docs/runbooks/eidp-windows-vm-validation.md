@@ -134,11 +134,18 @@ C:\Program Files\EIDP
 "C:\Program Files\EIDP\scripts\validate_install.bat" --after-setup --after-bootstrap
 ```
 
+出荷 gate まで同時に判定する場合:
+
+```text
+"C:\Program Files\EIDP\scripts\validate_install.bat" --after-setup --after-bootstrap --require-ship-gate
+```
+
 確認項目:
 
 - `logs\bootstrap-pdfs-YYYYMMDD-HHMMSS.json` が作成される
 - `logs\bootstrap-pdfs-YYYYMMDD-HHMMSS.log` が作成される
-- progress JSON に `target_pdf_auto_yield_pct` と `ship_gate_status` がある
+- progress JSON に `target_pdf_auto_yield_pct`、`target_pdf_auto_denominator_scope`、
+  `ship_gate_metric_basis`、`ship_gate_status` がある
 - PDF探索で失敗証跡がある場合、`data\output\target-year-discovery\*-discovery-rca-batch-plan.json` が作成される
 - `EIDP-diagnose.bat` の診断ファイルに最新の Codex RCA キューが含まれる
 
@@ -165,6 +172,12 @@ C:\Program Files\EIDP
 "C:\Program Files\EIDP\scripts\validate_install.bat" --after-setup --after-weekly
 ```
 
+出荷 gate まで同時に判定する場合:
+
+```text
+"C:\Program Files\EIDP\scripts\validate_install.bat" --after-setup --after-weekly --require-ship-gate
+```
+
 確認項目:
 
 - UI に `週次処理中、編集は一時停止` が表示される
@@ -174,7 +187,8 @@ C:\Program Files\EIDP
 - `data\output\last_run.json` が作成される
 - `last_run.json` に `status=success`、`run_id`、`started_at`、`finished_at` がある
 - `last_run.json` に `current_fy`、`selection_mode`、`target_missing_school_count` がある
-- `last_run.json` に `target_pdf_auto_yield_pct` と `ship_gate_status` がある
+- `last_run.json` に `target_pdf_auto_yield_pct`、`target_pdf_auto_denominator_scope`、
+  `ship_gate_metric_basis`、`ship_gate_status` がある
 - `selection_mode` は通常 `target_missing`
 - Excel は自動生成されない
 

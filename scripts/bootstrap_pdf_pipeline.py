@@ -123,8 +123,10 @@ def bootstrap_target_pdf_yield_metrics(
         return {
             "target_pdf_auto_acquired_count": acquired,
             "target_pdf_auto_denominator_count": 0,
+            "target_pdf_auto_denominator_scope": "active_specialty_schools",
             "target_pdf_auto_yield_pct": None,
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+            "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
             "ship_gate_status": "not_measured",
         }
 
@@ -132,8 +134,10 @@ def bootstrap_target_pdf_yield_metrics(
     return {
         "target_pdf_auto_acquired_count": acquired,
         "target_pdf_auto_denominator_count": denominator,
+        "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": yield_pct,
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
         "ship_gate_status": "pass" if yield_pct >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate",
     }
 

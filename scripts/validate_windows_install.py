@@ -96,8 +96,11 @@ LAST_RUN_REQUIRED_KEYS = (
     "target_missing_school_count",
     "new_document_count",
     "target_pdf_auto_acquired_count",
+    "target_pdf_auto_denominator_count",
+    "target_pdf_auto_denominator_scope",
     "target_pdf_auto_yield_pct",
     "ship_gate_auto_yield_pct",
+    "ship_gate_metric_basis",
     "ship_gate_status",
     "discovery_stats",
     "ingest_stats",
@@ -122,6 +125,8 @@ BUILD_INFO_REQUIRED_KEYS = (
 )
 
 SHIP_GATE_STATUSES = frozenset({"pass", "below_gate", "not_measured"})
+BOOTSTRAP_SHIP_GATE_METRIC_BASIS = "post_bootstrap_current_target_fy_coverage"
+WEEKLY_SHIP_GATE_METRIC_BASIS = "weekly_missing_school_acquisition"
 
 
 def _posix_rel(path: str) -> Path:
@@ -335,7 +340,13 @@ def _load_latest_bootstrap_progress(check: InstallCheck, root: Path) -> dict[str
     return payload
 
 
-def _validate_bootstrap_progress_payload(check: InstallCheck, root: Path, payload: dict[str, Any]) -> None:
+def _validate_bootstrap_progress_payload(
+    check: InstallCheck,
+    root: Path,
+    payload: dict[str, Any],
+    *,
+    require_ship_gate: bool = False,
+) -> None:
     check.details["bootstrap_status"] = payload.get("status")
     if payload.get("status") != "succeeded":
         check.fail("bootstrap progress status must be succeeded for the after-bootstrap gate")
@@ -348,8 +359,10 @@ def _validate_bootstrap_progress_payload(check: InstallCheck, root: Path, payloa
     required_keys = (
         "target_pdf_auto_acquired_count",
         "target_pdf_auto_denominator_count",
+        "target_pdf_auto_denominator_scope",
         "target_pdf_auto_yield_pct",
         "ship_gate_auto_yield_pct",
+        "ship_gate_metric_basis",
         "ship_gate_status",
     )
     for key in required_keys:
@@ -373,6 +386,21 @@ def _validate_bootstrap_progress_payload(check: InstallCheck, root: Path, payloa
     bootstrap_gate_status = details.get("ship_gate_status")
     if isinstance(bootstrap_gate_status, str) and bootstrap_gate_status not in SHIP_GATE_STATUSES:
         check.fail("bootstrap progress details ship_gate_status must be pass, below_gate, or not_measured")
+    if (
+        "target_pdf_auto_denominator_scope" in details
+        and not isinstance(details.get("target_pdf_auto_denominator_scope"), str)
+    ):
+        check.fail("bootstrap progress details target_pdf_auto_denominator_scope must be a string")
+    if "ship_gate_metric_basis" in details:
+        if not isinstance(details.get("ship_gate_metric_basis"), str):
+            check.fail("bootstrap progress details ship_gate_metric_basis must be a string")
+        elif details.get("ship_gate_metric_basis") != BOOTSTRAP_SHIP_GATE_METRIC_BASIS:
+            check.fail(
+                "bootstrap progress details ship_gate_metric_basis must be "
+                f"{BOOTSTRAP_SHIP_GATE_METRIC_BASIS}"
+            )
+    if require_ship_gate and bootstrap_gate_status != "pass":
+        check.fail("bootstrap ship_gate_status must be pass when --require-ship-gate is used")
 
     raw_path = str(details.get("discovery_rca_batch_plan_path") or "")
     if raw_path:
@@ -391,6 +419,7 @@ def validate_install(
     after_setup: bool = False,
     after_bootstrap: bool = False,
     after_weekly: bool = False,
+    require_ship_gate: bool = False,
     require_ocr_addon: bool = False,
     require_playwright_addon: bool = False,
 ) -> InstallCheck:
@@ -401,6 +430,8 @@ def validate_install(
     if not root.is_dir():
         check.fail(f"app root does not exist or is not a directory: {root}")
         return check
+    if require_ship_gate and not (after_bootstrap or after_weekly):
+        check.fail("--require-ship-gate requires --after-bootstrap or --after-weekly")
 
     for rel in CORE_FILES:
         if not _exists_file(root, rel):
@@ -438,7 +469,7 @@ def validate_install(
     if after_bootstrap:
         bootstrap_progress = _load_latest_bootstrap_progress(check, root)
         if bootstrap_progress is not None:
-            _validate_bootstrap_progress_payload(check, root, bootstrap_progress)
+            _validate_bootstrap_progress_payload(check, root, bootstrap_progress, require_ship_gate=require_ship_gate)
         logs_dir = root / "logs"
         bootstrap_logs = sorted(logs_dir.glob("bootstrap-pdfs-*.log")) if logs_dir.is_dir() else []
         check.details["bootstrap_log_count"] = len(bootstrap_logs)
@@ -456,7 +487,12 @@ def validate_install(
                 check.fail("last_run.json status must be success for the weekly validation gate")
             if last_run.get("selection_mode") not in {"target_missing", "stale_only"}:
                 check.fail("last_run.json selection_mode must be target_missing or stale_only")
-            for key in ("target_missing_school_count", "new_document_count", "target_pdf_auto_acquired_count"):
+            for key in (
+                "target_missing_school_count",
+                "new_document_count",
+                "target_pdf_auto_acquired_count",
+                "target_pdf_auto_denominator_count",
+            ):
                 if key in last_run and not isinstance(last_run.get(key), int):
                     check.fail(f"last_run.json {key} must be an integer")
             if "target_pdf_auto_yield_pct" in last_run:
@@ -474,6 +510,18 @@ def validate_install(
             weekly_gate_status = last_run.get("ship_gate_status")
             if isinstance(weekly_gate_status, str) and weekly_gate_status not in SHIP_GATE_STATUSES:
                 check.fail("last_run.json ship_gate_status must be pass, below_gate, or not_measured")
+            if (
+                "target_pdf_auto_denominator_scope" in last_run
+                and not isinstance(last_run.get("target_pdf_auto_denominator_scope"), str)
+            ):
+                check.fail("last_run.json target_pdf_auto_denominator_scope must be a string")
+            if "ship_gate_metric_basis" in last_run:
+                if not isinstance(last_run.get("ship_gate_metric_basis"), str):
+                    check.fail("last_run.json ship_gate_metric_basis must be a string")
+                elif last_run.get("ship_gate_metric_basis") != WEEKLY_SHIP_GATE_METRIC_BASIS:
+                    check.fail(f"last_run.json ship_gate_metric_basis must be {WEEKLY_SHIP_GATE_METRIC_BASIS}")
+            if require_ship_gate and weekly_gate_status != "pass":
+                check.fail("last_run.json ship_gate_status must be pass when --require-ship-gate is used")
             _validate_discovery_rca_batch_plan(check, root, last_run.get("discovery_rca"))
 
         logs_dir = root / "logs"
@@ -536,6 +584,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--after-setup", action="store_true", help="Require first_setup.bat output artifacts")
     parser.add_argument("--after-bootstrap", action="store_true", help="Require initial bootstrap progress artifacts")
     parser.add_argument("--after-weekly", action="store_true", help="Require weekly_run.bat output artifacts")
+    parser.add_argument(
+        "--require-ship-gate",
+        action="store_true",
+        help="Fail after-bootstrap/after-weekly validation unless ship_gate_status is pass.",
+    )
     parser.add_argument("--require-ocr-addon", action="store_true")
     parser.add_argument("--require-playwright-addon", action="store_true")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
@@ -546,6 +599,7 @@ def main(argv: list[str] | None = None) -> int:
         after_setup=args.after_setup,
         after_bootstrap=args.after_bootstrap,
         after_weekly=args.after_weekly,
+        require_ship_gate=args.require_ship_gate,
         require_ocr_addon=args.require_ocr_addon,
         require_playwright_addon=args.require_playwright_addon,
     )

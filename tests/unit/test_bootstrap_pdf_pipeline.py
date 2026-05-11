@@ -962,8 +962,10 @@ def test_bootstrap_target_pdf_yield_metrics_marks_gate_status() -> None:
     ) == {
         "target_pdf_auto_acquired_count": 6,
         "target_pdf_auto_denominator_count": 10,
+        "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": 60.0,
         "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
         "ship_gate_status": "pass",
     }
 
@@ -973,8 +975,10 @@ def test_bootstrap_target_pdf_yield_metrics_marks_gate_status() -> None:
     ) == {
         "target_pdf_auto_acquired_count": 0,
         "target_pdf_auto_denominator_count": 0,
+        "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": None,
         "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
         "ship_gate_status": "not_measured",
     }
 
@@ -1090,8 +1094,10 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
         "excel_ready": 1,
         "target_pdf_auto_acquired_count": 6,
         "target_pdf_auto_denominator_count": 10,
+        "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": 60.0,
         "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
         "ship_gate_status": "pass",
     }
     assert calls[0] == {

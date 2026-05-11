@@ -150,6 +150,7 @@ PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キュー
 - 処理結果を `data\output\last_run.json` に保存します。
 - 真の対象年度PDFの自動取得率 (`target_pdf_auto_yield_pct`) と
   出荷判定 (`ship_gate_status`) を保存します。
+  `ship_gate_metric_basis` は週次処理では `weekly_missing_school_acquisition` です。
 - PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キューを
   `data\output\target-year-discovery\{run_id}-discovery-rca-batch-plan.json`
   に保存します。

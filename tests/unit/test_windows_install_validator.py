@@ -93,8 +93,11 @@ def _weekly_artifacts(root: Path) -> None:
                 "target_missing_school_count": 7,
                 "new_document_count": 2,
                 "target_pdf_auto_acquired_count": 6,
+                "target_pdf_auto_denominator_count": 7,
+                "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
                 "target_pdf_auto_yield_pct": 60.0,
                 "ship_gate_auto_yield_pct": 60.0,
+                "ship_gate_metric_basis": "weekly_missing_school_acquisition",
                 "ship_gate_status": "pass",
                 "discovery_stats": {"downloaded": 2},
                 "ingest_stats": {"processed": 2},
@@ -118,8 +121,10 @@ def _bootstrap_artifacts(root: Path) -> None:
                 "details": {
                     "target_pdf_auto_acquired_count": 6,
                     "target_pdf_auto_denominator_count": 10,
+                    "target_pdf_auto_denominator_scope": "active_specialty_schools",
                     "target_pdf_auto_yield_pct": 60.0,
                     "ship_gate_auto_yield_pct": 60.0,
+                    "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
                     "ship_gate_status": "pass",
                 },
             }
@@ -409,6 +414,24 @@ def test_validate_after_bootstrap_rejects_unknown_ship_gate_status(tmp_path: Pat
     assert any("ship_gate_status must be pass, below_gate, or not_measured" in error for error in check.errors)
 
 
+def test_validate_after_bootstrap_release_gate_rejects_below_gate(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _bootstrap_artifacts(root)
+    payload = json.loads((root / "logs" / "bootstrap-pdfs-20260505-010203.json").read_text(encoding="utf-8"))
+    payload["details"]["target_pdf_auto_acquired_count"] = 5
+    payload["details"]["target_pdf_auto_yield_pct"] = 50.0
+    payload["details"]["ship_gate_status"] = "below_gate"
+    _write(root, "logs/bootstrap-pdfs-20260505-010203.json", json.dumps(payload))
+
+    structure_only = module.validate_install(root, after_bootstrap=True)
+    release_gate = module.validate_install(root, after_bootstrap=True, require_ship_gate=True)
+
+    assert structure_only.ok, structure_only.errors
+    assert not release_gate.ok
+    assert any("bootstrap ship_gate_status must be pass" in error for error in release_gate.errors)
+
+
 def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
@@ -575,6 +598,33 @@ def test_validate_after_weekly_rejects_unknown_ship_gate_status(tmp_path: Path) 
     assert any("ship_gate_status must be pass, below_gate, or not_measured" in error for error in check.errors)
 
 
+def test_validate_after_weekly_release_gate_rejects_below_gate(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload["target_pdf_auto_acquired_count"] = 3
+    payload["target_pdf_auto_yield_pct"] = 42.9
+    payload["ship_gate_status"] = "below_gate"
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    structure_only = module.validate_install(root, after_weekly=True)
+    release_gate = module.validate_install(root, after_weekly=True, require_ship_gate=True)
+
+    assert structure_only.ok, structure_only.errors
+    assert not release_gate.ok
+    assert any("last_run.json ship_gate_status must be pass" in error for error in release_gate.errors)
+
+
+def test_validate_requires_release_gate_source_when_ship_gate_required(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+
+    check = module.validate_install(root, require_ship_gate=True)
+
+    assert not check.ok
+    assert any("--require-ship-gate requires --after-bootstrap or --after-weekly" in error for error in check.errors)
+
+
 def test_validate_optional_ocr_addon(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
 
@@ -633,7 +683,15 @@ def test_vm_runbook_uses_packaged_validator_wrapper() -> None:
     assert "uv run python scripts/validate_windows_install.py" not in body
     assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup' in body
     assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup --after-bootstrap' in body
+    assert (
+        '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '
+        "--after-setup --after-bootstrap --require-ship-gate"
+    ) in body
     assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup --after-weekly' in body
+    assert (
+        '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '
+        "--after-setup --after-weekly --require-ship-gate"
+    ) in body
     assert (
         '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '
         "--after-setup --require-ocr-addon"
