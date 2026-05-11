@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `ff4b13c6037070d7106eca0a60e3c91124f15062` (`eidp-windows-v216.zip`)
+Latest audited Windows package commit: `754e27de44880908dd7a98198fbe2be53190889c` (`eidp-windows-v217.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -1466,38 +1466,41 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v216.zip` rebuilt at commit `ff4b13c6037070d7106eca0a60e3c91124f15062`, verifier `OK core`, `git_dirty=false`, SHA256 `dca9dbbc60aac7035c6bb430ef01a7b9985a0dc40ad882da1c5ae52fe7c6d78f`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR runtime contract checks for `src/eidp/ocr/tesseract.py` / `src/eidp/ocr/availability.py`, packaged SQLite bootstrap data-loss guards for orphaned WAL sidecars, `PRAGMA integrity_check`, additive `department_change` columns, and `uq_document_file_hash`, packaged operator-action audit gates for school-code review, URL-candidate review, department-alias approval/void, manual entry, and fiscal-year override, a packaged 競合校 Excel target-year export gate for `src/eidp/excel/competition_exporter.py`, and a packaged CLI report DB-not-ready gate (`database_not_ready`) so deployment reports fail explicitly instead of printing SQL tracebacks. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v154 smoke on a fresh `C:\EIDP-v154-26d18a9` extraction remains the latest real Windows E2E proof: setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), school `757` packaged discovery accepts `study_support_system.pdf` with `year_evidence=prefecture_index_current_year`, school `757` packaged ingest writes the FY2026 row to the existing `医療` / `第一学科` Department with `extraction_confidence=0.94` and `is_current=True`, and Excel export contains one row for the school in both `学科別` and `在籍のみ抜粋`. v150 remains the packaged proof for school `95` target-PDF-to-Excel. | Latest v216 package verifier and extracted-install smoke are green on macOS. Windows SSH network reachability has recovered, but Codex still needs reusable SSH authentication before v216 can be validated on Windows. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v217.zip` rebuilt at commit `754e27de44880908dd7a98198fbe2be53190889c`, verifier `OK core`, `git_dirty=false`, SHA256 `91c47e37e3454bf591521a456e2b5f976fbdf4daa62037c4e57c46ccb625ea23`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR runtime contract checks for `src/eidp/ocr/tesseract.py` / `src/eidp/ocr/availability.py`, packaged SQLite bootstrap data-loss guards for orphaned WAL sidecars, `PRAGMA integrity_check`, additive `department_change` columns, and `uq_document_file_hash`, packaged Windows install validator checks for actual SQLite `PRAGMA integrity_check` and the `support_recipient` table, packaged operator-action audit gates for school-code review, URL-candidate review, department-alias approval/void, manual entry, and fiscal-year override, a packaged 競合校 Excel target-year export gate for `src/eidp/excel/competition_exporter.py`, and a packaged CLI report DB-not-ready gate (`database_not_ready`) so deployment reports fail explicitly instead of printing SQL tracebacks. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v154 smoke on a fresh `C:\EIDP-v154-26d18a9` extraction remains the latest real Windows E2E proof: setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), school `757` packaged discovery accepts `study_support_system.pdf` with `year_evidence=prefecture_index_current_year`, school `757` packaged ingest writes the FY2026 row to the existing `医療` / `第一学科` Department with `extraction_confidence=0.94` and `is_current=True`, and Excel export contains one row for the school in both `学科別` and `在籍のみ抜粋`. v150 remains the packaged proof for school `95` target-PDF-to-Excel. | Latest v217 package verifier and extracted-install smoke are green on macOS. Windows SSH network reachability has recovered, but Codex still needs reusable SSH authentication before v217 can be validated on Windows. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
-- 2026-05-11 v216 local package refresh →
-  commit `ff4b13c6037070d7106eca0a60e3c91124f15062` includes the v215
-  競合校 Excel exporter release gate and adds a CLI deployment-report hardening
-  fix. `eidp report ... --json` now returns `error="database_not_ready"` with
+- 2026-05-11 v217 local package refresh →
+  commit `754e27de44880908dd7a98198fbe2be53190889c` hardens the Windows
+  install validator's actual SQLite setup gate: `--after-setup` now requires
+  the objective-critical `support_recipient` table and records/fails on actual
+  `PRAGMA integrity_check` output. The distribution verifier gates the packaged
+  validator contract through `support_recipient`, `sqlite_integrity_check`, and
+  `PRAGMA integrity_check` tokens. This builds on the v216 CLI deployment-report
+  hardening: `eidp report ... --json` returns `error="database_not_ready"` with
   exit code 2 when the DB schema is missing, instead of leaking a SQLAlchemy
-  traceback; the distribution verifier gates this packaged behavior through
-  `_exit_report_db_error` / `database_not_ready` tokens. The core ZIP also
-  continues to require
+  traceback. The core ZIP also continues to require
   `src/eidp/excel/competition_exporter.py` and preserve the target-FY business
   export contract: default to `settings.target_fiscal_year`, reject empty
   target-year business exports with `TargetFiscalYearDataMissingError`, filter
   `gap_report_for_export(..., school_type="専門学校")`, and return target-year
-  readiness metrics. Verification: `uv run pytest tests/unit/test_cli_reports.py
-  tests/unit/test_windows_distribution_verifier.py -q` → `58 passed`;
-  `uv run pytest tests/unit -q` → `1144 passed, 5 warnings`; `uv run ruff
-  check src/eidp/cli.py scripts/verify_windows_distribution.py
-  tests/unit/test_cli_reports.py tests/unit/test_windows_distribution_verifier.py`
-  → passed.
-- v216 Windows ZIP artifacts were rebuilt locally at commit
-  `ff4b13c6037070d7106eca0a60e3c91124f15062`: `dist/eidp-windows-v216.zip`
+  readiness metrics. Verification: `uv run pytest
+  tests/unit/test_windows_install_validator.py
+  tests/unit/test_windows_distribution_verifier.py -q` → `93 passed`;
+  `uv run pytest tests/unit -q` → `1147 passed, 5 warnings`; `uv run ruff
+  check scripts/validate_windows_install.py scripts/verify_windows_distribution.py
+  tests/unit/test_windows_install_validator.py
+  tests/unit/test_windows_distribution_verifier.py` → passed.
+- v217 Windows ZIP artifacts were rebuilt locally at commit
+  `754e27de44880908dd7a98198fbe2be53190889c`: `dist/eidp-windows-v217.zip`
   and latest alias `dist/eidp-windows.zip` both have SHA256
-  `dca9dbbc60aac7035c6bb430ef01a7b9985a0dc40ad882da1c5ae52fe7c6d78f`.
+  `91c47e37e3454bf591521a456e2b5f976fbdf4daa62037c4e57c46ccb625ea23`.
   `uv run python scripts/verify_windows_distribution.py
-  dist/eidp-windows-v216.zip --json` returned `ok=true`, `errors=[]`, and
+  dist/eidp-windows-v217.zip --json` returned `ok=true`, `errors=[]`, and
   `warnings=[]`, with 3,026 ZIP entries, 78 wheels, 16 packaged discovery
   gold-set entries, and BUILD_INFO `git_dirty=false`. An extracted-install
-  check at `/tmp/eidp-v216-extract` returned `ok=true`, `errors=[]`,
+  check at `/tmp/eidp-v217-extract` returned `ok=true`, `errors=[]`,
   `warnings=[]`, `master_xlsx_present=true`, and `wheel_count=78`.
 - 2026-05-11 v214 local package refresh →
   commit `8969ceb3f6325a6c71a6ccd63a7fcb3164ec1291` fixes an operator audit
