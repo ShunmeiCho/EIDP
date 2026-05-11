@@ -115,6 +115,20 @@ def test_discovery_rca_packet_cli_outputs_single_school_input_packet(tmp_path: P
         ],
         "latest_bucket": "target_form_without_year_evidence",
         "latest_evidence_rows_path": str(evidence_path),
+        "latest_evidence_row_count": 1,
+        "latest_evidence_top_reasons": [["target_fiscal_year_not_detected", 1]],
+        "latest_evidence_rows": [
+            {
+                "reason": "target_fiscal_year_not_detected",
+                "pdf_type": "target",
+                "pdf_url": "https://www.siw.ac.jp/information/shugakushien.pdf",
+                "page_url": "",
+                "anchor_text": "",
+                "pattern_type": "",
+                "score": None,
+                "extra": {},
+            }
+        ],
         "known_operator_note": "Win SSH disconnected; continue manual RCA on Mac.",
     }
 
@@ -180,6 +194,8 @@ def test_discovery_rca_packet_cli_outputs_copy_paste_prompt(tmp_path: Path, monk
     assert "Do not run broad SERP crawling." in result.output
     assert '"school_id": 95' in result.output
     assert '"latest_bucket": "target_form_without_year_evidence"' in result.output
+    assert '"latest_evidence_rows"' in result.output
+    assert "https://www.siw.ac.jp/information/shugakushien.pdf" in result.output
     assert "Return exactly one Required Output Block JSON object." in result.output
 
 

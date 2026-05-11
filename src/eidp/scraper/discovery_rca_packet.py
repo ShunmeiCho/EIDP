@@ -57,6 +57,8 @@ def build_single_school_rca_packet(
             break
 
     latest_bucket = "unknown"
+    latest_evidence_rows: list[dict[str, Any]] = []
+    latest_evidence_top_reasons: list[list[Any]] = []
     if evidence_log is not None:
         rows = [
             row
@@ -65,6 +67,11 @@ def build_single_school_rca_packet(
         ]
         school_summary = summarize_pdf_discovery_evidence(rows).school_summaries
         latest_bucket = school_summary[0].bucket if school_summary else "no_evidence"
+        latest_evidence_top_reasons = [
+            [reason, count]
+            for reason, count in (school_summary[0].top_reasons if school_summary else [])
+        ]
+        latest_evidence_rows = [_compact_evidence_row(row) for row in rows[:10]]
 
     return {
         "school_id": int(school.id),
@@ -75,6 +82,9 @@ def build_single_school_rca_packet(
         "registered_sites": registered_sites,
         "latest_bucket": latest_bucket,
         "latest_evidence_rows_path": str(evidence_log) if evidence_log is not None else "",
+        "latest_evidence_row_count": len(rows) if evidence_log is not None else 0,
+        "latest_evidence_top_reasons": latest_evidence_top_reasons,
+        "latest_evidence_rows": latest_evidence_rows,
         "known_operator_note": known_operator_note,
     }
 
@@ -193,5 +203,28 @@ def _int_or_none(value: object) -> int | None:
         return None
     try:
         return int(str(value))
+    except ValueError:
+        return None
+
+
+def _compact_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
+    extra = row.get("extra")
+    return {
+        "reason": str(row.get("reason") or ""),
+        "pdf_type": str(row.get("pdf_type") or ""),
+        "pdf_url": str(row.get("pdf_url") or ""),
+        "page_url": str(row.get("page_url") or ""),
+        "anchor_text": str(row.get("anchor_text") or ""),
+        "pattern_type": str(row.get("pattern_type") or ""),
+        "score": _float_or_none(row.get("score")),
+        "extra": extra if isinstance(extra, dict) else {},
+    }
+
+
+def _float_or_none(value: object) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(str(value))
     except ValueError:
         return None

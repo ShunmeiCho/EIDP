@@ -340,7 +340,9 @@ usually publication timing problems rather than immediate crawler bugs.
 
 Every manual/Codex investigation must end with one JSON object in this shape.
 This is the bridge between human observation, gold-set entries, and future
-agent behavior.
+agent behavior. Generated packets include the latest school-level bucket, top
+evidence reasons, and up to 10 compact evidence rows so a copied prompt remains
+useful even when the target Codex session cannot read the original JSONL file.
 
 ```json
 {

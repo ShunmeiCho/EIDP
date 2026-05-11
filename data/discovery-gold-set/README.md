@@ -77,7 +77,8 @@ uv run eidp discovery-rca-packet \
 ```
 
 Use `--prompt` on the same command to emit a copy-paste Codex investigation
-prompt instead of the raw packet JSON.
+prompt instead of the raw packet JSON. The packet includes the latest bucket,
+top evidence reasons, and up to 10 compact evidence rows for that school.
 
 For a prioritized list of schools to hand to Codex next:
 
