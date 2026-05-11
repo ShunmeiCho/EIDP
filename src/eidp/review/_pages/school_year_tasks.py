@@ -1626,6 +1626,17 @@ def _render_weekly_last_run(payload: dict[str, Any]) -> None:
         meta.append(f"探索方式: {payload['selection_mode']}")
     if meta:
         st.caption(" / ".join(str(item) for item in meta))
+    auto_yield = payload.get("target_pdf_auto_yield_pct")
+    if auto_yield is not None:
+        acquired = _int_or_default(payload.get("target_pdf_auto_acquired_count"), 0)
+        target_missing = _int_or_default(payload.get("target_missing_school_count"), 0)
+        gate = payload.get("ship_gate_auto_yield_pct")
+        gate_status = str(payload.get("ship_gate_status") or "unknown")
+        gate_text = f" / gate {gate}%" if gate is not None else ""
+        st.caption(
+            f"自動取得率: {auto_yield}% ({acquired}/{target_missing})"
+            f"{gate_text} / 出荷判定: {gate_status}"
+        )
     if payload.get("summary_path"):
         st.caption(f"詳細ログ: {payload['summary_path']}")
     discovery_rca = payload.get("discovery_rca")

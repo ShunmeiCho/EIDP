@@ -95,6 +95,10 @@ LAST_RUN_REQUIRED_KEYS = (
     "selection_mode",
     "target_missing_school_count",
     "new_document_count",
+    "target_pdf_auto_acquired_count",
+    "target_pdf_auto_yield_pct",
+    "ship_gate_auto_yield_pct",
+    "ship_gate_status",
     "discovery_stats",
     "ingest_stats",
 )
@@ -347,9 +351,14 @@ def validate_install(
                 check.fail("last_run.json status must be success for the weekly validation gate")
             if last_run.get("selection_mode") not in {"target_missing", "stale_only"}:
                 check.fail("last_run.json selection_mode must be target_missing or stale_only")
-            for key in ("target_missing_school_count", "new_document_count"):
+            for key in ("target_missing_school_count", "new_document_count", "target_pdf_auto_acquired_count"):
                 if key in last_run and not isinstance(last_run.get(key), int):
                     check.fail(f"last_run.json {key} must be an integer")
+            for key in ("target_pdf_auto_yield_pct", "ship_gate_auto_yield_pct"):
+                if key in last_run and not isinstance(last_run.get(key), int | float):
+                    check.fail(f"last_run.json {key} must be numeric")
+            if "ship_gate_status" in last_run and not isinstance(last_run.get("ship_gate_status"), str):
+                check.fail("last_run.json ship_gate_status must be a string")
             _validate_discovery_rca_batch_plan(check, root, last_run.get("discovery_rca"))
 
         logs_dir = root / "logs"

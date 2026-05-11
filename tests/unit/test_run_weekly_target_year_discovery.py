@@ -308,9 +308,15 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
         "current_fy": 2026,
         "stale_school_count": 3,
         "no_crawlable_url_school_count": 9,
+        "target_missing_school_count": 10,
         "new_document_ids": [10, 11],
         "discovery_stats": {"downloaded": 2},
         "ingest_stats": {"processed": 2},
+        "delta": {
+            "coverage": {
+                "schools_with_target_pdf_current_fy": 6,
+            }
+        },
         "summary_path": str(tmp_path / "summary.json"),
     }
     out = tmp_path / "data" / "output" / "last_run.json"
@@ -323,6 +329,10 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     assert payload["current_fy"] == 2026
     assert payload["stale_school_count"] == 3
     assert payload["no_crawlable_url_school_count"] == 9
+    assert payload["target_pdf_auto_acquired_count"] == 6
+    assert payload["target_pdf_auto_yield_pct"] == 60.0
+    assert payload["ship_gate_auto_yield_pct"] == 60.0
+    assert payload["ship_gate_status"] == "pass"
     assert payload["new_document_count"] == 2
     assert payload["new_document_ids"] == [10, 11]
     assert payload["summary_path"].endswith("summary.json")

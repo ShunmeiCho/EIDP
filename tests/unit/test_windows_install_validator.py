@@ -92,6 +92,10 @@ def _weekly_artifacts(root: Path) -> None:
                 "selection_mode": "target_missing",
                 "target_missing_school_count": 7,
                 "new_document_count": 2,
+                "target_pdf_auto_acquired_count": 6,
+                "target_pdf_auto_yield_pct": 60.0,
+                "ship_gate_auto_yield_pct": 60.0,
+                "ship_gate_status": "pass",
                 "discovery_stats": {"downloaded": 2},
                 "ingest_stats": {"processed": 2},
             }
@@ -411,6 +415,8 @@ def test_validate_after_weekly_requires_target_year_runner_keys(tmp_path: Path) 
     assert not check.ok
     assert any("current_fy" in error for error in check.errors)
     assert any("target_missing_school_count" in error for error in check.errors)
+    assert any("target_pdf_auto_yield_pct" in error for error in check.errors)
+    assert any("ship_gate_status" in error for error in check.errors)
 
 
 def test_validate_after_weekly_rejects_invalid_selection_mode(tmp_path: Path) -> None:

@@ -144,6 +144,7 @@ C:\Program Files\EIDP
 - `data\output\last_run.json` が作成される
 - `last_run.json` に `status=success`、`run_id`、`started_at`、`finished_at` がある
 - `last_run.json` に `current_fy`、`selection_mode`、`target_missing_school_count` がある
+- `last_run.json` に `target_pdf_auto_yield_pct` と `ship_gate_status` がある
 - `selection_mode` は通常 `target_missing`
 - Excel は自動生成されない
 
@@ -152,7 +153,7 @@ C:\Program Files\EIDP
 - weekly run exit code 0
 - lock 表示が UI に出る
 - 完了後 UI が通常状態に戻る
-- `last_run.json` が読み取れる
+- `last_run.json` が読み取れ、自動取得率が 60-70% gate と比較できる
 
 ## 4. Stage 4 — Excel Preview / File Lock
 

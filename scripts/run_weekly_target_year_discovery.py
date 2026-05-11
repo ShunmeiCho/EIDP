@@ -55,6 +55,7 @@ DEFAULT_METHODS = (
     "scrapling_stealth",
 )
 DEFAULT_RCA_BATCH_LIMIT = 20
+SHIP_GATE_AUTO_YIELD_PCT = 60.0
 
 
 @dataclass(frozen=True)
@@ -104,6 +105,7 @@ def write_last_run(
     """
     last_run_path.parent.mkdir(parents=True, exist_ok=True)
     new_document_ids = list(summary.get("new_document_ids") or [])
+    yield_metrics = _weekly_target_pdf_yield_metrics(summary)
     payload = {
         "status": status,
         "run_id": summary.get("run_id"),
@@ -121,6 +123,7 @@ def write_last_run(
             or summary.get("stale_school_count")
             or 0
         ),
+        **yield_metrics,
         "new_document_count": len(new_document_ids),
         "new_document_ids": new_document_ids,
         "discovery_stats": summary.get("discovery_stats") or {},
@@ -355,6 +358,29 @@ def _delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
+    target_missing = int(summary.get("target_missing_school_count") or 0)
+    delta = summary.get("delta")
+    coverage_delta = delta.get("coverage") if isinstance(delta, dict) else {}
+    acquired = int((coverage_delta or {}).get("schools_with_target_pdf_current_fy") or 0)
+    acquired = max(acquired, 0)
+    if target_missing <= 0:
+        return {
+            "target_pdf_auto_acquired_count": acquired,
+            "target_pdf_auto_yield_pct": None,
+            "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+            "ship_gate_status": "not_measured",
+        }
+
+    yield_pct = round(acquired / target_missing * 100.0, 1)
+    return {
+        "target_pdf_auto_acquired_count": acquired,
+        "target_pdf_auto_yield_pct": yield_pct,
+        "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+        "ship_gate_status": "pass" if yield_pct >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate",
+    }
+
+
 def _timestamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
@@ -567,6 +593,7 @@ def _run_weekly_inner(
             output_path=discovery_rca_plan,
             target_fiscal_year=current_fy,
         )
+        delta = _delta(before, after)
         summary = {
             "run_id": run_id,
             "started_at": started_at.isoformat(),
@@ -586,7 +613,7 @@ def _run_weekly_inner(
             "school_fiscal_year_status_stats": status_stats,
             "before": before,
             "after": after,
-            "delta": _delta(before, after),
+            "delta": delta,
             "evidence": {
                 "discovery_rejections": str(discovery_evidence),
                 "ingest_rejections": str(ingest_evidence),
@@ -594,6 +621,7 @@ def _run_weekly_inner(
             "discovery_rca": discovery_rca,
             "summary_path": str(summary_path),
         }
+        summary.update(_weekly_target_pdf_yield_metrics(summary))
         summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         if last_run_path is not None:
             write_last_run(summary, last_run_path, status="success")
@@ -689,6 +717,9 @@ def main() -> None:
         "discovery_stats": summary["discovery_stats"],
         "ingest_stats": summary["ingest_stats"],
         "discovery_rca": summary.get("discovery_rca") or {},
+        "target_pdf_auto_acquired_count": summary.get("target_pdf_auto_acquired_count"),
+        "target_pdf_auto_yield_pct": summary.get("target_pdf_auto_yield_pct"),
+        "ship_gate_status": summary.get("ship_gate_status"),
         "coverage_delta": summary["delta"]["coverage"],
     }
     if prune_failures:

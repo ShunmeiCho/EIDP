@@ -950,6 +950,10 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
         "new_document_count": 0,
         "no_crawlable_url_school_count": 2,
         "stale_school_count": 1,
+        "target_pdf_auto_acquired_count": 6,
+        "target_pdf_auto_yield_pct": 60.0,
+        "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_status": "pass",
         "discovery_rca": {
             "batch_plan_path": "data/output/target-year-discovery/run-discovery-rca-batch-plan.json",
             "batch_plan_item_count": 7,
@@ -965,6 +969,8 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
     assert any("Codex RCAキュー" in caption for caption in captions)
     assert any("候補 7/12" in caption for caption in captions)
     assert any("run-discovery-rca-batch-plan.json" in caption for caption in captions)
+    assert any("自動取得率: 60.0%" in caption for caption in captions)
+    assert any("出荷判定: pass" in caption for caption in captions)
 
 
 def test_weekly_task_registration_warning_reads_setup_marker(tmp_path) -> None:

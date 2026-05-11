@@ -121,7 +121,10 @@ Each run writes:
 The summary contains before/after snapshots for coverage, PDF gaps, extraction,
 new document IDs, discovery stats, ingest stats, deltas, and a `discovery_rca`
 section pointing to the Codex RCA batch plan when discovery evidence was
-recorded.
+recorded. It also records `target_pdf_auto_acquired_count`,
+`target_pdf_auto_yield_pct`, `ship_gate_auto_yield_pct`, and
+`ship_gate_status`; use these fields as the direct weekly evidence for the
+60-70% automatic target-PDF acquisition gate.
 
 ## Verification (after a run)
 
