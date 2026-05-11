@@ -239,6 +239,24 @@ def test_discovery_rca_prompt_wraps_external_evidence_as_untrusted_data() -> Non
     assert "UNTRUSTED_EVIDENCE_JSON_END" in prompt
 
 
+def test_discovery_rca_packet_rejects_json_and_prompt_together() -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-rca-packet",
+            "--school-id",
+            "95",
+            "--target-fiscal-year",
+            "2026",
+            "--json",
+            "--prompt",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "--json and --prompt are mutually exclusive" in result.output
+
+
 def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path, monkeypatch) -> None:
     evidence_path = tmp_path / "evidence.jsonl"
     _write_jsonl(
@@ -447,6 +465,56 @@ def test_discovery_rca_outcome_validate_accepts_required_output_block(tmp_path: 
     assert "OK discovery RCA outcome" in result.output
     assert "school_id=95" in result.output
     assert "accepted_target_pdf" in result.output
+
+
+def test_discovery_rca_outcome_validate_rejects_relative_traversal_input() -> None:
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", "../outside.json"])
+
+    assert result.exit_code == 1
+    assert "--input relative path must not contain '..'" in result.output
+
+
+def test_discovery_rca_outcome_validate_rejects_relative_traversal_batch_plan(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "outcome.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 95,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "needs_operator_review",
+                "source_page_url": "https://www.siw.ac.jp/information",
+                "candidate_pdf_url": "",
+                "anchor_text": "",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "候補PDFあり",
+                "negative_evidence": "",
+                "checked_paths": ["https://www.siw.ac.jp/information"],
+                "search_queries_used": [],
+                "operator_action": "review_pdf",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "medium",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-rca-outcome-validate",
+            "--input",
+            str(outcome_path),
+            "--batch-plan",
+            "../batch-plan.json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "--batch-plan relative path must not contain '..'" in result.output
 
 
 def test_discovery_rca_outcome_validate_rejects_drifting_output_block(tmp_path: Path) -> None:

@@ -1032,6 +1032,12 @@ def _discovery_gold_gate_failed(report: object) -> bool:
     )
 
 
+def _reject_relative_path_traversal(path: Path, *, label: str) -> None:
+    if not path.is_absolute() and any(part == ".." for part in path.parts):
+        typer.echo(f"{label} relative path must not contain '..': {path}", err=True)
+        raise typer.Exit(1)
+
+
 @app.command("summarize-discovery-evidence")
 def summarize_discovery_evidence(
     evidence_log: Path = typer.Option(..., help="discover-pdfs evidence JSONL to summarize"),
@@ -1040,6 +1046,8 @@ def summarize_discovery_evidence(
     output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
 ) -> None:
     """Summarize PDF discovery evidence into school-level RCA buckets."""
+    _reject_relative_path_traversal(evidence_log, label="--evidence-log")
+
     from eidp.scraper.discovery_evidence_summary import (
         load_pdf_discovery_evidence,
         load_pdf_discovery_site_scope,
@@ -1092,6 +1100,12 @@ def discovery_rca_packet(
     output_json: bool = typer.Option(False, "--json", help="Emit JSON input packet"),
 ) -> None:
     """Build a read-only single-school RCA packet for Codex-assisted discovery."""
+    if output_json and output_prompt:
+        typer.echo("--json and --prompt are mutually exclusive", err=True)
+        raise typer.Exit(1)
+    if evidence_log is not None:
+        _reject_relative_path_traversal(evidence_log, label="--evidence-log")
+
     from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.discovery_rca_packet import (
@@ -1145,6 +1159,8 @@ def discovery_rca_batch_plan(
     output_json: bool = typer.Option(False, "--json", help="Emit JSON batch plan"),
 ) -> None:
     """Build a prioritized read-only batch of single-school RCA packets."""
+    _reject_relative_path_traversal(evidence_log, label="--evidence-log")
+
     from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.discovery_rca_packet import (
@@ -1192,6 +1208,10 @@ def discovery_rca_outcome_validate(
 ) -> None:
     """Validate a Codex-assisted single-school RCA output block."""
     import json
+
+    _reject_relative_path_traversal(input_path, label="--input")
+    if batch_plan_path is not None:
+        _reject_relative_path_traversal(batch_plan_path, label="--batch-plan")
 
     from eidp.scraper.discovery_rca_packet import (
         validate_rca_outcome_batch_plan_coverage,
