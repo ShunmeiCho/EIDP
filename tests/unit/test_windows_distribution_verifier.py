@@ -127,6 +127,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
         "scripts/weekly_run.bat": (SCRIPTS_DIR / "weekly_run.bat").read_text(encoding="utf-8"),
+        "scripts/bootstrap_pdfs.bat": (SCRIPTS_DIR / "bootstrap_pdfs.bat").read_text(encoding="utf-8"),
         "scripts/diagnose.bat": (SCRIPTS_DIR / "diagnose.bat").read_text(encoding="utf-8"),
         "scripts/uninstall.bat": (SCRIPTS_DIR / "uninstall.bat").read_text(encoding="utf-8"),
         "scripts/validate_install.bat": (SCRIPTS_DIR / "validate_install.bat").read_text(encoding="utf-8"),
@@ -879,6 +880,22 @@ def test_verify_core_zip_rejects_diagnose_without_strict_ship_gate_validation(tm
     assert any("--require-ship-gate" in error for error in check.errors)
     assert any("validate_after_bootstrap_ship_gate_rc" in error for error in check.errors)
     assert any("validate_after_weekly_ship_gate_rc" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_bootstrap_bat_without_log_capture(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/bootstrap_pdfs.bat"] = (
+        entries["scripts/bootstrap_pdfs.bat"]
+        .replace("bootstrap-pdfs-%RUN_ID%.log", "")
+        .replace('> "%LOG_PATH%" 2>&1', "")
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("scripts/bootstrap_pdfs.bat missing required token" in error for error in check.errors)
+    assert any("bootstrap-pdfs-%RUN_ID%.log" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_weekly_runner_export_excel(tmp_path: Path) -> None:

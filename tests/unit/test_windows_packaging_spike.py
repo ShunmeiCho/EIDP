@@ -454,6 +454,10 @@ def test_bootstrap_pdfs_bat_invokes_pipeline_script(bat_files: dict[str, str]):
     assert "cd /d \"%~dp0\\..\"" in body, (
         "bootstrap_pdfs.bat must anchor at the application root"
     )
+    assert "bootstrap-pdfs-%RUN_ID%.log" in body
+    assert "bootstrap-pdfs-%RUN_ID%.json" in body
+    assert "--progress-file \"%PROGRESS_PATH%\"" in body
+    assert "> \"%LOG_PATH%\" 2>&1" in body
     assert "set \"RC=%ERRORLEVEL%\"" in body
     assert "endlocal & exit /b %RC%" in body
 

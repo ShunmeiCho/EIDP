@@ -23,8 +23,16 @@ if not exist "%VENV_PY%" (
     exit /b 2
 )
 
-"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\bootstrap_pdf_pipeline.py" %*
+set "LOGS_DIR=%EIDP_APP_ROOT%\logs"
+if not exist "%LOGS_DIR%" mkdir "%LOGS_DIR%"
+for /f "delims=" %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "RUN_ID=%%T"
+set "LOG_PATH=%LOGS_DIR%\bootstrap-pdfs-%RUN_ID%.log"
+set "PROGRESS_PATH=%LOGS_DIR%\bootstrap-pdfs-%RUN_ID%.json"
+
+echo [bootstrap_pdfs] writing log to %LOG_PATH%
+"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\bootstrap_pdf_pipeline.py" --progress-file "%PROGRESS_PATH%" %* > "%LOG_PATH%" 2>&1
 set "RC=%ERRORLEVEL%"
+type "%LOG_PATH%"
 
 if %RC% EQU 0 (
     echo [bootstrap_pdfs] complete. Open the UI to review queued PDFs.
