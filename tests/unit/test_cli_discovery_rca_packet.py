@@ -526,6 +526,68 @@ def test_discovery_rca_outcome_validate_rejects_missing_investigation_trace(tmp_
     assert "layer_3_operator_or_search_fallback requires search_queries_used" in result.output
 
 
+def test_discovery_rca_outcome_validate_rejects_decision_table_action_mismatch(tmp_path: Path) -> None:
+    outcome_dir = tmp_path / "outcomes"
+    outcome_dir.mkdir()
+    rows = [
+        (
+            "layer0.json",
+            {
+                "layer": "layer_0_official_index_handoff",
+                "outcome": "needs_operator_review",
+                "operator_action": "review_pdf",
+            },
+        ),
+        (
+            "no-target.json",
+            {
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "no_target_candidate_found",
+                "operator_action": "review_pdf",
+            },
+        ),
+        (
+            "site-failure.json",
+            {
+                "layer": "site_infrastructure_failure",
+                "outcome": "no_target_candidate_found",
+                "operator_action": "manual_url_entry",
+            },
+        ),
+    ]
+    for index, (filename, overrides) in enumerate(rows, start=1):
+        payload = {
+            "school_id": 100 + index,
+            "target_fiscal_year": 2026,
+            "layer": "layer_1_pdf_discovery",
+            "outcome": "needs_operator_review",
+            "source_page_url": f"https://example.ac.jp/{index}/",
+            "candidate_pdf_url": "",
+            "anchor_text": "",
+            "fiscal_year_evidence": "",
+            "target_form_evidence": "候補PDFあり",
+            "negative_evidence": "",
+            "checked_paths": [f"https://example.ac.jp/{index}/"],
+            "search_queries_used": [],
+            "operator_action": "review_pdf",
+            "gold_set_entry_recommended": False,
+            "candidate_rule": "",
+            "anti_pattern": "",
+            "confidence": "medium",
+        }
+        payload.update(overrides)
+        (outcome_dir / filename).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_dir)])
+
+    assert result.exit_code == 1
+    assert "layer_0_official_index_handoff requires outcome=no_target_candidate_found" in result.output
+    assert "layer_0_official_index_handoff requires operator_action=manual_url_entry" in result.output
+    assert "no_target_candidate_found requires operator_action=manual_url_entry" in result.output
+    assert "site_infrastructure_failure requires outcome=needs_operator_review" in result.output
+    assert "site_infrastructure_failure requires operator_action=site_access_followup" in result.output
+
+
 def test_discovery_rca_outcome_validate_accepts_output_directory(tmp_path: Path) -> None:
     for school_id, outcome in [(95, "accepted_target_pdf"), (96, "needs_operator_review")]:
         accepted = outcome == "accepted_target_pdf"

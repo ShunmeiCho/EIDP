@@ -403,6 +403,18 @@ def _validate_rca_outcome_semantics(payload: dict[str, Any]) -> list[str]:
         errors.append("checked_paths must contain at least one investigated URL or local evidence path")
     if layer == "layer_3_operator_or_search_fallback" and not _has_nonblank_string(payload["search_queries_used"]):
         errors.append("layer_3_operator_or_search_fallback requires search_queries_used")
+    if layer == "layer_0_official_index_handoff":
+        if outcome != "no_target_candidate_found":
+            errors.append("layer_0_official_index_handoff requires outcome=no_target_candidate_found")
+        if operator_action != "manual_url_entry":
+            errors.append("layer_0_official_index_handoff requires operator_action=manual_url_entry")
+    if layer == "site_infrastructure_failure":
+        if outcome != "needs_operator_review":
+            errors.append("site_infrastructure_failure requires outcome=needs_operator_review")
+        if operator_action != "site_access_followup":
+            errors.append("site_infrastructure_failure requires operator_action=site_access_followup")
+    if outcome == "no_target_candidate_found" and operator_action != "manual_url_entry":
+        errors.append("no_target_candidate_found requires operator_action=manual_url_entry")
     if outcome == "accepted_target_pdf":
         if operator_action != "none":
             errors.append("accepted_target_pdf requires operator_action=none")
