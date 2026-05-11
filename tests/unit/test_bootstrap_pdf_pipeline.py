@@ -25,14 +25,14 @@ class _FakeStream:
         self.calls.append(kwargs)
 
 
-def test_configure_utf8_stdio_sets_replace_errors() -> None:
+def test_configure_utf8_stdio_sets_strict_utf8_errors() -> None:
     stdout = _FakeStream()
     stderr = _FakeStream()
 
     module._configure_utf8_stdio(stdout, stderr)
 
-    assert stdout.calls == [{"encoding": "utf-8", "errors": "replace"}]
-    assert stderr.calls == [{"encoding": "utf-8", "errors": "replace"}]
+    assert stdout.calls == [{"encoding": "utf-8", "errors": "strict"}]
+    assert stderr.calls == [{"encoding": "utf-8", "errors": "strict"}]
 
 
 def test_main_holds_app_lock_around_bootstrap(tmp_path: Path, monkeypatch) -> None:

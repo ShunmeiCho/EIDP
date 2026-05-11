@@ -29,14 +29,14 @@ class FakeSession:
         self.closed = True
 
 
-def test_configure_utf8_stdio_sets_replace_errors() -> None:
+def test_configure_utf8_stdio_sets_strict_utf8_errors() -> None:
     stdout = FakeStream()
     stderr = FakeStream()
 
     _configure_utf8_stdio(stdout, stderr)
 
-    assert stdout.calls == [{"encoding": "utf-8", "errors": "replace"}]
-    assert stderr.calls == [{"encoding": "utf-8", "errors": "replace"}]
+    assert stdout.calls == [{"encoding": "utf-8", "errors": "strict"}]
+    assert stderr.calls == [{"encoding": "utf-8", "errors": "strict"}]
 
 
 def test_ingest_pdfs_forwards_document_ids(monkeypatch) -> None:
