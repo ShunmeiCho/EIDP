@@ -114,6 +114,37 @@ primary data source.
 - Full unit regression after adding the entries and updating the count-based
   tests: `uv run pytest tests/unit -q` → `1040 passed, 5 warnings`.
 
+## 2026-05-11 PDF Fiscal-Year Diagnostic Update
+
+The Windows v150 Saitama replay exposed one evidence-quality defect in school
+`764` (`大宮理容美容専門学校`): the 2025 confirmation-form PDF was recorded as
+`fiscal_year_mismatch:2029`. Manual inspection of the real PDF showed the
+`2029年度` text was an officer-term end date (`2029年度定時評議員会終結時`), not
+the document fiscal year. Because `_detect_fiscal_year_from_text` only applied
+the strict target-year ceiling to contextual filing dates, a future western
+`20xx年度` label could override the candidate link's stale-year evidence.
+
+The detector now applies the same `max_fiscal_year` ceiling to explicit
+Japanese-era and western fiscal-year labels before accepting them as PDF-body
+year evidence. In strict FY2026 discovery, impossible future years such as
+`2029年度` are ignored, and the existing candidate-hint fallback can correctly
+classify the same PDF as `fiscal_year_mismatch:2025`.
+
+- Regression coverage:
+  `test_detect_fiscal_year_ignores_future_western_fiscal_year_labels` and
+  `test_download_pdf_uses_candidate_stale_year_when_body_only_has_future_term_year`.
+- Focused verification:
+  `uv run pytest tests/unit/test_pdf_discovery.py -q` → `54 passed,
+  5 warnings`; `uv run ruff check src/eidp/scraper/pdf_discovery.py
+  tests/unit/test_pdf_discovery.py` → passed.
+- Real-PDF verification:
+  `_temp/omiyaribi-2025koushinshinseisyo.pdf` from
+  `https://omiyaribi.ac.jp/wp/wp-content/uploads/2025/06/2025koushinshinseisyo.pdf`
+  now returns `('target', 'fiscal_year_mismatch:2025')` from `download_pdf`
+  under strict FY2026 mode.
+- Full unit regression after the patch:
+  `uv run pytest tests/unit -q` → `1042 passed, 5 warnings`.
+
 ## 2026-05-11 v146 Update
 
 v146 packages the school `95` real-PDF ingestion fix and verifies it on the
@@ -1144,6 +1175,14 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   Focused gold-set tests passed (`22 passed`), a two-school v150 evidence eval
   produced `exact_matches=2`, and full unit regression passed with
   `1040 passed, 5 warnings`.
+- Saitama school `764` future-term year diagnostic fix →
+  the real `2025koushinshinseisyo.pdf` previously produced
+  `fiscal_year_mismatch:2029` because an officer-term `2029年度` label was
+  accepted as PDF-body fiscal-year evidence. Current code applies the strict
+  target-year ceiling to explicit western/Japanese fiscal-year labels and the
+  same real PDF now returns `('target', 'fiscal_year_mismatch:2025')`.
+  Focused PDF discovery tests passed (`54 passed`), Ruff passed, and full unit
+  regression passed with `1042 passed, 5 warnings`.
 - Focused v149 first-year Japanese-era regression, Saitama school `773`
   replay, full current Saitama replay, Ruff, and full unit suite after the
   `元年度` parser patch →

@@ -534,12 +534,14 @@ def _detect_fiscal_year_from_text(text: str, *, max_fiscal_year: int | None = No
         include_fiscal_year_labels=True,
         include_filing_dates=False,
     )
+    fiscal_year = _within_detectable_year(fiscal_year, max_fiscal_year)
     if fiscal_year is not None:
         return fiscal_year
 
-    m = re.search(r"(20\d{2})\s*年度", normed)
-    if m:
-        return int(m.group(1))
+    for m in re.finditer(r"(20\d{2})\s*年度", normed):
+        fiscal_year = _within_detectable_year(int(m.group(1)), max_fiscal_year)
+        if fiscal_year is not None:
+            return fiscal_year
 
     # Most application forms carry a filing date on the cover page. In this
     # domain that date is useful only when the surrounding text says it is a
