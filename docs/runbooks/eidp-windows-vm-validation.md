@@ -191,6 +191,8 @@ C:\Program Files\EIDP
   `ship_gate_metric_basis`、`ship_gate_status` がある
 - `selection_mode` は通常 `target_missing`
 - Excel は自動生成されない
+- UI または別プロセスがロックを保持していた場合、週次処理は進まず
+  `last_run.json` に `status=lock_busy` と `LockBusyError` を残す
 
 合格条件:
 

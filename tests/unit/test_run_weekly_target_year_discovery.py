@@ -405,6 +405,7 @@ def test_run_weekly_respects_shared_lock(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr(module, "SessionLocal", lambda: session)
 
     lock_path = tmp_path / "data" / ".lock"
+    last_run_path = tmp_path / "data" / "output" / "last_run.json"
     with acquire_lock(lock_path, owner="ui"):
         with pytest.raises(LockBusyError):
             run_weekly(
@@ -420,8 +421,16 @@ def test_run_weekly_respects_shared_lock(tmp_path: Path, monkeypatch: pytest.Mon
                 limit=None,
                 dry_run=True,
                 lock_path=lock_path,
-                last_run_path=tmp_path / "data" / "output" / "last_run.json",
+                last_run_path=last_run_path,
             )
+
+    payload = json.loads(last_run_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "lock_busy"
+    assert payload["current_fy"] == 2026
+    assert payload["school_type"] == "専門学校"
+    assert payload["methods"] == ["prefecture_aggregator"]
+    assert payload["target_pdf_auto_yield_pct"] is None
+    assert "LockBusyError" in payload["error"]
 
 
 def test_run_weekly_writes_last_run_json_under_lock(

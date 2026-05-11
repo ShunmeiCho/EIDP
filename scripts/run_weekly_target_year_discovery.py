@@ -34,7 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from eidp.config import settings  # noqa: E402
-from eidp.db.locking import acquire_lock  # noqa: E402
+from eidp.db.locking import LockBusyError, acquire_lock  # noqa: E402
 from eidp.db.models import Document, School, SchoolSite  # noqa: E402
 from eidp.db.session import SessionLocal  # noqa: E402
 from eidp.pipeline.ingest import run_ingestion  # noqa: E402
@@ -474,8 +474,36 @@ def run_weekly(
     )
     if lock_path is None:
         return _run_weekly_inner(**inner_kwargs)
-    with acquire_lock(lock_path, owner="weekly_runner"):
-        return _run_weekly_inner(**inner_kwargs)
+    try:
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            return _run_weekly_inner(**inner_kwargs)
+    except LockBusyError as exc:
+        if last_run_path is not None:
+            now = datetime.now(UTC).isoformat()
+            write_last_run(
+                {
+                    "run_id": _timestamp(),
+                    "started_at": now,
+                    "finished_at": now,
+                    "dry_run": dry_run,
+                    "current_fy": current_fy,
+                    "school_type": school_type,
+                    "methods": methods,
+                    "selection_mode": "lock_busy",
+                    "stale_school_count": 0,
+                    "no_crawlable_url_school_count": 0,
+                    "target_missing_school_count": 0,
+                    "new_document_ids": [],
+                    "discovery_stats": {},
+                    "ingest_stats": {},
+                    "discovery_rca": {},
+                    "summary_path": None,
+                },
+                last_run_path,
+                status="lock_busy",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+        raise
 
 
 def _run_weekly_inner(
