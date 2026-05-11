@@ -164,6 +164,9 @@ PRE_DOWNLOAD_NEGATIVE_TOKENS = (
     "gakkouuneihyouka",
     "学校関係者評価",
     "kankeishahyouka",
+    "職業実践",
+    "shokugyouzissen",
+    "shokugyojissen",
     "外部評価",
     "gaibuhyouka",
     "内部評価",
@@ -657,6 +660,16 @@ def _classify_pdf_sample_text(sample_text: str) -> str:
         return "image_only"
 
     normed = unicodedata.normalize("NFKC", sample_text)
+    strong_target_markers = ("確認申請", "機関要件", "修学支援", "修学の支援", "高等教育", "無償化")
+    vocational_practice_basic_info = (
+        "職業実践専門課程等の基本情報" in normed
+        or "職業実践専門課程の基本情報" in normed
+        or "別紙様式4" in normed
+        or "別紙様式４" in normed
+    )
+    if vocational_practice_basic_info and not any(marker in normed for marker in strong_target_markers):
+        return "non_target"
+
     target_markers = ["様式第2号", "機関要件", "修学支援", "生徒総定員", "学科名"]
     hits = sum(1 for m in target_markers if m in normed)
     if hits >= 2:

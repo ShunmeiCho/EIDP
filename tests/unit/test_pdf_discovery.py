@@ -80,6 +80,7 @@ def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
         ("https://example.ac.jp/disclosure/gakkouinfo.pdf", "学校紹介"),
         ("https://example.ac.jp/disclosure/school-guide.pdf", "学校案内"),
         ("https://example.ac.jp/disclosure/schoolguide.pdf", "School Guide"),
+        ("https://example.ac.jp/disclosure/shokugyouzissen_sweets.pdf", "職業実践専門課程"),
     ]
 
     for url, anchor_text in token_cases:
@@ -2362,6 +2363,49 @@ def test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body(
     assert reason is None
     assert candidate.detected_fiscal_year is None
     assert candidate.year_evidence == "prefecture_index_current_year"
+
+
+def test_download_pdf_rejects_vocational_practice_basic_info_even_with_trusted_year(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """別紙様式4 職業実践基本情報 is not the support-system confirmation form."""
+
+    content = _make_pdf_bytes(
+        "（別紙様式４）\n"
+        "令和7年7月31日\n"
+        "職業実践専門課程等の基本情報について\n"
+        "学校名 設置認可年月日 校長名 所在地\n"
+        "大宮スイーツ＆カフェ専門学校\n"
+        "分野 認定課程名 認定学科名\n"
+        "生徒総定員 生徒実員 学科名"
+    )
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/disclosure/shokugyouzissen_sweets_patissier_.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="職業実践専門課程等の基本情報",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "non_target"
+    assert reason == "classified_non_target"
 
 
 def test_download_pdf_rejects_url_target_hint_when_body_is_not_target_form(
