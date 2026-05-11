@@ -856,9 +856,9 @@ def _download_attempt_urls(url: str) -> list[str]:
     return urls
 
 
-def _find_subpage_links(html: str, base_url: str) -> list[str]:
+def _find_subpage_links(html: str, base_url: str, *, school_name: str = "") -> list[str]:
     """Find disclosure subpage links to follow (two-tier pattern)."""
-    subpages: list[str] = []
+    subpages: list[tuple[int, int, str]] = []
     seen: set[str] = set()
     keywords = [
         "情報公開",
@@ -889,16 +889,20 @@ def _find_subpage_links(html: str, base_url: str) -> list[str]:
         text = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
         haystack = f"{text} {href}".lower()
 
-        if any(kw.lower() in haystack for kw in keywords) and not href.lower().endswith(".pdf"):
+        if any(kw.lower() in haystack for kw in keywords):
             url = urljoin(base_url, href)
             parsed = urlparse(url)
+            if parsed.path.lower().endswith(".pdf"):
+                continue
             base_parsed = urlparse(base_url)
             # Only follow links on the same domain
             if (parsed.netloc == base_parsed.netloc or not parsed.netloc) and url not in seen:
                 seen.add(url)
-                subpages.append(url)
+                priority = 0 if school_name and _school_name_matches_link(f"{text} {href}", school_name) else 1
+                subpages.append((priority, len(subpages), url))
 
-    return subpages[:12]  # Keep bounded while covering dense institutional navs.
+    subpages.sort()
+    return [url for _, _, url in subpages[:12]]  # Keep bounded while covering dense institutional navs.
 
 
 _EXTERNAL_SCHOOL_LINK_BLOCKED_HOST_PARTS = (
@@ -965,6 +969,8 @@ def _find_school_homepage_links(html: str, base_url: str, school_name: str, *, l
 
 def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]:
     """Return conservative same-host disclosure URL guesses from a school homepage URL."""
+    if limit <= 0:
+        return []
 
     parsed = urlparse(site_url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
@@ -977,6 +983,14 @@ def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]
     path_or_root = path or ""
     seen: set[str] = {normalize_candidate_url(site_url)}
     urls: list[str] = []
+
+    if len(raw_segments) >= 2 and raw_segments[-1].lower() in {"disclosure", "information", "public", "public_info"}:
+        inverted_path = f"/{raw_segments[-1]}/{raw_segments[-2]}"
+        inverted_url = urljoin(root + "/", inverted_path.lstrip("/"))
+        seen.add(normalize_candidate_url(inverted_url))
+        urls.append(inverted_url)
+        if len(urls) >= limit:
+            return urls
 
     for pattern in DERIVED_DISCLOSURE_PATHS:
         if "{slug}" in pattern and not slug:
@@ -1223,6 +1237,7 @@ def discover_pdfs_for_site(
     started_at = time.monotonic()
     extra_pages_fetched = 0
     target_year = target_fiscal_year or settings.target_fiscal_year
+    registered_site_url = site_url
 
     def extra_page_budget_remaining() -> int:
         if max_elapsed_seconds > 0 and time.monotonic() - started_at >= max_elapsed_seconds:
@@ -1276,7 +1291,7 @@ def discover_pdfs_for_site(
         # Even if root has PDFs, target docs may be on subpages
         subpages: list[str] = []
         if max_depth > 0:
-            subpages = _find_subpage_links(html, site_url)
+            subpages = _find_subpage_links(html, site_url, school_name=school_name)
             for sub_url in subpages:
                 if extra_page_budget_remaining() <= 0:
                     break
@@ -1308,7 +1323,7 @@ def discover_pdfs_for_site(
                     school_homepage_page_urls.append(homepage_base_url)
                     homepage_html = homepage_resp.text
                     _append_unique_candidates(candidates, _extract_pdf_links(homepage_html, homepage_base_url))
-                    for sub_url in _find_subpage_links(homepage_html, homepage_base_url):
+                    for sub_url in _find_subpage_links(homepage_html, homepage_base_url, school_name=school_name):
                         if extra_page_budget_remaining() <= 0:
                             break
                         if not _is_safe_url(sub_url):
@@ -1327,7 +1342,21 @@ def discover_pdfs_for_site(
                     continue
 
         derived_budget = max(extra_page_budget_remaining() - SITEMAP_DISCOVERY_RESERVED_PAGES, 0)
-        for derived_url in _derived_disclosure_page_urls(site_url, limit=derived_budget):
+        derived_urls: list[str] = []
+        derived_seen: set[str] = set()
+        for derived_source_url in (registered_site_url, site_url):
+            for derived_url in _derived_disclosure_page_urls(derived_source_url, limit=derived_budget):
+                derived_key = normalize_candidate_url(derived_url)
+                if derived_key in derived_seen:
+                    continue
+                derived_seen.add(derived_key)
+                derived_urls.append(derived_url)
+                if len(derived_urls) >= derived_budget:
+                    break
+            if len(derived_urls) >= derived_budget:
+                break
+
+        for derived_url in derived_urls:
             if extra_page_budget_remaining() <= 0:
                 break
             if not _is_safe_url(derived_url):

@@ -673,6 +673,148 @@ def test_discover_pdfs_falls_back_to_origin_root_when_registered_path_is_404(mon
     assert "https://example.ac.jp/about/disclosure/" in client.calls
 
 
+def test_discover_pdfs_prioritizes_school_named_disclosure_link_from_group_root(monkeypatch) -> None:
+    """Dense corporation roots must spend the bounded crawl budget on the matching school first."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    generic_links = "\n".join(
+        f'<a href="/disclosure/generic-{idx}/">Generic school {idx}</a>'
+        for idx in range(8)
+    )
+    client = _HtmlClient(
+        {
+            "https://www.sanko.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.sanko.ac.jp/omiya-med/disclosure/": _RaisingHtmlResponse(
+                "<html>stale</html>",
+                status_code=404,
+                url="https://www.sanko.ac.jp/omiya-med/disclosure/",
+            ),
+            "https://www.sanko.ac.jp/": _HtmlResponse(
+                f"""
+                <html>
+                  {generic_links}
+                  <a href="/disclosure/omiya-med/">大宮医療秘書専門学校</a>
+                </html>
+                """,
+                url="https://www.sanko.ac.jp/",
+            ),
+            "https://www.sanko.ac.jp/disclosure/omiya-med/": _HtmlResponse(
+                """
+                <a href="/disclosure/omiya-med/docs/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://www.sanko.ac.jp/disclosure/omiya-med/",
+            ),
+            "https://www.sanko.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        15,
+        "https://www.sanko.ac.jp/omiya-med/disclosure/",
+        max_extra_pages=1,
+        school_name="大宮医療秘書専門学校",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://www.sanko.ac.jp/disclosure/omiya-med/docs/r8-kakunin.pdf"
+    assert result.best.page_url == "https://www.sanko.ac.jp/disclosure/omiya-med/"
+    assert "https://www.sanko.ac.jp/disclosure/generic-0/" not in client.calls
+
+
+def test_discover_pdfs_inverts_stale_school_disclosure_path(monkeypatch) -> None:
+    """Official indexes can carry /school/disclosure while live group pages use /disclosure/school."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://www.sanko.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.sanko.ac.jp/omiya-med/disclosure/": _RaisingHtmlResponse(
+                "<html>stale</html>",
+                status_code=404,
+                url="https://www.sanko.ac.jp/omiya-med/disclosure/",
+            ),
+            "https://www.sanko.ac.jp/": _HtmlResponse(
+                "<html><a href='/disclosure/'>学校法人情報公開</a></html>",
+                url="https://www.sanko.ac.jp/",
+            ),
+            "https://www.sanko.ac.jp/disclosure/": _HtmlResponse(
+                "<html><a href='/disclosure/generic/'>別の学校</a></html>",
+                url="https://www.sanko.ac.jp/disclosure/",
+            ),
+            "https://www.sanko.ac.jp/disclosure/omiya-med": _HtmlResponse(
+                """
+                <a href="/disclosure/omiya-med/docs/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://www.sanko.ac.jp/disclosure/omiya-med",
+            ),
+            "https://www.sanko.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        15,
+        "https://www.sanko.ac.jp/omiya-med/disclosure/",
+        max_extra_pages=6,
+        school_name="大宮医療秘書専門学校",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://www.sanko.ac.jp/disclosure/omiya-med/docs/r8-kakunin.pdf"
+    assert result.best.page_url == "https://www.sanko.ac.jp/disclosure/omiya-med"
+    assert "https://www.sanko.ac.jp/information/omiya-med" not in client.calls
+
+
+def test_discover_pdfs_does_not_fetch_pdf_query_links_as_subpages(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/disclosure/": _HtmlResponse(
+                """
+                <a href="/docs/info.pdf?report=202604">情報公開 PDF</a>
+                <a href="/public/">情報公開</a>
+                """,
+                url="https://example.ac.jp/disclosure/",
+            ),
+            "https://example.ac.jp/public/": _HtmlResponse(
+                """
+                <a href="/docs/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://example.ac.jp/public/",
+            ),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://example.ac.jp/disclosure/",
+        max_extra_pages=1,
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
+    assert "https://example.ac.jp/docs/info.pdf?report=202604" not in client.calls
+
+
 def test_discover_pdfs_follows_school_named_homepage_from_umbrella_root(monkeypatch) -> None:
     """Stale official-index group URLs can recover via a school-named external homepage link."""
 
