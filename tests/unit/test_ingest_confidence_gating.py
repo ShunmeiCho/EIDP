@@ -233,6 +233,49 @@ def test_pdf_course_name_specialized_suffix_matches_existing_field_department(en
         assert yearly.enrollment == 80
 
 
+def test_pdf_nursing_course_name_matches_existing_medical_field_department(engine, tmp_path):
+    """Some nursing PDFs spell the course as 看護専門課程 while the master stores 医療."""
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        existing = Department(
+            school_id=school.id,
+            canonical_name="第一学科",
+            course_name="医療",
+            course_type=None,
+            duration_years=3,
+        )
+        session.add(existing)
+        session.flush()
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/nursing-target.pdf",
+            tmp_path=tmp_path,
+            file_hash="n" * 64,
+        )
+        doc.fiscal_year = 2026
+        ann = _annotation(dept_record=DepartmentRecord(
+            name="第一学科",
+            course_name="看護専門課程",
+            duration_years=3,
+            capacity=80,
+            enrollment=80,
+            graduates=24,
+        ))
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            stats = ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        assert stats["departments_created"] == 0
+        assert session.query(Department).count() == 1
+        yearly = session.query(DepartmentYearly).one()
+        assert yearly.department_id == existing.id
+        assert yearly.fiscal_year == 2026
+        assert yearly.enrollment == 80
+
+
 # ---------------------------------------------------------------------------
 # DepartmentYearly — low-confidence path
 # ---------------------------------------------------------------------------

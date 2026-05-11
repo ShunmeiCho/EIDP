@@ -47,6 +47,11 @@ _SPECIALIZED_COURSE_FIELDS = {
 }
 
 
+_PDF_COURSE_FIELD_ALIASES = {
+    "看護": "医療",
+}
+
+
 def _normalize_pdf_course_name(course_name: str | None) -> str | None:
     """Normalize PDF-side 課程名 to the field labels used by the Excel master."""
 
@@ -57,6 +62,7 @@ def _normalize_pdf_course_name(course_name: str | None) -> str | None:
     suffix = "専門課程"
     if compact.endswith(suffix):
         field = compact[: -len(suffix)]
+        field = _PDF_COURSE_FIELD_ALIASES.get(field, field)
         if field in _SPECIALIZED_COURSE_FIELDS:
             return field
     return compact
