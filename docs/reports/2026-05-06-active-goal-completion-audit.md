@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `d0d62c9bc98e8af9f6bec1723da611ce6e9ca3c6` (`eidp-windows-v220.zip`)
+Latest audited Windows package commit: `0dce42cdc6d87cbbebbc70e27820069156457ff2` (`eidp-windows-v223.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -1466,11 +1466,38 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v220.zip` rebuilt at commit `d0d62c9bc98e8af9f6bec1723da611ce6e9ca3c6`, verifier `OK core`, `git_dirty=false`, SHA256 `034e1faf06c955d9bf4163bdb9fb7b3b8e1a465499274d1ea06033321b53e3cb`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the v219 SQLite-backed `--require-ship-gate` validator, and v220 diagnostics that automatically include strict bootstrap/weekly ship-gate return codes in `EIDP-diagnose.bat` output. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v154 smoke on a fresh `C:\EIDP-v154-26d18a9` extraction remains the latest real Windows E2E proof: setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), school `757` packaged discovery accepts `study_support_system.pdf` with `year_evidence=prefecture_index_current_year`, school `757` packaged ingest writes the FY2026 row to the existing `医療` / `第一学科` Department with `extraction_confidence=0.94` and `is_current=True`, and Excel export contains one row for the school in both `学科別` and `在籍のみ抜粋`. v150 remains the packaged proof for school `95` target-PDF-to-Excel. | Latest v220 package verifier and extracted-install smoke are green on macOS. Windows SSH network reachability has recovered, but Codex still needs reusable SSH authentication before v220 can be validated on Windows. Automation yield remains below the 60-70% strict target-FY ship gate until real Windows workload evidence passes the SQLite-backed gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v223.zip` rebuilt at commit `0dce42cdc6d87cbbebbc70e27820069156457ff2`, verifier `OK core`, `git_dirty=false`, SHA256 `425f7a215332bc37cb91f8f316c2b479728f0f2def9de6ad81ee29bf387300cb`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the SQLite-backed `--require-ship-gate` validator, and diagnostics that preserve strict bootstrap/weekly ship-gate return codes with delayed `%ERRORLEVEL%` capture. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v223 smoke on a fresh `C:\Users\cyo20\EIDP-v223-0dce42c` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `department_change` void columns present, `uq_document_file_hash` present, write-lock rejection for `db-bootstrap` and `rebuild-school-year-tasks`, Saitama official-index apply (`matched=51`, `added=51`), bootstrap log/progress capture, non-release validator `ok=true`, and strict ship-gate validator `ok=false` when yield is 0%. v154 remains the latest packaged school `757` target-PDF-to-ingest/export proof, and v150 remains the packaged proof for school `95` target-PDF-to-Excel. | Latest v223 package verifier, Windows clean extraction/setup smoke, bounded bootstrap wrapper smoke, diagnostics smoke, and lock-contract smoke are green. Automation yield remains below the 60-70% strict target-FY ship gate until a real Windows workload passes the SQLite-backed gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
+- 2026-05-11 v223 Windows package and remote smoke →
+  commit `0dce42cdc6d87cbbebbc70e27820069156457ff2` fixes a Windows batch
+  diagnostic defect found during v222 smoke: `diagnose.bat` used parse-time
+  `%ERRORLEVEL%` inside parenthesized blocks, so a failed
+  `--require-ship-gate` validation was recorded as rc `0`. The script now uses
+  delayed `!ERRORLEVEL!` capture for all embedded validator calls, and the
+  distribution verifier rejects ZIPs missing that contract. Verification:
+  `uv run pytest tests/unit` → `1158 passed, 5 warnings`; `uv run python
+  scripts/verify_windows_distribution.py dist/eidp-windows-v223.zip --json`
+  and the same command against `dist/eidp-windows.zip` → `ok=true`,
+  SHA256 `425f7a215332bc37cb91f8f316c2b479728f0f2def9de6ad81ee29bf387300cb`,
+  3,026 entries, 78 wheels, 16 discovery gold-set entries, 47 prefecture seed
+  rows, 2,148 prefecture seed school rows, BUILD_INFO `git_dirty=false`.
+  Remote Windows fresh extraction `C:\Users\cyo20\EIDP-v223-0dce42c` verified
+  the ZIP checksum, `first_setup.bat` completed with `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  `department_change` void columns present, and `uq_document_file_hash`
+  present. A lock smoke proved `db-bootstrap --sqlite` and
+  `rebuild-school-year-tasks` return rc `5` while `data\.lock` is held.
+  Bounded `scripts\bootstrap_pdfs.bat --pref saitama --batch-size 0` created
+  `logs\bootstrap-pdfs-20260511-225600.log` and `.json`, applied Saitama
+  official-index URLs (`matched=51`, `added=51`), and recorded
+  `ship_gate_status=below_gate`, `target_pdf_auto_yield_pct=0.0`.
+  `validate_install.bat --after-setup --after-bootstrap --json` returned
+  `ok=true`; the same command with `--require-ship-gate` returned rc `1` and
+  `ok=false` with `bootstrap ship_gate_status must be pass...`. The v223
+  diagnostic file now records `validate_after_bootstrap_ship_gate_rc=1`.
 - 2026-05-11 v220 local package refresh →
   commit `d0d62c9bc98e8af9f6bec1723da611ce6e9ca3c6` extends the operator
   diagnostic package so `EIDP-diagnose.bat` records both regular validation
