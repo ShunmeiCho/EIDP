@@ -187,6 +187,8 @@ Excel は、業務員が画面で確認した後に `Excel プレビュー` ペ�
 
 - build 情報
 - インストール検証結果
+- 初回URL/PDF取得の機械検査結果 (`--after-bootstrap`, `validate_after_bootstrap_rc`)
+- 週次処理の機械検査結果 (`--after-weekly`, `validate_after_weekly_rc`)
 - `last_run.json`
 - 最新の Codex RCA キュー (`*-discovery-rca-batch-plan.json`)
 - 週次タスク登録警告

@@ -21,6 +21,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
+OPERATOR_RUNBOOK_PATH = REPO_ROOT / "docs" / "runbooks" / "eidp-windows.md"
 
 
 def _load_build_script():
@@ -431,6 +432,15 @@ def test_diagnose_bat_collects_operator_evidence_without_mutating_data(bat_files
     assert "latest bootstrap log tail" in body
     assert "del " not in body.lower()
     assert "rmdir" not in body.lower()
+
+
+def test_operator_runbook_documents_diagnose_validation_rcs():
+    body = OPERATOR_RUNBOOK_PATH.read_text(encoding="utf-8")
+
+    assert "validate_after_bootstrap_rc" in body
+    assert "validate_after_weekly_rc" in body
+    assert "--after-bootstrap" in body
+    assert "--after-weekly" in body
 
 
 def test_bootstrap_pdfs_bat_invokes_pipeline_script(bat_files: dict[str, str]):
