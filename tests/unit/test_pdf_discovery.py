@@ -464,6 +464,27 @@ def test_pre_download_keeps_kanji_current_year_for_future_target_year() -> None:
     assert rejection is None
 
 
+def test_pre_download_target_year_matrix_is_not_fixed_to_2026() -> None:
+    cases = [
+        (2026, "2025年度 高等教育の修学支援新制度 確認申請書", "fiscal_year_mismatch:2025"),
+        (2027, "R8年度 高等教育の修学支援新制度 確認申請書", "fiscal_year_mismatch:2026"),
+        (2028, "令和九年度 高等教育の修学支援新制度 確認申請書", "fiscal_year_mismatch:2027"),
+        (2028, "令和十年度 高等教育の修学支援新制度 確認申請書", None),
+    ]
+
+    for target_year, anchor_text, expected_reason in cases:
+        candidate = PdfCandidate(
+            pdf_url="https://example.ac.jp/disclosure/kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text=anchor_text,
+            score=3.0,
+        )
+
+        rejection = _pre_download_rejection(candidate, target_year=target_year)
+
+        assert (rejection.reason if rejection else None) == expected_reason
+
+
 def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> None:
     candidate = PdfCandidate(
         pdf_url="https://example.ac.jp/files/2025-renewal-confirmation-application.pdf",
