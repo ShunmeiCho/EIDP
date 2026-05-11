@@ -81,6 +81,8 @@ def test_manual_rca_runbook_contains_single_school_packet_contract() -> None:
     assert "uv run eidp discovery-rca-outcome-validate" in text
     assert '`accepted_target_pdf` must include a PDF URL' in text
     assert '`operator_action="wait_for_publication"`' in text
+    assert "Every output must also include at least one `checked_paths` entry" in text
+    assert '"checked_paths": ["https://example.ac.jp/disclosure"]' in text
     assert "path/to/rca-outcomes/" in text
     assert "--batch-plan path/to/discovery-rca-batch-plan.json" in text
     assert "details.discovery_rca_batch_plan_path" in text

@@ -491,6 +491,41 @@ def test_discovery_rca_outcome_validate_rejects_publication_lag_without_wait_act
     assert "publication_lag_latest_public requires operator_action=wait_for_publication" in result.output
 
 
+def test_discovery_rca_outcome_validate_rejects_missing_investigation_trace(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "no-trace.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 97,
+                "target_fiscal_year": 2026,
+                "layer": "layer_3_operator_or_search_fallback",
+                "outcome": "needs_operator_review",
+                "source_page_url": "",
+                "candidate_pdf_url": "",
+                "anchor_text": "",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "候補PDFあり",
+                "negative_evidence": "",
+                "checked_paths": [],
+                "search_queries_used": [],
+                "operator_action": "review_pdf",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "medium",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 1
+    assert "checked_paths must contain at least one investigated URL or local evidence path" in result.output
+    assert "layer_3_operator_or_search_fallback requires search_queries_used" in result.output
+
+
 def test_discovery_rca_outcome_validate_accepts_output_directory(tmp_path: Path) -> None:
     for school_id, outcome in [(95, "accepted_target_pdf"), (96, "needs_operator_review")]:
         accepted = outcome == "accepted_target_pdf"

@@ -370,6 +370,9 @@ table rules that are dangerous to get wrong. For example,
 target-form evidence, and `operator_action="none"`.
 `publication_lag_latest_public` must use
 `operator_action="wait_for_publication"`.
+Every output must also include at least one `checked_paths` entry. If the
+result uses `layer_3_operator_or_search_fallback`, it must record the bounded
+search query in `search_queries_used`.
 
 For a batch plan, save each school result as one JSON file in the same
 directory and validate the directory. When the original batch plan JSON is
@@ -394,7 +397,7 @@ uv run eidp discovery-rca-outcome-validate \
   "fiscal_year_evidence": "",
   "target_form_evidence": "",
   "negative_evidence": "",
-  "checked_paths": [],
+  "checked_paths": ["https://example.ac.jp/disclosure"],
   "search_queries_used": [],
   "operator_action": "review_pdf",
   "gold_set_entry_recommended": false,

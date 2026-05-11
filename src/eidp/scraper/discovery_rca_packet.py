@@ -395,9 +395,14 @@ def _format_batch_coverage_error(prefix: str, key: tuple[int, int]) -> str:
 
 
 def _validate_rca_outcome_semantics(payload: dict[str, Any]) -> list[str]:
+    layer = str(payload["layer"])
     outcome = str(payload["outcome"])
     operator_action = str(payload["operator_action"])
     errors: list[str] = []
+    if not _has_nonblank_string(payload["checked_paths"]):
+        errors.append("checked_paths must contain at least one investigated URL or local evidence path")
+    if layer == "layer_3_operator_or_search_fallback" and not _has_nonblank_string(payload["search_queries_used"]):
+        errors.append("layer_3_operator_or_search_fallback requires search_queries_used")
     if outcome == "accepted_target_pdf":
         if operator_action != "none":
             errors.append("accepted_target_pdf requires operator_action=none")
@@ -411,3 +416,7 @@ def _validate_rca_outcome_semantics(payload: dict[str, Any]) -> list[str]:
             if not str(payload[field]).strip():
                 errors.append(f"publication_lag_latest_public requires {field}")
     return errors
+
+
+def _has_nonblank_string(value: object) -> bool:
+    return isinstance(value, list) and any(isinstance(item, str) and item.strip() for item in value)
