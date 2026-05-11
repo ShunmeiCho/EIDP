@@ -33,6 +33,12 @@ from sqlalchemy.orm import Session
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from ship_gate_contract import (  # noqa: E402
+    SHIP_GATE_AUTO_YIELD_PCT,
+    WEEKLY_SHIP_GATE_METRIC_BASIS,
+    ship_gate_status_from_yield,
+)
+
 from eidp.config import settings  # noqa: E402
 from eidp.db.locking import LockBusyError, acquire_lock  # noqa: E402
 from eidp.db.models import Document, School, SchoolSite  # noqa: E402
@@ -55,7 +61,6 @@ DEFAULT_METHODS = (
     "scrapling_stealth",
 )
 DEFAULT_RCA_BATCH_LIMIT = 20
-SHIP_GATE_AUTO_YIELD_PCT = 60.0
 
 
 @dataclass(frozen=True)
@@ -371,8 +376,8 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
             "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
             "target_pdf_auto_yield_pct": None,
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
-            "ship_gate_metric_basis": "weekly_missing_school_acquisition",
-            "ship_gate_status": "not_measured",
+            "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
+            "ship_gate_status": ship_gate_status_from_yield(None),
         }
 
     yield_pct = round(acquired / target_missing * 100.0, 1)
@@ -382,8 +387,8 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
         "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
         "target_pdf_auto_yield_pct": yield_pct,
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
-        "ship_gate_metric_basis": "weekly_missing_school_acquisition",
-        "ship_gate_status": "pass" if yield_pct >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate",
+        "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
+        "ship_gate_status": ship_gate_status_from_yield(yield_pct),
     }
 
 

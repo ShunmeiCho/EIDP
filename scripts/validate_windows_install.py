@@ -15,6 +15,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from ship_gate_contract import (
+    BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
+    SHIP_GATE_STATUSES,
+    WEEKLY_SHIP_GATE_METRIC_BASIS,
+)
+
 
 @dataclass
 class InstallCheck:
@@ -47,6 +55,7 @@ CORE_FILES = (
     "scripts/run_weekly_target_year_discovery.py",
     "scripts/run_r8_rediscovery_weekly.py",
     "scripts/bootstrap_pdf_pipeline.py",
+    "scripts/ship_gate_contract.py",
     "scripts/download_prefecture_artifacts.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
@@ -123,11 +132,6 @@ BUILD_INFO_REQUIRED_KEYS = (
     "git_branch",
     "git_dirty",
 )
-
-SHIP_GATE_STATUSES = frozenset({"pass", "below_gate", "not_measured"})
-BOOTSTRAP_SHIP_GATE_METRIC_BASIS = "post_bootstrap_current_target_fy_coverage"
-WEEKLY_SHIP_GATE_METRIC_BASIS = "weekly_missing_school_acquisition"
-
 
 def _posix_rel(path: str) -> Path:
     return Path(*path.split("/"))

@@ -67,9 +67,13 @@ from download_prefecture_artifacts import (  # noqa: E402
     remove_stale_sibling_artifacts,
     write_source_url_sidecar,
 )
+from ship_gate_contract import (  # noqa: E402
+    BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
+    SHIP_GATE_AUTO_YIELD_PCT,
+    ship_gate_status_from_yield,
+)
 
 TOTAL_BOOTSTRAP_STEPS = 5
-SHIP_GATE_AUTO_YIELD_PCT = 60.0
 DEFAULT_RCA_BATCH_LIMIT = 10
 URL_SEARCH_PERCENT_START = 0.45
 URL_SEARCH_PERCENT_END = 0.56
@@ -126,8 +130,8 @@ def bootstrap_target_pdf_yield_metrics(
             "target_pdf_auto_denominator_scope": "active_specialty_schools",
             "target_pdf_auto_yield_pct": None,
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
-            "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
-            "ship_gate_status": "not_measured",
+            "ship_gate_metric_basis": BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
+            "ship_gate_status": ship_gate_status_from_yield(None),
         }
 
     yield_pct = round(acquired / denominator * 100.0, 1)
@@ -137,8 +141,8 @@ def bootstrap_target_pdf_yield_metrics(
         "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": yield_pct,
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
-        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
-        "ship_gate_status": "pass" if yield_pct >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate",
+        "ship_gate_metric_basis": BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
+        "ship_gate_status": ship_gate_status_from_yield(yield_pct),
     }
 
 

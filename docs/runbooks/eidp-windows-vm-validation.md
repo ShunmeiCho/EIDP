@@ -146,6 +146,8 @@ C:\Program Files\EIDP
 - `logs\bootstrap-pdfs-YYYYMMDD-HHMMSS.log` が作成される
 - progress JSON に `target_pdf_auto_yield_pct`、`target_pdf_auto_denominator_scope`、
   `ship_gate_metric_basis`、`ship_gate_status` がある
+- 初回 bootstrap の `ship_gate_metric_basis` は
+  `post_bootstrap_current_target_fy_coverage` です。分母は対象年度の専門学校全体です。
 - PDF探索で失敗証跡がある場合、`data\output\target-year-discovery\*-discovery-rca-batch-plan.json` が作成される
 - `EIDP-diagnose.bat` の診断ファイルに最新の Codex RCA キューが含まれる
 
@@ -189,10 +191,17 @@ C:\Program Files\EIDP
 - `last_run.json` に `current_fy`、`selection_mode`、`target_missing_school_count` がある
 - `last_run.json` に `target_pdf_auto_yield_pct`、`target_pdf_auto_denominator_scope`、
   `ship_gate_metric_basis`、`ship_gate_status` がある
+- 週次処理の `ship_gate_metric_basis` は `weekly_missing_school_acquisition` です。
+  分母は実行前に対象年度PDFが未取得だった学校数です。
 - `selection_mode` は通常 `target_missing`
 - Excel は自動生成されない
 - UI または別プロセスがロックを保持していた場合、週次処理は進まず
   `last_run.json` に `status=lock_busy` と `LockBusyError` を残す
+
+通常の validator は ZIP 構造と実行証跡の整合性を確認します。出荷 gate まで同時に
+判定する場合だけ、`--after-bootstrap --require-ship-gate` または
+`--after-weekly --require-ship-gate` を付けます。この場合 `ship_gate_status=below_gate`
+は失敗として扱われます。
 
 合格条件:
 

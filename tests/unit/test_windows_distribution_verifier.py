@@ -142,6 +142,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/bootstrap_pdf_pipeline.py": (SCRIPTS_DIR / "bootstrap_pdf_pipeline.py").read_text(
             encoding="utf-8"
         ),
+        "scripts/ship_gate_contract.py": (SCRIPTS_DIR / "ship_gate_contract.py").read_text(encoding="utf-8"),
         "scripts/download_prefecture_artifacts.py": (SCRIPTS_DIR / "download_prefecture_artifacts.py").read_text(
             encoding="utf-8"
         ),

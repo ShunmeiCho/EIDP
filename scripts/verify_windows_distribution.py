@@ -86,6 +86,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/run_r8_rediscovery_weekly.py",
     "scripts/validate_windows_install.py",
     "scripts/bootstrap_pdf_pipeline.py",
+    "scripts/ship_gate_contract.py",
     "scripts/download_prefecture_artifacts.py",
     "data/prefecture-aggregators/seed.csv",
     "data/url-discovery/discovered-urls-50.csv",
@@ -685,6 +686,12 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "discovered-urls-50.csv",
             "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
             "progress_callback",
+        ),
+        "scripts/ship_gate_contract.py": (
+            "BOOTSTRAP_SHIP_GATE_METRIC_BASIS",
+            "WEEKLY_SHIP_GATE_METRIC_BASIS",
+            "SHIP_GATE_AUTO_YIELD_PCT",
+            "ship_gate_status_from_yield",
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
