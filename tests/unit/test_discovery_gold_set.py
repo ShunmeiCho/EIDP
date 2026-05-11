@@ -78,4 +78,5 @@ def test_manual_rca_runbook_contains_single_school_packet_contract() -> None:
     assert "at most three query variants" in text
     assert "third-party directories are hints for a domain, never truth sources" in text
     assert "bootstrap-{timestamp}-discovery-rca-batch-plan.json" in text
+    assert "uv run eidp discovery-rca-outcome-validate" in text
     assert "details.discovery_rca_batch_plan_path" in text

@@ -6,6 +6,65 @@ import json
 from pathlib import Path
 from typing import Any
 
+RCA_OUTCOME_REQUIRED_FIELDS = (
+    "school_id",
+    "target_fiscal_year",
+    "layer",
+    "outcome",
+    "source_page_url",
+    "candidate_pdf_url",
+    "anchor_text",
+    "fiscal_year_evidence",
+    "target_form_evidence",
+    "negative_evidence",
+    "checked_paths",
+    "search_queries_used",
+    "operator_action",
+    "gold_set_entry_recommended",
+    "candidate_rule",
+    "anti_pattern",
+    "confidence",
+)
+
+RCA_OUTCOME_ALLOWED_LAYERS = {
+    "layer_0_official_index_handoff",
+    "layer_1_pdf_discovery",
+    "layer_2_pdf_body_or_ocr",
+    "layer_3_operator_or_search_fallback",
+    "site_infrastructure_failure",
+}
+
+RCA_OUTCOME_ALLOWED_OUTCOMES = {
+    "accepted_target_pdf",
+    "publication_lag_latest_public",
+    "needs_operator_review",
+    "no_target_candidate_found",
+    "site_fetch_error",
+}
+
+RCA_OUTCOME_ALLOWED_OPERATOR_ACTIONS = {
+    "none",
+    "review_pdf",
+    "manual_url_entry",
+    "wait_for_publication",
+    "site_access_followup",
+}
+
+RCA_OUTCOME_STRING_FIELDS = {
+    "layer",
+    "outcome",
+    "source_page_url",
+    "candidate_pdf_url",
+    "anchor_text",
+    "fiscal_year_evidence",
+    "target_form_evidence",
+    "negative_evidence",
+    "operator_action",
+    "candidate_rule",
+    "anti_pattern",
+    "confidence",
+}
+
 
 def build_single_school_rca_packet(
     session: Any,
@@ -186,6 +245,47 @@ def render_single_school_rca_packet(packet: dict[str, Any]) -> str:
     return json.dumps(packet, ensure_ascii=False, indent=2, sort_keys=True)
 
 
+def validate_single_school_rca_outcome(payload: dict[str, Any]) -> list[str]:
+    """Validate the Required Output Block from the manual RCA runbook.
+
+    This intentionally checks only shape, allowed labels, and basic types. It
+    does not prove the web investigation itself; that evidence must still be
+    reviewed before promoting a gold-set entry or crawler rule.
+    """
+    errors: list[str] = []
+    for field in RCA_OUTCOME_REQUIRED_FIELDS:
+        if field not in payload:
+            errors.append(f"missing required field: {field}")
+
+    if "school_id" in payload and not isinstance(payload["school_id"], int):
+        errors.append("school_id must be an integer")
+    if "target_fiscal_year" in payload and not isinstance(payload["target_fiscal_year"], int):
+        errors.append("target_fiscal_year must be an integer")
+    if "gold_set_entry_recommended" in payload and not isinstance(payload["gold_set_entry_recommended"], bool):
+        errors.append("gold_set_entry_recommended must be a boolean")
+
+    for field in RCA_OUTCOME_STRING_FIELDS:
+        if field in payload and not isinstance(payload[field], str):
+            errors.append(f"{field} must be a string")
+
+    if "checked_paths" in payload and not _is_string_list(payload["checked_paths"]):
+        errors.append("checked_paths must be a list")
+    if "search_queries_used" in payload and not _is_string_list(payload["search_queries_used"]):
+        errors.append("search_queries_used must be a list")
+
+    layer = payload.get("layer")
+    if isinstance(layer, str) and layer not in RCA_OUTCOME_ALLOWED_LAYERS:
+        errors.append(f"invalid layer: {layer}")
+    outcome = payload.get("outcome")
+    if isinstance(outcome, str) and outcome not in RCA_OUTCOME_ALLOWED_OUTCOMES:
+        errors.append(f"invalid outcome: {outcome}")
+    operator_action = payload.get("operator_action")
+    if isinstance(operator_action, str) and operator_action not in RCA_OUTCOME_ALLOWED_OPERATOR_ACTIONS:
+        errors.append(f"invalid operator_action: {operator_action}")
+
+    return errors
+
+
 def _bucket_priority(bucket: str) -> int:
     return {
         "target_form_without_year_evidence": 10,
@@ -228,3 +328,7 @@ def _float_or_none(value: object) -> float | None:
         return float(str(value))
     except ValueError:
         return None
+
+
+def _is_string_list(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)

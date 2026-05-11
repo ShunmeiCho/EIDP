@@ -357,6 +357,13 @@ agent behavior. Generated packets include the latest school-level bucket, top
 evidence reasons, and up to 10 compact evidence rows so a copied prompt remains
 useful even when the target Codex session cannot read the original JSONL file.
 
+Save the returned object to a local JSON file and validate it before promoting
+the finding into the gold set or a crawler rule:
+
+```bash
+uv run eidp discovery-rca-outcome-validate --input path/to/rca-outcome.json
+```
+
 ```json
 {
   "school_id": 0,

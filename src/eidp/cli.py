@@ -1158,6 +1158,41 @@ def discovery_rca_batch_plan(
         typer.echo(f"  [{item['bucket']}] school_id={packet['school_id']} {packet['school_name']}")
 
 
+@app.command("discovery-rca-outcome-validate")
+def discovery_rca_outcome_validate(
+    input_path: Path = typer.Option(..., "--input", help="Path to one Required Output Block JSON file"),
+) -> None:
+    """Validate a Codex-assisted single-school RCA output block."""
+    import json
+
+    from eidp.scraper.discovery_rca_packet import validate_single_school_rca_outcome
+
+    try:
+        payload = json.loads(input_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        typer.echo(f"failed to read {input_path}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    except json.JSONDecodeError as exc:
+        typer.echo(f"invalid JSON in {input_path}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    if not isinstance(payload, dict):
+        typer.echo("RCA outcome must be one JSON object", err=True)
+        raise typer.Exit(1)
+
+    errors = validate_single_school_rca_outcome(payload)
+    if errors:
+        typer.echo("Invalid discovery RCA outcome:", err=True)
+        for error in errors:
+            typer.echo(f"  - {error}", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(
+        "OK discovery RCA outcome: "
+        f"school_id={payload['school_id']} outcome={payload['outcome']} layer={payload['layer']}"
+    )
+
+
 @report_app.command("coverage")
 def report_coverage(
     school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),

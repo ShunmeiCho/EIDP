@@ -355,3 +355,66 @@ def test_discovery_rca_batch_plan_can_include_copy_paste_prompts(tmp_path: Path,
     assert "Do not run broad SERP crawling." in prompt
     assert '"school_id": 2' in prompt
     assert '"latest_bucket": "target_form_without_year_evidence"' in prompt
+
+
+def test_discovery_rca_outcome_validate_accepts_required_output_block(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "outcome.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 95,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "accepted_target_pdf",
+                "source_page_url": "https://www.siw.ac.jp/information",
+                "candidate_pdf_url": "https://www.siw.ac.jp/information/shugakushien.pdf",
+                "anchor_text": "修学支援新制度 機関要件確認申請書",
+                "fiscal_year_evidence": "PDF body contains 2026年度",
+                "target_form_evidence": "PDF body contains 機関要件確認申請書",
+                "negative_evidence": "",
+                "checked_paths": ["https://www.siw.ac.jp/information"],
+                "search_queries_used": [],
+                "operator_action": "none",
+                "gold_set_entry_recommended": True,
+                "candidate_rule": "same-domain disclosure page exposes target form PDF",
+                "anti_pattern": "do not accept third-party directory pages as truth",
+                "confidence": "high",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "OK discovery RCA outcome" in result.output
+    assert "school_id=95" in result.output
+    assert "accepted_target_pdf" in result.output
+
+
+def test_discovery_rca_outcome_validate_rejects_drifting_output_block(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "outcome.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 95,
+                "target_fiscal_year": 2026,
+                "layer": "broad_serp_search",
+                "outcome": "found_maybe",
+                "operator_action": "none",
+                "checked_paths": "https://www.siw.ac.jp/information",
+                "search_queries_used": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 1
+    assert "missing required field: source_page_url" in result.output
+    assert "invalid layer: broad_serp_search" in result.output
+    assert "invalid outcome: found_maybe" in result.output
+    assert "checked_paths must be a list" in result.output
