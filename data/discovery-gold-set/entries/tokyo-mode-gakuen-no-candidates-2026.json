@@ -1,0 +1,53 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "tokyo-mode-gakuen-no-candidates-2026",
+  "school": {
+    "school_id": 4,
+    "school_name": "東京モード学園",
+    "prefecture": "東京都",
+    "corporation_name": "日本教育財団"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "no_target_candidate_found",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a bounded official homepage case where current-code PDF discovery crawls successfully but finds no PDF candidates.",
+    "search_queries": [
+      "東京モード学園 修学支援",
+      "東京モード学園 機関要件確認申請書"
+    ],
+    "steps": [
+      "Start from the official school homepage URL https://www.mode.ac.jp/tokyo.",
+      "Run strict FY2026 PDF discovery against the seeded school_site URL with discovery_method=discovery_gold_set.",
+      "Observe that the crawler completes without a site fetch error and emits no_candidates_found for the same URL.",
+      "Classify the result as no_target_candidate_found so the operator can distinguish a crawlable no-PDF path from site infrastructure failure or old-year publication lag."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.mode.ac.jp/tokyo",
+    "disclosure_url": "https://www.mode.ac.jp/tokyo",
+    "pdf_url": "",
+    "pdf_type": "",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "official_homepage_without_pdf_candidates",
+    "reusable_rules": [
+      "Treat no_candidates_found as a first-class outcome when the official URL was fetched successfully but no PDF links were discoverable.",
+      "Keep this bucket separate from site_fetch_error because the site itself was reachable.",
+      "Use this bucket to route the school to manual URL entry or official-index follow-up instead of accepting a non-target substitute."
+    ],
+    "anti_patterns": [
+      "Do not weaken the release gate by dropping no_target_candidate_found coverage.",
+      "Do not relabel a crawlable no-PDF homepage as publication_lag_latest_public without an old-year target PDF.",
+      "Do not broaden to mass SERP from the agent harness just because the official homepage has no PDF candidates."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/tokyo-no-candidate-current/evidence.jsonl"
+    ],
+    "notes": "Current-code bounded replay on 2026-05-12 seeded the official homepage and produced no_candidates_found for school_id 4 with no downloaded PDFs."
+  }
+}
