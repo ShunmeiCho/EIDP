@@ -81,6 +81,8 @@ def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
         ("https://example.ac.jp/disclosure/school-guide.pdf", "学校案内"),
         ("https://example.ac.jp/disclosure/schoolguide.pdf", "School Guide"),
         ("https://example.ac.jp/disclosure/shokugyouzissen_sweets.pdf", "職業実践専門課程"),
+        ("https://example.ac.jp/disclosure/2026/subject_it-business.pdf", "ITビジネス学科"),
+        ("https://example.ac.jp/disclosure/2026/subject-houritsu.pdf", "法律学科"),
     ]
 
     for url, anchor_text in token_cases:
@@ -104,6 +106,19 @@ def test_pre_download_keeps_target_form_when_path_contains_school_information_to
         page_url="https://example.ac.jp/学校案内/",
         anchor_text="高等教育の修学支援新制度 確認申請書 様式第2号",
         score=10.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_keeps_target_form_when_subject_path_has_target_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/disclosure/2026/subject_academic_support.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和8年度 高等教育の修学支援新制度 確認申請書 様式第2号",
+        score=9.0,
     )
 
     rejection = _pre_download_rejection(candidate, target_year=2026)

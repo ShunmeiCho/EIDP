@@ -140,6 +140,8 @@ PRE_DOWNLOAD_NEGATIVE_TOKENS = (
     "jitsumukeiken",
     "course-subject",
     "course_subject",
+    "subject_",
+    "subject-",
     "curriculum",
     "財務",
     "zaimu",
