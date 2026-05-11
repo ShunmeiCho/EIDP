@@ -558,6 +558,34 @@ def test_verify_core_zip_rejects_stale_validator_missing_playwright_flag(tmp_pat
     assert any("--require-playwright-addon" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_stale_validator_missing_bootstrap_flag(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/validate_windows_install.py"] = entries["scripts/validate_windows_install.py"].replace(
+        "--after-bootstrap",
+        "--missing-bootstrap",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("--after-bootstrap" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_diagnose_without_bootstrap_validation(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/diagnose.bat"] = entries["scripts/diagnose.bat"].replace(
+        "--after-setup --after-bootstrap",
+        "--after-setup",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("--after-bootstrap" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_weekly_runner_export_excel(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/run_weekly_target_year_discovery.py"] = (
