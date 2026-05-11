@@ -74,6 +74,45 @@ open-campus, entrance-exam, and student `A様式1` application forms no longer
 consume the bounded top-10 download attempts before a lower-ranked target form
 can be tried.
 
+A fresh Windows v235 package replay was then run on
+`C:\Users\cyo20\EIDP-v235-864ae14` from the shipped ZIP
+(`git_commit=864ae148d0d4bc75abb1800298daa71191b2dfdd`, SHA256
+`6b645f2128e0715af0fdeb68cd1bcf595ecf910786dadc1fb49849c3b02319ba`).
+The replay was bounded to Saitama official-index URLs only:
+`--pref saitama --skip-known-url-discovery --url-search off
+--school-url-crawl off --discovery-methods prefecture_aggregator
+--batch-size 60 --rate-limit 0.5 --request-timeout 15`. It did not run
+nationwide SERP discovery.
+
+- Windows setup/after-setup validation passed: `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  `uq_document_file_hash` present, and `build_dirty=false`.
+- Official Saitama aggregation matched the expected Layer 0 result:
+  `extracted=58`, `matched=51`, `added=51`.
+- PDF discovery improved from the previous bounded Saitama evidence:
+  `crawled=51`, `found=50`, `downloaded=3`, `failed=4`,
+  `skipped=724`, `prefiltered=418`, and `cached_rejections=103`.
+- The three accepted strict FY2026 targets were schools `757`
+  (`上尾中央看護専門学校`), `760` (`入間看護専門学校`), and `784`
+  (`専門学校埼玉自動車大学校`). Ingest processed all three documents and
+  produced `yearly_upserted=8`; `rebuild-school-year-tasks` produced
+  `excel_ready=3`.
+- School-level evidence summary for the 51 scoped sites:
+  `accepted_target_pdf=3`, `publication_lag_or_old_target_pdf=40`,
+  `target_form_without_year_evidence=3`, `non_target_candidates_only=4`,
+  and `site_fetch_error_only=1`.
+- The package remains below the product ship gate:
+  `target_pdf_auto_acquired_count=3`,
+  `target_pdf_auto_denominator_count=2418`,
+  `target_pdf_auto_yield_pct=0.1`, and
+  `ship_gate_status=below_gate`.
+
+Operator-facing diagnosis was also run after replay. Core and after-setup
+validation passed; after-bootstrap diagnostics were intentionally not applicable
+to this bounded developer replay because it invoked `bootstrap_pdf_pipeline.py`
+directly with a custom progress file rather than the UI/batch wrapper that writes
+`logs/bootstrap-pdfs-*`.
+
 During this RCA, a classification defect was found in
 `discovery_evidence_summary.py`: old-year `image_only` PDFs with both system
 hints and target application-form hints, such as `修学支援` plus `様式第2号`,
