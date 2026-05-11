@@ -210,6 +210,9 @@ def _core_entries() -> dict[str, bytes | str]:
             "    jsonl_exported_at\n"
             "    jsonl_export_error\n"
         ),
+        "src/eidp/db/sqlite_bootstrap.py": (
+            REPO_ROOT / "src" / "eidp" / "db" / "sqlite_bootstrap.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/scraper/pdf_discovery.py": (
             "strict_target_fiscal_year\n"
             "target_fiscal_year_not_detected\n"
@@ -441,6 +444,20 @@ def test_verify_core_zip_requires_manual_action_audit_contract(tmp_path: Path) -
     assert any("src/eidp/db/audit.py missing required token" in error for error in check.errors)
     assert any("src/eidp/db/audit_outbox.py missing required token" in error for error in check.errors)
     assert any("ManualActionLog" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_sqlite_bootstrap_data_loss_guards(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/db/sqlite_bootstrap.py"] = "def bootstrap_sqlite(engine): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/db/sqlite_bootstrap.py missing required token" in error for error in check.errors)
+    assert any("PRAGMA integrity_check" in error for error in check.errors)
+    assert any("ensure_sqlite_additive_columns" in error for error in check.errors)
+    assert any("_refuse_orphaned_sqlite_sidecars" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Path) -> None:
