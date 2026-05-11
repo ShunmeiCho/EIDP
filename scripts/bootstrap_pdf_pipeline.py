@@ -70,6 +70,7 @@ from download_prefecture_artifacts import (  # noqa: E402
 
 TOTAL_BOOTSTRAP_STEPS = 5
 SHIP_GATE_AUTO_YIELD_PCT = 60.0
+DEFAULT_RCA_BATCH_LIMIT = 10
 URL_SEARCH_PERCENT_START = 0.45
 URL_SEARCH_PERCENT_END = 0.56
 SCHOOL_URL_CRAWL_PERCENT_START = URL_SEARCH_PERCENT_END
@@ -135,6 +136,54 @@ def bootstrap_target_pdf_yield_metrics(
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
         "ship_gate_status": "pass" if yield_pct >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate",
     }
+
+
+def write_bootstrap_discovery_rca_batch_plan(
+    session: Any,
+    *,
+    evidence_log: Path | None,
+    output_dir: Path,
+    target_fiscal_year: int,
+    limit: int = DEFAULT_RCA_BATCH_LIMIT,
+) -> dict[str, Any]:
+    """Write a Codex RCA queue for the first bootstrap discovery evidence."""
+    if evidence_log is None or not evidence_log.is_file() or evidence_log.stat().st_size == 0:
+        return {
+            "discovery_rca_batch_plan_path": None,
+            "discovery_rca_batch_plan_item_count": 0,
+            "discovery_rca_batch_plan_total_candidates": 0,
+            "discovery_rca_error": None,
+        }
+
+    from eidp.scraper.discovery_rca_packet import (
+        build_single_school_rca_batch_plan,
+        render_single_school_rca_batch_plan,
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"bootstrap-{datetime.now().strftime('%Y%m%d_%H%M%S')}-discovery-rca-batch-plan.json"
+    try:
+        plan = build_single_school_rca_batch_plan(
+            session,
+            evidence_log=evidence_log,
+            target_fiscal_year=target_fiscal_year,
+            limit=limit,
+            include_prompts=True,
+        )
+        output_path.write_text(render_single_school_rca_batch_plan(plan) + "\n", encoding="utf-8")
+        return {
+            "discovery_rca_batch_plan_path": str(output_path),
+            "discovery_rca_batch_plan_item_count": len(plan.get("items") or []),
+            "discovery_rca_batch_plan_total_candidates": int(plan.get("total_candidates") or 0),
+            "discovery_rca_error": None,
+        }
+    except Exception as exc:  # pragma: no cover - defensive artifact path
+        return {
+            "discovery_rca_batch_plan_path": None,
+            "discovery_rca_batch_plan_item_count": 0,
+            "discovery_rca_batch_plan_total_candidates": 0,
+            "discovery_rca_error": f"{type(exc).__name__}: {exc}",
+        }
 
 
 class BootstrapProgressWriter:
@@ -786,6 +835,29 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
     return out
 
 
+def step_write_discovery_rca_batch_plan(
+    *,
+    evidence_log: Path | None,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Write the first-bootstrap Codex RCA queue for failed PDF discovery."""
+    from eidp.config import settings
+    from eidp.db.session import SessionLocal
+
+    session = SessionLocal()
+    try:
+        stats = write_bootstrap_discovery_rca_batch_plan(
+            session,
+            evidence_log=evidence_log,
+            output_dir=output_dir,
+            target_fiscal_year=int(settings.target_fiscal_year),
+        )
+    finally:
+        session.close()
+    print(f"[step5] discovery RCA: {stats}")
+    return stats
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pref", default="", help="Comma-separated pref_keys. Empty = every supported.")
@@ -869,6 +941,12 @@ def main(argv: list[str] | None = None) -> int:
         "--evidence-log",
         type=Path,
         default=REPO_ROOT / "output" / "discovery_rejections.jsonl",
+    )
+    parser.add_argument(
+        "--discovery-rca-output-dir",
+        type=Path,
+        default=REPO_ROOT / "data" / "output" / "target-year-discovery",
+        help="Directory for the Codex RCA batch plan generated from bootstrap PDF discovery evidence.",
     )
     parser.add_argument(
         "--url-search-evidence-log",
@@ -1192,13 +1270,18 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         )
     print("\n=== Step 5: rebuild school fiscal-year status ===")
     status_stats = step_rebuild_status(evidence_log=args.evidence_log if str(args.evidence_log) else None)
+    rca_stats = step_write_discovery_rca_batch_plan(
+        evidence_log=args.evidence_log if str(args.evidence_log) else None,
+        output_dir=args.discovery_rca_output_dir,
+    )
+    final_status_details = {**status_stats, **rca_stats}
     if progress is not None:
         progress.write(
             status="running",
             current_step=5,
             percent=0.98,
             message="学校別タスクと対象年度PDFの自動取得率を集計しました。",
-            details=status_stats,
+            details=final_status_details,
         )
 
     print("\n=== Bootstrap pipeline summary ===")
@@ -1209,6 +1292,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
     print(f"  discover:    {discovery_stats}")
     print(f"  ingest:      {ingest_stats}")
     print(f"  status:      {status_stats}")
+    print(f"  discovery RCA: {rca_stats}")
     return 0
 
 

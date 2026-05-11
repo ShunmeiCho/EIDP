@@ -973,6 +973,13 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
             lines.append(line)
         else:
             lines.append(f"対象年度PDF自動取得率: 未測定 ({acquired}/{denominator}校)")
+    batch_plan_path = str(details.get("discovery_rca_batch_plan_path") or "")
+    if batch_plan_path:
+        item_count = _int_or_default(details.get("discovery_rca_batch_plan_item_count"), 0)
+        total_candidates = _int_or_default(details.get("discovery_rca_batch_plan_total_candidates"), item_count)
+        lines.append(f"Codex RCAキュー: {batch_plan_path} (候補 {item_count}/{total_candidates})")
+    if details.get("discovery_rca_error"):
+        lines.append(f"Codex RCA生成エラー: {details['discovery_rca_error']}")
     return lines
 
 

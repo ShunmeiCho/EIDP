@@ -979,6 +979,65 @@ def test_bootstrap_target_pdf_yield_metrics_marks_gate_status() -> None:
     }
 
 
+def test_write_bootstrap_discovery_rca_batch_plan_writes_copy_paste_queue(tmp_path: Path, monkeypatch) -> None:
+    evidence_log = tmp_path / "discovery_rejections.jsonl"
+    evidence_log.write_text('{"school_id": 1}\n', encoding="utf-8")
+    output_dir = tmp_path / "data" / "output" / "target-year-discovery"
+    calls: list[dict[str, object]] = []
+
+    def fake_build(session, **kwargs):  # noqa: ANN001, ANN003
+        calls.append({"session": session, **kwargs})
+        return {"total_candidates": 2, "items": [{"packet": {"school_id": 1}}]}
+
+    def fake_render(plan):  # noqa: ANN001
+        return json.dumps(plan, ensure_ascii=False, sort_keys=True)
+
+    import eidp.scraper.discovery_rca_packet as rca_mod
+
+    monkeypatch.setattr(rca_mod, "build_single_school_rca_batch_plan", fake_build)
+    monkeypatch.setattr(rca_mod, "render_single_school_rca_batch_plan", fake_render)
+
+    session = object()
+    result = module.write_bootstrap_discovery_rca_batch_plan(
+        session,
+        evidence_log=evidence_log,
+        output_dir=output_dir,
+        target_fiscal_year=2026,
+    )
+
+    plan_path = Path(result["discovery_rca_batch_plan_path"])
+    assert plan_path.name.endswith("-discovery-rca-batch-plan.json")
+    assert plan_path.parent == output_dir
+    assert result["discovery_rca_batch_plan_item_count"] == 1
+    assert result["discovery_rca_batch_plan_total_candidates"] == 2
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["total_candidates"] == 2
+    assert calls == [
+        {
+            "session": session,
+            "evidence_log": evidence_log,
+            "target_fiscal_year": 2026,
+            "limit": module.DEFAULT_RCA_BATCH_LIMIT,
+            "include_prompts": True,
+        }
+    ]
+
+
+def test_write_bootstrap_discovery_rca_batch_plan_skips_missing_evidence(tmp_path: Path) -> None:
+    result = module.write_bootstrap_discovery_rca_batch_plan(
+        object(),
+        evidence_log=tmp_path / "missing.jsonl",
+        output_dir=tmp_path / "out",
+        target_fiscal_year=2026,
+    )
+
+    assert result == {
+        "discovery_rca_batch_plan_path": None,
+        "discovery_rca_batch_plan_item_count": 0,
+        "discovery_rca_batch_plan_total_candidates": 0,
+        "discovery_rca_error": None,
+    }
+
+
 def test_step_rebuild_status_includes_all_school_types_and_discovery_evidence(monkeypatch, tmp_path) -> None:
     calls: list[dict[str, object]] = []
     evidence_log = tmp_path / "discovery.jsonl"

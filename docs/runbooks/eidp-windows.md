@@ -109,6 +109,10 @@ http://localhost:8501
 この操作で対応済みの都道府県の確認大学等一覧から学校URLを登録し、対象年度PDFの探索を開始します。
 一覧PDF内の学校名リンクに埋め込まれたURLも自動で読み取ります。
 同梱済みの既知URLリストと法人ドメイン推定も補助入口として登録します。
+完了後、画面には真の対象年度PDFの自動取得率と出荷目安 (`ship_gate_status`) が表示されます。
+PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キューを
+`data\output\target-year-discovery\bootstrap-{timestamp}-discovery-rca-batch-plan.json`
+に保存します。
 未対応の都道府県や未掲載校だけ、`学校別タスク` の `URL追加`
 から公式の情報公開ページを補足してください。
 学校数が多いため、完了まで数十分かかることがあります。

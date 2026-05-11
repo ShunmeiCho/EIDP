@@ -778,6 +778,37 @@ def test_bootstrap_progress_exposes_target_pdf_yield_gate(tmp_path) -> None:
     ]
 
 
+def test_bootstrap_progress_exposes_discovery_rca_queue(tmp_path) -> None:
+    progress_path = tmp_path / "progress.json"
+    progress_path.write_text(
+        json.dumps(
+            {
+                "status": "succeeded",
+                "current_step": 5,
+                "total_steps": 5,
+                "percent": 1.0,
+                "message": "初回URL/PDF取得が完了しました。",
+                "details": {
+                    "discovery_rca_batch_plan_path": (
+                        "data/output/target-year-discovery/bootstrap-discovery-rca-batch-plan.json"
+                    ),
+                    "discovery_rca_batch_plan_item_count": 4,
+                    "discovery_rca_batch_plan_total_candidates": 12,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    progress = read_bootstrap_progress(progress_path)
+
+    assert progress is not None
+    assert bootstrap_progress_detail_lines(progress) == [
+        "Codex RCAキュー: "
+        "data/output/target-year-discovery/bootstrap-discovery-rca-batch-plan.json (候補 4/12)"
+    ]
+
+
 def test_bootstrap_progress_auto_refresh_html_uses_bounded_delay() -> None:
     too_fast = bootstrap_progress_auto_refresh_html(seconds=1)
     normal = bootstrap_progress_auto_refresh_html(seconds=20)
