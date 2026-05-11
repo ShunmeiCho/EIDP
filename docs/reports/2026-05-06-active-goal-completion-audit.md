@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `1f03fffd4d1cd39fc5e0ab0ec09f873d28f2e5e5` (`eidp-windows-v239.zip`)
+Latest audited Windows package commit: `2dcc7f8362af991e8639b99ffebd34b78250f755` (`eidp-windows-v240.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -213,8 +213,51 @@ such as support-only `R7修学支援に関する資料`, form-only `様式2号`,
 MEXT support boilerplate years such as `2020年度の在学生から対象` remain
 `target_form_without_year_evidence`. This keeps strict target-year success
 unchanged while surfacing the correct operator action: latest-public old-year
-target form or review-bound year-unverified candidate, not irrelevant
-non-target material.
+forms require review, not automatic current-year acceptance.
+
+For v240 packaging, `scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v240.zip --latest-alias` produced SHA256
+`de1117a486bada414ec682a7045559446c4ba78088ab28043bad25e430dd1902`
+with `git_commit=2dcc7f8362af991e8639b99ffebd34b78250f755` and
+`git_dirty=false`. `scripts/verify_windows_distribution.py` passed with
+`entry_count=3027`, `wheel_count=78`, 17 discovery gold-set entries, and 47
+downloadable supported prefecture seeds. Local extracted-install validation
+passed. Fresh Windows extraction `C:\Users\cyo20\EIDP-v240-2dcc7f8` passed
+setup/after-setup validation with `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+`uq_document_file_hash` present, and
+`build_commit=2dcc7f8362af991e8639b99ffebd34b78250f755`.
+
+The v240 full bounded Saitama official-index replay used the same developer
+scope as v239: `--pref saitama --skip-known-url-discovery --url-search off
+--school-url-crawl off --discovery-methods prefecture_aggregator
+--batch-size 60 --rate-limit 0.5 --request-timeout 15`. It parsed
+`extracted=58`, `matched=51`, and `added=51` school sites, then crawled `51`
+registered sites and found PDF candidates on `50`. The final acquisition
+result did not improve strict target yield: `downloaded=3`, ingest
+`processed=3`, `yearly_upserted=8`, `target_pdf_auto_acquired_count=3`,
+`target_pdf_auto_yield_pct=0.1`, and `ship_gate_status=below_gate`.
+
+The v240 pre-download layer did reduce download-time noise: evidence rows grew
+from v239 `1846` to v240 `1968` because bounded attempts reached deeper
+candidate sets, while `pre_filtered_non_target_hint` rose `1217 -> 1416`,
+`classified_non_target` fell `230 -> 169`, and
+`target_fiscal_year_not_detected` fell `51 -> 27`. URL-level replay diff shows
+`86` v239 `classified_non_target` rows, `26` v239
+`target_fiscal_year_not_detected` rows, and `1` v239 `not_pdf_magic` row moved
+to pre-download non-target rejection. The DB result stayed unchanged at the
+same three current-year `Document` rows for schools `757`, `760`, and `784`.
+This is useful network/CPU hygiene, but not a ship-gate improvement.
+
+The remaining v240 `classified_non_target=169` rows show token tuning is now
+past the high-ROI phase. The largest residual families are site-family or
+structure problems rather than generic vocabulary misses: O-Hara numbered
+public-disclosure PDFs such as `2025-1-01-01-1.pdf`, Sanko school-specific
+course/hash PDFs, Arsnet course-code PDFs such as `R8_1A1_0420.pdf`, and
+school-specific survey/organization/career-support PDFs. Further broad
+negative tokens risk suppressing valid lower-ranked target forms. The next
+meaningful discovery work should be site-family rules or manual RCA/gold-set
+promotion for those families, not unrestricted token expansion.
 
 - Regression coverage:
   `test_summarize_pdf_discovery_evidence_treats_image_only_old_target_application_hints_as_publication_lag`,
@@ -2728,12 +2771,15 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v239 is the current verifier-clean and
+The active goal is **not complete**. v240 is the current verifier-clean and
 Windows setup-verified ZIP candidate. The latest full bounded Windows
 acquisition RCA still proves strict FY2026 yield below the ship gate: the
-v235 Saitama official-index run covered `51` official-index school URLs, found
+v240 Saitama official-index run covered `51` official-index school URLs, found
 PDF candidates on `50` sites, downloaded `3` PDFs, and counted `3` schools
-as current target-PDF auto acquired after ingest/status rebuild. v230
+as current target-PDF auto acquired after ingest/status rebuild. v240 reduced
+download-time non-target waste (`classified_non_target` fell from v239 `230`
+to `169`, and `target_fiscal_year_not_detected` fell from `51` to `27`) but
+did not change the final current-year document count or ship-gate status. v230
 pre-filters the earlier school `72` `職業実践専門課程等の基本情報` false positive
 as `non_target` in a targeted Windows replay. v231 also prevents school `793`
 stale `2025年度` full-form links from inheriting a preceding `2026年度` syllabus
@@ -2760,6 +2806,11 @@ v238/v239 additionally move the all-japan department-info and governance
 families (`info_`, `grade_manage`, `goal_policies`, `regulation`, `donation`,
 `remuneration`) to pre-download rejection; the latest targeted Windows replay
 has `classified_non_target=0` on schools `291` and `486`.
+v240 extends the same evidence-backed pre-download policy to financial
+statements, education/course, objective-indicator, plan/policy, and student
+form families exposed by the full Saitama replay, but the residual failures
+now concentrate in site-family patterns such as O-Hara numbered disclosure PDFs
+and Sanko/Arsnet course/hash documents.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
