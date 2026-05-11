@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `26d18a9aac2cc2e89705f3de5551f7003e8091f8` (`eidp-windows-v154.zip`)
+Latest audited Windows package commit: `8c6ef016366c1a37e9fa335ca4bdb07119d3ac7e` (`eidp-windows-v212.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -1466,11 +1466,34 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v154.zip` rebuilt at commit `26d18a9aac2cc2e89705f3de5551f7003e8091f8`, verifier `OK core`, `git_dirty=false`, SHA256 `fea99a950b0b671c75202cf470d4c06c6169bc299e013c0b45f3caaabe417952`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, and 14 packaged discovery gold-set entries. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v154 smoke on a fresh `C:\EIDP-v154-26d18a9` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), school `757` packaged discovery accepts `study_support_system.pdf` with `year_evidence=prefecture_index_current_year`, school `757` packaged ingest writes the FY2026 row to the existing `医療` / `第一学科` Department with `extraction_confidence=0.94` and `is_current=True`, and Excel export contains one row for the school in both `学科別` and `在籍のみ抜粋`. v150 remains the packaged proof for school `95` target-PDF-to-Excel, while v154 supersedes v153 for current Windows delivery because it includes the sparse-graduation-row parser fix. | Latest v154 package verifier and Windows extraction/setup/Saitama official-index/school-757 discovery/ingest/status/export smoke are green. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v212.zip` rebuilt at commit `8c6ef016366c1a37e9fa335ca4bdb07119d3ac7e`, verifier `OK core`, `git_dirty=false`, SHA256 `37d3d0e460f1a1654f8aaeef59a3d3b6bdc00c9c0a9460a8806ae86ae04e8853`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, and packaged OCR runtime contract checks for `src/eidp/ocr/tesseract.py` / `src/eidp/ocr/availability.py`. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v154 smoke on a fresh `C:\EIDP-v154-26d18a9` extraction remains the latest real Windows E2E proof: setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), school `757` packaged discovery accepts `study_support_system.pdf` with `year_evidence=prefecture_index_current_year`, school `757` packaged ingest writes the FY2026 row to the existing `医療` / `第一学科` Department with `extraction_confidence=0.94` and `is_current=True`, and Excel export contains one row for the school in both `学科別` and `在籍のみ抜粋`. v150 remains the packaged proof for school `95` target-PDF-to-Excel. | Latest v212 package verifier and extracted-install smoke are green on macOS. Latest real Windows extraction/setup/Saitama official-index/school-757 discovery/ingest/status/export smoke is still v154 because current Windows SSH is unavailable. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
+- 2026-05-11 v212 local package refresh →
+  commit `8c6ef016366c1a37e9fa335ca4bdb07119d3ac7e` adds a release verifier
+  gate for the packaged OCR runtime/availability contract. The core ZIP must
+  now contain `src/eidp/ocr/tesseract.py` and `src/eidp/ocr/availability.py`
+  with the add-on path, Japanese tessdata, Tesseract subprocess wrapper, and
+  operator-facing OCR availability checks intact. Verification:
+  `uv run pytest tests/unit/test_windows_distribution_verifier.py
+  tests/unit/test_ocr_addon_packaging.py
+  tests/unit/test_ocr_tesseract_wrapper.py
+  tests/unit/test_ocr_availability.py -q` → `87 passed`;
+  `uv run ruff check scripts/verify_windows_distribution.py
+  tests/unit/test_windows_distribution_verifier.py` → passed; `uv run pytest
+  tests/unit -q` → `1138 passed, 5 warnings`.
+- v212 Windows ZIP artifacts were rebuilt locally at commit
+  `8c6ef016366c1a37e9fa335ca4bdb07119d3ac7e`: `dist/eidp-windows-v212.zip`
+  and latest alias `dist/eidp-windows.zip` both have SHA256
+  `37d3d0e460f1a1654f8aaeef59a3d3b6bdc00c9c0a9460a8806ae86ae04e8853`.
+  `uv run python scripts/verify_windows_distribution.py
+  dist/eidp-windows-v212.zip --json` returned `ok=true`, `errors=[]`, and
+  `warnings=[]`, with 3,026 ZIP entries and BUILD_INFO
+  `git_dirty=false`. An extracted-install check at `/tmp/eidp-v212-extract`
+  returned `ok=true`, `errors=[]`, `warnings=[]`, `master_xlsx_present=true`,
+  and `wheel_count=78`.
 - 2026-05-11 v211 local package refresh →
   commit `aec802a3f05fab00128d86435af0ef65e21aebab` keeps the operator UI
   school scope vocational-only (`専門学校`) so the Streamlit task board, PDF
