@@ -107,6 +107,7 @@ CORE_REQUIRED_EXACT = (
     "src/eidp/excel/exporter.py",
     "src/eidp/db/audit.py",
     "src/eidp/db/audit_outbox.py",
+    "src/eidp/scraper/pdf_discovery.py",
     "src/eidp/scraper/prefecture_aggregator.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
@@ -733,6 +734,14 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "ManualActionLog",
             "jsonl_exported_at",
             "jsonl_export_error",
+        ),
+        "src/eidp/scraper/pdf_discovery.py": (
+            "strict_target_fiscal_year",
+            "target_fiscal_year_not_detected",
+            "fiscal_year_mismatch:",
+            "target_application_not_detected",
+            "prefecture_index_current_year",
+            'trusted_year_evidence if strict_target_fiscal_year else ""',
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
