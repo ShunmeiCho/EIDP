@@ -2221,6 +2221,26 @@ def test_extract_pdf_links_does_not_append_previous_year_when_anchor_has_year() 
     assert candidates[1].anchor_text == "10．令和7年度確認申請書"
 
 
+def test_extract_pdf_links_uses_nearest_year_heading_for_first_list_item() -> None:
+    html = """
+    <h3>2026年度</h3>
+    <ul>
+      <li><a href="./ybc/2026/2026_syllabus.pdf">2026年度 授業概要（シラバス） [PDF]</a></li>
+    </ul>
+    <h3>2025年度</h3>
+    <ul>
+      <li><a href="./ybc/2025/2-1_2-4.pdf">様式第2号の1～4 [PDF]</a></li>
+      <li><a href="./ybc/2025/2-4_bessi.pdf">様式第2号の4（別紙） [PDF]</a></li>
+    </ul>
+    """
+
+    candidates = _extract_pdf_links(html, "https://aiko.ac.jp/data/")
+
+    target = next(c for c in candidates if c.pdf_url.endswith("/ybc/2025/2-1_2-4.pdf"))
+    assert "2025年度" in target.anchor_text
+    assert "2026年度" not in target.anchor_text
+
+
 def test_download_pdf_accepts_url_target_hint_when_body_is_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:
