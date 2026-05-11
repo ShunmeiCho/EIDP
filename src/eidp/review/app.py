@@ -652,7 +652,7 @@ def main() -> None:
     elif page == PAGE_STATUS:
         operator_pages.page_pipeline_status(session)
     elif page == PAGE_PROPOSALS:
-        operator_pages.page_proposals_review(session)
+        operator_pages.page_proposals_review(session, lock_path=Path(settings.data_dir) / ".lock")
     elif page == PAGE_URL:
         operator_pages.page_url_submission(session)
     elif page == PAGE_EXPORTS:

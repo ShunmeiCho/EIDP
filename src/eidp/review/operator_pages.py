@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.audit import log_manual_action
+from eidp.db.locking import LockBusyError, acquire_lock
 from eidp.db.models import (
     Department,
     DepartmentChange,
@@ -2099,8 +2100,23 @@ def apply_dept_alias_proposal(
     department_id: int,
     old_name: str,
     source: str = "proposal_review_queue",
+    lock_path: Path | None = None,
 ) -> tuple[bool, str]:
     """Record a dept alias as DepartmentChange(change_type='alias')."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_dept_alias_proposal"):
+                return apply_dept_alias_proposal(
+                    session,
+                    department_id=department_id,
+                    old_name=old_name,
+                    source=source,
+                    lock_path=None,
+                )
+        except LockBusyError:
+            session.rollback()
+            return False, "lock_busy"
+
     old_name = old_name.strip()
     if not old_name:
         return False, "empty_old_name"
@@ -2141,8 +2157,23 @@ def void_department_change(
     change_id: int,
     actor: str = "operator",
     reason: str | None = None,
+    lock_path: Path | None = None,
 ) -> tuple[bool, str]:
     """Mark an operator-approved DepartmentChange as void without deleting history."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_dept_change_void"):
+                return void_department_change(
+                    session,
+                    change_id=change_id,
+                    actor=actor,
+                    reason=reason,
+                    lock_path=None,
+                )
+        except LockBusyError:
+            session.rollback()
+            return False, "lock_busy"
+
     change = session.get(DepartmentChange, change_id)
     if change is None:
         return False, "not_found"
@@ -2626,7 +2657,7 @@ def _render_school_candidate_picker(
             st.caption(f"保留しました: {template}")
 
 
-def _render_dept_proposals_tab(session: Session) -> None:
+def _render_dept_proposals_tab(session: Session, *, lock_path: Path | None = None) -> None:
     proposals = _read_proposals(_DEFAULT_DEPT_PROPOSALS)
     if not proposals:
         st.info(
@@ -2683,6 +2714,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
                     session,
                     department_id=p["db_dept_ids"][0],
                     old_name=p["template_dept"],
+                    lock_path=lock_path,
                 )
                 _record_decision(
                     ProposalDecision(
@@ -2742,6 +2774,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
                     change_id=alias["change_id"],
                     actor=st.session_state.get("operator_name", "operator") or "operator",
                     reason="operator voided dept alias from proposal review page",
+                    lock_path=lock_path,
                 )
                 if changed:
                     st.success("学科別名を取消しました。")
@@ -2749,7 +2782,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
                     st.info(f"未実行: {reason}")
 
 
-def page_proposals_review(session: Session) -> None:
+def page_proposals_review(session: Session, *, lock_path: Path | None = None) -> None:
     st.header("② マッチング提案の確認")
     st.caption(
         "競合校テンプレートと DB の学校名・学科名を自動照合した結果です。"
@@ -2793,7 +2826,7 @@ def page_proposals_review(session: Session) -> None:
     with tab_school:
         _render_school_proposals_tab(session)
     with tab_dept:
-        _render_dept_proposals_tab(session)
+        _render_dept_proposals_tab(session, lock_path=lock_path)
 
 
 def _decision_badge(decision: str) -> str:

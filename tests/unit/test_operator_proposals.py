@@ -6,6 +6,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.db.locking import acquire_lock
 from eidp.db.models import (
     Base,
     Department,
@@ -238,6 +239,64 @@ def test_apply_dept_alias_rejects_nonexistent_dept() -> None:
         )
         assert created is False
         assert reason == "dept_not_found"
+    finally:
+        session.close()
+
+
+def test_apply_dept_alias_returns_lock_busy_without_writing(tmp_path: Path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.commit()
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            created, reason = apply_dept_alias_proposal(
+                session,
+                department_id=9,
+                old_name="プロミュージシャン学科",
+                lock_path=lock_path,
+            )
+
+        assert created is False
+        assert reason == "lock_busy"
+        assert session.query(DepartmentChange).count() == 0
+    finally:
+        session.close()
+
+
+def test_void_department_change_returns_lock_busy_without_writing(tmp_path: Path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        change = DepartmentChange(
+            department_id=9,
+            change_type="alias",
+            fiscal_year=2026,
+            old_name="プロミュージシャン学科",
+            new_name="プロミュージシャン科",
+            verified=False,
+        )
+        session.add(change)
+        session.commit()
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            changed, reason = void_department_change(
+                session,
+                change_id=change.id,
+                actor="tester",
+                reason="wrong department",
+                lock_path=lock_path,
+            )
+
+        assert changed is False
+        assert reason == "lock_busy"
+        session.refresh(change)
+        assert change.voided is False
+        assert session.query(ManualActionLog).count() == 0
     finally:
         session.close()
 
