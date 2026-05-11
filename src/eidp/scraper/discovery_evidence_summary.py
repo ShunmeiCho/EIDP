@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import unicodedata
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 
 @dataclass(frozen=True)
@@ -184,9 +185,35 @@ def _classify_school_bucket(rows: list[dict[str, Any]]) -> str:
 
 
 def _is_old_year_target(row: dict[str, Any]) -> bool:
-    return (
-        str(row.get("reason") or "").startswith("fiscal_year_mismatch:")
-        and str(row.get("pdf_type") or "") == "target"
+    if not str(row.get("reason") or "").startswith("fiscal_year_mismatch:"):
+        return False
+    pdf_type = str(row.get("pdf_type") or "")
+    if pdf_type == "target":
+        return True
+    return pdf_type == "image_only" and _has_target_form_hint(row)
+
+
+def _has_target_form_hint(row: dict[str, Any]) -> bool:
+    text = unicodedata.normalize(
+        "NFKC",
+        f"{row.get('anchor_text') or ''} {row.get('pdf_url') or ''} {unquote(str(row.get('pdf_url') or ''))}",
+    ).lower()
+    return any(
+        token in text
+        for token in (
+            "修学支援",
+            "修学の支援",
+            "高等教育",
+            "無償化",
+            "機関要件",
+            "確認申請",
+            "申請書",
+            "様式第2号",
+            "様式2",
+            "shugakushien",
+            "syugakushien",
+            "hutankeigen",
+        )
     )
 
 

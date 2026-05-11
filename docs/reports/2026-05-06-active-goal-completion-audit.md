@@ -5,6 +5,48 @@ Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
 Latest audited Windows package commit: `26d18a9aac2cc2e89705f3de5551f7003e8091f8` (`eidp-windows-v154.zip`)
 
+## 2026-05-11 Codex Manual Discovery RCA Consolidation
+
+The manual/Codex discovery workflow has been consolidated into
+`docs/runbooks/discovery-codex-manual-rca.md`. The runbook fixes the operating
+order for future manual investigations: official-index handoff first,
+registered disclosure page second, bounded same-site navigation third, and
+SERP only as a last fallback for a named school. Each investigation must end in
+one structured outcome label (`accepted_target_pdf`,
+`publication_lag_latest_public`, `needs_operator_review`,
+`no_target_candidate_found`, or site/infrastructure failure) and, when useful,
+be promoted into an existing `data/discovery-gold-set/entries/*.json` entry.
+
+A current combined Saitama 51-school evidence view was also rebuilt from the
+school `95` accepted run plus the current official-index trusted year-evidence
+run. This proves Layer 0 is intact for the bounded Saitama sample: all 51
+scoped schools have `prefecture_aggregator` disclosure URLs. Layer 1 remains
+the bottleneck:
+
+- `accepted_target_pdf=2`
+- `publication_lag_or_old_target_pdf=42`
+- `non_target_candidates_only=5`
+- `no_pdf_candidates=1`
+- `site_fetch_error_only=1`
+
+During this RCA, a classification defect was found in
+`discovery_evidence_summary.py`: old-year `image_only` PDFs with strong target
+form hints such as `R7修学支援に関する資料` or `令和7年度-様式2` were being
+bucketed as `non_target_candidates_only`. They now count as
+`publication_lag_or_old_target_pdf`, which keeps strict target-year success
+unchanged while surfacing the correct operator action: latest-public old-year
+target form, not irrelevant non-target material.
+
+- Regression coverage:
+  `test_summarize_pdf_discovery_evidence_treats_image_only_old_target_hints_as_publication_lag`.
+- Verification:
+  `uv run pytest tests/unit/test_discovery_evidence_summary.py -q -k image_only`
+  → `1 passed`;
+  `uv run pytest tests/unit/test_discovery_evidence_summary.py
+  tests/unit/test_school_fiscal_year_status.py
+  tests/unit/test_review_school_year_tasks.py -q` → `72 passed`;
+  `uv run pytest tests/unit -q` → `1047 passed, 5 warnings`.
+
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
 After the discovery gold-set plan correction, a bounded current-code replay was

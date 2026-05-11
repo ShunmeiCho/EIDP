@@ -2,6 +2,8 @@
 
 This directory records manual or Codex-assisted demonstrations for finding a
 school's public confirmation PDF before turning the path into crawler logic.
+The operational manual/Codex RCA procedure lives in
+`docs/runbooks/discovery-codex-manual-rca.md`.
 
 The goal is to stop treating discovery as broad blind crawling. Each entry
 captures:

@@ -1,0 +1,255 @@
+# Codex-Assisted Discovery RCA Runbook
+
+This runbook defines how Codex should manually investigate school PDF discovery
+failures and turn the result into repeatable crawler behavior. The goal is not
+to manually replace the crawler. The goal is:
+
+1. start from the official-index chain,
+2. manually prove one school-level outcome,
+3. record the path and decision label,
+4. convert only repeated patterns into code or gold-set regression entries.
+
+Do not run nationwide SERP crawling from an agent harness. SERP is a bounded
+fallback for a named school, not the primary discovery source.
+
+## Inputs
+
+For each school, collect these facts before opening the web:
+
+- `school_id`
+- `school_name`
+- `prefecture`
+- `target_fiscal_year`
+- registered `SchoolSite` rows, especially
+  `discovery_method="prefecture_aggregator"`
+- latest `discover-pdfs` evidence rows for that school
+- current school-level evidence bucket from
+  `eidp summarize-discovery-evidence`
+
+Useful local commands:
+
+```bash
+uv run eidp summarize-discovery-evidence \
+  --evidence-log path/to/evidence.jsonl \
+  --prefecture 埼玉県 \
+  --discovery-method prefecture_aggregator \
+  --json
+
+uv run eidp discovery-gold-set --json
+uv run eidp eval-discovery-gold --pdf-evidence path/to/evidence.jsonl --json
+```
+
+## RCA Order
+
+Follow this order. Do not jump to broad search until the official-index path is
+classified.
+
+1. **Official index handoff**
+   - Confirm the prefectural official list produced a school URL.
+   - If no URL was registered, classify as Layer 0 failure.
+   - If the URL exists, continue to Layer 1. Do not start SERP yet.
+
+2. **Registered disclosure page**
+   - Open the registered `SchoolSite.url`.
+   - Look for links around `情報公開`, `公開情報`, `修学支援`, `高等教育`,
+     `無償化`, `機関要件`, `確認申請`, and `様式第2号`.
+   - Record the source page URL and exact anchor text.
+
+3. **Same-site bounded navigation**
+   - Check same-domain links that visibly look like disclosure/public info
+     pages.
+   - Check `robots.txt` and sitemap only for same-domain disclosure-like URLs.
+   - Do not follow unrelated admission, blog, SNS, job, or third-party
+     directory pages unless the official page explicitly points there.
+
+4. **Candidate PDF inspection**
+   - Prefer the PDF body over URL/anchor year hints.
+   - Treat URL/anchor year hints as evidence only when they are specific and
+     tied to target-form wording.
+   - If the candidate is image-only, classify it as review unless OCR or trusted
+     official-index context proves the target year.
+
+5. **Last-resort bounded search**
+   - Use search only for a named school and only after official-index and
+     same-site routes are classified.
+   - Use queries such as:
+     - `{school_name} 修学支援 機関要件確認申請書`
+     - `{school_name} 様式第2号 修学支援`
+     - `{school_name} 情報公開 修学支援`
+   - Reject third-party directory pages as truth sources. They may hint at a
+     school domain, but they must not prove the PDF outcome.
+
+## Outcome Labels
+
+Every manual investigation must end in one of these labels.
+
+### `accepted_target_pdf`
+
+Use only when strict target-year success is proven.
+
+Acceptable evidence:
+
+- PDF text/OCR contains the configured target FY, for example `2026年度` or
+  `令和8年度`.
+- URL or anchor contains target-year evidence and the downloaded PDF body
+  classifies as the target confirmation form.
+- Current prefecture official-index disclosure context supplies trusted year
+  evidence, and the downloaded PDF body classifies as target. Record
+  `year_evidence="prefecture_index_current_year"`.
+
+Do not use crawl date or the current calendar year as fiscal-year evidence.
+
+### `publication_lag_latest_public`
+
+Use when the latest visible target-form candidate is clearly old-year.
+
+Examples:
+
+- `R7修学支援に関する資料` for target FY2026.
+- `令和7年度-様式2` for target FY2026.
+- image-only PDFs with target-form hints but stale URL or anchor years.
+
+This is not success. It should surface to the operator as publication lag /
+latest public old-year PDF.
+
+### `needs_operator_review`
+
+Use when the PDF shape looks like a target confirmation form, but strict
+target-year evidence is missing or ambiguous.
+
+Examples:
+
+- yearless `study_support_system.pdf` from an untrusted source,
+- image-only candidate with no OCR,
+- body confirms the form shape but not the fiscal year,
+- conflicting URL/anchor/body evidence.
+
+### `no_target_candidate_found`
+
+Use when the official path was crawled and no plausible target-form candidate
+was found.
+
+This is different from a crawler crash. Record the checked page and why the
+visible PDFs are irrelevant.
+
+### Site or infrastructure failure
+
+Use an evidence bucket such as `site_fetch_error_only` or
+`tls_certificate_verify_failed` when the page cannot be fetched. Do not relabel
+this as no target.
+
+## Recording A Gold-Set Entry
+
+Add a new `data/discovery-gold-set/entries/*.json` entry only after the manual
+path is understood. Keep the schema in `data/discovery-gold-set/schema.json`.
+
+Minimum useful content:
+
+- `manual_demonstration.steps`: exact human/Codex navigation path.
+- `expected_result.school_url`: school homepage if known.
+- `expected_result.disclosure_url`: the source page that exposed the PDF or
+  proved no candidate.
+- `expected_result.pdf_url`: target, stale, review, or empty result.
+- `expected_result.strict_target_year_success`: `true` only for strict target
+  FY success.
+- `automation_pattern.reusable_rules`: the rule that should survive into code.
+- `automation_pattern.anti_patterns`: what the crawler must not infer.
+- `evidence.source_paths`: local or Windows evidence logs used for the
+  decision.
+
+After adding entries, run:
+
+```bash
+uv run eidp discovery-gold-set --json
+uv run eidp eval-discovery-gold --pdf-evidence path/to/evidence.jsonl --json
+uv run pytest tests/unit/test_discovery_gold_set.py \
+  tests/unit/test_discovery_gold_set_summary.py \
+  tests/unit/test_discovery_gold_set_eval.py \
+  tests/unit/test_cli_discovery_gold_set.py \
+  tests/unit/test_cli_eval_discovery_gold.py \
+  tests/unit/test_discovery_gold_set_seed.py -q
+```
+
+## Promoting Manual Findings Into Code
+
+Do not add a crawler rule from one anecdote unless the risk is narrow and the
+rule only changes classification/evidence presentation. Prefer these promotion
+levels:
+
+1. **Evidence-only classification fix**
+   - Safe for outcome labeling, operator UI, and RCA.
+   - Example: old-year `image_only` PDFs with `修学支援` or `様式第2号` hints
+     should be `publication_lag_or_old_target_pdf`, not
+     `non_target_candidates_only`.
+
+2. **Pre-download negative token**
+   - Safe when the PDF is clearly adjacent non-target material, such as
+     `役員名簿`, `学校情報`, `学校紹介`, or `授業科目`.
+
+3. **Candidate scoring or bounded same-site navigation**
+   - Use only after at least two similar gold-set entries or a focused RCA
+     proves the pattern.
+
+4. **Strict acceptance rule**
+   - Highest risk. Requires target-form body validation plus reliable target
+     fiscal-year evidence. Never accept stale forms to raise yield.
+
+## Saitama Current Baseline
+
+The current combined Saitama official-index RCA evidence has 51 scoped
+`prefecture_aggregator` disclosure schools:
+
+- `accepted_target_pdf=2`
+- `publication_lag_or_old_target_pdf=42`
+- `non_target_candidates_only=5`
+- `no_pdf_candidates=1`
+- `site_fetch_error_only=1`
+
+Interpretation:
+
+- Layer 0 is not the primary failure for this bounded Saitama set: 51 official
+  disclosure URLs are in DB.
+- Layer 1 is the bottleneck: most failures are latest-public old-year target
+  forms or review/manual cases.
+- The next manual RCA should focus on the 5 `non_target_candidates_only`, the
+  1 `no_pdf_candidates`, and the 1 `site_fetch_error_only` before spending time
+  on the 42 publication-lag schools.
+
+## Codex Prompt Template
+
+Use this when asking Codex to investigate one school:
+
+```text
+Investigate EIDP discovery for school_id=<id>, target_fiscal_year=<year>.
+
+Inputs:
+- school_name=<name>
+- prefecture=<prefecture>
+- registered SchoolSite URLs=<urls>
+- latest evidence rows=<paste or path>
+- current bucket=<bucket>
+
+Tasks:
+1. Classify whether the failure is Layer 0 URL handoff, Layer 1 PDF discovery,
+   strict fiscal-year evidence, PDF parsing, or true publication lag.
+2. Manually inspect only the official-index URL and bounded same-site paths
+   first. Use search only if those are exhausted.
+3. End with exactly one outcome label:
+   accepted_target_pdf / publication_lag_latest_public /
+   needs_operator_review / no_target_candidate_found / site_fetch_error.
+4. Return the evidence chain: source page, PDF URL if any, anchor text,
+   fiscal-year evidence, and what should become a crawler rule or anti-pattern.
+5. If this should enter the gold set, draft the entry fields.
+```
+
+## Stop Conditions
+
+Stop manual search for a school when one of these is true:
+
+- strict target-year PDF is proven and can be replayed by `discover-pdfs`,
+- latest public target-form PDF is old-year and no current-year evidence exists,
+- no plausible target-form link exists after official page, same-site
+  disclosure pages, robots/sitemap, and one bounded search pass,
+- site fetch is blocked by TLS, robots, auth, or persistent server error.
+
+The result should be a labeled evidence trail, not an open-ended web search.

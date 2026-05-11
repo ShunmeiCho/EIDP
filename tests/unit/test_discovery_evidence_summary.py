@@ -44,6 +44,39 @@ def test_summarize_pdf_discovery_evidence_buckets_school_outcomes(tmp_path: Path
     assert summary.pdf_type_counts["target"] == 2
 
 
+def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_hints_as_publication_lag(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 1,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "image_only",
+                "pdf_url": "https://example.ac.jp/report/09_shugakushien_r7.pdf",
+                "anchor_text": "R7修学支援に関する資料",
+            },
+            {
+                "school_id": 2,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "image_only",
+                "pdf_url": "https://example.ac.jp/report/R7-yoshiki-2.pdf",
+                "anchor_text": "令和7年度-様式2",
+            },
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    assert summary.school_bucket_counts == {"publication_lag_or_old_target_pdf": 2}
+    assert [school.bucket for school in summary.school_summaries] == [
+        "publication_lag_or_old_target_pdf",
+        "publication_lag_or_old_target_pdf",
+    ]
+
+
 def test_summarize_pdf_discovery_evidence_buckets_tls_certificate_failures(tmp_path: Path) -> None:
     evidence_path = tmp_path / "evidence.jsonl"
     _write_jsonl(
