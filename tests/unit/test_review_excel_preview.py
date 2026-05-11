@@ -95,6 +95,58 @@ def test_build_preview_workbook_produces_4_sheets(engine):
         preview = build_preview_workbook(session)
         assert preview.workbook.sheetnames == list(SHEET_ORDER)
         assert preview.counts.keys() == set(SHEET_ORDER)
+        assert preview.quality_warnings == {
+            "department_yearly_low_confidence_current": 0,
+            "department_yearly_auto_flag_current": 0,
+            "support_recipient_low_confidence_current": 0,
+            "support_recipient_auto_flag_current": 0,
+        }
+
+
+def test_build_preview_workbook_reports_quality_warnings(engine):
+    with Session(engine) as session:
+        _seed(session)
+        school = School(
+            prefecture="東京都",
+            corporation_name="法人C",
+            school_name="C学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.flush()
+        dept = Department(school_id=school.id, canonical_name="C学科")
+        session.add(dept)
+        session.flush()
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                enrollment=10,
+                capacity=20,
+                extraction_confidence=0.64,
+                extraction_method="pdf_parse",
+            )
+        )
+        session.add(
+            SupportRecipient(
+                school_id=school.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                annual_total=10,
+                grand_total=10,
+                extraction_confidence=0.80,
+            )
+        )
+        session.commit()
+
+        preview = build_preview_workbook(session)
+
+    assert preview.quality_warnings["department_yearly_low_confidence_current"] == 1
+    assert preview.quality_warnings["support_recipient_auto_flag_current"] == 1
 
 
 def test_build_preview_workbook_does_not_touch_filesystem(engine, tmp_path):

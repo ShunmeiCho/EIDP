@@ -40,6 +40,59 @@ YEAR_BLOCK_HEADERS = [
     "収定", "在籍", "留学生", "卒業", "進学", "就職",
     "その他", "前年在籍", "中退", "中退率",
 ]
+EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70
+EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = 0.85
+
+
+def _exportable_confidence_sql(alias: str) -> str:
+    return (
+        f"({alias}.extraction_confidence IS NULL "
+        f"OR {alias}.extraction_confidence >= {EXCEL_MIN_EXTRACTION_CONFIDENCE})"
+    )
+
+
+def export_quality_warnings(session: Session) -> dict[str, int]:
+    """Count current rows that need Excel export quality attention."""
+    params = {
+        "min_confidence": EXCEL_MIN_EXTRACTION_CONFIDENCE,
+        "auto_flag_confidence": EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE,
+    }
+    checks = {
+        "department_yearly_low_confidence_current": text(f"""
+            SELECT COUNT(*)
+            FROM department_yearly dy
+            WHERE dy.is_current = {IS_CURRENT_TRUE_SQL}
+              AND dy.extraction_confidence IS NOT NULL
+              AND dy.extraction_confidence < :min_confidence
+        """),
+        "department_yearly_auto_flag_current": text(f"""
+            SELECT COUNT(*)
+            FROM department_yearly dy
+            WHERE dy.is_current = {IS_CURRENT_TRUE_SQL}
+              AND dy.extraction_confidence IS NOT NULL
+              AND dy.extraction_confidence >= :min_confidence
+              AND dy.extraction_confidence < :auto_flag_confidence
+        """),
+        "support_recipient_low_confidence_current": text(f"""
+            SELECT COUNT(*)
+            FROM support_recipient sr
+            WHERE sr.is_current = {IS_CURRENT_TRUE_SQL}
+              AND sr.extraction_confidence IS NOT NULL
+              AND sr.extraction_confidence < :min_confidence
+        """),
+        "support_recipient_auto_flag_current": text(f"""
+            SELECT COUNT(*)
+            FROM support_recipient sr
+            WHERE sr.is_current = {IS_CURRENT_TRUE_SQL}
+              AND sr.extraction_confidence IS NOT NULL
+              AND sr.extraction_confidence >= :min_confidence
+              AND sr.extraction_confidence < :auto_flag_confidence
+        """),
+    }
+    return {
+        key: int(session.execute(query, params).scalar() or 0)
+        for key, query in checks.items()
+    }
 
 
 def _write_sairoku(ws: Worksheet, session: Session) -> int:
@@ -125,6 +178,7 @@ def _write_taisho_hiritu(ws: Worksheet, session: Session) -> int:
         FROM support_recipient sr
         JOIN school s ON s.id = sr.school_id
         WHERE sr.is_current = {IS_CURRENT_TRUE_SQL}
+          AND {_exportable_confidence_sql("sr")}
         ORDER BY sr.id
     """)
 
@@ -188,14 +242,15 @@ def _write_gakka(ws: Worksheet, session: Session) -> int:
     depts = session.execute(query).fetchall()
 
     # Pre-fetch all yearly data keyed by (department_id, fiscal_year)
-    yearly_query = text("""
+    yearly_query = text(f"""
         SELECT
             department_id, fiscal_year,
             capacity, enrollment, intl_students, graduates,
             advanced, employed, other, prev_enrollment,
             dropouts, dropout_rate, notes
         FROM department_yearly
-        WHERE is_current = true
+        WHERE is_current = {IS_CURRENT_TRUE_SQL}
+          AND {_exportable_confidence_sql("department_yearly")}
         ORDER BY department_id, fiscal_year
     """)
     yearly_rows = session.execute(yearly_query).fetchall()
@@ -280,7 +335,9 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
     yearly_query = text(f"""
         SELECT department_id, fiscal_year, enrollment, intl_students
         FROM department_yearly
-        WHERE is_current = true AND fiscal_year BETWEEN {min_ey} AND {max_ey}
+        WHERE is_current = {IS_CURRENT_TRUE_SQL}
+          AND fiscal_year BETWEEN {min_ey} AND {max_ey}
+          AND {_exportable_confidence_sql("department_yearly")}
         ORDER BY department_id, fiscal_year
     """)
     yearly_rows = session.execute(yearly_query).fetchall()
@@ -341,6 +398,9 @@ def export_master_workbook(session: Session, output_path: Path) -> dict[str, int
     # Sheet 4: 在籍のみ抜粋
     ws_zaiseki = wb.create_sheet("在籍のみ抜粋")
     zaiseki_count = _write_zaiseki(ws_zaiseki, session)
+    quality_warnings = export_quality_warnings(session)
+    if any(quality_warnings.values()):
+        log.warning("excel_export_quality_warnings", **quality_warnings)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(str(output_path))
@@ -351,6 +411,7 @@ def export_master_workbook(session: Session, output_path: Path) -> dict[str, int
         "対象比率": taisho_count,
         "学科別": gakka_count,
         "在籍のみ抜粋": zaiseki_count,
+        **{f"quality_{key}": value for key, value in quality_warnings.items()},
     }
     log.info("export_complete", results=results, output=str(output_path))
     return results

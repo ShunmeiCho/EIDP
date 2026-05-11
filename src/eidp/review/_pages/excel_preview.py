@@ -40,6 +40,7 @@ from eidp.excel.exporter import (
     _write_sairoku,
     _write_taisho_hiritu,
     _write_zaiseki,
+    export_quality_warnings,
 )
 from eidp.fiscal_year import format_fiscal_year_label
 from eidp.reports.coverage import ExportGapReport, gap_report_for_export
@@ -56,6 +57,7 @@ class PreviewWorkbook:
 
     workbook: openpyxl.Workbook
     counts: dict[str, int] = field(default_factory=dict)
+    quality_warnings: dict[str, int] = field(default_factory=dict)
 
     def to_bytes(self) -> bytes:
         """Serialize to bytes for st.download_button. Calling this does
@@ -100,6 +102,7 @@ def build_preview_workbook(session: Session) -> PreviewWorkbook:
             "学科別": gakka_count,
             "在籍のみ抜粋": zaiseki_count,
         },
+        quality_warnings=export_quality_warnings(session),
     )
 
 
@@ -214,6 +217,25 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             f"{target_label} は未完了です。"
             f"Excel出力可 {export_gap.excel_ready_schools}/{export_gap.total_schools} 校の状態で出力します。"
         )
+    quality_warnings = export_quality_warnings(session)
+    low_confidence_rows = (
+        quality_warnings["department_yearly_low_confidence_current"]
+        + quality_warnings["support_recipient_low_confidence_current"]
+    )
+    auto_flag_rows = (
+        quality_warnings["department_yearly_auto_flag_current"]
+        + quality_warnings["support_recipient_auto_flag_current"]
+    )
+    if low_confidence_rows:
+        st.error(
+            f"confidence 0.70 未満の current 行が {low_confidence_rows} 件あります。"
+            "これらはExcel出力から除外されます。PDF確認または手入力で修正してください。"
+        )
+    if auto_flag_rows:
+        st.warning(
+            f"confidence 0.70以上0.85未満の要確認行が {auto_flag_rows} 件あります。"
+            "Excelには含まれますが、配布前にPDF確認画面で内容を確認してください。"
+        )
 
     can_generate = export_gap.has_target_year_data
     if st.button("プレビュー workbook を生成", type="primary", disabled=not can_generate):
@@ -223,6 +245,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             st.session_state["excel_preview_counts"] = preview.counts
             st.session_state["excel_preview_workbook"] = preview.workbook
             st.session_state["excel_preview_gap"] = export_gap
+            st.session_state["excel_preview_quality_warnings"] = preview.quality_warnings
         st.rerun()
 
     if "excel_preview_workbook" in st.session_state:
