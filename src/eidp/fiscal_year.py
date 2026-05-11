@@ -139,10 +139,12 @@ def fiscal_year_search_tokens(
     active = japanese_era_for_fiscal_year(fiscal_year, eras=eras)
     if active is not None:
         era, era_year = active
+        kanji_era_year = _format_kanji_number(era_year)
         tokens.extend(
             [
                 f"{era.name}{era_year}",
                 f"{era.name}{era_year:02d}",
+                f"{era.name}{kanji_era_year}",
                 f"{era.initial}{era_year}",
                 f"{era.initial}{era_year:02d}",
                 f"{era.romanized}{era_year}",
@@ -166,6 +168,19 @@ _KANJI_DIGITS: dict[str, int] = {
     "八": 8,
     "九": 9,
 }
+
+
+def _format_kanji_number(value: int) -> str:
+    """Format a small positive integer using simple Japanese numerals."""
+
+    if value <= 0 or value >= 100:
+        return str(value)
+    if value < 10:
+        return next(key for key, digit in _KANJI_DIGITS.items() if digit == value and key not in {"〇", "零"})
+    tens, ones = divmod(value, 10)
+    tens_text = "" if tens == 1 else _format_kanji_number(tens)
+    ones_text = "" if ones == 0 else _format_kanji_number(ones)
+    return f"{tens_text}十{ones_text}"
 
 
 def _parse_era_year(value: str) -> int:

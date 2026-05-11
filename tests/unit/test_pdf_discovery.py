@@ -75,6 +75,23 @@ def test_score_candidate_uses_configured_target_fiscal_year() -> None:
     )
 
 
+def test_score_candidate_uses_kanji_target_fiscal_year_tokens() -> None:
+    target = PdfCandidate(
+        pdf_url="https://example.ac.jp/confirmation.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和十年度 確認申請書",
+    )
+    previous = PdfCandidate(
+        pdf_url="https://example.ac.jp/old-confirmation.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和九年度 確認申請書",
+    )
+
+    assert _score_candidate(target, target_fiscal_year=2028) > _score_candidate(
+        previous, target_fiscal_year=2028
+    )
+
+
 def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
     token_cases = [
         ("https://example.ac.jp/disclosure/yakuinmeibo.pdf", "役員名簿"),
@@ -417,6 +434,34 @@ def test_pre_download_detects_stale_full_form_range_without_support_system_words
     assert rejection is not None
     assert rejection.pdf_type == "target"
     assert rejection.reason == "fiscal_year_mismatch:2025"
+
+
+def test_pre_download_detects_kanji_stale_year_for_future_target_year() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/disclosure/kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和八年度 高等教育の修学支援新制度 確認申請書",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2027)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2026"
+
+
+def test_pre_download_keeps_kanji_current_year_for_future_target_year() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/disclosure/kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和九年度 高等教育の修学支援新制度 確認申請書",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2027)
+
+    assert rejection is None
 
 
 def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> None:
