@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `0511e6730ded05871d48202f61eea3765ac0a046` (`eidp-windows-v242.zip`)
+Latest audited Windows package commit: `8e7baef7d15f639fb424fa810b0b7b5090ab6bb8` (`eidp-windows-v243.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -369,6 +369,31 @@ Saitama schools where strict current-FY target PDFs still are not acquired.
   as did local ZIP verification, local extracted validation, Windows
   setup/after-setup validation, and the clean Windows v242 Saitama bounded
   replay above.
+
+For v243 packaging, `scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v243.zip --latest-alias` produced SHA256
+`b60b5643d537673de6abe5b7ff04654991993207542eb63e0c80f50945b0ad25`
+with `git_commit=8e7baef7d15f639fb424fa810b0b7b5090ab6bb8` and
+`git_dirty=false`. `scripts/verify_windows_distribution.py` passed with
+`entry_count=3028`, `wheel_count=78`, 18 discovery gold-set entries, and 47
+downloadable supported prefecture seeds. Fresh Windows extraction
+`C:\Users\cyo20\EIDP-v243-8e7baef` passed setup and after-setup validation
+with `school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, `uq_document_file_hash` present, the expected
+`department_change` void columns present, `build_commit` matching the package
+commit, and `build_dirty=false`.
+
+A focused Windows v243 replay then validated the packaged O-Hara table-header
+candidate derivation in the real operator runtime. The replay seeded school
+`212` with the registered disclosure page `https://www.o-hara.ac.jp/about/joho/`
+and ran strict FY2026 discovery against that single site. It produced
+`crawled=1`, `found=1`, `downloaded=0`, `skipped=198`, `prefiltered=187`,
+`candidate_budget_limited=1`, and `candidate_budget_dropped=1640`. The packaged
+evidence predicts
+`https://www.o-hara.ac.jp/about/joho/pdf/2025-1-37-01-5.pdf`, matching the new
+gold-set entry exactly as `publication_lag_latest_public`. This is a Windows
+package proof for the manual-success-to-agent pattern, but not a strict
+current-FY yield improvement because the visible O-Hara form remains FY2025.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
@@ -2869,10 +2894,12 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v242 is the current verifier-clean and
-Windows setup-verified ZIP candidate. The latest full bounded Windows
-acquisition RCA still proves strict FY2026 yield below the ship gate: the
-v242 Saitama official-index run covered `51` official-index school URLs, found
+The active goal is **not complete**. v243 is the current verifier-clean and
+Windows setup-verified ZIP candidate, with a focused Windows replay covering
+the O-Hara table-header discovery pattern. The latest full bounded Windows
+acquisition RCA is still v242 and still proves strict FY2026 yield below the
+ship gate: the v242 Saitama official-index run covered `51` official-index
+school URLs, found
 PDF candidates on `50` sites, downloaded `3` PDFs, and counted `3` schools
 as current target-PDF auto acquired after ingest/status rebuild. v240 and v241
 reduced download-time non-target waste (`classified_non_target` fell from v239
@@ -2924,13 +2951,12 @@ to `1324`, skipped candidates from `5418` to `1166`, cached rejections from
 `candidate_budget_limited=8` and `candidate_budget_dropped=6487`; the accepted
 current-year count still stayed `3/2418`, so v242 is a runtime/noise
 improvement rather than a yield improvement.
-Current-code manual RCA after v242 adds an O-Hara table pattern that mirrors the
-operator's successful path: use the same-column `確認申請書` header and the
-nearest school section heading before ranking candidates. A focused replay for
-school `212` on a copied Saitama RCA DB produced `crawled=1`, `found=1`,
-`downloaded=0`, `skipped=198`, `prefiltered=187`,
-`candidate_budget_limited=1`, and `candidate_budget_dropped=1641`; the new
-gold-set entry exactly predicts
+v243 packages and Windows-validates the next manual-success-to-agent pattern:
+use the same-column `確認申請書` table header and the nearest school section
+heading before ranking O-Hara group candidates. A focused Windows v243 replay
+for school `212` produced `crawled=1`, `found=1`, `downloaded=0`,
+`skipped=198`, `prefiltered=187`, `candidate_budget_limited=1`, and
+`candidate_budget_dropped=1640`; the new gold-set entry exactly predicts
 `https://www.o-hara.ac.jp/about/joho/pdf/2025-1-37-01-5.pdf` as
 `publication_lag_latest_public` for FY2026. This fixes the
 `non_target_candidates_only` RCA bucket for that O-Hara school-family case but
