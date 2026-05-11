@@ -261,6 +261,17 @@ def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path,
                 "reason": "no_candidates_found",
                 "pdf_url": "https://c.example.ac.jp/kokai/",
             },
+            {
+                "school_id": 4,
+                "reason": "discovery_error",
+                "pdf_url": "https://d.example.ac.jp/kokai/",
+                "extra": {"error": "503 Service Unavailable"},
+            },
+            {
+                "school_id": 4,
+                "reason": "pre_filtered_non_target_hint",
+                "pdf_url": "https://d.example.ac.jp/syllabus.pdf",
+            },
         ],
     )
     engine = create_engine("sqlite:///:memory:")
@@ -270,6 +281,8 @@ def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path,
             (1, "A専門学校", "https://a.example.ac.jp/kokai/"),
             (2, "B専門学校", "https://b.example.ac.jp/kokai/"),
             (3, "C専門学校", "https://c.example.ac.jp/kokai/"),
+            (4, "D専門学校", "https://d.example.ac.jp/kokai/"),
+            (5, "E専門学校", "https://e.example.ac.jp/kokai/"),
         ]:
             session.add(
                 School(
@@ -310,19 +323,22 @@ def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path,
             "--target-fiscal-year",
             "2026",
             "--limit",
-            "2",
+            "5",
             "--json",
         ],
     )
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["total_candidates"] == 3
+    assert payload["total_candidates"] == 5
     assert [item["bucket"] for item in payload["items"]] == [
         "target_form_without_year_evidence",
         "no_pdf_candidates",
+        "mixed_with_site_fetch_error",
+        "no_evidence",
+        "publication_lag_or_old_target_pdf",
     ]
-    assert [item["packet"]["school_id"] for item in payload["items"]] == [2, 3]
+    assert [item["packet"]["school_id"] for item in payload["items"]] == [2, 3, 4, 5, 1]
     assert payload["items"][0]["packet"]["official_index_url"] == "https://b.example.ac.jp/kokai/"
 
 

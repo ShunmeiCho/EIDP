@@ -347,6 +347,7 @@ def _bucket_priority(bucket: str) -> int:
         "no_pdf_candidates": 30,
         "tls_certificate_verify_failed": 40,
         "site_fetch_error_only": 50,
+        "mixed_with_site_fetch_error": 55,
         "no_evidence": 60,
         "publication_lag_or_old_target_pdf": 90,
     }.get(bucket, 80)
