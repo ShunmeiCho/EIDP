@@ -1165,11 +1165,19 @@ def discovery_rca_outcome_validate(
         "--input",
         help="Path to one Required Output Block JSON file, or a directory of *.json outcome files",
     ),
+    batch_plan_path: Path | None = typer.Option(
+        None,
+        "--batch-plan",
+        help="Optional discovery-rca-batch-plan JSON; require exact school/FY coverage",
+    ),
 ) -> None:
     """Validate a Codex-assisted single-school RCA output block."""
     import json
 
-    from eidp.scraper.discovery_rca_packet import validate_single_school_rca_outcome
+    from eidp.scraper.discovery_rca_packet import (
+        validate_rca_outcome_batch_plan_coverage,
+        validate_single_school_rca_outcome,
+    )
 
     is_directory = input_path.is_dir()
     input_files = sorted(input_path.glob("*.json")) if is_directory else [input_path]
@@ -1180,6 +1188,7 @@ def discovery_rca_outcome_validate(
     valid_count = 0
     failed = False
     last_payload: dict[str, object] | None = None
+    valid_payloads: list[dict[str, object]] = []
     for path in input_files:
         label = path.name if is_directory else str(path)
         try:
@@ -1208,12 +1217,38 @@ def discovery_rca_outcome_validate(
             continue
         valid_count += 1
         last_payload = payload
+        valid_payloads.append(payload)
 
     if failed:
         raise typer.Exit(1)
 
+    batch_plan_item_count: int | None = None
+    if batch_plan_path is not None:
+        try:
+            batch_plan = json.loads(batch_plan_path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            typer.echo(f"failed to read batch plan {batch_plan_path}: {exc}", err=True)
+            raise typer.Exit(1) from exc
+        except json.JSONDecodeError as exc:
+            typer.echo(f"invalid JSON in batch plan {batch_plan_path}: {exc}", err=True)
+            raise typer.Exit(1) from exc
+        if not isinstance(batch_plan, dict):
+            typer.echo("batch plan must be one JSON object", err=True)
+            raise typer.Exit(1)
+        coverage_errors = validate_rca_outcome_batch_plan_coverage(valid_payloads, batch_plan)
+        if coverage_errors:
+            typer.echo("Invalid discovery RCA batch coverage:", err=True)
+            for error in coverage_errors:
+                typer.echo(f"  - {error}", err=True)
+            raise typer.Exit(1)
+        items = batch_plan.get("items")
+        batch_plan_item_count = len(items) if isinstance(items, list) else 0
+
     if is_directory:
-        typer.echo(f"OK discovery RCA outcomes: files={valid_count}")
+        message = f"OK discovery RCA outcomes: files={valid_count}"
+        if batch_plan_item_count is not None:
+            message += f" batch_plan_items={batch_plan_item_count}"
+        typer.echo(message)
         return
 
     assert last_payload is not None

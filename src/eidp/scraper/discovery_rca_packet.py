@@ -286,6 +286,51 @@ def validate_single_school_rca_outcome(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
+def validate_rca_outcome_batch_plan_coverage(
+    outcomes: list[dict[str, Any]],
+    batch_plan: dict[str, Any],
+) -> list[str]:
+    """Validate that RCA outcomes exactly cover a generated batch plan."""
+    items = batch_plan.get("items")
+    if not isinstance(items, list):
+        return ["batch plan items must be a list"]
+
+    errors: list[str] = []
+    expected_counts: dict[tuple[int, int], int] = {}
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            errors.append(f"batch plan item {index} must be an object")
+            continue
+        packet = item.get("packet")
+        if not isinstance(packet, dict):
+            errors.append(f"batch plan item {index} packet must be an object")
+            continue
+        key = _rca_key(packet)
+        if key is None:
+            errors.append(f"batch plan item {index} packet must contain integer school_id and target_fiscal_year")
+            continue
+        expected_counts[key] = expected_counts.get(key, 0) + 1
+
+    actual_counts: dict[tuple[int, int], int] = {}
+    for outcome in outcomes:
+        key = _rca_key(outcome)
+        if key is None:
+            continue
+        actual_counts[key] = actual_counts.get(key, 0) + 1
+
+    for key, count in sorted(expected_counts.items()):
+        actual_count = actual_counts.get(key, 0)
+        if actual_count == 0:
+            errors.append(_format_batch_coverage_error("missing batch outcome", key))
+        elif actual_count > count:
+            errors.append(_format_batch_coverage_error("duplicate outcome", key))
+    for key in sorted(actual_counts):
+        if key not in expected_counts:
+            errors.append(_format_batch_coverage_error("unexpected outcome", key))
+
+    return errors
+
+
 def _bucket_priority(bucket: str) -> int:
     return {
         "target_form_without_year_evidence": 10,
@@ -332,3 +377,16 @@ def _float_or_none(value: object) -> float | None:
 
 def _is_string_list(value: object) -> bool:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+def _rca_key(payload: dict[str, Any]) -> tuple[int, int] | None:
+    school_id = payload.get("school_id")
+    target_fiscal_year = payload.get("target_fiscal_year")
+    if not isinstance(school_id, int) or not isinstance(target_fiscal_year, int):
+        return None
+    return (school_id, target_fiscal_year)
+
+
+def _format_batch_coverage_error(prefix: str, key: tuple[int, int]) -> str:
+    school_id, target_fiscal_year = key
+    return f"{prefix}: school_id={school_id} target_fiscal_year={target_fiscal_year}"

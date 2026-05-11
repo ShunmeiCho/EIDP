@@ -365,10 +365,14 @@ uv run eidp discovery-rca-outcome-validate --input path/to/rca-outcome.json
 ```
 
 For a batch plan, save each school result as one JSON file in the same
-directory and validate the directory:
+directory and validate the directory. When the original batch plan JSON is
+available, pass it too so missing, duplicate, or extra school outputs are
+rejected:
 
 ```bash
-uv run eidp discovery-rca-outcome-validate --input path/to/rca-outcomes/
+uv run eidp discovery-rca-outcome-validate \
+  --input path/to/rca-outcomes/ \
+  --batch-plan path/to/discovery-rca-batch-plan.json
 ```
 
 ```json

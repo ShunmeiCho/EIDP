@@ -488,3 +488,121 @@ def test_discovery_rca_outcome_validate_rejects_output_directory_with_bad_file(t
     assert "Invalid discovery RCA outcome: bad.json" in result.output
     assert "missing required field: target_fiscal_year" in result.output
     assert "invalid layer: broad_serp" in result.output
+
+
+def test_discovery_rca_outcome_validate_checks_batch_plan_coverage(tmp_path: Path) -> None:
+    plan_path = tmp_path / "batch-plan.json"
+    outcome_dir = tmp_path / "outcomes"
+    outcome_dir.mkdir()
+    plan_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {"packet": {"school_id": 95, "target_fiscal_year": 2026}},
+                    {"packet": {"school_id": 96, "target_fiscal_year": 2026}},
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    for school_id in [95, 96]:
+        (outcome_dir / f"{school_id}.json").write_text(
+            json.dumps(
+                {
+                    "school_id": school_id,
+                    "target_fiscal_year": 2026,
+                    "layer": "layer_1_pdf_discovery",
+                    "outcome": "needs_operator_review",
+                    "source_page_url": f"https://example.ac.jp/{school_id}/",
+                    "candidate_pdf_url": "",
+                    "anchor_text": "",
+                    "fiscal_year_evidence": "",
+                    "target_form_evidence": "候補PDFあり",
+                    "negative_evidence": "",
+                    "checked_paths": [f"https://example.ac.jp/{school_id}/"],
+                    "search_queries_used": [],
+                    "operator_action": "review_pdf",
+                    "gold_set_entry_recommended": False,
+                    "candidate_rule": "",
+                    "anti_pattern": "",
+                    "confidence": "medium",
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-rca-outcome-validate",
+            "--input",
+            str(outcome_dir),
+            "--batch-plan",
+            str(plan_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "OK discovery RCA outcomes: files=2 batch_plan_items=2" in result.output
+
+
+def test_discovery_rca_outcome_validate_rejects_batch_plan_coverage_gaps(tmp_path: Path) -> None:
+    plan_path = tmp_path / "batch-plan.json"
+    outcome_dir = tmp_path / "outcomes"
+    outcome_dir.mkdir()
+    plan_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {"packet": {"school_id": 95, "target_fiscal_year": 2026}},
+                    {"packet": {"school_id": 96, "target_fiscal_year": 2026}},
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    for filename, school_id in [("95-a.json", 95), ("95-b.json", 95), ("97.json", 97)]:
+        (outcome_dir / filename).write_text(
+            json.dumps(
+                {
+                    "school_id": school_id,
+                    "target_fiscal_year": 2026,
+                    "layer": "layer_1_pdf_discovery",
+                    "outcome": "needs_operator_review",
+                    "source_page_url": f"https://example.ac.jp/{school_id}/",
+                    "candidate_pdf_url": "",
+                    "anchor_text": "",
+                    "fiscal_year_evidence": "",
+                    "target_form_evidence": "候補PDFあり",
+                    "negative_evidence": "",
+                    "checked_paths": [f"https://example.ac.jp/{school_id}/"],
+                    "search_queries_used": [],
+                    "operator_action": "review_pdf",
+                    "gold_set_entry_recommended": False,
+                    "candidate_rule": "",
+                    "anti_pattern": "",
+                    "confidence": "medium",
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-rca-outcome-validate",
+            "--input",
+            str(outcome_dir),
+            "--batch-plan",
+            str(plan_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "missing batch outcome: school_id=96 target_fiscal_year=2026" in result.output
+    assert "unexpected outcome: school_id=97 target_fiscal_year=2026" in result.output
+    assert "duplicate outcome: school_id=95 target_fiscal_year=2026" in result.output
