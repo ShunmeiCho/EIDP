@@ -182,6 +182,7 @@ Excel は、業務員が画面で確認した後に `Excel プレビュー` ペ�
 - build 情報
 - インストール検証結果
 - `last_run.json`
+- 最新の Codex RCA キュー (`*-discovery-rca-batch-plan.json`)
 - 週次タスク登録警告
 - 最新の初回URL/PDF取得進行状況
 - 最新の初回URL/PDF取得ログ末尾

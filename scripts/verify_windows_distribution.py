@@ -611,6 +611,8 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "--after-setup",
             "BUILD_INFO.json",
             "last_run.json",
+            "latest discovery RCA batch plan",
+            "discovery-rca-batch-plan.json",
             "latest bootstrap progress",
             "latest bootstrap log tail",
             "endlocal & exit /b 0",

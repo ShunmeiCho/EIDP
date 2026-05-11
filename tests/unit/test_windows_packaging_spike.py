@@ -420,6 +420,9 @@ def test_diagnose_bat_collects_operator_evidence_without_mutating_data(bat_files
     assert "--after-setup" in body
     assert "BUILD_INFO.json" in body
     assert "last_run.json" in body
+    assert "latest discovery RCA batch plan" in body
+    assert "discovery-rca-batch-plan.json" in body
+    assert "discovery_rca" in body
     assert "latest bootstrap progress" in body
     assert "latest bootstrap log tail" in body
     assert "del " not in body.lower()
