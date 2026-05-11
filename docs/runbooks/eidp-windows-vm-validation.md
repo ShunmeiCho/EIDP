@@ -118,6 +118,36 @@ C:\Program Files\EIDP
 - 学校別タスク page が表示される
 - UTF-8 関連の文字化けがない
 
+## 2. Stage 2c — 初回URL/PDF取得
+
+目的: 初回 bootstrap が Windows 上で完走し、対象年度PDFの自動取得率と Codex RCA キューが保存されること。
+
+手順:
+
+1. `学校別タスク` ページを開く。
+2. `初回URL/PDF取得を開始` を押す。
+3. 完了後に進行状況と診断ファイルを確認する。
+
+機械検査:
+
+```text
+"C:\Program Files\EIDP\scripts\validate_install.bat" --after-setup --after-bootstrap
+```
+
+確認項目:
+
+- `logs\bootstrap-pdfs-YYYYMMDD-HHMMSS.json` が作成される
+- `logs\bootstrap-pdfs-YYYYMMDD-HHMMSS.log` が作成される
+- progress JSON に `target_pdf_auto_yield_pct` と `ship_gate_status` がある
+- PDF探索で失敗証跡がある場合、`data\output\target-year-discovery\*-discovery-rca-batch-plan.json` が作成される
+- `EIDP-diagnose.bat` の診断ファイルに最新の Codex RCA キューが含まれる
+
+合格条件:
+
+- initial bootstrap exit code 0
+- progress JSON の `status` が `succeeded`
+- 自動取得率が画面から確認できる
+
 ## 3. Stage 3 — Weekly + Lock + last_run
 
 目的: 週次処理が Windows 上で動き、UI と排他制御されること。

@@ -104,6 +104,30 @@ def _weekly_artifacts(root: Path) -> None:
     _write(root, "logs/run-20260505.log", "ok")
 
 
+def _bootstrap_artifacts(root: Path) -> None:
+    _write(
+        root,
+        "logs/bootstrap-pdfs-20260505-010203.json",
+        json.dumps(
+            {
+                "status": "succeeded",
+                "current_step": 5,
+                "total_steps": 5,
+                "percent": 1.0,
+                "message": "初回URL/PDF取得が完了しました。",
+                "details": {
+                    "target_pdf_auto_acquired_count": 6,
+                    "target_pdf_auto_denominator_count": 10,
+                    "target_pdf_auto_yield_pct": 60.0,
+                    "ship_gate_auto_yield_pct": 60.0,
+                    "ship_gate_status": "pass",
+                },
+            }
+        ),
+    )
+    _write(root, "logs/bootstrap-pdfs-20260505-010203.log", "ok")
+
+
 def test_validate_core_install_accepts_unzipped_layout(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
 
@@ -296,6 +320,79 @@ def test_validate_after_weekly_accepts_not_measured_yield(tmp_path: Path) -> Non
 
     assert check.ok, check.errors
     assert check.details["last_run_status"] == "success"
+
+
+def test_validate_after_bootstrap_accepts_progress_yield_and_rca_plan(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _bootstrap_artifacts(root)
+    plan_rel = "data/output/target-year-discovery/bootstrap-20260505-discovery-rca-batch-plan.json"
+    _write(
+        root,
+        plan_rel,
+        json.dumps(
+            {
+                "total_candidates": 2,
+                "items": [
+                    {
+                        "bucket": "target_form_without_year_evidence",
+                        "packet": {"school_id": 95},
+                        "prompt": "Investigate this EIDP school as a single-school RCA packet.",
+                    }
+                ],
+            }
+        ),
+    )
+    payload = json.loads((root / "logs" / "bootstrap-pdfs-20260505-010203.json").read_text(encoding="utf-8"))
+    payload["details"]["discovery_rca_batch_plan_path"] = plan_rel
+    payload["details"]["discovery_rca_batch_plan_item_count"] = 1
+    payload["details"]["discovery_rca_batch_plan_total_candidates"] = 2
+    _write(root, "logs/bootstrap-pdfs-20260505-010203.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_setup=True, after_bootstrap=True)
+
+    assert check.ok, check.errors
+    assert check.details["bootstrap_status"] == "succeeded"
+    assert check.details["bootstrap_log_count"] == 1
+    assert check.details["bootstrap_discovery_rca_batch_plan_item_count"] == 1
+    assert check.details["bootstrap_discovery_rca_batch_plan_total_candidates"] == 2
+
+
+def test_validate_after_bootstrap_rejects_missing_progress(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+
+    check = module.validate_install(root, after_bootstrap=True)
+
+    assert not check.ok
+    assert any("bootstrap-pdfs-*.json" in error for error in check.errors)
+    assert any("bootstrap-pdfs-*.log" in error for error in check.errors)
+
+
+def test_validate_after_bootstrap_requires_yield_gate_keys(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _bootstrap_artifacts(root)
+    _write(
+        root,
+        "logs/bootstrap-pdfs-20260505-010203.json",
+        json.dumps(
+            {
+                "status": "succeeded",
+                "current_step": 5,
+                "total_steps": 5,
+                "percent": 1.0,
+                "message": "done",
+                "details": {},
+            }
+        ),
+    )
+
+    check = module.validate_install(root, after_bootstrap=True)
+
+    assert not check.ok
+    assert any("target_pdf_auto_yield_pct" in error for error in check.errors)
+    assert any("ship_gate_status" in error for error in check.errors)
 
 
 def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
@@ -507,6 +604,7 @@ def test_vm_runbook_uses_packaged_validator_wrapper() -> None:
 
     assert "uv run python scripts/validate_windows_install.py" not in body
     assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup' in body
+    assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup --after-bootstrap' in body
     assert '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" --after-setup --after-weekly' in body
     assert (
         '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '

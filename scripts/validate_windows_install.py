@@ -208,6 +208,45 @@ def _resolve_install_path(root: Path, raw_path: str) -> Path:
     return root.joinpath(*parts)
 
 
+def _validate_rca_batch_plan_file(
+    check: InstallCheck,
+    root: Path,
+    *,
+    raw_path: str,
+    expected_items: object,
+    error_prefix: str,
+) -> None:
+    if not raw_path:
+        return
+
+    plan_path = _resolve_install_path(root, raw_path)
+    check.details[f"{error_prefix}_batch_plan_path"] = str(plan_path)
+    if not plan_path.is_file():
+        check.fail(f"{error_prefix} batch plan is missing: {raw_path}")
+        return
+    try:
+        payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        check.fail(f"{error_prefix} batch plan is not readable UTF-8 JSON: {exc}")
+        return
+    if not isinstance(payload, dict):
+        check.fail(f"{error_prefix} batch plan must contain a JSON object")
+        return
+    items = payload.get("items")
+    if not isinstance(items, list):
+        check.fail(f"{error_prefix} batch plan items must be a list")
+        return
+    total_candidates = payload.get("total_candidates")
+    check.details[f"{error_prefix}_batch_plan_item_count"] = len(items)
+    if isinstance(total_candidates, int):
+        check.details[f"{error_prefix}_batch_plan_total_candidates"] = total_candidates
+    if isinstance(expected_items, int) and expected_items != len(items):
+        check.fail(
+            f"{error_prefix}.batch_plan_item_count does not match batch plan items: "
+            f"{expected_items} != {len(items)}"
+        )
+
+
 def _validate_discovery_rca_batch_plan(
     check: InstallCheck,
     root: Path,
@@ -218,35 +257,13 @@ def _validate_discovery_rca_batch_plan(
     raw_path = str(discovery_rca.get("batch_plan_path") or "")
     if not raw_path:
         return
-
-    plan_path = _resolve_install_path(root, raw_path)
-    check.details["discovery_rca_batch_plan_path"] = str(plan_path)
-    if not plan_path.is_file():
-        check.fail(f"discovery_rca batch plan is missing: {raw_path}")
-        return
-    try:
-        payload = json.loads(plan_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        check.fail(f"discovery_rca batch plan is not readable UTF-8 JSON: {exc}")
-        return
-    if not isinstance(payload, dict):
-        check.fail("discovery_rca batch plan must contain a JSON object")
-        return
-    items = payload.get("items")
-    if not isinstance(items, list):
-        check.fail("discovery_rca batch plan items must be a list")
-        return
-    total_candidates = payload.get("total_candidates")
-    check.details["discovery_rca_batch_plan_item_count"] = len(items)
-    if isinstance(total_candidates, int):
-        check.details["discovery_rca_batch_plan_total_candidates"] = total_candidates
-
-    expected_items = discovery_rca.get("batch_plan_item_count")
-    if isinstance(expected_items, int) and expected_items != len(items):
-        check.fail(
-            "last_run.json discovery_rca.batch_plan_item_count does not match "
-            f"batch plan items: {expected_items} != {len(items)}"
-        )
+    _validate_rca_batch_plan_file(
+        check,
+        root,
+        raw_path=raw_path,
+        expected_items=discovery_rca.get("batch_plan_item_count"),
+        error_prefix="discovery_rca",
+    )
 
 
 def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
@@ -291,10 +308,83 @@ def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
         )
 
 
+def _load_latest_bootstrap_progress(check: InstallCheck, root: Path) -> dict[str, Any] | None:
+    logs_dir = root / "logs"
+    progress_files = sorted(
+        logs_dir.glob("bootstrap-pdfs-*.json") if logs_dir.is_dir() else [],
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    check.details["bootstrap_progress_count"] = len(progress_files)
+    if not progress_files:
+        check.fail("missing logs/bootstrap-pdfs-*.json after initial bootstrap")
+        return None
+
+    progress_path = progress_files[0]
+    check.details["bootstrap_progress_path"] = str(progress_path)
+    try:
+        payload = json.loads(progress_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        check.fail(f"bootstrap progress is not readable UTF-8 JSON: {exc}")
+        return None
+    if not isinstance(payload, dict):
+        check.fail("bootstrap progress must contain a JSON object")
+        return None
+    return payload
+
+
+def _validate_bootstrap_progress_payload(check: InstallCheck, root: Path, payload: dict[str, Any]) -> None:
+    check.details["bootstrap_status"] = payload.get("status")
+    if payload.get("status") != "succeeded":
+        check.fail("bootstrap progress status must be succeeded for the after-bootstrap gate")
+
+    details = payload.get("details")
+    if not isinstance(details, dict):
+        check.fail("bootstrap progress details must contain a JSON object")
+        return
+
+    required_keys = (
+        "target_pdf_auto_acquired_count",
+        "target_pdf_auto_denominator_count",
+        "target_pdf_auto_yield_pct",
+        "ship_gate_auto_yield_pct",
+        "ship_gate_status",
+    )
+    for key in required_keys:
+        if key not in details:
+            check.fail(f"bootstrap progress details missing key: {key}")
+
+    for key in ("target_pdf_auto_acquired_count", "target_pdf_auto_denominator_count"):
+        if key in details and not isinstance(details.get(key), int):
+            check.fail(f"bootstrap progress details {key} must be an integer")
+    target_yield = details.get("target_pdf_auto_yield_pct")
+    if "target_pdf_auto_yield_pct" in details:
+        if target_yield is None:
+            if details.get("ship_gate_status") != "not_measured":
+                check.fail("bootstrap target_pdf_auto_yield_pct can be null only when not_measured")
+        elif not isinstance(target_yield, int | float):
+            check.fail("bootstrap progress details target_pdf_auto_yield_pct must be numeric")
+    if "ship_gate_auto_yield_pct" in details and not isinstance(details.get("ship_gate_auto_yield_pct"), int | float):
+        check.fail("bootstrap progress details ship_gate_auto_yield_pct must be numeric")
+    if "ship_gate_status" in details and not isinstance(details.get("ship_gate_status"), str):
+        check.fail("bootstrap progress details ship_gate_status must be a string")
+
+    raw_path = str(details.get("discovery_rca_batch_plan_path") or "")
+    if raw_path:
+        _validate_rca_batch_plan_file(
+            check,
+            root,
+            raw_path=raw_path,
+            expected_items=details.get("discovery_rca_batch_plan_item_count"),
+            error_prefix="bootstrap_discovery_rca",
+        )
+
+
 def validate_install(
     app_root: Path,
     *,
     after_setup: bool = False,
+    after_bootstrap: bool = False,
     after_weekly: bool = False,
     require_ocr_addon: bool = False,
     require_playwright_addon: bool = False,
@@ -339,6 +429,16 @@ def validate_install(
             if not _exists_file(root, rel):
                 check.fail(f"missing setup file: {rel}")
         _validate_sqlite_schema(check, root / "data" / "eidp.sqlite3")
+
+    if after_bootstrap:
+        bootstrap_progress = _load_latest_bootstrap_progress(check, root)
+        if bootstrap_progress is not None:
+            _validate_bootstrap_progress_payload(check, root, bootstrap_progress)
+        logs_dir = root / "logs"
+        bootstrap_logs = sorted(logs_dir.glob("bootstrap-pdfs-*.log")) if logs_dir.is_dir() else []
+        check.details["bootstrap_log_count"] = len(bootstrap_logs)
+        if not bootstrap_logs:
+            check.fail("missing logs/bootstrap-pdfs-*.log after initial bootstrap")
 
     if after_weekly:
         last_run = _load_last_run(check, root / "data" / "output" / "last_run.json")
@@ -426,6 +526,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate an extracted EIDP Windows install directory.")
     parser.add_argument("app_root", type=Path, help="Path to extracted EIDP app root, e.g. C:\\EIDP")
     parser.add_argument("--after-setup", action="store_true", help="Require first_setup.bat output artifacts")
+    parser.add_argument("--after-bootstrap", action="store_true", help="Require initial bootstrap progress artifacts")
     parser.add_argument("--after-weekly", action="store_true", help="Require weekly_run.bat output artifacts")
     parser.add_argument("--require-ocr-addon", action="store_true")
     parser.add_argument("--require-playwright-addon", action="store_true")
@@ -435,6 +536,7 @@ def main(argv: list[str] | None = None) -> int:
     check = validate_install(
         args.app_root,
         after_setup=args.after_setup,
+        after_bootstrap=args.after_bootstrap,
         after_weekly=args.after_weekly,
         require_ocr_addon=args.require_ocr_addon,
         require_playwright_addon=args.require_playwright_addon,
