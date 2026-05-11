@@ -2100,6 +2100,7 @@ def apply_dept_alias_proposal(
     department_id: int,
     old_name: str,
     source: str = "proposal_review_queue",
+    actor: str = "operator",
     lock_path: Path | None = None,
 ) -> tuple[bool, str]:
     """Record a dept alias as DepartmentChange(change_type='alias')."""
@@ -2111,6 +2112,7 @@ def apply_dept_alias_proposal(
                     department_id=department_id,
                     old_name=old_name,
                     source=source,
+                    actor=actor,
                     lock_path=None,
                 )
         except LockBusyError:
@@ -2135,17 +2137,33 @@ def apply_dept_alias_proposal(
     )
     if exists is not None:
         return False, "already_exists"
-    session.add(
-        DepartmentChange(
-            department_id=department_id,
-            change_type="alias",
-            fiscal_year=datetime.now(UTC).year,
-            old_name=old_name,
-            new_name=dept.canonical_name,
-            verified=False,
-            verified_by=source,
-            notes="competition_template dept alias proposed by resolver",
-        )
+    change = DepartmentChange(
+        department_id=department_id,
+        change_type="alias",
+        fiscal_year=datetime.now(UTC).year,
+        old_name=old_name,
+        new_name=dept.canonical_name,
+        verified=False,
+        verified_by=source,
+        notes="competition_template dept alias proposed by resolver",
+    )
+    session.add(change)
+    session.flush()
+    log_manual_action(
+        session,
+        action_type="dept_alias_approved",
+        target_table="department_change",
+        target_id=change.id,
+        old_value=None,
+        new_value={
+            "department_id": department_id,
+            "change_type": "alias",
+            "old_name": old_name,
+            "new_name": dept.canonical_name,
+            "source": source,
+        },
+        reason="Operator approved department alias proposal",
+        actor=actor,
     )
     session.commit()
     return True, "inserted"

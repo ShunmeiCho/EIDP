@@ -176,13 +176,20 @@ def _core_entries() -> dict[str, bytes | str]:
             "site-fetch-error",
             "site_fetch_error",
         ),
-        "src/eidp/review/app.py": "PAGE_SETTINGS = 'settings'\n",
-        "src/eidp/review/operator_pages.py": "def inject_v1_theme(): pass\n",
+        "src/eidp/review/app.py": (REPO_ROOT / "src" / "eidp" / "review" / "app.py").read_text(
+            encoding="utf-8"
+        ),
+        "src/eidp/review/operator_pages.py": (
+            REPO_ROOT / "src" / "eidp" / "review" / "operator_pages.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/review/_pages/audit_log.py": "def render(session, *, lock_path, jsonl_path): pass\n",
         "src/eidp/review/_pages/settings_page.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/school_year_tasks.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/pdf_manual_entry.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/prefecture_remarks.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/url_candidate_review.py": (
+            REPO_ROOT / "src" / "eidp" / "review" / "_pages" / "url_candidate_review.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/review/_pages/fiscal_year_override.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/excel_preview.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/school_scope.py": (
@@ -231,6 +238,12 @@ def _core_entries() -> dict[str, bytes | str]:
             "support_recipient_review_pending\n"
             'doc.ingest_status = "review_pending"\n'
         ),
+        "src/eidp/pipeline/manual_entry.py": (
+            REPO_ROOT / "src" / "eidp" / "pipeline" / "manual_entry.py"
+        ).read_text(encoding="utf-8"),
+        "src/eidp/pipeline/fiscal_year_override.py": (
+            REPO_ROOT / "src" / "eidp" / "pipeline" / "fiscal_year_override.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/ocr/tesseract.py": (REPO_ROOT / "src" / "eidp" / "ocr" / "tesseract.py").read_text(
             encoding="utf-8"
         ),
@@ -444,6 +457,25 @@ def test_verify_core_zip_requires_manual_action_audit_contract(tmp_path: Path) -
     assert any("src/eidp/db/audit.py missing required token" in error for error in check.errors)
     assert any("src/eidp/db/audit_outbox.py missing required token" in error for error in check.errors)
     assert any("ManualActionLog" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_operator_action_audit_contracts(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/review/app.py"] = "def main(): pass\n"
+    entries["src/eidp/review/operator_pages.py"] = "def inject_v1_theme(): pass\n"
+    entries["src/eidp/review/_pages/url_candidate_review.py"] = "def render(session): pass\n"
+    entries["src/eidp/pipeline/manual_entry.py"] = "def submit_manual_entry(): pass\n"
+    entries["src/eidp/pipeline/fiscal_year_override.py"] = "def override_fiscal_year(): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("school_code_approved" in error for error in check.errors)
+    assert any("url_candidate_approved" in error for error in check.errors)
+    assert any("dept_alias_approved" in error for error in check.errors)
+    assert any("manual_entry" in error for error in check.errors)
+    assert any("fiscal_year_override" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_sqlite_bootstrap_data_loss_guards(tmp_path: Path) -> None:

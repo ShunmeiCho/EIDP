@@ -89,6 +89,10 @@ def test_apply_dept_alias_records_department_change() -> None:
         assert dc.new_name == "プロミュージシャン科"
         assert dc.change_type == "alias"
         assert dc.verified is False
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "dept_alias_approved"
+        assert audit.target_table == "department_change"
+        assert audit.target_id == dc.id
     finally:
         session.close()
 
