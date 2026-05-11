@@ -309,15 +309,18 @@ uv run eidp discovery-rca-batch-plan \
   --json
 ```
 
-The Windows weekly target-year runner writes this batch automatically beside
-the run evidence when discovery evidence exists:
+The Windows initial bootstrap and weekly target-year runner write this batch
+automatically when PDF discovery evidence exists:
 
 ```text
+data/output/target-year-discovery/bootstrap-{timestamp}-discovery-rca-batch-plan.json
 data/output/target-year-discovery/{run_id}-discovery-rca-batch-plan.json
 ```
 
-The same path is also exposed in `data/output/last_run.json` under
-`discovery_rca.batch_plan_path`.
+For weekly runs, the same path is exposed in `data/output/last_run.json` under
+`discovery_rca.batch_plan_path`. For initial bootstrap runs, it is exposed in
+the latest `logs/bootstrap-pdfs-*.json` progress file under
+`details.discovery_rca_batch_plan_path`.
 
 The batch plan prioritizes `target_form_without_year_evidence`,
 `non_target_candidates_only`, `no_pdf_candidates`, and fetch failures before
