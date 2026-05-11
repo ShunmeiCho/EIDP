@@ -10,6 +10,7 @@ from eidp.db.models import (
     Base,
     Department,
     DepartmentChange,
+    ManualActionLog,
     School,
     SchoolAlias,
 )
@@ -20,6 +21,7 @@ from eidp.review.operator_pages import (
     _record_decision,
     apply_dept_alias_proposal,
     apply_school_alias_proposal,
+    void_department_change,
 )
 
 
@@ -101,6 +103,87 @@ def test_apply_dept_alias_idempotent() -> None:
         )
         assert created is False
         assert reason == "already_exists"
+    finally:
+        session.close()
+
+
+def test_apply_dept_alias_allows_recreating_voided_alias() -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.add(
+            DepartmentChange(
+                department_id=9,
+                change_type="alias",
+                fiscal_year=2026,
+                old_name="プロミュージシャン学科",
+                new_name="プロミュージシャン科",
+                verified=False,
+                voided=True,
+                voided_by="operator",
+                void_reason="wrong approval",
+            )
+        )
+        session.flush()
+
+        created, reason = apply_dept_alias_proposal(
+            session, department_id=9, old_name="プロミュージシャン学科",
+        )
+        assert created is True
+        assert reason == "inserted"
+        rows = (
+            session.query(DepartmentChange)
+            .filter(
+                DepartmentChange.department_id == 9,
+                DepartmentChange.old_name == "プロミュージシャン学科",
+                DepartmentChange.change_type == "alias",
+            )
+            .order_by(DepartmentChange.id.asc())
+            .all()
+        )
+        assert len(rows) == 2
+        assert rows[0].voided is True
+        assert rows[1].voided is False
+    finally:
+        session.close()
+
+
+def test_void_department_change_marks_row_and_writes_audit() -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        change = DepartmentChange(
+            department_id=9,
+            change_type="alias",
+            fiscal_year=2026,
+            old_name="プロミュージシャン学科",
+            new_name="プロミュージシャン科",
+            verified=False,
+        )
+        session.add(change)
+        session.flush()
+
+        changed, reason = void_department_change(
+            session,
+            change_id=change.id,
+            actor="tester",
+            reason="wrong department",
+        )
+        assert changed is True
+        assert reason == "voided"
+
+        session.refresh(change)
+        assert change.voided is True
+        assert change.voided_by == "tester"
+        assert change.void_reason == "wrong department"
+        assert change.voided_at is not None
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "dept_change_void"
+        assert audit.target_table == "department_change"
+        assert audit.target_id == change.id
     finally:
         session.close()
 

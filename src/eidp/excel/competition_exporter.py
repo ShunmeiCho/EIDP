@@ -355,7 +355,10 @@ class CompetitionMatcher:
             list[tuple[DepartmentChange, Department]],
             self.session.query(DepartmentChange, Department)
             .join(Department, Department.id == DepartmentChange.department_id)
-            .filter(DepartmentChange.change_type == "alias")
+            .filter(
+                DepartmentChange.change_type == "alias",
+                DepartmentChange.voided.is_(False),
+            )
             .all(),
         )
         for change, dept in dept_alias_rows:

@@ -455,6 +455,67 @@ def test_rebuild_blocks_excel_ready_when_department_change_is_unverified() -> No
         session.close()
 
 
+def test_rebuild_ignores_voided_unverified_department_change() -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        doc = Document(
+            id=1,
+            school_id=1,
+            source_url="https://s1.example/fy2026.pdf",
+            file_hash="i" * 64,
+            fiscal_year=2026,
+            pdf_type="target",
+            ingest_status="ingested",
+        )
+        session.add(doc)
+        dept = Department(id=1, school_id=1, canonical_name="情報学科")
+        session.add(dept)
+        session.add(
+            DepartmentYearly(
+                id=1,
+                department_id=1,
+                document_id=1,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                capacity=40,
+                enrollment=38,
+            )
+        )
+        session.add(
+            DepartmentChange(
+                department_id=1,
+                change_type="名称変更",
+                fiscal_year=2026,
+                old_name="旧情報学科",
+                new_name="情報学科",
+                verified=False,
+                voided=True,
+                voided_by="operator",
+                void_reason="mistaken proposal",
+            )
+        )
+        session.commit()
+
+        stats = rebuild_school_fiscal_year_status(
+            session,
+            fiscal_year=2026,
+            school_type="専門学校",
+        )
+        session.commit()
+
+        row = session.get(SchoolFiscalYearStatus, (1, 2026))
+        assert row is not None
+        assert row.pdf_status == "confirmed_target"
+        assert row.extract_status == "parsed"
+        assert row.excel_ready is True
+        assert row.blocking_reason is None
+        assert stats.excel_ready == 1
+    finally:
+        session.close()
+
+
 def test_rebuild_marks_publication_lag_evidence_as_review_state(tmp_path) -> None:
     session = _session()
     try:

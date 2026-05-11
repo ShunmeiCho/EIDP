@@ -158,6 +158,10 @@ class DepartmentChange(Base):
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     verified_by: Mapped[str | None] = mapped_column(String(50))
     notes: Mapped[str | None] = mapped_column(Text)
+    voided: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    voided_by: Mapped[str | None] = mapped_column(String(50))
+    void_reason: Mapped[str | None] = mapped_column(Text)
 
     department: Mapped["Department"] = relationship(
         back_populates="changes", foreign_keys=[department_id]

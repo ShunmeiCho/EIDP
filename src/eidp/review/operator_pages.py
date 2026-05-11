@@ -26,6 +26,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
+from eidp.db.audit import log_manual_action
 from eidp.db.models import (
     Department,
     DepartmentChange,
@@ -2111,6 +2112,7 @@ def apply_dept_alias_proposal(
             DepartmentChange.department_id == department_id,
             DepartmentChange.old_name == old_name,
             DepartmentChange.change_type == "alias",
+            DepartmentChange.voided.is_(False),
         )
         .first()
     )
@@ -2130,6 +2132,49 @@ def apply_dept_alias_proposal(
     )
     session.commit()
     return True, "inserted"
+
+
+def void_department_change(
+    session: Session,
+    *,
+    change_id: int,
+    actor: str = "operator",
+    reason: str | None = None,
+) -> tuple[bool, str]:
+    """Mark an operator-approved DepartmentChange as void without deleting history."""
+    change = session.get(DepartmentChange, change_id)
+    if change is None:
+        return False, "not_found"
+    if change.voided:
+        return False, "already_voided"
+
+    old_value = {
+        "voided": False,
+        "change_type": change.change_type,
+        "department_id": change.department_id,
+        "old_name": change.old_name,
+        "new_name": change.new_name,
+    }
+    change.voided = True
+    change.voided_at = datetime.now(UTC)
+    change.voided_by = actor
+    change.void_reason = reason
+    log_manual_action(
+        session,
+        action_type="dept_change_void",
+        target_table="department_change",
+        target_id=change.id,
+        old_value=old_value,
+        new_value={
+            "voided": True,
+            "voided_by": actor,
+            "void_reason": reason,
+        },
+        reason=reason,
+        actor=actor,
+    )
+    session.commit()
+    return True, "voided"
 
 
 _SCHOOL_PROPOSAL_LABEL = {

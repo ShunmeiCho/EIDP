@@ -146,6 +146,7 @@ def _unverified_department_change_school_ids(
                 Department.school_id.in_(school_ids),
                 DepartmentChange.fiscal_year == fiscal_year,
                 DepartmentChange.verified.is_(False),
+                DepartmentChange.voided.is_(False),
             )
             .distinct()
             .all()
