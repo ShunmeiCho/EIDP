@@ -91,7 +91,21 @@ def _main_page_response_with_root_fallback(client: httpx.Client, site_url: str) 
     resp = _safe_get(client, site_url)
     try:
         resp.raise_for_status()
-        return resp, str(resp.url or site_url)
+        final_url = str(resp.url or site_url)
+        content_type = resp.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type and content_type not in {"text/html", "application/xhtml+xml", "application/pdf"}:
+            root_url = _origin_root_url(final_url)
+            if root_url is not None and _is_safe_url(root_url):
+                root_resp = _safe_get(client, root_url)
+                root_resp.raise_for_status()
+                log.info(
+                    "pdf_discovery_root_fallback",
+                    original_url=site_url,
+                    fallback_url=root_url,
+                    content_type=content_type,
+                )
+                return root_resp, str(root_resp.url or root_url)
+        return resp, final_url
     except httpx.HTTPStatusError as exc:
         status_code = exc.response.status_code if exc.response is not None else 0
         if status_code not in {404, 410}:

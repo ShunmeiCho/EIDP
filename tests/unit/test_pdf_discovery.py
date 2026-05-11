@@ -853,6 +853,51 @@ def test_discover_pdfs_follows_application_form_page_with_wordpress_download_man
     assert "https://i-heiseigakuen.ac.jp/youshiki/" in client.calls
 
 
+def test_discover_pdfs_falls_back_to_root_when_registered_page_is_non_html(monkeypatch) -> None:
+    """Official index URLs can rot into image/media assets while root nav still exposes disclosure."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    image_response = _HtmlResponse("not html", url="https://www.akikusa-wf.ac.jp/wp-content/uploads/cover.jpg")
+    image_response.headers["content-type"] = "image/jpeg"
+    client = _HtmlClient(
+        {
+            "https://www.akikusa-wf.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.akikusa-wf.ac.jp/?page_id=712": image_response,
+            "https://www.akikusa-wf.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/school-top/disclosure/">情報公開</a>
+                </html>
+                """,
+                url="https://www.akikusa-wf.ac.jp/",
+            ),
+            "https://www.akikusa-wf.ac.jp/school-top/disclosure/": _HtmlResponse(
+                """
+                <a href="/wp-content/uploads/2025/08/令和7年度-様式第2号.pdf">
+                  令和7年度 様式第2号
+                </a>
+                """,
+                url="https://www.akikusa-wf.ac.jp/school-top/disclosure/",
+            ),
+            "https://www.akikusa-wf.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        754,
+        "https://www.akikusa-wf.ac.jp/?page_id=712",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://www.akikusa-wf.ac.jp/wp-content/uploads/2025/08/令和7年度-様式第2号.pdf"
+    assert result.best.page_url == "https://www.akikusa-wf.ac.jp/school-top/disclosure/"
+    assert "https://www.akikusa-wf.ac.jp/" in client.calls
+
+
 def test_discover_pdfs_uses_sitemap_even_when_root_has_stale_pdf(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
