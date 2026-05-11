@@ -200,11 +200,11 @@ The current combined Saitama official-index RCA evidence has 51 scoped
 `prefecture_aggregator` disclosure schools:
 
 - `accepted_target_pdf=2`
-- `publication_lag_or_old_target_pdf=41`
+- `publication_lag_or_old_target_pdf=38`
 - `non_target_candidates_only=5`
 - `no_pdf_candidates=1`
 - `site_fetch_error_only=1`
-- `target_form_without_year_evidence=1`
+- `target_form_without_year_evidence=4`
 
 Interpretation:
 

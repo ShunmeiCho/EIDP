@@ -1,6 +1,6 @@
 {
   "schema_version": "discovery-gold-set/v0.1",
-  "entry_id": "urawa-specialized-school-image-publication-lag-2026",
+  "entry_id": "urawa-specialized-school-image-review-2026",
   "school": {
     "school_id": 761,
     "school_name": "浦和専門学校",
@@ -8,14 +8,14 @@
     "corporation_name": "浦和済美学園"
   },
   "target_fiscal_year": 2026,
-  "outcome": "publication_lag_latest_public",
+  "outcome": "needs_operator_review",
   "manual_demonstration": {
-    "operator_goal": "Classify the latest visible image-only 修学支援 PDF as publication lag rather than a non-target candidate.",
+    "operator_goal": "Classify the visible image-only 修学支援 PDF as review-bound because the URL and anchor do not prove the target application form.",
     "steps": [
       "Start from the Saitama official-index disclosure URL registered for the school.",
       "Open the public report page and inspect the 修学支援 links.",
       "Follow the anchor R7修学支援に関する資料 to 09_shugakushien_r7.pdf.",
-      "Treat the PDF as latest-public old-year target-form evidence for target FY2026 because the URL and anchor identify R7, not R8."
+      "Route the PDF to operator review because the URL and anchor identify R7 support material but do not contain a target-form hint such as 様式第2号 or 確認申請."
     ]
   },
   "expected_result": {
@@ -30,12 +30,12 @@
     "site_family": "image_only_old_year_support_pdf",
     "reusable_rules": [
       "Keep image-only 修学支援 PDFs visible in evidence even when strict target-year extraction cannot accept them.",
-      "When URL or anchor explicitly says R7/令和7 for target FY2026, classify the school as publication_lag_latest_public.",
-      "Surface this as an operator publication-lag state, not as non-target noise."
+      "Require both system hints such as 修学支援 and form hints such as 様式第2号 before classifying image-only old-year PDFs as publication lag.",
+      "Route support-only image PDFs to operator review instead of non-target noise or publication-lag evidence."
     ],
     "anti_patterns": [
       "Do not count an R7 image-only support PDF as FY2026 success.",
-      "Do not classify strong 修学支援 old-year hints as non-target just because the PDF text is image-only.",
+      "Do not classify support-only 修学支援 old-year hints as publication lag without a target application-form hint.",
       "Do not treat generic MEXT boilerplate years such as 2020年度対象 as publication-lag evidence."
     ]
   },

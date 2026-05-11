@@ -24,25 +24,26 @@ scoped schools have `prefecture_aggregator` disclosure URLs. Layer 1 remains
 the bottleneck:
 
 - `accepted_target_pdf=2`
-- `publication_lag_or_old_target_pdf=41`
+- `publication_lag_or_old_target_pdf=38`
 - `non_target_candidates_only=5`
 - `no_pdf_candidates=1`
 - `site_fetch_error_only=1`
-- `target_form_without_year_evidence=1`
+- `target_form_without_year_evidence=4`
 
 During this RCA, a classification defect was found in
-`discovery_evidence_summary.py`: old-year `image_only` PDFs with strong target
-form hints such as `R7修学支援に関する資料` or `令和7年度-様式2` were being
-bucketed as `non_target_candidates_only`. They now count as
-`publication_lag_or_old_target_pdf`, while generic MEXT support boilerplate
-years such as `2020年度の在学生から対象` remain
+`discovery_evidence_summary.py`: old-year `image_only` PDFs with both system
+hints and target application-form hints, such as `修学支援` plus `様式第2号`,
+are now bucketed as `publication_lag_or_old_target_pdf`. Weak image-only hints
+such as support-only `R7修学支援に関する資料`, form-only `様式2号`, or generic
+MEXT support boilerplate years such as `2020年度の在学生から対象` remain
 `target_form_without_year_evidence`. This keeps strict target-year success
 unchanged while surfacing the correct operator action: latest-public old-year
 target form or review-bound year-unverified candidate, not irrelevant
 non-target material.
 
 - Regression coverage:
-  `test_summarize_pdf_discovery_evidence_treats_image_only_old_target_hints_as_publication_lag`
+  `test_summarize_pdf_discovery_evidence_treats_image_only_old_target_application_hints_as_publication_lag`,
+  `test_summarize_pdf_discovery_evidence_keeps_weak_image_only_form_or_support_hints_in_review`,
   and
   `test_summarize_pdf_discovery_evidence_keeps_generic_higher_ed_boilerplate_image_only_in_review`.
 - Verification:
@@ -182,14 +183,15 @@ creating a new schema:
   no URL, anchor, or extracted PDF-body evidence proves FY2026. It is now
   accepted only because `prefecture_index_current_year` provides auditable
   current-year evidence from the official index.
-- `urawa-specialized-school-image-publication-lag-2026`: school `761`
-  (`浦和専門学校`) captures the image-only old-year target-hint pattern. The
+- `urawa-specialized-school-image-review-2026`: school `761`
+  (`浦和専門学校`) captures the image-only old-year support-only pattern. The
   visible anchor says `R7修学支援に関する資料` and the PDF URL contains
-  `shugakushien_r7.pdf`, so for FY2026 it is latest-public publication-lag
-  evidence, not a strict target-year success and not non-target noise.
+  `shugakushien_r7.pdf`, but neither the URL nor anchor proves a target
+  application form. For FY2026 it is review-bound target-year-unverified
+  evidence, not a strict target-year success and not publication-lag evidence.
 
-The gold-set summary now has 15 entries: 6 accepted target PDFs, 5 operator
-review cases, 3 publication-lag latest-public cases, and 1 no-target-candidate
+The gold-set summary now has 15 entries: 6 accepted target PDFs, 6 operator
+review cases, 2 publication-lag latest-public cases, and 1 no-target-candidate
 case. This keeps demonstration-driven discovery work as a regression/evaluation
 surface for Layer 1 while preserving the official prefectural indexes as the
 primary data source.
@@ -202,8 +204,8 @@ primary data source.
   tests/unit/test_cli_eval_discovery_gold.py
   tests/unit/test_discovery_gold_set_seed.py -q` → `22 passed`.
 - `uv run eidp discovery-gold-set --json` → `total_entries=15`,
-  `accepted_target_pdf=6`, `needs_operator_review=5`,
-  `publication_lag_latest_public=3`, `no_target_candidate_found=1`, and
+  `accepted_target_pdf=6`, `needs_operator_review=6`,
+  `publication_lag_latest_public=2`, `no_target_candidate_found=1`, and
   `strict_target_year_successes=6`.
 - Combined Windows evidence for school `95` and school `757` evaluated with
   `uv run eidp eval-discovery-gold --pdf-evidence

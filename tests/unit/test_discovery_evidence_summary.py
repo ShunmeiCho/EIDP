@@ -44,7 +44,7 @@ def test_summarize_pdf_discovery_evidence_buckets_school_outcomes(tmp_path: Path
     assert summary.pdf_type_counts["target"] == 2
 
 
-def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_hints_as_publication_lag(
+def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_application_hints_as_publication_lag(
     tmp_path: Path,
 ) -> None:
     evidence_path = tmp_path / "evidence.jsonl"
@@ -56,14 +56,14 @@ def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_hints_as_
                 "reason": "fiscal_year_mismatch:2025",
                 "pdf_type": "image_only",
                 "pdf_url": "https://example.ac.jp/report/09_shugakushien_r7.pdf",
-                "anchor_text": "R7修学支援に関する資料",
+                "anchor_text": "R7修学支援 様式第2号",
             },
             {
                 "school_id": 2,
                 "reason": "fiscal_year_mismatch:2025",
                 "pdf_type": "image_only",
                 "pdf_url": "https://example.ac.jp/report/R7-yoshiki-2.pdf",
-                "anchor_text": "令和7年度-様式2",
+                "anchor_text": "令和7年度 高等教育の修学支援新制度 様式2",
             },
         ],
     )
@@ -74,6 +74,39 @@ def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_hints_as_
     assert [school.bucket for school in summary.school_summaries] == [
         "publication_lag_or_old_target_pdf",
         "publication_lag_or_old_target_pdf",
+    ]
+
+
+def test_summarize_pdf_discovery_evidence_keeps_weak_image_only_form_or_support_hints_in_review(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 1,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "image_only",
+                "pdf_url": "https://example.ac.jp/report/syllabus_yoshiki2_2025.pdf",
+                "anchor_text": "シラバス 様式2号",
+            },
+            {
+                "school_id": 2,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "image_only",
+                "pdf_url": "https://example.ac.jp/report/09_shugakushien_r7.pdf",
+                "anchor_text": "R7修学支援に関する資料",
+            },
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    assert summary.school_bucket_counts == {"target_form_without_year_evidence": 2}
+    assert [school.bucket for school in summary.school_summaries] == [
+        "target_form_without_year_evidence",
+        "target_form_without_year_evidence",
     ]
 
 

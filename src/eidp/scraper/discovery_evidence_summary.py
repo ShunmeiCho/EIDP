@@ -198,17 +198,38 @@ def _is_old_year_target(row: dict[str, Any]) -> bool:
 
 def _has_stale_image_target_form_hint(row: dict[str, Any]) -> bool:
     text = _candidate_hint_text(row)
-    support_hint = any(token in text for token in ("修学支援", "修学の支援", "shugakushien", "syugakushien"))
-    form_hint = any(token in text for token in ("機関要件", "確認申請", "申請書", "様式第2号", "様式2"))
-    form_file_hint = bool(re.search(r"(?:^|[/_-])j20\d{2}[_-]?0?5[a-z]?(?:\.pdf|$)", text))
-    return support_hint or form_hint or form_file_hint
+    return _has_target_application_hint(text)
+
+
+def _has_target_application_hint(text: str) -> bool:
+    system_hint = any(
+        token in text
+        for token in (
+            "修学支援",
+            "修学の支援",
+            "高等教育",
+            "無償化",
+            "shugakushien",
+            "syugakushien",
+            "hutankeigen",
+        )
+    )
+    form_hint = _has_form_hint(text)
+    strong_form_hint = "機関要件" in text and form_hint
+    return (system_hint and form_hint) or strong_form_hint
+
+
+def _has_form_hint(text: str) -> bool:
+    return any(token in text for token in ("確認申請", "申請書", "様式第2号", "様式2")) or bool(
+        re.search(r"(?:^|[/_-])j20\d{2}[_-]?0?5[a-z]?(?:\.pdf|$)", text)
+    )
 
 
 def _is_image_only_review_candidate(row: dict[str, Any]) -> bool:
     if str(row.get("pdf_type") or "") != "image_only":
         return False
     text = _candidate_hint_text(row)
-    return any(
+    return _has_target_application_hint(text) or _has_form_hint(text) or any(
         token in text
         for token in (
             "申請内容",
