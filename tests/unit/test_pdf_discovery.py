@@ -154,6 +154,21 @@ def test_pre_download_detects_stale_renewal_confirmation_application_year() -> N
     assert rejection.reason == "fiscal_year_mismatch:2025"
 
 
+def test_pre_download_detects_stale_full_form_range_without_support_system_words() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://aiko.ac.jp/data/ybc/2025/2-1_2-4.pdf",
+        page_url="https://aiko.ac.jp/data/",
+        anchor_text="様式第2号の1～4 [PDF] 2025年度",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2025"
+
+
 def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> None:
     candidate = PdfCandidate(
         pdf_url="https://example.ac.jp/files/2025-renewal-confirmation-application.pdf",

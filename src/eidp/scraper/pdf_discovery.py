@@ -488,6 +488,7 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
     text = _candidate_hint_text(candidate).lower()
     system_hint = any(token in text for token in ("修学支援", "修学の支援", "高等教育", "無償化"))
     form_hint = any(token in text for token in ("確認申請", "申請書", "様式第2号", "様式第２号", "様式2号", "機関要件"))
+    full_form_range_hint = re.search(r"様式第[2２]号の?[1１]\s*[〜～~\-－−ー―]\s*[4４]", text) is not None
     renewal_form_hint = any(
         token in text
         for token in (
@@ -509,6 +510,7 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
     )
     return (
         (system_hint and form_hint)
+        or full_form_range_hint
         or renewal_form_hint
         or (system_hint and english_renewal_form_hint)
         or strong_form_hint
