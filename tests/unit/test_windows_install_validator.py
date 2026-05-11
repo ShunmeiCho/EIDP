@@ -395,6 +395,20 @@ def test_validate_after_bootstrap_requires_yield_gate_keys(tmp_path: Path) -> No
     assert any("ship_gate_status" in error for error in check.errors)
 
 
+def test_validate_after_bootstrap_rejects_unknown_ship_gate_status(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _bootstrap_artifacts(root)
+    payload = json.loads((root / "logs" / "bootstrap-pdfs-20260505-010203.json").read_text(encoding="utf-8"))
+    payload["details"]["ship_gate_status"] = "passed"
+    _write(root, "logs/bootstrap-pdfs-20260505-010203.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_bootstrap=True)
+
+    assert not check.ok
+    assert any("ship_gate_status must be pass, below_gate, or not_measured" in error for error in check.errors)
+
+
 def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
@@ -545,6 +559,20 @@ def test_validate_after_weekly_rejects_invalid_selection_mode(tmp_path: Path) ->
 
     assert not check.ok
     assert any("selection_mode" in error for error in check.errors)
+
+
+def test_validate_after_weekly_rejects_unknown_ship_gate_status(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload["ship_gate_status"] = "passed"
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_weekly=True)
+
+    assert not check.ok
+    assert any("ship_gate_status must be pass, below_gate, or not_measured" in error for error in check.errors)
 
 
 def test_validate_optional_ocr_addon(tmp_path: Path) -> None:

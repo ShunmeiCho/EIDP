@@ -121,6 +121,8 @@ BUILD_INFO_REQUIRED_KEYS = (
     "git_dirty",
 )
 
+SHIP_GATE_STATUSES = frozenset({"pass", "below_gate", "not_measured"})
+
 
 def _posix_rel(path: str) -> Path:
     return Path(*path.split("/"))
@@ -368,6 +370,9 @@ def _validate_bootstrap_progress_payload(check: InstallCheck, root: Path, payloa
         check.fail("bootstrap progress details ship_gate_auto_yield_pct must be numeric")
     if "ship_gate_status" in details and not isinstance(details.get("ship_gate_status"), str):
         check.fail("bootstrap progress details ship_gate_status must be a string")
+    bootstrap_gate_status = details.get("ship_gate_status")
+    if isinstance(bootstrap_gate_status, str) and bootstrap_gate_status not in SHIP_GATE_STATUSES:
+        check.fail("bootstrap progress details ship_gate_status must be pass, below_gate, or not_measured")
 
     raw_path = str(details.get("discovery_rca_batch_plan_path") or "")
     if raw_path:
@@ -466,6 +471,9 @@ def validate_install(
                     check.fail(f"last_run.json {key} must be numeric")
             if "ship_gate_status" in last_run and not isinstance(last_run.get("ship_gate_status"), str):
                 check.fail("last_run.json ship_gate_status must be a string")
+            weekly_gate_status = last_run.get("ship_gate_status")
+            if isinstance(weekly_gate_status, str) and weekly_gate_status not in SHIP_GATE_STATUSES:
+                check.fail("last_run.json ship_gate_status must be pass, below_gate, or not_measured")
             _validate_discovery_rca_batch_plan(check, root, last_run.get("discovery_rca"))
 
         logs_dir = root / "logs"
