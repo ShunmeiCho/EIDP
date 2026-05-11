@@ -16,6 +16,7 @@ from eidp.db.models import (
 )
 from eidp.review.operator_pages import (
     ProposalDecision,
+    _active_dept_alias_changes,
     _load_decision_index,
     _read_proposals,
     _record_decision,
@@ -184,6 +185,47 @@ def test_void_department_change_marks_row_and_writes_audit() -> None:
         assert audit.action_type == "dept_change_void"
         assert audit.target_table == "department_change"
         assert audit.target_id == change.id
+    finally:
+        session.close()
+
+
+def test_active_dept_alias_changes_excludes_voided_rows() -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.add_all([
+            DepartmentChange(
+                id=1,
+                department_id=9,
+                change_type="alias",
+                fiscal_year=2026,
+                old_name="プロミュージシャン学科",
+                new_name="プロミュージシャン科",
+                verified=False,
+            ),
+            DepartmentChange(
+                id=2,
+                department_id=9,
+                change_type="alias",
+                fiscal_year=2026,
+                old_name="誤った別名",
+                new_name="プロミュージシャン科",
+                verified=False,
+                voided=True,
+                voided_by="operator",
+                void_reason="wrong approval",
+            ),
+        ])
+        session.flush()
+
+        rows = _active_dept_alias_changes(session)
+
+        assert len(rows) == 1
+        assert rows[0]["change_id"] == 1
+        assert rows[0]["school_name"] == "学校A"
+        assert rows[0]["canonical_name"] == "プロミュージシャン科"
+        assert rows[0]["old_name"] == "プロミュージシャン学科"
     finally:
         session.close()
 

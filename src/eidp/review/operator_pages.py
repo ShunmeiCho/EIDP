@@ -2177,6 +2177,33 @@ def void_department_change(
     return True, "voided"
 
 
+def _active_dept_alias_changes(session: Session, *, limit: int = 20) -> list[dict]:
+    """Return recent active department aliases that the operator can void."""
+    rows = (
+        session.query(DepartmentChange, Department, School)
+        .join(Department, Department.id == DepartmentChange.department_id)
+        .join(School, School.id == Department.school_id)
+        .filter(
+            DepartmentChange.change_type == "alias",
+            DepartmentChange.voided.is_(False),
+        )
+        .order_by(DepartmentChange.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "change_id": int(change.id),
+            "school_name": school.school_name,
+            "canonical_name": dept.canonical_name,
+            "old_name": change.old_name or "",
+            "new_name": change.new_name or "",
+            "verified_by": change.verified_by or "",
+        }
+        for change, dept, school in rows
+    ]
+
+
 _SCHOOL_PROPOSAL_LABEL = {
     "alias_existing_school": "一致候補が1つ（別名追加で即マッチ）",
     "ambiguous_candidates": "候補が複数（選択が必要）",
@@ -2694,6 +2721,31 @@ def _render_dept_proposals_tab(session: Session) -> None:
                 f"　・ [{p['template_school'][:20]}] {p['template_dept']}  → "
                 f"候補: {names if names else '（なし）'}"
             )
+
+    st.divider()
+    with st.expander("登録済み学科別名の取消", expanded=False):
+        active_aliases = _active_dept_alias_changes(session)
+        if not active_aliases:
+            st.caption("取消できる学科別名はありません。")
+        for alias in active_aliases:
+            row = st.columns([4, 1])
+            row[0].write(
+                f"**{alias['school_name']} / {alias['canonical_name']}**"
+            )
+            row[0].caption(
+                f"別名: {alias['old_name']} / 登録元: {alias['verified_by'] or 'unknown'}"
+            )
+            if row[1].button("取消", key=f"void_dept_alias_{alias['change_id']}"):
+                changed, reason = void_department_change(
+                    session,
+                    change_id=alias["change_id"],
+                    actor=st.session_state.get("operator_name", "operator") or "operator",
+                    reason="operator voided dept alias from proposal review page",
+                )
+                if changed:
+                    st.success("学科別名を取消しました。")
+                else:
+                    st.info(f"未実行: {reason}")
 
 
 def page_proposals_review(session: Session) -> None:
