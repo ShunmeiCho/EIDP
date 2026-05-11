@@ -30,8 +30,10 @@ from typing import Any
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPTS_DIR.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(SCRIPTS_DIR))
 
 from atomic_write import write_text_atomic  # noqa: E402
 from ship_gate_contract import (  # noqa: E402
@@ -283,12 +285,15 @@ def count_no_crawlable_url_schools(
     SchoolSite. A fresh Windows setup has master schools but no URLs, so this
     count explains why the runner has nothing to crawl until the UI initial
     acquisition flow seeds SchoolSite rows.
+
+    ``methods`` is accepted for summary-call compatibility, but this metric
+    intentionally ignores it. A school with an operator/manual URL is still
+    crawlable even when the current discovery run is method-filtered to a
+    narrower source such as prefecture indexes.
     """
     crawlable_ids = session.query(SchoolSite.school_id).filter(
         or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None))
     )
-    if methods:
-        crawlable_ids = crawlable_ids.filter(SchoolSite.discovery_method.in_(methods))
 
     q = session.query(func.count(School.id)).filter(
         School.status == "active",

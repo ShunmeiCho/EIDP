@@ -185,7 +185,7 @@ def test_default_methods_include_reusable_bootstrap_and_operator_urls() -> None:
         session.close()
 
 
-def test_count_no_crawlable_url_schools_explains_empty_bootstrap_queue() -> None:
+def test_count_no_crawlable_url_schools_ignores_method_filter() -> None:
     session = _session()
     try:
         _school(session, 1)
@@ -204,7 +204,7 @@ def test_count_no_crawlable_url_schools_explains_empty_bootstrap_queue() -> None
             school_type="専門学校",
         )
 
-        assert count == 3
+        assert count == 2
     finally:
         session.close()
 
