@@ -42,6 +42,7 @@ YEAR_BLOCK_HEADERS = [
 ]
 EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70
 EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = 0.85
+LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"
 
 
 def _exportable_confidence_sql(alias: str) -> str:
@@ -368,6 +369,65 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
     return count
 
 
+def _low_confidence_exclusion_rows(session: Session) -> list[list]:
+    params = {"min_confidence": EXCEL_MIN_EXTRACTION_CONFIDENCE}
+    department_rows = session.execute(
+        text(f"""
+            SELECT
+                'department_yearly' AS row_type,
+                dy.id AS row_id,
+                s.school_name,
+                d.canonical_name AS department_name,
+                dy.fiscal_year,
+                dy.extraction_confidence,
+                'confidence<0.70' AS reason,
+                '学科別/在籍のみ抜粋' AS export_target
+            FROM department_yearly dy
+            JOIN department d ON d.id = dy.department_id
+            JOIN school s ON s.id = d.school_id
+            WHERE dy.is_current = {IS_CURRENT_TRUE_SQL}
+              AND dy.extraction_confidence IS NOT NULL
+              AND dy.extraction_confidence < :min_confidence
+            ORDER BY dy.id
+        """),
+        params,
+    ).fetchall()
+    support_rows = session.execute(
+        text(f"""
+            SELECT
+                'support_recipient' AS row_type,
+                sr.id AS row_id,
+                s.school_name,
+                NULL AS department_name,
+                sr.fiscal_year,
+                sr.extraction_confidence,
+                'confidence<0.70' AS reason,
+                '対象比率' AS export_target
+            FROM support_recipient sr
+            JOIN school s ON s.id = sr.school_id
+            WHERE sr.is_current = {IS_CURRENT_TRUE_SQL}
+              AND sr.extraction_confidence IS NOT NULL
+              AND sr.extraction_confidence < :min_confidence
+            ORDER BY sr.id
+        """),
+        params,
+    ).fetchall()
+    rows: list[list] = []
+    for row in [*department_rows, *support_rows]:
+        raw = list(row)
+        if raw[5] is not None:
+            raw[5] = float(raw[5])
+        rows.append(raw)
+    return rows
+
+
+def _write_low_confidence_exclusions(ws: Worksheet, rows: list[list]) -> int:
+    ws.append(["種別", "行ID", "学校名", "学科名", "年度", "confidence", "理由", "転記先"])
+    for row in rows:
+        ws.append(row)
+    return len(rows)
+
+
 def export_master_workbook(session: Session, output_path: Path) -> dict[str, int]:
     """Generate the master Excel workbook from database.
 
@@ -399,6 +459,11 @@ def export_master_workbook(session: Session, output_path: Path) -> dict[str, int
     ws_zaiseki = wb.create_sheet("在籍のみ抜粋")
     zaiseki_count = _write_zaiseki(ws_zaiseki, session)
     quality_warnings = export_quality_warnings(session)
+    low_confidence_exclusions = _low_confidence_exclusion_rows(session)
+    low_confidence_exclusion_count = 0
+    if low_confidence_exclusions:
+        ws_exclusions = wb.create_sheet(LOW_CONFIDENCE_EXCLUSION_SHEET)
+        low_confidence_exclusion_count = _write_low_confidence_exclusions(ws_exclusions, low_confidence_exclusions)
     if any(quality_warnings.values()):
         log.warning("excel_export_quality_warnings", **quality_warnings)
 
@@ -411,6 +476,7 @@ def export_master_workbook(session: Session, output_path: Path) -> dict[str, int
         "対象比率": taisho_count,
         "学科別": gakka_count,
         "在籍のみ抜粋": zaiseki_count,
+        **({LOW_CONFIDENCE_EXCLUSION_SHEET: low_confidence_exclusion_count} if low_confidence_exclusion_count else {}),
         **{f"quality_{key}": value for key, value in quality_warnings.items()},
     }
     log.info("export_complete", results=results, output=str(output_path))

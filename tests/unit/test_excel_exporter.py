@@ -157,9 +157,40 @@ def test_export_master_filters_low_confidence_rows_and_reports_auto_flag(sqlite_
     assert stats["quality_department_yearly_auto_flag_current"] == 1
     assert stats["quality_support_recipient_low_confidence_current"] == 1
     assert stats["quality_support_recipient_auto_flag_current"] == 1
+    assert stats["出力除外_低信頼"] == 2
 
     wb = openpyxl.load_workbook(output, data_only=True)
     try:
+        assert "出力除外_低信頼" in wb.sheetnames
+        excluded = wb["出力除外_低信頼"]
+        assert [excluded.cell(row=1, column=col).value for col in range(1, 9)] == [
+            "種別",
+            "行ID",
+            "学校名",
+            "学科名",
+            "年度",
+            "confidence",
+            "理由",
+            "転記先",
+        ]
+        excluded_rows = [
+            [excluded.cell(row=row, column=col).value for col in range(1, 9)]
+            for row in range(2, excluded.max_row + 1)
+        ]
+        assert [
+            [
+                "department_yearly",
+                1,
+                "低信頼専門学校",
+                "低信頼学科",
+                2026,
+                0.64,
+                "confidence<0.70",
+                "学科別/在籍のみ抜粋",
+            ],
+            ["support_recipient", 1, "低信頼専門学校", None, 2026, 0.64, "confidence<0.70", "対象比率"],
+        ] == excluded_rows
+
         taisho = wb["対象比率"]
         taisho_school_names = [taisho.cell(row=row, column=6).value for row in range(2, taisho.max_row + 1)]
         assert taisho_school_names == ["要確認専門学校"]
