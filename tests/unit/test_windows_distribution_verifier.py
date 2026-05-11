@@ -185,6 +185,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/review/_pages/prefecture_remarks.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/fiscal_year_override.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/excel_preview.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
         "runtime/uv.exe": b"PE",
@@ -335,6 +336,18 @@ def test_verify_core_zip_requires_release_relevant_discovery_gold_outcomes(tmp_p
     assert not check.ok
     assert any("missing discovery gold-set outcomes" in error for error in check.errors)
     assert any("publication_lag_latest_public" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_discovery_gold_eval_regression_gate(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/cli.py"] = "@app.command('eval-discovery-gold')\ndef eval_discovery_gold(): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/cli.py missing required token" in error for error in check.errors)
+    assert any("--fail-on-regression" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:

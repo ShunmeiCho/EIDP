@@ -701,6 +701,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "SHIP_GATE_AUTO_YIELD_PCT",
             "ship_gate_status_from_yield",
         ),
+        "src/eidp/cli.py": (
+            '@app.command("eval-discovery-gold")',
+            "--fail-on-regression",
+            "_discovery_gold_gate_failed",
+        ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
         "scripts/run_weekly_target_year_discovery.py": ("export_excel",),
