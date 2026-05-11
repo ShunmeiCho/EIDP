@@ -84,3 +84,7 @@ Current v0.1 seed coverage:
   hidden crawler error.
 - Image-only support PDFs that look target-related but must remain in review
   until OCR or page context proves the target fiscal year.
+- Official-index disclosure pages where stale-looking URL/anchor hints must be
+  overridden only by PDF-body current-year evidence.
+- Official-index support pages where a likely confirmation form is found but
+  remains review-bound because no reliable target-year evidence is available.

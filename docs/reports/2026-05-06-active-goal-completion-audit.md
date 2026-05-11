@@ -72,6 +72,48 @@ remains disabled.
   and `在籍のみ抜粋`, not the previous 4-row split, and the 2026 values are
   written onto the existing `工業` rows.
 
+## 2026-05-11 Discovery Gold-Set Update
+
+After the Windows v150 Saitama replay proved that Layer 0 official-index
+handoff is intact and Layer 1 target-PDF acquisition is the bottleneck, two
+real Saitama outcomes were added to the existing discovery gold set rather than
+creating a new schema:
+
+- `saitama-it-web-accepted-2026`: school `95`
+  (`さいたまIT・WEB専門学校`) captures the only current strict FY2026 success in
+  the bounded Saitama official-index replay. The URL and anchor look stale
+  because they contain `2025`, but the PDF body provides FY2026 evidence, so
+  this path must remain `accepted_target_pdf`.
+- `ageo-central-nursing-review-2026`: school `757`
+  (`上尾中央看護専門学校`) captures the remaining yearless target-form candidate.
+  The crawler finds `study_support_system.pdf` from the official-index site, but
+  no URL, anchor, or extracted PDF-body evidence proves FY2026, so it must
+  remain `needs_operator_review` and must not be counted as a strict success.
+
+The gold-set summary now has 14 entries: 5 accepted target PDFs, 6 operator
+review cases, 2 publication-lag latest-public cases, and 1 no-target-candidate
+case. This keeps demonstration-driven discovery work as a regression/evaluation
+surface for Layer 1 while preserving the official prefectural indexes as the
+primary data source.
+
+- Focused verification:
+  `uv run pytest tests/unit/test_discovery_gold_set.py
+  tests/unit/test_discovery_gold_set_summary.py
+  tests/unit/test_discovery_gold_set_eval.py
+  tests/unit/test_cli_discovery_gold_set.py
+  tests/unit/test_cli_eval_discovery_gold.py
+  tests/unit/test_discovery_gold_set_seed.py -q` → `22 passed`.
+- `uv run eidp discovery-gold-set --json` → `total_entries=14`,
+  `accepted_target_pdf=5`, `needs_operator_review=6`,
+  `publication_lag_latest_public=2`, `no_target_candidate_found=1`, and
+  `strict_target_year_successes=5`.
+- Combined Windows evidence for school `95` and school `757` evaluated with
+  `uv run eidp eval-discovery-gold --pdf-evidence
+  _temp/v150-goldset-two-school-evidence.jsonl --json` → `exact_matches=2`,
+  `failed_predictions=0`, `unexpected_predictions=0`.
+- Full unit regression after adding the entries and updating the count-based
+  tests: `uv run pytest tests/unit -q` → `1040 passed, 5 warnings`.
+
 ## 2026-05-11 v146 Update
 
 v146 packages the school `95` real-PDF ingestion fix and verifies it on the
@@ -1094,6 +1136,14 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   `all_negative_score=10`, `not_pdf_magic=5`,
   `http_error:HTTPStatusError=4`, `target_fiscal_year_not_detected=1`,
   `no_candidates_found=1`, and `discovery_error=1`.
+- Discovery gold-set expansion from that replay →
+  added `saitama-it-web-accepted-2026` and
+  `ageo-central-nursing-review-2026`; `uv run eidp discovery-gold-set --json`
+  now reports `total_entries=14`, `accepted_target_pdf=5`,
+  `needs_operator_review=6`, and `strict_target_year_successes=5`.
+  Focused gold-set tests passed (`22 passed`), a two-school v150 evidence eval
+  produced `exact_matches=2`, and full unit regression passed with
+  `1040 passed, 5 warnings`.
 - Focused v149 first-year Japanese-era regression, Saitama school `773`
   replay, full current Saitama replay, Ruff, and full unit suite after the
   `元年度` parser patch →

@@ -21,6 +21,7 @@ def test_discovery_gold_set_schema_and_prototypes_exist() -> None:
 
 def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     entries = [_load_json(path) for path in sorted(ENTRY_DIR.glob("*.json"))]
+    entries_by_id = {entry["entry_id"]: entry for entry in entries}
 
     accepted = [entry for entry in entries if entry["outcome"] == "accepted_target_pdf"]
     assert accepted, "prototype set needs at least one successful discovery path"
@@ -31,6 +32,10 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     assert any(entry["outcome"] == "no_target_candidate_found" for entry in entries)
     assert any(entry["evidence"]["source_kind"] == "saitama_rca_jsonl" for entry in entries)
     assert len({entry["entry_id"] for entry in entries}) == len(entries)
+    assert entries_by_id["saitama-it-web-accepted-2026"]["outcome"] == "accepted_target_pdf"
+    assert entries_by_id["saitama-it-web-accepted-2026"]["expected_result"]["strict_target_year_success"] is True
+    assert entries_by_id["ageo-central-nursing-review-2026"]["outcome"] == "needs_operator_review"
+    assert entries_by_id["ageo-central-nursing-review-2026"]["expected_result"]["fiscal_year"] is None
 
     for entry in entries:
         assert entry["schema_version"] == "discovery-gold-set/v0.1"
