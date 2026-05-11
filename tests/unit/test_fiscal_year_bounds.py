@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text
 from eidp.pdf.extractor import _extract_fiscal_year
 from eidp.pipeline.ingest import _parse_fiscal_year_from_annotation
 
@@ -14,6 +15,10 @@ def test_past_reiwa_year_is_accepted() -> None:
 
 def test_current_reiwa_year_is_accepted() -> None:
     assert _parse_fiscal_year_from_annotation("令和8年度", max_fiscal_year=2026) == 2026
+
+
+def test_kanji_reiwa_year_is_accepted() -> None:
+    assert fiscal_year_from_japanese_era_text("令和七年度") == 2025
 
 
 def test_current_fiscal_year_is_accepted_even_when_source_url_has_prior_year() -> None:

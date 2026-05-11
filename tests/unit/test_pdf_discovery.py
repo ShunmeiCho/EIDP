@@ -346,6 +346,21 @@ def test_pre_download_rejects_student_support_application_form() -> None:
     assert rejection.pdf_type == "non_target"
 
 
+def test_pre_download_rejects_tuition_reduction_download_link_without_target_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/higher_education_study_support/jyugyoryo-genmen2025_2.pdf",
+        page_url="https://example.ac.jp/information/",
+        anchor_text="授業料減免申請書ダウンロード（PDF版）",
+        score=9.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.reason == "pre_filtered_non_target_hint"
+    assert rejection.pdf_type == "non_target"
+
+
 def test_pre_download_prioritizes_stale_target_form_year_over_evaluation_path() -> None:
     candidate = PdfCandidate(
         pdf_url="https://ndac.ac.jp/about/evaluation/uploads/info-2025.pdf",
@@ -3018,6 +3033,72 @@ def test_download_pdf_trusted_prefecture_still_rejects_explicit_stale_year_label
         pdf_url="https://example.ac.jp/wp/wp-content/uploads/2025/06/shinsei.pdf",
         page_url="https://example.ac.jp/financial-aid/",
         anchor_text="2025年度 確認申請書",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2025"
+
+
+def test_download_pdf_trusted_prefecture_rejects_romanized_era_stale_year_label(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471",
+        page_url="https://i-heiseigakuen.ac.jp/youshiki/",
+        anchor_text="ダウンロード 様式２（R6年度分申請）",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2024"
+
+
+def test_download_pdf_trusted_prefecture_rejects_kanji_era_stale_year_label(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/wp-content/uploads/2025/07/kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和七年度大学等における修学の支援に関する法律第７条第１項の確認に係る申請書",
     )
     candidate.trusted_year_evidence = "prefecture_index_current_year"
 

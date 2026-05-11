@@ -153,8 +153,34 @@ def fiscal_year_search_tokens(
     return tuple(tokens)
 
 
+_KANJI_DIGITS: dict[str, int] = {
+    "〇": 0,
+    "零": 0,
+    "一": 1,
+    "二": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+}
+
+
 def _parse_era_year(value: str) -> int:
-    return 1 if value == "元" else int(value)
+    if value == "元":
+        return 1
+    if value.isdecimal():
+        return int(value)
+    if value in _KANJI_DIGITS:
+        return _KANJI_DIGITS[value]
+    if "十" in value:
+        tens_text, _, ones_text = value.partition("十")
+        tens = 1 if not tens_text else _KANJI_DIGITS[tens_text]
+        ones = 0 if not ones_text else _KANJI_DIGITS[ones_text]
+        return tens * 10 + ones
+    return int(value)
 
 
 def fiscal_year_from_japanese_era_text(
@@ -174,11 +200,11 @@ def fiscal_year_from_japanese_era_text(
     for era in sorted(_eras_or_active(eras), key=lambda item: item.start_fiscal_year, reverse=True):
         escaped_name = re.escape(era.name)
         if include_fiscal_year_labels:
-            m = re.search(rf"{escaped_name}\s*(\d+|元)\s*年度", normed)
+            m = re.search(rf"{escaped_name}\s*(\d+|[一二三四五六七八九十]+|元)\s*年度", normed)
             if m:
                 return era.fiscal_year_for_era_year(_parse_era_year(m.group(1)))
         if include_filing_dates:
-            m = re.search(rf"{escaped_name}\s*(\d+|元)\s*年\s*\d+\s*月\s*\d+\s*日", normed)
+            m = re.search(rf"{escaped_name}\s*(\d+|[一二三四五六七八九十]+|元)\s*年\s*\d+\s*月\s*\d+\s*日", normed)
             if m:
                 return era.fiscal_year_for_era_year(_parse_era_year(m.group(1)))
     return None

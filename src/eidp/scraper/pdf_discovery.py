@@ -638,6 +638,14 @@ def _has_explicit_stale_fiscal_year_label(candidate: PdfCandidate, *, target_yea
     )
     if detected_year is not None and target_year - 8 <= detected_year < target_year:
         return True
+    lowered = unicodedata.normalize("NFKC", text).lower()
+    for year in range(target_year - 8, target_year):
+        for token in fiscal_year_search_tokens(year):
+            token_lower = token.lower()
+            if not token_lower.startswith("r"):
+                continue
+            if re.search(rf"(?<![a-z0-9]){re.escape(token_lower)}\s*年度", lowered):
+                return True
     for match in re.finditer(r"(?<!\d)(20\d{2})\s*年度", text):
         year = int(match.group(1))
         if target_year - 8 <= year < target_year:
@@ -652,6 +660,13 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
     lowered = text.lower()
     detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
     if "a様式1" in lowered or "対象者の認定に関する申請書" in lowered:
+        return CachedPdfRejection(
+            pdf_type="non_target",
+            reason="pre_filtered_non_target_hint",
+        )
+    if any(token in lowered for token in ("授業料減免", "授業料等減免", "jyugyoryo", "jugyoryo", "genmen")) and not (
+        _has_target_application_hint(candidate)
+    ):
         return CachedPdfRejection(
             pdf_type="non_target",
             reason="pre_filtered_non_target_hint",
