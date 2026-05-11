@@ -434,7 +434,7 @@ Use this table to keep outcomes consistent across Codex sessions.
 | Official URL exists, target-form candidate is latest public but body/URL/anchor proves old FY only | `layer_1_pdf_discovery` | `publication_lag_latest_public` | `wait_for_publication` |
 | Target-form shape exists but year is missing, conflicting, or image-only without OCR proof | `layer_2_pdf_body_or_ocr` | `needs_operator_review` | `review_pdf` |
 | Only adjacent non-target PDFs are visible, such as 役員名簿, 授業科目, 学校情報, 学校紹介, 学校案内, 募集要項 | `layer_1_pdf_discovery` | `no_target_candidate_found` | `manual_url_entry` |
-| Page fetch fails because of TLS, robots, auth, repeated 403/429/503/418, or server error | `site_infrastructure_failure` | `needs_operator_review` | `site_access_followup` |
+| Page fetch fails because of TLS, robots, auth, repeated 403/429/503/418, or server error | `site_infrastructure_failure` | `site_fetch_error` | `site_access_followup` |
 | Named-school bounded search finds a school-domain disclosure URL after official paths are exhausted | `layer_3_operator_or_search_fallback` | classify by PDF/body evidence | record query and add review if not strict |
 
 Important distinction:

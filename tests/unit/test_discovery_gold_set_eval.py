@@ -43,11 +43,11 @@ def test_evaluate_discovery_predictions_flags_missing_and_mismatched_entries() -
 
     report = evaluate_discovery_gold_predictions(entries, predictions)
 
-    assert report.total_gold_entries == 15
+    assert report.total_gold_entries == 16
     assert report.predicted_entries == 2
     assert report.exact_matches == 1
     assert report.failed_predictions == 1
-    assert report.missing_entries == 13
+    assert report.missing_entries == 14
     assert report.unexpected_predictions == 0
     assert report.failures[0]["entry_id"] == "nihon-u-dental-hygienist-publication-lag-2026"
     assert report.failures[0]["reasons"] == [
@@ -151,6 +151,14 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
                 ),
                 json.dumps(
                     {
+                        "school_id": 767,
+                        "pdf_url": "https://www.kitasato-u.ac.jp/kango-gko/about/release.html",
+                        "reason": "discovery_error",
+                        "pdf_type": None,
+                    }
+                ),
+                json.dumps(
+                    {
                         "school_id": 763,
                         "pdf_url": ODHS_URL,
                         "reason": "target_fiscal_year_not_detected",
@@ -224,6 +232,13 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
             pdf_url=SIW_URL,
             fiscal_year=2026,
             strict_target_year_success=True,
+        ),
+        DiscoveryGoldPrediction(
+            entry_id="saitama-kitasato-nursing-site-fetch-error-2026",
+            outcome="site_fetch_error",
+            pdf_url="",
+            fiscal_year=None,
+            strict_target_year_success=False,
         ),
     ]
 
@@ -309,6 +324,6 @@ def test_render_discovery_gold_eval_report_outputs_json_payload() -> None:
 
     payload = json.loads(render_discovery_gold_eval_report(report))
 
-    assert payload["total_gold_entries"] == 15
+    assert payload["total_gold_entries"] == 16
     assert payload["exact_matches"] == 1
-    assert payload["missing_entries"] == 14
+    assert payload["missing_entries"] == 15

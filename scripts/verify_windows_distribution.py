@@ -175,6 +175,7 @@ DISCOVERY_GOLD_REQUIRED_OUTCOMES = frozenset(
         "needs_operator_review",
         "no_target_candidate_found",
         "publication_lag_latest_public",
+        "site_fetch_error",
     }
 )
 

@@ -38,7 +38,8 @@
         "accepted_target_pdf",
         "publication_lag_latest_public",
         "no_target_candidate_found",
-        "needs_operator_review"
+        "needs_operator_review",
+        "site_fetch_error"
       ]
     },
     "manual_demonstration": {

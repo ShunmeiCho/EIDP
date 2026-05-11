@@ -31,6 +31,7 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     assert any(entry["outcome"] == "needs_operator_review" for entry in entries)
     assert any(entry["outcome"] == "publication_lag_latest_public" for entry in entries)
     assert any(entry["outcome"] == "no_target_candidate_found" for entry in entries)
+    assert any(entry["outcome"] == "site_fetch_error" for entry in entries)
     assert any(entry["evidence"]["source_kind"] == "saitama_rca_jsonl" for entry in entries)
     assert len({entry["entry_id"] for entry in entries}) == len(entries)
     assert entries_by_id["saitama-it-web-accepted-2026"]["outcome"] == "accepted_target_pdf"
@@ -47,6 +48,7 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
             "publication_lag_latest_public",
             "no_target_candidate_found",
             "needs_operator_review",
+            "site_fetch_error",
         }
         assert entry["manual_demonstration"]["operator_goal"]
         assert entry["manual_demonstration"]["steps"]

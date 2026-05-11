@@ -392,6 +392,15 @@ def _prediction_from_pdf_evidence_payload(
             strict_target_year_success=False,
         )
 
+    if reason in {"discovery_error"} or reason.startswith("http_error:"):
+        return DiscoveryGoldPrediction(
+            entry_id=entry.entry_id,
+            outcome="site_fetch_error",
+            pdf_url="",
+            fiscal_year=None,
+            strict_target_year_success=False,
+        )
+
     return None
 
 
@@ -401,6 +410,7 @@ def _prediction_priority(outcome: str) -> int:
         "publication_lag_latest_public": 3,
         "needs_operator_review": 2,
         "no_target_candidate_found": 1,
+        "site_fetch_error": 1,
     }.get(outcome, 0)
 
 

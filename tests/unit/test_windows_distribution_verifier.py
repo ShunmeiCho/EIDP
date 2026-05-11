@@ -172,6 +172,10 @@ def _core_entries() -> dict[str, bytes | str]:
             "publication-lag",
             "publication_lag_latest_public",
         ),
+        "data/discovery-gold-set/entries/site-fetch-error.json": _discovery_gold_entry(
+            "site-fetch-error",
+            "site_fetch_error",
+        ),
         "src/eidp/review/app.py": "PAGE_SETTINGS = 'settings'\n",
         "src/eidp/review/operator_pages.py": "def inject_v1_theme(): pass\n",
         "src/eidp/review/_pages/audit_log.py": "def render(session, *, lock_path, jsonl_path): pass\n",
@@ -300,12 +304,13 @@ def test_verify_core_zip_reports_discovery_gold_set_summary(tmp_path: Path) -> N
     check = module.verify_core_zip(zip_path)
 
     assert check.ok, check.errors
-    assert check.details["discovery_gold_set_entries"] == 4
+    assert check.details["discovery_gold_set_entries"] == 5
     assert check.details["discovery_gold_set_outcomes"] == {
         "accepted_target_pdf": 1,
         "needs_operator_review": 1,
         "no_target_candidate_found": 1,
         "publication_lag_latest_public": 1,
+        "site_fetch_error": 1,
     }
 
 
