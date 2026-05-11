@@ -354,7 +354,14 @@ def validate_install(
             for key in ("target_missing_school_count", "new_document_count", "target_pdf_auto_acquired_count"):
                 if key in last_run and not isinstance(last_run.get(key), int):
                     check.fail(f"last_run.json {key} must be an integer")
-            for key in ("target_pdf_auto_yield_pct", "ship_gate_auto_yield_pct"):
+            if "target_pdf_auto_yield_pct" in last_run:
+                target_yield = last_run.get("target_pdf_auto_yield_pct")
+                if target_yield is None:
+                    if last_run.get("ship_gate_status") != "not_measured":
+                        check.fail("last_run.json target_pdf_auto_yield_pct can be null only when not_measured")
+                elif not isinstance(target_yield, int | float):
+                    check.fail("last_run.json target_pdf_auto_yield_pct must be numeric")
+            for key in ("ship_gate_auto_yield_pct",):
                 if key in last_run and not isinstance(last_run.get(key), int | float):
                     check.fail(f"last_run.json {key} must be numeric")
             if "ship_gate_status" in last_run and not isinstance(last_run.get("ship_gate_status"), str):

@@ -281,6 +281,23 @@ def test_validate_after_weekly_accepts_last_run_schema(tmp_path: Path) -> None:
     assert check.details["run_log_count"] == 1
 
 
+def test_validate_after_weekly_accepts_not_measured_yield(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload["target_missing_school_count"] = 0
+    payload["target_pdf_auto_acquired_count"] = 0
+    payload["target_pdf_auto_yield_pct"] = None
+    payload["ship_gate_status"] = "not_measured"
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_setup=True, after_weekly=True)
+
+    assert check.ok, check.errors
+    assert check.details["last_run_status"] == "success"
+
+
 def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
