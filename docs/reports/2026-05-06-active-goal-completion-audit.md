@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `2dcc7f8362af991e8639b99ffebd34b78250f755` (`eidp-windows-v240.zip`)
+Latest audited Windows package commit: `0994401073c5dceec749290def574492be50b801` (`eidp-windows-v241.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -259,18 +259,59 @@ negative tokens risk suppressing valid lower-ranked target forms. The next
 meaningful discovery work should be site-family rules or manual RCA/gold-set
 promotion for those families, not unrestricted token expansion.
 
+For v241 packaging, `scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v241.zip --latest-alias` produced SHA256
+`d175e174630ee2f833a27a2884525278447163bd20ac095f8b10a9bc0c6be439`
+with `git_commit=0994401073c5dceec749290def574492be50b801` and
+`git_dirty=false`. The ZIP verifier and local extracted-install validator
+passed. Fresh Windows extraction `C:\Users\cyo20\EIDP-v241-0994401` passed
+setup/after-setup validation with `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+`uq_document_file_hash` present, and
+`build_commit=0994401073c5dceec749290def574492be50b801`.
+
+The v241 full bounded Saitama official-index replay used the same developer
+scope as v240: `--pref saitama --skip-known-url-discovery --url-search off
+--school-url-crawl off --discovery-methods prefecture_aggregator
+--batch-size 60 --rate-limit 0.5 --request-timeout 15`. It again parsed
+`extracted=58`, `matched=51`, and `added=51` school sites, crawled `51`
+registered sites, found PDF candidates on `50`, downloaded `3`, and rebuilt
+status with `target_pdf_auto_acquired_count=3`,
+`target_pdf_auto_yield_pct=0.1`, and `ship_gate_status=below_gate`.
+The accepted current-year documents are still the same three schools:
+`757` (`上尾中央看護専門学校`), `760` (`入間看護専門学校`), and `784`
+(`専門学校埼玉自動車大学校`).
+
+The v241 site-family pre-download guard moved another `130` overlapping
+v240 evidence rows to `pre_filtered_non_target_hint`
+(`115` from `classified_non_target`, `7` from
+`target_fiscal_year_not_detected`, `7` from `fiscal_year_mismatch:2025`, and
+`1` from `fiscal_year_mismatch:2019`). In aggregate,
+`classified_non_target` fell from v240 `169` to v241 `125`, and
+`target_fiscal_year_not_detected` fell from `27` to `21`. This is still not a
+ship-gate improvement: evidence rows expanded from `1968` to `5580`, skipped
+candidates from `1809` to `5418`, cached rejections from `596` to `2813`, and
+prefiltered rows from `1117` to `2550`. Most of the new depth is site-family
+churn, especially O-Hara numbered public-disclosure PDFs. The next
+yield work should therefore change candidate budgeting/prioritization and
+site-family target-form derivation, not keep adding broad negative tokens.
+
 - Regression coverage:
   `test_summarize_pdf_discovery_evidence_treats_image_only_old_target_application_hints_as_publication_lag`,
   `test_summarize_pdf_discovery_evidence_keeps_weak_image_only_form_or_support_hints_in_review`,
-  and
-  `test_summarize_pdf_discovery_evidence_keeps_generic_higher_ed_boilerplate_image_only_in_review`.
+  `test_summarize_pdf_discovery_evidence_keeps_generic_higher_ed_boilerplate_image_only_in_review`,
+  `test_pre_download_rejects_site_family_non_target_url_shapes`,
+  `test_pre_download_site_family_guard_keeps_sanko_target_form_shape`, and
+  `test_pre_download_site_family_guard_keeps_local_target_application_hint`.
 - Verification:
   `uv run pytest tests/unit/test_discovery_evidence_summary.py -q -k image_only`
   → `2 passed`;
   `uv run pytest tests/unit/test_discovery_evidence_summary.py
   tests/unit/test_school_fiscal_year_status.py
   tests/unit/test_review_school_year_tasks.py -q` → `72 passed`;
-  `uv run pytest tests/unit -q` → `1047 passed, 5 warnings`.
+  `uv run pytest tests/unit/test_pdf_discovery.py -q` →
+  `88 passed, 5 warnings`; `uv run pytest tests/unit -q` →
+  `1189 passed, 5 warnings`.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
@@ -2771,15 +2812,20 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v240 is the current verifier-clean and
+The active goal is **not complete**. v241 is the current verifier-clean and
 Windows setup-verified ZIP candidate. The latest full bounded Windows
 acquisition RCA still proves strict FY2026 yield below the ship gate: the
-v240 Saitama official-index run covered `51` official-index school URLs, found
+v241 Saitama official-index run covered `51` official-index school URLs, found
 PDF candidates on `50` sites, downloaded `3` PDFs, and counted `3` schools
-as current target-PDF auto acquired after ingest/status rebuild. v240 reduced
-download-time non-target waste (`classified_non_target` fell from v239 `230`
-to `169`, and `target_fiscal_year_not_detected` fell from `51` to `27`) but
-did not change the final current-year document count or ship-gate status. v230
+as current target-PDF auto acquired after ingest/status rebuild. v240 and v241
+reduced download-time non-target waste (`classified_non_target` fell from v239
+`230` to v240 `169` and then v241 `125`, and
+`target_fiscal_year_not_detected` fell from `51` to `27` and then `21`) but
+did not change the final current-year document count or ship-gate status. v241
+also proved that pre-filter gains can expose much deeper same-site non-target
+queues: evidence rows expanded to `5580`, skipped candidates to `5418`, and
+prefiltered rows to `2550`, dominated by site-family disclosure-PDF families
+rather than generic missing negative tokens. v230
 pre-filters the earlier school `72` `職業実践専門課程等の基本情報` false positive
 as `non_target` in a targeted Windows replay. v231 also prevents school `793`
 stale `2025年度` full-form links from inheriting a preceding `2026年度` syllabus
@@ -2809,8 +2855,12 @@ has `classified_non_target=0` on schools `291` and `486`.
 v240 extends the same evidence-backed pre-download policy to financial
 statements, education/course, objective-indicator, plan/policy, and student
 form families exposed by the full Saitama replay, but the residual failures
-now concentrate in site-family patterns such as O-Hara numbered disclosure PDFs
-and Sanko/Arsnet course/hash documents.
+concentrate in site-family patterns such as O-Hara numbered disclosure PDFs
+and Sanko/Arsnet course/hash documents. v241 adds guarded site-family
+pre-download rejection for the first observed O-Hara/Sanko/Kanto/Honda/Arsnet
+families, but the unchanged `3/2418` auto-acquired count means the next
+meaningful lever is candidate prioritization/derivation from known site
+families rather than more broad rejection terms.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
