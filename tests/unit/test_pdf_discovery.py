@@ -17,7 +17,9 @@ from eidp.scraper.pdf_discovery import (
     _detect_fiscal_year_from_text,
     _download_attempt_urls,
     _extract_pdf_links,
+    _has_target_application_hint,
     _pre_download_rejection,
+    _prioritize_viable_candidates,
     _score_candidate,
     _sitemap_urls_for_site,
     discover_pdfs_for_site,
@@ -150,6 +152,80 @@ def test_pre_download_keeps_target_form_when_subject_path_has_target_hint() -> N
     rejection = _pre_download_rejection(candidate, target_year=2026)
 
     assert rejection is None
+
+
+def test_extract_pdf_links_adds_table_header_context_for_generic_pdf_links() -> None:
+    html = """
+    <html>
+      <head><title>修学支援新制度に関連する情報提供資料について</title></head>
+      <body>
+        <table>
+          <tr>
+            <th colspan="3">大原医療秘書福祉専門学校大宮校</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th>授業科目一覧</th>
+            <th>確認申請書</th>
+          </tr>
+          <tr>
+            <th>情報システム学科</th>
+            <td><a href="pdf/2025-1-01-01-1.pdf">PDF</a></td>
+            <td><a href="pdf/2025-1-01-01-5.pdf">PDF</a></td>
+          </tr>
+        </table>
+      </body>
+    </html>
+    """
+
+    candidates = _extract_pdf_links(html, "https://www.o-hara.ac.jp/about/joho/")
+
+    subject, application = candidates
+    assert "確認申請書" not in subject.anchor_text
+    assert "確認申請書" in application.anchor_text
+    assert "大原医療秘書福祉専門学校大宮校" in application.anchor_text
+    assert "修学支援新制度" in application.anchor_text
+    assert not _has_target_application_hint(subject)
+    assert _has_target_application_hint(application)
+
+
+def test_pre_download_treats_o_hara_confirmation_column_as_old_target_form() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
+        page_url="https://www.o-hara.ac.jp/about/joho/",
+        anchor_text="PDF 修学支援新制度に関連する情報提供資料について 確認申請書",
+        score=10.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2025"
+
+
+def test_prioritize_viable_candidates_prefers_matching_school_section() -> None:
+    other_school = PdfCandidate(
+        pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
+        page_url="https://www.o-hara.ac.jp/about/joho/",
+        anchor_text="PDF 大原簿記情報ビジネス専門学校大宮校 修学支援新制度 確認申請書",
+        score=10.0,
+    )
+    target_school = PdfCandidate(
+        pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-37-01-5.pdf",
+        page_url="https://www.o-hara.ac.jp/about/joho/",
+        anchor_text="PDF 大原医療秘書福祉専門学校大宮校 修学支援新制度 確認申請書",
+        score=1.0,
+    )
+
+    ordered, dropped = _prioritize_viable_candidates(
+        [other_school, target_school],
+        target_year=2026,
+        school_name="大原医療秘書福祉専門学校大宮校",
+    )
+
+    assert dropped == 0
+    assert ordered == [target_school, other_school]
 
 
 def test_pre_download_rejects_site_family_non_target_url_shapes() -> None:

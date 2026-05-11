@@ -796,23 +796,29 @@ def _prioritize_viable_candidates(
     candidates: list[PdfCandidate],
     *,
     target_year: int,
+    school_name: str = "",
 ) -> tuple[list[PdfCandidate], int]:
     """Prioritize target-like candidates and cap generic PDF scanning."""
 
-    priority: list[tuple[int, int, PdfCandidate]] = []
-    general: list[tuple[int, PdfCandidate]] = []
+    priority: list[tuple[int, int, int, PdfCandidate]] = []
+    general: list[tuple[int, int, PdfCandidate]] = []
     for index, candidate in enumerate(candidates):
         tier = _candidate_download_tier(candidate, target_year=target_year)
+        school_rank = (
+            0
+            if school_name and _school_name_matches_link(f"{candidate.anchor_text} {candidate.pdf_url}", school_name)
+            else 1
+        )
         if tier < 2:
-            priority.append((tier, index, candidate))
+            priority.append((tier, school_rank, index, candidate))
         else:
-            general.append((index, candidate))
+            general.append((school_rank, index, candidate))
 
-    priority.sort(key=lambda item: (item[0], -item[2].score, item[1]))
-    general.sort(key=lambda item: (-item[1].score, item[0]))
+    priority.sort(key=lambda item: (item[0], item[1], -item[3].score, item[2]))
+    general.sort(key=lambda item: (item[0], -item[2].score, item[1]))
     dropped = max(len(general) - MAX_GENERAL_CANDIDATE_SCAN, 0)
-    ordered = [candidate for _, _, candidate in priority]
-    ordered.extend(candidate for _, candidate in general[:MAX_GENERAL_CANDIDATE_SCAN])
+    ordered = [candidate for _, _, _, candidate in priority]
+    ordered.extend(candidate for _, _, candidate in general[:MAX_GENERAL_CANDIDATE_SCAN])
     return ordered, dropped
 
 
@@ -957,6 +963,13 @@ def _html_text(fragment: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def _html_title_text(html: str) -> str:
+    title_match = re.search(r"<title\b[^>]*>(.*?)</title\s*>", html, re.IGNORECASE | re.DOTALL)
+    if title_match is None:
+        return ""
+    return _html_text(title_match.group(1))
+
+
 def _enclosing_html_block(html: str, start: int, end: int) -> tuple[str, int, int, str] | None:
     """Return the closest simple HTML block containing an anchor match."""
 
@@ -992,6 +1005,98 @@ def _has_fiscal_year_context(text: str) -> bool:
     return bool(re.search(r"(令和\s*\d+|20\d{2}\s*年度|(?<![a-z0-9])r0?\d{1,2}(?![a-z0-9]))", normalized.lower()))
 
 
+def _has_support_system_context(text: str) -> bool:
+    return any(token in text for token in ("修学支援", "修学の支援", "高等教育", "無償化"))
+
+
+def _has_application_form_context(text: str) -> bool:
+    return any(
+        token in text
+        for token in (
+            "確認申請",
+            "確認申請書",
+            "申請書",
+            "様式第2号",
+            "様式第２号",
+            "様式2号",
+            "機関要件",
+        )
+    )
+
+
+def _html_table_cells(row_fragment: str) -> list[tuple[int, int, str]]:
+    return [
+        (match.start(), match.end(), match.group(0))
+        for match in re.finditer(r"<t[dh]\b[^>]*>.*?</t[dh]\s*>", row_fragment, re.IGNORECASE | re.DOTALL)
+    ]
+
+
+def _table_column_header_context(html: str, block_start: int, block_fragment: str, match: re.Match[str]) -> str:
+    """Return same-column table header text for generic PDF links.
+
+    Some school groups render disclosure tables with column headers such as
+    ``確認申請書`` while each link's visible text is only ``PDF``. Without the
+    header, the candidate looks generic and site-family prefilters can discard
+    the target-form column together with syllabus and grade-policy columns.
+    """
+
+    local_anchor_start = match.start() - block_start
+    current_cells = _html_table_cells(block_fragment)
+    cell_index: int | None = None
+    for index, (cell_start, cell_end, _) in enumerate(current_cells):
+        if cell_start <= local_anchor_start < cell_end:
+            cell_index = index
+            break
+    if cell_index is None:
+        return ""
+
+    prefix = html[:block_start]
+    table_start = prefix.lower().rfind("<table")
+    table_end = prefix.lower().rfind("</table")
+    if table_start == -1 or table_end > table_start:
+        return ""
+
+    table_prefix = html[table_start:block_start]
+    previous_rows = list(re.finditer(r"<tr\b[^>]*>.*?</tr\s*>", table_prefix, re.IGNORECASE | re.DOTALL))
+    for row in reversed(previous_rows):
+        cells = _html_table_cells(row.group(0))
+        if cell_index >= len(cells):
+            continue
+        header_text = _html_text(cells[cell_index][2])
+        if not header_text or not _has_application_form_context(header_text):
+            continue
+        title = _html_title_text(html)
+        if title and _has_support_system_context(title):
+            return f"{title} {header_text}"
+        return header_text
+    return ""
+
+
+def _table_section_heading_context(html: str, block_start: int) -> str:
+    """Return the closest school/section table heading before a row.
+
+    O-Hara-style group disclosure pages put many schools into one table. The
+    current row's nearest column header identifies the document type, while the
+    nearest preceding colspan header identifies the school section.
+    """
+
+    prefix = html[:block_start]
+    table_start = prefix.lower().rfind("<table")
+    table_end = prefix.lower().rfind("</table")
+    if table_start == -1 or table_end > table_start:
+        return ""
+
+    table_prefix = html[table_start:block_start]
+    for heading in reversed(list(re.finditer(r"<th\b([^>]*)>(.*?)</th\s*>", table_prefix, re.IGNORECASE | re.DOTALL))):
+        attrs = heading.group(1)
+        if not re.search(r"\bcolspan\s*=", attrs, re.IGNORECASE):
+            continue
+        text = _html_text(heading.group(2))
+        if text:
+            return text
+    return ""
+
+
 def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
     """Return anchor text plus nearby fiscal-year context when the CMS splits it.
 
@@ -1022,6 +1127,13 @@ def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
         has_current_year_context = any(_has_fiscal_year_context(part) for part in parts)
         if previous_text and not has_current_year_context and _has_fiscal_year_context(previous_text):
             parts.append(previous_text)
+        if tag == "tr":
+            section_heading = _table_section_heading_context(html, block_start)
+            if section_heading and section_heading not in parts:
+                parts.append(section_heading)
+            table_header = _table_column_header_context(html, block_start, block_fragment, match)
+            if table_header and table_header not in parts:
+                parts.append(table_header)
     elif previous_text := _previous_fiscal_year_context(html, match.start()):
         parts.append(previous_text)
     return " ".join(dict.fromkeys(part for part in parts if part))
@@ -2092,6 +2204,7 @@ def run_pdf_discovery(
             viable, candidate_budget_dropped = _prioritize_viable_candidates(
                 viable,
                 target_year=target_year,
+                school_name=site.school.school_name if site.school is not None else "",
             )
             if candidate_budget_dropped:
                 stats["candidate_budget_limited"] += 1

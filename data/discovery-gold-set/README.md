@@ -120,3 +120,6 @@ Current v0.1 seed coverage:
 - Official-index support pages where a yearless confirmation form is accepted
   only after the PDF body classifies as target and the current-year prefecture
   index supplies auditable year evidence.
+- Disclosure tables where every link says only `PDF` but the same-column header
+  identifies `確認申請書`; the header must apply only to that column, while
+  neighboring syllabus, grade-policy, and course-list columns remain non-target.

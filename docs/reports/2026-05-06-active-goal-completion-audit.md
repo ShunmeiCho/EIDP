@@ -2869,10 +2869,10 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v241 is the current verifier-clean and
+The active goal is **not complete**. v242 is the current verifier-clean and
 Windows setup-verified ZIP candidate. The latest full bounded Windows
 acquisition RCA still proves strict FY2026 yield below the ship gate: the
-v241 Saitama official-index run covered `51` official-index school URLs, found
+v242 Saitama official-index run covered `51` official-index school URLs, found
 PDF candidates on `50` sites, downloaded `3` PDFs, and counted `3` schools
 as current target-PDF auto acquired after ingest/status rebuild. v240 and v241
 reduced download-time non-target waste (`classified_non_target` fell from v239
@@ -2917,7 +2917,24 @@ and Sanko/Arsnet course/hash documents. v241 adds guarded site-family
 pre-download rejection for the first observed O-Hara/Sanko/Kanto/Honda/Arsnet
 families, but the unchanged `3/2418` auto-acquired count means the next
 meaningful lever is candidate prioritization/derivation from known site
-families rather than more broad rejection terms.
+families rather than more broad rejection terms. v242 implements that candidate
+prioritization/budget lever: full Saitama evidence rows fell from v241 `5580`
+to `1324`, skipped candidates from `5418` to `1166`, cached rejections from
+`2813` to `224`, and pre-filtered rows from `2550` to `886`, with
+`candidate_budget_limited=8` and `candidate_budget_dropped=6487`; the accepted
+current-year count still stayed `3/2418`, so v242 is a runtime/noise
+improvement rather than a yield improvement.
+Current-code manual RCA after v242 adds an O-Hara table pattern that mirrors the
+operator's successful path: use the same-column `確認申請書` header and the
+nearest school section heading before ranking candidates. A focused replay for
+school `212` on a copied Saitama RCA DB produced `crawled=1`, `found=1`,
+`downloaded=0`, `skipped=198`, `prefiltered=187`,
+`candidate_budget_limited=1`, and `candidate_budget_dropped=1641`; the new
+gold-set entry exactly predicts
+`https://www.o-hara.ac.jp/about/joho/pdf/2025-1-37-01-5.pdf` as
+`publication_lag_latest_public` for FY2026. This fixes the
+`non_target_candidates_only` RCA bucket for that O-Hara school-family case but
+does not raise strict FY2026 yield because the visible form is still FY2025.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
