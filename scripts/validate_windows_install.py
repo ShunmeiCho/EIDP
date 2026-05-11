@@ -487,9 +487,13 @@ def validate_install(
             for key in LAST_RUN_REQUIRED_KEYS:
                 if key not in last_run:
                     check.fail(f"last_run.json missing key: {key}")
-            if last_run.get("status") != "success":
-                check.fail("last_run.json status must be success for the weekly validation gate")
-            if last_run.get("selection_mode") not in {"target_missing", "stale_only"}:
+            last_run_status = last_run.get("status")
+            if last_run_status not in {"success", "lock_busy"}:
+                check.fail("last_run.json status must be success or lock_busy for the weekly validation gate")
+            if last_run_status == "lock_busy":
+                if last_run.get("selection_mode") != "lock_busy":
+                    check.fail("last_run.json selection_mode must be lock_busy when status is lock_busy")
+            elif last_run.get("selection_mode") not in {"target_missing", "stale_only"}:
                 check.fail("last_run.json selection_mode must be target_missing or stale_only")
             for key in (
                 "target_missing_school_count",

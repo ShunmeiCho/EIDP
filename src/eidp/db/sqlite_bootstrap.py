@@ -44,6 +44,13 @@ _SQLITE_PRAGMAS = (
     "PRAGMA busy_timeout=5000",
 )
 
+_DEPARTMENT_CHANGE_VOID_COLUMNS = {
+    "voided": "BOOLEAN NOT NULL DEFAULT 0",
+    "voided_at": "DATETIME",
+    "voided_by": "VARCHAR(50)",
+    "void_reason": "TEXT",
+}
+
 
 def _resolve_alembic_ini() -> Path:
     """Locate ``alembic.ini`` in deployment-aware order.
@@ -99,6 +106,35 @@ def _refuse_orphaned_sqlite_sidecars(engine: Engine) -> None:
             f"refusing to create an empty replacement database at {db_path}. "
             f"Move or restore the sidecar files first: {rels}"
         )
+
+
+def verify_sqlite_integrity(engine: Engine) -> None:
+    """Fail closed when SQLite reports page/index corruption."""
+    if not is_sqlite(engine):
+        return
+    with engine.connect() as conn:
+        rows = conn.execute(text("PRAGMA integrity_check")).all()
+    problems = [str(row[0]) for row in rows if row and str(row[0]).lower() != "ok"]
+    if problems:
+        raise RuntimeError(f"SQLite integrity_check failed: {'; '.join(problems)}")
+
+
+def ensure_sqlite_additive_columns(engine: Engine) -> None:
+    """Replay additive SQLite-only schema fixes on upgraded operator DBs.
+
+    ``create_all(checkfirst=True)`` creates missing tables but never adds
+    columns to existing tables. Windows ZIP upgrades rely on this bootstrap
+    path instead of the PostgreSQL-oriented Alembic chain, so additive fields
+    needed by current ORM code must be patched here.
+    """
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(department_change)")).mappings().all()
+        if not rows:
+            return
+        existing = {str(row["name"]) for row in rows}
+        for column_name, column_type in _DEPARTMENT_CHANGE_VOID_COLUMNS.items():
+            if column_name not in existing:
+                conn.execute(text(f"ALTER TABLE department_change ADD COLUMN {column_name} {column_type}"))
 
 
 def apply_sqlite_pragmas(engine: Engine) -> None:
@@ -178,7 +214,9 @@ def bootstrap_sqlite(engine: Engine, *, alembic_ini: Path | None = None) -> None
         )
 
     _refuse_orphaned_sqlite_sidecars(engine)
+    verify_sqlite_integrity(engine)
     Base.metadata.create_all(engine, checkfirst=True)
+    ensure_sqlite_additive_columns(engine)
     create_null_safe_dept_index(engine)
     apply_sqlite_pragmas(engine)
     stamp_alembic_head(engine, alembic_ini=alembic_ini)

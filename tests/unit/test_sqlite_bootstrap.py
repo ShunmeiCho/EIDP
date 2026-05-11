@@ -27,7 +27,8 @@ import pytest
 from sqlalchemy import create_engine, func, inspect, text
 from sqlalchemy.orm import Session
 
-from eidp.db.models import Department, DepartmentYearly, Document, School
+from eidp.db import sqlite_bootstrap
+from eidp.db.models import Department, DepartmentChange, DepartmentYearly, Document, School
 from eidp.db.sqlite_bootstrap import (
     apply_sqlite_pragmas,
     bootstrap_sqlite,
@@ -586,6 +587,63 @@ def test_empty_database_db_info_smoke(bootstrapped_engine):
         assert session.query(func.count(Department.id)).scalar() == 0
         assert session.query(func.count(DepartmentYearly.id)).scalar() == 0
         assert session.query(func.count(Document.id)).scalar() == 0
+
+
+def test_bootstrap_runs_sqlite_integrity_check(sqlite_engine, monkeypatch: pytest.MonkeyPatch):
+    calls = []
+
+    def fake_verify(engine):
+        calls.append(engine)
+
+    monkeypatch.setattr(sqlite_bootstrap, "verify_sqlite_integrity", fake_verify, raising=False)
+
+    bootstrap_sqlite(sqlite_engine)
+
+    assert calls == [sqlite_engine]
+
+
+def test_bootstrap_adds_department_change_void_columns_to_existing_sqlite_db(sqlite_engine):
+    """Operator ZIP upgrades run ``bootstrap_sqlite`` against an existing
+    SQLite file, not Alembic. Additive SQLite migrations must therefore be
+    replayed here as well as in migrations/.
+    """
+
+    with sqlite_engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE department_change (
+                    id INTEGER PRIMARY KEY,
+                    department_id INTEGER NOT NULL,
+                    change_type VARCHAR(20) NOT NULL,
+                    fiscal_year INTEGER NOT NULL,
+                    old_name VARCHAR(200),
+                    new_name VARCHAR(200),
+                    related_dept_id INTEGER,
+                    confidence NUMERIC(3, 2),
+                    verified BOOLEAN NOT NULL,
+                    verified_by VARCHAR(50),
+                    notes TEXT
+                )
+                """
+            )
+        )
+
+    bootstrap_sqlite(sqlite_engine)
+
+    columns = {column["name"] for column in inspect(sqlite_engine).get_columns("department_change")}
+    assert {"voided", "voided_at", "voided_by", "void_reason"} <= columns
+
+    with Session(sqlite_engine) as session:
+        session.add(
+            DepartmentChange(
+                department_id=1,
+                change_type="rename",
+                fiscal_year=2026,
+                verified=False,
+            )
+        )
+        session.flush()
 
 
 # ---------------------------------------------------------------------------

@@ -140,7 +140,7 @@ def write_last_run(
         "summary_path": summary.get("summary_path"),
         "error": error,
     }
-    last_run_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_text_atomic(last_run_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     return last_run_path
 
 
@@ -667,7 +667,7 @@ def _run_weekly_inner(
             "summary_path": str(summary_path),
         }
         summary.update(_weekly_target_pdf_yield_metrics(summary))
-        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        write_text_atomic(summary_path, json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
         if last_run_path is not None:
             write_last_run(summary, last_run_path, status="success")
         return summary

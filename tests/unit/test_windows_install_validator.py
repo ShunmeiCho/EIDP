@@ -310,6 +310,32 @@ def test_validate_after_weekly_accepts_last_run_schema(tmp_path: Path) -> None:
     assert check.details["run_log_count"] == 1
 
 
+def test_validate_after_weekly_accepts_lock_busy_last_run(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload.update(
+        {
+            "status": "lock_busy",
+            "selection_mode": "lock_busy",
+            "target_missing_school_count": 0,
+            "new_document_count": 0,
+            "target_pdf_auto_acquired_count": 0,
+            "target_pdf_auto_denominator_count": 0,
+            "target_pdf_auto_yield_pct": None,
+            "ship_gate_status": "not_measured",
+            "error": "LockBusyError: data lock is held by ui",
+        }
+    )
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_setup=True, after_weekly=True)
+
+    assert check.ok, check.errors
+    assert check.details["last_run_status"] == "lock_busy"
+
+
 def test_validate_after_weekly_accepts_not_measured_yield(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)

@@ -352,6 +352,33 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     assert payload["error"] is None
 
 
+def test_write_last_run_uses_atomic_replace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    summary = {
+        "run_id": "20260505_010203",
+        "started_at": "2026-05-05T01:02:03+00:00",
+        "finished_at": "2026-05-05T01:02:10+00:00",
+        "dry_run": False,
+        "current_fy": 2026,
+        "selection_mode": "target_missing",
+        "target_missing_school_count": 1,
+        "new_document_ids": [],
+        "summary_path": str(tmp_path / "summary.json"),
+    }
+    out = tmp_path / "data" / "output" / "last_run.json"
+    calls: list[Path] = []
+
+    def fake_write_text_atomic(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+        calls.append(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding=encoding)
+
+    monkeypatch.setattr(module, "write_text_atomic", fake_write_text_atomic)
+
+    write_last_run(summary, out, status="success")
+
+    assert calls == [out]
+
+
 def test_prune_run_logs_keeps_latest_twelve_by_name(tmp_path: Path) -> None:
     logs = tmp_path / "logs"
     logs.mkdir()
@@ -462,6 +489,42 @@ def test_run_weekly_writes_last_run_json_under_lock(
     assert payload["status"] == "success"
     assert payload["run_id"] == summary["run_id"]
     assert payload["dry_run"] is True
+
+
+def test_run_weekly_writes_summary_and_last_run_atomically(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    calls: list[Path] = []
+
+    def fake_write_text_atomic(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+        calls.append(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding=encoding)
+
+    monkeypatch.setattr(module, "write_text_atomic", fake_write_text_atomic)
+
+    last_run = tmp_path / "data" / "output" / "last_run.json"
+    summary = run_weekly(
+        current_fy=2026,
+        methods=["prefecture_aggregator"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=10,
+        rate_limit=1.5,
+        request_timeout=12.0,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=True,
+        lock_path=tmp_path / "data" / ".lock",
+        last_run_path=last_run,
+    )
+
+    assert Path(summary["summary_path"]) in calls
+    assert last_run in calls
 
 
 def test_run_weekly_separates_target_missing_from_stale_count(
