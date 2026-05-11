@@ -2060,3 +2060,63 @@ def test_run_pdf_discovery_skips_duplicate_hash_from_other_school(
         assert payload["extra"]["existing_school_id"] == "99"
     finally:
         session.close()
+
+
+def test_run_pdf_discovery_records_duplicate_when_file_hash_insert_races(
+    monkeypatch, tmp_path: Path
+) -> None:
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    duplicate_pdf = tmp_path / "candidate.pdf"
+    duplicate_pdf.write_bytes(b"%PDF-" + b"x" * 2000)
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        candidate = PdfCandidate(
+            pdf_url="https://example.ac.jp/r8.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 確認申請書",
+            score=10.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
+
+        def fake_download(_client, _candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            return str(duplicate_pdf), "racehash", 2005, "target", None
+
+        real_flush = session.flush
+
+        def race_flush(*args: object, **kwargs: object) -> None:
+            from sqlalchemy.exc import IntegrityError
+
+            if any(isinstance(obj, Document) and obj.file_hash == "racehash" for obj in session.new):
+                raise IntegrityError("INSERT INTO document", {}, RuntimeError("unique file_hash"))
+            real_flush(*args, **kwargs)
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+        monkeypatch.setattr(session, "flush", race_flush)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert stats["downloaded"] == 0
+        assert stats["skipped"] == 1
+        assert stats["failed"] == 0
+        assert session.query(Document).count() == 0
+        job = session.query(CrawlJob).one()
+        assert job.status == "review"
+        assert "duplicates" in (job.error_message or "")
+        assert not duplicate_pdf.exists()
+        payload = json.loads(evidence.read_text(encoding="utf-8").strip())
+        assert payload["reason"] == "duplicate_hash_integrity_error"
+        assert payload["extra"]["integrity_error"] == "true"
+    finally:
+        session.close()

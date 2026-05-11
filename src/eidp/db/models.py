@@ -107,12 +107,11 @@ class Document(Base):
     __table_args__ = (
         UniqueConstraint("school_id", "file_hash"),
         UniqueConstraint("school_id", "source_url", name="uq_document_school_url"),
-        # Sprint 8.7.f: cross-school dedupe in pdf_discovery looks up by
-        # file_hash alone. The composite UNIQUE on (school_id, file_hash)
-        # cannot serve that probe (leading column wrong), so we keep a
-        # standalone non-unique index. Without it, every PDF download
-        # triggers a full Document scan on SQLite.
-        Index("ix_document_file_hash", "file_hash"),
+        # pdf_discovery looks up by file_hash alone and treats cross-school
+        # matches as operator-review duplicates. Keep the database contract
+        # aligned with that probe so concurrent workers cannot attach the same
+        # PDF bytes to multiple schools.
+        Index("uq_document_file_hash", "file_hash", unique=True),
         {"comment": "PDF document registry"},
     )
 

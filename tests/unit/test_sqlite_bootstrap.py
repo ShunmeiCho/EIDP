@@ -315,6 +315,59 @@ def test_two_concurrent_current_revisions_are_rejected(bootstrapped_engine):
             session.commit()
 
 
+def test_document_file_hash_is_globally_unique(bootstrapped_engine):
+    """A downloaded PDF content hash must be unique across schools.
+
+    ``pdf_discovery`` probes by ``Document.file_hash`` alone to prevent the
+    same PDF from being attached to multiple schools. The database constraint
+    must match that contract so concurrent workers cannot both pass the
+    select-before-insert check and insert duplicate document rows.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    with Session(bootstrapped_engine) as session:
+        school_a = School(
+            prefecture="東京都",
+            corporation_name="法人A",
+            school_name="A専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        school_b = School(
+            prefecture="東京都",
+            corporation_name="法人B",
+            school_name="B専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add_all([school_a, school_b])
+        session.flush()
+
+        shared_hash = "a" * 64
+        session.add(
+            Document(
+                school_id=school_a.id,
+                source_url="https://a.example.ac.jp/r8.pdf",
+                file_hash=shared_hash,
+                fiscal_year=2026,
+                ingest_status="ingested",
+            )
+        )
+        session.flush()
+
+        session.add(
+            Document(
+                school_id=school_b.id,
+                source_url="https://b.example.ac.jp/r8.pdf",
+                file_hash=shared_hash,
+                fiscal_year=2026,
+                ingest_status="ingested",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.commit()
+
+
 # ---------------------------------------------------------------------------
 # Idempotency
 # ---------------------------------------------------------------------------

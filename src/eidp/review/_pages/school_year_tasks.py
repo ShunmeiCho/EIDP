@@ -972,6 +972,7 @@ DISCOVERY_REJECTION_REASON_LABELS = {
     "all_negative_score": "低スコア",
     "duplicate_hash": "重複PDF",
     "duplicate_hash_other_school": "他校重複",
+    "duplicate_hash_integrity_error": "重複PDF競合",
 }
 
 

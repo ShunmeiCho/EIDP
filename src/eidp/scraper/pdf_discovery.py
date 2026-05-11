@@ -24,6 +24,7 @@ from urllib.parse import parse_qsl, unquote, urljoin, urlparse
 
 import httpx
 import structlog
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
@@ -1812,7 +1813,53 @@ def run_pdf_discovery(
                             confidence=min(candidate.score / 10.0, 0.99),
                             downloaded_at=datetime.now(UTC),
                         )
-                        session.add(doc)
+                        try:
+                            with session.begin_nested():
+                                session.add(doc)
+                                session.flush()
+                        except IntegrityError as exc:
+                            duplicate_seen = True
+                            stats["skipped"] += 1
+                            if doc in session:
+                                session.expunge(doc)
+                            with session.no_autoflush:
+                                existing = (
+                                    session.query(Document)
+                                    .filter(Document.file_hash == file_hash)
+                                    .first()
+                                )
+                            if existing is not None:
+                                if existing.school_id != site.school_id:
+                                    cross_school_dup_seen = True
+                                    reason = "duplicate_hash_other_school"
+                                else:
+                                    reason = "duplicate_hash"
+                                extra = {
+                                    "existing_doc_id": str(existing.id),
+                                    "existing_school_id": str(existing.school_id),
+                                    "integrity_error": "true",
+                                }
+                            else:
+                                cross_school_dup_seen = True
+                                reason = "duplicate_hash_integrity_error"
+                                extra = {
+                                    "integrity_error": "true",
+                                    "error": str(exc.orig or exc),
+                                }
+                            Path(file_path).unlink(missing_ok=True)
+                            record_discovery_evidence(RejectionEvidence(
+                                school_id=site.school_id,
+                                pdf_url=candidate.pdf_url,
+                                page_url=candidate.page_url,
+                                anchor_text=candidate.anchor_text,
+                                pattern_type=candidate.pattern_type,
+                                score=candidate.score,
+                                reason=reason,
+                                pdf_type=pdf_type,
+                                extra=extra,
+                            ))
+                            time.sleep(0.5)
+                            continue
                         stats["downloaded"] += 1
                         record_discovery_evidence(RejectionEvidence(
                             school_id=site.school_id,
