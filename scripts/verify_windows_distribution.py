@@ -689,6 +689,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "support_recipient",
             "sqlite_integrity_check",
             "PRAGMA integrity_check",
+            "department_change missing column",
+            "uq_document_file_hash",
         ),
         "scripts/run_weekly_target_year_discovery.py": (
             "acquire_lock",

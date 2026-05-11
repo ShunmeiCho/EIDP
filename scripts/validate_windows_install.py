@@ -120,10 +120,19 @@ SQLITE_REQUIRED_TABLES = (
     "school_site",
     "document",
     "department",
+    "department_change",
     "department_yearly",
+    "review_item",
     "support_recipient",
     "school_fiscal_year_status",
     "manual_action_log",
+)
+
+SQLITE_DEPARTMENT_CHANGE_VOID_COLUMNS = (
+    "voided",
+    "voided_at",
+    "voided_by",
+    "void_reason",
 )
 
 BUILD_INFO_REQUIRED_KEYS = (
@@ -308,13 +317,36 @@ def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
         return
 
     try:
-        school_count = int(conn.execute("SELECT COUNT(*) FROM school").fetchone()[0] or 0)
-        task_count = int(
-            conn.execute("SELECT COUNT(*) FROM school_fiscal_year_status").fetchone()[0] or 0
-        )
+        with sqlite3.connect(db_path) as conn:
+            dept_change_columns = {
+                str(row[1])
+                for row in conn.execute("PRAGMA table_info(department_change)").fetchall()
+            }
+            document_indexes = {
+                str(row[1]): bool(row[2])
+                for row in conn.execute("PRAGMA index_list(document)").fetchall()
+            }
+
+            school_count = int(conn.execute("SELECT COUNT(*) FROM school").fetchone()[0] or 0)
+            task_count = int(
+                conn.execute("SELECT COUNT(*) FROM school_fiscal_year_status").fetchone()[0] or 0
+            )
     except sqlite3.Error as exc:
-        check.fail(f"data/eidp.sqlite3 cannot count setup rows: {exc}")
+        check.fail(f"data/eidp.sqlite3 cannot inspect setup rows/schema: {exc}")
         return
+
+    check.details["document_unique_indexes"] = sorted(
+        name for name, unique in document_indexes.items() if unique
+    )
+    if not document_indexes.get("uq_document_file_hash"):
+        check.fail("data/eidp.sqlite3 document missing unique index: uq_document_file_hash")
+
+    check.details["department_change_columns_present"] = sorted(
+        dept_change_columns & set(SQLITE_DEPARTMENT_CHANGE_VOID_COLUMNS)
+    )
+    for column in SQLITE_DEPARTMENT_CHANGE_VOID_COLUMNS:
+        if column not in dept_change_columns:
+            check.fail(f"data/eidp.sqlite3 department_change missing column: {column}")
 
     check.details["school_count"] = school_count
     check.details["school_fiscal_year_status_count"] = task_count

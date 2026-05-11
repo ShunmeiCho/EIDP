@@ -74,7 +74,22 @@ def _write_sqlite_schema(path: Path, *, omit: str | None = None) -> None:
         for table in module.SQLITE_REQUIRED_TABLES:
             if table == omit:
                 continue
-            conn.execute(f"CREATE TABLE {table} (id INTEGER PRIMARY KEY)")
+            if table == "document":
+                conn.execute("CREATE TABLE document (id INTEGER PRIMARY KEY, file_hash TEXT)")
+            elif table == "department_change":
+                conn.execute(
+                    "CREATE TABLE department_change ("
+                    "id INTEGER PRIMARY KEY, "
+                    "voided BOOLEAN NOT NULL DEFAULT 0, "
+                    "voided_at DATETIME, "
+                    "voided_by VARCHAR(50), "
+                    "void_reason TEXT"
+                    ")"
+                )
+            else:
+                conn.execute(f"CREATE TABLE {table} (id INTEGER PRIMARY KEY)")
+        if omit != "document":
+            conn.execute("CREATE UNIQUE INDEX uq_document_file_hash ON document (file_hash)")
         conn.commit()
 
 
@@ -303,6 +318,36 @@ def test_validate_after_setup_rejects_failed_sqlite_integrity_check(tmp_path: Pa
     assert not check.ok
     assert check.details["sqlite_integrity_check"] == "*** in database main *** simulated corruption"
     assert any("SQLite integrity_check failed" in error for error in check.errors)
+
+
+def test_validate_after_setup_rejects_missing_department_change_void_columns(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    db_path = root / "data" / "eidp.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DROP TABLE department_change")
+        conn.execute("CREATE TABLE department_change (id INTEGER PRIMARY KEY)")
+        conn.commit()
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert any("department_change missing column: voided" in error for error in check.errors)
+    assert any("department_change missing column: void_reason" in error for error in check.errors)
+
+
+def test_validate_after_setup_rejects_missing_document_hash_unique_index(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    db_path = root / "data" / "eidp.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DROP INDEX uq_document_file_hash")
+        conn.commit()
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert any("document missing unique index: uq_document_file_hash" in error for error in check.errors)
 
 
 def test_validate_after_setup_rejects_empty_school_year_tasks_when_schools_exist(tmp_path: Path) -> None:
