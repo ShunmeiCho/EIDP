@@ -86,5 +86,6 @@ Current v0.1 seed coverage:
   until OCR or page context proves the target fiscal year.
 - Official-index disclosure pages where stale-looking URL/anchor hints must be
   overridden only by PDF-body current-year evidence.
-- Official-index support pages where a likely confirmation form is found but
-  remains review-bound because no reliable target-year evidence is available.
+- Official-index support pages where a yearless confirmation form is accepted
+  only after the PDF body classifies as target and the current-year prefecture
+  index supplies auditable year evidence.

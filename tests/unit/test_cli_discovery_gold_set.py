@@ -21,7 +21,7 @@ def test_discovery_gold_set_cli_outputs_summary_json() -> None:
     assert payload["total_entries"] == 14
     assert payload["outcome_counts"]["publication_lag_latest_public"] == 2
     assert payload["outcome_counts"]["no_target_candidate_found"] == 1
-    assert payload["operator_review_entries"] == 6
+    assert payload["operator_review_entries"] == 5
 
 
 def test_discovery_gold_run_plan_cli_outputs_json_array() -> None:

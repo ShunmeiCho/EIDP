@@ -239,6 +239,7 @@ class PdfCandidate:
     score: float = 0.0
     detected_fiscal_year: int | None = None
     year_evidence: str = ""
+    trusted_year_evidence: str = ""
 
 
 @dataclass
@@ -312,14 +313,29 @@ def _rejection_cache_key(
     *,
     target_year: int,
     strict_target_fiscal_year: bool,
-) -> tuple[str, int | None, bool]:
+    trusted_year_evidence: str = "",
+) -> tuple[str, int | None, bool, str]:
     attempt_urls = _download_attempt_urls(candidate_url)
     canonical_url = attempt_urls[0] if attempt_urls else candidate_url
     return (
         canonical_url,
         target_year if strict_target_fiscal_year else None,
         strict_target_fiscal_year,
+        trusted_year_evidence if strict_target_fiscal_year else "",
     )
+
+
+def _trusted_year_evidence_for_site(site: SchoolSite) -> str:
+    """Return trusted current-year evidence supplied by the registered site source.
+
+    Prefecture official indexes are current target-year artifacts in the
+    packaged seed. If such an index points at a school's disclosure page and
+    the PDF body is a target confirmation form, the index itself can prove the
+    year when the school omits year labels from the PDF/link text.
+    """
+    if site.discovery_method == "prefecture_aggregator" and site.url_type == "disclosure":
+        return "prefecture_index_current_year"
+    return ""
 
 
 def _candidate_hint_text(candidate: PdfCandidate) -> str:
@@ -1378,16 +1394,21 @@ def download_pdf(
                 and not _has_target_application_hint(candidate)
             ):
                 return None, None, 0, pdf_type, "target_application_not_detected"
+            trusted_year_evidence = candidate.trusted_year_evidence.strip()
             if detected_fiscal_year is None and not (
                 pdf_type == "image_only" and _has_target_application_hint(candidate)
             ) and not (
                 pdf_type == "target" and _has_target_year_hint(candidate, target_year=target_year)
+            ) and not (
+                pdf_type == "target" and trusted_year_evidence
             ):
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
             if detected_fiscal_year == target_year:
                 candidate.year_evidence = "pdf_text"
             elif _has_target_year_hint(candidate, target_year=target_year):
                 candidate.year_evidence = "url_hint"
+            elif pdf_type == "target" and trusted_year_evidence:
+                candidate.year_evidence = trusted_year_evidence
             elif pdf_type == "image_only" and _has_target_application_hint(candidate):
                 candidate.year_evidence = "target_application_no_year"
             else:
@@ -1440,9 +1461,10 @@ def run_pdf_discovery(
         target_fiscal_year: fiscal year to treat as current. Defaults to
             ``settings.target_fiscal_year``.
         strict_target_fiscal_year: when True, downloads are accepted only when
-            PDF text or a body-confirmed target form plus URL/anchor evidence
-            confirms ``target_fiscal_year``. Year-like text alone is not enough
-            for image-only or ambiguous non-target application guides.
+            PDF text, a body-confirmed target form plus URL/anchor evidence, or
+            trusted current-year official-index evidence confirms
+            ``target_fiscal_year``. Year-like text alone is not enough for
+            image-only or ambiguous non-target application guides.
         progress_callback: optional callback invoked after each crawled school
             site with a snapshot of stats and the total site count. Used by the
             Windows operator UI so the long-running crawl does not sit at one
@@ -1464,7 +1486,7 @@ def run_pdf_discovery(
         recorder.record(evidence)
 
     target_year = target_fiscal_year or settings.target_fiscal_year
-    rejected_candidate_cache: dict[tuple[str, int | None, bool], CachedPdfRejection] = {}
+    rejected_candidate_cache: dict[tuple[str, int | None, bool, str], CachedPdfRejection] = {}
 
     # Get school_sites, excluding:
     # - schools with a document for the current target fiscal year
@@ -1626,10 +1648,13 @@ def run_pdf_discovery(
             cross_school_dup_seen = False
             target_year_rejection_seen = False
             for candidate in viable[:MAX_CANDIDATE_DOWNLOAD_ATTEMPTS]:
+                if strict_target_fiscal_year and not candidate.trusted_year_evidence:
+                    candidate.trusted_year_evidence = _trusted_year_evidence_for_site(site)
                 cache_key = _rejection_cache_key(
                     candidate.pdf_url,
                     target_year=target_year,
                     strict_target_fiscal_year=strict_target_fiscal_year,
+                    trusted_year_evidence=candidate.trusted_year_evidence,
                 )
                 cached_rejection = rejected_candidate_cache.get(cache_key)
                 if cached_rejection is not None:

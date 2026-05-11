@@ -996,7 +996,13 @@ def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path:
         def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
             return DiscoveryResult(school_id=school_id, candidates=[old, new], best=old)
 
-        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
             if candidate.pdf_url.endswith("old.pdf"):
                 return str(tmp_path / "old.pdf"), "oldhash", 2000, "target", None
             return str(tmp_path / "new.pdf"), "newhash", 3000, "target", None
@@ -1231,6 +1237,68 @@ def test_run_pdf_discovery_sets_target_year_on_strict_downloaded_document(
         doc = session.query(Document).one()
         assert doc.fiscal_year == 2026
         assert doc.is_current_year is True
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_marks_prefecture_disclosure_as_trusted_year_evidence(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Current-year prefecture indexes can prove the year for yearless target forms."""
+
+    session = _session()
+    evidence = tmp_path / "evidence.jsonl"
+    seen_trusted_evidence: list[str] = []
+    try:
+        session.add(SchoolSite(
+            school_id=1,
+            url="https://example.ac.jp/admission/support.php",
+            url_type="disclosure",
+            discovery_method="prefecture_aggregator",
+            http_status=200,
+        ))
+        session.flush()
+
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/files/study_support_system.pdf",
+            page_url="https://example.ac.jp/admission/support.php",
+            anchor_text="確認申請",
+            score=3.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[target], best=target)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            seen_trusted_evidence.append(candidate.trusted_year_evidence)
+            candidate.year_evidence = candidate.trusted_year_evidence
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+            discovery_methods=["prefecture_aggregator"],
+        )
+
+        assert stats["downloaded"] == 1
+        assert seen_trusted_evidence == ["prefecture_index_current_year"]
+        payload = json.loads(evidence.read_text(encoding="utf-8").splitlines()[-1])
+        assert payload["reason"] == "accepted_downloaded"
+        assert payload["extra"]["year_evidence"] == "prefecture_index_current_year"
     finally:
         session.close()
 
@@ -1767,6 +1835,43 @@ def test_download_pdf_accepts_reiwa_year_anchor_when_body_is_target_form(
     assert pdf_type == "target"
     assert reason is None
     assert candidate.year_evidence == "url_hint"
+
+
+def test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A current prefecture index can be year evidence when the PDF body is target."""
+
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/files/study_support_system.pdf",
+        page_url="https://example.ac.jp/admission/support.php",
+        anchor_text="確認申請",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.detected_fiscal_year is None
+    assert candidate.year_evidence == "prefecture_index_current_year"
 
 
 def test_download_pdf_rejects_url_target_hint_when_body_is_not_target_form(

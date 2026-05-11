@@ -8,14 +8,14 @@
     "corporation_name": "愛友会"
   },
   "target_fiscal_year": 2026,
-  "outcome": "needs_operator_review",
+  "outcome": "accepted_target_pdf",
   "manual_demonstration": {
-    "operator_goal": "Verify the official-index disclosure site finds the likely confirmation-form PDF, but does not auto-accept it without FY2026 evidence.",
+    "operator_goal": "Verify the official-index disclosure site finds the yearless confirmation-form PDF and accepts it only because the current-year prefecture index supplies FY2026 evidence.",
     "steps": [
       "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure site.",
       "Open the admission support page and inspect the anchor labeled 確認申請.",
       "Follow the linked study_support_system.pdf candidate.",
-      "Classify it as a target-looking PDF requiring operator/OCR review because neither the URL, anchor, nor extracted PDF text proves FY2026."
+      "Classify it as a target PDF whose FY2026 evidence comes from the current-year Saitama official index, not from the URL, anchor, or PDF body."
     ]
   },
   "expected_result": {
@@ -23,18 +23,18 @@
     "disclosure_url": "https://ageo.org/admission/support.php",
     "pdf_url": "https://ageo.org/files/admission/support/study_support_system.pdf",
     "pdf_type": "target",
-    "fiscal_year": null,
-    "strict_target_year_success": false
+    "fiscal_year": 2026,
+    "strict_target_year_success": true
   },
   "automation_pattern": {
     "site_family": "target_form_without_year_evidence",
     "reusable_rules": [
       "Keep anchors labeled 確認申請 as strong target-form candidates even when the link text omits the fiscal year.",
-      "Route target-looking PDFs with no URL, anchor, or PDF-body fiscal-year evidence to needs_operator_review.",
-      "Preserve the evidence URL so the operator can decide whether OCR or manual PDF inspection proves the target year."
+      "For prefecture_aggregator disclosure URLs, treat the current-year official index as trusted year evidence only after the downloaded PDF body classifies as target.",
+      "Record year_evidence=prefecture_index_current_year so the accepted path remains auditable."
     ],
     "anti_patterns": [
-      "Do not auto-accept a yearless confirmation-form candidate as FY2026.",
+      "Do not auto-accept a yearless confirmation-form candidate from web_search, manual, or school_url_crawl sources without its own FY evidence.",
       "Do not discard the PDF as non-target only because the surrounding support page also links many news/common PDFs.",
       "Do not infer FY2026 from the current crawl date."
     ]
@@ -44,6 +44,6 @@
     "source_paths": [
       "C:/EIDP-v150-d303b44/logs/v150_saitama51_evidence.jsonl"
     ],
-    "notes": "Windows v150 Saitama 51-site replay produced target_fiscal_year_not_detected for school_id 757 with pdf_type=target and anchor 確認申請."
+    "notes": "Windows v150 Saitama 51-site replay first exposed this as target_fiscal_year_not_detected. Current-code replay after adding prefecture_index_current_year evidence accepts the same target PDF with detected_fiscal_year empty and year_evidence=prefecture_index_current_year."
   }
 }

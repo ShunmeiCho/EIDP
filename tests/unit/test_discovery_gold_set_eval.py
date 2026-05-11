@@ -108,8 +108,12 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
                     {
                         "school_id": 757,
                         "pdf_url": AGEO_URL,
-                        "reason": "target_fiscal_year_not_detected",
+                        "reason": "accepted_downloaded",
                         "pdf_type": "target",
+                        "extra": {
+                            "target_fiscal_year": "2026",
+                            "year_evidence": "prefecture_index_current_year",
+                        },
                     }
                 ),
                 json.dumps(
@@ -174,10 +178,10 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
     assert predictions == [
         DiscoveryGoldPrediction(
             entry_id="ageo-central-nursing-review-2026",
-            outcome="needs_operator_review",
+            outcome="accepted_target_pdf",
             pdf_url=AGEO_URL,
-            fiscal_year=None,
-            strict_target_year_success=False,
+            fiscal_year=2026,
+            strict_target_year_success=True,
         ),
         DiscoveryGoldPrediction(
             entry_id="ecole-matsue-nutrition-2026",

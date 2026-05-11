@@ -39,7 +39,7 @@ nationwide crawling.
   rows now include one `confirmed_target/parsed` school, 34 publication-lag
   schools, 6 target-year-unverified schools, and the remaining no-target rows.
 
-Interpretation: the current code no longer supports the older "Saitama 51
+Interpretation at that point: the current code no longer supported the older "Saitama 51
 official URLs always produce 0 downloads" statement. It proves the official
 index chain can reach a true strict FY2026 target form and an Excel-ready parsed
 row, but the measured rate is still only `1/51` for this bounded Saitama set.
@@ -72,6 +72,50 @@ remains disabled.
   and `在籍のみ抜粋`, not the previous 4-row split, and the 2026 values are
   written onto the existing `工業` rows.
 
+## 2026-05-11 Current-Code Official-Index Year Evidence Update
+
+The remaining Saitama `target_fiscal_year_not_detected` case was school `757`
+(`上尾中央看護専門学校`). Manual inspection showed a strong target-form PDF body
+at `https://ageo.org/files/admission/support/study_support_system.pdf`, but
+the PDF URL, anchor, and body omit explicit `2026` / `令和8` labels. The page
+itself is linked from the current Saitama official confirmation index, whose
+artifact is dated `2026-04-01`.
+
+The crawler now carries `trusted_year_evidence="prefecture_index_current_year"`
+from `SchoolSite(discovery_method="prefecture_aggregator",
+url_type="disclosure")` into strict PDF download. This evidence can accept a
+yearless PDF only when the downloaded body classifies as `target`; web search,
+manual, and school-URL-crawl sources still need their own PDF/URL/anchor year
+evidence. The rejection cache key includes this trusted evidence so an
+untrusted yearless rejection cannot poison a trusted official-index retry.
+
+- Regression coverage:
+  `test_run_pdf_discovery_marks_prefecture_disclosure_as_trusted_year_evidence`
+  and
+  `test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body`.
+- Focused verification:
+  `uv run pytest tests/unit/test_pdf_discovery.py -q` → `57 passed,
+  5 warnings`; related trusted-evidence tests → `3 passed, 5 warnings`;
+  `uv run ruff check src/eidp/scraper/pdf_discovery.py
+  tests/unit/test_pdf_discovery.py ...` → passed.
+- Real-site replay for school `757` on a copied Saitama RCA DB:
+  `_temp/saitama-school757-prefindex-trusted-20260511-094155` produced
+  `crawled=1`, `found=1`, `downloaded=1`, `failed=0`. The accepted evidence
+  has `detected_fiscal_year=""` and
+  `year_evidence="prefecture_index_current_year"`.
+- Full bounded Saitama 50-site replay on the same copied DB, with school `95`
+  already ingested: `_temp/saitama-current51-prefindex-trusted-20260511-094241`
+  produced `crawled=50`, `found=48`, `downloaded=1`, `failed=6`, and no
+  `target_fiscal_year_not_detected` bucket. The DB now has two FY2026 target
+  documents across the 51 Saitama official-index schools: school `95` and
+  school `757`.
+- Ingest of school `757` document `2` completed and preserved the prevalidated
+  FY2026 document year, but it remains `review_pending` with
+  `extraction_confidence=0.64` because the PDF course label
+  `看護専門課程` does not match the master course field `医療`. This improves
+  strict target acquisition (`1/51` → `2/51`) but does not make school `757`
+  Excel-ready yet.
+
 ## 2026-05-11 Discovery Gold-Set Update
 
 After the Windows v150 Saitama replay proved that Layer 0 official-index
@@ -87,10 +131,11 @@ creating a new schema:
 - `ageo-central-nursing-review-2026`: school `757`
   (`上尾中央看護専門学校`) captures the remaining yearless target-form candidate.
   The crawler finds `study_support_system.pdf` from the official-index site, but
-  no URL, anchor, or extracted PDF-body evidence proves FY2026, so it must
-  remain `needs_operator_review` and must not be counted as a strict success.
+  no URL, anchor, or extracted PDF-body evidence proves FY2026. It is now
+  accepted only because `prefecture_index_current_year` provides auditable
+  current-year evidence from the official index.
 
-The gold-set summary now has 14 entries: 5 accepted target PDFs, 6 operator
+The gold-set summary now has 14 entries: 6 accepted target PDFs, 5 operator
 review cases, 2 publication-lag latest-public cases, and 1 no-target-candidate
 case. This keeps demonstration-driven discovery work as a regression/evaluation
 surface for Layer 1 while preserving the official prefectural indexes as the
@@ -104,9 +149,9 @@ primary data source.
   tests/unit/test_cli_eval_discovery_gold.py
   tests/unit/test_discovery_gold_set_seed.py -q` → `22 passed`.
 - `uv run eidp discovery-gold-set --json` → `total_entries=14`,
-  `accepted_target_pdf=5`, `needs_operator_review=6`,
+  `accepted_target_pdf=6`, `needs_operator_review=5`,
   `publication_lag_latest_public=2`, `no_target_candidate_found=1`, and
-  `strict_target_year_successes=5`.
+  `strict_target_year_successes=6`.
 - Combined Windows evidence for school `95` and school `757` evaluated with
   `uv run eidp eval-discovery-gold --pdf-evidence
   _temp/v150-goldset-two-school-evidence.jsonl --json` → `exact_matches=2`,
@@ -1162,7 +1207,7 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Start from official government/prefecture indexes where possible | `data/prefecture-aggregators/seed.csv`; `src/eidp/scraper/prefecture_aggregator.py`; `scripts/verify_windows_distribution.py` now reads the ZIP seed/parser source and gates 47 prefecture rows, 47 parser registrations, and 47 downloadable official artifact URLs. Latest verifier details include `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_with_school_link_signal=37`, `prefecture_seed_supplemental_rows=1`, `prefecture_seed_school_rows_total=2148`. Windows bounded bootstrap smoke on v73 downloaded/parsed all 47 official indexes and produced `official_index_rows_extracted=1948`, `official_index_rows_matched=1770`, `official_school_sites_added=1306`, plus 48 seed URLs and 295 corporation-pattern URLs before the 25-site PDF crawl. Latest Windows v138 three-pref smoke produced Tokyo `added=232`, Kanagawa `added=70`, and Saitama `added=51`. | Release-gated for nationwide official-index bootstrap presence, and official-index URL yield is proven through Windows smokes. Full target-year PDF crawling/ingestion still has to prove 60-70% strict-FY yield. |
 | Show source chain / why a PDF was found | `src/eidp/review/_pages/pdf_manual_entry.py` shows selected PDF, source page, confidence, and discovery evidence log; `school_year_tasks.py` now labels crawl entry source quality. | Mostly covered locally; Windows click-through not revalidated after latest UI. |
 | Minimize manual URL entry | `school_year_tasks.py` has UI buttons for initial URL/PDF bootstrap and weekly rediscovery; `URL追加` supports reusable page URLs and CSV bulk import. Web search now rejects known third-party directory/government-index URLs before registering `school_site`. Initial-bootstrap completion now preserves official-index yield details (`official_index_rows_extracted`, `official_index_rows_matched`, URL added/upgraded counts, and no-new-URL prefectures) for the operator UI. | Partial: manual entry is reduced and the reason for low yield is more visible, but prefectures without school-publication links and schools whose official page is not discoverable still need fallback discovery/operator review. |
-| Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. `pdf_discovery.py` also pre-filters clear non-target public documents, decoded wrapper-URL filenames, and explicit stale fiscal-year link hints such as `令和7年度`, `r07`, and `2025年度` before download, while preserving post-download target-year checks for ambiguous confirmation forms. v94 additionally accepts a PDF whose body classifies as the target confirmation form when the target-year evidence appears in the official URL or anchor text instead of the PDF body; URL-year evidence alone still cannot save non-target PDFs such as student A forms or syllabi. v95 tightens the remaining image-only edge: target-year text alone no longer admits ambiguous image-only admission guides unless the URL/anchor strongly names the target confirmation form. v139 also turns evidence bucket `publication_lag_or_old_target_pdf` into `pdf_status="publication_lag"` / `blocking_reason="publication_lag_latest_public"` for operator review, while keeping `excel_ready=false`. | Covered locally and packaged in v139. Windows v139 CLI smoke proved the publication-lag status row; full UI click-through is still pending. |
+| Avoid counting stale old-year PDFs as success | `pdf_discovery.py` strict target-FY mode; `target_year_status.py`; `excel_preview.py` warns when target FY data is missing; `school_fiscal_year_status.py` tracks stale fallback separately. `pdf_discovery.py` also pre-filters clear non-target public documents, decoded wrapper-URL filenames, and explicit stale fiscal-year link hints such as `令和7年度`, `r07`, and `2025年度` before download, while preserving post-download target-year checks for ambiguous confirmation forms. v94 additionally accepts a PDF whose body classifies as the target confirmation form when the target-year evidence appears in the official URL or anchor text instead of the PDF body; URL-year evidence alone still cannot save non-target PDFs such as student A forms or syllabi. v95 tightens the remaining image-only edge: target-year text alone no longer admits ambiguous image-only admission guides unless the URL/anchor strongly names the target confirmation form. v139 also turns evidence bucket `publication_lag_or_old_target_pdf` into `pdf_status="publication_lag"` / `blocking_reason="publication_lag_latest_public"` for operator review, while keeping `excel_ready=false`. Current code can also accept a body-confirmed yearless target form when the source `SchoolSite` is a current prefecture official-index disclosure URL, recording `year_evidence=prefecture_index_current_year`; the same PDF remains review/reject-bound from untrusted sources. | Covered locally and packaged through v151 except for the post-v151 prefecture-index year-evidence improvement. Windows v139 CLI smoke proved the publication-lag status row; current-code Saitama replay proves school `757` moves from review to accepted target, but full Windows package smoke for that improvement is pending. |
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
@@ -1231,11 +1276,20 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 - Discovery gold-set expansion from that replay →
   added `saitama-it-web-accepted-2026` and
   `ageo-central-nursing-review-2026`; `uv run eidp discovery-gold-set --json`
-  now reports `total_entries=14`, `accepted_target_pdf=5`,
-  `needs_operator_review=6`, and `strict_target_year_successes=5`.
-  Focused gold-set tests passed (`22 passed`), a two-school v150 evidence eval
-  produced `exact_matches=2`, and full unit regression passed with
-  `1040 passed, 5 warnings`.
+  now reports `total_entries=14`, `accepted_target_pdf=6`,
+  `needs_operator_review=5`, and `strict_target_year_successes=6`.
+  Focused gold-set tests passed, a two-school current evidence eval produced
+  `exact_matches=2`, and full unit regression passed with
+  `1045 passed, 5 warnings`.
+- Current-code Saitama official-index trusted-year replay →
+  `_temp/saitama-current51-prefindex-trusted-20260511-094241` crawled the 50
+  remaining Saitama official-index sites after the school `95` accepted
+  document was already present. It produced one additional target download:
+  school `757` with `year_evidence=prefecture_index_current_year`. The copied
+  DB now has two FY2026 target documents across the 51 Saitama
+  `prefecture_aggregator` schools: school `95` and school `757`. Ingest of
+  school `757` completed but remains review-bound (`ingest_status=review_pending`,
+  `extraction_confidence=0.64`) because of a master/PDF course-label mismatch.
 - Saitama school `764` future-term year diagnostic fix →
   the real `2025koushinshinseisyo.pdf` previously produced
   `fiscal_year_mismatch:2029` because an officer-term `2029年度` label was
@@ -1674,6 +1728,11 @@ produced discovery evidence, and the only strict target document remained the
 school `95` PDF. v151 supersedes v150 for delivery by packaging the discovery
 gold-set expansion and the school `764` future-term fiscal-year fix, with a
 fresh Windows setup/validator smoke plus packaged Saitama apply and school
-`764` diagnostic replay. The main remaining blockers are therefore target-year
-yield/policy, real operator UI validation, and the explicit university rollout
+`764` diagnostic replay. Current code after v151 also accepts school `757` by
+treating the current-year prefecture official index as trusted year evidence
+for a body-confirmed, yearless target form, moving the bounded Saitama strict
+target count from `1/51` to `2/51`. School `757` still requires extraction
+review because of a course-label mismatch, so the main remaining blockers are
+target-year yield/policy, extraction normalization for review-bound accepted
+PDFs, real operator UI validation, and the explicit university rollout
 decision.
