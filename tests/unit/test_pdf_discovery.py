@@ -2969,6 +2969,80 @@ def test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body(
     assert candidate.year_evidence == "prefecture_index_current_year"
 
 
+def test_download_pdf_trusted_prefecture_ignores_upload_year_for_target_body(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A WordPress upload year is not stale-FY proof when the current index is trusted."""
+
+    content = _make_pdf_bytes(
+        "様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員\n"
+        "役員任期 2025.4.1～2026.9.30"
+    )
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/wp/wp-content/uploads/2025/06/申請書_0602_資料A.pdf",
+        page_url="https://example.ac.jp/financial-aid/",
+        anchor_text="申請書",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "prefecture_index_current_year"
+
+
+def test_download_pdf_trusted_prefecture_still_rejects_explicit_stale_year_label(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Trusted index evidence must not override an explicit stale fiscal-year label."""
+
+    content = _make_pdf_bytes("様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/wp/wp-content/uploads/2025/06/shinsei.pdf",
+        page_url="https://example.ac.jp/financial-aid/",
+        anchor_text="2025年度 確認申請書",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2025"
+
+
 def test_download_pdf_rejects_vocational_practice_basic_info_even_with_trusted_year(
     monkeypatch, tmp_path: Path
 ) -> None:

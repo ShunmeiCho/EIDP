@@ -627,6 +627,24 @@ def _stale_fiscal_year_from_candidate_hint(candidate: PdfCandidate, *, target_ye
     return None
 
 
+def _has_explicit_stale_fiscal_year_label(candidate: PdfCandidate, *, target_year: int) -> bool:
+    """Return whether URL/anchor text explicitly labels a stale fiscal year."""
+
+    text = _candidate_hint_text(candidate)
+    detected_year = fiscal_year_from_japanese_era_text(
+        text,
+        include_fiscal_year_labels=True,
+        include_filing_dates=False,
+    )
+    if detected_year is not None and target_year - 8 <= detected_year < target_year:
+        return True
+    for match in re.finditer(r"(?<!\d)(20\d{2})\s*年度", text):
+        year = int(match.group(1))
+        if target_year - 8 <= year < target_year:
+            return True
+    return False
+
+
 def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> CachedPdfRejection | None:
     """Reject adjacent disclosure PDFs that are clearly not current target forms."""
 
@@ -1954,6 +1972,7 @@ def download_pdf(
 
         if strict_target_fiscal_year:
             target_year = target_fiscal_year or settings.target_fiscal_year
+            trusted_year_evidence = candidate.trusted_year_evidence.strip()
             if pdf_type == "non_target":
                 return None, None, 0, "non_target", "classified_non_target"
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
@@ -1964,14 +1983,19 @@ def download_pdf(
                 and stale_hint_year is not None
                 and (pdf_type == "target" or _has_target_form_hint(candidate))
             ):
-                return None, None, 0, pdf_type, f"fiscal_year_mismatch:{stale_hint_year}"
+                if pdf_type == "target" and trusted_year_evidence and not _has_explicit_stale_fiscal_year_label(
+                    candidate,
+                    target_year=target_year,
+                ):
+                    stale_hint_year = None
+                else:
+                    return None, None, 0, pdf_type, f"fiscal_year_mismatch:{stale_hint_year}"
             if (
                 detected_fiscal_year == target_year
                 and pdf_type == "image_only"
                 and not _has_target_application_hint(candidate)
             ):
                 return None, None, 0, pdf_type, "target_application_not_detected"
-            trusted_year_evidence = candidate.trusted_year_evidence.strip()
             if detected_fiscal_year is None and not (
                 pdf_type == "image_only" and _has_target_application_hint(candidate)
             ) and not (

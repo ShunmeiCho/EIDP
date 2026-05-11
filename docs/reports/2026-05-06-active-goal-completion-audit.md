@@ -395,6 +395,22 @@ gold-set entry exactly as `publication_lag_latest_public`. This is a Windows
 package proof for the manual-success-to-agent pattern, but not a strict
 current-FY yield improvement because the visible O-Hara form remains FY2025.
 
+The next current-code RCA found one strict-yield false negative in school `769`
+(`公益社団法人地域医療振興協会さいたま看護専門学校`). v242 rejected
+`http://www.saitama-kango.jp/wp/wp-content/uploads/2025/06/申請書_0602_資料A.pdf`
+as `fiscal_year_mismatch:2025` because the WordPress upload path contains
+`2025/06`. Manual inspection showed the PDF body is a target
+`様式第2号` form, while the internal 2025/2026 dates are committee/term dates,
+not explicit fiscal-year labels. Current code now preserves the existing safety
+boundary: explicit stale labels such as `2025年度` or `令和7年度` still reject,
+but a bare upload/calendar year no longer overrides
+`prefecture_index_current_year` when the PDF body classifies as target. A
+focused current-code replay for school `769` produced `downloaded=1` with
+`year_evidence=prefecture_index_current_year`; ingestion processed the document,
+preserved `document_fiscal_year=2026` despite parser-visible internal 2025
+dates, wrote `yearly_upserted=1`, and status rebuild raised the copied Saitama
+DB to `excel_ready=4`.
+
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
 After the discovery gold-set plan correction, a bounded current-code replay was
@@ -2961,6 +2977,15 @@ for school `212` produced `crawled=1`, `found=1`, `downloaded=0`,
 `publication_lag_latest_public` for FY2026. This fixes the
 `non_target_candidates_only` RCA bucket for that O-Hara school-family case but
 does not raise strict FY2026 yield because the visible form is still FY2025.
+Current-code RCA after v243 adds one strict-yield recovery: school `769`
+now accepts the target `申請書_0602_資料A.pdf` because a bare WordPress
+`/uploads/2025/06/` path is treated as an upload/calendar date, not an
+explicit stale fiscal-year label, when the PDF body is target and the
+prefecture official index supplies `prefecture_index_current_year`. Explicit
+stale labels such as `2025年度` and `令和7年度` still reject. The focused replay
+downloaded and ingested the document, wrote `yearly_upserted=1`, and raised the
+copied Saitama DB status to `excel_ready=4`; this is a current-code source
+improvement and is not yet a refreshed Windows ZIP package.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
