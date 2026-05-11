@@ -1504,12 +1504,13 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Windows operator delivery | `dist/eidp-windows-v232.zip` rebuilt at commit `db84f5ca22a2ed3018e9fcb03153a4c1a231219e`, verifier `OK core`, `git_dirty=false`, SHA256 `33e14cefa01c75ea2f84ce149ac943939c998a34761aaa1ffed3fa8cd289bc64`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the SQLite-backed `--require-ship-gate` validator, diagnostics that preserve strict bootstrap/weekly ship-gate return codes with delayed `%ERRORLEVEL%` capture, the `import-excel` `invalid_year` warning surface, RCA packet rows that preserve `school_id` for Codex/manual follow-up, same-origin WordPress Download Manager PDF candidate extraction for `wpdmdl` links, root fallback when a registered school publication URL resolves to non-HTML content, school-specific disclosure-link prioritization for dense corporation roots, stricter year-evidence filtering that ignores non-filing `完成年度` labels, a `職業実践専門課程等の基本情報` non-target guard, list-item year-context isolation, stale full-form range pre-filtering, support-only image PDF review-bound routing, and per-link `div` context isolation. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v232 smoke on a fresh `C:\Users\cyo20\EIDP-v232-db84f5c` extraction proves setup success: `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `department_change` void columns present, and `uq_document_file_hash` present. A v230 targeted replay for school `72` produced `downloaded=0`, `rejection_reason_pre_filtered_non_target_hint=3`, and no `document` row for that school. A v231 targeted replay for school `793` produced `downloaded=0`, `rejection_reason_fiscal_year_mismatch=5`, `rejection_reason_pre_filtered_non_target_hint=5`, and evidence rows for `2-1_2-4.pdf` as `fiscal_year_mismatch:2025` with `pre_download=true`. A full real bounded Saitama official-index acquisition on fresh `C:\Users\cyo20\EIDP-v231-full-e42df2b` produced official-index `extracted=58`, `matched=51`, `added=51`, crawl `found=50`, `downloaded=2`, `failed=5`, `skipped=391`, `prefiltered=198`, ingest `processed=2`, `yearly_upserted=7`, and rebuild `target_pdf_auto_acquired_count=2`, `target_pdf_auto_yield_pct=0.1`, `ship_gate_status=below_gate`; the `--require-ship-gate` validator correctly returned rc `1`. | Latest v232 package verifier, Windows clean extraction/setup smoke, school `72` false-positive replay, school `793` stale-year context replay, and full real Saitama bounded acquisition all passed mechanically. Deployment is healthy, but real strict automation yield remains far below the 60-70% ship gate. Execution-button UI E2E, broader real-workload yield, and remaining false-negative RCA are still incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
-Update: v233 supersedes v232 for packaged artifact verification only. The
+Update: v233 supersedes v232 for packaged artifact verification and setup
+smoke. The
 v233 ZIP at commit `b4b6324a9ad506ba832286dbc306fee1465be9b5` verifies with
 SHA256 `b153232ec8809ca1efee065420e1fa3b4bfc252e8dd8fd85a39eb0e95462d092`,
 3,027 entries, 78 wheels, and 17 discovery gold-set entries covering all five
-release-relevant outcomes. Remote Windows setup smoke remains latest-proven on
-the v232 extraction until v233 is run on the Windows host.
+release-relevant outcomes. Remote Windows setup smoke is now proven on the
+v233 extraction `C:\Users\cyo20\EIDP-v233-b4b6324`.
 
 ## Latest Verification Evidence
 
@@ -1527,7 +1528,13 @@ the v232 extraction until v233 is run on the Windows host.
   `dist/eidp-windows-v233.zip` verifies with SHA256
   `b153232ec8809ca1efee065420e1fa3b4bfc252e8dd8fd85a39eb0e95462d092`,
   3,027 entries, 78 wheels, 17 discovery gold-set entries, and BUILD_INFO
-  `git_dirty=false`; `dist/eidp-windows.zip` has the same SHA256.
+  `git_dirty=false`; `dist/eidp-windows.zip` has the same SHA256. Remote
+  Windows fresh extraction `C:\Users\cyo20\EIDP-v233-b4b6324` ran
+  `EIDP-setup.bat` successfully. The packaged `--after-setup --json`
+  validator returned `ok=true`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  `department_change` void columns present, and `uq_document_file_hash`
+  present.
 - 2026-05-12 v232 Windows package refresh →
   commit `db84f5ca22a2ed3018e9fcb03153a4c1a231219e` packages two Saitama
   review-bound RCA fixes after the v231 full-run evidence exposed schools `761`
@@ -2550,10 +2557,9 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v233 is the current verifier-clean ZIP
-candidate, while v232 remains the latest Windows setup-verified extraction.
-The latest full bounded Windows acquisition RCA still proves strict FY2026
-yield below the ship gate: the
+The active goal is **not complete**. v233 is the current verifier-clean and
+Windows setup-verified ZIP candidate. The latest full bounded Windows
+acquisition RCA still proves strict FY2026 yield below the ship gate: the
 v229 Saitama official-index run covered `51` official-index school URLs, found
 PDF candidates on `50` sites, downloaded `3` PDFs, and counted only `2` schools
 as current target-PDF auto acquired after ingest/status rebuild. The third
