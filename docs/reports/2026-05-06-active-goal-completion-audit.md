@@ -1,9 +1,9 @@
 # Active Goal Completion Audit — EIDP Rolling Automation
 
 Date: 2026-05-07
-Latest update: 2026-05-11
+Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `0dce42cdc6d87cbbebbc70e27820069156457ff2` (`eidp-windows-v223.zip`)
+Latest audited Windows package commit: `1e890e9016c9e979e19eff09b8dc5f85ef6bd2f4` (`eidp-windows-v224.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -1466,11 +1466,51 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v223.zip` rebuilt at commit `0dce42cdc6d87cbbebbc70e27820069156457ff2`, verifier `OK core`, `git_dirty=false`, SHA256 `425f7a215332bc37cb91f8f316c2b479728f0f2def9de6ad81ee29bf387300cb`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the SQLite-backed `--require-ship-gate` validator, and diagnostics that preserve strict bootstrap/weekly ship-gate return codes with delayed `%ERRORLEVEL%` capture. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v223 smoke on a fresh `C:\Users\cyo20\EIDP-v223-0dce42c` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `department_change` void columns present, `uq_document_file_hash` present, write-lock rejection for `db-bootstrap` and `rebuild-school-year-tasks`, Saitama official-index apply (`matched=51`, `added=51`), bootstrap log/progress capture, non-release validator `ok=true`, and strict ship-gate validator `ok=false` when yield is 0%. v154 remains the latest packaged school `757` target-PDF-to-ingest/export proof, and v150 remains the packaged proof for school `95` target-PDF-to-Excel. | Latest v223 package verifier, Windows clean extraction/setup smoke, bounded bootstrap wrapper smoke, diagnostics smoke, and lock-contract smoke are green. Automation yield remains below the 60-70% strict target-FY ship gate until a real Windows workload passes the SQLite-backed gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v224.zip` rebuilt at commit `1e890e9016c9e979e19eff09b8dc5f85ef6bd2f4`, verifier `OK core`, `git_dirty=false`, SHA256 `d178f7ac738fca8ab3f94f3aaf24dc1fb6f669d048f976b44ad1deafa1b654b2`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, 16 packaged discovery gold-set entries, packaged OCR/runtime/export/audit gates from v218, the SQLite-backed `--require-ship-gate` validator, and diagnostics that preserve strict bootstrap/weekly ship-gate return codes with delayed `%ERRORLEVEL%` capture. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v224 smoke on a fresh `C:\Users\cyo20\EIDP-v224-1e890e9` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `department_change` void columns present, and `uq_document_file_hash` present. A real bounded Saitama official-index run (`51` sites) proves URL handoff and wrapper logging are intact: official-index `extracted=58`, `matched=51`, `added=51`, crawl `found=49`, `downloaded=3`, ingest `processed=3`, `yearly_upserted=9`, and rebuild `target_pdf_auto_acquired_count=3`, `target_pdf_auto_yield_pct=0.1`, `ship_gate_status=below_gate`. `validate_install.bat --after-setup --after-bootstrap` returned `ok=true`; the same command with `--require-ship-gate` returned rc `1`, and `diagnose.bat` recorded `validate_after_bootstrap_ship_gate_rc=1`. | Latest v224 package verifier, Windows clean extraction/setup smoke, real bounded Saitama bootstrap, diagnostics smoke, and ship-gate negative validator are green. Deployment is healthy, but automation yield remains far below the 60-70% strict target-FY ship gate; execution-button UI E2E, broader real-workload yield, and remaining false-negative RCA are still incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
+- 2026-05-12 v224 Windows package and real Saitama official-index RCA →
+  commit `1e890e9016c9e979e19eff09b8dc5f85ef6bd2f4` extends the target-form
+  link hint set so `更新確認申請書` / renewal-confirmation application anchors
+  can be accepted when the source is trusted official-index evidence instead
+  of being pre-filtered as generic disclosure material. Verification:
+  `uv run pytest tests/unit` → `1160 passed, 5 warnings`; `uv run python
+  scripts/verify_windows_distribution.py dist/eidp-windows-v224.zip --json`
+  and the same command against `dist/eidp-windows.zip` → `ok=true`,
+  SHA256 `d178f7ac738fca8ab3f94f3aaf24dc1fb6f669d048f976b44ad1deafa1b654b2`,
+  3,026 entries, 78 wheels, 16 discovery gold-set entries, 47 prefecture seed
+  rows, 2,148 prefecture seed school rows, BUILD_INFO `git_dirty=false`.
+  Remote Windows fresh extraction `C:\Users\cyo20\EIDP-v224-1e890e9` verified
+  the ZIP checksum and `first_setup.bat` completed with `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  `department_change` void columns present, and `uq_document_file_hash`
+  present. A real Saitama official-index run with
+  `scripts\bootstrap_pdfs.bat --pref saitama --skip-known-url-discovery
+  --url-search off --school-url-crawl off --batch-size 60 --rate-limit 0.5`
+  created `logs\bootstrap-pdfs-20260511-232235.log` and `.json`, applied
+  Saitama official-index URLs (`extracted=58`, `matched=51`, `added=51`),
+  crawled `51` sites, found `49`, downloaded `3`, ingested `3`, upserted `9`
+  target-year rows, and wrote RCA plan
+  `data\output\target-year-discovery\bootstrap-20260511_233857-discovery-rca-batch-plan.json`
+  with `10` items / `48` candidates. The accepted target PDFs were schools
+  `757`, `95`, and `784`; school `784`
+  `https://www.saijidai.ac.jp/sys/wp-content/themes/saijidai/pdf/evaluation/koutoumusyou.pdf`
+  is the v224 regression proof for the new `更新確認申請書` hint. The same run
+  still records `target_pdf_auto_acquired_count=3`,
+  `target_pdf_auto_denominator_count=2418`, `target_pdf_auto_yield_pct=0.1`,
+  and `ship_gate_status=below_gate`. `validate_install.bat --after-setup
+  --after-bootstrap --json` returned `ok=true`; the same command with
+  `--require-ship-gate` returned rc `1`; `diagnose.bat` wrote
+  `logs\diagnostics-20260512-001612.txt` and recorded
+  `validate_after_bootstrap_ship_gate_rc=1`. A manual/Codex sample check of
+  rejected current-looking rows confirmed `applicationform-r8.pdf` is a
+  student `授業料等減免の対象者の認定` A-form, not an institution confirmation
+  application, and the sampled `academic_support.pdf` begins with
+  `実務経験のある教員等による授業科目` / `理事の複数配置` material rather than a
+  current target-year confirmation main form. These samples should stay
+  rejected or review-bound; broad token loosening would pollute target success.
 - 2026-05-11 v223 Windows package and remote smoke →
   commit `0dce42cdc6d87cbbebbc70e27820069156457ff2` fixes a Windows batch
   diagnostic defect found during v222 smoke: `diagnose.bat` used parse-time
@@ -2209,51 +2249,31 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v154 is the current locally and
-Windows-verified ZIP candidate, and the branch is backed up remotely.
-The latest bounded non-Sanko Windows acquisition RCA still proves strict FY2026
-yield below the ship gate: `0/45` target downloads despite official-index
-`SchoolSite` coverage, with the dominant blockers split between publication-lag
-old-year target forms and fetch/navigation failures. v140 fixes the stale
-same-origin 404 portion of that fetch/navigation bucket, v141 turns TLS
-certificate-chain failures into an auditable `site_error` without relaxing TLS
-verification, and v143 proves the remaining `nag.ac.jp` stale official-index
-rows can move past 404/no-candidate ambiguity into
-`publication_lag_or_old_target_pdf` evidence via bounded school-homepage
-fallback. The v143 45-school rerun also moves the remaining 13 generic
-site-fetch failures from the v139 bounded RCA into publication-lag evidence,
-while v144 closes one serial-filename no-year edge (`2025007.pdf`).
-v145 keeps the few target forms without usable year evidence visible as
-`年度未確認候補` / `PDF確認` operator work instead of generic no-target rows.
-v146 proves the first strict FY2026 Saitama target PDF can run through the
-packaged Windows PDF discovery, ingest, status rebuild, and Excel export path
-without creating duplicate departments. v147 reduces false
-`target_year_unverified` operator work by classifying Japanese-era old-year
-target-form anchors as publication-lag evidence. v148 extends that reduction
-to CMS pages whose year label is adjacent to, but outside, the PDF anchor.
-v149 closes the first-year Japanese-era edge (`令和元年度` / `元年`) and reduces
-the current Saitama official-index replay's target-year-unverified evidence to
-one known school (`757`). v150 fixes a Windows CLI codepage crash found during
-packaged ingest and proves the latest ZIP can run fresh setup plus school `95`
-strict target PDF discovery, ingest, status rebuild, and Excel export on the
-remote Windows host. The v150 packaged Saitama 51-site replay also proves the
-official-index handoff itself is intact on Windows: all 51 Saitama
-`prefecture_aggregator` URLs were in the database, the 50 remaining sites all
-produced discovery evidence, and the only strict target document remained the
-school `95` PDF. v151 supersedes v150 for delivery by packaging the discovery
-gold-set expansion and the school `764` future-term fiscal-year fix, with a
-fresh Windows setup/validator smoke plus packaged Saitama apply and school
-`764` diagnostic replay. v152 supersedes v151 by packaging the official-index
-trusted year-evidence rule, and the Windows package smoke proves school `757`
-now accepts a body-confirmed, yearless target form via
-`year_evidence=prefecture_index_current_year`. This moves the bounded Saitama
-strict target count from `1/51` to `2/51`, but school `757` still requires
-extraction review because the parsed yearly confidence is only `0.64`. v153
-keeps the same acquisition result and prevents school `757` from creating a
-duplicate Department by normalizing `看護専門課程` to the existing master field
-`医療`. v154 then parses the sparse graduation row, raising the school `757`
-FY2026 yearly confidence to `0.94`, marking it current, rebuilding the status
-row as `excel_ready=True`, and proving Excel export contains the school in both
-business sheets. The main remaining blockers are target-year yield/policy,
-broader extraction/OCR improvement for other accepted PDFs, real operator UI
-validation, and the explicit university rollout decision.
+The active goal is **not complete**. v224 is the current locally and
+Windows-verified ZIP candidate. The latest real bounded Windows acquisition RCA
+still proves strict FY2026 yield below the ship gate: the Saitama official-index
+run covered `51` official-index school URLs, found PDF candidates on `49` sites,
+and accepted only `3` strict target PDFs. The deployment layer is healthy
+(`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
+log/progress capture, non-release validator, and `diagnose.bat` all pass), but
+the product gate correctly fails with `ship_gate_status=below_gate` and
+`target_pdf_auto_yield_pct=0.1`.
+
+v140-v154 closed the earlier fetch/navigation, stale-year, year-evidence, and
+school `757` extraction issues. v150 proved school `95` target PDF discovery,
+ingest, status rebuild, and Excel export on Windows. v152-v154 moved school
+`757` through trusted official-index year evidence, extraction confidence
+`0.94`, status rebuild, and Excel export. v224 adds one real false-negative
+closure from the current Saitama evidence: school `784`
+`更新確認申請書` now downloads and ingests via
+`year_evidence=prefecture_index_current_year`, moving the Saitama accepted
+strict target count from `2/51` to `3/51`.
+
+The remaining blockers are target-year yield/policy, broader discovery RCA for
+the dominant rejection buckets (`fiscal_year_mismatch:*`,
+`classified_non_target`, and `pre_filtered_non_target_hint`), extraction/OCR
+quality on any newly accepted PDFs, real operator UI validation, and the
+explicit university rollout decision. Current evidence does not justify broad
+token loosening: sampled current-looking rejects such as `applicationform-r8.pdf`
+are student A-forms, and sampled `academic_support.pdf` begins with disclosure
+sub-forms rather than a current target-year confirmation main form.
