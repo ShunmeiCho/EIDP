@@ -202,6 +202,26 @@ def test_extract_pdf_links_deduplicates_encoded_and_unencoded_paths() -> None:
     assert [candidate.anchor_text for candidate in candidates] == ["raw"]
 
 
+def test_extract_pdf_links_includes_wordpress_download_manager_wrappers() -> None:
+    html = """
+    <p>令和6年度分申請</p>
+    <p>
+      <a href="#" data-downloadurl="/download/yousiki2/?wpdmdl=5471&amp;refresh=abc">ダウンロード</a>
+    </p>
+    <p>
+      <a href="https://files.example.net/download/yousiki2/?wpdmdl=5471">外部コピー</a>
+    </p>
+    """
+
+    candidates = _extract_pdf_links(html, "https://i-heiseigakuen.ac.jp/youshiki/")
+
+    assert len(candidates) == 1
+    assert candidates[0].pdf_url == "https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471&refresh=abc"
+    assert candidates[0].pattern_type == "wordpress_download_manager"
+    assert "令和6年度分申請" in candidates[0].anchor_text
+    assert "ダウンロード" in candidates[0].anchor_text
+
+
 def test_append_unique_candidates_deduplicates_encoded_and_unencoded_paths() -> None:
     target = [
         PdfCandidate(
@@ -782,6 +802,55 @@ def test_discover_pdfs_tries_gold_set_derived_support_pages(monkeypatch) -> None
     assert result.best.pdf_url == "https://example.ac.jp/files/school_support_R8.pdf"
     assert result.best.page_url == "https://example.ac.jp/school-support/"
     assert "https://example.ac.jp/school-support/" in client.calls
+
+
+def test_discover_pdfs_follows_application_form_page_with_wordpress_download_manager(monkeypatch) -> None:
+    """Some WordPress sites link application-form pages that expose only wpdmdl download wrappers."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    redirect = _HtmlResponse("", status_code=301, url="https://www.i-heiseigakuen.ac.jp/kokai/")
+    redirect.headers["location"] = "https://i-heiseigakuen.ac.jp/kokai/"
+    client = _HtmlClient(
+        {
+            "https://www.i-heiseigakuen.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.i-heiseigakuen.ac.jp/kokai/": redirect,
+            "https://i-heiseigakuen.ac.jp/kokai/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/youshiki/">申請様式</a>
+                </html>
+                """,
+                url="https://i-heiseigakuen.ac.jp/kokai/",
+            ),
+            "https://i-heiseigakuen.ac.jp/youshiki/": _HtmlResponse(
+                """
+                <p>令和8年度分申請</p>
+                <p>
+                  <a href="#" data-downloadurl="/download/yousiki2/?wpdmdl=5471&amp;refresh=abc">
+                    高等教育の修学支援新制度 確認申請書 様式２
+                  </a>
+                </p>
+                """,
+                url="https://i-heiseigakuen.ac.jp/youshiki/",
+            ),
+            "https://i-heiseigakuen.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://www.i-heiseigakuen.ac.jp/kokai/",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471&refresh=abc"
+    assert result.best.pattern_type == "wordpress_download_manager"
+    assert result.best.page_url == "https://i-heiseigakuen.ac.jp/youshiki/"
+    assert "https://i-heiseigakuen.ac.jp/youshiki/" in client.calls
 
 
 def test_discover_pdfs_uses_sitemap_even_when_root_has_stale_pdf(monkeypatch) -> None:

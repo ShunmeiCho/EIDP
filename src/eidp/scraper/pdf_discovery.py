@@ -3,11 +3,12 @@
 Crawls school disclosure pages, finds target PDF links using 4 patterns,
 scores candidates, downloads best match, stores in document table.
 
-4 delivery patterns (verified from reference sites):
+5 delivery patterns (verified from reference sites):
 1. Direct PDF links: a[href$=".pdf"]
 2. WordPress asset: a[href*="/wp-content/"] + .pdf
 3. Cache-busted: a[href*=".pdf?"]
-4. Two-tier embed: subpage -> embed[src*=".pdf"]
+4. WordPress Download Manager wrappers: a[href*="?wpdmdl="]
+5. Two-tier embed: subpage -> embed[src*=".pdf"]
 """
 
 import hashlib
@@ -90,7 +91,7 @@ def _main_page_response_with_root_fallback(client: httpx.Client, site_url: str) 
     resp = _safe_get(client, site_url)
     try:
         resp.raise_for_status()
-        return resp, site_url
+        return resp, str(resp.url or site_url)
     except httpx.HTTPStatusError as exc:
         status_code = exc.response.status_code if exc.response is not None else 0
         if status_code not in {404, 410}:
@@ -101,7 +102,7 @@ def _main_page_response_with_root_fallback(client: httpx.Client, site_url: str) 
         root_resp = _safe_get(client, root_url)
         root_resp.raise_for_status()
         log.info("pdf_discovery_root_fallback", original_url=site_url, fallback_url=root_url, status_code=status_code)
-        return root_resp, root_url
+        return root_resp, str(root_resp.url or root_url)
 
 
 # Keywords that indicate the target document (高等教育修学支援新制度 確認申請書)
@@ -237,7 +238,7 @@ class PdfCandidate:
     pdf_url: str
     page_url: str
     anchor_text: str = ""
-    pattern_type: str = ""  # direct, wordpress, cache_busted, embed
+    pattern_type: str = ""  # direct, wordpress, cache_busted, wordpress_download_manager, embed
     score: float = 0.0
     detected_fiscal_year: int | None = None
     year_evidence: str = ""
@@ -698,11 +699,50 @@ def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
         has_current_year_context = any(_has_fiscal_year_context(part) for part in parts)
         if previous_text and not has_current_year_context and _has_fiscal_year_context(previous_text):
             parts.append(previous_text)
+    elif previous_text := _previous_fiscal_year_context(html, match.start()):
+        parts.append(previous_text)
     return " ".join(dict.fromkeys(part for part in parts if part))
 
 
+def _previous_fiscal_year_context(html: str, before: int) -> str:
+    """Return nearby preceding year context for CMS download widgets."""
+
+    window = html[max(0, before - 2000):before]
+    block_re = r"<(?:p|li|dt|dd|h[1-6])\b[^>]*>.*?</(?:p|li|dt|dd|h[1-6])\s*>"
+    for match in reversed(list(re.finditer(block_re, window, re.IGNORECASE | re.DOTALL))):
+        text = _html_text(match.group(0))
+        if text and _has_fiscal_year_context(text):
+            return text
+
+    text = _html_text(window)
+    for line in reversed(re.split(r"[\n。]+", text)):
+        line = line.strip()
+        if line and _has_fiscal_year_context(line):
+            return line
+    return ""
+
+
+def _anchor_attr(attrs: str, name: str) -> str | None:
+    match = re.search(rf"\b{re.escape(name)}\s*=\s*([\"'])(.*?)\1", attrs, re.IGNORECASE | re.DOTALL)
+    if match is None:
+        return None
+    return html_lib.unescape(match.group(2))
+
+
+def _is_wordpress_download_manager_url(url: str, base_url: str) -> bool:
+    """Return whether ``url`` is a same-origin WordPress Download Manager PDF wrapper."""
+
+    parsed = urlparse(url)
+    base_parsed = urlparse(base_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return False
+    if parsed.netloc != base_parsed.netloc:
+        return False
+    return any(key.lower() == "wpdmdl" and value.strip() for key, value in parse_qsl(parsed.query))
+
+
 def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
-    """Extract PDF link candidates from HTML using 4 patterns."""
+    """Extract PDF link candidates from HTML using known PDF delivery patterns."""
     candidates: list[PdfCandidate] = []
     seen_urls: set[str] = set()
 
@@ -722,6 +762,30 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
                 pattern = "wordpress"
             candidates.append(PdfCandidate(
                 pdf_url=url, page_url=base_url, anchor_text=anchor, pattern_type=pattern,
+            ))
+
+    # Pattern 2b: WordPress Download Manager wrappers.
+    #
+    # These URLs do not contain ".pdf", but the wrapper returns a PDF when the
+    # ``wpdmdl`` query parameter is present.
+    for m in re.finditer(
+        r"<a\s([^>]*)>(.*?)</a>",
+        html, re.IGNORECASE | re.DOTALL,
+    ):
+        href = _anchor_attr(m.group(1), "data-downloadurl") or _anchor_attr(m.group(1), "href")
+        if not href:
+            continue
+        url = urljoin(base_url, href)
+        if not _is_wordpress_download_manager_url(url, base_url):
+            continue
+        dedupe_key = _pdf_candidate_dedupe_key(url)
+        if dedupe_key not in seen_urls:
+            seen_urls.add(dedupe_key)
+            candidates.append(PdfCandidate(
+                pdf_url=url,
+                page_url=base_url,
+                anchor_text=_pdf_anchor_context_text(html, m),
+                pattern_type="wordpress_download_manager",
             ))
 
     # Pattern 4: Embedded PDFs — embed/object/iframe with .pdf src
@@ -791,7 +855,9 @@ def _find_subpage_links(html: str, base_url: str) -> list[str]:
         "高等教育",
         "無償化",
         "確認申請",
+        "申請様式",
         "機関要件",
+        "youshiki",
         "disclosure",
         "public",
         "public_info",
@@ -1207,7 +1273,8 @@ def discover_pdfs_for_site(
                     extra_pages_fetched += 1
                     sub_resp = _safe_get(client, sub_url)
                     if sub_resp.status_code == 200:
-                        sub_candidates = _extract_pdf_links(sub_resp.text, sub_url)
+                        sub_base_url = str(sub_resp.url or sub_url)
+                        sub_candidates = _extract_pdf_links(sub_resp.text, sub_base_url)
                         _append_unique_candidates(candidates, sub_candidates)
                 except httpx.HTTPError:
                     continue
@@ -1256,7 +1323,8 @@ def discover_pdfs_for_site(
                 extra_pages_fetched += 1
                 derived_resp = _safe_get(client, derived_url)
                 if derived_resp.status_code == 200:
-                    _append_unique_candidates(candidates, _extract_pdf_links(derived_resp.text, derived_url))
+                    derived_base_url = str(derived_resp.url or derived_url)
+                    _append_unique_candidates(candidates, _extract_pdf_links(derived_resp.text, derived_base_url))
             except httpx.HTTPError:
                 continue
 
@@ -1284,7 +1352,8 @@ def discover_pdfs_for_site(
                 extra_pages_fetched += 1
                 sitemap_resp = _safe_get(client, sitemap_url)
                 if sitemap_resp.status_code == 200:
-                    _append_unique_candidates(candidates, _extract_pdf_links(sitemap_resp.text, sitemap_url))
+                    sitemap_base_url = str(sitemap_resp.url or sitemap_url)
+                    _append_unique_candidates(candidates, _extract_pdf_links(sitemap_resp.text, sitemap_base_url))
             except httpx.HTTPError:
                 continue
 
