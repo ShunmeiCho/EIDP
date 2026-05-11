@@ -61,6 +61,7 @@ def test_target_year_overview_surfaces_current_vs_stale_gap() -> None:
         _doc(session, 11, 1, None, status="ocr_pending", pdf_type="image_only")
         _doc(session, 20, 2, 2026)
         _doc(session, 30, 3, 2024, status="parse_failed")
+        _doc(session, 31, 3, 2027)
         _doc(session, 40, 4, 2026)
         session.flush()
 
@@ -72,6 +73,8 @@ def test_target_year_overview_surfaces_current_vs_stale_gap() -> None:
         assert overview.current_target_documents == 1
         assert overview.stale_target_documents == 1
         assert overview.stale_target_schools == 1
+        assert overview.future_target_documents == 1
+        assert overview.future_target_schools == 1
         assert overview.review_queue_documents == 2
         assert overview.missing_current_target_schools == 2
 
@@ -80,6 +83,8 @@ def test_target_year_overview_surfaces_current_vs_stale_gap() -> None:
         assert all_overview.active_schools == 4
         assert all_overview.current_target_schools == 2
         assert all_overview.current_target_documents == 2
+        assert all_overview.future_target_schools == 1
+        assert all_overview.future_target_documents == 1
         assert all_overview.missing_current_target_schools == 2
     finally:
         session.close()

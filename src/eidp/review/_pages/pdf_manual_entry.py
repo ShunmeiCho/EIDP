@@ -1386,11 +1386,12 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
     )
     st.caption(f"対象範囲: {OPERATOR_SCHOOL_SCOPE_LABEL}")
-    mcols = st.columns(4)
+    mcols = st.columns(5)
     mcols[0].metric("対象校", target.active_schools)
     mcols[1].metric(f"{target_label} PDF", target.current_target_schools)
     mcols[2].metric("旧年度fallback", target.stale_target_documents)
-    mcols[3].metric("要確認", target.review_queue_documents)
+    mcols[3].metric("来年度以降PDF", target.future_target_documents)
+    mcols[4].metric("要確認", target.review_queue_documents)
     if target.current_target_documents == 0 and target.stale_target_documents > 0:
         st.error(
             f"{target_label} の自動採録は 0 件です。旧年度PDFは参考情報として確認し、"

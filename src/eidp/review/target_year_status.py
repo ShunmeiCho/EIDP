@@ -33,6 +33,8 @@ class TargetYearOverview:
     current_target_documents: int
     stale_target_schools: int
     stale_target_documents: int
+    future_target_schools: int
+    future_target_documents: int
     review_queue_documents: int
 
     @property
@@ -65,6 +67,8 @@ def target_year_overview(
             current_target_documents=0,
             stale_target_schools=0,
             stale_target_documents=0,
+            future_target_schools=0,
+            future_target_documents=0,
             review_queue_documents=0,
         )
 
@@ -103,6 +107,19 @@ def target_year_overview(
         or 0
     )
 
+    future_target_query = session.query(Document).filter(
+        Document.school_id.in_(school_ids),
+        Document.fiscal_year.is_not(None),
+        Document.fiscal_year > target_fiscal_year,
+        Document.pdf_type == "target",
+        Document.ingest_status == "ingested",
+    )
+    future_target_documents = future_target_query.count()
+    future_target_schools = (
+        future_target_query.with_entities(func.count(func.distinct(Document.school_id))).scalar()
+        or 0
+    )
+
     review_queue_documents = (
         session.query(func.count(Document.id))
         .filter(
@@ -122,5 +139,7 @@ def target_year_overview(
         current_target_documents=int(current_target_documents),
         stale_target_schools=int(stale_target_schools),
         stale_target_documents=int(stale_target_documents),
+        future_target_schools=int(future_target_schools),
+        future_target_documents=int(future_target_documents),
         review_queue_documents=int(review_queue_documents),
     )

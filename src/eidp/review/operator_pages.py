@@ -641,11 +641,12 @@ def page_pipeline_status(session: Session) -> None:
         f"ここは {OPERATOR_SCHOOL_SCOPE_LABEL} の現在年度到達度です。"
         "旧年度PDFは成果ではなく、再取得待ちとして扱います。"
     )
-    ycols = st.columns(4)
+    ycols = st.columns(5)
     ycols[0].metric("対象校", target.active_schools)
     ycols[1].metric("現在年度PDFあり", target.current_target_schools)
     ycols[2].metric("旧年度fallback", target.stale_target_documents)
-    ycols[3].metric("要確認キュー", target.review_queue_documents)
+    ycols[3].metric("来年度以降PDF", target.future_target_documents)
+    ycols[4].metric("要確認キュー", target.review_queue_documents)
     if target.current_target_documents == 0 and target.stale_target_documents > 0:
         st.error(
             f"{target_label} の採録済PDFが 0 件です。旧年度fallbackをExcel成果として扱わず、"
