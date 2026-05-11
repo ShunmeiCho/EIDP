@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `2e90d7c540c88704dbf4f617597530f888f36ea1` (`eidp-windows-v236.zip`)
+Latest audited Windows package commit: `502b7ad182fd5a0fe99303012e008c9197763f49` (`eidp-windows-v237.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -77,6 +77,10 @@ The v236 package closes the next same-family network waste edge found in the
 v235 Windows evidence: English `subject_*.pdf` / `subject-*.pdf` disclosure
 files, which are usually syllabus/course-list PDFs, are now rejected before
 download unless the link also carries a target confirmation-form hint.
+The v237 package closes the residual subject-link contamination from the same
+all-japan evidence: `subject_*.pdf` / `subject-*.pdf` filenames no longer become
+old-year target-like candidates just because their enclosing block inherited
+adjacent `academic_support` or `修学支援新制度様式2号` text.
 
 A fresh Windows v235 package replay was then run on
 `C:\Users\cyo20\EIDP-v235-864ae14` from the shipped ZIP
@@ -149,6 +153,24 @@ subject rows are now pre-download `pre_filtered_non_target_hint`; the remaining
 `Document` rows were created for schools `291` or `486`. This proves the v236
 fix removes the subject-PDF download/classification waste without accepting any
 new target PDF.
+
+For v237 packaging, `scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v237.zip --latest-alias` produced a clean ZIP with SHA256
+`30a8fc52caefee981db4bd3096a6964f591724f8dae2d79a8cfdc9fa92507751`.
+Both `dist/eidp-windows-v237.zip` and `dist/eidp-windows.zip` passed
+`scripts/verify_windows_distribution.py --json` with `git_dirty=false`,
+`entry_count=3027`, `wheel_count=78`, 17 discovery gold-set entries, and 47
+downloadable supported prefecture seeds. A local extracted-install validation
+also passed. Fresh Windows extraction `C:\Users\cyo20\EIDP-v237-502b7ad`
+passed setup and after-setup validation with `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+`uq_document_file_hash` present, and
+`build_commit=502b7ad182fd5a0fe99303012e008c9197763f49`. The same bounded
+Saitama/291/486 replay produced `254` evidence rows. Across all
+`subject_` / `subject-` URLs, `124/124` are now pre-download
+`pre_filtered_non_target_hint` with `pdf_type=non_target`, and no `Document`
+rows were created for schools `291` or `486`. This closes the v236 residual
+`8` anchor-contaminated subject rows without accepting any new target PDF.
 
 During this RCA, a classification defect was found in
 `discovery_evidence_summary.py`: old-year `image_only` PDFs with both system
@@ -2673,7 +2695,7 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v236 is the current verifier-clean and
+The active goal is **not complete**. v237 is the current verifier-clean and
 Windows setup-verified ZIP candidate. The latest full bounded Windows
 acquisition RCA still proves strict FY2026 yield below the ship gate: the
 v235 Saitama official-index run covered `51` official-index school URLs, found
@@ -2697,6 +2719,10 @@ syllabus/course-list PDFs; a targeted Windows replay on schools `291` and `486`
 proved that the v235 overlapping subject set moved from `30` download-time
 `classified_non_target` rows to pre-download rejection without creating any new
 `Document` rows.
+v237 closes the remaining subject anchor-contamination edge: the same targeted
+Windows replay now shows `124/124` subject rows as pre-download
+`pre_filtered_non_target_hint/non_target`, with no `Document` rows for schools
+`291` or `486`.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
