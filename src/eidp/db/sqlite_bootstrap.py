@@ -79,6 +79,28 @@ def is_sqlite(engine: Engine) -> bool:
     return engine.dialect.name == "sqlite"
 
 
+def _sqlite_main_file(engine: Engine) -> Path | None:
+    database = engine.url.database
+    if not database or database == ":memory:":
+        return None
+    return Path(database).expanduser()
+
+
+def _refuse_orphaned_sqlite_sidecars(engine: Engine) -> None:
+    db_path = _sqlite_main_file(engine)
+    if db_path is None or db_path.exists():
+        return
+    sidecars = [Path(f"{db_path}-wal"), Path(f"{db_path}-shm")]
+    existing = [path for path in sidecars if path.exists()]
+    if existing:
+        rels = ", ".join(str(path) for path in existing)
+        raise RuntimeError(
+            "main SQLite database file is missing but SQLite sidecar files exist; "
+            f"refusing to create an empty replacement database at {db_path}. "
+            f"Move or restore the sidecar files first: {rels}"
+        )
+
+
 def apply_sqlite_pragmas(engine: Engine) -> None:
     """Apply WAL / FK / busy_timeout PRAGMAs on a SQLite engine.
 
@@ -155,6 +177,7 @@ def bootstrap_sqlite(engine: Engine, *, alembic_ini: Path | None = None) -> None
             f"bootstrap_sqlite requires a SQLite engine, got dialect={engine.dialect.name!r}"
         )
 
+    _refuse_orphaned_sqlite_sidecars(engine)
     Base.metadata.create_all(engine, checkfirst=True)
     create_null_safe_dept_index(engine)
     apply_sqlite_pragmas(engine)

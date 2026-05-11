@@ -207,6 +207,7 @@ YEAR_BLOCK_FIELDS_NO_BIKO = [
 YEAR_BLOCK_FIELDS_WITH_BIKO = YEAR_BLOCK_FIELDS_NO_BIKO + ["notes"]
 
 GAKKA_KEY_COLS = 7  # 都道府県, 法人名, 学校名, 課程名, 学科名, 昼夜, 年限
+DEPARTMENT_YEARLY_IMPORT_FIELDS = tuple(YEAR_BLOCK_FIELDS_WITH_BIKO)
 
 
 def _safe_int(val: object) -> int | None:
@@ -231,6 +232,51 @@ def _safe_str(val: object) -> str:
     if val is None:
         return ""
     return str(val).strip()
+
+
+def _same_department_yearly_import_values(
+    row: DepartmentYearly,
+    block_data: dict[str, int | float | str | None],
+) -> bool:
+    for field_name in DEPARTMENT_YEARLY_IMPORT_FIELDS:
+        current = getattr(row, field_name)
+        incoming = block_data.get(field_name)
+        if current is None and incoming is None:
+            continue
+        if isinstance(current, float) or isinstance(incoming, float):
+            if current is None or incoming is None or float(current) != float(incoming):
+                return False
+            continue
+        if current != incoming:
+            return False
+    return True
+
+
+def _department_yearly_from_block(
+    *,
+    department_id: int,
+    fiscal_year: int,
+    revision: int,
+    block_data: dict[str, int | float | str | None],
+) -> DepartmentYearly:
+    return DepartmentYearly(
+        department_id=department_id,
+        fiscal_year=fiscal_year,
+        revision=revision,
+        is_current=True,
+        capacity=block_data.get("capacity"),
+        enrollment=block_data.get("enrollment"),
+        intl_students=block_data.get("intl_students"),
+        graduates=block_data.get("graduates"),
+        advanced=block_data.get("advanced"),
+        employed=block_data.get("employed"),
+        other=block_data.get("other"),
+        prev_enrollment=block_data.get("prev_enrollment"),
+        dropouts=block_data.get("dropouts"),
+        dropout_rate=block_data.get("dropout_rate"),
+        notes=block_data.get("notes"),
+        extraction_method="excel_import",
+    )
 
 
 def import_sairoku(ws: openpyxl.worksheet.worksheet.Worksheet, session: Session) -> dict[str, int]:
@@ -347,7 +393,14 @@ def import_gakka(
 
     Multi-row header: row 1 = year groups, row 2 = field names. Data starts row 3.
     """
-    stats = {"departments": 0, "yearly_rows": 0, "school_misses": 0, "yearly_dupes": 0, "auto_created": 0}
+    stats = {
+        "departments": 0,
+        "yearly_rows": 0,
+        "school_misses": 0,
+        "yearly_dupes": 0,
+        "yearly_skipped_non_excel_current": 0,
+        "auto_created": 0,
+    }
     dept_cache: dict[tuple[int, str, str, str | None, int | None], int] = {}
     yearly_seen: set[tuple[int, int]] = set()  # (department_id, fiscal_year)
 
@@ -441,50 +494,37 @@ def import_gakka(
                 continue
             yearly_seen.add(yearly_key)
 
-            # Upsert: update the CURRENT revision (not hardcoded revision=1)
-            # This respects the append-only model — PDF ingest may have created later revisions
-            existing_dy = (
+            existing_rows = (
                 session.query(DepartmentYearly)
                 .filter(
                     DepartmentYearly.department_id == dept_id,
                     DepartmentYearly.fiscal_year == year,
-                    DepartmentYearly.is_current == True,  # noqa: E712
                 )
-                .first()
+                .all()
             )
+            existing_dy = next((r for r in existing_rows if r.is_current), None)
+            max_rev = max((r.revision for r in existing_rows), default=0)
             if existing_dy:
-                existing_dy.capacity = block_data.get("capacity")
-                existing_dy.enrollment = block_data.get("enrollment")
-                existing_dy.intl_students = block_data.get("intl_students")
-                existing_dy.graduates = block_data.get("graduates")
-                existing_dy.advanced = block_data.get("advanced")
-                existing_dy.employed = block_data.get("employed")
-                existing_dy.other = block_data.get("other")
-                existing_dy.prev_enrollment = block_data.get("prev_enrollment")
-                existing_dy.dropouts = block_data.get("dropouts")
-                existing_dy.dropout_rate = block_data.get("dropout_rate")
-                existing_dy.extraction_method = "excel_import"
-                existing_dy.notes = block_data.get("notes")
-            else:
-                dy = DepartmentYearly(
+                if _same_department_yearly_import_values(existing_dy, block_data):
+                    stats["yearly_rows"] += 1
+                    continue
+                if existing_dy.extraction_method not in (None, "excel_import"):
+                    stats["yearly_skipped_non_excel_current"] += 1
+                    continue
+                session.query(DepartmentYearly).filter(
+                    DepartmentYearly.department_id == dept_id,
+                    DepartmentYearly.fiscal_year == year,
+                    DepartmentYearly.is_current == True,  # noqa: E712
+                ).update({"is_current": False}, synchronize_session="fetch")
+
+            session.add(
+                _department_yearly_from_block(
                     department_id=dept_id,
                     fiscal_year=year,
-                    revision=1,
-                    is_current=True,
-                    capacity=block_data.get("capacity"),
-                    enrollment=block_data.get("enrollment"),
-                    intl_students=block_data.get("intl_students"),
-                    graduates=block_data.get("graduates"),
-                    advanced=block_data.get("advanced"),
-                    employed=block_data.get("employed"),
-                    other=block_data.get("other"),
-                    prev_enrollment=block_data.get("prev_enrollment"),
-                    dropouts=block_data.get("dropouts"),
-                    dropout_rate=block_data.get("dropout_rate"),
-                    notes=block_data.get("notes"),
-                    extraction_method="excel_import",
+                    revision=max_rev + 1,
+                    block_data=block_data,
                 )
-                session.add(dy)
+            )
             stats["yearly_rows"] += 1
 
     session.flush()

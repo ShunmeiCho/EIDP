@@ -384,6 +384,25 @@ def test_bootstrap_is_idempotent(sqlite_engine):
     assert len(version_rows) == 1, "stamp head must remain at one row after re-bootstrap"
 
 
+def test_bootstrap_refuses_to_recreate_missing_main_db_when_wal_sidecar_exists(tmp_path: Path):
+    """A missing main SQLite file with WAL/SHM sidecars is not a clean install.
+
+    On Windows this can happen when Defender or another tool quarantines
+    ``eidp.sqlite3`` while leaving sidecars behind. Bootstrapping must stop
+    instead of silently creating an empty DB next to stale sidecars.
+    """
+    db_path = tmp_path / "eidp.sqlite3"
+    (tmp_path / "eidp.sqlite3-wal").write_bytes(b"stale wal")
+    engine = create_engine(f"sqlite:///{db_path}", future=True)
+    try:
+        with pytest.raises(RuntimeError, match="main SQLite database file is missing"):
+            bootstrap_sqlite(engine)
+    finally:
+        engine.dispose()
+
+    assert not db_path.exists()
+
+
 def test_create_null_safe_index_is_idempotent(bootstrapped_engine):
     create_null_safe_dept_index(bootstrapped_engine)
     create_null_safe_dept_index(bootstrapped_engine)

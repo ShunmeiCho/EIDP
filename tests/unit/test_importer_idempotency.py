@@ -17,9 +17,16 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from eidp.db.models import School, SupportRecipient
+from eidp.db.models import Department, DepartmentYearly, School, SupportRecipient
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.excel.importer import SchoolResolver, import_taisho_hiritu
+from eidp.excel.importer import (
+    SAIROKU_YEARS,
+    YEAR_BLOCK_FIELDS_NO_BIKO,
+    YEAR_BLOCK_FIELDS_WITH_BIKO,
+    SchoolResolver,
+    import_gakka,
+    import_taisho_hiritu,
+)
 
 
 @pytest.fixture()
@@ -67,6 +74,32 @@ def _build_taisho_hiritu_ws(rows: list[dict]) -> openpyxl.worksheet.worksheet.Wo
             r.get("notes", ""),
             r.get("recipient_rate"),
         ])
+    return ws
+
+
+def _build_gakka_ws(rows: list[dict]) -> openpyxl.worksheet.worksheet.Worksheet:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    total_columns = 7 + sum(10 if year == 2019 else 11 for year in SAIROKU_YEARS)
+    ws.append([""] * total_columns)
+    ws.append([""] * total_columns)
+    for r in rows:
+        row = [
+            r["prefecture"],
+            r["corp"],
+            r["school"],
+            r.get("course_name", "専門課程"),
+            r["department"],
+            r.get("day_night", "昼"),
+            r.get("duration", 2),
+        ]
+        for year in SAIROKU_YEARS:
+            fields = YEAR_BLOCK_FIELDS_NO_BIKO if year == 2019 else YEAR_BLOCK_FIELDS_WITH_BIKO
+            if year == r["year"]:
+                row.extend(r.get(field) for field in fields)
+            else:
+                row.extend([None] * len(fields))
+        ws.append(row)
     return ws
 
 
@@ -157,3 +190,110 @@ def test_taisho_hiritu_reimport_with_changed_content_creates_revision_2(engine):
         assert [r.revision for r in rows] == [1, 2]
         assert [r.is_current for r in rows] == [False, True]
         assert rows[1].annual_total == 120
+
+
+def test_gakka_reimport_with_changed_excel_content_creates_revision_2(engine):
+    with Session(engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="テスト法人",
+            school_name="テスト専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.commit()
+
+        resolver = SchoolResolver(session)
+        resolver.build()
+
+        base = {
+            "year": 2026,
+            "prefecture": "東京都",
+            "corp": "テスト法人",
+            "school": "テスト専門学校",
+            "department": "情報処理学科",
+            "capacity": 40,
+            "enrollment": 80,
+        }
+        import_gakka(_build_gakka_ws([base]), session, resolver)
+        session.commit()
+
+        changed = dict(base, capacity=50, enrollment=90)
+        import_gakka(_build_gakka_ws([changed]), session, resolver)
+        session.commit()
+
+        dept = session.query(Department).filter(Department.school_id == school.id).one()
+        rows = (
+            session.query(DepartmentYearly)
+            .filter(DepartmentYearly.department_id == dept.id, DepartmentYearly.fiscal_year == 2026)
+            .order_by(DepartmentYearly.revision)
+            .all()
+        )
+        assert [r.revision for r in rows] == [1, 2]
+        assert [r.is_current for r in rows] == [False, True]
+        assert [r.capacity for r in rows] == [40, 50]
+        assert rows[1].extraction_method == "excel_import"
+
+
+def test_gakka_reimport_does_not_overwrite_pdf_current_revision(engine):
+    with Session(engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="テスト法人",
+            school_name="テスト専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.commit()
+
+        resolver = SchoolResolver(session)
+        resolver.build()
+
+        excel_row = {
+            "year": 2026,
+            "prefecture": "東京都",
+            "corp": "テスト法人",
+            "school": "テスト専門学校",
+            "department": "情報処理学科",
+            "capacity": 40,
+            "enrollment": 80,
+        }
+        import_gakka(_build_gakka_ws([excel_row]), session, resolver)
+        session.commit()
+
+        dept = session.query(Department).filter(Department.school_id == school.id).one()
+        session.query(DepartmentYearly).filter(
+            DepartmentYearly.department_id == dept.id,
+            DepartmentYearly.fiscal_year == 2026,
+            DepartmentYearly.is_current.is_(True),
+        ).update({"is_current": False}, synchronize_session="fetch")
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                fiscal_year=2026,
+                revision=2,
+                is_current=True,
+                capacity=55,
+                enrollment=95,
+                extraction_method="pdf_ingest",
+                extraction_confidence=0.92,
+            )
+        )
+        session.commit()
+
+        import_gakka(_build_gakka_ws([excel_row]), session, resolver)
+        session.commit()
+
+        rows = (
+            session.query(DepartmentYearly)
+            .filter(DepartmentYearly.department_id == dept.id, DepartmentYearly.fiscal_year == 2026)
+            .order_by(DepartmentYearly.revision)
+            .all()
+        )
+        assert [r.revision for r in rows] == [1, 2]
+        assert [r.is_current for r in rows] == [False, True]
+        assert rows[1].capacity == 55
+        assert rows[1].enrollment == 95
+        assert rows[1].extraction_method == "pdf_ingest"
