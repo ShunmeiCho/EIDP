@@ -46,6 +46,24 @@ def _require_app_lock(owner: str) -> Iterator[None]:
         raise typer.Exit(5) from exc
 
 
+def _echo_excel_export_results(output: Path, results: dict[str, int]) -> None:
+    """Print workbook sheet counts separately from export quality counters."""
+    typer.echo(f"Exported to: {output}")
+    sheet_counts = {name: count for name, count in results.items() if not name.startswith("quality_")}
+    quality_warnings = {
+        name.removeprefix("quality_"): count
+        for name, count in results.items()
+        if name.startswith("quality_")
+    }
+    for sheet, count in sheet_counts.items():
+        typer.echo(f"  {sheet}: {count} rows")
+    nonzero_quality = {name: count for name, count in quality_warnings.items() if count}
+    if nonzero_quality:
+        typer.echo("Quality warnings:")
+        for name, count in nonzero_quality.items():
+            typer.echo(f"  {name}: {count}")
+
+
 @app.command()
 def import_excel(
     excel_path: Path = typer.Argument(..., help="Path to master Excel file"),
@@ -802,9 +820,7 @@ def export_excel(
     session = SessionLocal()
     try:
         results = export_master_workbook(session, output)
-        typer.echo(f"Exported to: {output}")
-        for sheet, count in results.items():
-            typer.echo(f"  {sheet}: {count} rows")
+        _echo_excel_export_results(output, results)
     except Exception:
         session.rollback()
         raise

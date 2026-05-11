@@ -177,3 +177,35 @@ def test_import_excel_refuses_when_app_lock_is_held(monkeypatch, tmp_path: Path)
     assert fake_session.commits == 0
     assert fake_session.rollbacks == 0
     assert fake_session.closed is False
+
+
+def test_export_excel_prints_quality_warnings_separately(monkeypatch, tmp_path: Path) -> None:
+    fake_session = FakeSession()
+
+    import eidp.db.session as db_session
+    import eidp.excel.exporter as exporter
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(
+        exporter,
+        "export_master_workbook",
+        lambda *_args, **_kwargs: {
+            "採録状況": 3,
+            "対象比率": 2,
+            "出力除外_低信頼": 1,
+            "quality_department_yearly_low_confidence_current": 1,
+            "quality_support_recipient_auto_flag_current": 4,
+        },
+    )
+
+    result = CliRunner().invoke(app, ["export-excel", "--output", str(tmp_path / "out.xlsx")])
+
+    assert result.exit_code == 0, result.output
+    assert "採録状況: 3 rows" in result.output
+    assert "対象比率: 2 rows" in result.output
+    assert "出力除外_低信頼: 1 rows" in result.output
+    assert "Quality warnings:" in result.output
+    assert "department_yearly_low_confidence_current: 1" in result.output
+    assert "support_recipient_auto_flag_current: 4" in result.output
+    assert "quality_department_yearly_low_confidence_current: 1 rows" not in result.output
+    assert fake_session.closed is True
