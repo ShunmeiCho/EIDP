@@ -221,6 +221,7 @@ def test_taisho_hiritu_skips_unrealistic_future_fiscal_year(engine):
         stats = import_taisho_hiritu(ws, session, resolver)
 
         assert stats["rows"] == 0
+        assert stats["invalid_year"] == 1
         assert session.query(SupportRecipient).count() == 0
 
 

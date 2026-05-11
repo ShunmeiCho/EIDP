@@ -472,18 +472,19 @@ def db_bootstrap(
         typer.echo("Pass --sqlite to bootstrap a SQLite database. PostgreSQL setups should run `alembic upgrade head`.")
         raise typer.Exit(code=2)
 
-    from eidp.db.session import engine
-    from eidp.db.sqlite_bootstrap import bootstrap_sqlite, is_sqlite
+    with _require_app_lock("cli_db_bootstrap"):
+        from eidp.db.session import engine
+        from eidp.db.sqlite_bootstrap import bootstrap_sqlite, is_sqlite
 
-    if not is_sqlite(engine):
-        typer.echo(
-            f"ERROR: --sqlite requires EIDP_DATABASE_URL to point at SQLite, "
-            f"current dialect={engine.dialect.name!r}, url={engine.url!r}"
-        )
-        raise typer.Exit(code=1)
+        if not is_sqlite(engine):
+            typer.echo(
+                f"ERROR: --sqlite requires EIDP_DATABASE_URL to point at SQLite, "
+                f"current dialect={engine.dialect.name!r}, url={engine.url!r}"
+            )
+            raise typer.Exit(code=1)
 
-    bootstrap_sqlite(engine)
-    typer.echo(f"SQLite bootstrap complete: {engine.url}")
+        bootstrap_sqlite(engine)
+        typer.echo(f"SQLite bootstrap complete: {engine.url}")
 
 
 @app.command()
@@ -511,27 +512,28 @@ def rebuild_school_year_tasks(
     if not normalized_school_type:
         normalized_school_type = None
 
-    session = SessionLocal()
-    try:
-        stats = rebuild_school_fiscal_year_status(
-            session,
-            fiscal_year=target_fy,
-            school_type=normalized_school_type,
-            discovery_evidence_path=discovery_evidence_log,
-        )
-        session.commit()
-        typer.echo(
-            "School year tasks rebuilt: "
-            f"fiscal_year={target_fy} "
-            f"school_type={normalized_school_type or 'all'} "
-            f"rebuilt={stats.rebuilt} "
-            f"excel_ready={stats.excel_ready}"
-        )
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _require_app_lock("cli_rebuild_school_year_tasks"):
+        session = SessionLocal()
+        try:
+            stats = rebuild_school_fiscal_year_status(
+                session,
+                fiscal_year=target_fy,
+                school_type=normalized_school_type,
+                discovery_evidence_path=discovery_evidence_log,
+            )
+            session.commit()
+            typer.echo(
+                "School year tasks rebuilt: "
+                f"fiscal_year={target_fy} "
+                f"school_type={normalized_school_type or 'all'} "
+                f"rebuilt={stats.rebuilt} "
+                f"excel_ready={stats.excel_ready}"
+            )
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()

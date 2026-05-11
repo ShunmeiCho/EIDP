@@ -545,7 +545,7 @@ def import_taisho_hiritu(
     前年在籍, 前半期, 第Ⅰ区分x4, 後半期, 第Ⅰ区分x4,
     年間, 家計急変多子世帯, 総計, 備考, 受給比率
     """
-    stats = {"rows": 0, "school_misses": 0, "duplicates": 0, "auto_created": 0}
+    stats = {"rows": 0, "school_misses": 0, "duplicates": 0, "auto_created": 0, "invalid_year": 0}
     seen: set[tuple[int, int]] = set()  # (school_id, fiscal_year)
 
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -560,6 +560,7 @@ def import_taisho_hiritu(
 
         fiscal_year = _parse_fiscal_year(year_str)
         if fiscal_year is None:
+            stats["invalid_year"] += 1
             continue
 
         school_id = resolver.resolve(prefecture, corp_name, school_name)

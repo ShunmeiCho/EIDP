@@ -97,6 +97,28 @@ def test_apply_dept_alias_records_department_change() -> None:
         session.close()
 
 
+def test_apply_dept_alias_uses_operator_actor_in_audit() -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.flush()
+
+        created, reason = apply_dept_alias_proposal(
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            actor="reviewer-a",
+        )
+
+        assert created is True
+        assert reason == "inserted"
+        audit = session.query(ManualActionLog).one()
+        assert audit.actor == "reviewer-a"
+    finally:
+        session.close()
+
+
 def test_apply_dept_alias_idempotent() -> None:
     session = _session()
     try:
@@ -323,6 +345,24 @@ def test_record_decision_writes_audit_jsonl(tmp_path: Path) -> None:
     assert row["decision"] == "approved"
     assert row["template_name"] == "日本工学院(八王子)"
     assert row["proposal_kind"] == "school_alias"
+
+
+def test_lock_busy_decision_does_not_hide_dept_proposal(tmp_path: Path) -> None:
+    audit = tmp_path / "decisions.jsonl"
+    _record_decision(
+        ProposalDecision(
+            decision="lock_busy",
+            proposal_kind="dept_alias",
+            template_name="プロミュージシャン学科",
+            target_id=9,
+            operator_name="tester",
+            note="lock busy",
+            timestamp="2026-04-24T00:00:00+00:00",
+        ),
+        audit,
+    )
+
+    assert ("dept_alias", "プロミュージシャン学科") not in _load_decision_index(audit)
 
 
 def test_apply_preserves_school_context_on_picked_candidate() -> None:

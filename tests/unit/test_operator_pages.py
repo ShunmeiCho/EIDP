@@ -47,6 +47,15 @@ def test_output_path_rejects_wrong_suffix() -> None:
         operator_pages.output_path("output/test.txt", (".xlsx",))
 
 
+def test_export_error_message_explains_excel_file_lock() -> None:
+    message = operator_pages._format_export_exception(
+        PermissionError("[WinError 32] The process cannot access the file")
+    )
+
+    assert "Excelを閉じてから再実行してください" in message
+    assert "Export failed" not in message
+
+
 def test_v1_theme_css_uses_streamlit_theme_tokens() -> None:
     css = operator_pages.v1_theme_css()
 

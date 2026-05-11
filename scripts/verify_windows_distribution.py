@@ -733,6 +733,10 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "_exit_report_db_error",
             "database_not_ready",
             "report query failed; database is not initialized or the schema is incomplete",
+            '_require_app_lock("cli_import_excel")',
+            '_require_app_lock("cli_db_bootstrap")',
+            '_require_app_lock("cli_rebuild_school_year_tasks")',
+            '_require_app_lock("cli_weekly_update")',
         ),
         "src/eidp/review/school_scope.py": (
             'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"',
@@ -758,6 +762,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'action_type="dept_alias_approved"',
             "void_department_change",
             'action_type="dept_change_void"',
+            "Excelを閉じてから再実行してください",
         ),
         "src/eidp/excel/exporter.py": (
             "EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70",

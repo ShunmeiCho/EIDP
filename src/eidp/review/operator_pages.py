@@ -725,6 +725,18 @@ def _run_competition_export(
     )
 
 
+_EXCEL_FILE_LOCK_MESSAGE = "Excelを閉じてから再実行してください"
+
+
+def _format_export_exception(exc: Exception) -> str:
+    """Return an operator-readable export error message."""
+
+    text = str(exc)
+    if isinstance(exc, PermissionError) or "WinError 32" in text or "Permission denied" in text:
+        return f"{_EXCEL_FILE_LOCK_MESSAGE}（出力先ファイルが開かれている可能性があります）"
+    return f"Export failed: {exc}"
+
+
 def page_exports(session: Session) -> None:
     st.header("Excel出力（管理者向け）")
     st.caption(
@@ -748,7 +760,7 @@ def page_exports(session: Session) -> None:
         except PathPolicyError as exc:
             st.error(f"パス不正（許可された出力先外）: {exc}")
         except Exception as exc:
-            st.error(f"Export failed: {exc}")
+            st.error(_format_export_exception(exc))
 
     _offer_download_safe(master_out, (".xlsx",))
 
@@ -807,7 +819,7 @@ def page_exports(session: Session) -> None:
         except PathPolicyError as exc:
             st.error(f"パス不正（許可された出力先外）: {exc}")
         except Exception as exc:
-            st.error(f"Export failed: {exc}")
+            st.error(_format_export_exception(exc))
 
     _offer_download_safe(comp_out, (".xlsx",))
 
@@ -2034,6 +2046,8 @@ def _load_decision_index(audit_path: Path) -> dict[tuple[str, str], str]:
                     if kind_full.startswith("dept_alias")
                     else "school_alias"
                 )
+                if row.get("decision") in {"failed", "lock_busy"}:
+                    continue
                 key = (kind_prefix, row.get("template_name", ""))
                 out[key] = row.get("decision", "")
     except OSError:
@@ -2728,24 +2742,27 @@ def _render_dept_proposals_tab(session: Session, *, lock_path: Path | None = Non
             )
             key = f"approve_dept_{p['db_dept_ids'][0]}_{p['template_dept']}"
             if cols[1].button("承認", key=key, type="primary"):
+                operator_name = st.session_state.get("operator_name", "") or "operator"
                 created, reason = apply_dept_alias_proposal(
                     session,
                     department_id=p["db_dept_ids"][0],
                     old_name=p["template_dept"],
+                    actor=operator_name,
                     lock_path=lock_path,
                 )
-                _record_decision(
-                    ProposalDecision(
-                        decision="approved" if created else "already",
-                        proposal_kind="dept_alias",
-                        template_name=p["template_dept"],
-                        target_id=p["db_dept_ids"][0],
-                        operator_name=st.session_state.get("operator_name", ""),
-                        note=reason,
-                        timestamp=datetime.now(UTC).isoformat(),
-                    ),
-                    _DEFAULT_PROPOSAL_DECISIONS,
-                )
+                if created or reason == "already_exists":
+                    _record_decision(
+                        ProposalDecision(
+                            decision="approved" if created else "already",
+                            proposal_kind="dept_alias",
+                            template_name=p["template_dept"],
+                            target_id=p["db_dept_ids"][0],
+                            operator_name=operator_name,
+                            note=reason,
+                            timestamp=datetime.now(UTC).isoformat(),
+                        ),
+                        _DEFAULT_PROPOSAL_DECISIONS,
+                    )
                 if created:
                     st.success(
                         f"学科別名を登録しました: 「{p['template_dept']}」 → "
