@@ -254,3 +254,152 @@ Stop manual search for a school when one of these is true:
 - site fetch is blocked by TLS, robots, auth, or persistent server error.
 
 The result should be a labeled evidence trail, not an open-ended web search.
+
+## Single-School RCA Packet
+
+Use this packet when Windows SSH is unavailable or when a single failed school
+needs Codex-assisted manual investigation. The packet is intentionally
+school-scoped. It should never expand into a prefecture-wide or nationwide SERP
+run.
+
+### Required Input Block
+
+Collect these values before opening the web. If a value is unknown, write
+`unknown`; do not infer it silently.
+
+```json
+{
+  "school_id": 0,
+  "school_name": "",
+  "prefecture": "",
+  "target_fiscal_year": 2026,
+  "official_index_url": "",
+  "registered_sites": [
+    {
+      "url": "",
+      "url_type": "",
+      "discovery_method": "",
+      "confidence": null,
+      "verified": false
+    }
+  ],
+  "latest_bucket": "",
+  "latest_evidence_rows_path": "",
+  "known_operator_note": ""
+}
+```
+
+### Required Output Block
+
+Every manual/Codex investigation must end with one JSON object in this shape.
+This is the bridge between human observation, gold-set entries, and future
+agent behavior.
+
+```json
+{
+  "school_id": 0,
+  "target_fiscal_year": 2026,
+  "layer": "layer_1_pdf_discovery",
+  "outcome": "needs_operator_review",
+  "source_page_url": "",
+  "candidate_pdf_url": "",
+  "anchor_text": "",
+  "fiscal_year_evidence": "",
+  "target_form_evidence": "",
+  "negative_evidence": "",
+  "checked_paths": [],
+  "search_queries_used": [],
+  "operator_action": "review_pdf",
+  "gold_set_entry_recommended": false,
+  "candidate_rule": "",
+  "anti_pattern": "",
+  "confidence": "medium"
+}
+```
+
+Allowed `layer` values:
+
+- `layer_0_official_index_handoff`
+- `layer_1_pdf_discovery`
+- `layer_2_pdf_body_or_ocr`
+- `layer_3_operator_or_search_fallback`
+- `site_infrastructure_failure`
+
+Allowed `operator_action` values:
+
+- `none`
+- `review_pdf`
+- `manual_url_entry`
+- `wait_for_publication`
+- `site_access_followup`
+
+### Decision Table
+
+Use this table to keep outcomes consistent across Codex sessions.
+
+| Evidence found | Layer | Outcome | Operator action |
+| --- | --- | --- | --- |
+| No official-index URL or registered school site exists | `layer_0_official_index_handoff` | `no_target_candidate_found` | `manual_url_entry` |
+| Official URL exists and PDF body/OCR proves target FY plus target-form wording | `layer_1_pdf_discovery` or `layer_2_pdf_body_or_ocr` | `accepted_target_pdf` | `none` |
+| Official URL exists, target-form candidate is latest public but body/URL/anchor proves old FY only | `layer_1_pdf_discovery` | `publication_lag_latest_public` | `wait_for_publication` |
+| Target-form shape exists but year is missing, conflicting, or image-only without OCR proof | `layer_2_pdf_body_or_ocr` | `needs_operator_review` | `review_pdf` |
+| Only adjacent non-target PDFs are visible, such as 役員名簿, 授業科目, 学校情報, 学校紹介, 学校案内, 募集要項 | `layer_1_pdf_discovery` | `no_target_candidate_found` | `manual_url_entry` |
+| Page fetch fails because of TLS, robots, auth, repeated 403/429/503/418, or server error | `site_infrastructure_failure` | `needs_operator_review` | `site_access_followup` |
+| Named-school bounded search finds a school-domain disclosure URL after official paths are exhausted | `layer_3_operator_or_search_fallback` | classify by PDF/body evidence | record query and add review if not strict |
+
+Important distinction:
+
+- `no_target_candidate_found` means the official path was checked and no
+  plausible target-form candidate was visible.
+- `needs_operator_review` means a plausible target-form candidate exists but
+  strict target-year acceptance is not proven.
+- `publication_lag_latest_public` means the target-form candidate is real but
+  stale for the configured target FY.
+
+### Search Boundaries
+
+Codex may use web search only after the official-index URL, registered
+`SchoolSite` rows, same-domain disclosure paths, robots, and sitemap have been
+classified.
+
+When search is used:
+
+- one named school at a time,
+- at most three query variants,
+- inspect only top school-domain or official-domain results,
+- third-party directories are hints for a domain, never truth sources,
+- record every query in `search_queries_used`.
+
+### Promotion Rules
+
+Manual findings do not automatically become crawler rules.
+
+- Add a gold-set entry when the case is a new site family, a previous bug
+  regression, or a release-relevant outcome bucket.
+- Add code only after at least two similar gold-set entries show the same
+  reusable pattern, unless the change is a narrow evidence-label or
+  pre-download negative-token fix.
+- Never promote a rule that accepts target FY without PDF body/OCR evidence,
+  trusted current official-index context, or another auditable year source.
+- Keep broad SERP discovery outside this flow; bounded search is fallback
+  evidence collection, not the primary data source.
+
+### Copy-Paste Prompt
+
+```text
+Investigate this EIDP school as a single-school RCA packet. Do not run broad
+SERP crawling.
+
+Input:
+<paste Required Input Block JSON>
+
+Tasks:
+1. Classify the failure layer before searching.
+2. Check official-index and registered SchoolSite URLs first.
+3. Check bounded same-domain disclosure/public-info paths before named-school
+   search.
+4. Inspect candidate PDF body/OCR evidence before accepting target FY.
+5. Return exactly one Required Output Block JSON object.
+6. If the case should enter data/discovery-gold-set, draft the entry fields and
+   explain the reusable rule and anti-pattern.
+```
