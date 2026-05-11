@@ -96,6 +96,19 @@ def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
         assert rejection.pdf_type == "non_target"
 
 
+def test_pre_download_keeps_target_form_when_path_contains_school_information_token() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/学校案内/2026/r8-shugakushien-shinsei.pdf",
+        page_url="https://example.ac.jp/学校案内/",
+        anchor_text="高等教育の修学支援新制度 確認申請書 様式第2号",
+        score=10.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
 def test_pre_download_prioritizes_stale_target_form_year_over_evaluation_path() -> None:
     candidate = PdfCandidate(
         pdf_url="https://ndac.ac.jp/about/evaluation/uploads/info-2025.pdf",

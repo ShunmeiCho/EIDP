@@ -431,6 +431,8 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
             pdf_type="target",
             reason=f"fiscal_year_mismatch:{detected_year}",
         )
+    if _has_target_application_hint(candidate):
+        return None
     if any(token.lower() in lowered for token in PRE_DOWNLOAD_NEGATIVE_TOKENS):
         return CachedPdfRejection(
             pdf_type="non_target",
