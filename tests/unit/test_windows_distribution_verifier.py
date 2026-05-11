@@ -189,6 +189,13 @@ def _core_entries() -> dict[str, bytes | str]:
             'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"\n'
             'OPERATOR_SCHOOL_SCOPE_LABEL = "専門学校"\n'
         ),
+        "src/eidp/excel/exporter.py": (
+            "EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70\n"
+            'LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"\n'
+            "def _exportable_confidence_sql(alias): pass\n"
+            "def export_quality_warnings(session): pass\n"
+            "confidence<0.70\n"
+        ),
         "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
@@ -367,6 +374,21 @@ def test_verify_core_zip_requires_operator_scope_vocational_only(tmp_path: Path)
     assert not check.ok
     assert any("src/eidp/review/school_scope.py missing required token" in error for error in check.errors)
     assert any('OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"' in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_excel_confidence_export_gate(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/excel/exporter.py"] = (
+        "EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.0\n"
+        "def export_master_workbook(): pass\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/excel/exporter.py missing required token" in error for error in check.errors)
+    assert any("EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:
