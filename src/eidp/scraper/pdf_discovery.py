@@ -566,6 +566,9 @@ def _extract_pdf_sample_text(content: bytes) -> str:
 
 _FILING_DATE_CONTEXT_RE = re.compile(r"(提出日|提出年月日|申請日|申請年月日|届出日|届出年月日|作成日|作成年月日)")
 _FILING_DATE_REJECT_CONTEXT_RE = re.compile(r"(から|まで|任期|期間|在任|現職|前職|卒業|終了|修了)")
+_YEAR_LABEL_REJECT_CONTEXT_RE = re.compile(
+    r"(完成年度|から|まで|任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学)"
+)
 
 
 def _within_detectable_year(fiscal_year: int | None, max_fiscal_year: int | None) -> int | None:
@@ -601,24 +604,36 @@ def _detect_contextual_filing_year(normed_text: str, *, max_fiscal_year: int | N
     return None
 
 
+def _detect_explicit_fiscal_year_label(normed_text: str, *, max_fiscal_year: int | None) -> int | None:
+    """Return an explicit fiscal-year label unless its local line is a non-filing year."""
+
+    for line in normed_text.splitlines():
+        if _YEAR_LABEL_REJECT_CONTEXT_RE.search(line):
+            continue
+        fiscal_year = fiscal_year_from_japanese_era_text(
+            line,
+            include_fiscal_year_labels=True,
+            include_filing_dates=False,
+        )
+        fiscal_year = _within_detectable_year(fiscal_year, max_fiscal_year)
+        if fiscal_year is not None:
+            return fiscal_year
+
+        for match in re.finditer(r"(20\d{2})\s*年度", line):
+            fiscal_year = _within_detectable_year(int(match.group(1)), max_fiscal_year)
+            if fiscal_year is not None:
+                return fiscal_year
+    return None
+
+
 def _detect_fiscal_year_from_text(text: str, *, max_fiscal_year: int | None = None) -> int | None:
     """Best-effort fiscal-year detector for disclosure PDFs."""
     normed = unicodedata.normalize("NFKC", text)
 
     # Prefer explicit fiscal-year labels over filing dates.
-    fiscal_year = fiscal_year_from_japanese_era_text(
-        normed,
-        include_fiscal_year_labels=True,
-        include_filing_dates=False,
-    )
-    fiscal_year = _within_detectable_year(fiscal_year, max_fiscal_year)
+    fiscal_year = _detect_explicit_fiscal_year_label(normed, max_fiscal_year=max_fiscal_year)
     if fiscal_year is not None:
         return fiscal_year
-
-    for m in re.finditer(r"(20\d{2})\s*年度", normed):
-        fiscal_year = _within_detectable_year(int(m.group(1)), max_fiscal_year)
-        if fiscal_year is not None:
-            return fiscal_year
 
     # Most application forms carry a filing date on the cover page. In this
     # domain that date is useful only when the surrounding text says it is a

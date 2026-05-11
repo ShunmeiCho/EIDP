@@ -1922,6 +1922,16 @@ def test_detect_fiscal_year_ignores_future_western_fiscal_year_labels() -> None:
     assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) is None
 
 
+def test_detect_fiscal_year_ignores_completion_year_label() -> None:
+    text = (
+        "様式第2号 高等教育の修学支援新制度 確認申請書\n"
+        "学科設置3年目。完成年度は2026年度\n"
+        "機関要件 学科名 生徒総定員"
+    )
+
+    assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) is None
+
+
 def test_download_pdf_rejects_stale_fiscal_year_in_strict_target_mode(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -1990,6 +2000,42 @@ def test_download_pdf_does_not_treat_future_term_date_as_pdf_year(
     assert file_size == 0
     assert pdf_type == "target"
     assert reason == "target_fiscal_year_not_detected"
+    assert not list((tmp_path / "1").glob("*.pdf"))
+
+
+def test_download_pdf_rejects_stale_link_when_only_body_year_is_completion_year(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes(
+        "様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員\n"
+        "学科設置3年目。完成年度は2026年度"
+    )
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/wp-content/uploads/2025/shugakushien_shinsei2025.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="2025年度申請書（様式第2号）",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2025"
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
