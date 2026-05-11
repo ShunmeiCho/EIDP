@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -1269,6 +1270,8 @@ def test_run_pdf_discovery_marks_prefecture_disclosure_as_trusted_year_evidence(
             url_type="disclosure",
             discovery_method="prefecture_aggregator",
             http_status=200,
+            verified_at=datetime.now(UTC),
+            last_checked=datetime.now(UTC),
         ))
         session.flush()
 
@@ -1312,6 +1315,124 @@ def test_run_pdf_discovery_marks_prefecture_disclosure_as_trusted_year_evidence(
         payload = json.loads(evidence.read_text(encoding="utf-8").splitlines()[-1])
         assert payload["reason"] == "accepted_downloaded"
         assert payload["extra"]["year_evidence"] == "prefecture_index_current_year"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_does_not_trust_stale_prefecture_disclosure_year_evidence(
+    monkeypatch, tmp_path: Path
+) -> None:
+    session = _session()
+    evidence = tmp_path / "evidence.jsonl"
+    seen_trusted_evidence: list[str] = []
+    try:
+        stale_checked = datetime.now(UTC) - timedelta(days=500)
+        session.add(SchoolSite(
+            school_id=1,
+            url="https://example.ac.jp/admission/support.php",
+            url_type="disclosure",
+            discovery_method="prefecture_aggregator",
+            http_status=200,
+            verified_at=stale_checked,
+            last_checked=stale_checked,
+        ))
+        session.flush()
+
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/files/study_support_system.pdf",
+            page_url="https://example.ac.jp/admission/support.php",
+            anchor_text="確認申請",
+            score=3.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[target], best=target)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            seen_trusted_evidence.append(candidate.trusted_year_evidence)
+            return None, None, 0, "target", "target_fiscal_year_not_detected"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+            discovery_methods=["prefecture_aggregator"],
+        )
+
+        assert stats["downloaded"] == 0
+        assert seen_trusted_evidence == [""]
+        payload = json.loads(evidence.read_text(encoding="utf-8").splitlines()[-1])
+        assert payload["reason"] == "target_fiscal_year_not_detected"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_does_not_trust_prefecture_url_health_check_as_year_evidence(
+    monkeypatch, tmp_path: Path
+) -> None:
+    session = _session()
+    seen_trusted_evidence: list[str] = []
+    try:
+        session.add(SchoolSite(
+            school_id=1,
+            url="https://example.ac.jp/admission/support.php",
+            url_type="disclosure",
+            discovery_method="prefecture_aggregator",
+            http_status=200,
+            verified=True,
+            verified_at=None,
+            last_checked=datetime.now(UTC),
+        ))
+        session.flush()
+
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/files/study_support_system.pdf",
+            page_url="https://example.ac.jp/admission/support.php",
+            anchor_text="確認申請",
+            score=3.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[target], best=target)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            seen_trusted_evidence.append(candidate.trusted_year_evidence)
+            return None, None, 0, "target", "target_fiscal_year_not_detected"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+            discovery_methods=["prefecture_aggregator"],
+        )
+
+        assert stats["downloaded"] == 0
+        assert seen_trusted_evidence == [""]
     finally:
         session.close()
 

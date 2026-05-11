@@ -17,7 +17,7 @@ import time
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol, cast
 from urllib.parse import parse_qsl, unquote, urljoin, urlparse
@@ -187,6 +187,7 @@ HEADERS = {
 }
 
 MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
+PREFECTURE_INDEX_TRUST_MAX_AGE_DAYS = 370
 MAX_DISCOVERY_EXTRA_PAGES = 6
 SITEMAP_DISCOVERY_RESERVED_PAGES = 2
 MAX_DISCOVERY_ELAPSED_SECONDS = 45.0
@@ -334,9 +335,30 @@ def _trusted_year_evidence_for_site(site: SchoolSite) -> str:
     the PDF body is a target confirmation form, the index itself can prove the
     year when the school omits year labels from the PDF/link text.
     """
-    if site.discovery_method == "prefecture_aggregator" and site.url_type == "disclosure":
+    if (
+        site.discovery_method == "prefecture_aggregator"
+        and site.url_type == "disclosure"
+        and _has_recent_prefecture_index_refresh(site)
+    ):
         return "prefecture_index_current_year"
     return ""
+
+
+def _has_recent_prefecture_index_refresh(site: SchoolSite, *, now: datetime | None = None) -> bool:
+    """Return whether a prefecture-derived SchoolSite was freshly refreshed.
+
+    The prefecture index can prove the target year only when the row comes from
+    the current bootstrap/weekly artifact refresh. Stale rows remain useful as
+    crawl URLs, but they cannot silently turn a yearless target-form body into
+    current-FY success.
+    """
+    timestamp = site.verified_at
+    if timestamp is None:
+        return False
+    now = now or datetime.now(UTC)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=UTC)
+    return timedelta(0) <= now - timestamp <= timedelta(days=PREFECTURE_INDEX_TRUST_MAX_AGE_DAYS)
 
 
 def _candidate_hint_text(candidate: PdfCandidate) -> str:

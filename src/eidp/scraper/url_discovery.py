@@ -686,11 +686,13 @@ def verify_urls_sync(
                 if final_status in (405, 403) and not ssrf_blocked:
                     resp = client.get(site.url)
                     final_status = resp.status_code
+                checked_at = datetime.now(UTC)
                 site.http_status = final_status
                 site.verified = final_status == 200
-                site.last_checked = datetime.now(UTC)
+                site.last_checked = checked_at
                 if final_status == 200:
-                    site.verified_at = datetime.now(UTC)
+                    if site.discovery_method != "prefecture_aggregator":
+                        site.verified_at = checked_at
                     stats["ok"] += 1
                 else:
                     stats["failed"] += 1

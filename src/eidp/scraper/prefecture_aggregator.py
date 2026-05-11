@@ -45,6 +45,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -1331,6 +1332,7 @@ def apply_writer_plan(session: Session, report: PrefReport) -> dict[str, int]:
     from eidp.db.models import ReviewItem, SchoolSite
 
     stats = {"added": 0, "upgraded": 0, "skipped": 0}
+    refreshed_at = datetime.now(UTC)
     for record in report.records:
         action = record["recommended_action"]
         school_id = record["db_school_id"]
@@ -1378,6 +1380,9 @@ def apply_writer_plan(session: Session, report: PrefReport) -> dict[str, int]:
                 url_type="disclosure",
                 discovery_method="prefecture_aggregator",
                 confidence=0.95,
+                verified=True,
+                verified_at=refreshed_at,
+                last_checked=refreshed_at,
             ))
             stats["added"] += 1
         elif action == "upgrade":
@@ -1398,5 +1403,8 @@ def apply_writer_plan(session: Session, report: PrefReport) -> dict[str, int]:
                 worst.discovery_method = "prefecture_aggregator"
                 worst.confidence = 0.95
                 worst.url_type = "disclosure"
+                worst.verified = True
+                worst.verified_at = refreshed_at
+                worst.last_checked = refreshed_at
             stats["upgraded"] += 1
     return stats

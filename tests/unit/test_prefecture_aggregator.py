@@ -934,6 +934,9 @@ def test_apply_writer_plan_inserts_new_school_site(db_session):
     assert site.url == "https://example.com/saitama-test/r8.pdf"
     assert site.discovery_method == "prefecture_aggregator"
     assert float(site.confidence) == 0.95
+    assert site.verified is True
+    assert site.verified_at is not None
+    assert site.last_checked is not None
 
 
 def test_apply_writer_plan_upgrade_replaces_lower_quality_url(db_session):
@@ -977,6 +980,9 @@ def test_apply_writer_plan_upgrade_replaces_lower_quality_url(db_session):
     assert len(sites) == 1
     assert sites[0].url == "https://example.com/disclosure/r8.pdf"
     assert sites[0].discovery_method == "prefecture_aggregator"
+    assert sites[0].verified is True
+    assert sites[0].verified_at is not None
+    assert sites[0].last_checked is not None
 
 
 def test_apply_writer_plan_skips_review_and_noop(db_session):

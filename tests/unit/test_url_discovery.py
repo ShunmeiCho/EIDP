@@ -413,3 +413,49 @@ def test_search_queries_support_junior_college_and_kosen_terms() -> None:
 
     assert "東京短期カレッジ 短期大学" in url_discovery.search_queries_for_school(junior_college)
     assert "東京工業高専 高等専門学校" in url_discovery.search_queries_for_school(kosen)
+
+
+def test_verify_urls_sync_does_not_stamp_prefecture_aggregator_verified_at(monkeypatch) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers: dict[str, str] = {}
+        url = "https://example.ac.jp/disclosure/"
+
+    class FakeClient:
+        def __init__(self, **_kwargs):  # noqa: ANN001
+            pass
+
+        def __enter__(self):  # noqa: ANN204
+            return self
+
+        def __exit__(self, *_args):  # noqa: ANN002, ANN204
+            return None
+
+        def head(self, _url: str) -> FakeResponse:
+            return FakeResponse()
+
+    monkeypatch.setattr(url_discovery.httpx, "Client", FakeClient)
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda _url: True)
+
+    session = _session()
+    try:
+        session.add(
+            SchoolSite(
+                school_id=1,
+                url="https://example.ac.jp/disclosure/",
+                url_type="disclosure",
+                discovery_method="prefecture_aggregator",
+            )
+        )
+        session.flush()
+
+        stats = url_discovery.verify_urls_sync(session, batch_size=1)
+        site = session.query(SchoolSite).one()
+
+        assert stats == {"checked": 1, "ok": 1, "failed": 0, "timeout": 0}
+        assert site.http_status == 200
+        assert site.verified is True
+        assert site.last_checked is not None
+        assert site.verified_at is None
+    finally:
+        session.close()
