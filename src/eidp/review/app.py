@@ -70,10 +70,8 @@ class ButtonContainer(Protocol):
 
 
 def _get_session() -> Session:
-    """Get or reuse a SQLAlchemy session stored in Streamlit session_state."""
-    if "db_session" not in st.session_state:
-        st.session_state.db_session = SessionLocal()
-    return cast(Session, st.session_state.db_session)
+    """Create a short-lived SQLAlchemy session for one Streamlit rerun."""
+    return cast(Session, SessionLocal())
 
 
 def _select_page(page_id: str) -> None:
@@ -639,67 +637,66 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    session = _get_session()
+    with _get_session() as session:
+        # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
+        operator_pages.render_sidebar_todo(session)
 
-    # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
-    operator_pages.render_sidebar_todo(session)
+        page = _render_sidebar_navigation()
 
-    page = _render_sidebar_navigation()
-
-    if page == PAGE_TASKS:
-        from eidp.review._pages.school_year_tasks import render as render_school_year_tasks
-        render_school_year_tasks(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_STATUS:
-        operator_pages.page_pipeline_status(session)
-    elif page == PAGE_PROPOSALS:
-        operator_pages.page_proposals_review(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_URL:
-        operator_pages.page_url_submission(session)
-    elif page == PAGE_EXPORTS:
-        operator_pages.page_exports(session)
-    elif page == PAGE_GAPS:
-        operator_pages.page_gap_report()
-    elif page == PAGE_REJECTIONS:
-        operator_pages.page_rejections()
-    elif page == PAGE_PREFECTURE_REMARKS:
-        from eidp.review._pages.prefecture_remarks import render as render_prefecture_remarks
-        render_prefecture_remarks(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_URL_CANDIDATE_REVIEW:
-        from eidp.review._pages.url_candidate_review import render as render_url_candidate_review
-        render_url_candidate_review(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_SETTINGS:
-        from eidp.review._pages.settings_page import render as render_settings
-        render_settings(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_SCHOOL_CODE:
-        _page_review_queue(session)
-    elif page == PAGE_HISTORY:
-        _page_history(session)
-    elif page == PAGE_MANUAL_ENTRY:
-        # Sprint 8.4.c.1 — business-user main battlefield. Lock path is
-        # ``data/.lock`` per v6 architecture, resolved against the
-        # configured data_dir so the same file is shared with the
-        # weekly runner.
-        from eidp.review._pages.pdf_manual_entry import render as render_manual_entry
-        render_manual_entry(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_FISCAL_YEAR_OVERRIDE:
-        # Sprint 8.4.c.2 — operator confirms a document's fiscal_year
-        # via the 4-table atomic rewrite path
-        # (pipeline.fiscal_year_override.override_fiscal_year).
-        from eidp.review._pages.fiscal_year_override import render as render_fiscal_year_override
-        render_fiscal_year_override(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_EXCEL_PREVIEW:
-        # Sprint 8.4.c.3 — read-only dry-run before download.
-        from eidp.review._pages.excel_preview import render as render_excel_preview
-        render_excel_preview(session, lock_path=Path(settings.data_dir) / ".lock")
-    elif page == PAGE_AUDIT_LOG:
-        # Sprint 8.4.c.4 — manual_action_log browser + outbox flush.
-        from eidp.review._pages.audit_log import render as render_audit_log
-        data_dir = Path(settings.data_dir)
-        render_audit_log(
-            session,
-            lock_path=data_dir / ".lock",
-            jsonl_path=data_dir / "audit" / "manual-actions.jsonl",
-        )
+        if page == PAGE_TASKS:
+            from eidp.review._pages.school_year_tasks import render as render_school_year_tasks
+            render_school_year_tasks(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_STATUS:
+            operator_pages.page_pipeline_status(session)
+        elif page == PAGE_PROPOSALS:
+            operator_pages.page_proposals_review(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_URL:
+            operator_pages.page_url_submission(session)
+        elif page == PAGE_EXPORTS:
+            operator_pages.page_exports(session)
+        elif page == PAGE_GAPS:
+            operator_pages.page_gap_report()
+        elif page == PAGE_REJECTIONS:
+            operator_pages.page_rejections()
+        elif page == PAGE_PREFECTURE_REMARKS:
+            from eidp.review._pages.prefecture_remarks import render as render_prefecture_remarks
+            render_prefecture_remarks(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_URL_CANDIDATE_REVIEW:
+            from eidp.review._pages.url_candidate_review import render as render_url_candidate_review
+            render_url_candidate_review(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_SETTINGS:
+            from eidp.review._pages.settings_page import render as render_settings
+            render_settings(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_SCHOOL_CODE:
+            _page_review_queue(session)
+        elif page == PAGE_HISTORY:
+            _page_history(session)
+        elif page == PAGE_MANUAL_ENTRY:
+            # Sprint 8.4.c.1 — business-user main battlefield. Lock path is
+            # ``data/.lock`` per v6 architecture, resolved against the
+            # configured data_dir so the same file is shared with the
+            # weekly runner.
+            from eidp.review._pages.pdf_manual_entry import render as render_manual_entry
+            render_manual_entry(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_FISCAL_YEAR_OVERRIDE:
+            # Sprint 8.4.c.2 — operator confirms a document's fiscal_year
+            # via the 4-table atomic rewrite path
+            # (pipeline.fiscal_year_override.override_fiscal_year).
+            from eidp.review._pages.fiscal_year_override import render as render_fiscal_year_override
+            render_fiscal_year_override(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_EXCEL_PREVIEW:
+            # Sprint 8.4.c.3 — read-only dry-run before download.
+            from eidp.review._pages.excel_preview import render as render_excel_preview
+            render_excel_preview(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_AUDIT_LOG:
+            # Sprint 8.4.c.4 — manual_action_log browser + outbox flush.
+            from eidp.review._pages.audit_log import render as render_audit_log
+            data_dir = Path(settings.data_dir)
+            render_audit_log(
+                session,
+                lock_path=data_dir / ".lock",
+                jsonl_path=data_dir / "audit" / "manual-actions.jsonl",
+            )
 
     # Sidebar info
     st.sidebar.divider()

@@ -15,6 +15,7 @@ from eidp.review.app import (
     _approve_item,
     _approve_with_correction,
     _build_info_caption,
+    _get_session,
     _reject_item,
     _skip_item,
 )
@@ -70,6 +71,36 @@ def test_settings_is_visible_in_quick_navigation():
     assert PAGE_SETTINGS not in detail_ids
     assert PAGE_URL_CANDIDATE_REVIEW in detail_ids
     assert PAGE_AUDIT_LOG in detail_ids
+
+
+def test_get_session_does_not_store_db_session_in_streamlit_state(monkeypatch):
+    from eidp.review import app as review_app
+
+    created = []
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    def fake_session_local():
+        session = FakeSession()
+        created.append(session)
+        return session
+
+    monkeypatch.setattr(review_app, "SessionLocal", fake_session_local)
+    review_app.st.session_state.clear()
+
+    first = _get_session()
+    second = _get_session()
+
+    assert first is not second
+    assert created == [first, second]
+    assert "db_session" not in review_app.st.session_state
+    first.close()
+    second.close()
 
 
 def _session() -> Session:
