@@ -117,3 +117,90 @@ def test_discovery_rca_packet_cli_outputs_single_school_input_packet(tmp_path: P
         "latest_evidence_rows_path": str(evidence_path),
         "known_operator_note": "Win SSH disconnected; continue manual RCA on Mac.",
     }
+
+
+def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path, monkeypatch) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 1,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "target",
+                "pdf_url": "https://a.example.ac.jp/r7.pdf",
+            },
+            {
+                "school_id": 2,
+                "reason": "target_fiscal_year_not_detected",
+                "pdf_type": "target",
+                "pdf_url": "https://b.example.ac.jp/support.pdf",
+            },
+            {
+                "school_id": 3,
+                "reason": "no_candidates_found",
+                "pdf_url": "https://c.example.ac.jp/kokai/",
+            },
+        ],
+    )
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        for school_id, name, url in [
+            (1, "A専門学校", "https://a.example.ac.jp/kokai/"),
+            (2, "B専門学校", "https://b.example.ac.jp/kokai/"),
+            (3, "C専門学校", "https://c.example.ac.jp/kokai/"),
+        ]:
+            session.add(
+                School(
+                    id=school_id,
+                    school_name=name,
+                    prefecture="埼玉県",
+                    corporation_name=f"法人{school_id}",
+                    school_type="専門学校",
+                    status="active",
+                )
+            )
+            session.add(
+                SchoolSite(
+                    school_id=school_id,
+                    url=url,
+                    url_type="disclosure",
+                    discovery_method="prefecture_aggregator",
+                    confidence=0.9,
+                    verified=True,
+                )
+            )
+        session.commit()
+
+    import eidp.db.session as db_session
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: Session(engine))
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-rca-batch-plan",
+            "--evidence-log",
+            str(evidence_path),
+            "--prefecture",
+            "埼玉県",
+            "--discovery-method",
+            "prefecture_aggregator",
+            "--target-fiscal-year",
+            "2026",
+            "--limit",
+            "2",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["total_candidates"] == 3
+    assert [item["bucket"] for item in payload["items"]] == [
+        "target_form_without_year_evidence",
+        "no_pdf_candidates",
+    ]
+    assert [item["packet"]["school_id"] for item in payload["items"]] == [2, 3]
+    assert payload["items"][0]["packet"]["official_index_url"] == "https://b.example.ac.jp/kokai/"

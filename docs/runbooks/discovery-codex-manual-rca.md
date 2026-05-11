@@ -41,6 +41,12 @@ uv run eidp discovery-rca-packet \
   --school-id 95 \
   --evidence-log path/to/evidence.jsonl \
   --json
+uv run eidp discovery-rca-batch-plan \
+  --evidence-log path/to/evidence.jsonl \
+  --prefecture 埼玉県 \
+  --discovery-method prefecture_aggregator \
+  --limit 10 \
+  --json
 ```
 
 ## RCA Order
@@ -281,6 +287,23 @@ uv run eidp discovery-rca-packet \
   --known-operator-note "optional note" \
   --json
 ```
+
+When you have a full evidence log and need to choose the next schools to
+investigate, generate a prioritized batch first:
+
+```bash
+uv run eidp discovery-rca-batch-plan \
+  --evidence-log path/to/evidence.jsonl \
+  --prefecture 埼玉県 \
+  --discovery-method prefecture_aggregator \
+  --limit 10 \
+  --json
+```
+
+The batch plan prioritizes `target_form_without_year_evidence`,
+`non_target_candidates_only`, `no_pdf_candidates`, and fetch failures before
+`publication_lag_or_old_target_pdf`, because latest-public old-year forms are
+usually publication timing problems rather than immediate crawler bugs.
 
 ```json
 {

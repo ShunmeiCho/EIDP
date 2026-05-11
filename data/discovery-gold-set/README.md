@@ -76,6 +76,17 @@ uv run eidp discovery-rca-packet \
   --json
 ```
 
+For a prioritized list of schools to hand to Codex next:
+
+```bash
+uv run eidp discovery-rca-batch-plan \
+  --evidence-log path/to/discovery-evidence.jsonl \
+  --prefecture 埼玉県 \
+  --discovery-method prefecture_aggregator \
+  --limit 10 \
+  --json
+```
+
 Use `--fail-on-regression` in CI or release checks when missing, unexpected, or
 mismatched predictions should block the run.
 
