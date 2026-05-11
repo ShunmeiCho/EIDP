@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-11
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `d303b44c239706ccd7cdca854c3e53c9a66b3d4e` (`eidp-windows-v150.zip`)
+Latest audited Windows package commit: `6e1a0d814c43fce785de9784ec2bf1a27db1aaf1` (`eidp-windows-v151.zip`)
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
@@ -144,6 +144,49 @@ classify the same PDF as `fiscal_year_mismatch:2025`.
   under strict FY2026 mode.
 - Full unit regression after the patch:
   `uv run pytest tests/unit -q` → `1042 passed, 5 warnings`.
+
+## 2026-05-11 v151 Update
+
+v151 packages the discovery gold-set additions and the school `764`
+future-term fiscal-year diagnostic fix. It supersedes v150 for Windows operator
+delivery while preserving the same strict-yield interpretation: the package is
+installation-ready, but the active automation goal remains gated by strict
+current-FY target PDF yield.
+
+- Core ZIP: `dist/eidp-windows-v151.zip`
+- Latest alias: `dist/eidp-windows.zip`
+- Core ZIP SHA256:
+  `0966345403ec8d44c18dc5c908f685528c262c849ecc31d5041a02082285e2f5`
+- Core verifier with unchanged `dist/eidp-playwright-addon-windows-v106.zip`:
+  `OK core`, `OK playwright-addon`,
+  `git_commit=6e1a0d814c43fce785de9784ec2bf1a27db1aaf1`,
+  `git_dirty=false`, `entry_count=3018`, `wheel_count=78`,
+  `project_wheel_count=1`, `discovery_gold_set_entries=14`,
+  47 prefecture seed rows/parser registrations/downloadable artifact URLs,
+  `prefecture_seed_school_rows_total=2148`, and add-on SHA256
+  `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows remote extraction/setup smoke on host alias `win`: copied
+  `eidp-windows-v151.zip`, verified the same SHA256, expanded into
+  `C:\EIDP-v151-6e1a0d8`, and ran `scripts\first_setup.bat`. The bundled
+  validator reported `OK install`,
+  `build_commit=6e1a0d814c43fce785de9784ec2bf1a27db1aaf1`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required SQLite tables present, and
+  `wheel_count=78`. A separate `scripts\validate_windows_install.py . --json`
+  run returned `ok=true` with no errors or warnings.
+- Windows packaged Saitama official-index apply on that v151 extraction:
+  `bootstrap_pdf_pipeline.py --pref saitama --skip-known-url-discovery
+  --url-search off --school-url-crawl off --skip-discover` produced
+  `extracted=58`, `matched=51`, `added=51`, `skipped=7`, and
+  `review_items=2`.
+- Windows packaged school `764` fiscal-year diagnostic smoke:
+  `discover-pdfs --discovery-method prefecture_aggregator --school-id 764`
+  produced `crawled=1`, `found=1`, `downloaded=0`, `failed=0`,
+  `prefiltered=2`, `rejection_reason_fiscal_year_mismatch=7`,
+  `rejection_reason_classified_non_target=1`, and
+  `rejection_reason_pre_filtered_non_target_hint=2`. The evidence row for
+  `2025koushinshinseisyo.pdf` is now `fiscal_year_mismatch:2025`, and no
+  `2029` reject bucket remains.
 
 ## 2026-05-11 v146 Update
 
@@ -1123,13 +1166,31 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
 | Make PDF確認 usable | `school_year_tasks.py` now works as the main operator task board: progress bar, work-lane buttons for URL gaps / target-year PDF wait / stale PDFs / PDF確認・手入力 / dept changes / Excel preview, preserved filters, and a CSV export for the visible source chain (`取得入口`, registration method, reusable URL, PDF URL/year, and status labels). `PDF確認・手入力` now adds queue-level next-action summaries, year buckets, editable/read-only counts, action-lane filtering (`作業レーン`), focused-doc auto expansion, evidence panel, explicit fiscal-year evidence summaries that distinguish PDF body evidence from URL/link hints, candidate-table `年度根拠` / `PDF本文年度` columns sourced from crawler JSONL, PDF preview/download, lock handling, and manual entry save path. Latest AppTest smoke renders a focused PDF review row through `render()`, OCR availability, discovery JSONL, and the PDF route info panel without exceptions. | Improved locally with UI wiring tests; user still needs final real-workload UI feedback. |
 | Review school-universe changes from official remarks | `src/eidp/review/_pages/prefecture_remarks.py` now has dedicated page for official index coverage and `prefecture_remark` review items. The distribution verifier now proves the packaged official-index seed is nationwide rather than partial. | Covered locally with tests and package gate; real operator review of remark workload remains pending. |
 | Excel output should use current target FY | `excel_preview.py` blocks preview generation when target-FY data is zero and shows gap metrics; `competition_exporter.py` defaults business export to `settings.target_fiscal_year`, rejects empty target-year business export, and no longer carries the old auto-select-most-populated-year helper. | Core code covered locally; remaining risk is Windows UI click-through and real template/operator validation. |
-| Windows operator delivery | `dist/eidp-windows-v150.zip` rebuilt at commit `d303b44c239706ccd7cdca854c3e53c9a66b3d4e`, verifier `OK core`, `git_dirty=false`, SHA256 `5395b14b2f5263bc0138a04c7b2cd32ff6debffb4435bc079ff06f715672f923`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, and packaged discovery gold-set outcomes across accepted target PDFs, operator review, no-target, and publication-lag cases. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v150 smoke on a fresh `C:\EIDP-v150-d303b44` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, Saitama official-index apply (`matched=51`, `added=51`), school `95` strict target PDF discovery (`downloaded=1`), ingest without the v149 Unicode crash (`departments_created=0`, `yearly_upserted=2`), `excel_ready=1`, and 2 exported rows each in `学科別` / `在籍のみ抜粋`. v149 remains the current Saitama RCA package for first-year Japanese-era parsing, but v150 supersedes it for Windows delivery because of the CLI codepage fix. | Latest v150 package verifier and Windows extraction/setup/target-PDF-to-Excel packaged smoke are green. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
+| Windows operator delivery | `dist/eidp-windows-v151.zip` rebuilt at commit `6e1a0d814c43fce785de9784ec2bf1a27db1aaf1`, verifier `OK core`, `git_dirty=false`, SHA256 `0966345403ec8d44c18dc5c908f685528c262c849ecc31d5041a02082285e2f5`, wheelhouse 78 wheels, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, and 14 packaged discovery gold-set entries. The latest alias `dist/eidp-windows.zip` has the same SHA256. `dist/eidp-playwright-addon-windows-v106.zip` verifies with SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`, `entry_count=637`, and `manifest_files=636`. Remote Windows v151 smoke on a fresh `C:\EIDP-v151-6e1a0d8` extraction proves setup success, `school_count=2418`, `school_fiscal_year_status_count=2418`, standalone validator `ok=true`, Saitama official-index apply (`matched=51`, `added=51`), and school `764` packaged discovery now classifies `2025koushinshinseisyo.pdf` as `fiscal_year_mismatch:2025` instead of the prior impossible future-year `2029` bucket. v150 remains the packaged proof for school `95` target-PDF-to-Excel, while v151 supersedes it for current Windows delivery because it includes the gold-set expansion and FY detector fix. | Latest v151 package verifier and Windows extraction/setup/Saitama official-index/school-764 diagnostic smoke are green. Automation yield remains below the 60-70% strict target-FY ship gate; execution-button UI E2E and broader real-workload yield remain incomplete. |
 | Universities ~700 and vocational schools ~1700 | UI filters support `専門学校` / `大学`; official index parsers can parse mixed lists. | Not complete: full university rollout is explicitly v1.2; only pilot scope is planned. |
 
 ## Latest Verification Evidence
 
 - `sprint8-handoff-finalize` remains the active handoff branch; `main` is
   intentionally unchanged until the yield gate is met.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v151.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip --json` → `OK core`, `OK playwright-addon`, `git_commit=6e1a0d814c43fce785de9784ec2bf1a27db1aaf1`, `git_dirty=false`, `entry_count=3018`, `wheel_count=78`, `project_wheel_count=1`, `discovery_gold_set_entries=14`, 47 prefecture seed rows/parser registrations/downloadable artifact URLs, `prefecture_seed_school_rows_total=2148`, core SHA256 `0966345403ec8d44c18dc5c908f685528c262c849ecc31d5041a02082285e2f5`, add-on SHA256 `f6fe0cd095c337a81a870decb7a18e9d1f40044dd1567b017d92eda3aae1e8e8`.
+- Windows v151 clean extraction/setup smoke →
+  SHA256 matched on Windows, `C:\EIDP-v151-6e1a0d8` extracted cleanly,
+  `first_setup.bat` completed, the setup validator reported `OK install`,
+  `build_commit=6e1a0d814c43fce785de9784ec2bf1a27db1aaf1`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, required tables present, and
+  `wheel_count=78`. A standalone
+  `scripts\validate_windows_install.py . --json` run returned `ok=true` with
+  no errors or warnings.
+- Windows v151 packaged Saitama official-index and school `764` diagnostic
+  smoke →
+  Saitama apply produced `extracted=58`, `matched=51`, `added=51`, and
+  `review_items=2`. `discover-pdfs --discovery-method prefecture_aggregator
+  --school-id 764` produced `crawled=1`, `found=1`, `downloaded=0`,
+  `failed=0`, and no `2029` reject bucket. The
+  `2025koushinshinseisyo.pdf` evidence row is now
+  `fiscal_year_mismatch:2025`.
 - Focused v150 CLI encoding regression, Ruff, and full unit suite after the
   Windows codepage-safe CLI patch →
   `uv run pytest tests/unit/test_cli_ingest.py -q` → `2 passed`;
@@ -1579,7 +1640,7 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v150 is the current locally and
+The active goal is **not complete**. v151 is the current locally and
 Windows-verified ZIP candidate, and the branch is backed up remotely.
 The latest bounded non-Sanko Windows acquisition RCA still proves strict FY2026
 yield below the ship gate: `0/45` target downloads despite official-index
@@ -1610,6 +1671,9 @@ remote Windows host. The v150 packaged Saitama 51-site replay also proves the
 official-index handoff itself is intact on Windows: all 51 Saitama
 `prefecture_aggregator` URLs were in the database, the 50 remaining sites all
 produced discovery evidence, and the only strict target document remained the
-school `95` PDF. The main remaining blockers are therefore target-year
+school `95` PDF. v151 supersedes v150 for delivery by packaging the discovery
+gold-set expansion and the school `764` future-term fiscal-year fix, with a
+fresh Windows setup/validator smoke plus packaged Saitama apply and school
+`764` diagnostic replay. The main remaining blockers are therefore target-year
 yield/policy, real operator UI validation, and the explicit university rollout
 decision.
