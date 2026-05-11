@@ -286,6 +286,7 @@ HEADERS = {
 }
 
 MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
+MAX_GENERAL_CANDIDATE_SCAN = 80
 PREFECTURE_INDEX_TRUST_MAX_AGE_DAYS = 370
 MAX_DISCOVERY_EXTRA_PAGES = 6
 SITEMAP_DISCOVERY_RESERVED_PAGES = 2
@@ -716,6 +717,27 @@ def _has_target_form_hint(candidate: PdfCandidate) -> bool:
     )
 
 
+def _has_formish_candidate_hint(candidate: PdfCandidate) -> bool:
+    """Return whether URL/anchor text is worth trying ahead of generic PDFs."""
+
+    if _has_target_form_hint(candidate):
+        return True
+    text = _candidate_hint_text(candidate).lower()
+    return any(
+        token in text
+        for token in (
+            "様式",
+            "form",
+            "kakunin",
+            "shinsei",
+            "申請",
+            "確認",
+            "機関要件",
+            "wpdmdl",
+        )
+    )
+
+
 def _has_target_year_hint(candidate: PdfCandidate, *, target_year: int) -> bool:
     """Return whether URL/anchor text explicitly names the target fiscal year."""
     return _fiscal_year_from_strong_candidate_hint(
@@ -753,6 +775,45 @@ def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None 
 
     candidate.score = score
     return score
+
+
+def _candidate_download_tier(candidate: PdfCandidate, *, target_year: int) -> int:
+    """Return a coarse download priority before score sorting.
+
+    Dense disclosure pages often list hundreds of adjacent public PDFs. A raw
+    score sort lets those generic files crowd out low-score form links such as
+    WordPress Download Manager wrappers whose URL only contains ``様式``.
+    """
+
+    if _has_target_application_hint(candidate):
+        return 0
+    if _has_formish_candidate_hint(candidate):
+        return 1
+    return 2
+
+
+def _prioritize_viable_candidates(
+    candidates: list[PdfCandidate],
+    *,
+    target_year: int,
+) -> tuple[list[PdfCandidate], int]:
+    """Prioritize target-like candidates and cap generic PDF scanning."""
+
+    priority: list[tuple[int, int, PdfCandidate]] = []
+    general: list[tuple[int, PdfCandidate]] = []
+    for index, candidate in enumerate(candidates):
+        tier = _candidate_download_tier(candidate, target_year=target_year)
+        if tier < 2:
+            priority.append((tier, index, candidate))
+        else:
+            general.append((index, candidate))
+
+    priority.sort(key=lambda item: (item[0], -item[2].score, item[1]))
+    general.sort(key=lambda item: (-item[1].score, item[0]))
+    dropped = max(len(general) - MAX_GENERAL_CANDIDATE_SCAN, 0)
+    ordered = [candidate for _, _, candidate in priority]
+    ordered.extend(candidate for _, candidate in general[:MAX_GENERAL_CANDIDATE_SCAN])
+    return ordered, dropped
 
 
 def _extract_pdf_sample_text(content: bytes) -> str:
@@ -1882,6 +1943,8 @@ def run_pdf_discovery(
         "skipped": 0,
         "cached_rejections": 0,
         "prefiltered": 0,
+        "candidate_budget_limited": 0,
+        "candidate_budget_dropped": 0,
     }
     recorder = EvidenceRecorder(evidence_path)
 
@@ -2026,6 +2089,13 @@ def run_pdf_discovery(
                     _score_candidate(c, target_fiscal_year=target_year)
                 result.candidates.sort(key=lambda c: c.score, reverse=True)
             viable = [c for c in result.candidates if c.score >= 0]
+            viable, candidate_budget_dropped = _prioritize_viable_candidates(
+                viable,
+                target_year=target_year,
+            )
+            if candidate_budget_dropped:
+                stats["candidate_budget_limited"] += 1
+                stats["candidate_budget_dropped"] += candidate_budget_dropped
             if not viable:
                 job.status = "review"
                 job.error_message = "all candidates have negative score"
