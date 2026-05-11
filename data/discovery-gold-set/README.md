@@ -66,6 +66,16 @@ uv run eidp summarize-discovery-evidence \
   --json
 ```
 
+To prepare one failed school for Codex-assisted manual RCA, emit the
+single-school input packet from the configured DB:
+
+```bash
+uv run eidp discovery-rca-packet \
+  --school-id <id> \
+  --evidence-log path/to/discovery-evidence.jsonl \
+  --json
+```
+
 Use `--fail-on-regression` in CI or release checks when missing, unexpected, or
 mismatched predictions should block the run.
 

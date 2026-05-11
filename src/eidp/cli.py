@@ -1057,6 +1057,52 @@ def summarize_discovery_evidence(
         typer.echo(f"    {bucket}: {count}")
 
 
+@app.command("discovery-rca-packet")
+def discovery_rca_packet(
+    school_id: int = typer.Option(..., help="School.id to prepare for single-school RCA"),
+    target_fiscal_year: int | None = typer.Option(
+        None,
+        help="Target fiscal year. Defaults to settings.target_fiscal_year.",
+    ),
+    evidence_log: Path | None = typer.Option(
+        None,
+        help="Optional discover-pdfs evidence JSONL used to fill latest_bucket.",
+    ),
+    known_operator_note: str = typer.Option("", help="Optional operator note to preserve in the packet"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON input packet"),
+) -> None:
+    """Build a read-only single-school RCA packet for Codex-assisted discovery."""
+    from eidp.config import settings
+    from eidp.db.session import SessionLocal
+    from eidp.scraper.discovery_rca_packet import build_single_school_rca_packet, render_single_school_rca_packet
+
+    session = SessionLocal()
+    try:
+        packet = build_single_school_rca_packet(
+            session,
+            school_id=school_id,
+            target_fiscal_year=target_fiscal_year or int(settings.target_fiscal_year),
+            evidence_log=evidence_log,
+            known_operator_note=known_operator_note,
+        )
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+    finally:
+        session.close()
+
+    if output_json:
+        typer.echo(render_single_school_rca_packet(packet))
+        return
+
+    typer.echo(f"RCA packet for school_id={packet['school_id']}: {packet['school_name']}")
+    typer.echo(f"  prefecture:        {packet['prefecture']}")
+    typer.echo(f"  target_fiscal_year:{packet['target_fiscal_year']}")
+    typer.echo(f"  latest_bucket:     {packet['latest_bucket']}")
+    typer.echo(f"  official URL:      {packet['official_index_url'] or '(none)'}")
+    typer.echo(f"  registered sites:  {len(packet['registered_sites'])}")
+
+
 @report_app.command("coverage")
 def report_coverage(
     school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),

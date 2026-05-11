@@ -37,6 +37,10 @@ uv run eidp summarize-discovery-evidence \
 
 uv run eidp discovery-gold-set --json
 uv run eidp eval-discovery-gold --pdf-evidence path/to/evidence.jsonl --json
+uv run eidp discovery-rca-packet \
+  --school-id 95 \
+  --evidence-log path/to/evidence.jsonl \
+  --json
 ```
 
 ## RCA Order
@@ -266,6 +270,17 @@ run.
 
 Collect these values before opening the web. If a value is unknown, write
 `unknown`; do not infer it silently.
+
+Generate this block directly from the configured DB when possible:
+
+```bash
+uv run eidp discovery-rca-packet \
+  --school-id <id> \
+  --target-fiscal-year 2026 \
+  --evidence-log path/to/evidence.jsonl \
+  --known-operator-note "optional note" \
+  --json
+```
 
 ```json
 {
