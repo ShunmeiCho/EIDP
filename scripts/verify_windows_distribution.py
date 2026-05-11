@@ -82,6 +82,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/diagnose.bat",
     "scripts/uninstall.bat",
     "scripts/validate_install.bat",
+    "scripts/atomic_write.py",
     "scripts/run_weekly_target_year_discovery.py",
     "scripts/run_r8_rediscovery_weekly.py",
     "scripts/validate_windows_install.py",
@@ -679,6 +680,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "prune_run_logs",
             "run_pdf_discovery",
             "run_ingestion",
+            "write_text_atomic",
         ),
         "scripts/bootstrap_pdf_pipeline.py": (
             "Step 2b",
@@ -686,6 +688,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "discovered-urls-50.csv",
             "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
             "progress_callback",
+            "write_text_atomic",
+        ),
+        "scripts/atomic_write.py": (
+            "write_text_atomic",
+            "tmp_path.replace",
         ),
         "scripts/ship_gate_contract.py": (
             "BOOTSTRAP_SHIP_GATE_METRIC_BASIS",

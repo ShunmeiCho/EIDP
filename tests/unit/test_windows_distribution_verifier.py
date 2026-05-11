@@ -130,6 +130,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/diagnose.bat": (SCRIPTS_DIR / "diagnose.bat").read_text(encoding="utf-8"),
         "scripts/uninstall.bat": (SCRIPTS_DIR / "uninstall.bat").read_text(encoding="utf-8"),
         "scripts/validate_install.bat": (SCRIPTS_DIR / "validate_install.bat").read_text(encoding="utf-8"),
+        "scripts/atomic_write.py": (SCRIPTS_DIR / "atomic_write.py").read_text(encoding="utf-8"),
         "scripts/run_weekly_target_year_discovery.py": (
             SCRIPTS_DIR / "run_weekly_target_year_discovery.py"
         ).read_text(encoding="utf-8"),

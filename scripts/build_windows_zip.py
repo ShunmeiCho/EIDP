@@ -379,6 +379,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
         for name in (
             "run_weekly_target_year_discovery.py",
             "run_r8_rediscovery_weekly.py",
+            "atomic_write.py",
             "validate_windows_install.py",
             "bootstrap_pdf_pipeline.py",
             "ship_gate_contract.py",

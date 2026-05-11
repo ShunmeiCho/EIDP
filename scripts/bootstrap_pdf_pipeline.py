@@ -58,6 +58,7 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+from atomic_write import write_text_atomic  # noqa: E402
 from download_prefecture_artifacts import (  # noqa: E402
     DOWNLOADABLE_STATUSES,
     SUPPORTED_PARSERS,
@@ -178,7 +179,7 @@ def write_bootstrap_discovery_rca_batch_plan(
             limit=limit,
             include_prompts=True,
         )
-        output_path.write_text(render_single_school_rca_batch_plan(plan) + "\n", encoding="utf-8")
+        write_text_atomic(output_path, render_single_school_rca_batch_plan(plan) + "\n")
         return {
             "discovery_rca_batch_plan_path": str(output_path),
             "discovery_rca_batch_plan_item_count": len(plan.get("items") or []),

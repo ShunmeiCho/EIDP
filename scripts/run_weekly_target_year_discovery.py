@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from atomic_write import write_text_atomic  # noqa: E402
 from ship_gate_contract import (  # noqa: E402
     SHIP_GATE_AUTO_YIELD_PCT,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
@@ -425,7 +426,7 @@ def _write_discovery_rca_batch_plan(
             limit=DEFAULT_RCA_BATCH_LIMIT,
             include_prompts=True,
         )
-        output_path.write_text(render_single_school_rca_batch_plan(plan) + "\n", encoding="utf-8")
+        write_text_atomic(output_path, render_single_school_rca_batch_plan(plan) + "\n")
         return {
             "batch_plan_path": str(output_path),
             "batch_plan_item_count": len(plan.get("items") or []),
