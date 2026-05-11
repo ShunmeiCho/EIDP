@@ -882,6 +882,32 @@ def test_verify_core_zip_rejects_diagnose_without_strict_ship_gate_validation(tm
     assert any("validate_after_weekly_ship_gate_rc" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_diagnose_with_parse_time_errorlevel_capture(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/diagnose.bat"] = (
+        entries["scripts/diagnose.bat"]
+        .replace('set "VALIDATE_BOOTSTRAP_RC=!ERRORLEVEL!"', 'set "VALIDATE_BOOTSTRAP_RC=%ERRORLEVEL%"')
+        .replace(
+            'set "VALIDATE_BOOTSTRAP_SHIP_GATE_RC=!ERRORLEVEL!"',
+            'set "VALIDATE_BOOTSTRAP_SHIP_GATE_RC=%ERRORLEVEL%"',
+        )
+        .replace('set "VALIDATE_WEEKLY_RC=!ERRORLEVEL!"', 'set "VALIDATE_WEEKLY_RC=%ERRORLEVEL%"')
+        .replace(
+            'set "VALIDATE_WEEKLY_SHIP_GATE_RC=!ERRORLEVEL!"',
+            'set "VALIDATE_WEEKLY_SHIP_GATE_RC=%ERRORLEVEL%"',
+        )
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("VALIDATE_BOOTSTRAP_RC=!ERRORLEVEL!" in error for error in check.errors)
+    assert any("VALIDATE_BOOTSTRAP_SHIP_GATE_RC=!ERRORLEVEL!" in error for error in check.errors)
+    assert any("VALIDATE_WEEKLY_RC=!ERRORLEVEL!" in error for error in check.errors)
+    assert any("VALIDATE_WEEKLY_SHIP_GATE_RC=!ERRORLEVEL!" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_bootstrap_bat_without_log_capture(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/bootstrap_pdfs.bat"] = (
