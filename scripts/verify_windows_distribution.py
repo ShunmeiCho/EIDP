@@ -718,6 +718,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '@app.command("eval-discovery-gold")',
             "--fail-on-regression",
             "_discovery_gold_gate_failed",
+            "_exit_report_db_error",
+            "database_not_ready",
+            "report query failed; database is not initialized or the schema is incomplete",
         ),
         "src/eidp/review/school_scope.py": (
             'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"',

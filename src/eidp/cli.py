@@ -7,9 +7,10 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import typer
+from sqlalchemy.exc import SQLAlchemyError
 
 if TYPE_CHECKING:
     from eidp.reports.coverage import PrefectureCoverage
@@ -62,6 +63,31 @@ def _echo_excel_export_results(output: Path, results: dict[str, int]) -> None:
         typer.echo("Quality warnings:")
         for name, count in nonzero_quality.items():
             typer.echo(f"  {name}: {count}")
+
+
+def _exit_report_db_error(exc: SQLAlchemyError, *, output_json: bool) -> NoReturn:
+    message = (
+        "report query failed; database is not initialized or the schema is incomplete. "
+        "Run setup/db-bootstrap/import before using eidp report commands."
+    )
+    detail = str(exc).splitlines()[0]
+    if output_json:
+        typer.echo(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": "database_not_ready",
+                    "message": message,
+                    "detail": detail,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+    else:
+        typer.echo(f"ERROR: {message}", err=True)
+        typer.echo(f"DETAIL: {detail}", err=True)
+    raise typer.Exit(2) from exc
 
 
 @app.command()
@@ -1330,6 +1356,8 @@ def report_coverage(
     try:
         st = None if school_type == "all" else school_type
         report = compute_coverage(session, school_type=st, fiscal_year=fiscal_year)
+    except SQLAlchemyError as exc:
+        _exit_report_db_error(exc, output_json=output_json)
     finally:
         session.close()
 
@@ -1400,6 +1428,8 @@ def report_extraction(
     session = SessionLocal()
     try:
         report = compute_extraction(session, fiscal_year, delta_threshold)
+    except SQLAlchemyError as exc:
+        _exit_report_db_error(exc, output_json=output_json)
     finally:
         session.close()
 
@@ -1473,6 +1503,8 @@ def report_gaps(
             fiscal_year=fiscal_year,
             competition_csv=competition_csv,
         )
+    except SQLAlchemyError as exc:
+        _exit_report_db_error(exc, output_json=output_json)
     finally:
         session.close()
 

@@ -596,6 +596,22 @@ def test_verify_core_zip_requires_settings_page_module(tmp_path: Path) -> None:
     assert any("src/eidp/review/_pages/settings_page.py" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_cli_report_database_not_ready_gate(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/cli.py"] = (
+        '@app.command("eval-discovery-gold")\n'
+        "--fail-on-regression\n"
+        "_discovery_gold_gate_failed\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/cli.py missing required token" in error for error in check.errors)
+    assert any("database_not_ready" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_all_navigated_operator_modules(tmp_path: Path) -> None:
     entries = _core_entries()
     for rel in (
