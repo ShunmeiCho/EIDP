@@ -245,6 +245,8 @@ def test_validate_after_setup_accepts_setup_artifacts(tmp_path: Path) -> None:
 
     assert check.ok, check.errors
     assert "school_fiscal_year_status" in check.details["sqlite_required_tables_present"]
+    assert "support_recipient" in check.details["sqlite_required_tables_present"]
+    assert check.details["sqlite_integrity_check"] == "ok"
 
 
 def test_validate_after_setup_rejects_sqlite_missing_school_fiscal_year_status(tmp_path: Path) -> None:
@@ -258,6 +260,49 @@ def test_validate_after_setup_rejects_sqlite_missing_school_fiscal_year_status(t
 
     assert not check.ok
     assert any("school_fiscal_year_status" in error for error in check.errors)
+
+
+def test_validate_after_setup_rejects_sqlite_missing_support_recipient(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    db_path = root / "data" / "eidp.sqlite3"
+    db_path.unlink()
+    _write_sqlite_schema(db_path, omit="support_recipient")
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert any("support_recipient" in error for error in check.errors)
+
+
+def test_validate_after_setup_rejects_failed_sqlite_integrity_check(tmp_path: Path, monkeypatch) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+
+    real_connect = module.sqlite3.connect
+
+    class BrokenIntegrityConnection:
+        def __init__(self, path: Path) -> None:
+            self._conn = real_connect(path)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001
+            self._conn.close()
+
+        def execute(self, statement: str, *args, **kwargs):  # noqa: ANN002, ANN003
+            if statement == "PRAGMA integrity_check":
+                return self._conn.execute("SELECT '*** in database main *** simulated corruption'")
+            return self._conn.execute(statement, *args, **kwargs)
+
+    monkeypatch.setattr(module.sqlite3, "connect", lambda path: BrokenIntegrityConnection(path))
+
+    check = module.validate_install(root, after_setup=True)
+
+    assert not check.ok
+    assert check.details["sqlite_integrity_check"] == "*** in database main *** simulated corruption"
+    assert any("SQLite integrity_check failed" in error for error in check.errors)
 
 
 def test_validate_after_setup_rejects_empty_school_year_tasks_when_schools_exist(tmp_path: Path) -> None:

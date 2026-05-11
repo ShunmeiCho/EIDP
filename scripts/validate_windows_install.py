@@ -121,6 +121,7 @@ SQLITE_REQUIRED_TABLES = (
     "document",
     "department",
     "department_yearly",
+    "support_recipient",
     "school_fiscal_year_status",
     "manual_action_log",
 )
@@ -286,9 +287,14 @@ def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
             rows = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             ).fetchall()
+            integrity = str(conn.execute("PRAGMA integrity_check").fetchone()[0])
     except sqlite3.Error as exc:
         check.fail(f"data/eidp.sqlite3 is not a readable SQLite DB: {exc}")
         return
+
+    check.details["sqlite_integrity_check"] = integrity
+    if integrity != "ok":
+        check.fail(f"data/eidp.sqlite3 SQLite integrity_check failed: {integrity}")
 
     tables = {str(name) for (name,) in rows}
     check.details["sqlite_table_count"] = len(tables)

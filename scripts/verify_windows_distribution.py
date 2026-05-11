@@ -686,6 +686,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "--require-ocr-addon",
             "--require-playwright-addon",
             "last_run.json status must be success",
+            "support_recipient",
+            "sqlite_integrity_check",
+            "PRAGMA integrity_check",
         ),
         "scripts/run_weekly_target_year_discovery.py": (
             "acquire_lock",

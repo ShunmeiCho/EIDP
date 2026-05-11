@@ -551,6 +551,29 @@ def test_verify_core_zip_requires_ocr_tesseract_runtime_contract(tmp_path: Path)
     assert any("jpn.traineddata" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_validator_sqlite_integrity_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/validate_windows_install.py"] = (
+        "CORE_FILES\n"
+        "build_commit\n"
+        "scripts/validate_install.bat\n"
+        "--after-setup\n"
+        "--after-bootstrap\n"
+        "--after-weekly\n"
+        "--require-ocr-addon\n"
+        "--require-playwright-addon\n"
+        "last_run.json status must be success\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("scripts/validate_windows_install.py missing required token" in error for error in check.errors)
+    assert any("support_recipient" in error for error in check.errors)
+    assert any("sqlite_integrity_check" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["data/prefecture-aggregators/seed.csv"] = _prefecture_seed_csv(omit={"tokyo"})
