@@ -196,6 +196,55 @@ def _load_last_run(check: InstallCheck, path: Path) -> dict[str, Any] | None:
     return payload
 
 
+def _resolve_install_path(root: Path, raw_path: str) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    parts = [part for part in raw_path.replace("\\", "/").split("/") if part]
+    return root.joinpath(*parts)
+
+
+def _validate_discovery_rca_batch_plan(
+    check: InstallCheck,
+    root: Path,
+    discovery_rca: object,
+) -> None:
+    if not isinstance(discovery_rca, dict):
+        return
+    raw_path = str(discovery_rca.get("batch_plan_path") or "")
+    if not raw_path:
+        return
+
+    plan_path = _resolve_install_path(root, raw_path)
+    check.details["discovery_rca_batch_plan_path"] = str(plan_path)
+    if not plan_path.is_file():
+        check.fail(f"discovery_rca batch plan is missing: {raw_path}")
+        return
+    try:
+        payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        check.fail(f"discovery_rca batch plan is not readable UTF-8 JSON: {exc}")
+        return
+    if not isinstance(payload, dict):
+        check.fail("discovery_rca batch plan must contain a JSON object")
+        return
+    items = payload.get("items")
+    if not isinstance(items, list):
+        check.fail("discovery_rca batch plan items must be a list")
+        return
+    total_candidates = payload.get("total_candidates")
+    check.details["discovery_rca_batch_plan_item_count"] = len(items)
+    if isinstance(total_candidates, int):
+        check.details["discovery_rca_batch_plan_total_candidates"] = total_candidates
+
+    expected_items = discovery_rca.get("batch_plan_item_count")
+    if isinstance(expected_items, int) and expected_items != len(items):
+        check.fail(
+            "last_run.json discovery_rca.batch_plan_item_count does not match "
+            f"batch plan items: {expected_items} != {len(items)}"
+        )
+
+
 def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
     if not db_path.is_file():
         check.fail("missing setup file: data/eidp.sqlite3")
@@ -301,6 +350,7 @@ def validate_install(
             for key in ("target_missing_school_count", "new_document_count"):
                 if key in last_run and not isinstance(last_run.get(key), int):
                     check.fail(f"last_run.json {key} must be an integer")
+            _validate_discovery_rca_batch_plan(check, root, last_run.get("discovery_rca"))
 
         logs_dir = root / "logs"
         run_logs = sorted(logs_dir.glob("run-*.log")) if logs_dir.is_dir() else []

@@ -277,6 +277,60 @@ def test_validate_after_weekly_accepts_last_run_schema(tmp_path: Path) -> None:
     assert check.details["run_log_count"] == 1
 
 
+def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    plan_rel = "data/output/target-year-discovery/20260505-discovery-rca-batch-plan.json"
+    _write(
+        root,
+        plan_rel,
+        json.dumps(
+            {
+                "total_candidates": 2,
+                "items": [
+                    {
+                        "bucket": "target_form_without_year_evidence",
+                        "packet": {"school_id": 95},
+                        "prompt": "Investigate this EIDP school as a single-school RCA packet.",
+                    }
+                ],
+            }
+        ),
+    )
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload["discovery_rca"] = {
+        "batch_plan_path": plan_rel,
+        "batch_plan_item_count": 1,
+        "batch_plan_total_candidates": 2,
+    }
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_weekly=True)
+
+    assert check.ok, check.errors
+    assert check.details["discovery_rca_batch_plan_item_count"] == 1
+    assert check.details["discovery_rca_batch_plan_total_candidates"] == 2
+
+
+def test_validate_after_weekly_rejects_missing_discovery_rca_batch_plan(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload["discovery_rca"] = {
+        "batch_plan_path": "data/output/target-year-discovery/missing-discovery-rca-batch-plan.json",
+        "batch_plan_item_count": 1,
+        "batch_plan_total_candidates": 1,
+    }
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_weekly=True)
+
+    assert not check.ok
+    assert any("discovery_rca batch plan is missing" in error for error in check.errors)
+
+
 def test_validate_after_weekly_rejects_bad_last_run_status(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
