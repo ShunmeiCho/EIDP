@@ -364,6 +364,13 @@ the finding into the gold set or a crawler rule:
 uv run eidp discovery-rca-outcome-validate --input path/to/rca-outcome.json
 ```
 
+The validator checks required fields, allowed labels, and the narrow decision
+table rules that are dangerous to get wrong. For example,
+`accepted_target_pdf` must include a PDF URL, fiscal-year evidence,
+target-form evidence, and `operator_action="none"`.
+`publication_lag_latest_public` must use
+`operator_action="wait_for_publication"`.
+
 For a batch plan, save each school result as one JSON file in the same
 directory and validate the directory. When the original batch plan JSON is
 available, pass it too so missing, duplicate, or extra school outputs are

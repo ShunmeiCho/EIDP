@@ -282,6 +282,8 @@ def validate_single_school_rca_outcome(payload: dict[str, Any]) -> list[str]:
     operator_action = payload.get("operator_action")
     if isinstance(operator_action, str) and operator_action not in RCA_OUTCOME_ALLOWED_OPERATOR_ACTIONS:
         errors.append(f"invalid operator_action: {operator_action}")
+    if not errors:
+        errors.extend(_validate_rca_outcome_semantics(payload))
 
     return errors
 
@@ -390,3 +392,22 @@ def _rca_key(payload: dict[str, Any]) -> tuple[int, int] | None:
 def _format_batch_coverage_error(prefix: str, key: tuple[int, int]) -> str:
     school_id, target_fiscal_year = key
     return f"{prefix}: school_id={school_id} target_fiscal_year={target_fiscal_year}"
+
+
+def _validate_rca_outcome_semantics(payload: dict[str, Any]) -> list[str]:
+    outcome = str(payload["outcome"])
+    operator_action = str(payload["operator_action"])
+    errors: list[str] = []
+    if outcome == "accepted_target_pdf":
+        if operator_action != "none":
+            errors.append("accepted_target_pdf requires operator_action=none")
+        for field in ("candidate_pdf_url", "fiscal_year_evidence", "target_form_evidence"):
+            if not str(payload[field]).strip():
+                errors.append(f"accepted_target_pdf requires {field}")
+    elif outcome == "publication_lag_latest_public":
+        if operator_action != "wait_for_publication":
+            errors.append("publication_lag_latest_public requires operator_action=wait_for_publication")
+        for field in ("candidate_pdf_url", "fiscal_year_evidence", "target_form_evidence"):
+            if not str(payload[field]).strip():
+                errors.append(f"publication_lag_latest_public requires {field}")
+    return errors

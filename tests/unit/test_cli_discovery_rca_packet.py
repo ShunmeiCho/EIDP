@@ -420,8 +420,80 @@ def test_discovery_rca_outcome_validate_rejects_drifting_output_block(tmp_path: 
     assert "checked_paths must be a list" in result.output
 
 
+def test_discovery_rca_outcome_validate_rejects_semantic_contradictions(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "accepted-without-proof.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 95,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "accepted_target_pdf",
+                "source_page_url": "https://www.siw.ac.jp/information",
+                "candidate_pdf_url": "",
+                "anchor_text": "修学支援新制度",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "",
+                "negative_evidence": "",
+                "checked_paths": ["https://www.siw.ac.jp/information"],
+                "search_queries_used": [],
+                "operator_action": "review_pdf",
+                "gold_set_entry_recommended": True,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "high",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 1
+    assert "accepted_target_pdf requires operator_action=none" in result.output
+    assert "accepted_target_pdf requires candidate_pdf_url" in result.output
+    assert "accepted_target_pdf requires fiscal_year_evidence" in result.output
+    assert "accepted_target_pdf requires target_form_evidence" in result.output
+
+
+def test_discovery_rca_outcome_validate_rejects_publication_lag_without_wait_action(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "publication-lag-wrong-action.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 96,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "publication_lag_latest_public",
+                "source_page_url": "https://example.ac.jp/disclosure",
+                "candidate_pdf_url": "https://example.ac.jp/disclosure/r7-shien.pdf",
+                "anchor_text": "令和7年度 修学支援",
+                "fiscal_year_evidence": "URL and anchor contain 令和7年度",
+                "target_form_evidence": "PDF body contains 機関要件確認申請書",
+                "negative_evidence": "",
+                "checked_paths": ["https://example.ac.jp/disclosure"],
+                "search_queries_used": [],
+                "operator_action": "review_pdf",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "medium",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 1
+    assert "publication_lag_latest_public requires operator_action=wait_for_publication" in result.output
+
+
 def test_discovery_rca_outcome_validate_accepts_output_directory(tmp_path: Path) -> None:
     for school_id, outcome in [(95, "accepted_target_pdf"), (96, "needs_operator_review")]:
+        accepted = outcome == "accepted_target_pdf"
         (tmp_path / f"{school_id}.json").write_text(
             json.dumps(
                 {
@@ -430,10 +502,10 @@ def test_discovery_rca_outcome_validate_accepts_output_directory(tmp_path: Path)
                     "layer": "layer_1_pdf_discovery",
                     "outcome": outcome,
                     "source_page_url": f"https://example.ac.jp/{school_id}/",
-                    "candidate_pdf_url": "",
+                    "candidate_pdf_url": f"https://example.ac.jp/{school_id}/r8.pdf" if accepted else "",
                     "anchor_text": "",
-                    "fiscal_year_evidence": "",
-                    "target_form_evidence": "候補PDFあり",
+                    "fiscal_year_evidence": "PDF body contains 2026年度" if accepted else "",
+                    "target_form_evidence": "PDF body contains 機関要件確認申請書" if accepted else "候補PDFあり",
                     "negative_evidence": "",
                     "checked_paths": [f"https://example.ac.jp/{school_id}/"],
                     "search_queries_used": [],
