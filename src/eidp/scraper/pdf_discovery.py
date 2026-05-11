@@ -517,6 +517,25 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
     )
 
 
+def _has_target_form_hint(candidate: PdfCandidate) -> bool:
+    """Return whether URL/anchor text names an application-form shape."""
+
+    text = _candidate_hint_text(candidate).lower()
+    return _has_target_application_hint(candidate) or any(
+        token in text
+        for token in (
+            "確認申請",
+            "様式第2号",
+            "様式第２号",
+            "様式2号",
+            "機関要件",
+            "更新確認申請",
+            "koushinshinsei",
+            "koushin-shinsei",
+        )
+    )
+
+
 def _has_target_year_hint(candidate: PdfCandidate, *, target_year: int) -> bool:
     """Return whether URL/anchor text explicitly names the target fiscal year."""
     return _fiscal_year_from_strong_candidate_hint(
@@ -1578,7 +1597,11 @@ def download_pdf(
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
             stale_hint_year = _stale_fiscal_year_from_candidate_hint(candidate, target_year=target_year)
-            if detected_fiscal_year is None and stale_hint_year is not None:
+            if (
+                detected_fiscal_year is None
+                and stale_hint_year is not None
+                and (pdf_type == "target" or _has_target_form_hint(candidate))
+            ):
                 return None, None, 0, pdf_type, f"fiscal_year_mismatch:{stale_hint_year}"
             if (
                 detected_fiscal_year == target_year

@@ -530,6 +530,80 @@ def test_download_pdf_rejects_image_with_target_year_but_no_target_form_hint(
     assert not list((tmp_path / "123").glob("*.pdf"))
 
 
+def test_download_pdf_does_not_turn_support_only_image_year_into_publication_lag(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Support-only image PDFs need review; old year labels alone are not target-form proof."""
+
+    url = "https://urasen.jp/wp/wp-content/themes/urawa/assets/pdf/about/report/09_shugakushien_r7.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://urasen.jp/about/report/",
+        anchor_text="R7修学支援に関する資料",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", lambda _content: "")
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        761,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "image_only"
+    assert reason == "target_fiscal_year_not_detected"
+    assert not list((tmp_path / "761").glob("*.pdf"))
+
+
+def test_download_pdf_does_not_turn_boilerplate_year_image_into_publication_lag(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Generic MEXT support years in page context are not stale target-form evidence."""
+
+    url = "https://example.ac.jp/support/koutou202507.pdf?20250711"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://example.ac.jp/support/",
+        anchor_text="2020年度から対象 本校の申請内容について",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", lambda _content: "")
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        763,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "image_only"
+    assert reason == "target_fiscal_year_not_detected"
+    assert not list((tmp_path / "763").glob("*.pdf"))
+
+
 class _HtmlResponse:
     def __init__(self, text: str, *, status_code: int = 200, url: str = "https://example.ac.jp/") -> None:
         self.text = text
