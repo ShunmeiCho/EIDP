@@ -611,6 +611,8 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "--after-setup",
             "--after-bootstrap",
             "validate_after_bootstrap_rc",
+            "--after-weekly",
+            "validate_after_weekly_rc",
             "BUILD_INFO.json",
             "last_run.json",
             "latest discovery RCA batch plan",

@@ -586,6 +586,20 @@ def test_verify_core_zip_rejects_diagnose_without_bootstrap_validation(tmp_path:
     assert any("--after-bootstrap" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_diagnose_without_weekly_validation(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/diagnose.bat"] = entries["scripts/diagnose.bat"].replace(
+        "--after-setup --after-weekly",
+        "--after-setup",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("--after-weekly" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_weekly_runner_export_excel(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/run_weekly_target_year_discovery.py"] = (

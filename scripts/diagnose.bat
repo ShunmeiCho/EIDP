@@ -96,6 +96,20 @@ if exist "%EIDP_APP_ROOT%\data\output\last_run.json" (
 )
 >> "%DIAG_FILE%" echo.
 
+>> "%DIAG_FILE%" echo [validate_install after-weekly]
+if exist "%VENV_PY%" (
+    if exist "%EIDP_APP_ROOT%\data\output\last_run.json" (
+        "%VENV_PY%" "%EIDP_APP_ROOT%\scripts\validate_windows_install.py" "%EIDP_APP_ROOT%" --after-setup --after-weekly >> "%DIAG_FILE%" 2>&1
+        set "VALIDATE_WEEKLY_RC=%ERRORLEVEL%"
+        >> "%DIAG_FILE%" echo validate_after_weekly_rc=!VALIDATE_WEEKLY_RC!
+    ) else (
+        >> "%DIAG_FILE%" echo skipped; no last_run.json found
+    )
+) else (
+    >> "%DIAG_FILE%" echo skipped; .venv Python is missing
+)
+>> "%DIAG_FILE%" echo.
+
 >> "%DIAG_FILE%" echo [latest discovery RCA batch plan]
 powershell -NoProfile -Command "$root=$env:EIDP_APP_ROOT; $last=Join-Path $root 'data\output\last_run.json'; $path=$null; if (Test-Path -LiteralPath $last) { try { $json=Get-Content -LiteralPath $last -Raw | ConvertFrom-Json; $path=$json.discovery_rca.batch_plan_path } catch { Write-Output ('last_run_json_error=' + $_.Exception.Message) } }; if ($path) { if (-not [System.IO.Path]::IsPathRooted([string]$path)) { $path=Join-Path $root ([string]$path) } }; if (-not $path -or -not (Test-Path -LiteralPath $path)) { $dir=Join-Path $root 'data\output\target-year-discovery'; if (Test-Path -LiteralPath $dir) { $latest=Get-ChildItem -LiteralPath $dir -Filter '*-discovery-rca-batch-plan.json' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if ($latest) { $path=$latest.FullName } } }; if ($path -and (Test-Path -LiteralPath $path)) { Write-Output $path; Get-Content -LiteralPath $path -TotalCount 240 } else { Write-Output 'none' }" >> "%DIAG_FILE%" 2>&1
 >> "%DIAG_FILE%" echo.
