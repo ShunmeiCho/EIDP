@@ -959,6 +959,20 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
         )
         if details.get("school_url_crawl_unavailable"):
             lines.append("学校公式サイト探索: Scrapling add-on が未導入のためスキップしました。")
+    if "target_pdf_auto_yield_pct" in details:
+        auto_yield = details.get("target_pdf_auto_yield_pct")
+        acquired = _int_or_default(details.get("target_pdf_auto_acquired_count"), 0)
+        denominator = _int_or_default(details.get("target_pdf_auto_denominator_count"), 0)
+        gate = details.get("ship_gate_auto_yield_pct")
+        gate_status = str(details.get("ship_gate_status") or "unknown")
+        if isinstance(auto_yield, (int, float)):
+            line = f"対象年度PDF自動取得率: {auto_yield:.1f}% ({acquired}/{denominator}校)"
+            if isinstance(gate, (int, float)):
+                gate_label = "達成" if gate_status == "pass" else "未達"
+                line += f" / 出荷目安 {gate:.0f}% {gate_label}"
+            lines.append(line)
+        else:
+            lines.append(f"対象年度PDF自動取得率: 未測定 ({acquired}/{denominator}校)")
     return lines
 
 

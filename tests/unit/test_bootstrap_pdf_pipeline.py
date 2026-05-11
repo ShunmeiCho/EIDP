@@ -955,6 +955,30 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
     assert {"request_timeout": 12} in calls
 
 
+def test_bootstrap_target_pdf_yield_metrics_marks_gate_status() -> None:
+    assert module.bootstrap_target_pdf_yield_metrics(
+        schools_total=10,
+        schools_with_target_pdf_current_fy=6,
+    ) == {
+        "target_pdf_auto_acquired_count": 6,
+        "target_pdf_auto_denominator_count": 10,
+        "target_pdf_auto_yield_pct": 60.0,
+        "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_status": "pass",
+    }
+
+    assert module.bootstrap_target_pdf_yield_metrics(
+        schools_total=0,
+        schools_with_target_pdf_current_fy=0,
+    ) == {
+        "target_pdf_auto_acquired_count": 0,
+        "target_pdf_auto_denominator_count": 0,
+        "target_pdf_auto_yield_pct": None,
+        "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_status": "not_measured",
+    }
+
+
 def test_step_rebuild_status_includes_all_school_types_and_discovery_evidence(monkeypatch, tmp_path) -> None:
     calls: list[dict[str, object]] = []
     evidence_log = tmp_path / "discovery.jsonl"
@@ -980,21 +1004,41 @@ def test_step_rebuild_status_includes_all_school_types_and_discovery_evidence(mo
         )
         return SimpleNamespace(rebuilt=3, excel_ready=1)
 
+    def fake_compute_coverage(session, *, school_type, fiscal_year):  # noqa: ANN001
+        calls.append({"coverage_session": session, "school_type": school_type, "fiscal_year": fiscal_year})
+        return SimpleNamespace(
+            totals=SimpleNamespace(
+                schools_total=10,
+                schools_with_target_pdf_current_fy=6,
+            )
+        )
+
     import eidp.config as config_mod
     import eidp.db.session as db_session
     import eidp.pipeline.school_fiscal_year_status as status_mod
+    import eidp.reports.coverage as coverage_mod
 
     fake_session = FakeSession()
     monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
     monkeypatch.setattr(status_mod, "rebuild_school_fiscal_year_status", fake_rebuild)
+    monkeypatch.setattr(coverage_mod, "compute_coverage", fake_compute_coverage)
     monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
 
     result = module.step_rebuild_status(evidence_log=evidence_log)
 
-    assert result == {"rebuilt": 3, "excel_ready": 1}
+    assert result == {
+        "rebuilt": 3,
+        "excel_ready": 1,
+        "target_pdf_auto_acquired_count": 6,
+        "target_pdf_auto_denominator_count": 10,
+        "target_pdf_auto_yield_pct": 60.0,
+        "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_status": "pass",
+    }
     assert calls[0] == {
         "session": fake_session,
         "fiscal_year": 2026,
         "school_type": None,
         "discovery_evidence_path": evidence_log,
     }
+    assert calls[1] == {"coverage_session": fake_session, "school_type": None, "fiscal_year": 2026}

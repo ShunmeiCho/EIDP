@@ -748,6 +748,36 @@ def test_bootstrap_progress_exposes_official_index_yield_details(tmp_path) -> No
     ]
 
 
+def test_bootstrap_progress_exposes_target_pdf_yield_gate(tmp_path) -> None:
+    progress_path = tmp_path / "progress.json"
+    progress_path.write_text(
+        json.dumps(
+            {
+                "status": "succeeded",
+                "current_step": 5,
+                "total_steps": 5,
+                "percent": 1.0,
+                "message": "初回URL/PDF取得が完了しました。",
+                "details": {
+                    "target_pdf_auto_acquired_count": 1020,
+                    "target_pdf_auto_denominator_count": 1700,
+                    "target_pdf_auto_yield_pct": 60.0,
+                    "ship_gate_auto_yield_pct": 60.0,
+                    "ship_gate_status": "pass",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    progress = read_bootstrap_progress(progress_path)
+
+    assert progress is not None
+    assert bootstrap_progress_detail_lines(progress) == [
+        "対象年度PDF自動取得率: 60.0% (1020/1700校) / 出荷目安 60% 達成"
+    ]
+
+
 def test_bootstrap_progress_auto_refresh_html_uses_bounded_delay() -> None:
     too_fast = bootstrap_progress_auto_refresh_html(seconds=1)
     normal = bootstrap_progress_auto_refresh_html(seconds=20)

@@ -69,6 +69,7 @@ from download_prefecture_artifacts import (  # noqa: E402
 )
 
 TOTAL_BOOTSTRAP_STEPS = 5
+SHIP_GATE_AUTO_YIELD_PCT = 60.0
 URL_SEARCH_PERCENT_START = 0.45
 URL_SEARCH_PERCENT_END = 0.56
 SCHOOL_URL_CRAWL_PERCENT_START = URL_SEARCH_PERCENT_END
@@ -102,6 +103,38 @@ def discovery_progress_details(total_sites: int, stats: dict[str, int]) -> dict[
     if "skipped" in stats:
         details["discovery_skipped"] = int(stats["skipped"])
     return details
+
+
+def bootstrap_target_pdf_yield_metrics(
+    *,
+    schools_total: int,
+    schools_with_target_pdf_current_fy: int,
+) -> dict[str, Any]:
+    """Return the initial-bootstrap target-FY PDF gate metric.
+
+    Weekly rediscovery measures newly acquired PDFs against the missing-school
+    batch. The first bootstrap starts from the full active school universe, so
+    the operator-facing gate is the post-bootstrap current target-PDF coverage.
+    """
+    acquired = max(int(schools_with_target_pdf_current_fy), 0)
+    denominator = max(int(schools_total), 0)
+    if denominator <= 0:
+        return {
+            "target_pdf_auto_acquired_count": acquired,
+            "target_pdf_auto_denominator_count": 0,
+            "target_pdf_auto_yield_pct": None,
+            "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+            "ship_gate_status": "not_measured",
+        }
+
+    yield_pct = round(acquired / denominator * 100.0, 1)
+    return {
+        "target_pdf_auto_acquired_count": acquired,
+        "target_pdf_auto_denominator_count": denominator,
+        "target_pdf_auto_yield_pct": yield_pct,
+        "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+        "ship_gate_status": "pass" if yield_pct >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate",
+    }
 
 
 class BootstrapProgressWriter:
@@ -719,11 +752,12 @@ def step_ingest(
     return stats
 
 
-def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, int]:
+def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
     """Step 5: rebuild School x target fiscal-year status rows for the UI."""
     from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.pipeline.school_fiscal_year_status import rebuild_school_fiscal_year_status
+    from eidp.reports.coverage import compute_coverage
 
     session = SessionLocal()
     try:
@@ -733,13 +767,21 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, int]:
             school_type=None,
             discovery_evidence_path=evidence_log,
         )
+        coverage = compute_coverage(session, school_type=None, fiscal_year=settings.target_fiscal_year).totals
         session.commit()
     except Exception:
         session.rollback()
         raise
     finally:
         session.close()
-    out = {"rebuilt": stats.rebuilt, "excel_ready": stats.excel_ready}
+    out = {
+        "rebuilt": stats.rebuilt,
+        "excel_ready": stats.excel_ready,
+        **bootstrap_target_pdf_yield_metrics(
+            schools_total=coverage.schools_total,
+            schools_with_target_pdf_current_fy=coverage.schools_with_target_pdf_current_fy,
+        ),
+    }
     print(f"[step5] {out}")
     return out
 
@@ -1150,6 +1192,14 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         )
     print("\n=== Step 5: rebuild school fiscal-year status ===")
     status_stats = step_rebuild_status(evidence_log=args.evidence_log if str(args.evidence_log) else None)
+    if progress is not None:
+        progress.write(
+            status="running",
+            current_step=5,
+            percent=0.98,
+            message="学校別タスクと対象年度PDFの自動取得率を集計しました。",
+            details=status_stats,
+        )
 
     print("\n=== Bootstrap pipeline summary ===")
     print(f"  prefectures: {len(ok)} ok / {len(failed)} failed")
