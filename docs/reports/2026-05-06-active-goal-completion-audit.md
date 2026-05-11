@@ -320,6 +320,23 @@ but the Typer CLI entrypoint did not.
   `pdf_status=confirmed_target`, `evidence_level=prev_year_diff`,
   `blocking_reason=NULL`, `excel_ready=1`; the exported workbook contains 2
   `さいたまIT・WEB専門学校` rows in `学科別` and 2 in `在籍のみ抜粋`.
+- Windows packaged Saitama 51-site replay on the same v150 extraction:
+  the database contained 51 Saitama `prefecture_aggregator` `SchoolSite` rows.
+  Because school `95` already had the accepted target document, the packaged
+  `discover-pdfs --discovery-method prefecture_aggregator --batch-size 60`
+  command crawled the remaining 50 sites and wrote evidence to
+  `C:\EIDP-v150-d303b44\logs\v150_saitama51_evidence.jsonl`. The run produced
+  evidence for all 50 remaining schools, no missing official-index handoff
+  rows, and no additional current-FY target downloads. Evidence rows totaled
+  449: `classified_non_target=166`, `fiscal_year_mismatch=171`,
+  `pre_filtered_non_target_hint=90`, `all_negative_score=10`,
+  `not_pdf_magic=5`, `http_error:HTTPStatusError=4`,
+  `target_fiscal_year_not_detected=1`, `no_candidates_found=1`, and
+  `discovery_error=1`. The only remaining
+  `target_fiscal_year_not_detected` school was `757`; school `773`
+  `令和元年度確認申請書` stayed classified as `fiscal_year_mismatch:2019`, and
+  school `777` adjacent-year Goope target links stayed classified as old-year
+  mismatches rather than target-year-unverified work.
 
 ## 2026-05-11 v145 Update
 
@@ -1067,6 +1084,16 @@ to FY2027 and later by changing or deriving `target_fiscal_year`.
   departments and 2 current FY2026 yearly rows; status is
   `confirmed_target` / `prev_year_diff` / `excel_ready=1`; the workbook has 2
   `さいたまIT・WEB専門学校` rows in `学科別` and 2 in `在籍のみ抜粋`.
+- Windows v150 packaged Saitama 51-site replay →
+  `C:\EIDP-v150-d303b44` held 51 Saitama `prefecture_aggregator`
+  `SchoolSite` rows; after the existing school `95` accepted document, the
+  packaged 50-site `discover-pdfs` replay produced evidence for every remaining
+  official-index site and no additional target downloads. Evidence rows:
+  `449`; reason buckets: `classified_non_target=166`,
+  `fiscal_year_mismatch=171`, `pre_filtered_non_target_hint=90`,
+  `all_negative_score=10`, `not_pdf_magic=5`,
+  `http_error:HTTPStatusError=4`, `target_fiscal_year_not_detected=1`,
+  `no_candidates_found=1`, and `discovery_error=1`.
 - Focused v149 first-year Japanese-era regression, Saitama school `773`
   replay, full current Saitama replay, Ruff, and full unit suite after the
   `元年度` parser patch →
@@ -1490,6 +1517,10 @@ the current Saitama official-index replay's target-year-unverified evidence to
 one known school (`757`). v150 fixes a Windows CLI codepage crash found during
 packaged ingest and proves the latest ZIP can run fresh setup plus school `95`
 strict target PDF discovery, ingest, status rebuild, and Excel export on the
-remote Windows host. The main remaining blockers are target-year yield/policy,
-broader Windows E2E validation, real operator UI validation, and the explicit
-university rollout decision.
+remote Windows host. The v150 packaged Saitama 51-site replay also proves the
+official-index handoff itself is intact on Windows: all 51 Saitama
+`prefecture_aggregator` URLs were in the database, the 50 remaining sites all
+produced discovery evidence, and the only strict target document remained the
+school `95` PDF. The main remaining blockers are therefore target-year
+yield/policy, real operator UI validation, and the explicit university rollout
+decision.
