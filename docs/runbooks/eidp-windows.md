@@ -144,6 +144,9 @@ http://localhost:8501
   新しい対象年度 PDF を探します。
 - 新しく見つかった PDF だけを取り込みます。
 - 処理結果を `data\output\last_run.json` に保存します。
+- PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キューを
+  `data\output\target-year-discovery\{run_id}-discovery-rca-batch-plan.json`
+  に保存します。
 - 実行ログを `logs\run-YYYYMMDD.log` に保存します。
 
 週次処理で行わないこと:

@@ -116,9 +116,12 @@ Each run writes:
 - `output/target-year-discovery/{run_id}-summary.json`
 - `output/target-year-discovery/{run_id}-discovery-rejections.jsonl`
 - `output/target-year-discovery/{run_id}-ingest-rejections.jsonl`
+- `output/target-year-discovery/{run_id}-discovery-rca-batch-plan.json`
 
 The summary contains before/after snapshots for coverage, PDF gaps, extraction,
-new document IDs, discovery stats, ingest stats, and deltas.
+new document IDs, discovery stats, ingest stats, deltas, and a `discovery_rca`
+section pointing to the Codex RCA batch plan when discovery evidence was
+recorded.
 
 ## Verification (after a run)
 

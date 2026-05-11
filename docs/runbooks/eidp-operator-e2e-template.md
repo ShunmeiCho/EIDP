@@ -162,6 +162,7 @@ KPI メモ:
 
 - `logs\run-*.log`
 - `data\output\last_run.json`
+- `data\output\target-year-discovery\*-discovery-rca-batch-plan.json`
 - Excel 出力ファイル
 - 失敗画面の screenshot
 - Defender / SmartScreen screenshot

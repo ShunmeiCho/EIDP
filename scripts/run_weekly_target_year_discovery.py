@@ -54,6 +54,7 @@ DEFAULT_METHODS = (
     "operator_manual",
     "scrapling_stealth",
 )
+DEFAULT_RCA_BATCH_LIMIT = 20
 
 
 @dataclass(frozen=True)
@@ -124,6 +125,7 @@ def write_last_run(
         "new_document_ids": new_document_ids,
         "discovery_stats": summary.get("discovery_stats") or {},
         "ingest_stats": summary.get("ingest_stats") or {},
+        "discovery_rca": summary.get("discovery_rca") or {},
         "summary_path": summary.get("summary_path"),
         "error": error,
     }
@@ -357,6 +359,51 @@ def _timestamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
 
+def _write_discovery_rca_batch_plan(
+    session: Session,
+    *,
+    evidence_log: Path,
+    output_path: Path,
+    target_fiscal_year: int,
+) -> dict[str, Any]:
+    """Write the ready-to-copy Codex RCA queue for this weekly run."""
+    if not evidence_log.is_file() or evidence_log.stat().st_size == 0:
+        return {
+            "batch_plan_path": None,
+            "batch_plan_item_count": 0,
+            "batch_plan_total_candidates": 0,
+            "error": None,
+        }
+
+    from eidp.scraper.discovery_rca_packet import (
+        build_single_school_rca_batch_plan,
+        render_single_school_rca_batch_plan,
+    )
+
+    try:
+        plan = build_single_school_rca_batch_plan(
+            session,
+            evidence_log=evidence_log,
+            target_fiscal_year=target_fiscal_year,
+            limit=DEFAULT_RCA_BATCH_LIMIT,
+            include_prompts=True,
+        )
+        output_path.write_text(render_single_school_rca_batch_plan(plan) + "\n", encoding="utf-8")
+        return {
+            "batch_plan_path": str(output_path),
+            "batch_plan_item_count": len(plan.get("items") or []),
+            "batch_plan_total_candidates": int(plan.get("total_candidates") or 0),
+            "error": None,
+        }
+    except Exception as exc:  # pragma: no cover - defensive artifact path
+        return {
+            "batch_plan_path": None,
+            "batch_plan_item_count": 0,
+            "batch_plan_total_candidates": 0,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
 def run_weekly(
     *,
     current_fy: int,
@@ -420,6 +467,7 @@ def _run_weekly_inner(
     run_id = _timestamp()
     discovery_evidence = output_dir / f"{run_id}-discovery-rejections.jsonl"
     ingest_evidence = output_dir / f"{run_id}-ingest-rejections.jsonl"
+    discovery_rca_plan = output_dir / f"{run_id}-discovery-rca-batch-plan.json"
     summary_path = output_dir / f"{run_id}-summary.json"
 
     session = SessionLocal()
@@ -513,6 +561,12 @@ def _run_weekly_inner(
             session.commit()
 
         after = _snapshot_reports(session, current_fy, school_type)
+        discovery_rca = _write_discovery_rca_batch_plan(
+            session,
+            evidence_log=discovery_evidence,
+            output_path=discovery_rca_plan,
+            target_fiscal_year=current_fy,
+        )
         summary = {
             "run_id": run_id,
             "started_at": started_at.isoformat(),
@@ -537,6 +591,7 @@ def _run_weekly_inner(
                 "discovery_rejections": str(discovery_evidence),
                 "ingest_rejections": str(ingest_evidence),
             },
+            "discovery_rca": discovery_rca,
             "summary_path": str(summary_path),
         }
         summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -560,6 +615,7 @@ def _run_weekly_inner(
                 "new_document_ids": [],
                 "discovery_stats": {},
                 "ingest_stats": {},
+                "discovery_rca": {},
                 "summary_path": str(summary_path),
             }
             write_last_run(
@@ -632,6 +688,7 @@ def main() -> None:
         "new_document_ids": summary["new_document_ids"],
         "discovery_stats": summary["discovery_stats"],
         "ingest_stats": summary["ingest_stats"],
+        "discovery_rca": summary.get("discovery_rca") or {},
         "coverage_delta": summary["delta"]["coverage"],
     }
     if prune_failures:

@@ -309,6 +309,16 @@ uv run eidp discovery-rca-batch-plan \
   --json
 ```
 
+The Windows weekly target-year runner writes this batch automatically beside
+the run evidence when discovery evidence exists:
+
+```text
+data/output/target-year-discovery/{run_id}-discovery-rca-batch-plan.json
+```
+
+The same path is also exposed in `data/output/last_run.json` under
+`discovery_rca.batch_plan_path`.
+
 The batch plan prioritizes `target_form_without_year_evidence`,
 `non_target_candidates_only`, `no_pdf_candidates`, and fetch failures before
 `publication_lag_or_old_target_pdf`, because latest-public old-year forms are

@@ -468,3 +468,67 @@ def test_run_weekly_separates_target_missing_from_stale_count(
     assert summary["target_missing_school_count"] == 2
     assert summary["stale_school_count"] == 1
     assert summary["no_crawlable_url_school_count"] == 0
+
+
+def test_run_weekly_writes_discovery_rca_batch_plan_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Weekly discovery should leave a ready Codex RCA queue next to the
+    evidence log, so a disconnected Windows session can be continued from
+    artifacts alone."""
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    _school(session, 1)
+    _site(session, 1, "prefecture_aggregator")
+    session.commit()
+
+    def fake_run_pdf_discovery(*args, **kwargs):  # noqa: ANN002, ANN003
+        evidence_path = kwargs["evidence_path"]
+        evidence_path.write_text(
+            json.dumps(
+                {
+                    "school_id": 1,
+                    "reason": "target_fiscal_year_not_detected",
+                    "pdf_type": "target",
+                    "pdf_url": "https://example1.ac.jp/support.pdf",
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return {"processed": 1, "downloaded": 0}
+
+    monkeypatch.setattr(module, "run_pdf_discovery", fake_run_pdf_discovery)
+    last_run = tmp_path / "data" / "output" / "last_run.json"
+
+    summary = run_weekly(
+        current_fy=2026,
+        methods=["prefecture_aggregator"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=10,
+        rate_limit=1.5,
+        request_timeout=12.0,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=False,
+        lock_path=None,
+        last_run_path=last_run,
+    )
+
+    rca = summary["discovery_rca"]
+    assert rca["batch_plan_item_count"] == 1
+    plan_path = Path(rca["batch_plan_path"])
+    assert plan_path.name.endswith("-discovery-rca-batch-plan.json")
+    assert plan_path.is_file()
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert plan["items"][0]["packet"]["school_id"] == 1
+    assert plan["items"][0]["bucket"] == "target_form_without_year_evidence"
+    assert "Investigate this EIDP school as a single-school RCA packet." in plan["items"][0]["prompt"]
+
+    last_run_payload = json.loads(last_run.read_text(encoding="utf-8"))
+    assert last_run_payload["discovery_rca"]["batch_plan_path"] == str(plan_path)
+    assert last_run_payload["discovery_rca"]["batch_plan_item_count"] == 1
