@@ -86,6 +86,9 @@ Current v0.1 seed coverage:
   hidden crawler error.
 - Image-only support PDFs that look target-related but must remain in review
   until OCR or page context proves the target fiscal year.
+- Image-only old-year support PDFs whose URL or anchor explicitly says `R7` or
+  `令和7年度`, which should surface as publication lag for FY2026 rather than
+  non-target noise.
 - Official-index disclosure pages where stale-looking URL/anchor hints must be
   overridden only by PDF-body current-year evidence.
 - Official-index support pages where a yearless confirmation form is accepted

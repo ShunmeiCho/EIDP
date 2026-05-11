@@ -77,6 +77,33 @@ def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_hints_as_
     ]
 
 
+def test_summarize_pdf_discovery_evidence_keeps_generic_higher_ed_boilerplate_image_only_in_review(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 1,
+                "reason": "fiscal_year_mismatch:2020",
+                "pdf_type": "image_only",
+                "pdf_url": "https://odhs.info/app-def/S-101/html/koutou202507.pdf?20250711",
+                "anchor_text": (
+                    "本校の申請内容について 住民税非課税世帯及びそれに準ずる世帯の学生"
+                    "（2020年度の在学生（既入学者も含む）から対象）"
+                    " https://www.mext.go.jp/a_menu/koutou/hutankeigen/index.htm"
+                ),
+            }
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    assert summary.school_bucket_counts == {"target_form_without_year_evidence": 1}
+    assert summary.school_summaries[0].bucket == "target_form_without_year_evidence"
+
+
 def test_summarize_pdf_discovery_evidence_buckets_tls_certificate_failures(tmp_path: Path) -> None:
     evidence_path = tmp_path / "evidence.jsonl"
     _write_jsonl(

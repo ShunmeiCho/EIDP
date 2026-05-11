@@ -1,0 +1,49 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "urawa-specialized-school-image-publication-lag-2026",
+  "school": {
+    "school_id": 761,
+    "school_name": "浦和専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "浦和済美学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Classify the latest visible image-only 修学支援 PDF as publication lag rather than a non-target candidate.",
+    "steps": [
+      "Start from the Saitama official-index disclosure URL registered for the school.",
+      "Open the public report page and inspect the 修学支援 links.",
+      "Follow the anchor R7修学支援に関する資料 to 09_shugakushien_r7.pdf.",
+      "Treat the PDF as latest-public old-year target-form evidence for target FY2026 because the URL and anchor identify R7, not R8."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://urasen.jp/",
+    "disclosure_url": "https://urasen.jp/about/report/",
+    "pdf_url": "https://urasen.jp/wp/wp-content/themes/urawa/assets/pdf/about/report/09_shugakushien_r7.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "image_only_old_year_support_pdf",
+    "reusable_rules": [
+      "Keep image-only 修学支援 PDFs visible in evidence even when strict target-year extraction cannot accept them.",
+      "When URL or anchor explicitly says R7/令和7 for target FY2026, classify the school as publication_lag_latest_public.",
+      "Surface this as an operator publication-lag state, not as non-target noise."
+    ],
+    "anti_patterns": [
+      "Do not count an R7 image-only support PDF as FY2026 success.",
+      "Do not classify strong 修学支援 old-year hints as non-target just because the PDF text is image-only.",
+      "Do not treat generic MEXT boilerplate years such as 2020年度対象 as publication-lag evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/saitama-current51-prefindex-trusted-20260511-094241/logs/evidence_combined_51_latest.jsonl"
+    ],
+    "notes": "Current combined Saitama evidence contains school_id 761 reason=fiscal_year_mismatch:2025, pdf_type=image_only, anchor_text=R7修学支援に関する資料."
+  }
+}

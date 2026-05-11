@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unicodedata
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -171,6 +172,8 @@ def _classify_school_bucket(rows: list[dict[str, Any]]) -> str:
         return "publication_lag_or_old_target_pdf"
     if any(str(row.get("reason") or "") == "target_fiscal_year_not_detected" for row in rows):
         return "target_form_without_year_evidence"
+    if any(_is_image_only_review_candidate(row) for row in rows):
+        return "target_form_without_year_evidence"
     if any(str(row.get("reason") or "") == "no_candidates_found" for row in rows):
         return "no_pdf_candidates"
     if all(str(row.get("reason") or "") == "discovery_error" for row in rows) and any(
@@ -190,31 +193,43 @@ def _is_old_year_target(row: dict[str, Any]) -> bool:
     pdf_type = str(row.get("pdf_type") or "")
     if pdf_type == "target":
         return True
-    return pdf_type == "image_only" and _has_target_form_hint(row)
+    return pdf_type == "image_only" and _has_stale_image_target_form_hint(row)
 
 
-def _has_target_form_hint(row: dict[str, Any]) -> bool:
+def _has_stale_image_target_form_hint(row: dict[str, Any]) -> bool:
+    text = _candidate_hint_text(row)
+    support_hint = any(token in text for token in ("修学支援", "修学の支援", "shugakushien", "syugakushien"))
+    form_hint = any(token in text for token in ("機関要件", "確認申請", "申請書", "様式第2号", "様式2"))
+    form_file_hint = bool(re.search(r"(?:^|[/_-])j20\d{2}[_-]?0?5[a-z]?(?:\.pdf|$)", text))
+    return support_hint or form_hint or form_file_hint
+
+
+def _is_image_only_review_candidate(row: dict[str, Any]) -> bool:
+    if str(row.get("pdf_type") or "") != "image_only":
+        return False
+    text = _candidate_hint_text(row)
+    return any(
+        token in text
+        for token in (
+            "申請内容",
+            "高等教育",
+            "無償化",
+            "修学支援",
+            "修学の支援",
+            "koutou",
+            "hutankeigen",
+            "shugakushien",
+            "syugakushien",
+        )
+    )
+
+
+def _candidate_hint_text(row: dict[str, Any]) -> str:
     text = unicodedata.normalize(
         "NFKC",
         f"{row.get('anchor_text') or ''} {row.get('pdf_url') or ''} {unquote(str(row.get('pdf_url') or ''))}",
     ).lower()
-    return any(
-        token in text
-        for token in (
-            "修学支援",
-            "修学の支援",
-            "高等教育",
-            "無償化",
-            "機関要件",
-            "確認申請",
-            "申請書",
-            "様式第2号",
-            "様式2",
-            "shugakushien",
-            "syugakushien",
-            "hutankeigen",
-        )
-    )
+    return text
 
 
 def _is_tls_certificate_verify_failure(row: dict[str, Any]) -> bool:

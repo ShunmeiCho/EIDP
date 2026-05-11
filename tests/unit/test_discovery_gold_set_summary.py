@@ -19,17 +19,17 @@ def test_summarize_discovery_gold_entries_tracks_release_relevant_buckets() -> N
 
     summary = summarize_discovery_gold_entries(entries)
 
-    assert summary.total_entries == 14
-    assert summary.target_fiscal_year_counts == {2025: 2, 2026: 12}
+    assert summary.total_entries == 15
+    assert summary.target_fiscal_year_counts == {2025: 2, 2026: 13}
     assert summary.outcome_counts == {
         "accepted_target_pdf": 6,
         "needs_operator_review": 5,
         "no_target_candidate_found": 1,
-        "publication_lag_latest_public": 2,
+        "publication_lag_latest_public": 3,
     }
     assert summary.strict_target_year_successes == 6
     assert summary.operator_review_entries == 5
-    assert summary.publication_lag_entries == 2
+    assert summary.publication_lag_entries == 3
 
 
 def test_render_discovery_gold_summary_outputs_json_safe_payload() -> None:
@@ -38,7 +38,7 @@ def test_render_discovery_gold_summary_outputs_json_safe_payload() -> None:
 
     decoded = json.loads(payload)
 
-    assert decoded["total_entries"] == 14
+    assert decoded["total_entries"] == 15
     assert decoded["outcome_counts"]["needs_operator_review"] == 5
     assert decoded["outcome_counts"]["no_target_candidate_found"] == 1
     assert decoded["strict_target_year_successes"] == 6
@@ -50,7 +50,7 @@ def test_build_discovery_gold_run_plan_emits_bounded_pdf_discovery_inputs() -> N
 
     plan = build_discovery_gold_run_plan(entries)
 
-    assert len(plan) == 14
+    assert len(plan) == 15
     ecole = next(item for item in plan if item.entry_id == "ecole-matsue-nutrition-2026")
     assert ecole.school_id == 1721
     assert ecole.site_url == "https://www.ecole-cpb.com/school-support"
@@ -64,7 +64,7 @@ def test_render_discovery_gold_run_plan_outputs_json_array() -> None:
 
     decoded = json.loads(payload)
 
-    assert len(decoded) == 14
+    assert len(decoded) == 15
     items_by_id = {item["entry_id"]: item for item in decoded}
     assert items_by_id["ast-kansai-ika-review-2026"]["site_url"] == "https://www.kmc.ast.ac.jp/jyouhoukokai/"
     assert (
