@@ -418,6 +418,8 @@ def test_diagnose_bat_collects_operator_evidence_without_mutating_data(bat_files
     assert "diagnostics-%DIAG_STAMP%.txt" in body
     assert "validate_windows_install.py" in body
     assert "--after-setup" in body
+    assert "--after-bootstrap" in body
+    assert "validate_after_bootstrap_rc" in body
     assert "BUILD_INFO.json" in body
     assert "last_run.json" in body
     assert "latest discovery RCA batch plan" in body

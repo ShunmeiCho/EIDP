@@ -62,6 +62,24 @@ if exist "%VENV_PY%" (
 )
 >> "%DIAG_FILE%" echo.
 
+set "HAS_BOOTSTRAP_PROGRESS="
+for /f "delims=" %%F in ('dir /b /o-d "%EIDP_APP_ROOT%\logs\bootstrap-pdfs-*.json" 2^>nul') do (
+    if not defined HAS_BOOTSTRAP_PROGRESS set "HAS_BOOTSTRAP_PROGRESS=1"
+)
+>> "%DIAG_FILE%" echo [validate_install after-bootstrap]
+if exist "%VENV_PY%" (
+    if defined HAS_BOOTSTRAP_PROGRESS (
+        "%VENV_PY%" "%EIDP_APP_ROOT%\scripts\validate_windows_install.py" "%EIDP_APP_ROOT%" --after-setup --after-bootstrap >> "%DIAG_FILE%" 2>&1
+        set "VALIDATE_BOOTSTRAP_RC=%ERRORLEVEL%"
+        >> "%DIAG_FILE%" echo validate_after_bootstrap_rc=!VALIDATE_BOOTSTRAP_RC!
+    ) else (
+        >> "%DIAG_FILE%" echo skipped; no bootstrap progress file found
+    )
+) else (
+    >> "%DIAG_FILE%" echo skipped; .venv Python is missing
+)
+>> "%DIAG_FILE%" echo.
+
 >> "%DIAG_FILE%" echo [weekly task registration warning]
 if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" (
     type "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" >> "%DIAG_FILE%"
