@@ -708,8 +708,77 @@ def test_discovery_rca_outcome_validate_rejects_decision_table_action_mismatch(t
     assert "layer_0_official_index_handoff requires outcome=no_target_candidate_found" in result.output
     assert "layer_0_official_index_handoff requires operator_action=manual_url_entry" in result.output
     assert "no_target_candidate_found requires operator_action=manual_url_entry" in result.output
-    assert "site_infrastructure_failure requires outcome=needs_operator_review" in result.output
+    assert "site_infrastructure_failure requires outcome=site_fetch_error" in result.output
     assert "site_infrastructure_failure requires operator_action=site_access_followup" in result.output
+
+
+def test_discovery_rca_outcome_validate_accepts_site_fetch_error(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "site-fetch-error.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 98,
+                "target_fiscal_year": 2026,
+                "layer": "site_infrastructure_failure",
+                "outcome": "site_fetch_error",
+                "source_page_url": "https://example.ac.jp/disclosure",
+                "candidate_pdf_url": "",
+                "anchor_text": "",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "",
+                "negative_evidence": "TLS certificate verification failed",
+                "checked_paths": ["https://example.ac.jp/disclosure"],
+                "search_queries_used": [],
+                "operator_action": "site_access_followup",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "do not classify site fetch failures as missing target PDFs",
+                "confidence": "high",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "site_fetch_error" in result.output
+
+
+def test_discovery_rca_outcome_validate_rejects_bool_ids(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "bool-ids.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": True,
+                "target_fiscal_year": False,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "needs_operator_review",
+                "source_page_url": "https://example.ac.jp/disclosure",
+                "candidate_pdf_url": "",
+                "anchor_text": "",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "候補PDFあり",
+                "negative_evidence": "",
+                "checked_paths": ["https://example.ac.jp/disclosure"],
+                "search_queries_used": [],
+                "operator_action": "review_pdf",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "medium",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 1
+    assert "school_id must be an integer" in result.output
+    assert "target_fiscal_year must be an integer" in result.output
 
 
 def test_discovery_rca_outcome_validate_accepts_output_directory(tmp_path: Path) -> None:

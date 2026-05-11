@@ -264,9 +264,9 @@ def validate_single_school_rca_outcome(payload: dict[str, Any]) -> list[str]:
         if field not in payload:
             errors.append(f"missing required field: {field}")
 
-    if "school_id" in payload and not isinstance(payload["school_id"], int):
+    if "school_id" in payload and not _is_strict_int(payload["school_id"]):
         errors.append("school_id must be an integer")
-    if "target_fiscal_year" in payload and not isinstance(payload["target_fiscal_year"], int):
+    if "target_fiscal_year" in payload and not _is_strict_int(payload["target_fiscal_year"]):
         errors.append("target_fiscal_year must be an integer")
     if "gold_set_entry_recommended" in payload and not isinstance(payload["gold_set_entry_recommended"], bool):
         errors.append("gold_set_entry_recommended must be a boolean")
@@ -389,10 +389,14 @@ def _is_string_list(value: object) -> bool:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
+def _is_strict_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def _rca_key(payload: dict[str, Any]) -> tuple[int, int] | None:
     school_id = payload.get("school_id")
     target_fiscal_year = payload.get("target_fiscal_year")
-    if not isinstance(school_id, int) or not isinstance(target_fiscal_year, int):
+    if not _is_strict_int(school_id) or not _is_strict_int(target_fiscal_year):
         return None
     return (school_id, target_fiscal_year)
 
@@ -417,10 +421,15 @@ def _validate_rca_outcome_semantics(payload: dict[str, Any]) -> list[str]:
         if operator_action != "manual_url_entry":
             errors.append("layer_0_official_index_handoff requires operator_action=manual_url_entry")
     if layer == "site_infrastructure_failure":
-        if outcome != "needs_operator_review":
-            errors.append("site_infrastructure_failure requires outcome=needs_operator_review")
+        if outcome != "site_fetch_error":
+            errors.append("site_infrastructure_failure requires outcome=site_fetch_error")
         if operator_action != "site_access_followup":
             errors.append("site_infrastructure_failure requires operator_action=site_access_followup")
+    if outcome == "site_fetch_error":
+        if layer != "site_infrastructure_failure":
+            errors.append("site_fetch_error requires layer=site_infrastructure_failure")
+        if operator_action != "site_access_followup":
+            errors.append("site_fetch_error requires operator_action=site_access_followup")
     if outcome == "no_target_candidate_found" and operator_action != "manual_url_entry":
         errors.append("no_target_candidate_found requires operator_action=manual_url_entry")
     if outcome == "accepted_target_pdf":
