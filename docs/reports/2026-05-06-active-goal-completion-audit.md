@@ -127,6 +127,29 @@ downloadable supported prefecture seeds. A local extracted-install validation
 also passed, and the extracted source contains the `subject_` / `subject-`
 pre-download tokens.
 
+A targeted Windows v236 replay then validated that the shipped ZIP uses the new
+subject pre-download guard in the real operator runtime. Fresh extraction
+`C:\Users\cyo20\EIDP-v236-2e90d7c` passed setup and after-setup validation
+with `school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, `uq_document_file_hash` present, and
+`build_commit=2e90d7c540c88704dbf4f617597530f888f36ea1`. The replay was
+bounded to Saitama official-index data and the two affected all-japan schools
+(`291`, `486`): it downloaded the current Saitama artifact, applied
+`prefecture-aggregate --pref saitama --apply` (`extracted=58`, `matched=51`,
+`added=51`), and then ran `discover-pdfs` with
+`--discovery-method prefecture_aggregator --school-id 291 --school-id 486`.
+The pulled evidence has `254` rows. Among `subject_` / `subject-` URLs, the
+existing v235 overlap of `39` school+URL pairs changed from
+`classified_non_target=30`, `fiscal_year_mismatch=8`, and
+`pre_filtered_non_target_hint=1` to `pre_filtered_non_target_hint=31` and the
+same `fiscal_year_mismatch=8`. Across the full v236 targeted replay, `116/124`
+subject rows are now pre-download `pre_filtered_non_target_hint`; the remaining
+`8` are anchor-contaminated old-year target-like rows where adjacent
+`academic_support` / `修学支援新制度様式2号` context still dominates. No
+`Document` rows were created for schools `291` or `486`. This proves the v236
+fix removes the subject-PDF download/classification waste without accepting any
+new target PDF.
+
 During this RCA, a classification defect was found in
 `discovery_evidence_summary.py`: old-year `image_only` PDFs with both system
 hints and target application-form hints, such as `修学支援` plus `様式第2号`,
@@ -2650,16 +2673,16 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v233 is the current verifier-clean and
+The active goal is **not complete**. v236 is the current verifier-clean and
 Windows setup-verified ZIP candidate. The latest full bounded Windows
 acquisition RCA still proves strict FY2026 yield below the ship gate: the
-v229 Saitama official-index run covered `51` official-index school URLs, found
-PDF candidates on `50` sites, downloaded `3` PDFs, and counted only `2` schools
-as current target-PDF auto acquired after ingest/status rebuild. The third
-downloaded PDF was school `72`, which ended `school_mismatch`; v230 now
-pre-filters that `職業実践専門課程等の基本情報` PDF as `non_target` in a targeted
-Windows replay. v231 also prevents school `793` stale `2025年度` full-form
-links from inheriting a preceding `2026年度` syllabus context. v232 additionally
+v235 Saitama official-index run covered `51` official-index school URLs, found
+PDF candidates on `50` sites, downloaded `3` PDFs, and counted `3` schools
+as current target-PDF auto acquired after ingest/status rebuild. v230
+pre-filters the earlier school `72` `職業実践専門課程等の基本情報` false positive
+as `non_target` in a targeted Windows replay. v231 also prevents school `793`
+stale `2025年度` full-form links from inheriting a preceding `2026年度` syllabus
+context. v232 additionally
 keeps schools `761` and `763` review-bound by preventing support-only
 image PDFs from being mislabeled as old target publication-lag evidence or
 pre-filtered due to sibling-link text. The v228 school `95` false positive is
@@ -2669,6 +2692,11 @@ the 入間看護 entry was reclassified to publication-lag. v234 keeps JS-render
 fallback active when static HTML only exposes current-year non-target PDFs.
 v235 prevents those pre-filtered adjacent PDFs from exhausting the bounded
 download-attempt budget before lower-ranked target forms are tried.
+v236 additionally pre-filters English `subject_*.pdf` / `subject-*.pdf`
+syllabus/course-list PDFs; a targeted Windows replay on schools `291` and `486`
+proved that the v235 overlapping subject set moved from `30` download-time
+`classified_non_target` rows to pre-download rejection without creating any new
+`Document` rows.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
