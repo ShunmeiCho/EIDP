@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import urlparse
 
 RCA_OUTCOME_REQUIRED_FIELDS = (
     "school_id",
@@ -279,6 +280,18 @@ def validate_single_school_rca_outcome(payload: dict[str, Any]) -> list[str]:
         errors.append("checked_paths must be a list")
     if "search_queries_used" in payload and not _is_string_list(payload["search_queries_used"]):
         errors.append("search_queries_used must be a list")
+    for field in ("source_page_url", "candidate_pdf_url"):
+        if field in payload and isinstance(payload[field], str) and payload[field].strip():
+            if not _is_http_url(payload[field]):
+                errors.append(f"{field} must be an http(s) URL when present")
+    if "checked_paths" in payload and _is_string_list(payload["checked_paths"]):
+        invalid_checked_paths = [
+            item
+            for item in payload["checked_paths"]
+            if item.strip() and not _is_investigation_path(item)
+        ]
+        if invalid_checked_paths:
+            errors.append("checked_paths entries must be http(s) URLs or safe local evidence paths")
 
     layer = payload.get("layer")
     if isinstance(layer, str) and layer not in RCA_OUTCOME_ALLOWED_LAYERS:
@@ -391,6 +404,26 @@ def _is_string_list(value: object) -> bool:
 
 def _is_strict_int(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_http_url(value: str) -> bool:
+    parsed = urlparse(value.strip())
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _is_investigation_path(value: str) -> bool:
+    text = value.strip()
+    if not text or "\x00" in text or "\n" in text or "\r" in text:
+        return False
+    if _is_http_url(text):
+        return True
+    if "://" in text:
+        return False
+    normalized = text.replace("\\", "/")
+    path = PurePosixPath(normalized)
+    if path.is_absolute() or ".." in path.parts:
+        return False
+    return bool(path.suffix)
 
 
 def _rca_key(payload: dict[str, Any]) -> tuple[int, int] | None:

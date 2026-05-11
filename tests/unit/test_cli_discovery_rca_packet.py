@@ -650,6 +650,42 @@ def test_discovery_rca_outcome_validate_rejects_missing_investigation_trace(tmp_
     assert "layer_3_operator_or_search_fallback requires search_queries_used" in result.output
 
 
+def test_discovery_rca_outcome_validate_rejects_invalid_url_and_checked_path_shapes(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "invalid-url-shapes.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 99,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "needs_operator_review",
+                "source_page_url": "javascript:alert(1)",
+                "candidate_pdf_url": "not a pdf url",
+                "anchor_text": "",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "候補PDFあり",
+                "negative_evidence": "",
+                "checked_paths": ["not actually checked"],
+                "search_queries_used": [],
+                "operator_action": "review_pdf",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "medium",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 1
+    assert "source_page_url must be an http(s) URL when present" in result.output
+    assert "candidate_pdf_url must be an http(s) URL when present" in result.output
+    assert "checked_paths entries must be http(s) URLs or safe local evidence paths" in result.output
+
+
 def test_discovery_rca_outcome_validate_rejects_decision_table_action_mismatch(tmp_path: Path) -> None:
     outcome_dir = tmp_path / "outcomes"
     outcome_dir.mkdir()
