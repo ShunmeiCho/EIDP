@@ -2310,6 +2310,25 @@ def test_extract_pdf_links_does_not_append_previous_year_when_anchor_has_year() 
     assert candidates[1].anchor_text == "10．令和7年度確認申請書"
 
 
+def test_extract_pdf_links_does_not_mix_sibling_text_when_anchor_has_year() -> None:
+    html = """
+    <div class="linkBtn_item">
+      <a href="/about/report/09_shugakushien_r6.pdf">R6修学支援に関する資料</a>
+    </div>
+    <div class="linkBtn_item">
+      <a href="/about/report/09_shugakushien_r7.pdf">R7修学支援に関する資料</a>
+    </div>
+    <div class="linkBtn_item">
+      <a href="/about/report/08_jitsumu.pdf">実務経験のある教員の授業一覧</a>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(html, "https://urasen.jp/")
+
+    target = next(c for c in candidates if c.pdf_url.endswith("/about/report/09_shugakushien_r7.pdf"))
+    assert target.anchor_text == "R7修学支援に関する資料"
+
+
 def test_extract_pdf_links_uses_nearest_year_heading_for_first_list_item() -> None:
     html = """
     <h3>2026年度</h3>

@@ -720,7 +720,7 @@ def _enclosing_html_block(html: str, start: int, end: int) -> tuple[str, int, in
     """Return the closest simple HTML block containing an anchor match."""
 
     prefix = html[:start]
-    for tag in ("p", "li", "tr"):
+    for tag in ("p", "li", "tr", "div"):
         open_matches = list(re.finditer(rf"<{tag}\b[^>]*>", prefix, re.IGNORECASE))
         if not open_matches:
             continue
@@ -766,7 +766,12 @@ def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
     if block is not None:
         tag, block_start, _, block_fragment = block
         current_text = _html_text(block_fragment)
-        if current_text and _has_fiscal_year_context(current_text) and current_text not in parts:
+        if (
+            current_text
+            and not _has_fiscal_year_context(anchor)
+            and _has_fiscal_year_context(current_text)
+            and current_text not in parts
+        ):
             parts.append(current_text)
         previous_text = (
             _previous_fiscal_year_context(html, block_start)
