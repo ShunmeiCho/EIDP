@@ -12,6 +12,7 @@ import json
 import sqlite3
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +20,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from ship_gate_contract import (
     BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
+    SHIP_GATE_AUTO_YIELD_PCT,
     SHIP_GATE_STATUSES,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
+    ship_gate_status_from_yield,
 )
 
 
@@ -134,6 +137,8 @@ SQLITE_DEPARTMENT_CHANGE_VOID_COLUMNS = (
     "voided_by",
     "void_reason",
 )
+
+TARGET_FY_SCHOOL_TYPE = "専門学校"
 
 BUILD_INFO_REQUIRED_KEYS = (
     "app",
@@ -285,6 +290,211 @@ def _validate_discovery_rca_batch_plan(
         expected_items=discovery_rca.get("batch_plan_item_count"),
         error_prefix="discovery_rca",
     )
+
+
+def _current_fiscal_year() -> int:
+    now = datetime.now()
+    return now.year if now.month >= 4 else now.year - 1
+
+
+def _coerce_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _target_fiscal_year_from_env(root: Path) -> int | None:
+    env_path = root / ".env"
+    if not env_path.is_file():
+        return None
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, raw_value = line.split("=", 1)
+        if key.strip() != "EIDP_TARGET_FISCAL_YEAR":
+            continue
+        return _coerce_int(raw_value.strip().strip("'\""))
+    return None
+
+
+def _resolve_target_fiscal_year(root: Path, *candidates: object) -> int:
+    for candidate in candidates:
+        value = _coerce_int(candidate)
+        if value is not None:
+            return value
+    return _target_fiscal_year_from_env(root) or _current_fiscal_year()
+
+
+def _sqlite_target_fy_coverage(
+    check: InstallCheck,
+    root: Path,
+    fiscal_year: int,
+) -> dict[str, int | float | None] | None:
+    db_path = root / "data" / "eidp.sqlite3"
+    if not db_path.is_file():
+        check.fail("missing setup file: data/eidp.sqlite3")
+        return None
+    try:
+        with sqlite3.connect(db_path) as conn:
+            school_count = int(
+                conn.execute(
+                    "SELECT COUNT(*) FROM school WHERE status = 'active' AND school_type = ?",
+                    (TARGET_FY_SCHOOL_TYPE,),
+                ).fetchone()[0]
+                or 0
+            )
+            target_pdf_school_count = int(
+                conn.execute(
+                    """
+                    SELECT COUNT(DISTINCT school.id)
+                    FROM school
+                    JOIN document ON document.school_id = school.id
+                    WHERE school.status = 'active'
+                      AND school.school_type = ?
+                      AND document.fiscal_year = ?
+                      AND document.ingest_status = 'ingested'
+                      AND document.pdf_type = 'target'
+                    """,
+                    (TARGET_FY_SCHOOL_TYPE, fiscal_year),
+                ).fetchone()[0]
+                or 0
+            )
+    except sqlite3.Error as exc:
+        check.fail(f"data/eidp.sqlite3 cannot compute target-FY coverage: {exc}")
+        return None
+
+    yield_pct = round(target_pdf_school_count / school_count * 100.0, 1) if school_count else None
+    coverage = {
+        "fiscal_year": fiscal_year,
+        "schools_total": school_count,
+        "schools_with_target_pdf_current_fy": target_pdf_school_count,
+        "yield_pct": yield_pct,
+    }
+    check.details["sqlite_target_fy"] = fiscal_year
+    check.details["sqlite_target_fy_school_type"] = TARGET_FY_SCHOOL_TYPE
+    check.details["sqlite_target_fy_specialty_school_count"] = school_count
+    check.details["sqlite_target_fy_target_pdf_school_count"] = target_pdf_school_count
+    check.details["sqlite_target_fy_yield_pct"] = yield_pct
+    return coverage
+
+
+def _validate_bootstrap_ship_gate_against_sqlite(
+    check: InstallCheck,
+    root: Path,
+    details: dict[str, Any],
+    *,
+    require_ship_gate: bool,
+) -> None:
+    fiscal_year = _resolve_target_fiscal_year(root, details.get("current_fy"))
+    coverage = _sqlite_target_fy_coverage(check, root, fiscal_year)
+    if coverage is None:
+        return
+
+    reported_denominator = details.get("target_pdf_auto_denominator_count")
+    reported_acquired = details.get("target_pdf_auto_acquired_count")
+    if isinstance(reported_denominator, int) and reported_denominator != coverage["schools_total"]:
+        check.warn(
+            "bootstrap target_pdf_auto_denominator_count does not match SQLite active specialty school count: "
+            f"{reported_denominator} != {coverage['schools_total']}"
+        )
+    if isinstance(reported_acquired, int) and reported_acquired != coverage["schools_with_target_pdf_current_fy"]:
+        check.warn(
+            "bootstrap target_pdf_auto_acquired_count does not match SQLite target-FY target PDF count: "
+            f"{reported_acquired} != {coverage['schools_with_target_pdf_current_fy']}"
+        )
+
+    sqlite_status = ship_gate_status_from_yield(coverage["yield_pct"])  # type: ignore[arg-type]
+    check.details["sqlite_target_fy_ship_gate_status"] = sqlite_status
+    if require_ship_gate and sqlite_status != "pass":
+        check.fail(
+            "bootstrap ship_gate_status pass does not match SQLite target-FY coverage: "
+            f"{coverage['schools_with_target_pdf_current_fy']}/{coverage['schools_total']} "
+            f"({coverage['yield_pct']}%, gate={SHIP_GATE_AUTO_YIELD_PCT}%)"
+        )
+
+
+def _load_json_file(check: InstallCheck, path: Path, *, label: str) -> dict[str, Any] | None:
+    if not path.is_file():
+        check.fail(f"{label} is missing: {path}")
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        check.fail(f"{label} is not readable UTF-8 JSON: {exc}")
+        return None
+    if not isinstance(payload, dict):
+        check.fail(f"{label} must contain a JSON object")
+        return None
+    return payload
+
+
+def _validate_weekly_ship_gate_against_sqlite(
+    check: InstallCheck,
+    root: Path,
+    last_run: dict[str, Any],
+    *,
+    require_ship_gate: bool,
+) -> None:
+    if last_run.get("status") == "lock_busy":
+        return
+    fiscal_year = _resolve_target_fiscal_year(root, last_run.get("current_fy"))
+    coverage = _sqlite_target_fy_coverage(check, root, fiscal_year)
+    if coverage is None:
+        return
+
+    raw_summary_path = last_run.get("summary_path")
+    if not isinstance(raw_summary_path, str) or not raw_summary_path:
+        if require_ship_gate:
+            check.fail("last_run.json summary_path is required when --require-ship-gate is used")
+        return
+    summary_path = _resolve_install_path(root, raw_summary_path)
+    check.details["weekly_summary_path"] = str(summary_path)
+    summary = _load_json_file(check, summary_path, label="weekly summary")
+    if summary is None:
+        return
+
+    summary_fy = _coerce_int(summary.get("current_fy"))
+    if summary_fy is not None and summary_fy != fiscal_year:
+        check.fail(f"weekly summary current_fy does not match last_run.json current_fy: {summary_fy} != {fiscal_year}")
+
+    after = summary.get("after")
+    after_coverage = after.get("coverage") if isinstance(after, dict) else None
+    if not isinstance(after_coverage, dict):
+        check.fail("weekly summary after.coverage must contain a JSON object")
+        return
+
+    summary_total = _coerce_int(after_coverage.get("schools_total"))
+    summary_target = _coerce_int(after_coverage.get("schools_with_target_pdf_current_fy"))
+    if summary_total != coverage["schools_total"] or summary_target != coverage["schools_with_target_pdf_current_fy"]:
+        check.fail(
+            "weekly summary after.coverage does not match SQLite target-FY coverage: "
+            f"summary={summary_target}/{summary_total}, "
+            f"sqlite={coverage['schools_with_target_pdf_current_fy']}/{coverage['schools_total']}"
+        )
+
+    denominator = _coerce_int(last_run.get("target_pdf_auto_denominator_count"))
+    acquired = _coerce_int(last_run.get("target_pdf_auto_acquired_count"))
+    if denominator is None or acquired is None:
+        return
+    expected_yield = round(max(acquired, 0) / denominator * 100.0, 1) if denominator > 0 else None
+    expected_status = ship_gate_status_from_yield(expected_yield)
+    if last_run.get("ship_gate_status") != expected_status:
+        check.fail(
+            "last_run.json ship_gate_status does not match acquired/denominator counts: "
+            f"{last_run.get('ship_gate_status')} != {expected_status}"
+        )
 
 
 def _validate_sqlite_schema(check: InstallCheck, db_path: Path) -> None:
@@ -443,6 +653,12 @@ def _validate_bootstrap_progress_payload(
             )
     if require_ship_gate and bootstrap_gate_status != "pass":
         check.fail("bootstrap ship_gate_status must be pass when --require-ship-gate is used")
+    _validate_bootstrap_ship_gate_against_sqlite(
+        check,
+        root,
+        details,
+        require_ship_gate=require_ship_gate and bootstrap_gate_status == "pass",
+    )
 
     raw_path = str(details.get("discovery_rca_batch_plan_path") or "")
     if raw_path:
@@ -568,6 +784,12 @@ def validate_install(
                     check.fail(f"last_run.json ship_gate_metric_basis must be {WEEKLY_SHIP_GATE_METRIC_BASIS}")
             if require_ship_gate and weekly_gate_status != "pass":
                 check.fail("last_run.json ship_gate_status must be pass when --require-ship-gate is used")
+            _validate_weekly_ship_gate_against_sqlite(
+                check,
+                root,
+                last_run,
+                require_ship_gate=require_ship_gate and weekly_gate_status == "pass",
+            )
             _validate_discovery_rca_batch_plan(check, root, last_run.get("discovery_rca"))
 
         logs_dir = root / "logs"

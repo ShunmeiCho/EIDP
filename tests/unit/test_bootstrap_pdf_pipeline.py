@@ -1092,6 +1092,7 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
     assert result == {
         "rebuilt": 3,
         "excel_ready": 1,
+        "current_fy": 2026,
         "target_pdf_auto_acquired_count": 6,
         "target_pdf_auto_denominator_count": 10,
         "target_pdf_auto_denominator_scope": "active_specialty_schools",

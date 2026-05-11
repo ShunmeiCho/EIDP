@@ -691,6 +691,10 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "PRAGMA integrity_check",
             "department_change missing column",
             "uq_document_file_hash",
+            "TARGET_FY_SCHOOL_TYPE",
+            "sqlite_target_fy_yield_pct",
+            "bootstrap ship_gate_status pass does not match SQLite target-FY coverage",
+            "weekly summary after.coverage does not match SQLite target-FY coverage",
         ),
         "scripts/run_weekly_target_year_discovery.py": (
             "acquire_lock",

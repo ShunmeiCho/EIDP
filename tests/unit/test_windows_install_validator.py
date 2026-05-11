@@ -74,8 +74,33 @@ def _write_sqlite_schema(path: Path, *, omit: str | None = None) -> None:
         for table in module.SQLITE_REQUIRED_TABLES:
             if table == omit:
                 continue
-            if table == "document":
-                conn.execute("CREATE TABLE document (id INTEGER PRIMARY KEY, file_hash TEXT)")
+            if table == "school":
+                conn.execute(
+                    "CREATE TABLE school ("
+                    "id INTEGER PRIMARY KEY, "
+                    "status TEXT DEFAULT 'active', "
+                    "school_type TEXT"
+                    ")"
+                )
+            elif table == "school_site":
+                conn.execute(
+                    "CREATE TABLE school_site ("
+                    "id INTEGER PRIMARY KEY, "
+                    "school_id INTEGER, "
+                    "verified BOOLEAN"
+                    ")"
+                )
+            elif table == "document":
+                conn.execute(
+                    "CREATE TABLE document ("
+                    "id INTEGER PRIMARY KEY, "
+                    "file_hash TEXT, "
+                    "school_id INTEGER, "
+                    "fiscal_year INTEGER, "
+                    "ingest_status TEXT, "
+                    "pdf_type TEXT"
+                    ")"
+                )
             elif table == "department_change":
                 conn.execute(
                     "CREATE TABLE department_change ("
@@ -86,6 +111,13 @@ def _write_sqlite_schema(path: Path, *, omit: str | None = None) -> None:
                     "void_reason TEXT"
                     ")"
                 )
+            elif table == "school_fiscal_year_status":
+                conn.execute(
+                    "CREATE TABLE school_fiscal_year_status ("
+                    "school_id INTEGER, "
+                    "fiscal_year INTEGER"
+                    ")"
+                )
             else:
                 conn.execute(f"CREATE TABLE {table} (id INTEGER PRIMARY KEY)")
         if omit != "document":
@@ -93,7 +125,48 @@ def _write_sqlite_schema(path: Path, *, omit: str | None = None) -> None:
         conn.commit()
 
 
+def _seed_target_fy_coverage(root: Path, *, total: int = 10, acquired: int = 6, fy: int = 2026) -> None:
+    db_path = root / "data" / "eidp.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DELETE FROM document")
+        conn.execute("DELETE FROM school_fiscal_year_status")
+        conn.execute("DELETE FROM school")
+        for school_id in range(1, total + 1):
+            conn.execute(
+                "INSERT INTO school (id, status, school_type) VALUES (?, 'active', '専門学校')",
+                (school_id,),
+            )
+            conn.execute(
+                "INSERT INTO school_fiscal_year_status (school_id, fiscal_year) VALUES (?, ?)",
+                (school_id, fy),
+            )
+        for school_id in range(1, acquired + 1):
+            conn.execute(
+                "INSERT INTO document (id, file_hash, school_id, fiscal_year, ingest_status, pdf_type) "
+                "VALUES (?, ?, ?, ?, 'ingested', 'target')",
+                (school_id, f"hash-{school_id}", school_id, fy),
+            )
+        conn.commit()
+
+
 def _weekly_artifacts(root: Path) -> None:
+    _seed_target_fy_coverage(root, total=10, acquired=6, fy=2026)
+    summary_rel = "data/output/target-year-discovery/20260505_010203-summary.json"
+    _write(
+        root,
+        summary_rel,
+        json.dumps(
+            {
+                "run_id": "20260505_010203",
+                "current_fy": 2026,
+                "school_type": "専門学校",
+                "target_missing_school_count": 10,
+                "before": {"coverage": {"schools_total": 10, "schools_with_target_pdf_current_fy": 0}},
+                "after": {"coverage": {"schools_total": 10, "schools_with_target_pdf_current_fy": 6}},
+                "delta": {"coverage": {"schools_with_target_pdf_current_fy": 6}},
+            }
+        ),
+    )
     _write(
         root,
         "data/output/last_run.json",
@@ -105,10 +178,10 @@ def _weekly_artifacts(root: Path) -> None:
                 "finished_at": "2026-05-05T01:02:10+00:00",
                 "current_fy": 2026,
                 "selection_mode": "target_missing",
-                "target_missing_school_count": 7,
-                "new_document_count": 2,
+                "target_missing_school_count": 10,
+                "new_document_count": 6,
                 "target_pdf_auto_acquired_count": 6,
-                "target_pdf_auto_denominator_count": 7,
+                "target_pdf_auto_denominator_count": 10,
                 "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
                 "target_pdf_auto_yield_pct": 60.0,
                 "ship_gate_auto_yield_pct": 60.0,
@@ -116,6 +189,7 @@ def _weekly_artifacts(root: Path) -> None:
                 "ship_gate_status": "pass",
                 "discovery_stats": {"downloaded": 2},
                 "ingest_stats": {"processed": 2},
+                "summary_path": summary_rel,
             }
         ),
     )
@@ -123,6 +197,7 @@ def _weekly_artifacts(root: Path) -> None:
 
 
 def _bootstrap_artifacts(root: Path) -> None:
+    _seed_target_fy_coverage(root, total=10, acquired=6, fy=2026)
     _write(
         root,
         "logs/bootstrap-pdfs-20260505-010203.json",
@@ -141,6 +216,7 @@ def _bootstrap_artifacts(root: Path) -> None:
                     "ship_gate_auto_yield_pct": 60.0,
                     "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
                     "ship_gate_status": "pass",
+                    "current_fy": 2026,
                 },
             }
         ),
@@ -433,6 +509,7 @@ def test_validate_after_weekly_accepts_not_measured_yield(tmp_path: Path) -> Non
     payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
     payload["target_missing_school_count"] = 0
     payload["target_pdf_auto_acquired_count"] = 0
+    payload["target_pdf_auto_denominator_count"] = 0
     payload["target_pdf_auto_yield_pct"] = None
     payload["ship_gate_status"] = "not_measured"
     _write(root, "data/output/last_run.json", json.dumps(payload))
@@ -546,6 +623,25 @@ def test_validate_after_bootstrap_release_gate_rejects_below_gate(tmp_path: Path
     assert structure_only.ok, structure_only.errors
     assert not release_gate.ok
     assert any("bootstrap ship_gate_status must be pass" in error for error in release_gate.errors)
+
+
+def test_validate_after_bootstrap_release_gate_rejects_pass_log_when_sqlite_coverage_is_low(
+    tmp_path: Path,
+) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _bootstrap_artifacts(root)
+    _seed_target_fy_coverage(root, total=10, acquired=5, fy=2026)
+
+    check = module.validate_install(root, after_bootstrap=True, require_ship_gate=True)
+
+    assert not check.ok
+    assert check.details["sqlite_target_fy_specialty_school_count"] == 10
+    assert check.details["sqlite_target_fy_target_pdf_school_count"] == 5
+    assert any(
+        "bootstrap ship_gate_status pass does not match SQLite target-FY coverage" in error
+        for error in check.errors
+    )
 
 
 def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
@@ -730,6 +826,25 @@ def test_validate_after_weekly_release_gate_rejects_below_gate(tmp_path: Path) -
     assert structure_only.ok, structure_only.errors
     assert not release_gate.ok
     assert any("last_run.json ship_gate_status must be pass" in error for error in release_gate.errors)
+
+
+def test_validate_after_weekly_release_gate_rejects_pass_log_when_summary_after_mismatches_sqlite(
+    tmp_path: Path,
+) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    _seed_target_fy_coverage(root, total=10, acquired=5, fy=2026)
+
+    check = module.validate_install(root, after_weekly=True, require_ship_gate=True)
+
+    assert not check.ok
+    assert check.details["sqlite_target_fy_specialty_school_count"] == 10
+    assert check.details["sqlite_target_fy_target_pdf_school_count"] == 5
+    assert any(
+        "weekly summary after.coverage does not match SQLite target-FY coverage" in error
+        for error in check.errors
+    )
 
 
 def test_validate_requires_release_gate_source_when_ship_gate_required(tmp_path: Path) -> None:

@@ -573,6 +573,8 @@ def test_verify_core_zip_requires_validator_sqlite_integrity_contract(tmp_path: 
     assert any("support_recipient" in error for error in check.errors)
     assert any("sqlite_integrity_check" in error for error in check.errors)
     assert any("uq_document_file_hash" in error for error in check.errors)
+    assert any("sqlite_target_fy_yield_pct" in error for error in check.errors)
+    assert any("weekly summary after.coverage" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:

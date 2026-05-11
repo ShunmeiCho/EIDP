@@ -835,6 +835,7 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
     out = {
         "rebuilt": stats.rebuilt,
         "excel_ready": stats.excel_ready,
+        "current_fy": int(settings.target_fiscal_year),
         **bootstrap_target_pdf_yield_metrics(
             schools_total=coverage.schools_total,
             schools_with_target_pdf_current_fy=coverage.schools_with_target_pdf_current_fy,
