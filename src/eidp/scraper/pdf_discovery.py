@@ -1208,7 +1208,11 @@ def _needs_rendered_html_fallback(candidates: list[PdfCandidate], *, target_fisc
 
     if not candidates:
         return True
-    return not any(_has_target_year_hint(candidate, target_year=target_fiscal_year) for candidate in candidates)
+    return not any(
+        _has_target_year_hint(candidate, target_year=target_fiscal_year)
+        and _has_target_application_hint(candidate)
+        for candidate in candidates
+    )
 
 
 def _default_rendered_html_fetcher() -> RenderedHtmlFetcher | None:

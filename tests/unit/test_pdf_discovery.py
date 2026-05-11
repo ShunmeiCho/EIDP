@@ -1247,6 +1247,57 @@ def test_discover_pdfs_uses_rendered_html_when_static_candidates_are_stale(monke
     }
 
 
+def test_discover_pdfs_uses_rendered_html_when_static_current_year_candidate_is_not_target(
+    monkeypatch,
+) -> None:
+    """A current-year guide PDF must not suppress JS discovery of the target form."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/docs/2026-school-guide.pdf">2026年度 学校案内</a>
+                </html>
+                """,
+                url="https://example.ac.jp/",
+            ),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+    rendered = _RenderedHtmlFetcher(
+        {
+            "https://example.ac.jp/": """
+                <html>
+                  <a href="/docs/r8-kakunin.pdf">
+                    令和8年度 高等教育の修学支援新制度 確認申請書
+                  </a>
+                </html>
+            """,
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://example.ac.jp/",
+        rendered_html_fetcher=rendered,
+        target_fiscal_year=2026,
+    )
+
+    assert rendered.calls == ["https://example.ac.jp/"]
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
+    assert {candidate.pdf_url for candidate in result.candidates} == {
+        "https://example.ac.jp/docs/2026-school-guide.pdf",
+        "https://example.ac.jp/docs/r8-kakunin.pdf",
+    }
+
+
 def test_discover_pdfs_follows_subpage_revealed_by_rendered_html(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
