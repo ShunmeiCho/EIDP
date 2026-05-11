@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `0994401073c5dceec749290def574492be50b801` (`eidp-windows-v241.zip`)
+Latest audited Windows package commit: `0511e6730ded05871d48202f61eea3765ac0a046` (`eidp-windows-v242.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -296,6 +296,55 @@ churn, especially O-Hara numbered public-disclosure PDFs. The next
 yield work should therefore change candidate budgeting/prioritization and
 site-family target-form derivation, not keep adding broad negative tokens.
 
+For v242 packaging, `scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v242.zip --latest-alias` produced SHA256
+`0812e4aa807b15b7af11409ccb606c4e2d4ac68b7370ed36a805e4770bcd7afb`
+with `git_commit=0511e6730ded05871d48202f61eea3765ac0a046` and
+`git_dirty=false`. The ZIP verifier passed with `entry_count=3027`,
+`wheel_count=78`, 17 discovery gold-set entries, and 47 downloadable supported
+prefecture seeds. Local extracted-install validation also passed. Fresh
+Windows extraction `C:\Users\cyo20\EIDP-v242-0511e67` passed setup and
+after-setup validation with `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+`uq_document_file_hash` present, and the expected `department_change` void
+columns present.
+
+A first v242 developer replay attempt produced an inconsistent
+`pdf_discovery_start sites=0` despite the SQLite database containing 51
+`prefecture_aggregator` `SchoolSite` rows. That run was discarded as invalid:
+the same packaged environment then showed `sites=51` through a direct
+`run_pdf_discovery` call, the packaged `eidp discover-pdfs` CLI with
+`--batch-size 1`, and a clean replay from a separate fresh extraction
+`C:\Users\cyo20\EIDP-v242-replay-0511e67`.
+
+The valid v242 full bounded Saitama official-index replay used the same scope
+as v241: `--pref saitama --skip-known-url-discovery --url-search off
+--school-url-crawl off --discovery-methods prefecture_aggregator
+--batch-size 60 --rate-limit 0.5 --request-timeout 15`. It again parsed
+`extracted=58`, `matched=51`, and `added=51`, then crawled `51` registered
+sites and found PDF candidates on `50`. Final strict target yield stayed
+unchanged: `downloaded=3`, ingest `processed=3`, `yearly_upserted=8`,
+`target_pdf_auto_acquired_count=3`, `target_pdf_auto_yield_pct=0.1`, and
+`ship_gate_status=below_gate`. The accepted documents are still schools `757`,
+`760`, and `784`.
+
+The v242 candidate-prioritization budget is therefore a runtime/noise fix, not
+a yield fix. It keeps target-like and form-like candidates ahead of generic PDFs
+but caps generic candidate scans at 80 per school. Compared with v241, the
+valid Saitama replay reduced evidence rows `5580 -> 1324`, unique rejected PDF
+URLs `2766 -> 1100`, skipped candidates `5418 -> 1166`, cached rejections
+`2813 -> 224`, and prefiltered rows `2550 -> 886`. The new counters show
+`candidate_budget_limited=8` and `candidate_budget_dropped=6487`. Rejection
+distribution after budgeting remained structurally similar for the meaningful
+classes: `target_fiscal_year_not_detected=21`,
+`classified_non_target=129`, and `fiscal_year_mismatch=334`.
+
+Interpretation: v242 proves the previous v241 diagnosis was correct. The next
+high-ROI discovery work is not broader negative-token tuning; it is either
+manual RCA/gold-set promotion for real target-form derivation on the remaining
+families, or a different official-site navigation strategy for the 48/51 scoped
+Saitama schools where strict current-FY target PDFs still are not acquired.
+
 - Regression coverage:
   `test_summarize_pdf_discovery_evidence_treats_image_only_old_target_application_hints_as_publication_lag`,
   `test_summarize_pdf_discovery_evidence_keeps_weak_image_only_form_or_support_hints_in_review`,
@@ -303,6 +352,10 @@ site-family target-form derivation, not keep adding broad negative tokens.
   `test_pre_download_rejects_site_family_non_target_url_shapes`,
   `test_pre_download_site_family_guard_keeps_sanko_target_form_shape`, and
   `test_pre_download_site_family_guard_keeps_local_target_application_hint`.
+  v242 adds
+  `test_run_pdf_discovery_prioritizes_target_like_candidate_before_prefilter_noise`
+  and
+  `test_run_pdf_discovery_limits_general_candidate_scan_without_hiding_formish_target`.
 - Verification:
   `uv run pytest tests/unit/test_discovery_evidence_summary.py -q -k image_only`
   → `2 passed`;
@@ -310,8 +363,12 @@ site-family target-form derivation, not keep adding broad negative tokens.
   tests/unit/test_school_fiscal_year_status.py
   tests/unit/test_review_school_year_tasks.py -q` → `72 passed`;
   `uv run pytest tests/unit/test_pdf_discovery.py -q` →
-  `88 passed, 5 warnings`; `uv run pytest tests/unit -q` →
-  `1189 passed, 5 warnings`.
+  `90 passed, 5 warnings`; `uv run pytest tests/unit -q` →
+  `1191 passed, 5 warnings`. `uv run ruff check
+  src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` passed,
+  as did local ZIP verification, local extracted validation, Windows
+  setup/after-setup validation, and the clean Windows v242 Saitama bounded
+  replay above.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
