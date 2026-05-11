@@ -1038,7 +1038,7 @@ def test_write_bootstrap_discovery_rca_batch_plan_skips_missing_evidence(tmp_pat
     }
 
 
-def test_step_rebuild_status_includes_all_school_types_and_discovery_evidence(monkeypatch, tmp_path) -> None:
+def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(monkeypatch, tmp_path) -> None:
     calls: list[dict[str, object]] = []
     evidence_log = tmp_path / "discovery.jsonl"
 
@@ -1100,4 +1100,4 @@ def test_step_rebuild_status_includes_all_school_types_and_discovery_evidence(mo
         "school_type": None,
         "discovery_evidence_path": evidence_log,
     }
-    assert calls[1] == {"coverage_session": fake_session, "school_type": None, "fiscal_year": 2026}
+    assert calls[1] == {"coverage_session": fake_session, "school_type": "専門学校", "fiscal_year": 2026}

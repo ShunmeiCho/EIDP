@@ -229,20 +229,7 @@ def _is_image_only_review_candidate(row: dict[str, Any]) -> bool:
     if str(row.get("pdf_type") or "") != "image_only":
         return False
     text = _candidate_hint_text(row)
-    return _has_target_application_hint(text) or _has_form_hint(text) or any(
-        token in text
-        for token in (
-            "申請内容",
-            "高等教育",
-            "無償化",
-            "修学支援",
-            "修学の支援",
-            "koutou",
-            "hutankeigen",
-            "shugakushien",
-            "syugakushien",
-        )
-    )
+    return _has_target_application_hint(text)
 
 
 def _candidate_hint_text(row: dict[str, Any]) -> str:

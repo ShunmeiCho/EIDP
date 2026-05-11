@@ -816,7 +816,7 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
             school_type=None,
             discovery_evidence_path=evidence_log,
         )
-        coverage = compute_coverage(session, school_type=None, fiscal_year=settings.target_fiscal_year).totals
+        coverage = compute_coverage(session, school_type="専門学校", fiscal_year=settings.target_fiscal_year).totals
         session.commit()
     except Exception:
         session.rollback()

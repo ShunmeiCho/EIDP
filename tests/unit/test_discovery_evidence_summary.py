@@ -77,7 +77,7 @@ def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_applicati
     ]
 
 
-def test_summarize_pdf_discovery_evidence_keeps_weak_image_only_form_or_support_hints_in_review(
+def test_summarize_pdf_discovery_evidence_rejects_weak_image_only_form_or_support_hints(
     tmp_path: Path,
 ) -> None:
     evidence_path = tmp_path / "evidence.jsonl"
@@ -103,14 +103,14 @@ def test_summarize_pdf_discovery_evidence_keeps_weak_image_only_form_or_support_
 
     summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
 
-    assert summary.school_bucket_counts == {"target_form_without_year_evidence": 2}
+    assert summary.school_bucket_counts == {"non_target_candidates_only": 2}
     assert [school.bucket for school in summary.school_summaries] == [
-        "target_form_without_year_evidence",
-        "target_form_without_year_evidence",
+        "non_target_candidates_only",
+        "non_target_candidates_only",
     ]
 
 
-def test_summarize_pdf_discovery_evidence_keeps_generic_higher_ed_boilerplate_image_only_in_review(
+def test_summarize_pdf_discovery_evidence_rejects_generic_higher_ed_boilerplate_image_only(
     tmp_path: Path,
 ) -> None:
     evidence_path = tmp_path / "evidence.jsonl"
@@ -133,8 +133,8 @@ def test_summarize_pdf_discovery_evidence_keeps_generic_higher_ed_boilerplate_im
 
     summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
 
-    assert summary.school_bucket_counts == {"target_form_without_year_evidence": 1}
-    assert summary.school_summaries[0].bucket == "target_form_without_year_evidence"
+    assert summary.school_bucket_counts == {"non_target_candidates_only": 1}
+    assert summary.school_summaries[0].bucket == "non_target_candidates_only"
 
 
 def test_summarize_pdf_discovery_evidence_buckets_tls_certificate_failures(tmp_path: Path) -> None:

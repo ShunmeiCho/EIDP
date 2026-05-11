@@ -292,8 +292,18 @@ def test_parse_args_defaults_to_configured_target_fiscal_year(
         "operator_manual",
         "scrapling_stealth",
     ]
-    assert args.school_type == "all"
+    assert args.school_type == "専門学校"
     assert args.request_timeout == 12.0
+
+
+def test_parse_args_allows_explicit_all_school_types(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["run_weekly_target_year_discovery.py", "--school-type", "all"])
+
+    args = module.parse_args()
+
+    assert args.school_type == "all"
 
 
 def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
