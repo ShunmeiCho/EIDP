@@ -111,6 +111,49 @@ def test_pre_download_keeps_target_form_when_path_contains_school_information_to
     assert rejection is None
 
 
+def test_pre_download_rejects_current_year_news_without_target_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/files/news/2026/05/open-campus-thanks.pdf",
+        page_url="https://example.ac.jp/news/",
+        anchor_text="2026.05.08 お知らせ オープンキャンパス参加の皆様ありがとうございました",
+        score=9.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.reason == "pre_filtered_non_target_hint"
+    assert rejection.pdf_type == "non_target"
+
+
+def test_pre_download_keeps_target_form_when_news_path_has_target_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/2026/r8-kakunin-shinsei.pdf",
+        page_url="https://example.ac.jp/news/",
+        anchor_text="令和8年度 高等教育の修学支援新制度 確認申請書 様式第2号",
+        score=9.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_rejects_student_support_application_form() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/pdf/applicationform-r8.pdf",
+        page_url="https://example.ac.jp/support/",
+        anchor_text="授業料等減免の対象者の認定に関する申請書（A様式1） 令和8年度",
+        score=9.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.reason == "pre_filtered_non_target_hint"
+    assert rejection.pdf_type == "non_target"
+
+
 def test_pre_download_prioritizes_stale_target_form_year_over_evaluation_path() -> None:
     candidate = PdfCandidate(
         pdf_url="https://ndac.ac.jp/about/evaluation/uploads/info-2025.pdf",
@@ -1651,6 +1694,75 @@ def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
         assert payloads[-1]["reason"] == "accepted_downloaded"
         assert payloads[-1]["extra"]["year_evidence"] == "url_hint"
         assert payloads[-1]["extra"]["detected_fiscal_year"] == ""
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_prefiltered_candidates_do_not_exhaust_download_attempts(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Pre-filtered adjacent PDFs should not hide a lower-ranked target form."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        non_targets = [
+            PdfCandidate(
+                pdf_url=f"https://example.ac.jp/files/news/2026/05/open-campus-{idx}.pdf",
+                page_url="https://example.ac.jp/news/",
+                anchor_text=(
+                    f"2026.05.{idx:02d} お知らせ 高等教育 修学支援 無償化 "
+                    "オープンキャンパス"
+                ),
+                score=20.0,
+            )
+            for idx in range(MAX_CANDIDATE_DOWNLOAD_ATTEMPTS)
+        ]
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/r8-kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 確認申請書",
+            score=1.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            candidates = [*non_targets, target]
+            return DiscoveryResult(school_id=school_id, candidates=candidates, best=non_targets[0])
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int, **_kwargs: object):
+            download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = 2026
+            candidate.year_evidence = "pdf_text"
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        assert download_calls == ["https://example.ac.jp/r8-kakunin.pdf"]
+        assert stats["prefiltered"] == MAX_CANDIDATE_DOWNLOAD_ATTEMPTS
+        assert stats["downloaded"] == 1
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert [payload["reason"] for payload in payloads].count("pre_filtered_non_target_hint") == (
+            MAX_CANDIDATE_DOWNLOAD_ATTEMPTS
+        )
+        assert payloads[-1]["reason"] == "accepted_downloaded"
     finally:
         session.close()
 

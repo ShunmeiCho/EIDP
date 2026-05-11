@@ -195,6 +195,19 @@ PRE_DOWNLOAD_NEGATIVE_TOKENS = (
     "gakkou_genjo",
     "諸心得",
     "knowledge",
+    "お知らせ",
+    "ニュース",
+    "/news/",
+    "イベント",
+    "オープンキャンパス",
+    "open-campus",
+    "opencampus",
+    "進路相談会",
+    "防災訓練",
+    "防犯講話",
+    "入学試験",
+    "入試",
+    "ao入試",
 )
 
 # User-Agent mimicking a real browser (institutional research)
@@ -467,6 +480,11 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
     text = _candidate_hint_text(candidate)
     lowered = text.lower()
     detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
+    if "a様式1" in lowered or "対象者の認定に関する申請書" in lowered:
+        return CachedPdfRejection(
+            pdf_type="non_target",
+            reason="pre_filtered_non_target_hint",
+        )
     if detected_year is not None and detected_year != target_year and _has_target_application_hint(candidate):
         return CachedPdfRejection(
             pdf_type="target",
@@ -1871,7 +1889,8 @@ def run_pdf_discovery(
             duplicate_seen = False
             cross_school_dup_seen = False
             target_year_rejection_seen = False
-            for candidate in viable[:MAX_CANDIDATE_DOWNLOAD_ATTEMPTS]:
+            download_attempts = 0
+            for candidate in viable:
                 if strict_target_fiscal_year and not candidate.trusted_year_evidence:
                     candidate.trusted_year_evidence = _trusted_year_evidence_for_site(site)
                 cache_key = _rejection_cache_key(
@@ -1922,6 +1941,10 @@ def run_pdf_discovery(
                         extra={"pre_download": "true"},
                     ))
                     continue
+
+                if download_attempts >= MAX_CANDIDATE_DOWNLOAD_ATTEMPTS:
+                    break
+                download_attempts += 1
 
                 if strict_target_fiscal_year:
                     file_path, file_hash, file_size, pdf_type, reject_reason = download_pdf(
