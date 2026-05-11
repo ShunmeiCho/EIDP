@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `8e7baef7d15f639fb424fa810b0b7b5090ab6bb8` (`eidp-windows-v243.zip`)
+Latest audited Windows package commit: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -395,7 +395,7 @@ gold-set entry exactly as `publication_lag_latest_public`. This is a Windows
 package proof for the manual-success-to-agent pattern, but not a strict
 current-FY yield improvement because the visible O-Hara form remains FY2025.
 
-The next current-code RCA found one strict-yield false negative in school `769`
+The v244 package closes one strict-yield false negative in school `769`
 (`公益社団法人地域医療振興協会さいたま看護専門学校`). v242 rejected
 `http://www.saitama-kango.jp/wp/wp-content/uploads/2025/06/申請書_0602_資料A.pdf`
 as `fiscal_year_mismatch:2025` because the WordPress upload path contains
@@ -410,6 +410,23 @@ focused current-code replay for school `769` produced `downloaded=1` with
 preserved `document_fiscal_year=2026` despite parser-visible internal 2025
 dates, wrote `yearly_upserted=1`, and status rebuild raised the copied Saitama
 DB to `excel_ready=4`.
+
+For v244 packaging, `scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v244.zip --latest-alias` produced SHA256
+`fecc714573983c0ca00fcd3775c84fb6b680307cd8daf71432839d193887775e`
+with `git_commit=d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` and
+`git_dirty=false`. `scripts/verify_windows_distribution.py` passed with
+`entry_count=3029`, `wheel_count=78`, 19 discovery gold-set entries, and 47
+downloadable supported prefecture seeds. Fresh Windows extraction
+`C:\Users\cyo20\EIDP-v244-d2beff6` passed setup and after-setup validation
+with `school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, `uq_document_file_hash` present, and
+`build_dirty=false`. A Windows v244 focused replay for school `769` then
+validated the packaged fix: PDF discovery returned `downloaded=1`, ingestion
+returned `processed=1` / `yearly_upserted=1`, status rebuild returned
+`excel_ready=1` on the fresh package DB, and
+`eval-discovery-gold --pdf-evidence` reported `exact_matches=1` /
+`failed_predictions=0` for the new gold-set entry.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
@@ -2910,9 +2927,10 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v243 is the current verifier-clean and
-Windows setup-verified ZIP candidate, with a focused Windows replay covering
-the O-Hara table-header discovery pattern. The latest full bounded Windows
+The active goal is **not complete**. v244 is the current verifier-clean and
+Windows setup-verified ZIP candidate, with focused Windows replays covering
+both the O-Hara table-header discovery pattern and the school `769`
+prefecture-trusted upload-year pattern. The latest full bounded Windows
 acquisition RCA is still v242 and still proves strict FY2026 yield below the
 ship gate: the v242 Saitama official-index run covered `51` official-index
 school URLs, found
@@ -2977,15 +2995,16 @@ for school `212` produced `crawled=1`, `found=1`, `downloaded=0`,
 `publication_lag_latest_public` for FY2026. This fixes the
 `non_target_candidates_only` RCA bucket for that O-Hara school-family case but
 does not raise strict FY2026 yield because the visible form is still FY2025.
-Current-code RCA after v243 adds one strict-yield recovery: school `769`
+v244 adds one strict-yield recovery: school `769`
 now accepts the target `申請書_0602_資料A.pdf` because a bare WordPress
 `/uploads/2025/06/` path is treated as an upload/calendar date, not an
 explicit stale fiscal-year label, when the PDF body is target and the
 prefecture official index supplies `prefecture_index_current_year`. Explicit
 stale labels such as `2025年度` and `令和7年度` still reject. The focused replay
 downloaded and ingested the document, wrote `yearly_upserted=1`, and raised the
-copied Saitama DB status to `excel_ready=4`; this is a current-code source
-improvement and is not yet a refreshed Windows ZIP package.
+copied Saitama DB status to `excel_ready=4`; the fresh Windows v244 package
+replay also validated `downloaded=1`, `processed=1`, `yearly_upserted=1`, and
+gold-set `exact_matches=1` for this new entry.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
