@@ -228,6 +228,12 @@ def _core_entries() -> dict[str, bytes | str]:
             "support_recipient_review_pending\n"
             'doc.ingest_status = "review_pending"\n'
         ),
+        "src/eidp/ocr/tesseract.py": (REPO_ROOT / "src" / "eidp" / "ocr" / "tesseract.py").read_text(
+            encoding="utf-8"
+        ),
+        "src/eidp/ocr/availability.py": (REPO_ROOT / "src" / "eidp" / "ocr" / "availability.py").read_text(
+            encoding="utf-8"
+        ),
         "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
@@ -459,6 +465,21 @@ def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) 
     assert not check.ok
     assert any("src/eidp/pipeline/ingest.py missing required token" in error for error in check.errors)
     assert any("compute_pdf_parse_breakdown" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_ocr_tesseract_runtime_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/ocr/tesseract.py"] = "def locate_tesseract(): pass\n"
+    entries["src/eidp/ocr/availability.py"] = "def detect_ocr_availability(): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/ocr/tesseract.py missing required token" in error for error in check.errors)
+    assert any("src/eidp/ocr/availability.py missing required token" in error for error in check.errors)
+    assert any("tesseract.exe" in error for error in check.errors)
+    assert any("jpn.traineddata" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:

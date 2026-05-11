@@ -109,6 +109,8 @@ CORE_REQUIRED_EXACT = (
     "src/eidp/db/audit_outbox.py",
     "src/eidp/scraper/pdf_discovery.py",
     "src/eidp/pipeline/ingest.py",
+    "src/eidp/ocr/tesseract.py",
+    "src/eidp/ocr/availability.py",
     "src/eidp/scraper/prefecture_aggregator.py",
     "runtime/python/python.exe",
     "runtime/uv.exe",
@@ -753,6 +755,24 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "is_current=is_current_row",
             "support_recipient_review_pending",
             'doc.ingest_status = "review_pending"',
+        ),
+        "src/eidp/ocr/tesseract.py": (
+            "locate_tesseract",
+            "locate_tessdata",
+            "run_tesseract_on_image",
+            "parse_tesseract_tsv",
+            "EIDP_TESSERACT_BIN",
+            "tesseract.exe",
+            "jpn.traineddata",
+            "--tessdata-dir",
+        ),
+        "src/eidp/ocr/availability.py": (
+            "detect_ocr_availability",
+            "availability_banner_text",
+            "availability_banner_severity",
+            "has_jpn_traineddata",
+            "auto_can_run",
+            "OCR add-on 未インストール",
         ),
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
