@@ -81,6 +81,12 @@ def _render_school_tasks_for_test(session, lock_path):  # noqa: ANN001, ANN201
     tasks.render(session, lock_path=lock_path)
 
 
+def _render_weekly_last_run_for_test(payload):  # noqa: ANN001, ANN201
+    from eidp.review._pages import school_year_tasks as tasks
+
+    tasks._render_weekly_last_run(payload)
+
+
 def _school(
     session: Session,
     school_id: int,
@@ -935,6 +941,30 @@ def test_read_weekly_last_run_returns_payload_or_none(tmp_path) -> None:
     assert payload is not None
     assert payload["status"] == "success"
     assert payload["new_document_count"] == 2
+
+
+def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
+    payload = {
+        "status": "success",
+        "target_missing_school_count": 10,
+        "new_document_count": 0,
+        "no_crawlable_url_school_count": 2,
+        "stale_school_count": 1,
+        "discovery_rca": {
+            "batch_plan_path": "data/output/target-year-discovery/run-discovery-rca-batch-plan.json",
+            "batch_plan_item_count": 7,
+            "batch_plan_total_candidates": 12,
+        },
+    }
+
+    app = AppTest.from_function(_render_weekly_last_run_for_test, args=(payload,))
+    app.run(timeout=15)
+
+    assert not app.exception
+    captions = [str(caption.value) for caption in app.caption]
+    assert any("Codex RCAキュー" in caption for caption in captions)
+    assert any("候補 7/12" in caption for caption in captions)
+    assert any("run-discovery-rca-batch-plan.json" in caption for caption in captions)
 
 
 def test_weekly_task_registration_warning_reads_setup_marker(tmp_path) -> None:

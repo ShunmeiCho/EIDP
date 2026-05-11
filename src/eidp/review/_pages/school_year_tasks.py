@@ -1628,6 +1628,15 @@ def _render_weekly_last_run(payload: dict[str, Any]) -> None:
         st.caption(" / ".join(str(item) for item in meta))
     if payload.get("summary_path"):
         st.caption(f"詳細ログ: {payload['summary_path']}")
+    discovery_rca = payload.get("discovery_rca")
+    if isinstance(discovery_rca, dict):
+        batch_plan_path = str(discovery_rca.get("batch_plan_path") or "")
+        if batch_plan_path:
+            item_count = _int_or_default(discovery_rca.get("batch_plan_item_count"), 0)
+            total_candidates = _int_or_default(discovery_rca.get("batch_plan_total_candidates"), item_count)
+            st.caption(f"Codex RCAキュー: {batch_plan_path} (候補 {item_count}/{total_candidates})")
+        if discovery_rca.get("error"):
+            st.caption(f"Codex RCA生成エラー: {discovery_rca['error']}")
     if payload.get("error"):
         st.caption(f"エラー詳細: {payload['error']}")
 
