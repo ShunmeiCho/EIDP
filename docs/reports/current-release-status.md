@@ -5,7 +5,8 @@ Branch: `sprint8-handoff-finalize`
 Current Mac-verifier-clean package: `dist/eidp-windows-v326.zip`
 Package commit: `a0c188e3e62fe421058f72b7417515b1d21a67bc`
 Package SHA256: `c01c3acb3409fceb0aa05ecc35a33279ce3385dee03295c15381714afeb8b7ca`
-Latest Windows-backend-proven package: `dist/eidp-windows-v325.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v326.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v325.zip`
 
 ## Verdict
 
@@ -13,24 +14,26 @@ Status: **NOT COMPLETE**
 
 The current source/ZIP snapshot is v326 and passes the default macOS package
 verifier. The packaging, setup, SQLite, Task Scheduler, and bounded Windows
-backend pipeline are reproducible on `ssh win` for v325. v326 contains a
-strict-mode fix for opaque WordPress Download Manager wrappers and still needs
-a Windows backend rerun plus browser UI operator click-through. The product
-goal is still not complete: the measured operator-reviewable coverage / Excel
-readiness remain far below the shipping line.
+setup are reproducible on `ssh win` for v326. The bounded Windows bootstrap
+pipeline is still last proven on v325. v326 contains a strict-mode fix for
+opaque WordPress Download Manager wrappers and has a targeted Windows proof for
+that fix, but still needs a bounded Windows bootstrap rerun plus browser UI
+operator click-through. The product goal is still not complete: the measured
+operator-reviewable coverage / Excel readiness remain far below the shipping
+line.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official indexes seed school public URLs | v325 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v325 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v326 verifier clean by default; discovery gold-set `22` entries; expected predictions `22/22 exact`; Windows v325 Saitama 25-site run crawled `25` official-index sites, found candidates on `24`, downloaded `2`, ingested `2`, and produced `2` Excel-ready schools; v326 Windows rerun pending | Mechanically proven, yield failing |
+| 47 prefecture official indexes seed school public URLs | v326 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v325 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
+| Discover and download current target-FY PDFs in strict mode | v326 verifier clean by default; discovery gold-set `22` entries; expected predictions `22/22 exact`; Windows v325 Saitama 25-site run crawled `25` official-index sites, found candidates on `24`, downloaded `2`, ingested `2`, and produced `2` Excel-ready schools; v326 bounded bootstrap rerun pending | Mechanically proven, yield failing |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `8` publication-lag cases; Windows v325 evidence shows `R7確認申請書類 様式第2号` is rejected as `fiscal_year_mismatch:2025`; v326 also rejects the ambiguous 入間看護専門学校 `wpdmdl=4821` wrapper as `target_fiscal_year_not_detected` instead of trusting prefecture-index evidence alone | Partially proven |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v325 Saitama 25-site run processed `2` documents, created `1` department, and wrote `2` yearly rows; both downloaded documents were Excel-ready | Partially proven |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
-| Excel template output | v325 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v325 | Partially proven |
-| ManualActionLog audit for operator actions | v325 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v325 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v326 ZIP verifies clean on macOS packaging gate; v325 ZIP was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v325-8670acc`, and `scripts\first_setup.bat` completed successfully; v326 Windows setup and browser UI click-through remain unverified | Backend Win proof present for v325, UI proof missing |
+| Excel template output | v326 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v326 | Partially proven |
+| ManualActionLog audit for operator actions | v326 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v326 | Partially proven |
+| ZIP distribution, double-click setup, browser UI offline operation | v326 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v326-a0c188e`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v325 25-site diagnostics report `target_pdf_auto_yield_pct=0.1` as a diagnostic metric, `operator_reviewable_yield_pct=0.8`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
 
 ## Current Non-Windows Evidence
@@ -56,7 +59,28 @@ v326 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v325:
+Commands and observations from `ssh win` for v326 setup:
+
+- Uploaded `dist/eidp-windows-v326.zip` to
+  `C:\Users\cyo20\eidp-windows-v326.zip`.
+- Windows `Get-FileHash -Algorithm SHA256` ->
+  `C01C3ACB3409FCEB0AA05ECC35A33279CE3385DEE03295C15381714AFEB8B7CA`.
+- Extracted to `C:\Users\cyo20\EIDP-v326-a0c188e`;
+  `runtime\python\python.exe scripts\validate_windows_install.py .` ->
+  `OK install`, build commit `a0c188e3e62fe421058f72b7417515b1d21a67bc`,
+  `build_dirty=false`.
+- `scripts\first_setup.bat` -> exit `0`; after-setup validator reported:
+  `school_count=2418`, `school_fiscal_year_status_count=2418`,
+  `sqlite_integrity_check=ok`, required SQLite tables present,
+  `department_change` void columns present, and `uq_document_file_hash` present.
+- The Windows scheduled task `EIDP Weekly Run` was updated by setup to
+  `C:\Users\cyo20\EIDP-v326-a0c188e\scripts\weekly_run.bat`.
+- Targeted strict-mode check for the prior 入間看護専門学校 false-positive URL
+  `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055`
+  with opaque anchor `download` returned
+  `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`.
+
+Commands and observations from `ssh win` for v325 bounded bootstrap:
 
 - Uploaded `dist/eidp-windows-v325.zip` to
   `C:\Users\cyo20\eidp-windows-v325.zip`.
@@ -91,7 +115,9 @@ v325 25-site backend run:
   `validate_after_bootstrap_rc=0`,
   `validate_after_bootstrap_ship_gate_rc=1`, `ship_readiness_rc=1`.
 - DB evidence after the 25-site run has `Document=2` and `CrawlJob=25`; the
-  accepted downloads are only `上尾中央看護専門学校` and `入間看護専門学校`.
+  accepted downloads are `上尾中央看護専門学校` and `入間看護専門学校`. v326's
+  targeted strict-mode proof shows the latter opaque `wpdmdl` acceptance no
+  longer qualifies without target-year context.
 - Evidence review confirmed stale-label rejection: the prior v324 false
   acceptance `R7確認申請書類 様式第2号` is now recorded as
   `fiscal_year_mismatch:2025`.
