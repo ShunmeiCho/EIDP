@@ -3,9 +3,25 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `def5bb72f03a864ae561adcd4d2a40440b91ffa0` (`eidp-windows-v311.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `97fbb7c88787f767b14b10fcdc3fc9323867368d` (`eidp-windows-v312.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+
+## 2026-05-12 V312 Packaged Gold Pattern Prediction Gate
+
+v312 (`97fbb7c`) closes the packaging side of the v311 gold-set provenance
+contract. The Windows ZIP verifier now derives `pattern_type` from any
+gold-set `expected_result.pattern_type` and requires the packaged
+`data/discovery-gold-set/expected-predictions.jsonl` to carry the same field.
+This prevents a future release from shipping gold entries with extractor
+provenance while silently omitting that provenance from the regression fixture.
+The verifier source contract also requires the evaluator tokens that preserve
+`pattern_type` from discover-pdfs evidence and report `pattern_type_mismatch`.
+Verification: Windows distribution verifier tests `81 passed`; full unit suite
+`1312 passed, 5 warnings`; targeted Ruff passed; discovery gold-set replay
+`20/20 exact`; `dist/eidp-windows-v312.zip` verified clean with SHA256
+`6737449864695a3bbf37c336b1d766793a663787a7718e886d14eb57ec4c617c`.
+Windows operator E2E is still pending.
 
 ## 2026-05-12 V311 Discovery Gold Pattern Provenance
 
