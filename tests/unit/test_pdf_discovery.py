@@ -800,6 +800,29 @@ def test_extract_pdf_links_includes_direct_pdf_data_attributes() -> None:
     assert "確認申請書" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_includes_select_option_pdf_values() -> None:
+    html = """
+    <section>
+      <h2>令和12年度分申請</h2>
+      <select onchange="location.href=this.value">
+        <option value="">選択してください</option>
+        <option value="/docs/r12-kakunin.pdf?download=1">確認申請書</option>
+        <option value="/docs/r12-school-info.pdf">学校情報</option>
+      </select>
+    </section>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2030)
+
+    assert [candidate.pdf_url for candidate in candidates] == [
+        "https://example.ac.jp/docs/r12-kakunin.pdf?download=1",
+        "https://example.ac.jp/docs/r12-school-info.pdf",
+    ]
+    assert candidates[0].pattern_type == "cache_busted"
+    assert "令和12年度分申請" in candidates[0].anchor_text
+    assert "確認申請書" in candidates[0].anchor_text
+
+
 def test_extract_pdf_links_includes_lazy_pdf_data_attributes() -> None:
     html = """
     <p>令和11年度分申請</p>

@@ -307,6 +307,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "PDF_LINK_ATTRIBUTE_NAMES\n"
             "PDF_DATA_ATTRIBUTE_TAG_PATTERN\n"
             "PDF_SCRIPT_URL_PATTERN\n"
+            "PDF_OPTION_VALUE_PATTERN\n"
+            "\"value\"\n"
             "_pdf_urls_from_script_attribute\n"
             "\"onclick\"\n"
             "button|span|div\n"
@@ -759,6 +761,8 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("PDF_LINK_ATTRIBUTE_NAMES" in error for error in check.errors)
     assert any("PDF_DATA_ATTRIBUTE_TAG_PATTERN" in error for error in check.errors)
     assert any("PDF_SCRIPT_URL_PATTERN" in error for error in check.errors)
+    assert any("PDF_OPTION_VALUE_PATTERN" in error for error in check.errors)
+    assert any('"value"' in error for error in check.errors)
     assert any("_pdf_urls_from_script_attribute" in error for error in check.errors)
     assert any('"onclick"' in error for error in check.errors)
     assert any("button|span|div" in error for error in check.errors)

@@ -374,6 +374,7 @@ class RenderedHtmlFetcher(Protocol):
 PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url", "data-file", "data-pdf", "data-src")
 PDF_DATA_ATTRIBUTE_TAG_PATTERN = r"(?:a|button|span|div)"
 PDF_SCRIPT_URL_PATTERN = re.compile(r"([\"'])([^\"']*?\.pdf(?:[?#][^\"']*)?)\1", re.IGNORECASE)
+PDF_OPTION_VALUE_PATTERN = r"<option\s([^>]*)>(.*?)</option\s*>"
 
 
 def _is_target_year_rejection(reason: str) -> bool:
@@ -1337,6 +1338,31 @@ def _extract_pdf_links(
             candidate_index_by_key,
             PdfCandidate(
                 pdf_url=url, page_url=base_url, anchor_text=anchor, pattern_type=pattern,
+            ),
+            target_fiscal_year=target_fiscal_year,
+        )
+
+    # Pattern 1a: year/select dropdowns whose option values are PDF URLs.
+    for m in re.finditer(
+        PDF_OPTION_VALUE_PATTERN,
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        href = _anchor_attr(m.group(1), "value")
+        if not href or ".pdf" not in unquote(href).lower():
+            continue
+        url = urljoin(base_url, href)
+        pattern = "cache_busted" if "?" in href else "direct"
+        if "/wp-content/" in url:
+            pattern = "wordpress"
+        _append_or_upgrade_candidate(
+            candidates,
+            candidate_index_by_key,
+            PdfCandidate(
+                pdf_url=url,
+                page_url=base_url,
+                anchor_text=_pdf_anchor_context_text(html, m),
+                pattern_type=pattern,
             ),
             target_fiscal_year=target_fiscal_year,
         )
