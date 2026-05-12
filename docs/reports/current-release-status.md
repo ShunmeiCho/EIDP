@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v335.zip`
-Package commit: `ac667cd5469c1cb695acc4c82cf6b4f6bd11d67b`
-Package SHA256: `7c022629304013ef3d0e427aa46da24b2adfbb68f94eb05d34e6c47aa42ef359`
+Current Mac-verifier-clean package: `dist/eidp-windows-v336.zip`
+Package commit: `3f5df7948c076e7886bd51f99a4c2f014d311772`
+Package SHA256: `71c21dabaf01e82f5b8e6489317030abab7b21c3843726bab20b6dc0cd6fa1ee`
 Latest Windows-core-validated package: `dist/eidp-windows-v333.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v333.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v333.zip`
@@ -13,8 +13,8 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v333.zip`
 
 Status: **NOT COMPLETE**
 
-The current source/ZIP snapshot is v335 and passes the default macOS package
-verifier. v335 keeps the v326 strict-mode fix for opaque WordPress Download
+The current source/ZIP snapshot is v336 and passes the default macOS package
+verifier. v336 keeps the v326 strict-mode fix for opaque WordPress Download
 Manager wrappers, the v328 cross-school candidate rejection, the v329
 actionable RCA counts, the v330 raw-control-character URL guard, and the v331
 one-retry guard for transient registered-page timeouts plus structured
@@ -25,9 +25,11 @@ longer fills missing PDF/link fiscal-year evidence. v334 aligns the discovery
 gold-set with that strict-year correction by reclassifying two former
 prefecture-index-only auto successes as operator-review candidates. v335
 tightens Codex/manual RCA outcome validation so `needs_operator_review` must
-name a concrete candidate PDF and target-form evidence. Windows
+name a concrete candidate PDF and target-form evidence. v336 adds a real
+Saitama CMCC RCA demonstration for a readable target-form PDF that still lacks
+PDF/link FY2026 evidence. Windows
 setup, SQLite initialization, diagnostics, and a bounded 50-site Saitama
-bootstrap are still proven on v333, not yet rerun on v335. The product goal is
+bootstrap are still proven on v333, not yet rerun on v336. The product goal is
 still not complete: browser UI operator
 click-through is missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
@@ -37,19 +39,19 @@ line.
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official indexes seed school public URLs | v335 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v333 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v335 verifier clean by default; discovery gold-set `23` entries; Windows v333 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill | Mechanically proven, strict yield failing |
+| 47 prefecture official indexes seed school public URLs | v336 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v333 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
+| Discover and download current target-FY PDFs in strict mode | v336 verifier clean by default; discovery gold-set `24` entries; Windows v333 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill | Mechanically proven, strict yield failing |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `9` publication-lag cases; Windows v333 evidence records the prior v332 downloaded URLs as `target_fiscal_year_not_detected` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v333 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
-| Excel template output | v335 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v335 | Partially proven |
-| ManualActionLog audit for operator actions | v335 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v335 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v335 ZIP verifies clean on macOS packaging gate; v333 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v333-422741d`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
+| Excel template output | v336 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v336 | Partially proven |
+| ManualActionLog audit for operator actions | v336 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v336 | Partially proven |
+| ZIP distribution, double-click setup, browser UI offline operation | v336 ZIP verifies clean on macOS packaging gate; v333 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v333-422741d`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v333 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.6`, `excel_ready=0`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
 
 ## Current Non-Windows Evidence
 
-Commands run for v335 source/package:
+Commands run for v336 source/package:
 
 - `uv run pytest tests/unit -q` -> `1339 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py -q` -> `148 passed, 5 warnings`
@@ -58,21 +60,21 @@ Commands run for v335 source/package:
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed`
 - `uv run ruff check src/eidp/scraper/discovery_rca_packet.py tests/unit/test_cli_discovery_rca_packet.py` -> `All checks passed`
 - `uv run ruff check data/discovery-gold-set tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_cli_eval_discovery_gold.py` -> `All checks passed`
-- `uv run eidp discovery-gold-set --json` -> `23` entries,
-  `accepted_target_pdf=4`, `needs_operator_review=8`,
+- `uv run eidp discovery-gold-set --json` -> `24` entries,
+  `accepted_target_pdf=4`, `needs_operator_review=9`,
   `strict_target_year_successes=4`
-- `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `23` exact, `0` failures
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v335.zip` -> `OK core`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v335.zip --require-demonstrated-discovery-patterns` -> expected failure for the six remaining undemonstrated sources
+- `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `24` exact, `0` failures
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v336.zip` -> `OK core`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v336.zip --require-demonstrated-discovery-patterns` -> expected failure for the six remaining undemonstrated sources
 - One-off strict download check for `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055` with anchor `ダウンロード` -> `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`
 - Rebuilt the v326 Windows Saitama RCA batch plan locally with v327 code and
   verified publication-lag packets now surface `fiscal_year_mismatch:*` rows
   before `candidate_budget_dropped` rows.
 
-v335 verifier exposes the current demonstration gap:
+v336 verifier exposes the current demonstration gap:
 
-- Discovery gold-set entries: `23`
-- Outcome distribution: `accepted_target_pdf=4`, `needs_operator_review=8`,
+- Discovery gold-set entries: `24`
+- Outcome distribution: `accepted_target_pdf=4`, `needs_operator_review=9`,
   `no_target_candidate_found=1`, `publication_lag_latest_public=9`,
   `site_fetch_error=1`
 - Demonstrated extractor sources: `embed`, `wordpress_download_manager`
