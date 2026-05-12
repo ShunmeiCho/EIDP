@@ -704,6 +704,21 @@ def test_verify_core_zip_rejects_english_renewal_tokens_in_pdf_discovery(tmp_pat
     assert any("contains forbidden token: renewal confirmation application" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_url_normalization_tracking_dedupe_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/url_normalization.py"] = "def normalize_candidate_url(url): return url\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/scraper/url_normalization.py missing required token" in error for error in check.errors)
+    assert any("TRACKING_QUERY_PARAMS" in error for error in check.errors)
+    assert any("utm_source" in error for error in check.errors)
+    assert any("gclid" in error for error in check.errors)
+    assert any("wpdmdl" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/scraper/discovery_gold_set.py"] = (

@@ -1005,6 +1005,14 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "replace(evidence",
             "candidate.detected_fiscal_year >= target_year",
         ),
+        "src/eidp/scraper/url_normalization.py": (
+            "TRACKING_QUERY_PARAMS",
+            '"utm_source"',
+            '"utm_medium"',
+            '"gclid"',
+            "key.lower() not in TRACKING_QUERY_PARAMS",
+            'key.lower() == "wpdmdl"',
+        ),
         "src/eidp/scraper/discovery_gold_set.py": (
             "entries_by_key",
             "(entry.school_id, entry.target_fiscal_year)",

@@ -5,6 +5,18 @@ from __future__ import annotations
 import re
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+TRACKING_QUERY_PARAMS = frozenset({
+    "fbclid",
+    "gclid",
+    "mc_cid",
+    "mc_eid",
+    "utm_campaign",
+    "utm_content",
+    "utm_medium",
+    "utm_source",
+    "utm_term",
+})
+
 
 def normalize_candidate_url(url: str) -> str:
     """Return a stable URL key for dedup/idempotency.
@@ -31,7 +43,11 @@ def normalize_candidate_url(url: str) -> str:
     elif path.endswith("/"):
         path = path.rstrip("/")
 
-    query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    query_pairs = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key.lower() not in TRACKING_QUERY_PARAMS
+    ]
     if any(key.lower() == "wpdmdl" for key, _ in query_pairs):
         query_pairs = [(key, value) for key, value in query_pairs if key.lower() != "refresh"]
     query = urlencode(sorted(query_pairs), doseq=True)
