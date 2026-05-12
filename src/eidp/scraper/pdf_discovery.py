@@ -553,6 +553,8 @@ def _has_site_family_non_target_url(candidate: PdfCandidate) -> bool:
 
 
 def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> int | None:
+    """Return fiscal-year evidence from URL/anchor text, not publication dates."""
+
     text = unicodedata.normalize("NFKC", text)
     detected = fiscal_year_from_japanese_era_text(
         text,
@@ -578,22 +580,15 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         )
     )
     if strong_form_context:
-        western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*度)", text)
+        western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*(?:度|\d{1,2}\s*月))", text)
         if western_year is not None:
             return int(western_year.group(1))
-        filename_year = re.search(r"(?<!\d)(20\d{2})(?!\d)", text)
+        filename_year = re.search(r"(?<!\d)(20\d{2})(?=[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if filename_year is not None:
             return int(filename_year.group(1))
         serial_filename_year = re.search(r"(?<!\d)(20\d{2})(?=\d{2,4}[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if serial_filename_year is not None:
             return int(serial_filename_year.group(1))
-        era_year = fiscal_year_from_japanese_era_text(
-            text,
-            include_fiscal_year_labels=False,
-            include_filing_dates=True,
-        )
-        if era_year is not None:
-            return era_year
 
     lowered = text.lower()
     for year in range(target_year - 8, target_year + 3):
@@ -605,8 +600,11 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
                 pattern = rf"(?<![a-z0-9]){re.escape(token_lower)}(?![a-z0-9])"
                 if re.search(pattern, lowered):
                     return year
-            elif token_lower in lowered:
-                return year
+            else:
+                for match in re.finditer(re.escape(token_lower), lowered):
+                    if _is_followed_by_year_month_date(lowered, match.end()):
+                        continue
+                    return year
     return None
 
 
@@ -620,7 +618,7 @@ def _stale_fiscal_year_from_candidate_hint(candidate: PdfCandidate, *, target_ye
     detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
     if detected_year is not None and target_year - 8 <= detected_year < target_year:
         return detected_year
-    for match in re.finditer(r"(?<!\d)(20\d{2})(?!\d)", text):
+    for match in re.finditer(r"(?<!\d)(20\d{2})(?=[^/\s]*\.pdf\b)", text, re.IGNORECASE):
         year = int(match.group(1))
         if target_year - 8 <= year < target_year:
             return year
@@ -646,6 +644,15 @@ def _has_explicit_stale_fiscal_year_label(candidate: PdfCandidate, *, target_yea
                 continue
             if re.search(rf"(?<![a-z0-9]){re.escape(token_lower)}\s*年度", lowered):
                 return True
+        for token in fiscal_year_search_tokens(year):
+            token_lower = token.lower()
+            if token_lower.startswith("r") or token == str(year):
+                continue
+            for match in re.finditer(re.escape(token_lower), lowered):
+                if _is_followed_by_year_month_date(lowered, match.end()):
+                    continue
+                if re.match(r"\s*年度", lowered[match.end() :]):
+                    return True
     for match in re.finditer(r"(?<!\d)(20\d{2})\s*年度", text):
         year = int(match.group(1))
         if target_year - 8 <= year < target_year:
@@ -864,6 +871,13 @@ _FILING_DATE_REJECT_CONTEXT_RE = re.compile(r"(から|まで|任期|期間|在�
 _YEAR_LABEL_REJECT_CONTEXT_RE = re.compile(
     r"(完成年度|から|まで|任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学)"
 )
+_YEAR_MONTH_DATE_SUFFIX_RE = re.compile(r"\s*年\s*\d{1,2}\s*月")
+
+
+def _is_followed_by_year_month_date(text: str, end_index: int) -> bool:
+    """Return whether a year token is followed by a month, i.e. a date."""
+
+    return _YEAR_MONTH_DATE_SUFFIX_RE.match(text[end_index:]) is not None
 
 
 def _within_detectable_year(fiscal_year: int | None, max_fiscal_year: int | None) -> int | None:

@@ -421,6 +421,47 @@ def test_pre_download_detects_stale_renewal_confirmation_application_year() -> N
     assert rejection.reason == "fiscal_year_mismatch:2025"
 
 
+def test_pre_download_does_not_treat_publication_date_as_stale_target_year() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/assessment/",
+        anchor_text="2025年7月18日 更新確認申請書",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_does_not_treat_era_publication_date_as_stale_target_year() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/assessment/",
+        anchor_text="令和7年7月18日 更新確認申請書",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_still_detects_stale_year_name_without_month_date() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/assessment/",
+        anchor_text="2025年更新確認申請書",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2025"
+
+
 def test_pre_download_detects_stale_full_form_range_without_support_system_words() -> None:
     candidate = PdfCandidate(
         pdf_url="https://aiko.ac.jp/data/ybc/2025/2-1_2-4.pdf",
@@ -2978,6 +3019,40 @@ def test_download_pdf_accepts_western_year_anchor_when_body_is_target_form(
     assert pdf_type == "target"
     assert reason is None
     assert candidate.year_evidence == "url_hint"
+
+
+def test_download_pdf_does_not_treat_anchor_publication_date_as_fiscal_year(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="2025年7月18日 更新確認申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "target_fiscal_year_not_detected"
+    assert candidate.detected_fiscal_year is None
+    assert not list((tmp_path / "1").glob("*.pdf"))
 
 
 def test_download_pdf_accepts_reiwa_year_anchor_when_body_is_target_form(
