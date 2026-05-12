@@ -655,6 +655,7 @@ def test_verify_core_zip_requires_discovery_gold_replay_semantics_contract(tmp_p
     assert any("src/eidp/scraper/discovery_gold_set.py missing required token" in error for error in check.errors)
     assert any("detected_fiscal_year" in error for error in check.errors)
     assert any("DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS" in error for error in check.errors)
+    assert any('"site_fetch_error": 2' in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) -> None:

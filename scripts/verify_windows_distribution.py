@@ -975,6 +975,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '"pre_filtered_non_target_hint"',
             '"classified_non_target"',
             '"all_negative_score"',
+            '"site_fetch_error": 2',
         ),
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly",
