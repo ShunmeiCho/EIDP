@@ -49,6 +49,7 @@ from eidp.db.models import Document, School, SchoolSite  # noqa: E402
 from eidp.db.session import SessionLocal  # noqa: E402
 from eidp.pipeline.ingest import run_ingestion  # noqa: E402
 from eidp.pipeline.school_fiscal_year_status import (  # noqa: E402
+    operator_reviewable_status_count,
     rebuild_school_fiscal_year_status,
     school_fiscal_year_status_counts,
 )
@@ -405,7 +406,7 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     acquired = int((coverage_delta or {}).get("schools_with_target_pdf_current_fy") or 0)
     acquired = max(acquired, 0)
     status_delta = delta.get("school_fiscal_year_status") if isinstance(delta, dict) else {}
-    publication_lag_acquired = max(int((status_delta or {}).get("publication_lag") or 0), 0)
+    review_candidate_acquired = operator_reviewable_status_count(status_delta or {})
     if target_missing <= 0:
         return {
             "target_pdf_auto_acquired_count": acquired,
@@ -421,7 +422,7 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
         }
 
     yield_pct = round(acquired / target_missing * 100.0, 1)
-    operator_reviewable = min(acquired + publication_lag_acquired, target_missing)
+    operator_reviewable = min(acquired + review_candidate_acquired, target_missing)
     operator_reviewable_pct = round(operator_reviewable / target_missing * 100.0, 1)
     return {
         "target_pdf_auto_acquired_count": acquired,

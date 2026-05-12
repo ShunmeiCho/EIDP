@@ -140,6 +140,7 @@ def test_rebuild_creates_one_target_year_row_per_active_school() -> None:
             "total": 3,
             "confirmed_target": 1,
             "publication_lag": 0,
+            "target_year_unverified": 0,
             "stale_or_old": 1,
             "review_or_parse": 0,
             "excel_ready": 1,
@@ -685,6 +686,7 @@ def test_rebuild_marks_target_form_without_year_evidence_as_review_state(tmp_pat
             fiscal_year=2026,
             school_type="専門学校",
         )
+        assert counts["target_year_unverified"] == 1
         assert counts["review_or_parse"] == 1
         assert counts["excel_ready"] == 0
     finally:

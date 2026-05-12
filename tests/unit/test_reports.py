@@ -344,12 +344,20 @@ def test_ship_readiness_passes_when_final_business_thresholds_are_met() -> None:
     assert rep.ok is True
 
 
-def test_ship_readiness_can_pass_with_publication_lag_operator_coverage() -> None:
+def test_ship_readiness_can_pass_with_review_candidate_operator_coverage() -> None:
     s = _session()
     for school_id in range(1, 11):
         _school(s, school_id, "東京")
         s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
-        pdf_status = "confirmed_target" if school_id <= 4 else "publication_lag" if school_id <= 7 else "none"
+        pdf_status = (
+            "confirmed_target"
+            if school_id <= 4
+            else "publication_lag"
+            if school_id <= 6
+            else "target_year_unverified"
+            if school_id == 7
+            else "none"
+        )
         s.add(
             SchoolFiscalYearStatus(
                 school_id=school_id,

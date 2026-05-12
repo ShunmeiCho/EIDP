@@ -89,6 +89,7 @@ SETUP_FILES = (
     ".venv/Scripts/python.exe",
     "data/eidp.sqlite3",
 )
+OPERATOR_REVIEWABLE_PDF_STATUSES = frozenset({"publication_lag", "target_year_unverified"})
 
 SETUP_DIRS = (
     "data",
@@ -395,7 +396,7 @@ def _sqlite_target_fy_coverage(
                          AND status.fiscal_year = ?
                         WHERE school.status = 'active'
                           AND school.school_type = ?
-                          AND status.pdf_status = 'publication_lag'
+                          AND status.pdf_status IN ('publication_lag', 'target_year_unverified')
                     )
                     """,
                     (TARGET_FY_SCHOOL_TYPE, fiscal_year, fiscal_year, TARGET_FY_SCHOOL_TYPE),
@@ -536,11 +537,14 @@ def _validate_weekly_ship_gate_against_sqlite(
     summary_delta = summary.get("delta")
     status_delta = summary_delta.get("school_fiscal_year_status") if isinstance(summary_delta, dict) else None
     if acquired is not None and isinstance(status_delta, dict):
-        publication_lag_delta = max(_coerce_int(status_delta.get("publication_lag")) or 0, 0)
-        expected_reviewable = min(max(acquired, 0) + publication_lag_delta, denominator)
+        reviewable_delta = sum(
+            max(_coerce_int(status_delta.get(status)) or 0, 0) for status in OPERATOR_REVIEWABLE_PDF_STATUSES
+        )
+        expected_reviewable = min(max(acquired, 0) + reviewable_delta, denominator)
         if reviewable != expected_reviewable:
             check.fail(
-                "last_run.json operator_reviewable_count does not match acquired plus publication_lag delta: "
+                "last_run.json operator_reviewable_count does not match acquired plus "
+                "operator-reviewable status delta: "
                 f"{reviewable} != {expected_reviewable}"
             )
     expected_yield = round(max(reviewable, 0) / denominator * 100.0, 1) if denominator > 0 else None

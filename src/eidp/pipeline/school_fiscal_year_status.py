@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,14 @@ REVIEW_STATUSES: tuple[str, ...] = (
     "review_pending",
     "school_mismatch",
 )
+OPERATOR_REVIEWABLE_PDF_STATUSES: tuple[str, ...] = (
+    "publication_lag",
+    "target_year_unverified",
+)
+SHIP_REVIEWABLE_PDF_STATUSES: tuple[str, ...] = (
+    "confirmed_target",
+    *OPERATOR_REVIEWABLE_PDF_STATUSES,
+)
 YOY_COMPARE_FIELDS: tuple[str, ...] = (
     "capacity",
     "enrollment",
@@ -45,6 +54,11 @@ class SchoolFiscalYearStatusStats:
     school_type: str | None
     rebuilt: int
     excel_ready: int
+
+
+def operator_reviewable_status_count(status_counts: Mapping[str, int]) -> int:
+    """Return unresolved PDF-status rows that are directly reviewable by the operator."""
+    return sum(max(int(status_counts.get(status) or 0), 0) for status in OPERATOR_REVIEWABLE_PDF_STATUSES)
 
 
 def _url_status(sites: list[SchoolSite]) -> str:
@@ -385,6 +399,7 @@ def school_fiscal_year_status_counts(
         "total": 0,
         "confirmed_target": 0,
         "publication_lag": 0,
+        "target_year_unverified": 0,
         "stale_or_old": 0,
         "review_or_parse": 0,
         "excel_ready": 0,
@@ -400,6 +415,8 @@ def school_fiscal_year_status_counts(
             counts["confirmed_target"] += count
         if pdf_status == "publication_lag":
             counts["publication_lag"] += count
+        if pdf_status == "target_year_unverified":
+            counts["target_year_unverified"] += count
         if pdf_status in {"publication_lag", "rejected_stale"}:
             counts["stale_or_old"] += count
         if extract_status in REVIEW_STATUSES or pdf_status in {

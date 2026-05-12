@@ -1101,7 +1101,7 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
 
     def fake_status_counts(session, *, fiscal_year, school_type):  # noqa: ANN001
         calls.append({"status_session": session, "school_type": school_type, "fiscal_year": fiscal_year})
-        return {"publication_lag": 2}
+        return {"publication_lag": 2, "target_year_unverified": 1}
 
     import eidp.config as config_mod
     import eidp.db.session as db_session
@@ -1125,8 +1125,8 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
         "target_pdf_auto_denominator_count": 10,
         "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": 60.0,
-        "operator_reviewable_count": 8,
-        "operator_reviewable_yield_pct": 80.0,
+        "operator_reviewable_count": 9,
+        "operator_reviewable_yield_pct": 90.0,
         "ship_gate_auto_yield_pct": 60.0,
         "ship_gate_operator_coverage_pct": 60.0,
         "ship_gate_metric_basis": "post_bootstrap_operator_reviewable_coverage",

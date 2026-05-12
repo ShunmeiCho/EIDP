@@ -132,6 +132,7 @@ def _seed_target_fy_coverage(
     total: int = 10,
     acquired: int = 6,
     publication_lag: int = 0,
+    target_year_unverified: int = 0,
     fy: int = 2026,
 ) -> None:
     db_path = root / "data" / "eidp.sqlite3"
@@ -147,6 +148,8 @@ def _seed_target_fy_coverage(
             pdf_status = "confirmed_target" if school_id <= acquired else None
             if acquired < school_id <= acquired + publication_lag:
                 pdf_status = "publication_lag"
+            if acquired + publication_lag < school_id <= acquired + publication_lag + target_year_unverified:
+                pdf_status = "target_year_unverified"
             conn.execute(
                 "INSERT INTO school_fiscal_year_status (school_id, fiscal_year, pdf_status) VALUES (?, ?, ?)",
                 (school_id, fy, pdf_status),
@@ -668,11 +671,11 @@ def test_validate_after_bootstrap_release_gate_rejects_pass_log_when_sqlite_cove
     )
 
 
-def test_validate_after_bootstrap_release_gate_accepts_publication_lag_coverage(tmp_path: Path) -> None:
+def test_validate_after_bootstrap_release_gate_accepts_review_candidate_coverage(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
     _bootstrap_artifacts(root)
-    _seed_target_fy_coverage(root, total=10, acquired=3, publication_lag=4, fy=2026)
+    _seed_target_fy_coverage(root, total=10, acquired=3, publication_lag=3, target_year_unverified=1, fy=2026)
     payload = json.loads((root / "logs" / "bootstrap-pdfs-20260505-010203.json").read_text(encoding="utf-8"))
     payload["details"].update(
         {
@@ -898,17 +901,17 @@ def test_validate_after_weekly_release_gate_rejects_pass_log_when_summary_after_
     )
 
 
-def test_validate_after_weekly_release_gate_accepts_publication_lag_delta(tmp_path: Path) -> None:
+def test_validate_after_weekly_release_gate_accepts_review_candidate_delta(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
     _weekly_artifacts(root)
-    _seed_target_fy_coverage(root, total=10, acquired=3, publication_lag=4, fy=2026)
+    _seed_target_fy_coverage(root, total=10, acquired=3, publication_lag=3, target_year_unverified=1, fy=2026)
     summary_path = root / "data/output/target-year-discovery/20260505_010203-summary.json"
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     summary["after"]["coverage"]["schools_with_target_pdf_current_fy"] = 3
     summary["delta"] = {
         "coverage": {"schools_with_target_pdf_current_fy": 3},
-        "school_fiscal_year_status": {"publication_lag": 4},
+        "school_fiscal_year_status": {"publication_lag": 3, "target_year_unverified": 1},
     }
     _write(root, "data/output/target-year-discovery/20260505_010203-summary.json", json.dumps(summary))
     payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))

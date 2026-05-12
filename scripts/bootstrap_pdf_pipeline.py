@@ -828,6 +828,7 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
     from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.pipeline.school_fiscal_year_status import (
+        operator_reviewable_status_count,
         rebuild_school_fiscal_year_status,
         school_fiscal_year_status_counts,
     )
@@ -860,7 +861,7 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
         **bootstrap_target_pdf_yield_metrics(
             schools_total=coverage.schools_total,
             schools_with_target_pdf_current_fy=coverage.schools_with_target_pdf_current_fy,
-            operator_reviewable_count=int(status_counts.get("publication_lag") or 0),
+            operator_reviewable_count=operator_reviewable_status_count(status_counts),
         ),
     }
     print(f"[step5] {out}")

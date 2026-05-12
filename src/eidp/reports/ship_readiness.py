@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.models import School, SchoolFiscalYearStatus
+from eidp.pipeline.school_fiscal_year_status import SHIP_REVIEWABLE_PDF_STATUSES
 from eidp.reports.coverage import compute_coverage, gap_report_for_export
 
 
@@ -118,7 +119,7 @@ def _operator_reviewable_school_count(
         .join(School, School.id == SchoolFiscalYearStatus.school_id)
         .filter(
             SchoolFiscalYearStatus.fiscal_year == fiscal_year,
-            SchoolFiscalYearStatus.pdf_status.in_(("confirmed_target", "publication_lag")),
+            SchoolFiscalYearStatus.pdf_status.in_(SHIP_REVIEWABLE_PDF_STATUSES),
             School.status == "active",
         )
     )

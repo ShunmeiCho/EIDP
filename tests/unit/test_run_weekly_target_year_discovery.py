@@ -359,13 +359,13 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     assert payload["error"] is None
 
 
-def test_weekly_yield_metrics_count_publication_lag_as_operator_reviewable() -> None:
+def test_weekly_yield_metrics_count_review_candidate_statuses_as_operator_reviewable() -> None:
     payload = module._weekly_target_pdf_yield_metrics(
         {
             "target_missing_school_count": 10,
             "delta": {
                 "coverage": {"schools_with_target_pdf_current_fy": 2},
-                "school_fiscal_year_status": {"publication_lag": 5},
+                "school_fiscal_year_status": {"publication_lag": 3, "target_year_unverified": 2},
             },
         }
     )
