@@ -23,7 +23,7 @@ auto-acquisition rate is not proven to be 60-70%.
 | Discover and download current target-FY PDFs in strict mode | v315 verifier clean; discovery gold-set `20` entries; expected predictions `20/20 exact`; package exposes `discovery_gold_undemonstrated_pattern_sources` so speculative extractor coverage is visible | Partially proven |
 | Exclude stale-year fallback from auto-success | Ship gate now uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes publication-lag cases | Partially proven |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts, but no current Windows operator E2E has revalidated the whole extraction-to-Excel path on v315 | Partially proven |
-| Append-only DepartmentYearly / SupportRecipient writes | Prior audits reported contract intact; not re-audited in this short status refresh | Needs fresh audit before final completion |
+| Append-only DepartmentYearly / SupportRecipient writes | Fresh non-Windows audit: targeted append-only/confidence/fiscal-year tests `116 passed`; source inspection confirmed demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win E2E still missing |
 | Excel template output | Package verifier includes Excel/export contracts; current operator-PC preview/download flow is not revalidated on v315 | Partially proven |
 | ManualActionLog audit for operator actions | Package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated on v315 | Partially proven |
 | ZIP distribution, double-click setup, browser UI offline operation | v315 ZIP verifies clean on macOS packaging gate; latest Windows setup-verified evidence is older than v315 | Missing current Win proof |
@@ -37,6 +37,7 @@ Commands run for v315:
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `20/20 exact`
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v315.zip` -> `OK core`
 - `uv run eidp discovery-gold-set --json` -> `pattern_source_counts={"wordpress_download_manager": 1}`
+- `uv run pytest tests/unit/test_ingest_confidence_gating.py tests/unit/test_manual_entry_contract.py tests/unit/test_fiscal_year_override.py tests/unit/test_extraction_confidence.py tests/unit/test_current_read_paths.py -q` -> `116 passed`
 
 v315 verifier exposes the current demonstration gap:
 
