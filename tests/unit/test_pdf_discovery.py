@@ -1872,6 +1872,33 @@ def test_run_pdf_discovery_passes_school_name_to_site_crawler(monkeypatch, tmp_p
         session.close()
 
 
+def test_run_pdf_discovery_uses_stable_site_order_for_equal_confidence(monkeypatch, tmp_path: Path) -> None:
+    session = _session()
+    crawled_school_ids: list[int] = []
+
+    def fake_discover(_client, school_id: int, _site_url: str, **_kwargs: object) -> DiscoveryResult:
+        crawled_school_ids.append(school_id)
+        return DiscoveryResult(school_id=school_id)
+
+    try:
+        session.add_all(
+            [
+                SchoolSite(school_id=3, url="https://example.ac.jp/school-3/", http_status=200, confidence=0.9),
+                SchoolSite(school_id=1, url="https://example.ac.jp/school-1/", http_status=200, confidence=0.9),
+                SchoolSite(school_id=2, url="https://example.ac.jp/school-2/", http_status=200, confidence=0.9),
+            ]
+        )
+        session.flush()
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=3, rate_limit=0)
+
+        assert stats["crawled"] == 3
+        assert crawled_school_ids == [1, 2, 3]
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path: Path) -> None:
     """Sprint 4 rediscovery must not stop on an old already-downloaded PDF.
 

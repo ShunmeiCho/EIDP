@@ -2165,7 +2165,7 @@ def run_pdf_discovery(
         site_query = site_query.filter(SchoolSite.school_id.in_(school_ids))
     sites = (
         site_query
-        .order_by(SchoolSite.confidence.desc())
+        .order_by(SchoolSite.confidence.desc(), SchoolSite.school_id.asc(), SchoolSite.id.asc())
         .limit(batch_size)
         .all()
     )

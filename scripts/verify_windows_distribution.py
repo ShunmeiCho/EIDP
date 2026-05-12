@@ -1012,6 +1012,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "replace(evidence",
             "candidate.detected_fiscal_year >= target_year",
             "has_fiscal_year_text",
+            "SchoolSite.school_id.asc()",
+            "SchoolSite.id.asc()",
         ),
         "src/eidp/scraper/url_normalization.py": (
             "TRACKING_QUERY_PARAMS",
