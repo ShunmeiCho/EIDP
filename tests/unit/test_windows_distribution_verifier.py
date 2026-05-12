@@ -312,6 +312,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/scraper/discovery_gold_set.py": (
             REPO_ROOT / "src" / "eidp" / "scraper" / "discovery_gold_set.py"
         ).read_text(encoding="utf-8"),
+        "src/eidp/scraper/discovery_evidence_summary.py": (
+            REPO_ROOT / "src" / "eidp" / "scraper" / "discovery_evidence_summary.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/pdf/extractor.py": (REPO_ROOT / "src" / "eidp" / "pdf" / "extractor.py").read_text(
             encoding="utf-8"
         ),
@@ -773,6 +776,22 @@ def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(
     assert not check.ok
     assert any("src/eidp/scraper/discovery_gold_set.py missing required token" in error for error in check.errors)
     assert any("_target_fiscal_year_from_evidence_payload" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_deterministic_discovery_evidence_summary(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/discovery_evidence_summary.py"] = "def summarize_pdf_discovery_evidence(): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        "src/eidp/scraper/discovery_evidence_summary.py missing required token" in error
+        for error in check.errors
+    )
+    assert any("_sorted_counter_items" in error for error in check.errors)
+    assert any("key=lambda item: (-item[1], item[0])" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_discovery_gold_replay_semantics_contract(tmp_path: Path) -> None:

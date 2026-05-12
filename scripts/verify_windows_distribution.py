@@ -1044,6 +1044,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'candidate.outcome == current.outcome == "publication_lag_latest_public"',
             "(candidate.fiscal_year or 0) > (current.fiscal_year or 0)",
         ),
+        "src/eidp/scraper/discovery_evidence_summary.py": (
+            "top_reasons=_sorted_counter_items",
+            "def _sorted_counter_items",
+            "key=lambda item: (-item[1], item[0])",
+        ),
         "src/eidp/pdf/extractor.py": (
             "def _extract_fiscal_year",
             "from eidp.config import",

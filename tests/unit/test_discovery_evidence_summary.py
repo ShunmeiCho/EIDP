@@ -12,6 +12,7 @@ from eidp.db.models import Base, School, SchoolSite
 from eidp.scraper.discovery_evidence_summary import (
     EvidenceScopeSite,
     load_pdf_discovery_evidence,
+    render_pdf_discovery_evidence_summary,
     summarize_pdf_discovery_evidence,
 )
 
@@ -42,6 +43,39 @@ def test_summarize_pdf_discovery_evidence_buckets_school_outcomes(tmp_path: Path
     assert summary.reason_counts["classified_non_target"] == 1
     assert summary.reason_counts["fiscal_year_mismatch:2025"] == 1
     assert summary.pdf_type_counts["target"] == 2
+
+
+def test_summarize_pdf_discovery_evidence_is_stable_for_equal_count_ties(tmp_path: Path) -> None:
+    rows = [
+        {
+            "school_id": 1,
+            "reason": "z_reason",
+            "pdf_type": "target",
+            "pattern_type": "z_pattern",
+            "pdf_url": "https://z.example.ac.jp/z.pdf",
+        },
+        {
+            "school_id": 1,
+            "reason": "a_reason",
+            "pdf_type": "non_target",
+            "pattern_type": "a_pattern",
+            "pdf_url": "https://a.example.ac.jp/a.pdf",
+        },
+    ]
+
+    first_path = tmp_path / "first.jsonl"
+    second_path = tmp_path / "second.jsonl"
+    _write_jsonl(first_path, rows)
+    _write_jsonl(second_path, list(reversed(rows)))
+
+    first = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(first_path))
+    second = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(second_path))
+
+    assert render_pdf_discovery_evidence_summary(first) == render_pdf_discovery_evidence_summary(second)
+    assert first.reason_counts == {"a_reason": 1, "z_reason": 1}
+    assert first.pattern_type_counts == {"a_pattern": 1, "z_pattern": 1}
+    assert first.top_hosts == {"a.example.ac.jp": 1, "z.example.ac.jp": 1}
+    assert first.school_summaries[0].top_reasons == [("a_reason", 1), ("z_reason", 1)]
 
 
 def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_application_hints_as_publication_lag(

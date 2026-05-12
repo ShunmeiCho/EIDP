@@ -139,7 +139,7 @@ def summarize_pdf_discovery_evidence(
                 site_url=site.site_url if site else "",
                 bucket=_classify_school_bucket(school_rows),
                 candidate_count=len(school_rows),
-                top_reasons=_reason_counter(school_rows).most_common(5),
+                top_reasons=_sorted_counter_items(_reason_counter(school_rows), limit=5),
             )
         )
 
@@ -149,10 +149,10 @@ def summarize_pdf_discovery_evidence(
         schools_with_evidence=len(grouped),
         site_scope_schools=len(scope_by_school) if site_scope is not None else len(grouped),
         school_bucket_counts=dict(sorted(bucket_counts.items())),
-        reason_counts=dict(_reason_counter(rows).most_common()),
-        pdf_type_counts=dict(_pdf_type_counter(rows).most_common()),
-        pattern_type_counts=dict(_pattern_type_counter(rows).most_common()),
-        top_hosts=dict(_host_counter(rows).most_common(20)),
+        reason_counts=dict(_sorted_counter_items(_reason_counter(rows))),
+        pdf_type_counts=dict(_sorted_counter_items(_pdf_type_counter(rows))),
+        pattern_type_counts=dict(_sorted_counter_items(_pattern_type_counter(rows))),
+        top_hosts=dict(_sorted_counter_items(_host_counter(rows), limit=20)),
         school_summaries=school_summaries,
     )
 
@@ -263,6 +263,11 @@ def _pattern_type_counter(rows: list[dict[str, Any]]) -> Counter[str]:
 
 def _host_counter(rows: list[dict[str, Any]]) -> Counter[str]:
     return Counter(urlparse(str(row.get("pdf_url") or "")).netloc for row in rows)
+
+
+def _sorted_counter_items(counter: Counter[str], *, limit: int | None = None) -> list[tuple[str, int]]:
+    items = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
+    return items if limit is None else items[:limit]
 
 
 def _int_or_none(value: object) -> int | None:
