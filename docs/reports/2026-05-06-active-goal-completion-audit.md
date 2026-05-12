@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `c9f2162cf6b49787f416f074164126a3fe58bffe` (`eidp-windows-v291.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `78570be7365a2b2f4befb8116205c57b635a1e34` (`eidp-windows-v292.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1292,6 +1292,26 @@ passed `scripts/verify_windows_distribution.py` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v291 is still pending and must not be
+inferred from the Mac verifier.
+
+v292 (`78570be`) hardens the packaged Windows verifier for Excel import
+diagnostics. The gate now requires `eidp import-excel` to keep the
+`_echo_import_excel_results` helper, expose `invalid_year` counters, and print
+the Japanese warning text for rows skipped because the fiscal year is outside
+the supported target range. This prevents a regression where `master.xlsx`
+typos such as unrealistic future years are silently skipped even though the
+importer increments the counter. Verification: `tests/unit` passed with
+`1286 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`.
+`dist/eidp-windows-v292.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py` with SHA256
+`d9270323ec5fa4b6654600cf73eb6b43cec40e60435be0eee757999345875dda`,
+`git_commit=78570be7365a2b2f4befb8116205c57b635a1e34`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v292 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
