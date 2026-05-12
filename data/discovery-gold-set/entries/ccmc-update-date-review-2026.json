@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ccmc-update-date-review-2026",
+  "school": {
+    "school_id": 787,
+    "school_name": "中央情報専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "中央情報学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Verify that a disclosure-page 様式第2号 PDF with an 更新確認申請書 appendix remains review-bound when the only visible dates are page-update or officer-term dates.",
+    "steps": [
+      "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure site.",
+      "Open the school information/disclosure page and inspect the anchor labeled 確認申請 様式第２号（令和7年6月26日更新）.",
+      "Follow the linked youshiki2.pdf candidate.",
+      "Extract the PDF text and confirm it is a 様式第2号 target-form bundle for 中央情報専門学校 with a 更新確認申請書 appendix.",
+      "Confirm the PDF body contains no 令和8/2026年度 target-year evidence and that 2025 appears only in officer-term contexts.",
+      "Classify it as needs_operator_review because page update dates and officer terms do not prove FY2026."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.ccmc.ac.jp/",
+    "disclosure_url": "https://www.ccmc.ac.jp/school/information/",
+    "pdf_url": "https://www.ccmc.ac.jp/wp-content/themes/ccmc/pdf/youshiki2.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "target_form_with_update_date_only",
+    "reusable_rules": [
+      "Keep 様式第2号 anchors and 更新確認申請書 appendices as high-value candidates.",
+      "Do not accept a target-form PDF as current FY when the only dates are page update dates, officer terms, or generic prior-year dates.",
+      "Preserve the direct PDF URL for operator review when target-form evidence exists but target-year evidence is missing."
+    ],
+    "anti_patterns": [
+      "Do not treat anchor text such as 令和7年6月26日更新 as target fiscal-year evidence.",
+      "Do not treat 2025 officer-term dates inside the PDF as target application-year evidence.",
+      "Do not discard the PDF as non-target just because strict target-year evidence is missing."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/win-v333-evidence/discovery_rejections.jsonl",
+      "_temp/manual-rca-v335/ccmc-youshiki2.pdf"
+    ],
+    "notes": "Windows v333 Saitama 50-site replay records this candidate as reason=target_fiscal_year_not_detected, pdf_type=target. Manual PyMuPDF extraction found readable 様式第2号 text and a 更新確認申請書 appendix, but no 令和8, 令和８, 2026, or 2026年度 target-year evidence."
+  }
+}
