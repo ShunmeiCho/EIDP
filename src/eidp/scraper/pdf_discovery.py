@@ -372,6 +372,7 @@ class RenderedHtmlFetcher(Protocol):
 
 
 PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url")
+PDF_DATA_ATTRIBUTE_TAG_PATTERN = r"(?:a|button|span|div)"
 
 
 def _is_target_year_rejection(reason: str) -> bool:
@@ -1321,9 +1322,9 @@ def _extract_pdf_links(
             target_fiscal_year=target_fiscal_year,
         )
 
-    # Pattern 1b: JavaScript/download-button anchors with direct PDF data attributes.
+    # Pattern 1b: JavaScript/download-button elements with direct PDF data attributes.
     for m in re.finditer(
-        r"<a\s([^>]*)>(.*?)</a>",
+        rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
         html, re.IGNORECASE | re.DOTALL,
     ):
         attrs = m.group(1)

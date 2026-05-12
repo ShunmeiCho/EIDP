@@ -305,6 +305,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "has_fiscal_year_text\n"
             "_candidate_download_year_rank\n"
             "PDF_LINK_ATTRIBUTE_NAMES\n"
+            "PDF_DATA_ATTRIBUTE_TAG_PATTERN\n"
+            "button|span|div\n"
             "\"data-href\"\n"
             "\"data-url\"\n"
             "_candidate_dedupe_preference\n"
@@ -749,6 +751,8 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("has_fiscal_year_text" in error for error in check.errors)
     assert any("_candidate_download_year_rank" in error for error in check.errors)
     assert any("PDF_LINK_ATTRIBUTE_NAMES" in error for error in check.errors)
+    assert any("PDF_DATA_ATTRIBUTE_TAG_PATTERN" in error for error in check.errors)
+    assert any("button|span|div" in error for error in check.errors)
     assert any('"data-href"' in error for error in check.errors)
     assert any('"data-url"' in error for error in check.errors)
     assert any("_candidate_dedupe_preference" in error for error in check.errors)

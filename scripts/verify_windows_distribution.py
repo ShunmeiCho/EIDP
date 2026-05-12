@@ -1024,6 +1024,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "has_fiscal_year_text",
             "_candidate_download_year_rank",
             "PDF_LINK_ATTRIBUTE_NAMES",
+            "PDF_DATA_ATTRIBUTE_TAG_PATTERN",
+            "button|span|div",
             '"data-href"',
             '"data-url"',
             "_candidate_dedupe_preference",

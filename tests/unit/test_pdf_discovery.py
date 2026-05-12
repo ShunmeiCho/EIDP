@@ -800,6 +800,28 @@ def test_extract_pdf_links_includes_direct_pdf_data_attributes() -> None:
     assert "確認申請書" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_includes_button_pdf_data_attributes() -> None:
+    html = """
+    <section>
+      <h2>令和9年度分申請</h2>
+      <button type="button" data-url="/docs/r9-kakunin.pdf">
+        確認申請書を開く
+      </button>
+      <span class="download" data-href="/docs/r9-appendix.pdf">別紙</span>
+    </section>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2027)
+
+    assert [candidate.pdf_url for candidate in candidates] == [
+        "https://example.ac.jp/docs/r9-kakunin.pdf",
+        "https://example.ac.jp/docs/r9-appendix.pdf",
+    ]
+    assert candidates[0].pattern_type == "direct"
+    assert "令和9年度分申請" in candidates[0].anchor_text
+    assert "確認申請書を開く" in candidates[0].anchor_text
+
+
 def test_append_unique_candidates_deduplicates_encoded_and_unencoded_paths() -> None:
     target = [
         PdfCandidate(
