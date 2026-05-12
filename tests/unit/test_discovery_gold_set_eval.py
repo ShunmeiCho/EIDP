@@ -452,6 +452,55 @@ def test_load_predictions_prefers_old_target_over_non_target_candidate_noise(tmp
     ]
 
 
+def test_load_predictions_prefers_site_fetch_error_over_non_target_candidate_noise(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/officers.pdf",
+                        "reason": "pre_filtered_non_target_hint",
+                        "pdf_type": "non_target",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/disclosure/",
+                        "reason": "discovery_error",
+                        "pdf_type": None,
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    entries = [
+        _entry(
+            entry_id="site-error",
+            school_id=1,
+            target_fiscal_year=2026,
+            outcome="site_fetch_error",
+            pdf_url="",
+            fiscal_year=None,
+        )
+    ]
+
+    predictions = load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries)
+
+    assert predictions == [
+        DiscoveryGoldPrediction(
+            entry_id="site-error",
+            outcome="site_fetch_error",
+            pdf_url="",
+            fiscal_year=None,
+            strict_target_year_success=False,
+        )
+    ]
+
+
 def test_load_predictions_prefers_accepted_body_year_over_stale_url_hint(tmp_path: Path) -> None:
     evidence_path = tmp_path / "discovery-evidence.jsonl"
     evidence_path.write_text(

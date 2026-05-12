@@ -532,8 +532,8 @@ def _prediction_priority(outcome: str) -> int:
         "accepted_target_pdf": 4,
         "publication_lag_latest_public": 3,
         "needs_operator_review": 2,
+        "site_fetch_error": 2,
         "no_target_candidate_found": 1,
-        "site_fetch_error": 1,
     }.get(outcome, 0)
 
 
