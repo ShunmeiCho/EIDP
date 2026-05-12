@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `372119b7a5bc5020a9d10845cc9799c58aec79aa` (`eidp-windows-v255.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `737785e4697ef82a63492c6d91383e7aafaedaa0` (`eidp-windows-v256.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -617,6 +617,23 @@ alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v255 is still pending and must not be
+inferred from the Mac verifier.
+
+v256 (`737785e`) makes the expected-predictions fixture reproducible instead of
+only committed. `eidp discovery-gold-expected-predictions` now emits the
+canonical JSONL fixture directly from the current gold-set entries, and the
+unit gate compares that command output byte-for-byte with
+`data/discovery-gold-set/expected-predictions.jsonl`. The Windows ZIP verifier
+also requires the packaged CLI to expose that generator command, so future
+gold-set expansions have one deterministic regeneration path plus a package
+gate that catches stale fixtures. `dist/eidp-windows-v256.zip` and the latest
+alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`bd3008f41e1686f55217e9a5576645480644010c2b5ddb328ee4a23af5ed9bec`,
+`git_commit=737785e4697ef82a63492c6d91383e7aafaedaa0`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v256 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
