@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `79bb0eeb1baf776a21a38f42c369411bd8d27157` (`eidp-windows-v290.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `c9f2162cf6b49787f416f074164126a3fe58bffe` (`eidp-windows-v291.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1269,6 +1269,29 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v290 is still pending and must not be
+inferred from the Mac verifier.
+
+v291 (`c9f2162`) hardens the packaged Windows verifier for the ingest-side
+confidence routing contract. The gate now requires PDF parse results to compute
+the confidence breakdown, classify the composite score, only promote
+`DepartmentYearly` / `SupportRecipient` rows to `is_current=True` for
+`auto` / `auto_flag`, increment the review-pending counters for low-confidence
+rows, and route any document with parked rows to `review_pending`. This is a
+verifier hardening only: the existing ingest
+runtime already parks low-confidence rows as `is_current=False` instead of
+replacing trusted current data. Verification: `tests/unit` passed with
+`1285 passed, 5 warnings`, focused ingest confidence tests passed, `ruff check`
+passed on the changed verifier/test files, and
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`.
+`dist/eidp-windows-v291.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py` with SHA256
+`d977b1a520a7219e78b248e88625e11d1ac81d9f574425dc7711bc74b757493f`,
+`git_commit=c9f2162cf6b49787f416f074164126a3fe58bffe`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v291 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
