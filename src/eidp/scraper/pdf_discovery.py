@@ -343,7 +343,7 @@ class PdfCandidate:
     pdf_url: str
     page_url: str
     anchor_text: str = ""
-    pattern_type: str = ""  # direct, wordpress, cache_busted, wordpress_download_manager, embed
+    pattern_type: str = ""
     score: float = 0.0
     detected_fiscal_year: int | None = None
     year_evidence: str = ""
@@ -822,8 +822,9 @@ def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None 
     if hinted_year == target_year - 1:
         score += 1.0
 
-    # Bonus for pattern type reliability
-    if candidate.pattern_type == "direct":
+    # Bonus for pattern type reliability. Source-prefixed direct candidates
+    # preserve extractor provenance without losing the old direct-link score.
+    if candidate.pattern_type == "direct" or candidate.pattern_type.endswith("_direct"):
         score += 0.5
     elif candidate.pattern_type == "embed":
         score += 0.3
@@ -1080,6 +1081,20 @@ def _append_or_upgrade_candidate(
         target_fiscal_year=target_fiscal_year,
     ):
         candidates[existing_index] = candidate
+
+
+def _pdf_delivery_pattern(url: str, raw_url: str, *, source: str | None = None) -> str:
+    """Return a stable evidence pattern that preserves extractor provenance."""
+
+    if "/wp-content/" in url:
+        pattern = "wordpress"
+    elif "?" in raw_url:
+        pattern = "cache_busted"
+    else:
+        pattern = "direct"
+    if source is None:
+        return pattern
+    return f"{source}_{pattern}"
 
 
 def _html_text(fragment: str) -> str:
@@ -1357,17 +1372,19 @@ def _extract_pdf_links(
     candidates: list[PdfCandidate] = []
     candidate_index_by_key: dict[str, int] = {}
 
-    # Pattern 1: Direct PDF links — a[href*=".pdf"]
+    # Pattern 1: Direct PDF links — a href values that point at PDFs.
+    # Parse the full attribute block so ``data-href`` is not misclassified as
+    # a plain direct link.
     for m in re.finditer(
-        r'<a\s[^>]*href=["\']([^"\']*\.pdf(?:[?#][^"\']*)?)["\'][^>]*>(.*?)</a>',
+        r"<a\s([^>]*)>(.*?)</a\s*>",
         html, re.IGNORECASE | re.DOTALL,
     ):
-        href = html_lib.unescape(m.group(1))
+        href = _anchor_attr(m.group(1), "href")
+        if not href or ".pdf" not in unquote(href).lower():
+            continue
         url = urljoin(base_url, href)
         anchor = _pdf_anchor_context_text(html, m)
-        pattern = "cache_busted" if "?" in href else "direct"
-        if "/wp-content/" in url:
-            pattern = "wordpress"
+        pattern = _pdf_delivery_pattern(url, href)
         _append_or_upgrade_candidate(
             candidates,
             candidate_index_by_key,
@@ -1388,9 +1405,7 @@ def _extract_pdf_links(
         url = _pdf_url_from_meta_refresh_content(content, base_url)
         if not url:
             continue
-        pattern = "cache_busted" if "?" in url else "direct"
-        if "/wp-content/" in url:
-            pattern = "wordpress"
+        pattern = _pdf_delivery_pattern(url, url, source="meta_refresh")
         _append_or_upgrade_candidate(
             candidates,
             candidate_index_by_key,
@@ -1413,9 +1428,7 @@ def _extract_pdf_links(
         if not href or ".pdf" not in unquote(href).lower():
             continue
         url = urljoin(base_url, href)
-        pattern = "cache_busted" if "?" in href else "direct"
-        if "/wp-content/" in url:
-            pattern = "wordpress"
+        pattern = _pdf_delivery_pattern(url, href, source="select_option")
         _append_or_upgrade_candidate(
             candidates,
             candidate_index_by_key,
@@ -1438,9 +1451,7 @@ def _extract_pdf_links(
         if not href or ".pdf" not in unquote(href).lower():
             continue
         url = urljoin(base_url, href)
-        pattern = "cache_busted" if "?" in href else "direct"
-        if "/wp-content/" in url:
-            pattern = "wordpress"
+        pattern = _pdf_delivery_pattern(url, href, source="form_action")
         _append_or_upgrade_candidate(
             candidates,
             candidate_index_by_key,
@@ -1464,9 +1475,7 @@ def _extract_pdf_links(
             if not href or ".pdf" not in unquote(href).lower():
                 continue
             url = urljoin(base_url, href)
-            pattern = "cache_busted" if "?" in href else "direct"
-            if "/wp-content/" in url:
-                pattern = "wordpress"
+            pattern = _pdf_delivery_pattern(url, href, source="data_attribute")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,
@@ -1490,9 +1499,7 @@ def _extract_pdf_links(
         if not onclick:
             continue
         for url in _pdf_urls_from_script_attribute(onclick, base_url):
-            pattern = "cache_busted" if "?" in url else "direct"
-            if "/wp-content/" in url:
-                pattern = "wordpress"
+            pattern = _pdf_delivery_pattern(url, url, source="onclick")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,
@@ -1519,9 +1526,7 @@ def _extract_pdf_links(
             if not href or ".pdf" not in unquote(href).lower():
                 continue
             url = urljoin(base_url, href)
-            pattern = "cache_busted" if "?" in href else "direct"
-            if "/wp-content/" in url:
-                pattern = "wordpress"
+            pattern = _pdf_delivery_pattern(url, href, source="input_control")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,
@@ -1538,9 +1543,7 @@ def _extract_pdf_links(
         if not onclick:
             continue
         for url in _pdf_urls_from_script_attribute(onclick, base_url):
-            pattern = "cache_busted" if "?" in url else "direct"
-            if "/wp-content/" in url:
-                pattern = "wordpress"
+            pattern = _pdf_delivery_pattern(url, url, source="input_control")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,

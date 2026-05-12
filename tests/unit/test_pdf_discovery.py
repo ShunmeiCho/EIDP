@@ -78,6 +78,26 @@ def test_score_candidate_uses_configured_target_fiscal_year() -> None:
     )
 
 
+def test_score_candidate_preserves_direct_bonus_for_source_prefixed_patterns() -> None:
+    direct = PdfCandidate(
+        pdf_url="https://example.ac.jp/r8.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="",
+        pattern_type="direct",
+    )
+    source_prefixed = PdfCandidate(
+        pdf_url="https://example.ac.jp/r8.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="",
+        pattern_type="input_control_direct",
+    )
+
+    assert _score_candidate(source_prefixed, target_fiscal_year=2026) == _score_candidate(
+        direct,
+        target_fiscal_year=2026,
+    )
+
+
 def test_score_candidate_uses_kanji_target_fiscal_year_tokens() -> None:
     target = PdfCandidate(
         pdf_url="https://example.ac.jp/confirmation.pdf",
@@ -796,7 +816,7 @@ def test_extract_pdf_links_includes_direct_pdf_data_attributes() -> None:
         "https://example.ac.jp/docs/r8-kakunin.pdf?download=1#page=1",
         "https://example.ac.jp/docs/syllabus.pdf",
     ]
-    assert candidates[0].pattern_type == "cache_busted"
+    assert candidates[0].pattern_type == "data_attribute_cache_busted"
     assert "令和8年度分申請" in candidates[0].anchor_text
     assert "確認申請書" in candidates[0].anchor_text
 
@@ -819,7 +839,7 @@ def test_extract_pdf_links_includes_select_option_pdf_values() -> None:
         "https://example.ac.jp/docs/r12-kakunin.pdf?download=1",
         "https://example.ac.jp/docs/r12-school-info.pdf",
     ]
-    assert candidates[0].pattern_type == "cache_busted"
+    assert candidates[0].pattern_type == "select_option_cache_busted"
     assert "令和12年度分申請" in candidates[0].anchor_text
     assert "確認申請書" in candidates[0].anchor_text
 
@@ -839,7 +859,7 @@ def test_extract_pdf_links_includes_meta_refresh_pdf_values() -> None:
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r15-kakunin.pdf?download=1",
     ]
-    assert candidates[0].pattern_type == "cache_busted"
+    assert candidates[0].pattern_type == "meta_refresh_cache_busted"
     assert "令和15年度分申請" in candidates[0].anchor_text
     assert "確認申請書" in candidates[0].anchor_text
 
@@ -863,7 +883,7 @@ def test_extract_pdf_links_includes_form_action_pdf_values() -> None:
         "https://example.ac.jp/docs/r14-kakunin.pdf?download=1",
         "https://example.ac.jp/docs/r14-syllabus.pdf",
     ]
-    assert candidates[0].pattern_type == "cache_busted"
+    assert candidates[0].pattern_type == "form_action_cache_busted"
     assert "令和14年度分申請" in candidates[0].anchor_text
     assert "確認申請書を開く" in candidates[0].anchor_text
     assert "授業科目一覧" in candidates[1].anchor_text
@@ -886,6 +906,7 @@ def test_extract_pdf_links_includes_lazy_pdf_data_attributes() -> None:
     ]
     assert "令和11年度分申請" in candidates[0].anchor_text
     assert "確認申請書" in candidates[0].anchor_text
+    assert candidates[0].pattern_type == "data_attribute_direct"
 
 
 def test_extract_pdf_links_includes_button_pdf_data_attributes() -> None:
@@ -905,7 +926,7 @@ def test_extract_pdf_links_includes_button_pdf_data_attributes() -> None:
         "https://example.ac.jp/docs/r9-kakunin.pdf",
         "https://example.ac.jp/docs/r9-appendix.pdf",
     ]
-    assert candidates[0].pattern_type == "direct"
+    assert candidates[0].pattern_type == "data_attribute_direct"
     assert "令和9年度分申請" in candidates[0].anchor_text
     assert "確認申請書を開く" in candidates[0].anchor_text
 
@@ -927,7 +948,7 @@ def test_extract_pdf_links_includes_onclick_pdf_urls() -> None:
         "https://example.ac.jp/docs/r10-kakunin.pdf?download=1",
         "https://example.ac.jp/docs/r10-syllabus.pdf",
     ]
-    assert candidates[0].pattern_type == "cache_busted"
+    assert candidates[0].pattern_type == "onclick_cache_busted"
     assert "令和10年度分申請" in candidates[0].anchor_text
     assert "確認申請書を開く" in candidates[0].anchor_text
 
@@ -947,7 +968,7 @@ def test_extract_pdf_links_includes_input_pdf_controls() -> None:
         "https://example.ac.jp/docs/r13-kakunin.pdf",
         "https://example.ac.jp/docs/r13-syllabus.pdf",
     ]
-    assert candidates[0].pattern_type == "direct"
+    assert candidates[0].pattern_type == "input_control_direct"
     assert "令和13年度分申請" in candidates[0].anchor_text
     assert "確認申請書" in candidates[0].anchor_text
 
