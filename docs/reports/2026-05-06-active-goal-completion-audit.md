@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `ad0385849bed15a38c60ebb647fe54af34712179` (`eidp-windows-v282.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `c9ee44922b2f3ed9faa24f4e2c0f903fa5281738` (`eidp-windows-v283.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1102,6 +1102,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v282 is still pending and must not be
+inferred from the Mac verifier.
+
+v283 (`c9ee449`) improves PDF candidate accuracy when a school page links the
+same PDF more than once. Candidate extraction and cross-page candidate merging
+now keep the stronger target-form anchor context for duplicate PDF URLs, so a
+generic first link such as `PDF` no longer suppresses a later
+`令和8年度 高等教育の修学支援新制度 確認申請書` link to the same file. Ties with the
+same hint strength still keep the first occurrence, preserving stable ordering
+and avoiding extra sibling-context noise. The Windows distribution verifier now
+requires the packaged duplicate-anchor upgrade helper. Verification:
+`tests/unit` passed with `1276 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v283.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`ca6a2bc19cd5330f48f9fe139ca30138315e56f6268856694cc8c67d96f0542c`,
+`git_commit=c9ee44922b2f3ed9faa24f4e2c0f903fa5281738`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v283 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
