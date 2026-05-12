@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `7204c1218552d0a0b207c7642e6fa4f6fd438e94` (`eidp-windows-v306.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `fe5ffc96b12ba4f56d6132f5de6e52ebf0e1b49e` (`eidp-windows-v307.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1620,6 +1620,32 @@ with SHA256 `a61f7ee3b6a67f03e698c6d495a6f5343e4e94e072535b30f70c16b024042956`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v306 is still pending and must not be
+inferred from the Mac verifier.
+
+v307 (`fe5ffc9`) closes the remaining CLI/UI write-lock coverage gap raised by
+the V305 deep audit. Every Typer command that writes the database via
+`session.commit()` or `flush_audit_outbox` now acquires the shared app lock,
+including `match-mext`, `reconcile`, `discover-urls`, `crawl-school-urls`,
+`discover-pdfs`, `ingest-pdfs`, `prefecture-aggregate`, `audit-flush`,
+`populate-reviews`, `firecrawl-discover`, and `seed-discovery-gold-sites`.
+The URL submission UI now receives the same `data/.lock` path from `app.py`;
+both CSV bulk registration and single URL submission use the lock before
+committing, so they cannot race the weekly runner or direct CLI writes. The CLI
+write-lock test is now AST-driven rather than a fixed four-command allowlist:
+any future Typer command that contains a DB commit or audit flush must call
+`_require_app_lock`, otherwise the test fails. The packaged verifier also
+requires the expanded CLI lock contract. Verification: CLI/operator/verifier
+targeted tests passed with `104 passed`; `tests/unit` passed with `1304 passed,
+5 warnings`; `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v307.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `e2d08e014f4a36ba33aff5f69db3d0f128687f4a34ec623af8529309eded822a`,
+`git_commit=fe5ffc96b12ba4f56d6132f5de6e52ebf0e1b49e`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v307 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
