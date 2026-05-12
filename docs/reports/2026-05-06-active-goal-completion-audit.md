@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `5a740365737671477bdd1807a300294223d92a7b` (`eidp-windows-v265.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `77016195f1c0ba3cd805702daddf4baaa5fc37f8` (`eidp-windows-v266.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -779,6 +779,22 @@ and the latest alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v265 is still pending and must not be
+inferred from the Mac verifier.
+
+v266 (`7701619`) tightens the PDF extractor's rolling-year parser to the
+supported business range. The parser now rejects western years before 2019
+instead of treating historical policy or school-history references such as
+`2005年度` / `2018年度` as the document fiscal year. The same lower bound is also
+packaged in the Windows distribution verifier, so a ZIP that regresses to the
+old unbounded `20xx` fallback fails the release gate. Verification:
+`tests/unit` passed with `1238 passed, 5 warnings`, and
+`dist/eidp-windows-v266.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`cac9640a30e53cdbc5ae6b418e644d7d4cc76f37ce23a15e20fce54ccbe15488`,
+`git_commit=77016195f1c0ba3cd805702daddf4baaa5fc37f8`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v266 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
