@@ -3,9 +3,24 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `97fbb7c88787f767b14b10fcdc3fc9323867368d` (`eidp-windows-v312.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `89dd53baf4e1a997ff83998d276b3098fb9242e4` (`eidp-windows-v313.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+
+## 2026-05-12 V313 Discovery Gold Pattern Coverage Visibility
+
+v313 (`89dd53b`) surfaces extractor-pattern demonstration coverage in both the
+gold-set summary and the Windows ZIP verifier details. `eidp discovery-gold-set
+--json` now includes `pattern_type_counts`, and the packaged verifier reports
+`discovery_gold_pattern_types`. This makes the demonstration-backed surface
+explicit during non-Windows release checks: today it shows
+`wordpress_download_manager: 1`, while other source-specific HTML extractors
+remain unit-test covered but not yet gold-set demonstrated. Verification:
+focused gold/verifier tests `96 passed`; full unit suite `1312 passed, 5
+warnings`; targeted Ruff passed; targeted mypy passed; discovery gold-set
+replay `20/20 exact`; `dist/eidp-windows-v313.zip` verified clean with SHA256
+`814d8bbf98dc8406858617c3d0d597af98be7953fde5eec04b178373da0d7153`.
+Windows operator E2E is still pending.
 
 ## 2026-05-12 V312 Packaged Gold Pattern Prediction Gate
 
