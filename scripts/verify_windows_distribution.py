@@ -967,6 +967,13 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         "src/eidp/reports/coverage.py": (
             "from eidp.config import settings",
             "settings.target_fiscal_year",
+            "schools_with_target_pdf_current_fy",
+            "target_pdf_current_fy_rate",
+            "d_fy == fy",
+            "Document.fiscal_year == fiscal_year",
+            "Document.fiscal_year < fiscal_year",
+            "stale_fallback_schools",
+            "target_pdf = int(coverage.schools_with_target_pdf_current_fy)",
         ),
         "src/eidp/reports/gaps.py": (
             "from eidp.config import settings",

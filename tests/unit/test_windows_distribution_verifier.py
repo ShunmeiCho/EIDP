@@ -655,6 +655,26 @@ def test_verify_core_zip_requires_report_defaults_to_configured_target_year(tmp_
     )
 
 
+def test_verify_core_zip_requires_current_target_fy_coverage_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/reports/coverage.py"] = (
+        "from eidp.config import settings\n"
+        "def compute_coverage(session, school_type='専門学校', fiscal_year=None): pass\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("schools_with_target_pdf_current_fy" in error for error in check.errors)
+    assert any("target_pdf_current_fy_rate" in error for error in check.errors)
+    assert any("d_fy == fy" in error for error in check.errors)
+    assert any("Document.fiscal_year == fiscal_year" in error for error in check.errors)
+    assert any("Document.fiscal_year < fiscal_year" in error for error in check.errors)
+    assert any("stale_fallback_schools" in error for error in check.errors)
+    assert any("target_pdf = int(coverage.schools_with_target_pdf_current_fy)" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_manual_action_audit_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/db/audit.py"] = "def log_manual_action(session): pass\n"
