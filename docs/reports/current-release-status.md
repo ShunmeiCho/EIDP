@@ -175,6 +175,14 @@ Commands and observations from `ssh win` for v342 setup/bootstrap:
   entries outside the bounded Saitama sample.
 - SQLite status rows from the v342 evidence DB: `none=2372`,
   `publication_lag=38`, `target_year_unverified=8`.
+- Reproducible scoped summary command:
+  `EIDP_DATABASE_URL=sqlite:///$PWD/_temp/win-v342-evidence/eidp.sqlite3 uv run eidp summarize-discovery-evidence --evidence-log _temp/win-v342-evidence/discovery_rejections.jsonl --discovery-method prefecture_aggregator --json`.
+  It reports Saitama official-index scope `51` schools with
+  `publication_lag_or_old_target_pdf=38`, `target_form_without_year_evidence=8`,
+  `non_target_candidates_only=3`, `site_fetch_error_only=1`, and
+  `no_evidence=1`. The `no_evidence` row is the one official-index site outside
+  the bounded `batch_size=50` smoke: 埼玉福祉保育医療製菓調理専門学校
+  (`school_id=2399`).
 - The v342 RCA batch plan has `10` items / `50` total candidates. Bucket split:
   `target_form_without_year_evidence=8`, `non_target_candidates_only=2`.
   Representative rows show that the low strict yield is dominated by forms that
