@@ -7,7 +7,7 @@ Package commit: `9730b5acc097b19d26a2b2db6a7d8212bca6483a`
 Package SHA256: `455c562901b0361e68be6dd00084fd89f2de33df09670246168e910dcfb09186`
 Latest Windows-core-validated package: `dist/eidp-windows-v331.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v331.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v330.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v331.zip`
 
 ## Verdict
 
@@ -19,10 +19,10 @@ Manager wrappers, the v328 cross-school candidate rejection, the v329
 actionable RCA counts, and the v330 raw-control-character URL guard. It also
 adds a one-retry guard for transient registered-page timeouts and structured
 `discovery_error` evidence (`error_code`, `retryable`) so Windows RCA can
-distinguish transient timeouts from robots policy blocks. v331 setup and SQLite
-initialization are reproducible on `ssh win`; the latest bounded 50-site
-Saitama bootstrap remains v330 evidence. The product goal is still not complete:
-browser UI operator click-through is missing, and the measured
+distinguish transient timeouts from robots policy blocks. v331 setup, SQLite
+initialization, diagnostics, and a bounded 50-site Saitama bootstrap are
+reproducible on `ssh win`. The product goal is still not complete: browser UI
+operator click-through is missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
 line.
 
@@ -30,15 +30,15 @@ line.
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official indexes seed school public URLs | v330 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v330 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v330 verifier clean by default; discovery gold-set `22` entries; Windows v330 Saitama 50-site run crawled `50` official-index sites, found candidates on `47`, downloaded `7`, processed `7`, and produced `5` Excel-ready schools | Mechanically proven, yield failing |
-| Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `8` publication-lag cases; Windows v330 evidence shows stale target PDFs rejected as `fiscal_year_mismatch:*`; malformed raw URLs are now recorded as `unsafe_url` instead of aborting the batch | Partially proven |
-| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v330 Saitama 50-site run processed `7` documents, ingested `5`, and wrote `18` yearly rows; `5` schools are Excel-ready | Partially proven |
+| 47 prefecture official indexes seed school public URLs | v331 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v331 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
+| Discover and download current target-FY PDFs in strict mode | v331 verifier clean by default; discovery gold-set `22` entries; Windows v331 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `7`, processed `7`, and produced `5` Excel-ready schools | Mechanically proven, yield failing |
+| Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `8` publication-lag cases; Windows v331 evidence shows stale target PDFs rejected as `fiscal_year_mismatch:*`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Partially proven |
+| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v331 Saitama 50-site run processed `7` documents, ingested `5`, and wrote `18` yearly rows; `5` schools are Excel-ready | Partially proven |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
-| Excel template output | v330 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v330 | Partially proven |
-| ManualActionLog audit for operator actions | v330 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v330 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v330 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v330-1de0ec7`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
-| Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v330 50-site diagnostics report `target_pdf_auto_yield_pct=0.2` as a diagnostic metric, `operator_reviewable_yield_pct=1.6`, `excel_ready=5`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
+| Excel template output | v331 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v331 | Partially proven |
+| ManualActionLog audit for operator actions | v331 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v331 | Partially proven |
+| ZIP distribution, double-click setup, browser UI offline operation | v331 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v331-9730b5a`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
+| Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v331 50-site diagnostics report `target_pdf_auto_yield_pct=0.2` as a diagnostic metric, `operator_reviewable_yield_pct=1.7`, `excel_ready=5`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
 
 ## Current Non-Windows Evidence
 
@@ -65,7 +65,7 @@ v331 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v331 setup plus the latest v330 bounded bootstrap:
+Commands and observations from `ssh win` for v331 setup/bootstrap:
 
 - Uploaded `dist/eidp-windows-v331.zip` to
   `C:\Users\cyo20\eidp-windows-v331.zip`.
@@ -85,40 +85,22 @@ Commands and observations from `ssh win` for v331 setup plus the latest v330 bou
   - school `767` returns `error_code=robots_disallow_all`, `retryable=false`;
   - school `785` now returns `error=null`, `candidates=27`, best
     `https://nihon-ika.ac.jp/wp/wp-content/uploads/2025/08/⑮2025年更新確認申請書.pdf`.
-  This confirms two v330 timeout rows were transient fetch failures, while the
-  Kitasato row is a real robots-policy block.
-
-Latest bounded bootstrap evidence is still from v330:
-
-- Uploaded `dist/eidp-windows-v330.zip` to
-  `C:\Users\cyo20\eidp-windows-v330.zip`.
-- Windows `Get-FileHash -Algorithm SHA256` ->
-  `79E383312C57413A2DFDFFA39CDF7BB8D87E5B89A3118A4A17AE705D425CE1AD`.
-- Extracted to `C:\Users\cyo20\EIDP-v330-1de0ec7`.
-- `scripts\first_setup.bat` -> exit `0`; after-setup validator reported:
-  `school_count=2418`, `school_fiscal_year_status_count=2418`,
-  `sqlite_integrity_check=ok`, required SQLite tables present,
-  `department_change` void columns present, and `uq_document_file_hash` present.
-- The Windows scheduled task `EIDP Weekly Run` was updated by setup to
-  `C:\Users\cyo20\EIDP-v330-1de0ec7\scripts\weekly_run.bat`.
-- Targeted strict-mode check for the prior 入間看護専門学校 false-positive URL
-  `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055`
-  with opaque anchor `download` returned
-  `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`.
-
+  The subsequent bounded bootstrap confirms two v330 timeout rows were transient
+  fetch failures, while the Kitasato row is a real robots-policy block.
 - `scripts\bootstrap_pdfs.bat --pref saitama --skip-known-url-discovery --url-search off --school-url-crawl off --batch-size 50 --rate-limit 0.2 --request-timeout 15` -> exit `0`.
 - Official Saitama artifact downloaded; aggregate `extracted=58`,
   `matched=51`, `added=51`, `review_items=2`.
-- PDF discovery: `crawled=50`, `found=47`, `downloaded=7`, `failed=6`,
-  `skipped=1218`, `prefiltered=904`, `cached_rejections=286`,
+- PDF discovery: `crawled=50`, `found=49`, `downloaded=7`, `failed=4`,
+  `skipped=1235`, `prefiltered=919`, `cached_rejections=286`,
   `candidate_school_mismatch=5160`, `candidate_budget_dropped=853`,
-  `rejection_reason_fiscal_year_mismatch=319`,
-  `rejection_reason_target_fiscal_year_not_detected=21`,
+  `rejection_reason_discovery_error=1`,
+  `rejection_reason_fiscal_year_mismatch=326`,
+  `rejection_reason_target_fiscal_year_not_detected=22`,
   `rejection_reason_unsafe_url=1`.
 - Ingest: `processed=7`, `departments_created=12`, `yearly_upserted=18`,
   `skipped=1`.
 - Rebuilt status: `excel_ready=5`, `target_pdf_auto_acquired_count=5`,
-  `operator_reviewable_count=39`, `operator_reviewable_yield_pct=1.6`,
+  `operator_reviewable_count=41`, `operator_reviewable_yield_pct=1.7`,
   `ship_gate_status=below_gate`.
 - Diagnostics after bootstrap:
   `validate_core_rc=0`, `validate_after_setup_rc=0`,
@@ -132,7 +114,7 @@ Latest bounded bootstrap evidence is still from v330:
 - Evidence review confirmed stale-label rejection: the prior v324 false
   acceptance `R7確認申請書類 様式第2号` is now recorded as
   `fiscal_year_mismatch:2025`.
-- The v330 RCA batch plan has `10` items / `43` actionable candidates. Top
+- The v331 RCA batch plan has `10` items / `43` actionable candidates. Top
   buckets include `target_form_without_year_evidence` for 浦和専門学校 and
   大宮歯科衛生士専門学校, `non_target_candidates_only` for several schools,
   and `publication_lag_or_old_target_pdf` for 東京IT会計公務員専門学校大宮校.
