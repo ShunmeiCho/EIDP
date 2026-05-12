@@ -474,7 +474,7 @@ def _prediction_from_pdf_evidence_payload(
     if reason == "accepted_downloaded":
         raw_extra = payload.get("extra")
         extra: dict[str, Any] = raw_extra if isinstance(raw_extra, dict) else {}
-        fiscal_year = _int_or_none(extra.get("target_fiscal_year")) or _int_or_none(extra.get("detected_fiscal_year"))
+        fiscal_year = _int_or_none(extra.get("detected_fiscal_year")) or _int_or_none(extra.get("target_fiscal_year"))
         return DiscoveryGoldPrediction(
             entry_id=entry.entry_id,
             outcome="accepted_target_pdf",

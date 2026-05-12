@@ -381,6 +381,49 @@ def test_load_predictions_prefers_accepted_body_year_over_stale_url_hint(tmp_pat
     ]
 
 
+def test_load_predictions_preserves_detected_year_mismatch_on_accepted_download(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "school_id": 1721,
+                "pdf_url": ECOLE_URL,
+                "reason": "accepted_downloaded",
+                "pdf_type": "target",
+                "extra": {
+                    "target_fiscal_year": "2026",
+                    "detected_fiscal_year": "2025",
+                    "year_evidence": "pdf_text",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    predictions = load_discovery_gold_predictions_from_pdf_evidence(
+        evidence_path,
+        load_discovery_gold_entries(GOLD_SET_DIR),
+    )
+    report = evaluate_discovery_gold_predictions(load_discovery_gold_entries(GOLD_SET_DIR), predictions)
+
+    assert predictions == [
+        DiscoveryGoldPrediction(
+            entry_id="ecole-matsue-nutrition-2026",
+            outcome="accepted_target_pdf",
+            pdf_url=ECOLE_URL,
+            fiscal_year=2025,
+            strict_target_year_success=True,
+        )
+    ]
+    assert report.failed_predictions == 1
+    assert report.failures == [
+        {
+            "entry_id": "ecole-matsue-nutrition-2026",
+            "reasons": ["fiscal_year_mismatch"],
+        }
+    ]
+
+
 def test_load_predictions_keeps_yearless_target_candidate_in_review(tmp_path: Path) -> None:
     evidence_path = tmp_path / "discovery-evidence.jsonl"
     evidence_path.write_text(
