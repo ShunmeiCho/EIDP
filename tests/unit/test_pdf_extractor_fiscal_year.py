@@ -1,3 +1,4 @@
+import eidp.pdf.extractor as extractor_module
 from eidp.pdf.extractor import _extract_fiscal_year
 
 
@@ -5,6 +6,12 @@ def test_extract_fiscal_year_accepts_2030s_western_filing_date() -> None:
     text = "確認申請書\n提出日 2030.6.1\n"
 
     assert _extract_fiscal_year(text, max_fiscal_year=2030) == "令和12年度"
+
+
+def test_extract_fiscal_year_default_cap_uses_configured_target(monkeypatch) -> None:
+    monkeypatch.setattr(extractor_module.settings, "target_fiscal_year", 2030)
+
+    assert _extract_fiscal_year("令和12年度 確認申請書") == "令和12年度"
 
 
 def test_extract_fiscal_year_fallback_accepts_2030s_western_year() -> None:

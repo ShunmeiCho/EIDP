@@ -300,6 +300,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "trusted_year_evidence if strict_target_fiscal_year else \"\"\n"
             "\"target_fiscal_year\" not in evidence.extra\n"
             "replace(evidence\n"
+            "candidate.detected_fiscal_year >= target_year\n"
         ),
         "src/eidp/scraper/discovery_gold_set.py": (
             REPO_ROOT / "src" / "eidp" / "scraper" / "discovery_gold_set.py"
@@ -316,6 +317,9 @@ def _core_entries() -> dict[str, bytes | str]:
             "is_current=is_current_row\n"
             "support_recipient_review_pending\n"
             'doc.ingest_status = "review_pending"\n'
+            "from eidp.config import settings\n"
+            "doc.is_current_year = fiscal_year >= settings.target_fiscal_year\n"
+            "settings.target_fiscal_year if max_fiscal_year is None\n"
         ),
         "src/eidp/pipeline/manual_entry.py": (
             REPO_ROOT / "src" / "eidp" / "pipeline" / "manual_entry.py"
@@ -679,6 +683,7 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("MIN_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("MAX_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("target_year - 8" in error for error in check.errors)
+    assert any("candidate.detected_fiscal_year >= target_year" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(tmp_path: Path) -> None:
@@ -735,6 +740,7 @@ def test_verify_core_zip_requires_rolling_pdf_fiscal_year_extractor_contract(tmp
     assert any("20\\d{2}" in error for error in check.errors)
     assert any("MIN_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("MAX_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
+    assert any("settings.target_fiscal_year" in error for error in check.errors)
     assert any("format_fiscal_year_as_japanese_era" in error for error in check.errors)
 
 
@@ -748,6 +754,7 @@ def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) 
     assert not check.ok
     assert any("src/eidp/pipeline/ingest.py missing required token" in error for error in check.errors)
     assert any("compute_pdf_parse_breakdown" in error for error in check.errors)
+    assert any("settings.target_fiscal_year" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_ocr_tesseract_runtime_contract(tmp_path: Path) -> None:

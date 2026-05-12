@@ -7,12 +7,13 @@ updates school_year_status.
 import re
 import unicodedata
 from collections.abc import Sequence
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import Department, DepartmentYearly, Document, SchoolYearStatus, SupportRecipient
 from eidp.department_normalization import normalize_course_name
 from eidp.extraction_confidence import (
@@ -21,14 +22,11 @@ from eidp.extraction_confidence import (
     compute_pdf_parse_breakdown,
     thresholds_from_env,
 )
-from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text
 from eidp.pdf.extractor import parse_pdf
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
 
 log = structlog.get_logger()
-
-JST = timezone(timedelta(hours=9))
-
 
 def _norm(s: str) -> str:
     if not s:
@@ -608,19 +606,11 @@ def ingest_document(
     # Write fiscal year back to Document so crawler can filter already-collected schools
     if fiscal_year:
         doc.fiscal_year = fiscal_year
-        # Compute current fiscal year dynamically (April-March boundary).
-        # Use module-level datetime; a local re-import here would shadow it
-        # for the whole function body and break the append-only branches above.
-        current_fy = current_fiscal_year()
-        doc.is_current_year = (fiscal_year >= current_fy)
+        doc.is_current_year = fiscal_year >= settings.target_fiscal_year
 
     session.flush()
     log.info("document_ingested", doc_id=doc.id, **stats)
     return stats
-
-
-def _current_jst_fiscal_year() -> int:
-    return current_fiscal_year(datetime.now(JST))
 
 
 def _has_fiscal_year_candidate(year_str: str) -> bool:
@@ -637,7 +627,7 @@ def _parse_fiscal_year_from_annotation(
     if not year_str:
         return None
 
-    cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
+    cap = settings.target_fiscal_year if max_fiscal_year is None else max_fiscal_year
 
     fiscal_year = fiscal_year_from_japanese_era_text(year_str)
     if fiscal_year is not None:

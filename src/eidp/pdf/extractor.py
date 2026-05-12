@@ -13,17 +13,16 @@ Each department section in Form 2-4-2 contains:
 
 import re
 import unicodedata
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import structlog
 
-from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text, format_fiscal_year_as_japanese_era
+from eidp.config import settings
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text, format_fiscal_year_as_japanese_era
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
 
 log = structlog.get_logger()
 
-JST = timezone(timedelta(hours=9))
 MIN_SUPPORTED_FISCAL_YEAR = 2019
 MAX_SUPPORTED_FISCAL_YEAR = 2099
 
@@ -73,16 +72,12 @@ def _extract_school_name(full_text: str) -> str:
     return ""
 
 
-def _current_jst_fiscal_year() -> int:
-    return current_fiscal_year(datetime.now(JST))
-
-
 def _format_fiscal_year_if_allowed(fiscal_year: int | None, max_fiscal_year: int | None = None) -> str | None:
     if fiscal_year is None:
         return None
     if fiscal_year < MIN_SUPPORTED_FISCAL_YEAR or fiscal_year > MAX_SUPPORTED_FISCAL_YEAR:
         return None
-    cap = min(_current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year, MAX_SUPPORTED_FISCAL_YEAR)
+    cap = min(settings.target_fiscal_year if max_fiscal_year is None else max_fiscal_year, MAX_SUPPORTED_FISCAL_YEAR)
     if fiscal_year > cap:
         return None
     return format_fiscal_year_as_japanese_era(fiscal_year) or f"{fiscal_year}年度"
@@ -136,7 +131,10 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
     # Pattern 4: Most frequent western year (fallback)
     # Exclude unsupported/future fiscal years to avoid unrelated policy/history references.
     from collections import Counter
-    max_valid_year = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
+    max_valid_year = min(
+        settings.target_fiscal_year if max_fiscal_year is None else max_fiscal_year,
+        MAX_SUPPORTED_FISCAL_YEAR,
+    )
     all_years = re.findall(r"(20\d{2})[\.\s年/]", normed)
     valid_years = [int(y) for y in all_years if MIN_SUPPORTED_FISCAL_YEAR <= int(y) <= max_valid_year]
     if valid_years:

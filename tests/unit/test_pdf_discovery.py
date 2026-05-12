@@ -2389,9 +2389,9 @@ def test_run_pdf_discovery_sets_target_year_on_strict_downloaded_document(
         session.flush()
 
         target = PdfCandidate(
-            pdf_url="https://example.ac.jp/r8-kakunin.pdf",
+            pdf_url="https://example.ac.jp/r7-kakunin.pdf",
             page_url="https://example.ac.jp/disclosure/",
-            anchor_text="令和8年度 確認申請書",
+            anchor_text="令和7年度 確認申請書",
             score=9.0,
         )
 
@@ -2417,13 +2417,13 @@ def test_run_pdf_discovery_sets_target_year_on_strict_downloaded_document(
             tmp_path,
             batch_size=10,
             rate_limit=0,
-            target_fiscal_year=2026,
+            target_fiscal_year=2025,
             strict_target_fiscal_year=True,
         )
 
         assert stats["downloaded"] == 1
         doc = session.query(Document).one()
-        assert doc.fiscal_year == 2026
+        assert doc.fiscal_year == 2025
         assert doc.is_current_year is True
     finally:
         session.close()

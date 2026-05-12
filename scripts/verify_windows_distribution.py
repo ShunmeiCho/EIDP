@@ -990,6 +990,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'trusted_year_evidence if strict_target_fiscal_year else ""',
             '"target_fiscal_year" not in evidence.extra',
             "replace(evidence",
+            "candidate.detected_fiscal_year >= target_year",
         ),
         "src/eidp/scraper/discovery_gold_set.py": (
             "entries_by_key",
@@ -1008,10 +1009,12 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
         "src/eidp/pdf/extractor.py": (
             "def _extract_fiscal_year",
+            "from eidp.config import settings",
             "MIN_SUPPORTED_FISCAL_YEAR = 2019",
             "MAX_SUPPORTED_FISCAL_YEAR = 2099",
             "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR",
             "fiscal_year > MAX_SUPPORTED_FISCAL_YEAR",
+            "settings.target_fiscal_year if max_fiscal_year is None",
             'filing_dates = re.findall(r"(20\\d{2})[./]\\d{1,2}[./]\\d{1,2}"',
             'all_years = re.findall(r"(20\\d{2})[\\.\\s年/]"',
             "MIN_SUPPORTED_FISCAL_YEAR <= int(y) <= max_valid_year",
@@ -1021,12 +1024,15 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly",
             "SupportRecipient",
+            "from eidp.config import settings",
             "compute_pdf_parse_breakdown",
             "breakdown_to_json",
             "revision=next_revision",
             "is_current=is_current_row",
             "support_recipient_review_pending",
             'doc.ingest_status = "review_pending"',
+            "doc.is_current_year = fiscal_year >= settings.target_fiscal_year",
+            "settings.target_fiscal_year if max_fiscal_year is None",
         ),
         "src/eidp/pipeline/manual_entry.py": (
             "log_manual_action",
