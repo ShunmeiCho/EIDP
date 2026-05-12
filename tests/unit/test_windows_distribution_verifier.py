@@ -123,7 +123,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "週次URL/PDF再取得\n"
             "対象年度を変更して保存すると、学校別タスクも同時に再計算されます\n"
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
-            "アンチウイルスにより隔離された可能性があります\n"
+            "アンチウイルスにより隔離された\n"
         ),
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
