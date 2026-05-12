@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `616bcf00683e608448300f0308876e382fc54350` (`eidp-windows-v276.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `18968d7596e3938885bd5549d26df9ef184dd8d6` (`eidp-windows-v277.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -980,6 +980,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v276 is still pending and must not be
+inferred from the Mac verifier.
+
+v277 (`18968d7`) removes the remaining hardcoded Reiwa fiscal-year context
+checks from PDF discovery and ingest. `fiscal_year.has_fiscal_year_text` now
+detects western years plus the configured Japanese era name, initial, and
+romanized alias, and both discovery context scoring and ingest annotation
+checks call that helper. This keeps the rolling target-year pipeline tied to
+the configured era table instead of an FY2026/Reiwa-only regex. The Windows
+distribution verifier now requires the packaged helper and verifies that both
+`pdf_discovery.py` and `ingest.py` import the shared fiscal-year text contract.
+Verification: `tests/unit` passed with `1266 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v277.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`4acaf7ea7670622e4e3425c42c038d8924c434a32c27415242d3c941f158e356`,
+`git_commit=18968d7596e3938885bd5549d26df9ef184dd8d6`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v277 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
