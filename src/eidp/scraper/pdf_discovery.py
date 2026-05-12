@@ -607,7 +607,10 @@ def _has_site_family_non_target_url(candidate: PdfCandidate) -> bool:
     if host == "www.hondacollege.ac.jp" and re.search(r"/about/disclosure/pdf/htece_report_\d{2}\.pdf$", path):
         return True
 
-    if host == "www.arsnet.ac.jp" and re.search(r"/uploads/20\d{2}/\d{2}/r\d+_\d[a-z]\d_\d{4}\.pdf$", path):
+    if host == "www.arsnet.ac.jp" and re.search(
+        r"/uploads/20\d{2}/\d{2}/r\d+_(?:\d[a-z]\d|[a-z]{2})_\d{4}\.pdf$",
+        path,
+    ):
         return True
 
     if host == "www.saitama-cmcc.ac.jp" and re.search(r"/uploads/20\d{2}/\d{2}/\d[a-z]\d{2}\.pdf$", path):

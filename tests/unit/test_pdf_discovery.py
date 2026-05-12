@@ -406,6 +406,8 @@ def test_pre_download_rejects_site_family_non_target_url_shapes() -> None:
         ("https://www.yoshikawa-fukushi.ac.jp/about/pdf/2025-09-2-1.pdf", "委員会報告書"),
         ("https://www.hondacollege.ac.jp/honda_e/about/disclosure/pdf/htece_report_08.pdf", "学生納付金・修学支援"),
         ("https://www.arsnet.ac.jp/school/wp/wp-content/uploads/2026/04/R8_1A1_0420.pdf", "大学併修コース"),
+        ("https://www.arsnet.ac.jp/school/wp/wp-content/uploads/2026/04/R8_IT_0420.pdf", "IT総合研究コース"),
+        ("https://www.arsnet.ac.jp/school/wp/wp-content/uploads/2026/04/R8_GB_0420.pdf", "国際ITビジネスコース"),
         ("https://www.saitama-cmcc.ac.jp/wp-content/uploads/2026/04/1A01.pdf", "HR"),
     ]
 

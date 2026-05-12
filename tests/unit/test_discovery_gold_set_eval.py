@@ -16,6 +16,7 @@ from eidp.scraper.discovery_gold_set import (
 GOLD_SET_DIR = Path(__file__).resolve().parents[2] / "data" / "discovery-gold-set"
 
 AGEO_URL = "https://ageo.org/files/admission/support/study_support_system.pdf"
+ARS_R7_URL = "https://www.arsnet.ac.jp/school/wp/wp-content/uploads/2025/06/414b23f669e2093caae76eccc9722c64.pdf"
 ECOLE_URL = "https://www.ecole-cpb.com/files/school_support_R8.pdf"
 NIHON_U_TUITION_URL = "https://www.dent.nihon-u.ac.jp/hyg/pdf/campus-life/tuition/2025_study-support_01.pdf"
 MASCAT_URL = "https://www.mascat.nihon-u.ac.jp/data/pdf/college/info/higher_education_support.pdf?1="
@@ -73,11 +74,11 @@ def test_evaluate_discovery_predictions_flags_missing_and_mismatched_entries() -
 
     report = evaluate_discovery_gold_predictions(entries, predictions)
 
-    assert report.total_gold_entries == 26
+    assert report.total_gold_entries == 27
     assert report.predicted_entries == 2
     assert report.exact_matches == 1
     assert report.failed_predictions == 1
-    assert report.missing_entries == 24
+    assert report.missing_entries == 25
     assert report.unexpected_predictions == 0
     assert report.failures[0]["entry_id"] == "nihon-u-dental-hygienist-publication-lag-2026"
     assert report.failures[0]["reasons"] == [
@@ -221,6 +222,15 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
                 ),
                 json.dumps(
                     {
+                        "school_id": 758,
+                        "pdf_url": ARS_R7_URL,
+                        "reason": "fiscal_year_mismatch:2025",
+                        "pdf_type": "target",
+                        "extra": {"target_fiscal_year": "2026"},
+                    }
+                ),
+                json.dumps(
+                    {
                         "school_id": 1721,
                         "pdf_url": ECOLE_URL,
                         "reason": "accepted_downloaded",
@@ -293,6 +303,13 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
             pdf_url=AGEO_URL,
             fiscal_year=2026,
             strict_target_year_success=True,
+        ),
+        DiscoveryGoldPrediction(
+            entry_id="ars-computer-publication-lag-2026",
+            outcome="publication_lag_latest_public",
+            pdf_url=ARS_R7_URL,
+            fiscal_year=2025,
+            strict_target_year_success=False,
         ),
         DiscoveryGoldPrediction(
             entry_id="ecole-matsue-nutrition-2026",
@@ -758,6 +775,6 @@ def test_render_discovery_gold_eval_report_outputs_json_payload() -> None:
 
     payload = json.loads(render_discovery_gold_eval_report(report))
 
-    assert payload["total_gold_entries"] == 26
+    assert payload["total_gold_entries"] == 27
     assert payload["exact_matches"] == 1
-    assert payload["missing_entries"] == 25
+    assert payload["missing_entries"] == 26

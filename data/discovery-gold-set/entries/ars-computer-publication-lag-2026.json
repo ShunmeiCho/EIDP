@@ -1,0 +1,54 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ars-computer-publication-lag-2026",
+  "school": {
+    "school_id": 758,
+    "school_name": "アルスコンピュータ専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "郷学舎"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a public disclosure page where current-year R8 PDFs are syllabi/course plans, while the latest target confirmation-form PDF is still R7.",
+    "search_queries": [],
+    "steps": [
+      "Use the Saitama official-index disclosure URL registered for the school.",
+      "Open https://www.arsnet.ac.jp/school/information.html.",
+      "Inspect the R8_*_0420.pdf links and verify they are 年間授業計画/シラバス PDFs, not target confirmation forms.",
+      "Follow the R7確認申請書類 様式第2号 link.",
+      "Classify the result as publication_lag_latest_public because the latest target-form PDF is explicitly R7/FY2025 while no R8 target-form PDF is public."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.arsnet.ac.jp/school/",
+    "disclosure_url": "https://www.arsnet.ac.jp/school/information.html",
+    "pdf_url": "https://www.arsnet.ac.jp/school/wp/wp-content/uploads/2025/06/414b23f669e2093caae76eccc9722c64.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "current_year_syllabus_with_old_year_target_form",
+    "reusable_rules": [
+      "Do not accept R8/2026 filename evidence unless the PDF or link also has target-form markers.",
+      "Treat current-year course-plan or syllabus PDFs as non-target even when the URL contains R8.",
+      "Keep the latest old-year target confirmation form as publication-lag evidence when no target-year form is discoverable."
+    ],
+    "anti_patterns": [
+      "Do not infer target-form status from R8 in the URL alone.",
+      "Do not let a current-year syllabus hide an older target-form PDF on the same disclosure page.",
+      "Do not classify 様式第2号別紙 or course-plan PDFs as the main target confirmation form."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/win-v339-evidence/discovery_rejections.jsonl",
+      "_temp/pdf-rca/ars_R7_youshiki2.txt",
+      "_temp/pdf-rca/ars_R8_IT_0420.txt",
+      "_temp/pdf-rca/ars_R8_GB_0420.txt"
+    ],
+    "notes": "Windows v339 bounded Saitama replay marks school_id 758 as publication_lag. Manual pdftotext inspection found the R8_IT/R8_GB PDFs contain 年間授業計画/シラバス text and no target-form markers, while the R7 様式第2号 PDF is the latest target-form candidate."
+  }
+}
