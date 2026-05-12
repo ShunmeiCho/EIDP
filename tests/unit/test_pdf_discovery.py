@@ -694,6 +694,24 @@ def test_extract_pdf_links_deduplicates_encoded_and_unencoded_paths() -> None:
     assert [candidate.anchor_text for candidate in candidates] == ["raw"]
 
 
+def test_extract_pdf_links_prefers_stronger_duplicate_anchor_text() -> None:
+    html = """
+    <p><a href="/docs/kakunin.pdf">PDF</a></p>
+    <p>
+      <a href="/docs/kakunin.pdf">
+        令和8年度 高等教育の修学支援新制度 確認申請書
+      </a>
+    </p>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/")
+
+    assert len(candidates) == 1
+    assert candidates[0].pdf_url == "https://example.ac.jp/docs/kakunin.pdf"
+    assert _has_target_application_hint(candidates[0])
+    assert "令和8年度" in candidates[0].anchor_text
+
+
 def test_extract_pdf_links_includes_wordpress_download_manager_wrappers() -> None:
     html = """
     <p>令和6年度分申請</p>
@@ -737,6 +755,29 @@ def test_append_unique_candidates_deduplicates_encoded_and_unencoded_paths() -> 
     _append_unique_candidates(target, additions)
 
     assert [candidate.anchor_text for candidate in target] == ["raw"]
+
+
+def test_append_unique_candidates_prefers_stronger_duplicate_candidate() -> None:
+    target = [
+        PdfCandidate(
+            pdf_url="https://example.ac.jp/docs/kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="PDF",
+        )
+    ]
+    additions = [
+        PdfCandidate(
+            pdf_url="https://example.ac.jp/docs/kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 高等教育の修学支援新制度 確認申請書",
+        )
+    ]
+
+    _append_unique_candidates(target, additions)
+
+    assert len(target) == 1
+    assert _has_target_application_hint(target[0])
+    assert "令和8年度" in target[0].anchor_text
 
 
 def test_download_attempt_urls_resolves_tmu_download_wrapper(monkeypatch) -> None:

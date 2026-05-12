@@ -1011,6 +1011,35 @@ def _pdf_candidate_dedupe_key(url: str) -> str:
     return parsed._replace(path=unquote(parsed.path)).geturl()
 
 
+def _candidate_dedupe_preference(candidate: PdfCandidate) -> int:
+    """Return how useful a duplicate candidate's own URL/anchor context is."""
+
+    if _has_target_application_hint(candidate):
+        return 3
+    if _has_target_form_hint(candidate):
+        return 2
+    if _has_formish_candidate_hint(candidate):
+        return 1
+    return 0
+
+
+def _append_or_upgrade_candidate(
+    candidates: list[PdfCandidate],
+    index_by_key: dict[str, int],
+    candidate: PdfCandidate,
+) -> None:
+    """Append a PDF candidate, replacing weak duplicate anchor context."""
+
+    key = _pdf_candidate_dedupe_key(candidate.pdf_url)
+    existing_index = index_by_key.get(key)
+    if existing_index is None:
+        index_by_key[key] = len(candidates)
+        candidates.append(candidate)
+        return
+    if _candidate_dedupe_preference(candidate) > _candidate_dedupe_preference(candidates[existing_index]):
+        candidates[existing_index] = candidate
+
+
 def _html_text(fragment: str) -> str:
     text = html_lib.unescape(re.sub(r"<[^>]+>", " ", fragment))
     return re.sub(r"\s+", " ", text).strip()
@@ -1231,7 +1260,7 @@ def _is_wordpress_download_manager_url(url: str, base_url: str) -> bool:
 def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
     """Extract PDF link candidates from HTML using known PDF delivery patterns."""
     candidates: list[PdfCandidate] = []
-    seen_urls: set[str] = set()
+    candidate_index_by_key: dict[str, int] = {}
 
     # Pattern 1: Direct PDF links — a[href*=".pdf"]
     for m in re.finditer(
@@ -1240,16 +1269,17 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
     ):
         href = html_lib.unescape(m.group(1))
         url = urljoin(base_url, href)
-        dedupe_key = _pdf_candidate_dedupe_key(url)
-        if dedupe_key not in seen_urls:
-            seen_urls.add(dedupe_key)
-            anchor = _pdf_anchor_context_text(html, m)
-            pattern = "cache_busted" if "?" in href else "direct"
-            if "/wp-content/" in url:
-                pattern = "wordpress"
-            candidates.append(PdfCandidate(
+        anchor = _pdf_anchor_context_text(html, m)
+        pattern = "cache_busted" if "?" in href else "direct"
+        if "/wp-content/" in url:
+            pattern = "wordpress"
+        _append_or_upgrade_candidate(
+            candidates,
+            candidate_index_by_key,
+            PdfCandidate(
                 pdf_url=url, page_url=base_url, anchor_text=anchor, pattern_type=pattern,
-            ))
+            ),
+        )
 
     # Pattern 2b: WordPress Download Manager wrappers.
     #
@@ -1265,15 +1295,16 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
         url = urljoin(base_url, href)
         if not _is_wordpress_download_manager_url(url, base_url):
             continue
-        dedupe_key = _pdf_candidate_dedupe_key(url)
-        if dedupe_key not in seen_urls:
-            seen_urls.add(dedupe_key)
-            candidates.append(PdfCandidate(
+        _append_or_upgrade_candidate(
+            candidates,
+            candidate_index_by_key,
+            PdfCandidate(
                 pdf_url=url,
                 page_url=base_url,
                 anchor_text=_pdf_anchor_context_text(html, m),
                 pattern_type="wordpress_download_manager",
-            ))
+            ),
+        )
 
     # Pattern 4: Embedded PDFs — embed/object/iframe with .pdf src
     for tag in ("embed", "object", "iframe"):
@@ -1284,12 +1315,13 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
             ):
                 href = html_lib.unescape(m.group(1))
                 url = urljoin(base_url, href)
-                dedupe_key = _pdf_candidate_dedupe_key(url)
-                if dedupe_key not in seen_urls:
-                    seen_urls.add(dedupe_key)
-                    candidates.append(PdfCandidate(
+                _append_or_upgrade_candidate(
+                    candidates,
+                    candidate_index_by_key,
+                    PdfCandidate(
                         pdf_url=url, page_url=base_url, anchor_text="", pattern_type="embed",
-                    ))
+                    ),
+                )
 
     return candidates
 
@@ -1599,13 +1631,9 @@ def _extract_sitemap_locs(xml: str) -> list[str]:
 
 def _append_unique_candidates(target: list[PdfCandidate], additions: list[PdfCandidate]) -> None:
     """Append candidates not already present by PDF URL."""
-    seen = {_pdf_candidate_dedupe_key(candidate.pdf_url) for candidate in target}
+    index_by_key = {_pdf_candidate_dedupe_key(candidate.pdf_url): index for index, candidate in enumerate(target)}
     for candidate in additions:
-        candidate_key = _pdf_candidate_dedupe_key(candidate.pdf_url)
-        if candidate_key in seen:
-            continue
-        seen.add(candidate_key)
-        target.append(candidate)
+        _append_or_upgrade_candidate(target, index_by_key, candidate)
 
 
 def _needs_rendered_html_fallback(candidates: list[PdfCandidate], *, target_fiscal_year: int) -> bool:
