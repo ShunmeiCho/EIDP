@@ -5,7 +5,7 @@ Branch: `sprint8-handoff-finalize`
 Current Mac-verifier-clean package: `dist/eidp-windows-v324.zip`
 Package commit: `9d9b9b32eb49f29f8da81ee31bde2e6f7461c1dd`
 Package SHA256: `29fd999376aacfdc40c13242c980b6fb900f84f2dfc036530d1d1dd538ecaf3e`
-Latest Windows-backend-proven package: `dist/eidp-windows-v323.zip`
+Latest Windows-backend-proven package: `dist/eidp-windows-v324.zip`
 
 ## Verdict
 
@@ -13,23 +13,23 @@ Status: **NOT COMPLETE**
 
 The current source/ZIP snapshot is v324 and passes the default macOS package
 verifier. The packaging, setup, SQLite, Task Scheduler, and bounded Windows
-backend pipeline are still proven only on `ssh win` for v323. The product goal
-is not complete: v324 has not passed Windows setup/backend smoke or browser UI
-operator click-through, and the measured operator-reviewable coverage / Excel
-readiness remain far below the shipping line.
+backend pipeline are reproducible on `ssh win` for v324. The product goal is
+still not complete: v324 has not passed browser UI operator click-through, and
+the measured operator-reviewable coverage / Excel readiness remain far below
+the shipping line.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official indexes seed school public URLs | v324 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v323 bounded Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v324 verifier clean by default; discovery gold-set `22` entries; expected predictions `22/22 exact`; Windows v323 Saitama bounded run crawled `5` official-index sites and found candidates on all `5`, but downloaded `0` strict target-FY PDFs | Mechanically proven, yield failing |
+| 47 prefecture official indexes seed school public URLs | v324 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v324 bounded Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
+| Discover and download current target-FY PDFs in strict mode | v324 verifier clean by default; discovery gold-set `22` entries; expected predictions `22/22 exact`; Windows v324 Saitama bounded run crawled `5` official-index sites and found candidates on all `5`, but downloaded `0` strict target-FY PDFs | Mechanically proven, yield failing |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `8` publication-lag cases | Partially proven |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows Saitama bounded run had `0` downloaded PDFs, so ingest executed but processed `0` documents | Partially proven |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v324 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v324 | Partially proven |
-| ManualActionLog audit for operator actions | v324 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated on v324 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v324 ZIP verifies clean on macOS packaging gate. v323 ZIP was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v323-2f98ce4`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains user-side/unverified | Backend Win proof stale by one package, UI proof missing |
+| ManualActionLog audit for operator actions | v324 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v324 | Partially proven |
+| ZIP distribution, double-click setup, browser UI offline operation | v324 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v324-9d9b9b3`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains user-side/unverified | Backend Win proof present, UI proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows after-bootstrap diagnostics report `target_pdf_auto_yield_pct=0.0` as a diagnostic metric, `operator_reviewable_yield_pct=0.2`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
 
 ## Current Non-Windows Evidence
@@ -54,11 +54,11 @@ v324 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v323:
+Commands and observations from `ssh win` for v324:
 
-- Uploaded `dist/eidp-windows-v323.zip` to `C:\Users\cyo20\eidp-windows-v323.zip`.
-- Windows `Get-FileHash -Algorithm SHA256` -> `3BCB823D1A7A4695EA5C758532098A6EA4D999A9240BECBE535590134C5A4672`.
-- Extracted to `C:\Users\cyo20\EIDP-v323-2f98ce4`; `runtime\python\python.exe scripts\validate_windows_install.py .` -> `OK install`, build commit `2f98ce43de1832e368e38331d781d2ecc3c18538`, `build_dirty=false`.
+- Uploaded `dist/eidp-windows-v324.zip` to `C:\Users\cyo20\eidp-windows-v324.zip`.
+- Windows `Get-FileHash -Algorithm SHA256` -> `29FD999376AACFDC40C13242C980B6FB900F84F2DFC036530D1D1DD538ECAF3E`.
+- Extracted to `C:\Users\cyo20\EIDP-v324-9d9b9b3`; `runtime\python\python.exe scripts\validate_windows_install.py .` -> `OK install`, build commit `9d9b9b32eb49f29f8da81ee31bde2e6f7461c1dd`, `build_dirty=false`.
 - `scripts\first_setup.bat` -> exit `0`; after-setup validator reported:
   `school_count=2418`, `school_fiscal_year_status_count=2418`,
   `sqlite_integrity_check=ok`, required SQLite tables present,
@@ -74,31 +74,29 @@ Commands and observations from `ssh win` for v323:
   `found=5`, `downloaded=0`, `failed=0`, `skipped=344`,
   `prefiltered=314`, `candidate_budget_dropped=1725`; ingest `processed=0`.
 - Generated RCA queue:
-  `data\output\target-year-discovery\bootstrap-20260512_223932-discovery-rca-batch-plan.json`,
+  `data\output\target-year-discovery\bootstrap-20260512_231557-discovery-rca-batch-plan.json`,
   `5` items / `5` total candidates, valid JSON by Python `json.tool`.
-- RCA queue buckets from the v323 bounded run:
-  school IDs `212`, `15`, `53`, `72`, and `95` are all
-  `publication_lag_or_old_target_pdf`.
+- RCA queue buckets from the v324 bounded run:
+  all `5` items are `publication_lag_or_old_target_pdf`, with candidate
+  counts `1992`, `31`, `28`, `24`, and `9`.
 - Diagnostics after bootstrap:
   `validate_core_rc=0`, `validate_after_setup_rc=0`,
   `validate_after_bootstrap_rc=0`,
   `validate_after_bootstrap_ship_gate_rc=1`, `ship_readiness_rc=1`.
 - The Windows scheduled task `EIDP Weekly Run` was updated by setup to
-  `C:\Users\cyo20\EIDP-v323-2f98ce4\scripts\weekly_run.bat`.
+  `C:\Users\cyo20\EIDP-v324-9d9b9b3\scripts\weekly_run.bat`.
 
 ## Next Required Proof
 
-1. Run Windows setup/backend smoke for v324, or explicitly keep v323 as the
-   latest Windows-backend-proven package until v324 is validated.
-2. Run browser UI operator click-through on the current Windows install:
+1. Run browser UI operator click-through on the current Windows install:
    `EIDP-start.bat` -> operator pages -> Excel preview/download -> diagnostics.
-3. Expand Windows official-index discovery beyond the 5-site Saitama bounded
+2. Expand Windows official-index discovery beyond the 5-site Saitama bounded
    smoke and record target PDFs accepted, publication-lag queue,
    manual-required queue, and errors.
-4. Use the generated RCA batch plan to classify whether the current zero
+3. Use the generated RCA batch plan to classify whether the current zero
    strict-target result is due to upstream publication lag, crawler false
    negatives, or missing manual fallback/gold-set demonstrations.
-5. Compare measured operator-reviewable coverage, manual workload, and Excel
+4. Compare measured operator-reviewable coverage, manual workload, and Excel
    readiness against the shipping line; keep strict target-PDF acquisition as a
    diagnostic metric during the May publication-lag window.
-6. Only after those numbers pass should the branch be treated as release-ready.
+5. Only after those numbers pass should the branch be treated as release-ready.
