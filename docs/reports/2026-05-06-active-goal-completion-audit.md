@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `8900cbc6af2d1e442d1697db01c5947ad1ed9de3` (`eidp-windows-v270.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `871de0b4a2b505b7be040adb05d8f720b9fda147` (`eidp-windows-v271.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -861,6 +861,23 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v270 is still pending and must not be
+inferred from the Mac verifier.
+
+v271 (`871de0b`) aligns the operator settings UI with the same rolling
+target-year bounds. The settings page now uses the shared
+`MIN_SUPPORTED_TARGET_FISCAL_YEAR=2019` and `MAX_SUPPORTED_TARGET_FISCAL_YEAR=2099`
+constants from `config.py`, so an operator cannot save an unsupported year that
+would later fail backend configuration validation. The packaged verifier also
+requires those settings-page bounds, preventing the UI/backend contract from
+drifting in future ZIPs. Verification: `tests/unit` passed with
+`1250 passed, 5 warnings`, and `dist/eidp-windows-v271.zip` plus the latest
+alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`4d0dc0455c45ce40530e54621486688c11fceaf306c886cf59e8a1d6e0e53d2c`,
+`git_commit=871de0b4a2b505b7be040adb05d8f720b9fda147`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v271 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
