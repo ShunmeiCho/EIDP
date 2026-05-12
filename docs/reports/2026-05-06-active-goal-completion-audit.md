@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `1385e19e9a005c8b9789a5452a3ccd9ed7bf913c` (`eidp-windows-v262.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `7abcfc48e849ae57357264a74a33dcc4f8fbd565` (`eidp-windows-v263.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -732,6 +732,22 @@ log-order accident. `dist/eidp-windows-v262.zip` and the latest alias
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v262 is still pending and must not be
+inferred from the Mac verifier.
+
+v263 (`7abcfc4`) adds the package-level guard for the v262 stale-target
+tie-break. The Windows distribution verifier now requires packaged
+`discovery_gold_set.py` to include `_is_better_tie_break_prediction`, the
+`publication_lag_latest_public` same-outcome guard, and the fiscal-year
+comparison that keeps the latest old public target form. The focused verifier
+test now fails a ZIP fixture that has the replay priority/no-target contract but
+omits the stale-target tie-break. `dist/eidp-windows-v263.zip` and the latest
+alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`6c3b6d11ab57054aae2496b3a1460dacbd9d6950118e90ed306b7acbb9772daf`,
+`git_commit=7abcfc48e849ae57357264a74a33dcc4f8fbd565`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v263 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
