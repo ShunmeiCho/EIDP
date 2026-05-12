@@ -3,9 +3,28 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `2f5734657e2947dc4ff9b16610d4ae1e2efb28de` (`eidp-windows-v310.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `def5bb72f03a864ae561adcd4d2a40440b91ffa0` (`eidp-windows-v311.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+
+## 2026-05-12 V311 Discovery Gold Pattern Provenance
+
+v311 (`def5bb7`) extends the discovery gold-set evaluator so proven
+`pattern_type` values become part of the regression contract when an entry
+declares one. The first committed case is the 入間看護 WordPress Download
+Manager old-year confirmation-form wrapper:
+`wordpress_download_manager`. Evaluating either expected-predictions JSONL or
+discover-pdfs evidence now preserves and compares that extractor provenance,
+so a future crawler that still finds the same PDF but via a different or opaque
+pattern is flagged as `pattern_type_mismatch` instead of silently passing. This
+keeps the manual-demonstration layer aligned with the v309/v310 evidence
+provenance work without adding new crawler scope. Verification: gold-set tests
+`15 passed`; full unit suite `1311 passed, 5 warnings`; Windows distribution
+verifier tests `80 passed`; targeted Ruff passed; targeted mypy passed;
+discovery gold-set replay `20/20 exact`; `dist/eidp-windows-v311.zip` verified
+clean with SHA256
+`740d4aee138c444eb4387322de5d4ce2bd559d751d95a271ce5c77ac82667203`.
+Windows operator E2E is still pending.
 
 ## 2026-05-12 V310 Packaged Extractor Provenance Gate
 
