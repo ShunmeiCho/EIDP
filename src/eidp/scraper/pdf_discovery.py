@@ -1011,16 +1011,24 @@ def _pdf_candidate_dedupe_key(url: str) -> str:
     return parsed._replace(path=unquote(parsed.path)).geturl()
 
 
-def _candidate_dedupe_preference(candidate: PdfCandidate) -> int:
+def _candidate_dedupe_year_preference(candidate: PdfCandidate) -> int:
+    """Return whether a duplicate candidate carries explicit fiscal-year context."""
+
+    return 1 if has_fiscal_year_text(_candidate_hint_text(candidate)) else 0
+
+
+def _candidate_dedupe_preference(candidate: PdfCandidate) -> tuple[int, int]:
     """Return how useful a duplicate candidate's own URL/anchor context is."""
 
     if _has_target_application_hint(candidate):
-        return 3
-    if _has_target_form_hint(candidate):
-        return 2
-    if _has_formish_candidate_hint(candidate):
-        return 1
-    return 0
+        hint_preference = 3
+    elif _has_target_form_hint(candidate):
+        hint_preference = 2
+    elif _has_formish_candidate_hint(candidate):
+        hint_preference = 1
+    else:
+        hint_preference = 0
+    return hint_preference, _candidate_dedupe_year_preference(candidate)
 
 
 def _append_or_upgrade_candidate(
