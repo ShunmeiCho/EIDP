@@ -1288,7 +1288,7 @@ def _extract_pdf_links(
 
     # Pattern 1: Direct PDF links — a[href*=".pdf"]
     for m in re.finditer(
-        r'<a\s[^>]*href=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\'][^>]*>(.*?)</a>',
+        r'<a\s[^>]*href=["\']([^"\']*\.pdf(?:[?#][^"\']*)?)["\'][^>]*>(.*?)</a>',
         html, re.IGNORECASE | re.DOTALL,
     ):
         href = html_lib.unescape(m.group(1))
@@ -1336,7 +1336,7 @@ def _extract_pdf_links(
     for tag in ("embed", "object", "iframe"):
         for attr in ("src", "data"):
             for m in re.finditer(
-                rf'<{tag}\s[^>]*{attr}=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']',
+                rf'<{tag}\s[^>]*{attr}=["\']([^"\']*\.pdf(?:[?#][^"\']*)?)["\']',
                 html, re.IGNORECASE,
             ):
                 href = html_lib.unescape(m.group(1))

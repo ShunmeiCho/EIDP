@@ -678,6 +678,22 @@ def test_extract_pdf_links_decodes_html_entities_in_query_string() -> None:
     assert "高等教育の修学支援新制度" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_accepts_fragment_pdf_links() -> None:
+    html = """
+    <a href="/docs/r8-kakunin.pdf#page=1">令和8年度 確認申請書</a>
+    <iframe src="/docs/embed-r8-kakunin.pdf#toolbar=0"></iframe>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/")
+
+    assert [candidate.pdf_url for candidate in candidates] == [
+        "https://example.ac.jp/docs/r8-kakunin.pdf#page=1",
+        "https://example.ac.jp/docs/embed-r8-kakunin.pdf#toolbar=0",
+    ]
+    assert candidates[0].pattern_type == "direct"
+    assert candidates[1].pattern_type == "embed"
+
+
 def test_extract_pdf_links_deduplicates_encoded_and_unencoded_paths() -> None:
     encoded_path = (
         "/wp-content/uploads/2025/07/"
