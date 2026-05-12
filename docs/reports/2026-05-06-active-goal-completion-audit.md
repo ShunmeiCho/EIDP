@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `873d38b341a2d5dfe24154f15f1ae1203129e916` (`eidp-windows-v285.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `e9bc2962868ccca0e8ffbaa05554d5f9f7541127` (`eidp-windows-v286.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1165,6 +1165,26 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v285 is still pending and must not be
+inferred from the Mac verifier.
+
+v286 (`e9bc296`) extends PDF link extraction to URLs with fragments such as
+`.pdf#page=1` and `.pdf#toolbar=0` for direct anchors and embedded
+`embed`/`object`/`iframe` PDF surfaces. This closes another persistent
+discovery false-negative class where a school publishes the correct target PDF
+behind a fragment-bearing viewer URL rather than a plain `.pdf` or
+cache-busted `.pdf?...` link. The Windows distribution verifier now requires
+the packaged fragment-aware PDF regex. Verification: `tests/unit` passed with
+`1281 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v286.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`b816221f80bf815dc2e8e5f098da023a4a7e3e1c6c9295ccf70dc41ee1cb764d`,
+`git_commit=e9bc2962868ccca0e8ffbaa05554d5f9f7541127`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v286 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
