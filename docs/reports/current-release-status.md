@@ -55,12 +55,12 @@ Commands run for v331 source/package:
 
 v331 verifier exposes the current demonstration gap:
 
-- Discovery gold-set entries: `22`
+- Discovery gold-set entries: `23`
 - Outcome distribution: `accepted_target_pdf=6`, `needs_operator_review=6`,
-  `no_target_candidate_found=1`, `publication_lag_latest_public=8`,
+  `no_target_candidate_found=1`, `publication_lag_latest_public=9`,
   `site_fetch_error=1`
-- Demonstrated extractor source: `wordpress_download_manager`
-- Not yet gold-demonstrated: `data_attribute`, `embed`, `form_action`,
+- Demonstrated extractor sources: `embed`, `wordpress_download_manager`
+- Not yet gold-demonstrated: `data_attribute`, `form_action`,
   `input_control`, `meta_refresh`, `onclick`, `select_option`
 
 ## Current Windows Backend Evidence
