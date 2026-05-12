@@ -529,6 +529,23 @@ def test_verify_core_zip_rejects_mismatched_discovery_gold_expected_predictions(
     assert any("prediction mismatch for accepted" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_missing_discovery_gold_pattern_prediction(tmp_path: Path) -> None:
+    entries = _core_entries()
+    member = "data/discovery-gold-set/entries/publication-lag.json"
+    payload = json.loads(str(entries[member]))
+    payload["expected_result"]["pattern_type"] = "wordpress_download_manager"
+    entries[member] = json.dumps(payload)
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        "prediction mismatch for publication-lag: pattern_type=None, expected 'wordpress_download_manager'" in error
+        for error in check.errors
+    )
+
+
 def test_verify_core_zip_requires_discovery_gold_eval_regression_gate(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/cli.py"] = "@app.command('eval-discovery-gold')\ndef eval_discovery_gold(): pass\n"
@@ -912,6 +929,8 @@ def test_verify_core_zip_requires_discovery_gold_replay_semantics_contract(tmp_p
     assert any('"site_fetch_error": 2' in error for error in check.errors)
     assert any("_is_better_tie_break_prediction" in error for error in check.errors)
     assert any("candidate.fiscal_year" in error for error in check.errors)
+    assert any("pattern_type_mismatch" in error for error in check.errors)
+    assert any("pattern_type=str(payload.get(\"pattern_type\")" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_rolling_pdf_fiscal_year_extractor_contract(tmp_path: Path) -> None:

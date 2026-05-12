@@ -607,13 +607,16 @@ def _strict_int(value: object) -> int | None:
 def _expected_prediction_from_gold_entry(payload: dict[str, Any]) -> dict[str, Any]:
     expected = payload.get("expected_result")
     expected_result: dict[str, Any] = expected if isinstance(expected, dict) else {}
-    return {
+    prediction = {
         "entry_id": str(payload.get("entry_id") or ""),
         "outcome": str(payload.get("outcome") or ""),
         "pdf_url": str(expected_result.get("pdf_url") or ""),
         "fiscal_year": expected_result.get("fiscal_year"),
         "strict_target_year_success": bool(expected_result.get("strict_target_year_success", False)),
     }
+    if pattern_type := str(expected_result.get("pattern_type") or ""):
+        prediction["pattern_type"] = pattern_type
+    return prediction
 
 
 def _check_discovery_gold_expected_predictions(
@@ -1118,6 +1121,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "_is_better_tie_break_prediction",
             'candidate.outcome == current.outcome == "publication_lag_latest_public"',
             "(candidate.fiscal_year or 0) > (current.fiscal_year or 0)",
+            "pattern_type_mismatch",
+            'pattern_type=str(payload.get("pattern_type") or "")',
             "json.JSONDecodeError",
             "line_number",
         ),
