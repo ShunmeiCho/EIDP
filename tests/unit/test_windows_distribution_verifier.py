@@ -237,7 +237,9 @@ def _core_entries() -> dict[str, bytes | str]:
             REPO_ROOT / "src" / "eidp" / "review" / "operator_pages.py"
         ).read_text(encoding="utf-8"),
         "src/eidp/review/_pages/audit_log.py": "def render(session, *, lock_path, jsonl_path): pass\n",
-        "src/eidp/review/_pages/settings_page.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/settings_page.py": (
+            REPO_ROOT / "src" / "eidp" / "review" / "_pages" / "settings_page.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/review/_pages/school_year_tasks.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/pdf_manual_entry.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/prefecture_remarks.py": "def render(session, *, lock_path): pass\n",
@@ -801,6 +803,21 @@ def test_verify_core_zip_requires_settings_page_module(tmp_path: Path) -> None:
 
     assert not check.ok
     assert any("src/eidp/review/_pages/settings_page.py" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_settings_page_target_year_bounds(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/review/_pages/settings_page.py"] = (
+        "def render(session, *, lock_path):\n"
+        "    st.number_input('対象年度（西暦）', min_value=2000, max_value=2100)\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("MIN_SUPPORTED_TARGET_FISCAL_YEAR" in error for error in check.errors)
+    assert any("MAX_SUPPORTED_TARGET_FISCAL_YEAR" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_cli_report_database_not_ready_gate(tmp_path: Path) -> None:

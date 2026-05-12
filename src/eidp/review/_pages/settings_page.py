@@ -15,7 +15,13 @@ from pathlib import Path
 import streamlit as st
 from sqlalchemy.orm import Session
 
-from eidp.config import apply_fiscal_era_settings, apply_runtime_env_settings, settings
+from eidp.config import (
+    MAX_SUPPORTED_TARGET_FISCAL_YEAR,
+    MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+    apply_fiscal_era_settings,
+    apply_runtime_env_settings,
+    settings,
+)
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.fiscal_year import JapaneseEra, format_fiscal_year_label
 from eidp.pipeline.school_fiscal_year_status import (
@@ -273,8 +279,8 @@ def render(_session: object, *, lock_path: Path) -> None:
     target_fiscal_year = int(
         st.number_input(
             "対象年度（西暦）",
-            min_value=2000,
-            max_value=2100,
+            min_value=MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+            max_value=MAX_SUPPORTED_TARGET_FISCAL_YEAR,
             value=int(settings.target_fiscal_year),
             step=1,
         )

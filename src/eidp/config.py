@@ -36,6 +36,9 @@ from pydantic_settings import BaseSettings
 
 from eidp.fiscal_year import JapaneseEra, configure_japanese_eras, current_fiscal_year
 
+MIN_SUPPORTED_TARGET_FISCAL_YEAR = 2019
+MAX_SUPPORTED_TARGET_FISCAL_YEAR = 2099
+
 
 def resolve_app_root(*, env: dict[str, str] | None = None, cwd: Path | None = None) -> Path:
     """Resolve the application root directory.
@@ -138,7 +141,7 @@ class Settings(BaseSettings):
     @field_validator("target_fiscal_year")
     @classmethod
     def _validate_target_fiscal_year(cls, v: int) -> int:
-        if v < 2019 or v > 2099:
+        if v < MIN_SUPPORTED_TARGET_FISCAL_YEAR or v > MAX_SUPPORTED_TARGET_FISCAL_YEAR:
             raise ValueError("target_fiscal_year outside supported range [2019, 2099]")
         return v
 

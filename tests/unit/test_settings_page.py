@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -8,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 from eidp.config import apply_fiscal_era_settings, apply_runtime_env_settings, settings
 from eidp.db.models import Base, School, SchoolFiscalYearStatus
+from eidp.review._pages import settings_page
 from eidp.review._pages.settings_page import (
     build_info_summary,
     maybe_rebuild_school_year_tasks_after_target_change,
@@ -76,6 +78,13 @@ def test_read_build_info_tolerates_missing_or_invalid_file(tmp_path: Path) -> No
     assert read_build_info(tmp_path) == {}
     (tmp_path / "BUILD_INFO.json").write_text("{bad json", encoding="utf-8")
     assert read_build_info(tmp_path) == {}
+
+
+def test_render_uses_supported_target_fiscal_year_bounds() -> None:
+    source = inspect.getsource(settings_page.render)
+
+    assert "min_value=MIN_SUPPORTED_TARGET_FISCAL_YEAR" in source
+    assert "max_value=MAX_SUPPORTED_TARGET_FISCAL_YEAR" in source
 
 
 def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None:

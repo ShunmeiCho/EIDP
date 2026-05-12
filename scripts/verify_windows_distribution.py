@@ -890,8 +890,14 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
         "src/eidp/config.py": (
             "target_fiscal_year",
+            "MIN_SUPPORTED_TARGET_FISCAL_YEAR = 2019",
+            "MAX_SUPPORTED_TARGET_FISCAL_YEAR = 2099",
             "def _validate_target_fiscal_year",
             "target_fiscal_year outside supported range [2019, 2099]",
+        ),
+        "src/eidp/review/_pages/settings_page.py": (
+            "MIN_SUPPORTED_TARGET_FISCAL_YEAR",
+            "MAX_SUPPORTED_TARGET_FISCAL_YEAR",
         ),
         "src/eidp/review/school_scope.py": (
             'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"',
