@@ -900,6 +900,19 @@ def test_download_attempt_urls_keeps_bare_filename_wrapper_original(monkeypatch)
     assert _download_attempt_urls(url) == [url]
 
 
+def test_download_attempt_urls_strips_pdf_fragments(monkeypatch) -> None:
+    """Fragments select a viewer position, not a different PDF resource."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    assert _download_attempt_urls("https://example.ac.jp/docs/r8-kakunin.pdf#page=1") == [
+        "https://example.ac.jp/docs/r8-kakunin.pdf"
+    ]
+    assert _download_attempt_urls("https://example.ac.jp/docs/r8-kakunin.pdf?dl=1#toolbar=0") == [
+        "https://example.ac.jp/docs/r8-kakunin.pdf?dl=1"
+    ]
+
+
 class _AttemptPdfResponse:
     def __init__(self, url: str, *, status_code: int, content: bytes) -> None:
         self.text = ""

@@ -1382,10 +1382,18 @@ def _download_attempt_urls(url: str) -> list[str]:
     urls: list[str] = []
     resolved = _pdf_url_from_query_value(url)
     if resolved:
-        urls.append(resolved)
-    if url not in urls:
-        urls.append(url)
+        urls.append(_without_url_fragment(resolved))
+    direct_url = _without_url_fragment(url)
+    if direct_url not in urls:
+        urls.append(direct_url)
     return urls
+
+
+def _without_url_fragment(url: str) -> str:
+    parsed = urlparse(url)
+    if not parsed.fragment:
+        return url
+    return parsed._replace(fragment="").geturl()
 
 
 def _find_subpage_links(html: str, base_url: str, *, school_name: str = "") -> list[str]:
