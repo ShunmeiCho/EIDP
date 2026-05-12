@@ -958,8 +958,10 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         "src/eidp/scraper/pdf_discovery.py": (
             "strict_target_fiscal_year",
             "MIN_SUPPORTED_FISCAL_YEAR = 2019",
-            "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR",
+            "MAX_SUPPORTED_FISCAL_YEAR = 2099",
+            "MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR",
             "max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8)",
+            "min(MAX_SUPPORTED_FISCAL_YEAR + 1, target_year + 3)",
             "target_fiscal_year_not_detected",
             "fiscal_year_mismatch:",
             "target_application_not_detected",
@@ -986,7 +988,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         "src/eidp/pdf/extractor.py": (
             "def _extract_fiscal_year",
             "MIN_SUPPORTED_FISCAL_YEAR = 2019",
+            "MAX_SUPPORTED_FISCAL_YEAR = 2099",
             "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR",
+            "fiscal_year > MAX_SUPPORTED_FISCAL_YEAR",
             'filing_dates = re.findall(r"(20\\d{2})[./]\\d{1,2}[./]\\d{1,2}"',
             'all_years = re.findall(r"(20\\d{2})[\\.\\s年/]"',
             "MIN_SUPPORTED_FISCAL_YEAR <= int(y) <= max_valid_year",

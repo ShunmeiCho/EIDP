@@ -39,6 +39,11 @@ log = structlog.get_logger()
 
 PdfDiscoveryProgressCallback = Callable[[dict[str, int], int], None]
 MIN_SUPPORTED_FISCAL_YEAR = 2019
+MAX_SUPPORTED_FISCAL_YEAR = 2099
+
+
+def _is_supported_fiscal_year(fiscal_year: int) -> bool:
+    return MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR
 
 
 def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
@@ -563,12 +568,12 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         include_filing_dates=False,
     )
     if detected is not None:
-        return detected if detected >= MIN_SUPPORTED_FISCAL_YEAR else None
+        return detected if _is_supported_fiscal_year(detected) else None
 
     western = re.search(r"(?<!\d)(20\d{2})\s*年度", text)
     if western is not None:
         year = int(western.group(1))
-        return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
+        return year if _is_supported_fiscal_year(year) else None
 
     strong_form_context = any(
         token in text
@@ -585,18 +590,21 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*(?:度|\d{1,2}\s*月))", text)
         if western_year is not None:
             year = int(western_year.group(1))
-            return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
+            return year if _is_supported_fiscal_year(year) else None
         filename_year = re.search(r"(?<!\d)(20\d{2})(?=[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if filename_year is not None:
             year = int(filename_year.group(1))
-            return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
+            return year if _is_supported_fiscal_year(year) else None
         serial_filename_year = re.search(r"(?<!\d)(20\d{2})(?=\d{2,4}[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if serial_filename_year is not None:
             year = int(serial_filename_year.group(1))
-            return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
+            return year if _is_supported_fiscal_year(year) else None
 
     lowered = text.lower()
-    for year in range(max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8), target_year + 3):
+    for year in range(
+        max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8),
+        min(MAX_SUPPORTED_FISCAL_YEAR + 1, target_year + 3),
+    ):
         for token in fiscal_year_search_tokens(year):
             if token == str(year):
                 continue
@@ -888,7 +896,7 @@ def _is_followed_by_year_month_date(text: str, end_index: int) -> bool:
 def _within_detectable_year(fiscal_year: int | None, max_fiscal_year: int | None) -> int | None:
     if fiscal_year is None:
         return None
-    if fiscal_year < MIN_SUPPORTED_FISCAL_YEAR:
+    if not _is_supported_fiscal_year(fiscal_year):
         return None
     if max_fiscal_year is not None and fiscal_year > max_fiscal_year:
         return None

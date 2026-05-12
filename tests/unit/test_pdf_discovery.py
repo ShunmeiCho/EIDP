@@ -588,6 +588,19 @@ def test_pre_download_ignores_pre_supported_serial_filename_hint() -> None:
     assert rejection is None
 
 
+def test_pre_download_ignores_post_supported_era_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/disclosure/kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和82年度 高等教育の修学支援新制度 確認申請書",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2099)
+
+    assert rejection is None
+
+
 def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> None:
     candidate = PdfCandidate(
         pdf_url="https://example.ac.jp/files/2025-renewal-confirmation-application.pdf",
@@ -2802,6 +2815,16 @@ def test_detect_fiscal_year_skips_pre_supported_year_before_current_label() -> N
     )
 
     assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) == 2026
+
+
+def test_detect_fiscal_year_ignores_post_supported_era_year() -> None:
+    text = (
+        "様式第2号 高等教育の修学支援新制度 確認申請書\n"
+        "令和82年度 申請内容\n"
+        "機関要件 学科名 生徒総定員"
+    )
+
+    assert _detect_fiscal_year_from_text(text, max_fiscal_year=2100) is None
 
 
 def test_download_pdf_rejects_stale_fiscal_year_in_strict_target_mode(

@@ -23,3 +23,9 @@ def test_extract_fiscal_year_fallback_skips_pre_supported_years() -> None:
     text = "2018年度 沿革\n2018年 旧制度\n2030年度 申請内容\n"
 
     assert _extract_fiscal_year(text, max_fiscal_year=2030) == "令和12年度"
+
+
+def test_extract_fiscal_year_ignores_post_supported_japanese_era_year() -> None:
+    text = "令和82年度 確認申請書\n2100年度 申請内容\n"
+
+    assert _extract_fiscal_year(text, max_fiscal_year=2100) == ""

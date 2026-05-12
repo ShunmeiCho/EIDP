@@ -280,8 +280,10 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/scraper/pdf_discovery.py": (
             "strict_target_fiscal_year\n"
             "MIN_SUPPORTED_FISCAL_YEAR = 2019\n"
-            "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR\n"
+            "MAX_SUPPORTED_FISCAL_YEAR = 2099\n"
+            "MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR\n"
             "max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8)\n"
+            "min(MAX_SUPPORTED_FISCAL_YEAR + 1, target_year + 3)\n"
             "target_fiscal_year_not_detected\n"
             "fiscal_year_mismatch:\n"
             "target_application_not_detected\n"
@@ -628,6 +630,7 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("src/eidp/scraper/pdf_discovery.py missing required token" in error for error in check.errors)
     assert any("target_fiscal_year_not_detected" in error for error in check.errors)
     assert any("MIN_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
+    assert any("MAX_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("target_year - 8" in error for error in check.errors)
 
 
@@ -684,6 +687,7 @@ def test_verify_core_zip_requires_rolling_pdf_fiscal_year_extractor_contract(tmp
     assert any("src/eidp/pdf/extractor.py missing required token" in error for error in check.errors)
     assert any("20\\d{2}" in error for error in check.errors)
     assert any("MIN_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
+    assert any("MAX_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("format_fiscal_year_as_japanese_era" in error for error in check.errors)
 
 

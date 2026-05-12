@@ -25,6 +25,7 @@ log = structlog.get_logger()
 
 JST = timezone(timedelta(hours=9))
 MIN_SUPPORTED_FISCAL_YEAR = 2019
+MAX_SUPPORTED_FISCAL_YEAR = 2099
 
 
 def _norm(text: str | None) -> str:
@@ -79,9 +80,9 @@ def _current_jst_fiscal_year() -> int:
 def _format_fiscal_year_if_allowed(fiscal_year: int | None, max_fiscal_year: int | None = None) -> str | None:
     if fiscal_year is None:
         return None
-    if fiscal_year < MIN_SUPPORTED_FISCAL_YEAR:
+    if fiscal_year < MIN_SUPPORTED_FISCAL_YEAR or fiscal_year > MAX_SUPPORTED_FISCAL_YEAR:
         return None
-    cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
+    cap = min(_current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year, MAX_SUPPORTED_FISCAL_YEAR)
     if fiscal_year > cap:
         return None
     return format_fiscal_year_as_japanese_era(fiscal_year) or f"{fiscal_year}年度"
