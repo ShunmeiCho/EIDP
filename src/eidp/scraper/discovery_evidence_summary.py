@@ -261,7 +261,7 @@ def _is_image_only_review_candidate(row: dict[str, Any]) -> bool:
     if str(row.get("pdf_type") or "") != "image_only":
         return False
     text = _candidate_hint_text(row)
-    return _has_target_application_hint(text)
+    return _has_target_application_hint(text) or _has_numbered_target_form_path_hint(text)
 
 
 def _candidate_hint_text(row: dict[str, Any]) -> str:
@@ -270,6 +270,12 @@ def _candidate_hint_text(row: dict[str, Any]) -> str:
         f"{row.get('anchor_text') or ''} {row.get('pdf_url') or ''} {unquote(str(row.get('pdf_url') or ''))}",
     ).lower()
     return text
+
+
+def _has_numbered_target_form_path_hint(text: str) -> bool:
+    return bool(re.search(r"(?:^|[/_-])j20\d{2}[_-]?0?5a(?:\.pdf|$)", text)) and any(
+        token in text for token in ("様式第2号", "様式2")
+    )
 
 
 def _is_tls_certificate_verify_failure(row: dict[str, Any]) -> bool:

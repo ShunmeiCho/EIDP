@@ -586,11 +586,21 @@ def _prediction_from_pdf_evidence_payload(
         )
 
     if reason.startswith("fiscal_year_mismatch:"):
+        fiscal_year = _int_or_none(reason.split(":", 1)[1])
+        if str(payload.get("pdf_type") or "") == "image_only":
+            return DiscoveryGoldPrediction(
+                entry_id=entry.entry_id,
+                outcome="needs_operator_review",
+                pdf_url=pdf_url,
+                fiscal_year=fiscal_year,
+                strict_target_year_success=False,
+                pattern_type=str(payload.get("pattern_type") or ""),
+            )
         return DiscoveryGoldPrediction(
             entry_id=entry.entry_id,
             outcome="publication_lag_latest_public",
             pdf_url=pdf_url,
-            fiscal_year=_int_or_none(reason.split(":", 1)[1]),
+            fiscal_year=fiscal_year,
             strict_target_year_success=False,
             pattern_type=str(payload.get("pattern_type") or ""),
         )

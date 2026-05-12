@@ -113,6 +113,40 @@ def test_eval_discovery_gold_cli_preserves_pdf_evidence_pattern_type(tmp_path: P
     assert payload["exact_matches"] == 1
 
 
+def test_eval_discovery_gold_cli_maps_image_only_old_year_to_review(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "school_id": 783,
+                "pdf_url": "https://kanto-koudai.com/school/johokokai/j2024_05a.pdf",
+                "reason": "fiscal_year_mismatch:2024",
+                "pdf_type": "image_only",
+                "pattern_type": "direct",
+                "extra": {"target_fiscal_year": "2026"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "eval-discovery-gold",
+            "--gold-set-dir",
+            str(GOLD_SET_DIR),
+            "--pdf-evidence",
+            str(evidence_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["predicted_entries"] == 1
+    assert payload["exact_matches"] == 1
+
+
 def test_eval_discovery_gold_cli_can_fail_on_incomplete_predictions(tmp_path: Path) -> None:
     predictions_path = tmp_path / "predictions.jsonl"
     predictions_path.write_text(

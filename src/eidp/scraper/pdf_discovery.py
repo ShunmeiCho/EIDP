@@ -1338,6 +1338,42 @@ def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
     return _pdf_element_context_text(html, match, match.group(2))
 
 
+def _wordpress_download_manager_anchor_context_text(html: str, match: re.Match[str]) -> str:
+    parts = [_pdf_anchor_context_text(html, match)]
+    block_text = _nearest_wordpress_download_manager_block_text(html, match.start())
+    if block_text:
+        parts.append(block_text)
+    return " ".join(dict.fromkeys(part for part in parts if part))
+
+
+def _nearest_wordpress_download_manager_block_text(html: str, anchor_start: int) -> str:
+    window_start = max(0, anchor_start - 2000)
+    prefix = html[window_start:anchor_start]
+    div_matches = list(re.finditer(r"<div\b([^>]*)>", prefix, re.IGNORECASE | re.DOTALL))
+    for div_match in reversed(div_matches):
+        class_attr = _anchor_attr(div_match.group(1), "class") or ""
+        classes = set(class_attr.lower().split())
+        if "media" not in classes:
+            continue
+        fragment = _balanced_div_fragment(html, window_start + div_match.start())
+        text = _html_text(fragment)
+        if text:
+            return text
+    return ""
+
+
+def _balanced_div_fragment(html: str, start: int) -> str:
+    depth = 0
+    for tag in re.finditer(r"</?div\b[^>]*>", html[start:], re.IGNORECASE | re.DOTALL):
+        if tag.group(0).lower().startswith("</div"):
+            depth -= 1
+        else:
+            depth += 1
+        if depth == 0:
+            return html[start:start + tag.end()]
+    return html[start:min(len(html), start + 2000)]
+
+
 def _previous_fiscal_year_context(html: str, before: int) -> str:
     """Return nearby preceding year context for CMS download widgets."""
 
@@ -1652,7 +1688,7 @@ def _extract_pdf_links(
             PdfCandidate(
                 pdf_url=url,
                 page_url=base_url,
-                anchor_text=_pdf_anchor_context_text(html, m),
+                anchor_text=_wordpress_download_manager_anchor_context_text(html, m),
                 pattern_type="wordpress_download_manager",
             ),
             target_fiscal_year=target_fiscal_year,

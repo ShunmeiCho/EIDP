@@ -197,6 +197,29 @@ def test_summarize_pdf_discovery_evidence_rejects_weak_image_only_form_or_suppor
     ]
 
 
+def test_summarize_pdf_discovery_evidence_surfaces_numbered_image_only_target_form(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 783,
+                "reason": "fiscal_year_mismatch:2024",
+                "pdf_type": "image_only",
+                "pdf_url": "https://kanto-koudai.com/school/johokokai/j2024_05a.pdf",
+                "anchor_text": "様式第2号",
+            }
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    assert summary.school_bucket_counts == {"target_form_without_year_evidence": 1}
+    assert summary.school_summaries[0].bucket == "target_form_without_year_evidence"
+
+
 def test_summarize_pdf_discovery_evidence_rejects_generic_higher_ed_boilerplate_image_only(
     tmp_path: Path,
 ) -> None:

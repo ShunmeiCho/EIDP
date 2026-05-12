@@ -900,6 +900,36 @@ def test_extract_pdf_links_includes_wordpress_download_manager_wrappers() -> Non
     assert "ダウンロード" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_includes_wordpress_download_manager_package_title_context() -> None:
+    html = """
+    <p>令和６年度</p>
+    <div class="w3eden">
+      <div class="media">
+        <div class="mr-3 img-48"><img alt="アイコン"></div>
+        <div class="media-body">
+          <h3 class="package-title">
+            <a href="https://i-heiseigakuen.ac.jp/download/yousiki2/">様式２（R6年度分申請）</a>
+          </h3>
+          <div class="text-muted text-small">1 ファイル</div>
+        </div>
+        <div class="ml-3">
+          <a class="wpdm-download-link" href="#"
+             data-downloadurl="https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471&amp;refresh=abc">
+            ダウンロード
+          </a>
+        </div>
+      </div>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(html, "https://i-heiseigakuen.ac.jp/youshiki/")
+
+    assert len(candidates) == 1
+    assert candidates[0].pdf_url == "https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471&refresh=abc"
+    assert "様式２（R6年度分申請）" in candidates[0].anchor_text
+    assert "ダウンロード" in candidates[0].anchor_text
+
+
 def test_extract_pdf_links_includes_direct_pdf_data_attributes() -> None:
     html = """
     <p>令和8年度分申請</p>
