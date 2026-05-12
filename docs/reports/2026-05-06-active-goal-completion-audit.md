@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `f39fafeb5e838cda58acee95dc2ee80216ac5eaa` (`eidp-windows-v295.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `80d8e121d403bf6022080b87e9a03327ba0f03fb` (`eidp-windows-v296.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1376,6 +1376,27 @@ with SHA256 `eafc6bc5b49627451345b10ad6ccdef2b32ef6b5b0d97e43568f560f88da5b21`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v295 is still pending and must not be
+inferred from the Mac verifier.
+
+v296 (`80d8e12`) extends the v295 data-attribute PDF extraction to common
+button/widget markup, not only anchors. School CMS pages can render download
+controls as `<button>`, `<span>`, or `<div>` with the real PDF URL in the same
+data attributes; `PDF_DATA_ATTRIBUTE_TAG_PATTERN` now covers those elements
+while preserving existing direct-anchor and WordPress Download Manager paths.
+The regression test uses a FY2027 / Reiwa 9 confirmation-form button to prove
+the rule is rolling-year rather than fixed to FY2026, and the packaged
+verifier now requires the button/span/div data-attribute extraction contract.
+Verification: `tests/unit` passed with `1290 passed, 5 warnings`,
+`eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v296.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `ddadf3a3e062e3dd747f8f024838032d4037bed50cdd066cb893c32b12abfc83`,
+`git_commit=80d8e121d403bf6022080b87e9a03327ba0f03fb`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v296 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
