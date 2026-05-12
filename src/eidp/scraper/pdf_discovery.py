@@ -836,6 +836,17 @@ def _candidate_download_tier(candidate: PdfCandidate, *, target_year: int) -> in
     return 2
 
 
+def _candidate_download_year_rank(candidate: PdfCandidate, *, target_year: int) -> int:
+    """Prefer current target-year form links over stale or yearless form links."""
+
+    hinted_year = _fiscal_year_from_strong_candidate_hint(_candidate_hint_text(candidate), target_year=target_year)
+    if hinted_year == target_year:
+        return 0
+    if hinted_year is None:
+        return 1
+    return 2
+
+
 def _prioritize_viable_candidates(
     candidates: list[PdfCandidate],
     *,
@@ -844,24 +855,25 @@ def _prioritize_viable_candidates(
 ) -> tuple[list[PdfCandidate], int]:
     """Prioritize target-like candidates and cap generic PDF scanning."""
 
-    priority: list[tuple[int, int, int, PdfCandidate]] = []
+    priority: list[tuple[int, int, int, int, PdfCandidate]] = []
     general: list[tuple[int, int, PdfCandidate]] = []
     for index, candidate in enumerate(candidates):
         tier = _candidate_download_tier(candidate, target_year=target_year)
+        year_rank = _candidate_download_year_rank(candidate, target_year=target_year)
         school_rank = (
             0
             if school_name and _school_name_matches_link(f"{candidate.anchor_text} {candidate.pdf_url}", school_name)
             else 1
         )
         if tier < 2:
-            priority.append((tier, school_rank, index, candidate))
+            priority.append((tier, school_rank, year_rank, index, candidate))
         else:
             general.append((school_rank, index, candidate))
 
-    priority.sort(key=lambda item: (item[0], item[1], -item[3].score, item[2]))
+    priority.sort(key=lambda item: (item[0], item[1], item[2], -item[4].score, item[3]))
     general.sort(key=lambda item: (item[0], -item[2].score, item[1]))
     dropped = max(len(general) - MAX_GENERAL_CANDIDATE_SCAN, 0)
-    ordered = [candidate for _, _, _, candidate in priority]
+    ordered = [candidate for _, _, _, _, candidate in priority]
     ordered.extend(candidate for _, _, candidate in general[:MAX_GENERAL_CANDIDATE_SCAN])
     return ordered, dropped
 

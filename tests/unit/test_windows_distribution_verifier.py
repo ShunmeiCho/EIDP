@@ -303,6 +303,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "replace(evidence\n"
             "candidate.detected_fiscal_year >= target_year\n"
             "has_fiscal_year_text\n"
+            "_candidate_download_year_rank\n"
             "_candidate_dedupe_preference\n"
             "_candidate_dedupe_year_preference\n"
             "candidate_year == target_year\n"
@@ -743,6 +744,7 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("target_year - 8" in error for error in check.errors)
     assert any("candidate.detected_fiscal_year >= target_year" in error for error in check.errors)
     assert any("has_fiscal_year_text" in error for error in check.errors)
+    assert any("_candidate_download_year_rank" in error for error in check.errors)
     assert any("_candidate_dedupe_preference" in error for error in check.errors)
     assert any("_candidate_dedupe_year_preference" in error for error in check.errors)
     assert any("candidate_year == target_year" in error for error in check.errors)

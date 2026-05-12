@@ -2042,11 +2042,11 @@ def test_run_pdf_discovery_uses_stable_site_order_for_equal_confidence(monkeypat
 
 
 def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path: Path) -> None:
-    """Sprint 4 rediscovery must not stop on an old already-downloaded PDF.
+    """Sprint 4 rediscovery must not stop on an already-downloaded PDF.
 
-    Stale disclosure pages often list both old and new target PDFs. If the old
-    PDF still ranks first, duplicate-hash handling must continue to the next
-    candidate so the newly-published R8 file can be stored.
+    Dense disclosure pages can list multiple current-year target PDFs. If an
+    already-downloaded duplicate still ranks first, duplicate-hash handling must
+    continue to the next candidate so the new file can be stored.
     """
     session = _session()
     try:
@@ -2067,7 +2067,7 @@ def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path:
         old = PdfCandidate(
             pdf_url="https://example.ac.jp/old.pdf",
             page_url="https://example.ac.jp/disclosure/",
-            anchor_text="確認申請書",
+            anchor_text="R8 高等教育の修学支援新制度 確認申請書 機関要件",
             score=10.0,
         )
         new = PdfCandidate(
@@ -2524,6 +2524,28 @@ def test_run_pdf_discovery_does_not_prioritize_generic_english_forms_over_target
         assert stats["downloaded"] == 1
     finally:
         session.close()
+
+
+def test_prioritize_viable_candidates_prefers_current_year_target_over_higher_score_stale_target() -> None:
+    stale = PdfCandidate(
+        pdf_url="https://example.ac.jp/docs/r7-kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和7年度 高等教育の修学支援新制度 確認申請書 機関要件 様式第2号 情報公開",
+    )
+    current = PdfCandidate(
+        pdf_url="https://example.ac.jp/docs/r8-kakunin.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和8年度 高等教育の修学支援新制度 確認申請書",
+    )
+    _score_candidate(stale, target_fiscal_year=2026)
+    _score_candidate(current, target_fiscal_year=2026)
+
+    assert stale.score > current.score
+
+    ordered, dropped = _prioritize_viable_candidates([stale, current], target_year=2026)
+
+    assert dropped == 0
+    assert ordered == [current, stale]
 
 
 def test_run_pdf_discovery_evidence_records_target_fiscal_year(
