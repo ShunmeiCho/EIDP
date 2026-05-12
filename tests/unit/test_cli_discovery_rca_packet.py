@@ -442,6 +442,83 @@ def test_discovery_rca_batch_plan_can_include_copy_paste_prompts(tmp_path: Path,
     assert '"latest_bucket": "target_form_without_year_evidence"' in prompt
 
 
+def test_discovery_rca_packet_prioritizes_diagnostic_rows_over_budget_noise(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            *[
+                {
+                    "school_id": 1,
+                    "reason": "candidate_budget_dropped",
+                    "pdf_type": "non_target",
+                    "pdf_url": f"https://noise.example.ac.jp/{index}.pdf",
+                }
+                for index in range(12)
+            ],
+            {
+                "school_id": 1,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "target",
+                "pdf_url": "https://a.example.ac.jp/r7-shugakushien.pdf",
+                "anchor_text": "令和7年度 修学支援 様式第2号",
+            },
+        ],
+    )
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(
+            School(
+                id=1,
+                school_name="A専門学校",
+                prefecture="埼玉県",
+                corporation_name="法人A",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(
+            SchoolSite(
+                school_id=1,
+                url="https://a.example.ac.jp/kokai/",
+                url_type="disclosure",
+                discovery_method="prefecture_aggregator",
+                confidence=0.9,
+                verified=True,
+            )
+        )
+        session.commit()
+
+    import eidp.db.session as db_session
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: Session(engine))
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-rca-packet",
+            "--school-id",
+            "1",
+            "--target-fiscal-year",
+            "2026",
+            "--evidence-log",
+            str(evidence_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["latest_bucket"] == "publication_lag_or_old_target_pdf"
+    assert payload["latest_evidence_row_count"] == 13
+    assert payload["latest_evidence_rows"][0]["reason"] == "fiscal_year_mismatch:2025"
+    assert payload["latest_evidence_rows"][0]["pdf_url"] == "https://a.example.ac.jp/r7-shugakushien.pdf"
+
+
 def test_discovery_rca_outcome_validate_accepts_required_output_block(tmp_path: Path) -> None:
     outcome_path = tmp_path / "outcome.json"
     outcome_path.write_text(

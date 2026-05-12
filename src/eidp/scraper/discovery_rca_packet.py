@@ -131,7 +131,7 @@ def build_single_school_rca_packet(
             [reason, count]
             for reason, count in (school_summary[0].top_reasons if school_summary else [])
         ]
-        latest_evidence_rows = [_compact_evidence_row(row) for row in rows[:10]]
+        latest_evidence_rows = [_compact_evidence_row(row) for row in _select_representative_evidence_rows(rows)]
 
     return {
         "school_id": int(school.id),
@@ -391,6 +391,40 @@ def _compact_evidence_row(row: dict[str, Any]) -> dict[str, Any]:
         "score": _float_or_none(row.get("score")),
         "extra": extra if isinstance(extra, dict) else {},
     }
+
+
+def _select_representative_evidence_rows(
+    rows: list[dict[str, Any]],
+    *,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """Select RCA rows that explain the school outcome before budget noise."""
+
+    indexed_rows = list(enumerate(rows))
+    indexed_rows.sort(key=lambda item: (_evidence_row_priority(item[1]), item[0]))
+    return [row for _, row in indexed_rows[: max(limit, 0)]]
+
+
+def _evidence_row_priority(row: dict[str, Any]) -> int:
+    reason = str(row.get("reason") or "")
+    pdf_type = str(row.get("pdf_type") or "")
+    if reason == "accepted_downloaded":
+        return 0
+    if reason == "target_fiscal_year_not_detected":
+        return 10
+    if reason.startswith("fiscal_year_mismatch:") and pdf_type in {"target", "image_only"}:
+        return 20
+    if reason == "discovery_error":
+        return 30
+    if reason == "no_candidates_found":
+        return 40
+    if reason.startswith("fiscal_year_mismatch:"):
+        return 50
+    if reason in {"classified_non_target", "pre_filtered_non_target_hint"}:
+        return 70
+    if reason == "candidate_budget_dropped":
+        return 90
+    return 80
 
 
 def _float_or_none(value: object) -> float | None:
