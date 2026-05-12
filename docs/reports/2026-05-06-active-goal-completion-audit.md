@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `21a017df6b2784193735d2b693a43a961a0094c6` (`eidp-windows-v251.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `ea8f1e9e0e31202f57674b527e20a35f8c51bf9b` (`eidp-windows-v252.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -554,6 +554,22 @@ Streamlit input maximum. `dist/eidp-windows-v251.zip` and the latest alias
 `git_commit=21a017df6b2784193735d2b693a43a961a0094c6`, `git_dirty=false`,
 `entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
 `47` downloadable supported prefecture seeds. Windows E2E for v251 is still
+pending and must not be inferred from the Mac verifier.
+
+v252 (`ea8f1e9`) makes discovery evidence and gold-set evaluation safe for
+multi-year reuse. `discover-pdfs` now records `extra.target_fiscal_year` on
+every evidence row, not only accepted downloads, so no-candidate, stale-year,
+prefilter, and site-fetch decisions can be replayed against the correct rolling
+FY. `eval-discovery-gold --pdf-evidence` now prefers `(school_id,
+target_fiscal_year)` when matching evidence to gold-set entries and skips
+ambiguous old evidence for duplicate school IDs rather than silently assigning
+it to the wrong year. `dist/eidp-windows-v252.zip` and the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py
+--json` with SHA256
+`54246d648e88a2bdbb46b7f8dfad85a35e3328e32ddce1c4f633df1bdc8a19aa`,
+`git_commit=ea8f1e9e0e31202f57674b527e20a35f8c51bf9b`, `git_dirty=false`,
+`entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
+`47` downloadable supported prefecture seeds. Windows E2E for v252 is still
 pending and must not be inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
