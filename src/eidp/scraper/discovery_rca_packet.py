@@ -119,6 +119,8 @@ def build_single_school_rca_packet(
     latest_bucket = "unknown"
     latest_evidence_rows: list[dict[str, Any]] = []
     latest_evidence_top_reasons: list[list[Any]] = []
+    latest_evidence_actionable_row_count = 0
+    latest_evidence_top_actionable_reasons: list[list[Any]] = []
     if evidence_log is not None:
         rows = [
             row
@@ -127,9 +129,16 @@ def build_single_school_rca_packet(
         ]
         school_summary = summarize_pdf_discovery_evidence(rows).school_summaries
         latest_bucket = school_summary[0].bucket if school_summary else "no_evidence"
+        latest_evidence_actionable_row_count = (
+            school_summary[0].actionable_candidate_count if school_summary else 0
+        )
         latest_evidence_top_reasons = [
             [reason, count]
             for reason, count in (school_summary[0].top_reasons if school_summary else [])
+        ]
+        latest_evidence_top_actionable_reasons = [
+            [reason, count]
+            for reason, count in (school_summary[0].top_actionable_reasons if school_summary else [])
         ]
         latest_evidence_rows = [_compact_evidence_row(row) for row in _select_representative_evidence_rows(rows)]
 
@@ -143,7 +152,9 @@ def build_single_school_rca_packet(
         "latest_bucket": latest_bucket,
         "latest_evidence_rows_path": str(evidence_log) if evidence_log is not None else "",
         "latest_evidence_row_count": len(rows) if evidence_log is not None else 0,
+        "latest_evidence_actionable_row_count": latest_evidence_actionable_row_count,
         "latest_evidence_top_reasons": latest_evidence_top_reasons,
+        "latest_evidence_top_actionable_reasons": latest_evidence_top_actionable_reasons,
         "latest_evidence_rows": latest_evidence_rows,
         "known_operator_note": known_operator_note,
     }
@@ -184,6 +195,7 @@ def build_single_school_rca_batch_plan(
     candidate_summaries.sort(
         key=lambda school_summary: (
             _bucket_priority(school_summary.bucket),
+            -school_summary.actionable_candidate_count,
             -school_summary.candidate_count,
             school_summary.school_id,
         )
@@ -202,6 +214,7 @@ def build_single_school_rca_batch_plan(
             "priority": _bucket_priority(school_summary.bucket),
             "bucket": school_summary.bucket,
             "candidate_count": school_summary.candidate_count,
+            "actionable_candidate_count": school_summary.actionable_candidate_count,
             "packet": packet,
         }
         if include_prompts:

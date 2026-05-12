@@ -117,7 +117,9 @@ def test_discovery_rca_packet_cli_outputs_single_school_input_packet(tmp_path: P
         "latest_bucket": "target_form_without_year_evidence",
         "latest_evidence_rows_path": str(evidence_path),
         "latest_evidence_row_count": 1,
+        "latest_evidence_actionable_row_count": 1,
         "latest_evidence_top_reasons": [["target_fiscal_year_not_detected", 1]],
+        "latest_evidence_top_actionable_reasons": [["target_fiscal_year_not_detected", 1]],
         "latest_evidence_rows": [
             {
                 "school_id": 95,
@@ -369,6 +371,7 @@ def test_discovery_rca_batch_plan_prioritizes_manual_rca_buckets(tmp_path: Path,
     assert [item["packet"]["school_id"] for item in payload["items"]] == [2, 3, 4, 5, 1]
     assert payload["items"][0]["packet"]["official_index_url"] == "https://b.example.ac.jp/kokai/"
     assert payload["items"][0]["packet"]["latest_evidence_rows"][0]["school_id"] == 2
+    assert payload["items"][0]["actionable_candidate_count"] == 1
 
 
 def test_discovery_rca_batch_plan_can_include_copy_paste_prompts(tmp_path: Path, monkeypatch) -> None:
@@ -515,6 +518,12 @@ def test_discovery_rca_packet_prioritizes_diagnostic_rows_over_budget_noise(
     payload = json.loads(result.output)
     assert payload["latest_bucket"] == "publication_lag_or_old_target_pdf"
     assert payload["latest_evidence_row_count"] == 13
+    assert payload["latest_evidence_actionable_row_count"] == 1
+    assert payload["latest_evidence_top_reasons"] == [
+        ["candidate_budget_dropped", 12],
+        ["fiscal_year_mismatch:2025", 1],
+    ]
+    assert payload["latest_evidence_top_actionable_reasons"] == [["fiscal_year_mismatch:2025", 1]]
     assert payload["latest_evidence_rows"][0]["reason"] == "fiscal_year_mismatch:2025"
     assert payload["latest_evidence_rows"][0]["pdf_url"] == "https://a.example.ac.jp/r7-shugakushien.pdf"
 

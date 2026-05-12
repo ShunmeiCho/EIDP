@@ -34,7 +34,9 @@ class SchoolEvidenceSummary:
     site_url: str
     bucket: str
     candidate_count: int
+    actionable_candidate_count: int
     top_reasons: list[tuple[str, int]]
+    top_actionable_reasons: list[tuple[str, int]]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,7 +45,11 @@ class SchoolEvidenceSummary:
             "site_url": self.site_url,
             "bucket": self.bucket,
             "candidate_count": self.candidate_count,
+            "actionable_candidate_count": self.actionable_candidate_count,
             "top_reasons": [[reason, count] for reason, count in self.top_reasons],
+            "top_actionable_reasons": [
+                [reason, count] for reason, count in self.top_actionable_reasons
+            ],
         }
 
 
@@ -144,6 +150,7 @@ def summarize_pdf_discovery_evidence(
     school_summaries: list[SchoolEvidenceSummary] = []
     for school_id in school_ids:
         school_rows = grouped.get(school_id, [])
+        actionable_rows = _actionable_evidence_rows(school_rows)
         site = scope_by_school.get(school_id)
         school_summaries.append(
             SchoolEvidenceSummary(
@@ -152,7 +159,9 @@ def summarize_pdf_discovery_evidence(
                 site_url=site.site_url if site else "",
                 bucket=_classify_school_bucket(school_rows),
                 candidate_count=len(school_rows),
+                actionable_candidate_count=len(actionable_rows),
                 top_reasons=_sorted_counter_items(_reason_counter(school_rows), limit=5),
+                top_actionable_reasons=_sorted_counter_items(_reason_counter(actionable_rows), limit=5),
             )
         )
 
@@ -198,6 +207,16 @@ def _classify_school_bucket(rows: list[dict[str, Any]]) -> str:
     if any(str(row.get("reason") or "") == "discovery_error" for row in rows):
         return "mixed_with_site_fetch_error"
     return "non_target_candidates_only"
+
+
+def _actionable_evidence_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [row for row in rows if str(row.get("reason") or "") not in _NON_ACTIONABLE_EVIDENCE_REASONS]
+
+
+_NON_ACTIONABLE_EVIDENCE_REASONS = {
+    "candidate_budget_dropped",
+    "candidate_school_mismatch",
+}
 
 
 def _is_old_year_target(row: dict[str, Any]) -> bool:

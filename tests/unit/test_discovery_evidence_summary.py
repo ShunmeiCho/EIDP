@@ -129,6 +129,41 @@ def test_summarize_pdf_discovery_evidence_treats_image_only_old_target_applicati
     ]
 
 
+def test_summarize_pdf_discovery_evidence_tracks_actionable_candidate_count(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 1,
+                "reason": "candidate_school_mismatch",
+                "pdf_type": "non_target",
+                "pdf_url": "https://example.ac.jp/other-school.pdf",
+            },
+            {
+                "school_id": 1,
+                "reason": "candidate_budget_dropped",
+                "pdf_url": "https://example.ac.jp/noise.pdf",
+            },
+            {
+                "school_id": 1,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "target",
+                "pdf_url": "https://example.ac.jp/r7.pdf",
+            },
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    school_summary = summary.school_summaries[0]
+    assert school_summary.candidate_count == 3
+    assert school_summary.actionable_candidate_count == 1
+    assert school_summary.top_actionable_reasons == [("fiscal_year_mismatch:2025", 1)]
+
+
 def test_summarize_pdf_discovery_evidence_rejects_weak_image_only_form_or_support_hints(
     tmp_path: Path,
 ) -> None:
