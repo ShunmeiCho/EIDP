@@ -3,10 +3,26 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `08639e37767f785c86b6e53323f0b4cb859c169f` (`eidp-windows-v314.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `7956ba0bbbb9a413e5fabe95c7ff380af2dc7d75` (`eidp-windows-v315.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-12 V315 Audit Outbox Durability
+
+v315 (`7956ba0`) makes ManualActionLog JSONL export durable before stamping
+`jsonl_exported_at`. `flush_audit_outbox` now flushes and `os.fsync`s each
+written JSONL line before adding the action ID to the in-memory dedupe set,
+counting it as exported, and marking the DB row as exported. If fsync fails,
+the row remains pending with `jsonl_export_error`, so the authoritative DB does
+not claim the derived JSONL outbox is complete when the line may still be only
+in the OS page cache. The Windows package verifier now requires the packaged
+`audit_outbox.py` to retain `os.fsync`. Verification: focused audit/verifier
+tests `90 passed`; full unit suite `1313 passed, 5 warnings`; targeted Ruff
+passed; targeted mypy passed; discovery gold-set replay `20/20 exact`;
+`dist/eidp-windows-v315.zip` verified clean with SHA256
+`612ae6ead92d1f500fdfb2bc852a78be042e151939eebbdacf0d773dace079c8`.
+Windows operator E2E is still pending.
 
 ## 2026-05-12 V314 Discovery Gold Pattern Source Gaps
 
