@@ -59,14 +59,18 @@ treated as operator-reviewable rather than dropped as generic non-target noise.
 The v342 Windows bounded bootstrap confirms both fixes in packaged runtime:
 current Saitama evidence evaluates as `16` exact gold-set predictions with
 `0` failures, while the bootstrap remains correctly below ship gate because no
-current-FY target PDFs were downloaded in the bounded 50-site sample.
+current-FY target PDFs were downloaded in the bounded 50-site sample. A separate
+Tokyo official-index probe on the same v342 Windows package confirms the same
+failure mode at a different prefecture boundary: the Tokyo official artifact
+matched `232` school URLs and a 30-site PDF discovery sample found candidates on
+all `30` sites, but still downloaded `0` strict current-FY target PDFs.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v342 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v342 verifier clean by default; discovery gold-set `28` entries; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield failing |
+| Discover and download current target-FY PDFs in strict mode | v342 verifier clean by default; discovery gold-set `28` entries; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield failing |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `10` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
@@ -193,6 +197,47 @@ Commands and observations from `ssh win` for v342 setup/bootstrap:
   さいたま看護専門学校 `申請書_0602_資料A.pdf`. The two non-target-only packets
   are 大川学園医療福祉専門学校 (old-year image-only form evidence) and
   呉竹医療専門学校 (self-evaluation reports).
+
+Additional v342 Tokyo official-index probe:
+
+- `scripts\bootstrap_pdfs.bat --pref tokyo --skip-known-url-discovery --url-search off --school-url-crawl off --skip-discover --rate-limit 0.2 --request-timeout 15`
+  -> exit `0`.
+- Official Tokyo artifact downloaded from
+  `https://www.seikatubunka.metro.tokyo.lg.jp/documents/d/seikatubunka/12syugakushien_kakuninko_ichiran_260401_1341`;
+  aggregate `extracted=243`, `matched=232`, `added=232`, `skipped=11`.
+- A targeted 30-site discovery run over the first Tokyo
+  `prefecture_aggregator` sites used:
+  `eidp.exe discover-pdfs --discovery-method prefecture_aggregator --batch-size 30 --rate-limit 0.2 --request-timeout 15 --evidence-log output\discovery_rejections_tokyo_v342_30.jsonl --school-id ...`
+  -> exit `0`.
+- PDF discovery: `crawled=30`, `found=30`, `downloaded=0`, `failed=5`,
+  `skipped=524`, `cached_rejections=88`, `prefiltered=293`,
+  `candidate_budget_limited=1`, `candidate_budget_dropped=6`,
+  `candidate_school_mismatch=1`, `rejection_reason_pre_filtered_non_target_hint=371`,
+  `rejection_reason_fiscal_year_mismatch=76`,
+  `rejection_reason_target_fiscal_year_not_detected=19`,
+  `rejection_reason_classified_non_target=118`,
+  `rejection_reason_http_error_httpstatuserror=3`,
+  `rejection_reason_not_pdf_magic=2`, and `rejection_reason_unsafe_url=2`.
+- Local evidence snapshot was pulled to `_temp/win-v342-tokyo-probe/`,
+  including `discovery_rejections_tokyo_v342_30.jsonl`,
+  `eidp-after-tokyo-aggregate.sqlite3`, and
+  `eidp-after-tokyo-discover.sqlite3`.
+- Reproducible summary command:
+  `EIDP_DATABASE_URL=sqlite:///$PWD/_temp/win-v342-tokyo-probe/eidp-after-tokyo-discover.sqlite3 uv run eidp summarize-discovery-evidence --evidence-log _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --json`.
+  It reports `598` evidence rows, `30` schools with evidence, PDF type counts
+  `target=80`, `image_only=15`, `non_target=490`, `unknown=7`, and `null=6`,
+  and school bucket counts `publication_lag_or_old_target_pdf=19`,
+  `target_form_without_year_evidence=6`, `non_target_candidates_only=5`.
+- Reproducible RCA command:
+  `EIDP_DATABASE_URL=sqlite:///$PWD/_temp/win-v342-tokyo-probe/eidp-after-tokyo-discover.sqlite3 uv run eidp discovery-rca-batch-plan --evidence-log _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --limit 10 --json`.
+  Representative target-form-without-year-evidence rows are
+  東京俳優・映画＆放送専門学校 `conf-apl.pdf`,
+  東京ダンス・俳優＆舞台芸術専門学校 `check-da.pdf`, and
+  東京メディカル・スポーツ専門学校 `support2024.pdf`.
+- The Tokyo sample reinforces the Saitama result: official-index URL seeding is
+  functioning, and low strict yield is currently dominated by publication lag,
+  stale target forms, image-only / no-year target forms, and non-target
+  disclosure PDFs rather than by a missing official-index URL pipeline.
 
 Superseded bounded bootstrap evidence from v341:
 
