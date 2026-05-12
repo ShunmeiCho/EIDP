@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `726e595bb1dec4a3aedd0e267a67147e30868626` (`eidp-windows-v278.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `1d5a612e7eb4e56221f6e95fe0101b55f7f4f49d` (`eidp-windows-v279.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1021,6 +1021,26 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v278 is still pending and must not be
+inferred from the Mac verifier.
+
+v279 (`1d5a612`) extends the same reproducibility rule to the URL-discovery
+input layer. Web-search URL discovery now selects URL-missing active schools
+in stable `prefecture, school_id` order, and both async and sync URL
+verification select unverified `SchoolSite` rows by `school_id, site_id`.
+This prevents the upstream URL seed set from drifting between bounded reruns
+because of implicit database row order. The Windows distribution verifier now
+requires the packaged URL-discovery stable-order contract. Verification:
+`tests/unit` passed with `1270 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v279.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`645dc0dae9824014605bd818f1abc2e638d5eaa54fc9f7f90e257a22df89be2f`,
+`git_commit=1d5a612e7eb4e56221f6e95fe0101b55f7f4f49d`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v279 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
