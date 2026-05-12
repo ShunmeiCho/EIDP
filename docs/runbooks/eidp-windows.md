@@ -361,6 +361,20 @@ OCR は補助機能です。低信頼度の結果は自動で手入力キュー�
 2. `EIDP-setup.bat` を再実行します。
 3. 失敗が続く場合は、表示されたエラー画面と `logs` フォルダを管理者へ共有します。
 
+### SQLite ファイルが見つからない
+
+`data\eidp.sqlite3` が無く、`data\eidp.sqlite3-wal` または
+`data\eidp.sqlite3-shm` が残っている場合は、アンチウイルスにより隔離された
+可能性があります。
+
+1. EIDP の画面と Excel を閉じます。
+2. `data` フォルダの `eidp.sqlite3` / `eidp.sqlite3-wal` /
+   `eidp.sqlite3-shm` を削除しないでください。
+3. アンチウイルスの隔離履歴を確認し、`eidp.sqlite3` を復元できる場合は
+   復元します。
+4. 復元できない場合は、`logs` フォルダと `data` フォルダの状態を管理者へ
+   共有してください。
+
 ### Defender または SmartScreen で止まる
 
 社内配布 ZIP であることを確認してください。管理者が指定する手順に従って実行を許可します。

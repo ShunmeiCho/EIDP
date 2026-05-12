@@ -495,10 +495,11 @@ def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> N
 
     rejection = _pre_download_rejection(candidate, target_year=2026)
 
+    assert not _has_target_application_hint(candidate)
     assert rejection is None
 
 
-def test_pre_download_keeps_english_renewal_form_with_support_system_hint() -> None:
+def test_pre_download_does_not_treat_english_renewal_form_with_english_support_hint_as_target() -> None:
     candidate = PdfCandidate(
         pdf_url="https://example.ac.jp/files/2026-renewal-confirmation-application.pdf",
         page_url="https://example.ac.jp/disclosure/",
@@ -508,6 +509,7 @@ def test_pre_download_keeps_english_renewal_form_with_support_system_hint() -> N
 
     rejection = _pre_download_rejection(candidate, target_year=2026)
 
+    assert not _has_target_application_hint(candidate)
     assert rejection is None
 
 

@@ -202,7 +202,7 @@ def test_import_excel_surfaces_invalid_year_warning(monkeypatch, tmp_path: Path)
 
     assert result.exit_code == 0, result.output
     assert "対象比率: {'rows': 0, 'invalid_year': 2}" in result.output
-    assert "WARNING: 対象比率 skipped 2 rows with unsupported fiscal year values." in result.output
+    assert "WARNING: 対象比率 で想定外の年度の行を 2 件スキップしました。" in result.output
     assert "Import complete." in result.output
     assert fake_session.commits == 1
     assert fake_session.rollbacks == 0

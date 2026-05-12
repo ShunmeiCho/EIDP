@@ -123,6 +123,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "週次URL/PDF再取得\n"
             "対象年度を変更して保存すると、学校別タスクも同時に再計算されます\n"
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
+            "アンチウイルスにより隔離された可能性があります\n"
         ),
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
@@ -968,6 +969,7 @@ def test_verify_core_zip_requires_current_operator_runbook_guidance(tmp_path: Pa
     assert not check.ok
     assert any("週次URL/PDF再取得" in error for error in check.errors)
     assert any("学校別タスクも同時に再計算" in error for error in check.errors)
+    assert any("アンチウイルスにより隔離" in error for error in check.errors)
     assert any("weekly_run.bat" in error for error in check.errors)
 
 

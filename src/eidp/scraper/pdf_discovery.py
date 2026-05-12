@@ -711,14 +711,6 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
             "koushin-shinsei",
         )
     )
-    english_renewal_form_hint = any(
-        token in text
-        for token in (
-            "renewalconfirmationapplication",
-            "renewal-confirmation-application",
-            "renewal confirmation application",
-        )
-    )
     strong_form_hint = "機関要件" in text and any(
         token in text for token in ("確認申請", "様式第2号", "様式第２号", "様式2号")
     )
@@ -726,7 +718,6 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
         (system_hint and form_hint)
         or full_form_range_hint
         or renewal_form_hint
-        or (system_hint and english_renewal_form_hint)
         or strong_form_hint
     )
 

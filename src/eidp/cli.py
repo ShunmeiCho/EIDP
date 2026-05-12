@@ -72,7 +72,7 @@ def _echo_import_excel_results(results: dict[str, dict[str, int]]) -> None:
         invalid_year = int(stats.get("invalid_year") or 0)
         if invalid_year:
             typer.echo(
-                f"WARNING: {sheet} skipped {invalid_year} rows with unsupported fiscal year values.",
+                f"WARNING: {sheet} で想定外の年度の行を {invalid_year} 件スキップしました。",
                 err=True,
             )
 
