@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `1292e990290e719dc2cada5b1d4440c89a4222ef` (`eidp-windows-v272.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `5b8a8c8f604d66a5a01a33c8f8bf4edcd9cd4737` (`eidp-windows-v273.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -896,6 +896,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v272 is still pending and must not be
+inferred from the Mac verifier.
+
+v273 (`5b8a8c8`) aligns PDF parsing, ingestion, and discovery current-year
+flags with the configured rolling target fiscal year. The PDF extractor and
+ingestion fiscal-year parser now default their maximum accepted year to
+`settings.target_fiscal_year`, so an operator-pinned next-year run can parse
+target-year labels before the calendar fiscal year rolls over. Strict PDF
+discovery also marks the configured strict target year as the current target
+year instead of comparing it with the machine date. The Windows distribution
+verifier now requires these packaged parser/ingest/discovery target-year
+contracts. Verification: `tests/unit` passed with `1256 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v273.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`f9a044148984786bc33967f27be071d1426c7257e720dc9232085fecbce06a8c`,
+`git_commit=5b8a8c8f604d66a5a01a33c8f8bf4edcd9cd4737`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v273 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
