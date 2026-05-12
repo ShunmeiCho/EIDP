@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `80d8e121d403bf6022080b87e9a03327ba0f03fb` (`eidp-windows-v296.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `52af67e8b3beab41df89492b3351dcef33c529ca` (`eidp-windows-v297.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1397,6 +1397,28 @@ with SHA256 `ddadf3a3e062e3dd747f8f024838032d4037bed50cdd066cb893c32b12abfc83`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v296 is still pending and must not be
+inferred from the Mac verifier.
+
+v297 (`52af67e`) adds a third static PDF-link extraction path for CMS buttons
+that open PDFs through click handlers such as `window.open('/docs/form.pdf')`
+or `location.href='/docs/form.pdf'`. The extractor only scans quoted `.pdf`
+strings in the `onclick` attribute; it does not execute or interpret
+JavaScript. This closes another common school-site markup variant while keeping
+the same URL normalization, anchor-context, and candidate dedupe path as direct
+links. The regression test uses a FY2028 / Reiwa 10 confirmation-form button
+to keep the rule rolling-year safe, and the packaged verifier now requires
+`PDF_SCRIPT_URL_PATTERN`, `_pdf_urls_from_script_attribute`, and the `onclick`
+contract. Verification: `tests/unit` passed with `1291 passed, 5 warnings`,
+`eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v297.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `41a3b49cd76f78b74b21e5c4355600d19c80c20fbda7ab1483c407b9e30e91a4`,
+`git_commit=52af67e8b3beab41df89492b3351dcef33c529ca`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v297 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
