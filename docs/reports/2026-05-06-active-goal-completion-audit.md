@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `5b8a8c8f604d66a5a01a33c8f8bf4edcd9cd4737` (`eidp-windows-v273.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `9fa75247fdf746828b98161108422524fd76de82` (`eidp-windows-v274.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -917,6 +917,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v273 is still pending and must not be
+inferred from the Mac verifier.
+
+v274 (`9fa7524`) centralizes the supported target fiscal-year bounds used by
+the rolling target-year pipeline. PDF discovery, PDF extraction, manual-entry
+validation, fiscal-year override validation, operator competition-export year
+selection, and discovery gold-set validation now derive their supported bounds
+from `src/eidp/config.py` instead of maintaining local `[2019, 2099]` copies.
+The Windows distribution verifier was updated to require this packaged
+contract, so future range changes must propagate through parser, discovery,
+operator UI, and gold-set replay surfaces together. Verification:
+`tests/unit` passed with `1256 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v274.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`01b2bc2892cecc0cacb2dac0bd17bf3fa48bcb326181d51528665aba271e7932`,
+`git_commit=9fa75247fdf746828b98161108422524fd76de82`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v274 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
