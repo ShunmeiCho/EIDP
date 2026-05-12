@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `2231a80ae66f9999ce747c87e6363e13b49fa187` (`eidp-windows-v259.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `fb181bc680c98e3b6869ef661baee88b8f086da9` (`eidp-windows-v260.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -686,6 +686,22 @@ latest alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v259 is still pending and must not be
+inferred from the Mac verifier.
+
+v260 (`fb181bc`) aligns discovery gold replay priority with the RCA bucket
+model for mixed site-fetch failures. `eval-discovery-gold --pdf-evidence` now
+keeps `site_fetch_error` ahead of `no_target_candidate_found` when the same
+school has both non-target candidate noise and a page/site fetch failure. This
+prevents a mixed infrastructure failure from being reported as if the school
+simply had no target PDF. Accepted target PDFs, publication-lag target PDFs,
+and review-bound target forms still outrank site errors. `dist/eidp-windows-v260.zip`
+and the latest alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`19be7a19e31309e76d1877cd8a821e0b92829090fcaf5bc5286ba4af2e54d308`,
+`git_commit=fb181bc680c98e3b6869ef661baee88b8f086da9`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v260 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
