@@ -776,6 +776,8 @@ def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(
     assert not check.ok
     assert any("src/eidp/scraper/discovery_gold_set.py missing required token" in error for error in check.errors)
     assert any("_target_fiscal_year_from_evidence_payload" in error for error in check.errors)
+    assert any("json.JSONDecodeError" in error for error in check.errors)
+    assert any("line_number" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_deterministic_discovery_evidence_summary(tmp_path: Path) -> None:

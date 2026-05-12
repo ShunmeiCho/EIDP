@@ -1043,6 +1043,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "_is_better_tie_break_prediction",
             'candidate.outcome == current.outcome == "publication_lag_latest_public"',
             "(candidate.fiscal_year or 0) > (current.fiscal_year or 0)",
+            "json.JSONDecodeError",
+            "line_number",
         ),
         "src/eidp/scraper/discovery_evidence_summary.py": (
             "top_reasons=_sorted_counter_items",

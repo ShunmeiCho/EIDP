@@ -8,12 +8,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import structlog
+
 from eidp.config import (
     MAX_SUPPORTED_TARGET_FISCAL_YEAR,
     MIN_SUPPORTED_TARGET_FISCAL_YEAR,
     SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL,
 )
 from eidp.scraper.url_normalization import normalize_candidate_url
+
+log = structlog.get_logger()
 
 DISCOVERY_GOLD_ALLOWED_OUTCOMES = frozenset({
     "accepted_target_pdf",
@@ -399,10 +403,19 @@ def load_discovery_gold_predictions_from_pdf_evidence(
     }
     predictions_by_entry_id: dict[str, tuple[int, DiscoveryGoldPrediction]] = {}
 
-    for line in evidence_path.read_text(encoding="utf-8").splitlines():
+    for line_number, line in enumerate(evidence_path.read_text(encoding="utf-8").splitlines(), start=1):
         if not line.strip():
             continue
-        payload = json.loads(line)
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            log.warning(
+                "discovery_gold_pdf_evidence_jsonl_skipped",
+                path=str(evidence_path),
+                line_number=line_number,
+                error=str(exc),
+            )
+            continue
         school_id = _int_or_none(payload.get("school_id"))
         if school_id is None:
             continue

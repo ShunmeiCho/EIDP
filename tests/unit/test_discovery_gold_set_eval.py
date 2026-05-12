@@ -346,6 +346,42 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
     ]
 
 
+def test_load_predictions_from_pdf_evidence_skips_truncated_jsonl_lines(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "school_id": 1721,
+                        "pdf_url": ECOLE_URL,
+                        "reason": "accepted_downloaded",
+                        "pdf_type": "target",
+                        "extra": {"target_fiscal_year": "2026"},
+                    }
+                ),
+                '{"school_id": 999, "reason": "truncated"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    predictions = load_discovery_gold_predictions_from_pdf_evidence(
+        evidence_path,
+        load_discovery_gold_entries(GOLD_SET_DIR),
+    )
+
+    assert predictions == [
+        DiscoveryGoldPrediction(
+            entry_id="ecole-matsue-nutrition-2026",
+            outcome="accepted_target_pdf",
+            pdf_url=ECOLE_URL,
+            fiscal_year=2026,
+            strict_target_year_success=True,
+        )
+    ]
+
+
 def test_load_predictions_maps_non_target_only_evidence_to_no_target_candidate(tmp_path: Path) -> None:
     evidence_path = tmp_path / "discovery-evidence.jsonl"
     evidence_path.write_text(
