@@ -793,9 +793,10 @@ def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None 
 
     # Bonus for configured target-year references. EIDP is a rolling
     # target-fiscal-year system, not a single Reiwa-year crawler.
-    if any(token.lower() in text for token in fiscal_year_search_tokens(target_year)):
+    hinted_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
+    if hinted_year == target_year:
         score += 3.0
-    if any(token.lower() in text for token in fiscal_year_search_tokens(target_year - 1)):
+    if hinted_year == target_year - 1:
         score += 1.0
 
     # Bonus for pattern type reliability

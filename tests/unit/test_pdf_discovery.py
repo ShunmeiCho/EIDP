@@ -92,6 +92,42 @@ def test_score_candidate_uses_kanji_target_fiscal_year_tokens() -> None:
     )
 
 
+def test_score_candidate_does_not_boost_publication_dates_as_target_year() -> None:
+    target_form_date = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="2026年7月18日 更新確認申請書",
+    )
+    no_year = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="更新確認申請書",
+    )
+
+    assert _score_candidate(target_form_date, target_fiscal_year=2026) == _score_candidate(
+        no_year,
+        target_fiscal_year=2026,
+    )
+
+
+def test_score_candidate_keeps_non_date_target_year_boost() -> None:
+    target = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="2026年更新確認申請書",
+    )
+    no_year = PdfCandidate(
+        pdf_url="https://example.ac.jp/news/koushin-shinsei.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="更新確認申請書",
+    )
+
+    assert _score_candidate(target, target_fiscal_year=2026) > _score_candidate(
+        no_year,
+        target_fiscal_year=2026,
+    )
+
+
 def test_pre_download_rejects_adjacent_school_information_tokens() -> None:
     token_cases = [
         ("https://example.ac.jp/disclosure/yakuinmeibo.pdf", "役員名簿"),
