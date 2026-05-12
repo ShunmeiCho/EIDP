@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `0e034a807fc7ead330290d7569261e02c20b04c4` (`eidp-windows-v268.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `60cbda054ee163fa7755b8835a13afbf298bab19` (`eidp-windows-v269.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -828,6 +828,22 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v268 is still pending and must not be
+inferred from the Mac verifier.
+
+v269 (`60cbda0`) caps PDF fiscal-year parsing and strict candidate-hint parsing
+at the supported maximum year `2099`. Japanese-era labels beyond the supported
+range, such as `令和82年度` (= FY2100), no longer become body-year evidence or
+candidate `fiscal_year_mismatch` diagnostics. The Windows distribution verifier
+requires both `MIN_SUPPORTED_FISCAL_YEAR=2019` and `MAX_SUPPORTED_FISCAL_YEAR=2099`
+contracts for packaged `extractor.py` and `pdf_discovery.py`. Verification:
+`tests/unit` passed with `1245 passed, 5 warnings`, and
+`dist/eidp-windows-v269.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`7f24b88c30a5025736fdb7300f277552f0107fa9efd78a96c2a3321763b1f007`,
+`git_commit=60cbda054ee163fa7755b8835a13afbf298bab19`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v269 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
