@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `3d82cfdc5a46f47176baceb15930bd8240d32ab9` (`eidp-windows-v300.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `73eca71717c6f3a20c02483a962482a8106984c5` (`eidp-windows-v301.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1482,6 +1482,28 @@ passed `scripts/verify_windows_distribution.py` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v300 is still pending and must not be
+inferred from the Mac verifier.
+
+v301 (`73eca71`) adds a static extraction path for `<form action="...pdf">`
+submit controls. Some older CMS pages expose the disclosure PDF only as a form
+submit target instead of an anchor, dropdown option, or button data attribute.
+The new rule accepts only `action` values that explicitly contain `.pdf`; it
+does not submit the form or execute page JavaScript. Form visible text plus
+`input` / `button` labels are fed through `_pdf_element_context_text`, so nearby
+fiscal-year headings remain available to the strict target-year scorer. The
+regression test uses FY2032 / Reiwa 14 to keep the contract rolling-year safe,
+and the packaged verifier now requires `PDF_FORM_ACTION_PATTERN` and the
+`action` contract. Verification: `tests/unit` passed with `1295 passed,
+5 warnings`, `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v301.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `5fae45983cdd3c8b9809e98f6752786710a8fca0a9cdb1e41656fbe99c5bcdb7`,
+`git_commit=73eca71717c6f3a20c02483a962482a8106984c5`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v301 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
