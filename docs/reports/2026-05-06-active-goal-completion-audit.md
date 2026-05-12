@@ -6,6 +6,7 @@ Branch: `sprint8-handoff-finalize`
 Latest Mac-verifier-clean Windows package commit: `08639e37767f785c86b6e53323f0b4cb859c169f` (`eidp-windows-v314.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+Current concise release status: `docs/reports/current-release-status.md`
 
 ## 2026-05-12 V314 Discovery Gold Pattern Source Gaps
 
