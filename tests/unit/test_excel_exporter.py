@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib
+
 import openpyxl
 import pytest
 from sqlalchemy import create_engine, text
@@ -8,6 +10,22 @@ from sqlalchemy.orm import Session
 from eidp.db.models import Department, DepartmentYearly, School, SupportRecipient
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.excel.exporter import _write_sairoku, export_master_workbook
+
+
+def test_excel_exporter_confidence_thresholds_follow_central_env(monkeypatch) -> None:
+    import eidp.excel.exporter as exporter_module
+
+    monkeypatch.setenv("EIDP_CONFIDENCE_REVIEW", "0.76")
+    monkeypatch.setenv("EIDP_CONFIDENCE_AUTO", "0.91")
+    reloaded = importlib.reload(exporter_module)
+    try:
+        assert reloaded.EXCEL_MIN_EXTRACTION_CONFIDENCE == 0.76
+        assert reloaded.EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE == 0.91
+        assert reloaded._low_confidence_reason() == "confidence<0.76"
+    finally:
+        monkeypatch.delenv("EIDP_CONFIDENCE_REVIEW", raising=False)
+        monkeypatch.delenv("EIDP_CONFIDENCE_AUTO", raising=False)
+        importlib.reload(exporter_module)
 
 
 @pytest.fixture()

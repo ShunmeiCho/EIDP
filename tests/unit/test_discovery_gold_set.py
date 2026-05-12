@@ -132,6 +132,32 @@ def test_discovery_gold_set_semantic_validator_rejects_inconsistent_outcomes() -
     assert "bad-accepted: accepted_target_pdf requires strict_target_year_success=true" in errors
 
 
+def test_discovery_gold_set_semantic_validator_rejects_non_http_urls() -> None:
+    from eidp.scraper.discovery_gold_set import DiscoveryGoldEntry, validate_discovery_gold_entries
+
+    errors = validate_discovery_gold_entries([
+        DiscoveryGoldEntry(
+            entry_id="bad-url",
+            school_id=1,
+            school_name="学校",
+            prefecture="東京都",
+            corporation_name="",
+            target_fiscal_year=2026,
+            outcome="accepted_target_pdf",
+            school_url="file:///etc/passwd",
+            disclosure_url="",
+            pdf_url="javascript:alert(1)",
+            pdf_type="target",
+            fiscal_year=2026,
+            strict_target_year_success=True,
+            site_family="test",
+        )
+    ])
+
+    assert "bad-url: seed site URL must be an absolute http(s) URL" in errors
+    assert "bad-url: expected_result.pdf_url must be an absolute http(s) URL" in errors
+
+
 def test_manual_rca_runbook_contains_single_school_packet_contract() -> None:
     text = MANUAL_RCA_RUNBOOK.read_text(encoding="utf-8")
 

@@ -1025,11 +1025,14 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "Excelを閉じてから再実行してください",
         ),
         "src/eidp/excel/exporter.py": (
-            "EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70",
+            "thresholds_from_env",
+            "_EXCEL_CONFIDENCE_THRESHOLDS",
+            "EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review",
+            "EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.auto",
             'LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"',
             "_exportable_confidence_sql",
             "export_quality_warnings",
-            "confidence<0.70",
+            "_low_confidence_reason",
         ),
         "src/eidp/excel/competition_exporter.py": (
             "TargetFiscalYearDataMissingError",

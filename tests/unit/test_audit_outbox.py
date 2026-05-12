@@ -154,6 +154,41 @@ def test_flush_outbox_does_not_stamp_when_fsync_fails(engine, tmp_path, monkeypa
         assert row.jsonl_export_error == "disk flush failed"
 
 
+def test_flush_outbox_retry_after_fsync_failure_dedups_partial_line(engine, tmp_path, monkeypatch):
+    jsonl = tmp_path / "manual-actions.jsonl"
+
+    def fail_fsync(_fd):
+        raise OSError("disk flush failed")
+
+    with Session(engine) as session:
+        row = log_manual_action(
+            session,
+            action_type="manual_entry",
+            target_table="department_yearly",
+            target_id=1,
+            new_value={"enrollment": 100},
+        )
+        session.commit()
+        action_id = row.action_id
+
+        monkeypatch.setattr("eidp.db.audit_outbox.os.fsync", fail_fsync)
+        first = flush_audit_outbox(session, jsonl_path=jsonl)
+        assert first == {"exported": 0, "already_present": 0, "failed": 1}
+
+        monkeypatch.setattr("eidp.db.audit_outbox.os.fsync", lambda _fd: None)
+        retry = flush_audit_outbox(session, jsonl_path=jsonl)
+        assert retry == {"exported": 0, "already_present": 1, "failed": 0}
+
+        row = session.query(ManualActionLog).one()
+        assert row.action_id == action_id
+        assert row.jsonl_exported_at is not None
+        assert row.jsonl_export_error is None
+
+    lines = [ln for ln in jsonl.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 1
+    assert json.loads(lines[0])["action_id"] == action_id
+
+
 def test_flush_outbox_dedups_when_action_id_already_in_file(engine, tmp_path):
     """Simulate a partial previous flush: the JSONL line was written but
     ``jsonl_exported_at`` failed to update. A subsequent flush must NOT

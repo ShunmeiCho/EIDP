@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from eidp.db.current_helpers import IS_CURRENT_TRUE_SQL
+from eidp.extraction_confidence import thresholds_from_env
 
 log = structlog.get_logger()
 
@@ -40,8 +41,9 @@ YEAR_BLOCK_HEADERS = [
     "収定", "在籍", "留学生", "卒業", "進学", "就職",
     "その他", "前年在籍", "中退", "中退率",
 ]
-EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70
-EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = 0.85
+_EXCEL_CONFIDENCE_THRESHOLDS = thresholds_from_env()
+EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review
+EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.auto
 LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"
 
 
@@ -50,6 +52,10 @@ def _exportable_confidence_sql(alias: str) -> str:
         f"({alias}.extraction_confidence IS NULL "
         f"OR {alias}.extraction_confidence >= {EXCEL_MIN_EXTRACTION_CONFIDENCE})"
     )
+
+
+def _low_confidence_reason() -> str:
+    return f"confidence<{EXCEL_MIN_EXTRACTION_CONFIDENCE:.2f}"
 
 
 def export_quality_warnings(session: Session) -> dict[str, int]:
@@ -370,7 +376,10 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
 
 
 def _low_confidence_exclusion_rows(session: Session) -> list[list]:
-    params = {"min_confidence": EXCEL_MIN_EXTRACTION_CONFIDENCE}
+    params = {
+        "min_confidence": EXCEL_MIN_EXTRACTION_CONFIDENCE,
+        "low_confidence_reason": _low_confidence_reason(),
+    }
     department_rows = session.execute(
         text(f"""
             SELECT
@@ -380,7 +389,7 @@ def _low_confidence_exclusion_rows(session: Session) -> list[list]:
                 d.canonical_name AS department_name,
                 dy.fiscal_year,
                 dy.extraction_confidence,
-                'confidence<0.70' AS reason,
+                :low_confidence_reason AS reason,
                 '学科別/在籍のみ抜粋' AS export_target
             FROM department_yearly dy
             JOIN department d ON d.id = dy.department_id
@@ -401,7 +410,7 @@ def _low_confidence_exclusion_rows(session: Session) -> list[list]:
                 NULL AS department_name,
                 sr.fiscal_year,
                 sr.extraction_confidence,
-                'confidence<0.70' AS reason,
+                :low_confidence_reason AS reason,
                 '対象比率' AS export_target
             FROM support_recipient sr
             JOIN school s ON s.id = sr.school_id

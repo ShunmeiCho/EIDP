@@ -265,11 +265,14 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/config.py": (REPO_ROOT / "src" / "eidp" / "config.py").read_text(encoding="utf-8"),
         "src/eidp/fiscal_year.py": (REPO_ROOT / "src" / "eidp" / "fiscal_year.py").read_text(encoding="utf-8"),
         "src/eidp/excel/exporter.py": (
-            "EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70\n"
+            "from eidp.extraction_confidence import thresholds_from_env\n"
+            "_EXCEL_CONFIDENCE_THRESHOLDS = thresholds_from_env()\n"
+            "EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review\n"
+            "EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.auto\n"
             'LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"\n'
             "def _exportable_confidence_sql(alias): pass\n"
             "def export_quality_warnings(session): pass\n"
-            "confidence<0.70\n"
+            "def _low_confidence_reason(): pass\n"
         ),
         "src/eidp/excel/competition_exporter.py": (
             REPO_ROOT / "src" / "eidp" / "excel" / "competition_exporter.py"
@@ -627,7 +630,10 @@ def test_verify_core_zip_requires_excel_confidence_export_gate(tmp_path: Path) -
 
     assert not check.ok
     assert any("src/eidp/excel/exporter.py missing required token" in error for error in check.errors)
-    assert any("EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70" in error for error in check.errors)
+    assert any(
+        "EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review" in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_requires_competition_export_target_year_gate(tmp_path: Path) -> None:

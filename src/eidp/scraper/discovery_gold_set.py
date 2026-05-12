@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import structlog
 
@@ -188,18 +190,38 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
     return entries
 
 
-def seed_discovery_gold_sites(session: Any, entries: list[DiscoveryGoldEntry], *, apply: bool) -> dict[str, int | bool]:
+def seed_discovery_gold_sites(
+    session: Any,
+    entries: list[DiscoveryGoldEntry],
+    *,
+    apply: bool,
+    safe_url_checker: Callable[[str], bool] | None = None,
+) -> dict[str, int | bool]:
     """Seed gold-set schools and disclosure sites into a DB session."""
 
     from eidp.db.models import School, SchoolSite
+    from eidp.scraper.url_discovery import _is_safe_url
 
+    checker = safe_url_checker or _is_safe_url
     stats: dict[str, int | bool] = {
         "applied": apply,
         "schools_to_create": 0,
         "sites_to_add": 0,
         "sites_existing": 0,
+        "invalid_site_urls": 0,
     }
     for entry in entries:
+        site_url = normalize_candidate_url(entry.disclosure_url or entry.school_url)
+        if not site_url or not checker(site_url):
+            stats["invalid_site_urls"] = int(stats["invalid_site_urls"]) + 1
+            log.warning(
+                "discovery_gold_seed_site_url_rejected",
+                entry_id=entry.entry_id,
+                school_id=entry.school_id,
+                url=site_url,
+            )
+            continue
+
         school = session.get(School, entry.school_id)
         if school is None:
             stats["schools_to_create"] = int(stats["schools_to_create"]) + 1
@@ -215,7 +237,6 @@ def seed_discovery_gold_sites(session: Any, entries: list[DiscoveryGoldEntry], *
                     )
                 )
 
-        site_url = normalize_candidate_url(entry.disclosure_url or entry.school_url)
         if _school_site_exists(session, school_id=entry.school_id, url=site_url):
             stats["sites_existing"] = int(stats["sites_existing"]) + 1
             continue
@@ -332,6 +353,13 @@ def validate_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> list[s
             )
         if entry.outcome not in DISCOVERY_GOLD_ALLOWED_OUTCOMES:
             errors.append(prefix + f"unsupported outcome {entry.outcome!r}")
+        site_url = entry.disclosure_url or entry.school_url
+        if not site_url:
+            errors.append(prefix + "expected_result.school_url or expected_result.disclosure_url is required")
+        elif not _is_absolute_http_url(site_url):
+            errors.append(prefix + "seed site URL must be an absolute http(s) URL")
+        if entry.pdf_url and not _is_absolute_http_url(entry.pdf_url):
+            errors.append(prefix + "expected_result.pdf_url must be an absolute http(s) URL")
 
         if entry.outcome == "accepted_target_pdf":
             if not entry.pdf_url:
@@ -618,6 +646,14 @@ def _pattern_source(pattern_type: str) -> str:
         if pattern_type.endswith(suffix):
             return pattern_type.removesuffix(suffix)
     return pattern_type
+
+
+def _is_absolute_http_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
 def _int_or_none(value: object) -> int | None:

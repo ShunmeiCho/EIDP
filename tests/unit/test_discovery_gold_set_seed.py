@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -28,13 +29,14 @@ def test_seed_discovery_gold_sites_dry_run_does_not_write() -> None:
     session = _session()
     entries = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]
 
-    stats = seed_discovery_gold_sites(session, entries, apply=False)
+    stats = seed_discovery_gold_sites(session, entries, apply=False, safe_url_checker=lambda _url: True)
 
     assert stats == {
         "applied": False,
         "schools_to_create": 1,
         "sites_to_add": 1,
         "sites_existing": 0,
+        "invalid_site_urls": 0,
     }
     assert session.query(School).count() == 0
     assert session.query(SchoolSite).count() == 0
@@ -44,7 +46,7 @@ def test_seed_discovery_gold_sites_apply_writes_school_and_site() -> None:
     session = _session()
     entries = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]
 
-    stats = seed_discovery_gold_sites(session, entries, apply=True)
+    stats = seed_discovery_gold_sites(session, entries, apply=True, safe_url_checker=lambda _url: True)
     session.commit()
 
     assert stats == {
@@ -52,6 +54,7 @@ def test_seed_discovery_gold_sites_apply_writes_school_and_site() -> None:
         "schools_to_create": 1,
         "sites_to_add": 1,
         "sites_existing": 0,
+        "invalid_site_urls": 0,
     }
     school = session.get(School, 1721)
     assert school is not None
@@ -68,9 +71,9 @@ def test_seed_discovery_gold_sites_is_idempotent_on_existing_site() -> None:
     session = _session()
     entries = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]
 
-    seed_discovery_gold_sites(session, entries, apply=True)
+    seed_discovery_gold_sites(session, entries, apply=True, safe_url_checker=lambda _url: True)
     session.commit()
-    stats = seed_discovery_gold_sites(session, entries, apply=True)
+    stats = seed_discovery_gold_sites(session, entries, apply=True, safe_url_checker=lambda _url: True)
     session.commit()
 
     assert stats == {
@@ -78,8 +81,50 @@ def test_seed_discovery_gold_sites_is_idempotent_on_existing_site() -> None:
         "schools_to_create": 0,
         "sites_to_add": 0,
         "sites_existing": 1,
+        "invalid_site_urls": 0,
     }
     assert session.query(SchoolSite).count() == 1
+
+
+def test_seed_discovery_gold_sites_rejects_unsafe_site_url_before_writing() -> None:
+    session = _session()
+    [entry] = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]
+    unsafe_entry = replace(entry, disclosure_url="file:///etc/passwd", school_url="")
+
+    stats = seed_discovery_gold_sites(session, [unsafe_entry], apply=True, safe_url_checker=lambda _url: False)
+    session.commit()
+
+    assert stats == {
+        "applied": True,
+        "schools_to_create": 0,
+        "sites_to_add": 0,
+        "sites_existing": 0,
+        "invalid_site_urls": 1,
+    }
+    assert session.query(School).count() == 0
+    assert session.query(SchoolSite).count() == 0
+
+
+def test_seed_discovery_gold_sites_checks_normalized_site_url() -> None:
+    session = _session()
+    [entry] = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]
+    seen_urls: list[str] = []
+
+    def reject(url: str) -> bool:
+        seen_urls.append(url)
+        return False
+
+    stats = seed_discovery_gold_sites(
+        session,
+        [replace(entry, disclosure_url="https://127.0.0.1/admin#fragment", school_url="")],
+        apply=False,
+        safe_url_checker=reject,
+    )
+
+    assert seen_urls == ["https://127.0.0.1/admin"]
+    assert stats["invalid_site_urls"] == 1
+    assert session.query(School).count() == 0
+    assert session.query(SchoolSite).count() == 0
 
 
 def test_seed_discovery_gold_sites_cli_applies_when_requested(monkeypatch) -> None:
@@ -89,6 +134,7 @@ def test_seed_discovery_gold_sites_cli_applies_when_requested(monkeypatch) -> No
     import eidp.db.session as db_session
 
     monkeypatch.setattr(db_session, "SessionLocal", lambda: Session(engine))
+    monkeypatch.setattr("eidp.scraper.url_discovery._is_safe_url", lambda _url: True)
 
     result = CliRunner().invoke(
         app,
@@ -105,5 +151,6 @@ def test_seed_discovery_gold_sites_cli_applies_when_requested(monkeypatch) -> No
     assert payload["applied"] is True
     assert payload["schools_to_create"] == 22
     assert payload["sites_to_add"] == 22
+    assert payload["invalid_site_urls"] == 0
     with Session(engine) as session:
         assert session.query(SchoolSite).filter(SchoolSite.discovery_method == "discovery_gold_set").count() == 22
