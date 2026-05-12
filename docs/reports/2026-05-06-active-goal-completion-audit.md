@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `1d5a612e7eb4e56221f6e95fe0101b55f7f4f49d` (`eidp-windows-v279.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `5ce4e3b4e3272316c43e2e159f8a88197b7e84f3` (`eidp-windows-v280.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1041,6 +1041,26 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v279 is still pending and must not be
+inferred from the Mac verifier.
+
+v280 (`5ce4e3b`) makes discovery RCA summaries deterministic when evidence
+counts tie. `discovery_evidence_summary` now renders reason, PDF-type,
+pattern-type, host, and per-school top-reason counters in `count desc, key asc`
+order instead of relying on `Counter.most_common()` tie order from the incoming
+JSONL rows. This makes manual RCA summaries stable even when equivalent
+evidence rows are replayed or merged in a different order. The Windows
+distribution verifier now requires the packaged deterministic-summary helper.
+Verification: `tests/unit` passed with `1272 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v280.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`3337c18b1855dc1e1286121929adbebdce9f53293d281691c91fea615409f174`,
+`git_commit=5ce4e3b4e3272316c43e2e159f8a88197b7e84f3`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v280 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
