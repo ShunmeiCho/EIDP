@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 from streamlit.testing.v1 import AppTest
 
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR
 from eidp.db.locking import acquire_lock
 from eidp.db.models import (
     Base,
@@ -72,8 +73,8 @@ from eidp.review._pages.pdf_manual_entry import (
 
 
 def test_manual_entry_fiscal_year_bounds_are_long_lived() -> None:
-    assert MANUAL_ENTRY_MIN_FISCAL_YEAR == 2019
-    assert MANUAL_ENTRY_MAX_FISCAL_YEAR == 2099
+    assert MANUAL_ENTRY_MIN_FISCAL_YEAR == MIN_SUPPORTED_TARGET_FISCAL_YEAR
+    assert MANUAL_ENTRY_MAX_FISCAL_YEAR == MAX_SUPPORTED_TARGET_FISCAL_YEAR
 
 
 @pytest.fixture()

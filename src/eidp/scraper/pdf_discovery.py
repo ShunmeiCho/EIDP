@@ -28,7 +28,7 @@ import structlog
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from eidp.config import settings
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
 from eidp.db.models import CrawlJob, Document, SchoolSite
 from eidp.fiscal_year import fiscal_year_from_japanese_era_text, fiscal_year_search_tokens
 from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
@@ -38,8 +38,8 @@ from eidp.scraper.url_normalization import normalize_candidate_url
 log = structlog.get_logger()
 
 PdfDiscoveryProgressCallback = Callable[[dict[str, int], int], None]
-MIN_SUPPORTED_FISCAL_YEAR = 2019
-MAX_SUPPORTED_FISCAL_YEAR = 2099
+MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR
+MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR
 
 
 def _is_supported_fiscal_year(fiscal_year: int) -> bool:

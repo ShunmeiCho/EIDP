@@ -18,6 +18,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.config import SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL
 from eidp.db.locking import acquire_lock
 from eidp.db.models import (
     Department,
@@ -295,7 +296,7 @@ def test_submit_form_rejects_out_of_range_target_fy(engine, tmp_path, monkeypatc
             session, document_id=1, target_fy=1850, reason=None, lock_path=lock,
         )
     assert outcome.ok is False
-    assert "out of [2019, 2099]" in (outcome.error or "")
+    assert f"out of {SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}" in (outcome.error or "")
     assert called["count"] == 0
 
 

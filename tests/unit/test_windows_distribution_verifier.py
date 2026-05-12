@@ -288,8 +288,8 @@ def _core_entries() -> dict[str, bytes | str]:
         ).read_text(encoding="utf-8"),
         "src/eidp/scraper/pdf_discovery.py": (
             "strict_target_fiscal_year\n"
-            "MIN_SUPPORTED_FISCAL_YEAR = 2019\n"
-            "MAX_SUPPORTED_FISCAL_YEAR = 2099\n"
+            "MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR\n"
+            "MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR\n"
             "MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR\n"
             "max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8)\n"
             "min(MAX_SUPPORTED_FISCAL_YEAR + 1, target_year + 3)\n"
@@ -563,7 +563,7 @@ def test_verify_core_zip_requires_target_fiscal_year_config_bound(tmp_path: Path
     assert not check.ok
     assert any("src/eidp/config.py missing required token" in error for error in check.errors)
     assert any("_validate_target_fiscal_year" in error for error in check.errors)
-    assert any("[2019, 2099]" in error for error in check.errors)
+    assert any("SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_excel_confidence_export_gate(tmp_path: Path) -> None:

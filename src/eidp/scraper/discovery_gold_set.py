@@ -8,6 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from eidp.config import (
+    MAX_SUPPORTED_TARGET_FISCAL_YEAR,
+    MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+    SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL,
+)
 from eidp.scraper.url_normalization import normalize_candidate_url
 
 DISCOVERY_GOLD_ALLOWED_OUTCOMES = frozenset({
@@ -279,8 +284,13 @@ def validate_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> list[s
             errors.append(prefix + "duplicate school_id + target_fiscal_year")
         seen_school_years.add(school_year)
 
-        if entry.target_fiscal_year < 2019 or entry.target_fiscal_year > 2099:
-            errors.append(prefix + "target_fiscal_year outside supported range [2019, 2099]")
+        if (
+            entry.target_fiscal_year < MIN_SUPPORTED_TARGET_FISCAL_YEAR
+            or entry.target_fiscal_year > MAX_SUPPORTED_TARGET_FISCAL_YEAR
+        ):
+            errors.append(
+                prefix + f"target_fiscal_year outside supported range {SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}"
+            )
         if entry.outcome not in DISCOVERY_GOLD_ALLOWED_OUTCOMES:
             errors.append(prefix + f"unsupported outcome {entry.outcome!r}")
 

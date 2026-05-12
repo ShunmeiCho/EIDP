@@ -36,6 +36,7 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Department, DepartmentYearly, Document, School, SchoolSite, SupportRecipient
 from eidp.extraction_confidence import ConfidenceVerdict
@@ -69,8 +70,8 @@ MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
 MANUAL_QUEUE_VIEW_TARGET = "target_year"
 MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED = "target_year_with_ingested"
 MANUAL_QUEUE_VIEW_ALL = "all_documents"
-MANUAL_ENTRY_MIN_FISCAL_YEAR = 2019
-MANUAL_ENTRY_MAX_FISCAL_YEAR = 2099
+MANUAL_ENTRY_MIN_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR
+MANUAL_ENTRY_MAX_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR
 MANUAL_ACTION_FILTER_ALL = "すべて"
 MANUAL_ACTION_FILTER_ORDER: tuple[str, ...] = (
     "学校紐付け確認",

@@ -27,6 +27,11 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from eidp.config import (
+    MAX_SUPPORTED_TARGET_FISCAL_YEAR,
+    MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+    SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL,
+)
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Document, School
 from eidp.fiscal_year import format_fiscal_year_label
@@ -40,6 +45,10 @@ OVERRIDE_ELIGIBLE_STATUSES: frozenset[str] = frozenset({
     "ingested",
     "support_only",
 })
+
+
+def _is_supported_target_fiscal_year(fiscal_year: int) -> bool:
+    return MIN_SUPPORTED_TARGET_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_TARGET_FISCAL_YEAR
 
 
 @dataclass(frozen=True)
@@ -120,10 +129,10 @@ def override_with_lock(
     UI MUST NOT call override_fiscal_year directly — always go through
     this wrapper so lock + commit + rollback boundaries stay aligned.
     """
-    if target_fy < 2019 or target_fy > 2099:
+    if not _is_supported_target_fiscal_year(target_fy):
         return OverrideOutcome(
             ok=False,
-            error=f"target fiscal_year {target_fy} out of supported range [2019, 2099]",
+            error=f"target fiscal_year {target_fy} out of supported range {SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}",
         )
 
     try:
@@ -168,9 +177,9 @@ def submit_override_form(
     override_with_lock to assert the wiring."""
     if document_id <= 0:
         return OverrideOutcome(ok=False, error="document must be selected")
-    if target_fy < 2019 or target_fy > 2099:
+    if not _is_supported_target_fiscal_year(target_fy):
         return OverrideOutcome(
-            ok=False, error=f"target fiscal_year {target_fy} out of [2019, 2099]",
+            ok=False, error=f"target fiscal_year {target_fy} out of {SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}",
         )
     return override_with_lock(
         session,
@@ -228,7 +237,9 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             "対象文書", options=list(label_to_doc.keys()),
         )
         target_fy = st.number_input(
-            "正しい年度", min_value=2019, max_value=2099,
+            "正しい年度",
+            min_value=MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+            max_value=MAX_SUPPORTED_TARGET_FISCAL_YEAR,
             value=settings.target_fiscal_year, step=1,
         )
         reason = st.text_input("操作メモ (reason)")

@@ -25,7 +25,7 @@ import streamlit as st
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from eidp.config import settings
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
 from eidp.db.audit import log_manual_action
 from eidp.db.locking import LockBusyError, acquire_lock
 from eidp.db.models import (
@@ -790,7 +790,8 @@ def page_exports(session: Session) -> None:
     )
     fy_pick = st.number_input(
         f"対象年度（通常は {format_fiscal_year_label(settings.target_fiscal_year)}）",
-        min_value=2019,
+        min_value=MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+        max_value=MAX_SUPPORTED_TARGET_FISCAL_YEAR,
         value=settings.target_fiscal_year,
         step=1,
         key="comp_fy",

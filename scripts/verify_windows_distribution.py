@@ -47,6 +47,12 @@ def _load_accepted_wheel_suffixes() -> tuple[str, ...]:
 
 ACCEPTED_WHEEL_SUFFIXES = _load_accepted_wheel_suffixes()
 
+MIN_SUPPORTED_TARGET_FISCAL_YEAR = 2019
+MAX_SUPPORTED_TARGET_FISCAL_YEAR = 2099
+SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL = (
+    f"[{MIN_SUPPORTED_TARGET_FISCAL_YEAR}, {MAX_SUPPORTED_TARGET_FISCAL_YEAR}]"
+)
+
 
 @dataclass
 class ZipCheck:
@@ -551,8 +557,14 @@ def _check_discovery_gold_entry_semantics(check: ZipCheck, member: str, payload:
     pdf_type = str(expected.get("pdf_type") or "")
     strict_success = expected.get("strict_target_year_success")
 
-    if target_year is None or target_year < 2019 or target_year > 2099:
-        check.fail(f"{member} target_fiscal_year must be an integer in [2019, 2099]")
+    if (
+        target_year is None
+        or target_year < MIN_SUPPORTED_TARGET_FISCAL_YEAR
+        or target_year > MAX_SUPPORTED_TARGET_FISCAL_YEAR
+    ):
+        check.fail(
+            f"{member} target_fiscal_year must be an integer in {SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}"
+        )
     if school_id is None or school_id <= 0:
         check.fail(f"{member} school.school_id must be a positive integer")
 
@@ -894,8 +906,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "target_fiscal_year",
             "MIN_SUPPORTED_TARGET_FISCAL_YEAR = 2019",
             "MAX_SUPPORTED_TARGET_FISCAL_YEAR = 2099",
+            "SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL",
             "def _validate_target_fiscal_year",
-            "target_fiscal_year outside supported range [2019, 2099]",
+            "target_fiscal_year outside supported range",
         ),
         "src/eidp/review/_pages/settings_page.py": (
             "MIN_SUPPORTED_TARGET_FISCAL_YEAR",
@@ -978,8 +991,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
         "src/eidp/scraper/pdf_discovery.py": (
             "strict_target_fiscal_year",
-            "MIN_SUPPORTED_FISCAL_YEAR = 2019",
-            "MAX_SUPPORTED_FISCAL_YEAR = 2099",
+            "MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR",
+            "MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR",
             "MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR",
             "max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8)",
             "min(MAX_SUPPORTED_FISCAL_YEAR + 1, target_year + 3)",
@@ -1009,9 +1022,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
         "src/eidp/pdf/extractor.py": (
             "def _extract_fiscal_year",
-            "from eidp.config import settings",
-            "MIN_SUPPORTED_FISCAL_YEAR = 2019",
-            "MAX_SUPPORTED_FISCAL_YEAR = 2099",
+            "from eidp.config import",
+            "MIN_SUPPORTED_TARGET_FISCAL_YEAR",
+            "MAX_SUPPORTED_TARGET_FISCAL_YEAR",
+            "MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR",
+            "MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR",
             "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR",
             "fiscal_year > MAX_SUPPORTED_FISCAL_YEAR",
             "settings.target_fiscal_year if max_fiscal_year is None",

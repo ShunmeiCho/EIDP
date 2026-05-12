@@ -17,14 +17,14 @@ from pathlib import Path
 
 import structlog
 
-from eidp.config import settings
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
 from eidp.fiscal_year import fiscal_year_from_japanese_era_text, format_fiscal_year_as_japanese_era
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
 
 log = structlog.get_logger()
 
-MIN_SUPPORTED_FISCAL_YEAR = 2019
-MAX_SUPPORTED_FISCAL_YEAR = 2099
+MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR
+MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR
 
 
 def _norm(text: str | None) -> str:

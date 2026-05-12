@@ -38,6 +38,9 @@ from eidp.fiscal_year import JapaneseEra, configure_japanese_eras, current_fisca
 
 MIN_SUPPORTED_TARGET_FISCAL_YEAR = 2019
 MAX_SUPPORTED_TARGET_FISCAL_YEAR = 2099
+SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL = (
+    f"[{MIN_SUPPORTED_TARGET_FISCAL_YEAR}, {MAX_SUPPORTED_TARGET_FISCAL_YEAR}]"
+)
 
 
 def resolve_app_root(*, env: dict[str, str] | None = None, cwd: Path | None = None) -> Path:
@@ -142,7 +145,7 @@ class Settings(BaseSettings):
     @classmethod
     def _validate_target_fiscal_year(cls, v: int) -> int:
         if v < MIN_SUPPORTED_TARGET_FISCAL_YEAR or v > MAX_SUPPORTED_TARGET_FISCAL_YEAR:
-            raise ValueError("target_fiscal_year outside supported range [2019, 2099]")
+            raise ValueError(f"target_fiscal_year outside supported range {SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}")
         return v
 
 
