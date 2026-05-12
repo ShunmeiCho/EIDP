@@ -562,6 +562,32 @@ def test_pre_download_target_year_matrix_is_not_fixed_to_2026() -> None:
         assert (rejection.reason if rejection else None) == expected_reason
 
 
+def test_pre_download_ignores_pre_supported_year_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/disclosure/2018-kakunin-shinsei.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="2018年度 高等教育の修学支援新制度 確認申請書",
+        score=3.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
+def test_pre_download_ignores_pre_supported_serial_filename_hint() -> None:
+    candidate = PdfCandidate(
+        pdf_url="http://www.atg-web.ac.jp/img/educational/2018007.pdf",
+        page_url="http://www.atg-web.ac.jp/educational/practice.php",
+        anchor_text="７. 大学等における修学の支援に関する確認申請書",
+        score=3.5,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert rejection is None
+
+
 def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> None:
     candidate = PdfCandidate(
         pdf_url="https://example.ac.jp/files/2025-renewal-confirmation-application.pdf",

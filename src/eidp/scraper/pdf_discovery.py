@@ -563,11 +563,12 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         include_filing_dates=False,
     )
     if detected is not None:
-        return detected
+        return detected if detected >= MIN_SUPPORTED_FISCAL_YEAR else None
 
     western = re.search(r"(?<!\d)(20\d{2})\s*年度", text)
     if western is not None:
-        return int(western.group(1))
+        year = int(western.group(1))
+        return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
 
     strong_form_context = any(
         token in text
@@ -583,16 +584,19 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
     if strong_form_context:
         western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*(?:度|\d{1,2}\s*月))", text)
         if western_year is not None:
-            return int(western_year.group(1))
+            year = int(western_year.group(1))
+            return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
         filename_year = re.search(r"(?<!\d)(20\d{2})(?=[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if filename_year is not None:
-            return int(filename_year.group(1))
+            year = int(filename_year.group(1))
+            return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
         serial_filename_year = re.search(r"(?<!\d)(20\d{2})(?=\d{2,4}[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if serial_filename_year is not None:
-            return int(serial_filename_year.group(1))
+            year = int(serial_filename_year.group(1))
+            return year if year >= MIN_SUPPORTED_FISCAL_YEAR else None
 
     lowered = text.lower()
-    for year in range(target_year - 8, target_year + 3):
+    for year in range(max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8), target_year + 3):
         for token in fiscal_year_search_tokens(year):
             if token == str(year):
                 continue
@@ -617,11 +621,11 @@ def _stale_fiscal_year_from_candidate_hint(candidate: PdfCandidate, *, target_ye
 
     text = _candidate_hint_text(candidate)
     detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
-    if detected_year is not None and target_year - 8 <= detected_year < target_year:
+    if detected_year is not None and max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= detected_year < target_year:
         return detected_year
     for match in re.finditer(r"(?<!\d)(20\d{2})(?=[^/\s]*\.pdf\b)", text, re.IGNORECASE):
         year = int(match.group(1))
-        if target_year - 8 <= year < target_year:
+        if max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= year < target_year:
             return year
     return None
 
@@ -635,10 +639,10 @@ def _has_explicit_stale_fiscal_year_label(candidate: PdfCandidate, *, target_yea
         include_fiscal_year_labels=True,
         include_filing_dates=False,
     )
-    if detected_year is not None and target_year - 8 <= detected_year < target_year:
+    if detected_year is not None and max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= detected_year < target_year:
         return True
     lowered = unicodedata.normalize("NFKC", text).lower()
-    for year in range(target_year - 8, target_year):
+    for year in range(max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8), target_year):
         for token in fiscal_year_search_tokens(year):
             token_lower = token.lower()
             if not token_lower.startswith("r"):
@@ -656,7 +660,7 @@ def _has_explicit_stale_fiscal_year_label(candidate: PdfCandidate, *, target_yea
                     return True
     for match in re.finditer(r"(?<!\d)(20\d{2})\s*年度", text):
         year = int(match.group(1))
-        if target_year - 8 <= year < target_year:
+        if max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= year < target_year:
             return True
     return False
 
