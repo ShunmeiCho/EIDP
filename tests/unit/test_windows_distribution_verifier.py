@@ -279,6 +279,8 @@ def _core_entries() -> dict[str, bytes | str]:
         ).read_text(encoding="utf-8"),
         "src/eidp/scraper/pdf_discovery.py": (
             "strict_target_fiscal_year\n"
+            "MIN_SUPPORTED_FISCAL_YEAR = 2019\n"
+            "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR\n"
             "target_fiscal_year_not_detected\n"
             "fiscal_year_mismatch:\n"
             "target_application_not_detected\n"
@@ -624,6 +626,7 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert not check.ok
     assert any("src/eidp/scraper/pdf_discovery.py missing required token" in error for error in check.errors)
     assert any("target_fiscal_year_not_detected" in error for error in check.errors)
+    assert any("MIN_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(tmp_path: Path) -> None:

@@ -2756,6 +2756,28 @@ def test_detect_fiscal_year_ignores_completion_year_label() -> None:
     assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) is None
 
 
+def test_detect_fiscal_year_ignores_pre_supported_history_years() -> None:
+    text = (
+        "様式第2号 高等教育の修学支援新制度 確認申請書\n"
+        "沿革 2005年度 開校\n"
+        "2018年度 旧制度説明\n"
+        "機関要件 学科名 生徒総定員"
+    )
+
+    assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) is None
+
+
+def test_detect_fiscal_year_skips_pre_supported_year_before_current_label() -> None:
+    text = (
+        "様式第2号 高等教育の修学支援新制度 確認申請書\n"
+        "沿革 2018年度 旧制度説明\n"
+        "2026年度 申請内容\n"
+        "機関要件 学科名 生徒総定員"
+    )
+
+    assert _detect_fiscal_year_from_text(text, max_fiscal_year=2026) == 2026
+
+
 def test_download_pdf_rejects_stale_fiscal_year_in_strict_target_mode(
     monkeypatch, tmp_path: Path
 ) -> None:

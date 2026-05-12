@@ -38,6 +38,7 @@ from eidp.scraper.url_normalization import normalize_candidate_url
 log = structlog.get_logger()
 
 PdfDiscoveryProgressCallback = Callable[[dict[str, int], int], None]
+MIN_SUPPORTED_FISCAL_YEAR = 2019
 
 
 def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
@@ -882,6 +883,8 @@ def _is_followed_by_year_month_date(text: str, end_index: int) -> bool:
 
 def _within_detectable_year(fiscal_year: int | None, max_fiscal_year: int | None) -> int | None:
     if fiscal_year is None:
+        return None
+    if fiscal_year < MIN_SUPPORTED_FISCAL_YEAR:
         return None
     if max_fiscal_year is not None and fiscal_year > max_fiscal_year:
         return None

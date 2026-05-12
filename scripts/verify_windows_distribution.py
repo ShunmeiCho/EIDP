@@ -957,6 +957,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
         "src/eidp/scraper/pdf_discovery.py": (
             "strict_target_fiscal_year",
+            "MIN_SUPPORTED_FISCAL_YEAR = 2019",
+            "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR",
             "target_fiscal_year_not_detected",
             "fiscal_year_mismatch:",
             "target_application_not_detected",
