@@ -863,7 +863,7 @@ def _prioritize_viable_candidates(
     *,
     target_year: int,
     school_name: str = "",
-) -> tuple[list[PdfCandidate], int]:
+) -> tuple[list[PdfCandidate], list[PdfCandidate]]:
     """Prioritize target-like candidates and cap generic PDF scanning."""
 
     priority: list[tuple[int, int, int, int, PdfCandidate]] = []
@@ -883,9 +883,9 @@ def _prioritize_viable_candidates(
 
     priority.sort(key=lambda item: (item[0], item[1], item[2], -item[4].score, item[3]))
     general.sort(key=lambda item: (item[0], -item[2].score, item[1]))
-    dropped = max(len(general) - MAX_GENERAL_CANDIDATE_SCAN, 0)
     ordered = [candidate for _, _, _, _, candidate in priority]
     ordered.extend(candidate for _, _, candidate in general[:MAX_GENERAL_CANDIDATE_SCAN])
+    dropped = [candidate for _, _, candidate in general[MAX_GENERAL_CANDIDATE_SCAN:]]
     return ordered, dropped
 
 
@@ -2606,14 +2606,27 @@ def run_pdf_discovery(
                     _score_candidate(c, target_fiscal_year=target_year)
                 result.candidates.sort(key=lambda c: c.score, reverse=True)
             viable = [c for c in result.candidates if c.score >= 0]
-            viable, candidate_budget_dropped = _prioritize_viable_candidates(
+            viable, candidate_budget_dropped_candidates = _prioritize_viable_candidates(
                 viable,
                 target_year=target_year,
                 school_name=site.school.school_name if site.school is not None else "",
             )
-            if candidate_budget_dropped:
+            if candidate_budget_dropped_candidates:
                 stats["candidate_budget_limited"] += 1
-                stats["candidate_budget_dropped"] += candidate_budget_dropped
+                stats["candidate_budget_dropped"] += len(candidate_budget_dropped_candidates)
+                for c in candidate_budget_dropped_candidates:
+                    record_discovery_evidence(RejectionEvidence(
+                        school_id=site.school_id,
+                        pdf_url=c.pdf_url,
+                        page_url=c.page_url,
+                        anchor_text=c.anchor_text,
+                        pattern_type=c.pattern_type,
+                        score=c.score,
+                        reason="candidate_budget_dropped",
+                        extra={
+                            "candidate_budget": f"max_general_candidate_scan={MAX_GENERAL_CANDIDATE_SCAN}",
+                        },
+                    ))
             if not viable:
                 job.status = "review"
                 job.error_message = "all candidates have negative score"

@@ -1057,6 +1057,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "(?:[?#][^\"\\']*)?",
             "_without_url_fragment",
             "_append_or_upgrade_candidate",
+            "candidate_budget_dropped",
+            "max_general_candidate_scan=",
             "SchoolSite.school_id.asc()",
             "SchoolSite.id.asc()",
         ),

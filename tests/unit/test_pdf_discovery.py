@@ -12,6 +12,7 @@ from eidp.db.models import Base, CrawlJob, Document, School, SchoolSite
 from eidp.fiscal_year import JapaneseEra, active_japanese_eras, configure_japanese_eras
 from eidp.scraper.pdf_discovery import (
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
+    MAX_GENERAL_CANDIDATE_SCAN,
     DiscoveryResult,
     PdfCandidate,
     _append_unique_candidates,
@@ -293,7 +294,7 @@ def test_prioritize_viable_candidates_prefers_matching_school_section() -> None:
         school_name="大原医療秘書福祉専門学校大宮校",
     )
 
-    assert dropped == 0
+    assert dropped == []
     assert ordered == [target_school, other_school]
 
 
@@ -2737,8 +2738,27 @@ def test_prioritize_viable_candidates_prefers_current_year_target_over_higher_sc
 
     ordered, dropped = _prioritize_viable_candidates([stale, current], target_year=2026)
 
-    assert dropped == 0
+    assert dropped == []
     assert ordered == [current, stale]
+
+
+def test_prioritize_viable_candidates_returns_budget_dropped_general_candidates() -> None:
+    candidates = [
+        PdfCandidate(
+            pdf_url=f"https://example.ac.jp/docs/generic-{idx:03d}.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="情報公開資料",
+        )
+        for idx in range(MAX_GENERAL_CANDIDATE_SCAN + 2)
+    ]
+
+    ordered, dropped = _prioritize_viable_candidates(candidates, target_year=2026)
+
+    assert len(ordered) == MAX_GENERAL_CANDIDATE_SCAN
+    assert [candidate.pdf_url for candidate in dropped] == [
+        f"https://example.ac.jp/docs/generic-{MAX_GENERAL_CANDIDATE_SCAN:03d}.pdf",
+        f"https://example.ac.jp/docs/generic-{MAX_GENERAL_CANDIDATE_SCAN + 1:03d}.pdf",
+    ]
 
 
 def test_run_pdf_discovery_evidence_records_target_fiscal_year(
@@ -2774,6 +2794,69 @@ def test_run_pdf_discovery_evidence_records_target_fiscal_year(
         ]
         assert payload["reason"] == "no_candidates_found"
         assert payload["extra"]["target_fiscal_year"] == "2027"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_records_candidate_budget_dropped_evidence(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Budget-capped candidates must remain reproducible in discovery evidence."""
+
+    session = _session()
+    evidence = tmp_path / "evidence.jsonl"
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+        candidates = [
+            PdfCandidate(
+                pdf_url=f"https://example.ac.jp/docs/generic-{idx:03d}.pdf",
+                page_url="https://example.ac.jp/disclosure/",
+                anchor_text="情報公開資料",
+            )
+            for idx in range(MAX_GENERAL_CANDIDATE_SCAN + 1)
+        ]
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=candidates, best=candidates[0])
+
+        def fake_download(
+            _client,
+            _candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            return None, None, 0, "unknown", "too_small"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        dropped = [
+            payload
+            for payload in payloads
+            if payload["reason"] == "candidate_budget_dropped"
+        ]
+        assert stats["candidate_budget_limited"] == 1
+        assert stats["candidate_budget_dropped"] == 1
+        assert len(dropped) == 1
+        assert dropped[0]["pdf_url"] == f"https://example.ac.jp/docs/generic-{MAX_GENERAL_CANDIDATE_SCAN:03d}.pdf"
+        assert dropped[0]["extra"]["candidate_budget"] == f"max_general_candidate_scan={MAX_GENERAL_CANDIDATE_SCAN}"
+        assert dropped[0]["extra"]["target_fiscal_year"] == "2026"
     finally:
         session.close()
 

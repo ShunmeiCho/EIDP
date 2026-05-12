@@ -336,6 +336,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "(?:[?#][^\"\\']*)?\n"
             "_without_url_fragment\n"
             "_append_or_upgrade_candidate\n"
+            "candidate_budget_dropped\n"
+            "max_general_candidate_scan=\n"
             "SchoolSite.school_id.asc()\n"
             "SchoolSite.id.asc()\n"
         ),
@@ -802,6 +804,8 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("(?:[?#][^\"\\']*)?" in error for error in check.errors)
     assert any("_without_url_fragment" in error for error in check.errors)
     assert any("_append_or_upgrade_candidate" in error for error in check.errors)
+    assert any("candidate_budget_dropped" in error for error in check.errors)
+    assert any("max_general_candidate_scan=" in error for error in check.errors)
     assert any("SchoolSite.school_id.asc()" in error for error in check.errors)
     assert any("SchoolSite.id.asc()" in error for error in check.errors)
 
