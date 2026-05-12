@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `34c77bd309e3fd6b39be1b0eac63dd85cf395684` (`eidp-windows-v261.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `1385e19e9a005c8b9789a5452a3ccd9ed7bf913c` (`eidp-windows-v262.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -717,6 +717,21 @@ and the latest alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v261 is still pending and must not be
+inferred from the Mac verifier.
+
+v262 (`1385e19`) makes publication-lag replay deterministic when multiple old
+target forms are present for the same school/year. For same-priority
+`publication_lag_latest_public` predictions, `eval-discovery-gold
+--pdf-evidence` now keeps the highest detected fiscal year, matching the
+outcome's "latest public old-year target" meaning instead of preserving
+log-order accident. `dist/eidp-windows-v262.zip` and the latest alias
+`dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`4afdb8a11aaf594d7b80057e446b6083bdeffd7969e3d798e03e426f01e10427`,
+`git_commit=1385e19e9a005c8b9789a5452a3ccd9ed7bf913c`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v262 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
