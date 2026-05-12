@@ -7,7 +7,7 @@ Package commit: `9fe773e972f76043fd5d3d96431b18754ee05711`
 Package SHA256: `5af664c961768b9003ebbb9191d3ed5ef2fffdd76337b09cba92f14eaf97c5a2`
 Latest Windows-core-validated package: `dist/eidp-windows-v332.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v332.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v331.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v332.zip`
 
 ## Verdict
 
@@ -20,10 +20,10 @@ actionable RCA counts, the v330 raw-control-character URL guard, and the v331
 one-retry guard for transient registered-page timeouts plus structured
 `discovery_error` evidence (`error_code`, `retryable`). It adds a committed
 HAL東京/NKZ embed-subpage discovery demonstration so the `<embed>` extractor is
-no longer only unit-test covered. Windows setup and SQLite initialization are
-proven on v332; diagnostics and a bounded 50-site Saitama bootstrap are still
-proven on v331. The product goal is still not complete: browser UI operator
-click-through is missing, and the measured
+no longer only unit-test covered. Windows setup, SQLite initialization,
+diagnostics, and a bounded 50-site Saitama bootstrap are proven on v332. The
+product goal is still not complete: browser UI operator click-through is
+missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
 line.
 
@@ -31,15 +31,15 @@ line.
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official indexes seed school public URLs | v332 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v331 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v332 verifier clean by default; discovery gold-set `23` entries; Windows v331 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `7`, processed `7`, and produced `5` Excel-ready schools | Mechanically proven, yield failing |
-| Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `9` publication-lag cases; Windows v331 evidence shows stale target PDFs rejected as `fiscal_year_mismatch:*`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Partially proven |
-| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v331 Saitama 50-site run processed `7` documents, ingested `5`, and wrote `18` yearly rows; `5` schools are Excel-ready | Partially proven |
+| 47 prefecture official indexes seed school public URLs | v332 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v332 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
+| Discover and download current target-FY PDFs in strict mode | v332 verifier clean by default; discovery gold-set `23` entries; Windows v332 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `7`, processed `7`, and produced `5` Excel-ready schools | Mechanically proven, yield failing |
+| Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `9` publication-lag cases; Windows v332 evidence shows stale target PDFs rejected as `fiscal_year_mismatch:*`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Partially proven |
+| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v332 Saitama 50-site run processed `7` documents, ingested `5`, and wrote `18` yearly rows; `5` schools are Excel-ready | Partially proven |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v332 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v332 | Partially proven |
 | ManualActionLog audit for operator actions | v332 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v332 | Partially proven |
 | ZIP distribution, double-click setup, browser UI offline operation | v332 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v332-9fe773e`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
-| Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v331 50-site diagnostics report `target_pdf_auto_yield_pct=0.2` as a diagnostic metric, `operator_reviewable_yield_pct=1.7`, `excel_ready=5`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
+| Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v332 50-site diagnostics report `target_pdf_auto_yield_pct=0.2` as a diagnostic metric, `operator_reviewable_yield_pct=1.7`, `excel_ready=5`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
 
 ## Current Non-Windows Evidence
 
@@ -67,7 +67,7 @@ v332 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v332 setup:
+Commands and observations from `ssh win` for v332 setup/bootstrap:
 
 - Uploaded `dist/eidp-windows-v332.zip` to
   `C:\Users\cyo20\eidp-windows-v332.zip`.
@@ -83,10 +83,36 @@ Commands and observations from `ssh win` for v332 setup:
 - Windows `eidp discovery-gold-set --json` reports `23` entries,
   `publication_lag_latest_public=9`, and demonstrated extractor sources
   `embed` plus `wordpress_download_manager`.
+- `scripts\bootstrap_pdfs.bat --pref saitama --skip-known-url-discovery --url-search off --school-url-crawl off --batch-size 50 --rate-limit 0.2 --request-timeout 15` -> exit `0`.
+- Official Saitama artifact downloaded; aggregate `extracted=58`,
+  `matched=51`, `added=51`, `review_items=2`.
+- PDF discovery: `crawled=50`, `found=49`, `downloaded=7`, `failed=4`,
+  `skipped=1235`, `prefiltered=919`, `cached_rejections=286`,
+  `candidate_school_mismatch=5160`, `candidate_budget_dropped=853`,
+  `rejection_reason_discovery_error=1`,
+  `rejection_reason_fiscal_year_mismatch=326`,
+  `rejection_reason_target_fiscal_year_not_detected=22`,
+  `rejection_reason_unsafe_url=1`.
+- Ingest: `processed=7`, `departments_created=12`, `yearly_upserted=18`,
+  `skipped=1`.
+- Rebuilt status: `excel_ready=5`, `target_pdf_auto_acquired_count=5`,
+  `operator_reviewable_count=41`, `operator_reviewable_yield_pct=1.7`,
+  `ship_gate_status=below_gate`.
+- Diagnostics after bootstrap:
+  `validate_core_rc=0`, `validate_after_setup_rc=0`,
+  `validate_after_bootstrap_rc=0`,
+  `validate_after_bootstrap_ship_gate_rc=1`, `ship_readiness_rc=1`.
+- Local evidence snapshot was pulled to `_temp/win-v332-evidence/`, including
+  `bootstrap-pdfs-20260513-035633.log`, `bootstrap-pdfs-20260513-035633.json`,
+  `diagnostics-20260513-041410.txt`, the RCA batch plan, and a copy of
+  `eidp.sqlite3`. SQLite checks on that snapshot report `2418` schools,
+  `51` school sites, `7` documents, `18` current 2026 DepartmentYearly rows,
+  `2418` 2026 school status rows, `5` Excel-ready schools, and `2` pending
+  review items.
 
 ## Previous Windows Bootstrap Evidence
 
-Commands and observations from `ssh win` for v331 setup/bootstrap:
+Earlier commands and observations from `ssh win` for v331 setup/bootstrap:
 
 - Uploaded `dist/eidp-windows-v331.zip` to
   `C:\Users\cyo20\eidp-windows-v331.zip`.
