@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `c3163224f09577b970d730f9ce55c54882e74ec5` (`eidp-windows-v303.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `058565650011d11132884bb6916af40580992756` (`eidp-windows-v304.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1550,6 +1550,28 @@ passed `scripts/verify_windows_distribution.py` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v303 is still pending and must not be
+inferred from the Mac verifier.
+
+v304 (`0585656`) adds retention for the timestamped weekly discovery evidence
+artifacts, not just `logs/run-*.log`. The weekly runner now keeps the latest
+configured number per artifact kind for `*-summary.json`,
+`*-discovery-rca-batch-plan.json`, `*-discovery-rejections.jsonl`, and
+`*-ingest-rejections.jsonl`; unrelated operator notes in the same output
+directory are left alone. Deletion failures are surfaced in the final JSON
+payload under `artifact_prune_failures`, matching the existing no-silent-failure
+contract for log pruning. Regression coverage adds per-kind artifact retention
+tests and a packaged verifier failure-path requiring `prune_run_artifacts` and
+`RUN_ARTIFACT_PATTERNS`. Verification: `tests/unit` passed with `1299 passed,
+5 warnings`, `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v304.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `a0a410412df25f0d54f3b6abc33ac97611ed4752dbaa8e0167304d07e990a928`,
+`git_commit=058565650011d11132884bb6916af40580992756`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v304 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
