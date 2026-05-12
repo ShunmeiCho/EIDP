@@ -371,7 +371,7 @@ class RenderedHtmlFetcher(Protocol):
     def fetch_html(self, url: str) -> str | None: ...
 
 
-PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url")
+PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url", "data-file", "data-pdf", "data-src")
 PDF_DATA_ATTRIBUTE_TAG_PATTERN = r"(?:a|button|span|div)"
 PDF_SCRIPT_URL_PATTERN = re.compile(r"([\"'])([^\"']*?\.pdf(?:[?#][^\"']*)?)\1", re.IGNORECASE)
 

@@ -312,6 +312,9 @@ def _core_entries() -> dict[str, bytes | str]:
             "button|span|div\n"
             "\"data-href\"\n"
             "\"data-url\"\n"
+            "\"data-file\"\n"
+            "\"data-pdf\"\n"
+            "\"data-src\"\n"
             "_candidate_dedupe_preference\n"
             "_candidate_dedupe_year_preference\n"
             "candidate_year == target_year\n"
@@ -761,6 +764,9 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("button|span|div" in error for error in check.errors)
     assert any('"data-href"' in error for error in check.errors)
     assert any('"data-url"' in error for error in check.errors)
+    assert any('"data-file"' in error for error in check.errors)
+    assert any('"data-pdf"' in error for error in check.errors)
+    assert any('"data-src"' in error for error in check.errors)
     assert any("_candidate_dedupe_preference" in error for error in check.errors)
     assert any("_candidate_dedupe_year_preference" in error for error in check.errors)
     assert any("candidate_year == target_year" in error for error in check.errors)
