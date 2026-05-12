@@ -410,7 +410,9 @@ def load_discovery_gold_predictions_from_pdf_evidence(
             continue
         priority = _prediction_priority(prediction.outcome)
         current = predictions_by_entry_id.get(prediction.entry_id)
-        if current is None or priority > current[0]:
+        if current is None or priority > current[0] or (
+            priority == current[0] and _is_better_tie_break_prediction(prediction, current[1])
+        ):
             predictions_by_entry_id[prediction.entry_id] = (priority, prediction)
 
     return [item[1] for item in sorted(predictions_by_entry_id.values(), key=lambda item: item[1].entry_id)]
@@ -535,6 +537,14 @@ def _prediction_priority(outcome: str) -> int:
         "site_fetch_error": 2,
         "no_target_candidate_found": 1,
     }.get(outcome, 0)
+
+
+def _is_better_tie_break_prediction(candidate: DiscoveryGoldPrediction, current: DiscoveryGoldPrediction) -> bool:
+    """Return whether a same-priority prediction is the more useful replay result."""
+
+    if candidate.outcome == current.outcome == "publication_lag_latest_public":
+        return (candidate.fiscal_year or 0) > (current.fiscal_year or 0)
+    return False
 
 
 def _int_or_none(value: object) -> int | None:

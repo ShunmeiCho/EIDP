@@ -452,6 +452,57 @@ def test_load_predictions_prefers_old_target_over_non_target_candidate_noise(tmp
     ]
 
 
+def test_load_predictions_uses_latest_public_old_target_when_multiple_stale_forms(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/r6-target.pdf",
+                        "reason": "fiscal_year_mismatch:2024",
+                        "pdf_type": "target",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/r7-target.pdf",
+                        "reason": "fiscal_year_mismatch:2025",
+                        "pdf_type": "target",
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    entries = [
+        _entry(
+            entry_id="latest-old-target",
+            school_id=1,
+            target_fiscal_year=2026,
+            outcome="publication_lag_latest_public",
+            pdf_url="https://example.ac.jp/r7-target.pdf",
+            fiscal_year=2025,
+        )
+    ]
+
+    predictions = load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries)
+
+    assert predictions == [
+        DiscoveryGoldPrediction(
+            entry_id="latest-old-target",
+            outcome="publication_lag_latest_public",
+            pdf_url="https://example.ac.jp/r7-target.pdf",
+            fiscal_year=2025,
+            strict_target_year_success=False,
+        )
+    ]
+
+
 def test_load_predictions_prefers_site_fetch_error_over_non_target_candidate_noise(tmp_path: Path) -> None:
     evidence_path = tmp_path / "discovery-evidence.jsonl"
     evidence_path.write_text(
