@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `281643c38c5ba25980dcf8676653deeedda421f8` (`eidp-windows-v264.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `5a740365737671477bdd1807a300294223d92a7b` (`eidp-windows-v265.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -764,6 +764,21 @@ alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v264 is still pending and must not be
+inferred from the Mac verifier.
+
+v265 (`5a74036`) adds the package-level guard for the v264 rolling PDF
+fiscal-year parser. The Windows distribution verifier now requires packaged
+`src/eidp/pdf/extractor.py` to keep `_extract_fiscal_year`, the `20xx`
+western filing-date/fallback patterns, the max-fiscal-year cap, and the
+Japanese-era formatter path. The focused verifier test now fails a ZIP fixture
+that regresses to the old `2020`-`2029` parser. `dist/eidp-windows-v265.zip`
+and the latest alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`18e21a1e69f528aadea2922f861d7103cb13f950c30d459719eaa8d0f305d48c`,
+`git_commit=5a740365737671477bdd1807a300294223d92a7b`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v265 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
