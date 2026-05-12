@@ -656,6 +656,8 @@ def test_verify_core_zip_requires_discovery_gold_replay_semantics_contract(tmp_p
     assert any("detected_fiscal_year" in error for error in check.errors)
     assert any("DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS" in error for error in check.errors)
     assert any('"site_fetch_error": 2' in error for error in check.errors)
+    assert any("_is_better_tie_break_prediction" in error for error in check.errors)
+    assert any("candidate.fiscal_year" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) -> None:

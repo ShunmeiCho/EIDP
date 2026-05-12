@@ -976,6 +976,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '"classified_non_target"',
             '"all_negative_score"',
             '"site_fetch_error": 2',
+            "_is_better_tie_break_prediction",
+            'candidate.outcome == current.outcome == "publication_lag_latest_public"',
+            "(candidate.fiscal_year or 0) > (current.fiscal_year or 0)",
         ),
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly",
