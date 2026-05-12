@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `e9bc2962868ccca0e8ffbaa05554d5f9f7541127` (`eidp-windows-v286.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `3bd694050c2641518c1b583d9292f2cf3d672951` (`eidp-windows-v287.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1185,6 +1185,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v286 is still pending and must not be
+inferred from the Mac verifier.
+
+v287 (`3bd6940`) stabilizes the v286 fragment-link path by stripping URL
+fragments before download attempts. Fragment identifiers select a browser/PDF
+viewer position, not a separate PDF resource, so `_download_attempt_urls` now
+downloads `.pdf#page=1` as `.pdf` and `.pdf?dl=1#toolbar=0` as `.pdf?dl=1`.
+This keeps HTTP fetches, rejection-cache keys, evidence URLs, and packaged
+runtime behavior deterministic while still allowing fragment-bearing links to
+be discovered. The Windows distribution verifier now requires the packaged
+fragment-stripping helper. Verification: `tests/unit` passed with
+`1282 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v287.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`ad9e177f3b11d9d51b121fb52aac97263bfffecd098e9e874b2c5a64defe6ce3`,
+`git_commit=3bd694050c2641518c1b583d9292f2cf3d672951`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v287 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
