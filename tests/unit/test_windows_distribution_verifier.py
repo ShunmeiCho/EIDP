@@ -290,57 +290,8 @@ def _core_entries() -> dict[str, bytes | str]:
             REPO_ROOT / "src" / "eidp" / "db" / "sqlite_bootstrap.py"
         ).read_text(encoding="utf-8"),
         "src/eidp/scraper/pdf_discovery.py": (
-            "strict_target_fiscal_year\n"
-            "MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR\n"
-            "MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR\n"
-            "MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR\n"
-            "max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8)\n"
-            "min(MAX_SUPPORTED_FISCAL_YEAR + 1, target_year + 3)\n"
-            "target_fiscal_year_not_detected\n"
-            "fiscal_year_mismatch:\n"
-            "target_application_not_detected\n"
-            "prefecture_index_current_year\n"
-            "trusted_year_evidence if strict_target_fiscal_year else \"\"\n"
-            "\"target_fiscal_year\" not in evidence.extra\n"
-            "replace(evidence\n"
-            "candidate.detected_fiscal_year >= target_year\n"
-            "has_fiscal_year_text\n"
-            "_candidate_download_year_rank\n"
-            "PDF_LINK_ATTRIBUTE_NAMES\n"
-            "PDF_DATA_ATTRIBUTE_TAG_PATTERN\n"
-            "PDF_SCRIPT_URL_PATTERN\n"
-            "PDF_META_REFRESH_PATTERN\n"
-            "PDF_OPTION_VALUE_PATTERN\n"
-            "PDF_FORM_ACTION_PATTERN\n"
-            "PDF_INPUT_TAG_PATTERN\n"
-            "PDF_EMBED_TAG_NAMES\n"
-            "PDF_EMBED_ATTRIBUTE_NAMES\n"
-            "_pdf_url_from_meta_refresh_content\n"
-            "\"http-equiv\"\n"
-            "_pdf_element_context_text\n"
-            "pattern_type=\"embed\"\n"
-            "\"value\"\n"
-            "\"action\"\n"
-            "_pdf_urls_from_script_attribute\n"
-            "\"onclick\"\n"
-            "button|span|div\n"
-            "\"data-href\"\n"
-            "\"data-url\"\n"
-            "\"data-file\"\n"
-            "\"data-pdf\"\n"
-            "\"data-src\"\n"
-            "_candidate_dedupe_preference\n"
-            "_candidate_dedupe_year_preference\n"
-            "candidate_year == target_year\n"
-            "target_fiscal_year=target_year\n"
-            "(?:[?#][^\"\\']*)?\n"
-            "_without_url_fragment\n"
-            "_append_or_upgrade_candidate\n"
-            "candidate_budget_dropped\n"
-            "max_general_candidate_scan=\n"
-            "SchoolSite.school_id.asc()\n"
-            "SchoolSite.id.asc()\n"
-        ),
+            REPO_ROOT / "src" / "eidp" / "scraper" / "pdf_discovery.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/scraper/url_discovery.py": (
             REPO_ROOT / "src" / "eidp" / "scraper" / "url_discovery.py"
         ).read_text(encoding="utf-8"),
@@ -783,6 +734,14 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("PDF_INPUT_TAG_PATTERN" in error for error in check.errors)
     assert any("PDF_EMBED_TAG_NAMES" in error for error in check.errors)
     assert any("PDF_EMBED_ATTRIBUTE_NAMES" in error for error in check.errors)
+    assert any("_pdf_delivery_pattern" in error for error in check.errors)
+    assert any('source="meta_refresh"' in error for error in check.errors)
+    assert any('source="select_option"' in error for error in check.errors)
+    assert any('source="form_action"' in error for error in check.errors)
+    assert any('source="data_attribute"' in error for error in check.errors)
+    assert any('source="onclick"' in error for error in check.errors)
+    assert any('source="input_control"' in error for error in check.errors)
+    assert any('endswith("_direct")' in error for error in check.errors)
     assert any("_pdf_url_from_meta_refresh_content" in error for error in check.errors)
     assert any('"http-equiv"' in error for error in check.errors)
     assert any("_pdf_element_context_text" in error for error in check.errors)
@@ -808,6 +767,23 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("max_general_candidate_scan=" in error for error in check.errors)
     assert any("SchoolSite.school_id.asc()" in error for error in check.errors)
     assert any("SchoolSite.id.asc()" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_pdf_delivery_pattern_provenance(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/pdf_discovery.py"] = str(entries["src/eidp/scraper/pdf_discovery.py"]).replace(
+        'source="onclick"',
+        'source="script"',
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        'src/eidp/scraper/pdf_discovery.py missing required token: source="onclick"' in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_rejects_english_renewal_tokens_in_pdf_discovery(tmp_path: Path) -> None:
