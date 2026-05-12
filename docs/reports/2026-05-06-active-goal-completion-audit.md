@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `3bd694050c2641518c1b583d9292f2cf3d672951` (`eidp-windows-v287.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `99789d37f2d189bb044e484c534e626d40b36360` (`eidp-windows-v288.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1206,6 +1206,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v287 is still pending and must not be
+inferred from the Mac verifier.
+
+v288 (`99789d3`) adds a packaged rolling-year contract for PDF discovery:
+`src/eidp/scraper/pdf_discovery.py` must not contain one-year literals for
+the current FY2026/令和8/R8 cycle. The verifier already requires the positive
+rolling-year hooks (`target_fiscal_year`, bounded supported FY range,
+`fiscal_year_search_tokens`, target-year candidate dedupe, and
+`settings.target_fiscal_year` plumbing); v288 adds the corresponding negative
+gate so future fixes cannot quietly hard-code `2026`, `令和8`, `令和８`, `R8`,
+or `r8` into the runtime module. Verification: `tests/unit` passed with
+`1283 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v288.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`e1dc42966bc74a74857d456a6a097b1fda1b06f06e0e81193a1d5d5ad40a13ca`,
+`git_commit=99789d37f2d189bb044e484c534e626d40b36360`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v288 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
