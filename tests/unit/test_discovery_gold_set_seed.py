@@ -4,6 +4,7 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typer.testing import CliRunner
@@ -89,7 +90,7 @@ def test_seed_discovery_gold_sites_is_idempotent_on_existing_site() -> None:
 def test_seed_discovery_gold_sites_rejects_unsafe_site_url_before_writing() -> None:
     session = _session()
     [entry] = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]
-    unsafe_entry = replace(entry, disclosure_url="file:///etc/passwd", school_url="")
+    unsafe_entry = replace(entry, disclosure_url="https://127.0.0.1/admin", school_url="")
 
     stats = seed_discovery_gold_sites(session, [unsafe_entry], apply=True, safe_url_checker=lambda _url: False)
     session.commit()
@@ -101,6 +102,18 @@ def test_seed_discovery_gold_sites_rejects_unsafe_site_url_before_writing() -> N
         "sites_existing": 0,
         "invalid_site_urls": 1,
     }
+    assert session.query(School).count() == 0
+    assert session.query(SchoolSite).count() == 0
+
+
+def test_seed_discovery_gold_sites_fails_fast_on_semantically_invalid_entry() -> None:
+    session = _session()
+    [entry] = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]
+    invalid_entry = replace(entry, disclosure_url="file:///etc/passwd", school_url="")
+
+    with pytest.raises(ValueError, match="seed site URL must be an absolute http"):
+        seed_discovery_gold_sites(session, [invalid_entry], apply=True, safe_url_checker=lambda _url: True)
+
     assert session.query(School).count() == 0
     assert session.query(SchoolSite).count() == 0
 

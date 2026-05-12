@@ -202,6 +202,13 @@ def seed_discovery_gold_sites(
     from eidp.db.models import School, SchoolSite
     from eidp.scraper.url_discovery import _is_safe_url
 
+    validation_errors = validate_discovery_gold_entries(entries)
+    if validation_errors:
+        preview = "; ".join(validation_errors[:5])
+        if len(validation_errors) > 5:
+            preview += f"; ... ({len(validation_errors)} total)"
+        raise ValueError(f"invalid discovery gold-set entries: {preview}")
+
     checker = safe_url_checker or _is_safe_url
     stats: dict[str, int | bool] = {
         "applied": apply,
