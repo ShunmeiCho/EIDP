@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `ea8f1e9e0e31202f57674b527e20a35f8c51bf9b` (`eidp-windows-v252.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `94251ebd61b9065b97ca219255439356c198d3ab` (`eidp-windows-v253.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -570,6 +570,21 @@ it to the wrong year. `dist/eidp-windows-v252.zip` and the latest alias
 `git_commit=ea8f1e9e0e31202f57674b527e20a35f8c51bf9b`, `git_dirty=false`,
 `entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
 `47` downloadable supported prefecture seeds. Windows E2E for v252 is still
+pending and must not be inferred from the Mac verifier.
+
+v253 (`94251eb`) adds a package verifier gate for the v252 rolling evidence
+contract. The Windows ZIP verifier now requires packaged `pdf_discovery.py` to
+record `target_fiscal_year` on discovery evidence rows and packaged
+`discovery_gold_set.py` to match evidence by `(school_id, target_fiscal_year)`
+before falling back to unambiguous legacy school-only evidence. This makes the
+non-Windows package gate catch regressions in the multi-year discovery replay
+contract, not just the unit suite. `dist/eidp-windows-v253.zip` and the latest
+alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`221304670352d19d4e59b0650a658e0907e14eadecc3fd205dd1475416e57792`,
+`git_commit=94251ebd61b9065b97ca219255439356c198d3ab`, `git_dirty=false`,
+`entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
+`47` downloadable supported prefecture seeds. Windows E2E for v253 is still
 pending and must not be inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
