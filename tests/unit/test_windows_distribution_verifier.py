@@ -114,6 +114,32 @@ def _discovery_gold_entry(entry_id: str, outcome: str) -> str:
     ) + "\n"
 
 
+def _discovery_gold_expected_predictions() -> str:
+    lines = []
+    for entry_id, outcome in (
+        ("accepted", "accepted_target_pdf"),
+        ("review", "needs_operator_review"),
+        ("no-target", "no_target_candidate_found"),
+        ("publication-lag", "publication_lag_latest_public"),
+        ("site-fetch-error", "site_fetch_error"),
+    ):
+        payload = json.loads(_discovery_gold_entry(entry_id, outcome))
+        expected = payload["expected_result"]
+        lines.append(
+            json.dumps(
+                {
+                    "entry_id": payload["entry_id"],
+                    "outcome": payload["outcome"],
+                    "pdf_url": expected.get("pdf_url") or "",
+                    "fiscal_year": expected.get("fiscal_year"),
+                    "strict_target_year_success": bool(expected.get("strict_target_year_success", False)),
+                },
+                sort_keys=True,
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
 def _core_entries() -> dict[str, bytes | str]:
     return {
         "BUILD_INFO.json": json.dumps(
@@ -183,6 +209,7 @@ def _core_entries() -> dict[str, bytes | str]:
         ),
         "data/discovery-gold-set/README.md": "# Discovery Gold Set\n",
         "data/discovery-gold-set/schema.json": '{"title": "test discovery gold-set schema"}\n',
+        "data/discovery-gold-set/expected-predictions.jsonl": _discovery_gold_expected_predictions(),
         "data/discovery-gold-set/entries/accepted.json": _discovery_gold_entry(
             "accepted",
             "accepted_target_pdf",
@@ -413,6 +440,7 @@ def test_verify_core_zip_reports_discovery_gold_set_summary(tmp_path: Path) -> N
         "publication_lag_latest_public": 1,
         "site_fetch_error": 1,
     }
+    assert check.details["discovery_gold_expected_predictions"] == 5
 
 
 def test_verify_core_zip_rejects_invalid_discovery_gold_set_json(tmp_path: Path) -> None:
@@ -449,6 +477,32 @@ def test_verify_core_zip_rejects_semantically_invalid_discovery_gold_entry(tmp_p
 
     assert not check.ok
     assert any("accepted_target_pdf requires strict_target_year_success=true" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_missing_discovery_gold_expected_predictions(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries.pop("data/discovery-gold-set/expected-predictions.jsonl")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("data/discovery-gold-set/expected-predictions.jsonl" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_mismatched_discovery_gold_expected_predictions(tmp_path: Path) -> None:
+    entries = _core_entries()
+    lines = str(entries["data/discovery-gold-set/expected-predictions.jsonl"]).splitlines()
+    first = json.loads(lines[0])
+    first["strict_target_year_success"] = False
+    lines[0] = json.dumps(first, sort_keys=True)
+    entries["data/discovery-gold-set/expected-predictions.jsonl"] = "\n".join(lines) + "\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("prediction mismatch for accepted" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_discovery_gold_eval_regression_gate(tmp_path: Path) -> None:

@@ -95,6 +95,7 @@ CORE_REQUIRED_EXACT = (
     "data/url-discovery/corporation_domains.csv",
     "data/discovery-gold-set/README.md",
     "data/discovery-gold-set/schema.json",
+    "data/discovery-gold-set/expected-predictions.jsonl",
     "src/eidp/review/app.py",
     "src/eidp/review/operator_pages.py",
     "src/eidp/review/_pages/audit_log.py",
@@ -498,6 +499,7 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
         return
 
     outcome_counts: dict[str, int] = {}
+    expected_predictions: dict[str, dict[str, Any]] = {}
     for member in entry_members:
         payload = _read_zip_json(check, member, label="discovery gold-set")
         if payload is None:
@@ -514,6 +516,8 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
             continue
         outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
         _check_discovery_gold_entry_semantics(check, member, payload)
+        if isinstance(entry_id, str) and entry_id:
+            expected_predictions[entry_id] = _expected_prediction_from_gold_entry(payload)
 
     missing = sorted(DISCOVERY_GOLD_REQUIRED_OUTCOMES - set(outcome_counts))
     if missing:
@@ -521,6 +525,7 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
 
     check.details["discovery_gold_set_entries"] = len(entry_members)
     check.details["discovery_gold_set_outcomes"] = dict(sorted(outcome_counts.items()))
+    _check_discovery_gold_expected_predictions(check, names, expected_predictions)
 
 
 def _check_discovery_gold_entry_semantics(check: ZipCheck, member: str, payload: dict[str, Any]) -> None:
@@ -583,6 +588,70 @@ def _strict_int(value: object) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     return value
+
+
+def _expected_prediction_from_gold_entry(payload: dict[str, Any]) -> dict[str, Any]:
+    expected = payload.get("expected_result")
+    expected_result: dict[str, Any] = expected if isinstance(expected, dict) else {}
+    return {
+        "entry_id": str(payload.get("entry_id") or ""),
+        "outcome": str(payload.get("outcome") or ""),
+        "pdf_url": str(expected_result.get("pdf_url") or ""),
+        "fiscal_year": expected_result.get("fiscal_year"),
+        "strict_target_year_success": bool(expected_result.get("strict_target_year_success", False)),
+    }
+
+
+def _check_discovery_gold_expected_predictions(
+    check: ZipCheck,
+    names: set[str],
+    expected_by_entry_id: dict[str, dict[str, Any]],
+) -> None:
+    member = "data/discovery-gold-set/expected-predictions.jsonl"
+    if member not in names:
+        check.fail(f"{member} missing from core ZIP")
+        return
+
+    body = _read_zip_text(check, member)
+    if body is None:
+        return
+
+    seen: dict[str, dict[str, Any]] = {}
+    for line_no, line in enumerate(body.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            check.fail(f"{member}:{line_no} invalid JSONL prediction: {exc}")
+            continue
+        if not isinstance(payload, dict):
+            check.fail(f"{member}:{line_no} prediction must be a JSON object")
+            continue
+        entry_id = payload.get("entry_id")
+        if not isinstance(entry_id, str) or not entry_id:
+            check.fail(f"{member}:{line_no} prediction missing entry_id")
+            continue
+        if entry_id in seen:
+            check.fail(f"{member}:{line_no} duplicate prediction entry_id: {entry_id}")
+        seen[entry_id] = payload
+
+    for entry_id, expected in sorted(expected_by_entry_id.items()):
+        prediction = seen.get(entry_id)
+        if prediction is None:
+            check.fail(f"{member} missing prediction for discovery gold-set entry: {entry_id}")
+            continue
+        for key, expected_value in expected.items():
+            if prediction.get(key) != expected_value:
+                check.fail(
+                    f"{member} prediction mismatch for {entry_id}: "
+                    f"{key}={prediction.get(key)!r}, expected {expected_value!r}"
+                )
+
+    for entry_id in sorted(set(seen) - set(expected_by_entry_id)):
+        check.fail(f"{member} contains unexpected prediction entry_id: {entry_id}")
+
+    check.details["discovery_gold_expected_predictions"] = len(seen)
 
 
 def _require_text(check: ZipCheck, body: str, member: str, needle: str) -> None:

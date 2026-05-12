@@ -49,6 +49,18 @@ per line with `entry_id`, `outcome`, `pdf_url`, `fiscal_year`, and
 uv run eidp eval-discovery-gold --predictions path/to/predictions.jsonl --json
 ```
 
+The committed `expected-predictions.jsonl` file is the complete expected
+prediction fixture for the current gold set. It is intentionally checked into
+git so release gates can prove the evaluator itself still catches missing or
+mismatched entries:
+
+```bash
+uv run eidp eval-discovery-gold \
+  --predictions data/discovery-gold-set/expected-predictions.jsonl \
+  --fail-on-regression \
+  --json
+```
+
 Existing `discover-pdfs` evidence logs can be evaluated directly:
 
 ```bash
