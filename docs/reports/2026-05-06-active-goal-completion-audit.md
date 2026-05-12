@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `4a2b92df5b8b5eaf0321886577afb41487d9a6ee` (`eidp-windows-v308.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `4eecc76c02b576acb31d2000cafd410ec47a0c71` (`eidp-windows-v309.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -20,6 +20,21 @@ targeted ship-gate tests `240 passed`; full unit suite `1307 passed, 5
 warnings`; targeted Ruff on changed files passed; discovery gold-set replay
 `20/20 exact`; `dist/eidp-windows-v308.zip` verified clean with SHA256
 `ebaecabc312274885a55dbce0165e158a459b8ab8fab6c4185b46f3864c0c8dd`.
+Windows operator E2E is still pending.
+
+## 2026-05-12 V309 PDF Extractor Provenance
+
+v309 (`4eecc76`) preserves HTML extractor provenance in PDF candidate
+`pattern_type` values such as `data_attribute_cache_busted`,
+`select_option_cache_busted`, `form_action_cache_busted`, `onclick_cache_busted`,
+and `input_control_direct`. The direct-link parser now reads the real `href`
+attribute from the full anchor attribute block, so `data-href` is no longer
+misclassified as an ordinary direct link. This does not expand crawler scope; it
+makes discovery evidence reproducible by showing which extractor produced each
+candidate. Verification: focused PDF discovery tests `139 passed`; full unit
+suite `1308 passed, 5 warnings`; targeted Ruff passed; discovery gold-set replay
+`20/20 exact`; `dist/eidp-windows-v309.zip` verified clean with SHA256
+`8dfb8b9f2c6091f53b8c5f09699f0c9b17e15fe7c32d801777f3ab5ed748d7a6`.
 Windows operator E2E is still pending.
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
