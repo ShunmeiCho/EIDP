@@ -69,6 +69,8 @@ MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY = "pdf_manual_entry_document_id"
 MANUAL_QUEUE_VIEW_TARGET = "target_year"
 MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED = "target_year_with_ingested"
 MANUAL_QUEUE_VIEW_ALL = "all_documents"
+MANUAL_ENTRY_MIN_FISCAL_YEAR = 2019
+MANUAL_ENTRY_MAX_FISCAL_YEAR = 2099
 MANUAL_ACTION_FILTER_ALL = "すべて"
 MANUAL_ACTION_FILTER_ORDER: tuple[str, ...] = (
     "学校紐付け確認",
@@ -1178,7 +1180,10 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
     with st.form(key=f"form_{row.document_id}"):
         fiscal_year = st.number_input(
             "年度 (fiscal_year)",
-            min_value=2019, max_value=2030, value=fy_default, step=1,
+            min_value=MANUAL_ENTRY_MIN_FISCAL_YEAR,
+            max_value=MANUAL_ENTRY_MAX_FISCAL_YEAR,
+            value=fy_default,
+            step=1,
             key=f"fy_{row.document_id}",
         )
         reason = st.text_input("操作メモ (reason)", key=f"reason_{row.document_id}")

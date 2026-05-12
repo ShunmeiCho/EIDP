@@ -37,6 +37,8 @@ from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.review._pages.pdf_manual_entry import (
     MANUAL_ACTION_FILTER_ALL,
     MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY,
+    MANUAL_ENTRY_MAX_FISCAL_YEAR,
+    MANUAL_ENTRY_MIN_FISCAL_YEAR,
     MANUAL_QUEUE_VIEW_ALL,
     MANUAL_QUEUE_VIEW_TARGET,
     MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
@@ -67,6 +69,11 @@ from eidp.review._pages.pdf_manual_entry import (
     save_with_lock,
     school_site_evidence_table_rows,
 )
+
+
+def test_manual_entry_fiscal_year_bounds_are_long_lived() -> None:
+    assert MANUAL_ENTRY_MIN_FISCAL_YEAR == 2019
+    assert MANUAL_ENTRY_MAX_FISCAL_YEAR == 2099
 
 
 @pytest.fixture()
