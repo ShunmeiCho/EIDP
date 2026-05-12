@@ -5,8 +5,8 @@ Branch: `sprint8-handoff-finalize`
 Current Mac-verifier-clean package: `dist/eidp-windows-v332.zip`
 Package commit: `9fe773e972f76043fd5d3d96431b18754ee05711`
 Package SHA256: `5af664c961768b9003ebbb9191d3ed5ef2fffdd76337b09cba92f14eaf97c5a2`
-Latest Windows-core-validated package: `dist/eidp-windows-v331.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v331.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v332.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v332.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v331.zip`
 
 ## Verdict
@@ -20,9 +20,9 @@ actionable RCA counts, the v330 raw-control-character URL guard, and the v331
 one-retry guard for transient registered-page timeouts plus structured
 `discovery_error` evidence (`error_code`, `retryable`). It adds a committed
 HAL東京/NKZ embed-subpage discovery demonstration so the `<embed>` extractor is
-no longer only unit-test covered. Windows setup, SQLite initialization,
-diagnostics, and a bounded 50-site Saitama bootstrap are still proven on v331,
-not v332. The product goal is still not complete: browser UI operator
+no longer only unit-test covered. Windows setup and SQLite initialization are
+proven on v332; diagnostics and a bounded 50-site Saitama bootstrap are still
+proven on v331. The product goal is still not complete: browser UI operator
 click-through is missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
 line.
@@ -38,7 +38,7 @@ line.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v332 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v332 | Partially proven |
 | ManualActionLog audit for operator actions | v332 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v332 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v331 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v331-9730b5a`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v332 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v332-9fe773e`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v331 50-site diagnostics report `target_pdf_auto_yield_pct=0.2` as a diagnostic metric, `operator_reviewable_yield_pct=1.7`, `excel_ready=5`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
 
 ## Current Non-Windows Evidence
@@ -66,6 +66,25 @@ v332 verifier exposes the current demonstration gap:
   `input_control`, `meta_refresh`, `onclick`, `select_option`
 
 ## Current Windows Backend Evidence
+
+Commands and observations from `ssh win` for v332 setup:
+
+- Uploaded `dist/eidp-windows-v332.zip` to
+  `C:\Users\cyo20\eidp-windows-v332.zip`.
+- Windows `Get-FileHash -Algorithm SHA256` ->
+  `5AF664C961768B9003EBBB9191D3ED5EF2FFFDD76337B09CBA92F14EAF97C5A2`.
+- Extracted to `C:\Users\cyo20\EIDP-v332-9fe773e`.
+- `scripts\first_setup.bat` -> exit `0`; after-setup validator reported
+  commit `9fe773e972f76043fd5d3d96431b18754ee05711`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  required SQLite tables present, `department_change` void columns present,
+  and `uq_document_file_hash` present.
+- Windows `eidp discovery-gold-set --json` reports `23` entries,
+  `publication_lag_latest_public=9`, and demonstrated extractor sources
+  `embed` plus `wordpress_download_manager`.
+
+## Previous Windows Bootstrap Evidence
 
 Commands and observations from `ssh win` for v331 setup/bootstrap:
 
