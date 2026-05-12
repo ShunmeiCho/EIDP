@@ -202,6 +202,16 @@ DISCOVERY_GOLD_REQUIRED_OUTCOMES = frozenset(
     }
 )
 DISCOVERY_GOLD_ALLOWED_OUTCOMES = DISCOVERY_GOLD_REQUIRED_OUTCOMES
+DISCOVERY_GOLD_TRACKED_EXTRACTOR_SOURCES = (
+    "data_attribute",
+    "embed",
+    "form_action",
+    "input_control",
+    "meta_refresh",
+    "onclick",
+    "select_option",
+    "wordpress_download_manager",
+)
 
 OCR_REQUIRED_EXACT = (
     "ocr-addon/tesseract/tesseract.exe",
@@ -508,6 +518,7 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
 
     outcome_counts: dict[str, int] = {}
     pattern_type_counts: dict[str, int] = {}
+    pattern_source_counts: dict[str, int] = {}
     expected_predictions: dict[str, dict[str, Any]] = {}
     for member in entry_members:
         payload = _read_zip_json(check, member, label="discovery gold-set")
@@ -529,6 +540,9 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
             pattern_type = str(expected_result.get("pattern_type") or "")
             if pattern_type:
                 pattern_type_counts[pattern_type] = pattern_type_counts.get(pattern_type, 0) + 1
+                pattern_source = _discovery_pattern_source(pattern_type)
+                if pattern_source:
+                    pattern_source_counts[pattern_source] = pattern_source_counts.get(pattern_source, 0) + 1
         _check_discovery_gold_entry_semantics(check, member, payload)
         if isinstance(entry_id, str) and entry_id:
             expected_predictions[entry_id] = _expected_prediction_from_gold_entry(payload)
@@ -540,6 +554,10 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
     check.details["discovery_gold_set_entries"] = len(entry_members)
     check.details["discovery_gold_set_outcomes"] = dict(sorted(outcome_counts.items()))
     check.details["discovery_gold_pattern_types"] = dict(sorted(pattern_type_counts.items()))
+    check.details["discovery_gold_pattern_sources"] = dict(sorted(pattern_source_counts.items()))
+    check.details["discovery_gold_undemonstrated_pattern_sources"] = [
+        source for source in DISCOVERY_GOLD_TRACKED_EXTRACTOR_SOURCES if source not in pattern_source_counts
+    ]
     _check_discovery_gold_expected_predictions(check, names, expected_predictions)
 
 
@@ -624,6 +642,15 @@ def _expected_prediction_from_gold_entry(payload: dict[str, Any]) -> dict[str, A
     if pattern_type := str(expected_result.get("pattern_type") or ""):
         prediction["pattern_type"] = pattern_type
     return prediction
+
+
+def _discovery_pattern_source(pattern_type: str) -> str:
+    if pattern_type == "wordpress_download_manager":
+        return pattern_type
+    for suffix in ("_cache_busted", "_direct", "_wordpress"):
+        if pattern_type.endswith(suffix):
+            return pattern_type.removesuffix(suffix)
+    return pattern_type
 
 
 def _check_discovery_gold_expected_predictions(

@@ -987,6 +987,10 @@ def discovery_gold_set(
         typer.echo("  extractor patterns:")
         for pattern_type, count in summary.pattern_type_counts.items():
             typer.echo(f"    {pattern_type}: {count}")
+    if summary.undemonstrated_pattern_sources:
+        typer.echo("  extractor sources without gold demonstrations:")
+        for source in summary.undemonstrated_pattern_sources:
+            typer.echo(f"    {source}")
 
 
 @app.command("discovery-gold-run-plan")

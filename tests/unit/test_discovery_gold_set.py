@@ -100,6 +100,9 @@ def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:
         GOLD_SET_DIR / "expected-predictions.jsonl"
     ).read_text(encoding="utf-8")
     assert summary.pattern_type_counts == {"wordpress_download_manager": 1}
+    assert summary.pattern_source_counts == {"wordpress_download_manager": 1}
+    assert "onclick" in summary.undemonstrated_pattern_sources
+    assert "wordpress_download_manager" not in summary.undemonstrated_pattern_sources
 
 
 def test_discovery_gold_set_semantic_validator_rejects_inconsistent_outcomes() -> None:

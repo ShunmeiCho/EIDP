@@ -467,6 +467,9 @@ def test_verify_core_zip_reports_discovery_gold_set_summary(tmp_path: Path) -> N
         "site_fetch_error": 1,
     }
     assert check.details["discovery_gold_pattern_types"] == {"wordpress_download_manager": 1}
+    assert check.details["discovery_gold_pattern_sources"] == {"wordpress_download_manager": 1}
+    assert "onclick" in check.details["discovery_gold_undemonstrated_pattern_sources"]
+    assert "wordpress_download_manager" not in check.details["discovery_gold_undemonstrated_pattern_sources"]
     assert check.details["discovery_gold_expected_predictions"] == 5
 
 

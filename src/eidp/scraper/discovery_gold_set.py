@@ -31,6 +31,16 @@ DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS = frozenset({
     "classified_non_target",
     "pre_filtered_non_target_hint",
 })
+DISCOVERY_GOLD_TRACKED_EXTRACTOR_SOURCES = (
+    "data_attribute",
+    "embed",
+    "form_action",
+    "input_control",
+    "meta_refresh",
+    "onclick",
+    "select_option",
+    "wordpress_download_manager",
+)
 
 
 @dataclass(frozen=True)
@@ -100,6 +110,8 @@ class DiscoveryGoldSummary:
     publication_lag_entries: int
     site_families: list[str]
     pattern_type_counts: dict[str, int]
+    pattern_source_counts: dict[str, int]
+    undemonstrated_pattern_sources: list[str]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -111,6 +123,8 @@ class DiscoveryGoldSummary:
             "publication_lag_entries": self.publication_lag_entries,
             "site_families": self.site_families,
             "pattern_type_counts": self.pattern_type_counts,
+            "pattern_source_counts": self.pattern_source_counts,
+            "undemonstrated_pattern_sources": self.undemonstrated_pattern_sources,
         }
 
 
@@ -266,6 +280,13 @@ def summarize_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> Disco
     target_year_counts = Counter(entry.target_fiscal_year for entry in entries)
     site_families = sorted({entry.site_family for entry in entries if entry.site_family})
     pattern_type_counts = Counter(entry.pattern_type for entry in entries if entry.pattern_type)
+    pattern_source_counts = Counter(
+        source
+        for entry in entries
+        if entry.pattern_type
+        for source in [_pattern_source(entry.pattern_type)]
+        if source
+    )
     return DiscoveryGoldSummary(
         total_entries=len(entries),
         outcome_counts=dict(sorted(outcome_counts.items())),
@@ -275,6 +296,12 @@ def summarize_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> Disco
         publication_lag_entries=outcome_counts.get("publication_lag_latest_public", 0),
         site_families=site_families,
         pattern_type_counts=dict(sorted(pattern_type_counts.items())),
+        pattern_source_counts=dict(sorted(pattern_source_counts.items())),
+        undemonstrated_pattern_sources=[
+            source
+            for source in DISCOVERY_GOLD_TRACKED_EXTRACTOR_SOURCES
+            if source not in pattern_source_counts
+        ],
     )
 
 
@@ -582,6 +609,15 @@ def _is_better_tie_break_prediction(candidate: DiscoveryGoldPrediction, current:
     if candidate.outcome == current.outcome == "publication_lag_latest_public":
         return (candidate.fiscal_year or 0) > (current.fiscal_year or 0)
     return False
+
+
+def _pattern_source(pattern_type: str) -> str:
+    if pattern_type == "wordpress_download_manager":
+        return pattern_type
+    for suffix in ("_cache_busted", "_direct", "_wordpress"):
+        if pattern_type.endswith(suffix):
+            return pattern_type.removesuffix(suffix)
+    return pattern_type
 
 
 def _int_or_none(value: object) -> int | None:
