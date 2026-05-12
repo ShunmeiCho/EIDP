@@ -2,10 +2,10 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v327.zip`
-Package commit: `21583722efa6f0860af2cd6eaca33a56f3d0b432`
-Package SHA256: `aeb957c6f8f16d87ab2b6d63f707c5f8f8ca7ef02a65e57f4342b014447a69a3`
-Latest Windows-core-validated package: `dist/eidp-windows-v327.zip`
+Current Mac-verifier-clean package: `dist/eidp-windows-v328.zip`
+Package commit: `336804720519271885bf2cd6144ecd8814d84a5c`
+Package SHA256: `6dd2f253e75ceff289d72aaf604ef222db012a2fc22b511f0a18fed8506c438d`
+Latest Windows-core-validated package: `dist/eidp-windows-v328.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v326.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v326.zip`
 
@@ -13,14 +13,16 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v326.zip`
 
 Status: **NOT COMPLETE**
 
-The current source/ZIP snapshot is v327 and passes the default macOS package
-verifier. v327 keeps the v326 strict-mode fix for opaque WordPress Download
-Manager wrappers and improves RCA packet evidence sampling so candidate-budget
+The current source/ZIP snapshot is v328 and passes the default macOS package
+verifier. v328 keeps the v326 strict-mode fix for opaque WordPress Download
+Manager wrappers, improves RCA packet evidence sampling so candidate-budget
 noise does not hide fiscal-year mismatch / missing-year evidence during manual
-investigation. v327 also extracts and passes the core Windows install validator
-on `ssh win`. The setup, SQLite, Task Scheduler, and bounded Windows bootstrap
-pipeline are reproducible on `ssh win` for v326; v327 has not yet been rerun
-through Windows setup/bootstrap. The product goal is still not complete:
+investigation, and rejects candidates whose anchor/URL explicitly names a
+different school before download. v328 also extracts and passes the core
+Windows install validator on `ssh win`. The setup, SQLite, Task Scheduler, and
+bounded Windows bootstrap pipeline are reproducible on `ssh win` for v326; v328
+has not yet been rerun through Windows setup/bootstrap. The product goal is
+still not complete:
 browser UI operator click-through is missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
 line.
@@ -41,20 +43,21 @@ line.
 
 ## Current Non-Windows Evidence
 
-Commands run for v327 source/package:
+Commands run for v328 source/package:
 
-- `uv run pytest tests/unit -q` -> `1332 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1333 passed, 5 warnings`
 - `uv run pytest tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_discovery_evidence_summary.py -q` -> `33 passed`
+- `uv run pytest tests/unit/test_pdf_discovery.py -q` -> `145 passed, 5 warnings`
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `22/22 exact`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v327.zip` -> `OK core`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v327.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
-- `uv run ruff check src/eidp/scraper/discovery_rca_packet.py tests/unit/test_cli_discovery_rca_packet.py` -> `All checks passed`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v328.zip` -> `OK core`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v328.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
+- `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed`
 - One-off strict download check for `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055` with anchor `ダウンロード` -> `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`
 - Rebuilt the v326 Windows Saitama RCA batch plan locally with v327 code and
   verified publication-lag packets now surface `fiscal_year_mismatch:*` rows
   before `candidate_budget_dropped` rows.
 
-v327 verifier exposes the current demonstration gap:
+v328 verifier exposes the current demonstration gap:
 
 - Discovery gold-set entries: `22`
 - Outcome distribution: `accepted_target_pdf=6`, `needs_operator_review=6`,
@@ -66,15 +69,15 @@ v327 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v327 package-level validation:
+Commands and observations from `ssh win` for v328 package-level validation:
 
-- Uploaded `dist/eidp-windows-v327.zip` to
-  `C:\Users\cyo20\eidp-windows-v327.zip`.
+- Uploaded `dist/eidp-windows-v328.zip` to
+  `C:\Users\cyo20\eidp-windows-v328.zip`.
 - Windows `Get-FileHash -Algorithm SHA256` ->
-  `AEB957C6F8F16D87AB2B6D63F707C5F8F8CA7EF02A65E57F4342B014447A69A3`.
-- Extracted to `C:\Users\cyo20\EIDP-v327-2158372`;
+  `6DD2F253E75CEFF289D72AAF604EF222DB012A2FC22B511F0A18FED8506C438D`.
+- Extracted to `C:\Users\cyo20\EIDP-v328-3368047`;
   `runtime\python\python.exe scripts\validate_windows_install.py .` ->
-  `OK install`, build commit `21583722efa6f0860af2cd6eaca33a56f3d0b432`,
+  `OK install`, build commit `336804720519271885bf2cd6144ecd8814d84a5c`,
   `build_dirty=false`, `wheel_count=78`.
 
 Commands and observations from `ssh win` for v326 setup/bootstrap:
