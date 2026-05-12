@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `77016195f1c0ba3cd805702daddf4baaa5fc37f8` (`eidp-windows-v266.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `b67b9a174a91d6d1dd5dde5492ec2892ba024f20` (`eidp-windows-v267.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -795,6 +795,23 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v266 is still pending and must not be
+inferred from the Mac verifier.
+
+v267 (`b67b9a1`) applies the same supported-year lower bound to strict PDF
+discovery's body-year detector. `_detect_fiscal_year_from_text` now ignores
+pre-2019 western/Japanese fiscal years before deciding whether a PDF body proves
+the target year or an old-year mismatch, so history/old-system labels such as
+`2005年度` or `2018年度` no longer preempt a later valid current-year label. The
+Windows distribution verifier also requires the packaged `pdf_discovery.py`
+lower-bound contract. Verification: `tests/unit` passed with
+`1240 passed, 5 warnings`, and `dist/eidp-windows-v267.zip` plus the latest
+alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`509d4fe8d76ae6e7db56a6c5a304e366f2880c34ca5b5dcd750cc42853144825`,
+`git_commit=b67b9a174a91d6d1dd5dde5492ec2892ba024f20`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v267 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
