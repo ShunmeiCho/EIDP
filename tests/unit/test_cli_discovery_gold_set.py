@@ -22,7 +22,7 @@ def test_discovery_gold_set_cli_outputs_summary_json() -> None:
     assert payload["outcome_counts"]["publication_lag_latest_public"] == 9
     assert payload["outcome_counts"]["no_target_candidate_found"] == 1
     assert payload["outcome_counts"]["site_fetch_error"] == 1
-    assert payload["operator_review_entries"] == 6
+    assert payload["operator_review_entries"] == 8
 
 
 def test_discovery_gold_set_cli_can_fail_on_undemonstrated_pattern_sources() -> None:

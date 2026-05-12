@@ -8,16 +8,16 @@
     "corporation_name": "公益社団法人地域医療振興協会"
   },
   "target_fiscal_year": 2026,
-  "outcome": "accepted_target_pdf",
+  "outcome": "needs_operator_review",
   "manual_demonstration": {
-    "operator_goal": "Accept a target confirmation-form PDF from a current prefecture official index even when the WordPress upload path contains a prior calendar year.",
+    "operator_goal": "Find the target confirmation-form PDF from a current prefecture official index without treating the index itself as PDF fiscal-year evidence.",
     "search_queries": [],
     "steps": [
       "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure site.",
       "Open https://www.saitama-kango.jp/financial-aid/.",
       "Follow the link labeled 申請書.",
-      "Verify the linked PDF is a target form body for the school, and treat the current prefecture index as FY2026 evidence.",
-      "Do not treat the /uploads/2025/06/ path segment as an explicit stale fiscal-year label."
+      "Verify the linked PDF is a target form body for the school.",
+      "Classify it as needs_operator_review because the PDF body, URL, and anchor do not prove FY2026; the /uploads/2025/06/ path is only an upload date."
     ]
   },
   "expected_result": {
@@ -25,19 +25,19 @@
     "disclosure_url": "https://www.saitama-kango.jp/financial-aid/",
     "pdf_url": "http://www.saitama-kango.jp/wp/wp-content/uploads/2025/06/申請書_0602_資料A.pdf",
     "pdf_type": "target",
-    "fiscal_year": 2026,
-    "strict_target_year_success": true
+    "fiscal_year": null,
+    "strict_target_year_success": false
   },
   "automation_pattern": {
-    "site_family": "trusted_prefecture_upload_year_target_form",
+    "site_family": "target_form_without_year_evidence",
     "reusable_rules": [
-      "For prefecture_aggregator disclosure URLs, accept a target-form body using prefecture_index_current_year when the candidate URL only contains a bare upload/calendar year.",
-      "Preserve year_evidence=prefecture_index_current_year so the accepted path is auditable.",
-      "Continue rejecting candidates whose anchor or URL explicitly says 2025年度 or 令和7年度."
+      "For prefecture_aggregator disclosure URLs, preserve target-form candidates even when the candidate URL only contains a bare upload/calendar year.",
+      "Do not use prefecture_index_current_year as strict PDF year evidence.",
+      "Return target_fiscal_year_not_detected/needs_operator_review when the candidate has no FY2026 evidence."
     ],
     "anti_patterns": [
       "Do not use the crawl date as year evidence.",
-      "Do not let a bare /uploads/2025/06/ path override a current official-index handoff when the PDF body is target.",
+      "Do not let a current official-index handoff override missing PDF/link year evidence.",
       "Do not override explicit stale fiscal-year labels such as 2025年度."
     ]
   },
@@ -47,6 +47,6 @@
       "_temp/v244-school769-upload-year/logs/evidence.jsonl",
       "_temp/v242-windows-evidence/saitama-full/v242-saitama-evidence.jsonl"
     ],
-    "notes": "v242 rejected this PDF as fiscal_year_mismatch:2025 because the WordPress upload path contains 2025/06. Current-code replay after the upload-year trust fix downloads it with year_evidence=prefecture_index_current_year, then ingestion preserves document_fiscal_year=2026 while the parser sees internal 2025 term dates."
+    "notes": "Windows v333 Saitama 50-site replay records this target-form PDF as target_fiscal_year_not_detected. v332 downloaded it with year_evidence=prefecture_index_current_year and then ingestion preserved document_fiscal_year=2026 while the parser saw internal 2025 term dates; that behavior is now treated as a false-positive strict-year success."
   }
 }

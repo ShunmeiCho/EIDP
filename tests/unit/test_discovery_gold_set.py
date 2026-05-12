@@ -49,8 +49,8 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     assert len({entry["entry_id"] for entry in entries}) == len(entries)
     assert entries_by_id["saitama-it-web-accepted-2026"]["outcome"] == "publication_lag_latest_public"
     assert entries_by_id["saitama-it-web-accepted-2026"]["expected_result"]["strict_target_year_success"] is False
-    assert entries_by_id["ageo-central-nursing-review-2026"]["outcome"] == "accepted_target_pdf"
-    assert entries_by_id["ageo-central-nursing-review-2026"]["expected_result"]["fiscal_year"] == 2026
+    assert entries_by_id["ageo-central-nursing-review-2026"]["outcome"] == "needs_operator_review"
+    assert entries_by_id["ageo-central-nursing-review-2026"]["expected_result"]["fiscal_year"] is None
     assert (
         entries_by_id["iruma-kango-no-candidates-2026"]["expected_result"]["pattern_type"]
         == "wordpress_download_manager"

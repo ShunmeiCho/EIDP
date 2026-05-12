@@ -22,14 +22,14 @@ def test_summarize_discovery_gold_entries_tracks_release_relevant_buckets() -> N
     assert summary.total_entries == 23
     assert summary.target_fiscal_year_counts == {2025: 2, 2026: 21}
     assert summary.outcome_counts == {
-        "accepted_target_pdf": 6,
-        "needs_operator_review": 6,
+        "accepted_target_pdf": 4,
+        "needs_operator_review": 8,
         "no_target_candidate_found": 1,
         "publication_lag_latest_public": 9,
         "site_fetch_error": 1,
     }
-    assert summary.strict_target_year_successes == 6
-    assert summary.operator_review_entries == 6
+    assert summary.strict_target_year_successes == 4
+    assert summary.operator_review_entries == 8
     assert summary.publication_lag_entries == 9
     assert summary.pattern_source_counts == {"embed": 1, "wordpress_download_manager": 1}
     assert "table_header_confirmation_application" in summary.site_families
@@ -42,11 +42,11 @@ def test_render_discovery_gold_summary_outputs_json_safe_payload() -> None:
     decoded = json.loads(payload)
 
     assert decoded["total_entries"] == 23
-    assert decoded["outcome_counts"]["needs_operator_review"] == 6
+    assert decoded["outcome_counts"]["needs_operator_review"] == 8
     assert decoded["outcome_counts"]["no_target_candidate_found"] == 1
     assert decoded["outcome_counts"]["publication_lag_latest_public"] == 9
     assert decoded["outcome_counts"]["site_fetch_error"] == 1
-    assert decoded["strict_target_year_successes"] == 6
+    assert decoded["strict_target_year_successes"] == 4
     assert "dense_information_page" in decoded["site_families"]
     assert "table_header_confirmation_application" in decoded["site_families"]
 

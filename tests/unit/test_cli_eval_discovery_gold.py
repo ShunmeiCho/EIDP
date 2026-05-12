@@ -187,7 +187,9 @@ def test_eval_discovery_gold_cli_full_fixture_fails_on_mismatch(tmp_path: Path) 
     mutated_path = tmp_path / "mutated-predictions.jsonl"
     lines = EXPECTED_PREDICTIONS_PATH.read_text(encoding="utf-8").splitlines()
     first = json.loads(lines[0])
-    first["strict_target_year_success"] = False
+    first["outcome"] = "accepted_target_pdf"
+    first["fiscal_year"] = 2026
+    first["strict_target_year_success"] = True
     lines[0] = json.dumps(first, ensure_ascii=False, sort_keys=True)
     mutated_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
