@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `93c6ba1634f4172e5962130e9d5009e10f61ccb5` (`eidp-windows-v289.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `79bb0eeb1baf776a21a38f42c369411bd8d27157` (`eidp-windows-v290.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1247,6 +1247,28 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v289 is still pending and must not be
+inferred from the Mac verifier.
+
+v290 (`79bb0ee`) promotes the current-target-FY coverage semantics into the
+packaged Windows verifier. The release gate now requires `coverage.py` to keep
+the headline metric as `schools_with_target_pdf_current_fy` /
+`target_pdf_current_fy_rate`, to compare discovered documents against the
+requested FY (`d_fy == fy`), and to keep stale target PDFs isolated as
+`stale_fallback_schools` using `Document.fiscal_year < fiscal_year`. It also
+requires export readiness to derive `target_pdf` from
+`coverage.schools_with_target_pdf_current_fy`, preventing old-year target PDFs
+from satisfying the 60% ship gate. Verification: `tests/unit` passed with
+`1285 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v290.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`67db376eee4c89a1339b97752be632989a62a079087137dbe9857d54e77f9cc6`,
+`git_commit=79bb0eeb1baf776a21a38f42c369411bd8d27157`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v290 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
