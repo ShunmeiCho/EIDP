@@ -318,6 +318,82 @@ def test_prioritize_viable_candidates_prefers_matching_school_section() -> None:
     assert ordered == [target_school, other_school]
 
 
+def test_run_pdf_discovery_skips_candidates_that_name_a_different_school(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    try:
+        session.add(
+            School(
+                id=1,
+                school_name="大原医療秘書福祉専門学校大宮校",
+                prefecture="埼玉県",
+                corporation_name="大原学園",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=1, url="https://www.o-hara.ac.jp/about/joho/", http_status=200))
+        session.flush()
+
+        other_school = PdfCandidate(
+            pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2026-1-09-01-5.pdf",
+            page_url="https://www.o-hara.ac.jp/about/joho/",
+            anchor_text="PDF 山形スポーツ医療福祉専門学校 修学支援新制度 確認申請書",
+            score=20.0,
+        )
+        target_school = PdfCandidate(
+            pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2026-1-37-01-5.pdf",
+            page_url="https://www.o-hara.ac.jp/about/joho/",
+            anchor_text="PDF 大原医療秘書福祉専門学校大宮校 修学支援新制度 確認申請書",
+            score=5.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[other_school, target_school], best=other_school)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = 2026
+            candidate.year_evidence = "pdf_text"
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        mismatch = [payload for payload in payloads if payload["reason"] == "candidate_school_mismatch"]
+        assert download_calls == ["https://www.o-hara.ac.jp/about/joho/pdf/2026-1-37-01-5.pdf"]
+        assert stats["candidate_school_mismatch"] == 1
+        assert stats["downloaded"] == 1
+        assert mismatch[0]["pdf_url"] == "https://www.o-hara.ac.jp/about/joho/pdf/2026-1-09-01-5.pdf"
+        assert mismatch[0]["pdf_type"] == "non_target"
+    finally:
+        session.close()
+
+
 def test_pre_download_rejects_site_family_non_target_url_shapes() -> None:
     token_cases = [
         ("https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-1.pdf", "PDF"),

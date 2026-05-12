@@ -1739,6 +1739,12 @@ _EXTERNAL_SCHOOL_LINK_BLOCKED_HOST_PARTS = (
     "line.me",
     "google.",
 )
+_SCHOOL_ENTITY_RE = re.compile(
+    r"[一-龯ぁ-んァ-ヶA-Za-z0-9・･ー－\-（）()]{2,}"
+    r"(?:専門学校|大学校|短期大学|高等専門学校)",
+    re.IGNORECASE,
+)
+_GENERIC_SCHOOL_ENTITY_CONTEXT_RE = re.compile(r"(?:における|に関する|対象となる|学校一覧)")
 
 
 def _school_link_label(text: str) -> str:
@@ -1751,6 +1757,38 @@ def _school_name_matches_link(text: str, school_name: str) -> bool:
     school_label = _school_link_label(school_name)
     link_label = _school_link_label(text)
     return len(school_label) >= 4 and school_label in link_label
+
+
+def _candidate_mentions_different_school(candidate: PdfCandidate, school_name: str) -> bool:
+    if not school_name:
+        return False
+    text = unicodedata.normalize(
+        "NFKC",
+        f"{candidate.anchor_text or ''} {candidate.pdf_url or ''} {unquote(candidate.pdf_url or '')}",
+    )
+    if _school_name_matches_link(text, school_name):
+        return False
+    school_label = _school_link_label(school_name)
+    for candidate_label in _candidate_named_school_labels(text):
+        if candidate_label in school_label or school_label in candidate_label:
+            return False
+        return True
+    return False
+
+
+def _candidate_named_school_labels(text: str) -> list[str]:
+    labels: list[str] = []
+    for match in _SCHOOL_ENTITY_RE.finditer(text):
+        raw_label = match.group(0)
+        if _GENERIC_SCHOOL_ENTITY_CONTEXT_RE.search(raw_label):
+            continue
+        prefix = re.split(r"専門学校|大学校|短期大学|高等専門学校", raw_label, maxsplit=1)[0]
+        if not re.search(r"[一-龯ァ-ヶA-Za-z0-9]", prefix):
+            continue
+        label = _school_link_label(raw_label)
+        if len(label) >= 4:
+            labels.append(label)
+    return labels
 
 
 def _find_school_homepage_links(html: str, base_url: str, school_name: str, *, limit: int = 3) -> list[str]:
@@ -2500,6 +2538,7 @@ def run_pdf_discovery(
         "prefiltered": 0,
         "candidate_budget_limited": 0,
         "candidate_budget_dropped": 0,
+        "candidate_school_mismatch": 0,
     }
     recorder = EvidenceRecorder(evidence_path)
 
@@ -2645,11 +2684,30 @@ def run_pdf_discovery(
                 for c in result.candidates:
                     _score_candidate(c, target_fiscal_year=target_year)
                 result.candidates.sort(key=lambda c: c.score, reverse=True)
+            school_name = site.school.school_name if site.school is not None else ""
             viable = [c for c in result.candidates if c.score >= 0]
+            school_mismatch_candidates = [
+                c for c in viable if _candidate_mentions_different_school(c, school_name)
+            ]
+            if school_mismatch_candidates:
+                stats["candidate_school_mismatch"] += len(school_mismatch_candidates)
+                mismatch_ids = {id(c) for c in school_mismatch_candidates}
+                viable = [c for c in viable if id(c) not in mismatch_ids]
+                for c in school_mismatch_candidates:
+                    record_discovery_evidence(RejectionEvidence(
+                        school_id=site.school_id,
+                        pdf_url=c.pdf_url,
+                        page_url=c.page_url,
+                        anchor_text=c.anchor_text,
+                        pattern_type=c.pattern_type,
+                        score=c.score,
+                        reason="candidate_school_mismatch",
+                        pdf_type="non_target",
+                    ))
             viable, candidate_budget_dropped_candidates = _prioritize_viable_candidates(
                 viable,
                 target_year=target_year,
-                school_name=site.school.school_name if site.school is not None else "",
+                school_name=school_name,
             )
             if candidate_budget_dropped_candidates:
                 stats["candidate_budget_limited"] += 1
@@ -2667,6 +2725,16 @@ def run_pdf_discovery(
                             "candidate_budget": f"max_general_candidate_scan={MAX_GENERAL_CANDIDATE_SCAN}",
                         },
                     ))
+            if not viable and school_mismatch_candidates:
+                job.status = "review"
+                job.error_message = "all viable candidates name a different school"
+                job.finished_at = datetime.now(UTC)
+                stats["skipped"] += 1
+                if progress_callback is not None:
+                    progress_callback(dict(stats), len(sites))
+                time.sleep(rate_limit)
+                continue
+
             if not viable:
                 job.status = "review"
                 job.error_message = "all candidates have negative score"
