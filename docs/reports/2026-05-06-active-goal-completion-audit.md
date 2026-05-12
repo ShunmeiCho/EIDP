@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `1c61781c2cb9920bc5903394c2d1262420dea767` (`eidp-windows-v257.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `1d4d284dfbd2c387dbc0e459fb1bfc49f104bc70` (`eidp-windows-v258.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -651,6 +651,24 @@ and the latest alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v257 is still pending and must not be
+inferred from the Mac verifier.
+
+v258 (`1d4d284`) makes discovery gold replay understand the real
+`non_target_candidates_only` evidence shape. `eval-discovery-gold
+--pdf-evidence` now maps `pre_filtered_non_target_hint`,
+`classified_non_target`, and `all_negative_score` rows to
+`no_target_candidate_found` when no stronger target, old-year, review, or site
+failure evidence exists for the same gold-set entry. A paired priority test
+keeps `fiscal_year_mismatch:*` publication-lag evidence ahead of adjacent
+non-target PDF noise, so old visible target forms are still distinguished from
+true no-target paths. `dist/eidp-windows-v258.zip` and the latest alias
+`dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`e83e5e06d98af980aaa7d20de1c1ca889299638160bcb48e619558be03885769`,
+`git_commit=1d4d284dfbd2c387dbc0e459fb1bfc49f104bc70`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v258 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
