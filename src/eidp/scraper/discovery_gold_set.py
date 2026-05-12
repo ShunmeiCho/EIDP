@@ -17,6 +17,11 @@ DISCOVERY_GOLD_ALLOWED_OUTCOMES = frozenset({
     "needs_operator_review",
     "site_fetch_error",
 })
+DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS = frozenset({
+    "all_negative_score",
+    "classified_non_target",
+    "pre_filtered_non_target_hint",
+})
 
 
 @dataclass(frozen=True)
@@ -501,7 +506,7 @@ def _prediction_from_pdf_evidence_payload(
             strict_target_year_success=False,
         )
 
-    if reason == "no_candidates_found":
+    if reason == "no_candidates_found" or reason in DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS:
         return DiscoveryGoldPrediction(
             entry_id=entry.entry_id,
             outcome="no_target_candidate_found",

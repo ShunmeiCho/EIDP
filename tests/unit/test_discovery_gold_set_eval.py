@@ -346,6 +346,112 @@ def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_
     ]
 
 
+def test_load_predictions_maps_non_target_only_evidence_to_no_target_candidate(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/officers.pdf",
+                        "reason": "pre_filtered_non_target_hint",
+                        "pdf_type": "non_target",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/syllabus.pdf",
+                        "reason": "classified_non_target",
+                        "pdf_type": "non_target",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/low-score.pdf",
+                        "reason": "all_negative_score",
+                        "pdf_type": None,
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    entries = [
+        _entry(
+            entry_id="non-target-only",
+            school_id=1,
+            target_fiscal_year=2026,
+            outcome="no_target_candidate_found",
+            pdf_url="",
+            fiscal_year=None,
+        )
+    ]
+
+    predictions = load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries)
+
+    assert predictions == [
+        DiscoveryGoldPrediction(
+            entry_id="non-target-only",
+            outcome="no_target_candidate_found",
+            pdf_url="",
+            fiscal_year=None,
+            strict_target_year_success=False,
+        )
+    ]
+
+
+def test_load_predictions_prefers_old_target_over_non_target_candidate_noise(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/officers.pdf",
+                        "reason": "pre_filtered_non_target_hint",
+                        "pdf_type": "non_target",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "school_id": 1,
+                        "pdf_url": "https://example.ac.jp/r7-target.pdf",
+                        "reason": "fiscal_year_mismatch:2025",
+                        "pdf_type": "target",
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    entries = [
+        _entry(
+            entry_id="old-target",
+            school_id=1,
+            target_fiscal_year=2026,
+            outcome="publication_lag_latest_public",
+            pdf_url="https://example.ac.jp/r7-target.pdf",
+            fiscal_year=2025,
+        )
+    ]
+
+    predictions = load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries)
+
+    assert predictions == [
+        DiscoveryGoldPrediction(
+            entry_id="old-target",
+            outcome="publication_lag_latest_public",
+            pdf_url="https://example.ac.jp/r7-target.pdf",
+            fiscal_year=2025,
+            strict_target_year_success=False,
+        )
+    ]
+
+
 def test_load_predictions_prefers_accepted_body_year_over_stale_url_hint(tmp_path: Path) -> None:
     evidence_path = tmp_path / "discovery-evidence.jsonl"
     evidence_path.write_text(
