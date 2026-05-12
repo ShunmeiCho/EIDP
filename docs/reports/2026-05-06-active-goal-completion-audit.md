@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `30787551330c35916ba93629507405c1aa1c6de0` (`eidp-windows-v254.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `372119b7a5bc5020a9d10845cc9799c58aec79aa` (`eidp-windows-v255.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -601,6 +601,23 @@ and the latest alias `dist/eidp-windows.zip` both passed
 `entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
 `47` downloadable supported prefecture seeds. Windows E2E for v254 is still
 pending and must not be inferred from the Mac verifier.
+
+v255 (`372119b`) adds an executable expected-predictions fixture for the full
+discovery gold set. The committed
+`data/discovery-gold-set/expected-predictions.jsonl` now enumerates all `20`
+gold-set outcomes, and `eval-discovery-gold --fail-on-regression` is gated both
+for the passing full fixture and for a mutated mismatch. The Windows ZIP
+verifier now requires the fixture and checks that every packaged gold-set entry
+has exactly one matching expected prediction, with no missing, duplicate,
+unexpected, or mismatched rows. `dist/eidp-windows-v255.zip` and the latest
+alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`533a4008332bb636bf19943d3520e876dc6ea97fc30bcc3191edbefb2637703b`,
+`git_commit=372119b7a5bc5020a9d10845cc9799c58aec79aa`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v255 is still pending and must not be
+inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
