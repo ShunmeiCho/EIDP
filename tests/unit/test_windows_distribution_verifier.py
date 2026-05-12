@@ -272,6 +272,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/reports/gaps.py": (REPO_ROOT / "src" / "eidp" / "reports" / "gaps.py").read_text(
             encoding="utf-8"
         ),
+        "src/eidp/reports/ship_readiness.py": (
+            REPO_ROOT / "src" / "eidp" / "reports" / "ship_readiness.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/db/audit.py": (
             "from eidp.db.models import ManualActionLog\n"
             "def log_manual_action(session):\n"

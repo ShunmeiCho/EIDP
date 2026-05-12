@@ -1592,5 +1592,97 @@ def report_gaps(
             typer.echo(f"  #{e.school_id or '-'} {e.school_name or '-'}  [{e.reason}]  {e.detail}")
 
 
+@report_app.command("ship-readiness")
+def report_ship_readiness(
+    school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),
+    fiscal_year: int | None = typer.Option(None, "--fy", help="Fiscal year (defaults to configured target FY)"),
+    strict_target_pdf_min: float = typer.Option(
+        0.60,
+        "--strict-target-pdf-min",
+        help="Minimum true target-FY PDF auto-acquisition rate",
+    ),
+    manual_workload_max: float = typer.Option(
+        0.30,
+        "--manual-workload-max",
+        help="Maximum estimated remaining manual workload rate",
+    ),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of table"),
+    fail_on_missing_goal: bool = typer.Option(
+        False,
+        "--fail-on-missing-goal",
+        help="Exit non-zero when final business thresholds are not met",
+    ),
+) -> None:
+    """Final objective readiness: strict target PDFs, manual workload, and Excel-ready rows."""
+    from eidp.db.session import SessionLocal
+    from eidp.reports.ship_readiness import compute_ship_readiness
+
+    session = SessionLocal()
+    try:
+        st = None if school_type == "all" else school_type
+        report = compute_ship_readiness(
+            session,
+            fiscal_year=fiscal_year,
+            school_type=st,
+            strict_auto_target_pdf_min=strict_target_pdf_min,
+            manual_workload_max=manual_workload_max,
+        )
+    except SQLAlchemyError as exc:
+        _exit_report_db_error(exc, output_json=output_json)
+    finally:
+        session.close()
+
+    payload = _ship_readiness_to_dict(report)
+    if output_json:
+        typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        typer.echo(f"FY: {report.fiscal_year}  school_type: {report.school_type or 'all'}")
+        typer.echo(f"Final objective status: {'pass' if report.ok else 'missing'}")
+        typer.echo(
+            f"  strict target PDF: {report.strict_target_pdf_schools}/{report.total_schools} "
+            f"({report.strict_target_pdf_rate:.1%})"
+        )
+        typer.echo(
+            f"  operator-reviewable: {report.operator_reviewable_schools}/{report.total_schools} "
+            f"({report.operator_reviewable_rate:.1%})"
+        )
+        typer.echo(f"  estimated manual workload: {report.estimated_manual_workload_rate:.1%}")
+        typer.echo(
+            f"  Excel ready: {report.excel_ready_schools}/{report.total_schools} "
+            f"({report.excel_ready_rate:.1%})"
+        )
+    if fail_on_missing_goal and not report.ok:
+        raise typer.Exit(1)
+
+
+def _ship_readiness_to_dict(report: Any) -> dict[str, object]:
+    return {
+        "ok": report.ok,
+        "fiscal_year": report.fiscal_year,
+        "school_type": report.school_type,
+        "total_schools": report.total_schools,
+        "strict_target_pdf_schools": report.strict_target_pdf_schools,
+        "strict_target_pdf_rate": round(report.strict_target_pdf_rate, 4),
+        "operator_reviewable_schools": report.operator_reviewable_schools,
+        "operator_reviewable_rate": round(report.operator_reviewable_rate, 4),
+        "estimated_manual_workload_rate": round(report.estimated_manual_workload_rate, 4),
+        "excel_ready_schools": report.excel_ready_schools,
+        "excel_ready_rate": round(report.excel_ready_rate, 4),
+        "extracted_schools": report.extracted_schools,
+        "extracted_rate": round(report.extracted_rate, 4),
+        "strict_auto_target_pdf_min": report.strict_auto_target_pdf_min,
+        "manual_workload_max": report.manual_workload_max,
+        "criteria": [
+            {
+                "name": criterion.name,
+                "value": round(criterion.value, 4),
+                "threshold": criterion.threshold,
+                "passed": criterion.passed,
+            }
+            for criterion in report.criteria
+        ],
+    }
+
+
 if __name__ == "__main__":
     app()

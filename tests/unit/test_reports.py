@@ -25,6 +25,7 @@ from eidp.reports import (
     compute_coverage,
     compute_extraction,
     compute_gaps,
+    compute_ship_readiness,
     gap_report_for_export,
 )
 
@@ -275,6 +276,73 @@ def test_gap_report_for_export_counts_ready_target_year_data() -> None:
     assert rep.target_yearly_rows == 1
     assert rep.target_pdf_rate == pytest.approx(1.0)
     assert rep.excel_ready_rate == pytest.approx(1.0)
+
+
+# --- ship readiness --------------------------------------------------------
+
+
+def test_ship_readiness_requires_strict_target_pdf_and_manual_workload_thresholds() -> None:
+    s = _session()
+    for school_id in range(1, 11):
+        _school(s, school_id, "東京")
+        s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
+        pdf_status = "confirmed_target" if school_id <= 5 else "publication_lag" if school_id <= 7 else "none"
+        s.add(
+            SchoolFiscalYearStatus(
+                school_id=school_id,
+                fiscal_year=2026,
+                pdf_status=pdf_status,
+                excel_ready=school_id <= 4,
+            )
+        )
+    for school_id in range(1, 6):
+        _doc(s, 100 + school_id, school_id, 2026, "ingested", pdf_type="target")
+        dept = _dept(s, 200 + school_id, school_id)
+        _yearly(s, 300 + school_id, dept.id, 2026, document_id=100 + school_id)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.total_schools == 10
+    assert rep.strict_target_pdf_schools == 5
+    assert rep.strict_target_pdf_rate == pytest.approx(0.5)
+    assert rep.operator_reviewable_schools == 7
+    assert rep.operator_reviewable_rate == pytest.approx(0.7)
+    assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
+    assert rep.excel_ready_schools == 4
+    assert rep.ok is False
+    assert {criterion.name: criterion.passed for criterion in rep.criteria} == {
+        "strict_target_pdf_auto_acquisition": False,
+        "estimated_manual_workload": True,
+        "excel_ready": False,
+    }
+
+
+def test_ship_readiness_passes_when_final_business_thresholds_are_met() -> None:
+    s = _session()
+    for school_id in range(1, 11):
+        _school(s, school_id, "東京")
+        s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
+        s.add(
+            SchoolFiscalYearStatus(
+                school_id=school_id,
+                fiscal_year=2026,
+                pdf_status="confirmed_target" if school_id <= 7 else "none",
+                excel_ready=school_id <= 7,
+            )
+        )
+    for school_id in range(1, 8):
+        _doc(s, 100 + school_id, school_id, 2026, "ingested", pdf_type="target")
+        dept = _dept(s, 200 + school_id, school_id)
+        _yearly(s, 300 + school_id, dept.id, 2026, document_id=100 + school_id)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.strict_target_pdf_rate == pytest.approx(0.7)
+    assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
+    assert rep.excel_ready_rate == pytest.approx(0.7)
+    assert rep.ok is True
 
 
 # --- extraction ------------------------------------------------------------
