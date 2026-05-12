@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `8970c105d1679fa232360f2dab70b9954a9397a7` (`eidp-windows-v248.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `5e3b4236e85e692d506a4619a56bfa99bd2d512b` (`eidp-windows-v249.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -514,6 +514,19 @@ and the latest alias `dist/eidp-windows.zip` both passed
 `git_commit=8970c105d1679fa232360f2dab70b9954a9397a7`, `git_dirty=false`,
 `entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
 `47` downloadable supported prefecture seeds. Windows E2E for v248 is still
+pending and must not be inferred from the Mac verifier.
+
+v249 (`5e3b423`) applies the same publication-date discipline to candidate
+scoring. Raw target-year token containment no longer gives priority to generic
+dated posts such as `2026年7月18日 更新確認申請書`; the score bonus now follows the
+same strong fiscal-year hint parser used by pre-download and strict download
+checks. Non-date labels such as `2026年更新確認申請書` still receive the target-year
+boost. `dist/eidp-windows-v249.zip` and the latest alias `dist/eidp-windows.zip`
+both passed `scripts/verify_windows_distribution.py --json` with SHA256
+`963812515d8b04698e1143c44c573c6244b694c015d33fa77dfc10bbdfb0590c`,
+`git_commit=5e3b4236e85e692d506a4619a56bfa99bd2d512b`, `git_dirty=false`,
+`entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
+`47` downloadable supported prefecture seeds. Windows E2E for v249 is still
 pending and must not be inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
@@ -3015,7 +3028,7 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v248 is the latest Mac-verifier-clean
+The active goal is **not complete**. v249 is the latest Mac-verifier-clean
 Windows ZIP candidate, but its Windows E2E remains pending. v245 is the latest
 fresh Windows setup-verified package, and v244 remains the latest package with
 a focused Windows replay proof. The latest full bounded Windows acquisition
@@ -3024,7 +3037,7 @@ the v244 Saitama official-index run covered `51` official-index school URLs,
 found PDF candidates on `50` sites, downloaded `11` PDFs, and counted `7`
 schools as current target-PDF auto acquired after ingest/status rebuild, but
 gold-set evaluation exposed false positives in the discovery/status count.
-Those false positives are fixed in v245/v246/v247/v248 and covered by Mac-side tests, but
+Those false positives are fixed in v245/v246/v247/v248/v249 and covered by Mac-side tests, but
 they require a new Windows replay before they can be counted as packaged
 runtime evidence. v240 and v241
 reduced download-time non-target waste (`classified_non_target` fell from v239
@@ -3099,14 +3112,15 @@ gold-set `exact_matches=1` for this new entry.
 The full v244 Saitama replay then proved the next correction direction:
 official-index current-year trust was too strong when the candidate itself had
 explicit stale-year labels (`R6年度分申請`, `令和七年度`) or was an adjacent
-student tuition-reduction form. v245/v246/v247/v248 correct those false-positive classes
+student tuition-reduction form. v245/v246/v247/v248/v249 correct those false-positive classes
 and expand the discovery gold-set to `20` entries, including the new
 `ogose-auto-publication-lag-2026` fixture. v246 further adds a
 rolling-target-year matrix across FY2026-FY2028, so the guard is a persistent
 fiscal-year rule rather than a one-year FY2026 patch. v247 additionally removes
 low-value English renewal-form hints and adds operator-facing import/runbook
 hardening. v248 additionally prevents ordinary publication dates from being
-misread as stale fiscal-year labels. These fixes are Mac-tested and
+misread as stale fiscal-year labels, and v249 prevents those dates from
+inflating candidate priority. These fixes are Mac-tested and
 package-verifier-clean, but Windows focused/full replay remains the next
 required evidence step.
 The deployment layer is
