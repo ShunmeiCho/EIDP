@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `737785e4697ef82a63492c6d91383e7aafaedaa0` (`eidp-windows-v256.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `1c61781c2cb9920bc5903394c2d1262420dea767` (`eidp-windows-v257.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -634,6 +634,23 @@ alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v256 is still pending and must not be
+inferred from the Mac verifier.
+
+v257 (`1c61781`) tightens discovery evidence replay so accepted-download rows
+cannot hide a detected fiscal-year mismatch behind the configured target FY.
+`eval-discovery-gold --pdf-evidence` now uses `extra.detected_fiscal_year`
+first when an accepted evidence row carries it, and only falls back to
+`extra.target_fiscal_year` for trusted-year cases where the PDF itself was
+yearless. A focused unit test now proves that an accepted row with
+`detected_fiscal_year=2025` for target FY2026 becomes a gold-set
+`fiscal_year_mismatch` failure instead of a false exact match. `dist/eidp-windows-v257.zip`
+and the latest alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`d3ce5c23445d6f1dd48b28bea945943cfb3b0bb387dd52ff4b061435f6367edc`,
+`git_commit=1c61781c2cb9920bc5903394c2d1262420dea767`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v257 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
