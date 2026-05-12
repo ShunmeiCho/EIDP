@@ -5,6 +5,7 @@ Branch: `sprint8-handoff-finalize`
 Current Mac-verifier-clean package: `dist/eidp-windows-v327.zip`
 Package commit: `21583722efa6f0860af2cd6eaca33a56f3d0b432`
 Package SHA256: `aeb957c6f8f16d87ab2b6d63f707c5f8f8ca7ef02a65e57f4342b014447a69a3`
+Latest Windows-core-validated package: `dist/eidp-windows-v327.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v326.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v326.zip`
 
@@ -16,10 +17,11 @@ The current source/ZIP snapshot is v327 and passes the default macOS package
 verifier. v327 keeps the v326 strict-mode fix for opaque WordPress Download
 Manager wrappers and improves RCA packet evidence sampling so candidate-budget
 noise does not hide fiscal-year mismatch / missing-year evidence during manual
-investigation. The packaging, setup, SQLite, Task Scheduler, and bounded
-Windows bootstrap pipeline are reproducible on `ssh win` for v326; v327 has not
-yet been rerun through Windows setup/bootstrap. The product goal is still not
-complete: browser UI operator click-through is missing, and the measured
+investigation. v327 also extracts and passes the core Windows install validator
+on `ssh win`. The setup, SQLite, Task Scheduler, and bounded Windows bootstrap
+pipeline are reproducible on `ssh win` for v326; v327 has not yet been rerun
+through Windows setup/bootstrap. The product goal is still not complete:
+browser UI operator click-through is missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
 line.
 
@@ -64,7 +66,18 @@ v327 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v326:
+Commands and observations from `ssh win` for v327 package-level validation:
+
+- Uploaded `dist/eidp-windows-v327.zip` to
+  `C:\Users\cyo20\eidp-windows-v327.zip`.
+- Windows `Get-FileHash -Algorithm SHA256` ->
+  `AEB957C6F8F16D87AB2B6D63F707C5F8F8CA7EF02A65E57F4342B014447A69A3`.
+- Extracted to `C:\Users\cyo20\EIDP-v327-2158372`;
+  `runtime\python\python.exe scripts\validate_windows_install.py .` ->
+  `OK install`, build commit `21583722efa6f0860af2cd6eaca33a56f3d0b432`,
+  `build_dirty=false`, `wheel_count=78`.
+
+Commands and observations from `ssh win` for v326 setup/bootstrap:
 
 - Uploaded `dist/eidp-windows-v326.zip` to
   `C:\Users\cyo20\eidp-windows-v326.zip`.
