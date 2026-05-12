@@ -307,9 +307,12 @@ def _core_entries() -> dict[str, bytes | str]:
             "PDF_LINK_ATTRIBUTE_NAMES\n"
             "PDF_DATA_ATTRIBUTE_TAG_PATTERN\n"
             "PDF_SCRIPT_URL_PATTERN\n"
+            "PDF_META_REFRESH_PATTERN\n"
             "PDF_OPTION_VALUE_PATTERN\n"
             "PDF_FORM_ACTION_PATTERN\n"
             "PDF_INPUT_TAG_PATTERN\n"
+            "_pdf_url_from_meta_refresh_content\n"
+            "\"http-equiv\"\n"
             "_pdf_element_context_text\n"
             "\"value\"\n"
             "\"action\"\n"
@@ -765,9 +768,12 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("PDF_LINK_ATTRIBUTE_NAMES" in error for error in check.errors)
     assert any("PDF_DATA_ATTRIBUTE_TAG_PATTERN" in error for error in check.errors)
     assert any("PDF_SCRIPT_URL_PATTERN" in error for error in check.errors)
+    assert any("PDF_META_REFRESH_PATTERN" in error for error in check.errors)
     assert any("PDF_OPTION_VALUE_PATTERN" in error for error in check.errors)
     assert any("PDF_FORM_ACTION_PATTERN" in error for error in check.errors)
     assert any("PDF_INPUT_TAG_PATTERN" in error for error in check.errors)
+    assert any("_pdf_url_from_meta_refresh_content" in error for error in check.errors)
+    assert any('"http-equiv"' in error for error in check.errors)
     assert any("_pdf_element_context_text" in error for error in check.errors)
     assert any('"value"' in error for error in check.errors)
     assert any('"action"' in error for error in check.errors)

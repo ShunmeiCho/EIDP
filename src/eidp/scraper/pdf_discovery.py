@@ -374,6 +374,7 @@ class RenderedHtmlFetcher(Protocol):
 PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url", "data-file", "data-pdf", "data-src")
 PDF_DATA_ATTRIBUTE_TAG_PATTERN = r"(?:a|button|span|div)"
 PDF_SCRIPT_URL_PATTERN = re.compile(r"([\"'])([^\"']*?\.pdf(?:[?#][^\"']*)?)\1", re.IGNORECASE)
+PDF_META_REFRESH_PATTERN = r"<meta\s([^>]*)>"
 PDF_OPTION_VALUE_PATTERN = r"<option\s([^>]*)>(.*?)</option\s*>"
 PDF_FORM_ACTION_PATTERN = r"<form\s([^>]*)>(.*?)</form\s*>"
 PDF_INPUT_TAG_PATTERN = r"<input\s([^>]*)>"
@@ -1288,6 +1289,18 @@ def _anchor_attr(attrs: str, name: str) -> str | None:
     return html_lib.unescape(match.group(2))
 
 
+def _pdf_url_from_meta_refresh_content(content: str, base_url: str) -> str | None:
+    """Extract a PDF target from a meta refresh content attribute."""
+
+    match = re.search(r"(?:^|;)\s*url\s*=\s*(.+?)\s*$", html_lib.unescape(content), re.IGNORECASE)
+    if match is None:
+        return None
+    href = match.group(1).strip().strip("\"'")
+    if not href or ".pdf" not in unquote(href).lower():
+        return None
+    return urljoin(base_url, href)
+
+
 def _pdf_urls_from_script_attribute(value: str, base_url: str) -> list[str]:
     """Extract quoted PDF URLs from static click-handler attributes."""
 
@@ -1362,7 +1375,33 @@ def _extract_pdf_links(
             target_fiscal_year=target_fiscal_year,
         )
 
-    # Pattern 1a: year/select dropdowns whose option values are PDF URLs.
+    # Pattern 1a: HTML redirect pages whose meta refresh points directly at a PDF.
+    for m in re.finditer(PDF_META_REFRESH_PATTERN, html, re.IGNORECASE | re.DOTALL):
+        http_equiv = _anchor_attr(m.group(1), "http-equiv")
+        if not http_equiv or http_equiv.strip().lower() != "refresh":
+            continue
+        content = _anchor_attr(m.group(1), "content")
+        if not content:
+            continue
+        url = _pdf_url_from_meta_refresh_content(content, base_url)
+        if not url:
+            continue
+        pattern = "cache_busted" if "?" in url else "direct"
+        if "/wp-content/" in url:
+            pattern = "wordpress"
+        _append_or_upgrade_candidate(
+            candidates,
+            candidate_index_by_key,
+            PdfCandidate(
+                pdf_url=url,
+                page_url=base_url,
+                anchor_text=_html_title_text(html),
+                pattern_type=pattern,
+            ),
+            target_fiscal_year=target_fiscal_year,
+        )
+
+    # Pattern 1b: year/select dropdowns whose option values are PDF URLs.
     for m in re.finditer(
         PDF_OPTION_VALUE_PATTERN,
         html,
@@ -1387,7 +1426,7 @@ def _extract_pdf_links(
             target_fiscal_year=target_fiscal_year,
         )
 
-    # Pattern 1b: form submit buttons whose action points directly at a PDF.
+    # Pattern 1c: form submit buttons whose action points directly at a PDF.
     for m in re.finditer(
         PDF_FORM_ACTION_PATTERN,
         html,
@@ -1412,7 +1451,7 @@ def _extract_pdf_links(
             target_fiscal_year=target_fiscal_year,
         )
 
-    # Pattern 1c: JavaScript/download-button elements with direct PDF data attributes.
+    # Pattern 1d: JavaScript/download-button elements with direct PDF data attributes.
     for m in re.finditer(
         rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
         html, re.IGNORECASE | re.DOTALL,
@@ -1439,7 +1478,7 @@ def _extract_pdf_links(
             )
             break
 
-    # Pattern 1d: static click handlers such as window.open('/docs/form.pdf').
+    # Pattern 1e: static click handlers such as window.open('/docs/form.pdf').
     for m in re.finditer(
         rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
         html,
@@ -1464,7 +1503,7 @@ def _extract_pdf_links(
                 target_fiscal_year=target_fiscal_year,
             )
 
-    # Pattern 1e: void input controls with direct PDF data attributes or click handlers.
+    # Pattern 1f: void input controls with direct PDF data attributes or click handlers.
     for m in re.finditer(PDF_INPUT_TAG_PATTERN, html, re.IGNORECASE | re.DOTALL):
         attrs = m.group(1)
         element_text = (

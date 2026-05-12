@@ -823,6 +823,26 @@ def test_extract_pdf_links_includes_select_option_pdf_values() -> None:
     assert "確認申請書" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_includes_meta_refresh_pdf_values() -> None:
+    html = """
+    <html>
+      <head>
+        <title>令和15年度分申請 確認申請書</title>
+        <meta http-equiv="refresh" content="0; url=/docs/r15-kakunin.pdf?download=1">
+      </head>
+    </html>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2033)
+
+    assert [candidate.pdf_url for candidate in candidates] == [
+        "https://example.ac.jp/docs/r15-kakunin.pdf?download=1",
+    ]
+    assert candidates[0].pattern_type == "cache_busted"
+    assert "令和15年度分申請" in candidates[0].anchor_text
+    assert "確認申請書" in candidates[0].anchor_text
+
+
 def test_extract_pdf_links_includes_form_action_pdf_values() -> None:
     html = """
     <section>
