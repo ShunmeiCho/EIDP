@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v326.zip`
-Package commit: `a0c188e3e62fe421058f72b7417515b1d21a67bc`
-Package SHA256: `c01c3acb3409fceb0aa05ecc35a33279ce3385dee03295c15381714afeb8b7ca`
+Current Mac-verifier-clean package: `dist/eidp-windows-v327.zip`
+Package commit: `21583722efa6f0860af2cd6eaca33a56f3d0b432`
+Package SHA256: `aeb957c6f8f16d87ab2b6d63f707c5f8f8ca7ef02a65e57f4342b014447a69a3`
 Latest Windows-setup-proven package: `dist/eidp-windows-v326.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v326.zip`
 
@@ -12,13 +12,14 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v326.zip`
 
 Status: **NOT COMPLETE**
 
-The current source/ZIP snapshot is v326 and passes the default macOS package
-verifier. The packaging, setup, SQLite, Task Scheduler, and bounded Windows
-bootstrap pipeline are reproducible on `ssh win` for v326. v326 contains a
-strict-mode fix for opaque WordPress Download Manager wrappers; the bounded
-Saitama replay confirms the prior 入間看護専門学校 false positive no longer
-downloads as an automatic success. The product goal is still not complete:
-browser UI operator click-through is missing, and the measured
+The current source/ZIP snapshot is v327 and passes the default macOS package
+verifier. v327 keeps the v326 strict-mode fix for opaque WordPress Download
+Manager wrappers and improves RCA packet evidence sampling so candidate-budget
+noise does not hide fiscal-year mismatch / missing-year evidence during manual
+investigation. The packaging, setup, SQLite, Task Scheduler, and bounded
+Windows bootstrap pipeline are reproducible on `ssh win` for v326; v327 has not
+yet been rerun through Windows setup/bootstrap. The product goal is still not
+complete: browser UI operator click-through is missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
 line.
 
@@ -38,16 +39,20 @@ line.
 
 ## Current Non-Windows Evidence
 
-Commands run for v326 source/package:
+Commands run for v327 source/package:
 
-- `uv run pytest tests/unit -q` -> `1331 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1332 passed, 5 warnings`
+- `uv run pytest tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_discovery_evidence_summary.py -q` -> `33 passed`
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `22/22 exact`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v326.zip` -> `OK core`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v326.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
-- `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v327.zip` -> `OK core`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v327.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
+- `uv run ruff check src/eidp/scraper/discovery_rca_packet.py tests/unit/test_cli_discovery_rca_packet.py` -> `All checks passed`
 - One-off strict download check for `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055` with anchor `ダウンロード` -> `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`
+- Rebuilt the v326 Windows Saitama RCA batch plan locally with v327 code and
+  verified publication-lag packets now surface `fiscal_year_mismatch:*` rows
+  before `candidate_budget_dropped` rows.
 
-v326 verifier exposes the current demonstration gap:
+v327 verifier exposes the current demonstration gap:
 
 - Discovery gold-set entries: `22`
 - Outcome distribution: `accepted_target_pdf=6`, `needs_operator_review=6`,
