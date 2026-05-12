@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `60cbda054ee163fa7755b8835a13afbf298bab19` (`eidp-windows-v269.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `8900cbc6af2d1e442d1697db01c5947ad1ed9de3` (`eidp-windows-v270.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -844,6 +844,23 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v269 is still pending and must not be
+inferred from the Mac verifier.
+
+v270 (`8900cbc`) closes the remaining configuration-layer bypass for rolling
+target fiscal years. `EIDP_TARGET_FISCAL_YEAR` and `.env` settings now fail
+validation outside the same supported range `[2019, 2099]` used by PDF parsing,
+strict discovery, and packaged verifier contracts. This keeps the long-lived
+project from silently running an unsupported fiscal-year target even if the
+environment is misconfigured. The Windows distribution verifier now requires
+the packaged `config.py` target-year validator contract. Verification:
+`tests/unit` passed with `1248 passed, 5 warnings`, and
+`dist/eidp-windows-v270.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`ed0e0a3400ecfd1f1f526787e896f9ca55474bcdf1c13a559738265ed0b0a591`,
+`git_commit=8900cbc6af2d1e442d1697db01c5947ad1ed9de3`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v270 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
