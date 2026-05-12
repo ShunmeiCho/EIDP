@@ -121,7 +121,7 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
 
     # Pattern 3: Western filing date "YYYY.M.D" or "YYYY/M/D" pattern
     # These are actual filing dates, not stray year references in policy text
-    filing_dates = re.findall(r"(202[0-9])[./]\d{1,2}[./]\d{1,2}", normed)
+    filing_dates = re.findall(r"(20\d{2})[./]\d{1,2}[./]\d{1,2}", normed)
     if filing_dates:
         # Use the first filing date found (typically on the cover page)
         western_year = int(filing_dates[0])
@@ -130,10 +130,10 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
             return formatted
 
     # Pattern 4: Most frequent western year (fallback)
-    # Exclude future fiscal years to avoid policy references like "2027年度決算"
+    # Exclude future fiscal years to avoid unrelated future policy references.
     from collections import Counter
     max_valid_year = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
-    all_years = re.findall(r"(202[0-9])[\.\s年/]", normed)
+    all_years = re.findall(r"(20\d{2})[\.\s年/]", normed)
     valid_years = [int(y) for y in all_years if int(y) <= max_valid_year]
     if valid_years:
         most_common = Counter(valid_years).most_common(1)[0][0]
