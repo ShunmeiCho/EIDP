@@ -3853,6 +3853,77 @@ def test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body(
     assert candidate.year_evidence == "prefecture_index_current_year"
 
 
+def test_download_pdf_rejects_ambiguous_wordpress_download_manager_without_year_context(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Opaque download-manager wrappers need their own target-year context."""
+
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://i-heiseigakuen.ac.jp/download/%E6%A7%98%E5%BC%8F%EF%BC%92/?wpdmdl=4821",
+        page_url="https://i-heiseigakuen.ac.jp/youshiki/",
+        anchor_text="ダウンロード",
+        pattern_type="wordpress_download_manager",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "target_fiscal_year_not_detected"
+
+
+def test_download_pdf_accepts_wordpress_download_manager_with_target_year_context(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://i-heiseigakuen.ac.jp/download/%E6%A7%98%E5%BC%8F%EF%BC%92/?wpdmdl=4821",
+        page_url="https://i-heiseigakuen.ac.jp/youshiki/",
+        anchor_text="令和8年度分申請 ダウンロード",
+        pattern_type="wordpress_download_manager",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "url_hint"
+
+
 def test_download_pdf_trusted_prefecture_ignores_upload_year_for_target_body(
     monkeypatch, tmp_path: Path
 ) -> None:

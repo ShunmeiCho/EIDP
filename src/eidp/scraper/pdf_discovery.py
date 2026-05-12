@@ -1376,6 +1376,23 @@ def _is_wordpress_download_manager_url(url: str, base_url: str) -> bool:
     return any(key.lower() == "wpdmdl" and value.strip() for key, value in parse_qsl(parsed.query))
 
 
+def _trusted_year_evidence_can_fill_missing_pdf_year(
+    candidate: PdfCandidate,
+    *,
+    pdf_type: str,
+    trusted_year_evidence: str,
+    target_year: int,
+) -> bool:
+    if pdf_type != "target" or not trusted_year_evidence:
+        return False
+    if candidate.pattern_type == "wordpress_download_manager" and not _has_target_year_hint(
+        candidate,
+        target_year=target_year,
+    ):
+        return False
+    return True
+
+
 def _extract_pdf_links(
     html: str,
     base_url: str,
@@ -2369,6 +2386,12 @@ def download_pdf(
         if strict_target_fiscal_year:
             target_year = target_fiscal_year or settings.target_fiscal_year
             trusted_year_evidence = candidate.trusted_year_evidence.strip()
+            trusted_year_can_fill_missing_pdf_year = _trusted_year_evidence_can_fill_missing_pdf_year(
+                candidate,
+                pdf_type=pdf_type,
+                trusted_year_evidence=trusted_year_evidence,
+                target_year=target_year,
+            )
             if pdf_type == "non_target":
                 return None, None, 0, "non_target", "classified_non_target"
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
@@ -2397,14 +2420,14 @@ def download_pdf(
             ) and not (
                 pdf_type == "target" and _has_target_year_hint(candidate, target_year=target_year)
             ) and not (
-                pdf_type == "target" and trusted_year_evidence
+                trusted_year_can_fill_missing_pdf_year
             ):
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
             if detected_fiscal_year == target_year:
                 candidate.year_evidence = "pdf_text"
             elif _has_target_year_hint(candidate, target_year=target_year):
                 candidate.year_evidence = "url_hint"
-            elif pdf_type == "target" and trusted_year_evidence:
+            elif trusted_year_can_fill_missing_pdf_year:
                 candidate.year_evidence = trusted_year_evidence
             elif pdf_type == "image_only" and _has_target_application_hint(candidate):
                 candidate.year_evidence = "target_application_no_year"
