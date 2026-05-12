@@ -1537,6 +1537,21 @@ class _HtmlClient:
         return self.pages.get(url, _HtmlResponse("", status_code=404, url=url))
 
 
+class _TimeoutOnceHtmlClient(_HtmlClient):
+    def __init__(self, pages: dict[str, _HtmlResponse], timeout_url: str) -> None:
+        super().__init__(pages)
+        self.timeout_url = timeout_url
+        self._timed_out = False
+
+    def get(self, url: str, **kwargs):  # noqa: ANN001
+        if url == self.timeout_url and not self._timed_out:
+            self._timed_out = True
+            self.calls.append(url)
+            request = httpx.Request("GET", url)
+            raise httpx.ReadTimeout("timed out", request=request)
+        return super().get(url, **kwargs)
+
+
 class _RenderedHtmlFetcher:
     def __init__(self, pages: dict[str, str]) -> None:
         self.pages = pages
@@ -1636,6 +1651,39 @@ def test_discover_pdfs_uses_sitemap_when_site_has_no_disclosure_links(monkeypatc
     assert result.best is not None
     assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
     assert result.best.page_url == "https://example.ac.jp/school/public_info/"
+
+
+def test_discover_pdfs_retries_registered_page_timeout_once(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _TimeoutOnceHtmlClient(
+        {
+            "https://example.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://example.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/docs/r8-kakunin.pdf">
+                    令和8年度 高等教育の修学支援新制度 確認申請書
+                  </a>
+                </html>
+                """,
+                url="https://example.ac.jp/",
+            ),
+            "https://example.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        },
+        timeout_url="https://example.ac.jp/",
+    )
+
+    result = discover_pdfs_for_site(client, 1, "https://example.ac.jp/", target_fiscal_year=2026)
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://example.ac.jp/docs/r8-kakunin.pdf"
+    assert client.calls[:3] == [
+        "https://example.ac.jp/robots.txt",
+        "https://example.ac.jp/",
+        "https://example.ac.jp/",
+    ]
 
 
 def test_discover_pdfs_falls_back_to_origin_root_when_registered_path_is_404(monkeypatch) -> None:
@@ -2318,6 +2366,35 @@ def test_run_pdf_discovery_passes_school_name_to_site_crawler(monkeypatch, tmp_p
 
         assert stats["crawled"] == 1
         assert seen["school_name"] == "専門学校名古屋ビジネス・アカデミー"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_records_structured_site_error_evidence(monkeypatch, tmp_path: Path) -> None:
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+
+    def fake_discover(_client, school_id: int, _site_url: str, **_kwargs: object) -> DiscoveryResult:
+        return DiscoveryResult(
+            school_id=school_id,
+            error="robots.txt disallows all crawling",
+            error_code="robots_disallow_all",
+            error_retryable=False,
+        )
+
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=1, rate_limit=0, evidence_path=evidence)
+
+        assert stats["failed"] == 1
+        payload = json.loads(evidence.read_text(encoding="utf-8").splitlines()[0])
+        assert payload["reason"] == "discovery_error"
+        assert payload["extra"]["error"] == "robots.txt disallows all crawling"
+        assert payload["extra"]["error_code"] == "robots_disallow_all"
+        assert payload["extra"]["retryable"] == "false"
     finally:
         session.close()
 

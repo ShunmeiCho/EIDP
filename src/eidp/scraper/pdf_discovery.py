@@ -101,6 +101,23 @@ def _origin_root_url(url: str) -> str | None:
 
 
 def _main_page_response_with_root_fallback(client: httpx.Client, site_url: str) -> tuple[httpx.Response, str]:
+    """Fetch the registered page, retrying one transient timeout before root fallback."""
+
+    last_timeout: httpx.TimeoutException | None = None
+    for attempt in range(2):
+        try:
+            return _main_page_response_with_root_fallback_once(client, site_url)
+        except httpx.TimeoutException as exc:
+            last_timeout = exc
+            if attempt == 0:
+                time.sleep(1.0)
+                continue
+            break
+    assert last_timeout is not None
+    raise last_timeout
+
+
+def _main_page_response_with_root_fallback_once(client: httpx.Client, site_url: str) -> tuple[httpx.Response, str]:
     """Fetch the registered page, falling back to origin root for stale 404 paths."""
 
     resp = _safe_get(client, site_url)
@@ -368,6 +385,8 @@ class DiscoveryResult:
     file_hash: str | None = None
     file_size: int = 0
     error: str | None = None
+    error_code: str = ""
+    error_retryable: bool = False
 
 
 @dataclass(frozen=True)
@@ -434,6 +453,25 @@ def _increment_rejection_reason(stats: dict[str, int], reason: str) -> None:
         return
     key = _rejection_reason_stat_key(reason)
     stats[key] = int(stats.get(key, 0)) + 1
+
+
+def _discovery_error_extra(result: DiscoveryResult) -> dict[str, str]:
+    """Return machine-readable metadata for a site-level discovery failure."""
+
+    error = str(result.error or "")
+    extra = {"error": error}
+    if result.error_code:
+        extra["error_code"] = result.error_code
+    elif error == "timeout":
+        extra["error_code"] = "timeout"
+    elif error == "unsafe_url":
+        extra["error_code"] = "unsafe_url"
+    elif "robots.txt disallows" in error:
+        extra["error_code"] = "robots_disallow_all"
+    elif error:
+        extra["error_code"] = "http_error"
+    extra["retryable"] = "true" if result.error_retryable or extra.get("error_code") == "timeout" else "false"
+    return extra
 
 
 def _rejection_cache_key(
@@ -2122,6 +2160,7 @@ def discover_pdfs_for_site(
         # SSRF validation: reject internal/metadata URLs
         if not _is_safe_url(site_url):
             result.error = "unsafe_url"
+            result.error_code = "unsafe_url"
             return result
 
         # Check robots.txt (best effort, non-blocking)
@@ -2142,6 +2181,7 @@ def discover_pdfs_for_site(
                         in_wildcard = False
                     elif in_wildcard and line.strip() == "Disallow: /":
                         result.error = "robots.txt disallows all crawling"
+                        result.error_code = "robots_disallow_all"
                         return result
         except httpx.HTTPError:
             pass  # No robots.txt or unreachable, proceed
@@ -2329,8 +2369,11 @@ def discover_pdfs_for_site(
 
     except httpx.TimeoutException:
         result.error = "timeout"
+        result.error_code = "timeout"
+        result.error_retryable = True
     except httpx.HTTPError as e:
         result.error = str(e)
+        result.error_code = type(e).__name__
 
     return result
 
@@ -2657,7 +2700,7 @@ def run_pdf_discovery(
                     pdf_url=site.url,
                     page_url=site.url,
                     reason="discovery_error",
-                    extra={"error": str(result.error)},
+                    extra=_discovery_error_extra(result),
                 ))
                 if progress_callback is not None:
                     progress_callback(dict(stats), len(sites))
