@@ -1423,14 +1423,16 @@ def _trusted_year_evidence_can_fill_missing_pdf_year(
     trusted_year_evidence: str,
     target_year: int,
 ) -> bool:
-    if pdf_type != "target" or not trusted_year_evidence:
-        return False
-    if candidate.pattern_type == "wordpress_download_manager" and not _has_target_year_hint(
-        candidate,
-        target_year=target_year,
-    ):
-        return False
-    return True
+    """Return whether source freshness may replace PDF/link year evidence.
+
+    It currently must not. A current prefecture index proves that the registered
+    disclosure URL is worth crawling, but live Saitama evidence showed that many
+    current index rows still point at yearless or stale PDFs. Strict current-FY
+    success therefore requires PDF text or candidate URL/anchor year evidence.
+    """
+
+    _ = (candidate, pdf_type, trusted_year_evidence, target_year)
+    return False
 
 
 def _extract_pdf_links(

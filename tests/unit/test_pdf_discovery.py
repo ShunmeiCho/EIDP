@@ -3996,10 +3996,10 @@ def test_download_pdf_rejects_control_character_url_without_fetch(tmp_path: Path
     assert reason == "unsafe_url"
 
 
-def test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body(
+def test_download_pdf_rejects_trusted_prefecture_year_evidence_without_pdf_or_url_year(
     monkeypatch, tmp_path: Path
 ) -> None:
-    """A current prefecture index can be year evidence when the PDF body is target."""
+    """A current prefecture index is source evidence, not PDF year evidence."""
 
     content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
     candidate = PdfCandidate(
@@ -4024,13 +4024,13 @@ def test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body(
         strict_target_fiscal_year=True,
     )
 
-    assert file_path is not None
-    assert file_hash is not None
-    assert file_size > 1000
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
     assert pdf_type == "target"
-    assert reason is None
+    assert reason == "target_fiscal_year_not_detected"
     assert candidate.detected_fiscal_year is None
-    assert candidate.year_evidence == "prefecture_index_current_year"
+    assert candidate.year_evidence == ""
 
 
 def test_download_pdf_rejects_ambiguous_wordpress_download_manager_without_year_context(
@@ -4104,10 +4104,10 @@ def test_download_pdf_accepts_wordpress_download_manager_with_target_year_contex
     assert candidate.year_evidence == "url_hint"
 
 
-def test_download_pdf_trusted_prefecture_ignores_upload_year_for_target_body(
+def test_download_pdf_rejects_yearless_upload_path_even_with_trusted_prefecture(
     monkeypatch, tmp_path: Path
 ) -> None:
-    """A WordPress upload year is not stale-FY proof when the current index is trusted."""
+    """Upload dates are not enough for strict current-FY success."""
 
     content = _make_pdf_bytes(
         "様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員\n"
@@ -4135,12 +4135,12 @@ def test_download_pdf_trusted_prefecture_ignores_upload_year_for_target_body(
         strict_target_fiscal_year=True,
     )
 
-    assert file_path is not None
-    assert file_hash is not None
-    assert file_size > 1000
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
     assert pdf_type == "target"
-    assert reason is None
-    assert candidate.year_evidence == "prefecture_index_current_year"
+    assert reason == "target_fiscal_year_not_detected"
+    assert candidate.year_evidence == ""
 
 
 def test_download_pdf_trusted_prefecture_still_rejects_explicit_stale_year_label(
