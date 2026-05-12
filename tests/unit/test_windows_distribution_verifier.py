@@ -479,6 +479,7 @@ def test_verify_core_zip_reports_discovery_gold_set_summary(tmp_path: Path) -> N
     assert "onclick" in check.details["discovery_gold_undemonstrated_pattern_sources"]
     assert "wordpress_download_manager" not in check.details["discovery_gold_undemonstrated_pattern_sources"]
     assert check.details["discovery_gold_expected_predictions"] == 5
+    assert any("lack gold-set demonstrations" in warning for warning in check.warnings)
 
 
 def test_verify_core_zip_rejects_invalid_discovery_gold_set_json(tmp_path: Path) -> None:
@@ -1756,3 +1757,4 @@ def test_cli_can_require_demonstrated_discovery_patterns(tmp_path: Path, capsys)
     output = capsys.readouterr().out
     assert "undemonstrated discovery extractor sources" in output
     assert "onclick" in output
+    assert "warning: tracked PDF discovery extractor sources lack gold-set demonstrations" in output

@@ -560,6 +560,11 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
     check.details["discovery_gold_undemonstrated_pattern_sources"] = [
         source for source in DISCOVERY_GOLD_TRACKED_EXTRACTOR_SOURCES if source not in pattern_source_counts
     ]
+    if check.details["discovery_gold_undemonstrated_pattern_sources"]:
+        check.warn(
+            "tracked PDF discovery extractor sources lack gold-set demonstrations: "
+            f"{check.details['discovery_gold_undemonstrated_pattern_sources']}"
+        )
     _check_discovery_gold_expected_predictions(check, names, expected_predictions)
 
 
