@@ -292,6 +292,28 @@ def test_apply_dept_alias_returns_lock_busy_without_writing(tmp_path: Path) -> N
         session.close()
 
 
+def test_apply_school_alias_returns_lock_busy_without_writing(tmp_path: Path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.commit()
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            created, reason = apply_school_alias_proposal(
+                session,
+                school_id=1,
+                alias_name="A-short",
+                lock_path=lock_path,
+            )
+
+        assert created is False
+        assert reason == "lock_busy"
+        assert session.query(SchoolAlias).count() == 0
+    finally:
+        session.close()
+
+
 def test_void_department_change_returns_lock_busy_without_writing(tmp_path: Path) -> None:
     session = _session()
     lock_path = tmp_path / "data" / ".lock"

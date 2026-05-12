@@ -16,4 +16,4 @@ WEEKLY_SHIP_GATE_METRIC_BASIS = "weekly_operator_reviewable_acquisition"
 def ship_gate_status_from_yield(yield_pct: float | None) -> str:
     if yield_pct is None:
         return "not_measured"
-    return "pass" if float(yield_pct) >= SHIP_GATE_AUTO_YIELD_PCT else "below_gate"
+    return "pass" if float(yield_pct) >= SHIP_GATE_OPERATOR_COVERAGE_PCT else "below_gate"

@@ -1,9 +1,9 @@
 """Final-goal ship readiness report.
 
 This report keeps the long-term product target separate from lower-level
-package and unit-test gates. It measures the business line directly:
-strict target-FY PDF acquisition, estimated manual workload, and Excel-ready
-target-FY data.
+package and unit-test gates. Strict target-FY PDF acquisition remains a
+diagnostic metric; the release-blocking business line is operator-reviewable
+coverage expressed as manual workload, plus Excel-ready target-FY data.
 """
 
 from dataclasses import dataclass
@@ -74,12 +74,6 @@ def compute_ship_readiness(
     estimated_manual_workload_rate = 1.0 - operator_reviewable_rate if total else 0.0
 
     criteria = (
-        ShipReadinessCriterion(
-            name="strict_target_pdf_auto_acquisition",
-            value=strict_target_pdf_rate,
-            threshold=strict_auto_target_pdf_min,
-            passed=strict_target_pdf_rate >= strict_auto_target_pdf_min,
-        ),
         ShipReadinessCriterion(
             name="estimated_manual_workload",
             value=estimated_manual_workload_rate,

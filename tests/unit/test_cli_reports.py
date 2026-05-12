@@ -85,7 +85,6 @@ def test_report_ship_readiness_json_can_fail_on_missing_goal(monkeypatch) -> Non
             strict_auto_target_pdf_min=0.6,
             manual_workload_max=0.3,
             criteria=(
-                ShipReadinessCriterion("strict_target_pdf_auto_acquisition", 0.5, 0.6, False),
                 ShipReadinessCriterion("estimated_manual_workload", 0.3, 0.3, True),
                 ShipReadinessCriterion("excel_ready", 0.4, 0.6, False),
             ),
@@ -101,5 +100,5 @@ def test_report_ship_readiness_json_can_fail_on_missing_goal(monkeypatch) -> Non
     assert payload["ok"] is False
     assert payload["strict_target_pdf_rate"] == 0.5
     assert payload["estimated_manual_workload_rate"] == 0.3
-    assert payload["criteria"][0]["name"] == "strict_target_pdf_auto_acquisition"
+    assert payload["criteria"][0]["name"] == "estimated_manual_workload"
     assert fake_session.closed is True

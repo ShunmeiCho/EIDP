@@ -4,6 +4,24 @@ import ast
 from pathlib import Path
 
 CLI_SOURCE = Path("src/eidp/cli.py")
+WRITE_HELPER_CALLS = frozenset(
+    {
+        "apply_prefecture_artifact",
+        "crawl_missing_school_urls",
+        "create_review_items_for_documents",
+        "discover_pdfs_for_sites",
+        "discover_school_urls",
+        "flush_audit_outbox",
+        "import_excel_file",
+        "ingest_documents",
+        "populate_review_items",
+        "rebuild_school_year_tasks",
+        "reconcile_mext_rows",
+        "run_firecrawl_discovery",
+        "seed_discovery_gold_sites",
+        "update_school_matches",
+    }
+)
 
 
 def _is_typer_command(node: ast.FunctionDef) -> bool:
@@ -35,7 +53,7 @@ def _contains_db_write_call(node: ast.FunctionDef) -> bool:
         func = child.func
         if isinstance(func, ast.Attribute) and func.attr == "commit":
             return True
-        if isinstance(func, ast.Name) and func.id == "flush_audit_outbox":
+        if isinstance(func, ast.Name) and func.id in WRITE_HELPER_CALLS:
             return True
     return False
 

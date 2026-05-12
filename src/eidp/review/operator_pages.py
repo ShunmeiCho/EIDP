@@ -2082,6 +2082,7 @@ def apply_school_alias_proposal(
     school_id: int,
     alias_name: str,
     source: str = "proposal_review_queue",
+    lock_path: Path | None = None,
 ) -> tuple[bool, str]:
     """Idempotent SchoolAlias insert with cross-school conflict check.
 
@@ -2094,6 +2095,20 @@ def apply_school_alias_proposal(
                                          the row to school_name_ambiguous.
       - empty_alias                    : alias_name is blank after strip
     """
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_alias_proposal"):
+                return apply_school_alias_proposal(
+                    session,
+                    school_id=school_id,
+                    alias_name=alias_name,
+                    source=source,
+                    lock_path=None,
+                )
+        except LockBusyError:
+            session.rollback()
+            return False, "lock_busy"
+
     alias_name = alias_name.strip()
     if not alias_name:
         return False, "empty_alias"
@@ -2297,7 +2312,7 @@ _SCHOOL_PROPOSAL_LABEL = {
 }
 
 
-def _render_school_proposals_tab(session: Session) -> None:
+def _render_school_proposals_tab(session: Session, *, lock_path: Path | None = None) -> None:
     proposals = _read_proposals(_DEFAULT_SCHOOL_PROPOSALS)
     if not proposals:
         st.info(
@@ -2348,7 +2363,7 @@ def _render_school_proposals_tab(session: Session) -> None:
         ),
     )
     if mode.startswith("集中"):
-        _render_school_focus_mode(session, focus_items)
+        _render_school_focus_mode(session, focus_items, lock_path=lock_path)
         return
 
     st.divider()
@@ -2381,6 +2396,7 @@ def _render_school_proposals_tab(session: Session) -> None:
                     session,
                     school_id=p["matched_school_id"],
                     alias_name=p["template_name"],
+                    lock_path=lock_path,
                 )
                 _record_decision(
                     ProposalDecision(
@@ -2430,7 +2446,7 @@ def _render_school_proposals_tab(session: Session) -> None:
                 "扱われているか確信が持てなければ「保留」にしてください。"
             )
         for p in items:
-            _render_school_candidate_picker(session, p, ptype)
+            _render_school_candidate_picker(session, p, ptype, lock_path=lock_path)
 
     truly = by_type.get("truly_missing", [])
     if truly:
@@ -2448,7 +2464,7 @@ def _render_school_proposals_tab(session: Session) -> None:
 
 
 def _render_school_focus_mode(
-    session: Session, focus_items: list[dict]
+    session: Session, focus_items: list[dict], *, lock_path: Path | None = None
 ) -> None:
     """V2-inspired single-proposal focus card.
 
@@ -2554,6 +2570,7 @@ def _render_school_focus_mode(
                     session,
                     school_id=int(picked["school_id"]),
                     alias_name=item["template_name"],
+                    lock_path=lock_path,
                 )
                 _record_decision(
                     ProposalDecision(
@@ -2626,7 +2643,7 @@ def _next_focus_idx_after_decision(ptr: int, total: int) -> int:
 
 
 def _render_school_candidate_picker(
-    session: Session, proposal: dict, ptype: str
+    session: Session, proposal: dict, ptype: str, *, lock_path: Path | None = None
 ) -> None:
     """Render one picker card with Approve / Defer buttons."""
     candidates = proposal.get("candidates") or []
@@ -2665,6 +2682,7 @@ def _render_school_candidate_picker(
                 session,
                 school_id=int(picked["school_id"]),
                 alias_name=template,
+                lock_path=lock_path,
             )
             _record_decision(
                 ProposalDecision(
@@ -2880,7 +2898,7 @@ def page_proposals_review(session: Session, *, lock_path: Path | None = None) ->
         ["学校タブ（学校名のマッチング）", "学科タブ（学科名のマッチング）"]
     )
     with tab_school:
-        _render_school_proposals_tab(session)
+        _render_school_proposals_tab(session, lock_path=lock_path)
     with tab_dept:
         _render_dept_proposals_tab(session, lock_path=lock_path)
 

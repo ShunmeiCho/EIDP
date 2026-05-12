@@ -821,6 +821,23 @@ def test_extract_pdf_links_includes_direct_pdf_data_attributes() -> None:
     assert "確認申請書" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_does_not_treat_data_href_as_href() -> None:
+    html = """
+    <p>令和8年度分申請</p>
+    <a data-href="/docs/old-syllabus.pdf" href="/docs/r8-kakunin.pdf">
+      確認申請書
+    </a>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2026)
+
+    assert [candidate.pdf_url for candidate in candidates] == [
+        "https://example.ac.jp/docs/r8-kakunin.pdf",
+        "https://example.ac.jp/docs/old-syllabus.pdf",
+    ]
+    assert candidates[0].pattern_type == "direct"
+
+
 def test_extract_pdf_links_includes_select_option_pdf_values() -> None:
     html = """
     <section>

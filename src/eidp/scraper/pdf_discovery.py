@@ -1300,7 +1300,7 @@ def _previous_fiscal_year_context(html: str, before: int) -> str:
 
 
 def _anchor_attr(attrs: str, name: str) -> str | None:
-    match = re.search(rf"\b{re.escape(name)}\s*=\s*([\"'])(.*?)\1", attrs, re.IGNORECASE | re.DOTALL)
+    match = re.search(rf"(?:^|\s){re.escape(name)}\s*=\s*([\"'])(.*?)\1", attrs, re.IGNORECASE | re.DOTALL)
     if match is None:
         return None
     return html_lib.unescape(match.group(2))
