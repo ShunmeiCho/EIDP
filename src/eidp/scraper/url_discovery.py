@@ -298,6 +298,7 @@ def search_and_discover(
         session.query(School)
         .filter(~School.id.in_(schools_with_url))
         .filter(School.status == "active")
+        .order_by(School.prefecture.asc(), School.id.asc())
         .limit(batch_size)
         .all()
     )
@@ -575,6 +576,7 @@ async def verify_urls_async(
     unverified = (
         session.query(SchoolSite)
         .filter(SchoolSite.http_status.is_(None))
+        .order_by(SchoolSite.school_id.asc(), SchoolSite.id.asc())
         .limit(batch_size)
         .all()
     )
@@ -642,6 +644,7 @@ def verify_urls_sync(
     unverified = (
         session.query(SchoolSite)
         .filter(SchoolSite.http_status.is_(None))
+        .order_by(SchoolSite.school_id.asc(), SchoolSite.id.asc())
         .limit(batch_size)
         .all()
     )

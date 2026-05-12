@@ -1023,6 +1023,12 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "key.lower() not in TRACKING_QUERY_PARAMS",
             'key.lower() == "wpdmdl"',
         ),
+        "src/eidp/scraper/url_discovery.py": (
+            "School.prefecture.asc()",
+            "School.id.asc()",
+            "SchoolSite.school_id.asc()",
+            "SchoolSite.id.asc()",
+        ),
         "src/eidp/scraper/discovery_gold_set.py": (
             "entries_by_key",
             "(entry.school_id, entry.target_fiscal_year)",

@@ -306,6 +306,9 @@ def _core_entries() -> dict[str, bytes | str]:
             "SchoolSite.school_id.asc()\n"
             "SchoolSite.id.asc()\n"
         ),
+        "src/eidp/scraper/url_discovery.py": (
+            REPO_ROOT / "src" / "eidp" / "scraper" / "url_discovery.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/scraper/discovery_gold_set.py": (
             REPO_ROOT / "src" / "eidp" / "scraper" / "discovery_gold_set.py"
         ).read_text(encoding="utf-8"),
@@ -739,6 +742,21 @@ def test_verify_core_zip_requires_url_normalization_tracking_dedupe_contract(tmp
     assert any("utm_source" in error for error in check.errors)
     assert any("gclid" in error for error in check.errors)
     assert any("wpdmdl" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_stable_url_discovery_order(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/url_discovery.py"] = "def search_and_discover(): pass\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/scraper/url_discovery.py missing required token" in error for error in check.errors)
+    assert any("School.prefecture.asc()" in error for error in check.errors)
+    assert any("School.id.asc()" in error for error in check.errors)
+    assert any("SchoolSite.school_id.asc()" in error for error in check.errors)
+    assert any("SchoolSite.id.asc()" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(tmp_path: Path) -> None:

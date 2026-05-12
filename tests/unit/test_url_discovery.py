@@ -124,6 +124,69 @@ def test_search_and_discover_registers_best_result(tmp_path: Path, monkeypatch) 
         session.close()
 
 
+def test_search_and_discover_uses_stable_school_order(monkeypatch) -> None:
+    import time as time_module
+
+    class FakeProvider:
+        queries: list[str] = []
+
+        def name(self) -> str:
+            return "fake"
+
+        def search(self, query: str, count: int = 5) -> list[SearchResult]:
+            self.queries.append(query)
+            return []
+
+    provider = FakeProvider()
+
+    import eidp.scraper.search_provider as search_provider
+
+    monkeypatch.setattr(search_provider, "create_provider", lambda **_kwargs: provider)
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda url: True)
+    monkeypatch.setattr(time_module, "sleep", lambda _seconds: None)
+
+    session = _session()
+    try:
+        session.add_all(
+            [
+                School(
+                    id=3,
+                    prefecture="東京都",
+                    corporation_name="法人C",
+                    school_name="C専門学校",
+                    school_type="専門学校",
+                    status="active",
+                ),
+                School(
+                    id=1,
+                    prefecture="東京都",
+                    corporation_name="法人A",
+                    school_name="A専門学校",
+                    school_type="専門学校",
+                    status="active",
+                ),
+                School(
+                    id=2,
+                    prefecture="東京都",
+                    corporation_name="法人B",
+                    school_name="B専門学校",
+                    school_type="専門学校",
+                    status="active",
+                ),
+            ]
+        )
+        session.commit()
+
+        stats = url_discovery.search_and_discover(session, batch_size=3, rate_limit_delay=0)
+
+        assert stats == {"searched": 3, "found": 0, "no_result": 3, "errors": 0}
+        assert provider.queries[0] == "A専門学校 情報公開 高等教育 修学支援"
+        assert provider.queries[5] == "B専門学校 情報公開 高等教育 修学支援"
+        assert provider.queries[10] == "C専門学校 情報公開 高等教育 修学支援"
+    finally:
+        session.close()
+
+
 def test_search_and_discover_rejects_low_confidence_results(tmp_path: Path, monkeypatch) -> None:
     import time as time_module
 
@@ -457,5 +520,55 @@ def test_verify_urls_sync_does_not_stamp_prefecture_aggregator_verified_at(monke
         assert site.verified is True
         assert site.last_checked is not None
         assert site.verified_at is None
+    finally:
+        session.close()
+
+
+def test_verify_urls_sync_uses_stable_site_order(monkeypatch) -> None:
+    calls: list[str] = []
+
+    class FakeResponse:
+        status_code = 200
+        headers: dict[str, str] = {}
+
+        def __init__(self, url: str) -> None:
+            self.url = url
+
+    class FakeClient:
+        def __init__(self, **_kwargs):  # noqa: ANN001
+            pass
+
+        def __enter__(self):  # noqa: ANN204
+            return self
+
+        def __exit__(self, *_args):  # noqa: ANN002, ANN204
+            return None
+
+        def head(self, url: str) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(url)
+
+    monkeypatch.setattr(url_discovery.httpx, "Client", FakeClient)
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda _url: True)
+
+    session = _session()
+    try:
+        session.add_all(
+            [
+                SchoolSite(school_id=3, url="https://example.ac.jp/school-3/"),
+                SchoolSite(school_id=1, url="https://example.ac.jp/school-1/"),
+                SchoolSite(school_id=2, url="https://example.ac.jp/school-2/"),
+            ]
+        )
+        session.flush()
+
+        stats = url_discovery.verify_urls_sync(session, batch_size=3)
+
+        assert stats == {"checked": 3, "ok": 3, "failed": 0, "timeout": 0}
+        assert calls == [
+            "https://example.ac.jp/school-1/",
+            "https://example.ac.jp/school-2/",
+            "https://example.ac.jp/school-3/",
+        ]
     finally:
         session.close()
