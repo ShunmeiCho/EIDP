@@ -554,9 +554,9 @@ def _prediction_from_pdf_evidence_payload(
 
 def _prediction_priority(outcome: str) -> int:
     return {
-        "accepted_target_pdf": 4,
-        "publication_lag_latest_public": 3,
-        "needs_operator_review": 2,
+        "accepted_target_pdf": 5,
+        "publication_lag_latest_public": 4,
+        "needs_operator_review": 3,
         "site_fetch_error": 2,
         "no_target_candidate_found": 1,
     }.get(outcome, 0)

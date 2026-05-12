@@ -588,6 +588,52 @@ def test_load_predictions_prefers_site_fetch_error_over_non_target_candidate_noi
     ]
 
 
+def test_load_predictions_prefers_review_candidate_over_site_fetch_error_regardless_of_order(tmp_path: Path) -> None:
+    entries = [
+        _entry(
+            entry_id="review-over-site-error",
+            school_id=1,
+            target_fiscal_year=2026,
+            outcome="needs_operator_review",
+            pdf_url="https://example.ac.jp/form.pdf",
+            fiscal_year=None,
+        )
+    ]
+    rows = [
+        {
+            "school_id": 1,
+            "pdf_url": "https://example.ac.jp/disclosure/",
+            "reason": "discovery_error",
+            "pdf_type": None,
+        },
+        {
+            "school_id": 1,
+            "pdf_url": "https://example.ac.jp/form.pdf",
+            "reason": "target_fiscal_year_not_detected",
+            "pdf_type": "target",
+        },
+    ]
+
+    for index, ordered_rows in enumerate((rows, list(reversed(rows))), start=1):
+        evidence_path = tmp_path / f"discovery-evidence-{index}.jsonl"
+        evidence_path.write_text(
+            "\n".join(json.dumps(row) for row in ordered_rows),
+            encoding="utf-8",
+        )
+
+        predictions = load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries)
+
+        assert predictions == [
+            DiscoveryGoldPrediction(
+                entry_id="review-over-site-error",
+                outcome="needs_operator_review",
+                pdf_url="https://example.ac.jp/form.pdf",
+                fiscal_year=None,
+                strict_target_year_success=False,
+            )
+        ]
+
+
 def test_load_predictions_prefers_accepted_body_year_over_stale_url_hint(tmp_path: Path) -> None:
     evidence_path = tmp_path / "discovery-evidence.jsonl"
     evidence_path.write_text(

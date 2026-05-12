@@ -1057,6 +1057,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '"pre_filtered_non_target_hint"',
             '"classified_non_target"',
             '"all_negative_score"',
+            '"needs_operator_review": 3',
             '"site_fetch_error": 2',
             "_is_better_tie_break_prediction",
             'candidate.outcome == current.outcome == "publication_lag_latest_public"',
