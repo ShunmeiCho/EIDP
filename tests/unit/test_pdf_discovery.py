@@ -776,6 +776,30 @@ def test_extract_pdf_links_includes_wordpress_download_manager_wrappers() -> Non
     assert "ダウンロード" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_includes_direct_pdf_data_attributes() -> None:
+    html = """
+    <p>令和8年度分申請</p>
+    <p>
+      <a href="#" data-href="/docs/r8-kakunin.pdf?download=1#page=1">
+        確認申請書 ダウンロード
+      </a>
+    </p>
+    <p>
+      <a href="#" data-url="/docs/syllabus.pdf">授業科目一覧</a>
+    </p>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2026)
+
+    assert [candidate.pdf_url for candidate in candidates] == [
+        "https://example.ac.jp/docs/r8-kakunin.pdf?download=1#page=1",
+        "https://example.ac.jp/docs/syllabus.pdf",
+    ]
+    assert candidates[0].pattern_type == "cache_busted"
+    assert "令和8年度分申請" in candidates[0].anchor_text
+    assert "確認申請書" in candidates[0].anchor_text
+
+
 def test_append_unique_candidates_deduplicates_encoded_and_unencoded_paths() -> None:
     target = [
         PdfCandidate(

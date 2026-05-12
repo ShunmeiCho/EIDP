@@ -371,6 +371,9 @@ class RenderedHtmlFetcher(Protocol):
     def fetch_html(self, url: str) -> str | None: ...
 
 
+PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url")
+
+
 def _is_target_year_rejection(reason: str) -> bool:
     return reason == "target_fiscal_year_not_detected" or reason.startswith("fiscal_year_mismatch:")
 
@@ -1317,6 +1320,33 @@ def _extract_pdf_links(
             ),
             target_fiscal_year=target_fiscal_year,
         )
+
+    # Pattern 1b: JavaScript/download-button anchors with direct PDF data attributes.
+    for m in re.finditer(
+        r"<a\s([^>]*)>(.*?)</a>",
+        html, re.IGNORECASE | re.DOTALL,
+    ):
+        attrs = m.group(1)
+        for attr_name in PDF_LINK_ATTRIBUTE_NAMES:
+            href = _anchor_attr(attrs, attr_name)
+            if not href or ".pdf" not in unquote(href).lower():
+                continue
+            url = urljoin(base_url, href)
+            pattern = "cache_busted" if "?" in href else "direct"
+            if "/wp-content/" in url:
+                pattern = "wordpress"
+            _append_or_upgrade_candidate(
+                candidates,
+                candidate_index_by_key,
+                PdfCandidate(
+                    pdf_url=url,
+                    page_url=base_url,
+                    anchor_text=_pdf_anchor_context_text(html, m),
+                    pattern_type=pattern,
+                ),
+                target_fiscal_year=target_fiscal_year,
+            )
+            break
 
     # Pattern 2b: WordPress Download Manager wrappers.
     #
