@@ -706,6 +706,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (migrations / "versions" / "abcd_initial.py").write_text("# rev", encoding="utf-8")
     (fake_repo / "docs" / "runbooks").mkdir(parents=True)
     (fake_repo / "docs" / "runbooks" / "eidp-windows.md").write_text("# runbook", encoding="utf-8")
+    (fake_repo / "docs" / "runbooks" / "eidp-operator-e2e-template.md").write_text(
+        "# E2E\nship_readiness_rc\n",
+        encoding="utf-8",
+    )
     (fake_repo / "README.md").write_text("# EIDP", encoding="utf-8")
     (fake_repo / "requirements-windows.txt").write_text("structlog\n", encoding="utf-8")
     (fake_repo / "pyproject.toml").write_text("[project]\nname='eidp'\n", encoding="utf-8")
@@ -813,6 +817,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "scripts/diagnose.bat" in arcs
     assert "wheelhouse/structlog-25.0.0-py3-none-any.whl" in arcs
     assert "docs/runbooks/eidp-windows.md" in arcs
+    assert "docs/runbooks/eidp-operator-e2e-template.md" in arcs
     assert "README.md" in arcs
     assert "requirements-windows.txt" in arcs
     assert "data/master.xlsx" in arcs, (

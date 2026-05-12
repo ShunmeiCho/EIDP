@@ -402,10 +402,13 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
 
     # Operator-facing docs. Keep this narrow: historical reports/plans are
     # useful in git, but the Windows operator ZIP should carry only the
-    # current runbook and top-level entrypoint.
+    # current runbook, E2E evidence template, and top-level entrypoint.
     runbook = repo_root / "docs" / "runbooks" / "eidp-windows.md"
     if runbook.is_file():
         members.append((runbook, "docs/runbooks/eidp-windows.md"))
+    e2e_template = repo_root / "docs" / "runbooks" / "eidp-operator-e2e-template.md"
+    if e2e_template.is_file():
+        members.append((e2e_template, "docs/runbooks/eidp-operator-e2e-template.md"))
 
     # runtime/ — python-build-standalone + uv.exe. Sprint 8.5.a.2.
     # The download_windows_runtime.py script populates this directory.

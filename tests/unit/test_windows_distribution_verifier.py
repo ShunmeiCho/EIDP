@@ -178,6 +178,14 @@ def _core_entries() -> dict[str, bytes | str]:
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
             "アンチウイルスにより隔離された\n"
         ),
+        "docs/runbooks/eidp-operator-e2e-template.md": (
+            "# E2E\n"
+            "ship_readiness_rc\n"
+            "strict target PDF 自動取得率\n"
+            "推定手作業率\n"
+            "Excel ready 率\n"
+            "logs\\diagnostics-*.txt\n"
+        ),
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
         "scripts/weekly_run.bat": (SCRIPTS_DIR / "weekly_run.bat").read_text(encoding="utf-8"),

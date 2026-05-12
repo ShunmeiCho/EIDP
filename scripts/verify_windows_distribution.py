@@ -82,6 +82,7 @@ CORE_REQUIRED_EXACT = (
     "pyproject.toml",
     "alembic.ini",
     "docs/runbooks/eidp-windows.md",
+    "docs/runbooks/eidp-operator-e2e-template.md",
     "scripts/first_setup.bat",
     "scripts/launch.bat",
     "scripts/weekly_run.bat",
@@ -1308,6 +1309,21 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "画面左のサイドバーに 12 ページ",
     ):
         _reject_text(check, body, member, token)
+
+    e2e_member = "docs/runbooks/eidp-operator-e2e-template.md"
+    if e2e_member not in names:
+        return
+    e2e_body = _read_zip_text(check, e2e_member)
+    if e2e_body is None:
+        return
+    for token in (
+        "ship_readiness_rc",
+        "strict target PDF 自動取得率",
+        "推定手作業率",
+        "Excel ready 率",
+        "logs\\diagnostics-*.txt",
+    ):
+        _require_text(check, e2e_body, e2e_member, token)
 
 
 def _check_build_info(check: ZipCheck, names: set[str]) -> None:
