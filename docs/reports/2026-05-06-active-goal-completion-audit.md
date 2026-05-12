@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `99789d37f2d189bb044e484c534e626d40b36360` (`eidp-windows-v288.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `93c6ba1634f4172e5962130e9d5009e10f61ccb5` (`eidp-windows-v289.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1227,6 +1227,26 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v288 is still pending and must not be
+inferred from the Mac verifier.
+
+v289 (`93c6ba1`) extends the rolling-year/era contract to the PDF extraction
+layer. The extractor already used the shared fiscal-year parser and formatter;
+v289 adds a regression test proving `_extract_fiscal_year` follows the active
+Japanese-era configuration, and the Windows distribution verifier now requires
+the packaged extractor to call `fiscal_year_from_japanese_era_text`. This
+prevents the ingest-side fiscal-year label extraction from drifting back to a
+hard-coded Reiwa-only implementation as the project rolls beyond the current
+cycle. Verification: `tests/unit` passed with `1284 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v289.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`16fc31b29b1b056fee4ad608fb67e2c5287d2322e0c9a5ace00c30b8df1c5ee7`,
+`git_commit=93c6ba1634f4172e5962130e9d5009e10f61ccb5`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v289 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
