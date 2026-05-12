@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `f053bbdda54ac6e2e49f2bf3df91420c7d8af88d` (`eidp-windows-v302.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `c3163224f09577b970d730f9ce55c54882e74ec5` (`eidp-windows-v303.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1527,6 +1527,29 @@ with SHA256 `0709e8dbad15577d46fd3218e8d7d9eed3808e1432b75997144bab161aac35b8`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v302 is still pending and must not be
+inferred from the Mac verifier.
+
+v303 (`c316322`) improves scoring context for PDFs already exposed through
+`embed`, `object`, or `iframe` tags. Earlier versions discovered these embedded
+PDF URLs but stored an empty anchor context, so generic PDF names could lose the
+nearby `令和N年度` and `確認申請書` text needed by strict target-year scoring.
+The extractor now routes embedded PDF candidates through
+`_pdf_element_context_text`, without widening the set of embedded tags or
+attributes it accepts. The regression test uses FY2034 / Reiwa 16 and verifies
+that the embedded candidate keeps both fiscal-year and target-form context. The
+packaged verifier now requires `PDF_EMBED_TAG_NAMES`,
+`PDF_EMBED_ATTRIBUTE_NAMES`, and the embedded pattern contract. Verification:
+`tests/unit` passed with `1297 passed, 5 warnings`, `eval-discovery-gold
+--predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`.
+`dist/eidp-windows-v303.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py` with SHA256
+`0e0e96c6b7b20e5f5d216962a175cb32334a9bcbf136bf35f9a5d09668d450bb`,
+`git_commit=c3163224f09577b970d730f9ce55c54882e74ec5`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v303 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
