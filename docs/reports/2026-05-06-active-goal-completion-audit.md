@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `058565650011d11132884bb6916af40580992756` (`eidp-windows-v304.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `313dee6a3bdb126369110aa834e94044c94bff6c` (`eidp-windows-v305.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1572,6 +1572,30 @@ with SHA256 `a0a410412df25f0d54f3b6abc33ac97611ed4752dbaa8e0167304d07e990a928`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v304 is still pending and must not be
+inferred from the Mac verifier.
+
+v305 (`313dee6`) makes the manual-action audit JSONL outbox dedup-safe across
+monthly archive shards. The DB remains the authoritative audit source and
+`data/audit/manual-actions.jsonl` remains the active outbox path, but
+`flush_audit_outbox` now scans sibling `manual-actions-*.jsonl` files as well
+as the active file before deciding whether a pending `action_id` has already
+been exported. This supports future/manual monthly rotation without duplicating
+audit rows or losing the crash-recovery behavior where a line was written but
+`jsonl_exported_at` was not stamped yet. Regression coverage seeds
+`manual-actions-2026-05.jsonl` with a pending row's `action_id` and verifies the
+row is stamped as `already_present` without appending a duplicate line. The
+packaged verifier now requires `OUTBOX_ARCHIVE_GLOB` and
+`_candidate_outbox_paths`. Verification: `tests/unit` passed with
+`1300 passed, 5 warnings`, `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v305.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `19b2e50f9f8294d7243f50d7744592e5c640dbe4de969085412d788d0c13c55e`,
+`git_commit=313dee6a3bdb126369110aa834e94044c94bff6c`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v305 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
