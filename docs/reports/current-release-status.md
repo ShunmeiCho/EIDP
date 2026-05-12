@@ -2,27 +2,29 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v330.zip`
-Package commit: `1de0ec75adbb936b36abc215255790e21bdaba24`
-Package SHA256: `79e383312c57413a2dfdffa39cdf7bb8d87e5b89a3118a4a17ae705d425ce1ad`
-Latest Windows-core-validated package: `dist/eidp-windows-v330.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v330.zip`
+Current Mac-verifier-clean package: `dist/eidp-windows-v331.zip`
+Package commit: `9730b5acc097b19d26a2b2db6a7d8212bca6483a`
+Package SHA256: `455c562901b0361e68be6dd00084fd89f2de33df09670246168e910dcfb09186`
+Latest Windows-core-validated package: `dist/eidp-windows-v331.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v331.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v330.zip`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-The current source/ZIP snapshot is v330 and passes the default macOS package
-verifier. v330 keeps the v326 strict-mode fix for opaque WordPress Download
-Manager wrappers, the v328 cross-school candidate rejection, and the v329
-actionable RCA counts. It also fixes a Windows-discovered blocker where raw URL
-control characters could pass `urlparse()`-based safety checks and crash
-`httpx` during PDF download. v330 setup, SQLite initialization, diagnostics,
-and a bounded 50-site Saitama bootstrap are reproducible on `ssh win`. The
-product goal is still not complete: browser UI operator click-through is
-missing, and the measured operator-reviewable coverage / Excel readiness remain
-far below the shipping line.
+The current source/ZIP snapshot is v331 and passes the default macOS package
+verifier. v331 keeps the v326 strict-mode fix for opaque WordPress Download
+Manager wrappers, the v328 cross-school candidate rejection, the v329
+actionable RCA counts, and the v330 raw-control-character URL guard. It also
+adds a one-retry guard for transient registered-page timeouts and structured
+`discovery_error` evidence (`error_code`, `retryable`) so Windows RCA can
+distinguish transient timeouts from robots policy blocks. v331 setup and SQLite
+initialization are reproducible on `ssh win`; the latest bounded 50-site
+Saitama bootstrap remains v330 evidence. The product goal is still not complete:
+browser UI operator click-through is missing, and the measured
+operator-reviewable coverage / Excel readiness remain far below the shipping
+line.
 
 ## Objective Checklist
 
@@ -40,18 +42,18 @@ far below the shipping line.
 
 ## Current Non-Windows Evidence
 
-Commands run for v330 source/package:
+Commands run for v331 source/package:
 
-- `uv run pytest tests/unit -q` -> `1336 passed, 5 warnings`
-- `uv run pytest tests/unit/test_url_discovery.py tests/unit/test_pdf_discovery.py -q` -> `161 passed, 5 warnings`
-- `uv run ruff check src/eidp/scraper/url_discovery.py src/eidp/scraper/pdf_discovery.py tests/unit/test_url_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v330.zip` -> `OK core`
+- `uv run pytest tests/unit -q` -> `1338 passed, 5 warnings`
+- `uv run pytest tests/unit/test_pdf_discovery.py -q` -> `148 passed, 5 warnings`
+- `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v331.zip` -> `OK core`
 - One-off strict download check for `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055` with anchor `ダウンロード` -> `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`
 - Rebuilt the v326 Windows Saitama RCA batch plan locally with v327 code and
   verified publication-lag packets now surface `fiscal_year_mismatch:*` rows
   before `candidate_budget_dropped` rows.
 
-v330 verifier exposes the current demonstration gap:
+v331 verifier exposes the current demonstration gap:
 
 - Discovery gold-set entries: `22`
 - Outcome distribution: `accepted_target_pdf=6`, `needs_operator_review=6`,
@@ -63,7 +65,30 @@ v330 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v330 setup/bootstrap:
+Commands and observations from `ssh win` for v331 setup plus the latest v330 bounded bootstrap:
+
+- Uploaded `dist/eidp-windows-v331.zip` to
+  `C:\Users\cyo20\eidp-windows-v331.zip`.
+- Windows `Get-FileHash -Algorithm SHA256` ->
+  `455C562901B0361E68BE6DD00084FD89F2DE33DF09670246168E910DCFB09186`.
+- Extracted to `C:\Users\cyo20\EIDP-v331-9730b5a`.
+- `scripts\first_setup.bat` -> exit `0`; after-setup validator reported
+  commit `9730b5acc097b19d26a2b2db6a7d8212bca6483a`,
+  `build_dirty=false`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  required SQLite tables present, `department_change` void columns present,
+  and `uq_document_file_hash` present.
+- Read-only v331 Windows discovery probe for the prior three
+  `site_fetch_error_only` rows:
+  - school `760` now returns `error=null`, `candidates=2`, best
+    `https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471&refresh=...`;
+  - school `767` returns `error_code=robots_disallow_all`, `retryable=false`;
+  - school `785` now returns `error=null`, `candidates=27`, best
+    `https://nihon-ika.ac.jp/wp/wp-content/uploads/2025/08/⑮2025年更新確認申請書.pdf`.
+  This confirms two v330 timeout rows were transient fetch failures, while the
+  Kitasato row is a real robots-policy block.
+
+Latest bounded bootstrap evidence is still from v330:
 
 - Uploaded `dist/eidp-windows-v330.zip` to
   `C:\Users\cyo20\eidp-windows-v330.zip`.
