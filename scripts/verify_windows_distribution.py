@@ -982,8 +982,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
         "src/eidp/pdf/extractor.py": (
             "def _extract_fiscal_year",
+            "MIN_SUPPORTED_FISCAL_YEAR = 2019",
+            "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR",
             'filing_dates = re.findall(r"(20\\d{2})[./]\\d{1,2}[./]\\d{1,2}"',
             'all_years = re.findall(r"(20\\d{2})[\\.\\s年/]"',
+            "MIN_SUPPORTED_FISCAL_YEAR <= int(y) <= max_valid_year",
             "max_valid_year",
             "format_fiscal_year_as_japanese_era(fiscal_year)",
         ),

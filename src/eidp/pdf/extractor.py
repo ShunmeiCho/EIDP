@@ -24,6 +24,7 @@ from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipient
 log = structlog.get_logger()
 
 JST = timezone(timedelta(hours=9))
+MIN_SUPPORTED_FISCAL_YEAR = 2019
 
 
 def _norm(text: str | None) -> str:
@@ -78,6 +79,8 @@ def _current_jst_fiscal_year() -> int:
 def _format_fiscal_year_if_allowed(fiscal_year: int | None, max_fiscal_year: int | None = None) -> str | None:
     if fiscal_year is None:
         return None
+    if fiscal_year < MIN_SUPPORTED_FISCAL_YEAR:
+        return None
     cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
     if fiscal_year > cap:
         return None
@@ -130,11 +133,11 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
             return formatted
 
     # Pattern 4: Most frequent western year (fallback)
-    # Exclude future fiscal years to avoid unrelated future policy references.
+    # Exclude unsupported/future fiscal years to avoid unrelated policy/history references.
     from collections import Counter
     max_valid_year = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
     all_years = re.findall(r"(20\d{2})[\.\s年/]", normed)
-    valid_years = [int(y) for y in all_years if int(y) <= max_valid_year]
+    valid_years = [int(y) for y in all_years if MIN_SUPPORTED_FISCAL_YEAR <= int(y) <= max_valid_year]
     if valid_years:
         most_common = Counter(valid_years).most_common(1)[0][0]
         formatted = _format_fiscal_year_if_allowed(most_common, max_fiscal_year)

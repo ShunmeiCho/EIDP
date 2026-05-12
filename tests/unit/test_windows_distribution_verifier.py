@@ -678,6 +678,7 @@ def test_verify_core_zip_requires_rolling_pdf_fiscal_year_extractor_contract(tmp
     assert not check.ok
     assert any("src/eidp/pdf/extractor.py missing required token" in error for error in check.errors)
     assert any("20\\d{2}" in error for error in check.errors)
+    assert any("MIN_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("format_fiscal_year_as_japanese_era" in error for error in check.errors)
 
 
