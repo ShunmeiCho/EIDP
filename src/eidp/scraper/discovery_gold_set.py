@@ -51,6 +51,7 @@ class DiscoveryGoldEntry:
     fiscal_year: int | None
     strict_target_year_success: bool
     site_family: str
+    pattern_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class DiscoveryGoldPrediction:
     pdf_url: str
     fiscal_year: int | None
     strict_target_year_success: bool
+    pattern_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -164,6 +166,7 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
                 fiscal_year=int(fiscal_year) if fiscal_year is not None else None,
                 strict_target_year_success=bool(expected_result.get("strict_target_year_success", False)),
                 site_family=str(automation_pattern.get("site_family") or ""),
+                pattern_type=str(expected_result.get("pattern_type") or ""),
             )
         )
     return entries
@@ -248,6 +251,7 @@ def build_discovery_gold_expected_predictions(
             pdf_url=entry.pdf_url,
             fiscal_year=entry.fiscal_year,
             strict_target_year_success=entry.strict_target_year_success,
+            pattern_type=entry.pattern_type,
         )
         for entry in entries
     ]
@@ -347,20 +351,18 @@ def render_discovery_gold_run_plan(plan: list[DiscoveryGoldRunPlanItem]) -> str:
 def render_discovery_gold_predictions(predictions: list[DiscoveryGoldPrediction]) -> str:
     """Render discovery predictions as deterministic JSONL."""
 
-    lines = [
-        json.dumps(
-            {
-                "entry_id": prediction.entry_id,
-                "outcome": prediction.outcome,
-                "pdf_url": prediction.pdf_url,
-                "fiscal_year": prediction.fiscal_year,
-                "strict_target_year_success": prediction.strict_target_year_success,
-            },
-            ensure_ascii=False,
-            sort_keys=True,
-        )
-        for prediction in predictions
-    ]
+    lines = []
+    for prediction in predictions:
+        payload: dict[str, Any] = {
+            "entry_id": prediction.entry_id,
+            "outcome": prediction.outcome,
+            "pdf_url": prediction.pdf_url,
+            "fiscal_year": prediction.fiscal_year,
+            "strict_target_year_success": prediction.strict_target_year_success,
+        }
+        if prediction.pattern_type:
+            payload["pattern_type"] = prediction.pattern_type
+        lines.append(json.dumps(payload, ensure_ascii=False, sort_keys=True))
     return "\n".join(lines) + ("\n" if lines else "")
 
 
@@ -380,6 +382,7 @@ def load_discovery_gold_predictions(predictions_path: Path) -> list[DiscoveryGol
                 pdf_url=str(payload.get("pdf_url") or ""),
                 fiscal_year=int(fiscal_year) if fiscal_year is not None else None,
                 strict_target_year_success=bool(payload.get("strict_target_year_success", False)),
+                pattern_type=str(payload.get("pattern_type") or ""),
             )
         )
     return predictions
@@ -468,6 +471,8 @@ def evaluate_discovery_gold_predictions(
             reasons.append("fiscal_year_mismatch")
         if prediction.strict_target_year_success != expected.strict_target_year_success:
             reasons.append("strict_target_year_success_mismatch")
+        if expected.pattern_type and prediction.pattern_type != expected.pattern_type:
+            reasons.append("pattern_type_mismatch")
 
         if reasons:
             failures.append({"entry_id": prediction.entry_id, "reasons": reasons})
@@ -511,6 +516,7 @@ def _prediction_from_pdf_evidence_payload(
             pdf_url=pdf_url,
             fiscal_year=fiscal_year,
             strict_target_year_success=True,
+            pattern_type=str(payload.get("pattern_type") or ""),
         )
 
     if reason.startswith("fiscal_year_mismatch:"):
@@ -520,6 +526,7 @@ def _prediction_from_pdf_evidence_payload(
             pdf_url=pdf_url,
             fiscal_year=_int_or_none(reason.split(":", 1)[1]),
             strict_target_year_success=False,
+            pattern_type=str(payload.get("pattern_type") or ""),
         )
 
     if reason == "target_fiscal_year_not_detected":
@@ -529,6 +536,7 @@ def _prediction_from_pdf_evidence_payload(
             pdf_url=pdf_url,
             fiscal_year=None,
             strict_target_year_success=False,
+            pattern_type=str(payload.get("pattern_type") or ""),
         )
 
     if reason == "no_candidates_found" or reason in DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS:
@@ -538,6 +546,7 @@ def _prediction_from_pdf_evidence_payload(
             pdf_url="",
             fiscal_year=None,
             strict_target_year_success=False,
+            pattern_type="",
         )
 
     if reason in {"discovery_error"} or reason.startswith("http_error:"):
@@ -547,6 +556,7 @@ def _prediction_from_pdf_evidence_payload(
             pdf_url="",
             fiscal_year=None,
             strict_target_year_success=False,
+            pattern_type="",
         )
 
     return None

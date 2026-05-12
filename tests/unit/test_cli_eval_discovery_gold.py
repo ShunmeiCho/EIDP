@@ -79,6 +79,40 @@ def test_eval_discovery_gold_cli_accepts_pdf_evidence_log(tmp_path: Path) -> Non
     assert payload["exact_matches"] == 1
 
 
+def test_eval_discovery_gold_cli_preserves_pdf_evidence_pattern_type(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "school_id": 760,
+                "pdf_url": "https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471",
+                "reason": "fiscal_year_mismatch:2024",
+                "pdf_type": "target",
+                "pattern_type": "wordpress_download_manager",
+                "extra": {"target_fiscal_year": "2026"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "eval-discovery-gold",
+            "--gold-set-dir",
+            str(GOLD_SET_DIR),
+            "--pdf-evidence",
+            str(evidence_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["predicted_entries"] == 1
+    assert payload["exact_matches"] == 1
+
+
 def test_eval_discovery_gold_cli_can_fail_on_incomplete_predictions(tmp_path: Path) -> None:
     predictions_path = tmp_path / "predictions.jsonl"
     predictions_path.write_text(
@@ -172,6 +206,38 @@ def test_eval_discovery_gold_cli_full_fixture_fails_on_mismatch(tmp_path: Path) 
     assert result.exit_code == 1
     assert "Discovery gold gate failed" in result.output
     assert "failed:      1" in result.output
+
+
+def test_eval_discovery_gold_cli_fails_on_pattern_type_mismatch(tmp_path: Path) -> None:
+    mutated_path = tmp_path / "mutated-predictions.jsonl"
+    lines = EXPECTED_PREDICTIONS_PATH.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        payload = json.loads(line)
+        if payload.get("pattern_type"):
+            payload["pattern_type"] = "direct"
+            lines[index] = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+            break
+    else:  # pragma: no cover - protected by the committed gold-set fixture
+        raise AssertionError("expected at least one gold-set prediction with pattern_type")
+    mutated_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "eval-discovery-gold",
+            "--gold-set-dir",
+            str(GOLD_SET_DIR),
+            "--predictions",
+            str(mutated_path),
+            "--fail-on-regression",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["failed_predictions"] == 1
+    assert "pattern_type_mismatch" in result.output
 
 
 def test_eval_discovery_gold_cli_requires_one_input_mode(tmp_path: Path) -> None:

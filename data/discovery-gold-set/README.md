@@ -43,7 +43,9 @@ uv run eidp discover-pdfs --discovery-method discovery_gold_set --evidence-log _
 
 To evaluate crawler or agent output against the gold set, write one JSON object
 per line with `entry_id`, `outcome`, `pdf_url`, `fiscal_year`, and
-`strict_target_year_success`, then run:
+`strict_target_year_success`, then run. Entries may also carry `pattern_type`
+when the manual or replay evidence proves which extractor path found the PDF;
+the evaluator treats that as part of the regression contract for those entries.
 
 ```bash
 uv run eidp eval-discovery-gold --predictions path/to/predictions.jsonl --json

@@ -66,7 +66,8 @@
         "pdf_url": {"type": "string"},
         "pdf_type": {"enum": ["target", "non_target", "image_only", "unknown", ""]},
         "fiscal_year": {"type": ["integer", "null"]},
-        "strict_target_year_success": {"type": "boolean"}
+        "strict_target_year_success": {"type": "boolean"},
+        "pattern_type": {"type": "string"}
       }
     },
     "automation_pattern": {

@@ -15,8 +15,10 @@ def _load_json(path: Path) -> dict:
 def test_discovery_gold_set_schema_allows_image_only_review_entries() -> None:
     schema = _load_json(GOLD_SET_DIR / "schema.json")
     pdf_type_enum = schema["properties"]["expected_result"]["properties"]["pdf_type"]["enum"]
+    expected_result_properties = schema["properties"]["expected_result"]["properties"]
 
     assert "image_only" in pdf_type_enum
+    assert expected_result_properties["pattern_type"]["type"] == "string"
 
 
 def test_discovery_gold_set_schema_and_prototypes_exist() -> None:
@@ -49,6 +51,10 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     assert entries_by_id["saitama-it-web-accepted-2026"]["expected_result"]["strict_target_year_success"] is False
     assert entries_by_id["ageo-central-nursing-review-2026"]["outcome"] == "accepted_target_pdf"
     assert entries_by_id["ageo-central-nursing-review-2026"]["expected_result"]["fiscal_year"] == 2026
+    assert (
+        entries_by_id["iruma-kango-no-candidates-2026"]["expected_result"]["pattern_type"]
+        == "wordpress_download_manager"
+    )
 
     for entry in entries:
         assert entry["schema_version"] == "discovery-gold-set/v0.1"

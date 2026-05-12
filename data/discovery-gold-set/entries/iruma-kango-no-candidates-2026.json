@@ -29,7 +29,8 @@
     "pdf_url": "https://i-heiseigakuen.ac.jp/download/yousiki2/?wpdmdl=5471",
     "pdf_type": "target",
     "fiscal_year": 2024,
-    "strict_target_year_success": false
+    "strict_target_year_success": false,
+    "pattern_type": "wordpress_download_manager"
   },
   "automation_pattern": {
     "site_family": "wordpress_download_manager_old_year_target_form",
