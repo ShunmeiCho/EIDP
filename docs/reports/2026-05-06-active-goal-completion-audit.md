@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `7abcfc48e849ae57357264a74a33dcc4f8fbd565` (`eidp-windows-v263.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `281643c38c5ba25980dcf8676653deeedda421f8` (`eidp-windows-v264.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -748,6 +748,22 @@ alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v263 is still pending and must not be
+inferred from the Mac verifier.
+
+v264 (`281643c`) removes a 2020s-only ceiling from PDF body fiscal-year
+extraction. The extractor's western filing-date and fallback year patterns now
+accept `20xx` years instead of only `2020`-`2029`, while preserving the
+configured max-fiscal-year cap so unrelated future policy references remain
+excluded. New tests prove `2030.6.1` and `2031年度` PDF text still resolve through
+the rolling Japanese-era formatter. Verification: `tests/unit` passed with
+`1235 passed, 5 warnings`, and `dist/eidp-windows-v264.zip` plus the latest
+alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`eedc2fde0f9e9ab0b685c08f9358c9909d3fc4f5f52f14a1b39cf4400b905adb`,
+`git_commit=281643c38c5ba25980dcf8676653deeedda421f8`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v264 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
