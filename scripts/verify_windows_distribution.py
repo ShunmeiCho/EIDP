@@ -1054,6 +1054,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "ManualActionLog",
             "jsonl_exported_at",
             "jsonl_export_error",
+            "os.fsync",
         ),
         "src/eidp/db/sqlite_bootstrap.py": (
             "_refuse_orphaned_sqlite_sidecars",

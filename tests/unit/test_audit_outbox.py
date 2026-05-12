@@ -128,6 +128,32 @@ def test_flush_outbox_writes_pending_rows_to_jsonl(engine, tmp_path):
         assert all(r.jsonl_export_error is None for r in rows)
 
 
+def test_flush_outbox_does_not_stamp_when_fsync_fails(engine, tmp_path, monkeypatch):
+    jsonl = tmp_path / "manual-actions.jsonl"
+
+    def fail_fsync(_fd):
+        raise OSError("disk flush failed")
+
+    with Session(engine) as session:
+        log_manual_action(
+            session,
+            action_type="manual_entry",
+            target_table="department_yearly",
+            target_id=1,
+            new_value={"enrollment": 100},
+        )
+        session.commit()
+        monkeypatch.setattr("eidp.db.audit_outbox.os.fsync", fail_fsync)
+
+        stats = flush_audit_outbox(session, jsonl_path=jsonl)
+        assert stats == {"exported": 0, "already_present": 0, "failed": 1}
+
+    with Session(engine) as session:
+        row = session.query(ManualActionLog).one()
+        assert row.jsonl_exported_at is None
+        assert row.jsonl_export_error == "disk flush failed"
+
+
 def test_flush_outbox_dedups_when_action_id_already_in_file(engine, tmp_path):
     """Simulate a partial previous flush: the JSONL line was written but
     ``jsonl_exported_at`` failed to update. A subsequent flush must NOT

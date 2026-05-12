@@ -280,14 +280,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "    session.flush()\n"
         ),
         "src/eidp/db/audit_outbox.py": (
-            "DEFAULT_OUTBOX_PATH = Path(\"data/audit/manual-actions.jsonl\")\n"
-            "OUTBOX_ARCHIVE_GLOB = \"manual-actions-*.jsonl\"\n"
-            "def _candidate_outbox_paths(jsonl_path):\n"
-            "def flush_audit_outbox(session):\n"
-            "    ManualActionLog\n"
-            "    jsonl_exported_at\n"
-            "    jsonl_export_error\n"
-        ),
+            REPO_ROOT / "src" / "eidp" / "db" / "audit_outbox.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/db/sqlite_bootstrap.py": (
             REPO_ROOT / "src" / "eidp" / "db" / "sqlite_bootstrap.py"
         ).read_text(encoding="utf-8"),
@@ -700,6 +694,7 @@ def test_verify_core_zip_requires_manual_action_audit_contract(tmp_path: Path) -
     assert any("src/eidp/db/audit_outbox.py missing required token" in error for error in check.errors)
     assert any("ManualActionLog" in error for error in check.errors)
     assert any("OUTBOX_ARCHIVE_GLOB" in error for error in check.errors)
+    assert any("os.fsync" in error for error in check.errors)
     assert any("_candidate_outbox_paths" in error for error in check.errors)
 
 

@@ -18,6 +18,7 @@ recovery reading. Critically:
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -60,7 +61,7 @@ def _read_existing_action_ids(jsonl_path: Path) -> set[str]:
     return seen
 
 
-def _row_to_dict(row: ManualActionLog) -> dict:
+def _row_to_dict(row: ManualActionLog) -> dict[str, object]:
     return {
         "action_id": row.action_id,
         "timestamp": row.timestamp.isoformat() if row.timestamp else None,
@@ -109,6 +110,7 @@ def flush_audit_outbox(
                 else:
                     fh.write(json.dumps(_row_to_dict(row), ensure_ascii=False) + "\n")
                     fh.flush()
+                    os.fsync(fh.fileno())
                     existing_ids.add(row.action_id)
                     stats["exported"] += 1
                 row.jsonl_exported_at = now
