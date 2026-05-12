@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "kanto-koudai-image-old-year-review-2026",
+  "school": {
+    "school_id": 783,
+    "school_name": "専門学校関東工業自動車大学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "正興学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a disclosure page where the visible 様式第2号 link is image-only and old-year, while adjacent disclosure cards contain negative documents.",
+    "steps": [
+      "Use the Saitama official-index disclosure URL registered for the school.",
+      "Open https://kanto-koudai.com/school/#information.",
+      "Inspect the card labeled 様式第2号 and keep it separate from the preceding card containing 事業報告書, 財務諸表, 監査報告書, and 役員名簿 links.",
+      "Follow https://kanto-koudai.com/school/johokokai/j2024_05a.pdf.",
+      "Route the PDF to operator review because it is an image-only old-year target-form candidate and cannot be accepted as strict FY2026 evidence."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://kanto-koudai.com/",
+    "disclosure_url": "https://kanto-koudai.com/school/#information",
+    "pdf_url": "https://kanto-koudai.com/school/johokokai/j2024_05a.pdf",
+    "pdf_type": "image_only",
+    "fiscal_year": 2024,
+    "strict_target_year_success": false,
+    "pattern_type": "direct"
+  },
+  "automation_pattern": {
+    "site_family": "adjacent_disclosure_cards_with_old_year_image_target_form",
+    "reusable_rules": [
+      "Keep each disclosure card's anchor context isolated from neighboring cards.",
+      "Do not let negative adjacent links such as 事業報告書, 財務諸表, or 役員名簿 suppress a visible 様式第2号 link.",
+      "Keep image-only old-year target-form PDFs visible for operator review instead of counting them as strict target-year success."
+    ],
+    "anti_patterns": [
+      "Do not concatenate previous div-card text into the current PDF link's anchor context.",
+      "Do not infer FY2026 success from a public disclosure page when the only visible target form is old-year/image-only."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://kanto-koudai.com/school/#information",
+      "https://kanto-koudai.com/school/johokokai/j2024_05a.pdf",
+      "_temp/manual-rca-v341/kanto-j2024-05a.pdf"
+    ],
+    "notes": "Manual live-web RCA found a visible 様式第2号 link whose neighboring disclosure card contains negative documents. Before the context-isolation fix, the previous div card polluted the candidate anchor and pushed the score negative. After the fix, this PDF is the top candidate but still routes to review as image_only/fiscal_year_mismatch:2024."
+  }
+}

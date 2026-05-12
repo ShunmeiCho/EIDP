@@ -1314,11 +1314,11 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
             and current_text not in parts
         ):
             parts.append(current_text)
-        previous_text = (
-            _previous_fiscal_year_context(html, block_start)
-            if tag == "li"
-            else _previous_html_block_text(html, block_start, tag)
-        )
+        previous_text = ""
+        if tag == "li":
+            previous_text = _previous_fiscal_year_context(html, block_start)
+        elif tag in {"p", "tr"}:
+            previous_text = _previous_html_block_text(html, block_start, tag)
         has_current_year_context = any(_has_fiscal_year_context(part) for part in parts)
         if previous_text and not has_current_year_context and _has_fiscal_year_context(previous_text):
             parts.append(previous_text)

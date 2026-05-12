@@ -793,6 +793,31 @@ def test_extract_pdf_links_accepts_fragment_pdf_links() -> None:
     assert candidates[1].pattern_type == "embed"
 
 
+def test_extract_pdf_links_does_not_pollute_div_cards_with_previous_disclosure_card() -> None:
+    html = """
+    <div class="school-pdf">
+      <div class="school-pdf__message">
+        <a href="/school/johokokai/j2024_11.pdf">事業報告書 (令和6年度)</a><br>
+        <a href="/school/johokokai/j2024_12.pdf">財務諸表 (令和6年度)</a><br>
+        <a href="/school/johokokai/j2024_15.pdf">役員名簿</a>
+      </div>
+    </div>
+    <div class="school-pdf">
+      <div class="school-pdf__message">
+        <a href="/school/johokokai/j2024_05a.pdf">様式第2号</a>
+      </div>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(html, "https://kanto-koudai.com/school/#information")
+    target = next(candidate for candidate in candidates if candidate.pdf_url.endswith("j2024_05a.pdf"))
+
+    assert target.anchor_text == "様式第2号"
+    assert "事業報告書" not in target.anchor_text
+    assert "役員名簿" not in target.anchor_text
+    assert _score_candidate(target, target_fiscal_year=2026) > 0
+
+
 def test_extract_pdf_links_deduplicates_encoded_and_unencoded_paths() -> None:
     encoded_path = (
         "/wp-content/uploads/2025/07/"

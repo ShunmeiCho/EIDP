@@ -74,11 +74,11 @@ def test_evaluate_discovery_predictions_flags_missing_and_mismatched_entries() -
 
     report = evaluate_discovery_gold_predictions(entries, predictions)
 
-    assert report.total_gold_entries == 27
+    assert report.total_gold_entries == 28
     assert report.predicted_entries == 2
     assert report.exact_matches == 1
     assert report.failed_predictions == 1
-    assert report.missing_entries == 25
+    assert report.missing_entries == 26
     assert report.unexpected_predictions == 0
     assert report.failures[0]["entry_id"] == "nihon-u-dental-hygienist-publication-lag-2026"
     assert report.failures[0]["reasons"] == [
@@ -775,6 +775,6 @@ def test_render_discovery_gold_eval_report_outputs_json_payload() -> None:
 
     payload = json.loads(render_discovery_gold_eval_report(report))
 
-    assert payload["total_gold_entries"] == 27
+    assert payload["total_gold_entries"] == 28
     assert payload["exact_matches"] == 1
-    assert payload["missing_entries"] == 26
+    assert payload["missing_entries"] == 27
