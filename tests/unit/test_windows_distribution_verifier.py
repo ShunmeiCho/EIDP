@@ -1140,6 +1140,20 @@ def test_verify_core_zip_requires_import_excel_invalid_year_warning(tmp_path: Pa
     assert any("想定外の年度" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_cli_write_lock_contracts(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/cli.py"] = str(entries["src/eidp/cli.py"]).replace(
+        '_require_app_lock("cli_audit_flush")',
+        '# missing audit flush lock',
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any('_require_app_lock("cli_audit_flush")' in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_all_navigated_operator_modules(tmp_path: Path) -> None:
     entries = _core_entries()
     for rel in (

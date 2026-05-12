@@ -651,7 +651,7 @@ def main() -> None:
         elif page == PAGE_PROPOSALS:
             operator_pages.page_proposals_review(session, lock_path=Path(settings.data_dir) / ".lock")
         elif page == PAGE_URL:
-            operator_pages.page_url_submission(session)
+            operator_pages.page_url_submission(session, lock_path=Path(settings.data_dir) / ".lock")
         elif page == PAGE_EXPORTS:
             operator_pages.page_exports(session)
         elif page == PAGE_GAPS:

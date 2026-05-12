@@ -14,6 +14,8 @@ import hashlib
 import html
 import io
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from ipaddress import ip_address
@@ -118,6 +120,16 @@ def output_path(raw_path: str | Path, suffixes: tuple[str, ...]) -> Path:
 
 def sample_path(raw_path: str | Path, suffixes: tuple[str, ...], *, must_exist: bool = True) -> Path:
     return resolve_allowed_path(raw_path, allowed_roots=(_SAMPLE_DIR,), suffixes=suffixes, must_exist=must_exist)
+
+
+@contextmanager
+def _optional_operator_lock(lock_path: Path | None, owner: str) -> Iterator[None]:
+    """Share the Windows app lock for UI actions that mutate the database."""
+    if lock_path is None:
+        yield
+        return
+    with acquire_lock(lock_path, owner=owner):
+        yield
 
 
 @dataclass(frozen=True)
@@ -992,7 +1004,7 @@ def school_option_index(options: list[SchoolUrlOption], preferred_school_id: obj
     return 0
 
 
-def page_url_submission(session: Session) -> None:
+def page_url_submission(session: Session, *, lock_path: Path | None = None) -> None:
     st.header("③ URL追加")
     st.caption(
         "担当者が自分で見つけた情報公開ページまたは申請書PDFを登録する画面です。"
@@ -1045,8 +1057,9 @@ URLは登録前に以下のチェックを通します。
             else:
                 try:
                     csv_text = uploaded_csv.getvalue().decode("utf-8-sig")
-                    bulk_result = import_operator_url_csv(session, csv_text)
-                    session.commit()
+                    with _optional_operator_lock(lock_path, "ui_operator_url_bulk"):
+                        bulk_result = import_operator_url_csv(session, csv_text)
+                        session.commit()
                     if bulk_result.accepted:
                         st.success(
                             f"URLを{bulk_result.accepted}件登録しました"
@@ -1059,6 +1072,9 @@ URLは登録前に以下のチェックを通します。
                         st.warning(f"スキップ: {bulk_result.skipped}件")
                         with st.expander("スキップ理由", expanded=False):
                             st.write(bulk_result.errors)
+                except LockBusyError as exc:
+                    session.rollback()
+                    st.error(f"他の処理が実行中のため、CSV登録を実行できませんでした: {exc}")
                 except Exception as exc:
                     session.rollback()
                     st.error(f"CSV登録に失敗しました: {exc}")
@@ -1122,42 +1138,43 @@ URLは登録前に以下のチェックを通します。
 
     audit_path = output_path(_DEFAULT_OPERATOR_SUBMISSIONS, (".jsonl",))
     try:
-        if selected_school_id is None:
-            st.error("登録先の学校を選択してください。")
-            return
-        result = submit_operator_url(
-            session,
-            school_id=int(selected_school_id),
-            url=url,
-            operator_name=operator_name,
-            operator_note=operator_note,
-        )
-        if not result.accepted:
-            session.rollback()
-            record_operator_submission(result, audit_path)
-            st.error(f"Rejected: {result.reason} ({result.classifier})")
-            st.json(asdict(result))
-            return
-
-        pipeline_result: dict[str, object] | None = None
-        if run_now:
-            pipeline_result = run_operator_discovery_ingest(
+        with _optional_operator_lock(lock_path, "ui_operator_url_submission"):
+            if selected_school_id is None:
+                st.error("登録先の学校を選択してください。")
+                return
+            result = submit_operator_url(
                 session,
                 school_id=int(selected_school_id),
-                source_url=url.strip(),
-                storage_dir=resolve_allowed_path(
-                    _DEFAULT_PDF_STORAGE,
-                    allowed_roots=(_DATA_DIR,),
-                ),
-                discovery_evidence_path=output_path(_DEFAULT_REJECTIONS, (".jsonl",)),
-                ingest_evidence_path=output_path(_DEFAULT_INGEST_REJECTIONS, (".jsonl",)),
+                url=url,
+                operator_name=operator_name,
+                operator_note=operator_note,
             )
+            if not result.accepted:
+                session.rollback()
+                record_operator_submission(result, audit_path)
+                st.error(f"Rejected: {result.reason} ({result.classifier})")
+                st.json(asdict(result))
+                return
 
-        session.commit()
-        try:
-            record_operator_submission(result, audit_path)
-        except OSError as exc:
-            st.warning(f"Accepted, but audit log write failed: {exc}")
+            pipeline_result: dict[str, object] | None = None
+            if run_now:
+                pipeline_result = run_operator_discovery_ingest(
+                    session,
+                    school_id=int(selected_school_id),
+                    source_url=url.strip(),
+                    storage_dir=resolve_allowed_path(
+                        _DEFAULT_PDF_STORAGE,
+                        allowed_roots=(_DATA_DIR,),
+                    ),
+                    discovery_evidence_path=output_path(_DEFAULT_REJECTIONS, (".jsonl",)),
+                    ingest_evidence_path=output_path(_DEFAULT_INGEST_REJECTIONS, (".jsonl",)),
+                )
+
+            session.commit()
+            try:
+                record_operator_submission(result, audit_path)
+            except OSError as exc:
+                st.warning(f"Accepted, but audit log write failed: {exc}")
         label = "新規登録" if result.site_created else "登録済みURLを再確認"
         url_kind = operator_url_kind_label(result.classifier)
         st.success(
@@ -1176,6 +1193,9 @@ URLは登録前に以下のチェックを通します。
         if pipeline_result is not None:
             st.subheader("Pipeline result")
             st.json(pipeline_result)
+    except LockBusyError as exc:
+        session.rollback()
+        st.error(f"他の処理が実行中のため、URL登録を実行できませんでした: {exc}")
     except PathPolicyError as exc:
         session.rollback()
         st.error(f"Path rejected: {exc}")

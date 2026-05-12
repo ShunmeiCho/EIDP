@@ -133,39 +133,40 @@ def match_mext(
     from eidp.db.session import SessionLocal
     from eidp.matcher.school_matcher import apply_matches, match_schools
 
-    session = SessionLocal()
-    try:
-        report = match_schools(session, data_dir)
+    with _require_app_lock("cli_match_mext"):
+        session = SessionLocal()
+        try:
+            report = match_schools(session, data_dir)
 
-        typer.echo("\nMatch Results:")
-        typer.echo(f"  Exact:        {len(report.exact)}")
-        typer.echo(f"  NFKC:         {len(report.nfkc)}")
-        typer.echo(f"  Pref+Partial: {len(report.pref_partial)}")
-        typer.echo(f"  Unmatched:    {len(report.unmatched)}")
-        typer.echo(f"  Match rate:   {report.total_matched / report.total * 100:.1f}%")
+            typer.echo("\nMatch Results:")
+            typer.echo(f"  Exact:        {len(report.exact)}")
+            typer.echo(f"  NFKC:         {len(report.nfkc)}")
+            typer.echo(f"  Pref+Partial: {len(report.pref_partial)}")
+            typer.echo(f"  Unmatched:    {len(report.unmatched)}")
+            typer.echo(f"  Match rate:   {report.total_matched / report.total * 100:.1f}%")
 
-        if not dry_run:
-            stats = apply_matches(session, report)
-            session.commit()
-            typer.echo("\nApplied:")
-            typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
-            typer.echo(f"  Aliases created: {stats['aliases_created']}")
-            typer.echo(f"  Conflicts:      {stats['conflicts']}")
-        else:
-            typer.echo("\n(dry run — no DB writes)")
+            if not dry_run:
+                stats = apply_matches(session, report)
+                session.commit()
+                typer.echo("\nApplied:")
+                typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
+                typer.echo(f"  Aliases created: {stats['aliases_created']}")
+                typer.echo(f"  Conflicts:      {stats['conflicts']}")
+            else:
+                typer.echo("\n(dry run — no DB writes)")
+                session.rollback()
+
+            if report.unmatched:
+                typer.echo("\nTop unmatched corporations:")
+                from collections import Counter
+                corps = Counter(r.corporation_name for r in report.unmatched)
+                for corp, count in corps.most_common(10):
+                    typer.echo(f"  {corp}: {count}")
+        except Exception:
             session.rollback()
-
-        if report.unmatched:
-            typer.echo("\nTop unmatched corporations:")
-            from collections import Counter
-            corps = Counter(r.corporation_name for r in report.unmatched)
-            for corp, count in corps.most_common(10):
-                typer.echo(f"  {corp}: {count}")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -178,38 +179,39 @@ def reconcile(
     from eidp.matcher.reconciler import apply_reconciliation
     from eidp.matcher.reconciler import reconcile as do_reconcile
 
-    session = SessionLocal()
-    try:
-        report = do_reconcile(session, data_dir)
+    with _require_app_lock("cli_reconcile"):
+        session = SessionLocal()
+        try:
+            report = do_reconcile(session, data_dir)
 
-        typer.echo("\nReconciliation Results:")
-        typer.echo(f"  Already resolved:   {report.already_resolved}")
-        typer.echo(f"  Auto-assigned:      {len(report.auto_assigned)}")
-        typer.echo(f"  Excluded:           {len(report.excluded)}")
-        typer.echo(f"  Needs manual:       {len(report.needs_manual)}")
-        typer.echo(f"  Missing from DB:    {len(report.missing_from_db)}")
+            typer.echo("\nReconciliation Results:")
+            typer.echo(f"  Already resolved:   {report.already_resolved}")
+            typer.echo(f"  Auto-assigned:      {len(report.auto_assigned)}")
+            typer.echo(f"  Excluded:           {len(report.excluded)}")
+            typer.echo(f"  Needs manual:       {len(report.needs_manual)}")
+            typer.echo(f"  Missing from DB:    {len(report.missing_from_db)}")
 
-        if not dry_run:
-            stats = apply_reconciliation(session, report)
-            session.commit()
-            typer.echo("\nApplied:")
-            typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
-            typer.echo(f"  Aliases created: {stats['aliases_created']}")
-        else:
-            typer.echo("\n(dry run)")
+            if not dry_run:
+                stats = apply_reconciliation(session, report)
+                session.commit()
+                typer.echo("\nApplied:")
+                typer.echo(f"  Codes assigned: {stats['codes_assigned']}")
+                typer.echo(f"  Aliases created: {stats['aliases_created']}")
+            else:
+                typer.echo("\n(dry run)")
+                session.rollback()
+
+            if report.needs_manual:
+                typer.echo(f"\nManual resolution needed ({len(report.needs_manual)}):")
+                from collections import Counter
+                corps = Counter(c.corporation_name for c in report.needs_manual)
+                for corp, count in corps.most_common(10):
+                    typer.echo(f"  {corp}: {count}")
+        except Exception:
             session.rollback()
-
-        if report.needs_manual:
-            typer.echo(f"\nManual resolution needed ({len(report.needs_manual)}):")
-            from collections import Counter
-            corps = Counter(c.corporation_name for c in report.needs_manual)
-            for corp, count in corps.most_common(10):
-                typer.echo(f"  {corp}: {count}")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -261,60 +263,61 @@ def discover_urls(
 
     from eidp.db.session import SessionLocal
 
-    session = SessionLocal()
-    try:
-        # Phase 1: Import seed URLs
-        if seed_csv.exists():
-            seed_stats = import_seed_urls(session, seed_csv)
-            typer.echo(f"Seed import: {seed_stats}")
+    with _require_app_lock("cli_discover_urls"):
+        session = SessionLocal()
+        try:
+            # Phase 1: Import seed URLs
+            if seed_csv.exists():
+                seed_stats = import_seed_urls(session, seed_csv)
+                typer.echo(f"Seed import: {seed_stats}")
 
-        # Phase 2: Corporation pattern inference
-        corp_stats = infer_corporation_urls(session)
-        typer.echo(f"Corporation inference: {corp_stats}")
+            # Phase 2: Corporation pattern inference
+            corp_stats = infer_corporation_urls(session)
+            typer.echo(f"Corporation inference: {corp_stats}")
 
-        session.commit()
-
-        # Phase 2.5: Web search discovery
-        from eidp.config import settings
-        provider_key_map = {
-            "brave": bool(settings.brave_api_key),
-            "google": bool(settings.google_api_key and settings.google_cx),
-            "serper": bool(settings.serper_api_key),
-            "duckduckgo": True,  # no key needed
-        }
-        if settings.search_provider not in provider_key_map:
-            typer.echo(
-                f"ERROR: Unknown search_provider '{settings.search_provider}'. "
-                f"Valid: {list(provider_key_map.keys())}"
-            )
-            raise typer.Exit(1)
-        provider_has_key = provider_key_map[settings.search_provider]
-        if provider_has_key:
-            from eidp.scraper.url_discovery import search_and_discover
-            typer.echo(f"Running web search ({settings.search_provider})...")
-            search_stats = search_and_discover(session, batch_size=batch_size)
             session.commit()
-            typer.echo(f"Web search: {search_stats}")
-        else:
-            typer.echo(f"(No API key for {settings.search_provider}, skipping web search)")
 
-        # Phase 3: HTTP verification (optional)
-        if verify:
-            typer.echo(f"Verifying URLs (batch={batch_size})...")
-            verify_stats = verify_urls_sync(session, batch_size=batch_size)
-            session.commit()
-            typer.echo(f"Verification: {verify_stats}")
+            # Phase 2.5: Web search discovery
+            from eidp.config import settings
+            provider_key_map = {
+                "brave": bool(settings.brave_api_key),
+                "google": bool(settings.google_api_key and settings.google_cx),
+                "serper": bool(settings.serper_api_key),
+                "duckduckgo": True,  # no key needed
+            }
+            if settings.search_provider not in provider_key_map:
+                typer.echo(
+                    f"ERROR: Unknown search_provider '{settings.search_provider}'. "
+                    f"Valid: {list(provider_key_map.keys())}"
+                )
+                raise typer.Exit(1)
+            provider_has_key = provider_key_map[settings.search_provider]
+            if provider_has_key:
+                from eidp.scraper.url_discovery import search_and_discover
+                typer.echo(f"Running web search ({settings.search_provider})...")
+                search_stats = search_and_discover(session, batch_size=batch_size)
+                session.commit()
+                typer.echo(f"Web search: {search_stats}")
+            else:
+                typer.echo(f"(No API key for {settings.search_provider}, skipping web search)")
 
-        # Report
-        stats = get_discovery_stats(session)
-        typer.echo("\nURL Discovery Stats:")
-        for k, v in stats.items():
-            typer.echo(f"  {k}: {v}")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+            # Phase 3: HTTP verification (optional)
+            if verify:
+                typer.echo(f"Verifying URLs (batch={batch_size})...")
+                verify_stats = verify_urls_sync(session, batch_size=batch_size)
+                session.commit()
+                typer.echo(f"Verification: {verify_stats}")
+
+            # Report
+            stats = get_discovery_stats(session)
+            typer.echo("\nURL Discovery Stats:")
+            for k, v in stats.items():
+                typer.echo(f"  {k}: {v}")
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -347,28 +350,29 @@ def crawl_school_urls(
     from eidp.scraper.school_url_pipeline import run_school_url_auto_crawl
     from eidp.scraper.scrapling_fetcher import ScraplingFetchMode
 
-    session = SessionLocal()
-    try:
-        fetch_mode_value = cast(ScraplingFetchMode, fetch_mode)
-        stats = run_school_url_auto_crawl(
-            session,
-            batch_size=limit,
-            school_id=school_id,
-            prefecture=prefecture,
-            dry_run=dry_run,
-            evidence_path=evidence_log,
-            fetch_mode=fetch_mode_value,
-        )
-        if dry_run:
+    with _require_app_lock("cli_crawl_school_urls"):
+        session = SessionLocal()
+        try:
+            fetch_mode_value = cast(ScraplingFetchMode, fetch_mode)
+            stats = run_school_url_auto_crawl(
+                session,
+                batch_size=limit,
+                school_id=school_id,
+                prefecture=prefecture,
+                dry_run=dry_run,
+                evidence_path=evidence_log,
+                fetch_mode=fetch_mode_value,
+            )
+            if dry_run:
+                session.rollback()
+            else:
+                session.commit()
+            typer.echo(json.dumps(stats, ensure_ascii=False, indent=2, sort_keys=True))
+        except Exception:
             session.rollback()
-        else:
-            session.commit()
-        typer.echo(json.dumps(stats, ensure_ascii=False, indent=2, sort_keys=True))
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -403,26 +407,27 @@ def discover_pdfs(
     school_filter = list(school_id) if school_id else None
     evidence_path = evidence_log if str(evidence_log) else None
 
-    session = SessionLocal()
-    try:
-        stats = run_pdf_discovery(
-            session, storage_dir,
-            batch_size=batch_size, rate_limit=rate_limit, request_timeout=request_timeout,
-            discovery_methods=methods,
-            school_ids=school_filter,
-            evidence_path=evidence_path,
-            target_fiscal_year=settings.target_fiscal_year,
-            strict_target_fiscal_year=True,
-        )
-        session.commit()
-        typer.echo("\nPDF Discovery Results:")
-        for k, v in stats.items():
-            typer.echo(f"  {k}: {v}")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _require_app_lock("cli_discover_pdfs"):
+        session = SessionLocal()
+        try:
+            stats = run_pdf_discovery(
+                session, storage_dir,
+                batch_size=batch_size, rate_limit=rate_limit, request_timeout=request_timeout,
+                discovery_methods=methods,
+                school_ids=school_filter,
+                evidence_path=evidence_path,
+                target_fiscal_year=settings.target_fiscal_year,
+                strict_target_fiscal_year=True,
+            )
+            session.commit()
+            typer.echo("\nPDF Discovery Results:")
+            for k, v in stats.items():
+                typer.echo(f"  {k}: {v}")
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -450,23 +455,24 @@ def ingest_pdfs(
 
     evidence_path = evidence_log if str(evidence_log) else None
 
-    session = SessionLocal()
-    try:
-        stats = run_ingestion(
-            session,
-            batch_size=batch_size,
-            document_ids=document_id,
-            evidence_path=evidence_path,
-        )
-        session.commit()
-        typer.echo("\nIngestion Results:")
-        for k, v in stats.items():
-            typer.echo(f"  {k}: {v}")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _require_app_lock("cli_ingest_pdfs"):
+        session = SessionLocal()
+        try:
+            stats = run_ingestion(
+                session,
+                batch_size=batch_size,
+                document_ids=document_id,
+                evidence_path=evidence_path,
+            )
+            session.commit()
+            typer.echo("\nIngestion Results:")
+            for k, v in stats.items():
+                typer.echo(f"  {k}: {v}")
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -598,42 +604,43 @@ def prefecture_aggregate(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    session = SessionLocal()
-    try:
-        for p in requested:
-            artifacts = resolve_prefecture_artifacts(artifact_dir, p)
-            if not artifacts:
-                typer.echo(f"[skip] {p}: artifact missing at {artifact_dir / f'{p}.pdf'}")
-                continue
+    with _require_app_lock("cli_prefecture_aggregate"):
+        session = SessionLocal()
+        try:
+            for p in requested:
+                artifacts = resolve_prefecture_artifacts(artifact_dir, p)
+                if not artifacts:
+                    typer.echo(f"[skip] {p}: artifact missing at {artifact_dir / f'{p}.pdf'}")
+                    continue
 
-            for artifact in artifacts:
-                report = aggregate(session, p, artifact)
-                suffix = "" if len(artifacts) == 1 else f"__{artifact.stem.removeprefix(p).strip('_') or 'primary'}"
-                out_path = output_dir / f"{p}{suffix}.json"
-                out_path.write_text(
-                    json.dumps(report.__dict__, ensure_ascii=False, indent=2, default=str),
-                    encoding="utf-8",
-                )
-                typer.echo(
-                    f"[{p}/{artifact.name}] extracted={report.extracted_total} "
-                    f"matched={report.db_matched} unmatched={report.db_unmatched} "
-                    f"actions={report.action_distribution} → {out_path}"
-                )
+                for artifact in artifacts:
+                    report = aggregate(session, p, artifact)
+                    suffix = "" if len(artifacts) == 1 else f"__{artifact.stem.removeprefix(p).strip('_') or 'primary'}"
+                    out_path = output_dir / f"{p}{suffix}.json"
+                    out_path.write_text(
+                        json.dumps(report.__dict__, ensure_ascii=False, indent=2, default=str),
+                        encoding="utf-8",
+                    )
+                    typer.echo(
+                        f"[{p}/{artifact.name}] extracted={report.extracted_total} "
+                        f"matched={report.db_matched} unmatched={report.db_unmatched} "
+                        f"actions={report.action_distribution} → {out_path}"
+                    )
 
-                if not dry_run:
-                    stats = apply_writer_plan(session, report)
-                    typer.echo(f"[{p}/{artifact.name}] applied: {stats}")
+                    if not dry_run:
+                        stats = apply_writer_plan(session, report)
+                        typer.echo(f"[{p}/{artifact.name}] applied: {stats}")
 
-        if not dry_run:
-            session.commit()
-            typer.echo("All applies committed.")
-        else:
+            if not dry_run:
+                session.commit()
+                typer.echo("All applies committed.")
+            else:
+                session.rollback()
+        except Exception:
             session.rollback()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -653,16 +660,17 @@ def audit_flush(
     from eidp.db.audit_outbox import flush_audit_outbox
     from eidp.db.session import SessionLocal
 
-    session = SessionLocal()
-    try:
-        stats = flush_audit_outbox(session, jsonl_path=jsonl_path)
-        typer.echo(
-            f"Audit flush: exported={stats['exported']} "
-            f"already_present={stats['already_present']} "
-            f"failed={stats['failed']} → {jsonl_path}"
-        )
-    finally:
-        session.close()
+    with _require_app_lock("cli_audit_flush"):
+        session = SessionLocal()
+        try:
+            stats = flush_audit_outbox(session, jsonl_path=jsonl_path)
+            typer.echo(
+                f"Audit flush: exported={stats['exported']} "
+                f"already_present={stats['already_present']} "
+                f"failed={stats['failed']} → {jsonl_path}"
+            )
+        finally:
+            session.close()
 
 
 @app.command()
@@ -708,20 +716,21 @@ def populate_reviews(
     from eidp.db.session import SessionLocal
     from eidp.review.populate import populate_review_items
 
-    session = SessionLocal()
-    try:
-        stats = populate_review_items(session, data_dir)
-        session.commit()
-        typer.echo("\nReview Items Populated:")
-        typer.echo(f"  Created:          {stats['created']}")
-        typer.echo(f"  Skipped existing: {stats['skipped_existing']}")
-        typer.echo(f"  Skipped excluded: {stats['skipped_excluded']}")
-        typer.echo(f"  Total unresolved: {stats['total_unresolved']}")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _require_app_lock("cli_populate_reviews"):
+        session = SessionLocal()
+        try:
+            stats = populate_review_items(session, data_dir)
+            session.commit()
+            typer.echo("\nReview Items Populated:")
+            typer.echo(f"  Created:          {stats['created']}")
+            typer.echo(f"  Skipped existing: {stats['skipped_existing']}")
+            typer.echo(f"  Skipped excluded: {stats['skipped_excluded']}")
+            typer.echo(f"  Total unresolved: {stats['total_unresolved']}")
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -802,18 +811,19 @@ def firecrawl_discover(
     from eidp.db.session import SessionLocal
     from eidp.scraper.firecrawl_discovery import run_firecrawl_discovery
 
-    session = SessionLocal()
-    try:
-        stats = run_firecrawl_discovery(session, batch_size=batch_size)
-        session.commit()
-        typer.echo("\nFirecrawl Discovery:")
-        for k, v in stats.items():
-            typer.echo(f"  {k}: {v}")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with _require_app_lock("cli_firecrawl_discover"):
+        session = SessionLocal()
+        try:
+            stats = run_firecrawl_discovery(session, batch_size=batch_size)
+            session.commit()
+            typer.echo("\nFirecrawl Discovery:")
+            for k, v in stats.items():
+                typer.echo(f"  {k}: {v}")
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @app.command()
@@ -1027,19 +1037,20 @@ def seed_discovery_gold_sites(
         seed_discovery_gold_sites as seed_sites,
     )
 
-    session = SessionLocal()
-    try:
-        stats = seed_sites(session, load_discovery_gold_entries(gold_set_dir), apply=apply)
-        if apply:
-            session.commit()
-        else:
+    with _require_app_lock("cli_seed_discovery_gold_sites"):
+        session = SessionLocal()
+        try:
+            stats = seed_sites(session, load_discovery_gold_entries(gold_set_dir), apply=apply)
+            if apply:
+                session.commit()
+            else:
+                session.rollback()
+            typer.echo(json.dumps(stats, ensure_ascii=False, indent=2, sort_keys=True))
+        except Exception:
             session.rollback()
-        typer.echo(json.dumps(stats, ensure_ascii=False, indent=2, sort_keys=True))
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+            raise
+        finally:
+            session.close()
 
 
 @app.command("eval-discovery-gold")

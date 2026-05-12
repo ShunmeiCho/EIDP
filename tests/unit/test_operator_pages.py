@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import subprocess
@@ -32,6 +33,14 @@ def _render_url_submission_for_test(session):  # noqa: ANN001, ANN201
     from eidp.review import operator_pages as pages
 
     pages.page_url_submission(session)
+
+
+def test_url_submission_page_accepts_shared_lock_from_app() -> None:
+    signature = inspect.signature(operator_pages.page_url_submission)
+    app_source = Path("src/eidp/review/app.py").read_text(encoding="utf-8")
+
+    assert "lock_path" in signature.parameters
+    assert 'page_url_submission(session, lock_path=Path(settings.data_dir) / ".lock")' in app_source
 
 
 def test_output_path_allows_output_and_rejects_traversal() -> None:
