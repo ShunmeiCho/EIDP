@@ -1069,6 +1069,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR",
             "fiscal_year < MIN_SUPPORTED_FISCAL_YEAR",
             "fiscal_year > MAX_SUPPORTED_FISCAL_YEAR",
+            "fiscal_year_from_japanese_era_text",
             "settings.target_fiscal_year if max_fiscal_year is None",
             'filing_dates = re.findall(r"(20\\d{2})[./]\\d{1,2}[./]\\d{1,2}"',
             'all_years = re.findall(r"(20\\d{2})[\\.\\s年/]"',

@@ -872,6 +872,7 @@ def test_verify_core_zip_requires_rolling_pdf_fiscal_year_extractor_contract(tmp
     assert any("20\\d{2}" in error for error in check.errors)
     assert any("MIN_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("MAX_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
+    assert any("fiscal_year_from_japanese_era_text" in error for error in check.errors)
     assert any("settings.target_fiscal_year" in error for error in check.errors)
     assert any("format_fiscal_year_as_japanese_era" in error for error in check.errors)
 
