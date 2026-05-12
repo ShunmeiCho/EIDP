@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `313dee6a3bdb126369110aa834e94044c94bff6c` (`eidp-windows-v305.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `7204c1218552d0a0b207c7642e6fa4f6fd438e94` (`eidp-windows-v306.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1596,6 +1596,30 @@ with SHA256 `19b2e50f9f8294d7243f50d7744592e5c640dbe4de969085412d788d0c13c55e`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v305 is still pending and must not be
+inferred from the Mac verifier.
+
+v306 (`7204c12`) closes a PDF-discovery reproducibility gap in candidate budget
+limiting. `MAX_GENERAL_CANDIDATE_SCAN` still prevents dense disclosure pages
+from spending unbounded download attempts on generic public PDFs, but
+`_prioritize_viable_candidates` now returns the dropped candidate objects rather
+than only a count. `run_pdf_discovery` records each budget-dropped URL to the
+discovery evidence JSONL with `reason="candidate_budget_dropped"` and
+`extra.candidate_budget="max_general_candidate_scan=80"`, so a later operator
+or RCA agent can prove whether a potentially relevant PDF was never downloaded
+because of the scan budget. The packaged verifier now requires the
+`candidate_budget_dropped` evidence contract and the budget parameter token.
+Verification: targeted PDF discovery + Windows distribution verifier tests
+passed with `216 passed, 5 warnings`; `tests/unit` passed with `1302 passed, 5
+warnings`; `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v306.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `a61f7ee3b6a67f03e698c6d495a6f5343e4e94e072535b30f70c16b024042956`,
+`git_commit=7204c1218552d0a0b207c7642e6fa4f6fd438e94`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v306 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
