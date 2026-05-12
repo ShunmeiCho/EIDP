@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `9ad05c12acd22cbf7030cc47d6fcecc3623c6048` (`eidp-windows-v299.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `3d82cfdc5a46f47176baceb15930bd8240d32ab9` (`eidp-windows-v300.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1459,6 +1459,29 @@ with SHA256 `c8e552c22510699a0e23e2d0e910c150c7a75f2764fb8752c9ddd02cc9d48652`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v299 is still pending and must not be
+inferred from the Mac verifier.
+
+v300 (`3d82cfd`) extends the static button extraction contract to void
+`<input>` controls. Some CMS pages render download controls as
+`<input type="button" value="..." data-url="...pdf">` or as an input with an
+`onclick` PDF opener; these tags have no closing element and were outside the
+v296-v297 element matcher. `_pdf_element_context_text` now lets the extractor
+reuse the same nearby fiscal-year context logic for both normal elements and
+void input controls, using `value`, `aria-label`, or `title` as the visible
+label. The regression test uses a FY2031 / Reiwa 13 input-button pair to keep
+the rule rolling-year safe, and the packaged verifier now requires
+`PDF_INPUT_TAG_PATTERN` and `_pdf_element_context_text`. Verification:
+`tests/unit` passed with `1294 passed, 5 warnings`, `eval-discovery-gold
+--predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`.
+`dist/eidp-windows-v300.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py` with SHA256
+`ab692e5eef7f1ac151bfc729a32813074b7fe527f1e0f07f469e610bb1adb34a`,
+`git_commit=3d82cfdc5a46f47176baceb15930bd8240d32ab9`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v300 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
