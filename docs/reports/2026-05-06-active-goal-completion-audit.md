@@ -3,7 +3,9 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest audited Windows package commit: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`)
+Latest Mac-verifier-clean Windows package commit: `2406da413a888cb9086fedc45ecc85a3172e8e5a` (`eidp-windows-v246.zip`; Windows E2E pending)
+Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
+Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
@@ -427,6 +429,66 @@ returned `processed=1` / `yearly_upserted=1`, status rebuild returned
 `excel_ready=1` on the fresh package DB, and
 `eval-discovery-gold --pdf-evidence` reported `exact_matches=1` /
 `failed_predictions=0` for the new gold-set entry.
+
+## 2026-05-12 v244 Full Saitama Replay and v245/v246 Rolling-Year Hardening
+
+A full bounded Windows v244 Saitama replay showed that the v244
+upload/calendar-year trust fix improved raw acquisition but also exposed new
+strictness risks. The replay used the packaged v244 ZIP at
+`C:\Users\cyo20\EIDP-v244-full-d2beff6` with official-index scope only
+(`--pref saitama --skip-known-url-discovery --url-search off
+--school-url-crawl off --discovery-methods prefecture_aggregator
+--batch-size 60`). Step 2 extracted `58` official rows, matched `51`, and
+added `51` `prefecture_aggregator` URLs. PDF discovery then crawled `51`
+sites, found `50`, downloaded `11`, and final status rebuild counted
+`target_pdf_auto_acquired_count=7` / `target_pdf_auto_yield_pct=0.3` against
+the full `2418` active-specialty-school denominator. The ship gate correctly
+remained `below_gate`.
+
+The important finding is that the `7` status count was not fully trustworthy.
+Gold-set evaluation of the same evidence produced `exact_matches=6`,
+`failed_predictions=2`, and `missing_entries=11`. The failures were not
+packaging defects; they were discovery correctness defects:
+
+- school `760` (`入間看護専門学校`) was accepted from a WordPress Download
+  Manager wrapper whose anchor explicitly said `様式２（R6年度分申請）`. The
+  official-index current-year trust must not override that stale FY2024 label.
+- school `95` (`さいたまIT・WEB専門学校`) correctly rejected the known
+  `shugakushien_shinsei2025-1-2.pdf` publication-lag PDF, but also downloaded
+  an adjacent student tuition-reduction PDF
+  (`jyugyoryo-genmen2025_2.pdf`). Ingest marked it `school_mismatch`, so it did
+  not become `excel_ready`, but discovery should reject it before download.
+- school `782` (`専門学校越生自動車大学校`) was counted as current-year success
+  because `令和七年度` was not parsed as FY2025. This has been promoted into
+  `data/discovery-gold-set/entries/ogose-auto-publication-lag-2026.json` so it
+  remains a regression fixture.
+
+The v245 source fix (`e7c6c9c`) closes those false-positive classes locally:
+romanized stale era labels such as `R6年度` are explicit stale fiscal-year
+labels, kanji era labels such as `令和七年度` parse to western fiscal years, and
+student tuition-reduction links such as `授業料減免` / `jyugyoryo-genmen` are
+pre-download rejected unless they also contain a target-form hint. The focused
+unit and gold-set gates passed, and the full unit suite passed
+(`1200 passed`). A v245 ZIP was built from `e7c6c9c`, Mac verification passed
+with SHA256
+`a7475140f83ea1dabbb38b3fa8f40e8676dc7cb1b0a1c8e71efd5c03ae52af62`, and a
+fresh Windows extraction `C:\Users\cyo20\EIDP-v245-e7c6c9c` completed
+`EIDP-setup.bat` with `school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, `uq_document_file_hash` present, and
+`build_dirty=false`. SSH availability ended before a clean focused replay could
+be completed, so v245 is setup-verified but not focused-replay verified.
+
+The subsequent v246 package (`2406da4`) is the latest Mac-verifier-clean ZIP.
+It adds a rolling-year regression matrix so the PDF gate is not hard-coded to
+FY2026: FY2026 western-year labels, FY2027 romanized Reiwa labels, and FY2028
+kanji Reiwa labels are all tested as stale/current according to the configured
+target fiscal year. `scripts/verify_windows_distribution.py` passed for
+`dist/eidp-windows-v246.zip` with SHA256
+`d2555e87bbf2d572c790fdf4417fa7703d91b38568d6b6fd3b979c0b0e898cfe`,
+`git_commit=2406da413a888cb9086fedc45ecc85a3172e8e5a`, `git_dirty=false`,
+`entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
+`47` downloadable supported prefecture seeds. Windows E2E for v246 is still
+pending and must not be inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
 
@@ -2927,15 +2989,18 @@ The project is materially closer to the intended automation architecture:
 official government indexes are now the primary acquisition surface, stale PDFs
 are demoted, target-FY tasking is visible, and Windows packaging is refreshed.
 
-The active goal is **not complete**. v244 is the current verifier-clean and
-Windows setup-verified ZIP candidate, with focused Windows replays covering
-both the O-Hara table-header discovery pattern and the school `769`
-prefecture-trusted upload-year pattern. The latest full bounded Windows
-acquisition RCA is still v242 and still proves strict FY2026 yield below the
-ship gate: the v242 Saitama official-index run covered `51` official-index
-school URLs, found
-PDF candidates on `50` sites, downloaded `3` PDFs, and counted `3` schools
-as current target-PDF auto acquired after ingest/status rebuild. v240 and v241
+The active goal is **not complete**. v246 is the latest Mac-verifier-clean
+Windows ZIP candidate, but its Windows E2E remains pending. v245 is the latest
+fresh Windows setup-verified package, and v244 remains the latest package with
+a focused Windows replay proof. The latest full bounded Windows acquisition
+RCA is now v244 and still proves strict FY2026 yield far below the ship gate:
+the v244 Saitama official-index run covered `51` official-index school URLs,
+found PDF candidates on `50` sites, downloaded `11` PDFs, and counted `7`
+schools as current target-PDF auto acquired after ingest/status rebuild, but
+gold-set evaluation exposed false positives in the discovery/status count.
+Those false positives are fixed in v245/v246 and covered by Mac-side tests, but
+they require a new Windows replay before they can be counted as packaged
+runtime evidence. v240 and v241
 reduced download-time non-target waste (`classified_non_target` fell from v239
 `230` to v240 `169` and then v241 `125`, and
 `target_fiscal_year_not_detected` fell from `51` to `27` and then `21`) but
@@ -3005,6 +3070,16 @@ downloaded and ingested the document, wrote `yearly_upserted=1`, and raised the
 copied Saitama DB status to `excel_ready=4`; the fresh Windows v244 package
 replay also validated `downloaded=1`, `processed=1`, `yearly_upserted=1`, and
 gold-set `exact_matches=1` for this new entry.
+The full v244 Saitama replay then proved the next correction direction:
+official-index current-year trust was too strong when the candidate itself had
+explicit stale-year labels (`R6年度分申請`, `令和七年度`) or was an adjacent
+student tuition-reduction form. v245/v246 correct those false-positive classes
+and expand the discovery gold-set to `20` entries, including the new
+`ogose-auto-publication-lag-2026` fixture. v246 further adds a
+rolling-target-year matrix across FY2026-FY2028, so the guard is a persistent
+fiscal-year rule rather than a one-year FY2026 patch. These fixes are
+Mac-tested and package-verifier-clean, but Windows focused/full replay remains
+the next required evidence step.
 The deployment layer is
 healthy
 (`first_setup.bat`, SQLite integrity/schema checks, bootstrap wrapper
