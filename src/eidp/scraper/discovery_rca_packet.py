@@ -260,7 +260,9 @@ Tasks:
 4. Inspect candidate PDF body/OCR evidence before accepting target FY.
 5. Return exactly one Required Output Block JSON object.
 6. Include search_queries_used only when the layer is layer_3_operator_or_search_fallback.
-7. If this should enter data/discovery-gold-set, draft the entry fields and explain the reusable rule and anti-pattern.
+7. For needs_operator_review, include the concrete candidate_pdf_url and target_form_evidence.
+8. If no concrete candidate PDF exists, use no_target_candidate_found and operator_action=manual_url_entry.
+9. If this should enter data/discovery-gold-set, draft the entry fields and explain the reusable rule and anti-pattern.
 """
 
 
@@ -522,6 +524,12 @@ def _validate_rca_outcome_semantics(payload: dict[str, Any]) -> list[str]:
         for field in ("candidate_pdf_url", "fiscal_year_evidence", "target_form_evidence"):
             if not str(payload[field]).strip():
                 errors.append(f"accepted_target_pdf requires {field}")
+    elif outcome == "needs_operator_review":
+        if operator_action != "review_pdf":
+            errors.append("needs_operator_review requires operator_action=review_pdf")
+        for field in ("candidate_pdf_url", "target_form_evidence"):
+            if not str(payload[field]).strip():
+                errors.append(f"needs_operator_review requires {field}")
     elif outcome == "publication_lag_latest_public":
         if operator_action != "wait_for_publication":
             errors.append("publication_lag_latest_public requires operator_action=wait_for_publication")

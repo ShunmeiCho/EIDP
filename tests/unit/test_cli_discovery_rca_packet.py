@@ -745,6 +745,42 @@ def test_discovery_rca_outcome_validate_rejects_publication_lag_without_wait_act
     assert "publication_lag_latest_public requires operator_action=wait_for_publication" in result.output
 
 
+def test_discovery_rca_outcome_validate_rejects_review_without_candidate_pdf(tmp_path: Path) -> None:
+    outcome_path = tmp_path / "review-without-candidate.json"
+    outcome_path.write_text(
+        json.dumps(
+            {
+                "school_id": 97,
+                "target_fiscal_year": 2026,
+                "layer": "layer_1_pdf_discovery",
+                "outcome": "needs_operator_review",
+                "source_page_url": "https://example.ac.jp/disclosure",
+                "candidate_pdf_url": "",
+                "anchor_text": "確認申請書",
+                "fiscal_year_evidence": "",
+                "target_form_evidence": "",
+                "negative_evidence": "",
+                "checked_paths": ["https://example.ac.jp/disclosure"],
+                "search_queries_used": [],
+                "operator_action": "none",
+                "gold_set_entry_recommended": False,
+                "candidate_rule": "",
+                "anti_pattern": "",
+                "confidence": "medium",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["discovery-rca-outcome-validate", "--input", str(outcome_path)])
+
+    assert result.exit_code == 1
+    assert "needs_operator_review requires operator_action=review_pdf" in result.output
+    assert "needs_operator_review requires candidate_pdf_url" in result.output
+    assert "needs_operator_review requires target_form_evidence" in result.output
+
+
 def test_discovery_rca_outcome_validate_rejects_missing_investigation_trace(tmp_path: Path) -> None:
     outcome_path = tmp_path / "no-trace.json"
     outcome_path.write_text(
@@ -958,7 +994,7 @@ def test_discovery_rca_outcome_validate_accepts_output_directory(tmp_path: Path)
                     "layer": "layer_1_pdf_discovery",
                     "outcome": outcome,
                     "source_page_url": f"https://example.ac.jp/{school_id}/",
-                    "candidate_pdf_url": f"https://example.ac.jp/{school_id}/r8.pdf" if accepted else "",
+                    "candidate_pdf_url": f"https://example.ac.jp/{school_id}/r8.pdf",
                     "anchor_text": "",
                     "fiscal_year_evidence": "PDF body contains 2026年度" if accepted else "",
                     "target_form_evidence": "PDF body contains 機関要件確認申請書" if accepted else "候補PDFあり",
@@ -1043,7 +1079,7 @@ def test_discovery_rca_outcome_validate_checks_batch_plan_coverage(tmp_path: Pat
                     "layer": "layer_1_pdf_discovery",
                     "outcome": "needs_operator_review",
                     "source_page_url": f"https://example.ac.jp/{school_id}/",
-                    "candidate_pdf_url": "",
+                    "candidate_pdf_url": f"https://example.ac.jp/{school_id}/candidate.pdf",
                     "anchor_text": "",
                     "fiscal_year_evidence": "",
                     "target_form_evidence": "候補PDFあり",
@@ -1101,7 +1137,7 @@ def test_discovery_rca_outcome_validate_rejects_batch_plan_coverage_gaps(tmp_pat
                     "layer": "layer_1_pdf_discovery",
                     "outcome": "needs_operator_review",
                     "source_page_url": f"https://example.ac.jp/{school_id}/",
-                    "candidate_pdf_url": "",
+                    "candidate_pdf_url": f"https://example.ac.jp/{school_id}/candidate.pdf",
                     "anchor_text": "",
                     "fiscal_year_evidence": "",
                     "target_form_evidence": "候補PDFあり",
