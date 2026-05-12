@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `4b24d84e455e7cf1bcd142bc9a8f37590c2068b9` (`eidp-windows-v298.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `9ad05c12acd22cbf7030cc47d6fcecc3623c6048` (`eidp-windows-v299.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1439,6 +1439,26 @@ with SHA256 `6c4f042fd6cc2d407ef4e8b561f6021ba3e285f3e20331e6e99e8973b7b8d071`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v298 is still pending and must not be
+inferred from the Mac verifier.
+
+v299 (`9ad05c1`) adds a static extraction path for year/select dropdowns whose
+`<option value="...pdf">` entries point directly at PDF files. Some school
+disclosure pages expose annual documents only through an onchange dropdown; the
+new rule reads the option value without executing JavaScript and reuses the
+same anchor/context and candidate dedupe path. The regression test uses a
+FY2030 / Reiwa 12 dropdown to keep the contract rolling-year safe, and the
+packaged verifier now requires `PDF_OPTION_VALUE_PATTERN` and the option
+`value` contract. Verification: `tests/unit` passed with `1293 passed,
+5 warnings`, `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v299.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `c8e552c22510699a0e23e2d0e910c150c7a75f2764fb8752c9ddd02cc9d48652`,
+`git_commit=9ad05c12acd22cbf7030cc47d6fcecc3623c6048`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v299 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
