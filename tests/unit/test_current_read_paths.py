@@ -278,6 +278,7 @@ def test_verify_identity_does_not_count_historic_year_excluded(engine):
     on acceptance gates.
     """
     from pathlib import Path
+
     from eidp.matcher.reconciler import verify_identity
 
     with Session(engine) as session:

@@ -19,7 +19,7 @@ Owner-pinned data integrity contract:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -37,7 +37,6 @@ from eidp.db.models import (
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.pipeline.fiscal_year_override import effective_fiscal_year, override_fiscal_year
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -72,7 +71,7 @@ def _seed_one_doc(session: Session, *, fiscal_year: int) -> tuple[School, Docume
         content_type="text",
         fiscal_year=fiscal_year,
         ingest_status="ingested",
-        downloaded_at=datetime.now(timezone.utc),
+        downloaded_at=datetime.now(UTC),
     )
     session.add(doc)
     session.flush()
