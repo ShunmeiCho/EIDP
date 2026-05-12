@@ -951,6 +951,24 @@ def test_extract_pdf_links_includes_input_pdf_controls() -> None:
     assert "確認申請書" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_keeps_context_for_embedded_pdf_values() -> None:
+    html = """
+    <div class="disclosure">
+      <h2>令和16年度分申請 確認申請書</h2>
+      <iframe src="/docs/r16-kakunin.pdf"></iframe>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2034)
+
+    assert [candidate.pdf_url for candidate in candidates] == [
+        "https://example.ac.jp/docs/r16-kakunin.pdf",
+    ]
+    assert candidates[0].pattern_type == "embed"
+    assert "令和16年度分申請" in candidates[0].anchor_text
+    assert "確認申請書" in candidates[0].anchor_text
+
+
 def test_append_unique_candidates_deduplicates_encoded_and_unencoded_paths() -> None:
     target = [
         PdfCandidate(

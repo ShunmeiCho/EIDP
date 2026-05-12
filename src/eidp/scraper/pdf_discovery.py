@@ -378,6 +378,8 @@ PDF_META_REFRESH_PATTERN = r"<meta\s([^>]*)>"
 PDF_OPTION_VALUE_PATTERN = r"<option\s([^>]*)>(.*?)</option\s*>"
 PDF_FORM_ACTION_PATTERN = r"<form\s([^>]*)>(.*?)</form\s*>"
 PDF_INPUT_TAG_PATTERN = r"<input\s([^>]*)>"
+PDF_EMBED_TAG_NAMES = ("embed", "object", "iframe")
+PDF_EMBED_ATTRIBUTE_NAMES = ("src", "data")
 
 
 def _is_target_year_rejection(reason: str) -> bool:
@@ -1577,9 +1579,9 @@ def _extract_pdf_links(
             target_fiscal_year=target_fiscal_year,
         )
 
-    # Pattern 4: Embedded PDFs — embed/object/iframe with .pdf src
-    for tag in ("embed", "object", "iframe"):
-        for attr in ("src", "data"):
+    # Pattern 4: Embedded PDFs — embed/object/iframe with .pdf src/data
+    for tag in PDF_EMBED_TAG_NAMES:
+        for attr in PDF_EMBED_ATTRIBUTE_NAMES:
             for m in re.finditer(
                 rf'<{tag}\s[^>]*{attr}=["\']([^"\']*\.pdf(?:[?#][^"\']*)?)["\']',
                 html, re.IGNORECASE,
@@ -1590,7 +1592,10 @@ def _extract_pdf_links(
                     candidates,
                     candidate_index_by_key,
                     PdfCandidate(
-                        pdf_url=url, page_url=base_url, anchor_text="", pattern_type="embed",
+                        pdf_url=url,
+                        page_url=base_url,
+                        anchor_text=_pdf_element_context_text(html, m),
+                        pattern_type="embed",
                     ),
                     target_fiscal_year=target_fiscal_year,
                 )
