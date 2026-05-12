@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `52af67e8b3beab41df89492b3351dcef33c529ca` (`eidp-windows-v297.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `4b24d84e455e7cf1bcd142bc9a8f37590c2068b9` (`eidp-windows-v298.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1419,6 +1419,26 @@ with SHA256 `41a3b49cd76f78b74b21e5c4355600d19c80c20fbda7ab1483c407b9e30e91a4`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v297 is still pending and must not be
+inferred from the Mac verifier.
+
+v298 (`4b24d84`) widens the same static data-attribute extraction contract to
+lazy-download attribute names used by CMS widgets: `data-file`, `data-pdf`,
+and `data-src`. The extractor still only accepts values that explicitly
+contain `.pdf`, so generic media attributes do not become candidates unless
+they name a PDF. The regression test uses a FY2029 / Reiwa 11 confirmation-form
+block, proving the rule is not tied to the current FY2026 target. The packaged
+verifier now requires those three data-attribute names alongside the v295-v297
+button and click-handler contracts. Verification: `tests/unit` passed with
+`1292 passed, 5 warnings`, `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v298.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `6c4f042fd6cc2d407ef4e8b561f6021ba3e285f3e20331e6e99e8973b7b8d071`,
+`git_commit=4b24d84e455e7cf1bcd142bc9a8f37590c2068b9`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v298 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
