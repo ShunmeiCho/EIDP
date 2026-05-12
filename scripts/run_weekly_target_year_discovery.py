@@ -64,6 +64,12 @@ DEFAULT_METHODS = (
     "scrapling_stealth",
 )
 DEFAULT_RCA_BATCH_LIMIT = 20
+RUN_ARTIFACT_PATTERNS = (
+    "*-summary.json",
+    "*-discovery-rca-batch-plan.json",
+    "*-discovery-rejections.jsonl",
+    "*-ingest-rejections.jsonl",
+)
 
 
 @dataclass(frozen=True)
@@ -144,6 +150,24 @@ def write_last_run(
     return last_run_path
 
 
+def _prune_matching_files(directory: Path, pattern: str, *, keep: int) -> tuple[list[Path], list[tuple[Path, str]]]:
+    if keep < 0:
+        raise ValueError("keep must be >= 0")
+    if not directory.is_dir():
+        return [], []
+    files = sorted(p for p in directory.glob(pattern) if p.is_file())
+    removable = files if keep == 0 else files[:-keep]
+    removed: list[Path] = []
+    failed: list[tuple[Path, str]] = []
+    for path in removable:
+        try:
+            path.unlink()
+            removed.append(path)
+        except OSError as exc:
+            failed.append((path, str(exc)))
+    return removed, failed
+
+
 def prune_run_logs(logs_dir: Path, *, keep: int = 12) -> tuple[list[Path], list[tuple[Path, str]]]:
     """Keep only the latest ``run-*.log`` files by filename.
 
@@ -156,20 +180,18 @@ def prune_run_logs(logs_dir: Path, *, keep: int = 12) -> tuple[list[Path], list[
     failure rule). Common cause on Windows is the file still being held
     open by a viewer; the operator should close it and rerun.
     """
-    if keep < 0:
-        raise ValueError("keep must be >= 0")
-    if not logs_dir.is_dir():
-        return [], []
-    logs = sorted(p for p in logs_dir.glob("run-*.log") if p.is_file())
-    removable = logs if keep == 0 else logs[:-keep]
+    return _prune_matching_files(logs_dir, "run-*.log", keep=keep)
+
+
+def prune_run_artifacts(output_dir: Path, *, keep: int = 12) -> tuple[list[Path], list[tuple[Path, str]]]:
+    """Keep the latest timestamped weekly evidence artifacts per artifact kind."""
+
     removed: list[Path] = []
     failed: list[tuple[Path, str]] = []
-    for path in removable:
-        try:
-            path.unlink()
-            removed.append(path)
-        except OSError as exc:
-            failed.append((path, str(exc)))
+    for pattern in RUN_ARTIFACT_PATTERNS:
+        pattern_removed, pattern_failed = _prune_matching_files(output_dir, pattern, keep=keep)
+        removed.extend(pattern_removed)
+        failed.extend(pattern_failed)
     return removed, failed
 
 
@@ -750,6 +772,7 @@ def main() -> None:
     # Sprint 8.7: prune BEFORE the final print so a closed-pipe error on
     # stdout doesn't leave the ringbuffer unbounded.
     _, prune_failures = prune_run_logs(args.logs_dir, keep=args.keep_logs)
+    _, artifact_prune_failures = prune_run_artifacts(args.output_dir, keep=args.keep_logs)
     payload = {
         "summary_path": summary["summary_path"],
         "last_run_path": str(args.last_run_path),
@@ -772,6 +795,10 @@ def main() -> None:
         # and rerun. CLAUDE.md bans silent failure.
         payload["log_prune_failures"] = [
             {"path": str(p), "reason": reason} for p, reason in prune_failures
+        ]
+    if artifact_prune_failures:
+        payload["artifact_prune_failures"] = [
+            {"path": str(p), "reason": reason} for p, reason in artifact_prune_failures
         ]
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 

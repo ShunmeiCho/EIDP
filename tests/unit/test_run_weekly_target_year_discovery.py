@@ -27,6 +27,7 @@ snapshot_reports = module._snapshot_reports
 resolve_weekly_paths = module.resolve_weekly_paths
 write_last_run = module.write_last_run
 prune_run_logs = module.prune_run_logs
+prune_run_artifacts = module.prune_run_artifacts
 run_weekly = module.run_weekly
 
 
@@ -422,6 +423,32 @@ def test_prune_run_logs_surfaces_unlink_failures(
     assert removed_names == {"run-20260502.log"}
     assert failed_names == {"run-20260501.log"}
     assert all("held open" in reason for _, reason in failed)
+
+
+def test_prune_run_artifacts_keeps_latest_twelve_per_artifact_kind(tmp_path: Path) -> None:
+    output = tmp_path / "data" / "output" / "target-year-discovery"
+    output.mkdir(parents=True)
+    suffixes = (
+        "summary.json",
+        "discovery-rca-batch-plan.json",
+        "discovery-rejections.jsonl",
+        "ingest-rejections.jsonl",
+    )
+    for day in range(1, 15):
+        for suffix in suffixes:
+            (output / f"weekly-202605{day:02d}-{suffix}").write_text(str(day), encoding="utf-8")
+    (output / "manual-note.json").write_text("keep", encoding="utf-8")
+
+    removed, failed = prune_run_artifacts(output, keep=12)
+
+    assert failed == []
+    assert len(removed) == 8
+    assert all("20260501" in p.name or "20260502" in p.name for p in removed)
+    for suffix in suffixes:
+        remaining = sorted(p.name for p in output.glob(f"*-{suffix}"))
+        assert remaining[0] == f"weekly-20260503-{suffix}"
+        assert remaining[-1] == f"weekly-20260514-{suffix}"
+    assert (output / "manual-note.json").exists()
 
 
 def test_run_weekly_respects_shared_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

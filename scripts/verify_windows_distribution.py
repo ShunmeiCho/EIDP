@@ -867,6 +867,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "last_run.json",
             "write_last_run",
             "prune_run_logs",
+            "prune_run_artifacts",
+            "RUN_ARTIFACT_PATTERNS",
             "run_pdf_discovery",
             "run_ingestion",
             "write_text_atomic",

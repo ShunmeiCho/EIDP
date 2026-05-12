@@ -1010,6 +1010,27 @@ def test_verify_core_zip_requires_validator_sqlite_integrity_contract(tmp_path: 
     assert any("weekly summary after.coverage" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_weekly_artifact_pruning_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/run_weekly_target_year_discovery.py"] = (
+        "acquire_lock\n"
+        "last_run.json\n"
+        "write_last_run\n"
+        "prune_run_logs\n"
+        "run_pdf_discovery\n"
+        "run_ingestion\n"
+        "write_text_atomic\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("scripts/run_weekly_target_year_discovery.py missing required token" in error for error in check.errors)
+    assert any("prune_run_artifacts" in error for error in check.errors)
+    assert any("RUN_ARTIFACT_PATTERNS" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_all_prefecture_seed_rows(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["data/prefecture-aggregators/seed.csv"] = _prefecture_seed_csv(omit={"tokyo"})
