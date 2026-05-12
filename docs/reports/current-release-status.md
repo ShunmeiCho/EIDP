@@ -1,48 +1,50 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-12
+Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v325.zip`
-Package commit: `8670acca932ec857785ade1a02339fc0080aaec4`
-Package SHA256: `96bdc4685bd915bc3d0c7385b208c7922e0666ab53f434690ebcf22d321a3cf7`
+Current Mac-verifier-clean package: `dist/eidp-windows-v326.zip`
+Package commit: `a0c188e3e62fe421058f72b7417515b1d21a67bc`
+Package SHA256: `c01c3acb3409fceb0aa05ecc35a33279ce3385dee03295c15381714afeb8b7ca`
 Latest Windows-backend-proven package: `dist/eidp-windows-v325.zip`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-The current source/ZIP snapshot is v325 and passes the default macOS package
+The current source/ZIP snapshot is v326 and passes the default macOS package
 verifier. The packaging, setup, SQLite, Task Scheduler, and bounded Windows
-backend pipeline are reproducible on `ssh win` for v325. The product goal is
-still not complete: v325 has not passed browser UI operator click-through, and
-the measured operator-reviewable coverage / Excel readiness remain far below
-the shipping line.
+backend pipeline are reproducible on `ssh win` for v325. v326 contains a
+strict-mode fix for opaque WordPress Download Manager wrappers and still needs
+a Windows backend rerun plus browser UI operator click-through. The product
+goal is still not complete: the measured operator-reviewable coverage / Excel
+readiness remain far below the shipping line.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official indexes seed school public URLs | v325 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v325 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v325 verifier clean by default; discovery gold-set `22` entries; expected predictions `22/22 exact`; Windows v325 Saitama 25-site run crawled `25` official-index sites, found candidates on `24`, downloaded `2`, ingested `2`, and produced `2` Excel-ready schools | Mechanically proven, yield failing |
-| Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `8` publication-lag cases; Windows v325 evidence shows `R7確認申請書類 様式第2号` is rejected as `fiscal_year_mismatch:2025` even when prefecture-index evidence is trusted | Partially proven |
+| Discover and download current target-FY PDFs in strict mode | v326 verifier clean by default; discovery gold-set `22` entries; expected predictions `22/22 exact`; Windows v325 Saitama 25-site run crawled `25` official-index sites, found candidates on `24`, downloaded `2`, ingested `2`, and produced `2` Excel-ready schools; v326 Windows rerun pending | Mechanically proven, yield failing |
+| Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `8` publication-lag cases; Windows v325 evidence shows `R7確認申請書類 様式第2号` is rejected as `fiscal_year_mismatch:2025`; v326 also rejects the ambiguous 入間看護専門学校 `wpdmdl=4821` wrapper as `target_fiscal_year_not_detected` instead of trusting prefecture-index evidence alone | Partially proven |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v325 Saitama 25-site run processed `2` documents, created `1` department, and wrote `2` yearly rows; both downloaded documents were Excel-ready | Partially proven |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v325 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v325 | Partially proven |
 | ManualActionLog audit for operator actions | v325 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v325 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v325 ZIP verifies clean on macOS packaging gate, was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v325-8670acc`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains user-side/unverified | Backend Win proof present, UI proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v326 ZIP verifies clean on macOS packaging gate; v325 ZIP was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v325-8670acc`, and `scripts\first_setup.bat` completed successfully; v326 Windows setup and browser UI click-through remain unverified | Backend Win proof present for v325, UI proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v325 25-site diagnostics report `target_pdf_auto_yield_pct=0.1` as a diagnostic metric, `operator_reviewable_yield_pct=0.8`, `ship_gate_status=below_gate`, `validate_after_bootstrap_ship_gate_rc=1`, and `ship_readiness_rc=1` | Failing |
 
 ## Current Non-Windows Evidence
 
-Commands run for v325 source/package:
+Commands run for v326 source/package:
 
-- `uv run pytest tests/unit -q` -> `1329 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1331 passed, 5 warnings`
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `22/22 exact`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v325.zip` -> `OK core`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v325.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v326.zip` -> `OK core`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v326.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed`
+- One-off strict download check for `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055` with anchor `ダウンロード` -> `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`
 
-v325 verifier exposes the current demonstration gap:
+v326 verifier exposes the current demonstration gap:
 
 - Discovery gold-set entries: `22`
 - Outcome distribution: `accepted_target_pdf=6`, `needs_operator_review=6`,
