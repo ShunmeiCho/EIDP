@@ -279,6 +279,8 @@ def _core_entries() -> dict[str, bytes | str]:
         ),
         "src/eidp/db/audit_outbox.py": (
             "DEFAULT_OUTBOX_PATH = Path(\"data/audit/manual-actions.jsonl\")\n"
+            "OUTBOX_ARCHIVE_GLOB = \"manual-actions-*.jsonl\"\n"
+            "def _candidate_outbox_paths(jsonl_path):\n"
             "def flush_audit_outbox(session):\n"
             "    ManualActionLog\n"
             "    jsonl_exported_at\n"
@@ -717,6 +719,8 @@ def test_verify_core_zip_requires_manual_action_audit_contract(tmp_path: Path) -
     assert any("src/eidp/db/audit.py missing required token" in error for error in check.errors)
     assert any("src/eidp/db/audit_outbox.py missing required token" in error for error in check.errors)
     assert any("ManualActionLog" in error for error in check.errors)
+    assert any("OUTBOX_ARCHIVE_GLOB" in error for error in check.errors)
+    assert any("_candidate_outbox_paths" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_operator_action_audit_contracts(tmp_path: Path) -> None:

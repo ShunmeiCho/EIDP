@@ -992,7 +992,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         ),
         "src/eidp/db/audit_outbox.py": (
             'DEFAULT_OUTBOX_PATH = Path("data/audit/manual-actions.jsonl")',
+            'OUTBOX_ARCHIVE_GLOB = "manual-actions-*.jsonl"',
             "def flush_audit_outbox",
+            "def _candidate_outbox_paths",
             "ManualActionLog",
             "jsonl_exported_at",
             "jsonl_export_error",

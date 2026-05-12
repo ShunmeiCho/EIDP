@@ -18,7 +18,7 @@ recovery reading. Critically:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
@@ -27,25 +27,36 @@ from sqlalchemy.orm import Session
 from eidp.db.models import ManualActionLog
 
 DEFAULT_OUTBOX_PATH = Path("data/audit/manual-actions.jsonl")
+OUTBOX_ARCHIVE_GLOB = "manual-actions-*.jsonl"
+
+
+def _candidate_outbox_paths(jsonl_path: Path) -> list[Path]:
+    """Return active and archived JSONL outbox files to use for dedup."""
+
+    paths = [jsonl_path]
+    if jsonl_path.name == DEFAULT_OUTBOX_PATH.name and jsonl_path.parent.exists():
+        paths.extend(sorted(p for p in jsonl_path.parent.glob(OUTBOX_ARCHIVE_GLOB) if p.is_file()))
+    return list(dict.fromkeys(paths))
 
 
 def _read_existing_action_ids(jsonl_path: Path) -> set[str]:
-    """Collect action_ids already written to the JSONL file."""
-    if not jsonl_path.exists():
-        return set()
+    """Collect action_ids already written to active or archived JSONL files."""
     seen: set[str] = set()
-    with jsonl_path.open(encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            aid = rec.get("action_id")
-            if aid:
-                seen.add(aid)
+    for path in _candidate_outbox_paths(jsonl_path):
+        if not path.exists():
+            continue
+        with path.open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                aid = rec.get("action_id")
+                if aid:
+                    seen.add(aid)
     return seen
 
 
@@ -88,7 +99,7 @@ def flush_audit_outbox(
     ).scalars().all()
 
     stats = {"exported": 0, "already_present": 0, "failed": 0}
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     with target_path.open("a", encoding="utf-8") as fh:
         for row in pending:
