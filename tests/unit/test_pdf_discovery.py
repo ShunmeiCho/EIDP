@@ -3927,6 +3927,72 @@ def test_download_pdf_trusted_prefecture_still_rejects_explicit_stale_year_label
     assert reason == "fiscal_year_mismatch:2025"
 
 
+def test_download_pdf_trusted_prefecture_rejects_era_shorthand_stale_form_label(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://www.arsnet.ac.jp/school/wp/wp-content/uploads/2025/06/414b23f669e2093caae76eccc9722c64.pdf",
+        page_url="https://www.arsnet.ac.jp/school/information.html",
+        anchor_text="R7確認申請書類 様式第2号",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2025"
+
+
+def test_download_pdf_trusted_prefecture_rejects_era_year_stale_form_label(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/pdf/r07-applicationform2-1-4.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和7年 更新確認申請書",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2025"
+
+
 def test_download_pdf_trusted_prefecture_rejects_romanized_era_stale_year_label(
     monkeypatch, tmp_path: Path
 ) -> None:

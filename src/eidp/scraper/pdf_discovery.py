@@ -46,6 +46,13 @@ def _is_supported_fiscal_year(fiscal_year: int) -> bool:
     return MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR
 
 
+def _is_candidate_hint_year(fiscal_year: int, *, target_year: int) -> bool:
+    return max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= fiscal_year <= min(
+        MAX_SUPPORTED_FISCAL_YEAR,
+        target_year + 2,
+    )
+
+
 def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
     """GET with manual redirect following + SSRF check on each hop.
 
@@ -601,15 +608,18 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*(?:度|\d{1,2}\s*月))", text)
         if western_year is not None:
             year = int(western_year.group(1))
-            return year if _is_supported_fiscal_year(year) else None
+            if _is_candidate_hint_year(year, target_year=target_year):
+                return year
         filename_year = re.search(r"(?<!\d)(20\d{2})(?=[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if filename_year is not None:
             year = int(filename_year.group(1))
-            return year if _is_supported_fiscal_year(year) else None
+            if _is_candidate_hint_year(year, target_year=target_year):
+                return year
         serial_filename_year = re.search(r"(?<!\d)(20\d{2})(?=\d{2,4}[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if serial_filename_year is not None:
             year = int(serial_filename_year.group(1))
-            return year if _is_supported_fiscal_year(year) else None
+            if _is_candidate_hint_year(year, target_year=target_year):
+                return year
 
     lowered = text.lower()
     for year in range(
@@ -653,6 +663,10 @@ def _has_explicit_stale_fiscal_year_label(candidate: PdfCandidate, *, target_yea
     """Return whether URL/anchor text explicitly labels a stale fiscal year."""
 
     text = _candidate_hint_text(candidate)
+    detected_year = _fiscal_year_from_strong_candidate_hint(text, target_year=target_year)
+    if detected_year is not None and max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= detected_year < target_year:
+        return True
+
     detected_year = fiscal_year_from_japanese_era_text(
         text,
         include_fiscal_year_labels=True,
