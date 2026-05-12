@@ -10,6 +10,14 @@ from typing import Any
 
 from eidp.scraper.url_normalization import normalize_candidate_url
 
+DISCOVERY_GOLD_ALLOWED_OUTCOMES = frozenset({
+    "accepted_target_pdf",
+    "publication_lag_latest_public",
+    "no_target_candidate_found",
+    "needs_operator_review",
+    "site_fetch_error",
+})
+
 
 @dataclass(frozen=True)
 class DiscoveryGoldEntry:
@@ -25,6 +33,7 @@ class DiscoveryGoldEntry:
     school_url: str
     disclosure_url: str
     pdf_url: str
+    pdf_type: str
     fiscal_year: int | None
     strict_target_year_success: bool
     site_family: str
@@ -137,6 +146,7 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
                 school_url=str(expected_result.get("school_url") or ""),
                 disclosure_url=str(expected_result.get("disclosure_url") or ""),
                 pdf_url=str(expected_result.get("pdf_url") or ""),
+                pdf_type=str(expected_result.get("pdf_type") or ""),
                 fiscal_year=int(fiscal_year) if fiscal_year is not None else None,
                 strict_target_year_success=bool(expected_result.get("strict_target_year_success", False)),
                 site_family=str(automation_pattern.get("site_family") or ""),
@@ -227,6 +237,63 @@ def summarize_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> Disco
         publication_lag_entries=outcome_counts.get("publication_lag_latest_public", 0),
         site_families=site_families,
     )
+
+
+def validate_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> list[str]:
+    """Return semantic validation errors for committed discovery demonstrations."""
+
+    errors: list[str] = []
+    seen_entry_ids: set[str] = set()
+    seen_school_years: set[tuple[int, int]] = set()
+
+    for entry in entries:
+        prefix = f"{entry.entry_id}: "
+        if entry.entry_id in seen_entry_ids:
+            errors.append(prefix + "duplicate entry_id")
+        seen_entry_ids.add(entry.entry_id)
+
+        school_year = (entry.school_id, entry.target_fiscal_year)
+        if school_year in seen_school_years:
+            errors.append(prefix + "duplicate school_id + target_fiscal_year")
+        seen_school_years.add(school_year)
+
+        if entry.target_fiscal_year < 2019 or entry.target_fiscal_year > 2099:
+            errors.append(prefix + "target_fiscal_year outside supported range [2019, 2099]")
+        if entry.outcome not in DISCOVERY_GOLD_ALLOWED_OUTCOMES:
+            errors.append(prefix + f"unsupported outcome {entry.outcome!r}")
+
+        if entry.outcome == "accepted_target_pdf":
+            if not entry.pdf_url:
+                errors.append(prefix + "accepted_target_pdf requires expected_result.pdf_url")
+            if entry.pdf_type != "target":
+                errors.append(prefix + "accepted_target_pdf requires expected_result.pdf_type=target")
+            if entry.fiscal_year != entry.target_fiscal_year:
+                errors.append(prefix + "accepted_target_pdf fiscal_year must equal target_fiscal_year")
+            if not entry.strict_target_year_success:
+                errors.append(prefix + "accepted_target_pdf requires strict_target_year_success=true")
+        elif entry.outcome == "publication_lag_latest_public":
+            if not entry.pdf_url:
+                errors.append(prefix + "publication_lag_latest_public requires expected_result.pdf_url")
+            if entry.pdf_type != "target":
+                errors.append(prefix + "publication_lag_latest_public requires expected_result.pdf_type=target")
+            if entry.fiscal_year is None or entry.fiscal_year >= entry.target_fiscal_year:
+                errors.append(
+                    prefix + "publication_lag_latest_public fiscal_year must be older than target_fiscal_year"
+                )
+            if entry.strict_target_year_success:
+                errors.append(prefix + "publication_lag_latest_public requires strict_target_year_success=false")
+        elif entry.outcome == "needs_operator_review":
+            if entry.strict_target_year_success:
+                errors.append(prefix + "needs_operator_review requires strict_target_year_success=false")
+        elif entry.outcome in {"no_target_candidate_found", "site_fetch_error"}:
+            if entry.pdf_url:
+                errors.append(prefix + f"{entry.outcome} must not carry expected_result.pdf_url")
+            if entry.fiscal_year is not None:
+                errors.append(prefix + f"{entry.outcome} must not carry expected_result.fiscal_year")
+            if entry.strict_target_year_success:
+                errors.append(prefix + f"{entry.outcome} requires strict_target_year_success=false")
+
+    return errors
 
 
 def render_discovery_gold_summary(summary: DiscoveryGoldSummary) -> str:

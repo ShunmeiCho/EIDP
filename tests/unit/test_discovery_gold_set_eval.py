@@ -30,6 +30,7 @@ def _entry(
     target_fiscal_year: int,
     outcome: str,
     pdf_url: str = "",
+    pdf_type: str = "target",
     fiscal_year: int | None = None,
     strict_target_year_success: bool = False,
 ) -> DiscoveryGoldEntry:
@@ -44,6 +45,7 @@ def _entry(
         school_url="https://example.ac.jp/",
         disclosure_url="https://example.ac.jp/disclosure/",
         pdf_url=pdf_url,
+        pdf_type=pdf_type,
         fiscal_year=fiscal_year,
         strict_target_year_success=strict_target_year_success,
         site_family="test",

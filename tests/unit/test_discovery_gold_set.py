@@ -12,6 +12,13 @@ def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def test_discovery_gold_set_schema_allows_image_only_review_entries() -> None:
+    schema = _load_json(GOLD_SET_DIR / "schema.json")
+    pdf_type_enum = schema["properties"]["expected_result"]["properties"]["pdf_type"]["enum"]
+
+    assert "image_only" in pdf_type_enum
+
+
 def test_discovery_gold_set_schema_and_prototypes_exist() -> None:
     assert (GOLD_SET_DIR / "schema.json").is_file()
     assert (GOLD_SET_DIR / "README.md").is_file()
@@ -21,8 +28,12 @@ def test_discovery_gold_set_schema_and_prototypes_exist() -> None:
 
 
 def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
+    from eidp.scraper.discovery_gold_set import load_discovery_gold_entries, validate_discovery_gold_entries
+
     entries = [_load_json(path) for path in sorted(ENTRY_DIR.glob("*.json"))]
     entries_by_id = {entry["entry_id"]: entry for entry in entries}
+
+    assert validate_discovery_gold_entries(load_discovery_gold_entries(GOLD_SET_DIR)) == []
 
     accepted = [entry for entry in entries if entry["outcome"] == "accepted_target_pdf"]
     assert accepted, "prototype set needs at least one successful discovery path"
@@ -65,6 +76,32 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
             assert entry["expected_result"]["pdf_url"].endswith(".pdf")
             assert entry["expected_result"]["pdf_type"] == "target"
             assert entry["expected_result"]["fiscal_year"] == entry["target_fiscal_year"]
+
+
+def test_discovery_gold_set_semantic_validator_rejects_inconsistent_outcomes() -> None:
+    from eidp.scraper.discovery_gold_set import DiscoveryGoldEntry, validate_discovery_gold_entries
+
+    errors = validate_discovery_gold_entries([
+        DiscoveryGoldEntry(
+            entry_id="bad-accepted",
+            school_id=1,
+            school_name="学校",
+            prefecture="東京都",
+            corporation_name="",
+            target_fiscal_year=2026,
+            outcome="accepted_target_pdf",
+            school_url="https://example.test/",
+            disclosure_url="https://example.test/disclosure/",
+            pdf_url="https://example.test/r7.pdf",
+            pdf_type="target",
+            fiscal_year=2025,
+            strict_target_year_success=False,
+            site_family="test",
+        )
+    ])
+
+    assert "bad-accepted: accepted_target_pdf fiscal_year must equal target_fiscal_year" in errors
+    assert "bad-accepted: accepted_target_pdf requires strict_target_year_success=true" in errors
 
 
 def test_manual_rca_runbook_contains_single_school_packet_contract() -> None:

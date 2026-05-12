@@ -192,6 +192,7 @@ DISCOVERY_GOLD_REQUIRED_OUTCOMES = frozenset(
         "site_fetch_error",
     }
 )
+DISCOVERY_GOLD_ALLOWED_OUTCOMES = DISCOVERY_GOLD_REQUIRED_OUTCOMES
 
 OCR_REQUIRED_EXACT = (
     "ocr-addon/tesseract/tesseract.exe",
@@ -512,6 +513,7 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
             check.fail(f"{member} missing discovery gold-set outcome")
             continue
         outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+        _check_discovery_gold_entry_semantics(check, member, payload)
 
     missing = sorted(DISCOVERY_GOLD_REQUIRED_OUTCOMES - set(outcome_counts))
     if missing:
@@ -519,6 +521,68 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
 
     check.details["discovery_gold_set_entries"] = len(entry_members)
     check.details["discovery_gold_set_outcomes"] = dict(sorted(outcome_counts.items()))
+
+
+def _check_discovery_gold_entry_semantics(check: ZipCheck, member: str, payload: dict[str, Any]) -> None:
+    outcome = payload.get("outcome")
+    school = payload.get("school")
+    expected = payload.get("expected_result")
+    if outcome not in DISCOVERY_GOLD_ALLOWED_OUTCOMES:
+        check.fail(f"{member} has unsupported discovery gold-set outcome: {outcome!r}")
+        return
+    if not isinstance(school, dict):
+        check.fail(f"{member} missing discovery gold-set school object")
+        return
+    if not isinstance(expected, dict):
+        check.fail(f"{member} missing discovery gold-set expected_result object")
+        return
+
+    target_year = _strict_int(payload.get("target_fiscal_year"))
+    school_id = _strict_int(school.get("school_id"))
+    fiscal_year = _strict_int(expected.get("fiscal_year"))
+    pdf_url = str(expected.get("pdf_url") or "")
+    pdf_type = str(expected.get("pdf_type") or "")
+    strict_success = expected.get("strict_target_year_success")
+
+    if target_year is None or target_year < 2019 or target_year > 2099:
+        check.fail(f"{member} target_fiscal_year must be an integer in [2019, 2099]")
+    if school_id is None or school_id <= 0:
+        check.fail(f"{member} school.school_id must be a positive integer")
+
+    if outcome == "accepted_target_pdf":
+        if not pdf_url:
+            check.fail(f"{member} accepted_target_pdf requires expected_result.pdf_url")
+        if pdf_type != "target":
+            check.fail(f"{member} accepted_target_pdf requires expected_result.pdf_type=target")
+        if fiscal_year != target_year:
+            check.fail(f"{member} accepted_target_pdf fiscal_year must equal target_fiscal_year")
+        if strict_success is not True:
+            check.fail(f"{member} accepted_target_pdf requires strict_target_year_success=true")
+    elif outcome == "publication_lag_latest_public":
+        if not pdf_url:
+            check.fail(f"{member} publication_lag_latest_public requires expected_result.pdf_url")
+        if pdf_type != "target":
+            check.fail(f"{member} publication_lag_latest_public requires expected_result.pdf_type=target")
+        if fiscal_year is None or target_year is None or fiscal_year >= target_year:
+            check.fail(f"{member} publication_lag_latest_public fiscal_year must be older than target_fiscal_year")
+        if strict_success is True:
+            check.fail(f"{member} publication_lag_latest_public requires strict_target_year_success=false")
+    elif outcome == "needs_operator_review":
+        if strict_success is True:
+            check.fail(f"{member} needs_operator_review requires strict_target_year_success=false")
+    elif outcome in {"no_target_candidate_found", "site_fetch_error"}:
+        if pdf_url:
+            check.fail(f"{member} {outcome} must not carry expected_result.pdf_url")
+        if fiscal_year is not None:
+            check.fail(f"{member} {outcome} must not carry expected_result.fiscal_year")
+        if strict_success is True:
+            check.fail(f"{member} {outcome} requires strict_target_year_success=false")
+
+
+def _strict_int(value: object) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
 
 
 def _require_text(check: ZipCheck, body: str, member: str, needle: str) -> None:

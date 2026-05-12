@@ -73,6 +73,31 @@ def _prefecture_parser_source(*, omit: set[str] | None = None) -> str:
 
 
 def _discovery_gold_entry(entry_id: str, outcome: str) -> str:
+    expected_result: dict[str, object] = {"pdf_url": "", "pdf_type": "", "fiscal_year": None}
+    if outcome == "accepted_target_pdf":
+        expected_result = {
+            "pdf_url": f"https://example.test/{entry_id}.pdf",
+            "pdf_type": "target",
+            "fiscal_year": 2026,
+            "strict_target_year_success": True,
+        }
+    elif outcome == "publication_lag_latest_public":
+        expected_result = {
+            "pdf_url": f"https://example.test/{entry_id}-r7.pdf",
+            "pdf_type": "target",
+            "fiscal_year": 2025,
+            "strict_target_year_success": False,
+        }
+    elif outcome == "needs_operator_review":
+        expected_result = {
+            "pdf_url": f"https://example.test/{entry_id}.pdf",
+            "pdf_type": "image_only",
+            "fiscal_year": None,
+            "strict_target_year_success": False,
+        }
+    else:
+        expected_result["strict_target_year_success"] = False
+
     return json.dumps(
         {
             "schema_version": "discovery-gold-set/v0.1",
@@ -81,7 +106,7 @@ def _discovery_gold_entry(entry_id: str, outcome: str) -> str:
             "school": {"school_id": 1, "school_name": "学校", "prefecture": "東京都"},
             "target_fiscal_year": 2026,
             "manual_demonstration": {"operator_goal": "test", "steps": ["open page"]},
-            "expected_result": {"pdf_url": "", "pdf_type": "", "fiscal_year": None},
+            "expected_result": expected_result,
             "automation_pattern": {"reusable_rules": ["test rule"]},
             "evidence": {"source_kind": "manual_web", "source_paths": ["https://example.test/"]},
         },
@@ -411,6 +436,19 @@ def test_verify_core_zip_requires_release_relevant_discovery_gold_outcomes(tmp_p
     assert not check.ok
     assert any("missing discovery gold-set outcomes" in error for error in check.errors)
     assert any("publication_lag_latest_public" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_semantically_invalid_discovery_gold_entry(tmp_path: Path) -> None:
+    entries = _core_entries()
+    payload = json.loads(str(entries["data/discovery-gold-set/entries/accepted.json"]))
+    payload["expected_result"]["strict_target_year_success"] = False
+    entries["data/discovery-gold-set/entries/accepted.json"] = json.dumps(payload)
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("accepted_target_pdf requires strict_target_year_success=true" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_discovery_gold_eval_regression_gate(tmp_path: Path) -> None:
