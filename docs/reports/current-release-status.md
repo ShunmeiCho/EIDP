@@ -175,6 +175,16 @@ Commands and observations from `ssh win` for v342 setup/bootstrap:
   entries outside the bounded Saitama sample.
 - SQLite status rows from the v342 evidence DB: `none=2372`,
   `publication_lag=38`, `target_year_unverified=8`.
+- The v342 RCA batch plan has `10` items / `50` total candidates. Bucket split:
+  `target_form_without_year_evidence=8`, `non_target_candidates_only=2`.
+  Representative rows show that the low strict yield is dominated by forms that
+  are visible but cannot prove FY2026 from PDF/link evidence: 埼玉コンピュータ＆
+  医療事務専門学校 `補正➅確認申請書（様式第2号）.pdf`,
+  専門学校埼玉自動車大学校 `koutoumusyou.pdf`, 上尾中央看護専門学校
+  `study_support_system.pdf`, 中央情報専門学校 `youshiki2.pdf`, and
+  さいたま看護専門学校 `申請書_0602_資料A.pdf`. The two non-target-only packets
+  are 大川学園医療福祉専門学校 (old-year image-only form evidence) and
+  呉竹医療専門学校 (self-evaluation reports).
 
 Superseded bounded bootstrap evidence from v341:
 
@@ -375,9 +385,10 @@ Earlier commands and observations from `ssh win` for v331 setup/bootstrap:
 2. Expand Windows official-index discovery beyond the 50-site Saitama bounded
    smoke and record target PDFs accepted, publication-lag queue,
    manual-required queue, and errors.
-3. Use the generated RCA batch plan to classify whether the current low
-   strict-target result is due to upstream publication lag, crawler false
-   negatives, or missing manual fallback/gold-set demonstrations.
+3. Repeat the v342 RCA batch-plan classification on a larger official-index
+   sample to quantify whether low strict-target result remains dominated by
+   upstream publication lag / missing PDF-year evidence rather than crawler
+   false negatives.
 4. Compare measured operator-reviewable coverage, manual workload, and Excel
    readiness against the shipping line; keep strict target-PDF acquisition as a
    diagnostic metric during the May publication-lag window.
