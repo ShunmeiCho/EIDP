@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `9419eecc9398a6c166fb76812ff8bbd066bac67a` (`eidp-windows-v275.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `616bcf00683e608448300f0308876e382fc54350` (`eidp-windows-v276.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -959,6 +959,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v275 is still pending and must not be
+inferred from the Mac verifier.
+
+v276 (`616bcf0`) makes URL/PDF candidate normalization ignore common tracking
+query parameters while preserving business parameters. `normalize_candidate_url`
+now removes `utm_*`, `gclid`, `fbclid`, and mail-campaign identifiers before
+dedupe, so the same school page or PDF linked with campaign tags no longer
+creates duplicate SchoolSite, ReviewItem, PDF-candidate, or gold-set comparison
+keys. The existing WordPress Download Manager behavior still preserves the
+`wpdmdl` key and removes only its volatile `refresh` cache buster. The Windows
+distribution verifier now requires the packaged tracking-parameter dedupe
+contract. Verification: `tests/unit` passed with `1261 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v276.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`6161a55b4098f11889514e19940b7e6626a3606ab234105b2ccfd3cc69bcba35`,
+`git_commit=616bcf00683e608448300f0308876e382fc54350`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v276 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
