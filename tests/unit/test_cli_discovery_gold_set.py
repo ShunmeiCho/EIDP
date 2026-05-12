@@ -25,6 +25,24 @@ def test_discovery_gold_set_cli_outputs_summary_json() -> None:
     assert payload["operator_review_entries"] == 6
 
 
+def test_discovery_gold_set_cli_can_fail_on_undemonstrated_pattern_sources() -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-gold-set",
+            "--gold-set-dir",
+            str(GOLD_SET_DIR),
+            "--json",
+            "--fail-on-undemonstrated-pattern-sources",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert "onclick" in payload["undemonstrated_pattern_sources"]
+    assert "wordpress_download_manager" not in payload["undemonstrated_pattern_sources"]
+
+
 def test_discovery_gold_run_plan_cli_outputs_json_array() -> None:
     result = CliRunner().invoke(
         app,

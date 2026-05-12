@@ -940,6 +940,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '@app.command("eval-discovery-gold")',
             '@app.command("discovery-gold-expected-predictions")',
             "--fail-on-regression",
+            "--fail-on-undemonstrated-pattern-sources",
             "_discovery_gold_gate_failed",
             "_exit_report_db_error",
             "database_not_ready",

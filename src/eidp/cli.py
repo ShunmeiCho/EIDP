@@ -962,6 +962,11 @@ def eval_pdf(
 def discovery_gold_set(
     gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
     output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of a short text summary"),
+    fail_on_undemonstrated_pattern_sources: bool = typer.Option(
+        False,
+        "--fail-on-undemonstrated-pattern-sources",
+        help="Exit non-zero when tracked extractor sources lack discovery gold-set demonstrations",
+    ),
 ) -> None:
     """Summarize discovery demonstration coverage."""
     from eidp.scraper.discovery_gold_set import (
@@ -974,6 +979,8 @@ def discovery_gold_set(
     summary = summarize_discovery_gold_entries(entries)
     if output_json:
         typer.echo(render_discovery_gold_summary(summary))
+        if fail_on_undemonstrated_pattern_sources and summary.undemonstrated_pattern_sources:
+            raise typer.Exit(1)
         return
 
     typer.echo(f"Discovery gold set: {summary.total_entries} entries")
@@ -991,6 +998,8 @@ def discovery_gold_set(
         typer.echo("  extractor sources without gold demonstrations:")
         for source in summary.undemonstrated_pattern_sources:
             typer.echo(f"    {source}")
+    if fail_on_undemonstrated_pattern_sources and summary.undemonstrated_pattern_sources:
+        raise typer.Exit(1)
 
 
 @app.command("discovery-gold-run-plan")

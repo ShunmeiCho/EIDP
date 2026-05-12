@@ -24,6 +24,13 @@ To inspect the current release-relevant buckets locally:
 uv run eidp discovery-gold-set --json
 ```
 
+To turn speculative extractor coverage into a release gate, require every
+tracked extractor source to have at least one committed demonstration:
+
+```bash
+uv run eidp discovery-gold-set --fail-on-undemonstrated-pattern-sources
+```
+
 To emit the bounded school/site inputs that should be used for a gold-set PDF
 discovery run:
 
