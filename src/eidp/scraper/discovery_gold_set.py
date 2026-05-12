@@ -99,6 +99,7 @@ class DiscoveryGoldSummary:
     operator_review_entries: int
     publication_lag_entries: int
     site_families: list[str]
+    pattern_type_counts: dict[str, int]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -109,6 +110,7 @@ class DiscoveryGoldSummary:
             "operator_review_entries": self.operator_review_entries,
             "publication_lag_entries": self.publication_lag_entries,
             "site_families": self.site_families,
+            "pattern_type_counts": self.pattern_type_counts,
         }
 
 
@@ -263,6 +265,7 @@ def summarize_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> Disco
     outcome_counts = Counter(entry.outcome for entry in entries)
     target_year_counts = Counter(entry.target_fiscal_year for entry in entries)
     site_families = sorted({entry.site_family for entry in entries if entry.site_family})
+    pattern_type_counts = Counter(entry.pattern_type for entry in entries if entry.pattern_type)
     return DiscoveryGoldSummary(
         total_entries=len(entries),
         outcome_counts=dict(sorted(outcome_counts.items())),
@@ -271,6 +274,7 @@ def summarize_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> Disco
         operator_review_entries=outcome_counts.get("needs_operator_review", 0),
         publication_lag_entries=outcome_counts.get("publication_lag_latest_public", 0),
         site_families=site_families,
+        pattern_type_counts=dict(sorted(pattern_type_counts.items())),
     )
 
 

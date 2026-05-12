@@ -87,6 +87,7 @@ def _discovery_gold_entry(entry_id: str, outcome: str) -> str:
             "pdf_type": "target",
             "fiscal_year": 2025,
             "strict_target_year_success": False,
+            "pattern_type": "wordpress_download_manager",
         }
     elif outcome == "needs_operator_review":
         expected_result = {
@@ -133,6 +134,7 @@ def _discovery_gold_expected_predictions() -> str:
                     "pdf_url": expected.get("pdf_url") or "",
                     "fiscal_year": expected.get("fiscal_year"),
                     "strict_target_year_success": bool(expected.get("strict_target_year_success", False)),
+                    **({"pattern_type": expected["pattern_type"]} if expected.get("pattern_type") else {}),
                 },
                 sort_keys=True,
             )
@@ -464,6 +466,7 @@ def test_verify_core_zip_reports_discovery_gold_set_summary(tmp_path: Path) -> N
         "publication_lag_latest_public": 1,
         "site_fetch_error": 1,
     }
+    assert check.details["discovery_gold_pattern_types"] == {"wordpress_download_manager": 1}
     assert check.details["discovery_gold_expected_predictions"] == 5
 
 
@@ -531,10 +534,14 @@ def test_verify_core_zip_rejects_mismatched_discovery_gold_expected_predictions(
 
 def test_verify_core_zip_rejects_missing_discovery_gold_pattern_prediction(tmp_path: Path) -> None:
     entries = _core_entries()
-    member = "data/discovery-gold-set/entries/publication-lag.json"
-    payload = json.loads(str(entries[member]))
-    payload["expected_result"]["pattern_type"] = "wordpress_download_manager"
-    entries[member] = json.dumps(payload)
+    lines = str(entries["data/discovery-gold-set/expected-predictions.jsonl"]).splitlines()
+    for index, line in enumerate(lines):
+        payload = json.loads(line)
+        if payload.get("entry_id") == "publication-lag":
+            payload.pop("pattern_type", None)
+            lines[index] = json.dumps(payload, sort_keys=True)
+            break
+    entries["data/discovery-gold-set/expected-predictions.jsonl"] = "\n".join(lines) + "\n"
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)

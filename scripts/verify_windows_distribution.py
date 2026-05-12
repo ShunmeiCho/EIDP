@@ -507,6 +507,7 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
         return
 
     outcome_counts: dict[str, int] = {}
+    pattern_type_counts: dict[str, int] = {}
     expected_predictions: dict[str, dict[str, Any]] = {}
     for member in entry_members:
         payload = _read_zip_json(check, member, label="discovery gold-set")
@@ -523,6 +524,11 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
             check.fail(f"{member} missing discovery gold-set outcome")
             continue
         outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+        expected_result = payload.get("expected_result")
+        if isinstance(expected_result, dict):
+            pattern_type = str(expected_result.get("pattern_type") or "")
+            if pattern_type:
+                pattern_type_counts[pattern_type] = pattern_type_counts.get(pattern_type, 0) + 1
         _check_discovery_gold_entry_semantics(check, member, payload)
         if isinstance(entry_id, str) and entry_id:
             expected_predictions[entry_id] = _expected_prediction_from_gold_entry(payload)
@@ -533,6 +539,7 @@ def _check_discovery_gold_set_contract(check: ZipCheck, names: set[str]) -> None
 
     check.details["discovery_gold_set_entries"] = len(entry_members)
     check.details["discovery_gold_set_outcomes"] = dict(sorted(outcome_counts.items()))
+    check.details["discovery_gold_pattern_types"] = dict(sorted(pattern_type_counts.items()))
     _check_discovery_gold_expected_predictions(check, names, expected_predictions)
 
 

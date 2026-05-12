@@ -89,14 +89,17 @@ def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:
         build_discovery_gold_expected_predictions,
         load_discovery_gold_entries,
         render_discovery_gold_predictions,
+        summarize_discovery_gold_entries,
     )
 
     entries = load_discovery_gold_entries(GOLD_SET_DIR)
     predictions = build_discovery_gold_expected_predictions(entries)
+    summary = summarize_discovery_gold_entries(entries)
 
     assert render_discovery_gold_predictions(predictions) == (
         GOLD_SET_DIR / "expected-predictions.jsonl"
     ).read_text(encoding="utf-8")
+    assert summary.pattern_type_counts == {"wordpress_download_manager": 1}
 
 
 def test_discovery_gold_set_semantic_validator_rejects_inconsistent_outcomes() -> None:

@@ -983,6 +983,10 @@ def discovery_gold_set(
     typer.echo("  outcomes:")
     for outcome, count in summary.outcome_counts.items():
         typer.echo(f"    {outcome}: {count}")
+    if summary.pattern_type_counts:
+        typer.echo("  extractor patterns:")
+        for pattern_type, count in summary.pattern_type_counts.items():
+            typer.echo(f"    {pattern_type}: {count}")
 
 
 @app.command("discovery-gold-run-plan")
