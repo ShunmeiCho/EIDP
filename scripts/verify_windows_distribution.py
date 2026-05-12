@@ -888,6 +888,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '_require_app_lock("cli_rebuild_school_year_tasks")',
             '_require_app_lock("cli_weekly_update")',
         ),
+        "src/eidp/config.py": (
+            "target_fiscal_year",
+            "def _validate_target_fiscal_year",
+            "target_fiscal_year outside supported range [2019, 2099]",
+        ),
         "src/eidp/review/school_scope.py": (
             'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"',
             'OPERATOR_SCHOOL_SCOPE_LABEL = "専門学校"',

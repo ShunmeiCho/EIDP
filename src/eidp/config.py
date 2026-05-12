@@ -135,6 +135,13 @@ class Settings(BaseSettings):
             return Path(v).expanduser()
         return v
 
+    @field_validator("target_fiscal_year")
+    @classmethod
+    def _validate_target_fiscal_year(cls, v: int) -> int:
+        if v < 2019 or v > 2099:
+            raise ValueError("target_fiscal_year outside supported range [2019, 2099]")
+        return v
+
 
 settings = Settings()
 

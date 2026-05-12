@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from eidp.config import Settings
 from eidp.fiscal_year import current_fiscal_year
 
@@ -28,6 +31,14 @@ def test_target_fiscal_year_can_be_pinned_by_env(monkeypatch) -> None:
     settings = Settings(_env_file=None)
 
     assert settings.target_fiscal_year == 2027
+
+
+@pytest.mark.parametrize("target_fiscal_year", ["2018", "2100"])
+def test_target_fiscal_year_rejects_unsupported_env_range(monkeypatch, target_fiscal_year: str) -> None:
+    monkeypatch.setenv("EIDP_TARGET_FISCAL_YEAR", target_fiscal_year)
+
+    with pytest.raises(ValidationError, match=r"target_fiscal_year outside supported range \[2019, 2099\]"):
+        Settings(_env_file=None)
 
 
 def test_fiscal_era_settings_can_be_pinned_by_env(monkeypatch) -> None:

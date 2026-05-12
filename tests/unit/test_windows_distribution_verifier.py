@@ -250,6 +250,7 @@ def _core_entries() -> dict[str, bytes | str]:
             'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"\n'
             'OPERATOR_SCHOOL_SCOPE_LABEL = "専門学校"\n'
         ),
+        "src/eidp/config.py": (REPO_ROOT / "src" / "eidp" / "config.py").read_text(encoding="utf-8"),
         "src/eidp/excel/exporter.py": (
             "EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70\n"
             'LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"\n'
@@ -538,6 +539,19 @@ def test_verify_core_zip_requires_operator_scope_vocational_only(tmp_path: Path)
     assert not check.ok
     assert any("src/eidp/review/school_scope.py missing required token" in error for error in check.errors)
     assert any('OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"' in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_target_fiscal_year_config_bound(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/config.py"] = "class Settings: target_fiscal_year = 2026\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/config.py missing required token" in error for error in check.errors)
+    assert any("_validate_target_fiscal_year" in error for error in check.errors)
+    assert any("[2019, 2099]" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_excel_confidence_export_gate(tmp_path: Path) -> None:
