@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from eidp.scraper.discovery_gold_set import (
+    DiscoveryGoldEntry,
     DiscoveryGoldPrediction,
     evaluate_discovery_gold_predictions,
     load_discovery_gold_entries,
@@ -20,6 +21,33 @@ NIHON_U_TUITION_URL = "https://www.dent.nihon-u.ac.jp/hyg/pdf/campus-life/tuitio
 MASCAT_URL = "https://www.mascat.nihon-u.ac.jp/data/pdf/college/info/higher_education_support.pdf?1="
 ODHS_URL = "https://odhs.info/app-def/S-101/html/koutou202507.pdf?20250711"
 SIW_URL = "https://www.siw.ac.jp/wp-content/themes/bsc/dist/images/information/shugakushien_shinsei2025-1-2.pdf"
+
+
+def _entry(
+    *,
+    entry_id: str,
+    school_id: int,
+    target_fiscal_year: int,
+    outcome: str,
+    pdf_url: str = "",
+    fiscal_year: int | None = None,
+    strict_target_year_success: bool = False,
+) -> DiscoveryGoldEntry:
+    return DiscoveryGoldEntry(
+        entry_id=entry_id,
+        school_id=school_id,
+        school_name="テスト専門学校",
+        prefecture="東京都",
+        corporation_name="",
+        target_fiscal_year=target_fiscal_year,
+        outcome=outcome,
+        school_url="https://example.ac.jp/",
+        disclosure_url="https://example.ac.jp/disclosure/",
+        pdf_url=pdf_url,
+        fiscal_year=fiscal_year,
+        strict_target_year_success=strict_target_year_success,
+        site_family="test",
+    )
 
 
 def test_evaluate_discovery_predictions_flags_missing_and_mismatched_entries() -> None:
@@ -88,6 +116,79 @@ def test_load_discovery_predictions_accepts_jsonl(tmp_path: Path) -> None:
             strict_target_year_success=True,
         )
     ]
+
+
+def test_load_predictions_from_pdf_evidence_uses_target_year_for_duplicate_school_entries(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "discovery-evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "school_id": 1,
+                "pdf_url": "https://example.ac.jp/r9.pdf",
+                "reason": "accepted_downloaded",
+                "pdf_type": "target",
+                "extra": {"target_fiscal_year": "2027"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    entries = [
+        _entry(
+            entry_id="same-school-2026",
+            school_id=1,
+            target_fiscal_year=2026,
+            outcome="publication_lag_latest_public",
+            pdf_url="https://example.ac.jp/r8.pdf",
+            fiscal_year=2025,
+        ),
+        _entry(
+            entry_id="same-school-2027",
+            school_id=1,
+            target_fiscal_year=2027,
+            outcome="accepted_target_pdf",
+            pdf_url="https://example.ac.jp/r9.pdf",
+            fiscal_year=2027,
+            strict_target_year_success=True,
+        ),
+    ]
+
+    predictions = load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries)
+
+    assert predictions == [
+        DiscoveryGoldPrediction(
+            entry_id="same-school-2027",
+            outcome="accepted_target_pdf",
+            pdf_url="https://example.ac.jp/r9.pdf",
+            fiscal_year=2027,
+            strict_target_year_success=True,
+        )
+    ]
+
+
+def test_load_predictions_from_ambiguous_old_evidence_skips_duplicate_school_entries(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "old-discovery-evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "school_id": 1,
+                "pdf_url": "https://example.ac.jp/r9.pdf",
+                "reason": "accepted_downloaded",
+                "pdf_type": "target",
+                "extra": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    entries = [
+        _entry(entry_id="same-school-2026", school_id=1, target_fiscal_year=2026, outcome="accepted_target_pdf"),
+        _entry(entry_id="same-school-2027", school_id=1, target_fiscal_year=2027, outcome="accepted_target_pdf"),
+    ]
+
+    assert load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries) == []
 
 
 def test_load_predictions_from_pdf_discovery_evidence_maps_release_outcomes(tmp_path: Path) -> None:

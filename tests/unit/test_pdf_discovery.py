@@ -2302,6 +2302,43 @@ def test_run_pdf_discovery_does_not_prioritize_generic_english_forms_over_target
         session.close()
 
 
+def test_run_pdf_discovery_evidence_records_target_fiscal_year(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Every discovery evidence row should be reusable for rolling-year gold-set eval."""
+
+    session = _session()
+    evidence = tmp_path / "evidence.jsonl"
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id)
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2027,
+            strict_target_fiscal_year=True,
+        )
+
+        assert stats["skipped"] == 1
+        [payload] = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert payload["reason"] == "no_candidates_found"
+        assert payload["extra"]["target_fiscal_year"] == "2027"
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_sets_target_year_on_strict_downloaded_document(
     monkeypatch, tmp_path: Path
 ) -> None:

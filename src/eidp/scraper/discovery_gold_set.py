@@ -268,7 +268,16 @@ def load_discovery_gold_predictions_from_pdf_evidence(
 ) -> list[DiscoveryGoldPrediction]:
     """Convert existing discover-pdfs evidence JSONL into gold-set predictions."""
 
-    entries_by_school_id = {entry.school_id: entry for entry in entries}
+    entries_by_key = {
+        (entry.school_id, entry.target_fiscal_year): entry
+        for entry in entries
+    }
+    school_id_counts = Counter(entry.school_id for entry in entries)
+    entries_by_school_id = {
+        entry.school_id: entry
+        for entry in entries
+        if school_id_counts[entry.school_id] == 1
+    }
     predictions_by_entry_id: dict[str, tuple[int, DiscoveryGoldPrediction]] = {}
 
     for line in evidence_path.read_text(encoding="utf-8").splitlines():
@@ -278,7 +287,12 @@ def load_discovery_gold_predictions_from_pdf_evidence(
         school_id = _int_or_none(payload.get("school_id"))
         if school_id is None:
             continue
-        entry = entries_by_school_id.get(school_id)
+        target_fiscal_year = _target_fiscal_year_from_evidence_payload(payload)
+        entry = (
+            entries_by_key.get((school_id, target_fiscal_year))
+            if target_fiscal_year is not None
+            else entries_by_school_id.get(school_id)
+        )
         if entry is None:
             continue
 
@@ -421,6 +435,12 @@ def _int_or_none(value: object) -> int | None:
         return int(str(value))
     except ValueError:
         return None
+
+
+def _target_fiscal_year_from_evidence_payload(payload: dict[str, Any]) -> int | None:
+    raw_extra = payload.get("extra")
+    extra: dict[str, Any] = raw_extra if isinstance(raw_extra, dict) else {}
+    return _int_or_none(extra.get("target_fiscal_year"))
 
 
 def _school_site_exists(session: Any, *, school_id: int, url: str) -> bool:

@@ -17,7 +17,7 @@ import re
 import time
 import unicodedata
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol, cast
@@ -2105,6 +2105,8 @@ def run_pdf_discovery(
     recorder = EvidenceRecorder(evidence_path)
 
     def record_discovery_evidence(evidence: RejectionEvidence) -> None:
+        if "target_fiscal_year" not in evidence.extra:
+            evidence = replace(evidence, extra={**evidence.extra, "target_fiscal_year": str(target_year)})
         _increment_rejection_reason(stats, evidence.reason)
         recorder.record(evidence)
 
