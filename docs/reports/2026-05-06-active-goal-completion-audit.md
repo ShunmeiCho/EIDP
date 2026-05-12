@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `73eca71717c6f3a20c02483a962482a8106984c5` (`eidp-windows-v301.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `f053bbdda54ac6e2e49f2bf3df91420c7d8af88d` (`eidp-windows-v302.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1504,6 +1504,29 @@ with SHA256 `5fae45983cdd3c8b9809e98f6752786710a8fca0a9cdb1e41656fbe99c5bcdb7`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v301 is still pending and must not be
+inferred from the Mac verifier.
+
+v302 (`f053bbd`) adds a static extraction path for HTML redirect pages whose
+`<meta http-equiv="refresh" content="0; url=...pdf">` target points directly at
+a PDF. Some legacy school sites expose document downloads through a redirect
+HTML page instead of an ordinary anchor; the new rule only accepts refresh
+content with an explicit `url=` target containing `.pdf`, and it does not follow
+or execute anything during HTML parsing. The page title is retained as candidate
+context, which lets strict scoring keep fiscal-year and confirmation-form text
+when the redirect page title carries it. The regression test uses FY2033 /
+Reiwa 15 to keep the contract rolling-year safe, and the packaged verifier now
+requires `PDF_META_REFRESH_PATTERN`, `_pdf_url_from_meta_refresh_content`, and
+the `http-equiv` contract. Verification: `tests/unit` passed with `1296 passed,
+5 warnings`, `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v302.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `0709e8dbad15577d46fd3218e8d7d9eed3808e1432b75997144bab161aac35b8`,
+`git_commit=f053bbdda54ac6e2e49f2bf3df91420c7d8af88d`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v302 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
