@@ -2,11 +2,14 @@ from datetime import date
 
 from eidp.fiscal_year import (
     JapaneseEra,
+    active_japanese_eras,
+    configure_japanese_eras,
     current_fiscal_year,
     fiscal_year_from_japanese_era_text,
     fiscal_year_search_tokens,
     format_fiscal_year_as_japanese_era,
     format_fiscal_year_label,
+    has_fiscal_year_text,
     reiwa_year_for_fiscal_year,
 )
 
@@ -64,3 +67,25 @@ def test_era_alias_layer_can_be_reconfigured_for_future_era() -> None:
     assert "BetaEra元" in tokens
     assert "b1" in tokens
     assert "a11" not in tokens
+
+
+def test_has_fiscal_year_text_uses_configured_era_aliases() -> None:
+    eras = (JapaneseEra(name="BetaEra", romanized="betaera", initial="b", start_fiscal_year=2010),)
+
+    assert has_fiscal_year_text("BetaEra2年度 確認申請書", eras=eras)
+    assert has_fiscal_year_text("b02-kakunin.pdf", eras=eras)
+    assert has_fiscal_year_text("betaera2-kakunin.pdf", eras=eras)
+    assert not has_fiscal_year_text("令和8年度 確認申請書", eras=eras)
+
+
+def test_has_fiscal_year_text_follows_active_era_configuration() -> None:
+    original = active_japanese_eras()
+    try:
+        configure_japanese_eras((
+            JapaneseEra(name="BetaEra", romanized="betaera", initial="b", start_fiscal_year=2010),
+        ))
+
+        assert has_fiscal_year_text("BetaEra2年度 確認申請書")
+        assert not has_fiscal_year_text("令和8年度 確認申請書")
+    finally:
+        configure_japanese_eras(original)

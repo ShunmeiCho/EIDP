@@ -155,6 +155,31 @@ def fiscal_year_search_tokens(
     return tuple(tokens)
 
 
+def has_fiscal_year_text(
+    text: str,
+    *,
+    eras: Sequence[JapaneseEra] | None = None,
+) -> bool:
+    """Return whether ``text`` contains a western or configured-era year hint."""
+
+    normed = unicodedata.normalize("NFKC", text)
+    if re.search(r"20\d{2}\s*(?:年度|年)?", normed):
+        return True
+
+    lowered = normed.lower()
+    for era in _eras_or_active(eras):
+        escaped_name = re.escape(era.name)
+        if re.search(rf"{escaped_name}\s*(?:\d+|[一二三四五六七八九十]+|元)", normed):
+            return True
+        for alias in (era.initial, era.romanized):
+            alias = alias.strip().lower()
+            if not alias:
+                continue
+            if re.search(rf"(?<![a-z0-9]){re.escape(alias)}0?\d{{1,2}}(?![a-z0-9])", lowered):
+                return True
+    return False
+
+
 _KANJI_DIGITS: dict[str, int] = {
     "〇": 0,
     "零": 0,

@@ -22,7 +22,7 @@ from eidp.extraction_confidence import (
     compute_pdf_parse_breakdown,
     thresholds_from_env,
 )
-from eidp.fiscal_year import fiscal_year_from_japanese_era_text
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text, has_fiscal_year_text
 from eidp.pdf.extractor import parse_pdf
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
 
@@ -614,7 +614,7 @@ def ingest_document(
 
 
 def _has_fiscal_year_candidate(year_str: str) -> bool:
-    return bool(re.search(r"令和\d+|20\d{2}", year_str))
+    return has_fiscal_year_text(year_str)
 
 
 def _parse_fiscal_year_from_annotation(

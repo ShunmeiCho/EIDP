@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
 from eidp.db.models import CrawlJob, Document, SchoolSite
-from eidp.fiscal_year import fiscal_year_from_japanese_era_text, fiscal_year_search_tokens
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text, fiscal_year_search_tokens, has_fiscal_year_text
 from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 from eidp.scraper.url_discovery import _is_safe_url
 from eidp.scraper.url_normalization import normalize_candidate_url
@@ -1054,8 +1054,7 @@ def _previous_html_block_text(html: str, before: int, tag: str) -> str:
 
 
 def _has_fiscal_year_context(text: str) -> bool:
-    normalized = unicodedata.normalize("NFKC", text)
-    return bool(re.search(r"(令和\s*\d+|20\d{2}\s*年度|(?<![a-z0-9])r0?\d{1,2}(?![a-z0-9]))", normalized.lower()))
+    return has_fiscal_year_text(text)
 
 
 def _has_support_system_context(text: str) -> bool:

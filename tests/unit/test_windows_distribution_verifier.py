@@ -253,6 +253,7 @@ def _core_entries() -> dict[str, bytes | str]:
             'OPERATOR_SCHOOL_SCOPE_LABEL = "専門学校"\n'
         ),
         "src/eidp/config.py": (REPO_ROOT / "src" / "eidp" / "config.py").read_text(encoding="utf-8"),
+        "src/eidp/fiscal_year.py": (REPO_ROOT / "src" / "eidp" / "fiscal_year.py").read_text(encoding="utf-8"),
         "src/eidp/excel/exporter.py": (
             "EXCEL_MIN_EXTRACTION_CONFIDENCE = 0.70\n"
             'LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"\n'
@@ -301,6 +302,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "\"target_fiscal_year\" not in evidence.extra\n"
             "replace(evidence\n"
             "candidate.detected_fiscal_year >= target_year\n"
+            "has_fiscal_year_text\n"
         ),
         "src/eidp/scraper/discovery_gold_set.py": (
             REPO_ROOT / "src" / "eidp" / "scraper" / "discovery_gold_set.py"
@@ -320,6 +322,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "from eidp.config import settings\n"
             "doc.is_current_year = fiscal_year >= settings.target_fiscal_year\n"
             "settings.target_fiscal_year if max_fiscal_year is None\n"
+            "has_fiscal_year_text\n"
         ),
         "src/eidp/pipeline/manual_entry.py": (
             REPO_ROOT / "src" / "eidp" / "pipeline" / "manual_entry.py"
@@ -566,6 +569,20 @@ def test_verify_core_zip_requires_target_fiscal_year_config_bound(tmp_path: Path
     assert any("SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_configurable_fiscal_year_text_helper(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/fiscal_year.py"] = "def fiscal_year_search_tokens(year): return (str(year),)\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/fiscal_year.py missing required token" in error for error in check.errors)
+    assert any("has_fiscal_year_text" in error for error in check.errors)
+    assert any("era.initial" in error for error in check.errors)
+    assert any("era.romanized" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_excel_confidence_export_gate(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/excel/exporter.py"] = (
@@ -684,6 +701,7 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("MAX_SUPPORTED_FISCAL_YEAR" in error for error in check.errors)
     assert any("target_year - 8" in error for error in check.errors)
     assert any("candidate.detected_fiscal_year >= target_year" in error for error in check.errors)
+    assert any("has_fiscal_year_text" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_english_renewal_tokens_in_pdf_discovery(tmp_path: Path) -> None:
@@ -788,6 +806,7 @@ def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) 
     assert any("src/eidp/pipeline/ingest.py missing required token" in error for error in check.errors)
     assert any("compute_pdf_parse_breakdown" in error for error in check.errors)
     assert any("settings.target_fiscal_year" in error for error in check.errors)
+    assert any("has_fiscal_year_text" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_ocr_tesseract_runtime_contract(tmp_path: Path) -> None:

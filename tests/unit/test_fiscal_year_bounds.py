@@ -3,9 +3,15 @@ from __future__ import annotations
 import pytest
 
 import eidp.pipeline.ingest as ingest_module
-from eidp.fiscal_year import fiscal_year_from_japanese_era_text, fiscal_year_search_tokens
+from eidp.fiscal_year import (
+    JapaneseEra,
+    active_japanese_eras,
+    configure_japanese_eras,
+    fiscal_year_from_japanese_era_text,
+    fiscal_year_search_tokens,
+)
 from eidp.pdf.extractor import _extract_fiscal_year
-from eidp.pipeline.ingest import _parse_fiscal_year_from_annotation
+from eidp.pipeline.ingest import _has_fiscal_year_candidate, _parse_fiscal_year_from_annotation
 
 
 def test_future_reiwa_year_is_rejected() -> None:
@@ -24,6 +30,20 @@ def test_past_reiwa_year_is_accepted() -> None:
 
 def test_current_reiwa_year_is_accepted() -> None:
     assert _parse_fiscal_year_from_annotation("令和8年度", max_fiscal_year=2026) == 2026
+
+
+def test_ingest_year_candidate_uses_configured_era_aliases() -> None:
+    original = active_japanese_eras()
+    try:
+        configure_japanese_eras((
+            JapaneseEra(name="BetaEra", romanized="betaera", initial="b", start_fiscal_year=2010),
+        ))
+
+        assert _has_fiscal_year_candidate("BetaEra2年度")
+        assert _has_fiscal_year_candidate("b02-kakunin.pdf")
+        assert not _has_fiscal_year_candidate("令和8年度")
+    finally:
+        configure_japanese_eras(original)
 
 
 def test_kanji_reiwa_year_is_accepted() -> None:

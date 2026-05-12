@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Base, CrawlJob, Document, School, SchoolSite
+from eidp.fiscal_year import JapaneseEra, active_japanese_eras, configure_japanese_eras
 from eidp.scraper.pdf_discovery import (
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
     DiscoveryResult,
@@ -17,6 +18,7 @@ from eidp.scraper.pdf_discovery import (
     _detect_fiscal_year_from_text,
     _download_attempt_urls,
     _extract_pdf_links,
+    _has_fiscal_year_context,
     _has_target_application_hint,
     _pre_download_rejection,
     _prioritize_viable_candidates,
@@ -126,6 +128,20 @@ def test_score_candidate_keeps_non_date_target_year_boost() -> None:
         no_year,
         target_fiscal_year=2026,
     )
+
+
+def test_pdf_discovery_fiscal_year_context_uses_configured_era_aliases() -> None:
+    original = active_japanese_eras()
+    try:
+        configure_japanese_eras((
+            JapaneseEra(name="BetaEra", romanized="betaera", initial="b", start_fiscal_year=2010),
+        ))
+
+        assert _has_fiscal_year_context("BetaEra2年度 高等教育の修学支援新制度")
+        assert _has_fiscal_year_context("b02-kakunin.pdf")
+        assert not _has_fiscal_year_context("令和8年度 高等教育の修学支援新制度")
+    finally:
+        configure_japanese_eras(original)
 
 
 def test_pre_download_rejects_adjacent_school_information_tokens() -> None:

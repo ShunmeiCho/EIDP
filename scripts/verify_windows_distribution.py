@@ -914,6 +914,13 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "MIN_SUPPORTED_TARGET_FISCAL_YEAR",
             "MAX_SUPPORTED_TARGET_FISCAL_YEAR",
         ),
+        "src/eidp/fiscal_year.py": (
+            "def has_fiscal_year_text",
+            "active_japanese_eras",
+            "era.initial",
+            "era.romanized",
+            "20\\d{2}",
+        ),
         "src/eidp/review/school_scope.py": (
             'OPERATOR_SCHOOL_TYPE_SCOPE: str | None = "専門学校"',
             'OPERATOR_SCHOOL_SCOPE_LABEL = "専門学校"',
@@ -1004,6 +1011,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             '"target_fiscal_year" not in evidence.extra',
             "replace(evidence",
             "candidate.detected_fiscal_year >= target_year",
+            "has_fiscal_year_text",
         ),
         "src/eidp/scraper/url_normalization.py": (
             "TRACKING_QUERY_PARAMS",
@@ -1056,6 +1064,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'doc.ingest_status = "review_pending"',
             "doc.is_current_year = fiscal_year >= settings.target_fiscal_year",
             "settings.target_fiscal_year if max_fiscal_year is None",
+            "has_fiscal_year_text",
         ),
         "src/eidp/pipeline/manual_entry.py": (
             "log_manual_action",
