@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `b67b9a174a91d6d1dd5dde5492ec2892ba024f20` (`eidp-windows-v267.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `0e034a807fc7ead330290d7569261e02c20b04c4` (`eidp-windows-v268.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -812,6 +812,22 @@ alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v267 is still pending and must not be
+inferred from the Mac verifier.
+
+v268 (`0e034a8`) applies the supported-year lower bound to URL/anchor fiscal-year
+hints as well. Candidate hint parsing and stale-year windows now start at 2019,
+so pre-supported labels or filenames such as `2018年度` and `2018007.pdf` no
+longer become `fiscal_year_mismatch` evidence for otherwise target-looking
+confirmation-form links. The Windows distribution verifier requires the
+packaged `pdf_discovery.py` candidate-window lower-bound contract. Verification:
+`tests/unit` passed with `1242 passed, 5 warnings`, and
+`dist/eidp-windows-v268.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`ccd9bbe502dd119e4b0f34fcbd6d46005da1a5206f636eb0112770e4291d5230`,
+`git_commit=0e034a807fc7ead330290d7569261e02c20b04c4`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v268 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
