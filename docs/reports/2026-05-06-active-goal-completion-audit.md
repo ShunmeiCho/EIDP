@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `0a15ea4fe10cd38cc662372f053313256af34da7` (`eidp-windows-v284.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `873d38b341a2d5dfe24154f15f1ae1203129e916` (`eidp-windows-v285.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1143,6 +1143,28 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v284 is still pending and must not be
+inferred from the Mac verifier.
+
+v285 (`873d38b`) threads the active target fiscal year through duplicate-PDF
+candidate dedupe across root pages, subpages, derived disclosure pages,
+sitemap pages, direct sitemap PDFs, and rendered-HTML fallback. Duplicate links
+that both carry fiscal-year text now prefer the anchor matching the configured
+target FY over stale-year anchors, instead of merely preferring "any year"
+context. This keeps rolling-year strict mode from preserving a first-seen
+`令和7年度` duplicate when a later duplicate link to the same PDF carries
+`令和8年度`. The Windows distribution verifier now requires the packaged
+target-year dedupe threading. Verification: `tests/unit` passed with
+`1280 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v285.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`6c51cfd25f130415f94a1142a9e978f7c9115ab382d05e81c6faa7027405e36a`,
+`git_commit=873d38b341a2d5dfe24154f15f1ae1203129e916`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v285 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
