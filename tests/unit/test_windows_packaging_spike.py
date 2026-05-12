@@ -429,6 +429,9 @@ def test_diagnose_bat_collects_operator_evidence_without_mutating_data(bat_files
     assert 'set "VALIDATE_WEEKLY_SHIP_GATE_RC=!ERRORLEVEL!"' in body
     assert "BUILD_INFO.json" in body
     assert "last_run.json" in body
+    assert "final objective ship readiness" in body
+    assert "report ship-readiness --json --fail-on-missing-goal" in body
+    assert "ship_readiness_rc" in body
     assert "latest discovery RCA batch plan" in body
     assert "discovery-rca-batch-plan.json" in body
     assert "discovery_rca" in body
