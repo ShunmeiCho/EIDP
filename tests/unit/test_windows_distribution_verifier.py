@@ -1037,6 +1037,31 @@ def test_verify_core_zip_requires_cli_report_database_not_ready_gate(tmp_path: P
     assert any("database_not_ready" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_import_excel_invalid_year_warning(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/cli.py"] = (
+        '@app.command("eval-discovery-gold")\n'
+        '@app.command("discovery-gold-expected-predictions")\n'
+        "--fail-on-regression\n"
+        "_discovery_gold_gate_failed\n"
+        "_exit_report_db_error\n"
+        "database_not_ready\n"
+        "report query failed; database is not initialized or the schema is incomplete\n"
+        '_require_app_lock("cli_import_excel")\n'
+        '_require_app_lock("cli_db_bootstrap")\n'
+        '_require_app_lock("cli_rebuild_school_year_tasks")\n'
+        '_require_app_lock("cli_weekly_update")\n'
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("_echo_import_excel_results" in error for error in check.errors)
+    assert any("invalid_year" in error for error in check.errors)
+    assert any("想定外の年度" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_all_navigated_operator_modules(tmp_path: Path) -> None:
     entries = _core_entries()
     for rel in (
