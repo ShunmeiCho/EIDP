@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `9c422a66926a7e531ef04228d123acc972711fc3` (`eidp-windows-v294.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `f39fafeb5e838cda58acee95dc2ee80216ac5eaa` (`eidp-windows-v295.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1354,6 +1354,28 @@ passed `scripts/verify_windows_distribution.py` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v294 is still pending and must not be
+inferred from the Mac verifier.
+
+v295 (`f39fafe`) improves PDF link extraction for school pages that expose the
+real PDF URL through JavaScript/download-button data attributes instead of an
+`href="*.pdf"` anchor. `_extract_pdf_links` now recognizes direct PDF URLs in
+`data-downloadurl`, `data-href`, and `data-url` while preserving the existing
+WordPress Download Manager wrapper path. This is year-agnostic and supports
+rolling target-FY discovery because the same anchor/context extraction and
+candidate dedupe preference are reused. A regression test covers a
+current-year confirmation-form button and an adjacent non-target syllabus data
+link, and the packaged verifier now requires `PDF_LINK_ATTRIBUTE_NAMES` plus
+the `data-href` / `data-url` contract. Verification: `tests/unit` passed with
+`1289 passed, 5 warnings`, `eval-discovery-gold --predictions
+data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+reported `exact_matches=20`, `failed_predictions=0`, and
+`unexpected_predictions=0`. `dist/eidp-windows-v295.zip` plus the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py`
+with SHA256 `eafc6bc5b49627451345b10ad6ccdef2b32ef6b5b0d97e43568f560f88da5b21`,
+`git_commit=f39fafeb5e838cda58acee95dc2ee80216ac5eaa`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v295 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
