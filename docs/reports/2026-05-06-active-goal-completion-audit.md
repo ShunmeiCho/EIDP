@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `c544a4e78f0a74bda936c79dc6ef618d534dc847` (`eidp-windows-v293.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `9c422a66926a7e531ef04228d123acc972711fc3` (`eidp-windows-v294.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1333,6 +1333,27 @@ with SHA256 `098e0471feee045d513ccf1adb483d08a9c31f9d45f60f7e56abf39070c5f584`,
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v293 is still pending and must not be
+inferred from the Mac verifier.
+
+v294 (`9c422a6`) makes discovery gold-set replay deterministic when a bounded
+evidence log contains both actionable review evidence and site-fetch failures
+for the same school. `needs_operator_review` now ranks above `site_fetch_error`,
+while accepted current-year PDFs and publication-lag target PDFs remain higher
+priority. This prevents JSONL line order from turning a target form without
+year evidence into a less actionable site-fetch-error prediction. A regression
+test covers both evidence orders, and the packaged verifier now requires the
+`"needs_operator_review": 3` replay-priority contract. Verification:
+`tests/unit` passed with `1288 passed, 5 warnings`, `eval-discovery-gold
+--predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`.
+`dist/eidp-windows-v294.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py` with SHA256
+`36ebbdfa55bd95054341fc0af447a3bab7b4d3a40bdcd1e4eb983b25dc9ddcab`,
+`git_commit=9c422a66926a7e531ef04228d123acc972711fc3`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v294 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
