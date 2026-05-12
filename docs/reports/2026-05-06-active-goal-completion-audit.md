@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `9fa75247fdf746828b98161108422524fd76de82` (`eidp-windows-v274.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `9419eecc9398a6c166fb76812ff8bbd066bac67a` (`eidp-windows-v275.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -938,6 +938,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v274 is still pending and must not be
+inferred from the Mac verifier.
+
+v275 (`9419eec`) adds a packaged negative gate for renewal-form hint false
+positives. The PDF discovery implementation already limits renewal-form target
+hints to Japanese and romaji tokens (`更新確認申請`, `koushinshinsei`, and
+`koushin-shinsei`), with unit tests proving English `renewal confirmation
+application` wording does not become target evidence. The Windows distribution
+verifier now rejects packaged `pdf_discovery.py` if the broader English renewal
+tokens are reintroduced, preventing unrelated English-language documents from
+becoming target-form candidates. Verification: `tests/unit` passed with
+`1257 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v275.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`a2db024e07e06be3a79abf50965c3bb6ece98873a8894ef60cc1df6a9071b803`,
+`git_commit=9419eecc9398a6c166fb76812ff8bbd066bac67a`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v275 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
