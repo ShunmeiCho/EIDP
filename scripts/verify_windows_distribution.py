@@ -828,6 +828,14 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "target_application_not_detected",
             "prefecture_index_current_year",
             'trusted_year_evidence if strict_target_fiscal_year else ""',
+            '"target_fiscal_year" not in evidence.extra',
+            "replace(evidence",
+        ),
+        "src/eidp/scraper/discovery_gold_set.py": (
+            "entries_by_key",
+            "(entry.school_id, entry.target_fiscal_year)",
+            "_target_fiscal_year_from_evidence_payload",
+            "school_id_counts",
         ),
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly",

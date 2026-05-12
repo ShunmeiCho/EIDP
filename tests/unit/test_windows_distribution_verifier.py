@@ -232,7 +232,12 @@ def _core_entries() -> dict[str, bytes | str]:
             "target_application_not_detected\n"
             "prefecture_index_current_year\n"
             "trusted_year_evidence if strict_target_fiscal_year else \"\"\n"
+            "\"target_fiscal_year\" not in evidence.extra\n"
+            "replace(evidence\n"
         ),
+        "src/eidp/scraper/discovery_gold_set.py": (
+            REPO_ROOT / "src" / "eidp" / "scraper" / "discovery_gold_set.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly\n"
             "SupportRecipient\n"
@@ -524,6 +529,22 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert not check.ok
     assert any("src/eidp/scraper/pdf_discovery.py missing required token" in error for error in check.errors)
     assert any("target_fiscal_year_not_detected" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/discovery_gold_set.py"] = (
+        "def load_discovery_gold_predictions_from_pdf_evidence(evidence_path, entries):\n"
+        "    entries_by_school_id = {entry.school_id: entry for entry in entries}\n"
+        "    return []\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/scraper/discovery_gold_set.py missing required token" in error for error in check.errors)
+    assert any("_target_fiscal_year_from_evidence_payload" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) -> None:
