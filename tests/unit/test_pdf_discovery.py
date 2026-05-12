@@ -728,6 +728,18 @@ def test_extract_pdf_links_prefers_duplicate_anchor_with_year_evidence() -> None
     assert "令和8年度" in candidates[0].anchor_text
 
 
+def test_extract_pdf_links_prefers_duplicate_anchor_matching_target_year() -> None:
+    html = """
+    <p><a href="/docs/kakunin.pdf">令和7年度 高等教育の修学支援新制度 確認申請書</a></p>
+    <p><a href="/docs/kakunin.pdf">令和8年度 高等教育の修学支援新制度 確認申請書</a></p>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2026)
+
+    assert len(candidates) == 1
+    assert "令和8年度" in candidates[0].anchor_text
+
+
 def test_extract_pdf_links_includes_wordpress_download_manager_wrappers() -> None:
     html = """
     <p>令和6年度分申請</p>
@@ -813,6 +825,28 @@ def test_append_unique_candidates_prefers_duplicate_candidate_with_year_evidence
     ]
 
     _append_unique_candidates(target, additions)
+
+    assert len(target) == 1
+    assert "令和8年度" in target[0].anchor_text
+
+
+def test_append_unique_candidates_prefers_duplicate_candidate_matching_target_year() -> None:
+    target = [
+        PdfCandidate(
+            pdf_url="https://example.ac.jp/docs/kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和7年度 高等教育の修学支援新制度 確認申請書",
+        )
+    ]
+    additions = [
+        PdfCandidate(
+            pdf_url="https://example.ac.jp/docs/kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和8年度 高等教育の修学支援新制度 確認申請書",
+        )
+    ]
+
+    _append_unique_candidates(target, additions, target_fiscal_year=2026)
 
     assert len(target) == 1
     assert "令和8年度" in target[0].anchor_text

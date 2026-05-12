@@ -1011,13 +1011,19 @@ def _pdf_candidate_dedupe_key(url: str) -> str:
     return parsed._replace(path=unquote(parsed.path)).geturl()
 
 
-def _candidate_dedupe_year_preference(candidate: PdfCandidate) -> int:
+def _candidate_dedupe_year_preference(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> int:
     """Return whether a duplicate candidate carries explicit fiscal-year context."""
 
-    return 1 if has_fiscal_year_text(_candidate_hint_text(candidate)) else 0
+    target_year = target_fiscal_year or settings.target_fiscal_year
+    candidate_year = _fiscal_year_from_strong_candidate_hint(_candidate_hint_text(candidate), target_year=target_year)
+    if candidate_year == target_year:
+        return 2
+    if candidate_year is not None or has_fiscal_year_text(_candidate_hint_text(candidate)):
+        return 1
+    return 0
 
 
-def _candidate_dedupe_preference(candidate: PdfCandidate) -> tuple[int, int]:
+def _candidate_dedupe_preference(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> tuple[int, int]:
     """Return how useful a duplicate candidate's own URL/anchor context is."""
 
     if _has_target_application_hint(candidate):
@@ -1028,13 +1034,15 @@ def _candidate_dedupe_preference(candidate: PdfCandidate) -> tuple[int, int]:
         hint_preference = 1
     else:
         hint_preference = 0
-    return hint_preference, _candidate_dedupe_year_preference(candidate)
+    return hint_preference, _candidate_dedupe_year_preference(candidate, target_fiscal_year=target_fiscal_year)
 
 
 def _append_or_upgrade_candidate(
     candidates: list[PdfCandidate],
     index_by_key: dict[str, int],
     candidate: PdfCandidate,
+    *,
+    target_fiscal_year: int | None = None,
 ) -> None:
     """Append a PDF candidate, replacing weak duplicate anchor context."""
 
@@ -1044,7 +1052,10 @@ def _append_or_upgrade_candidate(
         index_by_key[key] = len(candidates)
         candidates.append(candidate)
         return
-    if _candidate_dedupe_preference(candidate) > _candidate_dedupe_preference(candidates[existing_index]):
+    if _candidate_dedupe_preference(candidate, target_fiscal_year=target_fiscal_year) > _candidate_dedupe_preference(
+        candidates[existing_index],
+        target_fiscal_year=target_fiscal_year,
+    ):
         candidates[existing_index] = candidate
 
 
@@ -1265,7 +1276,12 @@ def _is_wordpress_download_manager_url(url: str, base_url: str) -> bool:
     return any(key.lower() == "wpdmdl" and value.strip() for key, value in parse_qsl(parsed.query))
 
 
-def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
+def _extract_pdf_links(
+    html: str,
+    base_url: str,
+    *,
+    target_fiscal_year: int | None = None,
+) -> list[PdfCandidate]:
     """Extract PDF link candidates from HTML using known PDF delivery patterns."""
     candidates: list[PdfCandidate] = []
     candidate_index_by_key: dict[str, int] = {}
@@ -1287,6 +1303,7 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
             PdfCandidate(
                 pdf_url=url, page_url=base_url, anchor_text=anchor, pattern_type=pattern,
             ),
+            target_fiscal_year=target_fiscal_year,
         )
 
     # Pattern 2b: WordPress Download Manager wrappers.
@@ -1312,6 +1329,7 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
                 anchor_text=_pdf_anchor_context_text(html, m),
                 pattern_type="wordpress_download_manager",
             ),
+            target_fiscal_year=target_fiscal_year,
         )
 
     # Pattern 4: Embedded PDFs — embed/object/iframe with .pdf src
@@ -1329,6 +1347,7 @@ def _extract_pdf_links(html: str, base_url: str) -> list[PdfCandidate]:
                     PdfCandidate(
                         pdf_url=url, page_url=base_url, anchor_text="", pattern_type="embed",
                     ),
+                    target_fiscal_year=target_fiscal_year,
                 )
 
     return candidates
@@ -1637,11 +1656,16 @@ def _extract_sitemap_locs(xml: str) -> list[str]:
     ]
 
 
-def _append_unique_candidates(target: list[PdfCandidate], additions: list[PdfCandidate]) -> None:
+def _append_unique_candidates(
+    target: list[PdfCandidate],
+    additions: list[PdfCandidate],
+    *,
+    target_fiscal_year: int | None = None,
+) -> None:
     """Append candidates not already present by PDF URL."""
     index_by_key = {_pdf_candidate_dedupe_key(candidate.pdf_url): index for index, candidate in enumerate(target)}
     for candidate in additions:
-        _append_or_upgrade_candidate(target, index_by_key, candidate)
+        _append_or_upgrade_candidate(target, index_by_key, candidate, target_fiscal_year=target_fiscal_year)
 
 
 def _needs_rendered_html_fallback(candidates: list[PdfCandidate], *, target_fiscal_year: int) -> bool:
@@ -1687,6 +1711,7 @@ def _append_rendered_html_candidates(
     *,
     page_urls: list[str],
     rendered_html_fetcher: RenderedHtmlFetcher,
+    target_fiscal_year: int | None = None,
     max_pages: int = MAX_RENDERED_DISCOVERY_PAGES,
     max_elapsed_seconds: float = MAX_DISCOVERY_ELAPSED_SECONDS,
     started_at: float | None = None,
@@ -1721,7 +1746,11 @@ def _append_rendered_html_candidates(
         if not html:
             continue
 
-        _append_unique_candidates(candidates, _extract_pdf_links(html, page_url))
+        _append_unique_candidates(
+            candidates,
+            _extract_pdf_links(html, page_url, target_fiscal_year=target_fiscal_year),
+            target_fiscal_year=target_fiscal_year,
+        )
 
         for sub_url in _find_subpage_links(html, page_url):
             sub_key = normalize_candidate_url(sub_url)
@@ -1798,7 +1827,7 @@ def discover_pdfs_for_site(
             html = resp.text
 
         # Extract PDF candidates from main page
-        candidates = _extract_pdf_links(html, site_url)
+        candidates = _extract_pdf_links(html, site_url, target_fiscal_year=target_year)
 
         # Always try subpage links (two-tier pattern)
         # Even if root has PDFs, target docs may be on subpages
@@ -1816,8 +1845,12 @@ def discover_pdfs_for_site(
                     sub_resp = _safe_get(client, sub_url)
                     if sub_resp.status_code == 200:
                         sub_base_url = str(sub_resp.url or sub_url)
-                        sub_candidates = _extract_pdf_links(sub_resp.text, sub_base_url)
-                        _append_unique_candidates(candidates, sub_candidates)
+                        sub_candidates = _extract_pdf_links(
+                            sub_resp.text,
+                            sub_base_url,
+                            target_fiscal_year=target_year,
+                        )
+                        _append_unique_candidates(candidates, sub_candidates, target_fiscal_year=target_year)
                 except httpx.HTTPError:
                     continue
 
@@ -1835,7 +1868,11 @@ def discover_pdfs_for_site(
                     homepage_base_url = str(homepage_resp.url or homepage_url)
                     school_homepage_page_urls.append(homepage_base_url)
                     homepage_html = homepage_resp.text
-                    _append_unique_candidates(candidates, _extract_pdf_links(homepage_html, homepage_base_url))
+                    _append_unique_candidates(
+                        candidates,
+                        _extract_pdf_links(homepage_html, homepage_base_url, target_fiscal_year=target_year),
+                        target_fiscal_year=target_year,
+                    )
                     for sub_url in _find_subpage_links(homepage_html, homepage_base_url, school_name=school_name):
                         if extra_page_budget_remaining() <= 0:
                             break
@@ -1848,7 +1885,11 @@ def discover_pdfs_for_site(
                             if sub_resp.status_code == 200:
                                 sub_base_url = str(sub_resp.url or sub_url)
                                 school_homepage_page_urls.append(sub_base_url)
-                                _append_unique_candidates(candidates, _extract_pdf_links(sub_resp.text, sub_base_url))
+                                _append_unique_candidates(
+                                    candidates,
+                                    _extract_pdf_links(sub_resp.text, sub_base_url, target_fiscal_year=target_year),
+                                    target_fiscal_year=target_year,
+                                )
                         except httpx.HTTPError:
                             continue
                 except httpx.HTTPError:
@@ -1880,7 +1921,11 @@ def discover_pdfs_for_site(
                 derived_resp = _safe_get(client, derived_url)
                 if derived_resp.status_code == 200:
                     derived_base_url = str(derived_resp.url or derived_url)
-                    _append_unique_candidates(candidates, _extract_pdf_links(derived_resp.text, derived_base_url))
+                    _append_unique_candidates(
+                        candidates,
+                        _extract_pdf_links(derived_resp.text, derived_base_url, target_fiscal_year=target_year),
+                        target_fiscal_year=target_year,
+                    )
             except httpx.HTTPError:
                 continue
 
@@ -1900,6 +1945,7 @@ def discover_pdfs_for_site(
                         anchor_text="sitemap",
                         pattern_type="sitemap_pdf",
                     )],
+                    target_fiscal_year=target_year,
                 )
                 continue
             sitemap_page_urls.append(sitemap_url)
@@ -1909,7 +1955,11 @@ def discover_pdfs_for_site(
                 sitemap_resp = _safe_get(client, sitemap_url)
                 if sitemap_resp.status_code == 200:
                     sitemap_base_url = str(sitemap_resp.url or sitemap_url)
-                    _append_unique_candidates(candidates, _extract_pdf_links(sitemap_resp.text, sitemap_base_url))
+                    _append_unique_candidates(
+                        candidates,
+                        _extract_pdf_links(sitemap_resp.text, sitemap_base_url, target_fiscal_year=target_year),
+                        target_fiscal_year=target_year,
+                    )
             except httpx.HTTPError:
                 continue
 
@@ -1929,6 +1979,7 @@ def discover_pdfs_for_site(
                     candidates,
                     page_urls=unique_rendered_page_urls,
                     rendered_html_fetcher=fetcher,
+                    target_fiscal_year=target_year,
                     max_elapsed_seconds=max_elapsed_seconds,
                     started_at=started_at,
                 )

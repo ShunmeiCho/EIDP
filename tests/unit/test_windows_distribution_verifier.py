@@ -305,6 +305,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "has_fiscal_year_text\n"
             "_candidate_dedupe_preference\n"
             "_candidate_dedupe_year_preference\n"
+            "candidate_year == target_year\n"
+            "target_fiscal_year=target_year\n"
             "_append_or_upgrade_candidate\n"
             "SchoolSite.school_id.asc()\n"
             "SchoolSite.id.asc()\n"
@@ -715,6 +717,8 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("has_fiscal_year_text" in error for error in check.errors)
     assert any("_candidate_dedupe_preference" in error for error in check.errors)
     assert any("_candidate_dedupe_year_preference" in error for error in check.errors)
+    assert any("candidate_year == target_year" in error for error in check.errors)
+    assert any("target_fiscal_year=target_year" in error for error in check.errors)
     assert any("_append_or_upgrade_candidate" in error for error in check.errors)
     assert any("SchoolSite.school_id.asc()" in error for error in check.errors)
     assert any("SchoolSite.id.asc()" in error for error in check.errors)

@@ -1014,6 +1014,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "has_fiscal_year_text",
             "_candidate_dedupe_preference",
             "_candidate_dedupe_year_preference",
+            "candidate_year == target_year",
+            "target_fiscal_year=target_year",
             "_append_or_upgrade_candidate",
             "SchoolSite.school_id.asc()",
             "SchoolSite.id.asc()",
