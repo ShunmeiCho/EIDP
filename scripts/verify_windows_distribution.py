@@ -1570,15 +1570,31 @@ def checks_to_json(checks: list[ZipCheck]) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
 
 
+def _require_demonstrated_discovery_patterns(check: ZipCheck) -> None:
+    """Fail core ZIPs whose tracked discovery extractors lack gold-set demonstrations."""
+
+    missing = check.details.get("discovery_gold_undemonstrated_pattern_sources")
+    if isinstance(missing, list) and missing:
+        check.fail(f"undemonstrated discovery extractor sources: {missing}")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Verify EIDP Windows distribution ZIPs.")
     parser.add_argument("core_zip", type=Path, help="Path to eidp-windows.zip")
     parser.add_argument("--ocr-addon", type=Path, default=None)
     parser.add_argument("--playwright-addon", type=Path, default=None)
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    parser.add_argument(
+        "--require-demonstrated-discovery-patterns",
+        action="store_true",
+        help="Fail when tracked PDF discovery extractor sources lack discovery gold-set demonstrations",
+    )
     args = parser.parse_args(argv)
 
-    checks = [verify_core_zip(args.core_zip)]
+    core_check = verify_core_zip(args.core_zip)
+    if args.require_demonstrated_discovery_patterns:
+        _require_demonstrated_discovery_patterns(core_check)
+    checks = [core_check]
     if args.ocr_addon is not None:
         checks.append(verify_ocr_addon_zip(args.ocr_addon))
     if args.playwright_addon is not None:

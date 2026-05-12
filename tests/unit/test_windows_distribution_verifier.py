@@ -1745,3 +1745,14 @@ def test_cli_json_includes_distribution_checksum(tmp_path: Path, capsys) -> None
     assert payload[0]["ok"] is True
     assert payload[0]["details"]["sha256"] == hashlib.sha256(zip_path.read_bytes()).hexdigest()
     assert payload[0]["details"]["size_bytes"] == zip_path.stat().st_size
+
+
+def test_cli_can_require_demonstrated_discovery_patterns(tmp_path: Path, capsys) -> None:  # noqa: ANN001
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", _core_entries())
+
+    rc = module.main([str(zip_path), "--require-demonstrated-discovery-patterns"])
+
+    assert rc == 1
+    output = capsys.readouterr().out
+    assert "undemonstrated discovery extractor sources" in output
+    assert "onclick" in output
