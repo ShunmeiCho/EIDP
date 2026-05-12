@@ -373,6 +373,7 @@ class RenderedHtmlFetcher(Protocol):
 
 PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url")
 PDF_DATA_ATTRIBUTE_TAG_PATTERN = r"(?:a|button|span|div)"
+PDF_SCRIPT_URL_PATTERN = re.compile(r"([\"'])([^\"']*?\.pdf(?:[?#][^\"']*)?)\1", re.IGNORECASE)
 
 
 def _is_target_year_rejection(reason: str) -> bool:
@@ -1280,6 +1281,24 @@ def _anchor_attr(attrs: str, name: str) -> str | None:
     return html_lib.unescape(match.group(2))
 
 
+def _pdf_urls_from_script_attribute(value: str, base_url: str) -> list[str]:
+    """Extract quoted PDF URLs from static click-handler attributes."""
+
+    urls: list[str] = []
+    seen: set[str] = set()
+    for match in PDF_SCRIPT_URL_PATTERN.finditer(html_lib.unescape(value)):
+        href = match.group(2).strip()
+        if not href or ".pdf" not in unquote(href).lower():
+            continue
+        url = urljoin(base_url, href)
+        key = normalize_candidate_url(url)
+        if key in seen:
+            continue
+        seen.add(key)
+        urls.append(url)
+    return urls
+
+
 def _is_wordpress_download_manager_url(url: str, base_url: str) -> bool:
     """Return whether ``url`` is a same-origin WordPress Download Manager PDF wrapper."""
 
@@ -1348,6 +1367,31 @@ def _extract_pdf_links(
                 target_fiscal_year=target_fiscal_year,
             )
             break
+
+    # Pattern 1c: static click handlers such as window.open('/docs/form.pdf').
+    for m in re.finditer(
+        rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        onclick = _anchor_attr(m.group(1), "onclick")
+        if not onclick:
+            continue
+        for url in _pdf_urls_from_script_attribute(onclick, base_url):
+            pattern = "cache_busted" if "?" in url else "direct"
+            if "/wp-content/" in url:
+                pattern = "wordpress"
+            _append_or_upgrade_candidate(
+                candidates,
+                candidate_index_by_key,
+                PdfCandidate(
+                    pdf_url=url,
+                    page_url=base_url,
+                    anchor_text=_pdf_anchor_context_text(html, m),
+                    pattern_type=pattern,
+                ),
+                target_fiscal_year=target_fiscal_year,
+            )
 
     # Pattern 2b: WordPress Download Manager wrappers.
     #
