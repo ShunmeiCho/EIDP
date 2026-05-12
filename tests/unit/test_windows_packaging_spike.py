@@ -446,6 +446,8 @@ def test_operator_runbook_documents_diagnose_validation_rcs():
 
     assert "validate_after_bootstrap_rc" in body
     assert "validate_after_weekly_rc" in body
+    assert "ship_readiness_rc" in body
+    assert "report ship-readiness --json --fail-on-missing-goal" in body
     assert "--after-bootstrap" in body
     assert "--after-weekly" in body
 

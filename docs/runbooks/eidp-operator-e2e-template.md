@@ -135,6 +135,10 @@ override 例:
 | 業務員週次作業時間 | <= 4h | | pass / watch / fail |
 | 手入力件数 | 記録値 | | pass / watch / fail |
 | review_pending 残件 | 記録値 | | pass / watch / fail |
+| `ship_readiness_rc` | 0 | | pass / watch / fail |
+| strict target PDF 自動取得率 | >= 60% | | pass / watch / fail |
+| 推定手作業率 | <= 30% | | pass / watch / fail |
+| Excel ready 率 | >= 60% | | pass / watch / fail |
 
 KPI メモ:
 
@@ -161,6 +165,7 @@ KPI メモ:
 添付する証跡:
 
 - `logs\run-*.log`
+- `logs\diagnostics-*.txt`
 - `data\output\last_run.json`
 - `data\output\target-year-discovery\*-discovery-rca-batch-plan.json`
 - Excel 出力ファイル
