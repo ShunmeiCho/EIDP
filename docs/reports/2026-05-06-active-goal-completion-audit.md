@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `2971fee8ec6bebf3e03e2b711fbecf91259d3202` (`eidp-windows-v250.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `21a017df6b2784193735d2b693a43a961a0094c6` (`eidp-windows-v251.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -541,6 +541,19 @@ and the latest alias `dist/eidp-windows.zip` both passed
 `git_commit=2971fee8ec6bebf3e03e2b711fbecf91259d3202`, `git_dirty=false`,
 `entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
 `47` downloadable supported prefecture seeds. Windows E2E for v250 is still
+pending and must not be inferred from the Mac verifier.
+
+v251 (`21a017d`) removes the last short-lived fiscal-year bound in the PDF
+manual-entry save form. The manual PDF entry UI now allows the same long-lived
+supported range as the fiscal-year override workflow (`2019` through `2099`)
+instead of stopping at `2030`, so future rolling target years do not exceed the
+Streamlit input maximum. `dist/eidp-windows-v251.zip` and the latest alias
+`dist/eidp-windows.zip` both passed `scripts/verify_windows_distribution.py
+--json` with SHA256
+`99dd4054aafab862e1b7112c73f1308e6bb75c4b313f21f6c77ec1b931728ede`,
+`git_commit=21a017df6b2784193735d2b693a43a961a0094c6`, `git_dirty=false`,
+`entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
+`47` downloadable supported prefecture seeds. Windows E2E for v251 is still
 pending and must not be inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
