@@ -330,9 +330,15 @@ def _core_entries() -> dict[str, bytes | str]:
             "SupportRecipient\n"
             "compute_pdf_parse_breakdown\n"
             "breakdown_to_json\n"
+            "verdict = classify(breakdown.composite, thresholds_from_env())\n"
+            'is_current_row = verdict in ("auto", "auto_flag")\n'
             "revision=next_revision\n"
             "is_current=is_current_row\n"
+            'stats["yearly_review_pending"] += 1\n'
+            'sr_is_current = sr_verdict in ("auto", "auto_flag")\n'
             "support_recipient_review_pending\n"
+            'stats["support_recipient_review_pending"] = 1\n'
+            "if yearly_review > 0 or sr_review > 0:\n"
             'doc.ingest_status = "review_pending"\n'
             "from eidp.config import settings\n"
             "doc.is_current_year = fiscal_year >= settings.target_fiscal_year\n"
@@ -907,6 +913,9 @@ def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) 
     assert not check.ok
     assert any("src/eidp/pipeline/ingest.py missing required token" in error for error in check.errors)
     assert any("compute_pdf_parse_breakdown" in error for error in check.errors)
+    assert any('is_current_row = verdict in ("auto", "auto_flag")' in error for error in check.errors)
+    assert any('stats["yearly_review_pending"] += 1' in error for error in check.errors)
+    assert any("if yearly_review > 0 or sr_review > 0:" in error for error in check.errors)
     assert any("settings.target_fiscal_year" in error for error in check.errors)
     assert any("has_fiscal_year_text" in error for error in check.errors)
 
