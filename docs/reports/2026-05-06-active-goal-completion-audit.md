@@ -3,9 +3,26 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `89dd53baf4e1a997ff83998d276b3098fb9242e4` (`eidp-windows-v313.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `08639e37767f785c86b6e53323f0b4cb859c169f` (`eidp-windows-v314.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+
+## 2026-05-12 V314 Discovery Gold Pattern Source Gaps
+
+v314 (`08639e3`) makes the demonstration gap explicit at source level. The
+gold-set summary and packaged ZIP verifier now report
+`discovery_gold_pattern_sources` and
+`discovery_gold_undemonstrated_pattern_sources`. The current packaged verifier
+shows `wordpress_download_manager: 1` as demonstrated and lists
+`data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`,
+`onclick`, and `select_option` as not yet gold-set demonstrated. This is a
+non-Windows guard against mistaking unit-test-only HTML extractor capability for
+manual/Codex-proven automation patterns. Verification: focused gold/verifier
+tests `87 passed`; full unit suite `1312 passed, 5 warnings`; targeted Ruff
+passed; targeted mypy passed; discovery gold-set replay `20/20 exact`;
+`dist/eidp-windows-v314.zip` verified clean with SHA256
+`c7294a3540df126079663964bfcdab0db8cdbe686a28eccb84be4bd7b7437983`.
+Windows operator E2E is still pending.
 
 ## 2026-05-12 V313 Discovery Gold Pattern Coverage Visibility
 
