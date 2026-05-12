@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `3d2d6a97156c93f8aa98c274802f97e81925c787` (`eidp-windows-v281.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `ad0385849bed15a38c60ebb647fe54af34712179` (`eidp-windows-v282.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -1081,6 +1081,27 @@ passed `scripts/verify_windows_distribution.py --json` with SHA256
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v281 is still pending and must not be
+inferred from the Mac verifier.
+
+v282 (`ad03858`) extends the same truncated-JSONL tolerance to discovery
+gold-set prediction generation from runtime PDF evidence. The runtime evidence
+prediction loader now skips malformed evidence rows with a warning
+that includes the file path and line number, so one partial append no longer
+prevents valid runtime evidence from being replayed against the gold set. The
+explicit expected-predictions JSONL loader remains strict because fixture
+corruption should fail fast. The Windows distribution verifier now requires the
+packaged gold-evidence JSON decode guard. Verification: `tests/unit` passed
+with `1274 passed, 5 warnings`,
+`eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl
+--fail-on-regression --json` reported `exact_matches=20`,
+`failed_predictions=0`, and `unexpected_predictions=0`, and
+`dist/eidp-windows-v282.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`872145ce00ba6585753e91fd00e26e2495f66fc5ee14791cfca5fba01134e26f`,
+`git_commit=ad0385849bed15a38c60ebb647fe54af34712179`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v282 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
