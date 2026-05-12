@@ -51,6 +51,8 @@ def _is_safe_url(url: str) -> bool:
     Performs DNS resolution to block rebinding-style hostnames (e.g.
     169.254.169.254.nip.io) that resolve to private/metadata IPs.
     """
+    if not url or any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
+        return False
     try:
         parsed = urlparse(url)
     except Exception:

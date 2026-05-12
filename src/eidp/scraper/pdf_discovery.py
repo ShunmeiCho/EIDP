@@ -59,6 +59,8 @@ def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
     Raises httpx.HTTPStatusError on SSRF-blocked redirect or redirect loop.
     Fails closed: if max hops exceeded, raises instead of returning last 3xx.
     """
+    if not _is_safe_url(url):
+        raise httpx.InvalidURL("Unsafe URL")
     resp = client.get(url, **kwargs)
     visited = {url}
     for _ in range(5):
@@ -2374,7 +2376,7 @@ def download_pdf(
             try:
                 resp = _safe_get(client, download_url)
                 resp.raise_for_status()
-            except httpx.HTTPError as e:
+            except (httpx.HTTPError, httpx.InvalidURL) as e:
                 last_reject_reason = f"http_error:{type(e).__name__}"
                 continue
 

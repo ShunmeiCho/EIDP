@@ -3892,6 +3892,33 @@ def test_download_pdf_accepts_reiwa_year_anchor_when_body_is_target_form(
     assert candidate.year_evidence == "url_hint"
 
 
+def test_download_pdf_rejects_control_character_url_without_fetch(tmp_path: Path) -> None:
+    class FailingClient:
+        def get(self, _url: str, **_kwargs: object) -> object:
+            raise AssertionError("invalid URL should be rejected before fetch")
+
+    candidate = PdfCandidate(
+        pdf_url="https://www.\nogosejidai.ac.jp/file.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="高等教育の修学支援新制度 確認申請書",
+    )
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        FailingClient(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "unknown"
+    assert reason == "unsafe_url"
+
+
 def test_download_pdf_accepts_trusted_prefecture_year_evidence_for_target_body(
     monkeypatch, tmp_path: Path
 ) -> None:

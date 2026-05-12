@@ -23,6 +23,12 @@ def _session() -> Session:
     return Session(engine)
 
 
+def test_is_safe_url_rejects_raw_control_characters_before_urlparse() -> None:
+    assert not url_discovery._is_safe_url("https://www.\nogosejidai.ac.jp/file.pdf")
+    assert not url_discovery._is_safe_url("https://example.ac.jp/\rfile.pdf")
+    assert not url_discovery._is_safe_url("https://example.ac.jp/\tfile.pdf")
+
+
 def test_import_seed_urls_reads_utf8_sig_csv(tmp_path: Path, monkeypatch) -> None:
     csv_path = tmp_path / "discovered-urls-50.csv"
     csv_path.write_text(
