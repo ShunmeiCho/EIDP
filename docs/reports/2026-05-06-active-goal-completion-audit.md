@@ -3,9 +3,24 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `fe5ffc96b12ba4f56d6132f5de6e52ebf0e1b49e` (`eidp-windows-v307.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `4a2b92df5b8b5eaf0321886577afb41487d9a6ee` (`eidp-windows-v308.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+
+## 2026-05-12 V308 Ship Gate Metric Realignment
+
+v308 (`4a2b92d`) changes the release gate from pure automatic target-PDF yield
+to operator-reviewable coverage. The diagnostic `target_pdf_auto_yield_pct`
+remains, but `ship_gate_status` now uses `operator_reviewable_yield_pct`, which
+counts current target PDFs plus `publication_lag` schools where the latest
+public old-year target form is reviewable by the operator. The Windows install
+validator now cross-checks this operator-reviewable gate against SQLite for
+bootstrap and against weekly summary deltas for weekly runs. Verification:
+targeted ship-gate tests `240 passed`; full unit suite `1307 passed, 5
+warnings`; targeted Ruff on changed files passed; discovery gold-set replay
+`20/20 exact`; `dist/eidp-windows-v308.zip` verified clean with SHA256
+`ebaecabc312274885a55dbce0165e158a459b8ab8fab6c4185b46f3864c0c8dd`.
+Windows operator E2E is still pending.
 
 ## 2026-05-11 Codex Manual Discovery RCA Consolidation
 
