@@ -980,6 +980,13 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'candidate.outcome == current.outcome == "publication_lag_latest_public"',
             "(candidate.fiscal_year or 0) > (current.fiscal_year or 0)",
         ),
+        "src/eidp/pdf/extractor.py": (
+            "def _extract_fiscal_year",
+            'filing_dates = re.findall(r"(20\\d{2})[./]\\d{1,2}[./]\\d{1,2}"',
+            'all_years = re.findall(r"(20\\d{2})[\\.\\s年/]"',
+            "max_valid_year",
+            "format_fiscal_year_as_japanese_era(fiscal_year)",
+        ),
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly",
             "SupportRecipient",

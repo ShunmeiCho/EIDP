@@ -290,6 +290,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/scraper/discovery_gold_set.py": (
             REPO_ROOT / "src" / "eidp" / "scraper" / "discovery_gold_set.py"
         ).read_text(encoding="utf-8"),
+        "src/eidp/pdf/extractor.py": (REPO_ROOT / "src" / "eidp" / "pdf" / "extractor.py").read_text(
+            encoding="utf-8"
+        ),
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly\n"
             "SupportRecipient\n"
@@ -658,6 +661,24 @@ def test_verify_core_zip_requires_discovery_gold_replay_semantics_contract(tmp_p
     assert any('"site_fetch_error": 2' in error for error in check.errors)
     assert any("_is_better_tie_break_prediction" in error for error in check.errors)
     assert any("candidate.fiscal_year" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_rolling_pdf_fiscal_year_extractor_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/pdf/extractor.py"] = (
+        "def _extract_fiscal_year(full_text):\n"
+        "    filing_dates = re.findall(r\"(202[0-9])[./]\\d{1,2}[./]\\d{1,2}\", full_text)\n"
+        "    all_years = re.findall(r\"(202[0-9])[\\.\\s年/]\", full_text)\n"
+        "    return ''\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/pdf/extractor.py missing required token" in error for error in check.errors)
+    assert any("20\\d{2}" in error for error in check.errors)
+    assert any("format_fiscal_year_as_japanese_era" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) -> None:
