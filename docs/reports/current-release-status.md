@@ -2,9 +2,9 @@
 
 Updated: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v315.zip`
-Package commit: `7956ba0bbbb9a413e5fabe95c7ff380af2dc7d75`
-Package SHA256: `612ae6ead92d1f500fdfb2bc852a78be042e151939eebbdacf0d773dace079c8`
+Current Mac-verifier-clean package: `dist/eidp-windows-v316.zip`
+Package commit: `e398e7a7640ba32debf7795372313cd5750e6d77`
+Package SHA256: `f7e87fbe1815f172b7e54a0694ce2579d4e1e86179eb8b9418e974fc6998dbb9`
 
 ## Verdict
 
@@ -19,28 +19,29 @@ auto-acquisition rate is not proven to be 60-70%.
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official indexes seed school public URLs | v315 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148` | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v315 verifier clean; discovery gold-set `20` entries; expected predictions `20/20 exact`; package exposes `discovery_gold_undemonstrated_pattern_sources` so speculative extractor coverage is visible | Partially proven |
+| 47 prefecture official indexes seed school public URLs | v316 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148` | Evidence present |
+| Discover and download current target-FY PDFs in strict mode | v316 verifier clean; discovery gold-set `20` entries; expected predictions `20/20 exact`; package exposes `discovery_gold_undemonstrated_pattern_sources` and the CLI can fail on undemonstrated extractor sources | Partially proven |
 | Exclude stale-year fallback from auto-success | Ship gate now uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes publication-lag cases | Partially proven |
-| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts, but no current Windows operator E2E has revalidated the whole extraction-to-Excel path on v315 | Partially proven |
+| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts, but no current Windows operator E2E has revalidated the whole extraction-to-Excel path on v316 | Partially proven |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh non-Windows audit: targeted Ruff clean and append-only/confidence/fiscal-year tests `116 passed`; source inspection confirmed demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win E2E still missing |
-| Excel template output | Package verifier includes Excel/export contracts; current operator-PC preview/download flow is not revalidated on v315 | Partially proven |
-| ManualActionLog audit for operator actions | Package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated on v315 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v315 ZIP verifies clean on macOS packaging gate; latest Windows setup-verified evidence is older than v315 | Missing current Win proof |
+| Excel template output | Package verifier includes Excel/export contracts; current operator-PC preview/download flow is not revalidated on v316 | Partially proven |
+| ManualActionLog audit for operator actions | Package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated on v316 | Partially proven |
+| ZIP distribution, double-click setup, browser UI offline operation | v316 ZIP verifies clean on macOS packaging gate; latest Windows setup-verified evidence is older than v316 | Missing current Win proof |
 | Shipping threshold: true target PDF 60-70% auto-acquired, operator manual work <=30% | Not proven. Current evidence still distinguishes code/package readiness from real nationwide yield | Missing |
 
 ## Current Non-Windows Evidence
 
-Commands run for v315:
+Commands run for v316:
 
-- `uv run pytest tests/unit -q` -> `1313 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1314 passed, 5 warnings`
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `20/20 exact`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v315.zip` -> `OK core`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v316.zip` -> `OK core`
 - `uv run eidp discovery-gold-set --json` -> `pattern_source_counts={"wordpress_download_manager": 1}`
+- `uv run eidp discovery-gold-set --json --fail-on-undemonstrated-pattern-sources` -> non-zero with the same `undemonstrated_pattern_sources` payload
 - `uv run ruff check tests/unit/test_current_read_paths.py tests/unit/test_fiscal_year_override.py` -> `All checks passed`
 - `uv run pytest tests/unit/test_ingest_confidence_gating.py tests/unit/test_manual_entry_contract.py tests/unit/test_fiscal_year_override.py tests/unit/test_extraction_confidence.py tests/unit/test_current_read_paths.py -q` -> `116 passed`
 
-v315 verifier exposes the current demonstration gap:
+v316 verifier exposes the current demonstration gap:
 
 - Demonstrated extractor source: `wordpress_download_manager`
 - Not yet gold-demonstrated: `data_attribute`, `embed`, `form_action`,
