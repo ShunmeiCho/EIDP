@@ -1085,6 +1085,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
         "scripts/run_weekly_target_year_discovery.py": ("export_excel",),
+        "src/eidp/scraper/pdf_discovery.py": (
+            "renewalconfirmationapplication",
+            "renewal-confirmation-application",
+            "renewal confirmation application",
+        ),
     }
 
     for member, tokens in required_tokens.items():

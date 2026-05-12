@@ -686,6 +686,24 @@ def test_verify_core_zip_requires_strict_target_year_pdf_discovery(tmp_path: Pat
     assert any("candidate.detected_fiscal_year >= target_year" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_english_renewal_tokens_in_pdf_discovery(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/pdf_discovery.py"] = (
+        str(entries["src/eidp/scraper/pdf_discovery.py"])
+        + "\nrenewalconfirmationapplication\n"
+        + "renewal-confirmation-application\n"
+        + "renewal confirmation application\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("contains forbidden token: renewalconfirmationapplication" in error for error in check.errors)
+    assert any("contains forbidden token: renewal-confirmation-application" in error for error in check.errors)
+    assert any("contains forbidden token: renewal confirmation application" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/scraper/discovery_gold_set.py"] = (
