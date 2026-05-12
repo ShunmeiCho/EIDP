@@ -3,9 +3,27 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `4eecc76c02b576acb31d2000cafd410ec47a0c71` (`eidp-windows-v309.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `2f5734657e2947dc4ff9b16610d4ae1e2efb28de` (`eidp-windows-v310.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+
+## 2026-05-12 V310 Packaged Extractor Provenance Gate
+
+v310 (`2f57346`) adds a release verifier contract for the v309 PDF extractor
+provenance work. The Windows package verifier now requires the packaged
+`src/eidp/scraper/pdf_discovery.py` to retain `_pdf_delivery_pattern`,
+source-specific HTML extractor labels (`meta_refresh`, `select_option`,
+`form_action`, `data_attribute`, `onclick`, and `input_control`), and the
+direct-link scoring compatibility for `*_direct` pattern types. This turns the
+manual v309 audit finding into a packaging gate: if a future ZIP regresses from
+source-specific `pattern_type` values back to opaque `direct/cache_busted`
+evidence, `scripts/verify_windows_distribution.py` fails before handoff.
+Verification: packaging verifier tests `80 passed`; PDF discovery plus
+packaging verifier tests `219 passed, 5 warnings`; full unit suite `1309
+passed, 5 warnings`; targeted Ruff passed; discovery gold-set replay `20/20
+exact`; `dist/eidp-windows-v310.zip` verified clean with SHA256
+`773e678d89b1820926b78bc924ca0dd9415db8d63e9fd749ec9b2f212c16e89f`.
+Windows operator E2E is still pending.
 
 ## 2026-05-12 V308 Ship Gate Metric Realignment
 
