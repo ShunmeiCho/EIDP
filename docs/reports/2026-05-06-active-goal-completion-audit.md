@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `5e3b4236e85e692d506a4619a56bfa99bd2d512b` (`eidp-windows-v249.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `2971fee8ec6bebf3e03e2b711fbecf91259d3202` (`eidp-windows-v250.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -527,6 +527,20 @@ both passed `scripts/verify_windows_distribution.py --json` with SHA256
 `git_commit=5e3b4236e85e692d506a4619a56bfa99bd2d512b`, `git_dirty=false`,
 `entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
 `47` downloadable supported prefecture seeds. Windows E2E for v249 is still
+pending and must not be inferred from the Mac verifier.
+
+v250 (`2971fee`) tightens the candidate download budget so generic English
+links such as `applicationform-r8-*.pdf` are no longer promoted to the formish
+priority tier by the bare token `form`. Target-like Japanese/romaji hints and
+WordPress Download Manager `wpdmdl` wrappers still keep their priority, so a
+low-score target wrapper is tried before generic application-form noise can
+spend the `MAX_CANDIDATE_DOWNLOAD_ATTEMPTS` budget. `dist/eidp-windows-v250.zip`
+and the latest alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`c800b9e8fc404a19da07a3aa5bee5aed776935cc7f0002dadd1966f4f721a2a1`,
+`git_commit=2971fee8ec6bebf3e03e2b711fbecf91259d3202`, `git_dirty=false`,
+`entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
+`47` downloadable supported prefecture seeds. Windows E2E for v250 is still
 pending and must not be inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
