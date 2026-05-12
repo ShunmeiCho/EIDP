@@ -375,6 +375,7 @@ PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url", "data-f
 PDF_DATA_ATTRIBUTE_TAG_PATTERN = r"(?:a|button|span|div)"
 PDF_SCRIPT_URL_PATTERN = re.compile(r"([\"'])([^\"']*?\.pdf(?:[?#][^\"']*)?)\1", re.IGNORECASE)
 PDF_OPTION_VALUE_PATTERN = r"<option\s([^>]*)>(.*?)</option\s*>"
+PDF_INPUT_TAG_PATTERN = r"<input\s([^>]*)>"
 
 
 def _is_target_year_rejection(reason: str) -> bool:
@@ -1215,8 +1216,8 @@ def _table_section_heading_context(html: str, block_start: int) -> str:
     return ""
 
 
-def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
-    """Return anchor text plus nearby fiscal-year context when the CMS splits it.
+def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str = "") -> str:
+    """Return element text plus nearby fiscal-year context when the CMS splits it.
 
     Some CMS pages, notably Goope, render a year header in one paragraph and the
     PDF link in the next paragraph. Keeping that adjacent context lets strict
@@ -1224,7 +1225,7 @@ def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
     sending them to the target-year-unverified manual queue.
     """
 
-    anchor = _html_text(match.group(2))
+    anchor = _html_text(element_text)
     parts = [anchor] if anchor else []
     block = _enclosing_html_block(html, match.start(), match.end())
     if block is not None:
@@ -1255,6 +1256,10 @@ def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
     elif previous_text := _previous_fiscal_year_context(html, match.start()):
         parts.append(previous_text)
     return " ".join(dict.fromkeys(part for part in parts if part))
+
+
+def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
+    return _pdf_element_context_text(html, match, match.group(2))
 
 
 def _previous_fiscal_year_context(html: str, before: int) -> str:
@@ -1414,6 +1419,54 @@ def _extract_pdf_links(
                     pdf_url=url,
                     page_url=base_url,
                     anchor_text=_pdf_anchor_context_text(html, m),
+                    pattern_type=pattern,
+                ),
+                target_fiscal_year=target_fiscal_year,
+            )
+
+    # Pattern 1d: void input controls with direct PDF data attributes or click handlers.
+    for m in re.finditer(PDF_INPUT_TAG_PATTERN, html, re.IGNORECASE | re.DOTALL):
+        attrs = m.group(1)
+        element_text = (
+            _anchor_attr(attrs, "value")
+            or _anchor_attr(attrs, "aria-label")
+            or _anchor_attr(attrs, "title")
+            or ""
+        )
+        for attr_name in PDF_LINK_ATTRIBUTE_NAMES:
+            href = _anchor_attr(attrs, attr_name)
+            if not href or ".pdf" not in unquote(href).lower():
+                continue
+            url = urljoin(base_url, href)
+            pattern = "cache_busted" if "?" in href else "direct"
+            if "/wp-content/" in url:
+                pattern = "wordpress"
+            _append_or_upgrade_candidate(
+                candidates,
+                candidate_index_by_key,
+                PdfCandidate(
+                    pdf_url=url,
+                    page_url=base_url,
+                    anchor_text=_pdf_element_context_text(html, m, element_text),
+                    pattern_type=pattern,
+                ),
+                target_fiscal_year=target_fiscal_year,
+            )
+            break
+        onclick = _anchor_attr(attrs, "onclick")
+        if not onclick:
+            continue
+        for url in _pdf_urls_from_script_attribute(onclick, base_url):
+            pattern = "cache_busted" if "?" in url else "direct"
+            if "/wp-content/" in url:
+                pattern = "wordpress"
+            _append_or_upgrade_candidate(
+                candidates,
+                candidate_index_by_key,
+                PdfCandidate(
+                    pdf_url=url,
+                    page_url=base_url,
+                    anchor_text=_pdf_element_context_text(html, m, element_text),
                     pattern_type=pattern,
                 ),
                 target_fiscal_year=target_fiscal_year,

@@ -1027,6 +1027,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "PDF_DATA_ATTRIBUTE_TAG_PATTERN",
             "PDF_SCRIPT_URL_PATTERN",
             "PDF_OPTION_VALUE_PATTERN",
+            "PDF_INPUT_TAG_PATTERN",
+            "_pdf_element_context_text",
             '"value"',
             "_pdf_urls_from_script_attribute",
             '"onclick"',
