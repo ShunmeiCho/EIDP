@@ -746,6 +746,28 @@ def test_verify_core_zip_rejects_english_renewal_tokens_in_pdf_discovery(tmp_pat
     assert any("contains forbidden token: renewal confirmation application" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_current_fiscal_year_literals_in_pdf_discovery(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/pdf_discovery.py"] = (
+        str(entries["src/eidp/scraper/pdf_discovery.py"])
+        + "\n2026\n"
+        + "令和8\n"
+        + "令和８\n"
+        + "R8\n"
+        + "r8\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("contains forbidden token: 2026" in error for error in check.errors)
+    assert any("contains forbidden token: 令和8" in error for error in check.errors)
+    assert any("contains forbidden token: 令和８" in error for error in check.errors)
+    assert any("contains forbidden token: R8" in error for error in check.errors)
+    assert any("contains forbidden token: r8" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_url_normalization_tracking_dedupe_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/scraper/url_normalization.py"] = "def normalize_candidate_url(url): return url\n"

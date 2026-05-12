@@ -1127,6 +1127,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
     forbidden_tokens: dict[str, tuple[str, ...]] = {
         "scripts/run_weekly_target_year_discovery.py": ("export_excel",),
         "src/eidp/scraper/pdf_discovery.py": (
+            "2026",
+            "令和8",
+            "令和８",
+            "R8",
+            "r8",
             "renewalconfirmationapplication",
             "renewal-confirmation-application",
             "renewal confirmation application",
