@@ -997,6 +997,22 @@ def discovery_gold_run_plan(
         typer.echo(f"  {item.entry_id}: school_id={item.school_id} site_url={item.site_url}")
 
 
+@app.command("discovery-gold-expected-predictions")
+def discovery_gold_expected_predictions(
+    gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),
+) -> None:
+    """Emit the canonical expected-predictions JSONL fixture for the discovery gold set."""
+    from eidp.scraper.discovery_gold_set import (
+        build_discovery_gold_expected_predictions,
+        load_discovery_gold_entries,
+        render_discovery_gold_predictions,
+    )
+
+    entries = load_discovery_gold_entries(gold_set_dir)
+    predictions = build_discovery_gold_expected_predictions(entries)
+    typer.echo(render_discovery_gold_predictions(predictions), nl=False)
+
+
 @app.command("seed-discovery-gold-sites")
 def seed_discovery_gold_sites(
     gold_set_dir: Path = typer.Option(Path("data/discovery-gold-set"), help="Discovery gold-set directory"),

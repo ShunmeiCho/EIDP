@@ -55,6 +55,11 @@ git so release gates can prove the evaluator itself still catches missing or
 mismatched entries:
 
 ```bash
+uv run eidp discovery-gold-expected-predictions \
+  > data/discovery-gold-set/expected-predictions.jsonl
+```
+
+```bash
 uv run eidp eval-discovery-gold \
   --predictions data/discovery-gold-set/expected-predictions.jsonl \
   --fail-on-regression \

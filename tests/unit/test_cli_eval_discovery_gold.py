@@ -135,6 +135,20 @@ def test_eval_discovery_gold_cli_full_expected_fixture_passes_fail_on_regression
     assert payload["unexpected_predictions"] == 0
 
 
+def test_discovery_gold_expected_predictions_cli_matches_committed_fixture() -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "discovery-gold-expected-predictions",
+            "--gold-set-dir",
+            str(GOLD_SET_DIR),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.output == EXPECTED_PREDICTIONS_PATH.read_text(encoding="utf-8")
+
+
 def test_eval_discovery_gold_cli_full_fixture_fails_on_mismatch(tmp_path: Path) -> None:
     mutated_path = tmp_path / "mutated-predictions.jsonl"
     lines = EXPECTED_PREDICTIONS_PATH.read_text(encoding="utf-8").splitlines()

@@ -78,6 +78,21 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
             assert entry["expected_result"]["fiscal_year"] == entry["target_fiscal_year"]
 
 
+def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:
+    from eidp.scraper.discovery_gold_set import (
+        build_discovery_gold_expected_predictions,
+        load_discovery_gold_entries,
+        render_discovery_gold_predictions,
+    )
+
+    entries = load_discovery_gold_entries(GOLD_SET_DIR)
+    predictions = build_discovery_gold_expected_predictions(entries)
+
+    assert render_discovery_gold_predictions(predictions) == (
+        GOLD_SET_DIR / "expected-predictions.jsonl"
+    ).read_text(encoding="utf-8")
+
+
 def test_discovery_gold_set_semantic_validator_rejects_inconsistent_outcomes() -> None:
     from eidp.scraper.discovery_gold_set import DiscoveryGoldEntry, validate_discovery_gold_entries
 

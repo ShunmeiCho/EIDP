@@ -222,6 +222,23 @@ def build_discovery_gold_run_plan(entries: list[DiscoveryGoldEntry]) -> list[Dis
     return plan
 
 
+def build_discovery_gold_expected_predictions(
+    entries: list[DiscoveryGoldEntry],
+) -> list[DiscoveryGoldPrediction]:
+    """Build the canonical expected-predictions fixture from gold entries."""
+
+    return [
+        DiscoveryGoldPrediction(
+            entry_id=entry.entry_id,
+            outcome=entry.outcome,
+            pdf_url=entry.pdf_url,
+            fiscal_year=entry.fiscal_year,
+            strict_target_year_success=entry.strict_target_year_success,
+        )
+        for entry in entries
+    ]
+
+
 def summarize_discovery_gold_entries(entries: list[DiscoveryGoldEntry]) -> DiscoveryGoldSummary:
     """Summarize the gold set in buckets used by discovery release gates."""
 
@@ -306,6 +323,26 @@ def render_discovery_gold_run_plan(plan: list[DiscoveryGoldRunPlanItem]) -> str:
     """Render bounded run-plan inputs as deterministic JSON."""
 
     return json.dumps([item.to_dict() for item in plan], ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def render_discovery_gold_predictions(predictions: list[DiscoveryGoldPrediction]) -> str:
+    """Render discovery predictions as deterministic JSONL."""
+
+    lines = [
+        json.dumps(
+            {
+                "entry_id": prediction.entry_id,
+                "outcome": prediction.outcome,
+                "pdf_url": prediction.pdf_url,
+                "fiscal_year": prediction.fiscal_year,
+                "strict_target_year_success": prediction.strict_target_year_success,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        for prediction in predictions
+    ]
+    return "\n".join(lines) + ("\n" if lines else "")
 
 
 def load_discovery_gold_predictions(predictions_path: Path) -> list[DiscoveryGoldPrediction]:
