@@ -263,6 +263,12 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/excel/competition_exporter.py": (
             REPO_ROOT / "src" / "eidp" / "excel" / "competition_exporter.py"
         ).read_text(encoding="utf-8"),
+        "src/eidp/reports/coverage.py": (REPO_ROOT / "src" / "eidp" / "reports" / "coverage.py").read_text(
+            encoding="utf-8"
+        ),
+        "src/eidp/reports/gaps.py": (REPO_ROOT / "src" / "eidp" / "reports" / "gaps.py").read_text(
+            encoding="utf-8"
+        ),
         "src/eidp/db/audit.py": (
             "from eidp.db.models import ManualActionLog\n"
             "def log_manual_action(session):\n"
@@ -586,6 +592,31 @@ def test_verify_core_zip_requires_competition_export_target_year_gate(tmp_path: 
     assert any("src/eidp/excel/competition_exporter.py missing required token" in error for error in check.errors)
     assert any("TargetFiscalYearDataMissingError" in error for error in check.errors)
     assert any("settings.target_fiscal_year" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_report_defaults_to_configured_target_year(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/reports/coverage.py"] = (
+        "def compute_coverage(session, school_type='専門学校', fiscal_year=None):\n"
+        "    fy = fiscal_year if fiscal_year is not None else current_fiscal_year()\n"
+    )
+    entries["src/eidp/reports/gaps.py"] = (
+        "def _gaps_pdf(session, school_type, fiscal_year):\n"
+        "    fy = fiscal_year if fiscal_year is not None else current_fiscal_year()\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        "src/eidp/reports/coverage.py" in error and "settings.target_fiscal_year" in error
+        for error in check.errors
+    )
+    assert any(
+        "src/eidp/reports/gaps.py" in error and "settings.target_fiscal_year" in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_requires_manual_action_audit_contract(tmp_path: Path) -> None:

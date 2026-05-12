@@ -1373,7 +1373,7 @@ def discovery_rca_outcome_validate(
 @report_app.command("coverage")
 def report_coverage(
     school_type: str = typer.Option("専門学校", help="Filter by school_type (or 'all')"),
-    fiscal_year: int | None = typer.Option(None, help="Fiscal year (defaults to current FY)"),
+    fiscal_year: int | None = typer.Option(None, help="Fiscal year (defaults to configured target FY)"),
     by_prefecture: bool = typer.Option(False, "--by-prefecture", help="Show per-prefecture breakdown"),
     output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of table"),
 ) -> None:

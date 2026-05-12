@@ -109,6 +109,8 @@ CORE_REQUIRED_EXACT = (
     "src/eidp/review/school_scope.py",
     "src/eidp/excel/exporter.py",
     "src/eidp/excel/competition_exporter.py",
+    "src/eidp/reports/coverage.py",
+    "src/eidp/reports/gaps.py",
     "src/eidp/db/audit.py",
     "src/eidp/db/audit_outbox.py",
     "src/eidp/db/sqlite_bootstrap.py",
@@ -941,6 +943,14 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "run target-year acquisition/review before business export",
             '"target_yearly_rows": export_gap.target_yearly_rows',
             '"excel_ready_schools": export_gap.excel_ready_schools',
+        ),
+        "src/eidp/reports/coverage.py": (
+            "from eidp.config import settings",
+            "settings.target_fiscal_year",
+        ),
+        "src/eidp/reports/gaps.py": (
+            "from eidp.config import settings",
+            "settings.target_fiscal_year",
         ),
         "src/eidp/db/audit.py": (
             "ManualActionLog",

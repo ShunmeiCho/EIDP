@@ -21,18 +21,12 @@ exists" with "the target document was successfully ingested":
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
 
 from sqlalchemy import distinct, func
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import Department, DepartmentYearly, Document, School, SchoolFiscalYearStatus, SchoolSite
-
-
-def current_fiscal_year(now: datetime | None = None) -> int:
-    """Japanese fiscal year — April-March. Apr 2026 → FY2026."""
-    now = now or datetime.now()
-    return now.year if now.month >= 4 else now.year - 1
 
 
 @dataclass(frozen=True)
@@ -128,7 +122,7 @@ def compute_coverage(
     fiscal_year: int | None = None,
 ) -> CoverageReport:
     """Build coverage report grouped by prefecture, plus an aggregate row."""
-    fy = fiscal_year if fiscal_year is not None else current_fiscal_year()
+    fy = fiscal_year if fiscal_year is not None else settings.target_fiscal_year
 
     school_q = session.query(School).filter(School.status == "active")
     if school_type is not None:
