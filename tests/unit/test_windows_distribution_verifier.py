@@ -639,6 +639,24 @@ def test_verify_core_zip_requires_rolling_year_discovery_gold_evidence_contract(
     assert any("_target_fiscal_year_from_evidence_payload" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_discovery_gold_replay_semantics_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/scraper/discovery_gold_set.py"] = (
+        "entries_by_key = {}\n"
+        "(entry.school_id, entry.target_fiscal_year)\n"
+        "_target_fiscal_year_from_evidence_payload\n"
+        "school_id_counts\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("src/eidp/scraper/discovery_gold_set.py missing required token" in error for error in check.errors)
+    assert any("detected_fiscal_year" in error for error in check.errors)
+    assert any("DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_append_only_confidence_ingest(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/pipeline/ingest.py"] = "def ingest_document(): pass\n"

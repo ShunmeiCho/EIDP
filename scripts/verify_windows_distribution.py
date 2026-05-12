@@ -970,6 +970,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "(entry.school_id, entry.target_fiscal_year)",
             "_target_fiscal_year_from_evidence_payload",
             "school_id_counts",
+            'extra.get("detected_fiscal_year")) or _int_or_none(extra.get("target_fiscal_year")',
+            "DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS",
+            '"pre_filtered_non_target_hint"',
+            '"classified_non_target"',
+            '"all_negative_score"',
         ),
         "src/eidp/pipeline/ingest.py": (
             "DepartmentYearly",
