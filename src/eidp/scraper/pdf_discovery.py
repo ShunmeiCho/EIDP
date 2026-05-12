@@ -758,7 +758,6 @@ def _has_formish_candidate_hint(candidate: PdfCandidate) -> bool:
         token in text
         for token in (
             "様式",
-            "form",
             "kakunin",
             "shinsei",
             "申請",

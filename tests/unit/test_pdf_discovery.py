@@ -2241,6 +2241,67 @@ def test_run_pdf_discovery_limits_general_candidate_scan_without_hiding_formish_
         session.close()
 
 
+def test_run_pdf_discovery_does_not_prioritize_generic_english_forms_over_target_wrapper(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Generic English forms should not spend the download budget before target wrappers."""
+
+    session = _session()
+    download_calls: list[str] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        generic_forms = [
+            PdfCandidate(
+                pdf_url=f"https://example.ac.jp/forms/applicationform-r8-{idx}.pdf",
+                page_url="https://example.ac.jp/forms/",
+                anchor_text="Student application form",
+                score=20.0,
+            )
+            for idx in range(MAX_CANDIDATE_DOWNLOAD_ATTEMPTS)
+        ]
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/download/yousiki2/?wpdmdl=4821",
+            page_url="https://example.ac.jp/youshiki/",
+            anchor_text="ダウンロード",
+            pattern_type="wordpress_download_manager",
+            score=0.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(
+                school_id=school_id,
+                candidates=[*generic_forms, target],
+                best=generic_forms[0],
+            )
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int, **_kwargs: object):
+            download_calls.append(candidate.pdf_url)
+            if "wpdmdl" in candidate.pdf_url:
+                candidate.detected_fiscal_year = None
+                candidate.year_evidence = "prefecture_index_current_year"
+                return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+            return None, None, 0, "non_target", "classified_non_target"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        assert download_calls == ["https://example.ac.jp/download/yousiki2/?wpdmdl=4821"]
+        assert stats["downloaded"] == 1
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_sets_target_year_on_strict_downloaded_document(
     monkeypatch, tmp_path: Path
 ) -> None:
