@@ -38,6 +38,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from atomic_write import write_text_atomic  # noqa: E402
 from ship_gate_contract import (  # noqa: E402
     SHIP_GATE_AUTO_YIELD_PCT,
+    SHIP_GATE_OPERATOR_COVERAGE_PCT,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
     ship_gate_status_from_yield,
 )
@@ -388,6 +389,12 @@ def _delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
             reason: gap_after.get(reason, 0) - gap_before.get(reason, 0)
             for reason in gap_reasons
         },
+        "school_fiscal_year_status": {
+            key: after["school_fiscal_year_status"].get(key, 0)
+            - before["school_fiscal_year_status"].get(key, 0)
+            for key in sorted(set(before["school_fiscal_year_status"]) | set(after["school_fiscal_year_status"]))
+            if isinstance(after["school_fiscal_year_status"].get(key, 0), int)
+        },
     }
 
 
@@ -397,26 +404,36 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     coverage_delta = delta.get("coverage") if isinstance(delta, dict) else {}
     acquired = int((coverage_delta or {}).get("schools_with_target_pdf_current_fy") or 0)
     acquired = max(acquired, 0)
+    status_delta = delta.get("school_fiscal_year_status") if isinstance(delta, dict) else {}
+    publication_lag_acquired = max(int((status_delta or {}).get("publication_lag") or 0), 0)
     if target_missing <= 0:
         return {
             "target_pdf_auto_acquired_count": acquired,
             "target_pdf_auto_denominator_count": 0,
             "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
             "target_pdf_auto_yield_pct": None,
+            "operator_reviewable_count": 0,
+            "operator_reviewable_yield_pct": None,
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+            "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
             "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
             "ship_gate_status": ship_gate_status_from_yield(None),
         }
 
     yield_pct = round(acquired / target_missing * 100.0, 1)
+    operator_reviewable = min(acquired + publication_lag_acquired, target_missing)
+    operator_reviewable_pct = round(operator_reviewable / target_missing * 100.0, 1)
     return {
         "target_pdf_auto_acquired_count": acquired,
         "target_pdf_auto_denominator_count": target_missing,
         "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
         "target_pdf_auto_yield_pct": yield_pct,
+        "operator_reviewable_count": operator_reviewable,
+        "operator_reviewable_yield_pct": operator_reviewable_pct,
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+        "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
         "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
-        "ship_gate_status": ship_gate_status_from_yield(yield_pct),
+        "ship_gate_status": ship_gate_status_from_yield(operator_reviewable_pct),
     }
 
 
@@ -787,6 +804,8 @@ def main() -> None:
         "discovery_rca": summary.get("discovery_rca") or {},
         "target_pdf_auto_acquired_count": summary.get("target_pdf_auto_acquired_count"),
         "target_pdf_auto_yield_pct": summary.get("target_pdf_auto_yield_pct"),
+        "operator_reviewable_count": summary.get("operator_reviewable_count"),
+        "operator_reviewable_yield_pct": summary.get("operator_reviewable_yield_pct"),
         "ship_gate_status": summary.get("ship_gate_status"),
         "coverage_delta": summary["delta"]["coverage"],
     }

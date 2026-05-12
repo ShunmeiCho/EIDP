@@ -762,7 +762,10 @@ def test_bootstrap_progress_exposes_target_pdf_yield_gate(tmp_path) -> None:
                     "target_pdf_auto_acquired_count": 1020,
                     "target_pdf_auto_denominator_count": 1700,
                     "target_pdf_auto_yield_pct": 60.0,
+                    "operator_reviewable_count": 1020,
+                    "operator_reviewable_yield_pct": 60.0,
                     "ship_gate_auto_yield_pct": 60.0,
+                    "ship_gate_operator_coverage_pct": 60.0,
                     "ship_gate_status": "pass",
                 },
             }
@@ -774,7 +777,7 @@ def test_bootstrap_progress_exposes_target_pdf_yield_gate(tmp_path) -> None:
 
     assert progress is not None
     assert bootstrap_progress_detail_lines(progress) == [
-        "対象年度PDF自動取得率: 60.0% (1020/1700校) / 出荷目安 60% 達成"
+        "操作員レビュー可能率: 60.0% (1020/1700校) / 出荷目安 60% 達成"
     ]
 
 
@@ -1013,7 +1016,10 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
         "stale_school_count": 1,
         "target_pdf_auto_acquired_count": 6,
         "target_pdf_auto_yield_pct": 60.0,
+        "operator_reviewable_count": 6,
+        "operator_reviewable_yield_pct": 60.0,
         "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_operator_coverage_pct": 60.0,
         "ship_gate_status": "pass",
         "discovery_rca": {
             "batch_plan_path": "data/output/target-year-discovery/run-discovery-rca-batch-plan.json",
@@ -1030,7 +1036,7 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
     assert any("Codex RCAキュー" in caption for caption in captions)
     assert any("候補 7/12" in caption for caption in captions)
     assert any("run-discovery-rca-batch-plan.json" in caption for caption in captions)
-    assert any("自動取得率: 60.0%" in caption for caption in captions)
+    assert any("レビュー可能率: 60.0%" in caption for caption in captions)
     assert any("出荷判定: pass" in caption for caption in captions)
 
 

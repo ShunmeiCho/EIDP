@@ -71,6 +71,7 @@ from download_prefecture_artifacts import (  # noqa: E402
 from ship_gate_contract import (  # noqa: E402
     BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
     SHIP_GATE_AUTO_YIELD_PCT,
+    SHIP_GATE_OPERATOR_COVERAGE_PCT,
     ship_gate_status_from_yield,
 )
 
@@ -115,14 +116,18 @@ def bootstrap_target_pdf_yield_metrics(
     *,
     schools_total: int,
     schools_with_target_pdf_current_fy: int,
+    operator_reviewable_count: int = 0,
 ) -> dict[str, Any]:
     """Return the initial-bootstrap target-FY PDF gate metric.
 
     Weekly rediscovery measures newly acquired PDFs against the missing-school
     batch. The first bootstrap starts from the full active school universe, so
-    the operator-facing gate is the post-bootstrap current target-PDF coverage.
+    the operator-facing gate is the post-bootstrap reviewable coverage:
+    confirmed target PDFs plus latest-public old-year target PDFs that the
+    operator can explicitly treat as publication lag.
     """
     acquired = max(int(schools_with_target_pdf_current_fy), 0)
+    reviewable = max(int(operator_reviewable_count), 0)
     denominator = max(int(schools_total), 0)
     if denominator <= 0:
         return {
@@ -130,20 +135,28 @@ def bootstrap_target_pdf_yield_metrics(
             "target_pdf_auto_denominator_count": 0,
             "target_pdf_auto_denominator_scope": "active_specialty_schools",
             "target_pdf_auto_yield_pct": None,
+            "operator_reviewable_count": 0,
+            "operator_reviewable_yield_pct": None,
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+            "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
             "ship_gate_metric_basis": BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
             "ship_gate_status": ship_gate_status_from_yield(None),
         }
 
     yield_pct = round(acquired / denominator * 100.0, 1)
+    operator_reviewable = min(acquired + reviewable, denominator)
+    operator_reviewable_pct = round(operator_reviewable / denominator * 100.0, 1)
     return {
         "target_pdf_auto_acquired_count": acquired,
         "target_pdf_auto_denominator_count": denominator,
         "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": yield_pct,
+        "operator_reviewable_count": operator_reviewable,
+        "operator_reviewable_yield_pct": operator_reviewable_pct,
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
+        "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
         "ship_gate_metric_basis": BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
-        "ship_gate_status": ship_gate_status_from_yield(yield_pct),
+        "ship_gate_status": ship_gate_status_from_yield(operator_reviewable_pct),
     }
 
 
@@ -814,7 +827,10 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
     """Step 5: rebuild School x target fiscal-year status rows for the UI."""
     from eidp.config import settings
     from eidp.db.session import SessionLocal
-    from eidp.pipeline.school_fiscal_year_status import rebuild_school_fiscal_year_status
+    from eidp.pipeline.school_fiscal_year_status import (
+        rebuild_school_fiscal_year_status,
+        school_fiscal_year_status_counts,
+    )
     from eidp.reports.coverage import compute_coverage
 
     session = SessionLocal()
@@ -826,6 +842,11 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
             discovery_evidence_path=evidence_log,
         )
         coverage = compute_coverage(session, school_type="専門学校", fiscal_year=settings.target_fiscal_year).totals
+        status_counts = school_fiscal_year_status_counts(
+            session,
+            fiscal_year=settings.target_fiscal_year,
+            school_type="専門学校",
+        )
         session.commit()
     except Exception:
         session.rollback()
@@ -839,6 +860,7 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
         **bootstrap_target_pdf_yield_metrics(
             schools_total=coverage.schools_total,
             schools_with_target_pdf_current_fy=coverage.schools_with_target_pdf_current_fy,
+            operator_reviewable_count=int(status_counts.get("publication_lag") or 0),
         ),
     }
     print(f"[step5] {out}")

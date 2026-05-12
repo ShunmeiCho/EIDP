@@ -963,16 +963,20 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
         auto_yield = details.get("target_pdf_auto_yield_pct")
         acquired = _int_or_default(details.get("target_pdf_auto_acquired_count"), 0)
         denominator = _int_or_default(details.get("target_pdf_auto_denominator_count"), 0)
-        gate = details.get("ship_gate_auto_yield_pct")
+        reviewable_yield = details.get("operator_reviewable_yield_pct", auto_yield)
+        reviewable = _int_or_default(details.get("operator_reviewable_count"), acquired)
+        gate = details.get("ship_gate_operator_coverage_pct", details.get("ship_gate_auto_yield_pct"))
         gate_status = str(details.get("ship_gate_status") or "unknown")
-        if isinstance(auto_yield, (int, float)):
-            line = f"対象年度PDF自動取得率: {auto_yield:.1f}% ({acquired}/{denominator}校)"
+        if isinstance(reviewable_yield, (int, float)):
+            line = f"操作員レビュー可能率: {reviewable_yield:.1f}% ({reviewable}/{denominator}校)"
+            if isinstance(auto_yield, (int, float)) and (auto_yield != reviewable_yield or acquired != reviewable):
+                line += f" / 自動取得 {auto_yield:.1f}% ({acquired}/{denominator}校)"
             if isinstance(gate, (int, float)):
                 gate_label = "達成" if gate_status == "pass" else "未達"
                 line += f" / 出荷目安 {gate:.0f}% {gate_label}"
             lines.append(line)
         else:
-            lines.append(f"対象年度PDF自動取得率: 未測定 ({acquired}/{denominator}校)")
+            lines.append(f"操作員レビュー可能率: 未測定 ({reviewable}/{denominator}校)")
     batch_plan_path = str(details.get("discovery_rca_batch_plan_path") or "")
     if batch_plan_path:
         item_count = _int_or_default(details.get("discovery_rca_batch_plan_item_count"), 0)
@@ -1651,12 +1655,19 @@ def _render_weekly_last_run(payload: dict[str, Any]) -> None:
     if auto_yield is not None:
         acquired = _int_or_default(payload.get("target_pdf_auto_acquired_count"), 0)
         target_missing = _int_or_default(payload.get("target_missing_school_count"), 0)
-        gate = payload.get("ship_gate_auto_yield_pct")
+        reviewable_yield = payload.get("operator_reviewable_yield_pct", auto_yield)
+        reviewable = _int_or_default(payload.get("operator_reviewable_count"), acquired)
+        gate = payload.get("ship_gate_operator_coverage_pct", payload.get("ship_gate_auto_yield_pct"))
         gate_status = str(payload.get("ship_gate_status") or "unknown")
         gate_text = f" / gate {gate}%" if gate is not None else ""
+        auto_text = (
+            f" / 自動取得率: {auto_yield}% ({acquired}/{target_missing})"
+            if auto_yield != reviewable_yield or acquired != reviewable
+            else ""
+        )
         st.caption(
-            f"自動取得率: {auto_yield}% ({acquired}/{target_missing})"
-            f"{gate_text} / 出荷判定: {gate_status}"
+            f"レビュー可能率: {reviewable_yield}% ({reviewable}/{target_missing})"
+            f"{auto_text}{gate_text} / 出荷判定: {gate_status}"
         )
     if payload.get("summary_path"):
         st.caption(f"詳細ログ: {payload['summary_path']}")

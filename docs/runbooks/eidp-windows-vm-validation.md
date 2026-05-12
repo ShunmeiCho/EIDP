@@ -144,10 +144,10 @@ C:\Program Files\EIDP
 
 - `logs\bootstrap-pdfs-YYYYMMDD-HHMMSS.json` が作成される
 - `logs\bootstrap-pdfs-YYYYMMDD-HHMMSS.log` が作成される
-- progress JSON に `target_pdf_auto_yield_pct`、`target_pdf_auto_denominator_scope`、
-  `ship_gate_metric_basis`、`ship_gate_status` がある
+- progress JSON に `target_pdf_auto_yield_pct`、`operator_reviewable_yield_pct`、
+  `target_pdf_auto_denominator_scope`、`ship_gate_metric_basis`、`ship_gate_status` がある
 - 初回 bootstrap の `ship_gate_metric_basis` は
-  `post_bootstrap_current_target_fy_coverage` です。分母は対象年度の専門学校全体です。
+  `post_bootstrap_operator_reviewable_coverage` です。分母は対象年度の専門学校全体です。
 - PDF探索で失敗証跡がある場合、`data\output\target-year-discovery\*-discovery-rca-batch-plan.json` が作成される
 - `EIDP-diagnose.bat` の診断ファイルに最新の Codex RCA キューが含まれる
 
@@ -189,9 +189,9 @@ C:\Program Files\EIDP
 - `data\output\last_run.json` が作成される
 - `last_run.json` に `status=success`、`run_id`、`started_at`、`finished_at` がある
 - `last_run.json` に `current_fy`、`selection_mode`、`target_missing_school_count` がある
-- `last_run.json` に `target_pdf_auto_yield_pct`、`target_pdf_auto_denominator_scope`、
-  `ship_gate_metric_basis`、`ship_gate_status` がある
-- 週次処理の `ship_gate_metric_basis` は `weekly_missing_school_acquisition` です。
+- `last_run.json` に `target_pdf_auto_yield_pct`、`operator_reviewable_yield_pct`、
+  `target_pdf_auto_denominator_scope`、`ship_gate_metric_basis`、`ship_gate_status` がある
+- 週次処理の `ship_gate_metric_basis` は `weekly_operator_reviewable_acquisition` です。
   分母は実行前に対象年度PDFが未取得だった学校数です。
 - `selection_mode` は通常 `target_missing`
 - Excel は自動生成されない

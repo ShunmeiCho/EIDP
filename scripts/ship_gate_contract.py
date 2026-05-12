@@ -6,10 +6,11 @@ validator before the project wheel is installed.
 
 from __future__ import annotations
 
-BOOTSTRAP_SHIP_GATE_METRIC_BASIS = "post_bootstrap_current_target_fy_coverage"
+BOOTSTRAP_SHIP_GATE_METRIC_BASIS = "post_bootstrap_operator_reviewable_coverage"
 SHIP_GATE_AUTO_YIELD_PCT = 60.0
+SHIP_GATE_OPERATOR_COVERAGE_PCT = 60.0
 SHIP_GATE_STATUSES = frozenset({"pass", "below_gate", "not_measured"})
-WEEKLY_SHIP_GATE_METRIC_BASIS = "weekly_missing_school_acquisition"
+WEEKLY_SHIP_GATE_METRIC_BASIS = "weekly_operator_reviewable_acquisition"
 
 
 def ship_gate_status_from_yield(yield_pct: float | None) -> str:

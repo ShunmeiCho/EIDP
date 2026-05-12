@@ -384,6 +384,7 @@ def school_fiscal_year_status_counts(
     counts: dict[str, int] = {
         "total": 0,
         "confirmed_target": 0,
+        "publication_lag": 0,
         "stale_or_old": 0,
         "review_or_parse": 0,
         "excel_ready": 0,
@@ -397,6 +398,8 @@ def school_fiscal_year_status_counts(
         counts["total"] += count
         if pdf_status == "confirmed_target":
             counts["confirmed_target"] += count
+        if pdf_status == "publication_lag":
+            counts["publication_lag"] += count
         if pdf_status in {"publication_lag", "rejected_stale"}:
             counts["stale_or_old"] += count
         if extract_status in REVIEW_STATUSES or pdf_status in {

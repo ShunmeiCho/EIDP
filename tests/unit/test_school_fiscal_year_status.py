@@ -139,6 +139,7 @@ def test_rebuild_creates_one_target_year_row_per_active_school() -> None:
         assert counts == {
             "total": 3,
             "confirmed_target": 1,
+            "publication_lag": 0,
             "stale_or_old": 1,
             "review_or_parse": 0,
             "excel_ready": 1,
@@ -566,6 +567,7 @@ def test_rebuild_marks_publication_lag_evidence_as_review_state(tmp_path) -> Non
             fiscal_year=2026,
             school_type="専門学校",
         )
+        assert counts["publication_lag"] == 1
         assert counts["stale_or_old"] == 1
         assert counts["excel_ready"] == 0
     finally:

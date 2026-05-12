@@ -859,7 +859,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "uq_document_file_hash",
             "TARGET_FY_SCHOOL_TYPE",
             "sqlite_target_fy_yield_pct",
-            "bootstrap ship_gate_status pass does not match SQLite target-FY coverage",
+            "sqlite_target_fy_operator_reviewable_yield_pct",
+            "bootstrap ship_gate_status pass does not match SQLite operator-reviewable coverage",
             "weekly summary after.coverage does not match SQLite target-FY coverage",
         ),
         "scripts/run_weekly_target_year_discovery.py": (
@@ -872,6 +873,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "run_pdf_discovery",
             "run_ingestion",
             "write_text_atomic",
+            "operator_reviewable_yield_pct",
+            "ship_gate_operator_coverage_pct",
         ),
         "scripts/bootstrap_pdf_pipeline.py": (
             "Step 2b",
@@ -880,6 +883,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
             "progress_callback",
             "write_text_atomic",
+            "operator_reviewable_yield_pct",
+            "ship_gate_operator_coverage_pct",
         ),
         "scripts/atomic_write.py": (
             "write_text_atomic",
@@ -889,6 +894,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "BOOTSTRAP_SHIP_GATE_METRIC_BASIS",
             "WEEKLY_SHIP_GATE_METRIC_BASIS",
             "SHIP_GATE_AUTO_YIELD_PCT",
+            "SHIP_GATE_OPERATOR_COVERAGE_PCT",
+            "post_bootstrap_operator_reviewable_coverage",
+            "weekly_operator_reviewable_acquisition",
             "ship_gate_status_from_yield",
         ),
         "src/eidp/cli.py": (

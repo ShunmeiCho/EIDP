@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from ship_gate_contract import (
     BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
-    SHIP_GATE_AUTO_YIELD_PCT,
+    SHIP_GATE_OPERATOR_COVERAGE_PCT,
     SHIP_GATE_STATUSES,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
     ship_gate_status_from_yield,
@@ -111,7 +111,10 @@ LAST_RUN_REQUIRED_KEYS = (
     "target_pdf_auto_denominator_count",
     "target_pdf_auto_denominator_scope",
     "target_pdf_auto_yield_pct",
+    "operator_reviewable_count",
+    "operator_reviewable_yield_pct",
     "ship_gate_auto_yield_pct",
+    "ship_gate_operator_coverage_pct",
     "ship_gate_metric_basis",
     "ship_gate_status",
     "discovery_stats",
@@ -371,22 +374,57 @@ def _sqlite_target_fy_coverage(
                 ).fetchone()[0]
                 or 0
             )
+            operator_reviewable_school_count = int(
+                conn.execute(
+                    """
+                    SELECT COUNT(DISTINCT school_id)
+                    FROM (
+                        SELECT school.id AS school_id
+                        FROM school
+                        JOIN document ON document.school_id = school.id
+                        WHERE school.status = 'active'
+                          AND school.school_type = ?
+                          AND document.fiscal_year = ?
+                          AND document.ingest_status = 'ingested'
+                          AND document.pdf_type = 'target'
+                        UNION
+                        SELECT school.id AS school_id
+                        FROM school
+                        JOIN school_fiscal_year_status AS status
+                          ON status.school_id = school.id
+                         AND status.fiscal_year = ?
+                        WHERE school.status = 'active'
+                          AND school.school_type = ?
+                          AND status.pdf_status = 'publication_lag'
+                    )
+                    """,
+                    (TARGET_FY_SCHOOL_TYPE, fiscal_year, fiscal_year, TARGET_FY_SCHOOL_TYPE),
+                ).fetchone()[0]
+                or 0
+            )
     except sqlite3.Error as exc:
         check.fail(f"data/eidp.sqlite3 cannot compute target-FY coverage: {exc}")
         return None
 
     yield_pct = round(target_pdf_school_count / school_count * 100.0, 1) if school_count else None
+    operator_reviewable_yield_pct = (
+        round(operator_reviewable_school_count / school_count * 100.0, 1) if school_count else None
+    )
     coverage = {
         "fiscal_year": fiscal_year,
         "schools_total": school_count,
         "schools_with_target_pdf_current_fy": target_pdf_school_count,
+        "operator_reviewable_school_count": operator_reviewable_school_count,
         "yield_pct": yield_pct,
+        "operator_reviewable_yield_pct": operator_reviewable_yield_pct,
     }
     check.details["sqlite_target_fy"] = fiscal_year
     check.details["sqlite_target_fy_school_type"] = TARGET_FY_SCHOOL_TYPE
     check.details["sqlite_target_fy_specialty_school_count"] = school_count
     check.details["sqlite_target_fy_target_pdf_school_count"] = target_pdf_school_count
     check.details["sqlite_target_fy_yield_pct"] = yield_pct
+    check.details["sqlite_target_fy_operator_reviewable_school_count"] = operator_reviewable_school_count
+    check.details["sqlite_target_fy_operator_reviewable_yield_pct"] = operator_reviewable_yield_pct
     return coverage
 
 
@@ -414,14 +452,20 @@ def _validate_bootstrap_ship_gate_against_sqlite(
             "bootstrap target_pdf_auto_acquired_count does not match SQLite target-FY target PDF count: "
             f"{reported_acquired} != {coverage['schools_with_target_pdf_current_fy']}"
         )
+    reported_reviewable = details.get("operator_reviewable_count")
+    if isinstance(reported_reviewable, int) and reported_reviewable != coverage["operator_reviewable_school_count"]:
+        check.warn(
+            "bootstrap operator_reviewable_count does not match SQLite operator-reviewable count: "
+            f"{reported_reviewable} != {coverage['operator_reviewable_school_count']}"
+        )
 
-    sqlite_status = ship_gate_status_from_yield(coverage["yield_pct"])  # type: ignore[arg-type]
-    check.details["sqlite_target_fy_ship_gate_status"] = sqlite_status
+    sqlite_status = ship_gate_status_from_yield(coverage["operator_reviewable_yield_pct"])  # type: ignore[arg-type]
+    check.details["sqlite_target_fy_operator_reviewable_ship_gate_status"] = sqlite_status
     if require_ship_gate and sqlite_status != "pass":
         check.fail(
-            "bootstrap ship_gate_status pass does not match SQLite target-FY coverage: "
-            f"{coverage['schools_with_target_pdf_current_fy']}/{coverage['schools_total']} "
-            f"({coverage['yield_pct']}%, gate={SHIP_GATE_AUTO_YIELD_PCT}%)"
+            "bootstrap ship_gate_status pass does not match SQLite operator-reviewable coverage: "
+            f"{coverage['operator_reviewable_school_count']}/{coverage['schools_total']} "
+            f"({coverage['operator_reviewable_yield_pct']}%, gate={SHIP_GATE_OPERATOR_COVERAGE_PCT}%)"
         )
 
 
@@ -486,13 +530,24 @@ def _validate_weekly_ship_gate_against_sqlite(
 
     denominator = _coerce_int(last_run.get("target_pdf_auto_denominator_count"))
     acquired = _coerce_int(last_run.get("target_pdf_auto_acquired_count"))
-    if denominator is None or acquired is None:
+    reviewable = _coerce_int(last_run.get("operator_reviewable_count"))
+    if denominator is None or reviewable is None:
         return
-    expected_yield = round(max(acquired, 0) / denominator * 100.0, 1) if denominator > 0 else None
+    summary_delta = summary.get("delta")
+    status_delta = summary_delta.get("school_fiscal_year_status") if isinstance(summary_delta, dict) else None
+    if acquired is not None and isinstance(status_delta, dict):
+        publication_lag_delta = max(_coerce_int(status_delta.get("publication_lag")) or 0, 0)
+        expected_reviewable = min(max(acquired, 0) + publication_lag_delta, denominator)
+        if reviewable != expected_reviewable:
+            check.fail(
+                "last_run.json operator_reviewable_count does not match acquired plus publication_lag delta: "
+                f"{reviewable} != {expected_reviewable}"
+            )
+    expected_yield = round(max(reviewable, 0) / denominator * 100.0, 1) if denominator > 0 else None
     expected_status = ship_gate_status_from_yield(expected_yield)
     if last_run.get("ship_gate_status") != expected_status:
         check.fail(
-            "last_run.json ship_gate_status does not match acquired/denominator counts: "
+            "last_run.json ship_gate_status does not match operator_reviewable/denominator counts: "
             f"{last_run.get('ship_gate_status')} != {expected_status}"
         )
 
@@ -613,7 +668,10 @@ def _validate_bootstrap_progress_payload(
         "target_pdf_auto_denominator_count",
         "target_pdf_auto_denominator_scope",
         "target_pdf_auto_yield_pct",
+        "operator_reviewable_count",
+        "operator_reviewable_yield_pct",
         "ship_gate_auto_yield_pct",
+        "ship_gate_operator_coverage_pct",
         "ship_gate_metric_basis",
         "ship_gate_status",
     )
@@ -621,7 +679,7 @@ def _validate_bootstrap_progress_payload(
         if key not in details:
             check.fail(f"bootstrap progress details missing key: {key}")
 
-    for key in ("target_pdf_auto_acquired_count", "target_pdf_auto_denominator_count"):
+    for key in ("target_pdf_auto_acquired_count", "target_pdf_auto_denominator_count", "operator_reviewable_count"):
         if key in details and not isinstance(details.get(key), int):
             check.fail(f"bootstrap progress details {key} must be an integer")
     target_yield = details.get("target_pdf_auto_yield_pct")
@@ -631,8 +689,16 @@ def _validate_bootstrap_progress_payload(
                 check.fail("bootstrap target_pdf_auto_yield_pct can be null only when not_measured")
         elif not isinstance(target_yield, int | float):
             check.fail("bootstrap progress details target_pdf_auto_yield_pct must be numeric")
-    if "ship_gate_auto_yield_pct" in details and not isinstance(details.get("ship_gate_auto_yield_pct"), int | float):
-        check.fail("bootstrap progress details ship_gate_auto_yield_pct must be numeric")
+    operator_yield = details.get("operator_reviewable_yield_pct")
+    if "operator_reviewable_yield_pct" in details:
+        if operator_yield is None:
+            if details.get("ship_gate_status") != "not_measured":
+                check.fail("bootstrap operator_reviewable_yield_pct can be null only when not_measured")
+        elif not isinstance(operator_yield, int | float):
+            check.fail("bootstrap progress details operator_reviewable_yield_pct must be numeric")
+    for key in ("ship_gate_auto_yield_pct", "ship_gate_operator_coverage_pct"):
+        if key in details and not isinstance(details.get(key), int | float):
+            check.fail(f"bootstrap progress details {key} must be numeric")
     if "ship_gate_status" in details and not isinstance(details.get("ship_gate_status"), str):
         check.fail("bootstrap progress details ship_gate_status must be a string")
     bootstrap_gate_status = details.get("ship_gate_status")
@@ -754,6 +820,7 @@ def validate_install(
                 "new_document_count",
                 "target_pdf_auto_acquired_count",
                 "target_pdf_auto_denominator_count",
+                "operator_reviewable_count",
             ):
                 if key in last_run and not isinstance(last_run.get(key), int):
                     check.fail(f"last_run.json {key} must be an integer")
@@ -764,7 +831,14 @@ def validate_install(
                         check.fail("last_run.json target_pdf_auto_yield_pct can be null only when not_measured")
                 elif not isinstance(target_yield, int | float):
                     check.fail("last_run.json target_pdf_auto_yield_pct must be numeric")
-            for key in ("ship_gate_auto_yield_pct",):
+            operator_yield = last_run.get("operator_reviewable_yield_pct")
+            if "operator_reviewable_yield_pct" in last_run:
+                if operator_yield is None:
+                    if last_run.get("ship_gate_status") != "not_measured":
+                        check.fail("last_run.json operator_reviewable_yield_pct can be null only when not_measured")
+                elif not isinstance(operator_yield, int | float):
+                    check.fail("last_run.json operator_reviewable_yield_pct must be numeric")
+            for key in ("ship_gate_auto_yield_pct", "ship_gate_operator_coverage_pct"):
                 if key in last_run and not isinstance(last_run.get(key), int | float):
                     check.fail(f"last_run.json {key} must be numeric")
             if "ship_gate_status" in last_run and not isinstance(last_run.get("ship_gate_status"), str):

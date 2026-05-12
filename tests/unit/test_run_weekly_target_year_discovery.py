@@ -326,7 +326,10 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
         "delta": {
             "coverage": {
                 "schools_with_target_pdf_current_fy": 6,
-            }
+            },
+            "school_fiscal_year_status": {
+                "publication_lag": 0,
+            },
         },
         "summary_path": str(tmp_path / "summary.json"),
     }
@@ -344,13 +347,35 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     assert payload["target_pdf_auto_denominator_count"] == 10
     assert payload["target_pdf_auto_denominator_scope"] == "target_missing_schools_before_run"
     assert payload["target_pdf_auto_yield_pct"] == 60.0
+    assert payload["operator_reviewable_count"] == 6
+    assert payload["operator_reviewable_yield_pct"] == 60.0
     assert payload["ship_gate_auto_yield_pct"] == 60.0
-    assert payload["ship_gate_metric_basis"] == "weekly_missing_school_acquisition"
+    assert payload["ship_gate_operator_coverage_pct"] == 60.0
+    assert payload["ship_gate_metric_basis"] == "weekly_operator_reviewable_acquisition"
     assert payload["ship_gate_status"] == "pass"
     assert payload["new_document_count"] == 2
     assert payload["new_document_ids"] == [10, 11]
     assert payload["summary_path"].endswith("summary.json")
     assert payload["error"] is None
+
+
+def test_weekly_yield_metrics_count_publication_lag_as_operator_reviewable() -> None:
+    payload = module._weekly_target_pdf_yield_metrics(
+        {
+            "target_missing_school_count": 10,
+            "delta": {
+                "coverage": {"schools_with_target_pdf_current_fy": 2},
+                "school_fiscal_year_status": {"publication_lag": 5},
+            },
+        }
+    )
+
+    assert payload["target_pdf_auto_acquired_count"] == 2
+    assert payload["target_pdf_auto_yield_pct"] == 20.0
+    assert payload["operator_reviewable_count"] == 7
+    assert payload["operator_reviewable_yield_pct"] == 70.0
+    assert payload["ship_gate_metric_basis"] == "weekly_operator_reviewable_acquisition"
+    assert payload["ship_gate_status"] == "pass"
 
 
 def test_write_last_run_uses_atomic_replace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

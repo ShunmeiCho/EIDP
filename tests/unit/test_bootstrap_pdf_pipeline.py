@@ -964,8 +964,28 @@ def test_bootstrap_target_pdf_yield_metrics_marks_gate_status() -> None:
         "target_pdf_auto_denominator_count": 10,
         "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": 60.0,
+        "operator_reviewable_count": 6,
+        "operator_reviewable_yield_pct": 60.0,
         "ship_gate_auto_yield_pct": 60.0,
-        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
+        "ship_gate_operator_coverage_pct": 60.0,
+        "ship_gate_metric_basis": "post_bootstrap_operator_reviewable_coverage",
+        "ship_gate_status": "pass",
+    }
+
+    assert module.bootstrap_target_pdf_yield_metrics(
+        schools_total=10,
+        schools_with_target_pdf_current_fy=3,
+        operator_reviewable_count=4,
+    ) == {
+        "target_pdf_auto_acquired_count": 3,
+        "target_pdf_auto_denominator_count": 10,
+        "target_pdf_auto_denominator_scope": "active_specialty_schools",
+        "target_pdf_auto_yield_pct": 30.0,
+        "operator_reviewable_count": 7,
+        "operator_reviewable_yield_pct": 70.0,
+        "ship_gate_auto_yield_pct": 60.0,
+        "ship_gate_operator_coverage_pct": 60.0,
+        "ship_gate_metric_basis": "post_bootstrap_operator_reviewable_coverage",
         "ship_gate_status": "pass",
     }
 
@@ -977,8 +997,11 @@ def test_bootstrap_target_pdf_yield_metrics_marks_gate_status() -> None:
         "target_pdf_auto_denominator_count": 0,
         "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": None,
+        "operator_reviewable_count": 0,
+        "operator_reviewable_yield_pct": None,
         "ship_gate_auto_yield_pct": 60.0,
-        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
+        "ship_gate_operator_coverage_pct": 60.0,
+        "ship_gate_metric_basis": "post_bootstrap_operator_reviewable_coverage",
         "ship_gate_status": "not_measured",
     }
 
@@ -1076,6 +1099,10 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
             )
         )
 
+    def fake_status_counts(session, *, fiscal_year, school_type):  # noqa: ANN001
+        calls.append({"status_session": session, "school_type": school_type, "fiscal_year": fiscal_year})
+        return {"publication_lag": 2}
+
     import eidp.config as config_mod
     import eidp.db.session as db_session
     import eidp.pipeline.school_fiscal_year_status as status_mod
@@ -1084,6 +1111,7 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
     fake_session = FakeSession()
     monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
     monkeypatch.setattr(status_mod, "rebuild_school_fiscal_year_status", fake_rebuild)
+    monkeypatch.setattr(status_mod, "school_fiscal_year_status_counts", fake_status_counts)
     monkeypatch.setattr(coverage_mod, "compute_coverage", fake_compute_coverage)
     monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
 
@@ -1097,8 +1125,11 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
         "target_pdf_auto_denominator_count": 10,
         "target_pdf_auto_denominator_scope": "active_specialty_schools",
         "target_pdf_auto_yield_pct": 60.0,
+        "operator_reviewable_count": 8,
+        "operator_reviewable_yield_pct": 80.0,
         "ship_gate_auto_yield_pct": 60.0,
-        "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
+        "ship_gate_operator_coverage_pct": 60.0,
+        "ship_gate_metric_basis": "post_bootstrap_operator_reviewable_coverage",
         "ship_gate_status": "pass",
     }
     assert calls[0] == {
@@ -1108,3 +1139,4 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
         "discovery_evidence_path": evidence_log,
     }
     assert calls[1] == {"coverage_session": fake_session, "school_type": "専門学校", "fiscal_year": 2026}
+    assert calls[2] == {"status_session": fake_session, "school_type": "専門学校", "fiscal_year": 2026}

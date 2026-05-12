@@ -115,7 +115,8 @@ def _write_sqlite_schema(path: Path, *, omit: str | None = None) -> None:
                 conn.execute(
                     "CREATE TABLE school_fiscal_year_status ("
                     "school_id INTEGER, "
-                    "fiscal_year INTEGER"
+                    "fiscal_year INTEGER, "
+                    "pdf_status TEXT"
                     ")"
                 )
             else:
@@ -125,7 +126,14 @@ def _write_sqlite_schema(path: Path, *, omit: str | None = None) -> None:
         conn.commit()
 
 
-def _seed_target_fy_coverage(root: Path, *, total: int = 10, acquired: int = 6, fy: int = 2026) -> None:
+def _seed_target_fy_coverage(
+    root: Path,
+    *,
+    total: int = 10,
+    acquired: int = 6,
+    publication_lag: int = 0,
+    fy: int = 2026,
+) -> None:
     db_path = root / "data" / "eidp.sqlite3"
     with sqlite3.connect(db_path) as conn:
         conn.execute("DELETE FROM document")
@@ -136,9 +144,12 @@ def _seed_target_fy_coverage(root: Path, *, total: int = 10, acquired: int = 6, 
                 "INSERT INTO school (id, status, school_type) VALUES (?, 'active', '専門学校')",
                 (school_id,),
             )
+            pdf_status = "confirmed_target" if school_id <= acquired else None
+            if acquired < school_id <= acquired + publication_lag:
+                pdf_status = "publication_lag"
             conn.execute(
-                "INSERT INTO school_fiscal_year_status (school_id, fiscal_year) VALUES (?, ?)",
-                (school_id, fy),
+                "INSERT INTO school_fiscal_year_status (school_id, fiscal_year, pdf_status) VALUES (?, ?, ?)",
+                (school_id, fy, pdf_status),
             )
         for school_id in range(1, acquired + 1):
             conn.execute(
@@ -163,7 +174,10 @@ def _weekly_artifacts(root: Path) -> None:
                 "target_missing_school_count": 10,
                 "before": {"coverage": {"schools_total": 10, "schools_with_target_pdf_current_fy": 0}},
                 "after": {"coverage": {"schools_total": 10, "schools_with_target_pdf_current_fy": 6}},
-                "delta": {"coverage": {"schools_with_target_pdf_current_fy": 6}},
+                "delta": {
+                    "coverage": {"schools_with_target_pdf_current_fy": 6},
+                    "school_fiscal_year_status": {"publication_lag": 0},
+                },
             }
         ),
     )
@@ -184,8 +198,11 @@ def _weekly_artifacts(root: Path) -> None:
                 "target_pdf_auto_denominator_count": 10,
                 "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
                 "target_pdf_auto_yield_pct": 60.0,
+                "operator_reviewable_count": 6,
+                "operator_reviewable_yield_pct": 60.0,
                 "ship_gate_auto_yield_pct": 60.0,
-                "ship_gate_metric_basis": "weekly_missing_school_acquisition",
+                "ship_gate_operator_coverage_pct": 60.0,
+                "ship_gate_metric_basis": "weekly_operator_reviewable_acquisition",
                 "ship_gate_status": "pass",
                 "discovery_stats": {"downloaded": 2},
                 "ingest_stats": {"processed": 2},
@@ -213,8 +230,11 @@ def _bootstrap_artifacts(root: Path) -> None:
                     "target_pdf_auto_denominator_count": 10,
                     "target_pdf_auto_denominator_scope": "active_specialty_schools",
                     "target_pdf_auto_yield_pct": 60.0,
+                    "operator_reviewable_count": 6,
+                    "operator_reviewable_yield_pct": 60.0,
                     "ship_gate_auto_yield_pct": 60.0,
-                    "ship_gate_metric_basis": "post_bootstrap_current_target_fy_coverage",
+                    "ship_gate_operator_coverage_pct": 60.0,
+                    "ship_gate_metric_basis": "post_bootstrap_operator_reviewable_coverage",
                     "ship_gate_status": "pass",
                     "current_fy": 2026,
                 },
@@ -490,6 +510,8 @@ def test_validate_after_weekly_accepts_lock_busy_last_run(tmp_path: Path) -> Non
             "target_pdf_auto_acquired_count": 0,
             "target_pdf_auto_denominator_count": 0,
             "target_pdf_auto_yield_pct": None,
+            "operator_reviewable_count": 0,
+            "operator_reviewable_yield_pct": None,
             "ship_gate_status": "not_measured",
             "error": "LockBusyError: data lock is held by ui",
         }
@@ -511,6 +533,8 @@ def test_validate_after_weekly_accepts_not_measured_yield(tmp_path: Path) -> Non
     payload["target_pdf_auto_acquired_count"] = 0
     payload["target_pdf_auto_denominator_count"] = 0
     payload["target_pdf_auto_yield_pct"] = None
+    payload["operator_reviewable_count"] = 0
+    payload["operator_reviewable_yield_pct"] = None
     payload["ship_gate_status"] = "not_measured"
     _write(root, "data/output/last_run.json", json.dumps(payload))
 
@@ -639,9 +663,34 @@ def test_validate_after_bootstrap_release_gate_rejects_pass_log_when_sqlite_cove
     assert check.details["sqlite_target_fy_specialty_school_count"] == 10
     assert check.details["sqlite_target_fy_target_pdf_school_count"] == 5
     assert any(
-        "bootstrap ship_gate_status pass does not match SQLite target-FY coverage" in error
+        "bootstrap ship_gate_status pass does not match SQLite operator-reviewable coverage" in error
         for error in check.errors
     )
+
+
+def test_validate_after_bootstrap_release_gate_accepts_publication_lag_coverage(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _bootstrap_artifacts(root)
+    _seed_target_fy_coverage(root, total=10, acquired=3, publication_lag=4, fy=2026)
+    payload = json.loads((root / "logs" / "bootstrap-pdfs-20260505-010203.json").read_text(encoding="utf-8"))
+    payload["details"].update(
+        {
+            "target_pdf_auto_acquired_count": 3,
+            "target_pdf_auto_yield_pct": 30.0,
+            "operator_reviewable_count": 7,
+            "operator_reviewable_yield_pct": 70.0,
+            "ship_gate_status": "pass",
+        }
+    )
+    _write(root, "logs/bootstrap-pdfs-20260505-010203.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_bootstrap=True, require_ship_gate=True)
+
+    assert check.ok, check.errors
+    assert check.details["sqlite_target_fy_target_pdf_school_count"] == 3
+    assert check.details["sqlite_target_fy_operator_reviewable_school_count"] == 7
+    assert check.details["sqlite_target_fy_operator_reviewable_yield_pct"] == 70.0
 
 
 def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
@@ -817,6 +866,8 @@ def test_validate_after_weekly_release_gate_rejects_below_gate(tmp_path: Path) -
     payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
     payload["target_pdf_auto_acquired_count"] = 3
     payload["target_pdf_auto_yield_pct"] = 42.9
+    payload["operator_reviewable_count"] = 3
+    payload["operator_reviewable_yield_pct"] = 42.9
     payload["ship_gate_status"] = "below_gate"
     _write(root, "data/output/last_run.json", json.dumps(payload))
 
@@ -845,6 +896,36 @@ def test_validate_after_weekly_release_gate_rejects_pass_log_when_summary_after_
         "weekly summary after.coverage does not match SQLite target-FY coverage" in error
         for error in check.errors
     )
+
+
+def test_validate_after_weekly_release_gate_accepts_publication_lag_delta(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    _seed_target_fy_coverage(root, total=10, acquired=3, publication_lag=4, fy=2026)
+    summary_path = root / "data/output/target-year-discovery/20260505_010203-summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["after"]["coverage"]["schools_with_target_pdf_current_fy"] = 3
+    summary["delta"] = {
+        "coverage": {"schools_with_target_pdf_current_fy": 3},
+        "school_fiscal_year_status": {"publication_lag": 4},
+    }
+    _write(root, "data/output/target-year-discovery/20260505_010203-summary.json", json.dumps(summary))
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload.update(
+        {
+            "target_pdf_auto_acquired_count": 3,
+            "target_pdf_auto_yield_pct": 30.0,
+            "operator_reviewable_count": 7,
+            "operator_reviewable_yield_pct": 70.0,
+            "ship_gate_status": "pass",
+        }
+    )
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_weekly=True, require_ship_gate=True)
+
+    assert check.ok, check.errors
 
 
 def test_validate_requires_release_gate_source_when_ship_gate_required(tmp_path: Path) -> None:
