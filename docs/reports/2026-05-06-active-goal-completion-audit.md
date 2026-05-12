@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `fb181bc680c98e3b6869ef661baee88b8f086da9` (`eidp-windows-v260.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `34c77bd309e3fd6b39be1b0eac63dd85cf395684` (`eidp-windows-v261.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -702,6 +702,21 @@ and the latest alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v260 is still pending and must not be
+inferred from the Mac verifier.
+
+v261 (`34c77bd`) adds the package-level guard for the v260 site-fetch priority
+rule. The Windows distribution verifier now requires packaged
+`discovery_gold_set.py` to keep `site_fetch_error` at priority `2`, above
+`no_target_candidate_found` and below accepted/publication-lag outcomes. The
+focused verifier test now fails a ZIP fixture that has the rolling-year and
+non-target replay tokens but omits that priority contract. `dist/eidp-windows-v261.zip`
+and the latest alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`2142394f9e455f61d7c16b744a3b69372a6cdea5826b8d85ebffd4f1ffedc695`,
+`git_commit=34c77bd309e3fd6b39be1b0eac63dd85cf395684`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v261 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
