@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `871de0b4a2b505b7be040adb05d8f720b9fda147` (`eidp-windows-v271.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `1292e990290e719dc2cada5b1d4440c89a4222ef` (`eidp-windows-v272.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -878,6 +878,24 @@ alias `dist/eidp-windows.zip` both passed
 `entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
 `20` discovery gold expected predictions, and `47` downloadable supported
 prefecture seeds. Windows E2E for v271 is still pending and must not be
+inferred from the Mac verifier.
+
+v272 (`1292e99`) aligns report and gap defaults with the configured rolling
+target fiscal year. `compute_coverage` and PDF gap reporting now use
+`settings.target_fiscal_year` when no explicit `--fiscal-year` is provided,
+instead of a separate system-date fiscal-year calculation. This prevents
+ship-gate diagnostics, coverage reports, and operator gap views from drifting
+when the operator has pinned the next target year before the calendar fiscal
+year rolls over. The Windows distribution verifier now requires the packaged
+`reports/coverage.py` and `reports/gaps.py` target-year default contract.
+Verification: `tests/unit` passed with `1253 passed, 5 warnings`, and
+`dist/eidp-windows-v272.zip` plus the latest alias `dist/eidp-windows.zip` both
+passed `scripts/verify_windows_distribution.py --json` with SHA256
+`ad68022b25156a82b35862905ef0481cf56f9a5e7963d94d8eb8525027fed467`,
+`git_commit=1292e990290e719dc2cada5b1d4440c89a4222ef`, `git_dirty=false`,
+`entry_count=3031`, `wheel_count=78`, `20` discovery gold-set entries,
+`20` discovery gold expected predictions, and `47` downloadable supported
+prefecture seeds. Windows E2E for v272 is still pending and must not be
 inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
