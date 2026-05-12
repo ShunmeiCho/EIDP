@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "sanko-omiya-child-publication-lag-2026",
+  "school": {
+    "school_id": 53,
+    "school_name": "大宮こども専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "学校法人三幸学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve the Sanko disclosure-page publication-lag case where the visible confirmation form is still the latest public old-year PDF.",
+    "search_queries": [],
+    "steps": [
+      "Start from the Saitama official-index URL registered as https://www.sanko.ac.jp/disclosure/omiya-child/.",
+      "Inspect the disclosure page's 修学支援新制度 / 確認申請書 area before SERP fallback.",
+      "Observe that the latest target-form candidate is yoshiki2025.pdf with anchor text 2025年度.",
+      "Reject the PDF from strict FY2026 success as fiscal_year_mismatch:2025.",
+      "Keep the school in publication-lag/operator-reviewable status instead of counting it as crawler failure."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.sanko.ac.jp/omiya-child/",
+    "disclosure_url": "https://www.sanko.ac.jp/disclosure/omiya-child/",
+    "pdf_url": "https://www.sanko.ac.jp/disclosure/omiya-child/docs/yoshiki2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "sanko_disclosure",
+    "reusable_rules": [
+      "Treat 2025年度/yoshiki2025.pdf as latest-public target-form evidence, not as FY2026 success.",
+      "Use official-index SchoolSite URLs first and preserve the rejection evidence for operator publication-lag review.",
+      "Do not let adjacent disclosure PDFs such as director compensation, school evaluation, syllabus, or security-policy files enter the target parser."
+    ],
+    "anti_patterns": [
+      "Do not infer FY2026 from the current system target year when the actual link says 2025年度.",
+      "Do not accept stale forms just to improve the strict auto-yield metric.",
+      "Do not treat non-target disclosure PDFs on the same Sanko page as confirmation-form candidates."
+    ]
+  },
+  "evidence": {
+    "source_kind": "windows_v320_jsonl",
+    "source_paths": [
+      "_temp/win-v320-evidence/bootstrap-20260512_214530-discovery-rca-batch-plan.json",
+      "_temp/win-v320-evidence/bootstrap-pdfs-20260512-214335.log"
+    ],
+    "notes": "Windows v320 bounded Saitama bootstrap crawled this official-index disclosure page, found yoshiki2025.pdf, and rejected it as fiscal_year_mismatch:2025 for target FY2026."
+  }
+}

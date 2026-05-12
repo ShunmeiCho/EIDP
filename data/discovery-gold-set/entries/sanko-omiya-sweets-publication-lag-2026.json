@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "sanko-omiya-sweets-publication-lag-2026",
+  "school": {
+    "school_id": 72,
+    "school_name": "大宮スイーツ＆カフェ専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "学校法人三幸学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve the Sanko sweets disclosure-page case where the latest public confirmation form is still FY2025.",
+    "search_queries": [],
+    "steps": [
+      "Start from the Saitama official-index URL registered as https://www.sanko.ac.jp/disclosure/omiya-sweets/.",
+      "Inspect the disclosure page's visible yearly confirmation-form links.",
+      "Observe that the latest visible target-form candidate is yoshiki2025.pdf with anchor text 2025年度.",
+      "Reject the PDF from strict FY2026 success as fiscal_year_mismatch:2025.",
+      "Keep prior yoshiki2020-2024 files as old-year history, not as current target-FY success."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.sanko.ac.jp/omiya-sweets/",
+    "disclosure_url": "https://www.sanko.ac.jp/disclosure/omiya-sweets/",
+    "pdf_url": "https://www.sanko.ac.jp/disclosure/omiya-sweets/docs/yoshiki2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "sanko_disclosure",
+    "reusable_rules": [
+      "Treat 2025年度/yoshiki2025.pdf as latest-public target-form evidence, not as FY2026 success.",
+      "Keep the publication-lag queue visible so the operator can distinguish public-site lag from crawler failure.",
+      "Preserve old-year mismatch evidence for the school because it explains why no FY2026 document row exists."
+    ],
+    "anti_patterns": [
+      "Do not loosen strict mode to accept stale Sanko forms.",
+      "Do not infer the target fiscal year from the current run configuration alone.",
+      "Do not send adjacent school-evaluation, course-list, syllabus, or director-compensation PDFs to the target parser."
+    ]
+  },
+  "evidence": {
+    "source_kind": "windows_v320_jsonl",
+    "source_paths": [
+      "_temp/win-v320-evidence/bootstrap-20260512_214530-discovery-rca-batch-plan.json",
+      "_temp/win-v320-evidence/bootstrap-pdfs-20260512-214335.log"
+    ],
+    "notes": "Windows v320 bounded Saitama bootstrap crawled this official-index disclosure page, found yoshiki2025.pdf, and rejected it as fiscal_year_mismatch:2025 for target FY2026."
+  }
+}

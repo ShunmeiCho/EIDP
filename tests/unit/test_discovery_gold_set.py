@@ -72,6 +72,7 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
         assert entry["automation_pattern"]["reusable_rules"]
         assert entry["evidence"]["source_kind"] in {
             "windows_v136_jsonl",
+            "windows_v320_jsonl",
             "manual_web",
             "operator_review",
             "saitama_rca_jsonl",

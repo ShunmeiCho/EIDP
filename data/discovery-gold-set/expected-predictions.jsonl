@@ -14,6 +14,8 @@
 {"entry_id": "saitama-it-web-accepted-2026", "fiscal_year": 2025, "outcome": "publication_lag_latest_public", "pdf_url": "https://www.siw.ac.jp/wp-content/themes/bsc/dist/images/information/shugakushien_shinsei2025-1-2.pdf", "strict_target_year_success": false}
 {"entry_id": "saitama-kango-upload-year-trusted-2026", "fiscal_year": 2026, "outcome": "accepted_target_pdf", "pdf_url": "http://www.saitama-kango.jp/wp/wp-content/uploads/2025/06/申請書_0602_資料A.pdf", "strict_target_year_success": true}
 {"entry_id": "saitama-kitasato-nursing-site-fetch-error-2026", "fiscal_year": null, "outcome": "site_fetch_error", "pdf_url": "", "strict_target_year_success": false}
+{"entry_id": "sanko-omiya-child-publication-lag-2026", "fiscal_year": 2025, "outcome": "publication_lag_latest_public", "pdf_url": "https://www.sanko.ac.jp/disclosure/omiya-child/docs/yoshiki2025.pdf", "strict_target_year_success": false}
+{"entry_id": "sanko-omiya-sweets-publication-lag-2026", "fiscal_year": 2025, "outcome": "publication_lag_latest_public", "pdf_url": "https://www.sanko.ac.jp/disclosure/omiya-sweets/docs/yoshiki2025.pdf", "strict_target_year_success": false}
 {"entry_id": "sanko-osaka-med-2025", "fiscal_year": 2025, "outcome": "accepted_target_pdf", "pdf_url": "https://www.sanko.ac.jp/disclosure/osaka-med/docs/yoshiki2025.pdf", "strict_target_year_success": true}
 {"entry_id": "sanko-yokohama-sweets-publication-lag-2026", "fiscal_year": 2025, "outcome": "publication_lag_latest_public", "pdf_url": "https://www.sanko.ac.jp/disclosure/yokohama-sweets/docs/yoshiki2025.pdf", "strict_target_year_success": false}
 {"entry_id": "tokyo-mode-gakuen-no-candidates-2026", "fiscal_year": null, "outcome": "no_target_candidate_found", "pdf_url": "", "strict_target_year_success": false}
