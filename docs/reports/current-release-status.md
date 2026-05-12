@@ -2,10 +2,10 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v328.zip`
-Package commit: `336804720519271885bf2cd6144ecd8814d84a5c`
-Package SHA256: `6dd2f253e75ceff289d72aaf604ef222db012a2fc22b511f0a18fed8506c438d`
-Latest Windows-core-validated package: `dist/eidp-windows-v328.zip`
+Current Mac-verifier-clean package: `dist/eidp-windows-v329.zip`
+Package commit: `3e1afc532f99b52927854d792259abdb13282fea`
+Package SHA256: `e923d02506dd2b9a3abb078a152421381573544ab3f1de9c0b12dffc02d6b1b2`
+Latest Windows-core-validated package: `dist/eidp-windows-v329.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v328.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v328.zip`
 
@@ -13,12 +13,14 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v328.zip`
 
 Status: **NOT COMPLETE**
 
-The current source/ZIP snapshot is v328 and passes the default macOS package
-verifier. v328 keeps the v326 strict-mode fix for opaque WordPress Download
+The current source/ZIP snapshot is v329 and passes the default macOS package
+verifier. v329 keeps the v326 strict-mode fix for opaque WordPress Download
 Manager wrappers, improves RCA packet evidence sampling so candidate-budget
 noise does not hide fiscal-year mismatch / missing-year evidence during manual
 investigation, and rejects candidates whose anchor/URL explicitly names a
-different school before download. v328 also extracts and passes the core
+different school before download. v329 also adds actionable RCA counts so
+already-explained budget/cross-school noise does not inflate manual workload
+estimates. v329 extracts and passes the core
 Windows install validator on `ssh win`. The setup, SQLite, Task Scheduler, and
 bounded Windows bootstrap pipeline are reproducible on `ssh win` for v328. The
 product goal is still not complete:
@@ -42,21 +44,21 @@ line.
 
 ## Current Non-Windows Evidence
 
-Commands run for v328 source/package:
+Commands run for v329 source/package:
 
-- `uv run pytest tests/unit -q` -> `1333 passed, 5 warnings`
-- `uv run pytest tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_discovery_evidence_summary.py -q` -> `33 passed`
+- `uv run pytest tests/unit -q` -> `1334 passed, 5 warnings`
+- `uv run pytest tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_discovery_evidence_summary.py -q` -> `34 passed`
 - `uv run pytest tests/unit/test_pdf_discovery.py -q` -> `145 passed, 5 warnings`
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `22/22 exact`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v328.zip` -> `OK core`
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v328.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v329.zip` -> `OK core`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v329.zip --require-demonstrated-discovery-patterns` -> expected `FAIL core` because `data_attribute`, `embed`, `form_action`, `input_control`, `meta_refresh`, `onclick`, and `select_option` have no discovery gold-set demonstrations yet
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed`
 - One-off strict download check for `https://i-heiseigakuen.ac.jp/download/%e6%a7%98%e5%bc%8f%ef%bc%92/?wpdmdl=4821&refresh=6a0340a79aaeb1778598055` with anchor `ダウンロード` -> `(None, None, 0, 'target', 'target_fiscal_year_not_detected')`
 - Rebuilt the v326 Windows Saitama RCA batch plan locally with v327 code and
   verified publication-lag packets now surface `fiscal_year_mismatch:*` rows
   before `candidate_budget_dropped` rows.
 
-v328 verifier exposes the current demonstration gap:
+v329 verifier exposes the current demonstration gap:
 
 - Discovery gold-set entries: `22`
 - Outcome distribution: `accepted_target_pdf=6`, `needs_operator_review=6`,
@@ -68,15 +70,15 @@ v328 verifier exposes the current demonstration gap:
 
 ## Current Windows Backend Evidence
 
-Commands and observations from `ssh win` for v328 package-level validation:
+Commands and observations from `ssh win` for v329 package-level validation:
 
-- Uploaded `dist/eidp-windows-v328.zip` to
-  `C:\Users\cyo20\eidp-windows-v328.zip`.
+- Uploaded `dist/eidp-windows-v329.zip` to
+  `C:\Users\cyo20\eidp-windows-v329.zip`.
 - Windows `Get-FileHash -Algorithm SHA256` ->
-  `6DD2F253E75CEFF289D72AAF604EF222DB012A2FC22B511F0A18FED8506C438D`.
-- Extracted to `C:\Users\cyo20\EIDP-v328-3368047`;
+  `E923D02506DD2B9A3ABB078A152421381573544AB3F1DE9C0B12DFFC02D6B1B2`.
+- Extracted to `C:\Users\cyo20\EIDP-v329-3e1afc5`;
   `runtime\python\python.exe scripts\validate_windows_install.py .` ->
-  `OK install`, build commit `336804720519271885bf2cd6144ecd8814d84a5c`,
+  `OK install`, build commit `3e1afc532f99b52927854d792259abdb13282fea`,
   `build_dirty=false`, `wheel_count=78`.
 
 Commands and observations from `ssh win` for v328 setup/bootstrap:
@@ -117,6 +119,10 @@ Commands and observations from `ssh win` for v328 setup/bootstrap:
 - Evidence review confirmed stale-label rejection: the prior v324 false
   acceptance `R7確認申請書類 様式第2号` is now recorded as
   `fiscal_year_mismatch:2025`.
+- Rebuilding the v328 Saitama RCA batch plan locally with v329 code preserved
+  total evidence counts while adding actionable counts; for example, the three
+  O-Hara publication-lag packets remain `candidate_count=1992` but now report
+  only `actionable_candidate_count=86-93`.
 
 ## Next Required Proof
 
