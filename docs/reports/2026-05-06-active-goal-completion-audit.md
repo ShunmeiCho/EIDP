@@ -3,7 +3,7 @@
 Date: 2026-05-07
 Latest update: 2026-05-12
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `94251ebd61b9065b97ca219255439356c198d3ab` (`eidp-windows-v253.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `30787551330c35916ba93629507405c1aa1c6de0` (`eidp-windows-v254.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
 Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
 
@@ -585,6 +585,21 @@ alias `dist/eidp-windows.zip` both passed
 `git_commit=94251ebd61b9065b97ca219255439356c198d3ab`, `git_dirty=false`,
 `entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
 `47` downloadable supported prefecture seeds. Windows E2E for v253 is still
+pending and must not be inferred from the Mac verifier.
+
+v254 (`3078755`) promotes discovery gold-set consistency from bucket-counting
+to semantic validation. The committed schema now allows `pdf_type=image_only`
+for review-bound image PDFs, matching existing gold-set evidence. The source
+validator and Windows ZIP verifier now reject inconsistent demonstrations, for
+example `accepted_target_pdf` entries without `strict_target_year_success=true`,
+publication-lag entries that are not older than the target FY, or no-candidate
+/ site-fetch-error entries that still carry a PDF URL. `dist/eidp-windows-v254.zip`
+and the latest alias `dist/eidp-windows.zip` both passed
+`scripts/verify_windows_distribution.py --json` with SHA256
+`96879550ff4185400e6a71afad4fa42be1f31687dd5021dd29a9d7db09c580d5`,
+`git_commit=30787551330c35916ba93629507405c1aa1c6de0`, `git_dirty=false`,
+`entry_count=3030`, `wheel_count=78`, `20` discovery gold-set entries, and
+`47` downloadable supported prefecture seeds. Windows E2E for v254 is still
 pending and must not be inferred from the Mac verifier.
 
 ## 2026-05-11 Current-Code Saitama Official-Index RCA
