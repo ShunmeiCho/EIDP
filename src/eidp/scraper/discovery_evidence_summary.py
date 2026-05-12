@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+import structlog
+
+log = structlog.get_logger()
+
 
 @dataclass(frozen=True)
 class EvidenceScopeSite:
@@ -75,10 +79,19 @@ def load_pdf_discovery_evidence(evidence_path: Path) -> list[dict[str, Any]]:
     """Load append-only ``discover-pdfs`` evidence JSONL."""
 
     rows: list[dict[str, Any]] = []
-    for line in evidence_path.read_text(encoding="utf-8").splitlines():
+    for line_number, line in enumerate(evidence_path.read_text(encoding="utf-8").splitlines(), start=1):
         if not line.strip():
             continue
-        payload = json.loads(line)
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            log.warning(
+                "pdf_discovery_evidence_jsonl_skipped",
+                path=str(evidence_path),
+                line_number=line_number,
+                error=str(exc),
+            )
+            continue
         if isinstance(payload, dict):
             rows.append(payload)
     return rows

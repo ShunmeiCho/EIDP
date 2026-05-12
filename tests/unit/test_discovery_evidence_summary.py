@@ -45,6 +45,24 @@ def test_summarize_pdf_discovery_evidence_buckets_school_outcomes(tmp_path: Path
     assert summary.pdf_type_counts["target"] == 2
 
 
+def test_load_pdf_discovery_evidence_skips_truncated_jsonl_lines(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    evidence_path.write_text(
+        "\n".join(
+            [
+                json.dumps({"school_id": 1, "reason": "accepted_downloaded"}, ensure_ascii=False),
+                '{"school_id": 2, "reason": "truncated"',
+                json.dumps({"school_id": 3, "reason": "no_candidates_found"}, ensure_ascii=False),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rows = load_pdf_discovery_evidence(evidence_path)
+
+    assert [row["school_id"] for row in rows] == [1, 3]
+
+
 def test_summarize_pdf_discovery_evidence_is_stable_for_equal_count_ties(tmp_path: Path) -> None:
     rows = [
         {

@@ -1048,6 +1048,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "top_reasons=_sorted_counter_items",
             "def _sorted_counter_items",
             "key=lambda item: (-item[1], item[0])",
+            "json.JSONDecodeError",
+            "line_number",
         ),
         "src/eidp/pdf/extractor.py": (
             "def _extract_fiscal_year",

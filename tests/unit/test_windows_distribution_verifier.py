@@ -792,6 +792,8 @@ def test_verify_core_zip_requires_deterministic_discovery_evidence_summary(tmp_p
     )
     assert any("_sorted_counter_items" in error for error in check.errors)
     assert any("key=lambda item: (-item[1], item[0])" in error for error in check.errors)
+    assert any("json.JSONDecodeError" in error for error in check.errors)
+    assert any("line_number" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_discovery_gold_replay_semantics_contract(tmp_path: Path) -> None:
