@@ -375,6 +375,7 @@ PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url", "data-f
 PDF_DATA_ATTRIBUTE_TAG_PATTERN = r"(?:a|button|span|div)"
 PDF_SCRIPT_URL_PATTERN = re.compile(r"([\"'])([^\"']*?\.pdf(?:[?#][^\"']*)?)\1", re.IGNORECASE)
 PDF_OPTION_VALUE_PATTERN = r"<option\s([^>]*)>(.*?)</option\s*>"
+PDF_FORM_ACTION_PATTERN = r"<form\s([^>]*)>(.*?)</form\s*>"
 PDF_INPUT_TAG_PATTERN = r"<input\s([^>]*)>"
 
 
@@ -1305,6 +1306,20 @@ def _pdf_urls_from_script_attribute(value: str, base_url: str) -> list[str]:
     return urls
 
 
+def _pdf_form_control_text(fragment: str) -> str:
+    """Return visible form text plus labels from void controls."""
+
+    parts = [_html_text(fragment)]
+    for match in re.finditer(r"<(?:input|button)\s([^>]*)>", fragment, re.IGNORECASE | re.DOTALL):
+        attrs = match.group(1)
+        for attr_name in ("value", "aria-label", "title"):
+            value = _anchor_attr(attrs, attr_name)
+            if value:
+                parts.append(value)
+                break
+    return " ".join(dict.fromkeys(part for part in parts if part))
+
+
 def _is_wordpress_download_manager_url(url: str, base_url: str) -> bool:
     """Return whether ``url`` is a same-origin WordPress Download Manager PDF wrapper."""
 
@@ -1372,7 +1387,32 @@ def _extract_pdf_links(
             target_fiscal_year=target_fiscal_year,
         )
 
-    # Pattern 1b: JavaScript/download-button elements with direct PDF data attributes.
+    # Pattern 1b: form submit buttons whose action points directly at a PDF.
+    for m in re.finditer(
+        PDF_FORM_ACTION_PATTERN,
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        href = _anchor_attr(m.group(1), "action")
+        if not href or ".pdf" not in unquote(href).lower():
+            continue
+        url = urljoin(base_url, href)
+        pattern = "cache_busted" if "?" in href else "direct"
+        if "/wp-content/" in url:
+            pattern = "wordpress"
+        _append_or_upgrade_candidate(
+            candidates,
+            candidate_index_by_key,
+            PdfCandidate(
+                pdf_url=url,
+                page_url=base_url,
+                anchor_text=_pdf_element_context_text(html, m, _pdf_form_control_text(m.group(2))),
+                pattern_type=pattern,
+            ),
+            target_fiscal_year=target_fiscal_year,
+        )
+
+    # Pattern 1c: JavaScript/download-button elements with direct PDF data attributes.
     for m in re.finditer(
         rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
         html, re.IGNORECASE | re.DOTALL,
@@ -1399,7 +1439,7 @@ def _extract_pdf_links(
             )
             break
 
-    # Pattern 1c: static click handlers such as window.open('/docs/form.pdf').
+    # Pattern 1d: static click handlers such as window.open('/docs/form.pdf').
     for m in re.finditer(
         rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
         html,
@@ -1424,7 +1464,7 @@ def _extract_pdf_links(
                 target_fiscal_year=target_fiscal_year,
             )
 
-    # Pattern 1d: void input controls with direct PDF data attributes or click handlers.
+    # Pattern 1e: void input controls with direct PDF data attributes or click handlers.
     for m in re.finditer(PDF_INPUT_TAG_PATTERN, html, re.IGNORECASE | re.DOTALL):
         attrs = m.group(1)
         element_text = (
