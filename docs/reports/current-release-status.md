@@ -7,6 +7,7 @@ Package commit: `75732b057a115afcebe35f9a40b831fac0ffa6f6`
 Package SHA256: `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v384.zip`
+Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -87,7 +88,18 @@ execution, TSV output parsing, and an OCR-sourced DepartmentYearly write in a
 copied DB. Post-v383 source now also routes image-PDF ingest through the
 packaged/system Tesseract TSV wrapper when available and propagates
 `ocr_tesseract` confidence breakdowns to both `DepartmentYearly` and
-`SupportRecipient` rows in focused unit coverage. This still does not prove
+`SupportRecipient` rows in focused unit coverage. A disposable operator-PC v384
+extraction under
+`C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe` then expanded the v384
+core ZIP plus the v383 smoke OCR add-on and ran
+`runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json`;
+it returned `ok=true`, build commit
+`75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`,
+`wheel_count=78`, packaged Tesseract
+`C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe\ocr-addon\tesseract\tesseract.exe`,
+version `tesseract v5.4.0.20240606`, and languages including `jpn` and
+`jpn_vert`. This proves the latest v384 package can detect and execute the OCR
+add-on on the operator PC. It still does not prove
 operator-PC real target-form OCR extraction, operator-PC SupportRecipient OCR
 writes, or a full Stage 6 operator cycle. The latest
 broader Windows bounded-bootstrap proof remains v342.
@@ -465,6 +477,18 @@ Latest v384 package-verifier commands:
   `document`. A follow-up query against the real v380 runtime DB returned
   `0` matching marker documents, departments, and audit rows. The disposable
   v383 probe directory and uploaded ZIPs were removed after capture.
+- Windows v384 OCR runtime gate positive probe:
+  disposable extraction under
+  `C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe` expanded
+  `dist/eidp-windows-v384.zip` plus
+  `dist/eidp-ocr-addon-windows-v383-smoke.zip` after confirming the v384 core
+  SHA256 sidecar. It ran
+  `runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json`
+  and returned `ok=true`, build commit
+  `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`,
+  `wheel_count=78`, `ocr_tessdata_dir` under the disposable extraction,
+  packaged Tesseract version `tesseract v5.4.0.20240606`, and language support
+  including `jpn` and `jpn_vert`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v379.zip --require-demonstrated-discovery-patterns`
   now fails under the current verifier because v379 predates the
   `db-backup --output $dbBackup` runbook contract.
