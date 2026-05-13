@@ -109,9 +109,9 @@ Runbook: `docs/runbooks/eidp-non-windows-release-gates.md`.
 
 Commands run for v351/v342 source/package:
 
-- `uv run pytest tests/unit -q` -> `1358 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1361 passed, 5 warnings`
 - `uv run pytest tests/unit/test_non_windows_release_gates.py -q`
-  -> `7 passed`
+  -> `8 passed`
 - `uv run mypy scripts/run_non_windows_release_gates.py`
   -> `Success: no issues found in 1 source file`
 - `uv run ruff check scripts/run_non_windows_release_gates.py tests/unit/test_non_windows_release_gates.py`

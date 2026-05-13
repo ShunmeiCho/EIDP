@@ -22,11 +22,11 @@ gate reproducible from a single command. The operational runbook is
 bounded Saitama/Tokyo evidence JSONL can be replayed without SSH Win access.
 The bounded replay gate allows missing entries because a bounded run only
 covers part of the gold-set, but it fails on failed or unexpected predictions.
-Verification: helper unit tests passed with `7 passed`, helper mypy passed,
+Verification: helper unit tests passed with `8 passed`, helper mypy passed,
 helper Ruff passed, the full v351 non-Windows gate run returned `ok=true`, and
 the evidence replay run returned `ok=true` with Tokyo evidence `4` exact /
 `0` failures and Saitama evidence `16` exact / `0` failures. The full unit
-suite passed with `1358 passed, 5 warnings`.
+suite passed with `1361 passed, 5 warnings`.
 
 ## 2026-05-13 V351 Validator Typing Gate And Package Rebuild
 

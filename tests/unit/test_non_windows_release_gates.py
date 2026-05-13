@@ -5,8 +5,11 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "run_non_windows_release_gates.py"
 spec = importlib.util.spec_from_file_location("run_non_windows_release_gates", SCRIPT_PATH)
@@ -103,3 +106,20 @@ def test_pdf_evidence_gate_rejects_failed_predictions() -> None:
     )
 
     assert error == "pdf-evidence replay had failed_predictions=1, unexpected_predictions=0"
+
+
+def test_run_gate_fails_pdf_evidence_result_when_json_has_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout=json.dumps({"failed_predictions": 1, "unexpected_predictions": 0}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    result = module.run_gate(module.GateCommand("discovery_gold_pdf_evidence_1", ("python",)))
+
+    assert result.returncode == 1
+    assert result.stderr_tail == "pdf-evidence replay had failed_predictions=1, unexpected_predictions=0"
