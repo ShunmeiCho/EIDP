@@ -5,7 +5,7 @@ Branch: `sprint8-handoff-finalize`
 Current Mac-verifier-clean package: `dist/eidp-windows-v385.zip`
 Package commit: `c5cffcd64eb6487a8484d97f5dcd8ee941e407f2`
 Package SHA256: `571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v385.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v385.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
@@ -31,8 +31,10 @@ with the v383 OCR add-on and v106 Playwright add-on. The v385 core SHA256 is
 `571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`, with
 `44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
 seeds, `entry_count=3064`, and `undemonstrated_pattern_sources=[]`. The latest
-full non-Windows release gate remains v378 with `1385` unit tests and `44`
-exact discovery gold-set predictions.
+full non-Windows release gate is now v385 with `1402` unit tests, `44` exact
+discovery gold-set predictions, and both package verifier modes passing
+against SHA256
+`571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`.
 The latest Windows setup proof is now v384: the versioned ZIP was transferred
 to the operator PC, its SHA256 sidecar matched
 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`, and it
@@ -1069,7 +1071,20 @@ Previous v379 Windows setup and UI-service commands:
   health only; browser rendering, navigation, and operator-action click-through
   still require separate evidence.
 
-Latest v378 full non-Windows release-gate commands:
+Latest v385 full non-Windows release-gate commands:
+
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v385.zip --json --output _temp/v385-non-windows-release-gates-full.json`
+  -> `ok=true`; SHA256 sidecar matched
+  `571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`; full
+  unit passed with `1402 passed, 5 warnings`; validator/distribution unit tests
+  passed with `143 passed`; validator/distribution mypy and Ruff passed;
+  discovery gold-set reported `44` entries, `10` strict target-year successes,
+  `17` publication-lag cases, and `undemonstrated_pattern_sources=[]`;
+  expected-prediction replay returned `44` exact matches / `0` failures; both
+  package verifier modes passed with the same v385 SHA256.
+
+Historical v378 full non-Windows release-gate commands:
+
 
 - `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v378.zip --latest-alias`
   -> wrote `dist/eidp-windows-v378.zip` and refreshed `dist/eidp-windows.zip`;
