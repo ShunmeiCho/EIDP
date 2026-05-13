@@ -4,17 +4,17 @@ Updated: 2026-05-14
 Status: **DRAFT / NOT COMPLETE**
 
 This document maps the current v380 Windows UI/write evidence plus newer v384
-package/setup/OCR evidence to `docs/runbooks/eidp-operator-e2e-template.md`. It
-is an evidence consolidation draft, not a completed Stage 6 sign-off. The
-current evidence was collected through SSH / Playwright / disposable DB
-sandboxes, not by a business operator running one uninterrupted production
-cycle.
+package/setup/OCR/read-only UI evidence to
+`docs/runbooks/eidp-operator-e2e-template.md`. It is an evidence consolidation
+draft, not a completed Stage 6 sign-off. The current evidence was collected
+through SSH / Playwright / disposable DB sandboxes, not by a business operator
+running one uninterrupted production cycle.
 
 ## Gate Interpretation
 
 | Gate | Current result | Evidence |
 | --- | --- | --- |
-| Process gate / v1.0-rc | partial | v384 setup, diagnostics, UI service health, and initial browser render; v380 read-only nav, Excel preview, R7 Excel download, URL-candidate write, audit flush, manual-entry write, fiscal-year override write, SupportRecipient ingest smoke |
+| Process gate / v1.0-rc | partial | v384 setup, diagnostics, UI service health, initial browser render, read-only quick navigation, and FY2026 Excel disabled-state display; v380 R7 Excel download, URL-candidate write, audit flush, manual-entry write, fiscal-year override write, SupportRecipient ingest smoke |
 | FY2026/R8 yield gate / v1.0 GA | fail | `ship_readiness_rc=1`, `strict_target_pdf_schools=0`, `operator_reviewable_schools=0`, `excel_ready_schools=0`, `estimated_manual_workload_rate=1.0` |
 | FY2025/R7 retroactive marker | pass for retroactive rehearsal only | `is_retroactive_fiscal_year=true`, `extracted_schools=2031`, `extracted_rate=0.84`, `retroactive_fiscal_year=2025`, `retroactive_ship_readiness_rc=0` |
 
@@ -34,6 +34,7 @@ cycle.
 | Latest Windows setup package commit | `75732b057a115afcebe35f9a40b831fac0ffa6f6` |
 | Latest Windows setup package SHA256 | `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0` |
 | Latest Windows setup proof path | `C:\Users\cyo20\EIDP-v384-75732b0-setup-probe` |
+| Latest Windows read-only UI proof path | `C:\Users\cyo20\EIDP-v384-75732b0-ui-nav-probe` |
 | Latest package-level OCR evidence | v384 package commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, core SHA256 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0` |
 | OCR add-on ZIP SHA256 | v383 smoke add-on `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853` |
 | Playwright add-on ZIP SHA256 | not captured in this evidence set |
@@ -74,11 +75,14 @@ cycle.
 | v384 package and OCR add-on verifier | v384 core ZIP `dist/eidp-windows-v384.zip` and latest alias share SHA256 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`; BUILD_INFO records commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, branch `sprint8-handoff-finalize`, and `git_dirty=false`; verifier returned `OK core` for v384 and latest alias plus `OK ocr-addon` for `dist/eidp-ocr-addon-windows-v383-smoke.zip` |
 | v384 operator-PC setup and diagnostics proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-setup-probe` expanded `dist/eidp-windows-v384.zip` after confirming the SHA256 sidecar; `scripts\first_setup.bat` returned `setup_rc=0`; `.\.venv\Scripts\python.exe scripts\validate_windows_install.py . --after-setup --json` returned `ok=true`, build commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`, `wheel_count=78`, `school_count=2418`, `school_fiscal_year_status_count=2418`, and `sqlite_integrity_check=ok`; `EIDP-diagnose.bat` returned `diagnose_rc=0`; diagnostics `logs\diagnostics-20260514-020156.txt` included `validate_after_setup_rc=0`, FY2026 `operator_reviewable_schools=0`, FY2026 `excel_ready_schools=0`, FY2025 `is_retroactive_fiscal_year=true`, and `retroactive_ship_readiness_rc=0`; the harness observed `task_registered_to_v384=true`, then restored the original v380 `EIDP Weekly Run` task |
 | v384 operator-PC UI service and browser render proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-ui-probe` expanded and set up the same v384 core ZIP, then started Streamlit on Windows `127.0.0.1:8501`; remote health returned `status=200` / `body=ok`, local tunnel `127.0.0.1:18501 -> Windows 127.0.0.1:8501` returned HTTP `200 OK`, Browser/Playwright rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `75732b0 / branch=sprint8-handoff-finalize`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, and the initial acquisition warning; captured console messages reported `0` errors and `0` warnings; cleanup removed the v384 UI probe, stopped the service, confirmed `port_8501_listeners=0`, and left the scheduled task pointing at v380 |
+| v384 operator-PC read-only quick-navigation proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-ui-nav-probe` expanded and set up the same v384 core ZIP, then started Streamlit on Windows `127.0.0.1:8501` through the local tunnel; Browser/Playwright clicked only the five non-mutating quick navigation buttons: `PDF確認・手入力`, `③ 年度判定・修正`, `④ Excel プレビュー`, `⑤ 設定（年度・OCR・API）`, and back to `① 学校別タスク`; snapshots rendered `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー` with `対象年度: 2026年度（令和8年度） / 対象範囲: 専門学校`, `設定` with the `バージョン`, `和暦 alias`, `OCR`, and `外部 API` sections, and the task page again; the Excel workbook-generation button remained disabled for empty FY2026 data; the settings save button was not clicked; incremental console capture reported `Total messages: 5 (Errors: 0, Warnings: 0)`; cleanup removed the v384 UI-nav probe, stopped the service, confirmed `port_8501_listeners=0`, and left the scheduled task pointing at v380 |
 | v384 operator-PC OCR runtime gate proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe` expanded `dist/eidp-windows-v384.zip` plus `dist/eidp-ocr-addon-windows-v383-smoke.zip` after confirming the v384 core SHA256 sidecar; `runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json` returned `ok=true`, build commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`, `wheel_count=78`, packaged Tesseract path `C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe\ocr-addon\tesseract\tesseract.exe`, version `tesseract v5.4.0.20240606`, and languages including `jpn` and `jpn_vert` |
 | v383 OCR image + copied-DB write proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v383-effcd58-ocr-write-sandbox` generated `data\ocr-write-smoke.png`, ran packaged Tesseract through `run_tesseract_on_image(..., output_format="tsv")`, returned `ocr_full_text="V383 OCR WRITE SMOKE 2026"` with `ocr_avg_confidence=0.952`, then used `save_manual_entries(..., method="ocr_tesseract")` against a copied DB to write one `DepartmentYearly` row with `extraction_confidence=0.95`, `verified=true`, promote the document `ocr_pending -> ingested`, and emit three `manual_entry` audit rows; real v380 runtime DB marker counts were all `0`; probe directory and uploaded ZIPs were removed after capture |
 | Post-v383 OCR ingest source propagation | focused unit coverage proves image-PDF ingest uses the packaged/system Tesseract TSV wrapper when available and records `ocr_tesseract` confidence breakdowns on both `DepartmentYearly` and `SupportRecipient`; this is code-level proof only, not an operator-PC real target-form OCR smoke |
 | v384 UI health | remote `/_stcore/health` returned `200 ok`; tunneled local `/_stcore/health` returned HTTP `200 OK`; cleanup left `port_8501_listeners=0` |
 | v384 Browser render | Browser/Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `75732b0`; console errors/warnings `0` |
+| v384 read-only quick navigation | Browser/Playwright clicked the five non-mutating quick navigation buttons and rendered task, PDF manual-entry, fiscal-year override, Excel preview, and settings pages; no save/edit/write button was clicked |
+| v384 FY2026 Excel disabled-state | Excel preview rendered `対象年度: 2026年度（令和8年度） / 対象範囲: 専門学校`; workbook-generation button remained disabled for empty current-year data |
 | SSH tunnel note | `ssh -o ClearAllForwardings=no` was required because local `Host win` clears command-line forwards |
 
 ## 4. Setup Result
@@ -92,6 +96,8 @@ cycle.
 | v384 scheduler restoration | pass | setup registered the task to the v384 probe during setup, then the harness restored the original task containing `EIDP-v380-f6a5e6d`; restored task did not contain `EIDP-v384-75732b0-setup-probe` |
 | v384 `launch.bat` / Streamlit startup equivalent | pass | package-local Streamlit run returned remote and tunneled health `200 ok` |
 | v384 `学校別タスク` initial page | pass | title `EIDP Operator Console`, build `75732b0`, target `2026年度（令和8年度）`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, console errors/warnings `0` |
+| v384 read-only quick navigation | pass | clicked only `PDF確認・手入力`, `③ 年度判定・修正`, `④ Excel プレビュー`, `⑤ 設定（年度・OCR・API）`, and back to `① 学校別タスク`; all pages rendered; incremental console capture had `0` errors and `0` warnings |
+| v384 Excel preview disabled-state | pass | `Excel プレビュー` rendered target `2026年度（令和8年度）`; workbook-generation button stayed disabled for empty FY2026 data |
 | ZIP extraction | pass | separate v380 directory created |
 | `EIDP-setup.bat` | pass | setup completed |
 | `.venv` creation | pass | package-local Python commands and Streamlit ran |
