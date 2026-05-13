@@ -18,6 +18,7 @@ from eidp.db.models import (
     SupportRecipient,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
+from eidp.review._pages import excel_preview as excel_preview_mod
 from eidp.review._pages.excel_preview import (
     SHEET_ORDER,
     build_preview_workbook,
@@ -147,6 +148,14 @@ def test_build_preview_workbook_reports_quality_warnings(engine):
 
     assert preview.quality_warnings["department_yearly_low_confidence_current"] == 1
     assert preview.quality_warnings["support_recipient_auto_flag_current"] == 1
+
+
+def test_quality_warning_messages_follow_configured_thresholds(monkeypatch):
+    monkeypatch.setattr(excel_preview_mod, "EXCEL_MIN_EXTRACTION_CONFIDENCE", 0.76)
+    monkeypatch.setattr(excel_preview_mod, "EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE", 0.91)
+
+    assert "confidence 0.76 未満の current 行が 3 件" in excel_preview_mod._low_confidence_message(3)
+    assert "confidence 0.76以上0.91未満の要確認行が 4 件" in excel_preview_mod._auto_flag_confidence_message(4)
 
 
 def test_build_preview_workbook_does_not_touch_filesystem(engine, tmp_path):

@@ -36,6 +36,8 @@ from sqlalchemy.orm import Session
 from eidp.config import settings
 from eidp.db.locking import probe_lock
 from eidp.excel.exporter import (
+    EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE,
+    EXCEL_MIN_EXTRACTION_CONFIDENCE,
     _write_gakka,
     _write_sairoku,
     _write_taisho_hiritu,
@@ -160,6 +162,22 @@ def count_unmatched_and_gap(
 # ---------------------------------------------------------------------------
 
 
+def _low_confidence_message(row_count: int) -> str:
+    return (
+        f"confidence {EXCEL_MIN_EXTRACTION_CONFIDENCE:.2f} 未満の current 行が {row_count} 件あります。"
+        "これらはExcel出力から除外されます。PDF確認または手入力で修正してください。"
+    )
+
+
+def _auto_flag_confidence_message(row_count: int) -> str:
+    return (
+        "confidence "
+        f"{EXCEL_MIN_EXTRACTION_CONFIDENCE:.2f}以上"
+        f"{EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE:.2f}未満の要確認行が {row_count} 件あります。"
+        "Excelには含まれますが、配布前にPDF確認画面で内容を確認してください。"
+    )
+
+
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin streamlit shell
     """Top-level Streamlit render for the Excel プレビュー page."""
     import streamlit as st
@@ -228,15 +246,9 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         + quality_warnings["support_recipient_auto_flag_current"]
     )
     if low_confidence_rows:
-        st.error(
-            f"confidence 0.70 未満の current 行が {low_confidence_rows} 件あります。"
-            "これらはExcel出力から除外されます。PDF確認または手入力で修正してください。"
-        )
+        st.error(_low_confidence_message(low_confidence_rows))
     if auto_flag_rows:
-        st.warning(
-            f"confidence 0.70以上0.85未満の要確認行が {auto_flag_rows} 件あります。"
-            "Excelには含まれますが、配布前にPDF確認画面で内容を確認してください。"
-        )
+        st.warning(_auto_flag_confidence_message(auto_flag_rows))
 
     can_generate = export_gap.has_target_year_data
     if st.button("プレビュー workbook を生成", type="primary", disabled=not can_generate):
