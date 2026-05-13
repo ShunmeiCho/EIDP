@@ -614,6 +614,10 @@ ssh -vvv -o ConnectTimeout=5 win hostname
 ssh -F /dev/null -o ConnectTimeout=5 -i ~/.ssh/id_rsa -l <WindowsUser> <業務員PCのLAN IP> hostname
 ```
 
+`powershell -EncodedCommand` が `#< CLIXML` だけを返して止まる場合も同じ扱いにする。
+複雑な PowerShell を再送せず、Mac 側で残った `ssh ... EncodedCommand` プロセスを
+終了してから、業務員 PC 側で `Restart-Service sshd` を実行する。
+
 Windows 側の復旧・確認例（管理者 PowerShell）:
 
 ```powershell
@@ -624,6 +628,11 @@ Get-ScheduledTask -TaskName "EIDP Weekly Run" | Select-Object State
 
 Test-Path "$env:USERPROFILE\EIDP-v384-75732b0-ocr-sr-sandbox"
 Test-Path "$env:USERPROFILE\v384_ocr_sr_smoke.ps1"
+Test-Path "$env:USERPROFILE\eidp-windows-v384.zip"
+Test-Path "$env:USERPROFILE\eidp-windows-v384.zip.sha256"
+Test-Path "$env:USERPROFILE\eidp-ocr-addon-windows-v383-smoke.zip"
+Test-Path "$env:USERPROFILE\eidp_v384_ocr_sr_smoke.py"
+Test-Path "$env:USERPROFILE\eidp-v384-ocr-sr-source.sqlite3"
 ```
 
 `EIDP Weekly Run` の action が検証用 sandbox を指したままなら、直近の本番
