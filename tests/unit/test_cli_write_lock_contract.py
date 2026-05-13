@@ -7,6 +7,7 @@ CLI_SOURCE = Path("src/eidp/cli.py")
 WRITE_HELPER_CALLS = frozenset(
     {
         "apply_prefecture_artifact",
+        "backup_sqlite_database",
         "bootstrap_sqlite",
         "crawl_missing_school_urls",
         "create_review_items_for_documents",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 
 from sqlalchemy.exc import OperationalError
 from typer.testing import CliRunner
@@ -42,6 +43,33 @@ def test_db_info_fails_cleanly_when_database_schema_is_missing(monkeypatch) -> N
     assert "schema is incomplete" in result.output
     assert "DETAIL:" in result.output
     assert fake_session.closed is True
+
+
+def test_db_backup_cli_creates_consistent_sqlite_backup(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "data" / "eidp.sqlite3"
+    backup_path = tmp_path / "backup.sqlite3"
+    db_path.parent.mkdir()
+    con = sqlite3.connect(db_path)
+    con.execute("CREATE TABLE sample (name TEXT NOT NULL)")
+    con.execute("INSERT INTO sample (name) VALUES ('cli')")
+    con.commit()
+    con.close()
+
+    import eidp.config as config
+
+    monkeypatch.setattr(config.settings, "database_url", f"sqlite:///{db_path.as_posix()}")
+    monkeypatch.setattr(config.settings, "data_dir", db_path.parent)
+
+    result = CliRunner().invoke(app, ["db-backup", "--output", str(backup_path)])
+
+    assert result.exit_code == 0
+    assert "SQLite backup written:" in result.output
+    backup = sqlite3.connect(backup_path)
+    try:
+        rows = backup.execute("SELECT name FROM sample").fetchall()
+    finally:
+        backup.close()
+    assert rows == [("cli",)]
 
 
 def test_report_coverage_json_fails_cleanly_when_database_schema_is_missing(monkeypatch) -> None:

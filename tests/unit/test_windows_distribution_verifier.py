@@ -182,6 +182,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "data\\eidp.sqlite3-shm\n"
             "PRAGMA wal_checkpoint(TRUNCATE)\n"
             "VACUUM INTO\n"
+            "db-backup --output $dbBackup\n"
             "eidp-backup-$ts.sqlite3\n"
             'Get-ChildItem "$old\\data" -Force\n'
             '$_.Name -notlike "eidp-backup-*.sqlite3"\n'

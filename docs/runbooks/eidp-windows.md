@@ -107,7 +107,7 @@ $dbBackup = Join-Path $old "data\eidp-backup-$ts.sqlite3"
 $excluded = @(".lock", "eidp.sqlite3-wal", "eidp.sqlite3-shm")
 
 Push-Location $old
-.\.venv\Scripts\python.exe -c "import sqlite3, sys; con=sqlite3.connect('data/eidp.sqlite3'); con.execute('PRAGMA wal_checkpoint(TRUNCATE)'); con.execute('VACUUM INTO ?', (sys.argv[1],)); con.close()" $dbBackup
+.\.venv\Scripts\python.exe -m eidp.cli db-backup --output $dbBackup
 Pop-Location
 
 Get-ChildItem "$old\data" -Force |

@@ -432,6 +432,35 @@ def db_bootstrap(
         typer.echo(f"SQLite bootstrap complete: {engine.url}")
 
 
+@app.command("db-backup")
+def db_backup(
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output SQLite backup path. Defaults to data/eidp-backup-YYYYMMDD-HHMMSS.sqlite3.",
+    ),
+) -> None:
+    """Create a consistent SQLite backup with WAL checkpoint + VACUUM INTO."""
+    with _require_app_lock("cli_db_backup"):
+        from eidp.config import settings
+        from eidp.db.sqlite_backup import (
+            backup_sqlite_database,
+            default_sqlite_backup_path,
+            sqlite_path_from_database_url,
+        )
+
+        try:
+            database_path = sqlite_path_from_database_url(settings.database_url)
+            backup_path = output or default_sqlite_backup_path(settings.data_dir)
+            written = backup_sqlite_database(database_path, backup_path)
+        except (FileExistsError, FileNotFoundError, RuntimeError, ValueError) as exc:
+            typer.echo(f"ERROR: SQLite backup failed: {exc}", err=True)
+            raise typer.Exit(2) from exc
+
+        typer.echo(f"SQLite backup written: {written}")
+
+
 @app.command()
 def rebuild_school_year_tasks(
     fiscal_year: int | None = typer.Option(

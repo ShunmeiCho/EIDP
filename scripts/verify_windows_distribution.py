@@ -1397,6 +1397,7 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "data\\eidp.sqlite3-shm",
         "PRAGMA wal_checkpoint(TRUNCATE)",
         "VACUUM INTO",
+        "db-backup --output $dbBackup",
         "eidp-backup-$ts.sqlite3",
         'Get-ChildItem "$old\\data" -Force',
         '$_.Name -notlike "eidp-backup-*.sqlite3"',
