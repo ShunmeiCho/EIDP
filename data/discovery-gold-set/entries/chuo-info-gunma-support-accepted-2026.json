@@ -1,0 +1,55 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "chuo-info-gunma-support-accepted-2026",
+  "school": {
+    "school_id": 436,
+    "school_name": "専門学校中央情報大学校",
+    "prefecture": "群馬県",
+    "corporation_name": "有坂中央学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find the FY2026 target confirmation form on a school information page that lists multiple fiscal-year support PDFs.",
+    "search_queries": [
+      "専門学校中央情報大学校 令和8年度 修学支援制度 確認申請書",
+      "中央情報大学校 様式第2号 令和８年度"
+    ],
+    "steps": [
+      "Open the school information page https://www.chuo.ac.jp/cid/introduction/about.",
+      "Find the 情報公開 section listing 修学支援制度 confirmation forms by fiscal year.",
+      "Select the link labeled 令和８年度_修学支援制度における確認申請書（様式第2号）.",
+      "Resolve the WordPress-hosted PDF URL /cid/wp-content/themes/cid/resource/pdf/22_CID_sinsei2025.pdf.",
+      "Accept it as FY2026 because the anchor explicitly says 令和８年度 and the PDF body contains 専門学校中央情報大学校 plus target-form 様式第２号 sections."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.chuo.ac.jp/cid/introduction/about",
+    "disclosure_url": "https://www.chuo.ac.jp/cid/introduction/about",
+    "pdf_url": "https://www.chuo.ac.jp/cid/wp-content/themes/cid/resource/pdf/22_CID_sinsei2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "pattern_type": "wordpress",
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "multi_year_support_pdf_list_current_year_anchor",
+    "reusable_rules": [
+      "When a disclosure page lists multiple 修学支援制度 confirmation-form PDFs by fiscal year, prefer the anchor whose label names the target fiscal year.",
+      "Keep the selected PDF URL as the exact expected evidence even when adjacent older-year forms remain on the same page.",
+      "Accept a WordPress-hosted support PDF when the anchor supplies current fiscal-year evidence and the PDF body has exact school-name plus target-form sections."
+    ],
+    "anti_patterns": [
+      "Do not let older 令和７年度/令和６年度 confirmation forms outrank the current 令和８年度 form.",
+      "Do not infer current-year success for adjacent information-disclosure PDFs that inherit stale confirmation-form context."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.chuo.ac.jp/cid/introduction/about",
+      "https://www.chuo.ac.jp/cid/wp-content/themes/cid/resource/pdf/22_CID_sinsei2025.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found the multi-year support-form list, verified the 令和８年度 anchor, and verified the PDF body contains 専門学校中央情報大学校 plus target-form 様式第２号 sections."
+  }
+}
