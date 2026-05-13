@@ -33,9 +33,9 @@ disabled-state smoke are now proven on v380. v380 also proves the retroactive
 FY2025/R7 Excel preview/download browser path with the same package. v380 has
 also repeated the sandboxed URL-candidate reject browser write path against a
 disposable copied database and the sandboxed audit-outbox browser flush path
-against a disposable copied database. The latest Windows bounded-bootstrap
-smoke remains v376. The latest broader Windows bounded-bootstrap proof remains
-v342.
+against a disposable copied database. v380 also has a sandboxed bounded backend
+bootstrap smoke for the 5-site Saitama official-index path. The latest broader
+Windows bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
@@ -321,14 +321,17 @@ browser-render proof, full read-only quick-navigation proof, and an Excel
 preview disabled-state smoke, plus retroactive FY2025/R7 Excel
 preview/download proof. It now has sandboxed URL-candidate reject browser write
 proof and audit-outbox browser flush proof on disposable copied databases;
+v380 also has a sandboxed 5-site Saitama backend bootstrap smoke that exercises
+official artifact download, official-index SchoolSite writes, strict PDF
+discovery, ingest, and status rebuild without mutating the real runtime DB.
 Stage 6 operator workflow evidence still remains incomplete, as listed below.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v342 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v380 package verifier clean by default; packaged discovery gold-set `44` entries / `10` strict target-year successes / `17` publication-lag cases; v375 fixes the heading/update-date fiscal-year context edge and adds a 尚美 historical-support-form ordering case where the latest public R7 target form stays visible for FY2026 publication-lag handling; v374 adds a code-level guard that current-year syllabus/curriculum PDFs do not outrank the previous-year target confirmation form in Aichi-style publication-lag pages; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; manual-web / official-index-linked 愛北 evidence records a support-system news page with `令和8年度` context linking `youshiki2-r7.pdf` as the target confirmation form; manual-web / official-index-linked 愛生会 evidence records a support page where the latest target-form PDF is still `令和7年9月公表` and the adjacent subject-list PDF must not be treated as the target form; manual-web / official-index-linked あいち福祉医療 evidence records a public-documents page where the `2026年度` section contains syllabus PDFs but the latest target-form PDF remains `2025年度`; manual-web / official-index-linked 尚美 evidence records a public-info page where the historical support-form list currently runs through R7/FY2025 and the latest target form must remain publication-lag evidence; manual-web / official-index-linked 中央動物 evidence records a disclosure page where R8 non-target operation-plan / professional-practice PDFs coexist with a support-system `申請書様式第2号` link still labeled `2025年度`; manual-web / official-index-linked 浜松工科 evidence records an official Shizuoka index route to a WordPress disclosure page whose `令和８年度 様式第２号` anchor supplies target-FY evidence for a PDF body that contains the school name, `様式第２号`, and `修学支援` but not the fiscal-year string; manual-web / official-index-linked 長野県公衆衛生 evidence records a prefecture-hosted support page whose latest public target-form PDF is still under the `令和７年度` section and must remain publication-lag evidence; v375 additionally preserves preceding heading-year context without crossing intervening non-year blocks or treating update dates as fiscal-year evidence; manual-web / official-index-linked 岩手医科大学医療専門学校 evidence records a dense Wix page where the target confirmation-form section is still `令和７年度` even though a later syllabus section has `令和8年度`; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
+| 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v380 sandboxed Saitama 5-site backend smoke downloaded the current official artifact, extracted `58`, matched `51`, and added `51` `SchoolSite` rows in a copied DB; Windows v342 broader Saitama run also downloaded the official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
+| Discover and download current target-FY PDFs in strict mode | v380 package verifier clean by default; packaged discovery gold-set `44` entries / `10` strict target-year successes / `17` publication-lag cases; v380 sandboxed Saitama 5-site backend smoke crawled `5`, found candidates on all `5`, downloaded `0` strict FY2026 target PDFs, produced `2084` discovery evidence lines, processed `0` PDFs, rebuilt `2418` status rows, and reported `operator_reviewable_count=5`, `operator_reviewable_yield_pct=0.2`, `target_pdf_auto_yield_pct=0.0`, and `ship_gate_status=below_gate`; v375 fixes the heading/update-date fiscal-year context edge and adds a 尚美 historical-support-form ordering case where the latest public R7 target form stays visible for FY2026 publication-lag handling; v374 adds a code-level guard that current-year syllabus/curriculum PDFs do not outrank the previous-year target confirmation form in Aichi-style publication-lag pages; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; manual-web / official-index-linked 愛北 evidence records a support-system news page with `令和8年度` context linking `youshiki2-r7.pdf` as the target confirmation form; manual-web / official-index-linked 愛生会 evidence records a support page where the latest target-form PDF is still `令和7年9月公表` and the adjacent subject-list PDF must not be treated as the target form; manual-web / official-index-linked あいち福祉医療 evidence records a public-documents page where the `2026年度` section contains syllabus PDFs but the latest target-form PDF remains `2025年度`; manual-web / official-index-linked 尚美 evidence records a public-info page where the historical support-form list currently runs through R7/FY2025 and the latest target form must remain publication-lag evidence; manual-web / official-index-linked 中央動物 evidence records a disclosure page where R8 non-target operation-plan / professional-practice PDFs coexist with a support-system `申請書様式第2号` link still labeled `2025年度`; manual-web / official-index-linked 浜松工科 evidence records an official Shizuoka index route to a WordPress disclosure page whose `令和８年度 様式第２号` anchor supplies target-FY evidence for a PDF body that contains the school name, `様式第２号`, and `修学支援` but not the fiscal-year string; manual-web / official-index-linked 長野県公衆衛生 evidence records a prefecture-hosted support page whose latest public target-form PDF is still under the `令和７年度` section and must remain publication-lag evidence; v375 additionally preserves preceding heading-year context without crossing intervening non-year blocks or treating update dates as fiscal-year evidence; manual-web / official-index-linked 岩手医科大学医療専門学校 evidence records a dense Wix page where the target confirmation-form section is still `令和７年度` even though a later syllabus section has `令和8年度`; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; v380 package gold-set includes `17` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
@@ -498,6 +501,35 @@ Latest v380 Windows setup and backup-smoke commands:
   Streamlit processes were removed by exact PID/command-line match, and
   `sandbox_exists_after_cleanup=False` / `remaining_matching_processes=0`
   confirmed cleanup.
+- Windows v380 sandboxed Saitama 5-site bounded backend smoke:
+  a disposable `C:\Users\cyo20\EIDP-v380-backend-sandbox` was created from the
+  v380 runtime database through the package-local `eidp db-backup` command.
+  The package-local `scripts\bootstrap_pdf_pipeline.py` then ran with
+  `EIDP_APP_ROOT` pointed at that sandbox:
+  `--pref saitama --skip-known-url-discovery --url-search off
+  --school-url-crawl off --discovery-methods prefecture_aggregator
+  --batch-size 5 --rate-limit 0.1 --request-timeout 10`, with artifact,
+  output, PDF storage, evidence-log, RCA output, progress, and lock paths all
+  redirected under the sandbox. It downloaded the current Saitama official
+  artifact `r080401kikanyokenlist.pdf`, extracted `58`, matched `51`, applied
+  `added=51 / upgraded=0 / skipped=7 / review_items=2`, crawled `5`
+  official-index disclosure sites, found candidates on all `5`, downloaded
+  `0` strict FY2026 target PDFs, skipped `163`, and wrote `2084` discovery
+  evidence lines. Ingest processed `0` documents, then status rebuild reported
+  `rebuilt=2418`, `excel_ready=0`, `target_pdf_auto_yield_pct=0.0`,
+  `operator_reviewable_count=5`, `operator_reviewable_yield_pct=0.2`, and
+  `ship_gate_status=below_gate`; the generated RCA batch plan had `5` items /
+  `5` total candidates. Post-run verification inside the sandbox reported
+  `school_site_count=51`, `prefecture_aggregator_sites=51`,
+  `review_items=2`, `documents=0`, `status_rows=2418`,
+  `progress_status=succeeded`, `progress_percent=1.0`,
+  `progress_ship_gate_status=below_gate`, `progress_operator_reviewable_count=5`,
+  `evidence_lines=2084`, `rca_files=1`, `rca_items=5`, and
+  `rca_total_candidates=5`. The real v380 runtime DB remained unchanged for
+  these tables: `runtime_school_site_count=0`, `runtime_review_items=0`,
+  `runtime_documents=0`, and `runtime_status_rows=2418`. The sandbox was
+  removed afterward; cleanup reported `sandbox_exists_after_cleanup=False` and
+  `remaining_matching_processes=0`.
 
 Previous v379 Windows setup and UI-service commands:
 
