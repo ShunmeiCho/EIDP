@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v382.zip`
-Package commit: `cc739c8704e45e37928a4ac55fa006766e5012dc`
-Package SHA256: `b455cf97b908f3a544488b80527d3e9002769fe3d5b652f83a59df4b33863b88`
+Current Mac-verifier-clean package: `dist/eidp-windows-v383.zip`
+Package commit: `effcd58efa50c8b9478a7dc762947e030236d65e`
+Package SHA256: `6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v382.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v383.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -17,13 +17,15 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v382. It supersedes v381 at the
-package level after commit `cc739c8` added an explicit OCR add-on runtime gate
-to the packaged Windows validator. The v382 versioned ZIP and latest alias both
-pass
+The current Mac-verifier-clean ZIP snapshot is v383. It supersedes v382 at the
+package level after commit `effcd58` made the OCR add-on manifest include the
+Tesseract TSV config file at `ocr-addon/tessdata/configs/tsv`; without that
+config, `run_tesseract_on_image(..., output_format="tsv")` can execute the
+binary but return plain text instead of TSV. The v383 versioned ZIP and latest
+alias both pass
 `scripts/verify_windows_distribution.py --require-demonstrated-discovery-patterns`
 with SHA256
-`b455cf97b908f3a544488b80527d3e9002769fe3d5b652f83a59df4b33863b88`,
+`6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`,
 `44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
 seeds, and `undemonstrated_pattern_sources=[]`. The latest full non-Windows
 release gate remains v378 with `1385` unit tests and `44` exact discovery
@@ -57,23 +59,31 @@ bounded backend bootstrap smoke for the 5-site Saitama official-index path, and
 a package-local backend ingest smoke for append-only SupportRecipient
 revisions. These observations are consolidated in
 `docs/reports/eidp-v380-stage6-evidence-draft.md` as a draft, not a completed
-operator sign-off. OCR add-on runtime proof is still not complete: the v380
-operator install has no `ocr-addon` directory and `detect_ocr_availability`
-correctly reports `can_run=false`. v381 carried the Windows RAM-detection fix:
-a v381 runtime-only probe on the operator PC returned `cpu_count=20`,
-`free_ram_mb=16242`, and `ocr_auto_enable=true`. v382 adds the stricter
-`--require-ocr-runtime` validator gate, which executes packaged
-`tesseract.exe --version` and `tesseract.exe --list-langs` when the add-on is
-present and requires `jpn` in the language list. A smoke OCR add-on ZIP was
-also built from the UB Mannheim Windows Tesseract `v5.4.0.20240606` installer
-plus local `jpn.traineddata`; its verifier SHA256 is
-`b39a07bb9367c2342c38d34fc1dddd06300d9ba7d5b5412f752b798008d1f431`. On a
-disposable operator-PC v382 extraction, `--require-ocr-runtime` executed the
-packaged Windows `tesseract.exe` successfully, returned
-`ocr_tesseract_version="tesseract v5.4.0.20240606"`, and listed both `jpn` and
-`jpn_vert`. This proves add-on detection and runtime execution, but not OCR
-page extraction or DB write behavior. The latest broader Windows
-bounded-bootstrap proof remains v342.
+operator sign-off. OCR add-on runtime proof is now stronger but still bounded:
+the v380 operator install has no `ocr-addon` directory and
+`detect_ocr_availability` correctly reports `can_run=false`; v381 carried the
+Windows RAM-detection fix and a runtime-only probe on the operator PC returned
+`cpu_count=20`, `free_ram_mb=16242`, and `ocr_auto_enable=true`; v382 added the
+stricter `--require-ocr-runtime` validator gate that executes packaged
+`tesseract.exe --version` and `tesseract.exe --list-langs`; and v383 adds the
+TSV config file required by the OCR wrapper's TSV path. A v383 smoke OCR add-on
+ZIP built from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus local
+`jpn.traineddata` verifies as SHA256
+`bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853`,
+`entry_count=267`, and `manifest_files=266`. In a disposable operator-PC v383
+extraction with the add-on, the OCR image smoke generated
+`ocr_full_text="V383 OCR WRITE SMOKE 2026"` from a PNG,
+`ocr_avg_confidence=0.952`, inserted one `DepartmentYearly` row through
+`save_manual_entries` with `extraction_method="ocr_tesseract"`,
+`extraction_confidence=0.95`, and `verified=true`, promoted the copied-DB
+document from `ocr_pending` to `ingested`, and emitted three `manual_entry`
+audit rows for `department`, `department_yearly`, and `document`. The real v380
+runtime DB had `0` matching marker rows after the smoke, and the disposable v383
+probe directory and uploads were removed. This proves packaged add-on runtime
+execution, TSV output parsing, and an OCR-sourced DepartmentYearly write in a
+copied DB; it still does not prove real target-form OCR extraction,
+SupportRecipient OCR writes, or a full Stage 6 operator cycle. The latest
+broader Windows bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
@@ -352,12 +362,16 @@ The current source checkout therefore reports `44` discovery gold-set entries,
 `10` strict target-year successes, `17` publication-lag cases, `15`
 operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
 enforcing a stricter ZIP hygiene contract. That source/package evidence is now
-packaged in `dist/eidp-windows-v382.zip`; v381 proved the Windows runtime can
-detect free RAM without `psutil`, and v382 adds a packaged
-`--require-ocr-runtime` gate that executes Tesseract runtime probes when an OCR
-add-on is present. A disposable operator-PC extraction without the add-on
-correctly failed that gate on missing `ocr-addon` files. The latest operator-PC
-setup and UI evidence remains v380: v380 was transferred to Windows, installed,
+packaged in `dist/eidp-windows-v383.zip`; v381 proved the Windows runtime can
+detect free RAM without `psutil`, v382 adds a packaged `--require-ocr-runtime`
+gate that executes Tesseract runtime probes when an OCR add-on is present, and
+v383 adds the Tesseract `configs/tsv` file required by the wrapper's TSV
+parsing path. A disposable operator-PC v382 extraction without the add-on
+correctly failed that gate on missing `ocr-addon` files. A disposable
+operator-PC v383 extraction with the smoke add-on then proved image OCR plus a
+copied-DB DepartmentYearly write via `extraction_method="ocr_tesseract"`,
+without mutating the real v380 runtime DB. The latest operator-PC setup and UI
+evidence remains v380: v380 was transferred to Windows, installed,
 diagnosed, and exercised through the package-local `eidp db-backup` smoke. It
 also has a read-only Windows environment / Task
 Scheduler capture, a headless Streamlit `/_stcore/health` smoke, initial
@@ -380,7 +394,7 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 | 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v380 sandboxed Saitama 5-site backend smoke downloaded the current official artifact, extracted `58`, matched `51`, and added `51` `SchoolSite` rows in a copied DB; Windows v342 broader Saitama run also downloaded the official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
 | Discover and download current target-FY PDFs in strict mode | v380 package verifier clean by default; packaged discovery gold-set `44` entries / `10` strict target-year successes / `17` publication-lag cases; v380 sandboxed Saitama 5-site backend smoke crawled `5`, found candidates on all `5`, downloaded `0` strict FY2026 target PDFs, produced `2084` discovery evidence lines, processed `0` PDFs, rebuilt `2418` status rows, and reported `operator_reviewable_count=5`, `operator_reviewable_yield_pct=0.2`, `target_pdf_auto_yield_pct=0.0`, and `ship_gate_status=below_gate`; v375 fixes the heading/update-date fiscal-year context edge and adds a 尚美 historical-support-form ordering case where the latest public R7 target form stays visible for FY2026 publication-lag handling; v374 adds a code-level guard that current-year syllabus/curriculum PDFs do not outrank the previous-year target confirmation form in Aichi-style publication-lag pages; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; manual-web / official-index-linked 愛北 evidence records a support-system news page with `令和8年度` context linking `youshiki2-r7.pdf` as the target confirmation form; manual-web / official-index-linked 愛生会 evidence records a support page where the latest target-form PDF is still `令和7年9月公表` and the adjacent subject-list PDF must not be treated as the target form; manual-web / official-index-linked あいち福祉医療 evidence records a public-documents page where the `2026年度` section contains syllabus PDFs but the latest target-form PDF remains `2025年度`; manual-web / official-index-linked 尚美 evidence records a public-info page where the historical support-form list currently runs through R7/FY2025 and the latest target form must remain publication-lag evidence; manual-web / official-index-linked 中央動物 evidence records a disclosure page where R8 non-target operation-plan / professional-practice PDFs coexist with a support-system `申請書様式第2号` link still labeled `2025年度`; manual-web / official-index-linked 浜松工科 evidence records an official Shizuoka index route to a WordPress disclosure page whose `令和８年度 様式第２号` anchor supplies target-FY evidence for a PDF body that contains the school name, `様式第２号`, and `修学支援` but not the fiscal-year string; manual-web / official-index-linked 長野県公衆衛生 evidence records a prefecture-hosted support page whose latest public target-form PDF is still under the `令和７年度` section and must remain publication-lag evidence; v375 additionally preserves preceding heading-year context without crossing intervening non-year blocks or treating update dates as fiscal-year evidence; manual-web / official-index-linked 岩手医科大学医療専門学校 evidence records a dense Wix page where the target confirmation-form section is still `令和７年度` even though a later syllabus section has `令和8年度`; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; v380 package gold-set includes `17` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
-| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
+| Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows. v383 adds package-verifier enforcement for the OCR add-on TSV config and a disposable operator-PC image smoke: Tesseract returned `ocr_full_text="V383 OCR WRITE SMOKE 2026"` with `ocr_avg_confidence=0.952`, and `save_manual_entries` wrote one copied-DB `DepartmentYearly` row with `extraction_method="ocr_tesseract"`, `extraction_confidence=0.95`, and `verified=true`, promoted the document to `ingested`, emitted three `manual_entry` audit rows, and left the real runtime DB with `0` matching marker rows | Mechanically proven for OCR runtime/TSV parsing and copied-DB DepartmentYearly write; no current strict target-form OCR data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v380 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`sandbox_support_recipient_smoke_rows=0`). Windows v380 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, and verified the real runtime DB had `0` matching document/department/audit rows. Windows v380 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, and revision `2` current with `annual_total=120`, while the real runtime DB had `0` matching documents/support-recipient rows. | DepartmentYearly Win UI E2E proven; fiscal-year override Win UI E2E proven; SupportRecipient Win package backend append-only proven |
 | Excel template output | v380 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v380 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive |
 | ManualActionLog audit for operator actions | v380 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database and verified the real runtime DB was not mutated; v380 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v380_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, and verified the real runtime DB was not mutated; v380 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v380 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths |
@@ -392,18 +406,24 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v382 package-verifier commands:
+Latest v383 package-verifier commands:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v382.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v382.zip` and refreshed `dist/eidp-windows.zip`;
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v383.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v383.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `b455cf97b908f3a544488b80527d3e9002769fe3d5b652f83a59df4b33863b88`.
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v382.zip --require-demonstrated-discovery-patterns`
-  and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --require-demonstrated-discovery-patterns`
-  -> both `OK core`, with matching SHA256, `44` packaged discovery gold-set
-  entries, `17` publication-lag cases, `47` prefecture seeds, and
-  `undemonstrated_pattern_sources=[]`; the packaged Windows runbook includes
-  `db-backup --output $dbBackup`, `VACUUM INTO`, and
+  `6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`.
+- `uv run python scripts/build_ocr_addon_zip.py --tesseract-dir _temp/ocr-addon-src/7z-extract --tessdata-dir /opt/homebrew/share/tessdata --out-zip dist/eidp-ocr-addon-windows-v383-smoke.zip`
+  built an add-on from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus
+  local `jpn.traineddata` and the required `tessdata/configs/tsv` file;
+  package verifier reported `OK ocr-addon`, SHA256
+  `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853`,
+  `entry_count=267`, and `manifest_files=266`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v383.zip --ocr-addon dist/eidp-ocr-addon-windows-v383-smoke.zip --require-demonstrated-discovery-patterns`
+  and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --ocr-addon dist/eidp-ocr-addon-windows-v383-smoke.zip --require-demonstrated-discovery-patterns`
+  -> both `OK core` plus `OK ocr-addon`, with matching core SHA256, `44`
+  packaged discovery gold-set entries, `17` publication-lag cases, `47`
+  prefecture seeds, and `undemonstrated_pattern_sources=[]`; the packaged
+  Windows runbook includes `db-backup --output $dbBackup`, `VACUUM INTO`, and
   `PRAGMA wal_checkpoint(TRUNCATE)`, and the packaged validator includes
   `--require-ocr-runtime`.
 - Windows v381 runtime-only OCR RAM probe:
@@ -420,21 +440,21 @@ Latest v382 package-verifier commands:
   expected missing-file errors for `ocr-addon/tesseract/tesseract.exe` and
   `ocr-addon/tessdata/jpn.traineddata`; the probe directory and uploaded v382
   ZIP/sidecar were removed after capture.
-- OCR add-on smoke package:
-  `uv run python scripts/build_ocr_addon_zip.py --tesseract-dir _temp/ocr-addon-src/7z-extract --tessdata-dir /opt/homebrew/share/tessdata --out-zip dist/eidp-ocr-addon-windows-v382-smoke.zip`
-  built an add-on from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus
-  local `jpn.traineddata`; package verifier reported `OK ocr-addon`, SHA256
-  `b39a07bb9367c2342c38d34fc1dddd06300d9ba7d5b5412f752b798008d1f431`,
-  `entry_count=266`, and `manifest_files=265`.
-- Windows v382 OCR add-on runtime proof:
+- Windows v383 OCR image plus copied-DB write proof:
   disposable extraction under
-  `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-addon-probe` with the smoke OCR add-on
-  ran `runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json`;
-  it returned `ok=true`, build commit
-  `cc739c8704e45e37928a4ac55fa006766e5012dc`, `build_dirty=false`,
-  `ocr_tesseract_version="tesseract v5.4.0.20240606"`, and a language list
-  containing `jpn` and `jpn_vert`; the probe directory and uploaded ZIPs were
-  removed after capture.
+  `C:\Users\cyo20\EIDP-v383-effcd58-ocr-write-sandbox` with the smoke OCR add-on
+  generated `data\ocr-write-smoke.png`, executed the packaged Tesseract binary
+  through `run_tesseract_on_image(..., output_format="tsv")`, and returned
+  `ocr_full_text="V383 OCR WRITE SMOKE 2026"`, `ocr_usable_word_count=5`, and
+  `ocr_avg_confidence=0.952`. The same smoke copied the real v380 DB with
+  `eidp db-backup`, seeded a marker document in the copied DB, and called
+  `save_manual_entries(..., method="ocr_tesseract")`; it wrote one
+  `DepartmentYearly` row with `extraction_confidence=0.95` and `verified=true`,
+  promoted the document from `ocr_pending` to `ingested`, and emitted three
+  `manual_entry` audit rows for `department`, `department_yearly`, and
+  `document`. A follow-up query against the real v380 runtime DB returned
+  `0` matching marker documents, departments, and audit rows. The disposable
+  v383 probe directory and uploaded ZIPs were removed after capture.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v379.zip --require-demonstrated-discovery-patterns`
   now fails under the current verifier because v379 predates the
   `db-backup --output $dbBackup` runbook contract.
