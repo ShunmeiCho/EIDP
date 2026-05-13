@@ -366,6 +366,19 @@ Latest v376 commands:
   and the operator warning that 2026 target-year transcribed rows are `0`.
   The `プレビュー workbook を生成` button was present but disabled, so the
   UI correctly prevents downloading old-year or empty workbook output.
+- Windows v376 retroactive FY2025 Excel preview/download smoke:
+  the same installed package was started with
+  `EIDP_TARGET_FISCAL_YEAR=2025` and opened through the SSH tunnel. The
+  `④ Excel プレビュー` page showed `対象年度: 2025年度（令和7年度）`,
+  `抽出済み学校 2031`, `Excel対象行 7150`, and sheet counts
+  `採録状況=2418 / 対象比率=10022 / 学科別=9719 / 在籍のみ抜粋=9719`.
+  The `プレビュー workbook を生成` button was enabled, generated the in-memory
+  workbook, and exposed `Excel ダウンロード`; the browser download produced
+  `eidp_master.xlsx` with size `3,728,652` bytes. No browser console warnings
+  or page errors were captured, and the temporary npm/download artifacts were
+  removed afterward. This proves the Windows UI Excel preview/download path
+  works for the retroactive R7 dataset, while FY2026 remains blocked by absent
+  current target-year rows.
 - Windows v376 Saitama 5-site bounded backend smoke:
   `bootstrap_pdf_pipeline.py --pref saitama --url-search off
   --school-url-crawl off --skip-known-url-discovery --discovery-methods

@@ -5289,3 +5289,15 @@ the operator warning that target-year transcribed rows are `0`, and kept
 `プレビュー workbook を生成` disabled. This proves the current UI prevents empty
 or old-year workbook generation, but it is still not a full mutating
 operator-action E2E.
+
+The same v376 Windows package was then started with
+`EIDP_TARGET_FISCAL_YEAR=2025` to exercise the retroactive R7 workbook path.
+The tunneled browser UI rendered `対象年度: 2025年度（令和7年度）`, showed
+`抽出済み学校 2031` and `Excel対象行 7150`, enabled
+`プレビュー workbook を生成`, generated the in-memory workbook, and exposed
+`Excel ダウンロード`. The captured workbook download was
+`eidp_master.xlsx` with size `3,728,652` bytes; temporary browser/npm/download
+artifacts were removed, and the follow-up remote process check again found no
+remaining EIDP Streamlit/bootstrap process. This is a real Windows UI proof of
+Excel preview/download mechanics on the retroactive FY2025 dataset, but it does
+not change FY2026/R8 strict target-year readiness.
