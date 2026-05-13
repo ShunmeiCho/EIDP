@@ -51,6 +51,12 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
     assert entries_by_id["saitama-it-web-accepted-2026"]["expected_result"]["strict_target_year_success"] is False
     assert entries_by_id["ageo-central-nursing-review-2026"]["outcome"] == "needs_operator_review"
     assert entries_by_id["ageo-central-nursing-review-2026"]["expected_result"]["fiscal_year"] is None
+    assert entries_by_id["tokyo-da-target-form-review-2026"]["outcome"] == "needs_operator_review"
+    assert entries_by_id["tokyo-da-target-form-review-2026"]["expected_result"]["fiscal_year"] is None
+    assert (
+        entries_by_id["tokyo-da-target-form-review-2026"]["expected_result"]["pdf_url"]
+        == "https://www.da-tokyo.ac.jp/wp-content/themes/da-tokyo/static/assets/images/school/pdf/check-da.pdf"
+    )
     assert (
         entries_by_id["iruma-kango-no-candidates-2026"]["expected_result"]["pattern_type"]
         == "wordpress_download_manager"

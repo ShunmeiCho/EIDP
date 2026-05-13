@@ -95,6 +95,25 @@ Commands run for v342 source/package:
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip` -> `OK core`
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip --require-demonstrated-discovery-patterns` -> expected failure for the six remaining undemonstrated sources
 
+Post-v342 source-side gold-set expansion:
+
+- Three Tokyo v342 evidence rows have been promoted to committed discovery
+  gold-set entries:
+  東京俳優・映画＆放送専門学校 `conf-apl.pdf`,
+  東京ダンス・俳優＆舞台芸術専門学校 `check-da.pdf`, and
+  東京メディカル・スポーツ専門学校 `support2024.pdf`.
+- `uv run eidp discovery-gold-set --json` now reports `31` entries:
+  `accepted_target_pdf=4`, `needs_operator_review=15`,
+  `publication_lag_latest_public=10`, `no_target_candidate_found=1`,
+  and `site_fetch_error=1`.
+- `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+  now reports `31` exact predictions with `0` failures.
+- `uv run eidp eval-discovery-gold --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --json`
+  now reports `3` exact predictions with `0` failures. The remaining `28`
+  missing entries are outside the Tokyo 30-site sample.
+- This source-side evidence is not yet packaged into a new Windows ZIP; the
+  latest Mac-verifier-clean package remains `dist/eidp-windows-v342.zip`.
+
 v342 verifier exposes the current demonstration gap:
 
 - Discovery gold-set entries: `28`
