@@ -322,6 +322,12 @@ Latest v376 commands:
   started successfully; `http://127.0.0.1:8501/_stcore/health` returned
   `200 ok`; the smoke process was stopped, and a follow-up process check found
   no remaining Streamlit process.
+- Windows v376 SSH-tunnel UI precheck:
+  with the remote Streamlit process held open, `ssh -o ClearAllForwardings=no
+  -L 127.0.0.1:18501:127.0.0.1:8501 win` exposed the Windows service to the
+  Mac; local `curl http://127.0.0.1:18501/_stcore/health` returned `ok`.
+  The tunnel and remote Streamlit processes were then stopped, and a follow-up
+  check found no remaining Streamlit process.
 - Windows cleanup after v376 proof removed stale
   `C:\Users\cyo20\EIDP-v375-bcca8df`; remaining EIDP directories are
   `EIDP-transfer`, `EIDP-v342-de2cfed`, and `EIDP-v376-d2402dc`.

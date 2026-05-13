@@ -43,6 +43,14 @@ the packaged virtualenv on `127.0.0.1:8501`, received `200 ok` from
 process remained. This proves app-server startup on Windows without replacing
 the still-missing operator browser click-through evidence.
 
+The same v376 service was also held open behind an SSH tunnel using
+`ClearAllForwardings=no`; local Mac `curl` through
+`127.0.0.1:18501/_stcore/health` returned `ok`. The tunnel and remote
+Streamlit processes were stopped afterward, and a follow-up process check found
+no remaining Streamlit process. This proves the SSH-based remote UI testing
+path can reach the Windows app server, but it is still below full browser
+click-through evidence.
+
 After the v376 proof, stale Windows directory
 `C:\Users\cyo20\EIDP-v375-bcca8df` was removed. The Windows host now retains
 only `EIDP-transfer`, the historical v342 proof directory, and the current
@@ -53,8 +61,8 @@ Verification: targeted diagnose/verifier regression tests passed with
 `3 passed`; targeted Ruff passed; the v376 versioned ZIP and latest alias both
 passed `scripts/verify_windows_distribution.py
 --require-demonstrated-discovery-patterns`; Windows setup, standalone
-after-setup validation, diagnose, and headless Streamlit health check all
-passed as described above.
+after-setup validation, diagnose, headless Streamlit health check, and SSH
+tunnel health check all passed as described above.
 
 ## 2026-05-13 V375 Fiscal-Year Context Cleanup and Shobi Latest-Public Case
 
