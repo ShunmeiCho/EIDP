@@ -8,6 +8,18 @@ Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d8
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
 
+## 2026-05-13 Source-Side DB Readiness Guard
+
+`eidp db-info` now fails cleanly when it points at a local SQLite file that
+exists but has not been initialized. This matches the report-command behavior:
+the command exits with `rc=2`, prints an operator-actionable setup/import
+message, includes the first database error line as detail, and does not emit a
+Python traceback. Verification: `uv run python -m eidp.cli db-info` against the
+local uninitialized `data/eidp.sqlite3` produced the clean error path,
+`uv run pytest tests/unit/test_cli_reports.py tests/unit/test_windows_distribution_verifier.py -q`
+passed with `93 passed`, targeted Ruff and mypy passed, and the full unit suite
+passed with `1362 passed, 5 warnings`.
+
 ## 2026-05-13 Non-Windows Release Gate Helper
 
 `scripts/run_non_windows_release_gates.py` now provides a repeatable developer
@@ -26,7 +38,7 @@ Verification: helper unit tests passed with `8 passed`, helper mypy passed,
 helper Ruff passed, the full v351 non-Windows gate run returned `ok=true`, and
 the evidence replay run returned `ok=true` with Tokyo evidence `4` exact /
 `0` failures and Saitama evidence `16` exact / `0` failures. The full unit
-suite passed with `1361 passed, 5 warnings`. A source-side ship-readiness read
+suite passed with `1362 passed, 5 warnings`. A source-side ship-readiness read
 against `_temp/v348-mac-tokyo20/eidp.sqlite3` still reports `ok=false`,
 `strict_target_pdf_rate=0.0`, `operator_reviewable_rate=0.019`, and
 `excel_ready_rate=0.0`.

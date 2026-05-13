@@ -109,7 +109,9 @@ Runbook: `docs/runbooks/eidp-non-windows-release-gates.md`.
 
 Commands run for v351/v342 source/package:
 
-- `uv run pytest tests/unit -q` -> `1361 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1362 passed, 5 warnings`
+- `uv run python -m eidp.cli db-info`
+  -> clean `rc=2` when the local SQLite file has no schema, with no traceback and an operator-actionable setup/import message
 - `uv run pytest tests/unit/test_non_windows_release_gates.py -q`
   -> `8 passed`
 - `uv run mypy scripts/run_non_windows_release_gates.py`

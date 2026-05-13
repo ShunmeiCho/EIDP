@@ -77,11 +77,21 @@ def _echo_import_excel_results(results: dict[str, dict[str, int]]) -> None:
             )
 
 
-def _exit_report_db_error(exc: SQLAlchemyError, *, output_json: bool) -> NoReturn:
-    message = (
-        "report query failed; database is not initialized or the schema is incomplete. "
-        "Run setup/db-bootstrap/import before using eidp report commands."
-    )
+_DATABASE_NOT_READY_DETAIL = "database is not initialized or the schema is incomplete"
+_REPORT_DATABASE_NOT_READY_MESSAGE = (
+    "report query failed; database is not initialized or the schema is incomplete. "
+    "Run setup/db-bootstrap/import before using eidp report commands."
+)
+
+
+def _exit_database_not_ready_error(exc: SQLAlchemyError, *, output_json: bool, command_label: str) -> NoReturn:
+    if command_label == "report":
+        message = _REPORT_DATABASE_NOT_READY_MESSAGE
+    else:
+        message = (
+            f"{command_label} query failed; {_DATABASE_NOT_READY_DETAIL}. "
+            "Run setup/db-bootstrap/import before using EIDP read/report commands."
+        )
     detail = str(exc).splitlines()[0]
     if output_json:
         typer.echo(
@@ -100,6 +110,10 @@ def _exit_report_db_error(exc: SQLAlchemyError, *, output_json: bool) -> NoRetur
         typer.echo(f"ERROR: {message}", err=True)
         typer.echo(f"DETAIL: {detail}", err=True)
     raise typer.Exit(2) from exc
+
+
+def _exit_report_db_error(exc: SQLAlchemyError, *, output_json: bool) -> NoReturn:
+    _exit_database_not_ready_error(exc, output_json=output_json, command_label="report")
 
 
 @app.command()
@@ -704,6 +718,8 @@ def db_info() -> None:
         typer.echo(f"SchoolSite:         {session.query(func.count(SchoolSite.id)).scalar()}")
         typer.echo(f"Document:           {session.query(func.count(Document.id)).scalar()}")
         typer.echo(f"CrawlJob:           {session.query(func.count(CrawlJob.id)).scalar()}")
+    except SQLAlchemyError as exc:
+        _exit_database_not_ready_error(exc, output_json=False, command_label="db-info")
     finally:
         session.close()
 

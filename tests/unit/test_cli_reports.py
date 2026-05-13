@@ -17,6 +17,33 @@ class FakeSession:
         self.closed = True
 
 
+class MissingSchemaQuery:
+    def scalar(self) -> int:
+        raise OperationalError("SELECT * FROM school", {}, Exception("no such table: school"))
+
+
+class MissingSchemaSession(FakeSession):
+    def query(self, *_args, **_kwargs) -> MissingSchemaQuery:  # noqa: ANN002, ANN003
+        return MissingSchemaQuery()
+
+
+def test_db_info_fails_cleanly_when_database_schema_is_missing(monkeypatch) -> None:
+    fake_session = MissingSchemaSession()
+
+    import eidp.db.session as db_session
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+
+    result = CliRunner().invoke(app, ["db-info"])
+
+    assert result.exit_code == 2
+    assert "Traceback" not in result.output
+    assert "ERROR: db-info query failed" in result.output
+    assert "schema is incomplete" in result.output
+    assert "DETAIL:" in result.output
+    assert fake_session.closed is True
+
+
 def test_report_coverage_json_fails_cleanly_when_database_schema_is_missing(monkeypatch) -> None:
     fake_session = FakeSession()
 
