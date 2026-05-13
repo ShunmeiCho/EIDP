@@ -1,12 +1,34 @@
 # Active Goal Completion Audit — EIDP Rolling Automation
 
 Date: 2026-05-07
-Latest update: 2026-05-12
+Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `7956ba0bbbb9a413e5fabe95c7ff380af2dc7d75` (`eidp-windows-v315.zip`; Windows E2E pending)
-Latest Windows setup-verified package commit: `e7c6c9ca6b95961b05acc6d56da19a41de320226` (`eidp-windows-v245.zip`)
-Latest Windows focused replay proof: `d2beff605d168431d2b35f8cbe5a891ea9ab9c0b` (`eidp-windows-v244.zip`, school `769`)
+Latest Mac-verifier-clean Windows package commit: `ac54605b0a57b94fe4b0467a74f942f3919b4f0f` (`eidp-windows-v350.zip`; Windows E2E pending)
+Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
+Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V350 Current Package And Discovery Gold Reproducibility
+
+v350 (`ac54605`) is the current Mac-verifier-clean ZIP. It packages the
+32-entry discovery gold-set, including the source-side Tokyo Sanko
+publication-lag case added from the v348 Tokyo 20-site strict discovery smoke.
+The package verifier passes both default and
+`--require-demonstrated-discovery-patterns` modes. The verifier reports
+`discovery_gold_set_entries=32`,
+`discovery_gold_expected_predictions=32`,
+`discovery_gold_undemonstrated_pattern_sources=[]`, and demonstrated pattern
+sources `direct=3`, `embed=1`, `wordpress=2`, and
+`wordpress_download_manager=1`. SHA256:
+`f6c450576202409f82e524f708b62ae6174e70281e87cf411022bc8109fc6dae`.
+
+The latest Windows setup and bounded-bootstrap proof remains v342
+(`de2cfed`). v342 setup completed on Windows, and bounded official-index
+bootstrap/probe evidence exists for Saitama and Tokyo. Those runs prove that
+official-index URL seeding and candidate discovery are functioning, but strict
+current-FY target PDF acquisition remains below the shipping line: Saitama 50
+sites and Tokyo 30 sites both found candidates while downloading `0` strict
+FY2026 target PDFs. Browser UI operator click-through remains unverified.
 
 ## 2026-05-12 V315 Audit Outbox Durability
 
