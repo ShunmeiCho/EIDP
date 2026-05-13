@@ -3,10 +3,42 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `39b3014e3ec7d8702cb7a4470789e6a048dbd0bf` (`eidp-windows-v356.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `aa10c8982a4b7f67a5a10509bbd86dbfee462b21` (`eidp-windows-v357.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V357 Commented PDF Link Suppression
+
+v357 (`aa10c89`) closes a current-source HTML extraction accuracy gap while
+SSH Windows testing is unavailable. The current 東京アニメ・声優＆eスポーツ専門学校
+public-info page keeps an old `07_study_support_application.pdf` anchor inside
+an HTML comment and exposes visible `11_confirmation_application.pdf` /
+`12_kakunin.pdf` anchors. Before the fix, `_extract_pdf_links` could still
+emit the commented-out old PDF link as a candidate. `pdf_discovery.py` now
+strips HTML comments before extracting PDF candidates, so invisible/commented
+links no longer enter ranking, download, or evidence generation.
+
+The current Tokyo Anime page is intentionally covered by a focused extractor
+unit test rather than a new discovery gold-set entry: the same school already
+appears in the historical v342 Tokyo evidence with a different observed URL,
+and the current gold-set schema has one expected result per school id. Adding a
+current same-school entry would make historical evidence replay fail for schema
+reasons instead of crawler reasons. v357 therefore preserves the packaged
+gold-set at `36` entries and `8` `accepted_target_pdf` successes while adding
+the source-level guard.
+
+Verification: focused PDF/gold-set tests passed with `47 passed`, broader
+discovery/package tests passed with `290 passed, 5 warnings`, targeted Ruff and
+mypy passed, and the full unit suite passed with `1366 passed, 5 warnings`.
+`dist/eidp-windows-v357.zip` was rebuilt from clean commit `aa10c89` with
+SHA256 `5385dd9395e295bc31b31193fd7582bd0df3678d7f6bc39abd845a6bfb32952f`.
+The default package verifier and `--require-demonstrated-discovery-patterns`
+both passed with `git_dirty=false`. The full non-Windows release gate returned
+`ok=true`; bounded evidence replay returned `ok=true` with Tokyo `4` exact /
+`0` failures, Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0`
+failures, 更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures,
+and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V356 Empty Anchor Sibling Text Recovery
 
