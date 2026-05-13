@@ -224,6 +224,7 @@ DISCOVERY_GOLD_EXPERIMENTAL_EXTRACTOR_SOURCES = (
 OCR_REQUIRED_EXACT = (
     "ocr-addon/tesseract/tesseract.exe",
     "ocr-addon/tessdata/jpn.traineddata",
+    "ocr-addon/tessdata/configs/tsv",
     "ocr-addon/MANIFEST.json",
 )
 

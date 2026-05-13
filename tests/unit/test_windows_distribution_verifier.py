@@ -1602,6 +1602,7 @@ def test_verify_core_zip_requires_retroactive_fy_e2e_template_fields(tmp_path: P
 def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:
     tesseract = b"PE"
     tessdata = b"jpn"
+    tsv_config = b"tessedit_create_tsv 1\n"
     manifest = {
         "layout_version": 1,
         "files": [
@@ -1615,6 +1616,11 @@ def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:
                 "size": len(tessdata),
                 "sha256": hashlib.sha256(tessdata).hexdigest(),
             },
+            {
+                "path": "ocr-addon/tessdata/configs/tsv",
+                "size": len(tsv_config),
+                "sha256": hashlib.sha256(tsv_config).hexdigest(),
+            },
         ],
     }
     zip_path = _write_zip(
@@ -1622,6 +1628,7 @@ def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:
         {
             "ocr-addon/tesseract/tesseract.exe": tesseract,
             "ocr-addon/tessdata/jpn.traineddata": tessdata,
+            "ocr-addon/tessdata/configs/tsv": tsv_config,
             "ocr-addon/MANIFEST.json": json.dumps(manifest),
         },
     )
@@ -1629,7 +1636,7 @@ def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:
     check = module.verify_ocr_addon_zip(zip_path)
 
     assert check.ok, check.errors
-    assert check.details["manifest_files"] == 2
+    assert check.details["manifest_files"] == 3
 
 
 def test_verify_ocr_addon_requires_manifest_paths(tmp_path: Path) -> None:
@@ -1638,6 +1645,7 @@ def test_verify_ocr_addon_requires_manifest_paths(tmp_path: Path) -> None:
         {
             "ocr-addon/tesseract/tesseract.exe": b"PE",
             "ocr-addon/tessdata/jpn.traineddata": b"jpn",
+            "ocr-addon/tessdata/configs/tsv": b"tsv",
             "ocr-addon/MANIFEST.json": json.dumps({"layout_version": 1, "files": []}),
         },
     )
@@ -1662,6 +1670,11 @@ def test_verify_ocr_addon_rejects_manifest_checksum_mismatch(tmp_path: Path) -> 
                 "size": 3,
                 "sha256": hashlib.sha256(b"jpn").hexdigest(),
             },
+            {
+                "path": "ocr-addon/tessdata/configs/tsv",
+                "size": 3,
+                "sha256": hashlib.sha256(b"tsv").hexdigest(),
+            },
         ],
     }
     zip_path = _write_zip(
@@ -1669,6 +1682,7 @@ def test_verify_ocr_addon_rejects_manifest_checksum_mismatch(tmp_path: Path) -> 
         {
             "ocr-addon/tesseract/tesseract.exe": b"PE",
             "ocr-addon/tessdata/jpn.traineddata": b"jpn",
+            "ocr-addon/tessdata/configs/tsv": b"tsv",
             "ocr-addon/MANIFEST.json": json.dumps(manifest),
         },
     )
@@ -1693,6 +1707,11 @@ def test_verify_ocr_addon_rejects_unlisted_payload_entry(tmp_path: Path) -> None
                 "size": 3,
                 "sha256": hashlib.sha256(b"jpn").hexdigest(),
             },
+            {
+                "path": "ocr-addon/tessdata/configs/tsv",
+                "size": 3,
+                "sha256": hashlib.sha256(b"tsv").hexdigest(),
+            },
         ],
     }
     zip_path = _write_zip(
@@ -1701,6 +1720,7 @@ def test_verify_ocr_addon_rejects_unlisted_payload_entry(tmp_path: Path) -> None
             "ocr-addon/tesseract/tesseract.exe": b"PE",
             "ocr-addon/tesseract/extra.dll": b"dll",
             "ocr-addon/tessdata/jpn.traineddata": b"jpn",
+            "ocr-addon/tessdata/configs/tsv": b"tsv",
             "ocr-addon/MANIFEST.json": json.dumps(manifest),
         },
     )
@@ -1727,6 +1747,11 @@ def test_verify_ocr_addon_rejects_duplicate_manifest_path(tmp_path: Path) -> Non
                 "size": 3,
                 "sha256": hashlib.sha256(b"jpn").hexdigest(),
             },
+            {
+                "path": "ocr-addon/tessdata/configs/tsv",
+                "size": 3,
+                "sha256": hashlib.sha256(b"tsv").hexdigest(),
+            },
         ],
     }
     zip_path = _write_zip(
@@ -1734,6 +1759,7 @@ def test_verify_ocr_addon_rejects_duplicate_manifest_path(tmp_path: Path) -> Non
         {
             "ocr-addon/tesseract/tesseract.exe": b"PE",
             "ocr-addon/tessdata/jpn.traineddata": b"jpn",
+            "ocr-addon/tessdata/configs/tsv": b"tsv",
             "ocr-addon/MANIFEST.json": json.dumps(manifest),
         },
     )

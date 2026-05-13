@@ -7,6 +7,7 @@ that ``eidp.ocr.tesseract`` already detects:
 
     ocr-addon/tesseract/tesseract.exe
     ocr-addon/tessdata/jpn.traineddata
+    ocr-addon/tessdata/configs/tsv
 
 The script does not download binaries. That keeps licensing/source selection
 as an explicit release-engineering step and makes this packager fully
@@ -24,6 +25,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT_ZIP = REPO_ROOT / "dist" / "eidp-ocr-addon-windows.zip"
+REQUIRED_TESSDATA_CONFIGS = ("tsv",)
 
 # Shared with build_playwright_addon_zip + verify_windows_distribution.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -43,8 +45,9 @@ def collect_ocr_addon_members(
 
     ``tesseract_dir`` is copied recursively because Windows Tesseract
     distributions ship DLLs next to ``tesseract.exe``. ``tessdata_dir`` is
-    restricted to ``*.traineddata`` files so local READMEs/cache files do not
-    leak into the operator package.
+    restricted to ``*.traineddata`` files plus the config files that EIDP's
+    wrapper invokes. Without ``configs/tsv``, Tesseract falls back to plain text
+    and logs ``read_params_file: Can't open tsv`` on Windows.
     """
     if not tesseract_dir.is_dir():
         raise OcrAddonError(f"tesseract dir does not exist: {tesseract_dir}")
@@ -57,13 +60,20 @@ def collect_ocr_addon_members(
     jpn = tessdata_dir / "jpn.traineddata"
     if not jpn.is_file():
         raise OcrAddonError(f"missing required jpn.traineddata: {jpn}")
+    for config_name in REQUIRED_TESSDATA_CONFIGS:
+        config = tessdata_dir / "configs" / config_name
+        if not config.is_file():
+            raise OcrAddonError(f"missing required tessdata config: {config}")
 
     members: list[tuple[Path, str]] = []
     for path in iter_payload_files(tesseract_dir):
         arc = "ocr-addon/tesseract/" + path.relative_to(tesseract_dir).as_posix()
         members.append((path, arc))
     for path in iter_payload_files(tessdata_dir):
-        if path.suffix == ".traineddata":
+        rel = path.relative_to(tessdata_dir)
+        if path.suffix == ".traineddata" or rel.as_posix() in {
+            f"configs/{config_name}" for config_name in REQUIRED_TESSDATA_CONFIGS
+        }:
             arc = "ocr-addon/tessdata/" + path.relative_to(tessdata_dir).as_posix()
             members.append((path, arc))
     return members
@@ -83,6 +93,7 @@ def build_manifest(members: list[tuple[Path, str]]) -> dict[str, Any]:
         "required": {
             "tesseract": "ocr-addon/tesseract/tesseract.exe",
             "jpn_traineddata": "ocr-addon/tessdata/jpn.traineddata",
+            "tsv_config": "ocr-addon/tessdata/configs/tsv",
         },
         "files": files,
     }
