@@ -7,6 +7,7 @@ Package commit: `d2402dcd52eeb7b9032aa7d4d30111485c37331b`
 Package SHA256: `8a7c9575394a37ee55ae8c566059385961cd70b8a06c768738a5529d7be9b2cd`
 Latest Windows-core-validated package: `dist/eidp-windows-v376.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v376.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v376.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 ## Verdict
@@ -16,7 +17,7 @@ Status: **NOT COMPLETE**
 The current Mac-verifier-clean ZIP snapshot is v376 and passes the default
 macOS package verifier, including `--require-demonstrated-discovery-patterns`.
 The latest Windows setup proof is v376. The latest Windows bounded-bootstrap
-proof remains v342.
+smoke is v376. The latest broader Windows bounded-bootstrap proof remains v342.
 v376 fixes a Windows-only diagnostics bug in the retroactive fiscal-year
 snapshot: the v375 ZIP passed token-based package verification, but real
 Windows batch execution skipped the FY2025 `ship-readiness --fy` call because
@@ -348,6 +349,20 @@ Latest v376 commands:
   `バージョン` / `和暦 alias` / `OCR` / `外部 API`. The script did not click
   acquisition, save, export, or any data-mutating action. Temporary npm files
   were removed afterward.
+- Windows v376 Saitama 5-site bounded backend smoke:
+  `bootstrap_pdf_pipeline.py --pref saitama --url-search off
+  --school-url-crawl off --skip-known-url-discovery --discovery-methods
+  prefecture_aggregator --batch-size 5 --rate-limit 0.1 --request-timeout 10`
+  completed on `C:\Users\cyo20\EIDP-v376-d2402dc`. It downloaded the current
+  Saitama artifact, extracted `58` rows, matched `51`, added `51`
+  `SchoolSite` rows, crawled `5` official-index disclosure sites, found
+  candidates on all `5`, downloaded `0` strict FY2026 target PDFs, produced
+  `2084` discovery evidence lines, rebuilt `2418` school status rows, and
+  reported `operator_reviewable_count=5`,
+  `operator_reviewable_yield_pct=0.2`, `target_pdf_auto_yield_pct=0.0`, and
+  `ship_gate_status=below_gate`. The progress JSON loaded as valid UTF-8 and
+  after-run `validate_windows_install.py --after-setup --json` returned
+  `ok=true` with `sqlite_integrity_check=ok`.
 - Windows cleanup after v376 proof removed stale
   `C:\Users\cyo20\EIDP-v375-bcca8df`; remaining EIDP directories are
   `EIDP-transfer`, `EIDP-v342-de2cfed`, and `EIDP-v376-d2402dc`.

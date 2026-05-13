@@ -75,6 +75,22 @@ Playwright/npm files were removed afterward. This upgrades the browser proof
 from single-page render to safe multi-page navigation, while the full
 operator-action E2E remains pending.
 
+A small v376 bounded backend smoke was also run from the Windows package
+directory with `bootstrap_pdf_pipeline.py --pref saitama --url-search off
+--school-url-crawl off --skip-known-url-discovery --discovery-methods
+prefecture_aggregator --batch-size 5 --rate-limit 0.1 --request-timeout 10`.
+It downloaded the current Saitama artifact, extracted `58` rows, matched `51`,
+added `51` `SchoolSite` rows, and then crawled `5` official-index disclosure
+sites. PDF discovery found candidates on all `5` sites but downloaded `0`
+strict FY2026 target PDFs, producing `2084` discovery evidence lines and the
+expected below-gate status: `operator_reviewable_count=5`,
+`operator_reviewable_yield_pct=0.2`, `target_pdf_auto_yield_pct=0.0`, and
+`ship_gate_status=below_gate`. This is intentionally smaller than the v342
+Saitama 50-site / Tokyo 30-site proof, but it proves the v376 package's current
+official-index -> SchoolSite -> PDF-discovery -> status-rebuild path still runs
+on Windows. After-run validation returned `ok=true` with
+`sqlite_integrity_check=ok`.
+
 After the v376 proof, stale Windows directory
 `C:\Users\cyo20\EIDP-v375-bcca8df` was removed. The Windows host now retains
 only `EIDP-transfer`, the historical v342 proof directory, and the current
@@ -87,7 +103,8 @@ passed `scripts/verify_windows_distribution.py
 --require-demonstrated-discovery-patterns`; Windows setup, standalone
 after-setup validation, diagnose, headless Streamlit health check, SSH tunnel
 health check, browser-render smoke, and read-only quick-navigation
-click-through all passed as described above.
+click-through all passed as described above. The v376 Saitama 5-site bounded
+backend smoke also completed and left the database validator clean.
 
 ## 2026-05-13 V375 Fiscal-Year Context Cleanup and Shobi Latest-Public Case
 
