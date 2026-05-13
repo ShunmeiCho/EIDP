@@ -1,0 +1,57 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "hamamatsu-kohka-support-accepted-2026",
+  "school": {
+    "school_id": 1317,
+    "school_name": "専門学校浜松工科自動車大学校",
+    "prefecture": "静岡県",
+    "corporation_name": "静岡自動車学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Preserve an official-index-linked WordPress disclosure page where the current target-year evidence is in the link label, not the PDF body.",
+    "search_queries": [
+      "専門学校浜松工科自動車大学校 令和8年度 様式第2号",
+      "専門学校浜松工科自動車大学校 機関要件 様式第2号"
+    ],
+    "steps": [
+      "Start from the Shizuoka official-index artifact row for 専門学校浜松工科自動車大学校.",
+      "Follow the official-index link to https://kohka-h.ac.jp/disclose.",
+      "Find the public-disclosure link labeled 令和８年度 様式第２号.",
+      "Open the linked PDF and verify that its body contains 専門学校浜松工科自動車大学校 and 様式第２号.",
+      "Accept it as strict FY2026 evidence because the link label supplies the target fiscal year even though the PDF body itself has no explicit 令和8年度 label."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://kohka-h.ac.jp/",
+    "disclosure_url": "https://kohka-h.ac.jp/disclose",
+    "pdf_url": "https://kohka-h.ac.jp/kohkacms/wp-content/uploads/2025/06/5ad4c281d27a5d882d3124e8c86dbe7e.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "pattern_type": "wordpress",
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "wordpress_current_year_anchor_context",
+    "reusable_rules": [
+      "On WordPress disclosure pages, use local link text such as 令和８年度 様式第２号 as trusted fiscal-year evidence for the linked target-form PDF.",
+      "Accept a target-form PDF whose body contains the school name and 様式第２号 when the PDF body lacks an explicit fiscal-year label but the local link label proves the target fiscal year.",
+      "Keep generic documents in the same current-year disclosure block, such as 学校情報, 学生便覧, 組織図, and 役員名簿, out of strict target success even when they share the same 令和８年度 heading."
+    ],
+    "anti_patterns": [
+      "Do not require the PDF body to repeat 令和8年度 when the immediately associated anchor text carries the target-year evidence.",
+      "Do not let generic current-year documents outrank a current-year 様式第２号 link merely because they appear earlier in the same disclosure section."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "data/prefecture-aggregators/artifacts/shizuoka.html",
+      "https://kohka-h.ac.jp/disclose",
+      "https://kohka-h.ac.jp/kohkacms/wp-content/uploads/2025/06/5ad4c281d27a5d882d3124e8c86dbe7e.pdf",
+      "_temp/hamamatsu-kohka-r8-youshiki2.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found the official-index-linked WordPress disclosure page. Project HTML extraction ranked the 令和８年度 様式第２号 candidate as a WordPress PDF link; source-side PDF text extraction verified 専門学校浜松工科自動車大学校 and 様式第２号 in the PDF body. The PDF body does not repeat 令和8年度, so this case preserves link-local year evidence as the strict success signal."
+  }
+}

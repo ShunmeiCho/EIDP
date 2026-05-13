@@ -79,6 +79,23 @@ def test_score_candidate_uses_configured_target_fiscal_year() -> None:
     )
 
 
+def test_current_year_target_form_is_prioritized_over_generic_current_year_disclosures() -> None:
+    html = """
+    <a href="/uploads/r8-school-info.pdf">令和８年度 学校情報</a>
+    <a href="/uploads/r8-handbook.pdf">令和８年度 学生便覧</a>
+    <a href="/uploads/r8-youshiki2.pdf">令和８年度 様式第２号</a>
+    <a href="/uploads/r8-board.pdf">令和８年度 役員名簿</a>
+    """
+
+    candidates = _extract_pdf_links(html, "https://kohka-h.ac.jp/disclose", target_fiscal_year=2026)
+    for candidate in candidates:
+        _score_candidate(candidate, target_fiscal_year=2026)
+    ordered, dropped = _prioritize_viable_candidates(candidates, target_year=2026)
+
+    assert not dropped
+    assert ordered[0].pdf_url == "https://kohka-h.ac.jp/uploads/r8-youshiki2.pdf"
+
+
 def test_score_candidate_preserves_direct_bonus_for_source_prefixed_patterns() -> None:
     direct = PdfCandidate(
         pdf_url="https://example.ac.jp/r8.pdf",
