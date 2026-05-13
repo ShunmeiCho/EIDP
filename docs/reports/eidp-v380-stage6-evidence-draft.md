@@ -40,6 +40,7 @@ running one uninterrupted production cycle.
 | Latest Windows fiscal-year override proof path | `C:\Users\cyo20\EIDP-v384-75732b0-fiscal-override-sandbox` |
 | Latest Windows manual-entry write proof path | `C:\Users\cyo20\EIDP-v384-75732b0-manual-entry-sandbox` |
 | Latest Windows SupportRecipient ingest proof path | `C:\Users\cyo20\EIDP-v384-75732b0-support-recipient-sandbox` |
+| Latest Windows backup/env proof path | `C:\Users\cyo20\EIDP-v384-75732b0-backup-env-sandbox` |
 | Latest package-level OCR evidence | v384 package commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, core SHA256 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0` |
 | OCR add-on ZIP SHA256 | v383 smoke add-on `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853` |
 | Playwright add-on ZIP SHA256 | not captured in this evidence set |
@@ -49,12 +50,12 @@ running one uninterrupted production cycle.
 
 | Item | Record |
 | --- | --- |
-| Windows version | `Microsoft Windows 11 Pro`, version `10.0.26200`, build `26200`, `AMD64` process architecture |
+| Windows version | latest v384 capture: `Microsoft Windows 11 Pro`, version `10.0.26200`, build `26200`, `AMD64` process architecture |
 | Japanese locale | not Japanese; captured culture/UI/system locale were `zh-CN`; timezone was `Tokyo Standard Time` |
 | Console encoding | `chcp` reported code page `936` with mojibake over SSH; prior commands used UTF-8 safeguards where needed |
-| CPU cores | `13th Gen Intel(R) Core(TM) i9-13900HK`, `14` cores / `20` logical processors |
-| RAM | `32453` MB visible, `16503` MB free at capture time |
-| Free disk | `C:` size `1888.7` GB, free `1058.8` GB |
+| CPU cores | latest v384 capture: `13th Gen Intel(R) Core(TM) i9-13900HK`, `14` cores / `20` logical processors |
+| RAM | latest v384 capture: `32453` MB visible, `694` MB free at capture time |
+| Free disk | latest v384 capture: `C:` size `1888.7` GB, free `964.4` GB |
 | Defender state | not captured |
 | SmartScreen display | not captured |
 | Network | SSH from Mac to Windows host `win`; local browser tunnel used `127.0.0.1:18501 -> Windows 127.0.0.1:8501` |
@@ -71,6 +72,7 @@ running one uninterrupted production cycle.
 | `eidp db-backup` smoke | backup opened successfully with `backup_objects=35`, `integrity=ok`, temp backup removed |
 | Environment capture | `2026-05-14T00:51:48+09:00`; host `JUNMING`; Windows 11 Pro; i9-13900HK; 32 GB RAM; `C:` free `1058.8` GB |
 | Task Scheduler query | task `EIDP Weekly Run` found, state `Ready`, action `"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"`, weekly trigger enabled from `2026-05-13T02:00:00`, last run `2026-05-11T02:00:00+09:00`, next run `2026-05-18T02:00:00+09:00`, last result `0` |
+| v384 environment, Task Scheduler, and `db-backup` smoke | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-backup-env-sandbox` expanded the v384 core ZIP after confirming SHA256 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`; environment capture reported host `JUNMING`, Windows 11 Pro version `10.0.26200` build `26200`, `AMD64`, culture/UI culture `zh-CN`, timezone `Tokyo Standard Time`, i9-13900HK with `14` cores / `20` logical processors, `32453` MB visible RAM, and `C:` free `964.4` GB; `scripts\first_setup.bat` returned `setup_rc=0`; setup registered `EIDP Weekly Run` to the v384 sandbox with state `Ready`, next run `05/18/2026 02:00:00`, last run `05/11/2026 02:00:00`, and last result `0`; the harness restored the task to `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`; v384 package-local `eidp db-backup` returned `db_backup_rc=0`; backup verification reported `backup_size=9015296`, `integrity=ok`, `sqlite_objects=35`, `school_count=2418`, and `school_year_status_count=17696`; cleanup removed the sandbox, uploaded ZIP/sidecar, and verify script |
 | OCR availability probe | v380 extract path had no `ocr-addon`; `detect_ocr_availability` returned `binary_path=null`, `has_jpn_traineddata=false`, `can_run=false`; the v380 packaged runtime also returned `runtime_free_ram_mb=0` because the Windows package lacks `psutil` |
 | Source-side OCR RAM fallback fix | added a stdlib Windows `GlobalMemoryStatusEx` fallback; direct Windows probe returned `cpu_count=20`, `avail_phys_mb=16532`, `meets_ocr_default_threshold=true` |
 | v381 OCR RAM fallback package probe | v381 disposable extraction under `C:\Users\cyo20\EIDP-v381-da29fee-runtime-probe` used the packaged runtime and returned `cpu_count=20`, `free_ram_mb=16242`, `ocr_auto_enable=true`; probe directory and uploaded v381 ZIP/sidecar were removed after capture |
@@ -111,6 +113,8 @@ running one uninterrupted production cycle.
 | v384 after-setup validator | pass | `ok=true`, no errors/warnings, build commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false` |
 | v384 diagnostics | pass | `diagnose_rc=0`; `logs\diagnostics-20260514-020156.txt`; `validate_after_setup_rc=0`; `retroactive_ship_readiness_rc=0` |
 | v384 scheduler restoration | pass | setup registered the task to the v384 probe during setup, then the harness restored the original task containing `EIDP-v380-f6a5e6d`; restored task did not contain `EIDP-v384-75732b0-setup-probe` |
+| v384 `db-backup` smoke | pass | package-local `eidp db-backup` returned `db_backup_rc=0`; backup verification returned `integrity=ok`, `sqlite_objects=35`, `school_count=2418`, and `school_year_status_count=17696` |
+| v384 environment and scheduler capture | pass | Windows 11 Pro build `26200`, host `JUNMING`, i9-13900HK, `32453` MB RAM, `C:` free `964.4` GB; setup registered task to v384 sandbox, then restored it to v380 |
 | v384 `launch.bat` / Streamlit startup equivalent | pass | package-local Streamlit run returned remote and tunneled health `200 ok` |
 | v384 `学校別タスク` initial page | pass | title `EIDP Operator Console`, build `75732b0`, target `2026年度（令和8年度）`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, console errors/warnings `0` |
 | v384 read-only quick navigation | pass | clicked only `PDF確認・手入力`, `③ 年度判定・修正`, `④ Excel プレビュー`, `⑤ 設定（年度・OCR・API）`, and back to `① 学校別タスク`; all pages rendered; incremental console capture had `0` errors and `0` warnings |
