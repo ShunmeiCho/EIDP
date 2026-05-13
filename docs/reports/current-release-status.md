@@ -6,7 +6,7 @@ Current Mac-verifier-clean package: `dist/eidp-windows-v378.zip`
 Package commit: `c82af41728a91e72cfd661d114d199175213dc9d`
 Package SHA256: `bdf1ffbae478ee32a2ae745e34960b32c57dd0b1d0689fc7c1d7d438e5092a2e`
 Latest Windows-core-validated package: `dist/eidp-windows-v376.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v376.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v378.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v376.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
@@ -20,7 +20,10 @@ The current Mac-verifier-clean ZIP snapshot is v378. It includes the post-v376
 data exclusion gate for ZIP contents, and a runbook-contract gate that requires
 that migration guidance to ship. The full non-Windows release gate passed for
 v378 with `1385` unit tests and `44` exact discovery gold-set predictions.
-The latest Windows setup proof remains v376. The latest Windows
+The latest Windows setup proof is v378. The latest Windows UI service/browser
+proof remains v376 because v378 setup and diagnostics passed, but the attempted
+v378 SSH-launched Streamlit health smoke did not produce a usable `/_stcore`
+health response before the process disappeared without logs. The latest Windows
 bounded-bootstrap smoke remains v376. The latest broader Windows
 bounded-bootstrap proof remains v342.
 v376 fixes a Windows-only diagnostics bug in the retroactive fiscal-year
@@ -330,6 +333,38 @@ Latest v378 non-Windows commands:
   expected-prediction replay returned `44` exact matches / `0` failures; both
   package verifier modes passed with SHA256
   `bdf1ffbae478ee32a2ae745e34960b32c57dd0b1d0689fc7c1d7d438e5092a2e`.
+- Windows v378 setup on `C:\Users\cyo20\EIDP-v378-c82af41`:
+  transferred `dist/eidp-windows-v378.zip` and its sidecar to
+  `C:\Users\cyo20\EIDP-transfer`; Windows SHA256 matched
+  `bdf1ffbae478ee32a2ae745e34960b32c57dd0b1d0689fc7c1d7d438e5092a2e`;
+  expanded into a separate directory without touching v376;
+  `EIDP-setup.bat` completed with build commit
+  `c82af41728a91e72cfd661d114d199175213dc9d`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  `document_unique_indexes` including `uq_document_file_hash`, and
+  `wheel_count=78`.
+- Windows v378 after-setup validator:
+  `.venv\Scripts\python.exe scripts\validate_windows_install.py . --after-setup --json`
+  returned `ok=true`, no errors or warnings, the same v378 build commit,
+  `master_xlsx_present=true`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and all
+  required SQLite tables.
+- Windows v378 diagnostics:
+  `EIDP-diagnose.bat` wrote
+  `logs\diagnostics-20260513-224228.txt`. FY2026 readiness remained below gate
+  with `ship_readiness_rc=1`, `strict_target_pdf_schools=0`,
+  `operator_reviewable_schools=0`, `excel_ready_schools=0`, and
+  `estimated_manual_workload_rate=1.0`. The retroactive FY2025 section recorded
+  `is_retroactive_fiscal_year=true`, `extracted_schools=2031`,
+  `extracted_rate=0.84`, `retroactive_fiscal_year=2025`, and
+  `retroactive_ship_readiness_rc=0`.
+- Windows v378 UI service smoke attempt:
+  `python -m streamlit version` returned `Streamlit, version 1.57.0`, and
+  `import eidp.review.app` returned `app_import_ok`. However, SSH-launched
+  `Start-Process` Streamlit attempts did not produce a usable
+  `/_stcore/health` response and left empty stdout/stderr logs; follow-up
+  process checks reported `remaining_python_processes=0`. Treat v378 UI
+  service/browser proof as not yet established.
 
 Latest v376 commands (historical Windows-validated package evidence):
 
