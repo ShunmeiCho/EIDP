@@ -105,9 +105,9 @@ broadened rolling-FY package verifier guard.
 
 Commands run for v350/v342 source/package:
 
-- `uv run pytest tests/unit -q` -> `1346 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1353 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_windows_distribution_verifier.py -q` -> `247 passed, 5 warnings`
-- `uv run pytest tests/unit/test_windows_distribution_verifier.py -q` -> `82 passed`
+- `uv run pytest tests/unit/test_windows_distribution_verifier.py -q` -> `89 passed`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_url_discovery.py tests/unit/test_url_normalization.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_discovery_gold_set_summary.py -q` -> `206 passed, 5 warnings`
 - `uv run pytest tests/unit/test_review_excel_preview.py tests/unit/test_excel_exporter.py tests/unit/test_windows_distribution_verifier.py -q` -> `96 passed`
 - `uv run ruff check src/eidp/review/_pages/excel_preview.py tests/unit/test_review_excel_preview.py` -> `All checks passed`
