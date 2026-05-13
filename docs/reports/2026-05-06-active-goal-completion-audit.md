@@ -3,10 +3,38 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `0f3b868d7dd44212650e7910ee771552f35f02eb` (`eidp-windows-v361.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `82d7d153ff64034f30d8f4027085c800a096d38d` (`eidp-windows-v362.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V362 Discovery Gold-Set Schema Gate
+
+v362 (`82d7d15`) hardens the demonstration-driven discovery baseline while
+SSH Windows testing is unavailable. `load_discovery_gold_entries` now validates
+every committed `entries/*.json` file against `data/discovery-gold-set/schema.json`
+before constructing `DiscoveryGoldEntry` objects. The schema now rejects
+unknown fields, includes the already-committed `windows_v320_jsonl` source kind,
+and remains compatible with all `36` current entries. `jsonschema` is now an
+explicit runtime dependency in both `pyproject.toml` and `requirements-windows.txt`,
+and the Windows package verifier checks for the schema-validation code path and
+the Windows requirements token. A new runbook,
+`docs/runbooks/eidp-retroactive-fy-validation.md`, documents how FY2025/R7 can
+be used as a retroactive rolling-year and Stage 6 rehearsal without reporting
+it as FY2026/R8 current-year yield.
+
+Verification: targeted discovery gold-set/schema/seed/eval/verifier tests
+passed with `136 passed`; targeted Ruff and mypy passed; `eidp
+discovery-gold-set --json` loaded all entries through schema validation and
+reported `36` entries, `8` strict target-year successes, and `0`
+undemonstrated pattern sources. The full unit suite passed with `1368 passed,
+5 warnings`. `dist/eidp-windows-v362.zip` was rebuilt from clean commit
+`82d7d15` with SHA256
+`44d6f0c2408df7f85315c09e025c93e0b9844c6b3fcecaaddef2fe67545b333a`. The full
+non-Windows release gate returned `ok=true`; bounded evidence replay returned
+`ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact / `0`
+failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V361 CLI Tool Module Split
 
