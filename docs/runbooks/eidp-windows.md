@@ -90,10 +90,12 @@ Windows の権限設定によっては、タスクスケジューラ登録だけ
 
 1. EIDP 画面、黒い起動画面、Excel をすべて閉じます。
 2. タスクマネージャーまたは PowerShell で、EIDP の `python.exe` / `streamlit` が残っていないことを確認します。
-3. `data\eidp.sqlite3`、`data\eidp.sqlite3-wal`、`data\eidp.sqlite3-shm` を含む `data\` をバックアップします。
+3. SQLite の WAL を閉じてから、`VACUUM INTO` で `data\eidp.sqlite3` の一貫したバックアップを作成します。
 
 データを新版へコピーする場合、`data\.lock` はコピーしません。`.lock` は業務データではなく実行中処理の印です。
 旧フォルダからコピーすると、新版が誤って `lock_busy` と判定することがあります。
+`data\eidp.sqlite3-wal` と `data\eidp.sqlite3-shm` は実行時の副ファイルです。EIDP が完全停止していることを確認し、
+`PRAGMA wal_checkpoint(TRUNCATE)` を実行してからバックアップ・コピーしてください。
 
 PowerShell 例:
 
@@ -101,9 +103,17 @@ PowerShell 例:
 $old = "C:\EIDP"
 $new = "C:\EIDP-vNext"
 $ts = Get-Date -Format "yyyyMMdd-HHmmss"
+$dbBackup = Join-Path $old "data\eidp-backup-$ts.sqlite3"
+$excluded = @(".lock", "eidp.sqlite3-wal", "eidp.sqlite3-shm")
 
-Compress-Archive "$old\data" "$old\data-backup-$ts.zip" -Force
-robocopy "$old\data" "$new\data" /E /XF ".lock"
+Push-Location $old
+.\.venv\Scripts\python.exe -c "import sqlite3, sys; con=sqlite3.connect('data/eidp.sqlite3'); con.execute('PRAGMA wal_checkpoint(TRUNCATE)'); con.execute('VACUUM INTO ?', (sys.argv[1],)); con.close()" $dbBackup
+Pop-Location
+
+Get-ChildItem "$old\data" -Force |
+  Where-Object { $excluded -notcontains $_.Name -and $_.Name -notlike "eidp-backup-*.sqlite3" } |
+  Compress-Archive -DestinationPath "$old\data-files-backup-$ts.zip" -Force
+robocopy "$old\data" "$new\data" /E /XF ".lock" "eidp.sqlite3-wal" "eidp.sqlite3-shm" "eidp-backup-*.sqlite3"
 ```
 
 コピー後:

@@ -1395,8 +1395,13 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "新しい ZIP へ更新する場合",
         "data\\eidp.sqlite3-wal",
         "data\\eidp.sqlite3-shm",
+        "PRAGMA wal_checkpoint(TRUNCATE)",
+        "VACUUM INTO",
+        "eidp-backup-$ts.sqlite3",
+        'Get-ChildItem "$old\\data" -Force',
+        '$_.Name -notlike "eidp-backup-*.sqlite3"',
         "data\\.lock",
-        '/XF ".lock"',
+        '/XF ".lock" "eidp.sqlite3-wal" "eidp.sqlite3-shm" "eidp-backup-*.sqlite3"',
     ):
         _require_text(check, body, member, token)
     for token in (

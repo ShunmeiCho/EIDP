@@ -180,8 +180,13 @@ def _core_entries() -> dict[str, bytes | str]:
             "新しい ZIP へ更新する場合\n"
             "data\\eidp.sqlite3-wal\n"
             "data\\eidp.sqlite3-shm\n"
+            "PRAGMA wal_checkpoint(TRUNCATE)\n"
+            "VACUUM INTO\n"
+            "eidp-backup-$ts.sqlite3\n"
+            'Get-ChildItem "$old\\data" -Force\n'
+            '$_.Name -notlike "eidp-backup-*.sqlite3"\n'
             "data\\.lock\n"
-            '/XF ".lock"\n'
+            '/XF ".lock" "eidp.sqlite3-wal" "eidp.sqlite3-shm" "eidp-backup-*.sqlite3"\n'
         ),
         "docs/runbooks/eidp-operator-e2e-template.md": (
             "# E2E\n"
