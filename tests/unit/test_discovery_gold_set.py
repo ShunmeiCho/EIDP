@@ -57,8 +57,6 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
         entries_by_id["tokyo-da-target-form-review-2026"]["expected_result"]["pdf_url"]
         == "https://www.da-tokyo.ac.jp/wp-content/themes/da-tokyo/static/assets/images/school/pdf/check-da.pdf"
     )
-    assert entries_by_id["tokyo-anime-commented-link-review-2026"]["outcome"] == "needs_operator_review"
-    assert entries_by_id["tokyo-anime-commented-link-review-2026"]["expected_result"]["fiscal_year"] is None
     assert (
         entries_by_id["iruma-kango-no-candidates-2026"]["expected_result"]["pattern_type"]
         == "wordpress_download_manager"
@@ -109,13 +107,13 @@ def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:
         GOLD_SET_DIR / "expected-predictions.jsonl"
     ).read_text(encoding="utf-8")
     assert summary.pattern_type_counts == {
-        "direct": 6,
+        "direct": 5,
         "embed": 1,
         "wordpress": 4,
         "wordpress_download_manager": 1,
     }
     assert summary.pattern_source_counts == {
-        "direct": 6,
+        "direct": 5,
         "embed": 1,
         "wordpress": 4,
         "wordpress_download_manager": 1,

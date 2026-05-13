@@ -40,10 +40,10 @@ def test_eval_discovery_gold_cli_outputs_json_report(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["total_gold_entries"] == 37
+    assert payload["total_gold_entries"] == 36
     assert payload["predicted_entries"] == 1
     assert payload["exact_matches"] == 1
-    assert payload["missing_entries"] == 36
+    assert payload["missing_entries"] == 35
 
 
 def test_eval_discovery_gold_cli_accepts_pdf_evidence_log(tmp_path: Path) -> None:
@@ -176,7 +176,7 @@ def test_eval_discovery_gold_cli_can_fail_on_incomplete_predictions(tmp_path: Pa
 
     assert result.exit_code == 1
     assert "Discovery gold gate failed" in result.output
-    assert "missing:     36" in result.output
+    assert "missing:     35" in result.output
 
 
 def test_eval_discovery_gold_cli_full_expected_fixture_passes_fail_on_regression() -> None:
@@ -195,9 +195,9 @@ def test_eval_discovery_gold_cli_full_expected_fixture_passes_fail_on_regression
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["total_gold_entries"] == 37
-    assert payload["predicted_entries"] == 37
-    assert payload["exact_matches"] == 37
+    assert payload["total_gold_entries"] == 36
+    assert payload["predicted_entries"] == 36
+    assert payload["exact_matches"] == 36
     assert payload["failed_predictions"] == 0
     assert payload["missing_entries"] == 0
     assert payload["unexpected_predictions"] == 0
