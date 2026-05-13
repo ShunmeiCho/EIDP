@@ -24,6 +24,14 @@ The new package was rebuilt from clean commit
 `8a7c9575394a37ee55ae8c566059385961cd70b8a06c768738a5529d7be9b2cd`;
 `dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
 passed for both ZIPs with `--require-demonstrated-discovery-patterns`.
+The full non-Windows release gate for `dist/eidp-windows-v376.zip` also
+returned `ok=true`: SHA256 sidecar matched, full unit passed with
+`1377 passed, 5 warnings`, validator/distribution tests passed with
+`133 passed`, validator/distribution mypy and Ruff passed, discovery gold-set
+summary reported `43` entries / `10` strict target-year successes /
+`16` publication-lag cases / `undemonstrated_pattern_sources=[]`, expected
+prediction replay returned `43` exact matches / `0` failures, and both package
+verifier modes passed.
 
 Windows proof was collected on `C:\Users\cyo20\EIDP-v376-d2402dc`.
 `EIDP-setup.bat` completed, `scripts\validate_install.bat` returned
@@ -98,8 +106,9 @@ v376 setup directory. Full operator-action click-through remains the
 outstanding Stage 6 evidence gap.
 
 Verification: targeted diagnose/verifier regression tests passed with
-`3 passed`; targeted Ruff passed; the v376 versioned ZIP and latest alias both
-passed `scripts/verify_windows_distribution.py
+`3 passed`; targeted Ruff passed; the full non-Windows release gate returned
+`ok=true`; the v376 versioned ZIP and latest alias both passed
+`scripts/verify_windows_distribution.py
 --require-demonstrated-discovery-patterns`; Windows setup, standalone
 after-setup validation, diagnose, headless Streamlit health check, SSH tunnel
 health check, browser-render smoke, and read-only quick-navigation

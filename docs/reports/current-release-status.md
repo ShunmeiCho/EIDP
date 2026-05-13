@@ -305,6 +305,15 @@ Latest v376 commands:
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v376.zip --require-demonstrated-discovery-patterns`
   and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --require-demonstrated-discovery-patterns`
   -> both `OK core`, with matching SHA256 and `43` packaged discovery gold-set entries.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v376.zip --json --output _temp/v376-non-windows-release-gates-full.json`
+  -> `ok=true`; SHA256 sidecar matched; full unit passed with
+  `1377 passed, 5 warnings`; validator/distribution unit tests passed with
+  `133 passed`; validator/distribution mypy and Ruff passed; discovery
+  gold-set reported `43` entries, `10` strict target-year successes,
+  `16` publication-lag cases, and `undemonstrated_pattern_sources=[]`;
+  expected-prediction replay returned `43` exact matches / `0` failures; both
+  package verifier modes passed with SHA256
+  `8a7c9575394a37ee55ae8c566059385961cd70b8a06c768738a5529d7be9b2cd`.
 - Windows v376 setup on `C:\Users\cyo20\EIDP-v376-d2402dc`:
   `EIDP-setup.bat` completed; `scripts\validate_install.bat` returned `OK install`;
   `.venv\Scripts\python.exe scripts\validate_windows_install.py . --after-setup --json`
