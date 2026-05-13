@@ -603,6 +603,7 @@ def test_verify_core_zip_requires_target_fiscal_year_config_bound(tmp_path: Path
     assert any("src/eidp/config.py missing required token" in error for error in check.errors)
     assert any("_validate_target_fiscal_year" in error for error in check.errors)
     assert any("SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL" in error for error in check.errors)
+    assert any("pdf_discovery_experimental_extractors: bool = False" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_configurable_fiscal_year_text_helper(tmp_path: Path) -> None:
