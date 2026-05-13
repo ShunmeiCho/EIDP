@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v383.zip`
-Package commit: `effcd58efa50c8b9478a7dc762947e030236d65e`
-Package SHA256: `6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`
+Current Mac-verifier-clean package: `dist/eidp-windows-v384.zip`
+Package commit: `75732b057a115afcebe35f9a40b831fac0ffa6f6`
+Package SHA256: `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v383.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -17,15 +17,18 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v383. It supersedes v382 at the
-package level after commit `effcd58` made the OCR add-on manifest include the
-Tesseract TSV config file at `ocr-addon/tessdata/configs/tsv`; without that
-config, `run_tesseract_on_image(..., output_format="tsv")` can execute the
-binary but return plain text instead of TSV. The v383 versioned ZIP and latest
-alias both pass
+The current Mac-verifier-clean ZIP snapshot is v384. It packages commit
+`75732b0`, which routes image-PDF ingest through the packaged/system Tesseract
+TSV wrapper when available and preserves OCR provenance in the DB confidence
+breakdown. It supersedes v383 at the package level; v383 had already made the
+OCR add-on manifest include the Tesseract TSV config file at
+`ocr-addon/tessdata/configs/tsv`. Without that config,
+`run_tesseract_on_image(..., output_format="tsv")` can execute the binary but
+return plain text instead of TSV. The v384 versioned ZIP and latest alias both
+pass
 `scripts/verify_windows_distribution.py --require-demonstrated-discovery-patterns`
 with SHA256
-`6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`,
+`2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`,
 `44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
 seeds, and `undemonstrated_pattern_sources=[]`. The latest full non-Windows
 release gate remains v378 with `1385` unit tests and `44` exact discovery
@@ -366,7 +369,7 @@ The current source checkout therefore reports `44` discovery gold-set entries,
 `10` strict target-year successes, `17` publication-lag cases, `15`
 operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
 enforcing a stricter ZIP hygiene contract. That source/package evidence is now
-packaged in `dist/eidp-windows-v383.zip`; v381 proved the Windows runtime can
+packaged in `dist/eidp-windows-v384.zip`; v381 proved the Windows runtime can
 detect free RAM without `psutil`, v382 adds a packaged `--require-ocr-runtime`
 gate that executes Tesseract runtime probes when an OCR add-on is present, and
 v383 adds the Tesseract `configs/tsv` file required by the wrapper's TSV
@@ -413,19 +416,19 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v383 package-verifier commands:
+Latest v384 package-verifier commands:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v383.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v383.zip` and refreshed `dist/eidp-windows.zip`;
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v384.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v384.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`.
+  `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`.
 - `uv run python scripts/build_ocr_addon_zip.py --tesseract-dir _temp/ocr-addon-src/7z-extract --tessdata-dir /opt/homebrew/share/tessdata --out-zip dist/eidp-ocr-addon-windows-v383-smoke.zip`
   built an add-on from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus
   local `jpn.traineddata` and the required `tessdata/configs/tsv` file;
   package verifier reported `OK ocr-addon`, SHA256
   `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853`,
   `entry_count=267`, and `manifest_files=266`.
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v383.zip --ocr-addon dist/eidp-ocr-addon-windows-v383-smoke.zip --require-demonstrated-discovery-patterns`
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v384.zip --ocr-addon dist/eidp-ocr-addon-windows-v383-smoke.zip --require-demonstrated-discovery-patterns`
   and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --ocr-addon dist/eidp-ocr-addon-windows-v383-smoke.zip --require-demonstrated-discovery-patterns`
   -> both `OK core` plus `OK ocr-addon`, with matching core SHA256, `44`
   packaged discovery gold-set entries, `17` publication-lag cases, `47`
