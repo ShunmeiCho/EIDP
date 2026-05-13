@@ -3,10 +3,48 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `8604155f2dcca9d16821eaa6b6dcd02c8fa2c1c4` (`eidp-windows-v369.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `ac3fb2a24e175b4636de210c6e4ab66dc70b0d72` (`eidp-windows-v370.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V370 Nagano Public-School Publication-Lag Case
+
+v370 (`ac3fb2a`) adds a manual-web / official-index-linked publication-lag case
+for 長野県公衆衛生専門学校. The committed Nagano official-index artifact links
+directly to the prefecture-hosted support page at
+`https://www.pref.nagano.lg.jp/koshueisei/guidance/sinseisyo.html`. That page
+was updated on 2025-07-16 and lists `令和７年度` and `令和６年度`
+target-form PDFs, but no `令和８年度` target-form section. The latest public
+`2025shinseisho2go.pdf` body contains `長野県公衆衛生専門学校`, `様式第２号`,
+and `修学支援`, but does not contain `令和8年度`. This records the
+prefecture-hosted public-school pattern where the latest available target-form
+PDF must remain operator-reviewable publication-lag evidence instead of being
+upgraded to strict FY2026 success by page update dates or generic
+support-system statements. Packaged discovery gold-set coverage rises to `40`
+entries, `13` publication-lag cases, `direct=7`, and
+`undemonstrated_pattern_sources=[]`; strict target-year successes remain `10`.
+
+Verification: targeted discovery-gold-set tests passed with `47 passed`;
+targeted Ruff passed; `eidp discovery-gold-set --json` reported `40` entries,
+`13` publication-lag cases, and `10` strict target-year successes; and
+`eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+returned `40` exact matches with `0` failed, missing, or unexpected
+predictions. `dist/eidp-windows-v370.zip` was rebuilt from clean commit
+`ac3fb2a24e175b4636de210c6e4ab66dc70b0d72` with SHA256
+`40d0cfecfb43de5a947d1ffff1dc1f0ed0ad5719300156faf8d48a05785b6389`, and
+`dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
+passed with `--require-demonstrated-discovery-patterns` for both the versioned
+ZIP and latest alias. The full non-Windows release gate returned `ok=true` with
+`1372 passed, 5 warnings` for the full unit suite, `133 passed` for the
+distribution-verifier suite, clean Ruff and mypy gates, package verification
+with `discovery_gold_set_entries=40`, and demonstrated-pattern verification.
+Bounded evidence replay also returned `ok=true` with Tokyo `4` exact / `0`
+failures, Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0` failures,
+更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures, and 君津 `1`
+exact / `0` failures. 長野県公衆衛生 is expectedly absent from those older
+bounded evidence JSONL files because it was added from a fresh manual-web /
+official-index trace.
 
 ## 2026-05-13 V369 Hamamatsu Kohka Current-Year Anchor Context Case
 
