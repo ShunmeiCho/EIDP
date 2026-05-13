@@ -3,10 +3,46 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `c7addaf62e4010f08aaba255887d4cd5897ac747` (`eidp-windows-v368.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `8604155f2dcca9d16821eaa6b6dcd02c8fa2c1c4` (`eidp-windows-v369.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V369 Hamamatsu Kohka Current-Year Anchor Context Case
+
+v369 (`8604155`) adds a manual-web / official-index-linked accepted target case
+for 専門学校浜松工科自動車大学校. The committed Shizuoka prefecture artifact
+links the school's disclosure page at `https://kohka-h.ac.jp/disclose`. That
+WordPress page exposes multiple `令和８年度` disclosure PDFs, including 学校情報,
+学生便覧, 組織図, and the target `様式第２号`; the crawler must keep the
+same-block generic disclosure documents from outranking the target form. The
+accepted target PDF body contains `専門学校浜松工科自動車大学校`, `様式第２号`, and
+`修学支援`, but does not repeat the target fiscal-year string, so the local
+anchor text `令和８年度 様式第２号` is the required target-FY evidence source.
+Packaged discovery gold-set coverage rises to `39` entries, `10` strict
+target-year successes, `12` publication-lag cases, `direct=6`, `wordpress=6`,
+and `undemonstrated_pattern_sources=[]`.
+
+Verification: targeted PDF-discovery and discovery-gold-set tests passed with
+`48 passed`; targeted Ruff passed; `eidp discovery-gold-set --json` reported
+`39` entries and `10` strict target-year successes; and
+`eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+returned `39` exact matches with `0` failed, missing, or unexpected
+predictions. `dist/eidp-windows-v369.zip` was rebuilt from clean commit
+`8604155f2dcca9d16821eaa6b6dcd02c8fa2c1c4` with SHA256
+`18269d42ed8f815178be5f68fab4fe7626bec00d6642a3ed717775ab995ee439`, and
+`dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
+passed with `--require-demonstrated-discovery-patterns` for both the versioned
+ZIP and the latest alias. The full non-Windows release gate returned `ok=true`
+with `1372 passed, 5 warnings` for the full unit suite, `133 passed` for the
+distribution-verifier suite, clean Ruff and mypy gates, package verification
+with `discovery_gold_set_entries=39`, and demonstrated-pattern verification.
+Bounded evidence replay also returned `ok=true` with Tokyo `4` exact / `0`
+failures, Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0` failures,
+更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures, and 君津 `1`
+exact / `0` failures. 浜松工科 is expectedly absent from those older bounded
+evidence JSONL files because it was added from a fresh manual-web /
+official-index trace.
 
 ## 2026-05-13 V368 Latest Alias Package Alignment
 
