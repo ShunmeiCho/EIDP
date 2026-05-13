@@ -106,6 +106,11 @@ Commands run for v345/v342 source/package:
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json` -> `31` exact, `0` failures
 - `uv run eidp eval-discovery-gold --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --json` -> `3` exact, `0` failures for the Tokyo entries present in the bounded run, including `pattern_type`
 - `uv run eidp eval-discovery-gold --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --json` -> `16` exact, `0` failures for the Saitama evidence entries present in the bounded run
+- `uv run python` bounded live HTML scan over `160` official-index school URLs
+  from the v342 Tokyo/Saitama evidence SQLite DBs -> pattern sources observed:
+  `direct=37059`, `wordpress=857`, `cache_busted=52`; observed examples for
+  the six undemonstrated sources remained `0`. The scan wrote its local
+  summary to `_temp/v345-pattern-source-live-scan-summary.json`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip` -> `OK core`
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip --require-demonstrated-discovery-patterns` -> expected failure for the six remaining undemonstrated sources
 - `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v345.zip`
