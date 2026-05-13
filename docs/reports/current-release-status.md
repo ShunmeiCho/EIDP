@@ -31,9 +31,9 @@ command. The latest UI service health proof is also v380. Initial browser
 rendering, broader read-only quick navigation, and the Excel preview
 disabled-state smoke are now proven on v380. v380 has also repeated the
 sandboxed URL-candidate reject browser write path against a disposable copied
-database. The audit-outbox browser flush proof remains v376, and the latest
-Windows bounded-bootstrap smoke remains v376. The latest broader Windows
-bounded-bootstrap proof remains v342.
+database and the sandboxed audit-outbox browser flush path against a
+disposable copied database. The latest Windows bounded-bootstrap smoke remains
+v376. The latest broader Windows bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
@@ -317,8 +317,8 @@ installed, diagnosed, and exercised through the package-local `eidp db-backup`
 smoke. It also has a headless Streamlit `/_stcore/health` smoke, initial
 browser-render proof, full read-only quick-navigation proof, and an Excel
 preview disabled-state smoke. It now has sandboxed URL-candidate reject
-browser write proof on a disposable copied database; Stage 6 operator workflow
-evidence and audit-outbox browser flush proof still remain older or missing, as
+browser write proof and audit-outbox browser flush proof on disposable copied
+databases; Stage 6 operator workflow evidence still remains incomplete, as
 listed below.
 
 ## Objective Checklist
@@ -331,8 +331,8 @@ listed below.
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
-| ManualActionLog audit for operator actions | v380 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database and verified the real runtime DB was not mutated; v342 package verifier also includes audit contracts and outbox checks; audit-outbox browser flush remains v376 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, and completed a sandboxed URL-candidate reject browser write smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, and one sandboxed browser write path proof present on v380; full operator workflow still missing |
+| ManualActionLog audit for operator actions | v380 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database and verified the real runtime DB was not mutated; v380 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v380_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, and verified the real runtime DB was not mutated; v342 package verifier also includes audit contracts and outbox checks | Partially proven |
+| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, completed a sandboxed URL-candidate reject browser write smoke against a copied DB, and completed a sandboxed audit-outbox browser flush smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, URL-candidate write, and audit-outbox flush proof present on v380; full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -458,6 +458,27 @@ Latest v380 Windows setup and backup-smoke commands:
   `audit_reasons=["v380 UI reject smoke"]`; the real v380 runtime DB reported
   `runtime_matching_audit_rows=0`. The local tunnel was stopped, residual
   sandbox Streamlit processes were removed by exact PID/command-line match, and
+  `sandbox_exists_after_cleanup=False` / `remaining_matching_processes=0`
+  confirmed cleanup.
+- Windows v380 browser UI audit-outbox flush smoke:
+  a disposable `C:\Users\cyo20\EIDP-v380-ui-audit-sandbox` was created from
+  the v380 runtime database through the package-local `eidp db-backup`
+  command. It seeded one unexported
+  `stage6_v380_ui_audit_flush_smoke` `ManualActionLog` row with actor
+  `codex-v380-ui-smoke` and reason `v380 UI audit flush smoke`. The v380
+  Streamlit UI ran with `EIDP_APP_ROOT` pointed at that sandbox, and the
+  tunneled browser opened `詳細 operator` -> `監査ログ`, verified
+  `JSONL outbox 未送信` with pending count `1`, clicked `Outbox を flush`,
+  and observed `exported=1 already_present=0 failed=0` with the seeded action
+  and actor visible. Browser warning/error/pageerror events were empty. Direct
+  post-UI verification using `settings.data_dir` reported
+  `jsonl_path=C:\Users\cyo20\EIDP-v380-ui-audit-sandbox\data\audit\manual-actions.jsonl`,
+  `pending=0`, `matching_db_rows=1`, `jsonl_exported_at_present=true`,
+  `matching_outbox_rows=1`, `outbox_lines=1`,
+  `outbox_action_types=["stage6_v380_ui_audit_flush_smoke"]`, and
+  `outbox_actors=["codex-v380-ui-smoke"]`; the real v380 runtime DB reported
+  `runtime_matching_db_rows=0`. The local tunnel was stopped, residual sandbox
+  Streamlit processes were removed by exact PID/command-line match, and
   `sandbox_exists_after_cleanup=False` / `remaining_matching_processes=0`
   confirmed cleanup.
 
