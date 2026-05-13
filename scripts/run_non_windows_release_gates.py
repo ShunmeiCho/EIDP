@@ -165,6 +165,24 @@ def _tail(text: str, *, limit: int = 4000) -> str:
     return text[-limit:]
 
 
+def _pdf_evidence_gate_error(stdout: str) -> str | None:
+    """Return an error when a bounded evidence replay has mismatches.
+
+    Evidence logs are often bounded samples, so missing gold entries are normal.
+    Failed or unexpected predictions are not normal and should fail this helper.
+    """
+
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        return f"could not parse pdf-evidence evaluation JSON: {exc}"
+    failed = int(payload.get("failed_predictions", 0))
+    unexpected = int(payload.get("unexpected_predictions", 0))
+    if failed or unexpected:
+        return f"pdf-evidence replay had failed_predictions={failed}, unexpected_predictions={unexpected}"
+    return None
+
+
 def run_gate(command: GateCommand) -> GateResult:
     started = time.monotonic()
     completed = subprocess.run(
@@ -174,13 +192,20 @@ def run_gate(command: GateCommand) -> GateResult:
         capture_output=True,
         check=False,
     )
+    validation_error = None
+    if completed.returncode == 0 and command.name.startswith("discovery_gold_pdf_evidence_"):
+        validation_error = _pdf_evidence_gate_error(completed.stdout)
+    returncode = 1 if validation_error else completed.returncode
+    stderr = completed.stderr
+    if validation_error:
+        stderr = f"{stderr}\n{validation_error}".lstrip()
     return GateResult(
         name=command.name,
         command=command.command,
-        returncode=completed.returncode,
+        returncode=returncode,
         duration_s=round(time.monotonic() - started, 3),
         stdout_tail=_tail(completed.stdout),
-        stderr_tail=_tail(completed.stderr),
+        stderr_tail=_tail(stderr),
     )
 
 

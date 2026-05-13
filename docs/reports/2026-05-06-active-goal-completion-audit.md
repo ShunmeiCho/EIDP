@@ -18,7 +18,9 @@ demonstrated-pattern package verification, and SHA256 sidecar matching. This
 does not replace Windows setup or browser UI E2E; it only makes the pre-Windows
 gate reproducible from a single command. It also accepts `--pdf-evidence` so
 bounded Saitama/Tokyo evidence JSONL can be replayed without SSH Win access.
-Verification: helper unit tests passed with `5 passed`, helper mypy passed,
+The bounded replay gate allows missing entries because a bounded run only
+covers part of the gold-set, but it fails on failed or unexpected predictions.
+Verification: helper unit tests passed with `7 passed`, helper mypy passed,
 helper Ruff passed, the full v351 non-Windows gate run returned `ok=true`, and
 the evidence replay run returned `ok=true` with Tokyo evidence `4` exact /
 `0` failures and Saitama evidence `16` exact / `0` failures. The full unit

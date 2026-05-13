@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -74,3 +75,31 @@ def test_verify_sha256_sidecar_rejects_mismatch(tmp_path: Path) -> None:
     assert result["ok"] is False
     assert result["actual"] == hashlib.sha256(b"package").hexdigest()
     assert result["expected"] == "0" * 64
+
+
+def test_pdf_evidence_gate_allows_missing_entries() -> None:
+    error = module._pdf_evidence_gate_error(
+        json.dumps(
+            {
+                "failed_predictions": 0,
+                "unexpected_predictions": 0,
+                "missing_entries": 28,
+            }
+        )
+    )
+
+    assert error is None
+
+
+def test_pdf_evidence_gate_rejects_failed_predictions() -> None:
+    error = module._pdf_evidence_gate_error(
+        json.dumps(
+            {
+                "failed_predictions": 1,
+                "unexpected_predictions": 0,
+                "missing_entries": 28,
+            }
+        )
+    )
+
+    assert error == "pdf-evidence replay had failed_predictions=1, unexpected_predictions=0"
