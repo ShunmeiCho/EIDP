@@ -61,6 +61,7 @@ running one uninterrupted production cycle.
 | Task Scheduler query | task `EIDP Weekly Run` found, state `Ready`, action `"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"`, weekly trigger enabled from `2026-05-13T02:00:00`, last run `2026-05-11T02:00:00+09:00`, next run `2026-05-18T02:00:00+09:00`, last result `0` |
 | OCR availability probe | v380 extract path had no `ocr-addon`; `detect_ocr_availability` returned `binary_path=null`, `has_jpn_traineddata=false`, `can_run=false`; the v380 packaged runtime also returned `runtime_free_ram_mb=0` because the Windows package lacks `psutil` |
 | Source-side OCR RAM fallback fix | added a stdlib Windows `GlobalMemoryStatusEx` fallback; direct Windows probe returned `cpu_count=20`, `avail_phys_mb=16532`, `meets_ocr_default_threshold=true` |
+| v381 OCR RAM fallback package probe | v381 disposable extraction under `C:\Users\cyo20\EIDP-v381-da29fee-runtime-probe` used the packaged runtime and returned `cpu_count=20`, `free_ram_mb=16242`, `ocr_auto_enable=true`; probe directory and uploaded v381 ZIP/sidecar were removed after capture |
 | UI health | `/_stcore/health` returned `200 ok`; Streamlit `1.57.0`; cleanup `remaining_streamlit_processes=0` |
 | Browser render | Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `f6a5e6d` |
 | SSH tunnel note | `ssh -o ClearAllForwardings=no` was required because local `Host win` clears command-line forwards |
@@ -182,7 +183,7 @@ SupportRecipient ingest example:
 | Owner sign-off | missing |
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
-| OCR add-on runtime proof on operator PC | blocked; v380 operator install has no `ocr-addon`, and source now contains a RAM-detection fix that still needs a rebuilt Windows package plus add-on runtime proof |
+| OCR add-on runtime proof on operator PC | blocked; v380 operator install has no `ocr-addon`; v381 proves the packaged Windows RAM fallback only and still does not prove OCR add-on execution |
 | Excel output file retained as signed artifact | missing |
 
 ## 9. Release Decision

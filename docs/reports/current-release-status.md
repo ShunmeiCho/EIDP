@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v380.zip`
-Package commit: `f6a5e6d46db7b0b836b18399e5b401362575c38d`
-Package SHA256: `1fef8d468ba2e7d882f7a3a774ccbbf071d1e1ee362ae62b8c4e458c576e5361`
+Current Mac-verifier-clean package: `dist/eidp-windows-v381.zip`
+Package commit: `da29fee280dba872d48f243209ba6cd7de02df50`
+Package SHA256: `6474468bf5f1455af91e02404c6f3674c5e841962f59ba00b12ea2d97e6fcca1`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v380.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v381.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -17,12 +17,14 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v380. It supersedes v379 after
-commit `f6a5e6d` added the `eidp db-backup` CLI and switched the Windows
-migration runbook from inline Python to that locked, tested backup command.
-Under the current package verifier, v379 is stale because it lacks the
-`db-backup --output $dbBackup` runbook token; v380 passes the package verifier
-for both the versioned ZIP and the latest alias. The latest full non-Windows
+The current Mac-verifier-clean ZIP snapshot is v381. It supersedes v380 at the
+package level after commit `da29fee` fixed Windows OCR RAM detection without
+requiring `psutil`. The v381 versioned ZIP and latest alias both pass
+`scripts/verify_windows_distribution.py --require-demonstrated-discovery-patterns`
+with SHA256
+`6474468bf5f1455af91e02404c6f3674c5e841962f59ba00b12ea2d97e6fcca1`,
+`44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
+seeds, and `undemonstrated_pattern_sources=[]`. The latest full non-Windows
 release gate remains v378 with `1385` unit tests and `44` exact discovery
 gold-set predictions.
 The latest Windows setup proof is v380: it was transferred to the operator PC,
@@ -56,13 +58,10 @@ revisions. These observations are consolidated in
 `docs/reports/eidp-v380-stage6-evidence-draft.md` as a draft, not a completed
 operator sign-off. OCR add-on runtime proof is still not complete: the v380
 operator install has no `ocr-addon` directory and `detect_ocr_availability`
-correctly reports `can_run=false`, but the probe also exposed a Windows
-RAM-detection bug in the source runtime fallback (`runtime_free_ram_mb=0` when
-the package lacks `psutil`). The source tree now has a focused fix that uses
-the Windows `GlobalMemoryStatusEx` API via stdlib `ctypes`; a direct operator-PC
-probe returned `avail_phys_mb=16532`, `cpu_count=20`, and
-`meets_ocr_default_threshold=true`. The latest broader Windows
-bounded-bootstrap proof remains v342.
+correctly reports `can_run=false`. The v381 package does, however, carry the
+Windows RAM-detection fix: a v381 runtime-only probe on the operator PC returned
+`cpu_count=20`, `free_ram_mb=16242`, and `ocr_auto_enable=true`. The latest
+broader Windows bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
@@ -340,11 +339,14 @@ verifier gates that reject mutable runtime data and stale runbook guidance.
 The current source checkout therefore reports `44` discovery gold-set entries,
 `10` strict target-year successes, `17` publication-lag cases, `15`
 operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
-enforcing a stricter ZIP hygiene contract. This evidence is now packaged in
-`dist/eidp-windows-v380.zip`; v380 has also been transferred to Windows,
-installed, diagnosed, and exercised through the package-local `eidp db-backup`
-smoke. It also has a read-only Windows environment / Task Scheduler capture, a
-headless Streamlit `/_stcore/health` smoke, initial
+enforcing a stricter ZIP hygiene contract. That source/package evidence is now
+packaged in `dist/eidp-windows-v381.zip`; v381 also proves the Windows runtime
+can detect free RAM without `psutil` by returning `free_ram_mb=16242` and
+`ocr_auto_enable=true` in a disposable operator-PC package probe. The latest
+operator-PC setup and UI evidence remains v380: v380 was transferred to
+Windows, installed, diagnosed, and exercised through the package-local
+`eidp db-backup` smoke. It also has a read-only Windows environment / Task
+Scheduler capture, a headless Streamlit `/_stcore/health` smoke, initial
 browser-render proof, full read-only quick-navigation proof, and an Excel
 preview disabled-state smoke, plus retroactive FY2025/R7 Excel
 preview/download proof. It now has sandboxed URL-candidate reject browser write
@@ -376,19 +378,24 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v380 package-verifier commands:
+Latest v381 package-verifier commands:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v380.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v380.zip` and refreshed `dist/eidp-windows.zip`;
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v381.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v381.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `1fef8d468ba2e7d882f7a3a774ccbbf071d1e1ee362ae62b8c4e458c576e5361`.
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v380.zip --require-demonstrated-discovery-patterns`
+  `6474468bf5f1455af91e02404c6f3674c5e841962f59ba00b12ea2d97e6fcca1`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v381.zip --require-demonstrated-discovery-patterns`
   and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --require-demonstrated-discovery-patterns`
   -> both `OK core`, with matching SHA256, `44` packaged discovery gold-set
   entries, `17` publication-lag cases, `47` prefecture seeds, and
   `undemonstrated_pattern_sources=[]`; the packaged Windows runbook includes
   `db-backup --output $dbBackup`, `VACUUM INTO`, and
   `PRAGMA wal_checkpoint(TRUNCATE)`.
+- Windows v381 runtime-only OCR RAM probe:
+  disposable extraction under
+  `C:\Users\cyo20\EIDP-v381-da29fee-runtime-probe` returned
+  `{"app_root": "C:\\Users\\cyo20\\EIDP-v381-da29fee-runtime-probe", "cpu_count": 20, "free_ram_mb": 16242, "ocr_auto_enable": true}`;
+  the probe directory and uploaded v381 ZIP/sidecar were removed after capture.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v379.zip --require-demonstrated-discovery-patterns`
   now fails under the current verifier because v379 predates the
   `db-backup --output $dbBackup` runbook contract.
