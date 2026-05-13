@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v345.zip`
-Package commit: `43d20084ef5bef387825033b1c018cf5e1f49041`
-Package SHA256: `2e58841191c68d2dae751a86f033a2415a8402edf016e5384e7d81c772d29b88`
+Current Mac-verifier-clean package: `dist/eidp-windows-v347.zip`
+Package commit: `8ad7819c790b6240c7e66ee6977f586cc649ca15`
+Package SHA256: `a38c7c909466dd3c5e1b45a2962ba3abfbd0160aecfaa05edad75b67e05a127e`
 Latest Windows-core-validated package: `dist/eidp-windows-v342.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v342.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -13,8 +13,9 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v345 and passes the default macOS package
-verifier. The latest Windows setup and bounded-bootstrap proof remains v342.
+The current Mac-verifier-clean ZIP snapshot is v347 and passes the default
+macOS package verifier, including `--require-demonstrated-discovery-patterns`.
+The latest Windows setup and bounded-bootstrap proof remains v342.
 v341 keeps the v326 strict-mode fix for opaque WordPress Download
 Manager wrappers, the v328 cross-school candidate rejection, the v329
 actionable RCA counts, the v330 raw-control-character URL guard, and the v331
@@ -72,7 +73,12 @@ confidence-threshold label drift by reading the same centralized thresholds as
 the workbook exporter. v345 tightens the Tokyo gold-set regression contract by
 requiring the actual observed candidate `pattern_type` for those entries
 (`direct` or `wordpress`), so future replays cannot silently change the source
-classification while preserving the same PDF URL.
+classification while preserving the same PDF URL. v347 moves the six
+synthetic-only extractor sources (`data_attribute`, `form_action`,
+`input_control`, `meta_refresh`, `onclick`, `select_option`) behind the
+explicit `EIDP_PDF_DISCOVERY_EXPERIMENTAL_EXTRACTORS` flag, so the default
+release surface only includes production-tracked sources that have gold-set
+demonstrations.
 
 ## Objective Checklist
 
@@ -90,9 +96,10 @@ classification while preserving the same PDF URL.
 
 ## Current Non-Windows Evidence
 
-Commands run for v345/v342 source/package:
+Commands run for v347/v342 source/package:
 
-- `uv run pytest tests/unit -q` -> `1345 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1346 passed, 5 warnings`
+- `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_windows_distribution_verifier.py -q` -> `247 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_url_discovery.py tests/unit/test_url_normalization.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_discovery_gold_set_summary.py -q` -> `206 passed, 5 warnings`
 - `uv run pytest tests/unit/test_review_excel_preview.py tests/unit/test_excel_exporter.py tests/unit/test_windows_distribution_verifier.py -q` -> `96 passed`
 - `uv run ruff check src/eidp/review/_pages/excel_preview.py tests/unit/test_review_excel_preview.py` -> `All checks passed`
@@ -100,6 +107,7 @@ Commands run for v345/v342 source/package:
 - `uv run pytest tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_cli_eval_discovery_gold.py -q` -> `36 passed`
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py src/eidp/scraper/discovery_evidence_summary.py src/eidp/scraper/discovery_gold_set.py tests/unit/test_pdf_discovery.py tests/unit/test_discovery_evidence_summary.py tests/unit/test_cli_eval_discovery_gold.py` -> `All checks passed`
 - `uv run ruff check tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py` -> `All checks passed`
+- `uv run ruff check src/eidp/config.py src/eidp/scraper/pdf_discovery.py src/eidp/scraper/discovery_gold_set.py scripts/verify_windows_distribution.py tests/unit/test_pdf_discovery.py tests/unit/test_discovery_gold_set.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_windows_distribution_verifier.py` -> `All checks passed`
 - `uv run eidp discovery-gold-set --json` -> `31` entries,
   `accepted_target_pdf=4`, `needs_operator_review=15`,
   `publication_lag_latest_public=10`, `strict_target_year_successes=4`
@@ -113,16 +121,17 @@ Commands run for v345/v342 source/package:
   summary to `_temp/v345-pattern-source-live-scan-summary.json`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip` -> `OK core`
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip --require-demonstrated-discovery-patterns` -> expected failure for the six remaining undemonstrated sources
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v345.zip`
-  -> wrote `dist/eidp-windows-v345.zip` and checksum sidecar.
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v345.zip`
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v347.zip`
+  -> wrote `dist/eidp-windows-v347.zip` and checksum sidecar.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v347.zip`
   -> `OK core`, build commit
-  `43d20084ef5bef387825033b1c018cf5e1f49041`, `git_dirty=false`,
+  `8ad7819c790b6240c7e66ee6977f586cc649ca15`, `git_dirty=false`,
   `discovery_gold_set_entries=31`, `discovery_gold_expected_predictions=31`,
+  `discovery_gold_undemonstrated_pattern_sources=[]`,
   `discovery_gold_pattern_sources={'direct': 2, 'embed': 1, 'wordpress': 2, 'wordpress_download_manager': 1}`,
-  SHA256 `2e58841191c68d2dae751a86f033a2415a8402edf016e5384e7d81c772d29b88`.
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v345.zip --require-demonstrated-discovery-patterns`
-  -> expected failure for the same six remaining undemonstrated sources.
+  SHA256 `a38c7c909466dd3c5e1b45a2962ba3abfbd0160aecfaa05edad75b67e05a127e`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v347.zip --require-demonstrated-discovery-patterns`
+  -> `OK core`, with `discovery_gold_undemonstrated_pattern_sources=[]`.
 
 Post-v342 source-side gold-set expansion:
 
@@ -141,12 +150,13 @@ Post-v342 source-side gold-set expansion:
   now reports `3` exact predictions with `0` failures. The remaining `28`
   missing entries are outside the Tokyo 30-site sample.
 - This source-side evidence, the Excel preview threshold-label fix, and the
-  Tokyo pattern-type regression contract are packaged into the new
-  Mac-verifier-clean `dist/eidp-windows-v345.zip`.
+  Tokyo pattern-type regression contract, and the default isolation of
+  synthetic-only extractor sources are packaged into the new
+  Mac-verifier-clean `dist/eidp-windows-v347.zip`.
   It still requires a future Windows extraction
   and setup run before it can replace v342 as Windows-setup-proven.
 
-v345 verifier exposes the current demonstration gap:
+v347 verifier exposes the current production-pattern demonstration status:
 
 - Discovery gold-set entries: `31`
 - Outcome distribution: `accepted_target_pdf=4`, `needs_operator_review=15`,
@@ -154,7 +164,8 @@ v345 verifier exposes the current demonstration gap:
   `site_fetch_error=1`
 - Demonstrated extractor sources: `direct` (2), `embed` (1), `wordpress` (2),
   `wordpress_download_manager` (1)
-- Not yet gold-demonstrated: `data_attribute`, `form_action`,
+- Production-tracked undemonstrated sources: none
+- Experimental-only, default-disabled sources: `data_attribute`, `form_action`,
   `input_control`, `meta_refresh`, `onclick`, `select_option`
 
 ## Current Windows Backend Evidence
