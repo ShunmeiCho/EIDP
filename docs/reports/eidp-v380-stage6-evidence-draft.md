@@ -14,7 +14,7 @@ running one uninterrupted production cycle.
 
 | Gate | Current result | Evidence |
 | --- | --- | --- |
-| Process gate / v1.0-rc | partial | v384 setup, diagnostics, UI service health, initial browser render, read-only quick navigation, FY2026 Excel disabled-state display, R7 Excel download, URL-candidate write, audit flush, fiscal-year override write, manual-entry write, and SupportRecipient ingest smoke |
+| Process gate / v1.0-rc | partial | v384 setup, diagnostics, UI service health, initial browser render, read-only quick navigation, FY2026 Excel disabled-state display, R7 Excel download, URL-candidate write, audit flush, fiscal-year override write, manual-entry write, SupportRecipient ingest smoke, and OCR image copied-DB write smoke |
 | FY2026/R8 yield gate / v1.0 GA | fail | `ship_readiness_rc=1`, `strict_target_pdf_schools=0`, `operator_reviewable_schools=0`, `excel_ready_schools=0`, `estimated_manual_workload_rate=1.0` |
 | FY2025/R7 retroactive marker | pass for retroactive rehearsal only | `is_retroactive_fiscal_year=true`, `extracted_schools=2031`, `extracted_rate=0.84`, `retroactive_fiscal_year=2025`, `retroactive_ship_readiness_rc=0` |
 
@@ -42,6 +42,7 @@ running one uninterrupted production cycle.
 | Latest Windows SupportRecipient ingest proof path | `C:\Users\cyo20\EIDP-v384-75732b0-support-recipient-sandbox` |
 | Latest Windows backup/env proof path | `C:\Users\cyo20\EIDP-v384-75732b0-backup-env-sandbox` |
 | Latest Windows Saitama backend proof path | `C:\Users\cyo20\EIDP-v384-75732b0-saitama-backend-sandbox` |
+| Latest Windows OCR image write proof path | `C:\Users\cyo20\EIDP-v384-75732b0-ocr-write-sandbox` |
 | Latest package-level OCR evidence | v384 package commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, core SHA256 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0` |
 | OCR add-on ZIP SHA256 | v383 smoke add-on `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853` |
 | Playwright add-on ZIP SHA256 | not captured in this evidence set |
@@ -92,7 +93,7 @@ running one uninterrupted production cycle.
 | v384 operator-PC manual-entry browser save proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-manual-entry-sandbox` expanded and set up the same v384 core ZIP, then used a copied DB from the v380 package-local `eidp db-backup` output; the seed inserted one FY2026 `parse_failed` document with source URL `https://example.com/eidp-v384-manual-entry-smoke.pdf`; Browser/Playwright opened `② PDF確認・手入力`, saw `表示 1 / 待機 1 件`, expanded the `日本工学院専門学校` row, filled `V384手入力学科` with capacity `40`, enrollment `35`, international students `2`, graduates `30`, advanced `5`, employed `24`, other `1`, previous enrollment `36`, dropouts `1`, dropout rate `0.0278`, duration `2`, and reason `v384 UI manual entry smoke`, then clicked `保存`; post-save UI showed the queue empty for that view; direct SQLite verification found the document `ingest_status="ingested"`, one `department_yearly` row with `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, `verified=1`, three `manual_entry` audit rows for `department`, `department_yearly`, and `document`, `support_recipient_rows_for_doc=0`, and zero matching marker rows in the real v380 runtime DB; cleanup removed the probe and confirmed `port_8501_listeners=0` |
 | v384 operator-PC SupportRecipient ingest proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-support-recipient-sandbox` expanded and set up the same v384 core ZIP, then used a copied DB from the v380 package-local `eidp db-backup` output; the seed inserted two FY2026 target documents for `V384 SupportRecipient Smoke School`; the package runtime called `ingest_document` twice while monkeypatching only the package parser boundary (`parse_pdf`) to return deterministic annotations with one department row and SupportRecipient totals; both calls returned `support_recipient=1`, `support_recipient_current=1`, `yearly_upserted=1`, and `yearly_current=1`; direct SQLite verification found SupportRecipient revision `1` demoted to `is_current=false` with `annual_total=100`, `grand_total=100`, `extraction_confidence=0.94`, and revision `2` current with `annual_total=120`, `grand_total=120`, `extraction_confidence=1.0`; the real v380 runtime DB had `matching_documents=0`, `matching_schools=0`, and `matching_support_recipients=0`; cleanup restored the scheduled task to v380 and removed the sandbox, backup, uploaded ZIP/sidecar, Python smoke, PowerShell runner, and result JSON |
 | v384 operator-PC OCR runtime gate proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe` expanded `dist/eidp-windows-v384.zip` plus `dist/eidp-ocr-addon-windows-v383-smoke.zip` after confirming the v384 core SHA256 sidecar; `runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json` returned `ok=true`, build commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`, `wheel_count=78`, packaged Tesseract path `C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe\ocr-addon\tesseract\tesseract.exe`, version `tesseract v5.4.0.20240606`, and languages including `jpn` and `jpn_vert` |
-| v383 OCR image + copied-DB write proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v383-effcd58-ocr-write-sandbox` generated `data\ocr-write-smoke.png`, ran packaged Tesseract through `run_tesseract_on_image(..., output_format="tsv")`, returned `ocr_full_text="V383 OCR WRITE SMOKE 2026"` with `ocr_avg_confidence=0.952`, then used `save_manual_entries(..., method="ocr_tesseract")` against a copied DB to write one `DepartmentYearly` row with `extraction_confidence=0.95`, `verified=true`, promote the document `ocr_pending -> ingested`, and emit three `manual_entry` audit rows; real v380 runtime DB marker counts were all `0`; probe directory and uploaded ZIPs were removed after capture |
+| v384 OCR image + copied-DB write proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-ocr-write-sandbox` generated `data\ocr-write-smoke.png`, ran packaged Tesseract through `run_tesseract_on_image(...)`, returned `ocr_full_text="V384 OCR WRITE SMOKE 2026"` with `ocr_conf_values=[93,94,96,96,96]` and `ocr_avg_confidence=0.95`, then used `save_manual_entries(..., method="ocr_tesseract")` against a copied DB to write one `DepartmentYearly` row with `extraction_method="ocr_tesseract"`, `extraction_confidence=0.95`, `verified=true`, promote the document `ocr_pending -> ingested`, and emit three `manual_entry` audit rows; real v380 runtime DB marker counts were all `0`; cleanup removed the sandbox and uploads, and a follow-up query confirmed `EIDP Weekly Run` was `Ready` with action `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat` |
 | Post-v383 OCR ingest source propagation | focused unit coverage proves image-PDF ingest uses the packaged/system Tesseract TSV wrapper when available and records `ocr_tesseract` confidence breakdowns on both `DepartmentYearly` and `SupportRecipient`; this is code-level proof only, not an operator-PC real target-form OCR smoke |
 | v384 UI health | remote `/_stcore/health` returned `200 ok`; tunneled local `/_stcore/health` returned HTTP `200 OK`; cleanup left `port_8501_listeners=0` |
 | v384 Browser render | Browser/Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `75732b0`; console errors/warnings `0` |
@@ -180,7 +181,7 @@ Fiscal-year override browser example:
 | v384 manual-entry UI DepartmentYearly rows | 1 sandbox row |
 | Manual-entry audit rows | 3 sandbox rows |
 | v384 SupportRecipient ingest revisions | 2 sandbox rows |
-| OCR image execution | v383 sandbox image smoke returned `V383 OCR WRITE SMOKE 2026` |
+| OCR image execution | v384 sandbox image smoke returned `V384 OCR WRITE SMOKE 2026` with `ocr_avg_confidence=0.95` |
 | Latest package OCR runtime gate | v384 disposable operator-PC validator returned `ok=true` with packaged Tesseract `v5.4.0.20240606` and `jpn` / `jpn_vert` language support |
 | OCR-sourced DepartmentYearly rows | 1 sandbox row in copied DB |
 | OCR-sourced SupportRecipient confidence propagation | code-level unit proof; no operator-PC target-form smoke yet |
@@ -204,7 +205,7 @@ OCR image write example:
 
 | Document | OCR text | Row | Result |
 | --- | --- | --- | --- |
-| `https://example.com/eidp-v383-ocr-write-smoke.pdf` | `V383 OCR WRITE SMOKE 2026` | `V383 OCR WRITE SMOKE Department` | copied-DB `DepartmentYearly` wrote `extraction_method="ocr_tesseract"`, `extraction_confidence=0.95`, `verified=true`; document promoted `ocr_pending -> ingested`; three `manual_entry` audit rows emitted; real runtime DB marker counts remained `0` |
+| `https://example.com/eidp-v384-ocr-write-smoke.pdf` | `V384 OCR WRITE SMOKE 2026` | `V384 OCR WRITE SMOKE Department` | copied-DB `DepartmentYearly` wrote `extraction_method="ocr_tesseract"`, `extraction_confidence=0.95`, `verified=true`; document promoted `ocr_pending -> ingested`; three `manual_entry` audit rows emitted; real runtime DB marker counts remained `0` |
 
 ### Step 4: Excel Preview / Output
 
@@ -249,7 +250,7 @@ OCR image write example:
 | Owner sign-off | missing |
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
-| OCR add-on runtime proof on operator PC | latest v384 disposable validator proves packaged OCR add-on detection/runtime execution with `--require-ocr-runtime`; v383 adds TSV config packaging plus OCR image extraction and `ocr_tesseract` DepartmentYearly write proof in a disposable copied DB; post-v383 source proves `ocr_tesseract` confidence propagation to SupportRecipient in unit coverage; real target-form OCR extraction and operator-PC SupportRecipient OCR write remain unproven |
+| OCR add-on runtime proof on operator PC | latest v384 disposable validator proves packaged OCR add-on detection/runtime execution with `--require-ocr-runtime`; v384 also proves TSV image extraction and `ocr_tesseract` DepartmentYearly write in a disposable copied DB using the packaged Tesseract add-on; post-v383 source proves `ocr_tesseract` confidence propagation to SupportRecipient in unit coverage; real target-form OCR extraction and operator-PC SupportRecipient OCR write remain unproven |
 | Excel output file retained as signed artifact | missing |
 
 ## 9. Release Decision
