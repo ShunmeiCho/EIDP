@@ -181,6 +181,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "docs/runbooks/eidp-operator-e2e-template.md": (
             "# E2E\n"
             "ship_readiness_rc\n"
+            "retroactive_fiscal_year\n"
+            "is_retroactive_fiscal_year\n"
+            "retroactive_ship_readiness_rc\n"
             "strict target PDF 自動取得率\n"
             "推定手作業率\n"
             "Excel ready 率\n"
@@ -1542,6 +1545,19 @@ def test_verify_core_zip_requires_current_operator_runbook_guidance(tmp_path: Pa
     assert any("学校別タスクも同時に再計算" in error for error in check.errors)
     assert any("アンチウイルスにより隔離" in error for error in check.errors)
     assert any("weekly_run.bat" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_retroactive_fy_e2e_template_fields(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-operator-e2e-template.md"] = entries[
+        "docs/runbooks/eidp-operator-e2e-template.md"
+    ].replace("retroactive_ship_readiness_rc", "previous_year_readiness_rc")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("retroactive_ship_readiness_rc" in error for error in check.errors)
 
 
 def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:

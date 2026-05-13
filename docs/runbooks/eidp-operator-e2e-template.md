@@ -71,6 +71,9 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 - `operator_reviewable_yield_pct`
 - `excel_ready`
 - `ship_gate_status`
+- `retroactive_fiscal_year`
+- `is_retroactive_fiscal_year`
+- `retroactive_ship_readiness_rc`
 
 ## 4. Setup 結果
 
@@ -175,6 +178,9 @@ override 例:
 | strict target PDF 自動取得率 | >= 60% | | pass / watch / fail |
 | 推定手作業率 | <= 30% | | pass / watch / fail |
 | Excel ready 率 | >= 60% | | pass / watch / fail |
+| retroactive FY 診断年度 | 記録値 | | pass / watch / fail |
+| retroactive FY marker | `is_retroactive_fiscal_year=true` | | pass / watch / fail |
+| `retroactive_ship_readiness_rc` | 記録値 | | pass / watch / fail |
 
 KPI メモ:
 

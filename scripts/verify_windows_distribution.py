@@ -1378,6 +1378,9 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         return
     for token in (
         "ship_readiness_rc",
+        "retroactive_fiscal_year",
+        "is_retroactive_fiscal_year",
+        "retroactive_ship_readiness_rc",
         "strict target PDF 自動取得率",
         "推定手作業率",
         "Excel ready 率",
