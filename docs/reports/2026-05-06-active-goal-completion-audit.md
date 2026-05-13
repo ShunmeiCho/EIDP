@@ -16,10 +16,13 @@ validator/distribution unit tests, validator/distribution mypy and Ruff,
 discovery gold-set summary, expected-prediction replay, package verification,
 demonstrated-pattern package verification, and SHA256 sidecar matching. This
 does not replace Windows setup or browser UI E2E; it only makes the pre-Windows
-gate reproducible from a single command. Verification: helper unit tests passed
-with `4 passed`, helper mypy passed, helper Ruff passed, the full v351
-non-Windows gate run returned `ok=true`, and the full unit suite inside that
-gate passed with `1357 passed, 5 warnings`.
+gate reproducible from a single command. It also accepts `--pdf-evidence` so
+bounded Saitama/Tokyo evidence JSONL can be replayed without SSH Win access.
+Verification: helper unit tests passed with `5 passed`, helper mypy passed,
+helper Ruff passed, the full v351 non-Windows gate run returned `ok=true`, and
+the evidence replay run returned `ok=true` with Tokyo evidence `4` exact /
+`0` failures and Saitama evidence `16` exact / `0` failures. The full unit
+suite passed with `1358 passed, 5 warnings`.
 
 ## 2026-05-13 V351 Validator Typing Gate And Package Rebuild
 

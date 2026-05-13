@@ -37,7 +37,12 @@ class GateResult:
     stderr_tail: str
 
 
-def build_gate_commands(package_zip: Path, *, include_full_unit: bool) -> list[GateCommand]:
+def build_gate_commands(
+    package_zip: Path,
+    *,
+    include_full_unit: bool,
+    pdf_evidence_paths: Sequence[Path] = (),
+) -> list[GateCommand]:
     """Return the ordered non-Windows release gates for a package ZIP."""
 
     py = sys.executable
@@ -102,6 +107,21 @@ def build_gate_commands(package_zip: Path, *, include_full_unit: bool) -> list[G
                     "--json",
                 ),
             ),
+            *[
+                GateCommand(
+                    f"discovery_gold_pdf_evidence_{index}",
+                    (
+                        py,
+                        "-m",
+                        "eidp.cli",
+                        "eval-discovery-gold",
+                        "--pdf-evidence",
+                        str(path),
+                        "--json",
+                    ),
+                )
+                for index, path in enumerate(pdf_evidence_paths, start=1)
+            ],
             GateCommand(
                 "package_verify",
                 (py, "scripts/verify_windows_distribution.py", str(package_zip)),
@@ -189,6 +209,13 @@ def _print_text_summary(summary: dict[str, Any]) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package_zip", type=Path, help="Windows ZIP package to verify")
+    parser.add_argument(
+        "--pdf-evidence",
+        type=Path,
+        action="append",
+        default=[],
+        help="Optional discovery evidence JSONL to replay with eval-discovery-gold",
+    )
     parser.add_argument("--skip-full-unit", action="store_true", help="Skip the full unit suite")
     parser.add_argument("--keep-going", action="store_true", help="Continue after a failed gate")
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON")
@@ -197,7 +224,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     package_zip = args.package_zip
     sha256_check = verify_sha256_sidecar(package_zip)
-    commands = build_gate_commands(package_zip, include_full_unit=not args.skip_full_unit)
+    commands = build_gate_commands(
+        package_zip,
+        include_full_unit=not args.skip_full_unit,
+        pdf_evidence_paths=args.pdf_evidence,
+    )
     results = run_gates(commands, keep_going=args.keep_going) if sha256_check.get("ok") else []
     summary = {
         "ok": _summary_ok(sha256_check, results),

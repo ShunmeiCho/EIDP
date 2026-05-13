@@ -27,6 +27,23 @@ def test_build_gate_commands_includes_package_verifiers_without_full_unit() -> N
     assert "--require-demonstrated-discovery-patterns" in commands[-1].command
 
 
+def test_build_gate_commands_can_include_pdf_evidence_replays() -> None:
+    evidence = Path("_temp/evidence.jsonl")
+
+    commands = module.build_gate_commands(
+        Path("dist/eidp-windows.zip"),
+        include_full_unit=False,
+        pdf_evidence_paths=[evidence],
+    )
+
+    evidence_commands = [
+        command for command in commands if command.name == "discovery_gold_pdf_evidence_1"
+    ]
+    assert len(evidence_commands) == 1
+    assert "--pdf-evidence" in evidence_commands[0].command
+    assert str(evidence) in evidence_commands[0].command
+
+
 def test_build_gate_commands_can_include_full_unit_first() -> None:
     commands = module.build_gate_commands(Path("dist/eidp-windows.zip"), include_full_unit=True)
 
