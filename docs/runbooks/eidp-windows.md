@@ -600,7 +600,38 @@ icacls $dst /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
 Restart-Service sshd
 ```
 
-### 14.6 「業務員傻瓜式部署」の前提
+### 14.6 SSH は認証後に落ちるが、公開鍵エラーではない
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| Mac から `ssh win hostname` が `exec request failed on channel 0`、`Connection reset by peer`、または `kex_exchange_identification: read: Connection reset by peer` で失敗する。ただし `nc -vz <業務員PC> 22` は成功し、`ssh -vvv` では `Remote protocol version ... OpenSSH_for_Windows` まで見える | TCP/22 と鍵認証は通っているが、Windows OpenSSH 側が session / exec channel を作れない状態。Stage 6 検証や SSH 経由セットアップ中に sshd が不安定化した可能性がある | 業務員 PC 側で管理者 PowerShell を開き、`Restart-Service sshd` を実行する。復旧後、最初に `EIDP Weekly Run` の action が本番 runtime に戻っていることと、一時 sandbox が残っていないことを確認する |
+
+Mac 側の切り分け例:
+
+```bash
+nc -vz -w 3 <業務員PCのLAN IP> 22
+ssh -vvv -o ConnectTimeout=5 win hostname
+ssh -F /dev/null -o ConnectTimeout=5 -i ~/.ssh/id_rsa -l <WindowsUser> <業務員PCのLAN IP> hostname
+```
+
+Windows 側の復旧・確認例（管理者 PowerShell）:
+
+```powershell
+Restart-Service sshd
+
+Get-ScheduledTask -TaskName "EIDP Weekly Run" | Select-Object State
+(Get-ScheduledTask -TaskName "EIDP Weekly Run").Actions.Execute
+
+Test-Path "$env:USERPROFILE\EIDP-v384-75732b0-ocr-sr-sandbox"
+Test-Path "$env:USERPROFILE\v384_ocr_sr_smoke.ps1"
+```
+
+`EIDP Weekly Run` の action が検証用 sandbox を指したままなら、直近の本番
+runtime（例: `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`）へ戻してから
+Stage 6 検証を再開する。SSH が復旧するまで、未完了の copied-DB smoke を
+Stage 6 証拠として数えない。
+
+### 14.7 「業務員傻瓜式部署」の前提
 
 最新 ZIP を使う限り、業務員側の操作は次の 3 ステップのみで完了します：
 
@@ -611,7 +642,7 @@ Restart-Service sshd
 それ以上の手作業（CRLF 変換、wheelhouse 追加、`.venv` 削除、ACL 修正など）は、本ランブックを書き終えた時点で全て build pipeline 側で済んでいます。
 業務員に渡る前に管理者側でこの章のチェックリストに従って ZIP の品質を確認してください。
 
-### 14.7 リモートからの HTTP アクセスが「業務員 PC では繋がる、外からは繋がらない」
+### 14.8 リモートからの HTTP アクセスが「業務員 PC では繋がる、外からは繋がらない」
 
 | 症状 | 原因 | 対処 |
 |------|------|------|
