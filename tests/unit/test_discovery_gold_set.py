@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 GOLD_SET_DIR = Path(__file__).resolve().parents[2] / "data" / "discovery-gold-set"
 ENTRY_DIR = GOLD_SET_DIR / "entries"
 MANUAL_RCA_RUNBOOK = Path(__file__).resolve().parents[2] / "docs" / "runbooks" / "discovery-codex-manual-rca.md"
@@ -16,9 +18,11 @@ def test_discovery_gold_set_schema_allows_image_only_review_entries() -> None:
     schema = _load_json(GOLD_SET_DIR / "schema.json")
     pdf_type_enum = schema["properties"]["expected_result"]["properties"]["pdf_type"]["enum"]
     expected_result_properties = schema["properties"]["expected_result"]["properties"]
+    source_kind_enum = schema["properties"]["evidence"]["properties"]["source_kind"]["enum"]
 
     assert "image_only" in pdf_type_enum
     assert expected_result_properties["pattern_type"]["type"] == "string"
+    assert "windows_v320_jsonl" in source_kind_enum
 
 
 def test_discovery_gold_set_schema_and_prototypes_exist() -> None:
@@ -89,6 +93,22 @@ def test_discovery_gold_set_entries_capture_manual_demonstrations() -> None:
             assert entry["expected_result"]["pdf_url"].endswith(".pdf")
             assert entry["expected_result"]["pdf_type"] == "target"
             assert entry["expected_result"]["fiscal_year"] == entry["target_fiscal_year"]
+
+
+def test_discovery_gold_set_loader_rejects_schema_invalid_entry(tmp_path: Path) -> None:
+    from eidp.scraper.discovery_gold_set import load_discovery_gold_entries
+
+    gold_dir = tmp_path / "gold"
+    entry_dir = gold_dir / "entries"
+    entry_dir.mkdir(parents=True)
+    (gold_dir / "schema.json").write_text((GOLD_SET_DIR / "schema.json").read_text(encoding="utf-8"))
+
+    source_entry = _load_json(next(iter(sorted(ENTRY_DIR.glob("*.json")))))
+    source_entry.pop("manual_demonstration")
+    (entry_dir / "bad.json").write_text(json.dumps(source_entry, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="manual_demonstration"):
+        load_discovery_gold_entries(gold_dir)
 
 
 def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:

@@ -952,6 +952,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "weekly_operator_reviewable_acquisition",
             "ship_gate_status_from_yield",
         ),
+        "requirements-windows.txt": (
+            "jsonschema>=4.0,<5.0",
+        ),
         "src/eidp/cli.py": (
             "_echo_import_excel_results",
             "invalid_year",
@@ -1195,6 +1198,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "SchoolSite.id.asc()",
         ),
         "src/eidp/scraper/discovery_gold_set.py": (
+            "Draft202012Validator",
+            "_load_and_validate_discovery_gold_payload",
+            "discovery gold-set schema validation failed",
             "entries_by_key",
             "(entry.school_id, entry.target_fiscal_year)",
             "_target_fiscal_year_from_evidence_payload",

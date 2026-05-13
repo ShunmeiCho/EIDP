@@ -164,7 +164,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "EIDP-start.bat": (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8"),
         "EIDP-diagnose.bat": (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8"),
         "README.md": "# EIDP\n",
-        "requirements-windows.txt": "structlog\n",
+        "requirements-windows.txt": "structlog\njsonschema>=4.0,<5.0\n",
         "pyproject.toml": "[project]\nname='eidp'\n",
         "alembic.ini": "[alembic]\n",
         "docs/runbooks/eidp-windows.md": (

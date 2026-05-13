@@ -642,6 +642,7 @@ version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "jsonschema" },
     { name = "openpyxl" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -698,6 +699,7 @@ requires-dist = [
     { name = "eidp", extras = ["scraper-basic"], marker = "extra == 'scraper'" },
     { name = "eidp", extras = ["scraper-playwright"], marker = "extra == 'scraper'" },
     { name = "httpx", marker = "extra == 'scraper-basic'", specifier = ">=0.28,<1.0" },
+    { name = "jsonschema", specifier = ">=4.0,<5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15" },
     { name = "openpyxl", specifier = ">=3.1,<4.0" },
     { name = "paddleocr", marker = "extra == 'ocr'", specifier = ">=3.0" },

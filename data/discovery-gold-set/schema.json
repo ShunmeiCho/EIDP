@@ -13,6 +13,7 @@
     "automation_pattern",
     "evidence"
   ],
+  "additionalProperties": false,
   "properties": {
     "schema_version": {
       "const": "discovery-gold-set/v0.1"
@@ -23,6 +24,7 @@
     "school": {
       "type": "object",
       "required": ["school_id", "school_name", "prefecture"],
+      "additionalProperties": false,
       "properties": {
         "school_id": {"type": "integer"},
         "school_name": {"type": "string"},
@@ -45,6 +47,7 @@
     "manual_demonstration": {
       "type": "object",
       "required": ["operator_goal", "steps"],
+      "additionalProperties": false,
       "properties": {
         "operator_goal": {"type": "string"},
         "search_queries": {
@@ -60,6 +63,7 @@
     "expected_result": {
       "type": "object",
       "required": ["pdf_url", "pdf_type", "fiscal_year"],
+      "additionalProperties": false,
       "properties": {
         "school_url": {"type": "string"},
         "disclosure_url": {"type": "string"},
@@ -73,6 +77,7 @@
     "automation_pattern": {
       "type": "object",
       "required": ["reusable_rules"],
+      "additionalProperties": false,
       "properties": {
         "site_family": {"type": "string"},
         "reusable_rules": {
@@ -88,9 +93,17 @@
     "evidence": {
       "type": "object",
       "required": ["source_kind", "source_paths"],
+      "additionalProperties": false,
       "properties": {
         "source_kind": {
-          "enum": ["windows_v136_jsonl", "manual_web", "operator_review", "saitama_rca_jsonl", "current_code_jsonl"]
+          "enum": [
+            "windows_v136_jsonl",
+            "windows_v320_jsonl",
+            "manual_web",
+            "operator_review",
+            "saitama_rca_jsonl",
+            "current_code_jsonl"
+          ]
         },
         "source_paths": {
           "type": "array",

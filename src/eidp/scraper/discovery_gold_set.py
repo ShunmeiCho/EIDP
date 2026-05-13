@@ -7,10 +7,12 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import structlog
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
+from jsonschema.exceptions import SchemaError, ValidationError  # type: ignore[import-untyped]
 
 from eidp.config import (
     MAX_SUPPORTED_TARGET_FISCAL_YEAR,
@@ -164,9 +166,10 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
     """Load discovery gold-set entries from ``entries/*.json``."""
 
     entry_dir = gold_set_dir / "entries"
+    schema_validator = _load_discovery_gold_schema_validator(gold_set_dir)
     entries: list[DiscoveryGoldEntry] = []
     for path in sorted(entry_dir.glob("*.json")):
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = _load_and_validate_discovery_gold_payload(path, validator=schema_validator)
         expected_result = payload.get("expected_result", {})
         automation_pattern = payload.get("automation_pattern", {})
         fiscal_year = expected_result.get("fiscal_year")
@@ -190,6 +193,38 @@ def load_discovery_gold_entries(gold_set_dir: Path) -> list[DiscoveryGoldEntry]:
             )
         )
     return entries
+
+
+def _load_discovery_gold_schema_validator(gold_set_dir: Path) -> Any:
+    schema_path = gold_set_dir / "schema.json"
+    schema_payload = json.loads(schema_path.read_text(encoding="utf-8"))
+    if not isinstance(schema_payload, dict):
+        raise ValueError(f"{schema_path}: discovery gold-set schema must be a JSON object")
+    schema = cast(dict[str, Any], schema_payload)
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as exc:
+        raise ValueError(f"{schema_path}: invalid discovery gold-set JSON schema: {exc.message}") from exc
+    return Draft202012Validator(schema)
+
+
+def _load_and_validate_discovery_gold_payload(
+    path: Path,
+    *,
+    validator: Any,
+) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path}: discovery gold-set entry must be a JSON object")
+    entry = cast(dict[str, Any], payload)
+    try:
+        validator.validate(entry)
+    except ValidationError as exc:
+        location = ".".join(str(part) for part in exc.absolute_path) or "<root>"
+        raise ValueError(
+            f"{path}: discovery gold-set schema validation failed at {location}: {exc.message}"
+        ) from exc
+    return entry
 
 
 def seed_discovery_gold_sites(
