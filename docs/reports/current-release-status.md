@@ -121,6 +121,9 @@ Commands run for v351/v342 source/package:
 - `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v351.zip --skip-full-unit --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --json --output _temp/v351-non-windows-release-gates-evidence.json`
   -> `ok=true`, Tokyo evidence `4` exact / `0` failures, Saitama evidence `16` exact / `0` failures;
   pdf-evidence replay gates allow bounded missing entries but fail on failed/unexpected predictions
+- `EIDP_DATABASE_URL=sqlite:///$PWD/_temp/v348-mac-tokyo20/eidp.sqlite3 uv run python -m eidp.cli report ship-readiness --json`
+  -> `ok=false`, `total_schools=2418`, `strict_target_pdf_rate=0.0`,
+  `operator_reviewable_rate=0.019`, `excel_ready_rate=0.0`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_windows_distribution_verifier.py -q` -> `247 passed, 5 warnings`
 - `uv run pytest tests/unit/test_windows_distribution_verifier.py -q` -> `89 passed`
 - `uv run pytest tests/unit/test_windows_install_validator.py tests/unit/test_windows_distribution_verifier.py -q`

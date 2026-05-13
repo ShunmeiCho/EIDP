@@ -26,7 +26,10 @@ Verification: helper unit tests passed with `8 passed`, helper mypy passed,
 helper Ruff passed, the full v351 non-Windows gate run returned `ok=true`, and
 the evidence replay run returned `ok=true` with Tokyo evidence `4` exact /
 `0` failures and Saitama evidence `16` exact / `0` failures. The full unit
-suite passed with `1361 passed, 5 warnings`.
+suite passed with `1361 passed, 5 warnings`. A source-side ship-readiness read
+against `_temp/v348-mac-tokyo20/eidp.sqlite3` still reports `ok=false`,
+`strict_target_pdf_rate=0.0`, `operator_reviewable_rate=0.019`, and
+`excel_ready_rate=0.0`.
 
 ## 2026-05-13 V351 Validator Typing Gate And Package Rebuild
 
