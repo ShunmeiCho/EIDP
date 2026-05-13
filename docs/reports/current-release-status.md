@@ -2,20 +2,27 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v375.zip`
-Package commit: `bcca8dfb7fd382afe2d1deb3eaab43056bb519e6`
-Package SHA256: `fa9a7c11f6d2f1efeadc4aa234965d733c8c45862f179e4e82dea65ac177ce4c`
-Latest Windows-core-validated package: `dist/eidp-windows-v342.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v342.zip`
+Current Mac-verifier-clean package: `dist/eidp-windows-v376.zip`
+Package commit: `d2402dcd52eeb7b9032aa7d4d30111485c37331b`
+Package SHA256: `8a7c9575394a37ee55ae8c566059385961cd70b8a06c768738a5529d7be9b2cd`
+Latest Windows-core-validated package: `dist/eidp-windows-v376.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v376.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v375 and passes the default
+The current Mac-verifier-clean ZIP snapshot is v376 and passes the default
 macOS package verifier, including `--require-demonstrated-discovery-patterns`.
-The latest Windows setup and bounded-bootstrap proof remains v342.
+The latest Windows setup proof is v376. The latest Windows bounded-bootstrap
+proof remains v342.
+v376 fixes a Windows-only diagnostics bug in the retroactive fiscal-year
+snapshot: the v375 ZIP passed token-based package verification, but real
+Windows batch execution skipped the FY2025 `ship-readiness --fy` call because
+the batch-side Python-output capture was too fragile. The v376 package moves
+that logic into Python and records the retroactive JSON plus
+`retroactive_ship_readiness_rc=0` in `EIDP-diagnose.bat`.
 v341 keeps the v326 strict-mode fix for opaque WordPress Download
 Manager wrappers, the v328 cross-school candidate rejection, the v329
 actionable RCA counts, the v330 raw-control-character URL guard, and the v331
@@ -252,6 +259,15 @@ R1-R7 support forms and the crawler must keep the latest public R7 target form
 visible for FY2026 publication-lag handling. Packaged discovery gold-set
 coverage rises to `43` entries, `16` publication-lag cases, `direct=10`, and
 `10` strict target-year successes.
+v376 preserves the v375 discovery code and package contents while fixing the
+Windows diagnostics capture for retroactive FY validation. It was extracted to
+`C:\Users\cyo20\EIDP-v376-d2402dc`, `EIDP-setup.bat` completed, standalone
+after-setup validation returned `ok=true`, and `EIDP-diagnose.bat` wrote
+`logs\diagnostics-20260513-211539.txt` with `school_count=2418`,
+`sqlite_integrity_check=ok`, `ship_readiness_rc=1` for FY2026, and a successful
+FY2025 retroactive section with `is_retroactive_fiscal_year=true`,
+`extracted_schools=2031`, `extracted_rate=0.84`, and
+`retroactive_ship_readiness_rc=0`.
 
 ## Objective Checklist
 
@@ -264,7 +280,7 @@ coverage rises to `43` entries, `16` publication-lag cases, `direct=10`, and
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
 | ManualActionLog audit for operator actions | v342 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v339/v340/v341/v342 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v342 ZIP verifies clean on macOS packaging gate; v342 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v342-de2cfed`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v376 ZIP verifies clean on macOS packaging gate; v376 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v376-d2402dc`, and `EIDP-setup.bat` plus standalone after-setup validation completed successfully; `EIDP-diagnose.bat` now records the FY2025 retroactive readiness JSON and `retroactive_ship_readiness_rc=0`; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -272,7 +288,35 @@ coverage rises to `43` entries, `16` publication-lag cases, `direct=10`, and
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v375 commands:
+Latest v376 commands:
+
+- `uv run pytest tests/unit/test_windows_packaging_spike.py::test_diagnose_bat_collects_operator_evidence_without_mutating_data tests/unit/test_windows_distribution_verifier.py::test_verify_core_zip_rejects_diagnose_without_retroactive_fiscal_year_snapshot tests/unit/test_windows_distribution_verifier.py::test_verify_core_zip_rejects_diagnose_with_parse_time_errorlevel_capture -q`
+  -> `3 passed`
+- `uv run ruff check scripts/verify_windows_distribution.py tests/unit/test_windows_packaging_spike.py`
+  -> `All checks passed`
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v376.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v376.zip` and refreshed `dist/eidp-windows.zip`; both have SHA256
+  `8a7c9575394a37ee55ae8c566059385961cd70b8a06c768738a5529d7be9b2cd`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v376.zip --require-demonstrated-discovery-patterns`
+  and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --require-demonstrated-discovery-patterns`
+  -> both `OK core`, with matching SHA256 and `43` packaged discovery gold-set entries.
+- Windows v376 setup on `C:\Users\cyo20\EIDP-v376-d2402dc`:
+  `EIDP-setup.bat` completed; `scripts\validate_install.bat` returned `OK install`;
+  `.venv\Scripts\python.exe scripts\validate_windows_install.py . --after-setup --json`
+  returned `ok=true`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and
+  `document_unique_indexes` including `uq_document_file_hash`.
+- Windows v376 diagnostics:
+  `EIDP-diagnose.bat` wrote `logs\diagnostics-20260513-211539.txt`; FY2026
+  readiness remained below gate with `ship_readiness_rc=1`, while the
+  retroactive FY2025 snapshot recorded `is_retroactive_fiscal_year=true`,
+  `extracted_schools=2031`, `extracted_rate=0.84`,
+  `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`.
+- Windows cleanup after v376 proof removed stale
+  `C:\Users\cyo20\EIDP-v375-bcca8df`; remaining EIDP directories are
+  `EIDP-transfer`, `EIDP-v342-de2cfed`, and `EIDP-v376-d2402dc`.
+
+Previously retained v375 commands:
 
 - `uv run pytest tests/unit/test_pdf_discovery.py::test_pdf_link_context_does_not_cross_intervening_non_year_block tests/unit/test_pdf_discovery.py::test_pdf_link_context_skips_update_date_before_heading_year tests/unit/test_pdf_discovery.py::test_prefecture_public_school_page_uses_heading_year_for_old_target_forms -q`
   -> `3 passed`

@@ -3,10 +3,51 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `bcca8dfb7fd382afe2d1deb3eaab43056bb519e6` (`eidp-windows-v375.zip`; Windows E2E pending)
-Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
+Latest Mac-verifier-clean Windows package commit: `d2402dcd52eeb7b9032aa7d4d30111485c37331b` (`eidp-windows-v376.zip`; browser UI E2E pending)
+Latest Windows setup-verified package commit: `d2402dcd52eeb7b9032aa7d4d30111485c37331b` (`eidp-windows-v376.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V376 Windows Retroactive Diagnose Proof
+
+v376 (`d2402dc`) fixes a Windows-only diagnostics bug found during the v375
+real-Windows setup pass. The v375 package verifier token gate proved that the
+diagnose script contained a retroactive fiscal-year snapshot path, but real
+`cmd.exe` execution skipped it because the batch-side Python-output capture was
+too fragile. The fix moves the FY selection and `eidp.cli report
+ship-readiness --fy` subprocess call into Python and lets batch capture only
+the final `ERRORLEVEL`.
+
+The new package was rebuilt from clean commit
+`d2402dcd52eeb7b9032aa7d4d30111485c37331b` as
+`dist/eidp-windows-v376.zip` with SHA256
+`8a7c9575394a37ee55ae8c566059385961cd70b8a06c768738a5529d7be9b2cd`;
+`dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
+passed for both ZIPs with `--require-demonstrated-discovery-patterns`.
+
+Windows proof was collected on `C:\Users\cyo20\EIDP-v376-d2402dc`.
+`EIDP-setup.bat` completed, `scripts\validate_install.bat` returned
+`OK install`, and standalone after-setup validation returned `ok=true` with
+`school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, and `document_unique_indexes` containing
+`uq_document_file_hash`. `EIDP-diagnose.bat` wrote
+`logs\diagnostics-20260513-211539.txt`: FY2026 readiness remained below gate
+with `ship_readiness_rc=1`, while the FY2025 retroactive section recorded
+`is_retroactive_fiscal_year=true`, `extracted_schools=2031`,
+`extracted_rate=0.84`, `retroactive_fiscal_year=2025`, and
+`retroactive_ship_readiness_rc=0`.
+
+After the v376 proof, stale Windows directory
+`C:\Users\cyo20\EIDP-v375-bcca8df` was removed. The Windows host now retains
+only `EIDP-transfer`, the historical v342 proof directory, and the current
+v376 setup directory. Browser UI operator click-through remains the outstanding
+Stage 6 evidence gap.
+
+Verification: targeted diagnose/verifier regression tests passed with
+`3 passed`; targeted Ruff passed; the v376 versioned ZIP and latest alias both
+passed `scripts/verify_windows_distribution.py
+--require-demonstrated-discovery-patterns`; Windows setup, standalone
+after-setup validation, and diagnose all passed as described above.
 
 ## 2026-05-13 V375 Fiscal-Year Context Cleanup and Shobi Latest-Public Case
 
