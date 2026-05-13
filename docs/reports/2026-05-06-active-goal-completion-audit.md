@@ -3,10 +3,33 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `5defaca0049255822c8be4ee49b5bbd6df8b6a9f` (`eidp-windows-v367.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `c7addaf62e4010f08aaba255887d4cd5897ac747` (`eidp-windows-v368.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V368 Latest Alias Package Alignment
+
+v368 (`c7addaf`) rebuilds the clean v367 state after the documentation update
+and refreshes the operator-facing latest alias. `dist/eidp-windows-v368.zip`
+and `dist/eidp-windows.zip` now have the same SHA256
+`833d500360456b4b827583d0927480173d20e41700d7db88675691aa084645ad`, so the
+versioned package and the default runbook package refer to the same contents.
+The packaged discovery gold-set remains at `38` entries, `9` strict target-year
+successes, `12` publication-lag cases, `direct=6`, and
+`undemonstrated_pattern_sources=[]`.
+
+Verification: `scripts/verify_windows_distribution.py` passed with
+`--require-demonstrated-discovery-patterns` for both `dist/eidp-windows-v368.zip`
+and `dist/eidp-windows.zip`. The full non-Windows release gate for
+`dist/eidp-windows-v368.zip` returned `ok=true` with SHA256 sidecar match,
+`1371 passed, 5 warnings` for the full unit suite, `133 passed` for the
+distribution-verifier suite, clean Ruff and mypy gates, package verification
+with `discovery_gold_set_entries=38`, and demonstrated-pattern verification.
+The bounded evidence replay against v368 also returned `ok=true` with Tokyo `4`
+exact / `0` failures, Saitama `16` exact / `0` failures, 聖十字 `1` exact /
+`0` failures, 更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures,
+and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V367 Iwate Iryo Dense Wix Publication-Lag Case
 
