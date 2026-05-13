@@ -111,11 +111,11 @@ def build_report(
     task = task or query_weekly_task()
     expected_norm = _normalise_windows_path(expected_weekly_action)
     actual_norm = _normalise_windows_path(task.execute)
-    action_matches = expected_norm is None or actual_norm == expected_norm
+    action_matches = expected_norm is not None and actual_norm == expected_norm
     residual_paths = [_path_status(path) for path in check_paths]
     residual_existing = [item for item in residual_paths if item["exists"]]
 
-    ok = bool(task.exists and not task.error and action_matches and not residual_existing)
+    ok = bool(task.exists and not task.error and expected_norm is not None and action_matches and not residual_existing)
     recommendations: list[str] = []
     if task.error:
         recommendations.append("Confirm the EIDP Weekly Run scheduled task manually.")

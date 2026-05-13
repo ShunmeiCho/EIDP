@@ -636,7 +636,15 @@ Test-Path "$env:USERPROFILE\eidp_v384_ocr_sr_smoke.py"
 Test-Path "$env:USERPROFILE\eidp-v384-ocr-sr-source.sqlite3"
 ```
 
-同じ確認は、ZIP 同梱の読み取り専用 helper でも実行できる:
+同じ確認は、ZIP 同梱の読み取り専用 helper でも実行できる。SSH が不安定で
+Mac 側から実行できない場合は、Windows 側でこの `.bat` を実行して
+`logs\stage6-recovery-*.json` を回収する:
+
+```powershell
+.\scripts\stage6_recovery_check.bat "C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
+```
+
+Python helper を直接実行する場合:
 
 ```powershell
 .\runtime\python\python.exe .\scripts\stage6_recovery_check.py `

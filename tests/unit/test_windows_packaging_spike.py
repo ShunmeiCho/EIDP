@@ -209,6 +209,7 @@ def bat_files() -> dict[str, str]:
     for name in (
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
+        "stage6_recovery_check.bat",
     ):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
@@ -219,12 +220,20 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
     assert set(bat_files.keys()) == {
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
+        "stage6_recovery_check.bat",
     }
 
 
 @pytest.mark.parametrize(
     "name",
-    ["first_setup.bat", "launch.bat", "weekly_run.bat", "diagnose.bat", "validate_install.bat"],
+    [
+        "first_setup.bat",
+        "launch.bat",
+        "weekly_run.bat",
+        "diagnose.bat",
+        "validate_install.bat",
+        "stage6_recovery_check.bat",
+    ],
 )
 def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
     """All write-capable launchers MUST cd to the script parent so
@@ -238,7 +247,14 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
 
 @pytest.mark.parametrize(
     "name",
-    ["first_setup.bat", "launch.bat", "weekly_run.bat", "diagnose.bat", "validate_install.bat"],
+    [
+        "first_setup.bat",
+        "launch.bat",
+        "weekly_run.bat",
+        "diagnose.bat",
+        "validate_install.bat",
+        "stage6_recovery_check.bat",
+    ],
 )
 def test_python_bat_forces_utf8(bat_files: dict[str, str], name: str):
     """Streamlit logs and run_weekly_target_year_discovery print Japanese.
@@ -554,6 +570,16 @@ def test_validate_install_bat_runs_packaged_validator(bat_files: dict[str, str])
     assert "endlocal & exit /b %RC%" in body
 
 
+def test_stage6_recovery_check_bat_runs_packaged_helper(bat_files: dict[str, str]):
+    body = bat_files["stage6_recovery_check.bat"]
+    assert "stage6_recovery_check.py" in body
+    assert "--expected-weekly-action" in body
+    assert "EIDP_EXPECTED_WEEKLY_ACTION" in body
+    assert "stage6-recovery-%RECOVERY_STAMP%.json" in body
+    assert "set \"RC=%ERRORLEVEL%\"" in body
+    assert "endlocal & exit /b %RC%" in body
+
+
 def test_first_setup_calls_db_bootstrap_via_python_module(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
     # `python -m eidp.cli db-bootstrap --sqlite` is the actual command
@@ -705,6 +731,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "stage6_recovery_check.py").write_text(
         "print('recovery')", encoding="utf-8",
     )
+    (fake_repo / "scripts" / "stage6_recovery_check.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "alembic.ini").write_text("[alembic]\n", encoding="utf-8")
     migrations = fake_repo / "migrations"
@@ -819,6 +846,9 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     )
     assert "scripts/stage6_recovery_check.py" in arcs, (
         "Stage 6 SSH recovery checklist depends on this read-only helper"
+    )
+    assert "scripts/stage6_recovery_check.bat" in arcs, (
+        "Stage 6 recovery must have a Windows-local wrapper when SSH is unavailable"
     )
     assert "scripts/validate_install.bat" in arcs, (
         "Windows VM checklist must run the validator from the extracted ZIP"

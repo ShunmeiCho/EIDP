@@ -176,6 +176,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "週次URL/PDF再取得\n"
             "対象年度を変更して保存すると、学校別タスクも同時に再計算されます\n"
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
+            "logs\\stage6-recovery-*.json\n"
+            "scripts\\stage6_recovery_check.bat\n"
             "アンチウイルスにより隔離された\n"
             "新しい ZIP へ更新する場合\n"
             "data\\eidp.sqlite3-wal\n"
@@ -209,6 +211,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/diagnose.bat": (SCRIPTS_DIR / "diagnose.bat").read_text(encoding="utf-8"),
         "scripts/uninstall.bat": (SCRIPTS_DIR / "uninstall.bat").read_text(encoding="utf-8"),
         "scripts/validate_install.bat": (SCRIPTS_DIR / "validate_install.bat").read_text(encoding="utf-8"),
+        "scripts/stage6_recovery_check.bat": (SCRIPTS_DIR / "stage6_recovery_check.bat").read_text(
+            encoding="utf-8"
+        ),
         "scripts/atomic_write.py": (SCRIPTS_DIR / "atomic_write.py").read_text(encoding="utf-8"),
         "scripts/run_weekly_target_year_discovery.py": (
             SCRIPTS_DIR / "run_weekly_target_year_discovery.py"

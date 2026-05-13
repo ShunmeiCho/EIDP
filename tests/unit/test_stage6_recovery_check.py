@@ -79,3 +79,21 @@ def test_build_report_flags_task_mismatch_and_residual_paths(tmp_path: Path) -> 
     assert report["residual_paths"] == [{"path": str(residual), "exists": True}]
     assert "Restore EIDP Weekly Run" in " ".join(report["recommendations"])
     assert "interrupted smoke artifacts" in " ".join(report["recommendations"])
+
+
+def test_build_report_requires_expected_weekly_action(tmp_path: Path) -> None:
+    module = _load_module()
+    task = module.ScheduledTaskSnapshot(
+        exists=True,
+        execute=r"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat",
+    )
+
+    report = module.build_report(
+        expected_weekly_action=None,
+        check_paths=[str(tmp_path / "missing-sandbox")],
+        task=task,
+    )
+
+    assert report["ok"] is False
+    assert report["task"]["action_matches_expected"] is False
+    assert "Pass --expected-weekly-action" in " ".join(report["recommendations"])
