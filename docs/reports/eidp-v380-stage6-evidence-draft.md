@@ -62,6 +62,7 @@ running one uninterrupted production cycle.
 | OCR availability probe | v380 extract path had no `ocr-addon`; `detect_ocr_availability` returned `binary_path=null`, `has_jpn_traineddata=false`, `can_run=false`; the v380 packaged runtime also returned `runtime_free_ram_mb=0` because the Windows package lacks `psutil` |
 | Source-side OCR RAM fallback fix | added a stdlib Windows `GlobalMemoryStatusEx` fallback; direct Windows probe returned `cpu_count=20`, `avail_phys_mb=16532`, `meets_ocr_default_threshold=true` |
 | v381 OCR RAM fallback package probe | v381 disposable extraction under `C:\Users\cyo20\EIDP-v381-da29fee-runtime-probe` used the packaged runtime and returned `cpu_count=20`, `free_ram_mb=16242`, `ocr_auto_enable=true`; probe directory and uploaded v381 ZIP/sidecar were removed after capture |
+| v382 OCR runtime gate negative probe | v382 disposable extraction under `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-runtime-probe` ran `scripts\validate_windows_install.py . --require-ocr-runtime --json`; it returned `ok=false`, build commit `cc739c8704e45e37928a4ac55fa006766e5012dc`, `build_dirty=false`, and expected missing-file errors for `ocr-addon/tesseract/tesseract.exe` and `ocr-addon/tessdata/jpn.traineddata`; probe directory and uploaded v382 ZIP/sidecar were removed after capture |
 | UI health | `/_stcore/health` returned `200 ok`; Streamlit `1.57.0`; cleanup `remaining_streamlit_processes=0` |
 | Browser render | Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `f6a5e6d` |
 | SSH tunnel note | `ssh -o ClearAllForwardings=no` was required because local `Host win` clears command-line forwards |
@@ -183,7 +184,7 @@ SupportRecipient ingest example:
 | Owner sign-off | missing |
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
-| OCR add-on runtime proof on operator PC | blocked; v380 operator install has no `ocr-addon`; v381 proves the packaged Windows RAM fallback only and still does not prove OCR add-on execution |
+| OCR add-on runtime proof on operator PC | blocked; v380 operator install has no `ocr-addon`; v381 proves the packaged Windows RAM fallback; v382 adds a live `--require-ocr-runtime` gate and correctly fails without add-on files, but a real OCR add-on payload still has not been supplied/executed |
 | Excel output file retained as signed artifact | missing |
 
 ## 9. Release Decision

@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v381.zip`
-Package commit: `da29fee280dba872d48f243209ba6cd7de02df50`
-Package SHA256: `6474468bf5f1455af91e02404c6f3674c5e841962f59ba00b12ea2d97e6fcca1`
+Current Mac-verifier-clean package: `dist/eidp-windows-v382.zip`
+Package commit: `cc739c8704e45e37928a4ac55fa006766e5012dc`
+Package SHA256: `b455cf97b908f3a544488b80527d3e9002769fe3d5b652f83a59df4b33863b88`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v381.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v382.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -17,12 +17,13 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v381. It supersedes v380 at the
-package level after commit `da29fee` fixed Windows OCR RAM detection without
-requiring `psutil`. The v381 versioned ZIP and latest alias both pass
+The current Mac-verifier-clean ZIP snapshot is v382. It supersedes v381 at the
+package level after commit `cc739c8` added an explicit OCR add-on runtime gate
+to the packaged Windows validator. The v382 versioned ZIP and latest alias both
+pass
 `scripts/verify_windows_distribution.py --require-demonstrated-discovery-patterns`
 with SHA256
-`6474468bf5f1455af91e02404c6f3674c5e841962f59ba00b12ea2d97e6fcca1`,
+`b455cf97b908f3a544488b80527d3e9002769fe3d5b652f83a59df4b33863b88`,
 `44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
 seeds, and `undemonstrated_pattern_sources=[]`. The latest full non-Windows
 release gate remains v378 with `1385` unit tests and `44` exact discovery
@@ -58,9 +59,16 @@ revisions. These observations are consolidated in
 `docs/reports/eidp-v380-stage6-evidence-draft.md` as a draft, not a completed
 operator sign-off. OCR add-on runtime proof is still not complete: the v380
 operator install has no `ocr-addon` directory and `detect_ocr_availability`
-correctly reports `can_run=false`. The v381 package does, however, carry the
-Windows RAM-detection fix: a v381 runtime-only probe on the operator PC returned
-`cpu_count=20`, `free_ram_mb=16242`, and `ocr_auto_enable=true`. The latest
+correctly reports `can_run=false`. v381 carried the Windows RAM-detection fix:
+a v381 runtime-only probe on the operator PC returned `cpu_count=20`,
+`free_ram_mb=16242`, and `ocr_auto_enable=true`. v382 adds the stricter
+`--require-ocr-runtime` validator gate, which executes packaged
+`tesseract.exe --version` and `tesseract.exe --list-langs` when the add-on is
+present and requires `jpn` in the language list. The same v382 gate was run on a
+disposable operator-PC extraction without the add-on and correctly failed with
+missing `ocr-addon/tesseract/tesseract.exe` and
+`ocr-addon/tessdata/jpn.traineddata`, so the gate is live but OCR add-on
+execution remains unproven until a real add-on payload is supplied. The latest
 broader Windows bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
@@ -340,12 +348,14 @@ The current source checkout therefore reports `44` discovery gold-set entries,
 `10` strict target-year successes, `17` publication-lag cases, `15`
 operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
 enforcing a stricter ZIP hygiene contract. That source/package evidence is now
-packaged in `dist/eidp-windows-v381.zip`; v381 also proves the Windows runtime
-can detect free RAM without `psutil` by returning `free_ram_mb=16242` and
-`ocr_auto_enable=true` in a disposable operator-PC package probe. The latest
-operator-PC setup and UI evidence remains v380: v380 was transferred to
-Windows, installed, diagnosed, and exercised through the package-local
-`eidp db-backup` smoke. It also has a read-only Windows environment / Task
+packaged in `dist/eidp-windows-v382.zip`; v381 proved the Windows runtime can
+detect free RAM without `psutil`, and v382 adds a packaged
+`--require-ocr-runtime` gate that executes Tesseract runtime probes when an OCR
+add-on is present. A disposable operator-PC extraction without the add-on
+correctly failed that gate on missing `ocr-addon` files. The latest operator-PC
+setup and UI evidence remains v380: v380 was transferred to Windows, installed,
+diagnosed, and exercised through the package-local `eidp db-backup` smoke. It
+also has a read-only Windows environment / Task
 Scheduler capture, a headless Streamlit `/_stcore/health` smoke, initial
 browser-render proof, full read-only quick-navigation proof, and an Excel
 preview disabled-state smoke, plus retroactive FY2025/R7 Excel
@@ -378,24 +388,34 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v381 package-verifier commands:
+Latest v382 package-verifier commands:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v381.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v381.zip` and refreshed `dist/eidp-windows.zip`;
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v382.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v382.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `6474468bf5f1455af91e02404c6f3674c5e841962f59ba00b12ea2d97e6fcca1`.
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v381.zip --require-demonstrated-discovery-patterns`
+  `b455cf97b908f3a544488b80527d3e9002769fe3d5b652f83a59df4b33863b88`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v382.zip --require-demonstrated-discovery-patterns`
   and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --require-demonstrated-discovery-patterns`
   -> both `OK core`, with matching SHA256, `44` packaged discovery gold-set
   entries, `17` publication-lag cases, `47` prefecture seeds, and
   `undemonstrated_pattern_sources=[]`; the packaged Windows runbook includes
   `db-backup --output $dbBackup`, `VACUUM INTO`, and
-  `PRAGMA wal_checkpoint(TRUNCATE)`.
+  `PRAGMA wal_checkpoint(TRUNCATE)`, and the packaged validator includes
+  `--require-ocr-runtime`.
 - Windows v381 runtime-only OCR RAM probe:
   disposable extraction under
   `C:\Users\cyo20\EIDP-v381-da29fee-runtime-probe` returned
   `{"app_root": "C:\\Users\\cyo20\\EIDP-v381-da29fee-runtime-probe", "cpu_count": 20, "free_ram_mb": 16242, "ocr_auto_enable": true}`;
   the probe directory and uploaded v381 ZIP/sidecar were removed after capture.
+- Windows v382 OCR runtime gate negative probe:
+  disposable extraction under
+  `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-runtime-probe` ran
+  `runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json`;
+  it returned `ok=false`, build commit
+  `cc739c8704e45e37928a4ac55fa006766e5012dc`, `build_dirty=false`, and the
+  expected missing-file errors for `ocr-addon/tesseract/tesseract.exe` and
+  `ocr-addon/tessdata/jpn.traineddata`; the probe directory and uploaded v382
+  ZIP/sidecar were removed after capture.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v379.zip --require-demonstrated-discovery-patterns`
   now fails under the current verifier because v379 predates the
   `db-backup --output $dbBackup` runbook contract.
