@@ -51,6 +51,19 @@ no remaining Streamlit process. This proves the SSH-based remote UI testing
 path can reach the Windows app server, but it is still below full browser
 click-through evidence.
 
+A temporary `playwright-core` install under `_temp/` plus the installed local
+Google Chrome binary then rendered the tunneled Windows UI. The rendered page
+title was `EIDP Operator Console`, `body_text_len=3533`, captured console
+warnings/errors were empty, page errors were empty, and visible text included
+`今週のやること`, `① 学校別タスク`, `② PDF確認・手入力`,
+`③ 年度判定・修正`, `④ Excel プレビュー`,
+`対象年度: 2026年度（令和8年度）`, `build: d2402dc`, `対象校 2418`,
+`Excel出力可 0/2418 校`, and `URLなし 2418`. The temporary npm package,
+script, Chrome profile, and screenshot were removed afterward. This is stronger
+than the health check because it proves initial browser rendering of the
+operator console, but it still does not replace the missing multi-page
+operator click-through.
+
 After the v376 proof, stale Windows directory
 `C:\Users\cyo20\EIDP-v375-bcca8df` was removed. The Windows host now retains
 only `EIDP-transfer`, the historical v342 proof directory, and the current
@@ -61,8 +74,8 @@ Verification: targeted diagnose/verifier regression tests passed with
 `3 passed`; targeted Ruff passed; the v376 versioned ZIP and latest alias both
 passed `scripts/verify_windows_distribution.py
 --require-demonstrated-discovery-patterns`; Windows setup, standalone
-after-setup validation, diagnose, headless Streamlit health check, and SSH
-tunnel health check all passed as described above.
+after-setup validation, diagnose, headless Streamlit health check, SSH tunnel
+health check, and browser-render smoke all passed as described above.
 
 ## 2026-05-13 V375 Fiscal-Year Context Cleanup and Shobi Latest-Public Case
 

@@ -328,6 +328,17 @@ Latest v376 commands:
   Mac; local `curl http://127.0.0.1:18501/_stcore/health` returned `ok`.
   The tunnel and remote Streamlit processes were then stopped, and a follow-up
   check found no remaining Streamlit process.
+- Windows v376 browser render smoke:
+  using temporary `playwright-core` under `_temp/` plus the installed local
+  Google Chrome binary, the tunneled Windows UI rendered with title
+  `EIDP Operator Console`, `body_text_len=3533`, no captured console warnings
+  or page errors, and visible operator text including `今週のやること`,
+  `① 学校別タスク`, `② PDF確認・手入力`, `③ 年度判定・修正`,
+  `④ Excel プレビュー`, `対象年度: 2026年度（令和8年度）`,
+  `build: d2402dc`, `対象校 2418`, `Excel出力可 0/2418 校`, and
+  `URLなし 2418`. The temporary npm package, script, Chrome profile, and
+  screenshot were removed afterward. This proves initial browser rendering, not
+  a full click-through of every operator workflow.
 - Windows cleanup after v376 proof removed stale
   `C:\Users\cyo20\EIDP-v375-bcca8df`; remaining EIDP directories are
   `EIDP-transfer`, `EIDP-v342-de2cfed`, and `EIDP-v376-d2402dc`.
