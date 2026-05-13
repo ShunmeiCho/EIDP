@@ -58,14 +58,19 @@ if not exist "%UV_EXE%" (
     goto :finish
 )
 
-REM 5. Create an isolated venv if needed. Do not clear an existing venv:
-REM    Windows may keep .venv\Scripts files locked while the UI is still
-REM    running. Dependency refresh happens through the offline install steps.
+REM 5. Create an isolated venv if needed. Use the stdlib venv module rather
+REM    than `uv venv`: live operator-PC v394 probing showed `uv venv` can
+REM    hang while checking the bundled Python interpreter, while
+REM    `python -m venv --without-pip` returns immediately. We still use
+REM    bundled uv below for offline wheelhouse installs. Do not clear an
+REM    existing venv: Windows may keep .venv\Scripts files locked while
+REM    the UI is still running. Dependency refresh happens through the
+REM    offline install steps.
 set "VENV_PY=%EIDP_APP_ROOT%\.venv\Scripts\python.exe"
 if not exist "%VENV_PY%" (
-    "%UV_EXE%" venv ".venv" --python "%RUNTIME_PY%"
+    "%RUNTIME_PY%" -m venv --without-pip ".venv"
     if errorlevel 1 (
-        echo [first_setup] uv venv failed
+        echo [first_setup] stdlib venv creation failed
         set "SETUP_RC=1"
         goto :finish
     )

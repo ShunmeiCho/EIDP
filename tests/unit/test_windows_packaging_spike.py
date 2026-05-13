@@ -320,7 +320,13 @@ def test_first_setup_creates_isolated_venv(bat_files: dict[str, str]):
     """Owner finding 8.5.a P0: install must target an isolated env, not
     rely on the runtime's site-packages."""
     body = bat_files["first_setup.bat"]
-    assert "uv.exe" in body, "first_setup must drive uv.exe explicitly"
+    assert '"%RUNTIME_PY%" -m venv --without-pip ".venv"' in body, (
+        "first_setup must create .venv with the stdlib venv module; a live "
+        "operator-PC v394 probe showed `uv venv` can hang while checking "
+        "the bundled Python interpreter"
+    )
+    assert '"%UV_EXE%" venv' not in body, "first_setup must not use `uv venv` on Windows"
+    assert "uv.exe" in body, "first_setup must still use bundled uv.exe for offline pip install"
     assert "venv" in body and ".venv" in body, "first_setup must create .venv"
     assert ".venv\\Scripts\\python.exe" in body, (
         "subsequent commands must run via .venv python so they see the "

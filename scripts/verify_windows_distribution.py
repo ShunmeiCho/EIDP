@@ -849,6 +849,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "uv.exe",
             "venv",
+            "-m venv --without-pip",
             ".venv\\Scripts\\python.exe",
             "--no-index",
             "--no-cache",
