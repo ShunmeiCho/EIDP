@@ -768,6 +768,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "print('recovery')", encoding="utf-8",
     )
     (fake_repo / "scripts" / "collect_stage6_evidence.py").write_text("print('bundle')", encoding="utf-8")
+    (fake_repo / "scripts" / "verify_stage6_evidence.py").write_text("print('verify bundle')", encoding="utf-8")
     (fake_repo / "scripts" / "stage6_recovery_check.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "alembic.ini").write_text("[alembic]\n", encoding="utf-8")
@@ -891,6 +892,9 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     )
     assert "scripts/collect_stage6_evidence.py" in arcs, (
         "Stage 6 evidence bundle depends on this read-only helper"
+    )
+    assert "scripts/verify_stage6_evidence.py" in arcs, (
+        "Stage 6 evidence bundle must have a mechanical receiver-side verifier"
     )
     assert "scripts/stage6_recovery_check.py" in arcs, (
         "Stage 6 SSH recovery checklist depends on this read-only helper"

@@ -261,6 +261,15 @@ Stage 6 検証後、管理者へ証跡をまとめて渡す場合:
 Codex RCA キュー、初回URL/PDF取得ログ、Excel 出力です。DB 本体
 (`data\eidp.sqlite3`)、WAL/SHM、PDF 原本、runtime、wheelhouse は含めません。
 
+管理者が受領後に機械確認する場合:
+
+```powershell
+.\runtime\python\python.exe .\scripts\verify_stage6_evidence.py .\logs\stage6-evidence-YYYYMMDD-HHMMSS.zip --json --require-label last_run
+```
+
+`ok=true` なら必須証跡ラベルが揃い、DB 本体、PDF 原本、runtime、wheelhouse が
+混入していないことを確認済みです。
+
 ## 4.3 設定
 
 通常は変更不要です。管理者だけが確認します。

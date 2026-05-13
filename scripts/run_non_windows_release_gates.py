@@ -64,6 +64,7 @@ def build_gate_commands(
                     "pytest",
                     "tests/unit/test_windows_install_validator.py",
                     "tests/unit/test_windows_distribution_verifier.py",
+                    "tests/unit/test_stage6_evidence_bundle.py",
                     "-q",
                 ),
             ),
@@ -75,6 +76,7 @@ def build_gate_commands(
                     "mypy",
                     "scripts/validate_windows_install.py",
                     "scripts/verify_windows_distribution.py",
+                    "scripts/verify_stage6_evidence.py",
                 ),
             ),
             GateCommand(
@@ -86,8 +88,10 @@ def build_gate_commands(
                     "check",
                     "scripts/validate_windows_install.py",
                     "scripts/verify_windows_distribution.py",
+                    "scripts/verify_stage6_evidence.py",
                     "tests/unit/test_windows_install_validator.py",
                     "tests/unit/test_windows_distribution_verifier.py",
+                    "tests/unit/test_stage6_evidence_bundle.py",
                 ),
             ),
             GateCommand(

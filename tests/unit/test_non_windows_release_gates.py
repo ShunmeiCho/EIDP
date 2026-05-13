@@ -27,6 +27,13 @@ def test_build_gate_commands_includes_package_verifiers_without_full_unit() -> N
     names = [command.name for command in commands]
     assert "unit_full" not in names
     assert names[-2:] == ["package_verify", "package_verify_demonstrated_patterns"]
+    validator_unit = next(command for command in commands if command.name == "validator_distribution_unit")
+    assert "tests/unit/test_stage6_evidence_bundle.py" in validator_unit.command
+    validator_mypy = next(command for command in commands if command.name == "validator_distribution_mypy")
+    assert "scripts/verify_stage6_evidence.py" in validator_mypy.command
+    validator_ruff = next(command for command in commands if command.name == "validator_distribution_ruff")
+    assert "scripts/verify_stage6_evidence.py" in validator_ruff.command
+    assert "tests/unit/test_stage6_evidence_bundle.py" in validator_ruff.command
     assert str(package) in commands[-2].command
     assert "--require-demonstrated-discovery-patterns" in commands[-1].command
 

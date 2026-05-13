@@ -183,6 +183,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "logs\\stage6-evidence-*.zip\n"
             "EIDP-stage6-evidence.bat\n"
             "scripts\\stage6_recovery_check.bat\n"
+            "verify_stage6_evidence.py\n"
+            "--require-label last_run\n"
             "アンチウイルスにより隔離された\n"
             "新しい ZIP へ更新する場合\n"
             "data\\eidp.sqlite3-wal\n"
@@ -242,6 +244,9 @@ def _core_entries() -> dict[str, bytes | str]:
             encoding="utf-8"
         ),
         "scripts/collect_stage6_evidence.py": (SCRIPTS_DIR / "collect_stage6_evidence.py").read_text(
+            encoding="utf-8"
+        ),
+        "scripts/verify_stage6_evidence.py": (SCRIPTS_DIR / "verify_stage6_evidence.py").read_text(
             encoding="utf-8"
         ),
         "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
