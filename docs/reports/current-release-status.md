@@ -64,12 +64,16 @@ a v381 runtime-only probe on the operator PC returned `cpu_count=20`,
 `free_ram_mb=16242`, and `ocr_auto_enable=true`. v382 adds the stricter
 `--require-ocr-runtime` validator gate, which executes packaged
 `tesseract.exe --version` and `tesseract.exe --list-langs` when the add-on is
-present and requires `jpn` in the language list. The same v382 gate was run on a
-disposable operator-PC extraction without the add-on and correctly failed with
-missing `ocr-addon/tesseract/tesseract.exe` and
-`ocr-addon/tessdata/jpn.traineddata`, so the gate is live but OCR add-on
-execution remains unproven until a real add-on payload is supplied. The latest
-broader Windows bounded-bootstrap proof remains v342.
+present and requires `jpn` in the language list. A smoke OCR add-on ZIP was
+also built from the UB Mannheim Windows Tesseract `v5.4.0.20240606` installer
+plus local `jpn.traineddata`; its verifier SHA256 is
+`b39a07bb9367c2342c38d34fc1dddd06300d9ba7d5b5412f752b798008d1f431`. On a
+disposable operator-PC v382 extraction, `--require-ocr-runtime` executed the
+packaged Windows `tesseract.exe` successfully, returned
+`ocr_tesseract_version="tesseract v5.4.0.20240606"`, and listed both `jpn` and
+`jpn_vert`. This proves add-on detection and runtime execution, but not OCR
+page extraction or DB write behavior. The latest broader Windows
+bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
@@ -416,6 +420,21 @@ Latest v382 package-verifier commands:
   expected missing-file errors for `ocr-addon/tesseract/tesseract.exe` and
   `ocr-addon/tessdata/jpn.traineddata`; the probe directory and uploaded v382
   ZIP/sidecar were removed after capture.
+- OCR add-on smoke package:
+  `uv run python scripts/build_ocr_addon_zip.py --tesseract-dir _temp/ocr-addon-src/7z-extract --tessdata-dir /opt/homebrew/share/tessdata --out-zip dist/eidp-ocr-addon-windows-v382-smoke.zip`
+  built an add-on from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus
+  local `jpn.traineddata`; package verifier reported `OK ocr-addon`, SHA256
+  `b39a07bb9367c2342c38d34fc1dddd06300d9ba7d5b5412f752b798008d1f431`,
+  `entry_count=266`, and `manifest_files=265`.
+- Windows v382 OCR add-on runtime proof:
+  disposable extraction under
+  `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-addon-probe` with the smoke OCR add-on
+  ran `runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json`;
+  it returned `ok=true`, build commit
+  `cc739c8704e45e37928a4ac55fa006766e5012dc`, `build_dirty=false`,
+  `ocr_tesseract_version="tesseract v5.4.0.20240606"`, and a language list
+  containing `jpn` and `jpn_vert`; the probe directory and uploaded ZIPs were
+  removed after capture.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v379.zip --require-demonstrated-discovery-patterns`
   now fails under the current verifier because v379 predates the
   `db-backup --output $dbBackup` runbook contract.

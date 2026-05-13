@@ -63,6 +63,7 @@ running one uninterrupted production cycle.
 | Source-side OCR RAM fallback fix | added a stdlib Windows `GlobalMemoryStatusEx` fallback; direct Windows probe returned `cpu_count=20`, `avail_phys_mb=16532`, `meets_ocr_default_threshold=true` |
 | v381 OCR RAM fallback package probe | v381 disposable extraction under `C:\Users\cyo20\EIDP-v381-da29fee-runtime-probe` used the packaged runtime and returned `cpu_count=20`, `free_ram_mb=16242`, `ocr_auto_enable=true`; probe directory and uploaded v381 ZIP/sidecar were removed after capture |
 | v382 OCR runtime gate negative probe | v382 disposable extraction under `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-runtime-probe` ran `scripts\validate_windows_install.py . --require-ocr-runtime --json`; it returned `ok=false`, build commit `cc739c8704e45e37928a4ac55fa006766e5012dc`, `build_dirty=false`, and expected missing-file errors for `ocr-addon/tesseract/tesseract.exe` and `ocr-addon/tessdata/jpn.traineddata`; probe directory and uploaded v382 ZIP/sidecar were removed after capture |
+| v382 OCR add-on runtime proof | smoke add-on `dist/eidp-ocr-addon-windows-v382-smoke.zip` was built from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus local `jpn.traineddata`; verifier reported SHA256 `b39a07bb9367c2342c38d34fc1dddd06300d9ba7d5b5412f752b798008d1f431`, `entry_count=266`, `manifest_files=265`; disposable Windows extraction under `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-addon-probe` returned `ok=true`, `ocr_tesseract_version="tesseract v5.4.0.20240606"`, and languages including `jpn` and `jpn_vert`; probe directory and uploaded ZIPs were removed after capture |
 | UI health | `/_stcore/health` returned `200 ok`; Streamlit `1.57.0`; cleanup `remaining_streamlit_processes=0` |
 | Browser render | Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `f6a5e6d` |
 | SSH tunnel note | `ssh -o ClearAllForwardings=no` was required because local `Host win` clears command-line forwards |
@@ -184,7 +185,7 @@ SupportRecipient ingest example:
 | Owner sign-off | missing |
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
-| OCR add-on runtime proof on operator PC | blocked; v380 operator install has no `ocr-addon`; v381 proves the packaged Windows RAM fallback; v382 adds a live `--require-ocr-runtime` gate and correctly fails without add-on files, but a real OCR add-on payload still has not been supplied/executed |
+| OCR add-on runtime proof on operator PC | add-on detection/runtime execution proven in disposable v382 probe; OCR page extraction and DB write via OCR still not proven |
 | Excel output file retained as signed artifact | missing |
 
 ## 9. Release Decision
