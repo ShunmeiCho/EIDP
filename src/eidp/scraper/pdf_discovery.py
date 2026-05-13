@@ -1546,6 +1546,7 @@ def _extract_pdf_links(
     experimental_extractors: bool | None = None,
 ) -> list[PdfCandidate]:
     """Extract PDF link candidates from HTML using known PDF delivery patterns."""
+    html = re.sub(r"<!--.*?-->", "", html, flags=re.DOTALL)
     candidates: list[PdfCandidate] = []
     candidate_index_by_key: dict[str, int] = {}
     experimental_enabled = (

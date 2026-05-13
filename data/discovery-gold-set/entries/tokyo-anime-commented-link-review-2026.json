@@ -1,0 +1,56 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "tokyo-anime-commented-link-review-2026",
+  "school": {
+    "school_id": 100,
+    "school_name": "東京アニメ・声優＆eスポーツ専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "滋慶学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Preserve the current Tokyo Anime public-info page where an old support PDF link is commented out and the visible target-form PDF still lacks explicit FY2026 evidence.",
+    "search_queries": [
+      "東京アニメ・声優＆eスポーツ専門学校 確認申請書 様式第2号",
+      "site:anime.ac.jp/school/public_info 11_confirmation_application.pdf"
+    ],
+    "steps": [
+      "Open https://www.anime.ac.jp/school/public_info/.",
+      "Confirm that the old 07_study_support_application.pdf link is inside an HTML comment and should not be treated as a visible candidate.",
+      "Find the visible link labeled 確認申請書様式 and resolve it to pdf/11_confirmation_application.pdf.",
+      "Inspect the PDF text and confirm it is target-shaped, but the URL, visible anchor, and PDF body do not prove FY2026.",
+      "Classify it as needs_operator_review instead of strict accepted_target_pdf."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.anime.ac.jp/",
+    "disclosure_url": "https://www.anime.ac.jp/school/public_info/",
+    "pdf_url": "https://www.anime.ac.jp/school/public_info/pdf/11_confirmation_application.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "commented_old_pdf_with_visible_target_form_without_year_evidence",
+    "reusable_rules": [
+      "Ignore PDF links inside HTML comments because they are not operator-visible publication links.",
+      "Keep visible 確認申請書 anchors as target-form candidates even when no target-year evidence exists.",
+      "Route target-shaped PDFs with no FY2026 evidence to needs_operator_review with the direct PDF URL preserved."
+    ],
+    "anti_patterns": [
+      "Do not resurrect a commented-out PDF link as the latest publication candidate.",
+      "Do not infer FY2026 from a current information-disclosure page alone.",
+      "Do not count officer-term or committee-term years in the PDF body as target fiscal-year evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.anime.ac.jp/school/public_info/",
+      "https://www.anime.ac.jp/school/public_info/pdf/11_confirmation_application.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found 07_study_support_application.pdf only inside an HTML comment. The visible 11_confirmation_application.pdf is target-shaped but has no URL, anchor, or PDF-body FY2026 evidence."
+  }
+}

@@ -359,6 +359,23 @@ def test_extract_pdf_links_does_not_assign_visible_sibling_anchor_text_to_empty_
     assert _score_candidate(current, target_fiscal_year=2026) > _score_candidate(stale, target_fiscal_year=2026)
 
 
+def test_extract_pdf_links_ignores_commented_out_pdf_anchors() -> None:
+    html = """
+    <section>
+      <!--<li><a href="pdf/07_study_support_application.pdf">高等教育修学支援制度</a></li>-->
+      <a href="pdf/11_confirmation_application.pdf">確認申請書様式</a>
+      <a href="pdf/12_kakunin.pdf">確認申請書 様式第2号の4（別紙）</a>
+    </section>
+    """
+
+    candidates = _extract_pdf_links(html, "https://www.anime.ac.jp/school/public_info/", target_fiscal_year=2026)
+
+    urls = {candidate.pdf_url for candidate in candidates}
+    assert "https://www.anime.ac.jp/school/public_info/pdf/07_study_support_application.pdf" not in urls
+    assert "https://www.anime.ac.jp/school/public_info/pdf/11_confirmation_application.pdf" in urls
+    assert "https://www.anime.ac.jp/school/public_info/pdf/12_kakunin.pdf" in urls
+
+
 def test_pre_download_treats_o_hara_confirmation_column_as_old_target_form() -> None:
     candidate = PdfCandidate(
         pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
