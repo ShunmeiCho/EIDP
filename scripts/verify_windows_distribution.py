@@ -852,7 +852,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "ship_readiness_rc",
             "retroactive fiscal-year ship readiness",
             "settings.target_fiscal_year",
-            "report ship-readiness --fy",
+            "'ship-readiness', '--fy'",
             "retroactive_fiscal_year",
             "retroactive_ship_readiness_rc",
             "latest discovery RCA batch plan",
