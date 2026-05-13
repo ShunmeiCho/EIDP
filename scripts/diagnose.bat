@@ -148,6 +148,25 @@ if exist "%VENV_PY%" (
 )
 >> "%DIAG_FILE%" echo.
 
+>> "%DIAG_FILE%" echo [retroactive fiscal-year ship readiness]
+if exist "%VENV_PY%" (
+    set "RETROACTIVE_FY="
+    for /f "delims=" %%Y in ('"%VENV_PY%" -c "from eidp.config import settings; print(max(2019, int(settings.target_fiscal_year) - 1))" 2^>nul') do (
+        if not defined RETROACTIVE_FY set "RETROACTIVE_FY=%%Y"
+    )
+    if defined RETROACTIVE_FY (
+        >> "%DIAG_FILE%" echo retroactive_fiscal_year=!RETROACTIVE_FY!
+        "%VENV_PY%" -m eidp.cli report ship-readiness --fy !RETROACTIVE_FY! --json >> "%DIAG_FILE%" 2>&1
+        set "RETROACTIVE_SHIP_READINESS_RC=!ERRORLEVEL!"
+        >> "%DIAG_FILE%" echo retroactive_ship_readiness_rc=!RETROACTIVE_SHIP_READINESS_RC!
+    ) else (
+        >> "%DIAG_FILE%" echo skipped; could not determine retroactive fiscal year
+    )
+) else (
+    >> "%DIAG_FILE%" echo skipped; .venv Python is missing
+)
+>> "%DIAG_FILE%" echo.
+
 >> "%DIAG_FILE%" echo [latest discovery RCA batch plan]
 powershell -NoProfile -Command "$root=$env:EIDP_APP_ROOT; $last=Join-Path $root 'data\output\last_run.json'; $path=$null; if (Test-Path -LiteralPath $last) { try { $json=Get-Content -LiteralPath $last -Raw | ConvertFrom-Json; $path=$json.discovery_rca.batch_plan_path } catch { Write-Output ('last_run_json_error=' + $_.Exception.Message) } }; if ($path) { if (-not [System.IO.Path]::IsPathRooted([string]$path)) { $path=Join-Path $root ([string]$path) } }; if (-not $path -or -not (Test-Path -LiteralPath $path)) { $dir=Join-Path $root 'data\output\target-year-discovery'; if (Test-Path -LiteralPath $dir) { $latest=Get-ChildItem -LiteralPath $dir -Filter '*-discovery-rca-batch-plan.json' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if ($latest) { $path=$latest.FullName } } }; if ($path -and (Test-Path -LiteralPath $path)) { Write-Output $path; Get-Content -LiteralPath $path -TotalCount 240 } else { Write-Output 'none' }" >> "%DIAG_FILE%" 2>&1
 >> "%DIAG_FILE%" echo.
