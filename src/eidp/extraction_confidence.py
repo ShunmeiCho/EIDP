@@ -364,6 +364,29 @@ def compute_pdf_parse_breakdown(
     return build_breakdown(f1=f1, f2=f2, f3=f3, method="pdf_parse", weights=weights)
 
 
+def compute_ocr_tesseract_breakdown(
+    record: dict,
+    *,
+    prior_enrollment: float | int | None,
+    per_word_confidences: list[float] | list[int],
+    required_fields: tuple[str, ...] = DEFAULT_REQUIRED_FIELDS,
+    weights: tuple[float, float, float] = DEFAULT_WEIGHTS,
+) -> ConfidenceBreakdown:
+    """Confidence wrapper for rows parsed from Tesseract OCR text.
+
+    F1 comes from Tesseract's per-word TSV confidences. F2/F3 reuse the
+    same completeness and YoY sanity checks as the pdf_parse path so the
+    downstream classification thresholds remain identical.
+    """
+    f1 = compute_f1_ocr_tesseract(per_word_confidences)
+    f2 = compute_f2_completeness(record, required_fields=required_fields)
+    f3 = compute_f3_yoy_sanity(
+        current_enrollment=record.get("enrollment"),
+        previous_enrollment=prior_enrollment,
+    )
+    return build_breakdown(f1=f1, f2=f2, f3=f3, method="ocr_tesseract", weights=weights)
+
+
 def breakdown_from_json(blob: str) -> ConfidenceBreakdown:
     """Inverse of :func:`breakdown_to_json`. Tolerant of missing
     ``composite`` (recompute from factors) so older rows still load."""

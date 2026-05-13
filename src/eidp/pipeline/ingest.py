@@ -19,11 +19,13 @@ from eidp.department_normalization import normalize_course_name
 from eidp.extraction_confidence import (
     breakdown_to_json,
     classify,
+    compute_ocr_tesseract_breakdown,
     compute_pdf_parse_breakdown,
     thresholds_from_env,
 )
 from eidp.fiscal_year import fiscal_year_from_japanese_era_text, has_fiscal_year_text
-from eidp.pdf.extractor import parse_pdf
+from eidp.pdf.extractor import parse_pdf, parse_pdf_ocr
+from eidp.pdf.ocr import extract_text_ocr_result
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
 
 log = structlog.get_logger()
@@ -154,8 +156,8 @@ def ingest_document(
                 stats["skip_reason"] = f"hash_dedup:{twin_status}"
                 return stats
 
-        from eidp.pdf.ocr import extract_text_ocr
-        ocr_pages = extract_text_ocr(pdf_path)
+        ocr_result = extract_text_ocr_result(pdf_path)
+        ocr_pages = ocr_result.page_texts
         if not ocr_pages or not any(t.strip() for t in ocr_pages):
             log.info("image_pdf_no_ocr", doc_id=doc.id, path=str(pdf_path))
             _record_rejection(recorder, doc, "ocr_pending")
@@ -166,11 +168,16 @@ def ingest_document(
             stats["skip_reason"] = "ocr_pending"
             return stats
         # Use OCR text for parsing
-        from eidp.pdf.extractor import parse_pdf_ocr
         annotation = parse_pdf_ocr(pdf_path, ocr_pages)
+        extraction_method = (
+            "ocr_tesseract" if ocr_result.provider == "tesseract" else "pdf_parse"
+        )
+        ocr_conf_values = ocr_result.conf_values
         # Continue to school-identity check and ingestion below
     else:
         annotation = None  # will be set after this block
+        extraction_method = "pdf_parse"
+        ocr_conf_values = []
 
     # Skip non-target documents
     if doc.pdf_type == "non_target":
@@ -385,9 +392,16 @@ def ingest_document(
                 "enrollment": dept_record.enrollment,
                 "graduates": dept_record.graduates,
             }
-            breakdown = compute_pdf_parse_breakdown(
-                dept_record_dict, prior_enrollment=prior_enrollment,
-            )
+            if extraction_method == "ocr_tesseract":
+                breakdown = compute_ocr_tesseract_breakdown(
+                    dept_record_dict,
+                    prior_enrollment=prior_enrollment,
+                    per_word_confidences=ocr_conf_values,
+                )
+            else:
+                breakdown = compute_pdf_parse_breakdown(
+                    dept_record_dict, prior_enrollment=prior_enrollment,
+                )
             verdict = classify(breakdown.composite, thresholds_from_env())
             is_current_row = verdict in ("auto", "auto_flag")
 
@@ -420,7 +434,7 @@ def ingest_document(
                 prev_enrollment=dept_record.prev_enrollment,
                 dropouts=dept_record.dropouts,
                 dropout_rate=dept_record.dropout_rate,
-                extraction_method="pdf_parse",
+                extraction_method=extraction_method,
                 extraction_confidence=breakdown.composite,
                 confidence_breakdown=breakdown_to_json(breakdown),
             )
@@ -480,11 +494,20 @@ def ingest_document(
         sr_required = ("annual_total", "grand_total")
         sr_record_dict = {name: merged_sr_fields.get(name) for name in sr_required}
         sr_prior_total = current_sr.annual_total if current_sr is not None else None
-        sr_breakdown = compute_pdf_parse_breakdown(
-            {**sr_record_dict, "enrollment": merged_sr_fields.get("annual_total")},
-            prior_enrollment=sr_prior_total,
-            required_fields=sr_required,
-        )
+        sr_breakdown_record = {**sr_record_dict, "enrollment": merged_sr_fields.get("annual_total")}
+        if extraction_method == "ocr_tesseract":
+            sr_breakdown = compute_ocr_tesseract_breakdown(
+                sr_breakdown_record,
+                prior_enrollment=sr_prior_total,
+                per_word_confidences=ocr_conf_values,
+                required_fields=sr_required,
+            )
+        else:
+            sr_breakdown = compute_pdf_parse_breakdown(
+                sr_breakdown_record,
+                prior_enrollment=sr_prior_total,
+                required_fields=sr_required,
+            )
         sr_verdict = classify(sr_breakdown.composite, thresholds_from_env())
         sr_is_current = sr_verdict in ("auto", "auto_flag")
 

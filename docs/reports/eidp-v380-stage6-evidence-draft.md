@@ -67,6 +67,7 @@ running one uninterrupted production cycle.
 | v382 OCR add-on runtime proof | smoke add-on `dist/eidp-ocr-addon-windows-v382-smoke.zip` was built from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus local `jpn.traineddata`; verifier reported SHA256 `b39a07bb9367c2342c38d34fc1dddd06300d9ba7d5b5412f752b798008d1f431`, `entry_count=266`, `manifest_files=265`; disposable Windows extraction under `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-addon-probe` returned `ok=true`, `ocr_tesseract_version="tesseract v5.4.0.20240606"`, and languages including `jpn` and `jpn_vert`; this proved runtime execution but not TSV OCR output parsing; probe directory and uploaded ZIPs were removed after capture |
 | v383 package and OCR add-on verifier | v383 core ZIP `dist/eidp-windows-v383.zip` and latest alias share SHA256 `6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`; `dist/eidp-ocr-addon-windows-v383-smoke.zip` includes `ocr-addon/tessdata/configs/tsv` and verifies as SHA256 `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853`, `entry_count=267`, `manifest_files=266`; `scripts/verify_windows_distribution.py ... --ocr-addon ... --require-demonstrated-discovery-patterns` returned `OK core` and `OK ocr-addon` for both the versioned ZIP and latest alias |
 | v383 OCR image + copied-DB write proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v383-effcd58-ocr-write-sandbox` generated `data\ocr-write-smoke.png`, ran packaged Tesseract through `run_tesseract_on_image(..., output_format="tsv")`, returned `ocr_full_text="V383 OCR WRITE SMOKE 2026"` with `ocr_avg_confidence=0.952`, then used `save_manual_entries(..., method="ocr_tesseract")` against a copied DB to write one `DepartmentYearly` row with `extraction_confidence=0.95`, `verified=true`, promote the document `ocr_pending -> ingested`, and emit three `manual_entry` audit rows; real v380 runtime DB marker counts were all `0`; probe directory and uploaded ZIPs were removed after capture |
+| Post-v383 OCR ingest source propagation | focused unit coverage proves image-PDF ingest uses the packaged/system Tesseract TSV wrapper when available and records `ocr_tesseract` confidence breakdowns on both `DepartmentYearly` and `SupportRecipient`; this is code-level proof only, not an operator-PC real target-form OCR smoke |
 | UI health | `/_stcore/health` returned `200 ok`; Streamlit `1.57.0`; cleanup `remaining_streamlit_processes=0` |
 | Browser render | Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `f6a5e6d` |
 | SSH tunnel note | `ssh -o ClearAllForwardings=no` was required because local `Host win` clears command-line forwards |
@@ -131,6 +132,7 @@ Fiscal-year override browser example:
 | SupportRecipient ingest revisions | 2 sandbox rows |
 | OCR image execution | v383 sandbox image smoke returned `V383 OCR WRITE SMOKE 2026` |
 | OCR-sourced DepartmentYearly rows | 1 sandbox row in copied DB |
+| OCR-sourced SupportRecipient confidence propagation | code-level unit proof; no operator-PC target-form smoke yet |
 | DepartmentChange explicit registrations | 0 |
 | Runtime DB mutation | 0 matching runtime rows for manual-entry and SupportRecipient smoke markers |
 
@@ -195,7 +197,7 @@ OCR image write example:
 | Owner sign-off | missing |
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
-| OCR add-on runtime proof on operator PC | add-on detection/runtime execution proven in disposable v382 probe; v383 adds TSV config packaging plus OCR image extraction and `ocr_tesseract` DepartmentYearly write proof in a disposable copied DB; real target-form OCR extraction and SupportRecipient OCR write remain unproven |
+| OCR add-on runtime proof on operator PC | add-on detection/runtime execution proven in disposable v382 probe; v383 adds TSV config packaging plus OCR image extraction and `ocr_tesseract` DepartmentYearly write proof in a disposable copied DB; post-v383 source proves `ocr_tesseract` confidence propagation to SupportRecipient in unit coverage; real target-form OCR extraction and operator-PC SupportRecipient OCR write remain unproven |
 | Excel output file retained as signed artifact | missing |
 
 ## 9. Release Decision

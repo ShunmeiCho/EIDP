@@ -20,6 +20,7 @@ from eidp.db.models import (
     SupportRecipient,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
+from eidp.pdf.ocr import OcrExtraction
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
 from eidp.pipeline.ingest import ingest_document
 
@@ -424,6 +425,49 @@ def test_sr_full_totals_lands_current(engine, tmp_path):
         breakdown = json.loads(sr.confidence_breakdown)
         assert breakdown["method"] == "pdf_parse"
         assert float(sr.extraction_confidence) >= 0.85
+
+
+def test_image_ocr_ingest_marks_dept_and_sr_breakdowns_as_ocr(engine, tmp_path):
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/image-sr.pdf",
+            tmp_path=tmp_path,
+            file_hash="o" * 64,
+        )
+        doc.content_type = "image"
+        ann = _annotation(
+            dept_record=DepartmentRecord(
+                name="OCR学科", capacity=40, enrollment=35, graduates=30,
+            ),
+            sr=SupportRecipientRecord(annual_total=100, grand_total=100),
+        )
+
+        with (
+            patch(
+                "eidp.pipeline.ingest.extract_text_ocr_result",
+                return_value=OcrExtraction(
+                    page_texts=["令和8年度\nOCR学科\n対象比率 100"],
+                    provider="tesseract",
+                    conf_values=[95, 90, 92],
+                ),
+            ),
+            patch("eidp.pipeline.ingest.parse_pdf_ocr", return_value=ann),
+        ):
+            stats = ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        assert stats["yearly_current"] == 1
+        assert stats["support_recipient_current"] == 1
+
+        dy = session.query(DepartmentYearly).one()
+        assert dy.extraction_method == "ocr_tesseract"
+        assert json.loads(dy.confidence_breakdown)["method"] == "ocr_tesseract"
+
+        sr = session.query(SupportRecipient).one()
+        assert json.loads(sr.confidence_breakdown)["method"] == "ocr_tesseract"
 
 
 def test_sr_missing_required_lands_non_current(engine, tmp_path):

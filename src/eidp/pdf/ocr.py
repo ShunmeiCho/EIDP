@@ -22,14 +22,31 @@ Design for portability:
 import os
 import tempfile
 import threading
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import structlog
 
+from eidp.config import settings
+from eidp.ocr.tesseract import (
+    OcrBinaryNotFoundError,
+    OcrError,
+    locate_tessdata,
+    locate_tesseract,
+    run_tesseract_on_image,
+)
+
 log = structlog.get_logger()
 
-_VALID_PROVIDERS = ("paddleocr", "pymupdf")
+_VALID_PROVIDERS = ("paddleocr", "pymupdf", "tesseract")
+
+
+@dataclass(frozen=True)
+class OcrExtraction:
+    page_texts: list[str]
+    provider: str
+    conf_values: list[int] = field(default_factory=list)
 
 # Module-level singleton for PaddleOCR (load once per process)
 # Protected by a lock so concurrent first-callers don't double-initialize
@@ -70,8 +87,8 @@ def _get_paddleocr_instance() -> Any:
         if _paddleocr_instance is not None:
             return _paddleocr_instance
 
-        from paddleocr import PaddleOCR
         import paddle
+        from paddleocr import PaddleOCR
 
         device = _detect_device()
         os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
@@ -97,7 +114,9 @@ def _check_ocr_availability() -> str:
     if override in _VALID_PROVIDERS:
         return override
 
-    # Auto-detect: prefer PaddleOCR > PyMuPDF OCR
+    # Auto-detect: prefer PaddleOCR > packaged/system Tesseract TSV >
+    # PyMuPDF OCR. The Tesseract TSV wrapper is the Windows add-on path
+    # and preserves per-word confidence values for the DB/UI.
     try:
         from paddleocr import PaddleOCR  # noqa: F401
         return "paddleocr"
@@ -106,8 +125,22 @@ def _check_ocr_availability() -> str:
 
     try:
         import fitz  # noqa: F401
+    except ImportError:
+        return "none"
+
+    try:
+        locate_tesseract(app_root=Path(settings.app_root))
+        tessdata = locate_tessdata(app_root=Path(settings.app_root))
+        if tessdata is None or (tessdata / "jpn.traineddata").is_file():
+            return "tesseract"
+        log.warning("tesseract_no_jpn", hint="Install OCR add-on with jpn.traineddata")
+    except OcrBinaryNotFoundError:
+        pass
+
+    try:
         import shutil
         import subprocess
+
         if shutil.which("tesseract"):
             try:
                 langs = subprocess.run(
@@ -213,30 +246,78 @@ def _ocr_with_pymupdf(pdf_path: Path) -> list[str]:
     return page_texts
 
 
+def _ocr_with_tesseract(pdf_path: Path) -> OcrExtraction:
+    """Extract text using the packaged/system Tesseract TSV wrapper."""
+    binary = locate_tesseract(app_root=Path(settings.app_root))
+    tessdata_dir = locate_tessdata(app_root=Path(settings.app_root))
+
+    with tempfile.TemporaryDirectory(prefix="eidp_ocr_") as tmp_dir:
+        try:
+            image_paths = _pdf_to_page_images(pdf_path, tmp_dir)
+        except ImportError:
+            log.warning("pymupdf_not_installed", hint="pip install pymupdf (needed for PDF->image)")
+            return OcrExtraction(page_texts=[], provider="tesseract", conf_values=[])
+        except Exception as e:
+            log.warning("pdf_to_image_failed", path=str(pdf_path), error=str(e))
+            return OcrExtraction(page_texts=[], provider="tesseract", conf_values=[])
+
+        page_texts: list[str] = []
+        conf_values: list[int] = []
+        for img_path in image_paths:
+            try:
+                result = run_tesseract_on_image(
+                    Path(img_path),
+                    binary=binary,
+                    tessdata_dir=tessdata_dir,
+                )
+                page_texts.append(result.full_text)
+                conf_values.extend(result.conf_values)
+            except OcrError as e:
+                log.warning("ocr_page_failed", path=img_path, provider="tesseract", error=str(e))
+                page_texts.append("")
+
+    log.info(
+        "ocr_tesseract_complete",
+        path=str(pdf_path),
+        pages=len(page_texts),
+        total_chars=sum(len(t) for t in page_texts),
+        usable_conf_values=sum(1 for value in conf_values if value >= 0),
+    )
+    return OcrExtraction(page_texts=page_texts, provider="tesseract", conf_values=conf_values)
+
+
+def extract_text_ocr_result(pdf_path: Path) -> OcrExtraction:
+    """Extract image-PDF text and preserve OCR provenance for confidence scoring."""
+    provider = _check_ocr_availability()
+
+    if provider == "none":
+        log.warning(
+            "no_ocr_available",
+            path=str(pdf_path),
+            hint="Install OCR add-on or pip install paddleocr paddlepaddle",
+        )
+        return OcrExtraction(page_texts=[], provider="none", conf_values=[])
+
+    log.info("ocr_start", path=str(pdf_path), provider=provider)
+
+    try:
+        if provider == "paddleocr":
+            return OcrExtraction(page_texts=_ocr_with_paddleocr(pdf_path), provider="paddleocr", conf_values=[])
+        if provider == "pymupdf":
+            return OcrExtraction(page_texts=_ocr_with_pymupdf(pdf_path), provider="pymupdf", conf_values=[])
+        if provider == "tesseract":
+            return _ocr_with_tesseract(pdf_path)
+        return OcrExtraction(page_texts=[], provider=provider, conf_values=[])
+    except Exception as e:
+        log.warning("ocr_failed", path=str(pdf_path), provider=provider,
+                    error=str(e), error_type=type(e).__name__)
+        return OcrExtraction(page_texts=[], provider=provider, conf_values=[])
+
+
 def extract_text_ocr(pdf_path: Path) -> list[str]:
     """Extract text from an image-only PDF using the best available OCR.
 
     Returns list of page texts (same format as pdfplumber extraction).
     Returns empty list if no OCR provider is available.
     """
-    provider = _check_ocr_availability()
-
-    if provider == "none":
-        log.warning("no_ocr_available",
-                    path=str(pdf_path),
-                    hint="Install OCR: pip install paddleocr paddlepaddle")
-        return []
-
-    log.info("ocr_start", path=str(pdf_path), provider=provider)
-
-    try:
-        if provider == "paddleocr":
-            return _ocr_with_paddleocr(pdf_path)
-        elif provider == "pymupdf":
-            return _ocr_with_pymupdf(pdf_path)
-        else:
-            return []
-    except Exception as e:
-        log.warning("ocr_failed", path=str(pdf_path), provider=provider,
-                    error=str(e), error_type=type(e).__name__)
-        return []
+    return extract_text_ocr_result(pdf_path).page_texts
