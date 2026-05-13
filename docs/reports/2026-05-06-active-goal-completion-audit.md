@@ -3,10 +3,30 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `53fc2a3093567b470956794c09ce123a4d85a77d` (`eidp-windows-v364.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `d44e65db0ae646ccec045316af52386d4bc7c0c4` (`eidp-windows-v365.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V365 Stage 6 Retroactive FY Evidence Fields
+
+v365 (`d44e65d`) carries the retroactive FY diagnostics contract into the
+packaged operator E2E evidence template. The template now asks for
+`retroactive_fiscal_year`, `is_retroactive_fiscal_year`, and
+`retroactive_ship_readiness_rc`, and the Windows distribution verifier rejects
+ZIPs whose template omits those fields. This keeps the Stage 6 record aligned
+with the v364 diagnostics log and makes previous-year rehearsal evidence
+explicitly separate from current-year R8 ship yield.
+
+Verification: targeted E2E-template verifier tests passed; the full
+distribution-verifier suite passed with `91 passed`; targeted Ruff and mypy
+passed; and the full unit suite passed with `1371 passed, 5 warnings`.
+`dist/eidp-windows-v365.zip` was rebuilt from clean commit `d44e65d` with
+SHA256 `b8d2e8fcb6c57d4c4485f964a663fbad22199d19e553b554d28ef9b6fc1fb10b`.
+The full non-Windows release gate returned `ok=true`; bounded evidence replay
+returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact /
+`0` failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V364 Retroactive FY Diagnostics Snapshot
 
