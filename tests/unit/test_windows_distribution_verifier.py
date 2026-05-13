@@ -1503,6 +1503,20 @@ def test_verify_core_zip_rejects_diagnose_without_retroactive_fiscal_year_snapsh
     assert any("retroactive fiscal-year ship readiness" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_diagnose_without_stage6_recovery_snapshot(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/diagnose.bat"] = entries["scripts/diagnose.bat"].replace(
+        "stage6 recovery check",
+        "stale recovery diagnostic",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("stage6 recovery check" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_diagnose_with_parse_time_errorlevel_capture(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/diagnose.bat"] = (

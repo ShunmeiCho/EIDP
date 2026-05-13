@@ -452,6 +452,9 @@ def test_diagnose_bat_collects_operator_evidence_without_mutating_data(bat_files
     assert "settings.target_fiscal_year" in body
     assert "'ship-readiness', '--fy'" in body
     assert "retroactive_ship_readiness_rc" in body
+    assert "stage6 recovery check" in body
+    assert "stage6_recovery_check.py" in body
+    assert "stage6_recovery_rc" in body
     assert "latest discovery RCA batch plan" in body
     assert "discovery-rca-batch-plan.json" in body
     assert "discovery_rca" in body
