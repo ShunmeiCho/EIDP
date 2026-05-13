@@ -1,9 +1,9 @@
 """Final-goal ship readiness report.
 
 This report keeps the long-term product target separate from lower-level
-package and unit-test gates. Strict target-FY PDF acquisition remains a
-diagnostic metric; the release-blocking business line is operator-reviewable
-coverage expressed as manual workload, plus Excel-ready target-FY data.
+package and unit-test gates. Strict target-FY PDF acquisition and Excel-ready
+data remain diagnostic metrics; the release-blocking business line is
+operator-reviewable coverage expressed as manual workload.
 """
 
 from dataclasses import dataclass
@@ -41,11 +41,21 @@ class ShipReadinessReport:
     extracted_rate: float
     strict_auto_target_pdf_min: float
     manual_workload_max: float
+    operator_review_criteria: tuple[ShipReadinessCriterion, ...]
+    strict_data_criteria: tuple[ShipReadinessCriterion, ...]
     criteria: tuple[ShipReadinessCriterion, ...]
 
     @property
     def ok(self) -> bool:
-        return all(criterion.passed for criterion in self.criteria)
+        return self.ok_operator_review
+
+    @property
+    def ok_operator_review(self) -> bool:
+        return all(criterion.passed for criterion in self.operator_review_criteria)
+
+    @property
+    def ok_strict(self) -> bool:
+        return all(criterion.passed for criterion in self.strict_data_criteria)
 
 
 def compute_ship_readiness(
@@ -74,13 +84,15 @@ def compute_ship_readiness(
     operator_reviewable_rate = _rate(operator_reviewable, total)
     estimated_manual_workload_rate = 1.0 - operator_reviewable_rate if total else 0.0
 
-    criteria = (
+    operator_review_criteria = (
         ShipReadinessCriterion(
             name="estimated_manual_workload",
             value=estimated_manual_workload_rate,
             threshold=manual_workload_max,
             passed=estimated_manual_workload_rate <= manual_workload_max + 1e-9,
         ),
+    )
+    strict_data_criteria = (
         ShipReadinessCriterion(
             name="excel_ready",
             value=excel_ready_rate,
@@ -88,6 +100,7 @@ def compute_ship_readiness(
             passed=excel_ready_rate >= strict_auto_target_pdf_min,
         ),
     )
+    criteria = operator_review_criteria + strict_data_criteria
 
     return ShipReadinessReport(
         fiscal_year=fy,
@@ -104,6 +117,8 @@ def compute_ship_readiness(
         extracted_rate=extracted_rate,
         strict_auto_target_pdf_min=strict_auto_target_pdf_min,
         manual_workload_max=manual_workload_max,
+        operator_review_criteria=operator_review_criteria,
+        strict_data_criteria=strict_data_criteria,
         criteria=criteria,
     )
 

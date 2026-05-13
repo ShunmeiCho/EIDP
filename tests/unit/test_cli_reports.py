@@ -89,13 +89,19 @@ def test_report_coverage_text_fails_cleanly_when_database_schema_is_missing(monk
     assert fake_session.closed is True
 
 
-def test_report_ship_readiness_json_can_fail_on_missing_goal(monkeypatch) -> None:
+def test_report_ship_readiness_json_uses_operator_review_gate(monkeypatch) -> None:
     fake_session = FakeSession()
 
     import eidp.db.session as db_session
     import eidp.reports.ship_readiness as ship_readiness
 
     def fake_compute_ship_readiness(*_args, **_kwargs):  # noqa: ANN002, ANN003
+        operator_review_criteria = (
+            ShipReadinessCriterion("estimated_manual_workload", 0.3, 0.3, True),
+        )
+        strict_data_criteria = (
+            ShipReadinessCriterion("excel_ready", 0.4, 0.6, False),
+        )
         return ShipReadinessReport(
             fiscal_year=2026,
             school_type="専門学校",
@@ -111,10 +117,60 @@ def test_report_ship_readiness_json_can_fail_on_missing_goal(monkeypatch) -> Non
             extracted_rate=0.5,
             strict_auto_target_pdf_min=0.6,
             manual_workload_max=0.3,
-            criteria=(
-                ShipReadinessCriterion("estimated_manual_workload", 0.3, 0.3, True),
-                ShipReadinessCriterion("excel_ready", 0.4, 0.6, False),
-            ),
+            operator_review_criteria=operator_review_criteria,
+            strict_data_criteria=strict_data_criteria,
+            criteria=operator_review_criteria + strict_data_criteria,
+        )
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(ship_readiness, "compute_ship_readiness", fake_compute_ship_readiness)
+
+    result = CliRunner().invoke(app, ["report", "ship-readiness", "--json", "--fail-on-missing-goal"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["ok"] is True
+    assert payload["ok_operator_review"] is True
+    assert payload["ok_strict"] is False
+    assert payload["strict_target_pdf_rate"] == 0.5
+    assert payload["estimated_manual_workload_rate"] == 0.3
+    assert payload["criteria"][0]["name"] == "estimated_manual_workload"
+    assert payload["operator_review_criteria"][0]["name"] == "estimated_manual_workload"
+    assert payload["strict_data_criteria"][0]["name"] == "excel_ready"
+    assert fake_session.closed is True
+
+
+def test_report_ship_readiness_json_can_fail_when_operator_review_gate_missing(monkeypatch) -> None:
+    fake_session = FakeSession()
+
+    import eidp.db.session as db_session
+    import eidp.reports.ship_readiness as ship_readiness
+
+    def fake_compute_ship_readiness(*_args, **_kwargs):  # noqa: ANN002, ANN003
+        operator_review_criteria = (
+            ShipReadinessCriterion("estimated_manual_workload", 0.4, 0.3, False),
+        )
+        strict_data_criteria = (
+            ShipReadinessCriterion("excel_ready", 0.8, 0.6, True),
+        )
+        return ShipReadinessReport(
+            fiscal_year=2026,
+            school_type="専門学校",
+            total_schools=10,
+            strict_target_pdf_schools=8,
+            strict_target_pdf_rate=0.8,
+            operator_reviewable_schools=6,
+            operator_reviewable_rate=0.6,
+            estimated_manual_workload_rate=0.4,
+            excel_ready_schools=8,
+            excel_ready_rate=0.8,
+            extracted_schools=8,
+            extracted_rate=0.8,
+            strict_auto_target_pdf_min=0.6,
+            manual_workload_max=0.3,
+            operator_review_criteria=operator_review_criteria,
+            strict_data_criteria=strict_data_criteria,
+            criteria=operator_review_criteria + strict_data_criteria,
         )
 
     monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
@@ -125,7 +181,6 @@ def test_report_ship_readiness_json_can_fail_on_missing_goal(monkeypatch) -> Non
     assert result.exit_code == 1
     payload = json.loads(result.output)
     assert payload["ok"] is False
-    assert payload["strict_target_pdf_rate"] == 0.5
-    assert payload["estimated_manual_workload_rate"] == 0.3
-    assert payload["criteria"][0]["name"] == "estimated_manual_workload"
+    assert payload["ok_operator_review"] is False
+    assert payload["ok_strict"] is True
     assert fake_session.closed is True

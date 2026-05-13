@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, cast
@@ -1615,7 +1615,7 @@ def report_ship_readiness(
     strict_target_pdf_min: float = typer.Option(
         0.60,
         "--strict-target-pdf-min",
-        help="Minimum true target-FY PDF auto-acquisition rate",
+        help="Minimum strict Excel-ready target-FY data rate",
     ),
     manual_workload_max: float = typer.Option(
         0.30,
@@ -1626,10 +1626,10 @@ def report_ship_readiness(
     fail_on_missing_goal: bool = typer.Option(
         False,
         "--fail-on-missing-goal",
-        help="Exit non-zero when final business thresholds are not met",
+        help="Exit non-zero when the operator-reviewable ship line is not met",
     ),
 ) -> None:
-    """Final objective readiness: strict target PDFs, manual workload, and Excel-ready rows."""
+    """Final objective readiness: operator review coverage plus strict data diagnostics."""
     from eidp.db.session import SessionLocal
     from eidp.reports.ship_readiness import compute_ship_readiness
 
@@ -1653,7 +1653,8 @@ def report_ship_readiness(
         typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
         typer.echo(f"FY: {report.fiscal_year}  school_type: {report.school_type or 'all'}")
-        typer.echo(f"Final objective status: {'pass' if report.ok else 'missing'}")
+        typer.echo(f"Operator-review status: {'pass' if report.ok_operator_review else 'missing'}")
+        typer.echo(f"Strict data status: {'pass' if report.ok_strict else 'missing'}")
         typer.echo(
             f"  strict target PDF: {report.strict_target_pdf_schools}/{report.total_schools} "
             f"({report.strict_target_pdf_rate:.1%})"
@@ -1674,6 +1675,8 @@ def report_ship_readiness(
 def _ship_readiness_to_dict(report: Any) -> dict[str, object]:
     return {
         "ok": report.ok,
+        "ok_operator_review": report.ok_operator_review,
+        "ok_strict": report.ok_strict,
         "fiscal_year": report.fiscal_year,
         "school_type": report.school_type,
         "total_schools": report.total_schools,
@@ -1688,16 +1691,22 @@ def _ship_readiness_to_dict(report: Any) -> dict[str, object]:
         "extracted_rate": round(report.extracted_rate, 4),
         "strict_auto_target_pdf_min": report.strict_auto_target_pdf_min,
         "manual_workload_max": report.manual_workload_max,
-        "criteria": [
-            {
-                "name": criterion.name,
-                "value": round(criterion.value, 4),
-                "threshold": criterion.threshold,
-                "passed": criterion.passed,
-            }
-            for criterion in report.criteria
-        ],
+        "criteria": _ship_readiness_criteria_to_dicts(report.criteria),
+        "operator_review_criteria": _ship_readiness_criteria_to_dicts(report.operator_review_criteria),
+        "strict_data_criteria": _ship_readiness_criteria_to_dicts(report.strict_data_criteria),
     }
+
+
+def _ship_readiness_criteria_to_dicts(criteria: Iterable[Any]) -> list[dict[str, object]]:
+    return [
+        {
+            "name": criterion.name,
+            "value": round(criterion.value, 4),
+            "threshold": criterion.threshold,
+            "passed": criterion.passed,
+        }
+        for criterion in criteria
+    ]
 
 
 if __name__ == "__main__":

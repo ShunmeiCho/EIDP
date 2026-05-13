@@ -310,11 +310,15 @@ def test_ship_readiness_treats_strict_target_pdf_as_diagnostic_metric() -> None:
     assert rep.operator_reviewable_rate == pytest.approx(0.7)
     assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
     assert rep.excel_ready_schools == 4
-    assert rep.ok is False
+    assert rep.ok is True
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is False
     assert {criterion.name: criterion.passed for criterion in rep.criteria} == {
         "estimated_manual_workload": True,
         "excel_ready": False,
     }
+    assert [criterion.name for criterion in rep.operator_review_criteria] == ["estimated_manual_workload"]
+    assert [criterion.name for criterion in rep.strict_data_criteria] == ["excel_ready"]
 
 
 def test_ship_readiness_passes_when_final_business_thresholds_are_met() -> None:
@@ -342,6 +346,8 @@ def test_ship_readiness_passes_when_final_business_thresholds_are_met() -> None:
     assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
     assert rep.excel_ready_rate == pytest.approx(0.7)
     assert rep.ok is True
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is True
 
 
 def test_ship_readiness_can_pass_with_review_candidate_operator_coverage() -> None:
@@ -379,6 +385,8 @@ def test_ship_readiness_can_pass_with_review_candidate_operator_coverage() -> No
     assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
     assert rep.excel_ready_rate == pytest.approx(0.7)
     assert rep.ok is True
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is True
 
 
 # --- extraction ------------------------------------------------------------
