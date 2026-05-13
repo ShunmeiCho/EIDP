@@ -117,6 +117,7 @@ CORE_REQUIRED_EXACT = (
     "src/eidp/cli.py",
     "src/eidp/cli_discovery.py",
     "src/eidp/cli_reports.py",
+    "src/eidp/cli_tools.py",
     "src/eidp/excel/exporter.py",
     "src/eidp/excel/competition_exporter.py",
     "src/eidp/reports/coverage.py",
@@ -990,6 +991,15 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "report query failed; database is not initialized or the schema is incomplete",
             "ok_operator_review",
             "ok_strict",
+        ),
+        "src/eidp/cli_tools.py": (
+            "register_tool_commands",
+            "_echo_excel_export_results",
+            "_exit_database_not_ready_error",
+            "export_master_workbook",
+            "export_competition_workbook",
+            "diff_workbooks",
+            "run_full_evaluation",
         ),
         "src/eidp/reports/ship_readiness.py": (
             "compute_ship_readiness",

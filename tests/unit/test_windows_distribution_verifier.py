@@ -353,6 +353,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/cli_reports.py": (REPO_ROOT / "src" / "eidp" / "cli_reports.py").read_text(
             encoding="utf-8"
         ),
+        "src/eidp/cli_tools.py": (REPO_ROOT / "src" / "eidp" / "cli_tools.py").read_text(
+            encoding="utf-8"
+        ),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
         "runtime/uv.exe": b"PE",
