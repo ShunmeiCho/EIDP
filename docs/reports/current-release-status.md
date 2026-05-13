@@ -27,12 +27,13 @@ gold-set predictions.
 The latest Windows setup proof is v380: it was transferred to the operator PC,
 hash-checked, extracted into a separate directory, set up with
 `EIDP-setup.bat`, diagnosed, and smoke-tested through the new `eidp db-backup`
-command. The latest UI service health proof is also v380. Browser render and
-click-through proof remain v376, because v380 has only been proven through
-setup, diagnostics, backup CLI smoke, and a headless `/_stcore/health` check.
-The latest Windows
-bounded-bootstrap smoke remains v376. The latest broader Windows
-bounded-bootstrap proof remains v342.
+command. The latest UI service health proof is also v380. Initial browser
+rendering and the Excel preview disabled-state smoke are now proven on v380.
+The broader read-only quick-navigation and sandboxed operator-action browser
+proofs remain v376, because v380 has not yet repeated every non-mutating page
+navigation or the sandbox write paths. The latest Windows bounded-bootstrap
+smoke remains v376. The latest broader Windows bounded-bootstrap proof remains
+v342.
 
 Release gate interpretation:
 
@@ -313,9 +314,10 @@ operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
 enforcing a stricter ZIP hygiene contract. This evidence is now packaged in
 `dist/eidp-windows-v380.zip`; v380 has also been transferred to Windows,
 installed, diagnosed, and exercised through the package-local `eidp db-backup`
-smoke. It also has a headless Streamlit `/_stcore/health` smoke. Full browser
-and Stage 6 operator workflow evidence still remain on older snapshots or
-missing, as listed below.
+smoke. It also has a headless Streamlit `/_stcore/health` smoke, initial
+browser-render proof, and an Excel preview disabled-state smoke. Full
+quick-navigation coverage and Stage 6 operator workflow evidence still remain
+on older snapshots or missing, as listed below.
 
 ## Objective Checklist
 
@@ -328,7 +330,7 @@ missing, as listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
 | ManualActionLog audit for operator actions | v342 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v339/v340/v341/v342 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, and started headless Streamlit with `200 ok` on `/_stcore/health`; v376 browser render and read-only quick-navigation click-through passed; full operator-action click-through remains unverified | Backend Win setup, backup CLI, and app-server startup proof present on v380; browser navigation proof present on v376; mutating/operator workflow proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, and opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data; v376 broader read-only quick-navigation click-through passed; full operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, and Excel preview disabled-state proof present on v380; broader navigation proof present on v376; mutating/operator workflow proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -402,6 +404,28 @@ Latest v380 Windows setup and backup-smoke commands:
   returned `remaining_streamlit_processes=0` for v380. This proves app-server
   health only; browser rendering, navigation, and operator-action click-through
   still require separate evidence.
+- Windows v380 browser render smoke:
+  with remote Streamlit held open in the same SSH session as the tunnel,
+  `ssh -o ClearAllForwardings=no -o ExitOnForwardFailure=yes
+  -L 127.0.0.1:18501:127.0.0.1:8501 win ...` exposed the Windows UI to the
+  Mac. The explicit `ClearAllForwardings=no` override is required because the
+  local `Host win` SSH config clears command-line forwards by default. Local
+  `curl http://127.0.0.1:18501/_stcore/health` returned `ok`; Playwright
+  rendered `http://127.0.0.1:18501/` with title `EIDP Operator Console`, page
+  heading `① 学校別タスク`, target year `2026年度（令和8年度）`, build
+  `f6a5e6d`, `対象校 2418`, `Excel出力可 0/2418 校`, `URLなし 2418`, and
+  the initial acquisition warning. This proves initial browser rendering on
+  the current v380 package.
+- Windows v380 read-only Excel preview smoke:
+  the same tunneled Playwright session clicked only the non-mutating sidebar
+  button `④ Excel プレビュー`. The page rendered with heading
+  `Excel プレビュー`, `対象年度: 2026年度（令和8年度） / 対象範囲: 専門学校`,
+  a warning that current-year transcribed rows are `0`, and the
+  `プレビュー workbook を生成` button present but disabled, preventing old-year
+  or empty workbook output. The temporary Playwright screenshot
+  `eidp-v380-excel-preview.png` and generated snapshot files were removed
+  afterward. The local tunnel was stopped, and a follow-up Windows process
+  cleanup reported `streamlit_after_cleanup=0` for v380.
 
 Previous v379 Windows setup and UI-service commands:
 
