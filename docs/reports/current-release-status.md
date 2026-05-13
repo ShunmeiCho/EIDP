@@ -8,7 +8,7 @@ Package SHA256: `1fef8d468ba2e7d882f7a3a774ccbbf071d1e1ee362ae62b8c4e458c576e536
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v380.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v379.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
 
@@ -27,9 +27,10 @@ gold-set predictions.
 The latest Windows setup proof is v380: it was transferred to the operator PC,
 hash-checked, extracted into a separate directory, set up with
 `EIDP-setup.bat`, diagnosed, and smoke-tested through the new `eidp db-backup`
-command. The latest UI service health proof remains v379. Browser render and
+command. The latest UI service health proof is also v380. Browser render and
 click-through proof remain v376, because v380 has only been proven through
-setup, diagnostics, and the backup CLI smoke. The latest Windows
+setup, diagnostics, backup CLI smoke, and a headless `/_stcore/health` check.
+The latest Windows
 bounded-bootstrap smoke remains v376. The latest broader Windows
 bounded-bootstrap proof remains v342.
 
@@ -312,9 +313,9 @@ operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
 enforcing a stricter ZIP hygiene contract. This evidence is now packaged in
 `dist/eidp-windows-v380.zip`; v380 has also been transferred to Windows,
 installed, diagnosed, and exercised through the package-local `eidp db-backup`
-smoke. v379 remains the latest UI service health proof. Full browser and Stage
-6 operator workflow evidence still remain on older snapshots or missing, as
-listed below.
+smoke. It also has a headless Streamlit `/_stcore/health` smoke. Full browser
+and Stage 6 operator workflow evidence still remain on older snapshots or
+missing, as listed below.
 
 ## Objective Checklist
 
@@ -327,7 +328,7 @@ listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
 | ManualActionLog audit for operator actions | v342 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v339/v340/v341/v342 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, and smoke-tested through `eidp db-backup`; v379 headless Streamlit startup returned `200 ok` on `/_stcore/health`; v376 browser render and read-only quick-navigation click-through passed; full operator-action click-through remains unverified | Backend Win setup and backup CLI proof present on v380; app-server startup proof present on v379; browser navigation proof present on v376; mutating/operator workflow proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, and started headless Streamlit with `200 ok` on `/_stcore/health`; v376 browser render and read-only quick-navigation click-through passed; full operator-action click-through remains unverified | Backend Win setup, backup CLI, and app-server startup proof present on v380; browser navigation proof present on v376; mutating/operator workflow proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -391,6 +392,16 @@ Latest v380 Windows setup and backup-smoke commands:
   wrote a package-local backup; a Python SQLite check opened that backup and
   reported `backup_objects=35` and `integrity=ok`; the temporary smoke backup
   was removed afterward (`backup_removed=True`).
+- Windows v380 UI service health smoke:
+  a PowerShell harness started Streamlit from
+  `C:\Users\cyo20\EIDP-v380-f6a5e6d` on `127.0.0.1:8501`,
+  received `/_stcore/health` as `status=200 body=ok`, reported
+  `Streamlit, version 1.57.0`, and then stopped the process. The stdout tail
+  included `URL: http://127.0.0.1:8501`; stderr recorded
+  `Uvicorn server started on 127.0.0.1:8501`. A follow-up process check
+  returned `remaining_streamlit_processes=0` for v380. This proves app-server
+  health only; browser rendering, navigation, and operator-action click-through
+  still require separate evidence.
 
 Previous v379 Windows setup and UI-service commands:
 
