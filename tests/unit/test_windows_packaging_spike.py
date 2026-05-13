@@ -702,6 +702,9 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "validate_windows_install.py").write_text(
         "print('validate')", encoding="utf-8",
     )
+    (fake_repo / "scripts" / "stage6_recovery_check.py").write_text(
+        "print('recovery')", encoding="utf-8",
+    )
     (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "alembic.ini").write_text("[alembic]\n", encoding="utf-8")
     migrations = fake_repo / "migrations"
@@ -813,6 +816,9 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     )
     assert "scripts/validate_windows_install.py" in arcs, (
         "Windows VM checklist depends on this validation entrypoint"
+    )
+    assert "scripts/stage6_recovery_check.py" in arcs, (
+        "Stage 6 SSH recovery checklist depends on this read-only helper"
     )
     assert "scripts/validate_install.bat" in arcs, (
         "Windows VM checklist must run the validator from the extracted ZIP"

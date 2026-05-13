@@ -94,6 +94,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/run_weekly_target_year_discovery.py",
     "scripts/run_r8_rediscovery_weekly.py",
     "scripts/validate_windows_install.py",
+    "scripts/stage6_recovery_check.py",
     "scripts/bootstrap_pdf_pipeline.py",
     "scripts/ship_gate_contract.py",
     "scripts/download_prefecture_artifacts.py",
@@ -951,6 +952,13 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "sqlite_target_fy_operator_reviewable_yield_pct",
             "bootstrap ship_gate_status pass does not match SQLite operator-reviewable coverage",
             "weekly summary after.coverage does not match SQLite target-FY coverage",
+        ),
+        "scripts/stage6_recovery_check.py": (
+            "EIDP Weekly Run",
+            "DEFAULT_INTERRUPTED_STAGE6_PATHS",
+            "--expected-weekly-action",
+            "residual_paths",
+            "action_matches_expected",
         ),
         "scripts/run_weekly_target_year_discovery.py": (
             "acquire_lock",

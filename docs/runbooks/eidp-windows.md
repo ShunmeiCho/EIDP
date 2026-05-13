@@ -635,6 +635,14 @@ Test-Path "$env:USERPROFILE\eidp_v384_ocr_sr_smoke.py"
 Test-Path "$env:USERPROFILE\eidp-v384-ocr-sr-source.sqlite3"
 ```
 
+同じ確認は、ZIP 同梱の読み取り専用 helper でも実行できる:
+
+```powershell
+.\runtime\python\python.exe .\scripts\stage6_recovery_check.py `
+  --expected-weekly-action "C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat" `
+  --json
+```
+
 `EIDP Weekly Run` の action が検証用 sandbox を指したままなら、直近の本番
 runtime（例: `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`）へ戻してから
 Stage 6 検証を再開する。SSH が復旧するまで、未完了の copied-DB smoke を

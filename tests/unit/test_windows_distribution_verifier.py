@@ -219,6 +219,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/validate_windows_install.py": (SCRIPTS_DIR / "validate_windows_install.py").read_text(
             encoding="utf-8"
         ),
+        "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
+            encoding="utf-8"
+        ),
         "scripts/bootstrap_pdf_pipeline.py": (SCRIPTS_DIR / "bootstrap_pdf_pipeline.py").read_text(
             encoding="utf-8"
         ),
