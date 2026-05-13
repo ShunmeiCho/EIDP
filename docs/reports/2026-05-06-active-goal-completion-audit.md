@@ -3,10 +3,32 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `0b2c4c295e996c3fd4be5ee287ff4e77ceeacde7` (`eidp-windows-v359.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `4df0201ae496129a9d452eac4cd68a1adbbbb6db` (`eidp-windows-v360.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V360 CLI Discovery Module Split
+
+v360 (`4df0201`) continues the `cli.py` size-debt cleanup by moving read-only
+discovery gold-set and RCA commands to `src/eidp/cli_discovery.py`. The
+external top-level command names remain unchanged, including
+`discovery-gold-set`, `eval-discovery-gold`, `summarize-discovery-evidence`,
+and `discovery-rca-outcome-validate`. The DB-writing
+`seed-discovery-gold-sites` command stays in `cli.py`, preserving the existing
+write-lock AST gate. `cli.py` drops from `1405` lines to `997`; this is still
+above the `<800` target, but the remaining excess is much smaller and isolated.
+
+Verification: targeted discovery/RCA/write-lock/verifier tests passed with
+`140 passed`; targeted Ruff and mypy passed; CLI help smoke for `eidp`,
+`eidp eval-discovery-gold`, and `eidp discovery-rca-outcome-validate` showed
+the expected commands. The full unit suite passed with `1367 passed, 5 warnings`.
+`dist/eidp-windows-v360.zip` was rebuilt from clean commit `4df0201` with
+SHA256 `637ab07fe953b676dd987e9224789343ffa00308aa19aece10f7eec91ac25555`.
+The full non-Windows release gate returned `ok=true`; bounded evidence replay
+returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact /
+`0` failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V359 CLI Report Module Split
 
