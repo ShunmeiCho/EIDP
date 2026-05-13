@@ -8,6 +8,8 @@
 問題が起きた場合だけ `EIDP-diagnose.bat` で診断ファイルを作成します。
 Stage 6 検証の証跡をまとめて共有する場合だけ `EIDP-stage6-evidence.bat`
 で証跡 ZIP を作成します。
+受領した証跡 ZIP を機械確認する場合だけ `EIDP-stage6-verify-evidence.bat`
+で最新の証跡 ZIP を検査します。
 Stage 6 検証が SSH 不安定化で中断した場合だけ `EIDP-stage6-recovery.bat`
 で復旧確認ファイルを作成します。
 `scripts\*.bat` は管理者向けの詳細入口です。
@@ -269,6 +271,14 @@ Codex RCA キュー、初回URL/PDF取得ログ、Excel 出力です。DB 本体
 
 `ok=true` なら必須証跡ラベルが揃い、DB 本体、PDF 原本、runtime、wheelhouse が
 混入していないことを確認済みです。
+
+Windows 上で最新の証跡 ZIP を自動選択して確認する場合:
+
+```text
+C:\EIDP\EIDP-stage6-verify-evidence.bat
+```
+
+結果は `logs\stage6-evidence-verify-*.json` に保存されます。
 
 ## 4.3 設定
 

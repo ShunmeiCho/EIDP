@@ -228,6 +228,7 @@ KPI メモ:
 - `logs\run-*.log`
 - `logs\diagnostics-*.txt`
 - `logs\stage6-evidence-*.zip`
+- `logs\stage6-evidence-verify-*.json`
 - `logs\stage6-recovery-*.json`
 - `data\output\last_run.json`
 - `data\output\target-year-discovery\*-discovery-rca-batch-plan.json`
