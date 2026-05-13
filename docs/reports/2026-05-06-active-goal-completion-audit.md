@@ -16,7 +16,9 @@ validator/distribution unit tests, validator/distribution mypy and Ruff,
 discovery gold-set summary, expected-prediction replay, package verification,
 demonstrated-pattern package verification, and SHA256 sidecar matching. This
 does not replace Windows setup or browser UI E2E; it only makes the pre-Windows
-gate reproducible from a single command. It also accepts `--pdf-evidence` so
+gate reproducible from a single command. The operational runbook is
+`docs/runbooks/eidp-non-windows-release-gates.md`. It also accepts
+`--pdf-evidence` so
 bounded Saitama/Tokyo evidence JSONL can be replayed without SSH Win access.
 The bounded replay gate allows missing entries because a bounded run only
 covers part of the gold-set, but it fails on failed or unexpected predictions.

@@ -105,6 +105,8 @@ discovery data is unchanged from v350.
 
 ## Current Non-Windows Evidence
 
+Runbook: `docs/runbooks/eidp-non-windows-release-gates.md`.
+
 Commands run for v351/v342 source/package:
 
 - `uv run pytest tests/unit -q` -> `1358 passed, 5 warnings`
