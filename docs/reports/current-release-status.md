@@ -87,7 +87,7 @@ turning those synthetic-only patterns back on.
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v342 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v342 verifier clean by default; discovery gold-set `28` entries; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield failing |
+| Discover and download current target-FY PDFs in strict mode | v348 verifier clean by default; discovery gold-set `31` entries; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield failing |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `10` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
@@ -135,6 +135,25 @@ Commands run for v348/v342 source/package:
   SHA256 `a4ebb78d0a6cfe1969c8df5cacf32660ea507cbc29bc843949af5d2f435fe3d4`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v348.zip --require-demonstrated-discovery-patterns`
   -> `OK core`, with `discovery_gold_undemonstrated_pattern_sources=[]`.
+- Source-side v348 strict Tokyo repeat on a copy of the v342 Tokyo aggregate DB:
+  `EIDP_DATABASE_URL=sqlite:///$PWD/_temp/v348-mac-tokyo20/eidp.sqlite3 EIDP_DATA_DIR=$PWD/_temp/v348-mac-tokyo20/data uv run eidp discover-pdfs --storage-dir _temp/v348-mac-tokyo20/pdfs --batch-size 20 --rate-limit 0.2 --request-timeout 12 --discovery-method prefecture_aggregator --evidence-log _temp/v348-mac-tokyo20/discovery_rejections.jsonl`
+  -> `crawled=20`, `found=20`, `downloaded=0`, `failed=4`,
+  `skipped=404`, `cached_rejections=125`, `prefiltered=229`,
+  `candidate_budget_limited=1`, `candidate_budget_dropped=6`,
+  `rejection_reason_pre_filtered_non_target_hint=351`,
+  `rejection_reason_fiscal_year_mismatch=62`,
+  `rejection_reason_classified_non_target=34`,
+  `rejection_reason_target_fiscal_year_not_detected=10`,
+  `rejection_reason_http_error_httpstatuserror=3`, and
+  `rejection_reason_not_pdf_magic=2`.
+- `EIDP_DATABASE_URL=sqlite:///$PWD/_temp/v348-mac-tokyo20/eidp.sqlite3 uv run eidp summarize-discovery-evidence --evidence-log _temp/v348-mac-tokyo20/discovery_rejections.jsonl --discovery-method prefecture_aggregator --json`
+  -> `468` evidence rows, pattern sources `direct=394`, `wordpress=39`,
+  `cache_busted=35`, PDF type counts `target=66`, `image_only=6`,
+  `non_target=385`, `unknown=5`, and `null=6`. Among the `20` crawled
+  schools with evidence, buckets are `publication_lag_or_old_target_pdf=15`,
+  `target_form_without_year_evidence=1`, and `non_target_candidates_only=4`.
+  The command also reports `no_evidence=263` for Tokyo official-index sites
+  that were in the copied aggregate DB but outside this `batch_size=20` smoke.
 
 Post-v342 source-side gold-set expansion:
 
