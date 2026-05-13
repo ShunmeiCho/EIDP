@@ -3,10 +3,42 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `835e66e19ce77d1d75096c69e0fbc11b591dfda4` (`eidp-windows-v373.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `2ec6d15881cd65bd5949462cb1fa5b6c3a36cce1` (`eidp-windows-v374.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V374 Aichi Syllabus Ordering Regression Guard
+
+v374 (`2ec6d15`) converts the v373 あいち福祉医療専門学校 production pattern into
+a code-level candidate-ordering regression test. The test page lists current-year
+syllabus and curriculum-map PDFs before the latest previous-year
+`2025_kakuninshinsei.pdf` target confirmation-form PDF. The crawler must rank
+the target confirmation form first for operator-reviewable publication-lag
+handling instead of letting generic current-year school documents outrank it.
+
+Packaged discovery gold-set coverage remains `42` entries, `15`
+publication-lag cases, `direct=9`, and
+`undemonstrated_pattern_sources=[]`; strict target-year successes remain `10`.
+`dist/eidp-windows-v374.zip` was rebuilt from clean commit
+`2ec6d15881cd65bd5949462cb1fa5b6c3a36cce1` with SHA256
+`2358c076bea7fc52a398cdec2fd2383f51a6aa92e8f4e1797b34f430180c787a`, and
+`dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
+passed with `--require-demonstrated-discovery-patterns` for both the versioned
+ZIP and latest alias.
+
+Verification: the two focused candidate-priority tests passed with `2 passed`;
+targeted Ruff passed; targeted mypy passed; the full PDF discovery unit module
+passed with `158 passed, 5 warnings`; and the full non-Windows release gate
+returned `ok=true` with `1374 passed, 5 warnings` for the full unit suite,
+`133 passed` for the distribution-verifier suite, clean Ruff and mypy gates,
+package verification with `discovery_gold_set_entries=42`, and
+demonstrated-pattern verification. Bounded evidence replay also returned
+`ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact / `0`
+failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures. 愛生会
+and あいち福祉医療 are expectedly absent from those older bounded evidence JSONL
+files because they were added from fresh manual-web / official-index traces.
 
 ## 2026-05-13 V373 Aichi Fukushi Iryo Current-Year Syllabus Publication-Lag Case
 
