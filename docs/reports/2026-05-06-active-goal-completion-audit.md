@@ -5271,3 +5271,21 @@ explicit university rollout decision. Current evidence does not justify broad
 token loosening: sampled current-looking rejects such as `applicationform-r8.pdf`
 are student A-forms, and sampled `academic_support.pdf` begins with disclosure
 sub-forms rather than a current target-year confirmation main form.
+
+## 2026-05-13 V376 Remote-Windows Cleanup And Excel Preview Guard
+
+After the v376 Windows evidence pass, stale remote test artifacts were pruned
+to avoid cross-version environment contamination. `C:\Users\cyo20\EIDP-v342-de2cfed`
+was removed, and `C:\Users\cyo20\EIDP-transfer` was reduced to only
+`eidp-windows-v376.zip` plus its `.sha256` sidecar. The current runtime
+directory remains `C:\Users\cyo20\EIDP-v376-d2402dc`; a process check found no
+remaining EIDP Streamlit/bootstrap process.
+
+A read-only tunneled browser smoke opened the v376 `④ Excel プレビュー` page and
+confirmed the current FY2026 dataset still has `対象年度PDFあり 0`,
+`Excel出力可 0`, `Excel対象行 0`, `未採録校 2418`, and `URLなし 2367`.
+The page rendered without browser console warnings or page errors, displayed
+the operator warning that target-year transcribed rows are `0`, and kept
+`プレビュー workbook を生成` disabled. This proves the current UI prevents empty
+or old-year workbook generation, but it is still not a full mutating
+operator-action E2E.

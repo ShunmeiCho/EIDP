@@ -339,7 +339,7 @@ Latest v376 commands:
   The tunnel and remote Streamlit processes were then stopped, and a follow-up
   check found no remaining Streamlit process.
 - Windows v376 browser render smoke:
-  using temporary `playwright-core` under `_temp/` plus the installed local
+  using temporary `playwright-core` under `/tmp` plus the installed local
   Google Chrome binary, the tunneled Windows UI rendered with title
   `EIDP Operator Console`, `body_text_len=3533`, no captured console warnings
   or page errors, and visible operator text including `今週のやること`,
@@ -358,6 +358,14 @@ Latest v376 commands:
   `バージョン` / `和暦 alias` / `OCR` / `外部 API`. The script did not click
   acquisition, save, export, or any data-mutating action. Temporary npm files
   were removed afterward.
+- Windows v376 Excel preview disabled-state smoke:
+  the tunneled browser path opened `④ Excel プレビュー` and verified the
+  page rendered with no console warnings or page errors. With current FY2026
+  target-year data still empty, the page showed `対象年度PDFあり 0`,
+  `Excel出力可 0`, `Excel対象行 0`, `URLなし 2367`, `未採録校 2418`,
+  and the operator warning that 2026 target-year transcribed rows are `0`.
+  The `プレビュー workbook を生成` button was present but disabled, so the
+  UI correctly prevents downloading old-year or empty workbook output.
 - Windows v376 Saitama 5-site bounded backend smoke:
   `bootstrap_pdf_pipeline.py --pref saitama --url-search off
   --school-url-crawl off --skip-known-url-discovery --discovery-methods
@@ -373,8 +381,12 @@ Latest v376 commands:
   after-run `validate_windows_install.py --after-setup --json` returned
   `ok=true` with `sqlite_integrity_check=ok`.
 - Windows cleanup after v376 proof removed stale
-  `C:\Users\cyo20\EIDP-v375-bcca8df`; remaining EIDP directories are
-  `EIDP-transfer`, `EIDP-v342-de2cfed`, and `EIDP-v376-d2402dc`.
+  `C:\Users\cyo20\EIDP-v342-de2cfed` plus old transfer ZIPs
+  `eidp-windows-v220.zip`, `v221`, `v222`, and `v375` with their sha256
+  sidecars. Remaining EIDP paths are only `EIDP-v376-d2402dc` and
+  `EIDP-transfer`; the transfer directory now contains only
+  `eidp-windows-v376.zip` and `eidp-windows-v376.zip.sha256`. A follow-up
+  process check found no remaining EIDP Streamlit/bootstrap process.
 
 Previously retained v375 commands:
 
