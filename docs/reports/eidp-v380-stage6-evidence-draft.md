@@ -1,19 +1,20 @@
-# EIDP v380 Stage 6 Evidence Draft
+# EIDP v380/v384 Stage 6 Evidence Draft
 
 Updated: 2026-05-14
 Status: **DRAFT / NOT COMPLETE**
 
-This document maps the current v380 Windows evidence to
-`docs/runbooks/eidp-operator-e2e-template.md`. It is an evidence consolidation
-draft, not a completed Stage 6 sign-off. The current evidence was collected
-through SSH / Playwright / disposable DB sandboxes, not by a business operator
-running one uninterrupted production cycle.
+This document maps the current v380 Windows UI/write evidence plus newer v384
+package/setup/OCR evidence to `docs/runbooks/eidp-operator-e2e-template.md`. It
+is an evidence consolidation draft, not a completed Stage 6 sign-off. The
+current evidence was collected through SSH / Playwright / disposable DB
+sandboxes, not by a business operator running one uninterrupted production
+cycle.
 
 ## Gate Interpretation
 
 | Gate | Current result | Evidence |
 | --- | --- | --- |
-| Process gate / v1.0-rc | partial | v380 setup, diagnostics, browser render, read-only nav, Excel preview, R7 Excel download, URL-candidate write, audit flush, manual-entry write, fiscal-year override write, SupportRecipient ingest smoke |
+| Process gate / v1.0-rc | partial | v384 setup and diagnostics; v380 browser render, read-only nav, Excel preview, R7 Excel download, URL-candidate write, audit flush, manual-entry write, fiscal-year override write, SupportRecipient ingest smoke |
 | FY2026/R8 yield gate / v1.0 GA | fail | `ship_readiness_rc=1`, `strict_target_pdf_schools=0`, `operator_reviewable_schools=0`, `excel_ready_schools=0`, `estimated_manual_workload_rate=1.0` |
 | FY2025/R7 retroactive marker | pass for retroactive rehearsal only | `is_retroactive_fiscal_year=true`, `extracted_schools=2031`, `extracted_rate=0.84`, `retroactive_fiscal_year=2025`, `retroactive_ship_readiness_rc=0` |
 
@@ -25,10 +26,14 @@ running one uninterrupted production cycle.
 | Evidence host | Windows operator PC reachable as SSH host `win`; hostname observed as `JUNMING` |
 | Operator | not yet captured |
 | Owner attendance | not yet captured |
-| EIDP package | `dist/eidp-windows-v380.zip` |
-| Package commit | `f6a5e6d46db7b0b836b18399e5b401362575c38d` |
-| Package SHA256 | `1fef8d468ba2e7d882f7a3a774ccbbf071d1e1ee362ae62b8c4e458c576e5361` |
-| Windows extract path | `C:\Users\cyo20\EIDP-v380-f6a5e6d` |
+| Primary Windows UI evidence package | `dist/eidp-windows-v380.zip` |
+| Primary UI package commit | `f6a5e6d46db7b0b836b18399e5b401362575c38d` |
+| Primary UI package SHA256 | `1fef8d468ba2e7d882f7a3a774ccbbf071d1e1ee362ae62b8c4e458c576e5361` |
+| Primary UI Windows extract path | `C:\Users\cyo20\EIDP-v380-f6a5e6d` |
+| Latest Windows setup package | `dist/eidp-windows-v384.zip` |
+| Latest Windows setup package commit | `75732b057a115afcebe35f9a40b831fac0ffa6f6` |
+| Latest Windows setup package SHA256 | `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0` |
+| Latest Windows setup proof path | `C:\Users\cyo20\EIDP-v384-75732b0-setup-probe` |
 | Latest package-level OCR evidence | v384 package commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, core SHA256 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0` |
 | OCR add-on ZIP SHA256 | v383 smoke add-on `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853` |
 | Playwright add-on ZIP SHA256 | not captured in this evidence set |
@@ -67,6 +72,7 @@ running one uninterrupted production cycle.
 | v382 OCR add-on runtime proof | smoke add-on `dist/eidp-ocr-addon-windows-v382-smoke.zip` was built from UB Mannheim Windows Tesseract `v5.4.0.20240606` plus local `jpn.traineddata`; verifier reported SHA256 `b39a07bb9367c2342c38d34fc1dddd06300d9ba7d5b5412f752b798008d1f431`, `entry_count=266`, `manifest_files=265`; disposable Windows extraction under `C:\Users\cyo20\EIDP-v382-cc739c8-ocr-addon-probe` returned `ok=true`, `ocr_tesseract_version="tesseract v5.4.0.20240606"`, and languages including `jpn` and `jpn_vert`; this proved runtime execution but not TSV OCR output parsing; probe directory and uploaded ZIPs were removed after capture |
 | v383 package and OCR add-on verifier | v383 core ZIP `dist/eidp-windows-v383.zip` and latest alias share SHA256 `6faae698bffd8302e1352a538ff5f73064be7cde7d757d37a3f1ac5270e7dfe9`; `dist/eidp-ocr-addon-windows-v383-smoke.zip` includes `ocr-addon/tessdata/configs/tsv` and verifies as SHA256 `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853`, `entry_count=267`, `manifest_files=266`; `scripts/verify_windows_distribution.py ... --ocr-addon ... --require-demonstrated-discovery-patterns` returned `OK core` and `OK ocr-addon` for both the versioned ZIP and latest alias |
 | v384 package and OCR add-on verifier | v384 core ZIP `dist/eidp-windows-v384.zip` and latest alias share SHA256 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`; BUILD_INFO records commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, branch `sprint8-handoff-finalize`, and `git_dirty=false`; verifier returned `OK core` for v384 and latest alias plus `OK ocr-addon` for `dist/eidp-ocr-addon-windows-v383-smoke.zip` |
+| v384 operator-PC setup and diagnostics proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-setup-probe` expanded `dist/eidp-windows-v384.zip` after confirming the SHA256 sidecar; `scripts\first_setup.bat` returned `setup_rc=0`; `.\.venv\Scripts\python.exe scripts\validate_windows_install.py . --after-setup --json` returned `ok=true`, build commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`, `wheel_count=78`, `school_count=2418`, `school_fiscal_year_status_count=2418`, and `sqlite_integrity_check=ok`; `EIDP-diagnose.bat` returned `diagnose_rc=0`; diagnostics `logs\diagnostics-20260514-020156.txt` included `validate_after_setup_rc=0`, FY2026 `operator_reviewable_schools=0`, FY2026 `excel_ready_schools=0`, FY2025 `is_retroactive_fiscal_year=true`, and `retroactive_ship_readiness_rc=0`; the harness observed `task_registered_to_v384=true`, then restored the original v380 `EIDP Weekly Run` task |
 | v384 operator-PC OCR runtime gate proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe` expanded `dist/eidp-windows-v384.zip` plus `dist/eidp-ocr-addon-windows-v383-smoke.zip` after confirming the v384 core SHA256 sidecar; `runtime\python\python.exe scripts\validate_windows_install.py . --require-ocr-runtime --json` returned `ok=true`, build commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`, `wheel_count=78`, packaged Tesseract path `C:\Users\cyo20\EIDP-v384-75732b0-ocr-runtime-probe\ocr-addon\tesseract\tesseract.exe`, version `tesseract v5.4.0.20240606`, and languages including `jpn` and `jpn_vert` |
 | v383 OCR image + copied-DB write proof | disposable Windows extraction under `C:\Users\cyo20\EIDP-v383-effcd58-ocr-write-sandbox` generated `data\ocr-write-smoke.png`, ran packaged Tesseract through `run_tesseract_on_image(..., output_format="tsv")`, returned `ocr_full_text="V383 OCR WRITE SMOKE 2026"` with `ocr_avg_confidence=0.952`, then used `save_manual_entries(..., method="ocr_tesseract")` against a copied DB to write one `DepartmentYearly` row with `extraction_confidence=0.95`, `verified=true`, promote the document `ocr_pending -> ingested`, and emit three `manual_entry` audit rows; real v380 runtime DB marker counts were all `0`; probe directory and uploaded ZIPs were removed after capture |
 | Post-v383 OCR ingest source propagation | focused unit coverage proves image-PDF ingest uses the packaged/system Tesseract TSV wrapper when available and records `ocr_tesseract` confidence breakdowns on both `DepartmentYearly` and `SupportRecipient`; this is code-level proof only, not an operator-PC real target-form OCR smoke |
@@ -78,6 +84,11 @@ running one uninterrupted production cycle.
 
 | Step | Result | Evidence |
 | --- | --- | --- |
+| v384 disposable ZIP extraction | pass | `C:\Users\cyo20\EIDP-v384-75732b0-setup-probe`; core SHA256 sidecar matched |
+| v384 `scripts\first_setup.bat` | pass | `setup_rc=0`; `school_count=2418`; `school_fiscal_year_status_count=2418`; `sqlite_integrity_check=ok`; `wheel_count=78` |
+| v384 after-setup validator | pass | `ok=true`, no errors/warnings, build commit `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false` |
+| v384 diagnostics | pass | `diagnose_rc=0`; `logs\diagnostics-20260514-020156.txt`; `validate_after_setup_rc=0`; `retroactive_ship_readiness_rc=0` |
+| v384 scheduler restoration | pass | setup registered the task to the v384 probe during setup, then the harness restored the original task containing `EIDP-v380-f6a5e6d`; restored task did not contain `EIDP-v384-75732b0-setup-probe` |
 | ZIP extraction | pass | separate v380 directory created |
 | `EIDP-setup.bat` | pass | setup completed |
 | `.venv` creation | pass | package-local Python commands and Streamlit ran |

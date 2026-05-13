@@ -8,7 +8,7 @@ Package SHA256: `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
@@ -34,15 +34,31 @@ with SHA256
 seeds, and `undemonstrated_pattern_sources=[]`. The latest full non-Windows
 release gate remains v378 with `1385` unit tests and `44` exact discovery
 gold-set predictions.
-The latest Windows setup proof is v380: it was transferred to the operator PC,
-hash-checked, extracted into a separate directory, set up with
+The latest Windows setup proof is now v384: the versioned ZIP was transferred
+to the operator PC, its SHA256 sidecar matched
+`2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`, and it
+was extracted to
+`C:\Users\cyo20\EIDP-v384-75732b0-setup-probe`. In that disposable extraction,
+`scripts\first_setup.bat` returned `setup_rc=0`, the after-setup validator
+returned `ok=true` with `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+`wheel_count=78`, build commit
+`75732b057a115afcebe35f9a40b831fac0ffa6f6`, and `build_dirty=false`, and
+`EIDP-diagnose.bat` returned `diagnose_rc=0` with
+`validate_after_setup_rc=0` and `retroactive_ship_readiness_rc=0`. The setup
+probe confirmed that `first_setup.bat` registered `EIDP Weekly Run` to the
+v384 probe during setup, then restored the original operator task afterward:
+the restored task contains `EIDP-v380-f6a5e6d` and does not contain
+`EIDP-v384-75732b0-setup-probe`. This v384 proof covers setup and diagnostics
+only. The latest UI service, browser rendering, read-only navigation, Excel,
+and sandboxed write proofs remain v380: that package was transferred to the
+operator PC, hash-checked, extracted into a separate directory, set up with
 `EIDP-setup.bat`, diagnosed, and smoke-tested through the new `eidp db-backup`
-command. v380 now also has read-only operator-PC environment and scheduler
+command. v380 also has read-only operator-PC environment and scheduler
 evidence: host `JUNMING` is `Microsoft Windows 11 Pro` build `26200`, with a
 13th Gen Intel Core i9-13900HK, about 32 GB visible RAM, `C:` free space
 `1058.8` GB, and an `EIDP Weekly Run` scheduled task in `Ready` state pointing
-at `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`. The latest UI
-service health proof is also v380. Initial browser
+at `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`. Initial browser
 rendering, broader read-only quick navigation, and the Excel preview
 disabled-state smoke are now proven on v380. v380 also proves the retroactive
 FY2025/R7 Excel preview/download browser path with the same package. v380 has
@@ -420,7 +436,7 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v380 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`sandbox_support_recipient_smoke_rows=0`). Windows v380 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, and verified the real runtime DB had `0` matching document/department/audit rows. Windows v380 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, and revision `2` current with `annual_total=120`, while the real runtime DB had `0` matching documents/support-recipient rows. | DepartmentYearly Win UI E2E proven; fiscal-year override Win UI E2E proven; SupportRecipient Win package backend append-only proven |
 | Excel template output | v380 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v380 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive |
 | ManualActionLog audit for operator actions | v380 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database and verified the real runtime DB was not mutated; v380 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v380_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, and verified the real runtime DB was not mutated; v380 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v380 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths |
-| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, confirmed the operator-PC environment and `EIDP Weekly Run` scheduled task, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, generated/downloaded the FY2025/R7 retroactive Excel workbook through the browser, completed a sandboxed URL-candidate reject browser write smoke against a copied DB, completed a sandboxed audit-outbox browser flush smoke against a copied DB, completed a sandboxed `PDF確認・手入力` browser save smoke against a copied DB, and completed a sandboxed `③ 年度判定・修正` browser write smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup, environment capture, Task Scheduler query, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, audit-outbox flush, manual-entry write, and fiscal-year override write proof present on v380; full operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v384 ZIP verifies clean on macOS packaging gate and now has disposable operator-PC setup proof: SHA256 sidecar matched, `scripts\first_setup.bat` returned `setup_rc=0`, after-setup validation returned `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and `EIDP-diagnose.bat` returned `diagnose_rc=0`; the proof restored the original v380 `EIDP Weekly Run` scheduled task after setup. v380 remains the latest package with browser/UI proof: it was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, confirmed the operator-PC environment and `EIDP Weekly Run` scheduled task, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, generated/downloaded the FY2025/R7 retroactive Excel workbook through the browser, completed a sandboxed URL-candidate reject browser write smoke against a copied DB, completed a sandboxed audit-outbox browser flush smoke against a copied DB, completed a sandboxed `PDF確認・手入力` browser save smoke against a copied DB, and completed a sandboxed `③ 年度判定・修正` browser write smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup/diagnostics proof present on v384; environment capture, Task Scheduler query, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, audit-outbox flush, manual-entry write, and fiscal-year override write proof remain present on v380; full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -489,6 +505,25 @@ Latest v384 package-verifier commands:
   `wheel_count=78`, `ocr_tessdata_dir` under the disposable extraction,
   packaged Tesseract version `tesseract v5.4.0.20240606`, and language support
   including `jpn` and `jpn_vert`.
+- Windows v384 setup and diagnostics proof:
+  disposable extraction under
+  `C:\Users\cyo20\EIDP-v384-75732b0-setup-probe` expanded
+  `dist/eidp-windows-v384.zip` after confirming the SHA256 sidecar. It ran
+  `scripts\first_setup.bat` with `setup_rc=0`; then
+  `.\.venv\Scripts\python.exe scripts\validate_windows_install.py . --after-setup --json`
+  returned `ok=true`, build commit
+  `75732b057a115afcebe35f9a40b831fac0ffa6f6`, `build_dirty=false`,
+  `wheel_count=78`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, and `sqlite_integrity_check=ok`.
+  `EIDP-diagnose.bat` returned `diagnose_rc=0`; the latest diagnostics file was
+  `logs\diagnostics-20260514-020156.txt` and included
+  `validate_after_setup_rc=0`, FY2026 `operator_reviewable_schools=0`,
+  FY2026 `excel_ready_schools=0`, FY2025
+  `is_retroactive_fiscal_year=true`, and `retroactive_ship_readiness_rc=0`.
+  During setup, the harness observed `task_registered_to_v384=true`, then
+  restored the pre-existing `EIDP Weekly Run` scheduled task; the restored task
+  contains `EIDP-v380-f6a5e6d` and does not contain
+  `EIDP-v384-75732b0-setup-probe`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v379.zip --require-demonstrated-discovery-patterns`
   now fails under the current verifier because v379 predates the
   `db-backup --output $dbBackup` runbook contract.
