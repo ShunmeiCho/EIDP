@@ -29,11 +29,13 @@ hash-checked, extracted into a separate directory, set up with
 `EIDP-setup.bat`, diagnosed, and smoke-tested through the new `eidp db-backup`
 command. The latest UI service health proof is also v380. Initial browser
 rendering, broader read-only quick navigation, and the Excel preview
-disabled-state smoke are now proven on v380. v380 has also repeated the
-sandboxed URL-candidate reject browser write path against a disposable copied
-database and the sandboxed audit-outbox browser flush path against a
-disposable copied database. The latest Windows bounded-bootstrap smoke remains
-v376. The latest broader Windows bounded-bootstrap proof remains v342.
+disabled-state smoke are now proven on v380. v380 also proves the retroactive
+FY2025/R7 Excel preview/download browser path with the same package. v380 has
+also repeated the sandboxed URL-candidate reject browser write path against a
+disposable copied database and the sandboxed audit-outbox browser flush path
+against a disposable copied database. The latest Windows bounded-bootstrap
+smoke remains v376. The latest broader Windows bounded-bootstrap proof remains
+v342.
 
 Release gate interpretation:
 
@@ -316,10 +318,10 @@ enforcing a stricter ZIP hygiene contract. This evidence is now packaged in
 installed, diagnosed, and exercised through the package-local `eidp db-backup`
 smoke. It also has a headless Streamlit `/_stcore/health` smoke, initial
 browser-render proof, full read-only quick-navigation proof, and an Excel
-preview disabled-state smoke. It now has sandboxed URL-candidate reject
-browser write proof and audit-outbox browser flush proof on disposable copied
-databases; Stage 6 operator workflow evidence still remains incomplete, as
-listed below.
+preview disabled-state smoke, plus retroactive FY2025/R7 Excel
+preview/download proof. It now has sandboxed URL-candidate reject browser write
+proof and audit-outbox browser flush proof on disposable copied databases;
+Stage 6 operator workflow evidence still remains incomplete, as listed below.
 
 ## Objective Checklist
 
@@ -330,9 +332,9 @@ listed below.
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; v380 package gold-set includes `17` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
-| Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
+| Excel template output | v380 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v380 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive |
 | ManualActionLog audit for operator actions | v380 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database and verified the real runtime DB was not mutated; v380 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v380_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, and verified the real runtime DB was not mutated; v342 package verifier also includes audit contracts and outbox checks | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, completed a sandboxed URL-candidate reject browser write smoke against a copied DB, and completed a sandboxed audit-outbox browser flush smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, URL-candidate write, and audit-outbox flush proof present on v380; full operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, generated/downloaded the FY2025/R7 retroactive Excel workbook through the browser, completed a sandboxed URL-candidate reject browser write smoke against a copied DB, and completed a sandboxed audit-outbox browser flush smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, and audit-outbox flush proof present on v380; full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -428,6 +430,21 @@ Latest v380 Windows setup and backup-smoke commands:
   `eidp-v380-excel-preview.png` and generated snapshot files were removed
   afterward. The local tunnel was stopped, and a follow-up Windows process
   cleanup reported `streamlit_after_cleanup=0` for v380.
+- Windows v380 retroactive FY2025 Excel preview/download smoke:
+  the same v380 package was started with process-scoped
+  `EIDP_TARGET_FISCAL_YEAR=2025` (no `.env` write) and opened through the SSH
+  tunnel. The `④ Excel プレビュー` page showed `対象年度: 2025年度`,
+  `抽出済み学校 2031`, and `Excel対象行 7150`. The
+  `プレビュー workbook を生成` button was enabled, generated the in-memory
+  workbook, and exposed `Excel ダウンロード`; the browser download suggested
+  `eidp_master.xlsx` and saved
+  `_temp/eidp-v380-r7-retroactive-download.xlsx` with size `3,728,651` bytes.
+  Browser warning/error/pageerror events were empty. The Streamlit stdout
+  recorded sheet exports `採録状況=2418`, `対象比率=10022`, `学科別=9719`,
+  and `在籍のみ抜粋=9719`. The downloaded workbook, Playwright download copy,
+  and temporary Streamlit launcher were removed afterward; cleanup reported
+  `run_script_exists_after_cleanup=False` and
+  `remaining_v380_streamlit_processes=0`, and the local tunnel had no listener.
 - Windows v380 read-only quick-navigation click-through:
   the same tunnel pattern was rerun against v380 and Playwright clicked only
   the five non-mutating quick navigation buttons:
