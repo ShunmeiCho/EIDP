@@ -3,10 +3,38 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `0ee34c6cbaf9a8c4f6dd1d7712a0ee51b758afb9` (`eidp-windows-v354.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `10b18d4cc52ebd389e8399e1724620e697454795` (`eidp-windows-v355.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V355 Multi-Year Support PDF List Demonstration
+
+v355 (`10b18d4`) adds a manual-web accepted target PDF demonstration for
+専門学校中央情報大学校. Its information page lists multiple 修学支援制度
+confirmation-form PDFs by fiscal year. The current crawler correctly selects
+the link labeled `令和８年度_修学支援制度における確認申請書（様式第2号）`,
+ranks it above older 令和７年度/令和６年度 forms, and downloads the
+WordPress-hosted PDF
+`https://www.chuo.ac.jp/cid/wp-content/themes/cid/resource/pdf/22_CID_sinsei2025.pdf`.
+
+Source-side replay for school id `436` reports `crawled=1`, `found=1`,
+`downloaded=1`, `failed=0`, `skipped=0`; the evidence row is
+`accepted_downloaded` with `year_evidence=url_hint`, `pattern_type=wordpress`,
+and `pdf_type=target`. The discovery gold-set now has `35` entries, including
+`7` `accepted_target_pdf` successes and the new
+`multi_year_support_pdf_list_current_year_anchor` site family.
+
+Verification: focused gold-set tests passed with `46 passed`, package/gold-set
+verifier tests passed with `135 passed`, targeted Ruff passed, and the full unit
+suite passed with `1364 passed, 5 warnings`. `dist/eidp-windows-v355.zip` was
+rebuilt from clean commit `10b18d4` with SHA256
+`1f23d9e2846599528fc5340651a8213cc005259a20068b0ee01d30efe77fa055`. The
+default package verifier and `--require-demonstrated-discovery-patterns` both
+passed. The full non-Windows release gate returned `ok=true`; bounded evidence
+replay returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16`
+exact / `0` failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0`
+failures, and 中央情報 `1` exact / `0` failures.
 
 ## 2026-05-13 V354 Definition-List Support Context Recovery
 
