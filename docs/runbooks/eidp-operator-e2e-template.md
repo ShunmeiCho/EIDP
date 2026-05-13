@@ -84,6 +84,12 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 - `retroactive_fiscal_year`
 - `is_retroactive_fiscal_year`
 - `retroactive_ship_readiness_rc`
+- `stage6_recovery_rc`
+- `[stage6 recovery check]` JSON の `task.execute`
+- `[stage6 recovery check]` JSON の `task.expected_action`
+- `[stage6 recovery check]` JSON の `task.action_matches_expected`
+- `[stage6 recovery check]` JSON の `residual_paths`
+- `[stage6 recovery check]` JSON の `recommendations`
 
 ## 4. Setup 結果
 
@@ -191,6 +197,9 @@ override 例:
 | retroactive FY 診断年度 | 記録値 | | pass / watch / fail |
 | retroactive FY marker | `is_retroactive_fiscal_year=true` | | pass / watch / fail |
 | `retroactive_ship_readiness_rc` | 記録値 | | pass / watch / fail |
+| `stage6_recovery_rc` | 0 | | pass / watch / fail |
+| Stage 6 scheduled task action | `action_matches_expected=true` | | pass / watch / fail |
+| interrupted smoke residue | `residual_paths[].exists=false` | | pass / watch / fail |
 
 KPI メモ:
 
@@ -218,6 +227,7 @@ KPI メモ:
 
 - `logs\run-*.log`
 - `logs\diagnostics-*.txt`
+- `logs\stage6-recovery-*.json`
 - `data\output\last_run.json`
 - `data\output\target-year-discovery\*-discovery-rca-batch-plan.json`
 - Excel 出力ファイル

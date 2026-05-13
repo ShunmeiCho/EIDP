@@ -197,10 +197,18 @@ def _core_entries() -> dict[str, bytes | str]:
             "retroactive_fiscal_year\n"
             "is_retroactive_fiscal_year\n"
             "retroactive_ship_readiness_rc\n"
+            "stage6_recovery_rc\n"
+            "stage6 recovery check\n"
+            "task.execute\n"
+            "task.expected_action\n"
+            "task.action_matches_expected\n"
+            "residual_paths\n"
+            "recommendations\n"
             "strict target PDF 自動取得率\n"
             "推定手作業率\n"
             "Excel ready 率\n"
             "logs\\diagnostics-*.txt\n"
+            "logs\\stage6-recovery-*.json\n"
             "v1.0-rc\n"
             "FY2026/R8 の current-year yield gate\n"
         ),
@@ -1619,6 +1627,19 @@ def test_verify_core_zip_requires_retroactive_fy_e2e_template_fields(tmp_path: P
 
     assert not check.ok
     assert any("retroactive_ship_readiness_rc" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_stage6_recovery_e2e_template_fields(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-operator-e2e-template.md"] = entries[
+        "docs/runbooks/eidp-operator-e2e-template.md"
+    ].replace("stage6_recovery_rc", "stage6_status_rc")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("stage6_recovery_rc" in error for error in check.errors)
 
 
 def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:
