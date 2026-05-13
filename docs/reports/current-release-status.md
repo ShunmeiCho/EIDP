@@ -11,6 +11,7 @@ Latest Windows-setup-proven package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v380.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
+Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md`
 
 ## Verdict
 
@@ -40,7 +41,10 @@ manual `DepartmentYearly` revision, and emitted the expected `manual_entry`
 audit rows without mutating the real runtime DB. v380 also has a sandboxed
 bounded backend bootstrap smoke for the 5-site Saitama official-index path, and
 a package-local backend ingest smoke for append-only SupportRecipient
-revisions. The latest broader Windows bounded-bootstrap proof remains v342.
+revisions. These observations are consolidated in
+`docs/reports/eidp-v380-stage6-evidence-draft.md` as a draft, not a completed
+operator sign-off. The latest broader Windows bounded-bootstrap proof remains
+v342.
 
 Release gate interpretation:
 
