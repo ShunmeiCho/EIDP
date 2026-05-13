@@ -36,7 +36,43 @@ Updated: 2026-05-06
 | ネットワーク | 社内 / VPN / offline / other |
 | Proxy / FW 影響 | none / observed |
 
-## 3. Setup 結果
+## 3. 証跡採取コマンド
+
+PowerShell で実行し、exit code と出力ファイル名を記録します。パスは実際の
+解凍先に合わせて置き換えます。
+
+```powershell
+cd C:\Users\<user>\<EIDP-extract-dir>
+Get-FileHash C:\Users\<user>\Downloads\eidp-windows-*.zip -Algorithm SHA256
+.\EIDP-setup.bat
+echo $LASTEXITCODE
+.\scripts\validate_install.bat --after-setup
+echo $LASTEXITCODE
+.\EIDP-start.bat
+```
+
+PDF 収集を実測した後に、診断ファイルを作ります。
+
+```powershell
+.\EIDP-diagnose.bat
+echo $LASTEXITCODE
+Get-ChildItem .\logs\diagnostics-*.txt | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+Get-ChildItem .\data\output\last_run.json
+Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.json
+```
+
+`diagnostics-*.txt` から最低限以下を転記します。
+
+- `validate_after_setup_rc`
+- `validate_after_bootstrap_rc`
+- `validate_after_bootstrap_ship_gate_rc`
+- `ship_readiness_rc`
+- `target_pdf_auto_yield_pct`
+- `operator_reviewable_yield_pct`
+- `excel_ready`
+- `ship_gate_status`
+
+## 4. Setup 結果
 
 | 手順 | 期待 | 結果 | 証跡 |
 | --- | --- | --- | --- |
@@ -51,7 +87,7 @@ Updated: 2026-05-06
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
-## 4. 4 工程 E2E
+## 5. 4 工程 E2E
 
 ### 工程 1: PDF 収集
 
@@ -123,7 +159,7 @@ override 例:
 
 ```
 
-## 5. KPI 判定
+## 6. KPI 判定
 
 | KPI | Target | Actual | 判定 |
 | --- | ---: | ---: | --- |
@@ -146,7 +182,7 @@ KPI メモ:
 
 ```
 
-## 6. 監査 / outbox
+## 7. 監査 / outbox
 
 | 項目 | 結果 |
 | --- | --- |
@@ -156,7 +192,7 @@ KPI メモ:
 | audit-flush 実行 | pass / fail / not needed |
 | JSONL action_id 重複 | none / observed |
 
-## 7. 障害 / 回避策
+## 8. 障害 / 回避策
 
 | 時刻 | 操作 | 現象 | 回避策 | 未解決 |
 | --- | --- | --- | --- | --- |
@@ -172,7 +208,7 @@ KPI メモ:
 - 失敗画面の screenshot
 - Defender / SmartScreen screenshot
 
-## 8. Release 判定
+## 9. Release 判定
 
 | 判定項目 | 結果 |
 | --- | --- |
