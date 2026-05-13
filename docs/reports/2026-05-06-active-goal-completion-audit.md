@@ -3,10 +3,49 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `5abdadedbc4e617dd5eb8e912da74d6c904be974` (`eidp-windows-v372.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `835e66e19ce77d1d75096c69e0fbc11b591dfda4` (`eidp-windows-v373.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V373 Aichi Fukushi Iryo Current-Year Syllabus Publication-Lag Case
+
+v373 (`835e66e`) adds a manual-web / official-index-linked publication-lag case
+for あいち福祉医療専門学校. The committed Aichi official-index artifact links to
+`http://fukushi-iryo.denpa.jp/public-documents.html`. The page has a `2026年度`
+section, but that section exposes syllabus and curriculum-map PDFs rather than
+a target confirmation-form PDF. The latest target confirmation-form link remains
+`2025_kakuninshinsei.pdf` under the `2025年度` section. Source-side PDF text
+extraction verified that `2025_kakuninshinsei.pdf` contains
+`あいち福祉医療専門学校` and `様式第２号`, but no `令和8年度` evidence. This records
+the production pattern where current-year syllabus PDFs must not be accepted as
+strict target-FY evidence or hide the previous-year target form.
+
+Packaged discovery gold-set coverage rises to `42` entries, `15`
+publication-lag cases, `direct=9`, and
+`undemonstrated_pattern_sources=[]`; strict target-year successes remain `10`.
+`dist/eidp-windows-v373.zip` was rebuilt from clean commit
+`835e66e19ce77d1d75096c69e0fbc11b591dfda4` with SHA256
+`1e190b1180f19f31d6bde4f5a4aff7b483214f8d3570efab3d56b232db470b27`, and
+`dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
+passed with `--require-demonstrated-discovery-patterns` for both the versioned
+ZIP and latest alias.
+
+Verification: targeted discovery-gold-set tests passed with `47 passed`;
+targeted Ruff passed; `eidp discovery-gold-set --json` reported `42` entries,
+`15` publication-lag cases, and `10` strict target-year successes; and
+`eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+returned `42` exact matches with `0` failed, missing, or unexpected
+predictions. The full non-Windows release gate returned `ok=true` with
+`1373 passed, 5 warnings` for the full unit suite, `133 passed` for the
+distribution-verifier suite, clean Ruff and mypy gates, package verification
+with `discovery_gold_set_entries=42`, and demonstrated-pattern verification.
+Bounded evidence replay also returned `ok=true` with Tokyo `4` exact / `0`
+failures, Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0` failures,
+更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures, and 君津 `1`
+exact / `0` failures. あいち福祉医療 is expectedly absent from those older
+bounded evidence JSONL files because it was added from a fresh manual-web /
+official-index trace.
 
 ## 2026-05-13 V372 Aiseikai Nursing Publication-Lag Case
 

@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v372.zip`
-Package commit: `5abdadedbc4e617dd5eb8e912da74d6c904be974`
-Package SHA256: `78ae4aab4675c51116d8b782248a5bbc8eea21c9aae82e8217f0da62a5121206`
+Current Mac-verifier-clean package: `dist/eidp-windows-v373.zip`
+Package commit: `835e66e19ce77d1d75096c69e0fbc11b591dfda4`
+Package SHA256: `1e190b1180f19f31d6bde4f5a4aff7b483214f8d3570efab3d56b232db470b27`
 Latest Windows-core-validated package: `dist/eidp-windows-v342.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v342.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -13,7 +13,7 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v372 and passes the default
+The current Mac-verifier-clean ZIP snapshot is v373 and passes the default
 macOS package verifier, including `--require-demonstrated-discovery-patterns`.
 The latest Windows setup and bounded-bootstrap proof remains v342.
 v341 keeps the v326 strict-mode fix for opaque WordPress Download
@@ -227,13 +227,22 @@ while the adjacent `subject_2025.pdf` is a subject-list PDF and must not become
 the target confirmation form. Packaged discovery gold-set coverage rises to
 `41` entries, `14` publication-lag cases, and `direct=8`; strict target-year
 successes remain `10`.
+v373 adds a manual-web / official-index-linked publication-lag case for
+あいち福祉医療専門学校. The Aichi official-index artifact links to a public
+documents page whose `2026年度` section exposes syllabus and curriculum-map PDFs,
+but no current-year target confirmation-form PDF. The latest target form remains
+`2025_kakuninshinsei.pdf` under the `2025年度` section. This records the
+production pattern where current-year syllabus PDFs must not outrank or replace
+the latest previous-year target confirmation form. Packaged discovery gold-set
+coverage rises to `42` entries, `15` publication-lag cases, and `direct=9`;
+strict target-year successes remain `10`.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v342 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v372 verifier clean by default; discovery gold-set `41` entries / `10` strict target-year successes / `14` publication-lag cases; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; manual-web / official-index-linked 愛北 evidence records a support-system news page with `令和8年度` context linking `youshiki2-r7.pdf` as the target confirmation form; manual-web / official-index-linked 愛生会 evidence records a support page where the latest target-form PDF is still `令和7年9月公表` and the adjacent subject-list PDF must not be treated as the target form; manual-web / official-index-linked 浜松工科 evidence records an official Shizuoka index route to a WordPress disclosure page whose `令和８年度 様式第２号` anchor supplies target-FY evidence for a PDF body that contains the school name, `様式第２号`, and `修学支援` but not the fiscal-year string; manual-web / official-index-linked 長野県公衆衛生 evidence records a prefecture-hosted support page whose latest public target-form PDF is still under the `令和７年度` section and must remain publication-lag evidence; v371 additionally preserves that preceding heading-year context while excluding the page update date; manual-web / official-index-linked 岩手医科大学医療専門学校 evidence records a dense Wix page where the target confirmation-form section is still `令和７年度` even though a later syllabus section has `令和8年度`; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
+| Discover and download current target-FY PDFs in strict mode | v373 verifier clean by default; discovery gold-set `42` entries / `10` strict target-year successes / `15` publication-lag cases; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; manual-web / official-index-linked 愛北 evidence records a support-system news page with `令和8年度` context linking `youshiki2-r7.pdf` as the target confirmation form; manual-web / official-index-linked 愛生会 evidence records a support page where the latest target-form PDF is still `令和7年9月公表` and the adjacent subject-list PDF must not be treated as the target form; manual-web / official-index-linked あいち福祉医療 evidence records a public-documents page where the `2026年度` section contains syllabus PDFs but the latest target-form PDF remains `2025年度`; manual-web / official-index-linked 浜松工科 evidence records an official Shizuoka index route to a WordPress disclosure page whose `令和８年度 様式第２号` anchor supplies target-FY evidence for a PDF body that contains the school name, `様式第２号`, and `修学支援` but not the fiscal-year string; manual-web / official-index-linked 長野県公衆衛生 evidence records a prefecture-hosted support page whose latest public target-form PDF is still under the `令和７年度` section and must remain publication-lag evidence; v371 additionally preserves that preceding heading-year context while excluding the page update date; manual-web / official-index-linked 岩手医科大学医療専門学校 evidence records a dense Wix page where the target confirmation-form section is still `令和７年度` even though a later syllabus section has `令和8年度`; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `13` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
@@ -247,26 +256,26 @@ successes remain `10`.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v372 commands:
+Latest v373 commands:
 
 - `uv run pytest tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_discovery_gold_set_seed.py -q`
   -> `47 passed`
 - `uv run ruff check tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_discovery_gold_set_seed.py src/eidp/scraper/discovery_gold_set.py`
   -> `All checks passed`
 - `uv run eidp discovery-gold-set --json`
-  -> `41` entries, `10` strict target-year successes, `14` publication-lag cases, `0` undemonstrated pattern sources.
+  -> `42` entries, `10` strict target-year successes, `15` publication-lag cases, `0` undemonstrated pattern sources.
 - `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
-  -> `41` exact matches, `0` failed, `0` missing, and `0` unexpected predictions.
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v372.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v372.zip` and refreshed `dist/eidp-windows.zip`; both have SHA256
-  `78ae4aab4675c51116d8b782248a5bbc8eea21c9aae82e8217f0da62a5121206`.
-- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v372.zip --require-demonstrated-discovery-patterns`
+  -> `42` exact matches, `0` failed, `0` missing, and `0` unexpected predictions.
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v373.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v373.zip` and refreshed `dist/eidp-windows.zip`; both have SHA256
+  `1e190b1180f19f31d6bde4f5a4aff7b483214f8d3570efab3d56b232db470b27`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v373.zip --require-demonstrated-discovery-patterns`
   and `uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip --require-demonstrated-discovery-patterns`
-  -> both `OK core`, with matching SHA256 and `41` packaged discovery gold-set entries.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v372.zip --json --output _temp/v372-non-windows-release-gates-full.json`
+  -> both `OK core`, with matching SHA256 and `42` packaged discovery gold-set entries.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v373.zip --json --output _temp/v373-non-windows-release-gates-full.json`
   -> `ok=true`, SHA256 sidecar matched, full unit passed with `1373 passed, 5 warnings`, distribution-verifier passed with `133 passed`, package verifier passed, and demonstrated-pattern gate passed.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v372.zip --skip-full-unit --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --pdf-evidence _temp/seijuji-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/kousei-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/chuo-gold-v1/discovery_evidence.jsonl --pdf-evidence _temp/kimikan-manual-v2/discovery_evidence.jsonl --json --output _temp/v372-non-windows-release-gates-evidence.json`
-  -> `ok=true`, Tokyo evidence `4` exact / `0` failures, Saitama evidence `16` exact / `0` failures, 聖十字 evidence `1` exact / `0` failures, 更生 evidence `1` exact / `0` failures, 中央情報 evidence `1` exact / `0` failures, and 君津 evidence `1` exact / `0` failures. 愛生会 is expectedly absent from those older bounded evidence JSONL files because it was added from a fresh manual-web / official-index trace.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v373.zip --skip-full-unit --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --pdf-evidence _temp/seijuji-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/kousei-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/chuo-gold-v1/discovery_evidence.jsonl --pdf-evidence _temp/kimikan-manual-v2/discovery_evidence.jsonl --json --output _temp/v373-non-windows-release-gates-evidence.json`
+  -> `ok=true`, Tokyo evidence `4` exact / `0` failures, Saitama evidence `16` exact / `0` failures, 聖十字 evidence `1` exact / `0` failures, 更生 evidence `1` exact / `0` failures, 中央情報 evidence `1` exact / `0` failures, and 君津 evidence `1` exact / `0` failures. 愛生会 and あいち福祉医療 are expectedly absent from those older bounded evidence JSONL files because they were added from fresh manual-web / official-index traces.
 
 Previously retained v359/v358/v357/v342 source/package evidence:
 
