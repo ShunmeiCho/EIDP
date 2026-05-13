@@ -3,10 +3,29 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `82d7d153ff64034f30d8f4027085c800a096d38d` (`eidp-windows-v362.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `34c34c9d36568e21749eafcc76aeba93cc914f8a` (`eidp-windows-v363.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V363 Retroactive Fiscal-Year Readiness Markers
+
+v363 (`34c34c9`) makes retroactive fiscal-year validation explicit in
+`eidp report ship-readiness` output. JSON reports now include
+`configured_target_fiscal_year`, `calendar_current_fiscal_year`,
+`is_configured_target_fiscal_year`, and `is_retroactive_fiscal_year`; text
+reports label retroactive runs as retroactive fiscal-year validation evidence.
+This supports FY2025/R7 Stage 6 rehearsal and rolling-FY proof without allowing
+FY2025 metrics to be mistaken for FY2026/R8 current-year ship yield.
+
+Verification: targeted report/verifier tests passed with `95 passed`; targeted
+Ruff and mypy passed; the full unit suite passed with `1369 passed, 5 warnings`.
+`dist/eidp-windows-v363.zip` was rebuilt from clean commit `34c34c9` with
+SHA256 `5fdc5c60a2d038a1e20154a7ea24947604025b66086d13c9dcbc10474a8687a9`.
+The full non-Windows release gate returned `ok=true`; bounded evidence replay
+returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact /
+`0` failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V362 Discovery Gold-Set Schema Gate
 

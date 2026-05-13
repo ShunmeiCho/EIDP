@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v362.zip`
-Package commit: `82d7d153ff64034f30d8f4027085c800a096d38d`
-Package SHA256: `44d6f0c2408df7f85315c09e025c93e0b9844c6b3fcecaaddef2fe67545b333a`
+Current Mac-verifier-clean package: `dist/eidp-windows-v363.zip`
+Package commit: `34c34c9d36568e21749eafcc76aeba93cc914f8a`
+Package SHA256: `5fdc5c60a2d038a1e20154a7ea24947604025b66086d13c9dcbc10474a8687a9`
 Latest Windows-core-validated package: `dist/eidp-windows-v342.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v342.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -13,7 +13,7 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v362 and passes the default
+The current Mac-verifier-clean ZIP snapshot is v363 and passes the default
 macOS package verifier, including `--require-demonstrated-discovery-patterns`.
 The latest Windows setup and bounded-bootstrap proof remains v342.
 v341 keeps the v326 strict-mode fix for opaque WordPress Download
@@ -150,13 +150,20 @@ Windows package verifier requires both the schema-validation code path and the
 runtime `jsonschema` dependency. A new retroactive fiscal-year validation
 runbook documents how FY2025/R7 can be used for Stage 6 rehearsal and rolling-FY
 proof without counting it as FY2026/R8 yield.
+v363 marks retroactive fiscal-year readiness reports explicitly. `eidp report
+ship-readiness --fy 2025 --json` now emits `configured_target_fiscal_year`,
+`calendar_current_fiscal_year`, `is_configured_target_fiscal_year`, and
+`is_retroactive_fiscal_year`, and the text output labels retroactive runs as
+retroactive validation evidence. This makes R7/FY2025 experiments safe for
+pipeline and operator-flow proof while preventing those numbers from being
+misreported as R8/FY2026 current-year ship yield.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v342 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v362 verifier clean by default; discovery gold-set `36` entries / `8` strict target-year successes; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
+| Discover and download current target-FY PDFs in strict mode | v363 verifier clean by default; discovery gold-set `36` entries / `8` strict target-year successes; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `11` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
@@ -170,22 +177,23 @@ proof without counting it as FY2026/R8 yield.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v362 commands:
+Latest v363 commands:
 
-- `uv run pytest tests/unit -q` -> `1368 passed, 5 warnings`
-- `uv run pytest tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_seed.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_windows_distribution_verifier.py -q`
-  -> `136 passed`
-- `uv run ruff check src/eidp/scraper/discovery_gold_set.py tests/unit/test_discovery_gold_set.py scripts/verify_windows_distribution.py tests/unit/test_windows_distribution_verifier.py`
+- `uv run pytest tests/unit -q` -> `1369 passed, 5 warnings`
+- `uv run pytest tests/unit/test_cli_reports.py tests/unit/test_windows_distribution_verifier.py -q`
+  -> `95 passed`
+- `uv run ruff check src/eidp/cli_reports.py tests/unit/test_cli_reports.py scripts/verify_windows_distribution.py tests/unit/test_windows_distribution_verifier.py`
   -> `All checks passed`
-- `uv run mypy src/eidp/scraper/discovery_gold_set.py scripts/verify_windows_distribution.py`
+- `uv run mypy src/eidp/cli_reports.py scripts/verify_windows_distribution.py`
   -> `Success: no issues found in 2 source files`
 - `uv run eidp discovery-gold-set --json`
   -> `36` entries, `8` strict target-year successes, `0` undemonstrated pattern sources.
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v362.zip`
-  -> wrote `dist/eidp-windows-v362.zip` and checksum sidecar.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v362.zip --json --output _temp/v362-non-windows-release-gates-full.json`
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v363.zip`
+  -> wrote `dist/eidp-windows-v363.zip` with SHA256
+  `5fdc5c60a2d038a1e20154a7ea24947604025b66086d13c9dcbc10474a8687a9`.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v363.zip --json --output _temp/v363-non-windows-release-gates-full.json`
   -> `ok=true`, SHA256 sidecar matched, full unit passed, package verifier passed, and demonstrated-pattern gate passed.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v362.zip --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --pdf-evidence _temp/seijuji-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/kousei-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/chuo-gold-v1/discovery_evidence.jsonl --pdf-evidence _temp/kimikan-manual-v2/discovery_evidence.jsonl --json --output _temp/v362-non-windows-release-gates-evidence.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v363.zip --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --pdf-evidence _temp/seijuji-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/kousei-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/chuo-gold-v1/discovery_evidence.jsonl --pdf-evidence _temp/kimikan-manual-v2/discovery_evidence.jsonl --json --output _temp/v363-non-windows-release-gates-evidence.json`
   -> `ok=true`, Tokyo evidence `4` exact / `0` failures, Saitama evidence `16` exact / `0` failures, 聖十字 evidence `1` exact / `0` failures, 更生 evidence `1` exact / `0` failures, 中央情報 evidence `1` exact / `0` failures, and 君津 evidence `1` exact / `0` failures.
 
 Previously retained v359/v358/v357/v342 source/package evidence:
