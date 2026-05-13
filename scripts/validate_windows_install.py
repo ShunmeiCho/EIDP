@@ -460,7 +460,7 @@ def _validate_bootstrap_ship_gate_against_sqlite(
             f"{reported_reviewable} != {coverage['operator_reviewable_school_count']}"
         )
 
-    sqlite_status = ship_gate_status_from_yield(coverage["operator_reviewable_yield_pct"])  # type: ignore[arg-type]
+    sqlite_status = ship_gate_status_from_yield(coverage["operator_reviewable_yield_pct"])
     check.details["sqlite_target_fy_operator_reviewable_ship_gate_status"] = sqlite_status
     if require_ship_gate and sqlite_status != "pass":
         check.fail(
