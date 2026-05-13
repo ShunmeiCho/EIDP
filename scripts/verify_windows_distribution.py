@@ -304,6 +304,35 @@ def _check_windows_safe_paths(check: ZipCheck, names: set[str]) -> None:
         check.fail(f"zip contains Windows trailing-dot/space path components: {trailing[:5]}")
 
 
+def _check_no_runtime_data(check: ZipCheck, names: set[str]) -> None:
+    """Reject mutable operator runtime data from the handoff ZIP.
+
+    The core ZIP may ship static bootstrap inputs such as master.xlsx,
+    prefecture seeds, URL seeds, and discovery gold-set fixtures. It must not
+    carry a developer/operator SQLite DB, lock file, downloaded PDFs, audit
+    outbox, or generated Excel/log state from the build host.
+    """
+    forbidden_exact = {
+        "data/.lock",
+        "data/eidp.sqlite3",
+        "data/eidp.sqlite3-wal",
+        "data/eidp.sqlite3-shm",
+    }
+    forbidden_prefixes = (
+        "data/audit/",
+        "data/output/",
+        "data/pdfs/",
+        "data/prefecture-aggregators/artifacts/",
+    )
+    runtime_entries = sorted(
+        name
+        for name in names
+        if name in forbidden_exact or any(name.startswith(prefix) for prefix in forbidden_prefixes)
+    )
+    if runtime_entries:
+        check.fail(f"zip contains mutable runtime data entries: {runtime_entries[:8]}")
+
+
 def _check_wheelhouse(check: ZipCheck, names: set[str], *, require_project: bool) -> None:
     wheels = sorted(name for name in names if name.startswith("wheelhouse/") and name.endswith(".whl"))
     check.details["wheel_count"] = len(wheels)
@@ -1527,6 +1556,7 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_prefixes(check, names, CORE_REQUIRED_PREFIXES)
     _check_no_pycache(check, names)
     _check_windows_safe_paths(check, names)
+    _check_no_runtime_data(check, names)
     _check_wheelhouse(check, names, require_project=True)
     _check_bat_contracts(check, names)
     _check_python_entrypoint_contracts(check, names)

@@ -1305,6 +1305,30 @@ def test_verify_core_zip_rejects_duplicate_entries(tmp_path: Path) -> None:
     assert any("duplicate entries" in error for error in check.errors)
 
 
+@pytest.mark.parametrize(
+    "runtime_member",
+    [
+        "data/.lock",
+        "data/eidp.sqlite3",
+        "data/eidp.sqlite3-wal",
+        "data/eidp.sqlite3-shm",
+        "data/audit/manual-actions.jsonl",
+        "data/output/last_run.json",
+        "data/pdfs/1234/abcd.pdf",
+        "data/prefecture-aggregators/artifacts/tokyo.pdf",
+    ],
+)
+def test_verify_core_zip_rejects_mutable_runtime_data(tmp_path: Path, runtime_member: str) -> None:
+    entries = _core_entries()
+    entries[runtime_member] = "runtime state must not ship"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("mutable runtime data" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_stale_launch_bat_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/launch.bat"] = entries["scripts/launch.bat"].replace(
