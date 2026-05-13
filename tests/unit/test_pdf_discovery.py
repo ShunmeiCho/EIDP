@@ -26,6 +26,7 @@ from eidp.scraper.pdf_discovery import (
     _prioritize_viable_candidates,
     _score_candidate,
     _sitemap_urls_for_site,
+    _stale_fiscal_year_from_candidate_hint,
     discover_pdfs_for_site,
     download_pdf,
     run_pdf_discovery,
@@ -94,6 +95,31 @@ def test_current_year_target_form_is_prioritized_over_generic_current_year_discl
 
     assert not dropped
     assert ordered[0].pdf_url == "https://kohka-h.ac.jp/uploads/r8-youshiki2.pdf"
+
+
+def test_prefecture_public_school_page_uses_heading_year_for_old_target_forms() -> None:
+    html = """
+    <p id="tmp_update">更新日：2025年7月16日</p>
+    <h2>高等教育等修学支援制度</h2>
+    <p>本校は、「大学等における修学支援に関する法律」の規定による修学支援の対象機関です。</p>
+    <h3>令和７年度</h3>
+    <p><a href="/koshueisei/guidance/documents/2025shinseisho2go.pdf">申請書　様式第２号（PDF：273KB）</a></p>
+    <h3>令和６年度</h3>
+    <p><a href="/koshueisei/guidance/documents/r6shinseisho2.pdf">申請書　様式第２号（PDF：274KB）</a></p>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://www.pref.nagano.lg.jp/koshueisei/guidance/sinseisyo.html",
+        target_fiscal_year=2026,
+    )
+    latest_public = next(candidate for candidate in candidates if candidate.pdf_url.endswith("2025shinseisho2go.pdf"))
+
+    assert "令和７年度" in latest_public.anchor_text
+    assert "更新日" not in latest_public.anchor_text
+    assert not _has_target_year_hint(latest_public, target_year=2026)
+
+    assert _stale_fiscal_year_from_candidate_hint(latest_public, target_year=2026) == 2025
 
 
 def test_score_candidate_preserves_direct_bonus_for_source_prefixed_patterns() -> None:
