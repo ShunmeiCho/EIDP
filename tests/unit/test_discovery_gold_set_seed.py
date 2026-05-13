@@ -162,8 +162,8 @@ def test_seed_discovery_gold_sites_cli_applies_when_requested(monkeypatch) -> No
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["applied"] is True
-    assert payload["schools_to_create"] == 40
-    assert payload["sites_to_add"] == 40
+    assert payload["schools_to_create"] == 41
+    assert payload["sites_to_add"] == 41
     assert payload["invalid_site_urls"] == 0
     with Session(engine) as session:
-        assert session.query(SchoolSite).filter(SchoolSite.discovery_method == "discovery_gold_set").count() == 40
+        assert session.query(SchoolSite).filter(SchoolSite.discovery_method == "discovery_gold_set").count() == 41

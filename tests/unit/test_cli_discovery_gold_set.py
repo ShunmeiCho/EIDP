@@ -18,9 +18,9 @@ def test_discovery_gold_set_cli_outputs_summary_json() -> None:
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["total_entries"] == 40
+    assert payload["total_entries"] == 41
     assert payload["outcome_counts"]["accepted_target_pdf"] == 10
-    assert payload["outcome_counts"]["publication_lag_latest_public"] == 13
+    assert payload["outcome_counts"]["publication_lag_latest_public"] == 14
     assert payload["outcome_counts"]["no_target_candidate_found"] == 1
     assert payload["outcome_counts"]["site_fetch_error"] == 1
     assert payload["operator_review_entries"] == 15
@@ -53,7 +53,7 @@ def test_discovery_gold_run_plan_cli_outputs_json_array() -> None:
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert len(payload) == 40
+    assert len(payload) == 41
     items_by_id = {item["entry_id"]: item for item in payload}
     assert items_by_id["ast-kansai-ika-review-2026"]["site_url"] == "https://www.kmc.ast.ac.jp/jyouhoukokai/"
     assert (

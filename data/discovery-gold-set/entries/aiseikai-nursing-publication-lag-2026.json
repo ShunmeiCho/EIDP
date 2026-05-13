@@ -1,0 +1,59 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "aiseikai-nursing-publication-lag-2026",
+  "school": {
+    "school_id": 1361,
+    "school_name": "愛生会看護専門学校",
+    "prefecture": "愛知県",
+    "corporation_name": "社会医療法人愛生会"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve an official-index-linked support page where the latest target-form PDF is still the previous fiscal year.",
+    "search_queries": [
+      "愛生会看護専門学校 高等教育 修学支援 様式第2号",
+      "愛生会看護専門学校 令和8年度 確認申請書"
+    ],
+    "steps": [
+      "Start from the Aichi official-index artifact row for 愛生会看護専門学校.",
+      "Follow the official-index link to https://www.aiseikai-hc.or.jp/ai-kango/support/.",
+      "Confirm the support page lists the target-form PDF section for 令和6年9月公表 and 令和7年9月公表, but no 令和8年度 target-form PDF.",
+      "Open support_system_2025.pdf and verify that its body contains 愛生会看護専門学校 and 様式第２号.",
+      "Classify the case as publication lag for target FY2026 because no local page, filename, or PDF-body evidence proves a 令和8年度 target-form PDF."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.aiseikai-hc.or.jp/ai-kango/",
+    "disclosure_url": "https://www.aiseikai-hc.or.jp/ai-kango/support/",
+    "pdf_url": "https://www.aiseikai-hc.or.jp/ai-kango/support/pdf/support_system_2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "support_page_previous_year_target_form",
+    "reusable_rules": [
+      "Treat explicit publication labels such as 令和7年9月公表 as local fiscal-year evidence for the following target-form links.",
+      "Keep the latest previous-year 様式第２号 PDF visible as operator-reviewable publication-lag evidence when no current-year target-form PDF is public.",
+      "Prefer the support_system target-form PDF over adjacent subject-list PDFs even when both share the same publication label."
+    ],
+    "anti_patterns": [
+      "Do not upgrade a 令和7年9月公表 target-form PDF to strict FY2026 success.",
+      "Do not treat adjacent 実務経験のある教員が担当する科目 PDF links as target confirmation forms.",
+      "Do not infer current target fiscal year from the generic support-system page title alone."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "data/prefecture-aggregators/artifacts/aichi.html",
+      "https://www.aiseikai-hc.or.jp/ai-kango/support/",
+      "https://www.aiseikai-hc.or.jp/ai-kango/support/pdf/support_system_2025.pdf",
+      "_temp/aiseikai-support-page.html",
+      "_temp/aiseikai-support-system-2025.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found an official-index-linked support page that lists 令和6年9月公表 and 令和7年9月公表 target-form PDFs, but no 令和8年度 target-form PDF. Source-side PDF text extraction verified 愛生会看護専門学校 and 様式第２号 in support_system_2025.pdf; the PDF body does not contain 令和8年度, so this case must remain publication_lag_latest_public for FY2026."
+  }
+}
