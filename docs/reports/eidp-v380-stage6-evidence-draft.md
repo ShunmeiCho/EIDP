@@ -13,7 +13,7 @@ running one uninterrupted production cycle.
 
 | Gate | Current result | Evidence |
 | --- | --- | --- |
-| Process gate / v1.0-rc | partial | v380 setup, diagnostics, browser render, read-only nav, Excel preview, R7 Excel download, URL-candidate write, audit flush, manual-entry write, SupportRecipient ingest smoke |
+| Process gate / v1.0-rc | partial | v380 setup, diagnostics, browser render, read-only nav, Excel preview, R7 Excel download, URL-candidate write, audit flush, manual-entry write, fiscal-year override write, SupportRecipient ingest smoke |
 | FY2026/R8 yield gate / v1.0 GA | fail | `ship_readiness_rc=1`, `strict_target_pdf_schools=0`, `operator_reviewable_schools=0`, `excel_ready_schools=0`, `estimated_manual_workload_rate=1.0` |
 | FY2025/R7 retroactive marker | pass for retroactive rehearsal only | `is_retroactive_fiscal_year=true`, `extracted_schools=2031`, `extracted_rate=0.84`, `retroactive_fiscal_year=2025`, `retroactive_ship_readiness_rc=0` |
 
@@ -101,10 +101,16 @@ Windows package. It does not prove the FY2026/R8 yield gate.
 | FY2026 operator-reviewable schools after fresh setup diagnostics | 0 |
 | FY2025 retroactive extracted schools | 2031 |
 | FY2025 retroactive extracted rate | 0.84 |
-| Fiscal-year override browser flow | not exercised as a write smoke in v380 evidence |
+| Fiscal-year override browser flow | pass in sandboxed browser write smoke |
 
 Notes: R7 retroactive evidence is valid as rolling-FY rehearsal evidence only.
 It must not be counted as FY2026/R8 current-year ship yield.
+
+Fiscal-year override browser example:
+
+| Document | From | To | Result |
+| --- | ---: | ---: | --- |
+| `https://example.com/eidp-v380-fiscal-override-smoke.pdf` | 2025 | 2026 | UI submitted `年度を確定` with reason `v380 UI fiscal override smoke`; `Document.fiscal_year=2026`, `fiscal_year_override=2026`; source FY2025 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows were demoted; new FY2026 current rows were inserted; real runtime DB had `0` matching document/department/audit rows |
 
 ### Step 3: Transcription / Manual Entry / OCR
 
@@ -160,6 +166,7 @@ SupportRecipient ingest example:
 | Audit log page display | pass in browser smoke |
 | URL-candidate rejection audit | pass; one `url_candidate_rejected` row in sandbox |
 | Manual-entry audit | pass; three `manual_entry` rows in sandbox |
+| Fiscal-year override audit | pass; four `fiscal_year_override` rows in sandbox for `department_yearly`, `support_recipient`, `school_year_status`, and `document` |
 | JSONL outbox flush | pass; `exported=1 already_present=0 failed=0` in sandbox |
 | Runtime DB mutation from sandbox tests | none observed for smoke markers |
 
@@ -172,7 +179,6 @@ SupportRecipient ingest example:
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
 | OCR add-on runtime proof on operator PC | missing in this evidence set |
-| Fiscal-year override browser write smoke | missing in v380 evidence set |
 | Task Scheduler registration query | missing in v380 evidence set |
 | Excel output file retained as signed artifact | missing |
 
