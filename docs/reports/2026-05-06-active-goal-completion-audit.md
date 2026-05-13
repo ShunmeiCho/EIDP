@@ -3,10 +3,54 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `2ec6d15881cd65bd5949462cb1fa5b6c3a36cce1` (`eidp-windows-v374.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `bcca8dfb7fd382afe2d1deb3eaab43056bb519e6` (`eidp-windows-v375.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V375 Fiscal-Year Context Cleanup and Shobi Latest-Public Case
+
+v375 (`bcca8df`) fixes the remaining fiscal-year-context edge after the v371
+heading-context repair. Strong context now requires explicit fiscal-year labels,
+page update/publication dates are weak context only, and preceding heading
+context is not carried across an intervening non-year block. This keeps a
+current-year handbook/syllabus section from lending its year to a previous-year
+target confirmation form while still preserving Nagano-style heading context
+when the heading directly owns the following form links.
+
+v375 also adds a manual-web / official-index-linked
+尚美ミュージックカレッジ専門学校 publication-lag case. The official-index matched
+site exposes a public-info page whose historical support-form list currently
+runs through R7/FY2025. Source-side PDF text verified the latest public target
+form contains the school name and `様式第２号` / `様式第2号`, but no FY2026
+evidence; strict download therefore remains `fiscal_year_mismatch:2025` for
+target FY2026 instead of being accepted as current-year success.
+
+Packaged discovery gold-set coverage rises to `43` entries, `16`
+publication-lag cases, `direct=10`, and
+`undemonstrated_pattern_sources=[]`; strict target-year successes remain `10`.
+`dist/eidp-windows-v375.zip` was rebuilt from clean commit
+`bcca8dfb7fd382afe2d1deb3eaab43056bb519e6` with SHA256
+`fa9a7c11f6d2f1efeadc4aa234965d733c8c45862f179e4e82dea65ac177ce4c`, and
+`dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
+passed with `--require-demonstrated-discovery-patterns` for both the versioned
+ZIP and latest alias.
+
+Verification: targeted heading/update-date context tests passed with
+`3 passed`; targeted stale-ordering tests passed with `3 passed`; the full PDF
+discovery unit module passed with `161 passed, 5 warnings`; discovery gold-set
+tests passed with `47 passed`; targeted Ruff and mypy passed; the full unit
+suite passed with `1377 passed, 5 warnings`; and the full non-Windows release
+gate returned `ok=true` with `1377 passed, 5 warnings` for the full unit suite,
+`133 passed` for the distribution-verifier suite, clean Ruff and mypy gates,
+package verification with `discovery_gold_set_entries=43`, and
+demonstrated-pattern verification. Bounded evidence replay also returned
+`ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact / `0`
+failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures. 愛生会,
+あいち福祉医療, and 尚美 are expectedly absent from those older bounded evidence
+JSONL files because they were added from fresh manual-web / official-index
+traces.
 
 ## 2026-05-13 V374 Aichi Syllabus Ordering Regression Guard
 
