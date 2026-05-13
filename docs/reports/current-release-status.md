@@ -2,20 +2,26 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v376.zip`
+Latest historical Mac-verifier-clean package: `dist/eidp-windows-v376.zip`
 Package commit: `d2402dcd52eeb7b9032aa7d4d30111485c37331b`
 Package SHA256: `8a7c9575394a37ee55ae8c566059385961cd70b8a06c768738a5529d7be9b2cd`
 Latest Windows-core-validated package: `dist/eidp-windows-v376.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v376.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v376.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
+Current source-contract package: pending rebuild after post-v376 verifier hardening
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v376 and passes the default
-macOS package verifier, including `--require-demonstrated-discovery-patterns`.
+The latest historical Mac-verifier-clean ZIP snapshot is v376 and passed the
+then-current default macOS package verifier, including
+`--require-demonstrated-discovery-patterns`. Post-v376 source commits add the
+中央動物 gold-set case, safe Windows data-migration runbook guidance, a runtime-
+data exclusion gate for ZIP contents, and a runbook-contract gate that requires
+that migration guidance to ship. Therefore the current source contract needs a
+new ZIP rebuild before it can be called Mac-verifier-clean again.
 The latest Windows setup proof is v376. The latest Windows bounded-bootstrap
 smoke is v376. The latest broader Windows bounded-bootstrap proof remains v342.
 v376 fixes a Windows-only diagnostics bug in the retroactive fiscal-year
@@ -275,12 +281,16 @@ without leaving a Streamlit process behind. This proves app server startup, not
 operator browser click-through.
 
 Post-v376 source-branch note: commit `e65021e` adds the manual-web / official-
-index-linked 中央動物専門学校 publication-lag case. The current source checkout
-therefore reports `44` discovery gold-set entries, `10` strict target-year
-successes, `17` publication-lag cases, `15` operator-review entries, and
-`undemonstrated_pattern_sources=[]`. This is source-only evidence until the next
-Windows ZIP rebuild; `dist/eidp-windows-v376.zip` remains the Windows-validated
-package snapshot with `43` packaged entries and `16` publication-lag cases.
+index-linked 中央動物専門学校 publication-lag case. Commits `044d188`,
+`4b872b0`, and `82570d9` then add safe data-migration guidance plus package
+verifier gates that reject mutable runtime data and stale runbook guidance.
+The current source checkout therefore reports `44` discovery gold-set entries,
+`10` strict target-year successes, `17` publication-lag cases, `15`
+operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
+enforcing a stricter ZIP hygiene contract. This is source-only evidence until
+the next Windows ZIP rebuild; `dist/eidp-windows-v376.zip` remains the
+Windows-validated package snapshot with `43` packaged entries and `16`
+publication-lag cases under the previous package contract.
 
 ## Objective Checklist
 
@@ -301,7 +311,8 @@ package snapshot with `43` packaged entries and `16` publication-lag cases.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v376 commands:
+Latest v376 commands (historical package-contract evidence before the
+post-v376 source verifier hardening):
 
 - `uv run pytest tests/unit/test_windows_packaging_spike.py::test_diagnose_bat_collects_operator_evidence_without_mutating_data tests/unit/test_windows_distribution_verifier.py::test_verify_core_zip_rejects_diagnose_without_retroactive_fiscal_year_snapshot tests/unit/test_windows_distribution_verifier.py::test_verify_core_zip_rejects_diagnose_with_parse_time_errorlevel_capture -q`
   -> `3 passed`
