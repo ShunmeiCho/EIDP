@@ -867,6 +867,32 @@ def test_verify_core_zip_rejects_current_fiscal_year_literals_in_pdf_discovery(t
     assert any("contains forbidden token: r8" in error for error in check.errors)
 
 
+@pytest.mark.parametrize(
+    "member",
+    [
+        "scripts/bootstrap_pdf_pipeline.py",
+        "scripts/run_weekly_target_year_discovery.py",
+        "scripts/validate_windows_install.py",
+        "src/eidp/pdf/extractor.py",
+        "src/eidp/reports/coverage.py",
+        "src/eidp/reports/gaps.py",
+        "src/eidp/reports/ship_readiness.py",
+    ],
+)
+def test_verify_core_zip_rejects_current_fiscal_year_literals_in_runtime_paths(
+    tmp_path: Path,
+    member: str,
+) -> None:
+    entries = _core_entries()
+    entries[member] = str(entries[member]) + "\n2026\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(f"{member} contains forbidden token: 2026" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_url_normalization_tracking_dedupe_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/scraper/url_normalization.py"] = "def normalize_candidate_url(url): return url\n"

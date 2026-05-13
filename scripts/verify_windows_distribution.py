@@ -1269,13 +1269,22 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "OCR add-on 未インストール",
         ),
     }
+    current_fy_literal_tokens = (
+        "2026",
+        "令和8",
+        "令和８",
+        "R8",
+    )
     forbidden_tokens: dict[str, tuple[str, ...]] = {
-        "scripts/run_weekly_target_year_discovery.py": ("export_excel",),
+        "scripts/bootstrap_pdf_pipeline.py": current_fy_literal_tokens,
+        "scripts/run_weekly_target_year_discovery.py": ("export_excel", *current_fy_literal_tokens),
+        "scripts/validate_windows_install.py": current_fy_literal_tokens,
+        "src/eidp/pdf/extractor.py": current_fy_literal_tokens,
+        "src/eidp/reports/coverage.py": current_fy_literal_tokens,
+        "src/eidp/reports/gaps.py": current_fy_literal_tokens,
+        "src/eidp/reports/ship_readiness.py": current_fy_literal_tokens,
         "src/eidp/scraper/pdf_discovery.py": (
-            "2026",
-            "令和8",
-            "令和８",
-            "R8",
+            *current_fy_literal_tokens,
             "r8",
             "renewalconfirmationapplication",
             "renewal-confirmation-application",
