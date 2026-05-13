@@ -37,12 +37,12 @@ running one uninterrupted production cycle.
 
 | Item | Record |
 | --- | --- |
-| Windows version | not captured |
-| Japanese locale | inferred from operator flow and source data; not explicitly captured |
-| Console encoding | not captured for v380 evidence; prior commands used UTF-8 safeguards where needed |
-| CPU cores | not captured |
-| RAM | not captured |
-| Free disk | not captured for this evidence draft |
+| Windows version | `Microsoft Windows 11 Pro`, version `10.0.26200`, build `26200`, `AMD64` process architecture |
+| Japanese locale | not Japanese; captured culture/UI/system locale were `zh-CN`; timezone was `Tokyo Standard Time` |
+| Console encoding | `chcp` reported code page `936` with mojibake over SSH; prior commands used UTF-8 safeguards where needed |
+| CPU cores | `13th Gen Intel(R) Core(TM) i9-13900HK`, `14` cores / `20` logical processors |
+| RAM | `32453` MB visible, `16503` MB free at capture time |
+| Free disk | `C:` size `1888.7` GB, free `1058.8` GB |
 | Defender state | not captured |
 | SmartScreen display | not captured |
 | Network | SSH from Mac to Windows host `win`; local browser tunnel used `127.0.0.1:18501 -> Windows 127.0.0.1:8501` |
@@ -57,6 +57,8 @@ running one uninterrupted production cycle.
 | After-setup validator | `ok=true`, no errors/warnings, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `wheel_count=78` |
 | Diagnostics | `logs\diagnostics-20260513-231923.txt` |
 | `eidp db-backup` smoke | backup opened successfully with `backup_objects=35`, `integrity=ok`, temp backup removed |
+| Environment capture | `2026-05-14T00:51:48+09:00`; host `JUNMING`; Windows 11 Pro; i9-13900HK; 32 GB RAM; `C:` free `1058.8` GB |
+| Task Scheduler query | task `EIDP Weekly Run` found, state `Ready`, action `"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"`, weekly trigger enabled from `2026-05-13T02:00:00`, last run `2026-05-11T02:00:00+09:00`, next run `2026-05-18T02:00:00+09:00`, last result `0` |
 | UI health | `/_stcore/health` returned `200 ok`; Streamlit `1.57.0`; cleanup `remaining_streamlit_processes=0` |
 | Browser render | Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `f6a5e6d` |
 | SSH tunnel note | `ssh -o ClearAllForwardings=no` was required because local `Host win` clears command-line forwards |
@@ -71,7 +73,7 @@ running one uninterrupted production cycle.
 | DB bootstrap | pass | `data\eidp.sqlite3`, `sqlite_integrity_check=ok` |
 | master import | pass | `school_count=2418` |
 | fiscal-year task bootstrap | pass | `school_fiscal_year_status_count=2418` |
-| Task Scheduler registration | not captured | no v380-specific scheduler query included in this evidence set |
+| Task Scheduler registration | pass | `EIDP Weekly Run` found in `Ready` state, action points at v380 `scripts\weekly_run.bat`, weekly trigger enabled |
 | `launch.bat` / Streamlit startup | pass | health smoke and browser render passed |
 | `学校別タスク` initial page | pass | title and target metrics rendered |
 | `詳細 operator` collapsed by default | pass | read-only nav smoke observed detail expander behavior |
@@ -179,7 +181,6 @@ SupportRecipient ingest example:
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
 | OCR add-on runtime proof on operator PC | missing in this evidence set |
-| Task Scheduler registration query | missing in v380 evidence set |
 | Excel output file retained as signed artifact | missing |
 
 ## 9. Release Decision
