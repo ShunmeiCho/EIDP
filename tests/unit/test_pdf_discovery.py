@@ -97,6 +97,34 @@ def test_current_year_target_form_is_prioritized_over_generic_current_year_discl
     assert ordered[0].pdf_url == "https://kohka-h.ac.jp/uploads/r8-youshiki2.pdf"
 
 
+def test_current_year_syllabus_does_not_outrank_previous_year_target_form() -> None:
+    html = """
+    <h3>2026年度</h3>
+    <ul>
+      <li><a href="./pdf/2026_syllabus-c.pdf">介護福祉学科シラバス（2026年度入学）</a></li>
+      <li><a href="./docs/2026_curriculum-pt.pdf">理学療法学科カリキュラムマップ（3ポリシー含む）</a></li>
+    </ul>
+    <h3>2025年度</h3>
+    <ul>
+      <li><a href="./pdf/2025_kakuninshinsei.pdf">大学等における修学の支援に関する法律第7条1項に係る確認申請書</a></li>
+      <li><a href="./pdf/2025_syllabus-c.pdf">介護福祉学科シラバス</a></li>
+    </ul>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "http://fukushi-iryo.denpa.jp/public-documents.html",
+        target_fiscal_year=2026,
+    )
+    for candidate in candidates:
+        _score_candidate(candidate, target_fiscal_year=2026)
+    ordered, dropped = _prioritize_viable_candidates(candidates, target_year=2026)
+
+    assert not dropped
+    assert ordered[0].pdf_url == "http://fukushi-iryo.denpa.jp/pdf/2025_kakuninshinsei.pdf"
+    assert _stale_fiscal_year_from_candidate_hint(ordered[0], target_year=2026) == 2025
+
+
 def test_prefecture_public_school_page_uses_heading_year_for_old_target_forms() -> None:
     html = """
     <p id="tmp_update">更新日：2025年7月16日</p>
