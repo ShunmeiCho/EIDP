@@ -2,7 +2,8 @@
 
 This script is for the Windows VM / operator-PC gates after ZIP extraction.
 It checks the evidence that should exist after setup and optionally after a
-weekly run. It does not execute Windows binaries.
+weekly run. It does not execute Windows binaries unless an explicit runtime
+smoke flag is used.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -749,6 +751,7 @@ def validate_install(
     after_weekly: bool = False,
     require_ship_gate: bool = False,
     require_ocr_addon: bool = False,
+    require_ocr_runtime: bool = False,
     require_playwright_addon: bool = False,
 ) -> InstallCheck:
     root = app_root.resolve()
@@ -876,11 +879,16 @@ def validate_install(
         if not run_logs:
             check.fail("missing logs/run-*.log after weekly run")
 
-    if require_ocr_addon:
-        if not _exists_file(root, "ocr-addon/tesseract/tesseract.exe"):
+    if require_ocr_addon or require_ocr_runtime:
+        tesseract_exe = root / "ocr-addon" / "tesseract" / "tesseract.exe"
+        tessdata_dir = root / "ocr-addon" / "tessdata"
+        jpn_traineddata = tessdata_dir / "jpn.traineddata"
+        if not tesseract_exe.is_file():
             check.fail("missing OCR add-on file: ocr-addon/tesseract/tesseract.exe")
-        if not _exists_file(root, "ocr-addon/tessdata/jpn.traineddata"):
+        if not jpn_traineddata.is_file():
             check.fail("missing OCR add-on file: ocr-addon/tessdata/jpn.traineddata")
+        if require_ocr_runtime and tesseract_exe.is_file() and jpn_traineddata.is_file():
+            _validate_ocr_runtime(check, tesseract_exe=tesseract_exe, tessdata_dir=tessdata_dir)
 
     if require_playwright_addon:
         if not _exists_dir(root, "playwright-addon/ms-playwright"):
@@ -895,6 +903,53 @@ def validate_install(
                 check.fail("missing Playwright add-on wheel: playwright-addon/wheelhouse/scrapling-*.whl")
 
     return check
+
+
+def _run_ocr_probe(check: InstallCheck, args: list[str], label: str) -> subprocess.CompletedProcess[str] | None:
+    try:
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            check=False,
+            encoding="utf-8",
+            errors="replace",
+            timeout=20,
+        )
+    except subprocess.TimeoutExpired:
+        check.fail(f"OCR runtime command timed out: {label}")
+        return None
+    except OSError as exc:
+        check.fail(f"OCR runtime command failed to start: {label}: {exc}")
+        return None
+    if result.returncode != 0:
+        stderr = result.stderr.strip().splitlines()
+        stdout = result.stdout.strip().splitlines()
+        snippet = (stderr or stdout or ["<no output>"])[0]
+        check.fail(f"OCR runtime command failed: {label} rc={result.returncode}: {snippet}")
+        return None
+    return result
+
+
+def _validate_ocr_runtime(check: InstallCheck, *, tesseract_exe: Path, tessdata_dir: Path) -> None:
+    check.details["ocr_tesseract_path"] = str(tesseract_exe)
+    check.details["ocr_tessdata_dir"] = str(tessdata_dir)
+
+    version = _run_ocr_probe(check, [str(tesseract_exe), "--version"], "tesseract --version")
+    if version is not None:
+        first_line = next((line.strip() for line in version.stdout.splitlines() if line.strip()), "")
+        check.details["ocr_tesseract_version"] = first_line
+
+    langs = _run_ocr_probe(
+        check,
+        [str(tesseract_exe), "--tessdata-dir", str(tessdata_dir), "--list-langs"],
+        "tesseract --list-langs",
+    )
+    if langs is None:
+        return
+    detected = [line.strip() for line in langs.stdout.splitlines() if line.strip() and not line.startswith("List of")]
+    check.details["ocr_tesseract_languages"] = detected
+    if "jpn" not in detected:
+        check.fail("OCR runtime language list missing jpn")
 
 
 def render_text(check: InstallCheck) -> str:
@@ -936,6 +991,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Fail after-bootstrap/after-weekly validation unless ship_gate_status is pass.",
     )
     parser.add_argument("--require-ocr-addon", action="store_true")
+    parser.add_argument(
+        "--require-ocr-runtime",
+        action="store_true",
+        help="Require OCR add-on files and execute packaged tesseract.exe runtime probes",
+    )
     parser.add_argument("--require-playwright-addon", action="store_true")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     args = parser.parse_args(argv)
@@ -947,6 +1007,7 @@ def main(argv: list[str] | None = None) -> int:
         after_weekly=args.after_weekly,
         require_ship_gate=args.require_ship_gate,
         require_ocr_addon=args.require_ocr_addon,
+        require_ocr_runtime=args.require_ocr_runtime,
         require_playwright_addon=args.require_playwright_addon,
     )
     print(check_to_json(check) if args.json else render_text(check))

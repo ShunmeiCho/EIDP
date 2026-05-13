@@ -358,9 +358,15 @@ C:\EIDP\ocr-addon\tesseract\tesseract.exe
 C:\EIDP\ocr-addon\tessdata\jpn.traineddata
 ```
 
-4. EIDP 画面を開いている場合は閉じます。
-5. `EIDP-start.bat` で起動し直します。
-6. `PDF確認・手入力` ページの OCR 表示を確認します。
+4. 必要に応じて runtime 検査を実行します。
+
+```powershell
+.\scripts\validate_install.bat --after-setup --require-ocr-runtime
+```
+
+5. EIDP 画面を開いている場合は閉じます。
+6. `EIDP-start.bat` で起動し直します。
+7. `PDF確認・手入力` ページの OCR 表示を確認します。
 
 OCR 自動実行の目安:
 

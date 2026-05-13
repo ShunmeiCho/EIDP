@@ -952,6 +952,57 @@ def test_validate_optional_ocr_addon(tmp_path: Path) -> None:
     assert present.ok, present.errors
 
 
+def test_validate_optional_ocr_runtime_executes_tesseract_and_requires_jpn(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    tesseract = root / "ocr-addon" / "tesseract" / "tesseract.exe"
+    tesseract.parent.mkdir(parents=True, exist_ok=True)
+    tesseract.write_text(
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "if '--version' in sys.argv:\n"
+        "    print('tesseract 5.4.0')\n"
+        "elif '--list-langs' in sys.argv:\n"
+        "    print('List of available languages in tessdata (2):')\n"
+        "    print('eng')\n"
+        "    print('jpn')\n"
+        "else:\n"
+        "    sys.exit(2)\n",
+        encoding="utf-8",
+    )
+    tesseract.chmod(0o755)
+    _write(root, "ocr-addon/tessdata/jpn.traineddata", b"jpn")
+
+    present = module.validate_install(root, require_ocr_runtime=True)
+
+    assert present.ok, present.errors
+    assert present.details["ocr_tesseract_version"] == "tesseract 5.4.0"
+    assert "jpn" in present.details["ocr_tesseract_languages"]
+
+
+def test_validate_optional_ocr_runtime_fails_when_jpn_not_listed(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    tesseract = root / "ocr-addon" / "tesseract" / "tesseract.exe"
+    tesseract.parent.mkdir(parents=True, exist_ok=True)
+    tesseract.write_text(
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "if '--version' in sys.argv:\n"
+        "    print('tesseract 5.4.0')\n"
+        "elif '--list-langs' in sys.argv:\n"
+        "    print('eng')\n"
+        "else:\n"
+        "    sys.exit(2)\n",
+        encoding="utf-8",
+    )
+    tesseract.chmod(0o755)
+    _write(root, "ocr-addon/tessdata/jpn.traineddata", b"jpn")
+
+    missing_lang = module.validate_install(root, require_ocr_runtime=True)
+
+    assert not missing_lang.ok
+    assert any("language list missing jpn" in error for error in missing_lang.errors)
+
+
 def test_validate_optional_playwright_addon(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
 
@@ -1010,6 +1061,10 @@ def test_vm_runbook_uses_packaged_validator_wrapper() -> None:
     assert (
         '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '
         "--after-setup --require-ocr-addon"
+    ) in body
+    assert (
+        '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '
+        "--after-setup --require-ocr-runtime"
     ) in body
     assert (
         '"C:\\Program Files\\EIDP\\scripts\\validate_install.bat" '

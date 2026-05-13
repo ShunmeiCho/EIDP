@@ -252,6 +252,7 @@ C:\Program Files\EIDP\ocr-addon\tessdata\jpn.traineddata
 
 ```text
 "C:\Program Files\EIDP\scripts\validate_install.bat" --after-setup --require-ocr-addon
+"C:\Program Files\EIDP\scripts\validate_install.bat" --after-setup --require-ocr-runtime
 ```
 
 3. UI を再起動する。

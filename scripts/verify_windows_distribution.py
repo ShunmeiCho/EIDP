@@ -937,6 +937,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "--after-bootstrap",
             "--after-weekly",
             "--require-ocr-addon",
+            "--require-ocr-runtime",
             "--require-playwright-addon",
             "last_run.json status must be success",
             "support_recipient",
