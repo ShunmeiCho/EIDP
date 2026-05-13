@@ -21,6 +21,7 @@ from eidp.scraper.pdf_discovery import (
     _extract_pdf_links,
     _has_fiscal_year_context,
     _has_target_application_hint,
+    _has_target_year_hint,
     _pre_download_rejection,
     _prioritize_viable_candidates,
     _score_candidate,
@@ -277,6 +278,30 @@ def test_extract_pdf_links_adds_table_header_context_for_generic_pdf_links() -> 
     assert "修学支援新制度" in application.anchor_text
     assert not _has_target_application_hint(subject)
     assert _has_target_application_hint(application)
+
+
+def test_extract_pdf_links_keeps_previous_support_year_statement_for_application_link() -> None:
+    html = """
+    <section>
+      <h2>高等教育の修学支援新制度</h2>
+      <p>本校は、令和8年度より高等教育の修学支援新制度における対象校となります。</p>
+      <p>※制度の詳細は文部科学省のホームページにてご確認ください</p>
+      <p>
+        <a href="/wp-content/themes/company/data/img/views/disclosure/kakunin-sinseisyo.pdf">
+          大学等における修学支援に関する法律第7条 第2項に掲げる要件（確認申請書様式 第2号）
+        </a>
+      </p>
+    </section>
+    """
+
+    candidates = _extract_pdf_links(html, "https://seijuji.jp/disclosure/", target_fiscal_year=2026)
+
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.pattern_type == "wordpress"
+    assert "令和8年度" in candidate.anchor_text
+    assert _has_target_application_hint(candidate)
+    assert _has_target_year_hint(candidate, target_year=2026)
 
 
 def test_pre_download_treats_o_hara_confirmation_column_as_old_target_form() -> None:

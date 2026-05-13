@@ -1219,6 +1219,24 @@ def _has_application_form_context(text: str) -> bool:
     )
 
 
+def _previous_support_fiscal_year_context(html: str, before: int) -> str:
+    """Return a nearby support-system paragraph that supplies fiscal-year context."""
+
+    window = html[max(0, before - 3000):before]
+    blocks = list(
+        re.finditer(
+            r"<(?:h[1-6]|p|li)\b[^>]*>.*?</(?:h[1-6]|p|li)\s*>",
+            window,
+            re.IGNORECASE | re.DOTALL,
+        )
+    )
+    for block in reversed(blocks):
+        text = _html_text(block.group(0))
+        if text and _has_fiscal_year_context(text) and _has_support_system_context(text):
+            return text
+    return ""
+
+
 def _html_table_cells(row_fragment: str) -> list[tuple[int, int, str]]:
     return [
         (match.start(), match.end(), match.group(0))
@@ -1322,6 +1340,12 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
         has_current_year_context = any(_has_fiscal_year_context(part) for part in parts)
         if previous_text and not has_current_year_context and _has_fiscal_year_context(previous_text):
             parts.append(previous_text)
+            has_current_year_context = True
+        if not has_current_year_context and anchor and _has_application_form_context(anchor):
+            support_year_text = _previous_support_fiscal_year_context(html, block_start)
+            if support_year_text and support_year_text not in parts:
+                parts.append(support_year_text)
+                has_current_year_context = True
         if tag == "tr":
             section_heading = _table_section_heading_context(html, block_start)
             if section_heading and section_heading not in parts:
@@ -1408,7 +1432,7 @@ def _pdf_url_from_meta_refresh_content(content: str, base_url: str) -> str | Non
     href = match.group(1).strip().strip("\"'")
     if not href or ".pdf" not in unquote(href).lower():
         return None
-    return urljoin(base_url, href)
+    return str(urljoin(base_url, href))
 
 
 def _pdf_urls_from_script_attribute(value: str, base_url: str) -> list[str]:
@@ -1525,15 +1549,15 @@ def _extract_pdf_links(
             content = _anchor_attr(m.group(1), "content")
             if not content:
                 continue
-            url = _pdf_url_from_meta_refresh_content(content, base_url)
-            if not url:
+            meta_url = _pdf_url_from_meta_refresh_content(content, base_url)
+            if not meta_url:
                 continue
-            pattern = _pdf_delivery_pattern(url, url, source="meta_refresh")
+            pattern = _pdf_delivery_pattern(meta_url, meta_url, source="meta_refresh")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,
                 PdfCandidate(
-                    pdf_url=url,
+                    pdf_url=meta_url,
                     page_url=base_url,
                     anchor_text=_html_title_text(html),
                     pattern_type=pattern,
