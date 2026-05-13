@@ -17,6 +17,17 @@ current-year yield.
 
 ## Recommended FY2025 Smoke
 
+For v364 and newer packages, `EIDP-diagnose.bat` automatically adds a read-only previous-year
+snapshot to the diagnostics log. With the default FY2026/R8 configuration, the log section
+`[retroactive fiscal-year ship readiness]` runs FY2025/R7 and records:
+
+- `retroactive_fiscal_year=2025`
+- the JSON output from `report ship-readiness --fy 2025 --json`
+- `retroactive_ship_readiness_rc`
+
+Use that section as the quickest operator-PC evidence. Use the explicit commands below when you need
+to run a full UI rehearsal with the whole process configured to the retroactive year.
+
 For PowerShell:
 
 ```powershell
