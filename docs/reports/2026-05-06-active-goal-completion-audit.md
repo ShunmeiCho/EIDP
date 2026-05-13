@@ -5312,3 +5312,17 @@ result was `inserted_delta=1`, `flush_stats.exported=1`,
 JSONL row preserved actor `codex-stage6-smoke`. The sandbox directory was
 removed after verification, and the current v376 runtime directory was left
 untouched.
+
+The audit chain was then exercised through the browser UI in a second
+disposable sandbox. `C:\Users\cyo20\EIDP-v376-ui-audit-sandbox` was seeded with
+one unexported `stage6_ui_audit_flush_smoke` `ManualActionLog` row, and the
+v376 Streamlit UI was started against that sandbox. The tunneled browser opened
+`詳細 operator` -> `監査ログ`, confirmed `JSONL outbox 未送信 1`, clicked
+`Outbox を flush`, and observed the success banner
+`exported=1 already_present=0 failed=0`; the row was visible in the UI as
+`stage6_ui_audit_flush_smoke` by `codex-ui-smoke`. A direct post-UI verification
+reported `pending=0`, `matching_db_rows=1`, `matching_exported_rows=1`,
+`matching_outbox_rows=1`, and `outbox_lines=1`. The remote sandbox, Streamlit
+process, SSH tunnel, and local Playwright temp directory were removed after the
+smoke, leaving only the current v376 runtime and transfer ZIP on the Windows
+host.

@@ -389,6 +389,18 @@ Latest v376 commands:
   `jsonl_exported_at_present=true`, `matching_outbox_rows=1`, and actor
   `codex-stage6-smoke`. The sandbox directory was removed afterward, and the
   current v376 runtime directory was not mutated.
+- Windows v376 browser UI audit-outbox flush smoke:
+  a second disposable sandbox `C:\Users\cyo20\EIDP-v376-ui-audit-sandbox`
+  seeded one unexported `stage6_ui_audit_flush_smoke` `ManualActionLog` row,
+  then started the v376 Streamlit UI against that sandbox. Through the SSH
+  tunnel, the browser opened `詳細 operator` -> `監査ログ`, verified
+  `JSONL outbox 未送信 1`, clicked `Outbox を flush`, and observed
+  `exported=1 already_present=0 failed=0` with the row visible as
+  `stage6_ui_audit_flush_smoke` by `codex-ui-smoke`. A direct post-UI DB/file
+  check reported `pending=0`, `matching_db_rows=1`,
+  `matching_exported_rows=1`, `matching_outbox_rows=1`, and `outbox_lines=1`.
+  The remote sandbox, Streamlit process, SSH tunnel, and local Playwright temp
+  files were removed afterward.
 - Windows v376 Saitama 5-site bounded backend smoke:
   `bootstrap_pdf_pipeline.py --pref saitama --url-search off
   --school-url-crawl off --skip-known-url-discovery --discovery-methods
