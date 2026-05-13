@@ -3,10 +3,31 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `34c34c9d36568e21749eafcc76aeba93cc914f8a` (`eidp-windows-v363.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `53fc2a3093567b470956794c09ce123a4d85a77d` (`eidp-windows-v364.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V364 Retroactive FY Diagnostics Snapshot
+
+v364 (`53fc2a3`) extends packaged Windows diagnostics for rolling-FY rehearsal.
+`scripts\diagnose.bat` now computes the configured target fiscal year minus
+one and runs `eidp report ship-readiness --fy <previous> --json`, writing both
+`retroactive_fiscal_year` and `retroactive_ship_readiness_rc` to the diagnostics
+log. The package verifier now requires this diagnostic section and rejects ZIPs
+that omit it. This gives the operator-PC handoff a read-only way to capture
+FY2025/R7 retroactive readiness evidence while preserving the rule that those
+numbers do not count as FY2026/R8 current-year yield.
+
+Verification: the targeted distribution-verifier regression tests passed, the
+full distribution-verifier suite passed with `90 passed`, targeted Ruff and
+mypy passed, and the full unit suite passed with `1370 passed, 5 warnings`.
+`dist/eidp-windows-v364.zip` was rebuilt from clean commit `53fc2a3` with
+SHA256 `9eb59b13e2360bad8b73fd5a3423a83bd6ca7b1ecc585a6a8f8d3207da073bed`.
+The full non-Windows release gate returned `ok=true`; bounded evidence replay
+returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact /
+`0` failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V363 Retroactive Fiscal-Year Readiness Markers
 
