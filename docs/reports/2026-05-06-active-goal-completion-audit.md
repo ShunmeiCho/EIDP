@@ -3,13 +3,14 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `90b64c583080011bb2cd94053fe82a51b0d66ca7` (`eidp-windows-v351.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `8f385f86e5a976b913d777ea80b56c00dc1c5ae7` (`eidp-windows-v352.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
 
 ## 2026-05-13 Source-Side DB Readiness Guard
 
+v352 (`8f385f8`) packages the source-side `db-info` readiness guard.
 `eidp db-info` now fails cleanly when it points at a local SQLite file that
 exists but has not been initialized. This matches the report-command behavior:
 the command exits with `rc=2`, prints an operator-actionable setup/import
@@ -18,7 +19,13 @@ Python traceback. Verification: `uv run python -m eidp.cli db-info` against the
 local uninitialized `data/eidp.sqlite3` produced the clean error path,
 `uv run pytest tests/unit/test_cli_reports.py tests/unit/test_windows_distribution_verifier.py -q`
 passed with `93 passed`, targeted Ruff and mypy passed, and the full unit suite
-passed with `1362 passed, 5 warnings`.
+passed with `1362 passed, 5 warnings`. `dist/eidp-windows-v352.zip` was then
+rebuilt from the clean commit with SHA256
+`2a8716d79cf2fcb42397bb126d90222ccf63e7fe72e38a3e303c5f9f6fbb5f25`; both the
+default package verifier and `--require-demonstrated-discovery-patterns`
+passed. The full non-Windows release gate returned `ok=true`, and bounded
+Tokyo/Saitama evidence replay returned `ok=true` with Tokyo evidence `4`
+exact / `0` failures and Saitama evidence `16` exact / `0` failures.
 
 ## 2026-05-13 Non-Windows Release Gate Helper
 
@@ -35,7 +42,7 @@ bounded Saitama/Tokyo evidence JSONL can be replayed without SSH Win access.
 The bounded replay gate allows missing entries because a bounded run only
 covers part of the gold-set, but it fails on failed or unexpected predictions.
 Verification: helper unit tests passed with `8 passed`, helper mypy passed,
-helper Ruff passed, the full v351 non-Windows gate run returned `ok=true`, and
+helper Ruff passed, the full v352 non-Windows gate run returned `ok=true`, and
 the evidence replay run returned `ok=true` with Tokyo evidence `4` exact /
 `0` failures and Saitama evidence `16` exact / `0` failures. The full unit
 suite passed with `1362 passed, 5 warnings`. A source-side ship-readiness read
