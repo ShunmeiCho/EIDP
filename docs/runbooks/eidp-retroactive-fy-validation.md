@@ -35,6 +35,13 @@ EIDP_TARGET_FISCAL_YEAR=2025 uv run eidp report coverage --json
 
 Record the output separately from the current-year Stage 6 evidence.
 
+In the `report ship-readiness --json` output, verify:
+
+- `fiscal_year` is the retroactive year under test, for example `2025`.
+- `calendar_current_fiscal_year` is the real current Japanese fiscal year.
+- `is_retroactive_fiscal_year` is `true`.
+- `is_configured_target_fiscal_year` is `false` when `--fy 2025` is used against a normal current-year install.
+
 ## Stage 6 Interpretation
 
 If FY2025 passes the operator workflow:

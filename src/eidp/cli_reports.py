@@ -10,6 +10,8 @@ from typing import Any, NoReturn
 import typer
 from sqlalchemy.exc import SQLAlchemyError
 
+from eidp.config import settings
+from eidp.fiscal_year import current_fiscal_year
 from eidp.reports.coverage import PrefectureCoverage
 
 report_app = typer.Typer(name="report", help="Acceptance-criteria reports")
@@ -280,6 +282,11 @@ def report_ship_readiness(
         typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
         typer.echo(f"FY: {report.fiscal_year}  school_type: {report.school_type or 'all'}")
+        if payload["is_retroactive_fiscal_year"]:
+            typer.echo(
+                "Evidence scope: retroactive fiscal-year validation "
+                f"(calendar_current_fiscal_year={payload['calendar_current_fiscal_year']})"
+            )
         typer.echo(f"Operator-review status: {'pass' if report.ok_operator_review else 'missing'}")
         typer.echo(f"Strict data status: {'pass' if report.ok_strict else 'missing'}")
         typer.echo(
@@ -300,11 +307,16 @@ def report_ship_readiness(
 
 
 def _ship_readiness_to_dict(report: Any) -> dict[str, object]:
+    calendar_current_fy = current_fiscal_year()
     return {
         "ok": report.ok,
         "ok_operator_review": report.ok_operator_review,
         "ok_strict": report.ok_strict,
         "fiscal_year": report.fiscal_year,
+        "configured_target_fiscal_year": int(settings.target_fiscal_year),
+        "calendar_current_fiscal_year": calendar_current_fy,
+        "is_configured_target_fiscal_year": report.fiscal_year == int(settings.target_fiscal_year),
+        "is_retroactive_fiscal_year": report.fiscal_year < calendar_current_fy,
         "school_type": report.school_type,
         "total_schools": report.total_schools,
         "strict_target_pdf_schools": report.strict_target_pdf_schools,

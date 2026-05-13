@@ -994,6 +994,9 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "report query failed; database is not initialized or the schema is incomplete",
             "ok_operator_review",
             "ok_strict",
+            "configured_target_fiscal_year",
+            "calendar_current_fiscal_year",
+            "is_retroactive_fiscal_year",
         ),
         "src/eidp/cli_tools.py": (
             "register_tool_commands",

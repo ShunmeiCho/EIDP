@@ -140,6 +140,61 @@ def test_report_ship_readiness_json_uses_operator_review_gate(monkeypatch) -> No
     assert fake_session.closed is True
 
 
+def test_report_ship_readiness_json_marks_retroactive_fiscal_year(monkeypatch) -> None:
+    fake_session = FakeSession()
+
+    import eidp.cli_reports as cli_reports
+    import eidp.db.session as db_session
+    import eidp.reports.ship_readiness as ship_readiness
+
+    seen_kwargs: dict[str, object] = {}
+
+    def fake_compute_ship_readiness(*_args, **kwargs):  # noqa: ANN002, ANN003
+        seen_kwargs.update(kwargs)
+        operator_review_criteria = (
+            ShipReadinessCriterion("estimated_manual_workload", 0.2, 0.3, True),
+        )
+        strict_data_criteria = (
+            ShipReadinessCriterion("excel_ready", 0.7, 0.6, True),
+        )
+        return ShipReadinessReport(
+            fiscal_year=int(kwargs["fiscal_year"]),
+            school_type="専門学校",
+            total_schools=10,
+            strict_target_pdf_schools=7,
+            strict_target_pdf_rate=0.7,
+            operator_reviewable_schools=8,
+            operator_reviewable_rate=0.8,
+            estimated_manual_workload_rate=0.2,
+            excel_ready_schools=7,
+            excel_ready_rate=0.7,
+            extracted_schools=7,
+            extracted_rate=0.7,
+            strict_auto_target_pdf_min=0.6,
+            manual_workload_max=0.3,
+            operator_review_criteria=operator_review_criteria,
+            strict_data_criteria=strict_data_criteria,
+            criteria=operator_review_criteria + strict_data_criteria,
+        )
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(ship_readiness, "compute_ship_readiness", fake_compute_ship_readiness)
+    monkeypatch.setattr(cli_reports, "current_fiscal_year", lambda: 2026)
+    monkeypatch.setattr(cli_reports.settings, "target_fiscal_year", 2026)
+
+    result = CliRunner().invoke(app, ["report", "ship-readiness", "--fy", "2025", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert seen_kwargs["fiscal_year"] == 2025
+    assert payload["fiscal_year"] == 2025
+    assert payload["configured_target_fiscal_year"] == 2026
+    assert payload["calendar_current_fiscal_year"] == 2026
+    assert payload["is_configured_target_fiscal_year"] is False
+    assert payload["is_retroactive_fiscal_year"] is True
+    assert fake_session.closed is True
+
+
 def test_report_ship_readiness_json_can_fail_when_operator_review_gate_missing(monkeypatch) -> None:
     fake_session = FakeSession()
 
