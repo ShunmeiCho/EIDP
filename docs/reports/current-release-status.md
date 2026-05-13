@@ -267,7 +267,11 @@ after-setup validation returned `ok=true`, and `EIDP-diagnose.bat` wrote
 `sqlite_integrity_check=ok`, `ship_readiness_rc=1` for FY2026, and a successful
 FY2025 retroactive section with `is_retroactive_fiscal_year=true`,
 `extracted_schools=2031`, `extracted_rate=0.84`, and
-`retroactive_ship_readiness_rc=0`.
+`retroactive_ship_readiness_rc=0`. A separate Windows service-level UI smoke
+started Streamlit headless from the v376 virtualenv on `127.0.0.1:8501`,
+received `200 ok` from `/_stcore/health`, and then stopped the smoke process
+without leaving a Streamlit process behind. This proves app server startup, not
+operator browser click-through.
 
 ## Objective Checklist
 
@@ -280,7 +284,7 @@ FY2025 retroactive section with `is_retroactive_fiscal_year=true`,
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
 | ManualActionLog audit for operator actions | v342 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v339/v340/v341/v342 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v376 ZIP verifies clean on macOS packaging gate; v376 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v376-d2402dc`, and `EIDP-setup.bat` plus standalone after-setup validation completed successfully; `EIDP-diagnose.bat` now records the FY2025 retroactive readiness JSON and `retroactive_ship_readiness_rc=0`; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v376 ZIP verifies clean on macOS packaging gate; v376 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v376-d2402dc`, and `EIDP-setup.bat` plus standalone after-setup validation completed successfully; `EIDP-diagnose.bat` now records the FY2025 retroactive readiness JSON and `retroactive_ship_readiness_rc=0`; v376 headless Streamlit startup returned `200 ok` on `/_stcore/health`; browser UI click-through remains unverified | Backend Win setup and app-server startup proof present, UI click-through proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -312,6 +316,12 @@ Latest v376 commands:
   retroactive FY2025 snapshot recorded `is_retroactive_fiscal_year=true`,
   `extracted_schools=2031`, `extracted_rate=0.84`,
   `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`.
+- Windows v376 UI service smoke:
+  `.venv\Scripts\python.exe -m streamlit run src\eidp\review\app.py
+  --server.port 8501 --server.address 127.0.0.1 --server.headless true`
+  started successfully; `http://127.0.0.1:8501/_stcore/health` returned
+  `200 ok`; the smoke process was stopped, and a follow-up process check found
+  no remaining Streamlit process.
 - Windows cleanup after v376 proof removed stale
   `C:\Users\cyo20\EIDP-v375-bcca8df`; remaining EIDP directories are
   `EIDP-transfer`, `EIDP-v342-de2cfed`, and `EIDP-v376-d2402dc`.

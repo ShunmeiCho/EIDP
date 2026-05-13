@@ -37,6 +37,12 @@ with `ship_readiness_rc=1`, while the FY2025 retroactive section recorded
 `extracted_rate=0.84`, `retroactive_fiscal_year=2025`, and
 `retroactive_ship_readiness_rc=0`.
 
+A separate v376 Windows service-level UI smoke started Streamlit headless from
+the packaged virtualenv on `127.0.0.1:8501`, received `200 ok` from
+`/_stcore/health`, then stopped the smoke process and confirmed no Streamlit
+process remained. This proves app-server startup on Windows without replacing
+the still-missing operator browser click-through evidence.
+
 After the v376 proof, stale Windows directory
 `C:\Users\cyo20\EIDP-v375-bcca8df` was removed. The Windows host now retains
 only `EIDP-transfer`, the historical v342 proof directory, and the current
@@ -47,7 +53,8 @@ Verification: targeted diagnose/verifier regression tests passed with
 `3 passed`; targeted Ruff passed; the v376 versioned ZIP and latest alias both
 passed `scripts/verify_windows_distribution.py
 --require-demonstrated-discovery-patterns`; Windows setup, standalone
-after-setup validation, and diagnose all passed as described above.
+after-setup validation, diagnose, and headless Streamlit health check all
+passed as described above.
 
 ## 2026-05-13 V375 Fiscal-Year Context Cleanup and Shobi Latest-Public Case
 
