@@ -25,6 +25,7 @@
     "pdf_url": "https://www.movie.ac.jp/wp-content/themes/movie/school/public_info/pdf/conf-apl.pdf",
     "pdf_type": "image_only",
     "fiscal_year": null,
+    "pattern_type": "wordpress",
     "strict_target_year_success": false
   },
   "automation_pattern": {

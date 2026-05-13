@@ -31,7 +31,12 @@ def test_summarize_discovery_gold_entries_tracks_release_relevant_buckets() -> N
     assert summary.strict_target_year_successes == 4
     assert summary.operator_review_entries == 15
     assert summary.publication_lag_entries == 10
-    assert summary.pattern_source_counts == {"direct": 1, "embed": 1, "wordpress_download_manager": 1}
+    assert summary.pattern_source_counts == {
+        "direct": 2,
+        "embed": 1,
+        "wordpress": 2,
+        "wordpress_download_manager": 1,
+    }
     assert "table_header_confirmation_application" in summary.site_families
 
 

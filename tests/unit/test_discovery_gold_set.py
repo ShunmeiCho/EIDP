@@ -106,8 +106,18 @@ def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:
     assert render_discovery_gold_predictions(predictions) == (
         GOLD_SET_DIR / "expected-predictions.jsonl"
     ).read_text(encoding="utf-8")
-    assert summary.pattern_type_counts == {"direct": 1, "embed": 1, "wordpress_download_manager": 1}
-    assert summary.pattern_source_counts == {"direct": 1, "embed": 1, "wordpress_download_manager": 1}
+    assert summary.pattern_type_counts == {
+        "direct": 2,
+        "embed": 1,
+        "wordpress": 2,
+        "wordpress_download_manager": 1,
+    }
+    assert summary.pattern_source_counts == {
+        "direct": 2,
+        "embed": 1,
+        "wordpress": 2,
+        "wordpress_download_manager": 1,
+    }
     assert "onclick" in summary.undemonstrated_pattern_sources
     assert "embed" not in summary.undemonstrated_pattern_sources
     assert "wordpress_download_manager" not in summary.undemonstrated_pattern_sources

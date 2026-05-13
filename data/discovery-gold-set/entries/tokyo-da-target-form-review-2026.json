@@ -25,6 +25,7 @@
     "pdf_url": "https://www.da-tokyo.ac.jp/wp-content/themes/da-tokyo/static/assets/images/school/pdf/check-da.pdf",
     "pdf_type": "target",
     "fiscal_year": null,
+    "pattern_type": "wordpress",
     "strict_target_year_success": false
   },
   "automation_pattern": {

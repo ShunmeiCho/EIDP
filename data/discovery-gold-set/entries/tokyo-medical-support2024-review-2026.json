@@ -25,6 +25,7 @@
     "pdf_url": "https://www.tokyo-medical.ac.jp/assets/doc/about/schooling_support/support2024.pdf",
     "pdf_type": "target",
     "fiscal_year": null,
+    "pattern_type": "direct",
     "strict_target_year_success": false
   },
   "automation_pattern": {
