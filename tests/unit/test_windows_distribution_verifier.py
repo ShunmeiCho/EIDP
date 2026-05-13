@@ -163,6 +163,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "EIDP-setup.bat": (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8"),
         "EIDP-start.bat": (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8"),
         "EIDP-diagnose.bat": (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8"),
+        "EIDP-stage6-recovery.bat": (REPO_ROOT / "EIDP-stage6-recovery.bat").read_text(encoding="utf-8"),
         "README.md": "# EIDP\n",
         "requirements-windows.txt": "structlog\njsonschema>=4.0,<5.0\n",
         "pyproject.toml": "[project]\nname='eidp'\n",
@@ -177,6 +178,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "対象年度を変更して保存すると、学校別タスクも同時に再計算されます\n"
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
             "logs\\stage6-recovery-*.json\n"
+            "EIDP-stage6-recovery.bat\n"
             "scripts\\stage6_recovery_check.bat\n"
             "アンチウイルスにより隔離された\n"
             "新しい ZIP へ更新する場合\n"
@@ -427,6 +429,7 @@ def test_verify_core_zip_requires_root_launchers(tmp_path: Path) -> None:
     entries.pop("EIDP-setup.bat")
     entries.pop("EIDP-start.bat")
     entries.pop("EIDP-diagnose.bat")
+    entries.pop("EIDP-stage6-recovery.bat")
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
@@ -435,6 +438,7 @@ def test_verify_core_zip_requires_root_launchers(tmp_path: Path) -> None:
     assert any("EIDP-setup.bat" in error for error in check.errors)
     assert any("EIDP-start.bat" in error for error in check.errors)
     assert any("EIDP-diagnose.bat" in error for error in check.errors)
+    assert any("EIDP-stage6-recovery.bat" in error for error in check.errors)
 
 
 def test_verify_core_zip_validates_root_launcher_contract(tmp_path: Path) -> None:
@@ -449,6 +453,20 @@ def test_verify_core_zip_validates_root_launcher_contract(tmp_path: Path) -> Non
 
     assert not check.ok
     assert any("EIDP-start.bat missing required token" in error for error in check.errors)
+
+
+def test_verify_core_zip_validates_root_stage6_recovery_launcher_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["EIDP-stage6-recovery.bat"] = entries["EIDP-stage6-recovery.bat"].replace(
+        'call "%~dp0scripts\\stage6_recovery_check.bat" %*',
+        'call "%~dp0scripts\\missing_recovery.bat" %*',
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("EIDP-stage6-recovery.bat missing required token" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_macos_wheel(tmp_path: Path) -> None:

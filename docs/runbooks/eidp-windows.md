@@ -6,6 +6,8 @@
 
 通常は `C:\EIDP` 直下の `EIDP-setup.bat` と `EIDP-start.bat` だけを使います。
 問題が起きた場合だけ `EIDP-diagnose.bat` で診断ファイルを作成します。
+Stage 6 検証が SSH 不安定化で中断した場合だけ `EIDP-stage6-recovery.bat`
+で復旧確認ファイルを作成します。
 `scripts\*.bat` は管理者向けの詳細入口です。
 
 このランブックは Windows 版 EIDP の業務手順です。ターミナル、SSH、SQL の操作は不要です。
@@ -641,14 +643,21 @@ Mac 側から実行できない場合は、Windows 側でこの `.bat` を実行
 `logs\stage6-recovery-*.json` を回収する:
 
 ```powershell
-.\scripts\stage6_recovery_check.bat
+.\EIDP-stage6-recovery.bat
 ```
 
 上記は現在開いている EIDP フォルダの `scripts\weekly_run.bat` を期待値として
-確認する。別の本番 runtime に戻すべきか確認する場合は、期待する action を明示する:
+確認し、画面を閉じる前に結果を読める。管理者がコンソールから実行する場合は、
+同じ処理を下位 wrapper でも実行できる:
 
 ```powershell
-.\scripts\stage6_recovery_check.bat "C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
+.\scripts\stage6_recovery_check.bat
+```
+
+別の本番 runtime に戻すべきか確認する場合は、期待する action を明示する:
+
+```powershell
+.\EIDP-stage6-recovery.bat "C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
 ```
 
 Python helper を直接実行する場合:

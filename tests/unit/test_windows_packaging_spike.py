@@ -409,6 +409,7 @@ def test_root_launchers_delegate_to_script_contracts():
     setup = (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8")
     start = (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8")
     diagnose = (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8")
+    stage6_recovery = (REPO_ROOT / "EIDP-stage6-recovery.bat").read_text(encoding="utf-8")
 
     assert 'cd /d "%~dp0"' in setup
     assert 'call "%~dp0scripts\\first_setup.bat"' in setup
@@ -427,6 +428,12 @@ def test_root_launchers_delegate_to_script_contracts():
     assert "Diagnostics collected" in diagnose
     assert "pause" in diagnose
     assert "endlocal & exit /b %RC%" in diagnose
+
+    assert 'cd /d "%~dp0"' in stage6_recovery
+    assert 'call "%~dp0scripts\\stage6_recovery_check.bat" %*' in stage6_recovery
+    assert "Stage 6 recovery check passed" in stage6_recovery
+    assert "pause" in stage6_recovery
+    assert "endlocal & exit /b %RC%" in stage6_recovery
 
 
 def test_diagnose_bat_collects_operator_evidence_without_mutating_data(bat_files: dict[str, str]):
@@ -721,6 +728,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "EIDP-setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-start.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-diagnose.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "EIDP-stage6-recovery.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts").mkdir()
     (fake_repo / "scripts" / "first_setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "diagnose.bat").write_text("@echo off", encoding="utf-8")
@@ -833,6 +841,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "EIDP-diagnose.bat" in arcs, (
         "root-level diagnostics launcher must be in the Windows ZIP so operators "
         "can collect evidence without browsing into scripts/"
+    )
+    assert "EIDP-stage6-recovery.bat" in arcs, (
+        "root-level Stage 6 recovery launcher must be in the Windows ZIP so operators "
+        "can collect SSH recovery evidence without browsing into scripts/"
     )
     assert ".streamlit/config.toml" in arcs, (
         "Streamlit config must ship at app root to keep the operator UI headless "
