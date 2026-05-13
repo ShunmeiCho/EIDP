@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v350.zip`
-Package commit: `ac54605b0a57b94fe4b0467a74f942f3919b4f0f`
-Package SHA256: `f6c450576202409f82e524f708b62ae6174e70281e87cf411022bc8109fc6dae`
+Current Mac-verifier-clean package: `dist/eidp-windows-v351.zip`
+Package commit: `90b64c583080011bb2cd94053fe82a51b0d66ca7`
+Package SHA256: `e97d1e58360e87ededa219846a80145aed0242a5d1d1f1f6d64a6403476a94fc`
 Latest Windows-core-validated package: `dist/eidp-windows-v342.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v342.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -13,7 +13,7 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v350 and passes the default
+The current Mac-verifier-clean ZIP snapshot is v351 and passes the default
 macOS package verifier, including `--require-demonstrated-discovery-patterns`.
 The latest Windows setup and bounded-bootstrap proof remains v342.
 v341 keeps the v326 strict-mode fix for opaque WordPress Download
@@ -85,14 +85,16 @@ Tokyo Sanko publication-lag regression from the v348 Tokyo 20-site strict smoke,
 raising the packaged discovery gold-set to `32` entries while keeping strict
 target-PDF auto-success unchanged at `4`. v350 rebuilds the same runtime/data
 package after the seed-count test contract update and remains clean under the
-broadened rolling-FY package verifier guard.
+broadened rolling-FY package verifier guard. v351 rebuilds the package after
+keeping the Windows validator/distribution verifier typing gate clean; runtime
+discovery data is unchanged from v350.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v342 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v350 verifier clean by default; discovery gold-set `32` entries; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield failing |
+| Discover and download current target-FY PDFs in strict mode | v351 verifier clean by default; discovery gold-set `32` entries; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield failing |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `11` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
@@ -103,7 +105,7 @@ broadened rolling-FY package verifier guard.
 
 ## Current Non-Windows Evidence
 
-Commands run for v350/v342 source/package:
+Commands run for v351/v342 source/package:
 
 - `uv run pytest tests/unit -q` -> `1353 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_windows_distribution_verifier.py -q` -> `247 passed, 5 warnings`
@@ -146,6 +148,17 @@ Commands run for v350/v342 source/package:
   SHA256 `f6c450576202409f82e524f708b62ae6174e70281e87cf411022bc8109fc6dae`.
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v350.zip --require-demonstrated-discovery-patterns`
   -> `OK core`, with `discovery_gold_undemonstrated_pattern_sources=[]`.
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v351.zip`
+  -> wrote `dist/eidp-windows-v351.zip` and checksum sidecar.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v351.zip`
+  -> `OK core`, build commit
+  `90b64c583080011bb2cd94053fe82a51b0d66ca7`, `git_dirty=false`,
+  `discovery_gold_set_entries=32`, `discovery_gold_expected_predictions=32`,
+  `discovery_gold_undemonstrated_pattern_sources=[]`,
+  `discovery_gold_pattern_sources={'direct': 3, 'embed': 1, 'wordpress': 2, 'wordpress_download_manager': 1}`,
+  SHA256 `e97d1e58360e87ededa219846a80145aed0242a5d1d1f1f6d64a6403476a94fc`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v351.zip --require-demonstrated-discovery-patterns`
+  -> `OK core`, with `discovery_gold_undemonstrated_pattern_sources=[]`.
 - Source-side v348 strict Tokyo repeat on a copy of the v342 Tokyo aggregate DB:
   `EIDP_DATABASE_URL=sqlite:///$PWD/_temp/v348-mac-tokyo20/eidp.sqlite3 EIDP_DATA_DIR=$PWD/_temp/v348-mac-tokyo20/data uv run eidp discover-pdfs --storage-dir _temp/v348-mac-tokyo20/pdfs --batch-size 20 --rate-limit 0.2 --request-timeout 12 --discovery-method prefecture_aggregator --evidence-log _temp/v348-mac-tokyo20/discovery_rejections.jsonl`
   -> `crawled=20`, `found=20`, `downloaded=0`, `failed=4`,
@@ -187,11 +200,11 @@ Post-v342 source-side gold-set expansion:
 - This source-side evidence, the Excel preview threshold-label fix, and the
   Tokyo pattern-type regression contract, the Tokyo Sanko publication-lag
   regression, and the default isolation of synthetic-only extractor sources are
-  packaged into the new Mac-verifier-clean `dist/eidp-windows-v350.zip`.
+  packaged into the new Mac-verifier-clean `dist/eidp-windows-v351.zip`.
   It still requires a future Windows extraction
   and setup run before it can replace v342 as Windows-setup-proven.
 
-v350 verifier exposes the current production-pattern demonstration status:
+v351 verifier exposes the current production-pattern demonstration status:
 
 - Discovery gold-set entries: `32`
 - Outcome distribution: `accepted_target_pdf=4`, `needs_operator_review=15`,

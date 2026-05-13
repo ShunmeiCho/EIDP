@@ -3,14 +3,37 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `ac54605b0a57b94fe4b0467a74f942f3919b4f0f` (`eidp-windows-v350.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `90b64c583080011bb2cd94053fe82a51b0d66ca7` (`eidp-windows-v351.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
 
+## 2026-05-13 V351 Validator Typing Gate And Package Rebuild
+
+v351 (`90b64c5`) keeps the Windows install validator and Windows distribution
+verifier typing gate clean by removing a stale `type: ignore` from
+`scripts/validate_windows_install.py`. The change has no behavioral impact on
+the ship-gate calculation, but it prevents the validator/verifier pair from
+regressing as a non-Windows static release gate. Verification:
+`uv run mypy scripts/validate_windows_install.py scripts/verify_windows_distribution.py`
+passed, targeted Ruff passed, validator/verifier unit tests passed with
+`131 passed`, and the full unit suite passed with `1353 passed, 5 warnings`.
+
+`dist/eidp-windows-v351.zip` was rebuilt from that clean commit and passes both
+the default package verifier and `--require-demonstrated-discovery-patterns`.
+The verifier reports `discovery_gold_set_entries=32`,
+`discovery_gold_expected_predictions=32`,
+`discovery_gold_undemonstrated_pattern_sources=[]`, and demonstrated pattern
+sources `direct=3`, `embed=1`, `wordpress=2`, and
+`wordpress_download_manager=1`. SHA256:
+`e97d1e58360e87ededa219846a80145aed0242a5d1d1f1f6d64a6403476a94fc`.
+
+The latest Windows setup and bounded-bootstrap proof remains v342
+(`de2cfed`). Browser UI operator click-through remains unverified.
+
 ## 2026-05-13 V350 Current Package And Discovery Gold Reproducibility
 
-v350 (`ac54605`) is the current Mac-verifier-clean ZIP. It packages the
+v350 (`ac54605`) was the Mac-verifier-clean ZIP before v351. It packages the
 32-entry discovery gold-set, including the source-side Tokyo Sanko
 publication-lag case added from the v348 Tokyo 20-site strict discovery smoke.
 The package verifier passes both default and
