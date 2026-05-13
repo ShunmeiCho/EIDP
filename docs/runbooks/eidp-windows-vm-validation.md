@@ -246,6 +246,7 @@ C:\Program Files\EIDP
 ```text
 C:\Program Files\EIDP\ocr-addon\tesseract\tesseract.exe
 C:\Program Files\EIDP\ocr-addon\tessdata\jpn.traineddata
+C:\Program Files\EIDP\ocr-addon\tessdata\configs\tsv
 ```
 
 機械検査:
@@ -272,6 +273,7 @@ C:\Program Files\EIDP\ocr-addon\tessdata\jpn.traineddata
 
 - Tesseract subprocess が実行できる
 - `jpn.traineddata` が見つかる
+- `tessdata\configs\tsv` が見つかり、TSV confidence 出力が使える
 - OCR 結果が DB と UI に反映される
 - 低 confidence が Excel に流入しない
 

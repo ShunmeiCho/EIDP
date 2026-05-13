@@ -356,9 +356,11 @@ Excel が開いたまま再出力した場合:
 ```text
 C:\EIDP\ocr-addon\tesseract\tesseract.exe
 C:\EIDP\ocr-addon\tessdata\jpn.traineddata
+C:\EIDP\ocr-addon\tessdata\configs\tsv
 ```
 
-4. 必要に応じて runtime 検査を実行します。
+4. 必要に応じて runtime 検査を実行します。`--require-ocr-runtime` は
+   `tesseract.exe` の実行、`jpn` 言語、TSV 出力用 config を確認します。
 
 ```powershell
 .\scripts\validate_install.bat --after-setup --require-ocr-runtime
@@ -445,6 +447,7 @@ Excel で同じファイルを開いている可能性があります。Excel �
 ```text
 C:\EIDP\ocr-addon\tesseract\tesseract.exe
 C:\EIDP\ocr-addon\tessdata\jpn.traineddata
+C:\EIDP\ocr-addon\tessdata\configs\tsv
 ```
 
 ファイルがない場合は、OCR add-on ZIP をもう一度 `C:\EIDP` に解凍してください。
@@ -472,6 +475,10 @@ uv run python scripts/verify_windows_distribution.py dist/eidp-windows.zip \
   --playwright-addon dist/eidp-playwright-addon-windows.zip \
   --json > dist/windows-distribution-verification.json
 ```
+
+OCR add-on を配布する場合、verifier は `ocr-addon\tessdata\configs\tsv`
+も確認します。この file がないと Tesseract は実行できても TSV 形式の
+OCR confidence を返せません。
 
 任意 add-on を配布しない場合は、その引数を省略します。
 
