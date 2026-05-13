@@ -8,6 +8,19 @@ Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d8
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
 
+## 2026-05-13 Non-Windows Release Gate Helper
+
+`scripts/run_non_windows_release_gates.py` now provides a repeatable developer
+entrypoint for the source/package checks that can run before Windows setup:
+validator/distribution unit tests, validator/distribution mypy and Ruff,
+discovery gold-set summary, expected-prediction replay, package verification,
+demonstrated-pattern package verification, and SHA256 sidecar matching. This
+does not replace Windows setup or browser UI E2E; it only makes the pre-Windows
+gate reproducible from a single command. Verification: helper unit tests passed
+with `4 passed`, helper mypy passed, helper Ruff passed, the fast v351 gate
+run returned `ok=true`, and the full unit suite passed with
+`1357 passed, 5 warnings`.
+
 ## 2026-05-13 V351 Validator Typing Gate And Package Rebuild
 
 v351 (`90b64c5`) keeps the Windows install validator and Windows distribution

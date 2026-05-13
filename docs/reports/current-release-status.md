@@ -107,7 +107,15 @@ discovery data is unchanged from v350.
 
 Commands run for v351/v342 source/package:
 
-- `uv run pytest tests/unit -q` -> `1353 passed, 5 warnings`
+- `uv run pytest tests/unit -q` -> `1357 passed, 5 warnings`
+- `uv run pytest tests/unit/test_non_windows_release_gates.py -q`
+  -> `4 passed`
+- `uv run mypy scripts/run_non_windows_release_gates.py`
+  -> `Success: no issues found in 1 source file`
+- `uv run ruff check scripts/run_non_windows_release_gates.py tests/unit/test_non_windows_release_gates.py`
+  -> `All checks passed`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v351.zip --skip-full-unit --json --output _temp/v351-non-windows-release-gates.json`
+  -> `ok=true`, SHA256 sidecar matched, and all fast non-Windows gates passed
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_windows_distribution_verifier.py -q` -> `247 passed, 5 warnings`
 - `uv run pytest tests/unit/test_windows_distribution_verifier.py -q` -> `89 passed`
 - `uv run pytest tests/unit/test_windows_install_validator.py tests/unit/test_windows_distribution_verifier.py -q`
