@@ -64,18 +64,30 @@ than the health check because it proves initial browser rendering of the
 operator console, but it still does not replace the missing multi-page
 operator click-through.
 
+A read-only quick-navigation click-through was then run through the same
+tunneled browser path. It clicked the five non-mutating quick navigation
+buttons only, avoiding acquisition, save, export, and other data-mutating
+actions. All five rendered without captured console warnings or page errors:
+`① 学校別タスク` with `週次URL/PDF再取得` / `次に進める作業`,
+`PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, and
+`設定` with `バージョン` / `和暦 alias` / `OCR` / `外部 API`. Temporary
+Playwright/npm files were removed afterward. This upgrades the browser proof
+from single-page render to safe multi-page navigation, while the full
+operator-action E2E remains pending.
+
 After the v376 proof, stale Windows directory
 `C:\Users\cyo20\EIDP-v375-bcca8df` was removed. The Windows host now retains
 only `EIDP-transfer`, the historical v342 proof directory, and the current
-v376 setup directory. Browser UI operator click-through remains the outstanding
-Stage 6 evidence gap.
+v376 setup directory. Full operator-action click-through remains the
+outstanding Stage 6 evidence gap.
 
 Verification: targeted diagnose/verifier regression tests passed with
 `3 passed`; targeted Ruff passed; the v376 versioned ZIP and latest alias both
 passed `scripts/verify_windows_distribution.py
 --require-demonstrated-discovery-patterns`; Windows setup, standalone
 after-setup validation, diagnose, headless Streamlit health check, SSH tunnel
-health check, and browser-render smoke all passed as described above.
+health check, browser-render smoke, and read-only quick-navigation
+click-through all passed as described above.
 
 ## 2026-05-13 V375 Fiscal-Year Context Cleanup and Shobi Latest-Public Case
 

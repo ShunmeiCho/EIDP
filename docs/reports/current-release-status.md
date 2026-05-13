@@ -47,8 +47,8 @@ setup, SQLite initialization, diagnostics, and a bounded 50-site Saitama
 bootstrap have been rerun through v342 and confirm the metric fix: the current
 sample now reports `operator_reviewable_count=46` from `publication_lag=38`
 plus `target_year_unverified=8`. The product goal is
-still not complete: browser UI operator
-click-through is missing, and the measured
+still not complete: browser UI read-only quick navigation now renders, but
+operator-action click-through is missing, and the measured
 operator-reviewable coverage / Excel readiness remain far below the shipping
 line. v340 adds a demonstration-backed ARS/アルスコンピュータ publication-lag
 case: current-year R8 PDFs on that page are syllabus/course-plan PDFs, while
@@ -284,7 +284,7 @@ operator browser click-through.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
 | ManualActionLog audit for operator actions | v342 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v339/v340/v341/v342 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v376 ZIP verifies clean on macOS packaging gate; v376 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v376-d2402dc`, and `EIDP-setup.bat` plus standalone after-setup validation completed successfully; `EIDP-diagnose.bat` now records the FY2025 retroactive readiness JSON and `retroactive_ship_readiness_rc=0`; v376 headless Streamlit startup returned `200 ok` on `/_stcore/health`; browser UI click-through remains unverified | Backend Win setup and app-server startup proof present, UI click-through proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v376 ZIP verifies clean on macOS packaging gate; v376 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v376-d2402dc`, and `EIDP-setup.bat` plus standalone after-setup validation completed successfully; `EIDP-diagnose.bat` now records the FY2025 retroactive readiness JSON and `retroactive_ship_readiness_rc=0`; v376 headless Streamlit startup returned `200 ok` on `/_stcore/health`; browser render and read-only quick-navigation click-through passed; full operator-action click-through remains unverified | Backend Win setup, app-server startup, and read-only UI navigation proof present; mutating/operator workflow proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -339,6 +339,15 @@ Latest v376 commands:
   `URLなし 2418`. The temporary npm package, script, Chrome profile, and
   screenshot were removed afterward. This proves initial browser rendering, not
   a full click-through of every operator workflow.
+- Windows v376 read-only quick-navigation click-through:
+  the same tunneled browser path clicked the five non-mutating quick navigation
+  buttons and rendered each page without captured console warnings or page
+  errors. Verified headings were `① 学校別タスク` with
+  `週次URL/PDF再取得` / `次に進める作業`, `PDF確認・手入力`,
+  `対象年度の判定・修正`, `Excel プレビュー`, and `設定` with
+  `バージョン` / `和暦 alias` / `OCR` / `外部 API`. The script did not click
+  acquisition, save, export, or any data-mutating action. Temporary npm files
+  were removed afterward.
 - Windows cleanup after v376 proof removed stale
   `C:\Users\cyo20\EIDP-v375-bcca8df`; remaining EIDP directories are
   `EIDP-transfer`, `EIDP-v342-de2cfed`, and `EIDP-v376-d2402dc`.
