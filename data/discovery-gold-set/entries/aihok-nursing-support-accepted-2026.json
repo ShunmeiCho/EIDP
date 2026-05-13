@@ -1,0 +1,56 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "aihok-nursing-support-accepted-2026",
+  "school": {
+    "school_id": 1369,
+    "school_name": "愛北看護専門学校",
+    "prefecture": "愛知県",
+    "corporation_name": "愛知県厚生農業協同組合連合会"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find a FY2026 target confirmation form from an official-index-linked school support news page where the page text supplies the rolling-year evidence.",
+    "search_queries": [
+      "愛北看護専門学校 令和8年度 修学支援新制度 確認申請書",
+      "愛北看護専門学校 機関要件確認申請書"
+    ],
+    "steps": [
+      "Open the Aichi official-index artifact row for 愛知県厚生農業協同組合連合会 愛北看護専門学校.",
+      "Follow the official-index link to https://www.jaaikosei.or.jp/aihokukansen/news/高等教育の修学支援制度について/.",
+      "Read the school support page statement 令和８年度より本校も支援対象となります.",
+      "Follow the adjacent link labeled 確認申請書様式第２号.",
+      "Accept the PDF because the official page supplies FY2026 target-year evidence and the PDF body contains 愛北看護専門学校 plus 様式第２号."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.jaaikosei.or.jp/aihokukansen/",
+    "disclosure_url": "https://www.jaaikosei.or.jp/aihokukansen/news/高等教育の修学支援制度について/",
+    "pdf_url": "https://www.jaaikosei.or.jp/aihokukansen/7LmQDt/wp-content/uploads/2025/08/youshiki2-r7.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "pattern_type": "wordpress",
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "official_index_linked_support_news_page",
+    "reusable_rules": [
+      "Treat an official-index-linked support page statement such as 令和８年度より本校も支援対象 as strong FY2026 evidence when it is local to a 確認申請書様式第２号 link.",
+      "Accept a PDF whose filename still contains an old marker such as r7 only when the page context supplies target-year evidence and the PDF body contains the school name plus 様式第２号.",
+      "Preserve pattern_type=wordpress for the /wp-content/uploads/ PDF so future extraction changes cannot silently reclassify this delivery path."
+    ],
+    "anti_patterns": [
+      "Do not accept the old-year-looking filename by itself; the FY2026 evidence comes from the adjacent official page text.",
+      "Do not use unrelated future dates in the PDF body as target fiscal-year evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "data/prefecture-aggregators/artifacts/aichi.html",
+      "https://www.jaaikosei.or.jp/aihokukansen/news/高等教育の修学支援制度について/",
+      "https://www.jaaikosei.or.jp/aihokukansen/7LmQDt/wp-content/uploads/2025/08/youshiki2-r7.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found the official-index-linked page statement 令和８年度より本校も支援対象となります. Source-side PDF text extraction verified 愛北看護専門学校 and 様式第２号 in the PDF body."
+  }
+}

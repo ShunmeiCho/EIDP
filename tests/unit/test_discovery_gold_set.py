@@ -129,13 +129,13 @@ def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:
     assert summary.pattern_type_counts == {
         "direct": 5,
         "embed": 1,
-        "wordpress": 4,
+        "wordpress": 5,
         "wordpress_download_manager": 1,
     }
     assert summary.pattern_source_counts == {
         "direct": 5,
         "embed": 1,
-        "wordpress": 4,
+        "wordpress": 5,
         "wordpress_download_manager": 1,
     }
     assert summary.undemonstrated_pattern_sources == []
