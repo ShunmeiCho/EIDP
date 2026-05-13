@@ -3,10 +3,40 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `d44e65db0ae646ccec045316af52386d4bc7c0c4` (`eidp-windows-v365.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `e7ae8c0b9c9641c0aa26528d217149cd037d9eb4` (`eidp-windows-v366.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V366 Aiho Nursing Official-Index Linked Gold Case
+
+v366 (`e7ae8c0`) adds a manual-web / official-index-linked accepted target case
+for 愛北看護専門学校. The committed Aichi prefecture artifact already links the
+school's support-system news page, and that page supplies the `令和8年度`
+support-target evidence while linking a `確認申請書様式第2号` PDF whose filename is
+still `youshiki2-r7.pdf`. The discovery gold-set now records this production
+pattern explicitly, so future changes cannot regress the case where target-FY
+evidence is provided by the school page context rather than the PDF filename.
+Packaged discovery gold-set coverage rises to `37` entries, `9` strict
+target-year successes, and `wordpress=5` demonstrated pattern entries.
+
+Verification: targeted discovery gold-set / summary / eval / seed / CLI /
+distribution-verifier tests passed with `48 passed`; targeted Ruff passed; and
+the expected-predictions eval returned `37` entries with `0` failed predictions
+and `0` unexpected predictions. The full non-Windows release gate for
+`dist/eidp-windows-v366.zip` returned `ok=true` with `1371 passed, 5 warnings`;
+the distribution-verifier suite passed with `133 passed`; package verification
+reported clean commit `e7ae8c0b9c9641c0aa26528d217149cd037d9eb4`,
+`discovery_gold_set_entries=37`, `discovery_gold_expected_predictions=37`,
+outcomes `accepted_target_pdf=9`, `needs_operator_review=15`,
+`no_target_candidate_found=1`, `publication_lag_latest_public=11`, and
+`site_fetch_error=1`, with `undemonstrated_pattern_sources=[]`. The ZIP SHA256 is
+`88eda3324c17cbab203d3b08165292ed6abe1b00db6ec3e46d20afb23560ff91`. Bounded
+evidence replay also returned `ok=true` with Tokyo `4` exact / `0` failures,
+Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0` failures, 更生 `1`
+exact / `0` failures, 中央情報 `1` exact / `0` failures, and 君津 `1` exact /
+`0` failures. 愛北 is expectedly absent from those older bounded evidence JSONL
+files because it was added from a fresh manual-web / official-index trace.
 
 ## 2026-05-13 V365 Stage 6 Retroactive FY Evidence Fields
 
