@@ -205,14 +205,16 @@ DISCOVERY_GOLD_REQUIRED_OUTCOMES = frozenset(
 )
 DISCOVERY_GOLD_ALLOWED_OUTCOMES = DISCOVERY_GOLD_REQUIRED_OUTCOMES
 DISCOVERY_GOLD_TRACKED_EXTRACTOR_SOURCES = (
-    "data_attribute",
     "embed",
+    "wordpress_download_manager",
+)
+DISCOVERY_GOLD_EXPERIMENTAL_EXTRACTOR_SOURCES = (
+    "data_attribute",
     "form_action",
     "input_control",
     "meta_refresh",
     "onclick",
     "select_option",
-    "wordpress_download_manager",
 )
 
 OCR_REQUIRED_EXACT = (
