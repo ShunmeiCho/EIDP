@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v385.zip`
-Package commit: `c5cffcd64eb6487a8484d97f5dcd8ee941e407f2`
-Package SHA256: `571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v385.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v385.zip`
+Current Mac-verifier-clean package: `dist/eidp-windows-v386.zip`
+Package commit: `7a4fe004b136608b8b04abadd919890c5161ba4b`
+Package SHA256: `83fd5f4f54f355ae631217912901bf4f9c12a3ca3179c80a6e9bc6fba8053b19`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v386.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v386.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v384.zip`
@@ -19,22 +19,22 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v385. It packages commit
-`c5cffcd`, which adds the read-only `scripts/stage6_recovery_check.py` helper
-to the Windows ZIP so an operator can verify `EIDP Weekly Run` and interrupted
-Stage 6 smoke leftovers locally after an `sshd` restart. It preserves the v384
-image-PDF ingest path that routes through the packaged/system Tesseract TSV
-wrapper when available and records OCR provenance in DB confidence breakdowns.
-The v385 versioned ZIP and latest alias both pass
+The current Mac-verifier-clean ZIP snapshot is v386. It packages commit
+`7a4fe00`, which keeps the read-only `scripts/stage6_recovery_check.py` helper
+in the Windows ZIP and records the Windows SSH program-launch failure recovery
+note in the packaged runbook. It preserves the v384 image-PDF ingest path that
+routes through the packaged/system Tesseract TSV wrapper when available and
+records OCR provenance in DB confidence breakdowns. The v386 versioned ZIP and
+latest alias both pass
 `scripts/verify_windows_distribution.py --json`; the latest alias also passes
-with the v383 OCR add-on and v106 Playwright add-on. The v385 core SHA256 is
-`571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`, with
+with the v383 OCR add-on and v106 Playwright add-on. The v386 core SHA256 is
+`83fd5f4f54f355ae631217912901bf4f9c12a3ca3179c80a6e9bc6fba8053b19`, with
 `44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
 seeds, `entry_count=3064`, and `undemonstrated_pattern_sources=[]`. The latest
-full non-Windows release gate is now v385 with `1402` unit tests, `44` exact
+full non-Windows release gate is now v386 with `1402` unit tests, `44` exact
 discovery gold-set predictions, and both package verifier modes passing
 against SHA256
-`571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`.
+`83fd5f4f54f355ae631217912901bf4f9c12a3ca3179c80a6e9bc6fba8053b19`.
 The latest Windows setup proof is now v384: the versioned ZIP was transferred
 to the operator PC, its SHA256 sidecar matched
 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`, and it
@@ -519,7 +519,7 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v384 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`support_recipient_rows_for_doc=0`). Windows v384 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, emitted four `fiscal_year_override` audit rows, and verified the real runtime DB had `0` matching document/school/department/audit rows. Windows v384 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, `grand_total=100`, and `extraction_confidence=0.94`; revision `2` current with `annual_total=120`, `grand_total=120`, and `extraction_confidence=1.0`; the real runtime DB had `0` matching documents, schools, and support-recipient rows. | DepartmentYearly Win UI E2E proven on v384; fiscal-year override Win UI E2E proven on v384; SupportRecipient Win package backend append-only proven on v384 |
 | Excel template output | v384 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v384 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; the downloaded workbook opened with sheets `採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋`, and `openpyxl` reported row counts `2419`, `10023`, `9721`, and `9721` including headers; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive on latest v384 |
 | ManualActionLog audit for operator actions | v384 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database, resolved the `ReviewItem` as rejected, created no `SchoolSite` row, and verified the real runtime DB was not mutated; v384 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v384_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, cleared pending count to `0`, and verified the real runtime DB was not mutated; v384 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v384 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths |
-| ZIP distribution, double-click setup, browser UI offline operation | v385 ZIP verifies clean on macOS packaging gate and includes `scripts/stage6_recovery_check.py`; the latest disposable operator-PC setup proof remains v384: SHA256 sidecar matched, `scripts\first_setup.bat` returned `setup_rc=0`, after-setup validation returned `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and `EIDP-diagnose.bat` returned `diagnose_rc=0`; the proof restored the original v380 `EIDP Weekly Run` scheduled task after setup. v384 also has environment capture, Task Scheduler query / restore proof, package-local backup CLI proof, UI service, initial browser-render, read-only quick-navigation, FY2026 Excel disabled-state, retroactive FY2025/R7 Excel preview/download proof, URL-candidate reject proof, audit-outbox flush proof, fiscal-year override proof, and `PDF確認・手入力` manual-entry browser save proof: disposable v384 Streamlit services returned HTTP `200 OK` on `/_stcore/health`, the tunneled browser rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `75732b0`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, and console errors/warnings `0`; a follow-up v384 probe clicked the five non-mutating quick navigation buttons, rendered `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and `① 学校別タスク`, and confirmed the FY2026 Excel workbook-generation button stayed disabled for empty current data; a separate process-scoped R7 v384 probe generated and downloaded `eidp_master.xlsx` through the browser; v384 disposable copied-DB probes rejected one URL candidate, flushed one audit-outbox row, moved one fiscal-year override fixture, saved a manual-entry row, and proved SupportRecipient append-only ingest, leaving the real runtime DB unchanged. A v384 backup/env probe captured Windows 11 Pro build `26200`, host `JUNMING`, `13th Gen Intel(R) Core(TM) i9-13900HK`, `32453` MB visible RAM, `C:` free `964.4` GB, `EIDP Weekly Run` task state `Ready`, v384 `db_backup_rc=0`, backup `integrity=ok`, `sqlite_objects=35`, `school_count=2418`, and `school_year_status_count=17696`; cleanup removed probes and restored the scheduled task to v380. Full Stage 6 operator-action click-through remains unverified | Backend Win setup/diagnostics, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, audit-outbox flush, fiscal-year override write, manual-entry write, SupportRecipient ingest, environment capture, Task Scheduler query / restore, and backup CLI proof present on v384; full operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v386 ZIP verifies clean on macOS packaging gate, includes `scripts/stage6_recovery_check.py`, and packages the Windows SSH program-launch failure recovery note; the latest disposable operator-PC setup proof remains v384: SHA256 sidecar matched, `scripts\first_setup.bat` returned `setup_rc=0`, after-setup validation returned `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and `EIDP-diagnose.bat` returned `diagnose_rc=0`; the proof restored the original v380 `EIDP Weekly Run` scheduled task after setup. v384 also has environment capture, Task Scheduler query / restore proof, package-local backup CLI proof, UI service, initial browser-render, read-only quick-navigation, FY2026 Excel disabled-state, retroactive FY2025/R7 Excel preview/download proof, URL-candidate reject proof, audit-outbox flush proof, fiscal-year override proof, and `PDF確認・手入力` manual-entry browser save proof: disposable v384 Streamlit services returned HTTP `200 OK` on `/_stcore/health`, the tunneled browser rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `75732b0`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, and console errors/warnings `0`; a follow-up v384 probe clicked the five non-mutating quick navigation buttons, rendered `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and `① 学校別タスク`, and confirmed the FY2026 Excel workbook-generation button stayed disabled for empty current data; a separate process-scoped R7 v384 probe generated and downloaded `eidp_master.xlsx` through the browser; v384 disposable copied-DB probes rejected one URL candidate, flushed one audit-outbox row, moved one fiscal-year override fixture, saved a manual-entry row, and proved SupportRecipient append-only ingest, leaving the real runtime DB unchanged. A v384 backup/env probe captured Windows 11 Pro build `26200`, host `JUNMING`, `13th Gen Intel(R) Core(TM) i9-13900HK`, `32453` MB visible RAM, `C:` free `964.4` GB, `EIDP Weekly Run` task state `Ready`, v384 `db_backup_rc=0`, backup `integrity=ok`, `sqlite_objects=35`, `school_count=2418`, and `school_year_status_count=17696`; cleanup removed probes and restored the scheduled task to v380. Full Stage 6 operator-action click-through remains unverified | Backend Win setup/diagnostics, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, audit-outbox flush, fiscal-year override write, manual-entry write, SupportRecipient ingest, environment capture, Task Scheduler query / restore, and backup CLI proof present on v384; full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -527,14 +527,14 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v385 package-verifier commands:
+Latest v386 package-verifier commands:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v385.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v385.zip` and refreshed `dist/eidp-windows.zip`;
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v386.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v386.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`.
-- `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v385.zip`
-  -> `ok=true`, commit `c5cffcd64eb6487a8484d97f5dcd8ee941e407f2`,
+  `83fd5f4f54f355ae631217912901bf4f9c12a3ca3179c80a6e9bc6fba8053b19`.
+- `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v386.zip`
+  -> `ok=true`, commit `7a4fe004b136608b8b04abadd919890c5161ba4b`,
   `build_dirty=false`, `entry_count=3064`, `wheel_count=78`, and
   `scripts/stage6_recovery_check.py` included in the core ZIP contract.
 - `uv run python scripts/build_ocr_addon_zip.py --tesseract-dir _temp/ocr-addon-src/7z-extract --tessdata-dir /opt/homebrew/share/tessdata --out-zip dist/eidp-ocr-addon-windows-v383-smoke.zip`
@@ -544,7 +544,7 @@ Latest v385 package-verifier commands:
   `bd1e2c96dcd7ac17562d44c3338fbf8da0ac21a1b1e60386073c730775e8d853`,
   `entry_count=267`, and `manifest_files=266`.
 - `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows.zip --ocr-addon dist/eidp-ocr-addon-windows-v383-smoke.zip --playwright-addon dist/eidp-playwright-addon-windows-v106.zip`
-  -> `OK core`, `OK ocr-addon`, and `OK playwright-addon`, with matching v385
+  -> `OK core`, `OK ocr-addon`, and `OK playwright-addon`, with matching v386
   core SHA256, `44` packaged discovery gold-set entries, `17`
   publication-lag cases, `47` prefecture seeds, and
   `undemonstrated_pattern_sources=[]`; the packaged Windows runbook includes
@@ -1071,17 +1071,17 @@ Previous v379 Windows setup and UI-service commands:
   health only; browser rendering, navigation, and operator-action click-through
   still require separate evidence.
 
-Latest v385 full non-Windows release-gate commands:
+Latest v386 full non-Windows release-gate commands:
 
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v385.zip --json --output _temp/v385-non-windows-release-gates-full.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v386.zip --json --output _temp/v386-non-windows-release-gates-full.json`
   -> `ok=true`; SHA256 sidecar matched
-  `571e1ed8d299433e25fb6bc0686ff37e6274551b9f2b0cc2b1a8100938c3acf3`; full
+  `83fd5f4f54f355ae631217912901bf4f9c12a3ca3179c80a6e9bc6fba8053b19`; full
   unit passed with `1402 passed, 5 warnings`; validator/distribution unit tests
   passed with `143 passed`; validator/distribution mypy and Ruff passed;
   discovery gold-set reported `44` entries, `10` strict target-year successes,
   `17` publication-lag cases, and `undemonstrated_pattern_sources=[]`;
   expected-prediction replay returned `44` exact matches / `0` failures; both
-  package verifier modes passed with the same v385 SHA256.
+  package verifier modes passed with the same v386 SHA256.
 
 Historical v378 full non-Windows release-gate commands:
 
