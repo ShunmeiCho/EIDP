@@ -3,10 +3,43 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `e7ae8c0b9c9641c0aa26528d217149cd037d9eb4` (`eidp-windows-v366.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `5defaca0049255822c8be4ee49b5bbd6df8b6a9f` (`eidp-windows-v367.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V367 Iwate Iryo Dense Wix Publication-Lag Case
+
+v367 (`5defaca`) adds a manual-web / official-index-linked publication-lag case
+for 岩手医科大学医療専門学校. The committed Iwate prefecture artifact links the
+school's dense Wix information page. The target confirmation-form section
+(`大学等における修学の支援に関する法律施行規則第7条第2項に基づく確認申請書`)
+exposes links only through `令和７年度`; the later `令和8年度` text on the same
+page belongs to a non-target syllabus section. The gold-set now captures this as
+latest-public target-form evidence that must not be upgraded to strict FY2026
+success by page-wide future-year text. Packaged discovery gold-set coverage
+rises to `38` entries, `12` publication-lag cases, and `direct=6` demonstrated
+pattern entries.
+
+Verification: source-side PDF extraction verified the latest confirmation-form
+PDF body contains `岩手医科大学医療専門学校` and `様式第２号`; project HTML
+extraction found the linked PDF with `pattern_type=direct` and anchor
+`令和７年度`. Targeted discovery gold-set tests passed with `47 passed`, targeted
+Ruff passed, and the expected-predictions eval returned `38` exact matches with
+`0` failed, missing, or unexpected predictions. `dist/eidp-windows-v367.zip` was
+rebuilt from clean commit `5defaca0049255822c8be4ee49b5bbd6df8b6a9f` with SHA256
+`944acf7957d0ced822adf790f6fd27a149bf222c303f1fb62f0f85cc7c78810a`. The full
+non-Windows release gate returned `ok=true` with `1371 passed, 5 warnings`; the
+distribution-verifier suite passed with `133 passed`; package verification
+reported `discovery_gold_set_entries=38`, `discovery_gold_expected_predictions=38`,
+outcomes `accepted_target_pdf=9`, `needs_operator_review=15`,
+`no_target_candidate_found=1`, `publication_lag_latest_public=12`, and
+`site_fetch_error=1`, with `undemonstrated_pattern_sources=[]`. Bounded evidence
+replay also returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16`
+exact / `0` failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0`
+failures, 中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures.
+岩手医療 is expectedly absent from those older bounded evidence JSONL files
+because it was added from a fresh manual-web / official-index trace.
 
 ## 2026-05-13 V366 Aiho Nursing Official-Index Linked Gold Case
 
