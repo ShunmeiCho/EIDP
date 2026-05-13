@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v342.zip`
-Package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413`
-Package SHA256: `8eb3fcb785f8dbbeebc008f710af7f58bf4d91fcd4d53958b6f519a6b934b593`
+Current Mac-verifier-clean package: `dist/eidp-windows-v343.zip`
+Package commit: `726a3e75896aba75f2c7fa19dfecbf9d114670ff`
+Package SHA256: `7a31eb1acdd3866d9a1a096405e0f48b603f00d89d254729a24459cb380859df`
 Latest Windows-core-validated package: `dist/eidp-windows-v342.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v342.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -13,8 +13,9 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v342 and passes the default macOS package
-verifier. v341 keeps the v326 strict-mode fix for opaque WordPress Download
+The current Mac-verifier-clean ZIP snapshot is v343 and passes the default macOS package
+verifier. The latest Windows setup and bounded-bootstrap proof remains v342.
+v341 keeps the v326 strict-mode fix for opaque WordPress Download
 Manager wrappers, the v328 cross-school candidate rejection, the v329
 actionable RCA counts, the v330 raw-control-character URL guard, and the v331
 one-retry guard for transient registered-page timeouts plus structured
@@ -63,7 +64,9 @@ current-FY target PDFs were downloaded in the bounded 50-site sample. A separate
 Tokyo official-index probe on the same v342 Windows package confirms the same
 failure mode at a different prefecture boundary: the Tokyo official artifact
 matched `232` school URLs and a 30-site PDF discovery sample found candidates on
-all `30` sites, but still downloaded `0` strict current-FY target PDFs.
+all `30` sites, but still downloaded `0` strict current-FY target PDFs. v343
+packages those Tokyo observations as three new source-side discovery gold-set
+entries, raising the packaged gold-set from `28` to `31` entries.
 
 ## Objective Checklist
 
@@ -81,7 +84,7 @@ all `30` sites, but still downloaded `0` strict current-FY target PDFs.
 
 ## Current Non-Windows Evidence
 
-Commands run for v342 source/package:
+Commands run for v343/v342 source/package:
 
 - `uv run pytest tests/unit -q` -> `1343 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_discovery_evidence_summary.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_discovery_gold_set_seed.py -q` -> `205 passed, 5 warnings`
@@ -94,6 +97,15 @@ Commands run for v342 source/package:
 - `uv run eidp eval-discovery-gold --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --json` -> `16` exact, `0` failures for the Saitama evidence entries present in the bounded run
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip` -> `OK core`
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v342.zip --require-demonstrated-discovery-patterns` -> expected failure for the six remaining undemonstrated sources
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v343.zip`
+  -> wrote `dist/eidp-windows-v343.zip` and checksum sidecar.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v343.zip`
+  -> `OK core`, build commit
+  `726a3e75896aba75f2c7fa19dfecbf9d114670ff`, `git_dirty=false`,
+  `discovery_gold_set_entries=31`, `discovery_gold_expected_predictions=31`,
+  SHA256 `7a31eb1acdd3866d9a1a096405e0f48b603f00d89d254729a24459cb380859df`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v343.zip --require-demonstrated-discovery-patterns`
+  -> expected failure for the same six remaining undemonstrated sources.
 
 Post-v342 source-side gold-set expansion:
 
@@ -111,8 +123,9 @@ Post-v342 source-side gold-set expansion:
 - `uv run eidp eval-discovery-gold --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --json`
   now reports `3` exact predictions with `0` failures. The remaining `28`
   missing entries are outside the Tokyo 30-site sample.
-- This source-side evidence is not yet packaged into a new Windows ZIP; the
-  latest Mac-verifier-clean package remains `dist/eidp-windows-v342.zip`.
+- This source-side evidence is packaged into the new Mac-verifier-clean
+  `dist/eidp-windows-v343.zip`. It still requires a future Windows extraction
+  and setup run before it can replace v342 as Windows-setup-proven.
 
 v342 verifier exposes the current demonstration gap:
 
