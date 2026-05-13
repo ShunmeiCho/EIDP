@@ -3,10 +3,33 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `4df0201ae496129a9d452eac4cd68a1adbbbb6db` (`eidp-windows-v360.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `0f3b868d7dd44212650e7910ee771552f35f02eb` (`eidp-windows-v361.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V361 CLI Tool Module Split
+
+v361 (`0f3b868`) finishes the current `cli.py` size-debt cleanup while SSH
+Windows testing is unavailable. Read-only/tool commands moved to
+`src/eidp/cli_tools.py`: `verify-identity`, `db-info`, `review-ui`,
+`operator-ui`, `export-excel`, `export-competition-excel`, `diff-excel`, and
+`eval-pdf`. DB-writing commands remain in `cli.py`, so the dynamic write-lock
+AST gate continues to inspect the command bodies that mutate the database.
+`cli.py` drops from `997` lines to `753`, below the `<800` target. The Windows
+distribution verifier now requires `src/eidp/cli_tools.py` and checks the
+tool/export/eval command tokens in that module.
+
+Verification: targeted tool/write-lock/verifier/report/discovery tests passed
+with `133 passed`; targeted Ruff and mypy passed; CLI help smoke for `eidp`,
+`eidp export-excel`, `eidp db-info`, and `eidp eval-pdf` showed the expected
+commands. The full unit suite passed with `1367 passed, 5 warnings`.
+`dist/eidp-windows-v361.zip` was rebuilt from clean commit `0f3b868` with
+SHA256 `0cd2a596f18e4e65e346d4b403968f292d1863e2a610a88a321228218e8c92ab`.
+The full non-Windows release gate returned `ok=true`; bounded evidence replay
+returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16` exact /
+`0` failures, 聖十字 `1` exact / `0` failures, 更生 `1` exact / `0` failures,
+中央情報 `1` exact / `0` failures, and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V360 CLI Discovery Module Split
 
