@@ -332,6 +332,33 @@ def test_extract_pdf_links_uses_definition_list_context_without_pagewide_news_no
     assert _has_target_year_hint(application, target_year=2026)
 
 
+def test_extract_pdf_links_does_not_assign_visible_sibling_anchor_text_to_empty_anchor() -> None:
+    html = """
+    <div class="text01">
+      <a href="/images/stories/contents/Nursing_school/reiwa3kakunin.pdf"></a>
+      <a href="/images/shinseisyo/2026sinseisyo.pdf">
+        <span>【令和８年度】更新確認申請書</span>
+      </a>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://www.kimikan.hospital.kisarazu.chiba.jp/index.php/school-seido",
+        target_fiscal_year=2026,
+    )
+
+    stale = next(candidate for candidate in candidates if candidate.pdf_url.endswith("reiwa3kakunin.pdf"))
+    current = next(candidate for candidate in candidates if candidate.pdf_url.endswith("2026sinseisyo.pdf"))
+    assert stale.anchor_text == ""
+    assert not _has_target_application_hint(stale)
+    assert not _has_target_year_hint(stale, target_year=2026)
+    assert "令和８年度" in current.anchor_text
+    assert _has_target_application_hint(current)
+    assert _has_target_year_hint(current, target_year=2026)
+    assert _score_candidate(current, target_fiscal_year=2026) > _score_candidate(stale, target_fiscal_year=2026)
+
+
 def test_pre_download_treats_o_hara_confirmation_column_as_old_target_form() -> None:
     candidate = PdfCandidate(
         pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",

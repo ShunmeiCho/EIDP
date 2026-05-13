@@ -1341,6 +1341,13 @@ def _table_section_heading_context(html: str, block_start: int) -> str:
     return ""
 
 
+def _has_visible_anchor_text(fragment: str) -> bool:
+    return any(
+        bool(_html_text(match.group(1)))
+        for match in re.finditer(r"<a\b[^>]*>(.*?)</a\s*>", fragment, re.IGNORECASE | re.DOTALL)
+    )
+
+
 def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str = "") -> str:
     """Return element text plus nearby fiscal-year context when the CMS splits it.
 
@@ -1355,6 +1362,8 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
     block = _enclosing_html_block(html, match.start(), match.end())
     if block is not None:
         tag, block_start, _, block_fragment = block
+        if not anchor and _has_visible_anchor_text(block_fragment):
+            return ""
         current_text = _html_text(block_fragment)
         if (
             current_text
