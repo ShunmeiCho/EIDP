@@ -3,10 +3,41 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `10b18d4cc52ebd389e8399e1724620e697454795` (`eidp-windows-v355.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `39b3014e3ec7d8702cb7a4470789e6a048dbd0bf` (`eidp-windows-v356.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V356 Empty Anchor Sibling Text Recovery
+
+v356 (`39b3014`) adds a manual-web accepted target PDF demonstration for
+君津中央病院附属看護学校. The support-system page contains an empty stale
+PDF anchor for `reiwa3kakunin.pdf` immediately before a visible current-year
+anchor labeled `【令和８年度】更新確認申請書`. Before the fix, block-context
+extraction could assign the visible sibling anchor text to the empty stale
+anchor, making an old PDF look like a current target form. `pdf_discovery.py`
+now detects that case and keeps visible sibling anchor text local to the
+visible anchor.
+
+Source-side replay for school id `798` now reports `crawled=1`, `found=1`,
+`downloaded=1`, `failed=0`, `skipped=0`; the evidence row downloads
+`https://www.kimikan.hospital.kisarazu.chiba.jp/images/shinseisyo/2026sinseisyo.pdf`
+as `accepted_downloaded` with `year_evidence=url_hint`,
+`pattern_type=direct`, and `pdf_type=target`. The discovery gold-set now has
+`36` entries, including `8` `accepted_target_pdf` successes and the new
+`empty_stale_anchor_before_visible_current_year_anchor` site family.
+
+Verification: focused PDF/gold-set tests passed with `47 passed`, broader
+discovery/package tests passed with `289 passed, 5 warnings`, targeted Ruff and
+mypy passed, and the full unit suite passed with `1365 passed, 5 warnings`.
+`dist/eidp-windows-v356.zip` was rebuilt from clean commit `39b3014` with
+SHA256 `6ba6276238600c89e13f6bf728f5001adcc5b7fceb4b520782d8d51a76e0116b`.
+The default package verifier and `--require-demonstrated-discovery-patterns`
+both passed. The full non-Windows release gate returned `ok=true`; bounded
+evidence replay returned `ok=true` with Tokyo `4` exact / `0` failures,
+Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0` failures,
+更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures, and
+君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V355 Multi-Year Support PDF List Demonstration
 
