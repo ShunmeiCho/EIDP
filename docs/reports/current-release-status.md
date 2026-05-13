@@ -3,8 +3,8 @@
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
 Current Mac-verifier-clean package: `dist/eidp-windows-v393.zip`
-Package commit: `a992ef6f37589f26db640c602d790711e5f740dd`
-Package SHA256: `3ab58cca9494940ac85c7018aed2faeebc20d1784370d7203b8642b5623a32e8`
+Package commit: `8b99c4d64f7301ce64d219c00fcd9c849e5a5be2`
+Package SHA256: `8d736fea8b717e573b344e3173e90b9a3c944e3813e2089203e24f55879d7de3`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v393.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v393.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
@@ -20,15 +20,16 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 The current Mac-verifier-clean ZIP snapshot is v393. It packages commit
-`a992ef6`, which adds a root-level `EIDP-stage6-evidence.bat` launcher, the
-Windows-local `scripts\collect_stage6_evidence.bat` wrapper, and the stdlib
-`scripts/collect_stage6_evidence.py` helper so a non-technical operator can
-create `logs\stage6-evidence-*.zip` without browsing into `scripts\`. The
-evidence bundle refreshes diagnostics, includes build/run/recovery/bootstrap/
-Excel/RCA evidence plus a manifest, and deliberately excludes the runtime DB,
-WAL/SHM files, PDFs, wheelhouse, and runtime directories. v393 preserves the
-v391 root `EIDP-stage6-recovery.bat` launcher and the v390 Stage 6 operator E2E
-template contract requiring `[stage6 recovery check]` diagnostics evidence:
+`8b99c4d`, which adds `scripts/verify_stage6_evidence.py` so an administrator
+can mechanically verify a received `logs\stage6-evidence-*.zip` before treating
+it as Stage 6 release evidence. The verifier checks the manifest, required
+evidence labels such as diagnostics and `last_run`, unsafe ZIP paths, and
+forbidden runtime data such as the SQLite DB, WAL/SHM files, PDFs, runtime, and
+wheelhouse. v393 preserves the v392 root `EIDP-stage6-evidence.bat` launcher,
+Windows-local `scripts\collect_stage6_evidence.bat` wrapper, stdlib
+`scripts/collect_stage6_evidence.py` collector, v391 root
+`EIDP-stage6-recovery.bat` launcher, and the v390 Stage 6 operator E2E template
+contract requiring `[stage6 recovery check]` diagnostics evidence:
 `stage6_recovery_rc`, scheduled-task execute path, expected action,
 action-match status, residual interrupted-smoke paths, recommendations,
 optional `logs\stage6-recovery-*.json`, and now optional
@@ -44,13 +45,13 @@ available and records OCR provenance in DB confidence breakdowns. The v393
 versioned ZIP and latest alias both pass
 `scripts/verify_windows_distribution.py --json`; the latest alias also passes
 with the v383 OCR add-on and v106 Playwright add-on. The v393 core SHA256 is
-`3ab58cca9494940ac85c7018aed2faeebc20d1784370d7203b8642b5623a32e8`, with
+`8d736fea8b717e573b344e3173e90b9a3c944e3813e2089203e24f55879d7de3`, with
 `44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
 seeds, `entry_count=3070`, and `undemonstrated_pattern_sources=[]`. The latest
 full non-Windows release gate is now v393 with `1418` unit tests, `44` exact
 discovery gold-set predictions, and both package verifier modes passing
 against SHA256
-`3ab58cca9494940ac85c7018aed2faeebc20d1784370d7203b8642b5623a32e8`.
+`8d736fea8b717e573b344e3173e90b9a3c944e3813e2089203e24f55879d7de3`.
 The latest Windows setup proof is now v384: the versioned ZIP was transferred
 to the operator PC, its SHA256 sidecar matched
 `2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`, and it
@@ -548,9 +549,9 @@ Latest v393 package-verifier commands:
 - `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v393.zip --latest-alias`
   -> wrote `dist/eidp-windows-v393.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `3ab58cca9494940ac85c7018aed2faeebc20d1784370d7203b8642b5623a32e8`.
+  `8d736fea8b717e573b344e3173e90b9a3c944e3813e2089203e24f55879d7de3`.
 - `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v393.zip`
-  -> `ok=true`, commit `a992ef6f37589f26db640c602d790711e5f740dd`,
+  -> `ok=true`, commit `8b99c4d64f7301ce64d219c00fcd9c849e5a5be2`,
   `build_dirty=false`, `entry_count=3070`, `wheel_count=78`,
   root-level `EIDP-stage6-evidence.bat` and `EIDP-stage6-recovery.bat`, and
   `scripts/collect_stage6_evidence.py`, `scripts\collect_stage6_evidence.bat`,
@@ -568,8 +569,9 @@ Latest v393 package-verifier commands:
   -> `OK core`, `OK ocr-addon`, and `OK playwright-addon`, with matching v393
   core SHA256, `44` packaged discovery gold-set entries, `17`
   publication-lag cases, `47` prefecture seeds,
-  `undemonstrated_pattern_sources=[]`, Stage 6 evidence/recovery roots, and
-  the Stage 6 evidence/recovery helper scripts; the packaged Windows runbook
+  `undemonstrated_pattern_sources=[]`, Stage 6 evidence/recovery roots, the
+  Stage 6 evidence/recovery helper scripts, and the receiver-side
+  `verify_stage6_evidence.py` checker; the packaged Windows runbook
   includes `db-backup --output $dbBackup`, `VACUUM INTO`,
   `PRAGMA wal_checkpoint(TRUNCATE)`, and `logs\stage6-evidence-*.zip`.
 - Windows v381 runtime-only OCR RAM probe:
@@ -1097,9 +1099,10 @@ Latest v393 full non-Windows release-gate commands:
 
 - `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v393.zip --json --output _temp/v393-non-windows-release-gates-full.json`
   -> `ok=true`; SHA256 sidecar matched
-  `3ab58cca9494940ac85c7018aed2faeebc20d1784370d7203b8642b5623a32e8`; full
+  `8d736fea8b717e573b344e3173e90b9a3c944e3813e2089203e24f55879d7de3`; full
   unit passed with `1418 passed, 5 warnings`; validator/distribution unit tests
-  passed with `147 passed`; validator/distribution mypy and Ruff passed;
+  passed with `152 passed`; validator/distribution mypy and Ruff passed,
+  including `scripts/verify_stage6_evidence.py`;
   discovery gold-set reported `44` entries, `10` strict target-year successes,
   `17` publication-lag cases, and `undemonstrated_pattern_sources=[]`;
   expected-prediction replay returned `44` exact matches / `0` failures; both
