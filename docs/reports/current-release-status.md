@@ -28,12 +28,11 @@ The latest Windows setup proof is v380: it was transferred to the operator PC,
 hash-checked, extracted into a separate directory, set up with
 `EIDP-setup.bat`, diagnosed, and smoke-tested through the new `eidp db-backup`
 command. The latest UI service health proof is also v380. Initial browser
-rendering and the Excel preview disabled-state smoke are now proven on v380.
-The broader read-only quick-navigation and sandboxed operator-action browser
-proofs remain v376, because v380 has not yet repeated every non-mutating page
-navigation or the sandbox write paths. The latest Windows bounded-bootstrap
-smoke remains v376. The latest broader Windows bounded-bootstrap proof remains
-v342.
+rendering, broader read-only quick navigation, and the Excel preview
+disabled-state smoke are now proven on v380. Sandboxed operator-action browser
+proofs remain v376, because v380 has not yet repeated the sandbox write paths.
+The latest Windows bounded-bootstrap smoke remains v376. The latest broader
+Windows bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
@@ -315,9 +314,10 @@ enforcing a stricter ZIP hygiene contract. This evidence is now packaged in
 `dist/eidp-windows-v380.zip`; v380 has also been transferred to Windows,
 installed, diagnosed, and exercised through the package-local `eidp db-backup`
 smoke. It also has a headless Streamlit `/_stcore/health` smoke, initial
-browser-render proof, and an Excel preview disabled-state smoke. Full
-quick-navigation coverage and Stage 6 operator workflow evidence still remain
-on older snapshots or missing, as listed below.
+browser-render proof, full read-only quick-navigation proof, and an Excel
+preview disabled-state smoke. Stage 6 operator workflow evidence and sandboxed
+write-path browser proof still remain on older snapshots or missing, as listed
+below.
 
 ## Objective Checklist
 
@@ -330,7 +330,7 @@ on older snapshots or missing, as listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
 | ManualActionLog audit for operator actions | v342 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v339/v340/v341/v342 | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, and opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data; v376 broader read-only quick-navigation click-through passed; full operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, and Excel preview disabled-state proof present on v380; broader navigation proof present on v376; mutating/operator workflow proof missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, and opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data; full operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, read-only navigation, and Excel preview disabled-state proof present on v380; mutating/operator workflow proof missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -426,6 +426,20 @@ Latest v380 Windows setup and backup-smoke commands:
   `eidp-v380-excel-preview.png` and generated snapshot files were removed
   afterward. The local tunnel was stopped, and a follow-up Windows process
   cleanup reported `streamlit_after_cleanup=0` for v380.
+- Windows v380 read-only quick-navigation click-through:
+  the same tunnel pattern was rerun against v380 and Playwright clicked only
+  the five non-mutating quick navigation buttons:
+  `① 学校別タスク`, `② PDF確認・手入力`, `③ 年度判定・修正`,
+  `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`. Each page rendered
+  the expected heading or key text with no missing assertions:
+  `① 学校別タスク` with `週次URL/PDF再取得` / `次に進める作業`,
+  `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー` with
+  `プレビュー workbook を生成`, and `設定` with `バージョン` / `OCR` /
+  `外部 API`. The script did not click acquisition, save, export, flush, or
+  any data-mutating action. Captured browser console output contained only
+  Chrome `VERBOSE` DOM messages about password fields, not warning/error or
+  page-error events. The local tunnel was stopped, and a follow-up Windows
+  process cleanup reported `streamlit_after_cleanup=0` for v380.
 
 Previous v379 Windows setup and UI-service commands:
 
