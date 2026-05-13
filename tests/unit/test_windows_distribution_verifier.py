@@ -163,6 +163,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "EIDP-setup.bat": (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8"),
         "EIDP-start.bat": (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8"),
         "EIDP-diagnose.bat": (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8"),
+        "EIDP-stage6-evidence.bat": (REPO_ROOT / "EIDP-stage6-evidence.bat").read_text(encoding="utf-8"),
         "EIDP-stage6-recovery.bat": (REPO_ROOT / "EIDP-stage6-recovery.bat").read_text(encoding="utf-8"),
         "README.md": "# EIDP\n",
         "requirements-windows.txt": "structlog\njsonschema>=4.0,<5.0\n",
@@ -179,6 +180,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
             "logs\\stage6-recovery-*.json\n"
             "EIDP-stage6-recovery.bat\n"
+            "logs\\stage6-evidence-*.zip\n"
+            "EIDP-stage6-evidence.bat\n"
             "scripts\\stage6_recovery_check.bat\n"
             "アンチウイルスにより隔離された\n"
             "新しい ZIP へ更新する場合\n"
@@ -210,6 +213,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "推定手作業率\n"
             "Excel ready 率\n"
             "logs\\diagnostics-*.txt\n"
+            "logs\\stage6-evidence-*.zip\n"
             "logs\\stage6-recovery-*.json\n"
             "v1.0-rc\n"
             "FY2026/R8 の current-year yield gate\n"
@@ -219,6 +223,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/weekly_run.bat": (SCRIPTS_DIR / "weekly_run.bat").read_text(encoding="utf-8"),
         "scripts/bootstrap_pdfs.bat": (SCRIPTS_DIR / "bootstrap_pdfs.bat").read_text(encoding="utf-8"),
         "scripts/diagnose.bat": (SCRIPTS_DIR / "diagnose.bat").read_text(encoding="utf-8"),
+        "scripts/collect_stage6_evidence.bat": (SCRIPTS_DIR / "collect_stage6_evidence.bat").read_text(
+            encoding="utf-8"
+        ),
         "scripts/uninstall.bat": (SCRIPTS_DIR / "uninstall.bat").read_text(encoding="utf-8"),
         "scripts/validate_install.bat": (SCRIPTS_DIR / "validate_install.bat").read_text(encoding="utf-8"),
         "scripts/stage6_recovery_check.bat": (SCRIPTS_DIR / "stage6_recovery_check.bat").read_text(
@@ -232,6 +239,9 @@ def _core_entries() -> dict[str, bytes | str]:
             SCRIPTS_DIR / "run_r8_rediscovery_weekly.py"
         ).read_text(encoding="utf-8"),
         "scripts/validate_windows_install.py": (SCRIPTS_DIR / "validate_windows_install.py").read_text(
+            encoding="utf-8"
+        ),
+        "scripts/collect_stage6_evidence.py": (SCRIPTS_DIR / "collect_stage6_evidence.py").read_text(
             encoding="utf-8"
         ),
         "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
@@ -429,6 +439,7 @@ def test_verify_core_zip_requires_root_launchers(tmp_path: Path) -> None:
     entries.pop("EIDP-setup.bat")
     entries.pop("EIDP-start.bat")
     entries.pop("EIDP-diagnose.bat")
+    entries.pop("EIDP-stage6-evidence.bat")
     entries.pop("EIDP-stage6-recovery.bat")
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
@@ -438,6 +449,7 @@ def test_verify_core_zip_requires_root_launchers(tmp_path: Path) -> None:
     assert any("EIDP-setup.bat" in error for error in check.errors)
     assert any("EIDP-start.bat" in error for error in check.errors)
     assert any("EIDP-diagnose.bat" in error for error in check.errors)
+    assert any("EIDP-stage6-evidence.bat" in error for error in check.errors)
     assert any("EIDP-stage6-recovery.bat" in error for error in check.errors)
 
 
@@ -467,6 +479,20 @@ def test_verify_core_zip_validates_root_stage6_recovery_launcher_contract(tmp_pa
 
     assert not check.ok
     assert any("EIDP-stage6-recovery.bat missing required token" in error for error in check.errors)
+
+
+def test_verify_core_zip_validates_root_stage6_evidence_launcher_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["EIDP-stage6-evidence.bat"] = entries["EIDP-stage6-evidence.bat"].replace(
+        'call "%~dp0scripts\\collect_stage6_evidence.bat"',
+        'call "%~dp0scripts\\missing_evidence.bat"',
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("EIDP-stage6-evidence.bat missing required token" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_macos_wheel(tmp_path: Path) -> None:

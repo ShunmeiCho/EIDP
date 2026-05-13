@@ -209,7 +209,7 @@ def bat_files() -> dict[str, str]:
     for name in (
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
-        "stage6_recovery_check.bat",
+        "collect_stage6_evidence.bat", "stage6_recovery_check.bat",
     ):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
@@ -220,7 +220,7 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
     assert set(bat_files.keys()) == {
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
-        "stage6_recovery_check.bat",
+        "collect_stage6_evidence.bat", "stage6_recovery_check.bat",
     }
 
 
@@ -232,6 +232,7 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
         "weekly_run.bat",
         "diagnose.bat",
         "validate_install.bat",
+        "collect_stage6_evidence.bat",
         "stage6_recovery_check.bat",
     ],
 )
@@ -253,6 +254,7 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
         "weekly_run.bat",
         "diagnose.bat",
         "validate_install.bat",
+        "collect_stage6_evidence.bat",
         "stage6_recovery_check.bat",
     ],
 )
@@ -409,6 +411,7 @@ def test_root_launchers_delegate_to_script_contracts():
     setup = (REPO_ROOT / "EIDP-setup.bat").read_text(encoding="utf-8")
     start = (REPO_ROOT / "EIDP-start.bat").read_text(encoding="utf-8")
     diagnose = (REPO_ROOT / "EIDP-diagnose.bat").read_text(encoding="utf-8")
+    stage6_evidence = (REPO_ROOT / "EIDP-stage6-evidence.bat").read_text(encoding="utf-8")
     stage6_recovery = (REPO_ROOT / "EIDP-stage6-recovery.bat").read_text(encoding="utf-8")
 
     assert 'cd /d "%~dp0"' in setup
@@ -428,6 +431,13 @@ def test_root_launchers_delegate_to_script_contracts():
     assert "Diagnostics collected" in diagnose
     assert "pause" in diagnose
     assert "endlocal & exit /b %RC%" in diagnose
+
+    assert 'cd /d "%~dp0"' in stage6_evidence
+    assert 'call "%~dp0scripts\\collect_stage6_evidence.bat"' in stage6_evidence
+    assert "Stage 6 evidence bundle created" in stage6_evidence
+    assert "logs\\stage6-evidence-*.zip" in stage6_evidence
+    assert "pause" in stage6_evidence
+    assert "endlocal & exit /b %RC%" in stage6_evidence
 
     assert 'cd /d "%~dp0"' in stage6_recovery
     assert 'call "%~dp0scripts\\stage6_recovery_check.bat" %*' in stage6_recovery
@@ -592,6 +602,17 @@ def test_stage6_recovery_check_bat_runs_packaged_helper(bat_files: dict[str, str
     assert "endlocal & exit /b %RC%" in body
 
 
+def test_collect_stage6_evidence_bat_runs_packaged_helper(bat_files: dict[str, str]):
+    body = bat_files["collect_stage6_evidence.bat"]
+    assert "collect_stage6_evidence.py" in body
+    assert "diagnose.bat" in body
+    assert "--json" in body
+    assert "logs\\stage6-evidence-*.zip" in body
+    assert "live SQLite database" in body
+    assert "downloaded PDFs" in body
+    assert "endlocal & exit /b %BUNDLE_RC%" in body
+
+
 def test_first_setup_calls_db_bootstrap_via_python_module(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
     # `python -m eidp.cli db-bootstrap --sqlite` is the actual command
@@ -728,10 +749,12 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "EIDP-setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-start.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-diagnose.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "EIDP-stage6-evidence.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-stage6-recovery.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts").mkdir()
     (fake_repo / "scripts" / "first_setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "diagnose.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "scripts" / "collect_stage6_evidence.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "run_weekly_target_year_discovery.py").write_text(
         "print('weekly')", encoding="utf-8",
     )
@@ -744,6 +767,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "stage6_recovery_check.py").write_text(
         "print('recovery')", encoding="utf-8",
     )
+    (fake_repo / "scripts" / "collect_stage6_evidence.py").write_text("print('bundle')", encoding="utf-8")
     (fake_repo / "scripts" / "stage6_recovery_check.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "alembic.ini").write_text("[alembic]\n", encoding="utf-8")
@@ -842,6 +866,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "root-level diagnostics launcher must be in the Windows ZIP so operators "
         "can collect evidence without browsing into scripts/"
     )
+    assert "EIDP-stage6-evidence.bat" in arcs, (
+        "root-level Stage 6 evidence launcher must be in the Windows ZIP so operators "
+        "can share one evidence bundle without browsing into scripts/"
+    )
     assert "EIDP-stage6-recovery.bat" in arcs, (
         "root-level Stage 6 recovery launcher must be in the Windows ZIP so operators "
         "can collect SSH recovery evidence without browsing into scripts/"
@@ -861,11 +889,17 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "scripts/validate_windows_install.py" in arcs, (
         "Windows VM checklist depends on this validation entrypoint"
     )
+    assert "scripts/collect_stage6_evidence.py" in arcs, (
+        "Stage 6 evidence bundle depends on this read-only helper"
+    )
     assert "scripts/stage6_recovery_check.py" in arcs, (
         "Stage 6 SSH recovery checklist depends on this read-only helper"
     )
     assert "scripts/stage6_recovery_check.bat" in arcs, (
         "Stage 6 recovery must have a Windows-local wrapper when SSH is unavailable"
+    )
+    assert "scripts/collect_stage6_evidence.bat" in arcs, (
+        "Stage 6 evidence bundle must have a Windows-local wrapper"
     )
     assert "scripts/validate_install.bat" in arcs, (
         "Windows VM checklist must run the validator from the extracted ZIP"

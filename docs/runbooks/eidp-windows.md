@@ -6,6 +6,8 @@
 
 通常は `C:\EIDP` 直下の `EIDP-setup.bat` と `EIDP-start.bat` だけを使います。
 問題が起きた場合だけ `EIDP-diagnose.bat` で診断ファイルを作成します。
+Stage 6 検証の証跡をまとめて共有する場合だけ `EIDP-stage6-evidence.bat`
+で証跡 ZIP を作成します。
 Stage 6 検証が SSH 不安定化で中断した場合だけ `EIDP-stage6-recovery.bat`
 で復旧確認ファイルを作成します。
 `scripts\*.bat` は管理者向けの詳細入口です。
@@ -244,6 +246,20 @@ Excel は、業務員が画面で確認した後に `Excel プレビュー` ペ�
 - 最新の初回URL/PDF取得ログ末尾
 
 診断ファイルは読み取り専用の情報収集です。DB、PDF、Excel、設定は変更しません。
+
+## 4.2.1 Stage 6 証跡 ZIP
+
+Stage 6 検証後、管理者へ証跡をまとめて渡す場合:
+
+1. `C:\EIDP\EIDP-stage6-evidence.bat` をダブルクリックします。
+2. 黒い画面に `Stage 6 evidence bundle created` と表示されたら閉じます。
+3. `C:\EIDP\logs\stage6-evidence-YYYYMMDD-HHMMSS.zip` を管理者に共有します
+   (`logs\stage6-evidence-*.zip` の最新ファイル)。
+
+証跡 ZIP は読み取り専用で、実行時に `EIDP-diagnose.bat` も呼び出します。
+含めるものは最新の diagnostics、Stage 6 recovery JSON、`last_run.json`、
+Codex RCA キュー、初回URL/PDF取得ログ、Excel 出力です。DB 本体
+(`data\eidp.sqlite3`)、WAL/SHM、PDF 原本、runtime、wheelhouse は含めません。
 
 ## 4.3 設定
 

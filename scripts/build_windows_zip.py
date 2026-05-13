@@ -327,6 +327,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       EIDP-setup.bat              root-level operator first setup launcher
       EIDP-start.bat              root-level operator app launcher
       EIDP-diagnose.bat           root-level diagnostics launcher
+      EIDP-stage6-evidence.bat    root-level Stage 6 evidence bundle launcher
       EIDP-stage6-recovery.bat    root-level Stage 6 recovery launcher
       wheelhouse/                  every accepted wheel
       src/eidp/...                 importable source layout
@@ -351,6 +352,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
         "EIDP-setup.bat",
         "EIDP-start.bat",
         "EIDP-diagnose.bat",
+        "EIDP-stage6-evidence.bat",
         "EIDP-stage6-recovery.bat",
     ):
         launcher = repo_root / name
@@ -387,6 +389,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             "run_r8_rediscovery_weekly.py",
             "atomic_write.py",
             "validate_windows_install.py",
+            "collect_stage6_evidence.py",
             "stage6_recovery_check.py",
             "bootstrap_pdf_pipeline.py",
             "ship_gate_contract.py",
