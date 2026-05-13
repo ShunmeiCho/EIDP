@@ -3,10 +3,45 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `ac3fb2a24e175b4636de210c6e4ab66dc70b0d72` (`eidp-windows-v370.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `72e874080fdfde2fab83aec9b0fbc370ed03fbbc` (`eidp-windows-v371.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V371 Preceding Fiscal-Year Heading Context
+
+v371 (`72e8740`) preserves preceding fiscal-year heading context for paragraph
+and definition-list PDF links. This fixes the Nagano-style public-school page
+shape where a page-level update date (`更新日：2025年7月16日`) appears near the
+top of the page, while the actual target-form PDF link is grouped under a later
+`<h3>令和７年度</h3>` heading. The crawler now attaches that heading-year context
+to the following `申請書 様式第２号` PDF link and still excludes the page update
+date from candidate anchor context. The result stays publication-lag evidence:
+`_stale_fiscal_year_from_candidate_hint(...) == 2025` and
+`_has_target_year_hint(..., target_year=2026)` remains false.
+
+Packaged discovery gold-set coverage remains `40` entries, `10` strict
+target-year successes, `13` publication-lag cases, and
+`undemonstrated_pattern_sources=[]`. `dist/eidp-windows-v371.zip` was rebuilt
+from clean commit `72e874080fdfde2fab83aec9b0fbc370ed03fbbc` with SHA256
+`8c115b330150744f5a462b9fffe7e62558846e4be7216a9289d09e208a685f3e`, and
+`dist/eidp-windows.zip` was refreshed to the same SHA. Package verification
+passed with `--require-demonstrated-discovery-patterns` for both the versioned
+ZIP and latest alias.
+
+Verification: targeted PDF-discovery regression tests passed with `2 passed`;
+the full `tests/unit/test_pdf_discovery.py` module passed with
+`157 passed, 5 warnings`; targeted Ruff passed; targeted mypy passed for
+`src/eidp/scraper/pdf_discovery.py`; the full non-Windows release gate returned
+`ok=true` with `1373 passed, 5 warnings` for the full unit suite, `133 passed`
+for the distribution-verifier suite, clean Ruff and mypy gates, package
+verification with `discovery_gold_set_entries=40`, and demonstrated-pattern
+verification. Bounded evidence replay also returned `ok=true` with Tokyo `4`
+exact / `0` failures, Saitama `16` exact / `0` failures, 聖十字 `1` exact /
+`0` failures, 更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures,
+and 君津 `1` exact / `0` failures. 長野県公衆衛生 is still absent from those
+older bounded evidence JSONL files because it was added from a fresh manual-web
+/ official-index trace.
 
 ## 2026-05-13 V370 Nagano Public-School Publication-Lag Case
 
