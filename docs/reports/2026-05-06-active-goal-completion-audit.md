@@ -3,10 +3,35 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `8f385f86e5a976b913d777ea80b56c00dc1c5ae7` (`eidp-windows-v352.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `b75eecd60d0417369f58cc17f298e288c1f2d251` (`eidp-windows-v353.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V353 Demonstrated Support-Year Context Recovery
+
+v353 (`b75eecd`) closes one source-side false negative from manual web
+demonstration. 聖十字看護専門学校 publishes a 修学支援新制度 page where the
+section text states `令和8年度より` target-school status immediately before a
+確認申請書様式 第2号 PDF link. Before the fix, a one-school discovery replay
+found the candidate but rejected it as `target_fiscal_year_not_detected`.
+`pdf_discovery.py` now lets target-form links inherit nearby support-system
+fiscal-year context from preceding paragraphs, without treating unrelated PDF
+links as target forms. The replay now reports `crawled=1`, `found=1`,
+`downloaded=1`, `skipped=0`, and the evidence row is `accepted_downloaded`
+with `year_evidence=url_hint`, `pattern_type=wordpress`, and `pdf_type=target`.
+
+The discovery gold-set now has `33` entries, including `5`
+`accepted_target_pdf` successes and the new
+`school_support_page_with_adjacent_target_year_statement` site family.
+Verification: focused discovery/gold-set tests passed, targeted Ruff and mypy
+passed, full unit suite passed with `1363 passed, 5 warnings`, and
+`dist/eidp-windows-v353.zip` was rebuilt with SHA256
+`9c68738c78ded416c84696fb78606f29767c9fe4f566747f42db802cb8a827de`. The
+default package verifier and `--require-demonstrated-discovery-patterns` both
+passed. The full non-Windows release gate returned `ok=true`; bounded evidence
+replay returned `ok=true` with Tokyo `4` exact / `0` failures, Saitama `16`
+exact / `0` failures, and 聖十字 `1` exact / `0` failures.
 
 ## 2026-05-13 Source-Side DB Readiness Guard
 
@@ -42,10 +67,10 @@ bounded Saitama/Tokyo evidence JSONL can be replayed without SSH Win access.
 The bounded replay gate allows missing entries because a bounded run only
 covers part of the gold-set, but it fails on failed or unexpected predictions.
 Verification: helper unit tests passed with `8 passed`, helper mypy passed,
-helper Ruff passed, the full v352 non-Windows gate run returned `ok=true`, and
+helper Ruff passed, the full v353 non-Windows gate run returned `ok=true`, and
 the evidence replay run returned `ok=true` with Tokyo evidence `4` exact /
 `0` failures and Saitama evidence `16` exact / `0` failures. The full unit
-suite passed with `1362 passed, 5 warnings`. A source-side ship-readiness read
+suite passed with `1363 passed, 5 warnings`. A source-side ship-readiness read
 against `_temp/v348-mac-tokyo20/eidp.sqlite3` still reports `ok=false`,
 `strict_target_pdf_rate=0.0`, `operator_reviewable_rate=0.019`, and
 `excel_ready_rate=0.0`.
