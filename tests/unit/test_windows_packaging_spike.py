@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,28 @@ OPERATOR_RUNBOOK_PATH = REPO_ROOT / "docs" / "runbooks" / "eidp-windows.md"
 def _load_build_script():
     spec = importlib.util.spec_from_file_location(
         "build_windows_zip", SCRIPTS_DIR / "build_windows_zip.py",
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_offline_pip_script():
+    spec = importlib.util.spec_from_file_location(
+        "offline_pip_install", SCRIPTS_DIR / "offline_pip_install.py",
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_windows_platform_module():
+    spec = importlib.util.spec_from_file_location(
+        "eidp.windows_platform", REPO_ROOT / "src" / "eidp" / "windows_platform.py",
     )
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -282,12 +305,67 @@ def test_first_setup_bootstraps_db(bat_files: dict[str, str]):
 def test_first_setup_uses_offline_install(bat_files: dict[str, str]):
     """No-network install is the entire reason we ship a wheelhouse."""
     body = bat_files["first_setup.bat"]
+    assert "offline_pip_install.py" in body
+    assert "VENV_SITE_PACKAGES=%EIDP_APP_ROOT%\\.venv\\Lib\\site-packages" in body
+    assert '"%RUNTIME_PY%" "%OFFLINE_PIP%" install' in body
+    assert '--target "%VENV_SITE_PACKAGES%"' in body
     assert "--no-index" in body
     assert "wheelhouse" in body
     assert "EIDP_WHEEL" in body
     assert "eidp-*.whl" in body
-    assert "--no-cache" in body
-    assert "--reinstall-package eidp" in body
+    assert "--no-cache-dir" in body
+    assert "--upgrade" in body
+    assert "--force-reinstall" in body
+    assert "--no-deps" in body
+    assert "--reinstall-package eidp" not in body
+
+
+def test_offline_pip_install_disables_wmi_before_importing_pip(monkeypatch: pytest.MonkeyPatch):
+    module = _load_offline_pip_script()
+    monkeypatch.setattr(module.platform, "_wmi_query", lambda *_args, **_kwargs: [], raising=False)
+    for key in ("PIP_DISABLE_PIP_VERSION_CHECK", "PIP_NO_INPUT", "PIP_NO_CACHE_DIR"):
+        monkeypatch.delenv(key, raising=False)
+
+    captured: list[list[str]] = []
+
+    def fake_pip_main(argv: list[str]) -> int:
+        captured.append(argv)
+        module.platform._wmi_query("Win32_OperatingSystem", (), ())  # type: ignore[attr-defined]
+        return 7
+
+    pip_pkg = types.ModuleType("pip")
+    pip_pkg.__path__ = []  # type: ignore[attr-defined]
+    internal_pkg = types.ModuleType("pip._internal")
+    internal_pkg.__path__ = []  # type: ignore[attr-defined]
+    cli_pkg = types.ModuleType("pip._internal.cli")
+    cli_pkg.__path__ = []  # type: ignore[attr-defined]
+    main_mod = types.ModuleType("pip._internal.cli.main")
+    main_mod.main = fake_pip_main  # type: ignore[attr-defined]
+
+    monkeypatch.setitem(sys.modules, "pip", pip_pkg)
+    monkeypatch.setitem(sys.modules, "pip._internal", internal_pkg)
+    monkeypatch.setitem(sys.modules, "pip._internal.cli", cli_pkg)
+    monkeypatch.setitem(sys.modules, "pip._internal.cli.main", main_mod)
+
+    with pytest.raises(OSError, match="WMI disabled"):
+        module.main(["install", "--no-index"])
+    assert captured == [["install", "--no-index"]]
+    assert module.os.environ["PIP_DISABLE_PIP_VERSION_CHECK"] == "1"
+    assert module.os.environ["PIP_NO_INPUT"] == "1"
+    assert module.os.environ["PIP_NO_CACHE_DIR"] == "1"
+
+
+def test_windows_platform_disables_wmi_queries(monkeypatch: pytest.MonkeyPatch):
+    module = _load_windows_platform_module()
+    monkeypatch.setattr(module.platform, "_wmi_query", lambda *_args, **_kwargs: [], raising=False)
+
+    module.disable_wmi_platform_queries()
+
+    with pytest.raises(OSError, match="WMI disabled"):
+        module.platform._wmi_query("Win32_OperatingSystem", (), ())  # type: ignore[attr-defined]
+    patched = module.platform._wmi_query  # type: ignore[attr-defined]
+    module.disable_wmi_platform_queries()
+    assert module.platform._wmi_query is patched  # type: ignore[attr-defined]
 
 
 def test_first_setup_installs_optional_playwright_addon_when_extracted(bat_files: dict[str, str]):
@@ -326,13 +404,15 @@ def test_first_setup_creates_isolated_venv(bat_files: dict[str, str]):
         "the bundled Python interpreter"
     )
     assert '"%UV_EXE%" venv' not in body, "first_setup must not use `uv venv` on Windows"
-    assert "uv.exe" in body, "first_setup must still use bundled uv.exe for offline pip install"
+    assert '"%UV_EXE%" pip install' not in body, "first_setup must not use uv pip install on Windows"
+    assert '--python "%VENV_PY%"' not in body, "offline pip install must avoid uv's interpreter check"
+    assert '"%RUNTIME_PY%" "%OFFLINE_PIP%" install' in body
+    assert '--target "%VENV_SITE_PACKAGES%"' in body
     assert "venv" in body and ".venv" in body, "first_setup must create .venv"
     assert ".venv\\Scripts\\python.exe" in body, (
         "subsequent commands must run via .venv python so they see the "
         "wheelhouse-installed packages"
     )
-    assert "--python" in body, "uv pip install must target the venv via --python"
     assert "--clear" not in body, (
         "first_setup must not delete an existing .venv because Windows can "
         "hold .venv\\Scripts files open while the app is running"
@@ -771,6 +851,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     fake_repo = tmp_path / "repo"
     (fake_repo / "src" / "eidp").mkdir(parents=True)
     (fake_repo / "src" / "eidp" / "__init__.py").write_text("", encoding="utf-8")
+    (fake_repo / "src" / "sitecustomize.py").write_text("print('startup')", encoding="utf-8")
     (fake_repo / "EIDP-setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-start.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-diagnose.bat").write_text("@echo off", encoding="utf-8")
@@ -788,6 +869,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "run_r8_rediscovery_weekly.py").write_text(
         "from run_weekly_target_year_discovery import main\n", encoding="utf-8",
     )
+    (fake_repo / "scripts" / "offline_pip_install.py").write_text("print('pip')", encoding="utf-8")
     (fake_repo / "scripts" / "validate_windows_install.py").write_text(
         "print('validate')", encoding="utf-8",
     )
@@ -912,11 +994,18 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     )
     assert "migrations/env.py" in arcs
     assert "migrations/versions/abcd_initial.py" in arcs
+    assert "src/sitecustomize.py" in arcs, (
+        "Windows launchers set PYTHONPATH=src, so sitecustomize.py must ship "
+        "to patch platform WMI before third-party imports"
+    )
     assert "scripts/run_weekly_target_year_discovery.py" in arcs, (
         "weekly_run.bat depends on this Python entrypoint"
     )
     assert "scripts/run_r8_rediscovery_weekly.py" in arcs, (
         "legacy Task Scheduler entries depend on this compatibility wrapper"
+    )
+    assert "scripts/offline_pip_install.py" in arcs, (
+        "first_setup.bat depends on this wrapper to avoid pip's Windows WMI hang"
     )
     assert "scripts/validate_windows_install.py" in arcs, (
         "Windows VM checklist depends on this validation entrypoint"

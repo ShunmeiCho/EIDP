@@ -332,6 +332,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       EIDP-stage6-recovery.bat    root-level Stage 6 recovery launcher
       wheelhouse/                  every accepted wheel
       src/eidp/...                 importable source layout
+      src/sitecustomize.py          Windows startup compatibility hook
       scripts/*.bat                .bat launchers
       scripts/run_weekly_target_year_discovery.py weekly runner
       scripts/run_r8_rediscovery_weekly.py        backward-compatible wrapper
@@ -381,6 +382,9 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             if path.is_file() and "__pycache__" not in path.parts:
                 arcname = "src/" + path.relative_to(repo_root / "src").as_posix()
                 members.append((path, arcname))
+    sitecustomize = repo_root / "src" / "sitecustomize.py"
+    if sitecustomize.is_file():
+        members.append((sitecustomize, "src/sitecustomize.py"))
 
     # scripts/*.bat + production/validation Python entrypoints.
     scripts_root = repo_root / "scripts"
@@ -390,6 +394,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
         for name in (
             "run_weekly_target_year_discovery.py",
             "run_r8_rediscovery_weekly.py",
+            "offline_pip_install.py",
             "atomic_write.py",
             "validate_windows_install.py",
             "collect_stage6_evidence.py",

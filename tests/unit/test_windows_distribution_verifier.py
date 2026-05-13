@@ -249,6 +249,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/run_r8_rediscovery_weekly.py": (
             SCRIPTS_DIR / "run_r8_rediscovery_weekly.py"
         ).read_text(encoding="utf-8"),
+        "scripts/offline_pip_install.py": (SCRIPTS_DIR / "offline_pip_install.py").read_text(encoding="utf-8"),
         "scripts/validate_windows_install.py": (SCRIPTS_DIR / "validate_windows_install.py").read_text(
             encoding="utf-8"
         ),
@@ -268,6 +269,10 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/download_prefecture_artifacts.py": (SCRIPTS_DIR / "download_prefecture_artifacts.py").read_text(
             encoding="utf-8"
         ),
+        "src/eidp/windows_platform.py": (REPO_ROOT / "src" / "eidp" / "windows_platform.py").read_text(
+            encoding="utf-8"
+        ),
+        "src/sitecustomize.py": (REPO_ROOT / "src" / "sitecustomize.py").read_text(encoding="utf-8"),
         "data/prefecture-aggregators/seed.csv": _prefecture_seed_csv(),
         "data/url-discovery/discovered-urls-50.csv": (
             "school_name,url\n東京都立大学,https://www.tmu.ac.jp/\n"

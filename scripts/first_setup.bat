@@ -46,14 +46,15 @@ set "SETUP_RC=0"
 REM 4. Use the bundled python-build-standalone runtime so we never
 REM    depend on whatever Python the operator might have installed.
 set "RUNTIME_PY=%EIDP_APP_ROOT%\runtime\python\python.exe"
-set "UV_EXE=%EIDP_APP_ROOT%\runtime\uv.exe"
+set "OFFLINE_PIP=%EIDP_APP_ROOT%\scripts\offline_pip_install.py"
+set "VENV_SITE_PACKAGES=%EIDP_APP_ROOT%\.venv\Lib\site-packages"
 if not exist "%RUNTIME_PY%" (
     echo [first_setup] ERROR: runtime\python\python.exe is missing. Re-extract the ZIP.
     set "SETUP_RC=2"
     goto :finish
 )
-if not exist "%UV_EXE%" (
-    echo [first_setup] ERROR: runtime\uv.exe is missing. Re-extract the ZIP.
+if not exist "%OFFLINE_PIP%" (
+    echo [first_setup] ERROR: scripts\offline_pip_install.py is missing. Re-extract the ZIP.
     set "SETUP_RC=2"
     goto :finish
 )
@@ -61,11 +62,12 @@ if not exist "%UV_EXE%" (
 REM 5. Create an isolated venv if needed. Use the stdlib venv module rather
 REM    than `uv venv`: live operator-PC v394 probing showed `uv venv` can
 REM    hang while checking the bundled Python interpreter, while
-REM    `python -m venv --without-pip` returns immediately. We still use
-REM    bundled uv below for offline wheelhouse installs. Do not clear an
-REM    existing venv: Windows may keep .venv\Scripts files locked while
-REM    the UI is still running. Dependency refresh happens through the
-REM    offline install steps.
+REM    `python -m venv --without-pip` returns immediately. Dependencies are
+REM    installed into .venv\Lib\site-packages by scripts\offline_pip_install.py,
+REM    which runs under the bundled runtime Python and avoids pip's Windows
+REM    WMI truststore hang. Do not clear an existing venv: Windows may keep
+REM    .venv\Scripts files locked while the UI is still running. Dependency
+REM    refresh happens through the offline install steps.
 set "VENV_PY=%EIDP_APP_ROOT%\.venv\Scripts\python.exe"
 if not exist "%VENV_PY%" (
     "%RUNTIME_PY%" -m venv --without-pip ".venv"
@@ -82,10 +84,11 @@ if not exist "%VENV_PY%" (
 )
 
 REM 6. Offline install from the bundled wheelhouse into the venv.
-"%UV_EXE%" pip install ^
-    --python "%VENV_PY%" ^
+"%RUNTIME_PY%" "%OFFLINE_PIP%" install ^
+    --target "%VENV_SITE_PACKAGES%" ^
     --no-index ^
     --find-links "%EIDP_APP_ROOT%\wheelhouse" ^
+    --upgrade ^
     --requirement "%EIDP_APP_ROOT%\requirements-windows.txt"
 if errorlevel 1 (
     echo [first_setup] dependency install failed
@@ -109,12 +112,14 @@ for %%F in ("%EIDP_APP_ROOT%\wheelhouse\eidp-*.whl") do (
     )
     set "EIDP_WHEEL=%%~fF"
 )
-"%UV_EXE%" pip install ^
-    --python "%VENV_PY%" ^
+"%RUNTIME_PY%" "%OFFLINE_PIP%" install ^
+    --target "%VENV_SITE_PACKAGES%" ^
     --no-index ^
     --find-links "%EIDP_APP_ROOT%\wheelhouse" ^
-    --no-cache ^
-    --reinstall-package eidp ^
+    --no-cache-dir ^
+    --upgrade ^
+    --force-reinstall ^
+    --no-deps ^
     "%EIDP_WHEEL%"
 if errorlevel 1 (
     echo [first_setup] eidp wheel install failed
@@ -129,11 +134,12 @@ REM     the add-on is safe because we do not delete .venv above.
 set "PLAYWRIGHT_ADDON_WHEELHOUSE=%EIDP_APP_ROOT%\playwright-addon\wheelhouse"
 if exist "%PLAYWRIGHT_ADDON_WHEELHOUSE%" (
     echo [first_setup] installing optional Playwright/Scrapling add-on wheels
-    "%UV_EXE%" pip install ^
-        --python "%VENV_PY%" ^
+    "%RUNTIME_PY%" "%OFFLINE_PIP%" install ^
+        --target "%VENV_SITE_PACKAGES%" ^
         --no-index ^
         --find-links "%EIDP_APP_ROOT%\playwright-addon\wheelhouse" ^
-        --no-cache ^
+        --no-cache-dir ^
+        --upgrade ^
         "scrapling[fetchers]" playwright
     if errorlevel 1 (
         echo [first_setup] optional Playwright/Scrapling add-on install failed
