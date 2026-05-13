@@ -379,6 +379,16 @@ Latest v376 commands:
   removed afterward. This proves the Windows UI Excel preview/download path
   works for the retroactive R7 dataset, while FY2026 remains blocked by absent
   current target-year rows.
+- Windows v376 ManualActionLog/outbox sandbox smoke:
+  a disposable `C:\Users\cyo20\EIDP-v376-audit-sandbox` copied only the
+  current v376 SQLite files, ran the package code with `EIDP_APP_ROOT` pointed
+  at that sandbox, inserted one `stage6_smoke_manual_action` row via
+  `log_manual_action`, committed it, and flushed `manual-actions.jsonl` via
+  `flush_audit_outbox`. The smoke reported `inserted_delta=1`,
+  `flush_stats={exported: 1, already_present: 0, failed: 0}`,
+  `jsonl_exported_at_present=true`, `matching_outbox_rows=1`, and actor
+  `codex-stage6-smoke`. The sandbox directory was removed afterward, and the
+  current v376 runtime directory was not mutated.
 - Windows v376 Saitama 5-site bounded backend smoke:
   `bootstrap_pdf_pipeline.py --pref saitama --url-search off
   --school-url-crawl off --skip-known-url-discovery --discovery-methods

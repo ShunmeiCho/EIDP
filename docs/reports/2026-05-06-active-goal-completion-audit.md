@@ -5301,3 +5301,14 @@ artifacts were removed, and the follow-up remote process check again found no
 remaining EIDP Streamlit/bootstrap process. This is a real Windows UI proof of
 Excel preview/download mechanics on the retroactive FY2025 dataset, but it does
 not change FY2026/R8 strict target-year readiness.
+
+A disposable Windows audit sandbox then copied only the v376 SQLite files into
+`C:\Users\cyo20\EIDP-v376-audit-sandbox` and ran the packaged code with
+`EIDP_APP_ROOT` pointed at that sandbox. The smoke inserted one
+`stage6_smoke_manual_action` row through `log_manual_action`, committed it, and
+ran `flush_audit_outbox` to `data\audit\manual-actions.jsonl`. The captured
+result was `inserted_delta=1`, `flush_stats.exported=1`,
+`jsonl_exported_at_present=true`, and `matching_outbox_rows=1`; the matching
+JSONL row preserved actor `codex-stage6-smoke`. The sandbox directory was
+removed after verification, and the current v376 runtime directory was left
+untouched.
