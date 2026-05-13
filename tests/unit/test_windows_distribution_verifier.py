@@ -347,6 +347,9 @@ def _core_entries() -> dict[str, bytes | str]:
             encoding="utf-8"
         ),
         "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
+        "src/eidp/cli_reports.py": (REPO_ROOT / "src" / "eidp" / "cli_reports.py").read_text(
+            encoding="utf-8"
+        ),
         "src/eidp/scraper/prefecture_aggregator.py": _prefecture_parser_source(),
         "runtime/python/python.exe": b"PE",
         "runtime/uv.exe": b"PE",
@@ -1146,17 +1149,13 @@ def test_verify_core_zip_requires_settings_page_target_year_bounds(tmp_path: Pat
 
 def test_verify_core_zip_requires_cli_report_database_not_ready_gate(tmp_path: Path) -> None:
     entries = _core_entries()
-    entries["src/eidp/cli.py"] = (
-        '@app.command("eval-discovery-gold")\n'
-        "--fail-on-regression\n"
-        "_discovery_gold_gate_failed\n"
-    )
+    entries["src/eidp/cli_reports.py"] = '@report_app.command("ship-readiness")\n--fail-on-missing-goal\n'
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
 
     assert not check.ok
-    assert any("src/eidp/cli.py missing required token" in error for error in check.errors)
+    assert any("src/eidp/cli_reports.py missing required token" in error for error in check.errors)
     assert any("database_not_ready" in error for error in check.errors)
 
 
@@ -1167,9 +1166,6 @@ def test_verify_core_zip_requires_import_excel_invalid_year_warning(tmp_path: Pa
         '@app.command("discovery-gold-expected-predictions")\n'
         "--fail-on-regression\n"
         "_discovery_gold_gate_failed\n"
-        "_exit_report_db_error\n"
-        "database_not_ready\n"
-        "report query failed; database is not initialized or the schema is incomplete\n"
         '_require_app_lock("cli_import_excel")\n'
         '_require_app_lock("cli_db_bootstrap")\n'
         '_require_app_lock("cli_rebuild_school_year_tasks")\n'
