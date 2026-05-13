@@ -46,27 +46,71 @@ def _default_cpu_count_reader() -> int:
 def _default_free_ram_reader() -> int:
     """Best-effort free-memory probe in MB.
 
-    Tries ``psutil.virtual_memory().available`` first because that is
-    what the operator install actually has. Falls back to
-    ``os.sysconf("SC_AVPHYS_PAGES")`` on POSIX. Worst case (Windows
-    without psutil) returns 0 so ``meets_threshold`` will fail closed.
+    Tries ``psutil.virtual_memory().available`` first when present, then
+    uses the Windows ``GlobalMemoryStatusEx`` API via stdlib ``ctypes``.
+    Falls back to ``os.sysconf("SC_AVPHYS_PAGES")`` on POSIX. Worst case
+    returns 0 so ``meets_threshold`` will fail closed.
     """
+    psutil_mb = _psutil_available_memory_mb()
+    if psutil_mb is not None:
+        return psutil_mb
+
+    if os.name == "nt":
+        windows_mb = _windows_available_memory_mb()
+        if windows_mb is not None:
+            return windows_mb
+
+    posix_mb = _posix_available_memory_mb()
+    if posix_mb is not None:
+        return posix_mb
+
+    return 0
+
+
+def _psutil_available_memory_mb() -> int | None:
     try:
-        import psutil  # type: ignore[import-not-found]
+        import psutil  # type: ignore[import-untyped]
 
         return int(psutil.virtual_memory().available // (1024 * 1024))
     except Exception:
-        pass
+        return None
 
+
+def _windows_available_memory_mb() -> int | None:
+    try:
+        import ctypes
+
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        status = MEMORYSTATUSEX()
+        status.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):  # type: ignore[attr-defined]
+            return None
+        return int(status.ullAvailPhys // (1024 * 1024))
+    except Exception:
+        return None
+
+
+def _posix_available_memory_mb() -> int | None:
     try:
         page_size = os.sysconf("SC_PAGESIZE")
         avail_pages = os.sysconf("SC_AVPHYS_PAGES")
         if page_size > 0 and avail_pages > 0:
             return int((page_size * avail_pages) // (1024 * 1024))
     except (AttributeError, ValueError, OSError):
-        pass
-
-    return 0
+        return None
+    return None
 
 
 def detect_runtime(

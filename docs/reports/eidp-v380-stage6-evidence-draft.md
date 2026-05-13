@@ -29,7 +29,7 @@ running one uninterrupted production cycle.
 | Package commit | `f6a5e6d46db7b0b836b18399e5b401362575c38d` |
 | Package SHA256 | `1fef8d468ba2e7d882f7a3a774ccbbf071d1e1ee362ae62b8c4e458c576e5361` |
 | Windows extract path | `C:\Users\cyo20\EIDP-v380-f6a5e6d` |
-| OCR add-on ZIP SHA256 | not captured in this evidence set |
+| OCR add-on ZIP SHA256 | not available in this evidence set; no OCR add-on ZIP was present in local `dist/` |
 | Playwright add-on ZIP SHA256 | not captured in this evidence set |
 | Distribution verifier output file | not captured as a saved JSON artifact in this evidence set |
 
@@ -59,6 +59,8 @@ running one uninterrupted production cycle.
 | `eidp db-backup` smoke | backup opened successfully with `backup_objects=35`, `integrity=ok`, temp backup removed |
 | Environment capture | `2026-05-14T00:51:48+09:00`; host `JUNMING`; Windows 11 Pro; i9-13900HK; 32 GB RAM; `C:` free `1058.8` GB |
 | Task Scheduler query | task `EIDP Weekly Run` found, state `Ready`, action `"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"`, weekly trigger enabled from `2026-05-13T02:00:00`, last run `2026-05-11T02:00:00+09:00`, next run `2026-05-18T02:00:00+09:00`, last result `0` |
+| OCR availability probe | v380 extract path had no `ocr-addon`; `detect_ocr_availability` returned `binary_path=null`, `has_jpn_traineddata=false`, `can_run=false`; the v380 packaged runtime also returned `runtime_free_ram_mb=0` because the Windows package lacks `psutil` |
+| Source-side OCR RAM fallback fix | added a stdlib Windows `GlobalMemoryStatusEx` fallback; direct Windows probe returned `cpu_count=20`, `avail_phys_mb=16532`, `meets_ocr_default_threshold=true` |
 | UI health | `/_stcore/health` returned `200 ok`; Streamlit `1.57.0`; cleanup `remaining_streamlit_processes=0` |
 | Browser render | Playwright title `EIDP Operator Console`; default page `① 学校別タスク`; target `2026年度（令和8年度）`; build `f6a5e6d` |
 | SSH tunnel note | `ssh -o ClearAllForwardings=no` was required because local `Host win` clears command-line forwards |
@@ -180,7 +182,7 @@ SupportRecipient ingest example:
 | Owner sign-off | missing |
 | Business operator sign-off | missing |
 | FY2026/R8 yield gate | failing / publication-lag dependent |
-| OCR add-on runtime proof on operator PC | missing in this evidence set |
+| OCR add-on runtime proof on operator PC | blocked; v380 operator install has no `ocr-addon`, and source now contains a RAM-detection fix that still needs a rebuilt Windows package plus add-on runtime proof |
 | Excel output file retained as signed artifact | missing |
 
 ## 9. Release Decision

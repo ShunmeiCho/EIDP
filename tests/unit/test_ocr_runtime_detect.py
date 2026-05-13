@@ -8,6 +8,7 @@ from eidp.ocr.runtime_detect import (
     DEFAULT_MIN_CPUS,
     DEFAULT_MIN_FREE_RAM_MB,
     RuntimeProfile,
+    _default_free_ram_reader,
     detect_runtime,
     ocr_auto_enable,
 )
@@ -39,6 +40,19 @@ def test_detect_runtime_uses_injected_readers():
         free_ram_reader=lambda: 10 * 1024,
     )
     assert profile == RuntimeProfile(cpu_count=6, free_ram_mb=10 * 1024)
+
+
+def test_default_free_ram_reader_uses_windows_api_without_psutil(monkeypatch: pytest.MonkeyPatch):
+    """Windows operator ZIPs do not have to bundle psutil; stdlib memory
+    detection must still keep OCR auto-enable from failing closed on RAM."""
+    import eidp.ocr.runtime_detect as runtime_detect
+
+    monkeypatch.setattr(runtime_detect, "_psutil_available_memory_mb", lambda: None)
+    monkeypatch.setattr(runtime_detect, "_windows_available_memory_mb", lambda: 12 * 1024)
+    monkeypatch.setattr(runtime_detect, "_posix_available_memory_mb", lambda: None)
+    monkeypatch.setattr(runtime_detect.os, "name", "nt")
+
+    assert _default_free_ram_reader() == 12 * 1024
 
 
 # ---------------------------------------------------------------------------

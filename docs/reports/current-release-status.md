@@ -54,8 +54,15 @@ bounded backend bootstrap smoke for the 5-site Saitama official-index path, and
 a package-local backend ingest smoke for append-only SupportRecipient
 revisions. These observations are consolidated in
 `docs/reports/eidp-v380-stage6-evidence-draft.md` as a draft, not a completed
-operator sign-off. The latest broader Windows bounded-bootstrap proof remains
-v342.
+operator sign-off. OCR add-on runtime proof is still not complete: the v380
+operator install has no `ocr-addon` directory and `detect_ocr_availability`
+correctly reports `can_run=false`, but the probe also exposed a Windows
+RAM-detection bug in the source runtime fallback (`runtime_free_ram_mb=0` when
+the package lacks `psutil`). The source tree now has a focused fix that uses
+the Windows `GlobalMemoryStatusEx` API via stdlib `ctypes`; a direct operator-PC
+probe returned `avail_phys_mb=16532`, `cpu_count=20`, and
+`meets_ocr_default_threshold=true`. The latest broader Windows
+bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
