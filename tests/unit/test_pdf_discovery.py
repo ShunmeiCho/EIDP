@@ -943,7 +943,12 @@ def test_extract_pdf_links_includes_direct_pdf_data_attributes() -> None:
     </p>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2026)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2026,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r8-kakunin.pdf?download=1#page=1",
@@ -966,9 +971,26 @@ def test_extract_pdf_links_does_not_treat_data_href_as_href() -> None:
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r8-kakunin.pdf",
-        "https://example.ac.jp/docs/old-syllabus.pdf",
     ]
     assert candidates[0].pattern_type == "direct"
+
+
+def test_extract_pdf_links_skips_experimental_patterns_by_default() -> None:
+    html = """
+    <section>
+      <h2>令和12年度分申請</h2>
+      <button type="button" data-url="/docs/r12-kakunin.pdf">確認申請書</button>
+      <button type="button" onclick="window.open('/docs/r12-onclick.pdf')">確認申請書</button>
+      <form action="/docs/r12-form.pdf"><button>確認申請書</button></form>
+      <select><option value="/docs/r12-select.pdf">確認申請書</option></select>
+      <input type="button" value="確認申請書" data-url="/docs/r12-input.pdf">
+      <meta http-equiv="refresh" content="0; url=/docs/r12-meta.pdf">
+    </section>
+    """
+
+    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2030)
+
+    assert candidates == []
 
 
 def test_extract_pdf_links_includes_select_option_pdf_values() -> None:
@@ -983,7 +1005,12 @@ def test_extract_pdf_links_includes_select_option_pdf_values() -> None:
     </section>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2030)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2030,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r12-kakunin.pdf?download=1",
@@ -1004,7 +1031,12 @@ def test_extract_pdf_links_includes_meta_refresh_pdf_values() -> None:
     </html>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2033)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2033,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r15-kakunin.pdf?download=1",
@@ -1027,7 +1059,12 @@ def test_extract_pdf_links_includes_form_action_pdf_values() -> None:
     </section>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2032)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2032,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r14-kakunin.pdf?download=1",
@@ -1047,7 +1084,12 @@ def test_extract_pdf_links_includes_lazy_pdf_data_attributes() -> None:
     <div data-src="/docs/r11-syllabus.pdf">授業科目一覧</div>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2029)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2029,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r11-kakunin.pdf",
@@ -1070,7 +1112,12 @@ def test_extract_pdf_links_includes_button_pdf_data_attributes() -> None:
     </section>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2027)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2027,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r9-kakunin.pdf",
@@ -1092,7 +1139,12 @@ def test_extract_pdf_links_includes_onclick_pdf_urls() -> None:
     </section>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2028)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2028,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r10-kakunin.pdf?download=1",
@@ -1112,7 +1164,12 @@ def test_extract_pdf_links_includes_input_pdf_controls() -> None:
     </section>
     """
 
-    candidates = _extract_pdf_links(html, "https://example.ac.jp/disclosure/", target_fiscal_year=2031)
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2031,
+        experimental_extractors=True,
+    )
 
     assert [candidate.pdf_url for candidate in candidates] == [
         "https://example.ac.jp/docs/r13-kakunin.pdf",

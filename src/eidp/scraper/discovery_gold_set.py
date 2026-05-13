@@ -34,14 +34,16 @@ DISCOVERY_GOLD_NO_TARGET_EVIDENCE_REASONS = frozenset({
     "pre_filtered_non_target_hint",
 })
 DISCOVERY_GOLD_TRACKED_EXTRACTOR_SOURCES = (
-    "data_attribute",
     "embed",
+    "wordpress_download_manager",
+)
+DISCOVERY_GOLD_EXPERIMENTAL_EXTRACTOR_SOURCES = (
+    "data_attribute",
     "form_action",
     "input_control",
     "meta_refresh",
     "onclick",
     "select_option",
-    "wordpress_download_manager",
 )
 
 

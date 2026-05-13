@@ -25,7 +25,7 @@ def test_discovery_gold_set_cli_outputs_summary_json() -> None:
     assert payload["operator_review_entries"] == 15
 
 
-def test_discovery_gold_set_cli_can_fail_on_undemonstrated_pattern_sources() -> None:
+def test_discovery_gold_set_cli_passes_when_tracked_pattern_sources_are_demonstrated() -> None:
     result = CliRunner().invoke(
         app,
         [
@@ -37,9 +37,9 @@ def test_discovery_gold_set_cli_can_fail_on_undemonstrated_pattern_sources() -> 
         ],
     )
 
-    assert result.exit_code == 1
+    assert result.exit_code == 0
     payload = json.loads(result.output)
-    assert "onclick" in payload["undemonstrated_pattern_sources"]
+    assert payload["undemonstrated_pattern_sources"] == []
     assert "embed" not in payload["undemonstrated_pattern_sources"]
     assert "wordpress_download_manager" not in payload["undemonstrated_pattern_sources"]
 

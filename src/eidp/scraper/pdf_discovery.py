@@ -1479,10 +1479,16 @@ def _extract_pdf_links(
     base_url: str,
     *,
     target_fiscal_year: int | None = None,
+    experimental_extractors: bool | None = None,
 ) -> list[PdfCandidate]:
     """Extract PDF link candidates from HTML using known PDF delivery patterns."""
     candidates: list[PdfCandidate] = []
     candidate_index_by_key: dict[str, int] = {}
+    experimental_enabled = (
+        settings.pdf_discovery_experimental_extractors
+        if experimental_extractors is None
+        else experimental_extractors
+    )
 
     # Pattern 1: Direct PDF links — a href values that point at PDFs.
     # Parse the full attribute block so ``data-href`` is not misclassified as
@@ -1506,112 +1512,46 @@ def _extract_pdf_links(
             target_fiscal_year=target_fiscal_year,
         )
 
-    # Pattern 1a: HTML redirect pages whose meta refresh points directly at a PDF.
-    for m in re.finditer(PDF_META_REFRESH_PATTERN, html, re.IGNORECASE | re.DOTALL):
-        http_equiv = _anchor_attr(m.group(1), "http-equiv")
-        if not http_equiv or http_equiv.strip().lower() != "refresh":
-            continue
-        content = _anchor_attr(m.group(1), "content")
-        if not content:
-            continue
-        url = _pdf_url_from_meta_refresh_content(content, base_url)
-        if not url:
-            continue
-        pattern = _pdf_delivery_pattern(url, url, source="meta_refresh")
-        _append_or_upgrade_candidate(
-            candidates,
-            candidate_index_by_key,
-            PdfCandidate(
-                pdf_url=url,
-                page_url=base_url,
-                anchor_text=_html_title_text(html),
-                pattern_type=pattern,
-            ),
-            target_fiscal_year=target_fiscal_year,
-        )
-
-    # Pattern 1b: year/select dropdowns whose option values are PDF URLs.
-    for m in re.finditer(
-        PDF_OPTION_VALUE_PATTERN,
-        html,
-        re.IGNORECASE | re.DOTALL,
-    ):
-        href = _anchor_attr(m.group(1), "value")
-        if not href or ".pdf" not in unquote(href).lower():
-            continue
-        url = urljoin(base_url, href)
-        pattern = _pdf_delivery_pattern(url, href, source="select_option")
-        _append_or_upgrade_candidate(
-            candidates,
-            candidate_index_by_key,
-            PdfCandidate(
-                pdf_url=url,
-                page_url=base_url,
-                anchor_text=_pdf_anchor_context_text(html, m),
-                pattern_type=pattern,
-            ),
-            target_fiscal_year=target_fiscal_year,
-        )
-
-    # Pattern 1c: form submit buttons whose action points directly at a PDF.
-    for m in re.finditer(
-        PDF_FORM_ACTION_PATTERN,
-        html,
-        re.IGNORECASE | re.DOTALL,
-    ):
-        href = _anchor_attr(m.group(1), "action")
-        if not href or ".pdf" not in unquote(href).lower():
-            continue
-        url = urljoin(base_url, href)
-        pattern = _pdf_delivery_pattern(url, href, source="form_action")
-        _append_or_upgrade_candidate(
-            candidates,
-            candidate_index_by_key,
-            PdfCandidate(
-                pdf_url=url,
-                page_url=base_url,
-                anchor_text=_pdf_element_context_text(html, m, _pdf_form_control_text(m.group(2))),
-                pattern_type=pattern,
-            ),
-            target_fiscal_year=target_fiscal_year,
-        )
-
-    # Pattern 1d: JavaScript/download-button elements with direct PDF data attributes.
-    for m in re.finditer(
-        rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
-        html, re.IGNORECASE | re.DOTALL,
-    ):
-        attrs = m.group(1)
-        for attr_name in PDF_LINK_ATTRIBUTE_NAMES:
-            href = _anchor_attr(attrs, attr_name)
-            if not href or ".pdf" not in unquote(href).lower():
+    # The patterns below are intentionally opt-in. They are covered by
+    # synthetic parser tests but still lack real school-page gold-set
+    # demonstrations, so production discovery keeps them out of the default
+    # release surface until a manual success case exists.
+    if experimental_enabled:
+        # Pattern 1a: HTML redirect pages whose meta refresh points directly at a PDF.
+        for m in re.finditer(PDF_META_REFRESH_PATTERN, html, re.IGNORECASE | re.DOTALL):
+            http_equiv = _anchor_attr(m.group(1), "http-equiv")
+            if not http_equiv or http_equiv.strip().lower() != "refresh":
                 continue
-            url = urljoin(base_url, href)
-            pattern = _pdf_delivery_pattern(url, href, source="data_attribute")
+            content = _anchor_attr(m.group(1), "content")
+            if not content:
+                continue
+            url = _pdf_url_from_meta_refresh_content(content, base_url)
+            if not url:
+                continue
+            pattern = _pdf_delivery_pattern(url, url, source="meta_refresh")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,
                 PdfCandidate(
                     pdf_url=url,
                     page_url=base_url,
-                    anchor_text=_pdf_anchor_context_text(html, m),
+                    anchor_text=_html_title_text(html),
                     pattern_type=pattern,
                 ),
                 target_fiscal_year=target_fiscal_year,
             )
-            break
 
-    # Pattern 1e: static click handlers such as window.open('/docs/form.pdf').
-    for m in re.finditer(
-        rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
-        html,
-        re.IGNORECASE | re.DOTALL,
-    ):
-        onclick = _anchor_attr(m.group(1), "onclick")
-        if not onclick:
-            continue
-        for url in _pdf_urls_from_script_attribute(onclick, base_url):
-            pattern = _pdf_delivery_pattern(url, url, source="onclick")
+        # Pattern 1b: year/select dropdowns whose option values are PDF URLs.
+        for m in re.finditer(
+            PDF_OPTION_VALUE_PATTERN,
+            html,
+            re.IGNORECASE | re.DOTALL,
+        ):
+            href = _anchor_attr(m.group(1), "value")
+            if not href or ".pdf" not in unquote(href).lower():
+                continue
+            url = urljoin(base_url, href)
+            pattern = _pdf_delivery_pattern(url, href, source="select_option")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,
@@ -1624,49 +1564,120 @@ def _extract_pdf_links(
                 target_fiscal_year=target_fiscal_year,
             )
 
-    # Pattern 1f: void input controls with direct PDF data attributes or click handlers.
-    for m in re.finditer(PDF_INPUT_TAG_PATTERN, html, re.IGNORECASE | re.DOTALL):
-        attrs = m.group(1)
-        element_text = (
-            _anchor_attr(attrs, "value")
-            or _anchor_attr(attrs, "aria-label")
-            or _anchor_attr(attrs, "title")
-            or ""
-        )
-        for attr_name in PDF_LINK_ATTRIBUTE_NAMES:
-            href = _anchor_attr(attrs, attr_name)
+        # Pattern 1c: form submit buttons whose action points directly at a PDF.
+        for m in re.finditer(
+            PDF_FORM_ACTION_PATTERN,
+            html,
+            re.IGNORECASE | re.DOTALL,
+        ):
+            href = _anchor_attr(m.group(1), "action")
             if not href or ".pdf" not in unquote(href).lower():
                 continue
             url = urljoin(base_url, href)
-            pattern = _pdf_delivery_pattern(url, href, source="input_control")
+            pattern = _pdf_delivery_pattern(url, href, source="form_action")
             _append_or_upgrade_candidate(
                 candidates,
                 candidate_index_by_key,
                 PdfCandidate(
                     pdf_url=url,
                     page_url=base_url,
-                    anchor_text=_pdf_element_context_text(html, m, element_text),
+                    anchor_text=_pdf_element_context_text(html, m, _pdf_form_control_text(m.group(2))),
                     pattern_type=pattern,
                 ),
                 target_fiscal_year=target_fiscal_year,
             )
-            break
-        onclick = _anchor_attr(attrs, "onclick")
-        if not onclick:
-            continue
-        for url in _pdf_urls_from_script_attribute(onclick, base_url):
-            pattern = _pdf_delivery_pattern(url, url, source="input_control")
-            _append_or_upgrade_candidate(
-                candidates,
-                candidate_index_by_key,
-                PdfCandidate(
-                    pdf_url=url,
-                    page_url=base_url,
-                    anchor_text=_pdf_element_context_text(html, m, element_text),
-                    pattern_type=pattern,
-                ),
-                target_fiscal_year=target_fiscal_year,
+
+        # Pattern 1d: JavaScript/download-button elements with direct PDF data attributes.
+        for m in re.finditer(
+            rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
+            html, re.IGNORECASE | re.DOTALL,
+        ):
+            attrs = m.group(1)
+            for attr_name in PDF_LINK_ATTRIBUTE_NAMES:
+                href = _anchor_attr(attrs, attr_name)
+                if not href or ".pdf" not in unquote(href).lower():
+                    continue
+                url = urljoin(base_url, href)
+                pattern = _pdf_delivery_pattern(url, href, source="data_attribute")
+                _append_or_upgrade_candidate(
+                    candidates,
+                    candidate_index_by_key,
+                    PdfCandidate(
+                        pdf_url=url,
+                        page_url=base_url,
+                        anchor_text=_pdf_anchor_context_text(html, m),
+                        pattern_type=pattern,
+                    ),
+                    target_fiscal_year=target_fiscal_year,
+                )
+                break
+
+        # Pattern 1e: static click handlers such as window.open('/docs/form.pdf').
+        for m in re.finditer(
+            rf"<{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s([^>]*)>(.*?)</{PDF_DATA_ATTRIBUTE_TAG_PATTERN}\s*>",
+            html,
+            re.IGNORECASE | re.DOTALL,
+        ):
+            onclick = _anchor_attr(m.group(1), "onclick")
+            if not onclick:
+                continue
+            for url in _pdf_urls_from_script_attribute(onclick, base_url):
+                pattern = _pdf_delivery_pattern(url, url, source="onclick")
+                _append_or_upgrade_candidate(
+                    candidates,
+                    candidate_index_by_key,
+                    PdfCandidate(
+                        pdf_url=url,
+                        page_url=base_url,
+                        anchor_text=_pdf_anchor_context_text(html, m),
+                        pattern_type=pattern,
+                    ),
+                    target_fiscal_year=target_fiscal_year,
+                )
+
+        # Pattern 1f: void input controls with direct PDF data attributes or click handlers.
+        for m in re.finditer(PDF_INPUT_TAG_PATTERN, html, re.IGNORECASE | re.DOTALL):
+            attrs = m.group(1)
+            element_text = (
+                _anchor_attr(attrs, "value")
+                or _anchor_attr(attrs, "aria-label")
+                or _anchor_attr(attrs, "title")
+                or ""
             )
+            for attr_name in PDF_LINK_ATTRIBUTE_NAMES:
+                href = _anchor_attr(attrs, attr_name)
+                if not href or ".pdf" not in unquote(href).lower():
+                    continue
+                url = urljoin(base_url, href)
+                pattern = _pdf_delivery_pattern(url, href, source="input_control")
+                _append_or_upgrade_candidate(
+                    candidates,
+                    candidate_index_by_key,
+                    PdfCandidate(
+                        pdf_url=url,
+                        page_url=base_url,
+                        anchor_text=_pdf_element_context_text(html, m, element_text),
+                        pattern_type=pattern,
+                    ),
+                    target_fiscal_year=target_fiscal_year,
+                )
+                break
+            onclick = _anchor_attr(attrs, "onclick")
+            if not onclick:
+                continue
+            for url in _pdf_urls_from_script_attribute(onclick, base_url):
+                pattern = _pdf_delivery_pattern(url, url, source="input_control")
+                _append_or_upgrade_candidate(
+                    candidates,
+                    candidate_index_by_key,
+                    PdfCandidate(
+                        pdf_url=url,
+                        page_url=base_url,
+                        anchor_text=_pdf_element_context_text(html, m, element_text),
+                        pattern_type=pattern,
+                    ),
+                    target_fiscal_year=target_fiscal_year,
+                )
 
     # Pattern 2b: WordPress Download Manager wrappers.
     #

@@ -118,7 +118,7 @@ def test_discovery_gold_expected_predictions_fixture_is_canonical() -> None:
         "wordpress": 2,
         "wordpress_download_manager": 1,
     }
-    assert "onclick" in summary.undemonstrated_pattern_sources
+    assert summary.undemonstrated_pattern_sources == []
     assert "embed" not in summary.undemonstrated_pattern_sources
     assert "wordpress_download_manager" not in summary.undemonstrated_pattern_sources
 

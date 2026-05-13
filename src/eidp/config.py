@@ -118,6 +118,7 @@ class Settings(BaseSettings):
     # pages still hide the current PDF behind JavaScript tabs.
     pdf_discovery_rendered_html_auto_enable: str = "auto"  # auto | on | off
     pdf_discovery_rendered_html_fetch_mode: str = "dynamic"  # dynamic | stealthy | static
+    pdf_discovery_experimental_extractors: bool = False
 
     # Firecrawl API (for corporation root URL expansion)
     firecrawl_api_key: str = ""
