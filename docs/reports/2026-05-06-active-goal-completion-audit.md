@@ -5326,3 +5326,15 @@ reported `pending=0`, `matching_db_rows=1`, `matching_exported_rows=1`,
 process, SSH tunnel, and local Playwright temp directory were removed after the
 smoke, leaving only the current v376 runtime and transfer ZIP on the Windows
 host.
+
+A separate disposable URL-candidate sandbox then exercised a real browser UI
+write path. `C:\Users\cyo20\EIDP-v376-url-review-sandbox` seeded one pending
+`url_candidate` `ReviewItem` for `日本工学院専門学校`; the tunneled browser opened
+`詳細 operator` -> `URL候補レビュー`, confirmed `確認待ち 1 件`, entered reject
+reason `stage6 UI reject smoke`, and clicked `却下`. The UI reran to
+`確認待ちのURL候補はありません。` without browser console warnings or page errors.
+Direct post-UI verification reported `review_items=1`, `pending_items=0`,
+`resolved_rejected_items=1`, `audit_rows=1`, and
+`audit_action_types=["url_candidate_rejected"]`. The sandbox and long-running
+processes were removed after verification; the current v376 runtime directory
+was not mutated.

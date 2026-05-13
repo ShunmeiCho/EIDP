@@ -401,6 +401,19 @@ Latest v376 commands:
   `matching_exported_rows=1`, `matching_outbox_rows=1`, and `outbox_lines=1`.
   The remote sandbox, Streamlit process, SSH tunnel, and local Playwright temp
   files were removed afterward.
+- Windows v376 browser UI URL-candidate review write smoke:
+  a disposable `C:\Users\cyo20\EIDP-v376-url-review-sandbox` seeded one
+  pending `url_candidate` `ReviewItem` for `日本工学院専門学校` with candidate URL
+  `https://example.com/eidp-stage6-url-candidate-smoke`. The v376 Streamlit UI
+  was started against that sandbox, and the tunneled browser opened
+  `詳細 operator` -> `URL候補レビュー`, confirmed `確認待ち 1 件`, entered reject
+  reason `stage6 UI reject smoke`, and clicked `却下`. The UI then showed
+  `確認待ちのURL候補はありません。` with no browser console warnings or page
+  errors. Direct post-UI DB verification reported `review_items=1`,
+  `pending_items=0`, `resolved_rejected_items=1`, `audit_rows=1`, and
+  `audit_action_types=["url_candidate_rejected"]`. The sandbox, Streamlit
+  process, SSH tunnel, and local Playwright temp directory were removed
+  afterward.
 - Windows v376 Saitama 5-site bounded backend smoke:
   `bootstrap_pdf_pipeline.py --pref saitama --url-search off
   --school-url-crawl off --skip-known-url-discovery --discovery-methods
