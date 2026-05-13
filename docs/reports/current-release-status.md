@@ -8,7 +8,7 @@ Package SHA256: `88afc9f40feabe0dcd701fea3ccfdb870f96d1fe1e72afa9f1c66e2490fce21
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v379.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v379.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v376.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v379.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
 
@@ -24,11 +24,10 @@ and the latest Stage 6 gate tokens; v379 passes the package verifier for both
 the versioned ZIP and the latest alias. The latest full non-Windows release
 gate remains v378 with `1385` unit tests and `44` exact discovery gold-set
 predictions.
-The latest Windows setup proof is v379. The latest Windows UI service/browser
-proof remains v376 because v378 setup and diagnostics passed, but the attempted
-v378 SSH-launched Streamlit health smoke did not produce a usable `/_stcore`
-health response before the process disappeared without logs. The latest Windows
-bounded-bootstrap smoke remains v376. The latest broader Windows
+The latest Windows setup proof and UI service health proof are v379. Browser
+render and click-through proof remain v376, because v379 has only been proven
+through setup, diagnostics, and a headless `/_stcore/health` check. The latest
+Windows bounded-bootstrap smoke remains v376. The latest broader Windows
 bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
@@ -372,6 +371,16 @@ Latest v379 package-verifier commands:
   `retroactive_ship_readiness_rc=0`. Because this was a fresh setup without
   discovery/bootstrap progress, both FY2026 and FY2025 operator-reviewable
   readiness remained `0`.
+- Windows v379 UI service health smoke:
+  a PowerShell harness started Streamlit from
+  `C:\Users\cyo20\EIDP-v379-71e7537` on `127.0.0.1:8501`,
+  received `/_stcore/health` as `status=200 body=ok`, reported
+  `Streamlit, version 1.57.0`, and then stopped the process. The stdout tail
+  included `URL: http://127.0.0.1:8501`; stderr recorded
+  `Uvicorn server started on 127.0.0.1:8501`. A follow-up process check
+  returned `count=0` for v379 Streamlit processes. This proves app-server
+  health only; browser rendering, navigation, and operator-action click-through
+  still require separate evidence.
 
 Latest v378 full non-Windows release-gate commands:
 
