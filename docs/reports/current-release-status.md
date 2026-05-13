@@ -6,8 +6,8 @@ Current Mac-verifier-clean package: `dist/eidp-windows-v379.zip`
 Package commit: `d851de9edc16d831707b90ab4459c1de2e83434a`
 Package SHA256: `88afc9f40feabe0dcd701fea3ccfdb870f96d1fe1e72afa9f1c66e2490fce212`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v378.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v376.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v378.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v379.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v379.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v376.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
@@ -24,7 +24,7 @@ and the latest Stage 6 gate tokens; v379 passes the package verifier for both
 the versioned ZIP and the latest alias. The latest full non-Windows release
 gate remains v378 with `1385` unit tests and `44` exact discovery gold-set
 predictions.
-The latest Windows setup proof is v378. The latest Windows UI service/browser
+The latest Windows setup proof is v379. The latest Windows UI service/browser
 proof remains v376 because v378 setup and diagnostics passed, but the attempted
 v378 SSH-launched Streamlit health smoke did not produce a usable `/_stcore`
 health response before the process disappeared without logs. The latest Windows
@@ -308,9 +308,9 @@ The current source checkout therefore reports `44` discovery gold-set entries,
 `10` strict target-year successes, `17` publication-lag cases, `15`
 operator-review entries, and `undemonstrated_pattern_sources=[]`, while also
 enforcing a stricter ZIP hygiene contract. This evidence is now packaged in
-`dist/eidp-windows-v379.zip`; the separate Windows setup-validated package
-snapshot remains `dist/eidp-windows-v378.zip` until v379 is transferred and
-exercised on Windows.
+`dist/eidp-windows-v379.zip`; v379 has also been transferred to Windows and
+setup-validated. Full UI/browser and Stage 6 operator workflow evidence still
+remain on older snapshots or missing, as listed below.
 
 ## Objective Checklist
 
@@ -345,6 +345,33 @@ Latest v379 package-verifier commands:
 - `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v378.zip --require-demonstrated-discovery-patterns`
   now fails under the current verifier because v378 predates the WAL-safe
   backup runbook contract and the latest Stage 6 gate-token contract.
+- Windows v379 setup on `C:\Users\cyo20\EIDP-v379-71e7537`:
+  transferred `dist/eidp-windows-v379.zip` and its sidecar to
+  `C:\Users\cyo20\EIDP-transfer`; Windows SHA256 matched
+  `88afc9f40feabe0dcd701fea3ccfdb870f96d1fe1e72afa9f1c66e2490fce212`;
+  expanded into a separate directory without touching v376 or v378.
+  `EIDP-setup.bat` completed with build commit
+  `d851de9edc16d831707b90ab4459c1de2e83434a`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  `document_unique_indexes` including `uq_document_file_hash`, and
+  `wheel_count=78`.
+- Windows v379 after-setup validator:
+  `runtime\python\python.exe scripts\validate_windows_install.py . --after-setup --json`
+  returned `ok=true`, no errors or warnings, the same v379 build commit,
+  `master_xlsx_present=true`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and all
+  required SQLite tables.
+- Windows v379 diagnostics:
+  `EIDP-diagnose.bat` wrote
+  `logs\diagnostics-20260513-230505.txt`. FY2026 readiness remained below gate
+  with `ship_readiness_rc=1`, `strict_target_pdf_schools=0`,
+  `operator_reviewable_schools=0`, `excel_ready_schools=0`, and
+  `estimated_manual_workload_rate=1.0`. The retroactive FY2025 section recorded
+  `is_retroactive_fiscal_year=true`, `extracted_schools=2031`,
+  `extracted_rate=0.84`, `retroactive_fiscal_year=2025`, and
+  `retroactive_ship_readiness_rc=0`. Because this was a fresh setup without
+  discovery/bootstrap progress, both FY2026 and FY2025 operator-reviewable
+  readiness remained `0`.
 
 Latest v378 full non-Windows release-gate commands:
 
