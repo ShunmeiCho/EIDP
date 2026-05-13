@@ -1,6 +1,6 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-13
+Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
 Current Mac-verifier-clean package: `dist/eidp-windows-v380.zip`
 Package commit: `f6a5e6d46db7b0b836b18399e5b401362575c38d`
@@ -33,9 +33,13 @@ disabled-state smoke are now proven on v380. v380 also proves the retroactive
 FY2025/R7 Excel preview/download browser path with the same package. v380 has
 also repeated the sandboxed URL-candidate reject browser write path against a
 disposable copied database and the sandboxed audit-outbox browser flush path
-against a disposable copied database. v380 also has a sandboxed bounded backend
-bootstrap smoke for the 5-site Saitama official-index path. The latest broader
-Windows bounded-bootstrap proof remains v342.
+against a disposable copied database. v380 now also proves the
+`PDF確認・手入力` browser save path for a disposable copied database: the UI
+promoted a seeded `parse_failed` FY2026 document to `ingested`, inserted one
+manual `DepartmentYearly` revision, and emitted the expected `manual_entry`
+audit rows without mutating the real runtime DB. v380 also has a sandboxed
+bounded backend bootstrap smoke for the 5-site Saitama official-index path. The
+latest broader Windows bounded-bootstrap proof remains v342.
 
 Release gate interpretation:
 
@@ -320,10 +324,11 @@ smoke. It also has a headless Streamlit `/_stcore/health` smoke, initial
 browser-render proof, full read-only quick-navigation proof, and an Excel
 preview disabled-state smoke, plus retroactive FY2025/R7 Excel
 preview/download proof. It now has sandboxed URL-candidate reject browser write
-proof and audit-outbox browser flush proof on disposable copied databases;
-v380 also has a sandboxed 5-site Saitama backend bootstrap smoke that exercises
-official artifact download, official-index SchoolSite writes, strict PDF
-discovery, ingest, and status rebuild without mutating the real runtime DB.
+proof, audit-outbox browser flush proof, and `PDF確認・手入力` manual-entry
+browser save proof on disposable copied databases; v380 also has a sandboxed
+5-site Saitama backend bootstrap smoke that exercises official artifact
+download, official-index SchoolSite writes, strict PDF discovery, ingest, and
+status rebuild without mutating the real runtime DB.
 Stage 6 operator workflow evidence still remains incomplete, as listed below.
 
 ## Objective Checklist
@@ -334,10 +339,10 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 | Discover and download current target-FY PDFs in strict mode | v380 package verifier clean by default; packaged discovery gold-set `44` entries / `10` strict target-year successes / `17` publication-lag cases; v380 sandboxed Saitama 5-site backend smoke crawled `5`, found candidates on all `5`, downloaded `0` strict FY2026 target PDFs, produced `2084` discovery evidence lines, processed `0` PDFs, rebuilt `2418` status rows, and reported `operator_reviewable_count=5`, `operator_reviewable_yield_pct=0.2`, `target_pdf_auto_yield_pct=0.0`, and `ship_gate_status=below_gate`; v375 fixes the heading/update-date fiscal-year context edge and adds a 尚美 historical-support-form ordering case where the latest public R7 target form stays visible for FY2026 publication-lag handling; v374 adds a code-level guard that current-year syllabus/curriculum PDFs do not outrank the previous-year target confirmation form in Aichi-style publication-lag pages; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; manual-web / official-index-linked 愛北 evidence records a support-system news page with `令和8年度` context linking `youshiki2-r7.pdf` as the target confirmation form; manual-web / official-index-linked 愛生会 evidence records a support page where the latest target-form PDF is still `令和7年9月公表` and the adjacent subject-list PDF must not be treated as the target form; manual-web / official-index-linked あいち福祉医療 evidence records a public-documents page where the `2026年度` section contains syllabus PDFs but the latest target-form PDF remains `2025年度`; manual-web / official-index-linked 尚美 evidence records a public-info page where the historical support-form list currently runs through R7/FY2025 and the latest target form must remain publication-lag evidence; manual-web / official-index-linked 中央動物 evidence records a disclosure page where R8 non-target operation-plan / professional-practice PDFs coexist with a support-system `申請書様式第2号` link still labeled `2025年度`; manual-web / official-index-linked 浜松工科 evidence records an official Shizuoka index route to a WordPress disclosure page whose `令和８年度 様式第２号` anchor supplies target-FY evidence for a PDF body that contains the school name, `様式第２号`, and `修学支援` but not the fiscal-year string; manual-web / official-index-linked 長野県公衆衛生 evidence records a prefecture-hosted support page whose latest public target-form PDF is still under the `令和７年度` section and must remain publication-lag evidence; v375 additionally preserves preceding heading-year context without crossing intervening non-year blocks or treating update dates as fiscal-year evidence; manual-web / official-index-linked 岩手医科大学医療専門学校 evidence records a dense Wix page where the target confirmation-form section is still `令和７年度` even though a later syllabus section has `令和8年度`; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; v380 package gold-set includes `17` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
-| Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
+| Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v380 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`sandbox_support_recipient_smoke_rows=0`). | DepartmentYearly Win UI E2E proven; SupportRecipient remains source/unit/backend-proven only |
 | Excel template output | v380 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v380 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive |
-| ManualActionLog audit for operator actions | v380 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database and verified the real runtime DB was not mutated; v380 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v380_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, and verified the real runtime DB was not mutated; v342 package verifier also includes audit contracts and outbox checks | Partially proven |
-| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, generated/downloaded the FY2025/R7 retroactive Excel workbook through the browser, completed a sandboxed URL-candidate reject browser write smoke against a copied DB, and completed a sandboxed audit-outbox browser flush smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, and audit-outbox flush proof present on v380; full operator workflow still missing |
+| ManualActionLog audit for operator actions | v380 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database and verified the real runtime DB was not mutated; v380 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v380_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, and verified the real runtime DB was not mutated; v380 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, and manual-entry paths |
+| ZIP distribution, double-click setup, browser UI offline operation | v380 ZIP verifies clean on macOS packaging gate and was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v380-f6a5e6d`, set up with `EIDP-setup.bat`, validated after setup, diagnosed, smoke-tested through `eidp db-backup`, started headless Streamlit with `200 ok` on `/_stcore/health`, rendered in Playwright through an SSH tunnel with title `EIDP Operator Console`, clicked all five non-mutating quick navigation buttons, opened the read-only `④ Excel プレビュー` page where workbook generation stayed disabled for empty FY2026 data, generated/downloaded the FY2025/R7 retroactive Excel workbook through the browser, completed a sandboxed URL-candidate reject browser write smoke against a copied DB, completed a sandboxed audit-outbox browser flush smoke against a copied DB, and completed a sandboxed `PDF確認・手入力` browser save smoke against a copied DB; full Stage 6 operator-action click-through remains unverified | Backend Win setup, backup CLI, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, audit-outbox flush, and manual-entry write proof present on v380; full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -501,6 +506,32 @@ Latest v380 Windows setup and backup-smoke commands:
   Streamlit processes were removed by exact PID/command-line match, and
   `sandbox_exists_after_cleanup=False` / `remaining_matching_processes=0`
   confirmed cleanup.
+- Windows v380 browser UI PDF manual-entry save smoke:
+  a disposable `C:\Users\cyo20\EIDP-v380-manual-entry-sandbox` was created
+  from the v380 runtime database through the package-local `eidp db-backup`
+  command. It seeded one FY2026 `parse_failed` document with source URL
+  `https://example.com/eidp-v380-manual-entry-smoke.pdf`. The v380 Streamlit
+  UI ran with `EIDP_APP_ROOT` pointed at that sandbox, and the tunneled browser
+  opened `② PDF確認・手入力`, verified a single save-eligible queue row for
+  `日本工学院専門学校`, filled one department row (`V380手入力学科`, capacity
+  `40`, enrollment `35`, international students `2`, graduates `30`, advanced
+  `5`, employed `24`, other `1`, previous enrollment `36`, dropouts `1`,
+  dropout rate `0.0278`, duration `2`) with reason
+  `v380 UI manual entry smoke`, and submitted the form. After the Streamlit
+  rerun the page showed the queue empty for that view. Direct post-UI DB
+  verification reported the seeded document promoted to `ingested`, one new
+  `department` row, one `department_yearly` row with `document_id=1`,
+  `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`,
+  `extraction_confidence=1`, `verified=1`, and three `manual_entry` audit rows
+  targeting `department`, `department_yearly`, and `document`. The same check
+  confirmed `sandbox_support_recipient_smoke_rows=0`, because this UI page does
+  not write SupportRecipient records, and the real v380 runtime DB reported
+  `runtime_matching_documents=0`, `runtime_matching_departments=0`,
+  `runtime_matching_department_yearly=0`, and
+  `runtime_matching_manual_actions=0`. The local tunnel was stopped, the
+  sandbox was removed, and cleanup reported
+  `sandbox_exists_after_cleanup=False`, `port_8501_open=False`, and
+  `remaining_matching_processes=0`.
 - Windows v380 sandboxed Saitama 5-site bounded backend smoke:
   a disposable `C:\Users\cyo20\EIDP-v380-backend-sandbox` was created from the
   v380 runtime database through the package-local `eidp db-backup` command.
