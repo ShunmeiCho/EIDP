@@ -3,10 +3,33 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `aa10c8982a4b7f67a5a10509bbd86dbfee462b21` (`eidp-windows-v357.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `3fc2ea2172a5bf0881bee9ffc8826e0d307880f0` (`eidp-windows-v358.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V358 Operator Ship Gate Separation
+
+v358 (`3fc2ea2`) separates the operator-review ship gate from strict data
+diagnostics while SSH Windows testing is unavailable. `ShipReadinessReport.ok`
+now follows `ok_operator_review`, based on estimated manual workload /
+operator-reviewable coverage. The strict `excel_ready` threshold remains
+reported as `ok_strict` and in `strict_data_criteria`, but no longer makes
+`report ship-readiness --fail-on-missing-goal` fail during the May
+publication-lag window when schools have not yet published enough current-FY
+target PDFs.
+
+Verification: targeted report/CLI tests passed with `34 passed`; verifier
+distribution tests passed with `89 passed`; targeted Ruff and mypy passed; the
+full unit suite passed with `1367 passed, 5 warnings`. `dist/eidp-windows-v358.zip`
+was rebuilt from clean commit `3fc2ea2` with SHA256
+`e6083a42124eb968d76641a5bc8fedb7cfb20ec07416297385ad7894a33226f6`. The
+default package verifier and `--require-demonstrated-discovery-patterns` both
+passed with `git_dirty=false`. The full non-Windows release gate returned
+`ok=true`; bounded evidence replay returned `ok=true` with Tokyo `4` exact /
+`0` failures, Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0`
+failures, 更生 `1` exact / `0` failures, 中央情報 `1` exact / `0` failures,
+and 君津 `1` exact / `0` failures.
 
 ## 2026-05-13 V357 Commented PDF Link Suppression
 

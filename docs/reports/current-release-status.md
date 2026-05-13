@@ -2,9 +2,9 @@
 
 Updated: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v357.zip`
-Package commit: `aa10c8982a4b7f67a5a10509bbd86dbfee462b21`
-Package SHA256: `5385dd9395e295bc31b31193fd7582bd0df3678d7f6bc39abd845a6bfb32952f`
+Current Mac-verifier-clean package: `dist/eidp-windows-v358.zip`
+Package commit: `3fc2ea2172a5bf0881bee9ffc8826e0d307880f0`
+Package SHA256: `e6083a42124eb968d76641a5bc8fedb7cfb20ec07416297385ad7894a33226f6`
 Latest Windows-core-validated package: `dist/eidp-windows-v342.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v342.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
@@ -13,7 +13,7 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v342.zip`
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v357 and passes the default
+The current Mac-verifier-clean ZIP snapshot is v358 and passes the default
 macOS package verifier, including `--require-demonstrated-discovery-patterns`.
 The latest Windows setup and bounded-bootstrap proof remains v342.
 v341 keeps the v326 strict-mode fix for opaque WordPress Download
@@ -121,26 +121,48 @@ publication candidates. The current page keeps an old
 `11_confirmation_application.pdf` / `12_kakunin.pdf` links. v357 ignores the
 commented stale link without changing the discovery gold-set count, preserving
 historical v342 evidence replay compatibility.
+v358 separates the operator-review ship gate from strict data diagnostics:
+`report ship-readiness --fail-on-missing-goal` now gates on
+operator-reviewable coverage / estimated manual workload, while `excel_ready`
+continues to appear as `ok_strict` diagnostic output. This keeps the May
+publication-lag period from being blocked by the long-term strict data metric
+while preserving the strict readiness signal for later release decisions.
 
 ## Objective Checklist
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official indexes seed school public URLs | v342 verifier: `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`; Windows v342 Saitama run downloaded the current official artifact and added `51` `SchoolSite` rows from `58` extracted / `51` matched rows | Evidence present |
-| Discover and download current target-FY PDFs in strict mode | v357 verifier clean by default; discovery gold-set `36` entries / `8` strict target-year successes; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
+| Discover and download current target-FY PDFs in strict mode | v358 verifier clean by default; discovery gold-set `36` entries / `8` strict target-year successes; source-side 聖十字 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 更生 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 中央情報 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; source-side 君津 replay crawled `1`, found `1`, downloaded `1`, and gold-set evidence replay matched the accepted target PDF exactly; current Tokyo Anime HTML probe ignores the commented-out old `07_study_support_application.pdf` link while keeping visible confirmation-form links; Windows v342 Saitama 50-site run crawled `50` official-index sites, found candidates on `49`, downloaded `0`, processed `0`, and produced `0` Excel-ready schools after removing false-positive prefecture-index year fill; Windows v342 Tokyo 30-site probe found candidates on all `30` sites and downloaded `0`; a source-side v348 Tokyo 20-site repeat crawled `20`, found candidates on all `20`, downloaded `0`, and reproduced the same publication-lag / stale-year / no-year target-form distribution; Windows v342 evidence proves Kanto/Iruma context fixes without accepting old-year PDFs as current-FY success | Mechanically proven, strict yield still failing at workload scale |
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; gold-set includes `11` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows | Mechanically proven, no current strict target data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override | Evidence present, Win UI E2E still missing |
 | Excel template output | v342 package verifier includes Excel/export contracts and centralized confidence threshold contract; current operator-PC preview/download flow is not revalidated on v333/v339/v340/v341/v342 | Partially proven |
 | ManualActionLog audit for operator actions | v342 package verifier includes audit contracts and outbox checks; current operator-PC run not revalidated through browser UI on v333/v339/v340/v341/v342 | Partially proven |
 | ZIP distribution, double-click setup, browser UI offline operation | v342 ZIP verifies clean on macOS packaging gate; v342 was transferred to Windows with matching SHA256, extracted to `C:\Users\cyo20\EIDP-v342-de2cfed`, and `scripts\first_setup.bat` completed successfully; browser UI click-through remains unverified | Backend Win setup proof present, UI proof missing |
-| Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, plus Excel readiness | Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing |
+| Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
 
 Runbook: `docs/runbooks/eidp-non-windows-release-gates.md`.
 
-Commands run for v357/v342 source/package:
+Latest v358 commands:
+
+- `uv run pytest tests/unit -q` -> `1367 passed, 5 warnings`
+- `uv run pytest tests/unit/test_reports.py tests/unit/test_cli_reports.py tests/unit/test_windows_distribution_verifier.py -q`
+  -> `123 passed`
+- `uv run ruff check src/eidp/reports/ship_readiness.py src/eidp/cli.py tests/unit/test_reports.py tests/unit/test_cli_reports.py`
+  -> `All checks passed`
+- `uv run mypy src/eidp/reports/ship_readiness.py src/eidp/cli.py`
+  -> `Success: no issues found in 2 source files`
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v358.zip`
+  -> wrote `dist/eidp-windows-v358.zip` and checksum sidecar.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v358.zip --json --output _temp/v358-non-windows-release-gates-full.json`
+  -> `ok=true`, SHA256 sidecar matched, full unit passed, package verifier passed, and demonstrated-pattern gate passed.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v358.zip --pdf-evidence _temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl --pdf-evidence _temp/win-v342-evidence/discovery_rejections.jsonl --pdf-evidence _temp/seijuji-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/kousei-gold-v2/discovery_evidence.jsonl --pdf-evidence _temp/chuo-gold-v1/discovery_evidence.jsonl --pdf-evidence _temp/kimikan-manual-v2/discovery_evidence.jsonl --json --output _temp/v358-non-windows-release-gates-evidence.json`
+  -> `ok=true`, Tokyo evidence `4` exact / `0` failures, Saitama evidence `16` exact / `0` failures, 聖十字 evidence `1` exact / `0` failures, 更生 evidence `1` exact / `0` failures, 中央情報 evidence `1` exact / `0` failures, and 君津 evidence `1` exact / `0` failures.
+
+Previously retained v357/v342 source/package evidence:
 
 - `uv run pytest tests/unit -q` -> `1366 passed, 5 warnings`
 - `uv run pytest tests/unit/test_pdf_discovery.py::test_extract_pdf_links_does_not_assign_visible_sibling_anchor_text_to_empty_anchor tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_discovery_gold_set_seed.py -q`
