@@ -347,6 +347,9 @@ def _core_entries() -> dict[str, bytes | str]:
             encoding="utf-8"
         ),
         "src/eidp/cli.py": (REPO_ROOT / "src" / "eidp" / "cli.py").read_text(encoding="utf-8"),
+        "src/eidp/cli_discovery.py": (REPO_ROOT / "src" / "eidp" / "cli_discovery.py").read_text(
+            encoding="utf-8"
+        ),
         "src/eidp/cli_reports.py": (REPO_ROOT / "src" / "eidp" / "cli_reports.py").read_text(
             encoding="utf-8"
         ),
@@ -570,13 +573,13 @@ def test_verify_core_zip_rejects_missing_discovery_gold_pattern_prediction(tmp_p
 
 def test_verify_core_zip_requires_discovery_gold_eval_regression_gate(tmp_path: Path) -> None:
     entries = _core_entries()
-    entries["src/eidp/cli.py"] = "@app.command('eval-discovery-gold')\ndef eval_discovery_gold(): pass\n"
+    entries["src/eidp/cli_discovery.py"] = "def register_discovery_commands(app): pass\n"
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
 
     assert not check.ok
-    assert any("src/eidp/cli.py missing required token" in error for error in check.errors)
+    assert any("src/eidp/cli_discovery.py missing required token" in error for error in check.errors)
     assert any("--fail-on-regression" in error for error in check.errors)
 
 
@@ -1162,10 +1165,6 @@ def test_verify_core_zip_requires_cli_report_database_not_ready_gate(tmp_path: P
 def test_verify_core_zip_requires_import_excel_invalid_year_warning(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/cli.py"] = (
-        '@app.command("eval-discovery-gold")\n'
-        '@app.command("discovery-gold-expected-predictions")\n'
-        "--fail-on-regression\n"
-        "_discovery_gold_gate_failed\n"
         '_require_app_lock("cli_import_excel")\n'
         '_require_app_lock("cli_db_bootstrap")\n'
         '_require_app_lock("cli_rebuild_school_year_tasks")\n'
