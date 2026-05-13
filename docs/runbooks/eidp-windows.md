@@ -604,7 +604,7 @@ Restart-Service sshd
 
 | 症状 | 原因 | 対処 |
 |------|------|------|
-| Mac から `ssh win hostname` が `exec request failed on channel 0`、`Connection reset by peer`、または `kex_exchange_identification: read: Connection reset by peer` で失敗する。ただし `nc -vz <業務員PC> 22` は成功し、`ssh -vvv` では `Remote protocol version ... OpenSSH_for_Windows` まで見える | TCP/22 と鍵認証は通っているが、Windows OpenSSH 側が session / exec channel を作れない状態。Stage 6 検証や SSH 経由セットアップ中に sshd が不安定化した可能性がある | 業務員 PC 側で管理者 PowerShell を開き、`Restart-Service sshd` を実行する。復旧後、最初に `EIDP Weekly Run` の action が本番 runtime に戻っていることと、一時 sandbox が残っていないことを確認する |
+| Mac から `ssh win hostname` が `exec request failed on channel 0`、`Connection reset by peer`、`kex_exchange_identification: read: Connection reset by peer`、または `システムは指定されたプログラムを実行できません` / `The system cannot execute the specified program` 相当の文字化け出力で失敗する。ただし `nc -vz <業務員PC> 22` は成功し、`ssh -vvv` では `Remote protocol version ... OpenSSH_for_Windows` まで見える | TCP/22 と鍵認証は通っているが、Windows OpenSSH 側が session / exec channel、または DefaultShell / program launch を作れない状態。Stage 6 検証や SSH 経由セットアップ中に sshd が不安定化した可能性がある | 業務員 PC 側で管理者 PowerShell を開き、`Restart-Service sshd` を実行する。復旧後、最初に `EIDP Weekly Run` の action が本番 runtime に戻っていることと、一時 sandbox が残っていないことを確認する |
 
 Mac 側の切り分け例:
 
@@ -612,6 +612,7 @@ Mac 側の切り分け例:
 nc -vz -w 3 <業務員PCのLAN IP> 22
 ssh -vvv -o ConnectTimeout=5 win hostname
 ssh -F /dev/null -o ConnectTimeout=5 -i ~/.ssh/id_rsa -l <WindowsUser> <業務員PCのLAN IP> hostname
+ssh -o ConnectTimeout=5 win "cmd /c hostname"
 ```
 
 `powershell -EncodedCommand` が `#< CLIXML` だけを返して止まる場合も同じ扱いにする。
