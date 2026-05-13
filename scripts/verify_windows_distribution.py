@@ -1392,6 +1392,11 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "対象年度を変更して保存すると、学校別タスクも同時に再計算されます",
         "scripts\\weekly_run.bat` は管理者向けの復旧入口",
         "アンチウイルスにより隔離された",
+        "新しい ZIP へ更新する場合",
+        "data\\eidp.sqlite3-wal",
+        "data\\eidp.sqlite3-shm",
+        "data\\.lock",
+        '/XF ".lock"',
     ):
         _require_text(check, body, member, token)
     for token in (

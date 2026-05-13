@@ -177,6 +177,11 @@ def _core_entries() -> dict[str, bytes | str]:
             "対象年度を変更して保存すると、学校別タスクも同時に再計算されます\n"
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
             "アンチウイルスにより隔離された\n"
+            "新しい ZIP へ更新する場合\n"
+            "data\\eidp.sqlite3-wal\n"
+            "data\\eidp.sqlite3-shm\n"
+            "data\\.lock\n"
+            '/XF ".lock"\n'
         ),
         "docs/runbooks/eidp-operator-e2e-template.md": (
             "# E2E\n"
@@ -1569,6 +1574,7 @@ def test_verify_core_zip_requires_current_operator_runbook_guidance(tmp_path: Pa
     assert any("学校別タスクも同時に再計算" in error for error in check.errors)
     assert any("アンチウイルスにより隔離" in error for error in check.errors)
     assert any("weekly_run.bat" in error for error in check.errors)
+    assert any("data\\.lock" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_retroactive_fy_e2e_template_fields(tmp_path: Path) -> None:
