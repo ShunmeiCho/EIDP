@@ -81,6 +81,38 @@ Windows の権限設定によっては、タスクスケジューラ登録だけ
 もう一度 `EIDP-setup.bat` を実行しても構いません。環境が壊れた場合の修復にも使います。
 前回のセットアップが異常終了して `.setup.lock` だけが残った場合、2時間以上古いロックは自動で復旧します。
 
+### 2.1 新しい ZIP へ更新する場合（管理者向け）
+
+新版 ZIP は、旧版フォルダへ直接上書きせず、別フォルダに解凍してからデータを引き継ぎます。
+業務員データは `data\` 配下にあり、コード・ランタイムとは分離されています。
+
+更新前に必ず確認すること:
+
+1. EIDP 画面、黒い起動画面、Excel をすべて閉じます。
+2. タスクマネージャーまたは PowerShell で、EIDP の `python.exe` / `streamlit` が残っていないことを確認します。
+3. `data\eidp.sqlite3`、`data\eidp.sqlite3-wal`、`data\eidp.sqlite3-shm` を含む `data\` をバックアップします。
+
+データを新版へコピーする場合、`data\.lock` はコピーしません。`.lock` は業務データではなく実行中処理の印です。
+旧フォルダからコピーすると、新版が誤って `lock_busy` と判定することがあります。
+
+PowerShell 例:
+
+```powershell
+$old = "C:\EIDP"
+$new = "C:\EIDP-vNext"
+$ts = Get-Date -Format "yyyyMMdd-HHmmss"
+
+Compress-Archive "$old\data" "$old\data-backup-$ts.zip" -Force
+robocopy "$old\data" "$new\data" /E /XF ".lock"
+```
+
+コピー後:
+
+1. 新版フォルダの `EIDP-setup.bat` を実行します。
+2. `EIDP-diagnose.bat` を実行し、診断ファイルを保存します。
+3. 画面上部の `実行中のパッケージ` が新版 commit を指すことを確認します。
+4. 新版で問題がないことを確認してから、旧版フォルダを削除します。
+
 ## 3. 通常起動
 
 1. `C:\EIDP\EIDP-start.bat` をダブルクリックします。
