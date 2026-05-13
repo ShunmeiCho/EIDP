@@ -40,10 +40,10 @@ def test_eval_discovery_gold_cli_outputs_json_report(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["total_gold_entries"] == 41
+    assert payload["total_gold_entries"] == 42
     assert payload["predicted_entries"] == 1
     assert payload["exact_matches"] == 1
-    assert payload["missing_entries"] == 40
+    assert payload["missing_entries"] == 41
 
 
 def test_eval_discovery_gold_cli_accepts_pdf_evidence_log(tmp_path: Path) -> None:
@@ -176,7 +176,7 @@ def test_eval_discovery_gold_cli_can_fail_on_incomplete_predictions(tmp_path: Pa
 
     assert result.exit_code == 1
     assert "Discovery gold gate failed" in result.output
-    assert "missing:     40" in result.output
+    assert "missing:     41" in result.output
 
 
 def test_eval_discovery_gold_cli_full_expected_fixture_passes_fail_on_regression() -> None:
@@ -195,9 +195,9 @@ def test_eval_discovery_gold_cli_full_expected_fixture_passes_fail_on_regression
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["total_gold_entries"] == 41
-    assert payload["predicted_entries"] == 41
-    assert payload["exact_matches"] == 41
+    assert payload["total_gold_entries"] == 42
+    assert payload["predicted_entries"] == 42
+    assert payload["exact_matches"] == 42
     assert payload["failed_predictions"] == 0
     assert payload["missing_entries"] == 0
     assert payload["unexpected_predictions"] == 0
@@ -250,7 +250,7 @@ def test_eval_discovery_gold_cli_fails_on_pattern_type_mismatch(tmp_path: Path) 
     for index, line in enumerate(lines):
         payload = json.loads(line)
         if payload.get("pattern_type"):
-            payload["pattern_type"] = "direct"
+            payload["pattern_type"] = "wordpress" if payload["pattern_type"] != "wordpress" else "direct"
             lines[index] = json.dumps(payload, ensure_ascii=False, sort_keys=True)
             break
     else:  # pragma: no cover - protected by the committed gold-set fixture

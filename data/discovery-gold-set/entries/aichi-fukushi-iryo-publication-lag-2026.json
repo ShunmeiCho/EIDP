@@ -1,0 +1,60 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "aichi-fukushi-iryo-publication-lag-2026",
+  "school": {
+    "school_id": 318,
+    "school_name": "あいち福祉医療専門学校",
+    "prefecture": "愛知県",
+    "corporation_name": "学校法人電波学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a disclosure page where current-year syllabus PDFs are public while the latest target confirmation form is still the previous fiscal year.",
+    "search_queries": [
+      "あいち福祉医療専門学校 2025 確認申請書 様式第2号",
+      "あいち福祉医療専門学校 2026 修学支援 確認申請書"
+    ],
+    "steps": [
+      "Start from the Aichi official-index artifact row for あいち福祉医療専門学校.",
+      "Follow the official-index link to http://fukushi-iryo.denpa.jp/public-documents.html.",
+      "Confirm the 2026年度 section exposes syllabus and curriculum-map PDFs, but not a current-year target confirmation-form PDF.",
+      "Confirm the latest target confirmation-form link is under the 2025年度 section as 2025_kakuninshinsei.pdf.",
+      "Open 2025_kakuninshinsei.pdf and verify that its body contains あいち福祉医療専門学校 and 様式第２号.",
+      "Classify the case as publication lag for target FY2026 because current-year syllabus PDFs must not be counted as target confirmation forms."
+    ]
+  },
+  "expected_result": {
+    "school_url": "http://fukushi-iryo.denpa.jp/",
+    "disclosure_url": "http://fukushi-iryo.denpa.jp/public-documents.html",
+    "pdf_url": "http://fukushi-iryo.denpa.jp/pdf/2025_kakuninshinsei.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "current_year_syllabus_with_old_year_target_form",
+    "reusable_rules": [
+      "Do not accept 2026年度 syllabus or curriculum-map PDF links as target confirmation forms.",
+      "Keep the latest previous-year 確認申請書 / 様式第２号 PDF as operator-reviewable publication-lag evidence when no current-year target-form link exists.",
+      "Use section headings such as 2025年度 as local fiscal-year context for the following target-form links."
+    ],
+    "anti_patterns": [
+      "Do not infer target-form status from 2026 in a syllabus filename or anchor.",
+      "Do not let current-year syllabus PDFs hide a previous-year target confirmation form on the same disclosure page.",
+      "Do not count a previous-year target-form PDF as strict FY2026 success without local R8/FY2026 target-form evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "data/prefecture-aggregators/artifacts/aichi.html",
+      "http://fukushi-iryo.denpa.jp/public-documents.html",
+      "http://fukushi-iryo.denpa.jp/pdf/2025_kakuninshinsei.pdf",
+      "_temp/aichi-fukushi-iryo-public-documents.html",
+      "_temp/aichi-fukushi-iryo-2025-kakuninshinsei.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found an official-index-linked public-documents page where the 2026年度 section contains syllabus/curriculum PDFs, while the latest target confirmation-form PDF is 2025_kakuninshinsei.pdf under the 2025年度 section. Source-side PDF text extraction verified あいち福祉医療専門学校 and 様式第２号; the PDF body does not contain 令和8年度, so this case must remain publication_lag_latest_public for FY2026."
+  }
+}
