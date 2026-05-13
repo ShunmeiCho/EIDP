@@ -907,6 +907,8 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "stage6_recovery_check.py",
             "--expected-weekly-action",
             "EIDP_EXPECTED_WEEKLY_ACTION",
+            'set "EXPECTED_WEEKLY_ACTION=%EIDP_APP_ROOT%\\scripts\\weekly_run.bat"',
+            "expected weekly action",
             "stage6-recovery-%RECOVERY_STAMP%.json",
             'set "RC=%ERRORLEVEL%"',
             "endlocal & exit /b %RC%",
