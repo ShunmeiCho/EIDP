@@ -648,6 +648,15 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         )
     )
     if strong_form_context:
+        western_start_month = re.search(r"(?<!\d)(20\d{2})(?=\s*年\s*0?4\s*月)", text)
+        if western_start_month is not None:
+            year = int(western_start_month.group(1))
+            if _is_candidate_hint_year(year, target_year=target_year) and _is_support_system_start_month_hint(
+                text,
+                western_start_month.start(1),
+                western_start_month.end(1),
+            ):
+                return year
         western_year = re.search(r"(?<!\d)(20\d{2})\s*年(?!\s*(?:度|\d{1,2}\s*月))", text)
         if western_year is not None:
             year = int(western_year.group(1))
@@ -680,6 +689,12 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
             else:
                 for match in re.finditer(re.escape(token_lower), lowered):
                     if _is_followed_by_year_month_date(lowered, match.end()):
+                        if strong_form_context and _is_support_system_start_month_hint(
+                            lowered,
+                            match.start(),
+                            match.end(),
+                        ):
+                            return year
                         continue
                     return year
     return None
@@ -966,12 +981,28 @@ _YEAR_LABEL_REJECT_CONTEXT_RE = re.compile(
     r"(完成年度|から|まで|任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学)"
 )
 _YEAR_MONTH_DATE_SUFFIX_RE = re.compile(r"\s*年\s*\d{1,2}\s*月")
+_SUPPORT_SYSTEM_START_MONTH_SUFFIX_RE = re.compile(r"\s*年\s*0?4\s*月\s*(?:から|より|以降)?")
+_SUPPORT_SYSTEM_START_MONTH_REJECT_CONTEXT_RE = re.compile(
+    r"(任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学)"
+)
 
 
 def _is_followed_by_year_month_date(text: str, end_index: int) -> bool:
     """Return whether a year token is followed by a month, i.e. a date."""
 
     return _YEAR_MONTH_DATE_SUFFIX_RE.match(text[end_index:]) is not None
+
+
+def _is_support_system_start_month_hint(text: str, start_index: int, end_index: int) -> bool:
+    """Return whether a year-month token denotes the target support-system start."""
+
+    suffix = _SUPPORT_SYSTEM_START_MONTH_SUFFIX_RE.match(text[end_index:])
+    if suffix is None:
+        return False
+    window = text[max(0, start_index - 80): min(len(text), end_index + suffix.end() + 100)]
+    if _SUPPORT_SYSTEM_START_MONTH_REJECT_CONTEXT_RE.search(window):
+        return False
+    return _has_support_system_context(window)
 
 
 def _within_detectable_year(fiscal_year: int | None, max_fiscal_year: int | None) -> int | None:
@@ -1170,7 +1201,7 @@ def _enclosing_html_block(html: str, start: int, end: int) -> tuple[str, int, in
     """Return the closest simple HTML block containing an anchor match."""
 
     prefix = html[:start]
-    for tag in ("p", "li", "tr", "div"):
+    for tag in ("p", "li", "tr", "dd", "div"):
         open_matches = list(re.finditer(rf"<{tag}\b[^>]*>", prefix, re.IGNORECASE))
         if not open_matches:
             continue
@@ -1225,7 +1256,7 @@ def _previous_support_fiscal_year_context(html: str, before: int) -> str:
     window = html[max(0, before - 3000):before]
     blocks = list(
         re.finditer(
-            r"<(?:h[1-6]|p|li)\b[^>]*>.*?</(?:h[1-6]|p|li)\s*>",
+            r"<(?:h[1-6]|p|li|dd)\b[^>]*>.*?</(?:h[1-6]|p|li|dd)\s*>",
             window,
             re.IGNORECASE | re.DOTALL,
         )
@@ -1335,7 +1366,7 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
         previous_text = ""
         if tag == "li":
             previous_text = _previous_fiscal_year_context(html, block_start)
-        elif tag in {"p", "tr"}:
+        elif tag in {"p", "tr", "dd"}:
             previous_text = _previous_html_block_text(html, block_start, tag)
         has_current_year_context = any(_has_fiscal_year_context(part) for part in parts)
         if previous_text and not has_current_year_context and _has_fiscal_year_context(previous_text):

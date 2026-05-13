@@ -304,6 +304,34 @@ def test_extract_pdf_links_keeps_previous_support_year_statement_for_application
     assert _has_target_year_hint(candidate, target_year=2026)
 
 
+def test_extract_pdf_links_uses_definition_list_context_without_pagewide_news_noise() -> None:
+    html = """
+    <div class="news">
+      <dl>
+        <dt>2026.03.02</dt>
+        <dd>令和8年度一般入学二次試験の実施について</dd>
+      </dl>
+      <dl>
+        <dt>2025.08.19</dt>
+        <dd>
+          令和8年4月から修学支援新制度の対象機関として認定されました。<br/>
+          それに伴い、関連する情報を公表します。
+        </dd>
+        <dd><a href="pdf/application_form2.pdf">・確認申請書（様式第２号）</a></dd>
+        <dd><a href="pdf/R7_instructor_course_list.pdf">・実務経験のある教員等による授業科目の一覧</a></dd>
+      </dl>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(html, "https://www.jaaikosei.or.jp/kouseikansen/", target_fiscal_year=2026)
+
+    application = next(candidate for candidate in candidates if candidate.pdf_url.endswith("application_form2.pdf"))
+    assert "令和8年4月から修学支援新制度" in application.anchor_text
+    assert "令和8年度一般入学" not in application.anchor_text
+    assert _has_target_application_hint(application)
+    assert _has_target_year_hint(application, target_year=2026)
+
+
 def test_pre_download_treats_o_hara_confirmation_column_as_old_target_form() -> None:
     candidate = PdfCandidate(
         pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
