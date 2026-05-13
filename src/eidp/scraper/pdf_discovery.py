@@ -920,15 +920,15 @@ def _candidate_download_tier(candidate: PdfCandidate, *, target_year: int) -> in
     return 2
 
 
-def _candidate_download_year_rank(candidate: PdfCandidate, *, target_year: int) -> int:
+def _candidate_download_year_rank(candidate: PdfCandidate, *, target_year: int) -> tuple[int, int]:
     """Prefer current target-year form links over stale or yearless form links."""
 
     hinted_year = _fiscal_year_from_strong_candidate_hint(_candidate_hint_text(candidate), target_year=target_year)
     if hinted_year == target_year:
-        return 0
+        return (0, 0)
     if hinted_year is None:
-        return 1
-    return 2
+        return (1, 0)
+    return (2, -hinted_year)
 
 
 def _prioritize_viable_candidates(
@@ -939,7 +939,7 @@ def _prioritize_viable_candidates(
 ) -> tuple[list[PdfCandidate], list[PdfCandidate]]:
     """Prioritize target-like candidates and cap generic PDF scanning."""
 
-    priority: list[tuple[int, int, int, int, PdfCandidate]] = []
+    priority: list[tuple[int, int, tuple[int, int], int, PdfCandidate]] = []
     general: list[tuple[int, int, PdfCandidate]] = []
     for index, candidate in enumerate(candidates):
         tier = _candidate_download_tier(candidate, target_year=target_year)
@@ -1231,6 +1231,30 @@ def _has_fiscal_year_context(text: str) -> bool:
     return has_fiscal_year_text(text)
 
 
+def _has_strong_fiscal_year_context(text: str) -> bool:
+    """Return whether nearby HTML text names a fiscal year, not a date."""
+
+    normed = unicodedata.normalize("NFKC", text)
+    if re.search(r"(?<!\d)20\d{2}\s*年度", normed):
+        return True
+    return fiscal_year_from_japanese_era_text(
+        normed,
+        include_fiscal_year_labels=True,
+        include_filing_dates=False,
+    ) is not None
+
+
+_WEAK_PUBLICATION_DATE_CONTEXT_RE = re.compile(r"(更新日|掲載日|公開日|投稿日|作成日|改定日|最終更新)")
+
+
+def _is_weak_publication_date_context(text: str) -> bool:
+    """Return whether text contains only date-like context for discovery use."""
+
+    return _has_fiscal_year_context(text) and not _has_strong_fiscal_year_context(text) and bool(
+        _WEAK_PUBLICATION_DATE_CONTEXT_RE.search(text)
+    )
+
+
 def _has_support_system_context(text: str) -> bool:
     return any(token in text for token in ("修学支援", "修学の支援", "高等教育", "無償化"))
 
@@ -1367,8 +1391,8 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
         current_text = _html_text(block_fragment)
         if (
             current_text
-            and not _has_fiscal_year_context(anchor)
-            and _has_fiscal_year_context(current_text)
+            and not _has_strong_fiscal_year_context(anchor)
+            and _has_strong_fiscal_year_context(current_text)
             and current_text not in parts
         ):
             parts.append(current_text)
@@ -1377,10 +1401,10 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
             previous_text = _previous_fiscal_year_context(html, block_start)
         elif tag in {"p", "tr", "dd"}:
             previous_text = _previous_html_block_text(html, block_start, tag)
-            if tag in {"p", "dd"} and not _has_fiscal_year_context(previous_text):
+            if tag in {"p", "dd"} and not _has_strong_fiscal_year_context(previous_text):
                 previous_text = _previous_fiscal_year_context(html, block_start)
-        has_current_year_context = any(_has_fiscal_year_context(part) for part in parts)
-        if previous_text and not has_current_year_context and _has_fiscal_year_context(previous_text):
+        has_current_year_context = any(_has_strong_fiscal_year_context(part) for part in parts)
+        if previous_text and not has_current_year_context and _has_strong_fiscal_year_context(previous_text):
             parts.append(previous_text)
             has_current_year_context = True
         if not has_current_year_context and anchor and _has_application_form_context(anchor):
@@ -1447,14 +1471,24 @@ def _previous_fiscal_year_context(html: str, before: int) -> str:
     block_re = r"<(?:p|li|dt|dd|h[1-6])\b[^>]*>.*?</(?:p|li|dt|dd|h[1-6])\s*>"
     for match in reversed(list(re.finditer(block_re, window, re.IGNORECASE | re.DOTALL))):
         text = _html_text(match.group(0))
-        if text and _has_fiscal_year_context(text):
+        if not text:
+            continue
+        if _has_strong_fiscal_year_context(text):
             return text
+        if _is_weak_publication_date_context(text):
+            continue
+        return ""
 
     text = _html_text(window)
     for line in reversed(re.split(r"[\n。]+", text)):
         line = line.strip()
-        if line and _has_fiscal_year_context(line):
+        if not line:
+            continue
+        if _has_strong_fiscal_year_context(line):
             return line
+        if _is_weak_publication_date_context(line):
+            continue
+        break
     return ""
 
 

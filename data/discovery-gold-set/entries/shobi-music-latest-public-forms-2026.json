@@ -1,0 +1,59 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "shobi-music-latest-public-forms-2026",
+  "school": {
+    "school_id": 554,
+    "school_name": "尚美ミュージックカレッジ専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "尚美学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Prefer the latest public target-form PDF when a current-year school page exposes a historical list of confirmation application forms.",
+    "search_queries": [
+      "尚美ミュージックカレッジ専門学校 2026年度 修学支援 様式第2号",
+      "尚美ミュージックカレッジ専門学校 令和7年度申請書 様式第2号"
+    ],
+    "steps": [
+      "Start from the Tokyo official-index matched school URL https://www.shobi.ac.jp/.",
+      "Follow the site's public information / support-system page to https://www.shobi.ac.jp/about/info/.",
+      "Find the historical confirmation-form list from 令和元年度申請書-様式第2号 through 令和7年度申請書-様式第2号.",
+      "Select the latest public target-form candidate r7_syugakushien_shinsei_2.pdf rather than older R1-R6 forms.",
+      "Open the linked PDF and verify that its body contains 尚美ミュージックカレッジ専門学校 and 様式第２号.",
+      "Keep it as FY2025 publication-lag evidence for FY2026 because the link and PDF do not provide strict 令和8年度 / 2026年度 target-year evidence."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.shobi.ac.jp/",
+    "disclosure_url": "https://www.shobi.ac.jp/about/info/",
+    "pdf_url": "https://www.shobi.ac.jp/about/info/pdf/r7_syugakushien_shinsei_2.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "ascending_historical_support_forms_latest_public",
+    "reusable_rules": [
+      "When a support page lists multiple historical target-form PDFs, scan stale target-form candidates in newest-fiscal-year order after current-year candidates.",
+      "Treat the latest public 様式第2号 / 確認申請書 PDF as operator-reviewable publication-lag evidence when it lacks strict target-FY evidence.",
+      "Keep generic current-year page wording separate from strict PDF/link target-year evidence unless the local PDF anchor or body proves the target fiscal year."
+    ],
+    "anti_patterns": [
+      "Do not download R1/R2-era target-form PDFs before the latest public R7 form merely because the page lists old forms first.",
+      "Do not upgrade a latest-public stale form to strict FY2026 success when the PDF body and link label only prove FY2025."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "output/pref-aggregator/tokyo.json",
+      "https://www.shobi.ac.jp/",
+      "https://www.shobi.ac.jp/about/info/",
+      "https://www.shobi.ac.jp/about/info/pdf/r7_syugakushien_shinsei_2.pdf",
+      "_temp/shobi-r7-syugakushien-shinsei-2.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found the Tokyo official-index matched homepage and the school's public information page. Source-side discovery ranked r7_syugakushien_shinsei_2.pdf as the best target-form candidate after scoring; source-side PDF text extraction verified 尚美ミュージックカレッジ専門学校 and 様式第２号 in the PDF body. Strict download rejects it for FY2026 with fiscal_year_mismatch:2025, so this entry preserves newest-public stale target-form ordering without counting it as current-FY success."
+  }
+}

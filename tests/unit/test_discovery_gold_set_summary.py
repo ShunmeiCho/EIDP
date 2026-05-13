@@ -19,24 +19,25 @@ def test_summarize_discovery_gold_entries_tracks_release_relevant_buckets() -> N
 
     summary = summarize_discovery_gold_entries(entries)
 
-    assert summary.total_entries == 42
-    assert summary.target_fiscal_year_counts == {2025: 2, 2026: 40}
+    assert summary.total_entries == 43
+    assert summary.target_fiscal_year_counts == {2025: 2, 2026: 41}
     assert summary.outcome_counts == {
         "accepted_target_pdf": 10,
         "needs_operator_review": 15,
         "no_target_candidate_found": 1,
-        "publication_lag_latest_public": 15,
+        "publication_lag_latest_public": 16,
         "site_fetch_error": 1,
     }
     assert summary.strict_target_year_successes == 10
     assert summary.operator_review_entries == 15
-    assert summary.publication_lag_entries == 15
+    assert summary.publication_lag_entries == 16
     assert summary.pattern_source_counts == {
-        "direct": 9,
+        "direct": 10,
         "embed": 1,
         "wordpress": 6,
         "wordpress_download_manager": 1,
     }
+    assert "ascending_historical_support_forms_latest_public" in summary.site_families
     assert "wordpress_current_year_anchor_context" in summary.site_families
     assert "empty_stale_anchor_before_visible_current_year_anchor" in summary.site_families
     assert "multi_year_support_pdf_list_current_year_anchor" in summary.site_families
@@ -53,10 +54,10 @@ def test_render_discovery_gold_summary_outputs_json_safe_payload() -> None:
 
     decoded = json.loads(payload)
 
-    assert decoded["total_entries"] == 42
+    assert decoded["total_entries"] == 43
     assert decoded["outcome_counts"]["needs_operator_review"] == 15
     assert decoded["outcome_counts"]["no_target_candidate_found"] == 1
-    assert decoded["outcome_counts"]["publication_lag_latest_public"] == 15
+    assert decoded["outcome_counts"]["publication_lag_latest_public"] == 16
     assert decoded["outcome_counts"]["site_fetch_error"] == 1
     assert decoded["strict_target_year_successes"] == 10
     assert "dense_information_page" in decoded["site_families"]
@@ -68,7 +69,7 @@ def test_build_discovery_gold_run_plan_emits_bounded_pdf_discovery_inputs() -> N
 
     plan = build_discovery_gold_run_plan(entries)
 
-    assert len(plan) == 42
+    assert len(plan) == 43
     aihok = next(item for item in plan if item.entry_id == "aihok-nursing-support-accepted-2026")
     assert aihok.school_id == 1369
     assert aihok.site_url == "https://www.jaaikosei.or.jp/aihokukansen/news/高等教育の修学支援制度について/"
@@ -118,7 +119,7 @@ def test_render_discovery_gold_run_plan_outputs_json_array() -> None:
 
     decoded = json.loads(payload)
 
-    assert len(decoded) == 42
+    assert len(decoded) == 43
     items_by_id = {item["entry_id"]: item for item in decoded}
     assert items_by_id["ast-kansai-ika-review-2026"]["site_url"] == "https://www.kmc.ast.ac.jp/jyouhoukokai/"
     assert (

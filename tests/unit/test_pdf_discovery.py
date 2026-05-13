@@ -125,6 +125,38 @@ def test_current_year_syllabus_does_not_outrank_previous_year_target_form() -> N
     assert _stale_fiscal_year_from_candidate_hint(ordered[0], target_year=2026) == 2025
 
 
+def test_prioritize_viable_candidates_prefers_latest_public_stale_target_form() -> None:
+    html = """
+    <h2>2026年度も修学支援新制度の対象校です</h2>
+    <ul>
+      <li><a href="/about/info/pdf/r1_syugakushien_shinsei_2.pdf">令和元年度申請書-様式第2号</a></li>
+      <li><a href="/about/info/pdf/r2_syugakushien_shinsei_2.pdf">令和2年度申請書-様式第2号</a></li>
+      <li><a href="/about/info/pdf/r3_syugakushien_shinsei_2.pdf">令和3年度申請書-様式第2号</a></li>
+      <li><a href="/about/info/pdf/r4_syugakushien_shinsei_2.pdf">令和4年度申請書-様式第2号</a></li>
+      <li><a href="/about/info/pdf/r5_syugakushien_shinsei_2.pdf">令和5年度申請書-様式第2号</a></li>
+      <li><a href="/about/info/pdf/r6_syugakushien_shinsei_2.pdf">令和6年度申請書-様式第2号</a></li>
+      <li><a href="/about/info/pdf/r7_syugakushien_shinsei_2.pdf">令和7年度申請書-様式第2号</a></li>
+    </ul>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://www.shobi.ac.jp/about/info/",
+        target_fiscal_year=2026,
+    )
+    for candidate in candidates:
+        _score_candidate(candidate, target_fiscal_year=2026)
+    ordered, dropped = _prioritize_viable_candidates(candidates, target_year=2026)
+
+    assert not dropped
+    assert [candidate.pdf_url.rsplit("/", 1)[-1] for candidate in ordered[:3]] == [
+        "r7_syugakushien_shinsei_2.pdf",
+        "r6_syugakushien_shinsei_2.pdf",
+        "r5_syugakushien_shinsei_2.pdf",
+    ]
+    assert _stale_fiscal_year_from_candidate_hint(ordered[0], target_year=2026) == 2025
+
+
 def test_prefecture_public_school_page_uses_heading_year_for_old_target_forms() -> None:
     html = """
     <p id="tmp_update">更新日：2025年7月16日</p>
@@ -148,6 +180,43 @@ def test_prefecture_public_school_page_uses_heading_year_for_old_target_forms() 
     assert not _has_target_year_hint(latest_public, target_year=2026)
 
     assert _stale_fiscal_year_from_candidate_hint(latest_public, target_year=2026) == 2025
+
+
+def test_pdf_link_context_does_not_cross_intervening_non_year_block() -> None:
+    html = """
+    <h3>令和８年度</h3>
+    <p><a href="/docs/r8-handbook.pdf">学生便覧</a></p>
+    <p><a href="/docs/r7-form2.pdf">様式第2号（旧）</a></p>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2026,
+    )
+    old_form = next(candidate for candidate in candidates if candidate.pdf_url.endswith("r7-form2.pdf"))
+
+    assert "令和８年度" not in old_form.anchor_text
+    assert not _has_target_year_hint(old_form, target_year=2026)
+
+
+def test_pdf_link_context_skips_update_date_before_heading_year() -> None:
+    html = """
+    <h3>令和７年度</h3>
+    <p>更新日：2025年7月16日</p>
+    <p><a href="/docs/2025shinseisho2go.pdf">申請書　様式第２号</a></p>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://example.ac.jp/disclosure/",
+        target_fiscal_year=2026,
+    )
+    candidate = candidates[0]
+
+    assert "更新日" not in candidate.anchor_text
+    assert "令和７年度" in candidate.anchor_text
+    assert _stale_fiscal_year_from_candidate_hint(candidate, target_year=2026) == 2025
 
 
 def test_score_candidate_preserves_direct_bonus_for_source_prefixed_patterns() -> None:
