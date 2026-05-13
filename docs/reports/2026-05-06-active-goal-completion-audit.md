@@ -3,10 +3,41 @@
 Date: 2026-05-07
 Latest update: 2026-05-13
 Branch: `sprint8-handoff-finalize`
-Latest Mac-verifier-clean Windows package commit: `b75eecd60d0417369f58cc17f298e288c1f2d251` (`eidp-windows-v353.zip`; Windows E2E pending)
+Latest Mac-verifier-clean Windows package commit: `0ee34c6cbaf9a8c4f6dd1d7712a0ee51b758afb9` (`eidp-windows-v354.zip`; Windows E2E pending)
 Latest Windows setup-verified package commit: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`)
 Latest Windows bounded-bootstrap proof: `de2cfed4f2a0f1834bc76368438bda3d80ff8413` (`eidp-windows-v342.zip`; Saitama 50-site and Tokyo 30-site official-index probes)
 Current concise release status: `docs/reports/current-release-status.md`
+
+## 2026-05-13 V354 Definition-List Support Context Recovery
+
+v354 (`0ee34c6`) adds a second manual-web accepted target PDF demonstration
+while SSH Windows testing is unavailable. 更生看護専門学校 publishes a news-style
+definition list where the support-system year evidence appears in one `dd`
+block (`令和8年4月から修学支援新制度の対象機関として認定されました`) and the
+確認申請書（様式第２号） PDF link appears in the next `dd`. The crawler already
+found the link, but a safe reusable rule needed to keep definition-list context
+local instead of inheriting page-wide news archive text. `pdf_discovery.py` now
+uses `dd` as an enclosing/context block, allows April support-system start-month
+evidence only when paired with target-form context, and keeps unrelated entrance
+exam/news items out of the candidate anchor text.
+
+Source-side replay for school id `1375` now reports `crawled=1`, `found=1`,
+`downloaded=1`, `failed=0`, `skipped=0`; the evidence row is
+`accepted_downloaded` with `year_evidence=url_hint`, `pattern_type=direct`, and
+`pdf_type=target`. The discovery gold-set now has `34` entries, including `6`
+`accepted_target_pdf` successes and the new
+`news_definition_list_support_year_statement` site family.
+
+Verification: focused discovery/gold-set tests passed, broader
+discovery/package tests passed with `288 passed, 5 warnings`, targeted Ruff and
+mypy passed, and the full unit suite passed with `1364 passed, 5 warnings`.
+`dist/eidp-windows-v354.zip` was rebuilt from clean commit `0ee34c6` with
+SHA256 `95ed537dc21beb52add6b31df0705ec9a6528c272354da68783f362b27b55dc4`.
+The default package verifier and `--require-demonstrated-discovery-patterns`
+both passed. The full non-Windows release gate returned `ok=true`; bounded
+evidence replay returned `ok=true` with Tokyo `4` exact / `0` failures,
+Saitama `16` exact / `0` failures, 聖十字 `1` exact / `0` failures, and
+更生 `1` exact / `0` failures.
 
 ## 2026-05-13 V353 Demonstrated Support-Year Context Recovery
 
