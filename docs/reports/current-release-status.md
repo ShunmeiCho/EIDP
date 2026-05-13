@@ -26,6 +26,20 @@ v378 SSH-launched Streamlit health smoke did not produce a usable `/_stcore`
 health response before the process disappeared without logs. The latest Windows
 bounded-bootstrap smoke remains v376. The latest broader Windows
 bounded-bootstrap proof remains v342.
+
+Release gate interpretation:
+
+- **Process gate / v1.0-rc evidence**: a real operator-PC Stage 6 cycle proves
+  setup, diagnostics, UI navigation, audit logging, Excel preview/download, and
+  bounded write behavior on the handed-off Windows package. FY2025/R7
+  retroactive validation may support this process evidence because it tests the
+  rolling-fiscal-year mechanics against a more complete disclosure season.
+- **Yield gate / v1.0 GA evidence**: current target-FY FY2026/R8 readiness must
+  still reach the shipping line: true target confirmation PDFs are acquired or
+  operator-reviewable at a rate sufficient for estimated manual workload
+  `<=30%`. Retroactive FY2025 evidence must not be counted as FY2026/R8
+  current-year yield or Excel readiness.
+
 v376 fixes a Windows-only diagnostics bug in the retroactive fiscal-year
 snapshot: the v375 ZIP passed token-based package verification, but real
 Windows batch execution skipped the FY2025 `ship-readiness --fy` call because

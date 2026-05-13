@@ -6,6 +6,16 @@ Updated: 2026-05-06
 このテンプレートは、業務員の実 PC で 1 サイクル実行した結果を記録するためのものです。
 ここが未記入のままでは、EIDP Windows 版を v1.0 と判定しません。
 
+判定上の注意:
+
+- このテンプレートをすべて埋めることは、Windows 実機での process gate
+  （v1.0-rc 候補）を確認するための条件です。
+- FY2025/R7 retroactive evidence は、rolling target FY の切替と operator workflow
+  の動作証明には使えますが、FY2026/R8 の current-year yield gate
+  （真の対象年度 PDF 60-70% 自動取得、推定手作業 30% 以下）の証明には使いません。
+- v1.0 GA 判定は、このテンプレートの完了に加えて、現在の対象年度で
+  `ship_readiness_rc=0` または同等の yield evidence が確認された後に行います。
+
 ## 1. 実施情報
 
 | 項目 | 記録 |

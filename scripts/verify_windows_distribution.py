@@ -1419,6 +1419,8 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "推定手作業率",
         "Excel ready 率",
         "logs\\diagnostics-*.txt",
+        "v1.0-rc",
+        "FY2026/R8 の current-year yield gate",
     ):
         _require_text(check, e2e_body, e2e_member, token)
 

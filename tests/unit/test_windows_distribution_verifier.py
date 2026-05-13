@@ -193,6 +193,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "推定手作業率\n"
             "Excel ready 率\n"
             "logs\\diagnostics-*.txt\n"
+            "v1.0-rc\n"
+            "FY2026/R8 の current-year yield gate\n"
         ),
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
