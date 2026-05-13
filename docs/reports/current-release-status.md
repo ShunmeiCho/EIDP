@@ -84,9 +84,8 @@ turning those synthetic-only patterns back on. v349 packages the source-side
 Tokyo Sanko publication-lag regression from the v348 Tokyo 20-site strict smoke,
 raising the packaged discovery gold-set to `32` entries while keeping strict
 target-PDF auto-success unchanged at `4`. v350 rebuilds the same runtime/data
-package from the current HEAD after the seed-count test contract update, so the
-Mac-verifier-clean ZIP commit now matches the branch head used for source-side
-verification.
+package after the seed-count test contract update and remains clean under the
+broadened rolling-FY package verifier guard.
 
 ## Objective Checklist
 
