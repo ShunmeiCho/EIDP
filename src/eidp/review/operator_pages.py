@@ -20,6 +20,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from ipaddress import ip_address
 from pathlib import Path
+from typing import Any, TypedDict, cast
 from urllib.parse import urlparse
 
 import httpx
@@ -67,6 +68,19 @@ _DEFAULT_PROPOSAL_DECISIONS = _OUTPUT_DIR / "proposal_decisions.jsonl"
 _MAX_OPERATOR_PDF_SIZE = 50 * 1024 * 1024
 _ACCEPTED_OPERATOR_CLASSIFIERS = {"target", "image_only"}
 _ACCEPTED_OPERATOR_PAGE_CLASSIFIER = "html_page"
+
+JsonDict = dict[str, Any]
+
+
+class PipelineStats(TypedDict):
+    total_schools: int
+    total_documents: int
+    docs_by_status: dict[str | None, int]
+    docs_by_pdf_type: dict[str | None, int]
+    coverage_by_year: dict[int | None, int]
+    dept_rows: int
+    dept_yearly_rows: int
+    school_year_rows: int
 
 
 @dataclass(frozen=True)
@@ -550,32 +564,35 @@ def run_operator_discovery_ingest(
 # Pipeline Status
 # ---------------------------------------------------------------------------
 
-def _pipeline_stats(session: Session) -> dict[str, object]:
-    total_schools = session.query(func.count(School.id)).scalar() or 0
-    total_docs = session.query(func.count(Document.id)).scalar() or 0
+def _pipeline_stats(session: Session) -> PipelineStats:
+    total_schools = int(session.query(func.count(School.id)).scalar() or 0)
+    total_docs = int(session.query(func.count(Document.id)).scalar() or 0)
 
-    docs_by_status = dict(
-        session.query(Document.ingest_status, func.count(Document.id))
+    docs_by_status: dict[str | None, int] = {
+        status: int(count)
+        for status, count in session.query(Document.ingest_status, func.count(Document.id))
         .group_by(Document.ingest_status)
         .all()
-    )
-    docs_by_pdf_type = dict(
-        session.query(Document.pdf_type, func.count(Document.id))
+    }
+    docs_by_pdf_type: dict[str | None, int] = {
+        pdf_type: int(count)
+        for pdf_type, count in session.query(Document.pdf_type, func.count(Document.id))
         .group_by(Document.pdf_type)
         .all()
-    )
+    }
 
-    coverage_by_year = dict(
-        session.query(Document.fiscal_year, func.count(Document.id))
+    coverage_by_year: dict[int | None, int] = {
+        fiscal_year: int(count)
+        for fiscal_year, count in session.query(Document.fiscal_year, func.count(Document.id))
         .filter(Document.ingest_status == "ingested")
         .group_by(Document.fiscal_year)
         .all()
-    )
+    }
 
-    dept_yearly_rows = session.query(func.count(DepartmentYearly.id)).scalar() or 0
-    dept_rows = session.query(func.count(Department.id)).scalar() or 0
+    dept_yearly_rows = int(session.query(func.count(DepartmentYearly.id)).scalar() or 0)
+    dept_rows = int(session.query(func.count(Department.id)).scalar() or 0)
 
-    school_year_rows = session.query(func.count(SchoolYearStatus.id)).scalar() or 0
+    school_year_rows = int(session.query(func.count(SchoolYearStatus.id)).scalar() or 0)
 
     return {
         "total_schools": total_schools,
@@ -724,7 +741,7 @@ def _run_competition_export(
     output: Path,
     gap_report: Path,
     fiscal_year: int | None,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     from eidp.excel.competition_exporter import export_competition_workbook
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -893,8 +910,8 @@ def _render_url_needed_worklist() -> None:
     # Aggregate by school_id: a single school may appear in many template rows.
     # Some rows have no school_id (school_missing / no_fy_data) — we skip those
     # here since the URL form requires school_id; they're visible in ⑤ instead.
-    agg: dict[str, dict[str, object]] = {}
-    by_name_only: list[dict[str, object]] = []
+    agg: dict[str, JsonDict] = {}
+    by_name_only: list[JsonDict] = []
 
     with _DEFAULT_COMPETITION_GAP.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
@@ -913,7 +930,7 @@ def _render_url_needed_worklist() -> None:
             if sid:
                 key = sid
                 if key in agg:
-                    agg[key]["rows"] = int(agg[key]["rows"]) + 1  # type: ignore[operator]
+                    agg[key]["rows"] = int(cast(int, agg[key]["rows"])) + 1
                 else:
                     agg[key] = entry
             else:
@@ -2019,10 +2036,10 @@ class ProposalDecision:
     timestamp: str
 
 
-def _read_proposals(path: Path) -> list[dict]:
+def _read_proposals(path: Path) -> list[JsonDict]:
     if not path.exists():
         return []
-    out: list[dict] = []
+    out: list[JsonDict] = []
     with path.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -2277,7 +2294,7 @@ def void_department_change(
     return True, "voided"
 
 
-def _active_dept_alias_changes(session: Session, *, limit: int = 20) -> list[dict]:
+def _active_dept_alias_changes(session: Session, *, limit: int = 20) -> list[JsonDict]:
     """Return recent active department aliases that the operator can void."""
     rows = (
         session.query(DepartmentChange, Department, School)
@@ -2324,10 +2341,10 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path | None = N
     decisions = _load_decision_index(_DEFAULT_PROPOSAL_DECISIONS)
     hide_processed = st.session_state.get("hide_processed", True)
 
-    by_type: dict[str, list[dict]] = {}
+    by_type: dict[str, list[JsonDict]] = {}
     for p in proposals:
-        key = ("school_alias", p.get("template_name", ""))
-        if hide_processed and key in decisions:
+        decision_key = ("school_alias", p.get("template_name", ""))
+        if hide_processed and decision_key in decisions:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
@@ -2464,7 +2481,7 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path | None = N
 
 
 def _render_school_focus_mode(
-    session: Session, focus_items: list[dict], *, lock_path: Path | None = None
+    session: Session, focus_items: list[JsonDict], *, lock_path: Path | None = None
 ) -> None:
     """V2-inspired single-proposal focus card.
 
@@ -2643,7 +2660,7 @@ def _next_focus_idx_after_decision(ptr: int, total: int) -> int:
 
 
 def _render_school_candidate_picker(
-    session: Session, proposal: dict, ptype: str, *, lock_path: Path | None = None
+    session: Session, proposal: JsonDict, ptype: str, *, lock_path: Path | None = None
 ) -> None:
     """Render one picker card with Approve / Defer buttons."""
     candidates = proposal.get("candidates") or []
@@ -2740,10 +2757,10 @@ def _render_dept_proposals_tab(session: Session, *, lock_path: Path | None = Non
     decisions = _load_decision_index(_DEFAULT_PROPOSAL_DECISIONS)
     hide_processed = st.session_state.get("hide_processed", True)
 
-    by_type: dict[str, list[dict]] = {}
+    by_type: dict[str, list[JsonDict]] = {}
     for p in proposals:
-        key = ("dept_alias", p.get("template_dept", ""))
-        if hide_processed and key in decisions:
+        decision_key = ("dept_alias", p.get("template_dept", ""))
+        if hide_processed and decision_key in decisions:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
@@ -2917,8 +2934,8 @@ def _decision_badge(decision: str) -> str:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _tail_jsonl(path: Path, limit: int) -> list[dict]:
-    out: list[dict] = []
+def _tail_jsonl(path: Path, limit: int) -> list[JsonDict]:
+    out: list[JsonDict] = []
     try:
         with path.open(encoding="utf-8") as fh:
             for line in fh:

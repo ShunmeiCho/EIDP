@@ -7,7 +7,7 @@ Or directly: streamlit run src/eidp/review/app.py
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Protocol
 
 import streamlit as st
 from sqlalchemy import func
@@ -71,7 +71,7 @@ class ButtonContainer(Protocol):
 
 def _get_session() -> Session:
     """Create a short-lived SQLAlchemy session for one Streamlit rerun."""
-    return cast(Session, SessionLocal())
+    return SessionLocal()
 
 
 def _select_page(page_id: str) -> None:
