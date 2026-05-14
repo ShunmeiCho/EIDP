@@ -839,8 +839,6 @@ def _has_target_form_hint(candidate: PdfCandidate) -> bool:
             "様式2号",
             "機関要件",
             "更新確認申請",
-            "koushinshinsei",
-            "koushin-shinsei",
         )
     )
 

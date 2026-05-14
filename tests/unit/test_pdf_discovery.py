@@ -21,6 +21,7 @@ from eidp.scraper.pdf_discovery import (
     _extract_pdf_links,
     _has_fiscal_year_context,
     _has_target_application_hint,
+    _has_target_form_hint,
     _has_target_year_hint,
     _pre_download_rejection,
     _prioritize_viable_candidates,
@@ -1000,6 +1001,7 @@ def test_pre_download_does_not_treat_english_renewal_form_alone_as_target() -> N
     rejection = _pre_download_rejection(candidate, target_year=2026)
 
     assert not _has_target_application_hint(candidate)
+    assert not _has_target_form_hint(candidate)
     assert rejection is None
 
 
@@ -1014,6 +1016,7 @@ def test_pre_download_does_not_treat_english_renewal_form_with_english_support_h
     rejection = _pre_download_rejection(candidate, target_year=2026)
 
     assert not _has_target_application_hint(candidate)
+    assert not _has_target_form_hint(candidate)
     assert rejection is None
 
 
@@ -1028,6 +1031,7 @@ def test_pre_download_does_not_treat_romanized_renewal_form_alone_as_target() ->
     rejection = _pre_download_rejection(candidate, target_year=2026)
 
     assert not _has_target_application_hint(candidate)
+    assert not _has_target_form_hint(candidate)
     assert rejection is None
 
 
