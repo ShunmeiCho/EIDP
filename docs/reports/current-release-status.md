@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v400.zip`
-Package commit: `378a88a25d607eff86035e88a9ccbca3c276ee4f`
-Package SHA256: `d2c30a95294cb56eaa44b2aee538e738a73b1828e3823bab352ad36763f3fa7f`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v400.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v400.zip`
+Current Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
+Package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
+Package SHA256: `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v401.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v401.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v399.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
@@ -22,21 +22,23 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v400. It packages commit
-`378a88a25d607eff86035e88a9ccbca3c276ee4f`, which carries forward the v397
+The current Mac-verifier-clean ZIP snapshot is v401. It packages commit
+`2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, which carries forward the v397
 Windows setup WMI fix, the v398 direct Stage 6 recovery helper WMI fix, the
 v399 dry-run-first `scripts\stage6_residual_cleanup.bat` helper, and the
 runbook/verifier contract requiring `ClearAllForwardings=no` for Mac-to-Windows
-UI tunnel tests. The versioned ZIP and latest alias both pass
+UI tunnel tests. It also adds actionable DB-scope errors for discovery RCA
+commands when `EIDP_DATABASE_URL` points at the wrong or unmigrated database.
+The versioned ZIP and latest alias both pass
 `scripts/verify_windows_distribution.py --json` with `git_dirty=false`,
 `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery
 gold-set entries, and
-`undemonstrated_pattern_sources=[]`. The v400 core SHA256 is
-`d2c30a95294cb56eaa44b2aee538e738a73b1828e3823bab352ad36763f3fa7f`.
+`undemonstrated_pattern_sources=[]`. The v401 core SHA256 is
+`ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`.
 The older v399 ZIP is now intentionally rejected by the current verifier because
 its packaged runbook lacks `ClearAllForwardings=no`, `ExitOnForwardFailure=yes`,
 and `127.0.0.1:18502:127.0.0.1:8502` tunnel guidance. Windows transfer, setup,
-and UI-service evidence remains v399 until SSH access resumes for v400.
+and UI-service evidence remains v399 until SSH access resumes for v401.
 The v399 residual cleanup helper was also hot-copied into the existing v397
 disposable operator-PC extraction and run in dry-run mode only:
 `scripts\stage6_residual_cleanup.bat --json` returned
@@ -107,9 +109,9 @@ cleanly to the operator PC, extracted with root launchers
 `EIDP-stage6-verify-evidence.bat`, returned the expected negative verifier
 result for a missing evidence ZIP, and then verified a minimal collected
 `logs\stage6-evidence-*.zip` with `VERIFY_BAT_RC=0`. The latest full
-non-Windows release gate is now v400 with `1432` unit tests and `44` exact
+non-Windows release gate is now v401 with `1433` unit tests and `44` exact
 discovery gold-set predictions; both package verifier modes passed against the
-v400 SHA256. The latest Windows UI-service health proof is now v399; the latest
+v401 SHA256. The latest Windows UI-service health proof is now v399; the latest
 browser initial-render and read-only quick-navigation proof remains v397. The
 existing `C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe` disposable extraction started
 Streamlit on Windows `127.0.0.1:8502`; the local SSH tunnel
@@ -574,7 +576,7 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v384 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`support_recipient_rows_for_doc=0`). Windows v384 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, emitted four `fiscal_year_override` audit rows, and verified the real runtime DB had `0` matching document/school/department/audit rows. Windows v384 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, `grand_total=100`, and `extraction_confidence=0.94`; revision `2` current with `annual_total=120`, `grand_total=120`, and `extraction_confidence=1.0`; the real runtime DB had `0` matching documents, schools, and support-recipient rows. | DepartmentYearly Win UI E2E proven on v384; fiscal-year override Win UI E2E proven on v384; SupportRecipient Win package backend append-only proven on v384 |
 | Excel template output | v384 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v384 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; the downloaded workbook opened with sheets `採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋`, and `openpyxl` reported row counts `2419`, `10023`, `9721`, and `9721` including headers; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive on latest v384 |
 | ManualActionLog audit for operator actions | v384 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database, resolved the `ReviewItem` as rejected, created no `SchoolSite` row, and verified the real runtime DB was not mutated; v384 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v384_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, cleared pending count to `0`, and verified the real runtime DB was not mutated; v384 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v384 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths |
-| ZIP distribution, double-click setup, browser UI offline operation | v400 ZIP verifies clean on the macOS packaging gate with SHA256 `d2c30a95294cb56eaa44b2aee538e738a73b1828e3823bab352ad36763f3fa7f`, commit `378a88a25d607eff86035e88a9ccbca3c276ee4f`, `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and `undemonstrated_pattern_sources=[]`; the current verifier intentionally rejects older v399 because its packaged runbook predates the `ClearAllForwardings=no`, `ExitOnForwardFailure=yes`, and `127.0.0.1:18502:127.0.0.1:8502` tunnel contract; v399 was transferred to the operator PC, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`, set up with the offline wheelhouse installer, imported the workbook, rebuilt `2418` FY2026 school-year task rows, returned `OK install`, passed after-setup validation with `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, `wheel_count=78`, and `duplicate_wheel_distributions={}`, and returned `cli_help_rc=0`; v399 then served Streamlit on Windows `0.0.0.0:8502`, returned Windows-local `http://127.0.0.1:8502/_stcore/health` as `ok`, showed a `netstat` listener on PID `10104`, and was stopped with follow-up `listening_8502=0`; v400 Windows transfer/setup/UI smoke remains pending until SSH access resumes. v397 remains the latest browser-click proof: it rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `3c100c7`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, clicked only the non-mutating quick navigation buttons for `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and back to `① 学校別タスク`, and kept the FY2026 Excel workbook-generation button disabled for empty current data. The v398 `stage6_recovery_check.py` WMI fix was hot-copied into the v397 disposable extraction and `EIDP-diagnose.bat` then completed, writing `logs\diagnostics-20260514-094322.txt` with `validate_core_rc=0`, `validate_after_setup_rc=0`, `ship_readiness_rc=1`, `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`; its `stage6_recovery_rc=1` was an expected recovery-state failure because task action matched the v397 expected weekly action but old v384 OCR smoke files still existed under `C:\Users\cyo20`. v394 remains the latest Windows evidence-bundle verifier proof with root Stage 6 evidence/verify/recovery BAT launchers and positive minimal `stage6-evidence-*.zip` verification; v384 remains the latest package with package-local `eidp db-backup`, Windows environment / Task Scheduler capture, R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry browser save, and SupportRecipient append-only ingest proofs on disposable copied databases, leaving the real runtime DB unchanged. Full Stage 6 operator-action click-through remains unverified | v400 Mac verifier proof, v399 Windows transfer/setup/UI-service proof, v397 Windows browser render/read-only navigation proof, and older Stage 6 evidence-bundle/browser write proofs present; v400 Windows transfer/setup/UI smoke and full operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v401 ZIP verifies clean on the macOS packaging gate with SHA256 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`, commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and `undemonstrated_pattern_sources=[]`; the current verifier intentionally rejects older v399 because its packaged runbook predates the `ClearAllForwardings=no`, `ExitOnForwardFailure=yes`, and `127.0.0.1:18502:127.0.0.1:8502` tunnel contract; v399 was transferred to the operator PC, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`, set up with the offline wheelhouse installer, imported the workbook, rebuilt `2418` FY2026 school-year task rows, returned `OK install`, passed after-setup validation with `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, `wheel_count=78`, and `duplicate_wheel_distributions={}`, and returned `cli_help_rc=0`; v399 then served Streamlit on Windows `0.0.0.0:8502`, returned Windows-local `http://127.0.0.1:8502/_stcore/health` as `ok`, showed a `netstat` listener on PID `10104`, and was stopped with follow-up `listening_8502=0`; v401 Windows transfer/setup/UI smoke remains pending until SSH access resumes. v397 remains the latest browser-click proof: it rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `3c100c7`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, clicked only the non-mutating quick navigation buttons for `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and back to `① 学校別タスク`, and kept the FY2026 Excel workbook-generation button disabled for empty current data. The v398 `stage6_recovery_check.py` WMI fix was hot-copied into the v397 disposable extraction and `EIDP-diagnose.bat` then completed, writing `logs\diagnostics-20260514-094322.txt` with `validate_core_rc=0`, `validate_after_setup_rc=0`, `ship_readiness_rc=1`, `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`; its `stage6_recovery_rc=1` was an expected recovery-state failure because task action matched the v397 expected weekly action but old v384 OCR smoke files still existed under `C:\Users\cyo20`. v394 remains the latest Windows evidence-bundle verifier proof with root Stage 6 evidence/verify/recovery BAT launchers and positive minimal `stage6-evidence-*.zip` verification; v384 remains the latest package with package-local `eidp db-backup`, Windows environment / Task Scheduler capture, R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry browser save, and SupportRecipient append-only ingest proofs on disposable copied databases, leaving the real runtime DB unchanged. Full Stage 6 operator-action click-through remains unverified | v401 Mac verifier proof, v399 Windows transfer/setup/UI-service proof, v397 Windows browser render/read-only navigation proof, and older Stage 6 evidence-bundle/browser write proofs present; v401 Windows transfer/setup/UI smoke and full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -582,14 +584,14 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v400 package-verifier commands:
+Latest v401 package-verifier commands:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v400.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v400.zip` and refreshed `dist/eidp-windows.zip`;
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v401.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v401.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `d2c30a95294cb56eaa44b2aee538e738a73b1828e3823bab352ad36763f3fa7f`.
-- `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v400.zip`
-  -> `ok=true`, commit `378a88a25d607eff86035e88a9ccbca3c276ee4f`,
+  `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`.
+- `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v401.zip`
+  -> `ok=true`, commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`,
   `git_dirty=false`, `entry_count=3077`, `wheel_count=78`, `47` prefecture
   seeds, `44` discovery gold-set entries,
   `undemonstrated_pattern_sources=[]`, and no warnings.
@@ -623,7 +625,7 @@ Latest v399 Windows setup and UI-service smoke:
   `curl.exe http://127.0.0.1:8502/_stcore/health` returned `ok`, `netstat`
   showed `0.0.0.0:8502 LISTENING` on PID `10104`, and `taskkill /PID 10104 /F`
   stopped it with follow-up `listening_8502=0`.
-- v400 Windows transfer/setup/UI smoke remains pending until SSH access resumes.
+- v401 Windows transfer/setup/UI smoke remains pending until SSH access resumes.
   The required tunnel command for the next browser proof is
   `ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18502:127.0.0.1:8502 win`.
 
@@ -1210,18 +1212,18 @@ Previous v379 Windows setup and UI-service commands:
   health only; browser rendering, navigation, and operator-action click-through
   still require separate evidence.
 
-Latest v400 full non-Windows release-gate commands:
+Latest v401 full non-Windows release-gate commands:
 
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v400.zip --json --output _temp/v400-non-windows-release-gates-full.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --json --output _temp/v401-non-windows-release-gates-full.json`
   -> `ok=true`; SHA256 sidecar matched
-  `d2c30a95294cb56eaa44b2aee538e738a73b1828e3823bab352ad36763f3fa7f`; full
-  unit passed with `1432 passed, 5 warnings`; validator/distribution unit tests
+  `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; full
+  unit passed with `1433 passed, 5 warnings`; validator/distribution unit tests
   passed with `153 passed`; validator/distribution mypy and Ruff passed,
   including `scripts/verify_stage6_evidence.py`;
   discovery gold-set reported `44` entries, `10` strict target-year successes,
   `17` publication-lag cases, and `undemonstrated_pattern_sources=[]`;
   expected-prediction replay returned `44` exact matches / `0` failures; both
-  package verifier modes passed with the same v400 SHA256, `entry_count=3077`,
+  package verifier modes passed with the same v401 SHA256, `entry_count=3077`,
   and `wheel_count=78`.
 
 Historical v394 full non-Windows release-gate commands:
