@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v399.zip`
-Package commit: `12719c0dc929d3b8727f6e8486931239e29a7145`
-Package SHA256: `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`
+Current Mac-verifier-clean package: `dist/eidp-windows-v400.zip`
+Package commit: `378a88a25d607eff86035e88a9ccbca3c276ee4f`
+Package SHA256: `d2c30a95294cb56eaa44b2aee538e738a73b1828e3823bab352ad36763f3fa7f`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v397.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v399.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v400.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v399.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
@@ -22,22 +22,21 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v399. It packages commit
-`12719c0dc929d3b8727f6e8486931239e29a7145`, which carries forward the v397
-Windows setup WMI fix, the v398 direct Stage 6 recovery helper WMI fix, and a
-dry-run-first `scripts\stage6_residual_cleanup.bat` helper that archives known
-interrupted Stage 6 smoke artifacts only when `--apply` is passed. v397 had
-fixed the live Windows setup hang found after v394/v396 by avoiding stdlib
-`platform._wmi_query` calls in both the offline pip installer and normal EIDP
-Python startup; v398 closed the same gap for
-`scripts\stage6_recovery_check.py`, which is run directly from
-`scripts\diagnose.bat` and therefore cannot rely on the package import hook.
-The versioned ZIP and latest alias both pass
+The current Mac-verifier-clean ZIP snapshot is v400. It packages commit
+`378a88a25d607eff86035e88a9ccbca3c276ee4f`, which carries forward the v397
+Windows setup WMI fix, the v398 direct Stage 6 recovery helper WMI fix, the
+v399 dry-run-first `scripts\stage6_residual_cleanup.bat` helper, and the
+runbook/verifier contract requiring `ClearAllForwardings=no` for Mac-to-Windows
+UI tunnel tests. The versioned ZIP and latest alias both pass
 `scripts/verify_windows_distribution.py --json` with `git_dirty=false`,
 `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery
 gold-set entries, and
-`undemonstrated_pattern_sources=[]`. The v399 core SHA256 is
-`bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
+`undemonstrated_pattern_sources=[]`. The v400 core SHA256 is
+`d2c30a95294cb56eaa44b2aee538e738a73b1828e3823bab352ad36763f3fa7f`.
+The older v399 ZIP is now intentionally rejected by the current verifier because
+its packaged runbook lacks `ClearAllForwardings=no`, `ExitOnForwardFailure=yes`,
+and `127.0.0.1:18502:127.0.0.1:8502` tunnel guidance. Windows transfer, setup,
+and UI-service evidence remains v399 until SSH access resumes for v400.
 The v399 residual cleanup helper was also hot-copied into the existing v397
 disposable operator-PC extraction and run in dry-run mode only:
 `scripts\stage6_residual_cleanup.bat --json` returned
