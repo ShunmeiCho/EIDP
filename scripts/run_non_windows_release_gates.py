@@ -212,13 +212,13 @@ def verify_package_source_commit(
     source_dirty = _current_git_dirty()
     stale = package_commit != "unknown" and source_commit != "unknown" and package_commit != source_commit
     result = {
-        "ok": allow_stale_package or (not stale and not source_dirty),
+        "ok": (not source_dirty) and (allow_stale_package or not stale),
         "package_commit": package_commit,
         "source_commit": source_commit,
         "source_dirty": source_dirty,
         "stale": stale,
     }
-    if source_dirty and not allow_stale_package:
+    if source_dirty:
         result["error"] = "current source tree has uncommitted tracked changes"
         return result
     if stale and not allow_stale_package:

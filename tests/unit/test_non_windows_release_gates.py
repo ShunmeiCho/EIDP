@@ -122,6 +122,7 @@ def test_verify_package_source_commit_can_allow_stale_zip_for_history(
             json.dumps({"git_commit": package_commit}),
         )
     monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
 
     result = module.verify_package_source_commit(package, allow_stale_package=True)
 
@@ -129,6 +130,28 @@ def test_verify_package_source_commit_can_allow_stale_zip_for_history(
     assert result["stale"] is True
     assert result["package_commit"] == package_commit
     assert result["source_commit"] == source_commit
+
+
+def test_verify_package_source_commit_allow_stale_still_rejects_dirty_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": package_commit}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: True)
+
+    result = module.verify_package_source_commit(package, allow_stale_package=True)
+
+    assert result["ok"] is False
+    assert result["stale"] is True
+    assert result["source_dirty"] is True
+    assert result["error"] == "current source tree has uncommitted tracked changes"
 
 
 def test_verify_package_source_commit_rejects_dirty_tracked_source(
