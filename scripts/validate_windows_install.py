@@ -213,6 +213,8 @@ def _validate_build_info(check: InstallCheck, path: Path) -> None:
     commit = payload.get("git_commit")
     if isinstance(commit, str) and commit != "unknown" and len(commit) != 40:
         check.fail("BUILD_INFO.json git_commit must be a full 40-character commit hash or unknown")
+    if payload.get("git_dirty") != "false":
+        check.fail("BUILD_INFO.json git_dirty must be false")
 
     check.details["build_commit"] = payload.get("git_commit")
     check.details["build_branch"] = payload.get("git_branch")

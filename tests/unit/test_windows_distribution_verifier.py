@@ -455,6 +455,19 @@ def test_verify_core_zip_accepts_complete_distribution(tmp_path: Path) -> None:
     assert check.details["build_info"]["git_commit"] == "a" * 40
 
 
+def test_verify_core_zip_rejects_dirty_build_info(tmp_path: Path) -> None:
+    entries = _core_entries()
+    build_info = json.loads(entries["BUILD_INFO.json"])
+    build_info["git_dirty"] = "true"
+    entries["BUILD_INFO.json"] = json.dumps(build_info)
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("BUILD_INFO.json git_dirty must be false" in error for error in check.errors)
+
+
 def test_verify_core_zip_requires_runtime(tmp_path: Path) -> None:
     entries = _core_entries()
     entries.pop("runtime/python/python.exe")
