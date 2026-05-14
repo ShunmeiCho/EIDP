@@ -2,7 +2,7 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current source evidence base: `ed874cd0e866f33304bd76226cf395ad886badf9`
+Current source evidence base: `e918524183f97f3588903404c845d5db83bca030`
 Current Mac-verifier-clean package for source HEAD: none
 Latest historical Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
 Historical package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
@@ -25,14 +25,14 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 There is currently no Mac-verifier-clean ZIP for source evidence base
-`ed874cd0e866f33304bd76226cf395ad886badf9`. The latest historical clean ZIP is
+`e918524183f97f3588903404c845d5db83bca030`. The latest historical clean ZIP is
 v401 at commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, SHA256
 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; it passed
 the then-current package verifier, but a read-only rerun with the current
-verifier now rejects v401 because it predates the newer Stage 6 safety and
-audit-outbox verifier tokens. The older v399 ZIP is also intentionally rejected
-by the current verifier because its packaged runbook predates the corrected SSH
-tunnel guidance. For the normal
+verifier now rejects v401 before downstream gates because `BUILD_INFO.json`
+records a different source commit. The older v399 ZIP is also intentionally
+rejected by the current verifier because its packaged runbook predates the
+corrected SSH tunnel guidance. For the normal
 `EIDP-start.bat` / `scripts\launch.bat` path, Streamlit defaults to Windows
 `127.0.0.1:8501`, so browser-click testing should forward Mac
 `127.0.0.1:18501` to Windows `127.0.0.1:8501`. The v399 health proof on port
@@ -1282,16 +1282,14 @@ Historical v401 full non-Windows release-gate commands:
 
 Current-source read-only v401 package-gate rerun:
 
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-skip-full-current-source.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-commit-e918524.json`
   -> `ok=false`; SHA256 sidecar still matched
   `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`;
-  validator/distribution unit tests passed with `154 passed`; validator mypy
-  and Ruff passed; discovery gold-set reported `44` entries, `10` strict
-  target-year successes, `17` publication-lag cases, and
-  `undemonstrated_pattern_sources=[]`; expected-prediction replay returned
-  `44` exact matches / `0` failures; `package_verify` failed because v401 lacks
-  the current verifier-required Stage 6 safety / audit-outbox tokens. No new ZIP
-  was built.
+  `package_source_check` failed before downstream gates with packaged commit
+  `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, source commit
+  `e918524183f97f3588903404c845d5db83bca030`, `stale=true`, and `results=[]`.
+  This prevents mixing current-source test gates with an older ZIP snapshot. No
+  new ZIP was built.
 
 Historical v394 full non-Windows release-gate commands:
 
