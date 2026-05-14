@@ -7,6 +7,7 @@ Produces 4 sheets matching the legacy format:
   Sheet 4: 在籍のみ抜粋 (one-year-lag enrollment blocks, multi-row header)
 """
 
+from collections import Counter
 from collections.abc import Iterator
 from itertools import zip_longest
 from pathlib import Path
@@ -75,6 +76,13 @@ class WorkbookBusinessDiffSample(TypedDict):
     original: object
 
 
+class WorkbookBusinessDiffSheetSummary(TypedDict):
+    missing_rows: int
+    extra_rows: int
+    category_counts: dict[str, int]
+    field_counts: dict[str, int]
+
+
 class WorkbookBusinessDiff(TypedDict):
     ok: bool
     missing_sheets: list[str]
@@ -84,6 +92,7 @@ class WorkbookBusinessDiff(TypedDict):
     differing_fields: int
     missing_fields: dict[str, list[str]]
     extra_fields: dict[str, list[str]]
+    sheet_summaries: dict[str, WorkbookBusinessDiffSheetSummary]
     samples: list[WorkbookBusinessDiffSample]
 
 
@@ -680,6 +689,23 @@ def _normalize_business_value(value: object) -> object:
     return "" if value is None else value
 
 
+def _business_diff_category(exported: object, original: object) -> str:
+    non_numeric_legacy_markers = {"#DIV/0!", "#VALUE!", "#N/A", "不明"}
+    if exported == "" and original in non_numeric_legacy_markers:
+        return "export_blank_vs_original_error_or_unknown"
+    if original == "" and exported in non_numeric_legacy_markers:
+        return "export_error_or_unknown_vs_original_blank"
+    if exported == "" and original != "":
+        return "export_blank_vs_original_value"
+    if original == "" and exported != "":
+        return "export_value_vs_original_blank"
+    if _is_number(exported) and _is_number(original):
+        return "numeric_mismatch"
+    if isinstance(exported, str) and isinstance(original, str):
+        return "text_mismatch"
+    return f"type_mismatch:{type(exported).__name__}->{type(original).__name__}"
+
+
 def _load_taisho_business_table(worksheet: Any) -> tuple[BusinessTable, list[str]]:
     rows = list(worksheet.iter_rows(values_only=True))
     if not rows:
@@ -791,6 +817,7 @@ def diff_workbook_business_values(
         missing_rows = 0
         extra_rows = 0
         differing_fields = 0
+        sheet_summaries: dict[str, WorkbookBusinessDiffSheetSummary] = {}
         samples: list[WorkbookBusinessDiffSample] = []
 
         for sheet in target_sheets:
@@ -810,6 +837,8 @@ def diff_workbook_business_values(
             extra_row_keys = sorted(exp_keys - orig_keys, key=_stringify_key)
             missing_rows += len(missing_row_keys)
             extra_rows += len(extra_row_keys)
+            category_counts: Counter[str] = Counter()
+            field_counts: Counter[str] = Counter()
 
             for key in sorted(exp_keys & orig_keys, key=_stringify_key):
                 exp_row = exp_table[key]
@@ -820,6 +849,8 @@ def diff_workbook_business_values(
                     if _cell_values_equal(exported, original, numeric_tolerance=numeric_tolerance):
                         continue
                     differing_fields += 1
+                    category_counts[_business_diff_category(exported, original)] += 1
+                    field_counts[field] += 1
                     if len(samples) < max_diffs:
                         samples.append(
                             {
@@ -830,6 +861,12 @@ def diff_workbook_business_values(
                                 "original": original,
                             }
                         )
+            sheet_summaries[sheet] = {
+                "missing_rows": len(missing_row_keys),
+                "extra_rows": len(extra_row_keys),
+                "category_counts": dict(category_counts.most_common()),
+                "field_counts": dict(field_counts.most_common()),
+            }
 
         return {
             "ok": (
@@ -848,6 +885,7 @@ def diff_workbook_business_values(
             "differing_fields": differing_fields,
             "missing_fields": missing_fields,
             "extra_fields": extra_fields,
+            "sheet_summaries": sheet_summaries,
             "samples": samples,
         }
     finally:

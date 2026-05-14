@@ -260,6 +260,19 @@ def diff_excel(
         typer.echo(f"  missing_rows: {business_result['missing_rows']}")
         typer.echo(f"  extra_rows: {business_result['extra_rows']}")
         typer.echo(f"  differing_fields: {business_result['differing_fields']}")
+        for sheet, summary in business_result["sheet_summaries"].items():
+            typer.echo(
+                f"  sheet_summary[{sheet}]: missing_rows={summary['missing_rows']} "
+                f"extra_rows={summary['extra_rows']}"
+            )
+            if summary["category_counts"]:
+                typer.echo("    categories:")
+                for category, count in list(summary["category_counts"].items())[:8]:
+                    typer.echo(f"      {category}: {count}")
+            if summary["field_counts"]:
+                typer.echo("    fields:")
+                for field, count in list(summary["field_counts"].items())[:8]:
+                    typer.echo(f"      {field}: {count}")
         for sheet, fields in business_result["missing_fields"].items():
             if fields:
                 typer.echo(f"  missing_fields[{sheet}]: {', '.join(fields)}")

@@ -246,6 +246,12 @@ def test_diff_workbook_business_values_reports_taisho_metric_diff(tmp_path) -> N
     assert result["missing_rows"] == 0
     assert result["extra_rows"] == 0
     assert result["differing_fields"] == 3
+    assert result["sheet_summaries"]["対象比率"]["category_counts"] == {"numeric_mismatch": 3}
+    assert result["sheet_summaries"]["対象比率"]["field_counts"] == {
+        "受給比率": 1,
+        "年間": 1,
+        "総計": 1,
+    }
     assert result["samples"] == [
         {
             "sheet": "対象比率",
@@ -262,6 +268,61 @@ def test_diff_workbook_business_values_reports_taisho_metric_diff(tmp_path) -> N
             "original": 100,
         },
     ]
+
+
+def test_diff_workbook_business_values_categorizes_blank_vs_error_or_unknown(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    header = [
+        "番号",
+        "年度",
+        "学校番号",
+        "都道府県",
+        "法人名",
+        "学校名",
+        "前年在籍",
+        "前半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "後半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "年間",
+        "家計急変多子世帯",
+        "総計",
+        "備考",
+        "受給比率",
+    ]
+    _write_cells(
+        original,
+        {
+            "対象比率": [
+                header,
+                [None, "2025年度", None, "東京都", "片柳学園", "日本工学院専門学校", "不明", *([None] * 14), "#DIV/0!"],
+            ]
+        },
+    )
+    _write_cells(
+        exported,
+        {
+            "対象比率": [
+                header,
+                [1, "2025年度", None, "東京都", "片柳学園", "日本工学院専門学校", None, *([None] * 14), None],
+            ]
+        },
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["対象比率"])
+
+    assert result["differing_fields"] == 2
+    assert result["sheet_summaries"]["対象比率"]["category_counts"] == {
+        "export_blank_vs_original_error_or_unknown": 2
+    }
+    assert result["sheet_summaries"]["対象比率"]["field_counts"] == {"前年在籍": 1, "受給比率": 1}
 
 
 def test_excel_exporter_confidence_thresholds_follow_central_env(monkeypatch) -> None:
