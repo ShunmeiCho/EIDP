@@ -1,12 +1,12 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-14
-Code evidence HEAD: `020988184b8df105d80b66d4a4f8bfd98d22abdb`
+Code evidence HEAD: `ed874cd0e866f33304bd76226cf395ad886badf9`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally separate from ZIP packaging: no new ZIP has been built for
-the code evidence base `0209881`, and the active operator-PC Stage 6 lane
+the code evidence base `ed874cd`, and the active operator-PC Stage 6 lane
 remains the existing v399 extraction. Later documentation-only commits may
 extend this checklist without changing that source-code evidence base.
 
@@ -26,7 +26,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes | Partially proven; code evidence base not packaged after `0209881` |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes | Partially proven; code evidence base not packaged after `ed874cd` |
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints; current evidence records strict FY2026 auto-yield still `0.0` on bounded Windows smokes | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
@@ -42,24 +42,47 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v399, commit
   `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
   `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source-code evidence base: `0209881`, with Stage 6 safety fixes for recovery check,
+- Current source-code evidence base: `ed874cd`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling, and typed fiscal-year
   override / PDF ingest / PDF OCR / Excel exporter / Excel import stats /
   manual audit / operator UI / bootstrap URL crawl / append-only audit-helper
   paths, plus unit-test isolation for Streamlit AppTest's fake `__main__`
-  module before multiprocessing spawn tests.
+  module before multiprocessing spawn tests and restored source-wide `mypy src`
+  coverage for all 83 source files.
 - These source-code fixes are not present in the existing v399 ZIP.
 - Do not mark the goal complete until v399 or a future approved package completes
   operator-PC browser write-cycle evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest local checks performed against source-code evidence base `0209881`:
+Latest local checks performed against source-code evidence base `ed874cd`:
 
+- `uv run mypy src`
+  -> `Success: no issues found in 83 source files`.
+- `uv run ruff check src`
+  -> `All checks passed`.
 - `uv run pytest tests/unit -q`
-  -> `1437 passed, 5 warnings in 69.23s`.
+  -> `1437 passed, 5 warnings in 53.41s`.
+- `uv run ruff check src/eidp/extraction_confidence.py tests/unit/test_extraction_confidence.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_ocr_tesseract_wrapper.py tests/unit/test_review_confidence_panels.py`
+  -> `All checks passed`.
+- `uv run mypy src/eidp/extraction_confidence.py src/eidp/pipeline/ingest.py src/eidp/review/confidence_panels.py src/eidp/pdf/ocr.py`
+  -> `Success: no issues found in 4 source files`.
+- `uv run pytest tests/unit/test_extraction_confidence.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_ocr_tesseract_wrapper.py tests/unit/test_review_confidence_panels.py -q`
+  -> `127 passed in 5.79s`.
+- `uv run ruff check src/eidp/ocr/tesseract.py tests/unit/test_ocr_tesseract_wrapper.py`
+  -> `All checks passed`.
+- `uv run mypy src/eidp/ocr/tesseract.py src/eidp/pdf/ocr.py`
+  -> `Success: no issues found in 2 source files`.
+- `uv run pytest tests/unit/test_ocr_tesseract_wrapper.py tests/unit/test_pdf_ocr_tesseract_provider.py -q`
+  -> `21 passed in 0.69s`.
+- `uv run ruff check src/eidp/pdf/eval_harness.py src/eidp/db/session.py src/eidp/scraper/discovery_rca_packet.py src/eidp/scraper/firecrawl_discovery.py src/eidp/matcher/reconciler.py tests/unit/test_eval_harness.py tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_cli_write_lock_contract.py`
+  -> `All checks passed`.
+- `uv run mypy src/eidp/pdf/eval_harness.py src/eidp/db/session.py src/eidp/scraper/discovery_rca_packet.py src/eidp/scraper/firecrawl_discovery.py src/eidp/matcher/reconciler.py`
+  -> `Success: no issues found in 5 source files`.
+- `uv run pytest tests/unit/test_eval_harness.py tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_cli_write_lock_contract.py -q`
+  -> `54 passed in 1.94s`.
 - `uv run mypy src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py`
   -> `Success: no issues found in 9 source files`.
 - `uv run ruff check src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py tests/unit/conftest.py tests/unit/test_manual_entry_contract.py tests/unit/test_review_pdf_manual_entry.py tests/unit/test_review_pdf_manual_entry_confidence.py tests/unit/test_review_audit_log.py tests/unit/test_review_audit_log_dashboard.py tests/unit/test_audit_outbox.py tests/unit/test_locking.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_ingest_evidence.py tests/unit/test_cli_ingest.py`
@@ -193,12 +216,16 @@ Known non-goal-wide lint boundary:
 
 - `uv run ruff check .` currently scans untracked `_temp/` extractions and
   historical one-off scripts; it reported existing lint debt and is not a
-  reliable current-source release gate. Goal-relevant changed surfaces above
-  were checked with targeted Ruff/Mypy commands.
-- `uv run mypy src` currently reports existing project-wide type debt across
-  21 files, including optional OCR/openpyxl stubs and historical UI/scraper
-  modules. The target-year override path has been cleaned and verified with
-  targeted Ruff/Mypy/tests above.
+  reliable current-source release gate.
+- `git ls-files -z '*.py' | xargs -0 uv run ruff check` also currently reports
+  historical lint debt outside `src/`, mainly Alembic revision style, old
+  one-off analysis scripts, and Japanese test function names. Tracked source
+  package linting is clean via `uv run ruff check src`; goal-relevant changed
+  surfaces above were checked with targeted Ruff/Mypy/tests.
+- `uv run mypy src` is now a usable source-wide gate for the tracked source
+  tree and passes across 83 source files. This is still Mac-side evidence only;
+  it does not prove the Windows operator-PC Stage 6 browser write-cycle or the
+  rolling FY yield gate.
 
 ## Next Concrete Gate
 
