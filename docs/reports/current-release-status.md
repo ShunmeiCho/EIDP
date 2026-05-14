@@ -2,7 +2,7 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Latest code-affecting source evidence base: `ceba1f66d70679da73e74ddaa4a41e6f2857eb1d`
+Latest code-affecting source evidence base: `cd07c2136438f282895ccc37beaa3a5df28ed816`
 Current Mac-verifier-clean package for latest code evidence base: none
 Latest historical Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
 Historical package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
@@ -25,7 +25,7 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 There is currently no Mac-verifier-clean ZIP for latest code-affecting source evidence base
-`ceba1f66d70679da73e74ddaa4a41e6f2857eb1d`. The latest historical clean ZIP is
+`cd07c2136438f282895ccc37beaa3a5df28ed816`. The latest historical clean ZIP is
 v401 at commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, SHA256
 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; it passed
 the then-current package verifier, but a read-only rerun with the current
@@ -37,8 +37,10 @@ disclosure-entrypoint and section-heading context fixes that keep year-only
 target-form links in the download budget ahead of generic disclosure PDFs.
 Subsequent Mac-side source fixes clarify the ship gate's operator-reviewable
 coverage helper, ignore audit-outbox archive symlinks, and centralize the
-extraction-confidence default thresholds. The current verifier also requires
-the default Stage 6 tunnel guidance (`18501 -> 8501`) in the packaged runbooks.
+extraction-confidence default thresholds, then narrow romanized renewal-form
+weak hints so `koushinshinseisyo` alone no longer counts as a target-form
+shape. The current verifier also requires the default Stage 6 tunnel guidance
+(`18501 -> 8501`) in the packaged runbooks.
 The non-Windows release gate also keeps `--allow-stale-package` dirty-safe: it
 can bypass a historical package commit mismatch, but it still rejects
 uncommitted tracked source. Later documentation-only commits refresh the
@@ -1333,7 +1335,7 @@ Latest recorded current-verifier read-only v401 package-gate rerun:
   `stale=true`, and `results=[]`.
   This prevents mixing source test gates with an older ZIP snapshot. The same
   stale-package boundary applies to latest code-affecting source evidence base
-  `ceba1f66d70679da73e74ddaa4a41e6f2857eb1d`, because v401 packages
+  `cd07c2136438f282895ccc37beaa3a5df28ed816`, because v401 packages
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`. No new ZIP was built.
 - Allow-stale diagnostic rerun for the same v401 ZIP:
   `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --allow-stale-package --json --output _temp/v401-non-windows-release-gates-allow-stale-current-bb621daa.json`
