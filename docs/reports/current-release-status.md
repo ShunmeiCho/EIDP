@@ -2,16 +2,16 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v394.zip`
-Package commit: `e7cbe72afc2e09a334b7c8b96c323438d3e6bd4d`
-Package SHA256: `62b2eae234bcdd2fea05b3da70dfcab531853bc302bf57c2c6cabff1c447a802`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v394.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v394.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v394.zip`
+Current Mac-verifier-clean package: `dist/eidp-windows-v397.zip`
+Package commit: `3c100c7aba5e812bcd791dcc227c775f1f3d93e6`
+Package SHA256: `55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v397.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v397.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v397.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v384.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v397.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
@@ -21,80 +21,48 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v394. It packages commit
-`e7cbe72`, which adds root-level `EIDP-stage6-verify-evidence.bat` and
-Windows-local `scripts\verify_stage6_evidence.bat` wrappers so an operator or
-administrator can mechanically verify the newest `logs\stage6-evidence-*.zip`
-without typing Python commands. The verifier checks the manifest, required
-evidence labels such as diagnostics and `last_run`, unsafe ZIP paths, and
-forbidden runtime data such as the SQLite DB, WAL/SHM files, PDFs, runtime, and
-wheelhouse, then writes `logs\stage6-evidence-verify-*.json`. v394 preserves the
-v392 root `EIDP-stage6-evidence.bat` launcher,
-Windows-local `scripts\collect_stage6_evidence.bat` wrapper, stdlib
-`scripts/collect_stage6_evidence.py` collector, v391 root
-`EIDP-stage6-recovery.bat` launcher, and the v390 Stage 6 operator E2E template
-contract requiring `[stage6 recovery check]` diagnostics evidence:
-`stage6_recovery_rc`, scheduled-task execute path, expected action,
-action-match status, residual interrupted-smoke paths, recommendations,
-optional `logs\stage6-recovery-*.json`, and now optional
-`logs\stage6-evidence-*.zip` attachment. It keeps the read-only
-`scripts/stage6_recovery_check.py` helper in the Windows ZIP, includes the
-Windows-local `scripts\stage6_recovery_check.bat` wrapper for SSH-unavailable
-recovery, defaults that wrapper to the current extracted package's
-`scripts\weekly_run.bat`, and keeps the `[stage6 recovery check]` section in
-`scripts\diagnose.bat`, so ordinary diagnostics capture scheduled-task action
-and interrupted-smoke residue status. It preserves the v384 image-PDF ingest
-path that routes through the packaged/system Tesseract TSV wrapper when
-available and records OCR provenance in DB confidence breakdowns. The v394
-versioned ZIP and latest alias both pass
-`scripts/verify_windows_distribution.py --json`; the latest alias also passes
-with the v383 OCR add-on and v106 Playwright add-on. The v394 core SHA256 is
-`62b2eae234bcdd2fea05b3da70dfcab531853bc302bf57c2c6cabff1c447a802`, with
-`44` discovery gold-set entries, `17` publication-lag cases, `47` prefecture
-seeds, `entry_count=3072`, and `undemonstrated_pattern_sources=[]`. The latest
-full non-Windows release gate is now v394 with `1422` unit tests, `44` exact
-discovery gold-set predictions, and both package verifier modes passing
-against SHA256
-`62b2eae234bcdd2fea05b3da70dfcab531853bc302bf57c2c6cabff1c447a802`.
-v394 has also been transferred to the operator PC for a disposable
-package/evidence-verifier probe. Windows SHA256 matched the same sidecar
-value, the package was extracted to
-`C:\Users\cyo20\EIDP-v394-e7cbe72-transfer-probe` with `entry_count=3072`,
-and `BUILD_INFO.json` reported commit
-`e7cbe72afc2e09a334b7c8b96c323438d3e6bd4d`, branch
-`sprint8-handoff-finalize`, and `git_dirty=false`. The extraction contained
-root launchers `EIDP-stage6-evidence.bat`,
-`EIDP-stage6-recovery.bat`, and `EIDP-stage6-verify-evidence.bat`. A negative
-receiver-side verifier smoke against a missing evidence ZIP returned
-`ok=false`, `missing_required_labels=["build_info","diagnostics"]`, and
-`VERIFY_RC=1`. A positive smoke then created minimal diagnostics and
-`data\output\last_run.json` in the disposable extraction, ran
-`collect_stage6_evidence.py` with `BUNDLE_RC=0` to produce
-`logs\stage6-evidence-20260513-211510.zip`, and ran
-`scripts\verify_stage6_evidence.bat` with `VERIFY_BAT_RC=0`. The verifier
-reported `ok=true`, `present_labels=["build_info","diagnostics","last_run"]`,
-no errors, no forbidden entries, no unsafe entries, and wrote
-`logs\stage6-evidence-verify-20260514-061510.json`. This proves v394 Windows
-transfer, extraction, launcher presence, and evidence-bundle verification only;
-it is not v394 setup, Task Scheduler update, UI click-through, or yield proof.
-The latest Windows setup proof is now v384: the versioned ZIP was transferred
-to the operator PC, its SHA256 sidecar matched
-`2707def6337f3f35c63c9933a1805271dcf75d8bf7d8ece27c09ba8de72d31c0`, and it
-was extracted to
-`C:\Users\cyo20\EIDP-v384-75732b0-setup-probe`. In that disposable extraction,
-`scripts\first_setup.bat` returned `setup_rc=0`, the after-setup validator
-returned `ok=true` with `school_count=2418`,
+The current Mac-verifier-clean ZIP snapshot is v397. It packages commit
+`3c100c7aba5e812bcd791dcc227c775f1f3d93e6`, which fixes the live Windows setup
+hang found after v394/v396 by avoiding stdlib `platform._wmi_query` calls in
+both the offline pip installer and normal EIDP Python startup. v397 creates the
+venv with stdlib `venv --without-pip`, installs the wheelhouse through
+`scripts\offline_pip_install.py` into `.venv\Lib\site-packages`, and ships
+`src\sitecustomize.py` plus `src\eidp\windows_platform.py` so CLI/UI/weekly
+processes patch `platform` before dependencies such as SQLAlchemy call
+`platform.machine()`. The versioned ZIP and latest alias both pass
+`scripts/verify_windows_distribution.py --json` with `git_dirty=false`,
+`entry_count=3075`, `wheel_count=78`, `47` prefecture seeds, `44` discovery
+gold-set entries, and
+`undemonstrated_pattern_sources=[]`. The v397 core SHA256 is
+`55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`.
+
+v397 has also been transferred to the operator PC and setup-validated in the
+disposable extraction
+`C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe`. Windows SHA256 matched the
+same sidecar value, `BUILD_INFO.json` reported commit
+`3c100c7aba5e812bcd791dcc227c775f1f3d93e6`, branch
+`sprint8-handoff-finalize`, and `git_dirty=false`, and the setup run completed
+the offline wheelhouse install, `db-bootstrap`, `import-excel`, school-year task
+rebuild, and after-setup validation. The setup log ended with
+`Import complete.`, `School year tasks rebuilt: fiscal_year=2026
+school_type=専門学校 rebuilt=2418 excel_ready=0`, and `OK install`. The
+standalone validator then returned `validate_rc=0` with `school_count=2418`,
 `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
-`wheel_count=78`, build commit
-`75732b057a115afcebe35f9a40b831fac0ffa6f6`, and `build_dirty=false`, and
-`EIDP-diagnose.bat` returned `diagnose_rc=0` with
-`validate_after_setup_rc=0` and `retroactive_ship_readiness_rc=0`. The setup
-probe confirmed that `first_setup.bat` registered `EIDP Weekly Run` to the
-v384 probe during setup, then restored the original operator task afterward:
-the restored task contains `EIDP-v380-f6a5e6d` and does not contain
-`EIDP-v384-75732b0-setup-probe`. The v384 browser UI service, initial render,
-and read-only quick navigation are now also proven in disposable operator-PC
-extractions. The initial render probe ran under
+`sqlite_table_count=15`, `wheel_count=78`, and no duplicate wheel
+distributions; `eidp.cli --help` returned `cli_help_rc=0`; `data\eidp.sqlite3`
+exists; and the smoke harness found no residual v397 processes after cleanup.
+
+v394 remains the latest Windows evidence-bundle verifier proof: it transferred
+cleanly to the operator PC, extracted with root launchers
+`EIDP-stage6-evidence.bat`, `EIDP-stage6-recovery.bat`, and
+`EIDP-stage6-verify-evidence.bat`, returned the expected negative verifier
+result for a missing evidence ZIP, and then verified a minimal collected
+`logs\stage6-evidence-*.zip` with `VERIFY_BAT_RC=0`. The latest full
+non-Windows release gate is now v397 with `1424` unit tests and `44` exact
+discovery gold-set predictions; both package verifier modes passed against the
+v397 SHA256. The latest browser UI service, initial render, and read-only quick
+navigation proof is still v384 and remains valid as historical UI evidence. The
+initial render probe ran under
 `C:\Users\cyo20\EIDP-v384-75732b0-ui-probe`: the local tunnel
 `127.0.0.1:18501 -> Windows 127.0.0.1:8501` returned
 `/_stcore/health` as HTTP `200 OK`, Browser/Playwright rendered
@@ -569,7 +537,19 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v394 package-verifier commands:
+Latest v397 package-verifier commands:
+
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v397.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v397.zip` and refreshed `dist/eidp-windows.zip`;
+  both have SHA256
+  `55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`.
+- `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v397.zip`
+  -> `ok=true`, commit `3c100c7aba5e812bcd791dcc227c775f1f3d93e6`,
+  `build_dirty=false`, `entry_count=3075`, `wheel_count=78`,
+  `47` prefecture seeds, `44` discovery gold-set entries, and
+  `undemonstrated_pattern_sources=[]`.
+
+Historical v394 package-verifier commands:
 
 - `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v394.zip --latest-alias`
   -> wrote `dist/eidp-windows-v394.zip` and refreshed `dist/eidp-windows.zip`;
@@ -1123,7 +1103,20 @@ Previous v379 Windows setup and UI-service commands:
   health only; browser rendering, navigation, and operator-action click-through
   still require separate evidence.
 
-Latest v394 full non-Windows release-gate commands:
+Latest v397 full non-Windows release-gate commands:
+
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v397.zip --json --output _temp/v397-non-windows-release-gates-full.json`
+  -> `ok=true`; SHA256 sidecar matched
+  `55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`; full
+  unit passed with `1424 passed, 5 warnings`; validator/distribution unit tests
+  passed with `153 passed`; validator/distribution mypy and Ruff passed,
+  including `scripts/verify_stage6_evidence.py`;
+  discovery gold-set reported `44` entries, `10` strict target-year successes,
+  `17` publication-lag cases, and `undemonstrated_pattern_sources=[]`;
+  expected-prediction replay returned `44` exact matches / `0` failures; both
+  package verifier modes passed with the same v397 SHA256.
+
+Historical v394 full non-Windows release-gate commands:
 
 - `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v394.zip --json --output _temp/v394-non-windows-release-gates-full.json`
   -> `ok=true`; SHA256 sidecar matched
