@@ -175,6 +175,17 @@ def _current_git_commit() -> str:
     return completed.stdout.strip() if completed.returncode == 0 else "unknown"
 
 
+def _current_git_dirty() -> bool:
+    completed = subprocess.run(
+        ("git", "status", "--porcelain", "--untracked-files=no"),
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return bool(completed.stdout.strip()) if completed.returncode == 0 else True
+
+
 def verify_package_source_commit(
     package_zip: Path,
     *,
@@ -198,13 +209,18 @@ def verify_package_source_commit(
         return {"ok": False, "error": "BUILD_INFO.json missing string field: git_commit"}
 
     source_commit = _current_git_commit()
+    source_dirty = _current_git_dirty()
     stale = package_commit != "unknown" and source_commit != "unknown" and package_commit != source_commit
     result = {
-        "ok": allow_stale_package or not stale,
+        "ok": allow_stale_package or (not stale and not source_dirty),
         "package_commit": package_commit,
         "source_commit": source_commit,
+        "source_dirty": source_dirty,
         "stale": stale,
     }
+    if source_dirty and not allow_stale_package:
+        result["error"] = "current source tree has uncommitted tracked changes"
+        return result
     if stale and not allow_stale_package:
         result["error"] = (
             f"package BUILD_INFO git_commit {package_commit} does not match current source HEAD {source_commit}"

@@ -100,6 +100,7 @@ def test_verify_package_source_commit_rejects_stale_zip_by_default(
             json.dumps({"git_commit": package_commit}),
         )
     monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
 
     result = module.verify_package_source_commit(package)
 
@@ -130,6 +131,36 @@ def test_verify_package_source_commit_can_allow_stale_zip_for_history(
     assert result["source_commit"] == source_commit
 
 
+def test_verify_package_source_commit_rejects_dirty_tracked_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    commit = "a" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": commit}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: True)
+
+    result = module.verify_package_source_commit(package)
+
+    assert result["ok"] is False
+    assert result["source_dirty"] is True
+    assert result["error"] == "current source tree has uncommitted tracked changes"
+
+
+def test_current_git_dirty_ignores_untracked_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert args[0] == ("git", "status", "--porcelain", "--untracked-files=no")
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    assert module._current_git_dirty() is False
+
+
 def test_main_stops_before_gates_when_package_commit_is_stale(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -147,6 +178,7 @@ def test_main_stops_before_gates_when_package_commit_is_stale(
         raise AssertionError("stale packages must fail before running gates")
 
     monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
     monkeypatch.setattr(module, "run_gates", fail_run_gates)
 
     rc = module.main([str(package), "--skip-full-unit", "--json", "--output", str(output)])
@@ -173,6 +205,7 @@ def test_main_allows_stale_package_when_explicitly_requested(
     output = tmp_path / "summary.json"
 
     monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
     monkeypatch.setattr(module, "run_gates", lambda *args, **kwargs: [])
 
     rc = module.main(
@@ -193,6 +226,7 @@ def test_main_allows_stale_package_when_explicitly_requested(
         "ok": True,
         "package_commit": package_commit,
         "source_commit": source_commit,
+        "source_dirty": False,
         "stale": True,
     }
 
