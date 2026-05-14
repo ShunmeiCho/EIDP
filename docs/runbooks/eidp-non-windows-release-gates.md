@@ -38,6 +38,10 @@ historical package and must not be called Mac-verifier-clean for the current
 source tree. Build an approved new ZIP only when the release lane explicitly
 permits it.
 
+`scripts/build_windows_zip.py` also refuses to build a Windows ZIP from
+uncommitted tracked source by default. Use `--allow-dirty` only for diagnostic
+builds that will not be treated as current release evidence.
+
 For archaeology or historical report regeneration only, rerun with
 `--allow-stale-package`. That flag intentionally bypasses the current-source
 commit and dirty-tree checks, so do not use it for current release readiness.

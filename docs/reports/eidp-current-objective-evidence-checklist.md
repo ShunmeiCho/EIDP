@@ -1,12 +1,12 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-14
-Code evidence HEAD: `0ca7e0aad9990815d8d509bb91794fe1b5fc8976`
+Code evidence HEAD: `ae835a1c2a47d0a245483ed5f097c27b9f901e86`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally separate from ZIP packaging: no new ZIP has been built for
-the code evidence base `0ca7e0a`, and the active operator-PC Stage 6 lane
+the code evidence base `ae835a1c`, and the active operator-PC Stage 6 lane
 remains the existing v399 extraction. Later documentation-only commits may
 extend this checklist without changing that source-code evidence base.
 
@@ -26,7 +26,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes | Partially proven; code evidence base not packaged after `0ca7e0a` |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes | Partially proven; code evidence base not packaged after `ae835a1c` |
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints; current evidence records strict FY2026 auto-yield still `0.0` on bounded Windows smokes | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
@@ -42,7 +42,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v399, commit
   `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
   `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source-code evidence base: `0ca7e0a`, with Stage 6 safety fixes for recovery check,
+- Current source-code evidence base: `ae835a1c`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling, and typed fiscal-year
@@ -55,25 +55,36 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   source HEAD, or whose current source tree has uncommitted tracked changes,
   unless `--allow-stale-package` is explicitly used for historical checks.
   The Windows package and install validators also reject packaged
-  `BUILD_INFO.json` values where `git_dirty` is not `false`.
+  `BUILD_INFO.json` values where `git_dirty` is not `false`, and
+  `scripts/build_windows_zip.py` now refuses to produce a Windows ZIP from
+  uncommitted tracked source unless `--allow-dirty` is explicitly used for a
+  diagnostic build.
 - These source-code fixes are not present in the existing v399/v401 ZIPs.
   A read-only rerun of the non-Windows package gate against v401 with the
   current verifier now fails before downstream gates because `package_source_check`
   detects that packaged commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd` does
-  not match current source HEAD `0ca7e0aad9990815d8d509bb91794fe1b5fc8976`.
+  not match current source HEAD `ae835a1c2a47d0a245483ed5f097c27b9f901e86`.
 - Do not mark the goal complete until v399 or a future approved package completes
   operator-PC browser write-cycle evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest local checks performed against source-code evidence base `0ca7e0a`:
+Latest local checks performed against source-code evidence base `ae835a1c`:
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
 - `uv run ruff check src`
   -> `All checks passed`.
 - `uv run pytest tests/unit -q`
-  -> `1446 passed, 5 warnings in 45.65s`.
+  -> `1448 passed, 5 warnings in 46.65s`.
+- `uv run ruff check scripts/build_windows_zip.py tests/unit/test_windows_packaging_spike.py`
+  -> `All checks passed`.
+- `uv run mypy scripts/build_windows_zip.py`
+  -> `Success: no issues found in 1 source file`.
+- `uv run pytest tests/unit/test_windows_packaging_spike.py -q`
+  -> `78 passed in 0.55s`.
+- `uv run pytest tests/unit/test_non_windows_release_gates.py tests/unit/test_windows_distribution_verifier.py tests/unit/test_windows_install_validator.py -q`
+  -> `165 passed in 9.35s`.
 - `uv run ruff check scripts/run_non_windows_release_gates.py tests/unit/test_non_windows_release_gates.py`
   -> `All checks passed`.
 - `uv run mypy scripts/run_non_windows_release_gates.py`
@@ -104,14 +115,14 @@ Latest local checks performed against source-code evidence base `0ca7e0a`:
   -> `Success: no issues found in 5 source files`.
 - `uv run pytest tests/unit/test_eval_harness.py tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_cli_write_lock_contract.py -q`
   -> `54 passed in 1.94s`.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-commit-0ca7e0a.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-commit-ae835a1c.json`
   -> `ok=false`; SHA256 sidecar matched
   `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`;
   `package_source_check` failed before downstream gates with packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, source commit
-  `0ca7e0aad9990815d8d509bb91794fe1b5fc8976`, `source_dirty=false`,
+  `ae835a1c2a47d0a245483ed5f097c27b9f901e86`, `source_dirty=false`,
   `stale=true`, and `results=[]`.
-  This is a stale-package finding, not evidence that `0ca7e0a` has been packaged.
+  This is a stale-package finding, not evidence that `ae835a1c` has been packaged.
 - `uv run mypy src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py`
   -> `Success: no issues found in 9 source files`.
 - `uv run ruff check src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py tests/unit/conftest.py tests/unit/test_manual_entry_contract.py tests/unit/test_review_pdf_manual_entry.py tests/unit/test_review_pdf_manual_entry_confidence.py tests/unit/test_review_audit_log.py tests/unit/test_review_audit_log_dashboard.py tests/unit/test_audit_outbox.py tests/unit/test_locking.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_ingest_evidence.py tests/unit/test_cli_ingest.py`

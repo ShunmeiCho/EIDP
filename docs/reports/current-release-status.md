@@ -2,7 +2,7 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current source evidence base: `0ca7e0aad9990815d8d509bb91794fe1b5fc8976`
+Current source evidence base: `ae835a1c2a47d0a245483ed5f097c27b9f901e86`
 Current Mac-verifier-clean package for source HEAD: none
 Latest historical Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
 Historical package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
@@ -25,7 +25,7 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 There is currently no Mac-verifier-clean ZIP for source evidence base
-`0ca7e0aad9990815d8d509bb91794fe1b5fc8976`. The latest historical clean ZIP is
+`ae835a1c2a47d0a245483ed5f097c27b9f901e86`. The latest historical clean ZIP is
 v401 at commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, SHA256
 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; it passed
 the then-current package verifier, but a read-only rerun with the current
@@ -1282,12 +1282,12 @@ Historical v401 full non-Windows release-gate commands:
 
 Current-source read-only v401 package-gate rerun:
 
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-commit-0ca7e0a.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-commit-ae835a1c.json`
   -> `ok=false`; SHA256 sidecar still matched
   `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`;
   `package_source_check` failed before downstream gates with packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, source commit
-  `0ca7e0aad9990815d8d509bb91794fe1b5fc8976`, `source_dirty=false`,
+  `ae835a1c2a47d0a245483ed5f097c27b9f901e86`, `source_dirty=false`,
   `stale=true`, and `results=[]`.
   This prevents mixing current-source test gates with an older ZIP snapshot. No
   new ZIP was built.
