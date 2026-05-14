@@ -55,6 +55,10 @@ Latest local checks performed against source HEAD `ed51b9c`:
 
 - `uv run pytest tests/unit -q`
   -> `1437 passed, 5 warnings in 41.56s`.
+- `uv run pytest tests/unit/test_ingest_confidence_gating.py -q`
+  -> `27 passed in 0.96s`; confirms low-confidence DepartmentYearly /
+  SupportRecipient revisions are append-only but parked out of current Excel
+  surfaces until operator review.
 - `uv run pytest tests/unit/test_pdf_discovery.py -q -k "renewal or koushin or english_renewal or target_form or pre_download"`
   -> `38 passed, 124 deselected, 5 warnings`.
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py`
@@ -81,6 +85,13 @@ Latest local checks performed against source HEAD `ed51b9c`:
   -> `All checks passed`.
 - `uv run pytest tests/unit/test_pdf_discovery.py -q -k "heading_year or intervening_non_year_block or update_date or publication_date or western_year_anchor or reiwa_year_anchor"`
   -> `9 passed, 152 deselected, 5 warnings`.
+
+Known non-goal-wide lint boundary:
+
+- `uv run ruff check .` currently scans untracked `_temp/` extractions and
+  historical one-off scripts; it reported existing lint debt and is not a
+  reliable current-source release gate. Goal-relevant changed surfaces above
+  were checked with targeted Ruff/Mypy commands.
 
 ## Next Concrete Gate
 
