@@ -981,6 +981,20 @@ def test_pre_download_does_not_treat_english_renewal_form_with_english_support_h
     assert rejection is None
 
 
+def test_pre_download_does_not_treat_romanized_renewal_form_alone_as_target() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/files/2025koushinshinseisyo.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="PDF",
+        score=1.0,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2026)
+
+    assert not _has_target_application_hint(candidate)
+    assert rejection is None
+
+
 def test_pre_download_detects_stale_year_prefix_serial_filename_for_target_form() -> None:
     candidate = PdfCandidate(
         pdf_url="http://www.atg-web.ac.jp/img/educational/2025007.pdf",
