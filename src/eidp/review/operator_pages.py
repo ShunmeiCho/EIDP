@@ -1996,23 +1996,24 @@ def _todo_line(
     done: bool = False,
 ) -> None:
     """One line in sidebar TODO. Uses Streamlit columns for alignment."""
+    safe_label = html.escape(label)
     c1, c2 = st.sidebar.columns([3, 1])
     if urgent:
-        c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
+        c1.markdown(f"<small>{safe_label}</small>", unsafe_allow_html=True)
         c2.markdown(
             f"<div style='text-align:right;color:var(--eidp-accent);font-weight:600;'>{count}</div>",
             unsafe_allow_html=True,
         )
     elif done:
         c1.markdown(
-            f"<small style='color:var(--eidp-ink-low)'>{label}</small>", unsafe_allow_html=True
+            f"<small style='color:var(--eidp-ink-low)'>{safe_label}</small>", unsafe_allow_html=True
         )
         c2.markdown(
             f"<div style='text-align:right;color:var(--eidp-ok);'>{count}</div>",
             unsafe_allow_html=True,
         )
     else:
-        c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
+        c1.markdown(f"<small>{safe_label}</small>", unsafe_allow_html=True)
         c2.markdown(
             f"<div style='text-align:right;color:var(--eidp-ink-mid);'>{count}</div>",
             unsafe_allow_html=True,
