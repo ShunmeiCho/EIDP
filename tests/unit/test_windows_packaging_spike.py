@@ -189,6 +189,72 @@ def test_build_info_records_commit_branch_and_tracked_dirty_state(tmp_path: Path
     assert ("status", "--porcelain", "--untracked-files=no") in calls
 
 
+def test_build_windows_zip_rejects_dirty_tracked_source_by_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bw = _load_build_script()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+
+    def fake_git_output(_repo_root: Path, *args: str) -> str:
+        if args == ("status", "--porcelain", "--untracked-files=no"):
+            return " M src/eidp/review/app.py"
+        return ""
+
+    def fail_build_project_wheel(**_kwargs):  # noqa: ANN003
+        raise AssertionError("dirty source must fail before building wheels")
+
+    monkeypatch.setattr(bw, "_git_output", fake_git_output)
+    monkeypatch.setattr(bw, "build_project_wheel", fail_build_project_wheel)
+
+    with pytest.raises(RuntimeError, match="uncommitted tracked changes"):
+        bw.main([
+            "--wheelhouse",
+            str(wheelhouse),
+            "--out-zip",
+            str(tmp_path / "eidp-windows.zip"),
+            "--skip-download",
+            "--skip-zip",
+        ])
+
+
+def test_build_windows_zip_allows_dirty_source_when_explicit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bw = _load_build_script()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+    (wheelhouse / "structlog-25.0.0-py3-none-any.whl").write_bytes(b"dep")
+
+    def fake_git_output(_repo_root: Path, *args: str) -> str:
+        if args == ("status", "--porcelain", "--untracked-files=no"):
+            return " M docs/reports/current-release-status.md"
+        return ""
+
+    def stub_build_project_wheel(*, repo_root: Path, out_dir: Path) -> Path:
+        assert repo_root == REPO_ROOT
+        wheel = out_dir / "eidp-0.2.0-py3-none-any.whl"
+        wheel.write_bytes(b"project")
+        return wheel
+
+    monkeypatch.setattr(bw, "_git_output", fake_git_output)
+    monkeypatch.setattr(bw, "build_project_wheel", stub_build_project_wheel)
+
+    rc = bw.main([
+        "--wheelhouse",
+        str(wheelhouse),
+        "--out-zip",
+        str(tmp_path / "eidp-windows.zip"),
+        "--skip-download",
+        "--skip-zip",
+        "--allow-dirty",
+    ])
+
+    assert rc == 0
+
+
 def test_write_sha256_sidecar_records_relative_repo_path(tmp_path: Path):
     bw = _load_build_script()
     artifact = tmp_path / "dist" / "eidp-windows.zip"
@@ -805,6 +871,7 @@ def test_skip_download_still_refreshes_project_wheel(
     def _stub_download_windows_wheels(**_kwargs):  # noqa: ANN003
         calls.append("download")
 
+    monkeypatch.setattr(bw, "_git_output", lambda _repo_root, *args: "")
     monkeypatch.setattr(bw, "reset_wheelhouse", _stub_reset)
     monkeypatch.setattr(bw, "build_project_wheel", _stub_build_project_wheel)
     monkeypatch.setattr(bw, "download_windows_wheels", _stub_download_windows_wheels)

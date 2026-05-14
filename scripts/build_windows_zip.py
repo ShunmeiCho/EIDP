@@ -318,6 +318,17 @@ def build_info(repo_root: Path) -> dict[str, str]:
     }
 
 
+def assert_clean_tracked_source(repo_root: Path) -> None:
+    """Refuse release-style ZIP builds from uncommitted tracked source."""
+    dirty = _git_output(repo_root, "status", "--porcelain", "--untracked-files=no")
+    if not dirty:
+        return
+    raise RuntimeError(
+        "refusing to build Windows ZIP with uncommitted tracked changes; "
+        "commit or stash tracked changes, or pass --allow-dirty for a diagnostic build"
+    )
+
+
 def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path, str]]:
     """Enumerate every (source_path, arcname) pair the Windows ZIP must
     carry. Tested in isolation so we can assert on the manifest without
@@ -557,7 +568,12 @@ def main(argv: list[str] | None = None) -> int:
                         help="Also refresh dist/eidp-windows.zip and its "
                              ".sha256 sidecar from --out-zip. Use for handoff "
                              "builds with a versioned output name.")
+    parser.add_argument("--allow-dirty", action="store_true",
+                        help="Allow a diagnostic build from uncommitted tracked source.")
     args = parser.parse_args(argv)
+
+    if not args.allow_dirty:
+        assert_clean_tracked_source(REPO_ROOT)
 
     if args.skip_download:
         build_project_wheel(repo_root=REPO_ROOT, out_dir=args.wheelhouse)
