@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v398.zip`
-Package commit: `0b13450bb611b4b6cf7fe5e875f23bb65d5f705c`
-Package SHA256: `12d82237b2e28d226b9a38f0cea08bcfb2c8b298e09acdb89c090bc538a13005`
+Current Mac-verifier-clean package: `dist/eidp-windows-v399.zip`
+Package commit: `12719c0dc929d3b8727f6e8486931239e29a7145`
+Package SHA256: `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v397.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v398.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v399.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v397.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
@@ -22,20 +22,22 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v398. It packages commit
-`0b13450bb611b4b6cf7fe5e875f23bb65d5f705c`, which carries forward the v397
-Windows setup WMI fix and also disables stdlib `platform._wmi_query` inside the
-directly executed Stage 6 recovery helper. v397 had fixed the live Windows setup
-hang found after v394/v396 by avoiding stdlib `platform._wmi_query` calls in
-both the offline pip installer and normal EIDP Python startup; v398 closes the
-same gap for `scripts\stage6_recovery_check.py`, which is run directly from
+The current Mac-verifier-clean ZIP snapshot is v399. It packages commit
+`12719c0dc929d3b8727f6e8486931239e29a7145`, which carries forward the v397
+Windows setup WMI fix, the v398 direct Stage 6 recovery helper WMI fix, and a
+dry-run-first `scripts\stage6_residual_cleanup.bat` helper that archives known
+interrupted Stage 6 smoke artifacts only when `--apply` is passed. v397 had
+fixed the live Windows setup hang found after v394/v396 by avoiding stdlib
+`platform._wmi_query` calls in both the offline pip installer and normal EIDP
+Python startup; v398 closed the same gap for
+`scripts\stage6_recovery_check.py`, which is run directly from
 `scripts\diagnose.bat` and therefore cannot rely on the package import hook.
 The versioned ZIP and latest alias both pass
 `scripts/verify_windows_distribution.py --json` with `git_dirty=false`,
-`entry_count=3075`, `wheel_count=78`, `47` prefecture seeds, `44` discovery
+`entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery
 gold-set entries, and
-`undemonstrated_pattern_sources=[]`. The v398 core SHA256 is
-`12d82237b2e28d226b9a38f0cea08bcfb2c8b298e09acdb89c090bc538a13005`.
+`undemonstrated_pattern_sources=[]`. The v399 core SHA256 is
+`bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
 
 v397 has also been transferred to the operator PC and setup-validated in the
 disposable extraction
