@@ -22,6 +22,9 @@ Expected result:
 
 - top-level `ok=true`
 - SHA256 sidecar matches the ZIP bytes
+- `package_source_check.ok=true`: the ZIP `BUILD_INFO.json` commit matches the
+  current source `HEAD`, and the current source tree has no uncommitted tracked
+  changes
 - full unit suite passes
 - validator/distribution unit tests pass
 - validator/distribution mypy and Ruff pass
@@ -29,6 +32,15 @@ Expected result:
 - committed expected predictions replay exactly
 - package verifier passes
 - package verifier with `--require-demonstrated-discovery-patterns` passes
+
+If this check fails with `package_source_check.stale=true`, the ZIP is a
+historical package and must not be called Mac-verifier-clean for the current
+source tree. Build an approved new ZIP only when the release lane explicitly
+permits it.
+
+For archaeology or historical report regeneration only, rerun with
+`--allow-stale-package`. That flag intentionally bypasses the current-source
+commit and dirty-tree checks, so do not use it for current release readiness.
 
 ## Bounded Evidence Replay
 
@@ -58,6 +70,8 @@ Current expected local replay results:
 
 - The ZIP has the expected source, data, wheelhouse, runbook, and validator
   structure.
+- The ZIP belongs to the same clean tracked source tree being gated, unless the
+  run was explicitly marked as historical with `--allow-stale-package`.
 - The package carries 47 prefecture seed rows and a complete discovery gold-set.
 - Production-tracked discovery pattern sources are demonstrated in the gold-set.
 - Existing bounded discovery evidence still maps to the expected gold outcomes.
