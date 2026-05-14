@@ -1639,8 +1639,8 @@ def _check_build_info(check: ZipCheck, names: set[str]) -> None:
     if payload.get("app") != "EIDP":
         check.fail("BUILD_INFO.json app must be EIDP")
     commit = payload.get("git_commit")
-    if isinstance(commit, str) and commit != "unknown" and len(commit) != 40:
-        check.fail("BUILD_INFO.json git_commit must be a full 40-character commit hash or unknown")
+    if not isinstance(commit, str) or len(commit) != 40:
+        check.fail("BUILD_INFO.json git_commit must be a full 40-character commit hash")
     if payload.get("git_dirty") != "false":
         check.fail("BUILD_INFO.json git_dirty must be false")
     check.details["build_info"] = payload
