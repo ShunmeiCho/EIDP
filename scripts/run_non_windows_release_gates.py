@@ -13,6 +13,7 @@ import json
 import subprocess
 import sys
 import time
+import zipfile
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -163,6 +164,54 @@ def verify_sha256_sidecar(package_zip: Path) -> dict[str, Any]:
     }
 
 
+def _current_git_commit() -> str:
+    completed = subprocess.run(
+        ("git", "rev-parse", "HEAD"),
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return completed.stdout.strip() if completed.returncode == 0 else "unknown"
+
+
+def verify_package_source_commit(
+    package_zip: Path,
+    *,
+    allow_stale_package: bool = False,
+) -> dict[str, Any]:
+    """Verify the ZIP BUILD_INFO commit matches the source tree being gated."""
+
+    if not package_zip.is_file():
+        return {"ok": False, "error": f"package ZIP is missing: {package_zip}"}
+    if not zipfile.is_zipfile(package_zip):
+        return {"ok": False, "error": f"package ZIP is not a valid ZIP file: {package_zip}"}
+    with zipfile.ZipFile(package_zip) as zf:
+        try:
+            payload = json.loads(zf.read("BUILD_INFO.json").decode("utf-8"))
+        except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            return {"ok": False, "error": f"BUILD_INFO.json is not readable: {exc}"}
+    if not isinstance(payload, dict):
+        return {"ok": False, "error": "BUILD_INFO.json must contain an object"}
+    package_commit = payload.get("git_commit")
+    if not isinstance(package_commit, str) or not package_commit:
+        return {"ok": False, "error": "BUILD_INFO.json missing string field: git_commit"}
+
+    source_commit = _current_git_commit()
+    stale = package_commit != "unknown" and source_commit != "unknown" and package_commit != source_commit
+    result = {
+        "ok": allow_stale_package or not stale,
+        "package_commit": package_commit,
+        "source_commit": source_commit,
+        "stale": stale,
+    }
+    if stale and not allow_stale_package:
+        result["error"] = (
+            f"package BUILD_INFO git_commit {package_commit} does not match current source HEAD {source_commit}"
+        )
+    return result
+
+
 def _tail(text: str, *, limit: int = 4000) -> str:
     if len(text) <= limit:
         return text
@@ -223,13 +272,25 @@ def run_gates(commands: Sequence[GateCommand], *, keep_going: bool) -> list[Gate
     return results
 
 
-def _summary_ok(sha256_check: dict[str, Any], results: Sequence[GateResult]) -> bool:
-    return bool(sha256_check.get("ok")) and all(result.returncode == 0 for result in results)
+def _summary_ok(
+    sha256_check: dict[str, Any],
+    package_source_check: dict[str, Any],
+    results: Sequence[GateResult],
+) -> bool:
+    return (
+        bool(sha256_check.get("ok"))
+        and bool(package_source_check.get("ok"))
+        and all(result.returncode == 0 for result in results)
+    )
 
 
 def _print_text_summary(summary: dict[str, Any]) -> None:
     print(f"package: {summary['package_zip']}")
     print(f"sha256_sidecar_ok: {summary['sha256_check'].get('ok')}")
+    package_source_check = summary.get("package_source_check", {})
+    print(f"package_source_check_ok: {package_source_check.get('ok')}")
+    if package_source_check.get("error"):
+        print(f"package_source_check_error: {package_source_check['error']}")
     for result in summary["results"]:
         status = "OK" if result["returncode"] == 0 else f"FAIL rc={result['returncode']}"
         print(f"{status}: {result['name']} ({result['duration_s']}s)")
@@ -247,22 +308,36 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--skip-full-unit", action="store_true", help="Skip the full unit suite")
     parser.add_argument("--keep-going", action="store_true", help="Continue after a failed gate")
+    parser.add_argument(
+        "--allow-stale-package",
+        action="store_true",
+        help="Allow BUILD_INFO git_commit to differ from the current source HEAD for historical package checks",
+    )
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     parser.add_argument("--output", type=Path, help="Optional JSON summary output path")
     args = parser.parse_args(argv)
 
     package_zip = args.package_zip
     sha256_check = verify_sha256_sidecar(package_zip)
+    package_source_check = verify_package_source_commit(
+        package_zip,
+        allow_stale_package=args.allow_stale_package,
+    )
     commands = build_gate_commands(
         package_zip,
         include_full_unit=not args.skip_full_unit,
         pdf_evidence_paths=args.pdf_evidence,
     )
-    results = run_gates(commands, keep_going=args.keep_going) if sha256_check.get("ok") else []
+    results = (
+        run_gates(commands, keep_going=args.keep_going)
+        if sha256_check.get("ok") and package_source_check.get("ok")
+        else []
+    )
     summary = {
-        "ok": _summary_ok(sha256_check, results),
+        "ok": _summary_ok(sha256_check, package_source_check, results),
         "package_zip": str(package_zip),
         "sha256_check": sha256_check,
+        "package_source_check": package_source_check,
         "results": [asdict(result) for result in results],
     }
 

@@ -7,6 +7,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -85,6 +86,133 @@ def test_verify_sha256_sidecar_rejects_mismatch(tmp_path: Path) -> None:
     assert result["ok"] is False
     assert result["actual"] == hashlib.sha256(b"package").hexdigest()
     assert result["expected"] == "0" * 64
+
+
+def test_verify_package_source_commit_rejects_stale_zip_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": package_commit}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+
+    result = module.verify_package_source_commit(package)
+
+    assert result["ok"] is False
+    assert result["package_commit"] == package_commit
+    assert result["source_commit"] == source_commit
+    assert "does not match current source HEAD" in result["error"]
+
+
+def test_verify_package_source_commit_can_allow_stale_zip_for_history(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": package_commit}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+
+    result = module.verify_package_source_commit(package, allow_stale_package=True)
+
+    assert result["ok"] is True
+    assert result["stale"] is True
+    assert result["package_commit"] == package_commit
+    assert result["source_commit"] == source_commit
+
+
+def test_main_stops_before_gates_when_package_commit_is_stale(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr("BUILD_INFO.json", json.dumps({"git_commit": package_commit}))
+    digest = hashlib.sha256(package.read_bytes()).hexdigest()
+    package.with_suffix(".zip.sha256").write_text(f"{digest}  {package.name}\n", encoding="utf-8")
+    output = tmp_path / "summary.json"
+
+    def fail_run_gates(*args: object, **kwargs: object) -> list[object]:
+        raise AssertionError("stale packages must fail before running gates")
+
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "run_gates", fail_run_gates)
+
+    rc = module.main([str(package), "--skip-full-unit", "--json", "--output", str(output)])
+
+    summary = json.loads(output.read_text(encoding="utf-8"))
+    assert rc == 1
+    assert summary["ok"] is False
+    assert summary["package_source_check"]["ok"] is False
+    assert summary["package_source_check"]["stale"] is True
+    assert summary["results"] == []
+
+
+def test_main_allows_stale_package_when_explicitly_requested(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr("BUILD_INFO.json", json.dumps({"git_commit": package_commit}))
+    digest = hashlib.sha256(package.read_bytes()).hexdigest()
+    package.with_suffix(".zip.sha256").write_text(f"{digest}  {package.name}\n", encoding="utf-8")
+    output = tmp_path / "summary.json"
+
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "run_gates", lambda *args, **kwargs: [])
+
+    rc = module.main(
+        [
+            str(package),
+            "--skip-full-unit",
+            "--allow-stale-package",
+            "--json",
+            "--output",
+            str(output),
+        ]
+    )
+
+    summary = json.loads(output.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert summary["ok"] is True
+    assert summary["package_source_check"] == {
+        "ok": True,
+        "package_commit": package_commit,
+        "source_commit": source_commit,
+        "stale": True,
+    }
+
+
+def test_text_summary_prints_package_source_check_error(capsys: pytest.CaptureFixture[str]) -> None:
+    module._print_text_summary(
+        {
+            "package_zip": "dist/eidp-windows.zip",
+            "sha256_check": {"ok": True},
+            "package_source_check": {
+                "ok": False,
+                "error": "package BUILD_INFO git_commit abc does not match current source HEAD def",
+            },
+            "results": [],
+        }
+    )
+
+    output = capsys.readouterr().out
+    assert "package_source_check_ok: False" in output
+    assert "package BUILD_INFO git_commit abc does not match current source HEAD def" in output
 
 
 def test_pdf_evidence_gate_allows_missing_entries() -> None:
