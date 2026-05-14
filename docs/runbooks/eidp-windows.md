@@ -741,5 +741,6 @@ Stage 6 証拠として数えない。
 | 症状 | 原因 | 対処 |
 |------|------|------|
 | `http://localhost:8501` は業務員 PC のブラウザで開く、`http://<業務員 PC の LAN IP>:8501` は外部マシンから繋がらない | Windows Defender Firewall が `python.exe` の inbound を初回 prompt まで遮断する。`launch.bat` の python は `.venv\Scripts\python.exe` で、毎回 ZIP 設置先が変わると別実行ファイル扱いになり再 prompt | 通常運用は問題なし — 業務員は localhost で開けば OK。LAN 経由の運用が必要な場合のみ管理者 PowerShell で許可:<br><br>`New-NetFirewallRule -DisplayName "EIDP Streamlit" -Direction Inbound -Action Allow -Program "C:\workspace\EIDP\.venv\Scripts\python.exe" -Profile Private`<br><br>install 場所が異なれば `-Program` を実際のパスに合わせる |
+| Mac から `ssh -N -L 127.0.0.1:18502:127.0.0.1:8502 win` を起動しても、Mac 側で `127.0.0.1:18502` が LISTEN しない | local `Host win` の SSH config で `ClearAllForwardings yes` が有効だと、コマンドラインの `-L` が消される | tunnel 検証時は明示的に上書きする:<br><br>`ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18502:127.0.0.1:8502 win`<br><br>起動後、Mac 側で `curl http://127.0.0.1:18502/_stcore/health` が `ok` を返すことを確認してから Playwright を開く |
 
 このパターンは初回 `launch.bat` 実行時に Defender ポップアップが出ることがあるが、業務員が「アクセスを許可する」を選択するだけで永続化される。CI / VM 検証では事前にルールを追加しておくのが楽。

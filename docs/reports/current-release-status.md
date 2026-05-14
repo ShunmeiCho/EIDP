@@ -76,8 +76,13 @@ showed `0.0.0.0:8502 LISTENING` for PID `10104`. The service was then stopped
 with `taskkill /PID 10104 /F`, and a stricter `netstat | findstr LISTENING |
 findstr :8502` check returned `listening_8502=0`. The browser-click UI smoke
 is still v397-only: the local SSH tunnel to v399 did not bind `127.0.0.1:18502`,
-and direct LAN access to `192.168.0.9:8502` timed out, consistent with the
-existing Windows firewall limitation documented in the runbook. No residual
+because local `ssh -G win` reported `clearallforwardings yes`, which suppresses
+command-line `-L` forwarding unless explicitly overridden. Direct LAN access to
+`192.168.0.9:8502` also timed out, consistent with the existing Windows firewall
+limitation documented in the runbook. The next browser-click attempt after SSH
+testing resumes should use
+`ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L
+127.0.0.1:18502:127.0.0.1:8502 win` before opening Playwright. No residual
 artifact was moved because `--apply` was not passed; actual archival still
 requires explicit operator/user approval.
 
