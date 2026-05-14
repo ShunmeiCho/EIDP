@@ -66,8 +66,20 @@ excel_ready=0`, and `OK install`. A standalone
 `duplicate_wheel_distributions={}`, and required tables including
 `manual_action_log`, `department_yearly`, and `support_recipient`. CLI smoke
 also returned `cli_help_rc=0`. A non-WMI `netstat` check found
-`streamlit_port_listener=0`. No residual artifact was moved because `--apply`
-was not passed; actual archival still requires explicit operator/user approval.
+`streamlit_port_listener=0` after setup. A v399 UI-service smoke then started
+Streamlit from the extracted package with
+`.venv\Scripts\python.exe -m streamlit run src\eidp\review\app.py
+--server.port 8502 --server.headless true --browser.gatherUsageStats false`;
+the service reported `Uvicorn server started on 0.0.0.0:8502`, Windows-local
+`curl.exe http://127.0.0.1:8502/_stcore/health` returned `ok`, and `netstat`
+showed `0.0.0.0:8502 LISTENING` for PID `10104`. The service was then stopped
+with `taskkill /PID 10104 /F`, and a stricter `netstat | findstr LISTENING |
+findstr :8502` check returned `listening_8502=0`. The browser-click UI smoke
+is still v397-only: the local SSH tunnel to v399 did not bind `127.0.0.1:18502`,
+and direct LAN access to `192.168.0.9:8502` timed out, consistent with the
+existing Windows firewall limitation documented in the runbook. No residual
+artifact was moved because `--apply` was not passed; actual archival still
+requires explicit operator/user approval.
 
 v397 was previously transferred to the operator PC and setup-validated in the
 disposable extraction
