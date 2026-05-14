@@ -1,12 +1,12 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-14
-Latest code-affecting source evidence base: `87087cd1f66b0677d7b4fc9194e46ca1f6b37150`
+Latest code-affecting source evidence base: `e714e3317ae561bcbbe2f41de1681a22a3b0934d`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally separate from ZIP packaging: no new ZIP has been built for
-the code evidence base `87087cd1`, and the active operator-PC Stage 6 lane
+the code evidence base `e714e331`, and the active operator-PC Stage 6 lane
 remains the existing v399 extraction. Later documentation-only commits may
 refresh this checklist without changing that code evidence base.
 
@@ -26,7 +26,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `87087cd1` |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `e714e331` |
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, and inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation; source HEAD names the default `0.70` review threshold via `DEFAULT_CONFIDENCE_REVIEW` and keeps Excel/exporter env-threshold tests green | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
@@ -42,7 +42,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v399, commit
   `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
   `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source-code evidence base: `87087cd1`, with Stage 6 safety fixes for recovery check,
+- Current source-code evidence base: `e714e331`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling, and typed fiscal-year
@@ -70,21 +70,23 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   requires default Stage 6 tunnel guidance for `18501 -> 8501` in both the
   operator runbook and E2E evidence template. The non-Windows release gate also
   keeps `--allow-stale-package` dirty-safe: it can bypass a historical package
-  commit mismatch, but still rejects uncommitted tracked source.
+  commit mismatch, but still rejects uncommitted tracked source. The Windows
+  install validator also rejects `last_run.json status=lock_busy` as weekly
+  ship-gate evidence even if the payload claims `ship_gate_status=pass`.
 - These source-code fixes are not present in the existing v399/v401 ZIPs.
   The latest recorded read-only rerun of the non-Windows package gate against
   v401 with the current verifier failed before downstream gates because
   `package_source_check` detected that packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd` did not match the then-current
   source HEAD. The same stale-package boundary still applies to code evidence
-  base `87087cd1f66b0677d7b4fc9194e46ca1f6b37150`, because v401 packages
+  base `e714e3317ae561bcbbe2f41de1681a22a3b0934d`, because v401 packages
   commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`.
 - Do not mark the goal complete until v399 or a future approved package completes
   operator-PC browser write-cycle evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest local checks performed against source-code evidence base `87087cd1`:
+Latest local checks performed against source-code evidence base `e714e331`:
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
@@ -187,7 +189,7 @@ Latest local checks performed against source-code evidence base `87087cd1`:
   `0e7e66d25a9e77193962c4385e06e9744ab9f09f`, `source_dirty=false`,
   `stale=true`, and `results=[]`.
   This current rerun confirms v401 is not a current package; it is not evidence
-  that the latest code-affecting source base `87087cd1` has been packaged.
+  that the latest code-affecting source base `e714e331` has been packaged.
 - `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --allow-stale-package --json --output _temp/v401-non-windows-release-gates-allow-stale-current-bb621daa.json`
   -> `ok=false`; SHA256 sidecar matched; `package_source_check` was allowed
   through with `stale=true`, but package verification then failed because v401
@@ -203,6 +205,15 @@ Latest local checks performed against source-code evidence base `87087cd1`:
 - `uv run ruff check scripts/run_non_windows_release_gates.py tests/unit/test_non_windows_release_gates.py`
   -> `All checks passed`.
 - `uv run mypy scripts/run_non_windows_release_gates.py`
+  -> `Success: no issues found in 1 source file`.
+- `uv run pytest tests/unit/test_windows_install_validator.py::test_validate_after_weekly_release_gate_rejects_lock_busy_even_if_payload_says_pass -q`
+  -> first run reproduced the bug with `1 failed`; after the fix, the focused
+  weekly ship-gate set returned `4 passed in 0.13s`.
+- `uv run pytest tests/unit/test_windows_install_validator.py -q`
+  -> `46 passed in 1.43s`.
+- `uv run ruff check scripts/validate_windows_install.py tests/unit/test_windows_install_validator.py`
+  -> `All checks passed`.
+- `uv run mypy scripts/validate_windows_install.py`
   -> `Success: no issues found in 1 source file`.
 - `uv run mypy src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py`
   -> `Success: no issues found in 9 source files`.
