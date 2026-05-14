@@ -2,8 +2,8 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current source evidence base: `212820276d61ad7a40d265b7a58d400ad4c9b4dd`
-Current Mac-verifier-clean package for source HEAD: none
+Latest code-affecting source evidence base: `212820276d61ad7a40d265b7a58d400ad4c9b4dd`
+Current Mac-verifier-clean package for latest code evidence base: none
 Latest historical Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
 Historical package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
 Historical package SHA256: `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`
@@ -24,7 +24,7 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-There is currently no Mac-verifier-clean ZIP for source evidence base
+There is currently no Mac-verifier-clean ZIP for latest code-affecting source evidence base
 `212820276d61ad7a40d265b7a58d400ad4c9b4dd`. The latest historical clean ZIP is
 v401 at commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, SHA256
 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; it passed
@@ -37,8 +37,9 @@ disclosure-entrypoint and section-heading context fixes that keep year-only
 target-form links in the download budget ahead of generic disclosure PDFs.
 Subsequent Mac-side source fixes clarify the ship gate's operator-reviewable
 coverage helper, ignore audit-outbox archive symlinks, and centralize the
-extraction-confidence default thresholds. No ZIP has been built or
-Windows-tested from this current source evidence base. The older v399 ZIP is
+extraction-confidence default thresholds. Later documentation-only commits
+refresh the release-status evidence without changing that code evidence base.
+No ZIP has been built or Windows-tested from this current code evidence base. The older v399 ZIP is
 also intentionally rejected by the current verifier because its packaged runbook
 predates the corrected SSH tunnel guidance. For the normal
 `EIDP-start.bat` / `scripts\launch.bat` path, Streamlit defaults to Windows
@@ -1274,7 +1275,7 @@ Previous v379 Windows setup and UI-service commands:
   health only; browser rendering, navigation, and operator-action click-through
   still require separate evidence.
 
-Current source local verification for source evidence base
+Historical source local verification for then-current source evidence base
 `c2a6f532075a8b02eb7a5853de3b3a564ab72107`:
 
 - `uv run pytest tests/unit -q`
@@ -1322,8 +1323,8 @@ Latest recorded current-verifier read-only v401 package-gate rerun:
   `ae835a1c2a47d0a245483ed5f097c27b9f901e86`, `source_dirty=false`,
   `stale=true`, and `results=[]`.
   This prevents mixing source test gates with an older ZIP snapshot. The same
-  stale-package boundary applies to source evidence base
-  `c2a6f532075a8b02eb7a5853de3b3a564ab72107`, because v401 packages
+  stale-package boundary applies to latest code-affecting source evidence base
+  `212820276d61ad7a40d265b7a58d400ad4c9b4dd`, because v401 packages
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`. No new ZIP was built.
 
 Historical v394 full non-Windows release-gate commands:
