@@ -46,6 +46,13 @@ def test_decode_process_output_accepts_utf16_xml() -> None:
     assert module._decode_process_output(xml.encode("utf-16")) == xml
 
 
+def test_decode_process_output_accepts_ascii_xml_mislabelled_as_utf16() -> None:
+    module = _load_module()
+    xml = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\r\r\n<Task />"
+
+    assert module._decode_process_output(xml.encode("utf-8")) == xml
+
+
 def test_build_report_passes_when_task_matches_and_no_residuals(tmp_path: Path) -> None:
     module = _load_module()
     expected = r"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"

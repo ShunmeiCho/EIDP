@@ -82,7 +82,17 @@ def parse_task_xml(xml_text: str) -> ScheduledTaskSnapshot:
 def _decode_process_output(data: bytes) -> str:
     if not data:
         return ""
-    for encoding in ("utf-16", "utf-8-sig", locale.getpreferredencoding(False)):
+
+    # Some Windows schtasks builds emit ASCII/UTF-8 bytes while the XML header
+    # still declares UTF-16. Decoding those bytes as utf-16 can succeed into
+    # garbage, so only prefer UTF-16 when the byte shape makes it plausible.
+    likely_utf16 = data.startswith((b"\xff\xfe", b"\xfe\xff")) or b"\x00" in data[:80]
+    encodings = (
+        ("utf-16", "utf-8-sig", locale.getpreferredencoding(False))
+        if likely_utf16
+        else ("utf-8-sig", locale.getpreferredencoding(False), "utf-16")
+    )
+    for encoding in encodings:
         try:
             return data.decode(encoding)
         except UnicodeDecodeError:
