@@ -27,7 +27,7 @@ def _load_verify_module():
     return module
 
 
-def test_build_evidence_bundle_includes_stage6_artifacts_without_db_or_pdfs(tmp_path: Path) -> None:
+def test_build_evidence_bundle_includes_stage6_artifacts_without_db_pdfs_or_excel(tmp_path: Path) -> None:
     module = _load_module()
     root = tmp_path / "eidp"
     (root / "logs").mkdir(parents=True)
@@ -63,7 +63,7 @@ def test_build_evidence_bundle_includes_stage6_artifacts_without_db_or_pdfs(tmp_
         assert "logs/bootstrap-pdfs-20260514-010002.json" in names
         assert "logs/bootstrap-pdfs-20260514-010003.log" in names
         assert "data/output/last_run.json" in names
-        assert "data/output/eidp_master.xlsx" in names
+        assert "data/output/eidp_master.xlsx" not in names
         assert "data/output/target-year-discovery/x-discovery-rca-batch-plan.json" in names
         assert "stage6-evidence-manifest.json" in names
         assert "data/eidp.sqlite3" not in names
@@ -81,6 +81,34 @@ def test_build_evidence_bundle_includes_stage6_artifacts_without_db_or_pdfs(tmp_
     assert verification["ok"] is True
     assert verification["missing_required_labels"] == []
     assert verification["forbidden_entries"] == []
+
+
+def test_build_evidence_bundle_can_include_excel_exports_with_explicit_opt_in(tmp_path: Path) -> None:
+    module = _load_module()
+    root = tmp_path / "eidp"
+    (root / "logs").mkdir(parents=True)
+    (root / "data" / "output").mkdir(parents=True)
+
+    (root / "BUILD_INFO.json").write_text('{"git_commit": "abc"}\n', encoding="utf-8")
+    (root / "logs" / "diagnostics-20260514-010000.txt").write_text("diag\n", encoding="utf-8")
+    (root / "data" / "output" / "eidp_master.xlsx").write_bytes(b"PK fake xlsx")
+
+    result = module.build_evidence_bundle(root, include_excel=True)
+
+    archive = Path(result["archive"])
+    with zipfile.ZipFile(archive) as zf:
+        names = set(zf.namelist())
+        assert "data/output/eidp_master.xlsx" in names
+
+    verify_module = _load_verify_module()
+    default_verification = verify_module.verify_stage6_evidence_bundle(archive)
+    assert default_verification["ok"] is False
+    assert "archive contains forbidden Excel exports" in default_verification["errors"]
+    assert default_verification["forbidden_entries"] == ["data/output/eidp_master.xlsx"]
+
+    allowed_verification = verify_module.verify_stage6_evidence_bundle(archive, allow_excel=True)
+    assert allowed_verification["ok"] is True
+    assert allowed_verification["forbidden_entries"] == []
 
 
 def test_build_evidence_bundle_limits_latest_diagnostics(tmp_path: Path) -> None:

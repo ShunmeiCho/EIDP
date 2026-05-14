@@ -36,9 +36,13 @@ gold-set entries, and
 `undemonstrated_pattern_sources=[]`. The v401 core SHA256 is
 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`.
 The older v399 ZIP is now intentionally rejected by the current verifier because
-its packaged runbook lacks `ClearAllForwardings=no`, `ExitOnForwardFailure=yes`,
-and `127.0.0.1:18502:127.0.0.1:8502` tunnel guidance. Windows transfer, setup,
-and UI-service evidence remains v399 until SSH access resumes for v401.
+its packaged runbook predates the corrected SSH tunnel guidance. For the normal
+`EIDP-start.bat` / `scripts\launch.bat` path, Streamlit defaults to Windows
+`127.0.0.1:8501`, so browser-click testing should forward Mac
+`127.0.0.1:18501` to Windows `127.0.0.1:8501`. The v399 health proof on port
+`8502` was a manual Streamlit invocation, not the default launcher path.
+Windows transfer, setup, and UI-service evidence remains v399 until SSH access
+resumes for v401.
 The v399 residual cleanup helper was also hot-copied into the existing v397
 disposable operator-PC extraction and run in dry-run mode only:
 `scripts\stage6_residual_cleanup.bat --json` returned
@@ -76,16 +80,64 @@ the service reported `Uvicorn server started on 0.0.0.0:8502`, Windows-local
 showed `0.0.0.0:8502 LISTENING` for PID `10104`. The service was then stopped
 with `taskkill /PID 10104 /F`, and a stricter `netstat | findstr LISTENING |
 findstr :8502` check returned `listening_8502=0`. The browser-click UI smoke
-is still v397-only: the local SSH tunnel to v399 did not bind `127.0.0.1:18502`,
-because local `ssh -G win` reported `clearallforwardings yes`, which suppresses
-command-line `-L` forwarding unless explicitly overridden. Direct LAN access to
+is still v397-only: the local SSH tunnel to v399 did not bind because local
+`ssh -G win` reported `clearallforwardings yes`, which suppresses command-line
+`-L` forwarding unless explicitly overridden. Direct LAN access to
 `192.168.0.9:8502` also timed out, consistent with the existing Windows firewall
 limitation documented in the runbook. The next browser-click attempt after SSH
-testing resumes should use
+testing resumes should use the default-launcher tunnel:
 `ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L
-127.0.0.1:18502:127.0.0.1:8502 win` before opening Playwright. No residual
+127.0.0.1:18501:127.0.0.1:8501 win` before opening Playwright. Only a manually
+started `--server.port 8502` service should use `18502 -> 8502`. No residual
 artifact was moved because `--apply` was not passed; actual archival still
 requires explicit operator/user approval.
+
+## Current Stage 6 Boundary
+
+The active operator-PC lane remains the existing v399 extraction
+`C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`. Do not build a replacement ZIP
+or add new helper scripts merely to advance Stage 6; the remaining process-gate
+work is the v399 browser-click write cycle against the already transferred and
+setup-proven package.
+
+Already supportable from v399 evidence: ZIP transfer and SHA256 match, clean
+`BUILD_INFO.json`, `EIDP-setup.bat` completion, offline wheelhouse install,
+`db-bootstrap`, master import, `school_fiscal_year_status` rebuild for `2418`
+schools, SQLite integrity, required-table presence, CLI help, and Streamlit
+health on a manually started service.
+
+Must still wait for restored Windows/SSH access: v399 browser initial render,
+quick navigation, `PDF確認・手入力` write, fiscal-year override write, R7 Excel
+preview/download, `監査ログ` page and outbox flush, post-click diagnostics,
+Stage 6 evidence ZIP verification, and owner/operator sign-off. Historical v397
+and v384 UI proofs can inform the checklist, but they must not be recorded as a
+completed v399 one-cycle sign-off.
+
+Post-audit source fixes now address the three v399 audit defects: the recovery
+check skips scheduled-task action path validation unless a production path is
+explicitly supplied; Stage 6 evidence bundles exclude Excel exports by default
+and the verifier rejects `data\output\*.xlsx` unless `--allow-excel` is passed;
+and residual cleanup refuses symlinks/junctions and uses rename-only archiving
+instead of copy/delete fallback. These fixes are source-level only until a future
+package is built and Windows-tested; the existing v399 ZIP still uses the older
+packaged behavior. For the frozen v399 click-through, keep treating recovery
+task mismatches as diagnostic, do not externally share any bundle containing
+Excel exports, and do not run `stage6_residual_cleanup.py --apply` from the v399
+package.
+
+Stage 6 template fill map for the frozen v399 lane:
+
+| Template section | Can be filled from current evidence | Must wait for restored Windows/SSH access |
+| --- | --- | --- |
+| 1. 実施情報 | v399 commit `12719c0dc929d3b8727f6e8486931239e29a7145`; `dist/eidp-windows-v399.zip`; SHA256 `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`; extract path `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
+| 2. PC / 環境 | Historical operator-PC environment exists from v380/v384 (`JUNMING`, Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM) | Current v399 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding |
+| 3. 証跡採取コマンド | v399 hash/setup/validate/CLI/health evidence is available | `EIDP-diagnose.bat` after the click-through cycle; recovery JSON from v399 treated as diagnostic only because v399 predates the #193 source fix |
+| 4. Setup 結果 | ZIP extraction, `first_setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, manual Streamlit health | Default `EIDP-start.bat` browser render via `18501 -> 8501`; Task Scheduler path confirmation if needed |
+| 5. 4 工程 E2E | Historical v397/v384 UI/write proofs can guide the exact clicks | v399 PDF/manual-entry write, fiscal-year override write, R7 Excel preview/download, and any current PDF collection metrics |
+| 6. KPI 判定 | Current setup evidence still shows FY2026 `excel_ready=0`; R7 retroactive proof exists historically | Current v399 diagnostics and yield fields; final `ship_readiness_rc` / retroactive gate values |
+| 7. 監査 / outbox | Historical v384 audit page and outbox flush proof exists | v399 `manual_action_log` delta, unexported count, flush result, and JSONL duplicate check |
+| 8. 障害 / 回避策 | Known hazards: WMI hangs fixed before v399, SSH `ClearAllForwardings yes`, #193/#194/#195 fixed in source but not in the existing v399 ZIP | Actual v399 click-through failures and screenshots/log attachments |
+| 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |
 
 v397 was previously transferred to the operator PC and setup-validated in the
 disposable extraction
@@ -576,7 +628,7 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v384 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`support_recipient_rows_for_doc=0`). Windows v384 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, emitted four `fiscal_year_override` audit rows, and verified the real runtime DB had `0` matching document/school/department/audit rows. Windows v384 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, `grand_total=100`, and `extraction_confidence=0.94`; revision `2` current with `annual_total=120`, `grand_total=120`, and `extraction_confidence=1.0`; the real runtime DB had `0` matching documents, schools, and support-recipient rows. | DepartmentYearly Win UI E2E proven on v384; fiscal-year override Win UI E2E proven on v384; SupportRecipient Win package backend append-only proven on v384 |
 | Excel template output | v384 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v384 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; the downloaded workbook opened with sheets `採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋`, and `openpyxl` reported row counts `2419`, `10023`, `9721`, and `9721` including headers; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive on latest v384 |
 | ManualActionLog audit for operator actions | v384 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database, resolved the `ReviewItem` as rejected, created no `SchoolSite` row, and verified the real runtime DB was not mutated; v384 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v384_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, cleared pending count to `0`, and verified the real runtime DB was not mutated; v384 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v384 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths |
-| ZIP distribution, double-click setup, browser UI offline operation | v401 ZIP verifies clean on the macOS packaging gate with SHA256 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`, commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and `undemonstrated_pattern_sources=[]`; the current verifier intentionally rejects older v399 because its packaged runbook predates the `ClearAllForwardings=no`, `ExitOnForwardFailure=yes`, and `127.0.0.1:18502:127.0.0.1:8502` tunnel contract; v399 was transferred to the operator PC, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`, set up with the offline wheelhouse installer, imported the workbook, rebuilt `2418` FY2026 school-year task rows, returned `OK install`, passed after-setup validation with `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, `wheel_count=78`, and `duplicate_wheel_distributions={}`, and returned `cli_help_rc=0`; v399 then served Streamlit on Windows `0.0.0.0:8502`, returned Windows-local `http://127.0.0.1:8502/_stcore/health` as `ok`, showed a `netstat` listener on PID `10104`, and was stopped with follow-up `listening_8502=0`; v401 Windows transfer/setup/UI smoke remains pending until SSH access resumes. v397 remains the latest browser-click proof: it rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `3c100c7`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, clicked only the non-mutating quick navigation buttons for `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and back to `① 学校別タスク`, and kept the FY2026 Excel workbook-generation button disabled for empty current data. The v398 `stage6_recovery_check.py` WMI fix was hot-copied into the v397 disposable extraction and `EIDP-diagnose.bat` then completed, writing `logs\diagnostics-20260514-094322.txt` with `validate_core_rc=0`, `validate_after_setup_rc=0`, `ship_readiness_rc=1`, `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`; its `stage6_recovery_rc=1` was an expected recovery-state failure because task action matched the v397 expected weekly action but old v384 OCR smoke files still existed under `C:\Users\cyo20`. v394 remains the latest Windows evidence-bundle verifier proof with root Stage 6 evidence/verify/recovery BAT launchers and positive minimal `stage6-evidence-*.zip` verification; v384 remains the latest package with package-local `eidp db-backup`, Windows environment / Task Scheduler capture, R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry browser save, and SupportRecipient append-only ingest proofs on disposable copied databases, leaving the real runtime DB unchanged. Full Stage 6 operator-action click-through remains unverified | v401 Mac verifier proof, v399 Windows transfer/setup/UI-service proof, v397 Windows browser render/read-only navigation proof, and older Stage 6 evidence-bundle/browser write proofs present; v401 Windows transfer/setup/UI smoke and full operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v401 ZIP verifies clean on the macOS packaging gate with SHA256 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`, commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and `undemonstrated_pattern_sources=[]`; the current verifier intentionally rejects older v399 because its packaged runbook predates the corrected SSH tunnel troubleshooting, where the normal launcher path is `18501 -> 8501` and manual `8502` smokes are documented separately; v399 was transferred to the operator PC, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`, set up with the offline wheelhouse installer, imported the workbook, rebuilt `2418` FY2026 school-year task rows, returned `OK install`, passed after-setup validation with `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, `wheel_count=78`, and `duplicate_wheel_distributions={}`, and returned `cli_help_rc=0`; v399 then served Streamlit on Windows `0.0.0.0:8502`, returned Windows-local `http://127.0.0.1:8502/_stcore/health` as `ok`, showed a `netstat` listener on PID `10104`, and was stopped with follow-up `listening_8502=0`; v401 Windows transfer/setup/UI smoke remains pending until SSH access resumes. v397 remains the latest browser-click proof: it rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `3c100c7`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, clicked only the non-mutating quick navigation buttons for `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and back to `① 学校別タスク`, and kept the FY2026 Excel workbook-generation button disabled for empty current data. The v398 `stage6_recovery_check.py` WMI fix was hot-copied into the v397 disposable extraction and `EIDP-diagnose.bat` then completed, writing `logs\diagnostics-20260514-094322.txt` with `validate_core_rc=0`, `validate_after_setup_rc=0`, `ship_readiness_rc=1`, `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`; its `stage6_recovery_rc=1` was an expected recovery-state failure because task action matched the v397 expected weekly action but old v384 OCR smoke files still existed under `C:\Users\cyo20`. v394 remains the latest Windows evidence-bundle verifier proof with root Stage 6 evidence/verify/recovery BAT launchers and positive minimal `stage6-evidence-*.zip` verification; v384 remains the latest package with package-local `eidp db-backup`, Windows environment / Task Scheduler capture, R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry browser save, and SupportRecipient append-only ingest proofs on disposable copied databases, leaving the real runtime DB unchanged. Full Stage 6 operator-action click-through remains unverified | v401 Mac verifier proof, v399 Windows transfer/setup/UI-service proof, v397 Windows browser render/read-only navigation proof, and older Stage 6 evidence-bundle/browser write proofs present; v401 Windows transfer/setup/UI smoke and full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -596,9 +648,9 @@ Latest v401 package-verifier commands:
   seeds, `44` discovery gold-set entries,
   `undemonstrated_pattern_sources=[]`, and no warnings.
 - The current verifier intentionally rejects the older v399 ZIP because its
-  packaged runbook lacks the new tunnel troubleshooting tokens
-  `ClearAllForwardings=no`, `ExitOnForwardFailure=yes`, and
-  `127.0.0.1:18502:127.0.0.1:8502`.
+  packaged runbook predates the corrected tunnel troubleshooting guidance. The
+  normal `EIDP-start.bat` path should use `18501 -> 8501`; only manually started
+  `--server.port 8502` smokes should use `18502 -> 8502`.
 
 Latest v399 Windows setup and UI-service smoke:
 
@@ -626,8 +678,9 @@ Latest v399 Windows setup and UI-service smoke:
   showed `0.0.0.0:8502 LISTENING` on PID `10104`, and `taskkill /PID 10104 /F`
   stopped it with follow-up `listening_8502=0`.
 - v401 Windows transfer/setup/UI smoke remains pending until SSH access resumes.
-  The required tunnel command for the next browser proof is
-  `ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18502:127.0.0.1:8502 win`.
+  The frozen v399 Stage 6 browser proof should stay on the already transferred
+  v399 extraction and use the default-launcher tunnel:
+  `ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win`.
 
 Latest v397 Windows browser UI proof:
 

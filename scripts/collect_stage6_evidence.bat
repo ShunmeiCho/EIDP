@@ -2,9 +2,12 @@
 REM Build a read-only Stage 6 evidence ZIP for operator-PC handoff.
 REM
 REM This wrapper first refreshes diagnostics, then bundles the latest logs,
-REM last_run.json, RCA plan, recovery JSON, and Excel exports. It does not copy
-REM the live SQLite database, WAL/SHM sidecars, downloaded PDFs, runtime, or
-REM wheelhouse.
+REM last_run.json, RCA plan, and recovery JSON. It does not copy the live SQLite database,
+REM WAL/SHM sidecars, downloaded PDFs, Excel exports, runtime, or
+REM wheelhouse unless an explicit Python-level opt-in is passed.
+REM
+REM To include Excel exports for internal-only handoff:
+REM   scripts\collect_stage6_evidence.bat --include-excel
 REM Output: logs\stage6-evidence-*.zip
 
 setlocal EnableExtensions
@@ -31,7 +34,7 @@ if exist "%VENV_PY%" (
 call "%EIDP_APP_ROOT%\scripts\diagnose.bat"
 set "DIAG_RC=%ERRORLEVEL%"
 
-"%PY_EXE%" "%EIDP_APP_ROOT%\scripts\collect_stage6_evidence.py" "%EIDP_APP_ROOT%" --json
+"%PY_EXE%" "%EIDP_APP_ROOT%\scripts\collect_stage6_evidence.py" "%EIDP_APP_ROOT%" --json %*
 set "BUNDLE_RC=%ERRORLEVEL%"
 
 if not "%DIAG_RC%"=="0" (

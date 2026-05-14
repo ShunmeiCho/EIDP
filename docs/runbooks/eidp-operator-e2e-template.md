@@ -88,6 +88,7 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 - `[stage6 recovery check]` JSON の `task.execute`
 - `[stage6 recovery check]` JSON の `task.expected_action`
 - `[stage6 recovery check]` JSON の `task.action_matches_expected`
+  （`task.expected_action` が `null` の場合は scheduled task action path 検証を skip）
 - `[stage6 recovery check]` JSON の `residual_paths`
 - `[stage6 recovery check]` JSON の `recommendations`
 
@@ -198,7 +199,7 @@ override 例:
 | retroactive FY marker | `is_retroactive_fiscal_year=true` | | pass / watch / fail |
 | `retroactive_ship_readiness_rc` | 記録値 | | pass / watch / fail |
 | `stage6_recovery_rc` | 0 | | pass / watch / fail |
-| Stage 6 scheduled task action | `action_matches_expected=true` | | pass / watch / fail |
+| Stage 6 scheduled task action | `expected_action=null`なら skip / production path 指定時は `action_matches_expected=true` | | pass / watch / fail |
 | interrupted smoke residue | `residual_paths[].exists=false` | | pass / watch / fail |
 | residual cleanup log | `logs\stage6-residual-cleanup-*.json` if cleanup was needed | | pass / watch / fail |
 
@@ -233,7 +234,8 @@ KPI メモ:
 - `logs\stage6-recovery-*.json`
 - `data\output\last_run.json`
 - `data\output\target-year-discovery\*-discovery-rca-batch-plan.json`
-- Excel 出力ファイル
+- Excel 出力ファイル（個人情報を含む可能性があるため、管理者共有用
+  `logs\stage6-evidence-*.zip` には入れない）
 - 失敗画面の screenshot
 - Defender / SmartScreen screenshot
 

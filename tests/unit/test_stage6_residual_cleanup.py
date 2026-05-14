@@ -102,6 +102,34 @@ def test_cleanup_residuals_refuses_outside_userprofile_by_default(
     assert outside.exists()
 
 
+def test_cleanup_residuals_refuses_symlink_without_following_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    target = tmp_path / "Documents"
+    target.mkdir()
+    (target / "private.txt").write_text("keep", encoding="utf-8")
+    residual_link = tmp_path / "EIDP-v384-75732b0-ocr-sr-sandbox"
+    residual_link.symlink_to(target, target_is_directory=True)
+
+    report = module.cleanup_residuals(
+        app_root=tmp_path / "app",
+        check_paths=[str(residual_link)],
+        archive_dir=tmp_path / "archive",
+        apply=True,
+    )
+
+    assert report["ok"] is False
+    assert report["existing_count"] == 1
+    assert report["moved_count"] == 0
+    assert report["actions"][0]["error"] == "refusing to move symlink or junction"
+    assert residual_link.is_symlink()
+    assert (target / "private.txt").read_text(encoding="utf-8") == "keep"
+    assert not (tmp_path / "archive" / "EIDP-v384-75732b0-ocr-sr-sandbox").exists()
+
+
 def test_write_cleanup_log_records_json(tmp_path: Path) -> None:
     module = _load_module()
     report = {"ok": True, "actions": []}

@@ -260,8 +260,13 @@ Stage 6 検証後、管理者へ証跡をまとめて渡す場合:
 
 証跡 ZIP は読み取り専用で、実行時に `EIDP-diagnose.bat` も呼び出します。
 含めるものは最新の diagnostics、Stage 6 recovery JSON、`last_run.json`、
-Codex RCA キュー、初回URL/PDF取得ログ、Excel 出力です。DB 本体
-(`data\eidp.sqlite3`)、WAL/SHM、PDF 原本、runtime、wheelhouse は含めません。
+Codex RCA キュー、初回URL/PDF取得ログです。DB 本体
+(`data\eidp.sqlite3`)、WAL/SHM、PDF 原本、Excel 出力、runtime、wheelhouse は
+含めません。
+
+Excel 出力は学校・学生に関する個人情報を含む可能性があるため、管理者共有用の
+証跡 ZIP には既定で入れません。内部確認でどうしても必要な場合だけ
+`scripts\collect_stage6_evidence.bat --include-excel` を使い、その ZIP は外部共有しないでください。
 
 管理者が受領後に機械確認する場合:
 
@@ -269,8 +274,8 @@ Codex RCA キュー、初回URL/PDF取得ログ、Excel 出力です。DB 本体
 .\runtime\python\python.exe .\scripts\verify_stage6_evidence.py .\logs\stage6-evidence-YYYYMMDD-HHMMSS.zip --json --require-label last_run
 ```
 
-`ok=true` なら必須証跡ラベルが揃い、DB 本体、PDF 原本、runtime、wheelhouse が
-混入していないことを確認済みです。
+`ok=true` なら必須証跡ラベルが揃い、DB 本体、PDF 原本、Excel 出力、runtime、
+wheelhouse が混入していないことを確認済みです。
 
 Windows 上で最新の証跡 ZIP を自動選択して確認する場合:
 
@@ -681,15 +686,16 @@ Mac 側から実行できない場合は、Windows 側でこの `.bat` を実行
 .\EIDP-stage6-recovery.bat
 ```
 
-上記は現在開いている EIDP フォルダの `scripts\weekly_run.bat` を期待値として
-確認し、画面を閉じる前に結果を読める。管理者がコンソールから実行する場合は、
-同じ処理を下位 wrapper でも実行できる:
+上記は既定では scheduled task の action path 検証を行わず、タスクの存在・取得可否と
+既知の中断 smoke 残骸だけを確認する。新しい ZIP を別フォルダに解凍して確認している時に、
+本番の `EIDP Weekly Run` が古い production runtime を指していることを誤って「故障」と判定しないため。
+管理者がコンソールから実行する場合は、同じ処理を下位 wrapper でも実行できる:
 
 ```powershell
 .\scripts\stage6_recovery_check.bat
 ```
 
-別の本番 runtime に戻すべきか確認する場合は、期待する action を明示する:
+本番 runtime の scheduled task action まで確認する場合だけ、期待する production path を明示する:
 
 ```powershell
 .\EIDP-stage6-recovery.bat "C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"

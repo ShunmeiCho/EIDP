@@ -84,7 +84,7 @@ def test_build_report_flags_task_mismatch_and_residual_paths(tmp_path: Path) -> 
     assert "interrupted smoke artifacts" in " ".join(report["recommendations"])
 
 
-def test_build_report_requires_expected_weekly_action(tmp_path: Path) -> None:
+def test_build_report_skips_expected_weekly_action_when_not_provided(tmp_path: Path) -> None:
     module = _load_module()
     task = module.ScheduledTaskSnapshot(
         exists=True,
@@ -97,9 +97,10 @@ def test_build_report_requires_expected_weekly_action(tmp_path: Path) -> None:
         task=task,
     )
 
-    assert report["ok"] is False
-    assert report["task"]["action_matches_expected"] is False
-    assert "Pass --expected-weekly-action" in " ".join(report["recommendations"])
+    assert report["ok"] is True
+    assert report["task"]["expected_action"] is None
+    assert report["task"]["action_matches_expected"] is None
+    assert "Scheduled task action check skipped" in " ".join(report["recommendations"])
 
 
 def test_direct_script_disables_wmi_platform_queries(monkeypatch: pytest.MonkeyPatch) -> None:

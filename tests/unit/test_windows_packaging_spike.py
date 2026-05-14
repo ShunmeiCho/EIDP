@@ -694,7 +694,8 @@ def test_stage6_recovery_check_bat_runs_packaged_helper(bat_files: dict[str, str
     assert "stage6_recovery_check.py" in body
     assert "--expected-weekly-action" in body
     assert "EIDP_EXPECTED_WEEKLY_ACTION" in body
-    assert 'set "EXPECTED_WEEKLY_ACTION=%EIDP_APP_ROOT%\\scripts\\weekly_run.bat"' in body
+    assert "expected weekly action: skipped" in body
+    assert "%EIDP_APP_ROOT%\\scripts\\weekly_run.bat" not in body
     assert "expected weekly action" in body
     assert "stage6-recovery-%RECOVERY_STAMP%.json" in body
     assert "set \"RC=%ERRORLEVEL%\"" in body

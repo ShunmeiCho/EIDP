@@ -104,7 +104,7 @@ if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" (
 
 >> "%DIAG_FILE%" echo [stage6 recovery check]
 if defined PY_EXE (
-    "%PY_EXE%" "%EIDP_APP_ROOT%\scripts\stage6_recovery_check.py" --expected-weekly-action "%EIDP_APP_ROOT%\scripts\weekly_run.bat" --json >> "%DIAG_FILE%" 2>&1
+    "%PY_EXE%" "%EIDP_APP_ROOT%\scripts\stage6_recovery_check.py" --json >> "%DIAG_FILE%" 2>&1
     set "STAGE6_RECOVERY_RC=!ERRORLEVEL!"
     >> "%DIAG_FILE%" echo stage6_recovery_rc=!STAGE6_RECOVERY_RC!
 ) else (

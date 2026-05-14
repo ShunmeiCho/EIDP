@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -66,6 +65,24 @@ def _unique_destination(archive_dir: Path, source: Path) -> Path:
     raise RuntimeError(f"could not choose unique archive path for {source}")
 
 
+def _is_symlink_or_junction(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    if os.name != "nt":
+        return False
+    try:
+        return bool(getattr(path.stat(follow_symlinks=False), "st_file_attributes", 0) & 0x400)
+    except OSError:
+        return False
+
+
+def _archive_by_rename(source: Path, destination: Path) -> None:
+    try:
+        source.replace(destination)
+    except OSError as exc:
+        raise OSError(f"rename failed; refusing copy/delete fallback: {exc}") from exc
+
+
 def cleanup_residuals(
     *,
     app_root: Path,
@@ -88,12 +105,16 @@ def cleanup_residuals(
             action.error = "refusing to move path outside USERPROFILE"
             actions.append(action)
             continue
+        if _is_symlink_or_junction(source):
+            action.error = "refusing to move symlink or junction"
+            actions.append(action)
+            continue
         destination = _unique_destination(resolved_archive_dir, source)
         action.destination = str(destination)
         if apply:
             try:
                 resolved_archive_dir.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(source), str(destination))
+                _archive_by_rename(source, destination)
                 action.moved = True
                 action.exists = source.exists()
             except OSError as exc:

@@ -1,9 +1,9 @@
 """Build a read-only Stage 6 evidence bundle for operator-PC handoff.
 
-The bundle intentionally includes logs and exported evidence only. It excludes
-the SQLite database, WAL/SHM sidecars, downloaded PDFs, runtime files, and
-wheelhouse contents so the operator can share one small ZIP without copying the
-live application state.
+The bundle intentionally includes logs and operational evidence only. It excludes
+the SQLite database, WAL/SHM sidecars, downloaded PDFs, Excel exports, runtime
+files, and wheelhouse contents so the operator can share one small ZIP without
+copying live application state or personal data.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ class EvidencePattern:
     limit: int
 
 
-EVIDENCE_PATTERNS: tuple[EvidencePattern, ...] = (
+BASE_EVIDENCE_PATTERNS: tuple[EvidencePattern, ...] = (
     EvidencePattern("build_info", "BUILD_INFO.json", 1),
     EvidencePattern("diagnostics", "logs/diagnostics-*.txt", 5),
     EvidencePattern("stage6_recovery", "logs/stage6-recovery-*.json", 5),
@@ -35,8 +35,8 @@ EVIDENCE_PATTERNS: tuple[EvidencePattern, ...] = (
     EvidencePattern("bootstrap_logs", "logs/bootstrap-pdfs-*.log", 3),
     EvidencePattern("last_run", "data/output/last_run.json", 1),
     EvidencePattern("discovery_rca", "data/output/target-year-discovery/*-discovery-rca-batch-plan.json", 5),
-    EvidencePattern("excel_exports", "data/output/**/*.xlsx", 5),
 )
+EXCEL_EVIDENCE_PATTERN = EvidencePattern("excel_exports", "data/output/**/*.xlsx", 5)
 
 EXCLUDED_TOP_LEVEL_PARTS = {
     ".venv",
@@ -72,7 +72,7 @@ def _latest_matches(root: Path, pattern: EvidencePattern) -> list[Path]:
     return matches[: pattern.limit]
 
 
-def build_evidence_bundle(root: Path, out_path: Path | None = None) -> dict[str, Any]:
+def build_evidence_bundle(root: Path, out_path: Path | None = None, *, include_excel: bool = False) -> dict[str, Any]:
     root = root.resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"app root does not exist: {root}")
@@ -89,7 +89,8 @@ def build_evidence_bundle(root: Path, out_path: Path | None = None) -> dict[str,
     seen: set[Path] = set()
 
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for pattern in EVIDENCE_PATTERNS:
+        patterns = (*BASE_EVIDENCE_PATTERNS, EXCEL_EVIDENCE_PATTERN) if include_excel else BASE_EVIDENCE_PATTERNS
+        for pattern in patterns:
             matches = _latest_matches(root, pattern)
             if not matches:
                 missing_patterns.append(pattern.label)
@@ -118,6 +119,7 @@ def build_evidence_bundle(root: Path, out_path: Path | None = None) -> dict[str,
             "excluded": {
                 "top_level": sorted(EXCLUDED_TOP_LEVEL_PARTS),
                 "data": sorted(EXCLUDED_DATA_PARTS),
+                "excel_exports": not include_excel,
             },
         }
         zf.writestr("stage6-evidence-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
@@ -134,6 +136,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", nargs="?", default=".", help="Extracted EIDP app root.")
     parser.add_argument("--out", help="Output ZIP path. Defaults to logs/stage6-evidence-<timestamp>.zip.")
+    parser.add_argument(
+        "--include-excel",
+        action="store_true",
+        help="Include data/output/**/*.xlsx. Use only for internal handoff; Excel exports may contain personal data.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
 
@@ -143,6 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     result = build_evidence_bundle(
         Path(args.root),
         out_path=Path(args.out) if args.out else None,
+        include_excel=args.include_excel,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))

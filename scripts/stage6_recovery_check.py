@@ -3,7 +3,8 @@
 Run this locally on the operator PC after ``Restart-Service sshd`` when a
 remote Stage 6 smoke was interrupted. It does not clean up or reconfigure
 anything; it only reports whether the weekly scheduled task still points at the
-expected runtime and whether known interrupted-smoke artifacts remain.
+expected runtime when an expected action is explicitly supplied and whether
+known interrupted-smoke artifacts remain.
 """
 
 from __future__ import annotations
@@ -133,16 +134,19 @@ def build_report(
     task = task or query_weekly_task()
     expected_norm = _normalise_windows_path(expected_weekly_action)
     actual_norm = _normalise_windows_path(task.execute)
-    action_matches = expected_norm is not None and actual_norm == expected_norm
+    action_matches = (actual_norm == expected_norm) if expected_norm is not None else None
     residual_paths = [_path_status(path) for path in check_paths]
     residual_existing = [item for item in residual_paths if item["exists"]]
 
-    ok = bool(task.exists and not task.error and expected_norm is not None and action_matches and not residual_existing)
+    task_action_ok = expected_norm is None or action_matches is True
+    ok = bool(task.exists and not task.error and task_action_ok and not residual_existing)
     recommendations: list[str] = []
     if task.error:
         recommendations.append("Confirm the EIDP Weekly Run scheduled task manually.")
     if expected_norm is None:
-        recommendations.append("Pass --expected-weekly-action to verify the task points at the production runtime.")
+        recommendations.append(
+            "Scheduled task action check skipped; pass --expected-weekly-action to verify the production runtime path."
+        )
     elif not action_matches:
         recommendations.append("Restore EIDP Weekly Run to the production weekly_run.bat before resuming Stage 6.")
     if residual_existing:

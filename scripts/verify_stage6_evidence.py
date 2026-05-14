@@ -22,6 +22,7 @@ FORBIDDEN_PREFIXES = (
     "wheelhouse/",
     "data/pdfs/",
 )
+EXCEL_EXPORT_PREFIX = "data/output/"
 
 
 def _is_unsafe_name(name: str) -> bool:
@@ -40,6 +41,11 @@ def _is_forbidden_entry(name: str) -> bool:
     return normalized in FORBIDDEN_EXACT_ENTRIES or any(
         normalized == prefix.rstrip("/") or normalized.startswith(prefix) for prefix in FORBIDDEN_PREFIXES
     )
+
+
+def _is_excel_export(name: str) -> bool:
+    normalized = name.replace("\\", "/")
+    return normalized.startswith(EXCEL_EXPORT_PREFIX) and normalized.lower().endswith(".xlsx")
 
 
 def _load_manifest(zf: zipfile.ZipFile, errors: list[str]) -> dict[str, Any] | None:
@@ -88,6 +94,7 @@ def verify_stage6_evidence_bundle(
     archive: Path,
     *,
     required_labels: tuple[str, ...] = DEFAULT_REQUIRED_LABELS,
+    allow_excel: bool = False,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -111,11 +118,17 @@ def verify_stage6_evidence_bundle(
         with zipfile.ZipFile(archive) as zf:
             names = zf.namelist()
             normalized_names = {name.replace("\\", "/") for name in names}
-            forbidden_entries = sorted(name for name in normalized_names if _is_forbidden_entry(name))
+            forbidden_runtime_entries = sorted(name for name in normalized_names if _is_forbidden_entry(name))
+            forbidden_excel_entries = sorted(
+                name for name in normalized_names if not allow_excel and _is_excel_export(name)
+            )
+            forbidden_entries = [*forbidden_runtime_entries, *forbidden_excel_entries]
             unsafe_names = sorted(name for name in names if _is_unsafe_name(name))
 
-            if forbidden_entries:
+            if forbidden_runtime_entries:
                 errors.append("archive contains forbidden runtime data")
+            if forbidden_excel_entries:
+                errors.append("archive contains forbidden Excel exports")
             if unsafe_names:
                 errors.append("archive contains unsafe entry names")
 
@@ -177,6 +190,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default=[],
         help="Manifest evidence label that must be present. Defaults to build_info and diagnostics.",
     )
+    parser.add_argument(
+        "--allow-excel",
+        action="store_true",
+        help="Allow data/output/**/*.xlsx in the evidence ZIP. Use only for internal handoff.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
 
@@ -184,7 +202,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     required = tuple(dict.fromkeys((*DEFAULT_REQUIRED_LABELS, *args.require_label)))
-    result = verify_stage6_evidence_bundle(Path(args.archive), required_labels=required)
+    result = verify_stage6_evidence_bundle(Path(args.archive), required_labels=required, allow_excel=args.allow_excel)
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     else:
