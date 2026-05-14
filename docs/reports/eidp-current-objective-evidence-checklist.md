@@ -9,8 +9,8 @@ It is intentionally explicit about lane boundaries: the active operator-PC
 Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v408-f0c27158` for
 `dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v407 remains the
 latest full non-Windows release-gate, diagnostic evidence-bundle, R7 browser
-Excel, and seeded UI-write sandbox evidence source until those proofs are
-repeated on v408 or replaced by a real operator cycle.
+Excel, and seeded UI-write sandbox evidence source until those browser/audit
+proofs are repeated on v408 or replaced by a real operator cycle.
 
 ## Objective Restatement
 
@@ -32,7 +32,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints in both strong application and weak form-shape detection, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, and inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation; source HEAD names the default `0.70` review threshold via `DEFAULT_CONFIDENCE_REVIEW` and keeps Excel/exporter env-threshold tests green | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current | Proven on sandboxed/copy DB paths; real operator one-cycle proof still missing |
-| Excel template export | v384 R7 retroactive Excel preview/download proof; v407 Windows R7/FY2025 CLI export/diff returned `diff_rc=0`; v407 real-install browser R7 preview/download with process-local `EIDP_TARGET_FISCAL_YEAR=2025` generated `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`, then downloaded `_temp/v407-r7-browser-eidp_master.xlsx` with sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` and row/column counts `2419x10`, `10023x22`, `9721x83`, `9721x19`; v407 disposable UI sandbox generated a smaller Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 rehearsal, real-install browser download, and sandbox UI preview proven; FY2026 target-year output not ready |
+| Excel template export | v384 R7 retroactive Excel preview/download proof; v408 Windows R7/FY2025 CLI export wrote `v408-r7-retroactive-export.xlsx` with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`; v408 business diff against the proven v407 R7 export returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; `openpyxl` opened the v408 workbook at `3,673,084` bytes with sheet dimensions `2419x10`, `10023x22`, `9721x83`, `9721x19`; v407 real-install browser R7 preview/download remains the current browser proof and v407 disposable UI sandbox generated a smaller Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 CLI export/diff proven on v408; R7 browser download and sandbox UI preview proven on v407; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows | Proven on sandboxed paths; real operator one-cycle proof still missing |
 | ZIP distribution, double-click setup, browser UI offline operation | v408 transfer, SHA match, setup completion, SQLite integrity, scheduled-task action update to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, packaged recovery checker proof, Streamlit health, and `18508 -> 8508` tunnel health; v407 verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` carries the R7 browser Excel proof and seeded UI write proof without Excel/SQLite/runtime exports, and v407 seeded browser write sandbox proof remains supporting evidence; v397 browser read-only navigation retained as historical support | Current v408 setup/service/recovery/UI-health proven; v407 diagnostic bundle and sandbox browser-write proven; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
@@ -51,7 +51,8 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   served Streamlit through a Mac tunnel `18508 -> 8508`, and its packaged
   `stage6_recovery_check.py` parsed the scheduled task XML successfully with
   `action_matches_expected=true` for the v408 weekly runner. v408 is not yet
-  evidence-bundle/R7-browser-Excel/UI-write-sandbox proven.
+  evidence-bundle/R7-browser-Excel/UI-write-sandbox proven, but it has R7 CLI
+  Excel export/diff parity with v407.
 - Supporting Windows evidence lane: v407, commit
   `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
   `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
@@ -147,6 +148,18 @@ refreshes:
   `action_matches_expected=true`; Windows-local `/_stcore/health` on port
   `8508` and Mac-tunnel `/_stcore/health` on `18508 -> 8508` both returned
   `ok`, and the Streamlit root HTML shell was fetched.
+- Windows v408 R7 retroactive CLI Excel proof:
+  with process-local `EIDP_TARGET_FISCAL_YEAR=2025`, `eidp export-excel`
+  wrote `data\output\v408-r7-retroactive-export.xlsx` with
+  `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and
+  `在籍のみ抜粋=9719`; `diff-excel --business-values --original` against the
+  proven v407 R7 export returned `missing_sheets=0`, `extra_sheets=0`,
+  `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; `openpyxl`
+  opened the v408 workbook at `3,673,084` bytes with dimensions `2419x10`,
+  `10023x22`, `9721x83`, and `9721x19`. The packaged default
+  `diff-excel --business-values` reference path still points to absent
+  `sample\◆2025専門学校無償化情報公開まとめ.xlsx`, so explicit `--original` is
+  required for now.
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
