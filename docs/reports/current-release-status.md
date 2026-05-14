@@ -2,11 +2,11 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current Mac-verifier-clean package: `dist/eidp-windows-v397.zip`
-Package commit: `3c100c7aba5e812bcd791dcc227c775f1f3d93e6`
-Package SHA256: `55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`
+Current Mac-verifier-clean package: `dist/eidp-windows-v398.zip`
+Package commit: `0b13450bb611b4b6cf7fe5e875f23bb65d5f705c`
+Package SHA256: `12d82237b2e28d226b9a38f0cea08bcfb2c8b298e09acdb89c090bc538a13005`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v397.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v397.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v398.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v397.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
@@ -22,20 +22,20 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-The current Mac-verifier-clean ZIP snapshot is v397. It packages commit
-`3c100c7aba5e812bcd791dcc227c775f1f3d93e6`, which fixes the live Windows setup
+The current Mac-verifier-clean ZIP snapshot is v398. It packages commit
+`0b13450bb611b4b6cf7fe5e875f23bb65d5f705c`, which carries forward the v397
+Windows setup WMI fix and also disables stdlib `platform._wmi_query` inside the
+directly executed Stage 6 recovery helper. v397 had fixed the live Windows setup
 hang found after v394/v396 by avoiding stdlib `platform._wmi_query` calls in
-both the offline pip installer and normal EIDP Python startup. v397 creates the
-venv with stdlib `venv --without-pip`, installs the wheelhouse through
-`scripts\offline_pip_install.py` into `.venv\Lib\site-packages`, and ships
-`src\sitecustomize.py` plus `src\eidp\windows_platform.py` so CLI/UI/weekly
-processes patch `platform` before dependencies such as SQLAlchemy call
-`platform.machine()`. The versioned ZIP and latest alias both pass
+both the offline pip installer and normal EIDP Python startup; v398 closes the
+same gap for `scripts\stage6_recovery_check.py`, which is run directly from
+`scripts\diagnose.bat` and therefore cannot rely on the package import hook.
+The versioned ZIP and latest alias both pass
 `scripts/verify_windows_distribution.py --json` with `git_dirty=false`,
 `entry_count=3075`, `wheel_count=78`, `47` prefecture seeds, `44` discovery
 gold-set entries, and
-`undemonstrated_pattern_sources=[]`. The v397 core SHA256 is
-`55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`.
+`undemonstrated_pattern_sources=[]`. The v398 core SHA256 is
+`12d82237b2e28d226b9a38f0cea08bcfb2c8b298e09acdb89c090bc538a13005`.
 
 v397 has also been transferred to the operator PC and setup-validated in the
 disposable extraction
@@ -527,7 +527,7 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v384 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`support_recipient_rows_for_doc=0`). Windows v384 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, emitted four `fiscal_year_override` audit rows, and verified the real runtime DB had `0` matching document/school/department/audit rows. Windows v384 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, `grand_total=100`, and `extraction_confidence=0.94`; revision `2` current with `annual_total=120`, `grand_total=120`, and `extraction_confidence=1.0`; the real runtime DB had `0` matching documents, schools, and support-recipient rows. | DepartmentYearly Win UI E2E proven on v384; fiscal-year override Win UI E2E proven on v384; SupportRecipient Win package backend append-only proven on v384 |
 | Excel template output | v384 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v384 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; the downloaded workbook opened with sheets `採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋`, and `openpyxl` reported row counts `2419`, `10023`, `9721`, and `9721` including headers; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive on latest v384 |
 | ManualActionLog audit for operator actions | v384 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database, resolved the `ReviewItem` as rejected, created no `SchoolSite` row, and verified the real runtime DB was not mutated; v384 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v384_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, cleared pending count to `0`, and verified the real runtime DB was not mutated; v384 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v384 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths |
-| ZIP distribution, double-click setup, browser UI offline operation | v397 ZIP verifies clean on the macOS packaging gate with SHA256 `55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`, `entry_count=3075`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and `undemonstrated_pattern_sources=[]`; v397 was transferred to the operator PC, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe`, set up with the offline wheelhouse installer, imported the workbook, rebuilt `2418` FY2026 school-year task rows, returned `OK install`, passed after-setup validation with `validate_rc=0`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`, and returned `cli_help_rc=0`; v397 then served Streamlit on Windows `127.0.0.1:8502`, returned `/_stcore/health` as `ok` through `127.0.0.1:18502`, rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `3c100c7`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, clicked only the non-mutating quick navigation buttons for `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and back to `① 学校別タスク`, and kept the FY2026 Excel workbook-generation button disabled for empty current data; v394 remains the latest Windows evidence-bundle verifier proof with root Stage 6 evidence/verify/recovery BAT launchers and positive minimal `stage6-evidence-*.zip` verification; v384 remains the latest package with package-local `eidp db-backup`, Windows environment / Task Scheduler capture, R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry browser save, and SupportRecipient append-only ingest proofs on disposable copied databases, leaving the real runtime DB unchanged. Full Stage 6 operator-action click-through remains unverified | Backend Win setup/diagnostics, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, audit-outbox flush, fiscal-year override write, manual-entry write, SupportRecipient ingest, environment capture, Task Scheduler query / restore, backup CLI proof, and Stage 6 evidence-bundle package plus Windows evidence-verifier proof present; full operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v398 ZIP verifies clean on the macOS packaging gate with SHA256 `12d82237b2e28d226b9a38f0cea08bcfb2c8b298e09acdb89c090bc538a13005`, commit `0b13450bb611b4b6cf7fe5e875f23bb65d5f705c`, `entry_count=3075`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and `undemonstrated_pattern_sources=[]`; v397 was transferred to the operator PC, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe`, set up with the offline wheelhouse installer, imported the workbook, rebuilt `2418` FY2026 school-year task rows, returned `OK install`, passed after-setup validation with `validate_rc=0`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`, and returned `cli_help_rc=0`; v397 then served Streamlit on Windows `127.0.0.1:8502`, returned `/_stcore/health` as `ok` through `127.0.0.1:18502`, rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `3c100c7`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, clicked only the non-mutating quick navigation buttons for `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and back to `① 学校別タスク`, and kept the FY2026 Excel workbook-generation button disabled for empty current data; the v398 `stage6_recovery_check.py` WMI fix was hot-copied into the v397 disposable extraction and `EIDP-diagnose.bat` then completed, writing `logs\diagnostics-20260514-094322.txt` with `validate_core_rc=0`, `validate_after_setup_rc=0`, `ship_readiness_rc=1`, `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`; its `stage6_recovery_rc=1` was an expected recovery-state failure because task action matched the v397 expected weekly action but old v384 OCR smoke files still existed under `C:\Users\cyo20`. v394 remains the latest Windows evidence-bundle verifier proof with root Stage 6 evidence/verify/recovery BAT launchers and positive minimal `stage6-evidence-*.zip` verification; v384 remains the latest package with package-local `eidp db-backup`, Windows environment / Task Scheduler capture, R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry browser save, and SupportRecipient append-only ingest proofs on disposable copied databases, leaving the real runtime DB unchanged. Full Stage 6 operator-action click-through remains unverified | Backend Win setup/diagnostics, app-server startup, initial browser render, read-only navigation, Excel preview disabled-state, R7 Excel download, URL-candidate write, audit-outbox flush, fiscal-year override write, manual-entry write, SupportRecipient ingest, environment capture, Task Scheduler query / restore, backup CLI proof, and Stage 6 evidence-bundle package plus Windows evidence-verifier proof present; full operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -535,14 +535,14 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
-Latest v397 package-verifier commands:
+Latest v398 package-verifier commands:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v397.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v397.zip` and refreshed `dist/eidp-windows.zip`;
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v398.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v398.zip` and refreshed `dist/eidp-windows.zip`;
   both have SHA256
-  `55f54f27d0dcfa22f4c5dfa1041e8f8c8f52ad18f3be7e4661a3c95b34559bbf`.
-- `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v397.zip`
-  -> `ok=true`, commit `3c100c7aba5e812bcd791dcc227c775f1f3d93e6`,
+  `12d82237b2e28d226b9a38f0cea08bcfb2c8b298e09acdb89c090bc538a13005`.
+- `uv run python scripts/verify_windows_distribution.py --json dist/eidp-windows-v398.zip`
+  -> `ok=true`, commit `0b13450bb611b4b6cf7fe5e875f23bb65d5f705c`,
   `build_dirty=false`, `entry_count=3075`, `wheel_count=78`,
   `47` prefecture seeds, `44` discovery gold-set entries, and
   `undemonstrated_pattern_sources=[]`.
@@ -572,6 +572,18 @@ Latest v397 Windows setup and UI smoke:
   workbook-generation button stayed disabled for empty FY2026 data. Captured
   console entries were verbose browser DOM notices about password fields outside
   forms, not application/page errors.
+- Windows diagnostics hot-copy proof:
+  the v398 `scripts\stage6_recovery_check.py` WMI fix was copied into the same
+  v397 disposable extraction to validate the fix before rebuilding the ZIP.
+  The first v397 `EIDP-diagnose.bat` attempt had timed out after writing only
+  through `[stage6 recovery check]` in `logs\diagnostics-20260514-093712.txt`.
+  After the hot-copy, `EIDP-diagnose.bat` completed and wrote
+  `logs\diagnostics-20260514-094322.txt`. Key results were
+  `validate_core_rc=0`, `validate_after_setup_rc=0`, `ship_readiness_rc=1`,
+  `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`.
+  `stage6_recovery_rc=1` remained because old v384 OCR smoke files still exist
+  under `C:\Users\cyo20`; the JSON showed `task.action_matches_expected=true`,
+  so this is a recovery-state cleanup issue, not the previous diagnostics hang.
 
 Historical v394 package-verifier commands:
 
