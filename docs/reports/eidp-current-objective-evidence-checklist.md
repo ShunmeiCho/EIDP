@@ -186,6 +186,13 @@ Latest local checks performed against source-code evidence base `c2f3ac3f`:
   `stale=true`, and `results=[]`.
   This current rerun confirms v401 is not a current package; it is not evidence
   that the latest code-affecting source base `c2f3ac3f` has been packaged.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --allow-stale-package --json --output _temp/v401-non-windows-release-gates-allow-stale-current-bb621daa.json`
+  -> `ok=false`; SHA256 sidecar matched; `package_source_check` was allowed
+  through with `stale=true`, but package verification then failed because v401
+  lacks the current verifier's Stage 6 recovery, evidence Excel opt-in,
+  residual cleanup symlink/junction safety, operator-coverage ship gate,
+  audit-outbox archive matching, and default `18501 -> 8501` tunnel guidance
+  tokens.
 - `uv run mypy src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py`
   -> `Success: no issues found in 9 source files`.
 - `uv run ruff check src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py tests/unit/conftest.py tests/unit/test_manual_entry_contract.py tests/unit/test_review_pdf_manual_entry.py tests/unit/test_review_pdf_manual_entry_confidence.py tests/unit/test_review_audit_log.py tests/unit/test_review_audit_log_dashboard.py tests/unit/test_audit_outbox.py tests/unit/test_locking.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_ingest_evidence.py tests/unit/test_cli_ingest.py`

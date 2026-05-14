@@ -1327,6 +1327,15 @@ Latest recorded current-verifier read-only v401 package-gate rerun:
   stale-package boundary applies to latest code-affecting source evidence base
   `c2f3ac3f4eaf1bf5d2cbb2564495e9c674abeadc`, because v401 packages
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`. No new ZIP was built.
+- Allow-stale diagnostic rerun for the same v401 ZIP:
+  `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --allow-stale-package --json --output _temp/v401-non-windows-release-gates-allow-stale-current-bb621daa.json`
+  -> `ok=false`; SHA256 sidecar matched; `package_source_check` was allowed
+  through with `stale=true`, but package verification then failed. The v401 ZIP
+  is missing the current verifier's Stage 6 safety tokens for recovery-check
+  skipped expected action, evidence Excel opt-in/exclusion, residual cleanup
+  symlink/junction refusal and rename-only archival, operator-coverage ship gate
+  helper, audit-outbox archive matching helper, and default `18501 -> 8501`
+  tunnel health guidance in the packaged Windows/operator runbooks.
 
 Historical v394 full non-Windows release-gate commands:
 
