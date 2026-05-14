@@ -1,7 +1,7 @@
 # EIDP 業務員 PC E2E 記録テンプレート
 
 Status: Stage 6 / v1.0 release candidate evidence template
-Updated: 2026-05-06
+Updated: 2026-05-14
 
 このテンプレートは、業務員の実 PC で 1 サイクル実行した結果を記録するためのものです。
 ここが未記入のままでは、EIDP Windows 版を v1.0 と判定しません。
@@ -61,6 +61,19 @@ echo $LASTEXITCODE
 .\EIDP-start.bat
 ```
 
+Mac / Playwright から業務員 PC のブラウザ UI を確認する場合は、既定 launcher
+port `8501` に対して local tunnel を張ります。`Host win` で
+`ClearAllForwardings yes` が有効な環境では、必ずコマンドラインで上書きします。
+
+```bash
+ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
+curl http://127.0.0.1:18501/_stcore/health
+```
+
+手動で Streamlit を `--server.port 8502` 起動した検証だけ、local `18502` から
+Windows `8502` へ転送します。通常の `EIDP-start.bat` / `scripts\launch.bat`
+検証では `18501 -> 8501` を使います。
+
 PDF 収集を実測した後に、診断ファイルを作ります。
 
 ```powershell
@@ -104,6 +117,7 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 | 年度タスク初期生成 | `school_fiscal_year_status` に行がある | pass / fail | |
 | Task Scheduler | `EIDP Weekly Run` が登録される | pass / fail | |
 | `launch.bat` | Streamlit 起動 | pass / fail | |
+| Mac tunnel health | `http://127.0.0.1:18501/_stcore/health` が `ok` | pass / fail / n/a | |
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
