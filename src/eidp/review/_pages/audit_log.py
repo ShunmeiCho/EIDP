@@ -24,6 +24,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -31,6 +32,8 @@ from sqlalchemy.orm import Session
 from eidp.db.audit_outbox import flush_audit_outbox
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Document, ManualActionLog
+
+JSONValue = dict[str, object] | list[object] | str | int | float | bool | None
 
 
 @dataclass(frozen=True)
@@ -46,8 +49,8 @@ class ActionRow:
     target_id: int | None
     document_id: int | None
     reason: str | None
-    old_value: dict | list | str | int | float | bool | None
-    new_value: dict | list | str | int | float | bool | None
+    old_value: JSONValue
+    new_value: JSONValue
     jsonl_exported_at: str | None
 
 
@@ -108,11 +111,11 @@ TARGET_TABLES: tuple[str, ...] = (
 )
 
 
-def _maybe_parse_json(value: str | None):
+def _maybe_parse_json(value: str | None) -> JSONValue:
     if value is None:
         return None
     try:
-        return json.loads(value)
+        return cast(JSONValue, json.loads(value))
     except json.JSONDecodeError:
         return value
 

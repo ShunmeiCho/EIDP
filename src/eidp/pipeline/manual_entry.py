@@ -47,6 +47,7 @@ from eidp.db.models import (
 
 ManualMethod = Literal["manual", "ocr_tesseract"]
 DeptChangeType = Literal["新設", "廃科", "名称変更", "統合"]
+JSONValue = dict[str, object] | list[object] | str | int | float | bool | None
 
 ALLOWED_METHODS: frozenset[str] = frozenset({"manual", "ocr_tesseract"})
 
@@ -207,7 +208,7 @@ def save_manual_entries(
     fiscal_year: int,
     entries: list[DepartmentEntry],
     method: ManualMethod = "manual",
-    confidence_breakdown: dict | None = None,
+    confidence_breakdown: dict[str, JSONValue] | None = None,
     actor: str = "operator",
     reason: str | None = None,
 ) -> ManualEntryResult:
@@ -267,10 +268,8 @@ def save_manual_entries(
         extraction_confidence = 1.0
     else:
         # OCR — caller supplies a breakdown; surface its synthesized score.
-        extraction_confidence = (
-            float(confidence_breakdown.get("score", 0.85))
-            if confidence_breakdown else 0.85
-        )
+        score = confidence_breakdown.get("score", 0.85) if confidence_breakdown else 0.85
+        extraction_confidence = float(score) if isinstance(score, int | float | str) else 0.85
 
     breakdown_text = (
         _json.dumps(confidence_breakdown, ensure_ascii=False, sort_keys=True)
