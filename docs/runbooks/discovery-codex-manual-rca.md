@@ -29,6 +29,7 @@ For each school, collect these facts before opening the web:
 Useful local commands:
 
 ```bash
+EIDP_DATABASE_URL=sqlite:////absolute/path/to/evidence-db.sqlite3 \
 uv run eidp summarize-discovery-evidence \
   --evidence-log path/to/evidence.jsonl \
   --prefecture 埼玉県 \
@@ -53,6 +54,12 @@ uv run eidp discovery-rca-batch-plan \
   --include-prompts \
   --json
 ```
+
+When `--prefecture` or `--discovery-method` is used, point
+`EIDP_DATABASE_URL` at the same copied database that produced the evidence log.
+If that database is missing or unmigrated, the command cannot calculate the
+expected school-site scope. Omit those scope options only for evidence-row-only
+summaries.
 
 ## RCA Order
 

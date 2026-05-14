@@ -362,6 +362,40 @@ def test_summarize_discovery_evidence_cli_reads_configured_db_scope(tmp_path: Pa
     }
 
 
+def test_summarize_discovery_evidence_cli_reports_actionable_db_scope_error(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(evidence_path, [{"school_id": 1, "reason": "no_candidates_found"}])
+    engine = create_engine("sqlite:///:memory:")
+
+    import eidp.db.session as db_session
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: Session(engine))
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "summarize-discovery-evidence",
+            "--evidence-log",
+            str(evidence_path),
+            "--prefecture",
+            "埼玉県",
+            "--discovery-method",
+            "prefecture_aggregator",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Could not load discovery RCA scope from the configured database." in result.output
+    assert "Set EIDP_DATABASE_URL" in result.output
+    assert "omit --prefecture and --discovery-method" in result.output
+    assert "no such table: school_site" in result.output
+    assert "Traceback" not in result.output
+
+
 def test_load_pdf_discovery_site_scope_can_filter_school_type() -> None:
     from eidp.scraper.discovery_evidence_summary import load_pdf_discovery_site_scope
 

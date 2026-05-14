@@ -164,6 +164,27 @@ def _reject_relative_path_traversal(path: Path, *, label: str) -> None:
         raise typer.Exit(1)
 
 
+def _database_error_detail(exc: Exception) -> str:
+    original = getattr(exc, "orig", None)
+    if original is not None:
+        return f"{type(original).__name__}: {original}"
+    return str(exc).splitlines()[0]
+
+
+def _echo_discovery_database_error(exc: Exception, *, evidence_only_hint: bool) -> None:
+    typer.echo("Could not load discovery RCA scope from the configured database.", err=True)
+    typer.echo(
+        "Set EIDP_DATABASE_URL to the SQLite database that produced the evidence log and ensure migrations ran.",
+        err=True,
+    )
+    if evidence_only_hint:
+        typer.echo(
+            "To summarize evidence rows without DB scope, omit --prefecture and --discovery-method.",
+            err=True,
+        )
+    typer.echo(f"Database error: {_database_error_detail(exc)}", err=True)
+
+
 def summarize_discovery_evidence(
     evidence_log: Path = typer.Option(..., help="discover-pdfs evidence JSONL to summarize"),
     prefecture: str = typer.Option("", help="Optional DB scope: school.prefecture"),
@@ -183,6 +204,8 @@ def summarize_discovery_evidence(
     rows = load_pdf_discovery_evidence(evidence_log)
     site_scope = None
     if prefecture or discovery_method:
+        from sqlalchemy.exc import SQLAlchemyError
+
         from eidp.db.session import SessionLocal
 
         session = SessionLocal()
@@ -192,6 +215,9 @@ def summarize_discovery_evidence(
                 prefecture=prefecture,
                 discovery_method=discovery_method,
             )
+        except SQLAlchemyError as exc:
+            _echo_discovery_database_error(exc, evidence_only_hint=True)
+            raise typer.Exit(1) from exc
         finally:
             session.close()
 
@@ -230,6 +256,8 @@ def discovery_rca_packet(
     if evidence_log is not None:
         _reject_relative_path_traversal(evidence_log, label="--evidence-log")
 
+    from sqlalchemy.exc import SQLAlchemyError
+
     from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.discovery_rca_packet import (
@@ -249,6 +277,9 @@ def discovery_rca_packet(
         )
     except ValueError as exc:
         typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+    except SQLAlchemyError as exc:
+        _echo_discovery_database_error(exc, evidence_only_hint=False)
         raise typer.Exit(1) from exc
     finally:
         session.close()
@@ -284,6 +315,8 @@ def discovery_rca_batch_plan(
     """Build a prioritized read-only batch of single-school RCA packets."""
     _reject_relative_path_traversal(evidence_log, label="--evidence-log")
 
+    from sqlalchemy.exc import SQLAlchemyError
+
     from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.discovery_rca_packet import (
@@ -303,6 +336,9 @@ def discovery_rca_batch_plan(
             known_operator_note=known_operator_note,
             include_prompts=include_prompts,
         )
+    except SQLAlchemyError as exc:
+        _echo_discovery_database_error(exc, evidence_only_hint=False)
+        raise typer.Exit(1) from exc
     finally:
         session.close()
 
