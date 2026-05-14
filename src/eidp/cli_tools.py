@@ -220,6 +220,11 @@ def diff_excel(
         help="Path to original reference Excel",
     ),
     values: bool = typer.Option(False, "--values", help="Compare cell values instead of only sheet row counts."),
+    business_values: bool = typer.Option(
+        False,
+        "--business-values",
+        help="Compare supported sheets after aligning rows by business keys.",
+    ),
     fail_on_diff: bool = typer.Option(False, "--fail-on-diff", help="Exit non-zero when differences are found."),
     max_diffs: int = typer.Option(20, "--max-diffs", help="Maximum value-diff samples to print."),
     numeric_tolerance: float = typer.Option(
@@ -229,12 +234,48 @@ def diff_excel(
     ),
 ) -> None:
     """Compare exported vs original Excel workbooks."""
-    from eidp.excel.exporter import diff_workbook_values, diff_workbooks
+    from eidp.excel.exporter import diff_workbook_business_values, diff_workbook_values, diff_workbooks
 
     if max_diffs < 0:
         raise typer.BadParameter("--max-diffs must be non-negative")
     if numeric_tolerance < 0:
         raise typer.BadParameter("--numeric-tolerance must be non-negative")
+    if values and business_values:
+        raise typer.BadParameter("--values and --business-values are mutually exclusive")
+
+    if business_values:
+        business_result = diff_workbook_business_values(
+            exported,
+            original,
+            max_diffs=max_diffs,
+            numeric_tolerance=numeric_tolerance,
+        )
+        typer.echo("Workbook business-value comparison (exported vs original):")
+        typer.echo(f"  missing_sheets: {len(business_result['missing_sheets'])}")
+        for sheet in business_result["missing_sheets"]:
+            typer.echo(f"    missing: {sheet}")
+        typer.echo(f"  extra_sheets: {len(business_result['extra_sheets'])}")
+        for sheet in business_result["extra_sheets"]:
+            typer.echo(f"    extra: {sheet}")
+        typer.echo(f"  missing_rows: {business_result['missing_rows']}")
+        typer.echo(f"  extra_rows: {business_result['extra_rows']}")
+        typer.echo(f"  differing_fields: {business_result['differing_fields']}")
+        for sheet, fields in business_result["missing_fields"].items():
+            if fields:
+                typer.echo(f"  missing_fields[{sheet}]: {', '.join(fields)}")
+        for sheet, fields in business_result["extra_fields"].items():
+            if fields:
+                typer.echo(f"  extra_fields[{sheet}]: {', '.join(fields)}")
+        if business_result["samples"]:
+            typer.echo("  samples:")
+            for business_sample in business_result["samples"]:
+                typer.echo(
+                    f"    {business_sample['sheet']} | {business_sample['key']} | {business_sample['field']}: "
+                    f"exported={business_sample['exported']!r} original={business_sample['original']!r}"
+                )
+        if fail_on_diff and not business_result["ok"]:
+            raise typer.Exit(1)
+        return
 
     if values:
         value_result = diff_workbook_values(
@@ -253,10 +294,10 @@ def diff_excel(
         typer.echo(f"  differing_cells: {value_result['differing_cells']}")
         if value_result["samples"]:
             typer.echo("  samples:")
-            for sample in value_result["samples"]:
+            for value_sample in value_result["samples"]:
                 typer.echo(
-                    f"    {sample['sheet']}!{sample['cell']}: "
-                    f"exported={sample['exported']!r} original={sample['original']!r}"
+                    f"    {value_sample['sheet']}!{value_sample['cell']}: "
+                    f"exported={value_sample['exported']!r} original={value_sample['original']!r}"
                 )
         if fail_on_diff and not value_result["ok"]:
             raise typer.Exit(1)

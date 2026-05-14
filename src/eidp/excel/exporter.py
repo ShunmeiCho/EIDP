@@ -69,6 +69,31 @@ class WorkbookValueDiff(TypedDict):
     samples: list[WorkbookValueDiffSample]
 
 
+class WorkbookBusinessDiffSample(TypedDict):
+    sheet: str
+    key: str
+    field: str
+    exported: object
+    original: object
+
+
+class WorkbookBusinessDiff(TypedDict):
+    ok: bool
+    missing_sheets: list[str]
+    extra_sheets: list[str]
+    missing_rows: int
+    extra_rows: int
+    differing_fields: int
+    missing_fields: dict[str, list[str]]
+    extra_fields: dict[str, list[str]]
+    samples: list[WorkbookBusinessDiffSample]
+
+
+type BusinessKey = tuple[object, ...]
+type BusinessRow = dict[str, object]
+type BusinessTable = dict[BusinessKey, BusinessRow]
+
+
 def _exportable_confidence_sql(alias: str) -> str:
     return (
         f"({alias}.extraction_confidence IS NULL "
@@ -639,6 +664,192 @@ def diff_workbook_values(
             "missing_sheets": missing_sheets,
             "extra_sheets": extra_sheets,
             "differing_cells": differing_cells,
+            "samples": samples,
+        }
+    finally:
+        wb_exp.close()
+        wb_orig.close()
+
+
+_BUSINESS_DIFF_SHEETS = ("対象比率", "在籍のみ抜粋")
+
+
+def _stringify_key(key: BusinessKey) -> str:
+    return " | ".join("" if part is None else str(part) for part in key)
+
+
+def _normalize_business_value(value: object) -> object:
+    return "" if value is None else value
+
+
+def _load_taisho_business_table(worksheet: Any) -> tuple[BusinessTable, list[str]]:
+    rows = list(worksheet.iter_rows(values_only=True))
+    if not rows:
+        return {}, []
+    metrics = [
+        "前年在籍",
+        "前半期",
+        "前半期_第Ⅰ区分",
+        "前半期_第Ⅱ区分",
+        "前半期_第Ⅲ区分",
+        "前半期_第Ⅳ区分",
+        "後半期",
+        "後半期_第Ⅰ区分",
+        "後半期_第Ⅱ区分",
+        "後半期_第Ⅲ区分",
+        "後半期_第Ⅳ区分",
+        "年間",
+        "家計急変多子世帯",
+        "総計",
+        "備考",
+        "受給比率",
+    ]
+    metric_columns = dict(zip(metrics, range(6, 22), strict=False))
+    table: BusinessTable = {}
+    for raw in rows[1:]:
+        row = tuple(raw)
+        if not any(value is not None for value in row):
+            continue
+        key = tuple(row[index] if index < len(row) else None for index in (1, 3, 4, 5))
+        table[key] = {
+            metric: _normalize_business_value(row[index] if index < len(row) else None)
+            for metric, index in metric_columns.items()
+        }
+    return table, list(metric_columns)
+
+
+def _forward_fill(values: tuple[object, ...]) -> list[object]:
+    filled: list[object] = []
+    current: object = None
+    for value in values:
+        if value is not None:
+            current = value
+        filled.append(current)
+    return filled
+
+
+def _load_zaiseki_business_table(worksheet: Any) -> tuple[BusinessTable, list[str]]:
+    rows = list(worksheet.iter_rows(values_only=True))
+    if len(rows) < 2:
+        return {}, []
+    group_row = _forward_fill(tuple(rows[0]))
+    year_row = tuple(rows[1])
+    field_columns: list[tuple[str, int]] = []
+    for index in range(7, max(len(group_row), len(year_row))):
+        group = group_row[index] if index < len(group_row) else None
+        year = year_row[index] if index < len(year_row) else None
+        if group in {"在籍者数", "留学生数"} and year is not None:
+            field_columns.append((f"{group}:{year}", index))
+
+    table: BusinessTable = {}
+    for raw in rows[2:]:
+        row = tuple(raw)
+        if not any(value is not None for value in row):
+            continue
+        key = tuple(row[index] if index < len(row) else None for index in range(7))
+        table[key] = {
+            field: _normalize_business_value(row[index] if index < len(row) else None)
+            for field, index in field_columns
+        }
+    return table, [field for field, _index in field_columns]
+
+
+def _load_business_table(worksheet: Any, sheet: str) -> tuple[BusinessTable, list[str]]:
+    if sheet == "対象比率":
+        return _load_taisho_business_table(worksheet)
+    if sheet == "在籍のみ抜粋":
+        return _load_zaiseki_business_table(worksheet)
+    raise ValueError(f"unsupported business diff sheet: {sheet}")
+
+
+def diff_workbook_business_values(
+    exported_path: Path,
+    original_path: Path,
+    *,
+    sheets: list[str] | None = None,
+    max_diffs: int = 20,
+    numeric_tolerance: float = 0.0,
+) -> WorkbookBusinessDiff:
+    """Compare Excel values after aligning rows by business keys."""
+    if max_diffs < 0:
+        raise ValueError("max_diffs must be non-negative")
+    if numeric_tolerance < 0:
+        raise ValueError("numeric_tolerance must be non-negative")
+
+    target_sheets = list(_BUSINESS_DIFF_SHEETS if sheets is None else sheets)
+    unsupported = sorted(set(target_sheets) - set(_BUSINESS_DIFF_SHEETS))
+    if unsupported:
+        raise ValueError(f"unsupported business diff sheets: {', '.join(unsupported)}")
+
+    wb_exp = openpyxl.load_workbook(exported_path, read_only=True, data_only=True)
+    wb_orig = openpyxl.load_workbook(original_path, read_only=True, data_only=True)
+    try:
+        exp_sheets = set(wb_exp.sheetnames)
+        orig_sheets = set(wb_orig.sheetnames)
+        missing_sheets = [sheet for sheet in target_sheets if sheet in orig_sheets and sheet not in exp_sheets]
+        extra_sheets = [sheet for sheet in target_sheets if sheet in exp_sheets and sheet not in orig_sheets]
+        missing_fields: dict[str, list[str]] = {}
+        extra_fields: dict[str, list[str]] = {}
+        missing_rows = 0
+        extra_rows = 0
+        differing_fields = 0
+        samples: list[WorkbookBusinessDiffSample] = []
+
+        for sheet in target_sheets:
+            if sheet not in exp_sheets or sheet not in orig_sheets:
+                continue
+            exp_table, exp_fields = _load_business_table(wb_exp[sheet], sheet)
+            orig_table, orig_fields = _load_business_table(wb_orig[sheet], sheet)
+            exp_field_set = set(exp_fields)
+            orig_field_set = set(orig_fields)
+            missing_fields[sheet] = sorted(orig_field_set - exp_field_set)
+            extra_fields[sheet] = sorted(exp_field_set - orig_field_set)
+            common_fields = [field for field in exp_fields if field in orig_field_set]
+
+            exp_keys = set(exp_table)
+            orig_keys = set(orig_table)
+            missing_row_keys = sorted(orig_keys - exp_keys, key=_stringify_key)
+            extra_row_keys = sorted(exp_keys - orig_keys, key=_stringify_key)
+            missing_rows += len(missing_row_keys)
+            extra_rows += len(extra_row_keys)
+
+            for key in sorted(exp_keys & orig_keys, key=_stringify_key):
+                exp_row = exp_table[key]
+                orig_row = orig_table[key]
+                for field in common_fields:
+                    exported = exp_row.get(field, "")
+                    original = orig_row.get(field, "")
+                    if _cell_values_equal(exported, original, numeric_tolerance=numeric_tolerance):
+                        continue
+                    differing_fields += 1
+                    if len(samples) < max_diffs:
+                        samples.append(
+                            {
+                                "sheet": sheet,
+                                "key": _stringify_key(key),
+                                "field": field,
+                                "exported": exported,
+                                "original": original,
+                            }
+                        )
+
+        return {
+            "ok": (
+                not missing_sheets
+                and not extra_sheets
+                and missing_rows == 0
+                and extra_rows == 0
+                and differing_fields == 0
+                and all(not fields for fields in missing_fields.values())
+                and all(not fields for fields in extra_fields.values())
+            ),
+            "missing_sheets": missing_sheets,
+            "extra_sheets": extra_sheets,
+            "missing_rows": missing_rows,
+            "extra_rows": extra_rows,
+            "differing_fields": differing_fields,
+            "missing_fields": missing_fields,
+            "extra_fields": extra_fields,
             "samples": samples,
         }
     finally:

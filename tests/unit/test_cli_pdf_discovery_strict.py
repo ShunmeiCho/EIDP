@@ -60,6 +60,115 @@ def test_diff_excel_values_mode_exits_nonzero_when_cells_differ(tmp_path: Path) 
     assert "Common!B2" in result.output
 
 
+def test_diff_excel_business_values_mode_exits_nonzero_when_fields_differ(tmp_path: Path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    header = [
+        "番号",
+        "年度",
+        "学校番号",
+        "都道府県",
+        "法人名",
+        "学校名",
+        "前年在籍",
+        "前半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "後半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "年間",
+        "家計急変多子世帯",
+        "総計",
+        "備考",
+        "受給比率",
+    ]
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "対象比率"
+    worksheet.append(header)
+    exported_row = [
+        1,
+        "2025年度",
+        None,
+        "東京都",
+        "片柳学園",
+        "日本工学院専門学校",
+        6319,
+        0,
+        None,
+        None,
+        None,
+        None,
+        0,
+        None,
+        None,
+        None,
+        None,
+        101,
+        0,
+        101,
+        None,
+        0.0160,
+    ]
+    worksheet.append(exported_row)
+    workbook.save(exported)
+    workbook.close()
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "対象比率"
+    worksheet.append(header)
+    original_row = [
+        None,
+        "2025年度",
+        None,
+        "東京都",
+        "片柳学園",
+        "日本工学院専門学校",
+        6319,
+        0,
+        None,
+        None,
+        None,
+        None,
+        0,
+        None,
+        None,
+        None,
+        None,
+        100,
+        0,
+        100,
+        None,
+        0.0158,
+    ]
+    worksheet.append(original_row)
+    workbook.save(original)
+    workbook.close()
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "diff-excel",
+            str(exported),
+            "--original",
+            str(original),
+            "--business-values",
+            "--fail-on-diff",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Workbook business-value comparison" in result.output
+    assert "differing_fields: 3" in result.output
+    assert "対象比率 | 2025年度 | 東京都 | 片柳学園 | 日本工学院専門学校 | 年間" in result.output
+
+
 def test_discover_pdfs_cli_uses_strict_target_fiscal_year(monkeypatch, tmp_path: Path) -> None:
     calls: dict[str, object] = {}
     fake_session = FakeSession()

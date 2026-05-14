@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, School, SupportRecipient
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.excel.exporter import _write_sairoku, diff_workbook_values, export_master_workbook
+from eidp.excel.exporter import (
+    _write_sairoku,
+    diff_workbook_business_values,
+    diff_workbook_values,
+    export_master_workbook,
+)
 
 
 def _write_cells(path, sheets: dict[str, list[list[object]]]) -> None:
@@ -91,6 +96,171 @@ def test_diff_workbook_values_handles_sparse_dimensions(tmp_path) -> None:
     assert result["samples"] == [
         {"sheet": "Common", "cell": "A2", "exported": 1, "original": None},
         {"sheet": "Common", "cell": "A500", "exported": None, "original": "tail"},
+    ]
+
+
+def test_diff_workbook_business_values_aligns_zaiseki_year_fields_by_key(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    key = ["東京都", "片柳学園", "日本工学院専門学校", "工業", "ITスペシャリスト科", "昼", 4]
+    _write_cells(
+        original,
+        {
+            "在籍のみ抜粋": [
+                [None, None, None, None, None, None, None, "在籍者数", None, "留学生数", None],
+                [
+                    "都道府県",
+                    "法人名",
+                    "学校名",
+                    "課程名",
+                    "学科名",
+                    "昼夜",
+                    "年限",
+                    "2019年度",
+                    "2020年度",
+                    "2019年度",
+                    "2020年度",
+                ],
+                [*key, 355, 407, 1, 4],
+            ]
+        },
+    )
+    _write_cells(
+        exported,
+        {
+            "在籍のみ抜粋": [
+                [None, None, None, None, None, None, None, "在籍者数", None, None, "留学生数", None, None],
+                [
+                    "都道府県",
+                    "法人名",
+                    "学校名",
+                    "課程名",
+                    "学科名",
+                    "昼夜",
+                    "年限",
+                    "2019年度",
+                    "2020年度",
+                    "2021年度",
+                    "2019年度",
+                    "2020年度",
+                    "2021年度",
+                ],
+                [*key, 355, 407, 428, 1, 4, 2],
+            ]
+        },
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["在籍のみ抜粋"])
+
+    assert result["differing_fields"] == 0
+    assert result["extra_fields"] == {"在籍のみ抜粋": ["在籍者数:2021年度", "留学生数:2021年度"]}
+    assert result["samples"] == []
+
+
+def test_diff_workbook_business_values_reports_taisho_metric_diff(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    header = [
+        "番号",
+        "年度",
+        "学校番号",
+        "都道府県",
+        "法人名",
+        "学校名",
+        "前年在籍",
+        "前半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "後半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "年間",
+        "家計急変多子世帯",
+        "総計",
+        "備考",
+        "受給比率",
+    ]
+    original_row = [
+        None,
+        "2025年度",
+        None,
+        "東京都",
+        "片柳学園",
+        "日本工学院専門学校",
+        6319,
+        0,
+        None,
+        None,
+        None,
+        None,
+        0,
+        None,
+        None,
+        None,
+        None,
+        100,
+        0,
+        100,
+        None,
+        0.0158,
+    ]
+    exported_row = [
+        1,
+        "2025年度",
+        None,
+        "東京都",
+        "片柳学園",
+        "日本工学院専門学校",
+        6319,
+        0,
+        None,
+        None,
+        None,
+        None,
+        0,
+        None,
+        None,
+        None,
+        None,
+        101,
+        0,
+        101,
+        None,
+        0.0160,
+    ]
+    _write_cells(
+        original,
+        {"対象比率": [header, original_row]},
+    )
+    _write_cells(
+        exported,
+        {"対象比率": [header, exported_row]},
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["対象比率"], max_diffs=2)
+
+    assert result["missing_rows"] == 0
+    assert result["extra_rows"] == 0
+    assert result["differing_fields"] == 3
+    assert result["samples"] == [
+        {
+            "sheet": "対象比率",
+            "key": "2025年度 | 東京都 | 片柳学園 | 日本工学院専門学校",
+            "field": "年間",
+            "exported": 101,
+            "original": 100,
+        },
+        {
+            "sheet": "対象比率",
+            "key": "2025年度 | 東京都 | 片柳学園 | 日本工学院専門学校",
+            "field": "総計",
+            "exported": 101,
+            "original": 100,
+        },
     ]
 
 
