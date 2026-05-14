@@ -306,6 +306,7 @@ def test_manual_queue_summary_and_table_explain_next_actions(engine):
         summary = manual_queue_summary(rows, target_fiscal_year=2026)
         table = manual_queue_table(rows, target_fiscal_year=2026)
         actions_by_doc = {int(row["doc"]): row["次の作業"] for row in table}
+        year_by_doc = {int(row["doc"]): row["年度"] for row in table}
         old_doc_id = int(old_doc.id)
         target_doc_id = int(target_doc.id)
         unknown_doc_id = int(unknown_doc.id)
@@ -320,6 +321,7 @@ def test_manual_queue_summary_and_table_explain_next_actions(engine):
     assert actions_by_doc[old_doc_id] == "旧年度診断"
     assert actions_by_doc[target_doc_id] == "OCR/手入力"
     assert actions_by_doc[unknown_doc_id] == "年度確認"
+    assert year_by_doc[unknown_doc_id] == "年度未確定"
     assert actions_by_doc[ingested_doc_id] == "抽出結果確認"
     assert table[0]["年度"] == "旧年度"
     assert table[0]["学校"] == "Action学校"
@@ -556,6 +558,24 @@ def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
     assert candidate_row["PDF本文年度"] == "2026"
     assert discovery_reason_label("fiscal_year_mismatch:2025") == "旧年度/別年度のため保留 (2025)"
 
+    yearless_candidate = DiscoveryEvidenceRow(
+        pdf_url="https://example.ac.jp/no-year.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        site_url="https://example.ac.jp/disclosure/",
+        discovery_method="prefecture_aggregator",
+        target_fiscal_year="2026",
+        reason="accepted_downloaded",
+        anchor_text="修学支援 確認申請書",
+        pattern_type="direct",
+        score=8.0,
+        pdf_type="target",
+        detected_fiscal_year="",
+        year_evidence="target_application_no_year",
+        timestamp="2026-05-06T00:02:00Z",
+    )
+
+    assert discovery_evidence_table_rows([yearless_candidate])[0]["年度根拠"] == "対象申請書候補（年度未確認）"
+
 
 def test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints() -> None:
     base_row = QueueRow(
@@ -607,6 +627,23 @@ def test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints() ->
     )
     assert "PDF本文は 2025年度" in conflict_summary
     assert "対象年度と異なる" in conflict_summary
+
+    yearless_summary = fiscal_year_evidence_summary(
+        QueueRow(**{**base_row.__dict__, "source_url": "https://example.ac.jp/no-year.pdf"}),
+        [
+            DiscoveryEvidenceRow(
+                **{
+                    **evidence[0].__dict__,
+                    "pdf_url": "https://example.ac.jp/no-year.pdf",
+                    "anchor_text": "修学支援 確認申請書",
+                    "year_evidence": "target_application_no_year",
+                }
+            )
+        ],
+        target_fiscal_year=2026,
+    )
+    assert "対象申請書候補ですが年度は未確認" in yearless_summary
+    assert "OCRまたは手入力で確認" in yearless_summary
 
 
 def test_render_page_smoke_with_focused_discovery_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
