@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import openpyxl
 from typer.testing import CliRunner
 
 from eidp.cli import app
@@ -22,6 +23,41 @@ class FakeSession:
 
     def close(self) -> None:
         self.closed = True
+
+
+def _write_cli_workbook(path: Path, rows: list[list[object]]) -> None:
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Common"
+    for row_index, row in enumerate(rows, start=1):
+        for col_index, value in enumerate(row, start=1):
+            worksheet.cell(row=row_index, column=col_index).value = value
+    workbook.save(path)
+    workbook.close()
+
+
+def test_diff_excel_values_mode_exits_nonzero_when_cells_differ(tmp_path: Path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    _write_cli_workbook(exported, [["学校", "定員"], ["A専門学校", 101]])
+    _write_cli_workbook(original, [["学校", "定員"], ["A専門学校", 100]])
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "diff-excel",
+            str(exported),
+            "--original",
+            str(original),
+            "--values",
+            "--fail-on-diff",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Workbook value comparison" in result.output
+    assert "differing_cells: 1" in result.output
+    assert "Common!B2" in result.output
 
 
 def test_discover_pdfs_cli_uses_strict_target_fiscal_year(monkeypatch, tmp_path: Path) -> None:

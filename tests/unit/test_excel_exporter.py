@@ -9,7 +9,89 @@ from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, School, SupportRecipient
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
-from eidp.excel.exporter import _write_sairoku, export_master_workbook
+from eidp.excel.exporter import _write_sairoku, diff_workbook_values, export_master_workbook
+
+
+def _write_cells(path, sheets: dict[str, list[list[object]]]) -> None:
+    workbook = openpyxl.Workbook()
+    default = workbook.active
+    workbook.remove(default)
+    for sheet_name, rows in sheets.items():
+        worksheet = workbook.create_sheet(sheet_name)
+        for row_index, row in enumerate(rows, start=1):
+            for col_index, value in enumerate(row, start=1):
+                worksheet.cell(row=row_index, column=col_index).value = value
+    workbook.save(path)
+    workbook.close()
+
+
+def test_diff_workbook_values_reports_cell_and_sheet_differences(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    _write_cells(
+        exported,
+        {
+            "Common": [["学校", "定員"], ["A専門学校", 101]],
+            "ExportedOnly": [["extra"]],
+        },
+    )
+    _write_cells(
+        original,
+        {
+            "Common": [["学校", "定員"], ["A専門学校", 100]],
+            "OriginalOnly": [["missing"]],
+        },
+    )
+
+    result = diff_workbook_values(exported, original, max_diffs=5)
+
+    assert result["ok"] is False
+    assert result["missing_sheets"] == ["OriginalOnly"]
+    assert result["extra_sheets"] == ["ExportedOnly"]
+    assert result["differing_cells"] == 1
+    assert result["samples"] == [
+        {
+            "sheet": "Common",
+            "cell": "B2",
+            "exported": 101,
+            "original": 100,
+        }
+    ]
+
+
+def test_diff_workbook_values_honors_numeric_tolerance(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    _write_cells(exported, {"Common": [["value"], [100.0001]]})
+    _write_cells(original, {"Common": [["value"], [100.0]]})
+
+    result = diff_workbook_values(exported, original, numeric_tolerance=0.001)
+
+    assert result["ok"] is True
+    assert result["differing_cells"] == 0
+
+
+def test_diff_workbook_values_handles_sparse_dimensions(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    _write_cells(exported, {"Common": [["value"], [1]]})
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Common"
+    worksheet.cell(row=1, column=1).value = "value"
+    worksheet.cell(row=500, column=1).value = "tail"
+    workbook.save(original)
+    workbook.close()
+
+    result = diff_workbook_values(exported, original, max_diffs=2)
+
+    assert result["ok"] is False
+    assert result["differing_cells"] == 2
+    assert result["samples"] == [
+        {"sheet": "Common", "cell": "A2", "exported": 1, "original": None},
+        {"sheet": "Common", "cell": "A500", "exported": None, "original": "tail"},
+    ]
 
 
 def test_excel_exporter_confidence_thresholds_follow_central_env(monkeypatch) -> None:

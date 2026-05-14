@@ -7,7 +7,10 @@ Produces 4 sheets matching the legacy format:
   Sheet 4: 在籍のみ抜粋 (one-year-lag enrollment blocks, multi-row header)
 """
 
+from collections.abc import Iterator
+from itertools import zip_longest
 from pathlib import Path
+from typing import Any, TypedDict, TypeGuard
 
 import openpyxl  # type: ignore[import-untyped]
 import structlog
@@ -49,6 +52,21 @@ LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"
 ExcelCell = object
 ExcelRow = list[ExcelCell]
 YearlyData = tuple[ExcelCell, ...]
+
+
+class WorkbookValueDiffSample(TypedDict):
+    sheet: str
+    cell: str
+    exported: object
+    original: object
+
+
+class WorkbookValueDiff(TypedDict):
+    ok: bool
+    missing_sheets: list[str]
+    extra_sheets: list[str]
+    differing_cells: int
+    samples: list[WorkbookValueDiffSample]
 
 
 def _exportable_confidence_sql(alias: str) -> str:
@@ -534,3 +552,95 @@ def diff_workbooks(exported_path: Path, original_path: Path) -> dict[str, dict[s
     wb_orig.close()
 
     return results
+
+
+def _is_number(value: object) -> TypeGuard[int | float]:
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _cell_values_equal(exported: object, original: object, *, numeric_tolerance: float) -> bool:
+    if exported == original:
+        return True
+    if numeric_tolerance > 0 and _is_number(exported) and _is_number(original):
+        return abs(float(exported) - float(original)) <= numeric_tolerance
+    return False
+
+
+def _excel_cell_ref(row: int, column: int) -> str:
+    letters = ""
+    current = column
+    while current:
+        current, remainder = divmod(current - 1, 26)
+        letters = f"{chr(65 + remainder)}{letters}"
+    return f"{letters}{row}"
+
+
+def _iter_sheet_values(worksheet: Any, *, max_row: int, max_column: int) -> Iterator[tuple[object, ...]]:
+    for row in worksheet.iter_rows(min_row=1, max_row=max_row, max_col=max_column, values_only=True):
+        yield tuple(row)
+
+
+def diff_workbook_values(
+    exported_path: Path,
+    original_path: Path,
+    *,
+    max_diffs: int = 20,
+    numeric_tolerance: float = 0.0,
+) -> WorkbookValueDiff:
+    """Compare cell values between exported and original Excel workbooks."""
+    if max_diffs < 0:
+        raise ValueError("max_diffs must be non-negative")
+    if numeric_tolerance < 0:
+        raise ValueError("numeric_tolerance must be non-negative")
+
+    wb_exp = openpyxl.load_workbook(exported_path, read_only=True, data_only=True)
+    wb_orig = openpyxl.load_workbook(original_path, read_only=True, data_only=True)
+
+    try:
+        exp_sheets = set(wb_exp.sheetnames)
+        orig_sheets = set(wb_orig.sheetnames)
+        missing_sheets = sorted(orig_sheets - exp_sheets)
+        extra_sheets = sorted(exp_sheets - orig_sheets)
+        samples: list[WorkbookValueDiffSample] = []
+        differing_cells = 0
+
+        for name in sorted(exp_sheets & orig_sheets):
+            ws_exp = wb_exp[name]
+            ws_orig = wb_orig[name]
+            max_row = max(ws_exp.max_row or 0, ws_orig.max_row or 0)
+            max_column = max(ws_exp.max_column or 0, ws_orig.max_column or 0)
+            exported_rows = _iter_sheet_values(ws_exp, max_row=max_row, max_column=max_column)
+            original_rows = _iter_sheet_values(ws_orig, max_row=max_row, max_column=max_column)
+            empty_row: tuple[object, ...] = ()
+            for row_index, (exported_row, original_row) in enumerate(
+                zip_longest(exported_rows, original_rows, fillvalue=empty_row),
+                start=1,
+            ):
+                if exported_row == original_row:
+                    continue
+                for column_index in range(1, max_column + 1):
+                    exported = exported_row[column_index - 1] if column_index <= len(exported_row) else None
+                    original = original_row[column_index - 1] if column_index <= len(original_row) else None
+                    if _cell_values_equal(exported, original, numeric_tolerance=numeric_tolerance):
+                        continue
+                    differing_cells += 1
+                    if len(samples) < max_diffs:
+                        samples.append(
+                            {
+                                "sheet": name,
+                                "cell": _excel_cell_ref(row_index, column_index),
+                                "exported": exported,
+                                "original": original,
+                            }
+                        )
+
+        return {
+            "ok": not missing_sheets and not extra_sheets and differing_cells == 0,
+            "missing_sheets": missing_sheets,
+            "extra_sheets": extra_sheets,
+            "differing_cells": differing_cells,
+            "samples": samples,
+        }
+    finally:
+        wb_exp.close()
+        wb_orig.close()

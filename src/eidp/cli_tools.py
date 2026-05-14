@@ -219,17 +219,60 @@ def diff_excel(
         Path("sample/◆2025専門学校無償化情報公開まとめ.xlsx"),
         help="Path to original reference Excel",
     ),
+    values: bool = typer.Option(False, "--values", help="Compare cell values instead of only sheet row counts."),
+    fail_on_diff: bool = typer.Option(False, "--fail-on-diff", help="Exit non-zero when differences are found."),
+    max_diffs: int = typer.Option(20, "--max-diffs", help="Maximum value-diff samples to print."),
+    numeric_tolerance: float = typer.Option(
+        0.0,
+        "--numeric-tolerance",
+        help="Absolute tolerance for numeric value comparisons.",
+    ),
 ) -> None:
-    """Compare exported vs original Excel row counts per sheet."""
-    from eidp.excel.exporter import diff_workbooks
+    """Compare exported vs original Excel workbooks."""
+    from eidp.excel.exporter import diff_workbook_values, diff_workbooks
+
+    if max_diffs < 0:
+        raise typer.BadParameter("--max-diffs must be non-negative")
+    if numeric_tolerance < 0:
+        raise typer.BadParameter("--numeric-tolerance must be non-negative")
+
+    if values:
+        value_result = diff_workbook_values(
+            exported,
+            original,
+            max_diffs=max_diffs,
+            numeric_tolerance=numeric_tolerance,
+        )
+        typer.echo("Workbook value comparison (exported vs original):")
+        typer.echo(f"  missing_sheets: {len(value_result['missing_sheets'])}")
+        for sheet in value_result["missing_sheets"]:
+            typer.echo(f"    missing: {sheet}")
+        typer.echo(f"  extra_sheets: {len(value_result['extra_sheets'])}")
+        for sheet in value_result["extra_sheets"]:
+            typer.echo(f"    extra: {sheet}")
+        typer.echo(f"  differing_cells: {value_result['differing_cells']}")
+        if value_result["samples"]:
+            typer.echo("  samples:")
+            for sample in value_result["samples"]:
+                typer.echo(
+                    f"    {sample['sheet']}!{sample['cell']}: "
+                    f"exported={sample['exported']!r} original={sample['original']!r}"
+                )
+        if fail_on_diff and not value_result["ok"]:
+            raise typer.Exit(1)
+        return
 
     results = diff_workbooks(exported, original)
     typer.echo("Sheet comparison (exported vs original):")
     typer.echo(f"  {'Sheet':<16} {'Exported':>10} {'Original':>10} {'Diff':>8}")
     typer.echo(f"  {'-' * 16} {'-' * 10} {'-' * 10} {'-' * 8}")
+    has_diff = False
     for sheet, stats in results.items():
+        has_diff = has_diff or stats["diff"] != 0
         diff_str = f"{stats['diff']:+d}" if stats["diff"] != 0 else "0"
         typer.echo(f"  {sheet:<16} {stats['exported']:>10} {stats['original']:>10} {diff_str:>8}")
+    if fail_on_diff and has_diff:
+        raise typer.Exit(1)
 
 
 def eval_pdf(
