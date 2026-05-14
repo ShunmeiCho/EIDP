@@ -14,6 +14,7 @@ Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v408.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
@@ -68,6 +69,16 @@ tunnel `127.0.0.1:18508 -> 127.0.0.1:8508` with
 Streamlit HTML shell at `/`. The test Streamlit process and the tunnel were
 stopped afterward; `18508` had no listener, and Windows `8508` had no listening
 process remaining.
+
+The packaged default launcher path was also smoke-tested on v408. Running
+`EIDP-start.bat` from `C:\Users\cyo20\EIDP-v408-f0c27158` invoked
+`scripts\launch.bat`, started Streamlit on default Windows port `8501`, and the
+default Mac tunnel `127.0.0.1:18501 -> 127.0.0.1:8501` returned
+`/_stcore/health=ok` plus the Streamlit HTML shell at `/`. The process was then
+stopped intentionally; the launcher batch printed exit `-1` only because the
+foreground Streamlit process was force-stopped after the health proof. macOS
+`18501` had no listener afterward, and Windows `8501` had no listening process
+remaining.
 
 A Windows v408 retroactive R7/FY2025 CLI export smoke was run with process-local
 `EIDP_TARGET_FISCAL_YEAR=2025`. `eidp export-excel` wrote
@@ -317,8 +328,9 @@ Already supportable from v408 evidence: ZIP transfer and SHA256 match, clean
 schools, SQLite integrity, required-table presence, scheduled-task XML parsing,
 scheduled-task action confirmation for the v408 weekly runner, Windows-local
 Streamlit health, Mac tunnel health on `18508 -> 8508`, and Streamlit root HTML
-retrieval, plus R7 retroactive CLI Excel export and zero-diff comparison against
-the already proven v407 R7 export, and R7 retroactive browser workbook
+retrieval, default `EIDP-start.bat` launcher health on `18501 -> 8501`, plus R7
+retroactive CLI Excel export and zero-diff comparison against the already proven
+v407 R7 export, and R7 retroactive browser workbook
 generation/download with zero business-value diff against the v408 CLI export,
 plus sandbox browser writes for manual entry, fiscal-year override, `監査ログ`,
 and audit-outbox flush on `18510 -> 8510`, plus
@@ -354,7 +366,7 @@ Stage 6 template fill map for the v408 lane:
 | 1. 実施情報 | v408 commit `f0c2715833b54e60fea85259e16ad0a1d9e6c106`; `dist/eidp-windows-v408.zip`; SHA256 `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`; extract path `C:\Users\cyo20\EIDP-v408-f0c27158` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Current v408 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
 | 3. 証跡採取コマンド | v408 hash/setup/validate/recovery/UI-health, R7 browser Excel proof, UI write/audit sandbox proof, and verifier-accepted diagnostic evidence bundle are available; v407 historical seeded UI write proof is retained as supporting evidence | `EIDP-diagnose.bat` after the real click-through cycle; v408 final evidence bundle from the real operator cycle |
-| 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, Mac tunnel health, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle |
+| 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, default `EIDP-start.bat` / `18501 -> 8501` health, Mac tunnel health, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle |
 | 5. 4 工程 E2E | v408 R7 retroactive CLI export/diff proof exists and matches the proven v407 export exactly; v408 browser Excel preview/download produced the same business values as the v408 CLI export; a seeded disposable v408 UI sandbox proved manual-entry write and fiscal-year override write through the browser; v407 remains historical support for sandbox Excel preview workbook generation | Complete real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
 | 6. KPI 判定 | v408 setup evidence still shows FY2026 `excel_ready=0`; v408 R7 retroactive export/diff exists; v408 dry-run `last_run.json` has `status=success`, `dry_run=true`, `ship_gate_status=not_measured`, no new documents, and no measured yield | v408 real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
 | 7. 監査 / outbox | Seeded disposable v408 UI sandbox showed `JSONL outbox 未送信=7`, flush result `exported=7 already_present=0 failed=0`, and seven `ManualActionLog` rows with `jsonl_exported_at_present=true`; v407 sandbox shows the same historical surface | Real or approved full-cycle `manual_action_log` delta and final JSONL duplicate check |
@@ -915,6 +927,13 @@ Current v408 package/setup/recovery/UI-health commands:
   tunnel `127.0.0.1:18508 -> 127.0.0.1:8508` returned `ok` for
   `/_stcore/health` and returned the Streamlit HTML shell at `/`. The test
   Streamlit process and tunnel were stopped afterward.
+- Windows v408 default launcher smoke:
+  `EIDP-start.bat` invoked packaged `scripts\launch.bat`, started Streamlit on
+  default Windows port `8501`, and the default Mac tunnel `127.0.0.1:18501 ->
+  127.0.0.1:8501` returned `/_stcore/health=ok` plus the Streamlit HTML shell at
+  `/`. The foreground Streamlit process was force-stopped after the health proof,
+  so the launcher printed exit `-1`; `18501` and `8501` had no listening process
+  remaining afterward.
 - Windows v408 R7 retroactive CLI Excel proof:
   with process-local `EIDP_TARGET_FISCAL_YEAR=2025`, `eidp export-excel`
   wrote `data\output\v408-r7-retroactive-export.xlsx` with

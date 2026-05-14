@@ -140,6 +140,15 @@ logs\stage6-evidence-20260514-190257.zip
 logs\stage6-evidence-verify-20260515-040322.json
 ```
 
+Default launcher smoke:
+
+```text
+EIDP-start.bat -> scripts\launch.bat -> Windows 127.0.0.1:8501
+Mac tunnel 127.0.0.1:18501 -> 127.0.0.1:8501
+/_stcore/health=ok; root path returned Streamlit HTML shell
+The process was force-stopped after the health proof; launcher exit -1 is a stop artifact, not a startup failure.
+```
+
 ## 4. Setup 結果
 
 | 手順 | 期待 | 結果 | 証跡 |
@@ -167,6 +176,7 @@ v408 既存証跡（転記候補）:
 | 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418`, `excel_ready=0` |
 | Task Scheduler | pass | execute path `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat` |
 | Streamlit health | pass | Windows `8508`, Mac tunnel `18508 -> 8508`, `/_stcore/health=ok` |
+| Default launcher health | pass | `EIDP-start.bat`, Windows `8501`, Mac tunnel `18501 -> 8501`, `/_stcore/health=ok` |
 
 ## 5. 4 工程 E2E
 
