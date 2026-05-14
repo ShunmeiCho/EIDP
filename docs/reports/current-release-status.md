@@ -1,20 +1,18 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-14
+Updated: 2026-05-15
 Branch: `sprint8-handoff-finalize`
-Latest code-affecting source evidence base: `4a16363d81db9bc0ab5f5607247e1a67290d9268`
-Current Mac-verifier-clean package for latest code evidence base: none
-Latest historical Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
-Historical package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
-Historical package SHA256: `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`
-Latest historical full non-Windows release-gate package: `dist/eidp-windows-v401.zip` (stale under current verifier)
-Latest historical Windows-core-validated package: `dist/eidp-windows-v401.zip` (stale under current verifier)
-Latest Windows-transfer-proven package: `dist/eidp-windows-v399.zip`
+Latest code-affecting source evidence base: `0974b60fb3d404678828ddfa348c74f4dd740c79`
+Current Mac-verifier-clean package for latest code evidence base: `dist/eidp-windows-v407.zip`
+Current package SHA256: `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v407.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v407.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v407.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v399.zip`
-Latest Windows-browser-UI-proven package: `dist/eidp-windows-v397.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v407.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v407.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
@@ -24,136 +22,112 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-There is currently no Mac-verifier-clean ZIP for latest code-affecting source evidence base
-`4a16363d81db9bc0ab5f5607247e1a67290d9268`. The latest historical clean ZIP is
-v401 at commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, SHA256
-`ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; it passed
-the then-current package verifier, but a read-only rerun with the current
-verifier now rejects v401 before downstream gates because `BUILD_INFO.json`
-records a different source commit. Current source also includes the RCA triage
-fix that prioritizes explicit `target_fiscal_year_not_detected` target-form
-evidence over older-year target evidence for the same school, plus gold-set
-disclosure-entrypoint and section-heading context fixes that keep year-only
-target-form links in the download budget ahead of generic disclosure PDFs.
-Subsequent Mac-side source fixes clarify the ship gate's operator-reviewable
-coverage helper, ignore audit-outbox archive symlinks, and centralize the
-extraction-confidence default thresholds, then narrow romanized renewal-form
-weak hints so `koushinshinseisyo` alone no longer counts as a target-form
-shape, then convert PDF discovery rejection codes in the school task-board
-detail panel into operator-facing labels. The current verifier also requires
-the default Stage 6 tunnel guidance (`18501 -> 8501`) in the packaged runbooks.
-The non-Windows release gate also keeps `--allow-stale-package` dirty-safe: it
-can bypass a historical package commit mismatch, but it still rejects
-uncommitted tracked source. Later documentation-only commits refresh the
-release-status evidence without changing that code evidence base.
-The Windows install validator also rejects `last_run.json status=lock_busy` as
-weekly ship-gate evidence even if the payload claims `ship_gate_status=pass`.
-For bootstrap release-gate checks, progress-count mismatches against SQLite are
-now fatal under `--require-ship-gate` while remaining warnings for
-structure-only validation.
-No ZIP has been built or Windows-tested from this current code evidence base. The older v399 ZIP is
-also intentionally rejected by the current verifier because its packaged runbook
-predates the corrected SSH tunnel guidance. For the normal
-`EIDP-start.bat` / `scripts\launch.bat` path, Streamlit defaults to Windows
-`127.0.0.1:8501`, so browser-click testing should forward Mac
-`127.0.0.1:18501` to Windows `127.0.0.1:8501`. The v399 health proof on port
-`8502` was a manual Streamlit invocation, not the default launcher path.
-Windows transfer, setup, and UI-service evidence remains v399 until SSH access
-resumes and a package lane is explicitly chosen.
-The v399 residual cleanup helper was also hot-copied into the existing v397
-disposable operator-PC extraction and run in dry-run mode only:
-`scripts\stage6_residual_cleanup.bat --json` returned
-`mode=dry_run`, `existing_count=5`, `moved_count=0`, `errors=[]`, and wrote
-`C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe\logs\stage6-residual-cleanup-20260514-100231.json`.
-The dry-run identified these five old v384 smoke artifacts in
-`C:\Users\cyo20`: `v384_ocr_sr_smoke.ps1`, `eidp-windows-v384.zip`,
-`eidp-windows-v384.zip.sha256`, `eidp-ocr-addon-windows-v383-smoke.zip`, and
-`eidp_v384_ocr_sr_smoke.py`. v399 was then transferred to the operator PC as
-`C:\Users\cyo20\eidp-windows-v399.zip`; Windows SHA256 matched
-`bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`, and the
-sidecar check reported `match=true` with size `211184728`. It was extracted
-into the new disposable directory
-`C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`; `BUILD_INFO.json` reported
-commit `12719c0dc929d3b8727f6e8486931239e29a7145`, branch
-`sprint8-handoff-finalize`, and `git_dirty=false`, and the packaged
-`scripts\stage6_residual_cleanup.bat` was present. `EIDP-setup.bat` completed
-offline wheelhouse installation, `db-bootstrap`, `import-excel`, and school-year
-task rebuild. The setup log ended with `Import complete.`,
-`School year tasks rebuilt: fiscal_year=2026 school_type=専門学校 rebuilt=2418
-excel_ready=0`, and `OK install`. A standalone
-`runtime\python\python.exe scripts\validate_windows_install.py . --after-setup
---json` run returned `ok=true`, `school_count=2418`,
-`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
-`sqlite_table_count=15`, `wheel_count=78`,
-`duplicate_wheel_distributions={}`, and required tables including
-`manual_action_log`, `department_yearly`, and `support_recipient`. CLI smoke
-also returned `cli_help_rc=0`. A non-WMI `netstat` check found
-`streamlit_port_listener=0` after setup. A v399 UI-service smoke then started
-Streamlit from the extracted package with
-`.venv\Scripts\python.exe -m streamlit run src\eidp\review\app.py
---server.port 8502 --server.headless true --browser.gatherUsageStats false`;
-the service reported `Uvicorn server started on 0.0.0.0:8502`, Windows-local
-`curl.exe http://127.0.0.1:8502/_stcore/health` returned `ok`, and `netstat`
-showed `0.0.0.0:8502 LISTENING` for PID `10104`. The service was then stopped
-with `taskkill /PID 10104 /F`, and a stricter `netstat | findstr LISTENING |
-findstr :8502` check returned `listening_8502=0`. The browser-click UI smoke
-is still v397-only: the local SSH tunnel to v399 did not bind because local
-`ssh -G win` reported `clearallforwardings yes`, which suppresses command-line
-`-L` forwarding unless explicitly overridden. Direct LAN access to
-`192.168.0.9:8502` also timed out, consistent with the existing Windows firewall
-limitation documented in the runbook. The next browser-click attempt after SSH
-testing resumes should use the default-launcher tunnel:
-`ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L
-127.0.0.1:18501:127.0.0.1:8501 win` before opening Playwright. Only a manually
-started `--server.port 8502` service should use `18502 -> 8502`. No residual
-artifact was moved because `--apply` was not passed; actual archival still
-requires explicit operator/user approval.
+v407 is now the current clean package lane for source commit
+`0974b60fb3d404678828ddfa348c74f4dd740c79`. It was built with
+`scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v407.zip --latest-alias`, and
+`scripts/verify_windows_distribution.py dist/eidp-windows-v407.zip --json`
+returned `ok=true` with SHA256
+`af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`,
+`git_dirty=false`, `wheel_count=78`, `project_wheel_count=1`,
+`prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
+`prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
+`discovery_gold_set_entries=44`, and no undemonstrated discovery pattern
+sources. The full non-Windows release gate also passed for v407:
+package/source commit matched exactly, sidecar SHA matched, `tests/unit`
+reported `1480 passed`, validator/distribution tests reported `161 passed`,
+validator/distribution mypy and Ruff passed, discovery-gold expected
+predictions were `44/44`, and package verification with
+`--require-demonstrated-discovery-patterns` passed.
+
+v407 was transferred to the Windows operator PC as
+`C:\Users\cyo20\eidp-windows-v407.zip`; Windows SHA256 matched the sidecar and
+the package was extracted to `C:\Users\cyo20\EIDP-v407-0974b60f`.
+`BUILD_INFO.json` reported commit
+`0974b60fb3d404678828ddfa348c74f4dd740c79`, branch
+`sprint8-handoff-finalize`, and `git_dirty=false`. `EIDP-setup.bat` completed
+offline wheelhouse installation, SQLite bootstrap, master import, and school
+task rebuild. The install validator printed `OK install` with
+`school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, `sqlite_table_count=15`, `wheel_count=78`, and the
+required tables including `manual_action_log`, `department_yearly`,
+`support_recipient`, and `school_site`.
+
+A Windows v407 retroactive R7/FY2025 CLI smoke was run with process-local
+`EIDP_TARGET_FISCAL_YEAR=2025`. `eidp export-excel` wrote
+`C:\Users\cyo20\EIDP-v407-0974b60f\data\output\v407-r7-retroactive-export.xlsx`
+with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and
+`在籍のみ抜粋=9719`. `eidp diff-excel --business-values` then compared that
+export against `data\master.xlsx`; it returned `diff_rc=0` and showed the
+current diagnostic surface: `対象比率 original_duplicate_keys=13`,
+`学科別 original_duplicate_keys=22`, and
+`在籍のみ抜粋 original_duplicate_keys=22`, while all three exported sheets had
+`exported_duplicate_keys=0`.
+
+The v407 UI service was started on Windows port `8501` using the packaged
+Streamlit app. Windows-local `/_stcore/health` returned `ok` once during
+background startup. A second verification kept Streamlit attached to the SSH
+session and forwarded Mac `127.0.0.1:18501` to Windows `127.0.0.1:8501` with
+`-o ClearAllForwardings=no`; Mac-side `curl
+http://127.0.0.1:18501/_stcore/health` returned `ok`, and the root page returned
+the Streamlit HTML shell. This proves the default `18501 -> 8501` tunnel and
+UI health path for v407, but it is still not an operator browser-click write
+cycle.
+
+The v407 Stage 6 evidence bundle remains **not release-valid**. Running
+`scripts\collect_stage6_evidence.bat --include-excel` produced
+`logs\stage6-evidence-20260514-170328.zip`, but
+`scripts\verify_stage6_evidence.bat` rejected it with
+`archive contains forbidden Excel exports`, missing required label `last_run`,
+and missing manifest patterns including `weekly_run_logs`, `bootstrap_logs`,
+`bootstrap_progress`, `last_run`, `discovery_rca`, `stage6_recovery`, and
+`stage6_residual_cleanup`. A v407 read-only recovery check also returned
+`ok=false`: the `EIDP Weekly Run` task exists, but scheduled-task XML parsing
+failed, the production action path was not verified, and the checker still sees
+five old v384 smoke artifacts in `C:\Users\cyo20`. The v407 residual cleanup was
+run in dry-run mode only and reported `existing_count=5`, `moved_count=0`,
+`errors=[]`.
 
 ## Current Stage 6 Boundary
 
-The active operator-PC lane remains the existing v399 extraction
-`C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`. Do not build a replacement ZIP
-or add new helper scripts merely to advance Stage 6; the remaining process-gate
-work is the v399 browser-click write cycle against the already transferred and
-setup-proven package.
+The active operator-PC lane is now the v407 extraction
+`C:\Users\cyo20\EIDP-v407-0974b60f`. It is transfer/setup/UI-health proven, but
+not Stage 6 complete. Do not treat the v407 evidence ZIP as release evidence:
+the verifier explicitly rejected the current bundle.
 
-Already supportable from v399 evidence: ZIP transfer and SHA256 match, clean
+Already supportable from v407 evidence: ZIP transfer and SHA256 match, clean
 `BUILD_INFO.json`, `EIDP-setup.bat` completion, offline wheelhouse install,
 `db-bootstrap`, master import, `school_fiscal_year_status` rebuild for `2418`
-schools, SQLite integrity, required-table presence, CLI help, and Streamlit
-health on a manually started service.
+schools, SQLite integrity, required-table presence, R7 retroactive Excel export,
+business-key Excel diff diagnostics, Windows-local Streamlit health, Mac tunnel
+health on `18501 -> 8501`, and Streamlit root HTML retrieval.
 
-Must still wait for restored Windows/SSH access: v399 browser initial render,
-quick navigation, `PDF確認・手入力` write, fiscal-year override write, R7 Excel
-preview/download, `監査ログ` page and outbox flush, post-click diagnostics,
-Stage 6 evidence ZIP verification, and owner/operator sign-off. Historical v397
-and v384 UI proofs can inform the checklist, but they must not be recorded as a
-completed v399 one-cycle sign-off.
+Still missing for Stage 6: browser click-through, `PDF確認・手入力` write,
+fiscal-year override write, R7 Excel preview/download through the UI,
+`監査ログ` page and outbox flush, post-click diagnostics with `last_run`,
+valid Stage 6 evidence ZIP verification, weekly-run task action confirmation,
+decision on whether to archive old v384 residual smoke artifacts, and
+owner/operator sign-off. Historical v397/v384/v399 UI proofs can inform the
+checklist, but they must not be recorded as a completed v407 one-cycle sign-off.
 
-Post-audit source fixes now address the three v399 audit defects: the recovery
-check skips scheduled-task action path validation unless a production path is
-explicitly supplied; Stage 6 evidence bundles exclude Excel exports by default
-and the verifier rejects `data\output\*.xlsx` unless `--allow-excel` is passed;
-and residual cleanup refuses symlinks/junctions and uses rename-only archiving
-instead of copy/delete fallback. These fixes are source-level only until a future
-package is built and Windows-tested; the existing v399 ZIP still uses the older
-packaged behavior. For the frozen v399 click-through, keep treating recovery
-task mismatches as diagnostic, do not externally share any bundle containing
-Excel exports, and do not run `stage6_residual_cleanup.py --apply` from the v399
-package.
+Historical v397/v384/v399 proofs below are retained as supporting evidence, but
+the current lane is v407. For v407, keep treating recovery task mismatches as
+diagnostic until the scheduled-task action is confirmed, do not externally share
+any bundle containing Excel exports, and do not run
+`stage6_residual_cleanup.py --apply` without explicit operator/user approval.
 
-Stage 6 template fill map for the frozen v399 lane:
+Stage 6 template fill map for the v407 lane:
 
 | Template section | Can be filled from current evidence | Must wait for restored Windows/SSH access |
 | --- | --- | --- |
-| 1. 実施情報 | v399 commit `12719c0dc929d3b8727f6e8486931239e29a7145`; `dist/eidp-windows-v399.zip`; SHA256 `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`; extract path `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
-| 2. PC / 環境 | Historical operator-PC environment exists from v380/v384 (`JUNMING`, Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM) | Current v399 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding |
-| 3. 証跡採取コマンド | v399 hash/setup/validate/CLI/health evidence is available | `EIDP-diagnose.bat` after the click-through cycle; recovery JSON from v399 treated as diagnostic only because v399 predates the #193 source fix |
-| 4. Setup 結果 | ZIP extraction, `first_setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, manual Streamlit health | Default `EIDP-start.bat` browser render via `18501 -> 8501`; Task Scheduler path confirmation if needed |
-| 5. 4 工程 E2E | Historical v397/v384 UI/write proofs can guide the exact clicks | v399 PDF/manual-entry write, fiscal-year override write, R7 Excel preview/download, and any current PDF collection metrics |
-| 6. KPI 判定 | Current setup evidence still shows FY2026 `excel_ready=0`; R7 retroactive proof exists historically | Current v399 diagnostics and yield fields; final `ship_readiness_rc` / retroactive gate values |
-| 7. 監査 / outbox | Historical v384 audit page and outbox flush proof exists | v399 `manual_action_log` delta, unexported count, flush result, and JSONL duplicate check |
-| 8. 障害 / 回避策 | Known hazards: WMI hangs fixed before v399, SSH `ClearAllForwardings yes`, #193/#194/#195 fixed in source but not in the existing v399 ZIP | Actual v399 click-through failures and screenshots/log attachments |
+| 1. 実施情報 | v407 commit `0974b60fb3d404678828ddfa348c74f4dd740c79`; `dist/eidp-windows-v407.zip`; SHA256 `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`; extract path `C:\Users\cyo20\EIDP-v407-0974b60f` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
+| 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Current v407 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
+| 3. 証跡採取コマンド | v407 hash/setup/validate/release-gate/export/UI-health evidence is available | `EIDP-diagnose.bat` after the click-through cycle; valid evidence bundle with `last_run` |
+| 4. Setup 結果 | ZIP extraction, `first_setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, and Mac tunnel health | Task Scheduler action path confirmation |
+| 5. 4 工程 E2E | v407 R7 retroactive CLI export/diff proof exists; historical v397/v384 UI/write proofs can guide the exact clicks | v407 PDF/manual-entry write, fiscal-year override write, R7 Excel preview/download through UI, and any current PDF collection metrics |
+| 6. KPI 判定 | v407 setup evidence still shows FY2026 `excel_ready=0`; R7 retroactive export/diff exists | Current v407 diagnostics and yield fields; final `ship_readiness_rc` / retroactive gate values |
+| 7. 監査 / outbox | Historical v384 audit page and outbox flush proof exists | v407 `manual_action_log` delta, unexported count, flush result, and JSONL duplicate check |
+| 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; weekly task XML parsing failed; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v407 click-through failures and screenshots/log attachments |
 | 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |
 
 v397 was previously transferred to the operator PC and setup-validated in the
@@ -185,8 +159,8 @@ because the ZIP predates the newer Stage 6 safety and audit-outbox verifier
 tokens; SHA256, validator/distribution tests, validator mypy/Ruff, gold-set
 summary, and expected-prediction replay still pass. Treat v401 as a stale
 package relative to the current source evidence base, not as a current
-Mac-verifier-clean candidate. The latest Windows UI-service health proof is now v399; the latest
-browser initial-render and read-only quick-navigation proof remains v397. The
+Mac-verifier-clean candidate. The latest Windows UI health proof is now v407;
+the latest browser initial-render and read-only quick-navigation proof remains v397. The
 existing `C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe` disposable extraction started
 Streamlit on Windows `127.0.0.1:8502`; the local SSH tunnel
 `127.0.0.1:18502 -> Windows 127.0.0.1:8502` returned `/_stcore/health` as
@@ -624,8 +598,8 @@ copied-DB `DepartmentYearly` row, three `manual_entry` audit rows, and zero
 matching real-runtime marker rows. Post-v383 source adds code-level
 coverage that image-PDF ingest uses the Tesseract TSV wrapper and stores
 `ocr_tesseract` confidence breakdowns on both `DepartmentYearly` and
-`SupportRecipient` rows. The latest operator-PC transfer/setup and UI-service
-health evidence is now v399; the latest tunneled browser initial-render and
+`SupportRecipient` rows. The latest operator-PC transfer/setup and UI-health
+evidence is now v407; the latest tunneled browser initial-render and
 read-only quick-navigation evidence remains v397, including non-mutating quick
 navigation clicks and the FY2026 Excel workbook-generation disabled state for
 empty current data. v384 remains the latest package with
@@ -640,6 +614,11 @@ rebuild without mutating the real runtime DB.
 Stage 6 operator workflow evidence still remains incomplete, as listed below.
 
 ## Objective Checklist
+
+Note: this checklist keeps older v384/v397/v399/v401 evidence in historical
+context where it still proves a specific workflow. For current package state,
+v407 supersedes the older ZIP distribution/setup/UI-health rows; full
+operator-action click-through remains unverified.
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
@@ -658,6 +637,24 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Runbooks: `docs/runbooks/eidp-non-windows-release-gates.md`;
 `docs/runbooks/eidp-retroactive-fy-validation.md`.
 
+Current v407 package-verifier commands:
+
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v407.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v407.zip`, refreshed `dist/eidp-windows.zip`,
+  and wrote `dist/eidp-windows-v407.zip.sha256`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v407.zip --json`
+  -> `ok=true`, commit `0974b60fb3d404678828ddfa348c74f4dd740c79`,
+  `git_dirty=false`, SHA256
+  `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`,
+  `entry_count=3077`, `wheel_count=78`, `prefecture_seed_rows=47`,
+  `prefecture_seed_school_rows_total=2148`, `discovery_gold_set_entries=44`,
+  and no warnings.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v407.zip --json --output _temp/v407-non-windows-release-gates-full.json`
+  -> `ok=true`, package/source commit matched, sidecar SHA matched, full unit
+  tests reported `1480 passed`, validator/distribution unit tests reported
+  `161 passed`, mypy/Ruff passed, and discovery-gold expected predictions were
+  `44/44`.
+
 Historical v401 package-verifier commands:
 
 - `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v401.zip --latest-alias`
@@ -674,7 +671,38 @@ Historical v401 package-verifier commands:
   normal `EIDP-start.bat` path should use `18501 -> 8501`; only manually started
   `--server.port 8502` smokes should use `18502 -> 8502`.
 
-Latest v399 Windows setup and UI-service smoke:
+Current v407 Windows setup and UI-health smoke:
+
+- Windows transfer/setup proof:
+  `C:\Users\cyo20\EIDP-v407-0974b60f` expanded the v407 core ZIP after
+  confirming SHA256
+  `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
+  `BUILD_INFO.json` reported commit
+  `0974b60fb3d404678828ddfa348c74f4dd740c79`, branch
+  `sprint8-handoff-finalize`, and `git_dirty=false`. `EIDP-setup.bat`
+  completed the offline wheelhouse install, package install, `db-bootstrap`,
+  `import-excel`, school-year task rebuild, and validation. The install
+  validator returned `OK install`, `school_count=2418`,
+  `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+  `sqlite_table_count=15`, and `wheel_count=78`.
+- Windows R7 retroactive Excel proof:
+  with process-local `EIDP_TARGET_FISCAL_YEAR=2025`, `eidp export-excel`
+  wrote `data\output\v407-r7-retroactive-export.xlsx` with
+  `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and
+  `在籍のみ抜粋=9719`. `eidp diff-excel --business-values` returned
+  `diff_rc=0` and reported duplicate-key diagnostics for the reference workbook
+  while exported duplicate keys remained `0`.
+- Windows UI-health proof:
+  v407 Streamlit served on Windows `127.0.0.1:8501`; a Mac SSH tunnel
+  `127.0.0.1:18501 -> 127.0.0.1:8501` with
+  `-o ClearAllForwardings=no` returned `/_stcore/health` as `ok`, and the root
+  page returned the Streamlit HTML shell.
+- Stage 6 evidence verifier status:
+  the current v407 evidence bundle was intentionally treated as invalid after
+  `scripts\verify_stage6_evidence.bat` rejected it for forbidden Excel exports
+  and missing `last_run` / weekly-run / bootstrap / discovery evidence labels.
+
+Historical v399 Windows setup and UI-service smoke:
 
 - Windows transfer/setup proof:
   `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe` expanded the v399 core ZIP
@@ -699,10 +727,7 @@ Latest v399 Windows setup and UI-service smoke:
   `curl.exe http://127.0.0.1:8502/_stcore/health` returned `ok`, `netstat`
   showed `0.0.0.0:8502 LISTENING` on PID `10104`, and `taskkill /PID 10104 /F`
   stopped it with follow-up `listening_8502=0`.
-- v401 Windows transfer/setup/UI smoke remains pending until SSH access resumes.
-  The frozen v399 Stage 6 browser proof should stay on the already transferred
-  v399 extraction and use the default-launcher tunnel:
-  `ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win`.
+- v399 is now historical. The active lane is v407.
 
 Latest v397 Windows browser UI proof:
 
