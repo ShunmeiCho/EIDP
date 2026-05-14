@@ -8,6 +8,7 @@ Produces 4 sheets matching the legacy format:
 """
 
 import re
+import unicodedata
 from collections import Counter
 from collections.abc import Iterator
 from itertools import zip_longest
@@ -692,6 +693,7 @@ def _stringify_key(key: BusinessKey) -> str:
 
 def _business_soft_key_part(value: object) -> str:
     text = "" if value is None else str(value)
+    text = unicodedata.normalize("NFKC", text)
     text = re.sub(r"[\s\u3000]+", "", text)
     for marker in ("（専）", "専門学校", "専修学校"):
         text = text.replace(marker, "")

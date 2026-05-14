@@ -388,6 +388,39 @@ def test_diff_workbook_business_values_reports_row_gap_samples_and_soft_matches(
     ]
 
 
+def test_diff_workbook_business_values_soft_matches_nfkc_width_variants(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    _write_cells(
+        original,
+        {
+            "在籍のみ抜粋": [
+                [None, None, None, None, None, None, None, "在籍者数"],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "2024年度"],
+                ["兵庫県", "大原学園", "姫路情報ITクリエイター法律専門学校", "工業", "情報IT学科", "昼", 2, 80],
+            ]
+        },
+    )
+    _write_cells(
+        exported,
+        {
+            "在籍のみ抜粋": [
+                [None, None, None, None, None, None, None, "在籍者数"],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "2024年度"],
+                ["兵庫県", "大原学園", "姫路情報ＩＴクリエイター法律専門学校", "工業", "情報IT学科", "昼", 2, 80],
+            ]
+        },
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["在籍のみ抜粋"])
+    summary = result["sheet_summaries"]["在籍のみ抜粋"]
+
+    assert summary["missing_rows"] == 1
+    assert summary["extra_rows"] == 1
+    assert summary["missing_rows_soft_matched"] == 1
+    assert summary["extra_rows_soft_matched"] == 1
+
+
 def test_excel_exporter_confidence_thresholds_follow_central_env(monkeypatch) -> None:
     import eidp.excel.exporter as exporter_module
 
