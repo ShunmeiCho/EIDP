@@ -188,6 +188,8 @@ def _core_entries() -> dict[str, bytes | str]:
             "logs\\stage6-residual-archive\\<timestamp>\n"
             "ClearAllForwardings=no\n"
             "ExitOnForwardFailure=yes\n"
+            "127.0.0.1:18501:127.0.0.1:8501\n"
+            "127.0.0.1:18501/_stcore/health\n"
             "127.0.0.1:18502:127.0.0.1:8502\n"
             "logs\\stage6-evidence-*.zip\n"
             "EIDP-stage6-evidence.bat\n"
@@ -227,6 +229,9 @@ def _core_entries() -> dict[str, bytes | str]:
             "推定手作業率\n"
             "Excel ready 率\n"
             "logs\\diagnostics-*.txt\n"
+            "127.0.0.1:18501:127.0.0.1:8501\n"
+            "127.0.0.1:18501/_stcore/health\n"
+            "Mac tunnel health\n"
             "logs\\stage6-evidence-*.zip\n"
             "logs\\stage6-evidence-verify-*.json\n"
             "logs\\stage6-recovery-*.json\n"
@@ -1743,6 +1748,24 @@ def test_verify_core_zip_requires_stage6_recovery_e2e_template_fields(tmp_path: 
 
     assert not check.ok
     assert any("stage6_recovery_rc" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_default_stage6_tunnel_guidance(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-windows.md"] = entries["docs/runbooks/eidp-windows.md"].replace(
+        "127.0.0.1:18501:127.0.0.1:8501",
+        "127.0.0.1:18502:127.0.0.1:8502",
+    )
+    entries["docs/runbooks/eidp-operator-e2e-template.md"] = entries[
+        "docs/runbooks/eidp-operator-e2e-template.md"
+    ].replace("127.0.0.1:18501/_stcore/health", "127.0.0.1:18502/_stcore/health")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("127.0.0.1:18501:127.0.0.1:8501" in error for error in check.errors)
+    assert any("127.0.0.1:18501/_stcore/health" in error for error in check.errors)
 
 
 def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:
