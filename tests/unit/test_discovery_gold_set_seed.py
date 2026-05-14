@@ -68,6 +68,51 @@ def test_seed_discovery_gold_sites_apply_writes_school_and_site() -> None:
     assert site.verified is True
 
 
+def test_seed_discovery_gold_sites_preserves_semantic_directory_trailing_slash() -> None:
+    session = _session()
+    entries = [
+        entry
+        for entry in load_discovery_gold_entries(GOLD_SET_DIR)
+        if entry.entry_id == "chuo-animal-publication-lag-2026"
+    ]
+    seen_urls: list[str] = []
+
+    def safe_url_checker(url: str) -> bool:
+        seen_urls.append(url)
+        return True
+
+    stats = seed_discovery_gold_sites(session, entries, apply=True, safe_url_checker=safe_url_checker)
+    session.commit()
+
+    assert stats["sites_to_add"] == 1
+    assert seen_urls == ["https://www.chuo-a.ac.jp/disclosure/"]
+    site = session.query(SchoolSite).filter(SchoolSite.school_id == 3205).one()
+    assert site.url == "https://www.chuo-a.ac.jp/disclosure/"
+
+
+def test_seed_discovery_gold_sites_keeps_trailing_slash_entry_idempotent() -> None:
+    session = _session()
+    entries = [
+        entry
+        for entry in load_discovery_gold_entries(GOLD_SET_DIR)
+        if entry.entry_id == "chuo-animal-publication-lag-2026"
+    ]
+
+    seed_discovery_gold_sites(session, entries, apply=True, safe_url_checker=lambda _url: True)
+    session.commit()
+    stats = seed_discovery_gold_sites(session, entries, apply=True, safe_url_checker=lambda _url: True)
+    session.commit()
+
+    assert stats == {
+        "applied": True,
+        "schools_to_create": 0,
+        "sites_to_add": 0,
+        "sites_existing": 1,
+        "invalid_site_urls": 0,
+    }
+    assert session.query(SchoolSite).filter(SchoolSite.school_id == 3205).count() == 1
+
+
 def test_seed_discovery_gold_sites_is_idempotent_on_existing_site() -> None:
     session = _session()
     entries = [entry for entry in load_discovery_gold_entries(GOLD_SET_DIR) if entry.entry_id == SAMPLE_ENTRY_ID]

@@ -125,6 +125,42 @@ def test_current_year_syllabus_does_not_outrank_previous_year_target_form() -> N
     assert _stale_fiscal_year_from_candidate_hint(ordered[0], target_year=2026) == 2025
 
 
+def test_year_only_support_form_link_inherits_section_heading_context() -> None:
+    html = """
+    <section>
+      <h2>令和6年度 職業実践専門課程の基本情報</h2>
+      <table>
+        <tr><td><a href="./pdf/job_biyou_4_1.pdf">様式4-1</a></td></tr>
+        <tr><td><a href="./pdf/job_biyou_4_2.pdf">様式4-2</a></td></tr>
+        <tr><td><a href="./pdf/job_biyou_4_3.pdf">様式4-3</a></td></tr>
+      </table>
+    </section>
+    <section>
+      <h2>高等教育の修学支援新制度</h2>
+      <h3>申請書様式第2号</h3>
+      <ul>
+        <li><a href="./pdf/confirmation_2.pdf">2025年度</a></li>
+      </ul>
+    </section>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://www.chuo-a.ac.jp/guide/disclosure.html",
+        target_fiscal_year=2026,
+    )
+    for candidate in candidates:
+        _score_candidate(candidate, target_fiscal_year=2026)
+    ordered, dropped = _prioritize_viable_candidates(candidates, target_year=2026, school_name="中央動物専門学校")
+    support_form = next(candidate for candidate in ordered if "confirmation_2" in candidate.pdf_url)
+
+    assert not dropped
+    assert support_form.anchor_text == "2025年度 高等教育の修学支援新制度 申請書様式第2号"
+    assert _has_target_application_hint(support_form)
+    assert ordered[0] == support_form
+    assert _stale_fiscal_year_from_candidate_hint(support_form, target_year=2026) == 2025
+
+
 def test_prioritize_viable_candidates_prefers_latest_public_stale_target_form() -> None:
     html = """
     <h2>2026年度も修学支援新制度の対象校です</h2>

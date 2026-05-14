@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import structlog
 from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
@@ -255,7 +255,7 @@ def seed_discovery_gold_sites(
         "invalid_site_urls": 0,
     }
     for entry in entries:
-        site_url = normalize_candidate_url(entry.disclosure_url or entry.school_url)
+        site_url = _canonical_seed_site_url(entry.disclosure_url or entry.school_url)
         if not site_url or not checker(site_url):
             stats["invalid_site_urls"] = int(stats["invalid_site_urls"]) + 1
             log.warning(
@@ -299,6 +299,26 @@ def seed_discovery_gold_sites(
                 )
             )
     return stats
+
+
+def _canonical_seed_site_url(url: str) -> str:
+    """Normalize seed URLs without changing directory URLs used as crawl entrypoints."""
+
+    parsed = urlparse(url.strip())
+    if not parsed.scheme or not parsed.netloc:
+        return url.strip()
+
+    base = normalize_candidate_url(url)
+    if not parsed.path.endswith("/") or parsed.path == "/":
+        return base
+
+    base_parsed = urlparse(base)
+    path = base_parsed.path
+    if path and not path.endswith("/"):
+        path = f"{path}/"
+    query_pairs = parse_qsl(base_parsed.query, keep_blank_values=True)
+    query = urlencode(query_pairs, doseq=True)
+    return urlunparse((base_parsed.scheme, base_parsed.netloc, path, "", query, ""))
 
 
 def build_discovery_gold_run_plan(entries: list[DiscoveryGoldEntry]) -> list[DiscoveryGoldRunPlanItem]:
@@ -729,4 +749,5 @@ def _school_site_exists(session: Any, *, school_id: int, url: str) -> bool:
     from eidp.db.models import SchoolSite
 
     rows = session.query(SchoolSite).filter(SchoolSite.school_id == school_id).all()
-    return any(normalize_candidate_url(str(row.url)) == url for row in rows)
+    normalized_url = normalize_candidate_url(url)
+    return any(normalize_candidate_url(str(row.url)) == normalized_url for row in rows)

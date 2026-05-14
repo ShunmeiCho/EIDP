@@ -1293,6 +1293,26 @@ def _previous_support_fiscal_year_context(html: str, before: int) -> str:
     return ""
 
 
+def _section_heading_context(html: str, block_start: int) -> str:
+    """Return heading context from the current HTML section."""
+
+    prefix = html[:block_start]
+    section_start = prefix.lower().rfind("<section")
+    if section_start == -1:
+        return ""
+    section_end = prefix.lower().rfind("</section")
+    if section_end > section_start:
+        return ""
+
+    section_prefix = html[section_start:block_start]
+    headings: list[str] = []
+    for heading in re.finditer(r"<h[1-6]\b[^>]*>.*?</h[1-6]\s*>", section_prefix, re.IGNORECASE | re.DOTALL):
+        text = _html_text(heading.group(0))
+        if text:
+            headings.append(text)
+    return " ".join(dict.fromkeys(headings))
+
+
 def _html_table_cells(row_fragment: str) -> list[tuple[int, int, str]]:
     return [
         (match.start(), match.end(), match.group(0))
@@ -1413,6 +1433,19 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
             if support_year_text and support_year_text not in parts:
                 parts.append(support_year_text)
                 has_current_year_context = True
+        if (
+            anchor
+            and _has_strong_fiscal_year_context(anchor)
+            and not _has_target_application_hint(PdfCandidate(pdf_url="", page_url="", anchor_text=" ".join(parts)))
+        ):
+            section_context = _section_heading_context(html, block_start)
+            if (
+                section_context
+                and _has_support_system_context(section_context)
+                and _has_application_form_context(section_context)
+                and section_context not in parts
+            ):
+                parts.append(section_context)
         if tag == "tr":
             section_heading = _table_section_heading_context(html, block_start)
             if section_heading and section_heading not in parts:
