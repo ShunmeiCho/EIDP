@@ -8,6 +8,9 @@ import pytest
 
 from eidp.extraction_confidence import (
     ALLOWED_METHODS,
+    DEFAULT_CONFIDENCE_AUTO,
+    DEFAULT_CONFIDENCE_REJECT,
+    DEFAULT_CONFIDENCE_REVIEW,
     ConfidenceBreakdown,
     ConfidenceThresholds,
     breakdown_from_json,
@@ -233,6 +236,13 @@ def test_classify_with_custom_thresholds():
 # ---------------------------------------------------------------------------
 # ConfidenceThresholds invariants
 # ---------------------------------------------------------------------------
+
+
+def test_confidence_threshold_defaults_are_named_single_source():
+    thresholds = ConfidenceThresholds()
+    assert thresholds.auto == DEFAULT_CONFIDENCE_AUTO
+    assert thresholds.review == DEFAULT_CONFIDENCE_REVIEW
+    assert thresholds.reject == DEFAULT_CONFIDENCE_REJECT
 
 
 def test_thresholds_must_be_in_unit_interval():

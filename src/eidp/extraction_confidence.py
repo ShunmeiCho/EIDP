@@ -74,6 +74,11 @@ DEFAULT_OPTIONAL_FIELDS: tuple[str, ...] = (
 #: Composite weights. Plan v6 §Confidence Architecture.
 DEFAULT_WEIGHTS: tuple[float, float, float] = (0.4, 0.4, 0.2)
 
+#: Default composite cutoffs for auto, operator-visible, and rejected rows.
+DEFAULT_CONFIDENCE_AUTO = 0.85
+DEFAULT_CONFIDENCE_REVIEW = 0.70
+DEFAULT_CONFIDENCE_REJECT = 0.50
+
 #: Methods that produce confidence rows.
 ExtractionMethod = Literal["pdf_parse", "ocr_tesseract", "manual"]
 ALLOWED_METHODS: frozenset[str] = frozenset({"pdf_parse", "ocr_tesseract", "manual"})
@@ -86,9 +91,9 @@ class ConfidenceThresholds:
     """Cutoffs for the four-bucket verdict. Values must satisfy
     ``0 <= reject <= review <= auto <= 1``."""
 
-    auto: float = 0.85
-    review: float = 0.70
-    reject: float = 0.50
+    auto: float = DEFAULT_CONFIDENCE_AUTO
+    review: float = DEFAULT_CONFIDENCE_REVIEW
+    reject: float = DEFAULT_CONFIDENCE_REJECT
 
     def __post_init__(self) -> None:
         for name in ("auto", "review", "reject"):
