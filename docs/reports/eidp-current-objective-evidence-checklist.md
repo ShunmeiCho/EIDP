@@ -141,11 +141,11 @@ Latest local checks performed against source-code evidence base `17c08d0`:
 - `uv run mypy src/eidp/db/audit_outbox.py scripts/verify_windows_distribution.py`
   -> `Success: no issues found in 2 source files`.
 - `uv run pytest tests/unit/test_reports.py tests/unit/test_cli_reports.py tests/unit/test_ship_gate_contract.py tests/unit/test_bootstrap_pdf_pipeline.py::test_bootstrap_target_pdf_yield_metrics_marks_gate_status tests/unit/test_run_weekly_target_year_discovery.py::test_weekly_yield_metrics_count_review_candidate_statuses_as_operator_reviewable -q`
-  -> `40 passed`.
-- `uv run ruff check scripts/ship_gate_contract.py src/eidp/reports/ship_readiness.py tests/unit/test_reports.py tests/unit/test_cli_reports.py tests/unit/test_ship_gate_contract.py`
+  -> `40 passed in 0.92s`.
+- `uv run ruff check scripts/ship_gate_contract.py src/eidp/reports/ship_readiness.py src/eidp/cli_reports.py tests/unit/test_reports.py tests/unit/test_cli_reports.py tests/unit/test_ship_gate_contract.py`
   -> `All checks passed`.
-- `uv run mypy src/eidp/reports/ship_readiness.py`
-  -> `Success: no issues found in 1 source file`.
+- `uv run mypy scripts/ship_gate_contract.py src/eidp/reports/ship_readiness.py src/eidp/cli_reports.py`
+  -> `Success: no issues found in 3 source files`.
 - `uv run pytest tests/unit/test_stage6_recovery_check.py tests/unit/test_stage6_residual_cleanup.py tests/unit/test_stage6_evidence_bundle.py tests/unit/test_windows_packaging_spike.py tests/unit/test_windows_distribution_verifier.py -q`
   -> `197 passed`.
 - `uv run mypy scripts/collect_stage6_evidence.py scripts/verify_stage6_evidence.py scripts/stage6_residual_cleanup.py scripts/stage6_recovery_check.py scripts/verify_windows_distribution.py`
