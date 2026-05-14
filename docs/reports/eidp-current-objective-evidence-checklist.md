@@ -1,14 +1,13 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-14
-Code evidence HEAD: `c2a6f532075a8b02eb7a5853de3b3a564ab72107`
+Code evidence HEAD: `eadf93ff4359957121ec057fc6748577ad6de481`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally separate from ZIP packaging: no new ZIP has been built for
-the code evidence base `c2a6f532`, and the active operator-PC Stage 6 lane
-remains the existing v399 extraction. Later documentation-only commits may
-extend this checklist without changing that source-code evidence base.
+the code evidence base `eadf93ff`, and the active operator-PC Stage 6 lane
+remains the existing v399 extraction.
 
 ## Objective Restatement
 
@@ -26,12 +25,12 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `c2a6f532` |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `eadf93ff` |
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, and inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs | Mechanically guarded; yield gate failing |
-| PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
+| PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation; source HEAD names the default `0.70` review threshold via `DEFAULT_CONFIDENCE_REVIEW` and keeps Excel/exporter env-threshold tests green | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
 | Excel template export | v384 R7 retroactive Excel preview/download proof; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 rehearsal proven; FY2026 target-year output not ready |
-| ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths | Proven on older sandboxed paths; v399 write-cycle still missing |
+| ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks | Proven on older sandboxed paths; v399 write-cycle still missing |
 | ZIP distribution, double-click setup, browser UI offline operation | v399 transfer, SHA match, setup completion, SQLite integrity, CLI smoke, and manual Streamlit health; v397 browser read-only navigation | Setup/service proven on v399; browser-click write-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | Latest recorded strict target PDF auto-yield remains `0.0%`; `ship_readiness_rc=1` in current Windows evidence | Failing |
@@ -42,7 +41,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v399, commit
   `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
   `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source-code evidence base: `c2a6f532`, with Stage 6 safety fixes for recovery check,
+- Current source-code evidence base: `eadf93ff`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling, and typed fiscal-year
@@ -63,22 +62,24 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   evidence for the same school so operator review queues do not bury
   yearless current candidates behind publication-lag labels. Gold-set seeding
   now preserves semantic directory trailing slashes for disclosure entrypoints,
-  and PDF discovery now attaches same-section support-system headings to
-  year-only target-form links before candidate prioritization.
+  PDF discovery now attaches same-section support-system headings to year-only
+  target-form links before candidate prioritization, audit-outbox archive
+  dedup ignores symlinks, and the extraction-confidence default thresholds are
+  named constants used by `ConfidenceThresholds`.
 - These source-code fixes are not present in the existing v399/v401 ZIPs.
   The latest recorded read-only rerun of the non-Windows package gate against
   v401 with the current verifier failed before downstream gates because
   `package_source_check` detected that packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd` did not match the then-current
   source HEAD. The same stale-package boundary still applies to code evidence
-  base `c2a6f532075a8b02eb7a5853de3b3a564ab72107`, because v401 packages
+  base `eadf93ff4359957121ec057fc6748577ad6de481`, because v401 packages
   commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`.
 - Do not mark the goal complete until v399 or a future approved package completes
   operator-PC browser write-cycle evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest local checks performed against source-code evidence base `c2a6f532`:
+Latest local checks performed against source-code evidence base `eadf93ff`:
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
@@ -305,6 +306,20 @@ Latest local checks performed against source-code evidence base `c2a6f532`:
   -> `All checks passed`.
 - `uv run pytest tests/unit/test_pdf_discovery.py -q -k "heading_year or intervening_non_year_block or update_date or publication_date or western_year_anchor or reiwa_year_anchor"`
   -> `9 passed, 152 deselected, 5 warnings`.
+- `uv run pytest tests/unit/test_audit_outbox.py -q`
+  -> `14 passed`.
+- `uv run pytest tests/unit/test_extraction_confidence.py tests/unit/test_ingest_confidence_gating.py::test_env_override_promotes_borderline_row_to_current tests/unit/test_excel_exporter.py::test_excel_exporter_confidence_thresholds_follow_central_env -q`
+  -> `59 passed`.
+- `uv run pytest tests/unit/test_discovery_gold_set_seed.py::test_seed_discovery_gold_sites_rejects_unsafe_site_url_before_writing tests/unit/test_discovery_gold_set_seed.py::test_seed_discovery_gold_sites_fails_fast_on_semantically_invalid_entry tests/unit/test_discovery_gold_set_seed.py::test_seed_discovery_gold_sites_checks_normalized_site_url -q`
+  -> `3 passed`.
+- `uv run pytest tests/unit/test_review_pdf_manual_entry.py::test_manual_queue_summary_and_table_explain_next_actions tests/unit/test_review_pdf_manual_entry.py::test_discovery_trace_summary_explains_pdf_route_to_operator tests/unit/test_review_pdf_manual_entry.py::test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints -q`
+  -> `3 passed`.
+- `uv run pytest tests/unit/test_pdf_discovery.py::test_pre_download_does_not_treat_romanized_renewal_form_alone_as_target tests/unit/test_pdf_discovery.py::test_pre_download_does_not_treat_english_renewal_form_alone_as_target tests/unit/test_pdf_discovery.py::test_pre_download_does_not_treat_english_renewal_form_with_english_support_hint_as_target -q`
+  -> `3 passed`.
+- `uv run ruff check src/eidp/extraction_confidence.py tests/unit/test_extraction_confidence.py src/eidp/db/audit_outbox.py tests/unit/test_audit_outbox.py`
+  -> `All checks passed`.
+- `uv run mypy src/eidp/extraction_confidence.py src/eidp/db/audit_outbox.py`
+  -> `Success: no issues found in 2 source files`.
 
 Known non-goal-wide lint boundary:
 
