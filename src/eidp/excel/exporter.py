@@ -7,6 +7,7 @@ Produces 4 sheets matching the legacy format:
   Sheet 4: 在籍のみ抜粋 (one-year-lag enrollment blocks, multi-row header)
 """
 
+import re
 from collections import Counter
 from collections.abc import Iterator
 from itertools import zip_longest
@@ -79,8 +80,12 @@ class WorkbookBusinessDiffSample(TypedDict):
 class WorkbookBusinessDiffSheetSummary(TypedDict):
     missing_rows: int
     extra_rows: int
+    missing_rows_soft_matched: int
+    extra_rows_soft_matched: int
     category_counts: dict[str, int]
     field_counts: dict[str, int]
+    missing_row_samples: list[str]
+    extra_row_samples: list[str]
 
 
 class WorkbookBusinessDiff(TypedDict):
@@ -685,6 +690,25 @@ def _stringify_key(key: BusinessKey) -> str:
     return " | ".join("" if part is None else str(part) for part in key)
 
 
+def _business_soft_key_part(value: object) -> str:
+    text = "" if value is None else str(value)
+    text = re.sub(r"[\s\u3000]+", "", text)
+    for marker in ("（専）", "専門学校", "専修学校"):
+        text = text.replace(marker, "")
+    return text
+
+
+def _business_soft_key(sheet: str, key: BusinessKey) -> tuple[str, ...]:
+    if sheet == "対象比率":
+        year, prefecture, _corporation, school = key
+        return tuple(_business_soft_key_part(part) for part in (year, prefecture, school))
+    if sheet == "在籍のみ抜粋":
+        prefecture, _corporation, school, course, department, daynight, years = key
+        parts = (prefecture, school, course, department, daynight, years)
+        return tuple(_business_soft_key_part(part) for part in parts)
+    return tuple(_business_soft_key_part(part) for part in key)
+
+
 def _normalize_business_value(value: object) -> object:
     return "" if value is None else value
 
@@ -837,6 +861,22 @@ def diff_workbook_business_values(
             extra_row_keys = sorted(exp_keys - orig_keys, key=_stringify_key)
             missing_rows += len(missing_row_keys)
             extra_rows += len(extra_row_keys)
+            exp_soft_keys = {_business_soft_key(sheet, key) for key in exp_keys}
+            orig_soft_keys = {_business_soft_key(sheet, key) for key in orig_keys}
+            missing_rows_soft_matched = sum(
+                1 for key in missing_row_keys if _business_soft_key(sheet, key) in exp_soft_keys
+            )
+            extra_rows_soft_matched = sum(
+                1 for key in extra_row_keys if _business_soft_key(sheet, key) in orig_soft_keys
+            )
+            missing_row_samples = sorted(
+                missing_row_keys,
+                key=lambda key: (_business_soft_key(sheet, key) not in exp_soft_keys, _stringify_key(key)),
+            )
+            extra_row_samples = sorted(
+                extra_row_keys,
+                key=lambda key: (_business_soft_key(sheet, key) not in orig_soft_keys, _stringify_key(key)),
+            )
             category_counts: Counter[str] = Counter()
             field_counts: Counter[str] = Counter()
 
@@ -864,8 +904,12 @@ def diff_workbook_business_values(
             sheet_summaries[sheet] = {
                 "missing_rows": len(missing_row_keys),
                 "extra_rows": len(extra_row_keys),
+                "missing_rows_soft_matched": missing_rows_soft_matched,
+                "extra_rows_soft_matched": extra_rows_soft_matched,
                 "category_counts": dict(category_counts.most_common()),
                 "field_counts": dict(field_counts.most_common()),
+                "missing_row_samples": [_stringify_key(key) for key in missing_row_samples[:max_diffs]],
+                "extra_row_samples": [_stringify_key(key) for key in extra_row_samples[:max_diffs]],
             }
 
         return {

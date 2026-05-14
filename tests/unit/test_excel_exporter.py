@@ -325,6 +325,69 @@ def test_diff_workbook_business_values_categorizes_blank_vs_error_or_unknown(tmp
     assert result["sheet_summaries"]["対象比率"]["field_counts"] == {"前年在籍": 1, "受給比率": 1}
 
 
+def test_diff_workbook_business_values_reports_row_gap_samples_and_soft_matches(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    header = [
+        "番号",
+        "年度",
+        "学校番号",
+        "都道府県",
+        "法人名",
+        "学校名",
+        "前年在籍",
+        "前半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "後半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "年間",
+        "家計急変多子世帯",
+        "総計",
+        "備考",
+        "受給比率",
+    ]
+    _write_cells(
+        original,
+        {
+            "対象比率": [
+                header,
+                [None, "2025年度", None, "東京都", "旧法人", "日本工学院専門学校", 100, *([None] * 15)],
+                [None, "2025年度", None, "東京都", "別法人", "別学校", 50, *([None] * 15)],
+            ]
+        },
+    )
+    _write_cells(
+        exported,
+        {
+            "対象比率": [
+                header,
+                [1, "2025年度", None, "東京都", "新法人", "日本工学院専門学校", 100, *([None] * 15)],
+                [2, "2025年度", None, "東京都", "追加法人", "追加学校", 10, *([None] * 15)],
+            ]
+        },
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["対象比率"], max_diffs=1)
+    summary = result["sheet_summaries"]["対象比率"]
+
+    assert summary["missing_rows"] == 2
+    assert summary["extra_rows"] == 2
+    assert summary["missing_rows_soft_matched"] == 1
+    assert summary["extra_rows_soft_matched"] == 1
+    assert summary["missing_row_samples"] == [
+        "2025年度 | 東京都 | 旧法人 | 日本工学院専門学校",
+    ]
+    assert summary["extra_row_samples"] == [
+        "2025年度 | 東京都 | 新法人 | 日本工学院専門学校",
+    ]
+
+
 def test_excel_exporter_confidence_thresholds_follow_central_env(monkeypatch) -> None:
     import eidp.excel.exporter as exporter_module
 

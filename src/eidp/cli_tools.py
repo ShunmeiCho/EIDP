@@ -263,7 +263,9 @@ def diff_excel(
         for sheet, summary in business_result["sheet_summaries"].items():
             typer.echo(
                 f"  sheet_summary[{sheet}]: missing_rows={summary['missing_rows']} "
-                f"extra_rows={summary['extra_rows']}"
+                f"extra_rows={summary['extra_rows']} "
+                f"missing_soft_matches={summary['missing_rows_soft_matched']} "
+                f"extra_soft_matches={summary['extra_rows_soft_matched']}"
             )
             if summary["category_counts"]:
                 typer.echo("    categories:")
@@ -273,6 +275,14 @@ def diff_excel(
                 typer.echo("    fields:")
                 for field, count in list(summary["field_counts"].items())[:8]:
                     typer.echo(f"      {field}: {count}")
+            if summary["missing_row_samples"]:
+                typer.echo("    missing_row_samples:")
+                for key in summary["missing_row_samples"]:
+                    typer.echo(f"      - {key}")
+            if summary["extra_row_samples"]:
+                typer.echo("    extra_row_samples:")
+                for key in summary["extra_row_samples"]:
+                    typer.echo(f"      + {key}")
         for sheet, fields in business_result["missing_fields"].items():
             if fields:
                 typer.echo(f"  missing_fields[{sheet}]: {', '.join(fields)}")
