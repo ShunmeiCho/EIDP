@@ -30,6 +30,9 @@ The constant ``TRUE`` is portable across PG (boolean literal) and SQLite
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import cast
+
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Query, Session
 
@@ -41,17 +44,17 @@ from eidp.db.models import SchoolYearStatus, SupportRecipient
 IS_CURRENT_TRUE_SQL = "TRUE"
 
 
-def current_school_year_status_q(query: Query) -> Query:
+def current_school_year_status_q(query: Query[SchoolYearStatus]) -> Query[SchoolYearStatus]:
     """Add ``SchoolYearStatus.is_current=True`` to an ORM Query."""
     return query.filter(SchoolYearStatus.is_current.is_(True))
 
 
-def current_support_recipient_q(query: Query) -> Query:
+def current_support_recipient_q(query: Query[SupportRecipient]) -> Query[SupportRecipient]:
     """Add ``SupportRecipient.is_current=True`` to an ORM Query."""
     return query.filter(SupportRecipient.is_current.is_(True))
 
 
-def latest_excluded_school_ids(session: Session):
+def latest_excluded_school_ids(session: Session) -> Iterable[tuple[int]]:
     """Return a Query yielding ``SchoolYearStatus.school_id`` for schools
     whose **current** revision in their **latest** fiscal year carries an
     ``excluded_reason`` (i.e. 閉校 / 統合 / 学校なし etc).
@@ -77,7 +80,7 @@ def latest_excluded_school_ids(session: Session):
         .group_by(SchoolYearStatus.school_id)
         .subquery()
     )
-    return (
+    query = (
         session.query(SchoolYearStatus.school_id)
         .join(
             latest_year_subq,
@@ -89,3 +92,4 @@ def latest_excluded_school_ids(session: Session):
         .filter(SchoolYearStatus.is_current.is_(True))
         .filter(SchoolYearStatus.excluded_reason.isnot(None))
     )
+    return cast(Iterable[tuple[int]], query)

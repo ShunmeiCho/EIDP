@@ -29,7 +29,6 @@ import pytest
 
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 
-
 pytestmark = pytest.mark.skipif(
     sys.platform == "win32",
     reason="POSIX-side regression; Windows path validated in 8.5 VM spike",

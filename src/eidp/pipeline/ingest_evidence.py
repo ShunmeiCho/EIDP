@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from types import TracebackType
+from typing import TextIO
 
 import structlog
 
@@ -28,7 +30,7 @@ class IngestRejection:
     reason: str
     detail: dict[str, str] = field(default_factory=dict)
     timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
 
@@ -37,7 +39,7 @@ class IngestEvidenceRecorder:
 
     def __init__(self, path: Path | None) -> None:
         self.path = path
-        self._fh = None
+        self._fh: TextIO | None = None
         if path is not None:
             try:
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,8 +65,13 @@ class IngestEvidenceRecorder:
         finally:
             self._fh = None
 
-    def __enter__(self) -> "IngestEvidenceRecorder":
+    def __enter__(self) -> IngestEvidenceRecorder:
         return self
 
-    def __exit__(self, *_args) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         self.close()

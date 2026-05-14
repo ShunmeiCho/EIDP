@@ -42,10 +42,11 @@ import contextlib
 import json
 import os
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
+from typing import Any, cast
 
 # Cross-platform file-lock primitives.
 if sys.platform == "win32":  # pragma: no cover — exercised in Windows VM tests
@@ -125,18 +126,19 @@ def _write_owner_metadata(path: Path, owner: str) -> None:
         meta = {
             "owner": owner,
             "pid": os.getpid(),
-            "started_at": datetime.now(timezone.utc).isoformat(),
+            "started_at": datetime.now(UTC).isoformat(),
         }
         path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
 
 
-def _read_owner_metadata(path: Path) -> dict | None:
+def _read_owner_metadata(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return cast(dict[str, Any], payload) if isinstance(payload, dict) else None
     except (OSError, json.JSONDecodeError):
         return None
 
