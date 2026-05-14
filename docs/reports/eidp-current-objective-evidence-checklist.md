@@ -1,12 +1,12 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-14
-Latest code-affecting source evidence base: `cd07c2136438f282895ccc37beaa3a5df28ed816`
+Latest code-affecting source evidence base: `4a16363d81db9bc0ab5f5607247e1a67290d9268`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally separate from ZIP packaging: no new ZIP has been built for
-the code evidence base `cd07c213`, and the active operator-PC Stage 6 lane
+the code evidence base `4a16363d`, and the active operator-PC Stage 6 lane
 remains the existing v399 extraction. Later documentation-only commits may
 refresh this checklist without changing that code evidence base.
 
@@ -26,7 +26,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `cd07c213` |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `4a16363d` |
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints in both strong application and weak form-shape detection, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, and inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation; source HEAD names the default `0.70` review threshold via `DEFAULT_CONFIDENCE_REVIEW` and keeps Excel/exporter env-threshold tests green | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
@@ -42,11 +42,12 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v399, commit
   `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
   `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source-code evidence base: `cd07c213`, with Stage 6 safety fixes for recovery check,
+- Current source-code evidence base: `4a16363d`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling across strong and weak
-  target-form hint paths, and typed fiscal-year
+  target-form hint paths, operator-facing PDF discovery reason labels in the
+  school task-board detail panel, and typed fiscal-year
   override / PDF ingest / PDF OCR / Excel exporter / Excel import stats /
   manual audit / operator UI / bootstrap URL crawl / append-only audit-helper
   paths, plus unit-test isolation for Streamlit AppTest's fake `__main__`
@@ -83,21 +84,28 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   `package_source_check` detected that packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd` did not match the then-current
   source HEAD. The same stale-package boundary still applies to code evidence
-  base `cd07c2136438f282895ccc37beaa3a5df28ed816`, because v401 packages
+  base `4a16363d81db9bc0ab5f5607247e1a67290d9268`, because v401 packages
   commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`.
 - Do not mark the goal complete until v399 or a future approved package completes
   operator-PC browser write-cycle evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest local checks performed against source-code evidence base `cd07c213`:
+Latest local checks performed against source-code evidence base `4a16363d`:
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
 - `uv run ruff check src`
   -> `All checks passed`.
 - `uv run pytest tests/unit -q`
-  -> `1459 passed, 5 warnings in 49.48s`.
+  -> `1459 passed, 5 warnings in 34.55s`.
+- `uv run pytest tests/unit/test_review_school_year_tasks.py::test_discovery_evidence_table_rows_show_candidate_reason_and_source tests/unit/test_review_school_year_tasks.py::test_discovery_rejection_reason_summary_labels_top_reasons tests/unit/test_review_school_year_tasks.py::test_bootstrap_progress_detail_lines_include_rejection_reason_counts -q`
+  -> first run reproduced the raw-code detail-table bug with `1 failed`; after
+  the fix, the focused reason-label set returned `3 passed in 0.38s`.
+- `uv run pytest tests/unit/test_review_school_year_tasks.py -q`
+  -> `59 passed in 1.16s`.
+- `uv run ruff check src/eidp/review/_pages/school_year_tasks.py tests/unit/test_review_school_year_tasks.py && uv run mypy src/eidp/review/_pages/school_year_tasks.py`
+  -> `All checks passed`; `Success: no issues found in 1 source file`.
 - `uv run pytest tests/unit/test_pdf_discovery.py::test_pre_download_does_not_treat_romanized_renewal_form_alone_as_target -q`
   -> first run reproduced the weak-hint bug with `1 failed`; after the fix,
   the focused nearby renewal/priority set returned `4 passed in 1.37s`.
@@ -200,7 +208,7 @@ Latest local checks performed against source-code evidence base `cd07c213`:
   `0e7e66d25a9e77193962c4385e06e9744ab9f09f`, `source_dirty=false`,
   `stale=true`, and `results=[]`.
   This current rerun confirms v401 is not a current package; it is not evidence
-  that the latest code-affecting source base `cd07c213` has been packaged.
+  that the latest code-affecting source base `4a16363d` has been packaged.
 - `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --allow-stale-package --json --output _temp/v401-non-windows-release-gates-allow-stale-current-bb621daa.json`
   -> `ok=false`; SHA256 sidecar matched; `package_source_check` was allowed
   through with `stale=true`, but package verification then failed because v401
