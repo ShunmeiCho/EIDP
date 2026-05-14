@@ -96,7 +96,7 @@ Latest local checks performed against source-code evidence base `ceba1f66`:
 - `uv run ruff check src`
   -> `All checks passed`.
 - `uv run pytest tests/unit -q`
-  -> `1456 passed, 5 warnings in 153.12s`.
+  -> `1459 passed, 5 warnings in 32.36s`.
 - `uv run pytest tests/unit/test_discovery_evidence_summary.py -q`
   -> `14 passed in 0.36s`.
 - `uv run pytest tests/unit/test_discovery_evidence_summary.py tests/unit/test_school_fiscal_year_status.py::test_rebuild_marks_publication_lag_evidence_as_review_state tests/unit/test_school_fiscal_year_status.py::test_rebuild_marks_target_form_without_year_evidence_as_review_state -q`
