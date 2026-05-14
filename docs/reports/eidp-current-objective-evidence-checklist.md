@@ -1,15 +1,16 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-15
-Latest code-affecting source evidence base: `0974b60fb3d404678828ddfa348c74f4dd740c79`
+Latest code-affecting source evidence base: `f0c2715833b54e60fea85259e16ad0a1d9e6c106`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
-It is intentionally separate from later documentation-only commits: the current
-package lane is `dist/eidp-windows-v407.zip` for code evidence base `0974b60f`,
-and the active operator-PC Stage 6 lane is
-`C:\Users\cyo20\EIDP-v407-0974b60f`. Later documentation-only commits may
-refresh this checklist without changing that packaged code evidence base.
+It is intentionally explicit about lane boundaries: the latest core-verified
+source package is `dist/eidp-windows-v408.zip` for code evidence base
+`f0c27158`, while the active operator-PC Stage 6 setup/UI lane remains
+`C:\Users\cyo20\EIDP-v407-0974b60f` until v408 setup/UI validation is run.
+Later documentation-only commits may refresh this checklist without changing
+the packaged code evidence base.
 
 ## Objective Restatement
 
@@ -33,7 +34,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current | Proven on sandboxed/copy DB paths; real operator one-cycle proof still missing |
 | Excel template export | v384 R7 retroactive Excel preview/download proof; v407 Windows R7/FY2025 CLI export/diff returned `diff_rc=0`; v407 real-install browser R7 preview/download with process-local `EIDP_TARGET_FISCAL_YEAR=2025` generated `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`, then downloaded `_temp/v407-r7-browser-eidp_master.xlsx` with sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` and row/column counts `2419x10`, `10023x22`, `9721x83`, `9721x19`; v407 disposable UI sandbox generated a smaller Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 rehearsal, real-install browser download, and sandbox UI preview proven; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows | Proven on sandboxed paths; real operator one-cycle proof still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v407 transfer, SHA match, setup completion, SQLite integrity, CLI smoke, Streamlit health, `18501 -> 8501` tunnel health, verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` carrying the R7 browser Excel proof and seeded UI write proof without Excel/SQLite/runtime exports, and seeded browser write sandbox proof; v397 browser read-only navigation retained as historical support | Current v407 setup/service, diagnostic bundle, and sandbox browser-write proven; real operator one-cycle missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v407 transfer, SHA match, setup completion, SQLite integrity, CLI smoke, Streamlit health, `18501 -> 8501` tunnel health, verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` carrying the R7 browser Excel proof and seeded UI write proof without Excel/SQLite/runtime exports, and seeded browser write sandbox proof; v408 transfer/SHA/extract plus packaged recovery checker proof confirms the scheduled-task XML parser fix and the existing task action path; v397 browser read-only navigation retained as historical support | Current v407 setup/service, diagnostic bundle, and sandbox browser-write proven; v408 recovery parser proven but not setup/UI lane; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | Latest recorded strict target PDF auto-yield remains `0.0%`; `ship_readiness_rc=1` in current Windows evidence | Failing |
 | Ship gate: estimated manual work <= 30% | Current evidence records operator-reviewable yield far below release threshold and manual workload effectively above target | Failing |
@@ -43,7 +44,15 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v407, commit
   `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
   `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
-- Current source-code evidence base: `0974b60f`, with Stage 6 safety fixes for recovery check,
+- Latest core-verified package: v408, commit
+  `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, SHA256
+  `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`.
+  v408 was Mac core-verifier-clean, SHA-checked on Windows, extracted to
+  `C:\Users\cyo20\EIDP-v408-f0c27158`, and its packaged
+  `stage6_recovery_check.py` parsed the existing scheduled task XML
+  successfully with `action_matches_expected=true` for the v407 weekly runner.
+  It is not yet setup/UI/evidence-lane proven.
+- Current source-code evidence base: `f0c27158`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling across strong and weak
@@ -78,22 +87,50 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   ship-gate evidence even if the payload claims `ship_gate_status=pass`. For
   bootstrap release-gate checks, progress-count mismatches against SQLite are
   fatal under `--require-ship-gate` while remaining warnings for structure-only
-  validation.
-- These source-code fixes are present in the current v407 ZIP. v401 remains a
+- The v407 active lane contains all v407-era fixes through
+  `0974b60f`. The latest scheduled-task XML decode fix is present in v408, and
+  should be used for the next setup/UI lane only after v408 setup validation.
+  v401 remains a
   stale package: the latest recorded read-only rerun of the non-Windows package
   gate against v401 with the current verifier failed before downstream gates
   because `package_source_check` detected that packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd` did not match the then-current
   source HEAD.
-- Do not mark the goal complete until v407 completes real operator-PC
-  click-through evidence and the rolling FY yield gate.
+- Do not mark the goal complete until an active setup lane completes real
+  operator-PC click-through evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest v407 package/local gate evidence is summarized in
+Latest v408 recovery-parser package evidence and v407 setup/UI lane evidence
+are summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
 below include source-code evidence base `4a16363d` and later documentation-only
 refreshes:
+
+- `uv run pytest tests/unit/test_stage6_recovery_check.py -q`
+  -> `7 passed`.
+- `uv run pytest tests/unit/test_stage6_recovery_check.py tests/unit/test_stage6_residual_cleanup.py tests/unit/test_stage6_evidence_bundle.py tests/unit/test_windows_packaging_spike.py tests/unit/test_windows_distribution_verifier.py -q`
+  -> `205 passed`.
+- `uv run ruff check scripts/stage6_recovery_check.py tests/unit/test_stage6_recovery_check.py`
+  -> `All checks passed`.
+- `uv run mypy scripts/stage6_recovery_check.py`
+  -> `Success: no issues found in 1 source file`.
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v408.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v408.zip`, refreshed `dist/eidp-windows.zip`,
+  and wrote `dist/eidp-windows-v408.zip.sha256`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v408.zip --json`
+  -> `ok=true`, SHA256
+  `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`,
+  `wheel_count=78`, `project_wheel_count=1`, `prefecture_seed_rows=47`,
+  `discovery_gold_set_entries=44`, and packaged `BUILD_INFO.json` commit
+  `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, `git_dirty=false`.
+- Windows v408 transfer/extract and packaged recovery check:
+  SHA256 matched the sidecar, `C:\Users\cyo20\EIDP-v408-f0c27158` expanded
+  cleanly, and the packaged recovery checker returned `task.exists=true`,
+  `task.error=null`, and `action_matches_expected=true` for
+  `C:\Users\cyo20\EIDP-v407-0974b60f\scripts\weekly_run.bat`; overall
+  `ok=false` remained solely because known v384 residual smoke artifacts still
+  exist.
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
