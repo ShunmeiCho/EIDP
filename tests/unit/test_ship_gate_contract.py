@@ -16,6 +16,7 @@ spec.loader.exec_module(module)
 def test_ship_gate_contract_names_distinct_bootstrap_and_weekly_metrics() -> None:
     assert module.SHIP_GATE_AUTO_YIELD_PCT == 60.0
     assert module.SHIP_GATE_OPERATOR_COVERAGE_PCT == 60.0
+    assert module.SHIP_GATE_AUTO_YIELD_PCT == module.SHIP_GATE_OPERATOR_COVERAGE_PCT
     assert module.SHIP_GATE_STATUSES == frozenset({"pass", "below_gate", "not_measured"})
     assert module.BOOTSTRAP_SHIP_GATE_METRIC_BASIS == "post_bootstrap_operator_reviewable_coverage"
     assert module.WEEKLY_SHIP_GATE_METRIC_BASIS == "weekly_operator_reviewable_acquisition"

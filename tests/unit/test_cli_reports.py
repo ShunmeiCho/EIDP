@@ -162,7 +162,7 @@ def test_report_ship_readiness_json_uses_operator_review_gate(monkeypatch) -> No
     assert payload["ok_strict"] is False
     assert payload["strict_target_pdf_rate"] == 0.5
     assert payload["estimated_manual_workload_rate"] == 0.3
-    assert payload["criteria"][0]["name"] == "estimated_manual_workload"
+    assert [criterion["name"] for criterion in payload["criteria"]] == ["estimated_manual_workload"]
     assert payload["operator_review_criteria"][0]["name"] == "estimated_manual_workload"
     assert payload["strict_data_criteria"][0]["name"] == "excel_ready"
     assert fake_session.closed is True

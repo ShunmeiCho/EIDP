@@ -45,6 +45,9 @@ class ShipReadinessReport:
     strict_data_criteria: tuple[ShipReadinessCriterion, ...]
     criteria: tuple[ShipReadinessCriterion, ...]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "criteria", self.operator_review_criteria)
+
     @property
     def ok(self) -> bool:
         return self.ok_operator_review
@@ -100,7 +103,6 @@ def compute_ship_readiness(
             passed=excel_ready_rate >= strict_auto_target_pdf_min,
         ),
     )
-    criteria = operator_review_criteria + strict_data_criteria
 
     return ShipReadinessReport(
         fiscal_year=fy,
@@ -119,7 +121,7 @@ def compute_ship_readiness(
         manual_workload_max=manual_workload_max,
         operator_review_criteria=operator_review_criteria,
         strict_data_criteria=strict_data_criteria,
-        criteria=criteria,
+        criteria=operator_review_criteria,
     )
 
 

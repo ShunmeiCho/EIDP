@@ -313,10 +313,7 @@ def test_ship_readiness_treats_strict_target_pdf_as_diagnostic_metric() -> None:
     assert rep.ok is True
     assert rep.ok_operator_review is True
     assert rep.ok_strict is False
-    assert {criterion.name: criterion.passed for criterion in rep.criteria} == {
-        "estimated_manual_workload": True,
-        "excel_ready": False,
-    }
+    assert [criterion.name for criterion in rep.criteria] == ["estimated_manual_workload"]
     assert [criterion.name for criterion in rep.operator_review_criteria] == ["estimated_manual_workload"]
     assert [criterion.name for criterion in rep.strict_data_criteria] == ["excel_ready"]
 
