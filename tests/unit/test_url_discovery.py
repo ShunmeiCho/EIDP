@@ -7,7 +7,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from eidp.config import settings
 from eidp.db.models import Base, School, SchoolSite
 from eidp.scraper import url_discovery
 from eidp.scraper.search_provider import SearchResult
@@ -70,9 +69,7 @@ def test_load_corporation_domains_reads_utf8_sig_csv(tmp_path: Path, monkeypatch
         "学校法人テスト,https://corp.example,日本語メモ\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr(settings, "data_dir", data_dir)
-
-    domains = url_discovery._load_corporation_domains()
+    domains = url_discovery._load_corporation_domains(data_dir=data_dir)
 
     assert domains == {"学校法人テスト": "https://corp.example"}
 

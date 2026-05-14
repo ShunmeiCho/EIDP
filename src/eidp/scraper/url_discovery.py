@@ -86,7 +86,7 @@ def _is_safe_url(url: str) -> bool:
     return True
 
 
-def _load_corporation_domains() -> dict[str, str]:
+def _load_corporation_domains(data_dir: Path | None = None) -> dict[str, str]:
     """Load corporation -> domain mapping from external CSV.
 
     CSV path: data/url-discovery/corporation_domains.csv
@@ -94,7 +94,8 @@ def _load_corporation_domains() -> dict[str, str]:
     """
     from eidp.config import settings
 
-    csv_path = settings.data_dir / "url-discovery" / "corporation_domains.csv"
+    base_dir = data_dir if data_dir is not None else settings.data_dir
+    csv_path = base_dir / "url-discovery" / "corporation_domains.csv"
     domains: dict[str, str] = {}
 
     if not csv_path.exists():
