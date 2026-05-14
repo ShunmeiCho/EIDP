@@ -1253,16 +1253,34 @@ def test_discovery_evidence_table_rows_show_candidate_reason_and_source() -> Non
             pdf_url="https://school.example/2025.pdf",
             page_url="https://school.example/disclosure/",
         ),
+        SimpleNamespace(
+            reason="target_fiscal_year_not_detected",
+            score=2.4,
+            pdf_type="target",
+            anchor_text="確認申請書",
+            pdf_url="https://school.example/yearless.pdf",
+            page_url="https://school.example/disclosure/",
+        ),
     ])
 
-    assert rows == [{
-        "採否理由": "fiscal_year_mismatch:2025",
-        "score": 3.2,
-        "PDF種別": "target",
-        "リンク文字": "2025年度 確認申請書",
-        "PDF候補": "https://school.example/2025.pdf",
-        "掲載ページ": "https://school.example/disclosure/",
-    }]
+    assert rows == [
+        {
+            "採否理由": "旧年度 (2025年度)",
+            "score": 3.2,
+            "PDF種別": "target",
+            "リンク文字": "2025年度 確認申請書",
+            "PDF候補": "https://school.example/2025.pdf",
+            "掲載ページ": "https://school.example/disclosure/",
+        },
+        {
+            "採否理由": "対象年度不明",
+            "score": 2.4,
+            "PDF種別": "target",
+            "リンク文字": "確認申請書",
+            "PDF候補": "https://school.example/yearless.pdf",
+            "掲載ページ": "https://school.example/disclosure/",
+        },
+    ]
 
 
 def test_discovery_evidence_stale_target_notice_summarizes_old_year_target_candidates() -> None:

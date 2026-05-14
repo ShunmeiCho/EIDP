@@ -291,7 +291,7 @@ def discovery_evidence_table_rows(evidence_rows: list[Any]) -> list[dict[str, ob
     """Compact discovery evidence rows for the school task detail panel."""
     return [
         {
-            "採否理由": row.reason,
+            "採否理由": discovery_rejection_reason_label(str(row.reason)),
             "score": row.score,
             "PDF種別": row.pdf_type or "",
             "リンク文字": row.anchor_text,
@@ -1001,6 +1001,14 @@ DISCOVERY_REJECTION_REASON_LABELS = {
 }
 
 
+def discovery_rejection_reason_label(reason: str) -> str:
+    """Return an operator-facing label for one discovery evidence reason."""
+    if reason.startswith("fiscal_year_mismatch:"):
+        raw_year = reason.removeprefix("fiscal_year_mismatch:").strip()
+        return f"旧年度 ({raw_year}年度)" if raw_year else DISCOVERY_REJECTION_REASON_LABELS["fiscal_year_mismatch"]
+    return DISCOVERY_REJECTION_REASON_LABELS.get(reason, reason)
+
+
 def discovery_rejection_reason_summary(details: dict[str, object], *, limit: int = 3) -> str:
     counts: list[tuple[str, int]] = []
     prefix = "rejection_reason_"
@@ -1021,7 +1029,7 @@ def discovery_rejection_reason_summary(details: dict[str, object], *, limit: int
         if count <= 0:
             continue
         reason = key.removeprefix(prefix)
-        label = DISCOVERY_REJECTION_REASON_LABELS.get(reason, reason)
+        label = discovery_rejection_reason_label(reason)
         counts.append((label, count))
     counts.sort(key=lambda item: item[1], reverse=True)
     return " / ".join(f"{label} {count}" for label, count in counts[:limit])
