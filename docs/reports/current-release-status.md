@@ -9,7 +9,7 @@ Latest full non-Windows release-gate package: `dist/eidp-windows-v407.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v408.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v407.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v408.zip`
@@ -128,8 +128,32 @@ written to
 The Streamlit process and tunnel were stopped afterward; macOS `18510` had no
 listener, and Windows `8510` had no listening process remaining.
 
-v407 remains the latest full non-Windows release-gate and Stage 6 diagnostic
-evidence-bundle source for commit
+A v408 non-Excel diagnostic Stage 6 evidence bundle was then generated and
+verified from the active operator-PC extraction. A process-local FY2025 dry-run
+weekly command wrote `data\output\last_run.json` with `status=success`,
+`dry_run=true`, `current_fy=2025`, `selection_mode=target_missing`,
+`new_document_ids=[]`, `ship_gate_status=not_measured`, and null yield
+percentages because the denominator was `0`. The packaged recovery check wrote
+`logs\stage6-recovery-20260515-040010.json` with `action_matches_expected=true`
+for `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, while overall
+`ok=false` remained only because five old v384 residual smoke artifacts still
+exist. The packaged residual cleanup was run in dry-run mode only and wrote
+`logs\stage6-residual-cleanup-20260515-040034.json` with `existing_count=5`,
+`moved_count=0`, and `errors=[]`. The v408 UI sandbox proof was copied into the
+main v408 logs as
+`logs\diagnostics-v408-ui-sandbox-proof-20260515-034848.txt`. Running
+`scripts\collect_stage6_evidence.bat` created
+`logs\stage6-evidence-20260514-190257.zip`, and
+`scripts\verify_stage6_evidence.bat` wrote
+`logs\stage6-evidence-verify-20260515-040322.json` with `ok=true`,
+`entry_count=8`, `errors=[]`, `forbidden_entries=[]`, `unsafe_entries=[]`,
+`missing_required_labels=[]`, and present labels `build_info`, `diagnostics`,
+`last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and
+`weekly_run_logs`. The manifest still records missing `bootstrap_logs`,
+`bootstrap_progress`, and `discovery_rca`, so this is verifier-accepted
+diagnostic evidence, not a completed Stage 6 release sign-off.
+
+v407 remains the latest full non-Windows release-gate source for commit
 `0974b60fb3d404678828ddfa348c74f4dd740c79`. It was built with
 `scripts/build_windows_zip.py --skip-download --out-zip
 dist/eidp-windows-v407.zip --latest-alias`, and
@@ -282,10 +306,10 @@ sandbox proof rather than a real operator one-cycle sign-off.
 The active operator-PC setup/UI lane is now the v408 extraction
 `C:\Users\cyo20\EIDP-v408-f0c27158`. It is transfer/setup/UI-health proven and
 the scheduled task now points to the v408 weekly runner. It is still not Stage 6
-complete because v408 does not yet have a verifier-accepted diagnostic evidence
-bundle or a real operator cycle. v408 now has the R7 CLI export/diff proof, the
-R7 browser Excel download proof, and a disposable copied-DB UI write/audit
-sandbox proof.
+complete because v408 still does not have a real operator cycle or measured
+yield/sign-off. v408 now has the R7 CLI export/diff proof, the R7 browser Excel
+download proof, a disposable copied-DB UI write/audit sandbox proof, and a
+verifier-accepted non-Excel diagnostic evidence bundle.
 
 Already supportable from v408 evidence: ZIP transfer and SHA256 match, clean
 `BUILD_INFO.json`, `EIDP-setup.bat` completion, offline wheelhouse install,
@@ -297,23 +321,25 @@ retrieval, plus R7 retroactive CLI Excel export and zero-diff comparison against
 the already proven v407 R7 export, and R7 retroactive browser workbook
 generation/download with zero business-value diff against the v408 CLI export,
 plus sandbox browser writes for manual entry, fiscal-year override, `監査ログ`,
-and audit-outbox flush on `18510 -> 8510`.
+and audit-outbox flush on `18510 -> 8510`, plus
+`logs\stage6-evidence-20260514-190257.zip` verified by
+`logs\stage6-evidence-verify-20260515-040322.json`.
 
 Still retained from v407 as supporting evidence: business-key Excel diff
-diagnostics, non-mutating R7 weekly dry-run `last_run.json`, verifier-accepted
-non-Excel diagnostic evidence bundle `logs\stage6-evidence-20260514-174859.zip`
-carrying both the historical R7 browser Excel proof and seeded UI write proof,
-plus the disposable sandbox browser proof for `PDF確認・手入力`, fiscal-year
+diagnostics, non-mutating R7 weekly dry-run `last_run.json`,
+`logs\stage6-evidence-20260514-174859.zip` carrying both the historical R7
+browser Excel proof and seeded UI write proof, plus the disposable sandbox
+browser proof for `PDF確認・手入力`, fiscal-year
 override, Excel preview generation, `監査ログ`, and outbox flush. The UI-write
 paths have now been repeated on v408, but the v407 evidence remains useful
 historical support because it also covered sandbox Excel preview generation.
 
 Still missing for Stage 6: the same browser click-through/write flow against
-the real operator cycle or an approved full-cycle copy, post-click diagnostics
-from that cycle, decision on whether to archive old v384 residual smoke
-artifacts, final KPI/yield evidence, and owner/operator sign-off. Historical
-v397/v384/v399 UI proofs and the v407 sandbox proof can inform the checklist,
-but they must not be recorded as a completed v408 one-cycle sign-off.
+the real operator cycle or an approved full-cycle copy, decision on whether to
+archive old v384 residual smoke artifacts, final KPI/yield evidence, and
+owner/operator sign-off. Historical v397/v384/v399 UI proofs and the v407
+sandbox proof can inform the checklist, but they must not be recorded as a
+completed v408 one-cycle sign-off.
 
 Historical v397/v384/v399 proofs below are retained as supporting evidence, but
 the current setup/UI lane is v408. Old residual smoke artifacts remain
@@ -327,12 +353,12 @@ Stage 6 template fill map for the v408 lane:
 | --- | --- | --- |
 | 1. 実施情報 | v408 commit `f0c2715833b54e60fea85259e16ad0a1d9e6c106`; `dist/eidp-windows-v408.zip`; SHA256 `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`; extract path `C:\Users\cyo20\EIDP-v408-f0c27158` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Current v408 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
-| 3. 証跡採取コマンド | v408 hash/setup/validate/recovery/UI-health, R7 browser Excel proof, and UI write/audit sandbox proof are available; v407 historical seeded UI write proof is retained as supporting evidence | `EIDP-diagnose.bat` after the click-through cycle; v408 final evidence bundle from the real operator cycle |
+| 3. 証跡採取コマンド | v408 hash/setup/validate/recovery/UI-health, R7 browser Excel proof, UI write/audit sandbox proof, and verifier-accepted diagnostic evidence bundle are available; v407 historical seeded UI write proof is retained as supporting evidence | `EIDP-diagnose.bat` after the real click-through cycle; v408 final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, Mac tunnel health, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle |
 | 5. 4 工程 E2E | v408 R7 retroactive CLI export/diff proof exists and matches the proven v407 export exactly; v408 browser Excel preview/download produced the same business values as the v408 CLI export; a seeded disposable v408 UI sandbox proved manual-entry write and fiscal-year override write through the browser; v407 remains historical support for sandbox Excel preview workbook generation | Complete real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
-| 6. KPI 判定 | v408 setup evidence still shows FY2026 `excel_ready=0`; v408 R7 retroactive export/diff exists; v407 dry-run `last_run.json` has `ship_gate_status=not_measured`, no new documents, and no measured yield | v408 real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
+| 6. KPI 判定 | v408 setup evidence still shows FY2026 `excel_ready=0`; v408 R7 retroactive export/diff exists; v408 dry-run `last_run.json` has `status=success`, `dry_run=true`, `ship_gate_status=not_measured`, no new documents, and no measured yield | v408 real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
 | 7. 監査 / outbox | Seeded disposable v408 UI sandbox showed `JSONL outbox 未送信=7`, flush result `exported=7 already_present=0 failed=0`, and seven `ManualActionLog` rows with `jsonl_exported_at_present=true`; v407 sandbox shows the same historical surface | Real or approved full-cycle `manual_action_log` delta and final JSONL duplicate check |
-| 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; v407 non-Excel dry-run bundle is diagnostic only; v408 browser write proof is sandbox-only; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v408 full-cycle failures and screenshots/log attachments |
+| 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; v408 non-Excel dry-run bundle is diagnostic only; v408 browser write proof is sandbox-only; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v408 full-cycle failures and screenshots/log attachments |
 | 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |
 
 v397 was previously transferred to the operator PC and setup-validated in the
@@ -933,6 +959,27 @@ Current v408 package/setup/recovery/UI-health commands:
   `C:\Users\cyo20\EIDP-v408-f0c27158-ui-sandbox-20260515-02\logs\diagnostics-v408-ui-sandbox-proof-20260515-034848.json`.
   The Streamlit process and tunnel were stopped; `18510` had no listener and
   Windows `8510` had no listening process remaining.
+- Windows v408 non-Excel diagnostic evidence bundle:
+  process-local FY2025 dry-run weekly wrote `data\output\last_run.json` with
+  `status=success`, `dry_run=true`, `selection_mode=target_missing`,
+  `new_document_ids=[]`, `ship_gate_status=not_measured`, and null yield
+  percentages because the denominator was `0`; the log was
+  `logs\run-v408-retroactive-dryrun-20260515-040053.log`. The v408 packaged
+  recovery check wrote `logs\stage6-recovery-20260515-040010.json` with
+  `action_matches_expected=true` for
+  `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, while old v384
+  residual artifacts kept overall `ok=false`. `scripts\stage6_residual_cleanup.bat
+  --json` was dry-run only and wrote
+  `logs\stage6-residual-cleanup-20260515-040034.json` with `existing_count=5`,
+  `moved_count=0`, and `errors=[]`. `scripts\collect_stage6_evidence.bat`
+  produced `logs\stage6-evidence-20260514-190257.zip`; packaged
+  `scripts\verify_stage6_evidence.bat` wrote
+  `logs\stage6-evidence-verify-20260515-040322.json` with `ok=true`,
+  `entry_count=8`, `forbidden_entries=[]`, `unsafe_entries=[]`,
+  `missing_required_labels=[]`, and present labels `build_info`, `diagnostics`,
+  `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and
+  `weekly_run_logs`. The manifest still lists missing `bootstrap_logs`,
+  `bootstrap_progress`, and `discovery_rca`, so this remains diagnostic evidence.
 
 Current v407 full release-gate/setup commands:
 

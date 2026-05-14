@@ -8,10 +8,10 @@ This checklist maps the long-term EIDP objective to concrete artifacts and gates
 It is intentionally explicit about lane boundaries: the active operator-PC
 Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v408-f0c27158` for
 `dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v407 remains the
-latest full non-Windows release-gate and diagnostic evidence-bundle source.
-v408 now has R7 CLI Excel parity, R7 browser Excel download proof, and a
-disposable copied-DB UI write/audit sandbox proof; the real operator cycle is
-still missing.
+latest full non-Windows release-gate source. v408 now has R7 CLI Excel parity,
+R7 browser Excel download proof, a disposable copied-DB UI write/audit sandbox
+proof, and a verifier-accepted non-Excel diagnostic evidence bundle; the real
+operator cycle is still missing.
 
 ## Objective Restatement
 
@@ -35,7 +35,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current; current v408 disposable UI sandbox repeated the browser-write surface with one manual FY2025 `DepartmentYearly` row (`capacity=40`, `enrollment=28`, `extraction_method=manual`, `extraction_confidence=1.0`, `verified=true`) and one fiscal-year override that marked FY2024 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows non-current while FY2025 current rows were present | Proven on sandboxed/copy DB paths including current v408; real operator one-cycle proof still missing |
 | Excel template export | v384 R7 retroactive Excel preview/download proof; v408 Windows R7/FY2025 CLI export wrote `v408-r7-retroactive-export.xlsx` with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`; v408 business diff against the proven v407 R7 export returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; `openpyxl` opened the v408 CLI workbook at `3,673,084` bytes with sheet dimensions `2419x10`, `10023x22`, `9721x83`, `9721x19`; v408 real-install browser R7 preview/download generated `_temp/v408-r7-browser-eidp_master.xlsx`, suggested `eidp_master.xlsx`, and matched the v408 CLI export with `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; v407 disposable UI sandbox generated a smaller Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 CLI export/diff and browser download proven on v408; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows; current v408 disposable UI sandbox repeated the audit path through `監査ログ`, showing `JSONL outbox 未送信=7`, `Outbox を flush` result `exported=7 already_present=0 failed=0`, and seven rows with `jsonl_exported_at_present=true` in direct DB verification | Proven on sandboxed paths including current v408; real operator one-cycle proof still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v408 transfer, SHA match, setup completion, SQLite integrity, scheduled-task action update to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, packaged recovery checker proof, Streamlit health, `18508 -> 8508` tunnel health, v408 R7 browser Excel proof through `18509 -> 8509`, and v408 disposable UI write/audit proof through `18510 -> 8510`; v407 verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` carries the historical R7 browser Excel proof and seeded UI write proof without Excel/SQLite/runtime exports, and v407 seeded browser write sandbox proof remains supporting evidence; v397 browser read-only navigation retained as historical support | Current v408 setup/service/recovery/UI-health, R7 browser Excel, and sandbox browser-write/audit proven; real operator one-cycle missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v408 transfer, SHA match, setup completion, SQLite integrity, scheduled-task action update to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, packaged recovery checker proof, Streamlit health, `18508 -> 8508` tunnel health, v408 R7 browser Excel proof through `18509 -> 8509`, v408 disposable UI write/audit proof through `18510 -> 8510`, and v408 non-Excel diagnostic bundle `logs\stage6-evidence-20260514-190257.zip` verified by `logs\stage6-evidence-verify-20260515-040322.json` with `ok=true`, no forbidden/unsafe entries, and labels `build_info`, `diagnostics`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`; v407 verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` and sandbox proof remain historical support; v397 browser read-only navigation retained as historical support | Current v408 setup/service/recovery/UI-health, R7 browser Excel, sandbox browser-write/audit, and diagnostic evidence bundle proven; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | Latest recorded strict target PDF auto-yield remains `0.0%`; `ship_readiness_rc=1` in current Windows evidence | Failing |
 | Ship gate: estimated manual work <= 30% | Current evidence records operator-reviewable yield far below release threshold and manual workload effectively above target | Failing |
@@ -52,9 +52,10 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   served Streamlit through a Mac tunnel `18508 -> 8508`, and its packaged
   `stage6_recovery_check.py` parsed the scheduled task XML successfully with
   `action_matches_expected=true` for the v408 weekly runner. v408 is not yet
-  evidence-bundle or real-operator-cycle proven, but it has R7 CLI Excel
-  export/diff parity with v407, R7 browser Excel download parity with the v408
-  CLI export, and a disposable copied-DB UI write/audit sandbox proof.
+  real-operator-cycle proven, but it has R7 CLI Excel export/diff parity with
+  v407, R7 browser Excel download parity with the v408 CLI export, a disposable
+  copied-DB UI write/audit sandbox proof, and a verifier-accepted non-Excel
+  diagnostic evidence bundle.
 - Supporting Windows evidence lane: v407, commit
   `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
   `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
@@ -189,6 +190,23 @@ refreshes:
   manual FY2025 `DepartmentYearly` row was verified, and the fiscal-year override
   cloned FY2025 current rows while demoting FY2024 rows. The Streamlit process
   and tunnel were stopped after the proof.
+- Windows v408 non-Excel diagnostic evidence bundle:
+  process-local FY2025 dry-run weekly wrote `data\output\last_run.json` with
+  `status=success`, `dry_run=true`, `selection_mode=target_missing`,
+  `new_document_ids=[]`, `ship_gate_status=not_measured`, and null yield
+  percentages because the denominator was `0`; the log was
+  `logs\run-v408-retroactive-dryrun-20260515-040053.log`. Packaged recovery
+  wrote `logs\stage6-recovery-20260515-040010.json` with
+  `action_matches_expected=true`; residual cleanup was dry-run only and wrote
+  `logs\stage6-residual-cleanup-20260515-040034.json` with `existing_count=5`,
+  `moved_count=0`, and `errors=[]`. Packaged collection produced
+  `logs\stage6-evidence-20260514-190257.zip`, and packaged verification wrote
+  `logs\stage6-evidence-verify-20260515-040322.json` with `ok=true`,
+  `entry_count=8`, `forbidden_entries=[]`, `unsafe_entries=[]`,
+  `missing_required_labels=[]`, and labels `build_info`, `diagnostics`,
+  `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and
+  `weekly_run_logs`. The manifest still lists missing `bootstrap_logs`,
+  `bootstrap_progress`, and `discovery_rca`, so this remains diagnostic evidence.
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
@@ -497,7 +515,8 @@ Known non-goal-wide lint boundary:
   tree and passes across 83 source files. This is still Mac-side evidence only;
   it does not prove the real Windows operator-PC Stage 6 one-cycle or the
   rolling FY yield gate. The current-package v408 browser-write proof is
-  sandbox-only and must not be treated as a real operator-cycle sign-off.
+  sandbox-only, and the v408 evidence bundle is dry-run diagnostic evidence;
+  neither must be treated as a real operator-cycle sign-off.
 
 ## Next Concrete Gate
 
