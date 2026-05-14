@@ -210,7 +210,14 @@ def verify_package_source_commit(
 
     source_commit = _current_git_commit()
     source_dirty = _current_git_dirty()
-    stale = package_commit != "unknown" and source_commit != "unknown" and package_commit != source_commit
+    # "unknown" is the sentinel build_info() / _current_git_commit() write when
+    # git metadata lookup failed. Treat it as stale on either side, never as a
+    # wildcard that matches anything. Otherwise a release ZIP carrying
+    # git_commit="unknown" (or a source tree with no resolvable HEAD) silently
+    # bypasses commit verification. allow_stale_package is the explicit override
+    # for historical package replays.
+    unknown_commit = package_commit == "unknown" or source_commit == "unknown"
+    stale = unknown_commit or package_commit != source_commit
     result = {
         "ok": (not source_dirty) and (allow_stale_package or not stale),
         "package_commit": package_commit,
@@ -222,9 +229,16 @@ def verify_package_source_commit(
         result["error"] = "current source tree has uncommitted tracked changes"
         return result
     if stale and not allow_stale_package:
-        result["error"] = (
-            f"package BUILD_INFO git_commit {package_commit} does not match current source HEAD {source_commit}"
-        )
+        if unknown_commit:
+            result["error"] = (
+                f"package BUILD_INFO git_commit {package_commit} vs source HEAD {source_commit}: "
+                "unresolved git commit cannot be verified; rebuild the package with a resolvable HEAD "
+                "or pass --allow-stale-package for an audited historical replay"
+            )
+        else:
+            result["error"] = (
+                f"package BUILD_INFO git_commit {package_commit} does not match current source HEAD {source_commit}"
+            )
     return result
 
 

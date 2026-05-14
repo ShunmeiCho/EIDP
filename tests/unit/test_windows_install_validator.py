@@ -295,6 +295,18 @@ def test_validate_core_install_rejects_dirty_build_info(tmp_path: Path) -> None:
     assert any("BUILD_INFO.json git_dirty must be false" in error for error in check.errors)
 
 
+def test_validate_core_install_rejects_unknown_build_commit(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    build_info = json.loads((root / "BUILD_INFO.json").read_text(encoding="utf-8"))
+    build_info["git_commit"] = "unknown"
+    _write(root, "BUILD_INFO.json", json.dumps(build_info))
+
+    check = module.validate_install(root)
+
+    assert not check.ok
+    assert any("BUILD_INFO.json git_commit must be a full 40-character commit hash" in error for error in check.errors)
+
+
 def test_validate_core_install_requires_project_wheel(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     (root / "wheelhouse" / "eidp-0.2.0-py3-none-any.whl").unlink()

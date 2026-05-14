@@ -189,6 +189,34 @@ def test_build_info_records_commit_branch_and_tracked_dirty_state(tmp_path: Path
     assert ("status", "--porcelain", "--untracked-files=no") in calls
 
 
+def test_build_info_release_refuses_unknown_git_commit(tmp_path: Path, monkeypatch):
+    """Release builds (allow_unknown_git=False) must hard-fail when the git
+    commit cannot be resolved. Otherwise the resulting ZIP carries
+    ``git_commit="unknown"`` and silently bypasses the source-commit gate in
+    ``run_non_windows_release_gates.verify_package_source_commit``."""
+    bw = _load_build_script()
+
+    monkeypatch.setattr(bw, "_git_output", lambda *_a, **_k: "")
+
+    with pytest.raises(RuntimeError, match="resolvable git commit"):
+        bw.build_info(tmp_path)
+
+
+def test_build_info_diagnostic_allows_unknown_git_commit(tmp_path: Path, monkeypatch):
+    """Diagnostic builds (--allow-dirty / allow_unknown_git=True) keep the
+    pre-existing escape hatch of writing ``git_commit="unknown"`` so engineers
+    can still produce throwaway ZIPs from worktrees without a resolvable HEAD."""
+    bw = _load_build_script()
+
+    monkeypatch.setattr(bw, "_git_output", lambda *_a, **_k: "")
+
+    info = bw.build_info(tmp_path, allow_unknown_git=True)
+
+    assert info["git_commit"] == "unknown"
+    assert info["git_branch"] == "unknown"
+    assert info["git_dirty"] == "false"
+
+
 def test_build_windows_zip_rejects_dirty_tracked_source_by_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -228,6 +228,7 @@ def assemble_zip(
     out_zip: Path,
     repo_root: Path,
     wheelhouse: Path,
+    allow_unknown_git: bool = False,
 ) -> Path:
     """Build a self-contained ZIP. ``runtime/`` (python-build-standalone
     + uv.exe) is appended later by a separate step that downloads the
@@ -238,8 +239,9 @@ def assemble_zip(
 
     members = collect_zip_members(repo_root=repo_root, wheelhouse=wheelhouse)
 
+    metadata = build_info(repo_root, allow_unknown_git=allow_unknown_git)
     with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("BUILD_INFO.json", json.dumps(build_info(repo_root), ensure_ascii=False, indent=2))
+        zf.writestr("BUILD_INFO.json", json.dumps(metadata, ensure_ascii=False, indent=2))
         for src, arc in members:
             if arc.endswith(".bat"):
                 # Windows cmd.exe needs CRLF; rewrite on-the-fly.
@@ -304,11 +306,26 @@ def _git_output(repo_root: Path, *args: str) -> str:
     return proc.stdout.strip()
 
 
-def build_info(repo_root: Path) -> dict[str, str]:
-    """Build metadata shown in the operator UI and checked during handoff."""
+def build_info(repo_root: Path, *, allow_unknown_git: bool = False) -> dict[str, str]:
+    """Build metadata shown in the operator UI and checked during handoff.
+
+    Release builds (``allow_unknown_git=False``) refuse to write the
+    ``"unknown"`` sentinel for ``git_commit``: a ZIP carrying ``"unknown"``
+    bypasses the source-commit gate in
+    ``run_non_windows_release_gates.verify_package_source_commit``, so we
+    fail loud at build time instead of producing a stale-friendly artefact.
+    Diagnostic builds opt in via ``allow_unknown_git=True`` (wired through
+    ``--allow-dirty`` on the CLI).
+    """
     commit = _git_output(repo_root, "rev-parse", "HEAD")
     branch = _git_output(repo_root, "rev-parse", "--abbrev-ref", "HEAD")
     dirty = "true" if _git_output(repo_root, "status", "--porcelain", "--untracked-files=no") else "false"
+    if not commit and not allow_unknown_git:
+        raise RuntimeError(
+            "release build requires resolvable git commit; `git rev-parse HEAD` "
+            "returned empty. Run inside a git checkout, or pass --allow-dirty "
+            "for a diagnostic build that records git_commit=unknown."
+        )
     return {
         "app": "EIDP",
         "built_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -590,7 +607,12 @@ def main(argv: list[str] | None = None) -> int:
             assert_runtime_present(REPO_ROOT)
         if not args.skip_master:
             assert_master_xlsx_present(REPO_ROOT)
-        out = assemble_zip(out_zip=args.out_zip, repo_root=REPO_ROOT, wheelhouse=args.wheelhouse)
+        out = assemble_zip(
+            out_zip=args.out_zip,
+            repo_root=REPO_ROOT,
+            wheelhouse=args.wheelhouse,
+            allow_unknown_git=args.allow_dirty,
+        )
         sidecar = write_sha256_sidecar(out, repo_root=REPO_ROOT)
         size_mb = out.stat().st_size / 1024 / 1024
         print(f"OK: wrote {out} ({size_mb:.1f} MB)")

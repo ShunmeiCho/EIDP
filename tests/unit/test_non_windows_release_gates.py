@@ -174,6 +174,70 @@ def test_verify_package_source_commit_rejects_dirty_tracked_source(
     assert result["error"] == "current source tree has uncommitted tracked changes"
 
 
+def test_verify_package_source_commit_rejects_unknown_package_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ZIP carrying git_commit='unknown' must not bypass commit verification."""
+    package = tmp_path / "eidp-windows.zip"
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": "unknown"}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+
+    result = module.verify_package_source_commit(package)
+
+    assert result["ok"] is False
+    assert result["stale"] is True
+    assert result["package_commit"] == "unknown"
+    assert result["source_commit"] == source_commit
+    assert "unresolved git commit" in result["error"]
+
+
+def test_verify_package_source_commit_rejects_unknown_source_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A source tree with no resolvable HEAD must not bypass verification either."""
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": package_commit}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: "unknown")
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+
+    result = module.verify_package_source_commit(package)
+
+    assert result["ok"] is False
+    assert result["stale"] is True
+    assert result["package_commit"] == package_commit
+    assert result["source_commit"] == "unknown"
+    assert "unresolved git commit" in result["error"]
+
+
+def test_verify_package_source_commit_unknown_still_overridable_for_history(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """allow_stale_package remains the explicit override even for unknown markers,
+    so audited historical replays still work."""
+    package = tmp_path / "eidp-windows.zip"
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr("BUILD_INFO.json", json.dumps({"git_commit": "unknown"}))
+    monkeypatch.setattr(module, "_current_git_commit", lambda: "b" * 40)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+
+    result = module.verify_package_source_commit(package, allow_stale_package=True)
+
+    assert result["ok"] is True
+    assert result["stale"] is True
+    assert result["package_commit"] == "unknown"
+
+
 def test_current_git_dirty_ignores_untracked_files(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
         assert args[0] == ("git", "status", "--porcelain", "--untracked-files=no")
