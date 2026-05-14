@@ -2,7 +2,7 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Latest code-affecting source evidence base: `e714e3317ae561bcbbe2f41de1681a22a3b0934d`
+Latest code-affecting source evidence base: `ceba1f66d70679da73e74ddaa4a41e6f2857eb1d`
 Current Mac-verifier-clean package for latest code evidence base: none
 Latest historical Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
 Historical package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
@@ -25,7 +25,7 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 There is currently no Mac-verifier-clean ZIP for latest code-affecting source evidence base
-`e714e3317ae561bcbbe2f41de1681a22a3b0934d`. The latest historical clean ZIP is
+`ceba1f66d70679da73e74ddaa4a41e6f2857eb1d`. The latest historical clean ZIP is
 v401 at commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, SHA256
 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; it passed
 the then-current package verifier, but a read-only rerun with the current
@@ -45,6 +45,9 @@ uncommitted tracked source. Later documentation-only commits refresh the
 release-status evidence without changing that code evidence base.
 The Windows install validator also rejects `last_run.json status=lock_busy` as
 weekly ship-gate evidence even if the payload claims `ship_gate_status=pass`.
+For bootstrap release-gate checks, progress-count mismatches against SQLite are
+now fatal under `--require-ship-gate` while remaining warnings for
+structure-only validation.
 No ZIP has been built or Windows-tested from this current code evidence base. The older v399 ZIP is
 also intentionally rejected by the current verifier because its packaged runbook
 predates the corrected SSH tunnel guidance. For the normal
@@ -1330,7 +1333,7 @@ Latest recorded current-verifier read-only v401 package-gate rerun:
   `stale=true`, and `results=[]`.
   This prevents mixing source test gates with an older ZIP snapshot. The same
   stale-package boundary applies to latest code-affecting source evidence base
-  `e714e3317ae561bcbbe2f41de1681a22a3b0934d`, because v401 packages
+  `ceba1f66d70679da73e74ddaa4a41e6f2857eb1d`, because v401 packages
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`. No new ZIP was built.
 - Allow-stale diagnostic rerun for the same v401 ZIP:
   `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --allow-stale-package --json --output _temp/v401-non-windows-release-gates-allow-stale-current-bb621daa.json`
