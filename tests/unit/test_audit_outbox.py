@@ -364,6 +364,42 @@ def test_flush_outbox_ignores_archives_with_other_stem(engine, tmp_path):
     assert json.loads(lines[0])["action_id"] == action_id
 
 
+def test_flush_outbox_ignores_archive_symlinks(engine, tmp_path):
+    """Archive dedup must not follow symlinks outside the audit directory."""
+    jsonl = tmp_path / "manual-actions.jsonl"
+    external = tmp_path / "external-actions.jsonl"
+    archive_link = tmp_path / "manual-actions-2026-05.jsonl"
+
+    with Session(engine) as session:
+        row = log_manual_action(
+            session,
+            action_type="manual_entry",
+            target_table="department_yearly",
+            target_id=1,
+            new_value={"enrollment": 100},
+        )
+        session.commit()
+        action_id = row.action_id
+
+    external.write_text(json.dumps({"action_id": action_id}) + "\n", encoding="utf-8")
+    try:
+        archive_link.symlink_to(external)
+    except OSError as exc:  # pragma: no cover - platform privilege boundary
+        pytest.skip(f"symlink not available: {exc}")
+
+    with Session(engine) as session:
+        stats = flush_audit_outbox(session, jsonl_path=jsonl)
+        assert stats == {"exported": 1, "already_present": 0, "failed": 0}
+
+        row = session.query(ManualActionLog).one()
+        assert row.jsonl_exported_at is not None
+        assert row.jsonl_export_error is None
+
+    lines = [ln for ln in jsonl.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 1
+    assert json.loads(lines[0])["action_id"] == action_id
+
+
 def test_flush_outbox_skips_already_exported_rows(engine, tmp_path):
     """Pending = jsonl_exported_at IS NULL. Already-exported rows must be
     skipped on subsequent flushes regardless of whether the JSONL file still

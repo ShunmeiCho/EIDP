@@ -40,7 +40,7 @@ def _candidate_outbox_paths(jsonl_path: Path) -> list[Path]:
             sorted(
                 p
                 for p in jsonl_path.parent.iterdir()
-                if p.is_file() and _is_matching_outbox_archive(jsonl_path, p)
+                if not p.is_symlink() and p.is_file() and _is_matching_outbox_archive(jsonl_path, p)
             )
         )
     return list(dict.fromkeys(paths))
