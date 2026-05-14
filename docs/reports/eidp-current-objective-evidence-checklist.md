@@ -63,6 +63,12 @@ Latest local checks performed against source HEAD `ed51b9c`:
   -> `101 passed, 5 warnings in 3.32s`; covers manual-entry append-only writes,
   fiscal-year override audit rows, audit-log/outbox helpers, and Excel export /
   preview surfaces at unit level.
+- `uv run eidp discovery-gold-set --json`
+  -> `44` entries, `10` strict target-year successes, `17` publication-lag
+  entries, and `undemonstrated_pattern_sources=[]`.
+- `uv run eidp eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --fail-on-regression --json`
+  -> `44` exact matches, `0` failed predictions, `0` missing entries, and `0`
+  unexpected predictions.
 - `uv run pytest tests/unit/test_pdf_discovery.py -q -k "renewal or koushin or english_renewal or target_form or pre_download"`
   -> `38 passed, 124 deselected, 5 warnings`.
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py`
