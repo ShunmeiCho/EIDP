@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import openpyxl
+import openpyxl  # type: ignore[import-untyped]
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
