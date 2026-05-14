@@ -14,6 +14,7 @@ Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v408.zip`
+Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v407.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
@@ -86,9 +87,28 @@ keys for `対象比率`, `学科別`, and `在籍のみ抜粋`. `openpyxl` opene
 workbook at `3,673,084` bytes with four sheets and row/column counts
 `2419x10`, `10023x22`, `9721x83`, and `9721x19`.
 
+The v408 Streamlit UI was also launched in retroactive R7/FY2025 mode on
+Windows `127.0.0.1:8509` with process-local `EIDP_TARGET_FISCAL_YEAR=2025`,
+and reached from macOS through an SSH tunnel `127.0.0.1:18509 ->
+127.0.0.1:8509`. The browser rendered `Excel プレビュー` with
+`対象年度: 2025年度（令和7年度）`, `抽出済み学校 2031`, and `Excel対象行 7150`.
+Clicking `プレビュー workbook を生成` produced sheet counts
+`採録状況=2418`, `対象比率=10022`, `学科別=9719`, and
+`在籍のみ抜粋=9719`; clicking `Excel ダウンロード` downloaded
+`_temp/v408-r7-browser-eidp_master.xlsx` with suggested filename
+`eidp_master.xlsx`. `openpyxl` opened the browser workbook at `3,673,083`
+bytes with four sheets and row/column counts `2419x10`, `10023x22`,
+`9721x83`, and `9721x19`. After copying the Windows CLI export to
+`_temp/v408-r7-cli-export.xlsx`, local `diff-excel --business-values
+--original _temp/v408-r7-cli-export.xlsx _temp/v408-r7-browser-eidp_master.xlsx`
+returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`,
+`extra_rows=0`, and `differing_fields=0`, with zero duplicate keys for
+`対象比率`, `学科別`, and `在籍のみ抜粋`. The Streamlit process and tunnel were
+stopped afterward; macOS `18509` had no listener, and Windows `8509` had only
+TIME_WAIT connections, no listening process.
+
 v407 remains the latest full non-Windows release-gate, Stage 6 diagnostic
-evidence-bundle, R7 browser Excel, and seeded UI-write sandbox evidence source
-for commit
+evidence-bundle, and seeded UI-write sandbox evidence source for commit
 `0974b60fb3d404678828ddfa348c74f4dd740c79`. It was built with
 `scripts/build_windows_zip.py --skip-download --out-zip
 dist/eidp-windows-v407.zip --latest-alias`, and
@@ -242,8 +262,8 @@ The active operator-PC setup/UI lane is now the v408 extraction
 `C:\Users\cyo20\EIDP-v408-f0c27158`. It is transfer/setup/UI-health proven and
 the scheduled task now points to the v408 weekly runner. It is still not Stage 6
 complete because v408 does not yet have a verifier-accepted diagnostic evidence
-bundle, a v408 R7 browser Excel proof, a v408 seeded UI-write sandbox proof, or
-a real operator cycle. v408 now has the R7 CLI export/diff proof.
+bundle, a v408 seeded UI-write sandbox proof, or a real operator cycle. v408 now
+has both the R7 CLI export/diff proof and the R7 browser Excel download proof.
 
 Already supportable from v408 evidence: ZIP transfer and SHA256 match, clean
 `BUILD_INFO.json`, `EIDP-setup.bat` completion, offline wheelhouse install,
@@ -252,16 +272,17 @@ schools, SQLite integrity, required-table presence, scheduled-task XML parsing,
 scheduled-task action confirmation for the v408 weekly runner, Windows-local
 Streamlit health, Mac tunnel health on `18508 -> 8508`, and Streamlit root HTML
 retrieval, plus R7 retroactive CLI Excel export and zero-diff comparison against
-the already proven v407 R7 export.
+the already proven v407 R7 export, and R7 retroactive browser workbook
+generation/download with zero business-value diff against the v408 CLI export.
 
-Still retained from v407 as supporting evidence: R7 browser Excel proof,
-business-key Excel diff diagnostics, non-mutating R7 weekly dry-run
-`last_run.json`, verifier-accepted non-Excel diagnostic evidence bundle
-`logs\stage6-evidence-20260514-174859.zip` carrying both the R7 browser Excel
-proof and seeded UI write proof, plus the disposable sandbox browser proof for
-`PDF確認・手入力`, fiscal-year override, Excel preview generation, `監査ログ`, and
-outbox flush. The browser Excel and UI-write paths should be repeated on v408
-before treating v408 as the full Stage 6 evidence lane.
+Still retained from v407 as supporting evidence: business-key Excel diff
+diagnostics, non-mutating R7 weekly dry-run `last_run.json`, verifier-accepted
+non-Excel diagnostic evidence bundle `logs\stage6-evidence-20260514-174859.zip`
+carrying both the historical R7 browser Excel proof and seeded UI write proof,
+plus the disposable sandbox browser proof for `PDF確認・手入力`, fiscal-year
+override, Excel preview generation, `監査ログ`, and outbox flush. The UI-write
+paths should still be repeated on v408 before treating v408 as the full Stage 6
+evidence lane.
 
 Still missing for Stage 6: the same browser click-through/write flow against
 the real operator cycle or an approved full-cycle copy, post-click diagnostics
@@ -282,9 +303,9 @@ Stage 6 template fill map for the v408 lane:
 | --- | --- | --- |
 | 1. 実施情報 | v408 commit `f0c2715833b54e60fea85259e16ad0a1d9e6c106`; `dist/eidp-windows-v408.zip`; SHA256 `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`; extract path `C:\Users\cyo20\EIDP-v408-f0c27158` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Current v408 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
-| 3. 証跡採取コマンド | v408 hash/setup/validate/recovery/UI-health is available; v407 R7 browser Excel proof and seeded UI write proof remain supporting historical evidence | `EIDP-diagnose.bat` after the click-through cycle; v408 final evidence bundle from the real operator cycle |
+| 3. 証跡採取コマンド | v408 hash/setup/validate/recovery/UI-health and R7 browser Excel proof are available; v407 seeded UI write proof remains supporting historical evidence | `EIDP-diagnose.bat` after the click-through cycle; v408 final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, Mac tunnel health, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle |
-| 5. 4 工程 E2E | v408 R7 retroactive CLI export/diff proof exists and matches the proven v407 export exactly; a seeded disposable v407 UI sandbox proved manual-entry write, fiscal-year override write, and Excel preview workbook generation through the browser | Repeat browser Excel/UI write proof on v408 or complete real operator-cycle click-through, final Excel download evidence, and any current PDF collection metrics |
+| 5. 4 工程 E2E | v408 R7 retroactive CLI export/diff proof exists and matches the proven v407 export exactly; v408 browser Excel preview/download produced the same business values as the v408 CLI export; a seeded disposable v407 UI sandbox proved manual-entry write, fiscal-year override write, and Excel preview workbook generation through the browser | Repeat UI write proof on v408 or complete real operator-cycle click-through, final current-FY PDF collection metrics |
 | 6. KPI 判定 | v408 setup evidence still shows FY2026 `excel_ready=0`; v408 R7 retroactive export/diff exists; v407 dry-run `last_run.json` has `ship_gate_status=not_measured`, no new documents, and no measured yield | v408 real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
 | 7. 監査 / outbox | Seeded disposable v407 UI sandbox showed `JSONL outbox 未送信=7`, flush result `exported=7 already_present=0 failed=0`, and seven `ManualActionLog` rows with `jsonl_exported_at_present=true` | v408 real or approved sandbox operator-cycle `manual_action_log` delta and final JSONL duplicate check |
 | 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; v407 non-Excel dry-run bundle is diagnostic only; v407 browser write proof is sandbox-only; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v408 full-cycle failures and screenshots/log attachments |
@@ -781,9 +802,9 @@ Stage 6 operator workflow evidence still remains incomplete, as listed below.
 Note: this checklist keeps older v384/v397/v399/v401 evidence in historical
 context where it still proves a specific workflow. For current package state,
 v408 supersedes older ZIPs for core package verification, Windows setup,
-scheduled-task recovery, and UI-health. v407 remains supporting evidence for
-R7 browser Excel, the diagnostic evidence bundle, and seeded UI writes until
-those are repeated on v408 or replaced by a real operator cycle. Full
+scheduled-task recovery, UI-health, and R7 browser Excel download. v407 remains
+supporting evidence for the diagnostic evidence bundle and seeded UI writes
+until those are repeated on v408 or replaced by a real operator cycle. Full
 operator-action click-through remains unverified.
 
 | Requirement | Current evidence | Status |
@@ -793,9 +814,9 @@ operator-action click-through remains unverified.
 | Exclude stale-year fallback from auto-success | Ship gate uses operator-reviewable coverage, while strict auto-yield remains diagnostic; v380 package gold-set includes `17` publication-lag cases; Windows v333/v339/v340 evidence records prior false-success or stale-year URLs as `target_fiscal_year_not_detected` / `fiscal_year_mismatch:*` instead of `accepted_downloaded`; malformed raw URLs are recorded as `unsafe_url` instead of aborting the batch | Evidence present |
 | Extract with pdfplumber/PyMuPDF/Tesseract and write only confidence >= 0.70 rows | Unit/package gates cover OCR runtime presence and confidence contracts; Windows v340 Saitama 50-site run produced no strict target PDFs, so no PDF-derived yearly rows were written; this avoids v332's false-positive `18` current rows. v383 adds package-verifier enforcement for the OCR add-on TSV config and a disposable operator-PC image smoke. v384 repeats the OCR image/write proof on the latest core package: Tesseract returned `ocr_full_text="V384 OCR WRITE SMOKE 2026"` with `ocr_conf_values=[93,94,96,96,96]` and `ocr_avg_confidence=0.95`; `save_manual_entries` wrote one copied-DB `DepartmentYearly` row with `extraction_method="ocr_tesseract"`, `extraction_confidence=0.95`, and `verified=true`, promoted the document to `ingested`, emitted three `manual_entry` audit rows, and left the real runtime DB with `0` matching marker rows. Post-v383 source coverage proves image-PDF ingest uses the Tesseract TSV wrapper and records `ocr_tesseract` confidence breakdowns on both `DepartmentYearly` and `SupportRecipient` rows when OCR TSV confidence is present | Mechanically proven for OCR runtime/TSV parsing and copied-DB DepartmentYearly write on v384, plus code-level SupportRecipient OCR confidence propagation; no current strict target-form OCR data |
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v384 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`support_recipient_rows_for_doc=0`). Windows v384 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, emitted four `fiscal_year_override` audit rows, and verified the real runtime DB had `0` matching document/school/department/audit rows. Windows v384 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, `grand_total=100`, and `extraction_confidence=0.94`; revision `2` current with `annual_total=120`, `grand_total=120`, and `extraction_confidence=1.0`; the real runtime DB had `0` matching documents, schools, and support-recipient rows. The current v407 operator-PC disposable UI sandbox repeated the critical browser-write surface on the current package: `PDF確認・手入力` saved one manual FY2025 `DepartmentYearly` row with `enrollment=28`, `extraction_method=manual`, and `verified=true`, while `年度判定・修正` cloned current FY2025 rows for `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` from seeded FY2024 rows and marked the FY2024 rows `is_current=false`. | DepartmentYearly Win UI E2E proven on v384 and v407 sandbox; fiscal-year override Win UI E2E proven on v384 and v407 sandbox; SupportRecipient append-only proven on v384 backend and v407 sandbox override |
-| Excel template output | v384 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v384 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; the downloaded workbook opened with sheets `採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋`, and `openpyxl` reported row counts `2419`, `10023`, `9721`, and `9721` including headers; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract. Current v408 Windows R7/FY2025 CLI export wrote `v408-r7-retroactive-export.xlsx` with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`; `diff-excel --business-values --original` against the proven v407 export returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; `openpyxl` opened the v408 workbook at `3,673,084` bytes with sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` and row/column counts `2419x10`, `10023x22`, `9721x83`, `9721x19`. Current v407 proved the R7 browser preview/download path on the real install with process-local `EIDP_TARGET_FISCAL_YEAR=2025`: the UI showed `抽出済み学校 2031`, `Excel対象行 7150`, sheet counts `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`; Playwright downloaded `_temp/v407-r7-browser-eidp_master.xlsx`, and `openpyxl` opened `3,673,084` bytes with the same four sheet dimensions. The v407 disposable UI sandbox also generated a small browser Excel preview workbook with sheet counts `採録状況=2`, `対象比率=1`, `学科別=2`, and `在籍のみ抜粋=2`. | R7 retroactive CLI export/diff proven on v408; R7 browser download proven on v407; FY2026 production output still pending |
+| Excel template output | v384 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v384 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; the downloaded workbook opened with sheets `採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋`, and `openpyxl` reported row counts `2419`, `10023`, `9721`, and `9721` including headers; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract. Current v408 Windows R7/FY2025 CLI export wrote `v408-r7-retroactive-export.xlsx` with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`; `diff-excel --business-values --original` against the proven v407 export returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; `openpyxl` opened the v408 CLI workbook at `3,673,084` bytes with sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` and row/column counts `2419x10`, `10023x22`, `9721x83`, `9721x19`. Current v408 also proved the R7 browser preview/download path on the real install with process-local `EIDP_TARGET_FISCAL_YEAR=2025`: the UI showed `抽出済み学校 2031`, `Excel対象行 7150`, sheet counts `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`; Playwright downloaded `_temp/v408-r7-browser-eidp_master.xlsx`, `openpyxl` opened `3,673,083` bytes with the same four sheet dimensions, and `diff-excel --business-values` against `_temp/v408-r7-cli-export.xlsx` returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`. The v407 disposable UI sandbox also generated a small browser Excel preview workbook with sheet counts `採録状況=2`, `対象比率=1`, `学科別=2`, and `在籍のみ抜粋=2`. | R7 retroactive CLI export/diff and browser download proven on v408; FY2026 production output still pending |
 | ManualActionLog audit for operator actions | v384 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database, resolved the `ReviewItem` as rejected, created no `SchoolSite` row, and verified the real runtime DB was not mutated; v384 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v384_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, cleared pending count to `0`, and verified the real runtime DB was not mutated; v384 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v384 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks. Current v407 disposable UI sandbox emitted seven browser-driven operator actions: three `manual_entry` rows and four `fiscal_year_override` rows; `監査ログ` showed `JSONL outbox 未送信=7`, `Outbox を flush` returned `exported=7 already_present=0 failed=0`, and post-click SQLite verification found all seven rows with `jsonl_exported_at_present=true`. | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths; current-package v407 sandbox proves manual-entry/fiscal-override outbox flush |
-| ZIP distribution, double-click setup, browser UI offline operation | v408 is the latest core/setup/UI-health package: `dist/eidp-windows-v408.zip` was built from source commit `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, Mac-verified with SHA256 `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`, transferred to Windows, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v408-f0c27158`, set up with `EIDP-setup.bat`, validated with `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`, updated the scheduled task to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, and served Streamlit with Windows-local health `ok` plus Mac tunnel `127.0.0.1:18508 -> Windows 127.0.0.1:8508` health `ok` and root HTML retrieval. The first v407 evidence bundle with Excel export was verifier-rejected as intended; the refreshed non-Excel dry-run bundle `logs\stage6-evidence-20260514-174859.zip` verified with `ok=true` and labels `build_info`, `diagnostics`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`, and carries both the R7 browser Excel proof and seeded UI write proof without bundling Excel or runtime data. It remains diagnostic because `last_run` was `dry_run=true`, `ship_gate_status=not_measured`, and no yield was measured. v407 additionally has a seeded disposable browser-write sandbox on the operator PC: `PDF確認・手入力`, `年度判定・修正`, `Excel プレビュー`, `監査ログ`, and outbox flush all rendered and wrote as expected through a `127.0.0.1:18503 -> Windows 127.0.0.1:8503` tunnel. Historical v397 remains a browser-click read-only navigation proof, and v384 remains supporting evidence for R7 Excel download and additional disposable copied-DB UI write paths. | v408 package/setup/recovery/UI-health proof present; v407 diagnostic evidence-bundle with R7 browser Excel and seeded UI write proofs plus v407 sandbox browser-write proof retained as supporting evidence; real full-cycle operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v408 is the latest core/setup/UI-health/R7-browser-Excel package: `dist/eidp-windows-v408.zip` was built from source commit `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, Mac-verified with SHA256 `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`, transferred to Windows, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v408-f0c27158`, set up with `EIDP-setup.bat`, validated with `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`, updated the scheduled task to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, served Streamlit with Windows-local health `ok` plus Mac tunnel `127.0.0.1:18508 -> Windows 127.0.0.1:8508` health `ok` and root HTML retrieval, and served the R7 browser Excel generation/download proof through `127.0.0.1:18509 -> Windows 127.0.0.1:8509`. The first v407 evidence bundle with Excel export was verifier-rejected as intended; the refreshed non-Excel dry-run bundle `logs\stage6-evidence-20260514-174859.zip` verified with `ok=true` and labels `build_info`, `diagnostics`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`, and carries both the historical R7 browser Excel proof and seeded UI write proof without bundling Excel or runtime data. It remains diagnostic because `last_run` was `dry_run=true`, `ship_gate_status=not_measured`, and no yield was measured. v407 additionally has a seeded disposable browser-write sandbox on the operator PC: `PDF確認・手入力`, `年度判定・修正`, `Excel プレビュー`, `監査ログ`, and outbox flush all rendered and wrote as expected through a `127.0.0.1:18503 -> Windows 127.0.0.1:8503` tunnel. Historical v397 remains a browser-click read-only navigation proof, and v384 remains supporting evidence for additional disposable copied-DB UI write paths. | v408 package/setup/recovery/UI-health and R7 browser Excel proof present; v407 diagnostic evidence-bundle with seeded UI write proof plus v407 sandbox browser-write proof retained as supporting evidence; real full-cycle operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -857,6 +878,22 @@ Current v408 package/setup/recovery/UI-health commands:
   `sample\◆2025専門学校無償化情報公開まとめ.xlsx`, which is absent from the
   packaged ZIP; use explicit `--original data\master.xlsx` or a known-good
   export until that packaging/CLI default is corrected.
+- Windows v408 R7 retroactive browser Excel proof:
+  with process-local `EIDP_TARGET_FISCAL_YEAR=2025`, Streamlit started on
+  Windows `127.0.0.1:8509`; a Mac SSH tunnel `127.0.0.1:18509 ->
+  127.0.0.1:8509` returned `/_stcore/health=ok`; Playwright opened
+  `Excel プレビュー`, observed `対象年度: 2025年度（令和7年度）`,
+  `抽出済み学校 2031`, and `Excel対象行 7150`, clicked
+  `プレビュー workbook を生成`, and observed sheet counts
+  `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and
+  `在籍のみ抜粋=9719`. The download button suggested `eidp_master.xlsx` and was
+  saved as `_temp/v408-r7-browser-eidp_master.xlsx`; `openpyxl` opened it at
+  `3,673,083` bytes with dimensions `2419x10`, `10023x22`, `9721x83`, and
+  `9721x19`. Comparing it to the copied Windows CLI export
+  `_temp/v408-r7-cli-export.xlsx` with `diff-excel --business-values` returned
+  `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and
+  `differing_fields=0`. The Streamlit process and tunnel were stopped; `18509`
+  had no listener and Windows `8509` had no listening process remaining.
 
 Current v407 full release-gate/setup commands:
 
