@@ -64,6 +64,12 @@ Latest local checks performed against source-code evidence base `ed51b9c`:
   -> `101 passed, 5 warnings in 3.32s`; covers manual-entry append-only writes,
   fiscal-year override audit rows, audit-log/outbox helpers, and Excel export /
   preview surfaces at unit level.
+- `uv run ruff check src/eidp/pipeline/fiscal_year_override.py tests/unit/test_fiscal_year_override.py tests/unit/test_review_fiscal_year_override.py`
+  -> `All checks passed`.
+- `uv run mypy src/eidp/pipeline/fiscal_year_override.py`
+  -> `Success: no issues found in 1 source file`.
+- `uv run pytest tests/unit/test_fiscal_year_override.py tests/unit/test_review_fiscal_year_override.py -q`
+  -> `20 passed in 0.95s`.
 - `uv run eidp discovery-gold-set --json`
   -> `44` entries, `10` strict target-year successes, `17` publication-lag
   entries, and `undemonstrated_pattern_sources=[]`.
@@ -103,6 +109,10 @@ Known non-goal-wide lint boundary:
   historical one-off scripts; it reported existing lint debt and is not a
   reliable current-source release gate. Goal-relevant changed surfaces above
   were checked with targeted Ruff/Mypy commands.
+- `uv run mypy src` currently reports existing project-wide type debt across
+  21 files, including optional OCR/openpyxl stubs and historical UI/scraper
+  modules. The target-year override path has been cleaned and verified with
+  targeted Ruff/Mypy/tests above.
 
 ## Next Concrete Gate
 

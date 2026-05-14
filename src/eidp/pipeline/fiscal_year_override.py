@@ -108,7 +108,11 @@ _SYS_CARRY = (
 )
 
 
-def _max_revision(session: Session, model, **filters: Any) -> int:
+def _max_revision[T: (DepartmentYearly, SchoolYearStatus, SupportRecipient)](
+    session: Session,
+    model: type[T],
+    **filters: Any,
+) -> int:
     """Return max revision for a (model, filters) selection, or 0."""
     from sqlalchemy import func
 
@@ -117,7 +121,7 @@ def _max_revision(session: Session, model, **filters: Any) -> int:
     ) or 0
 
 
-def _carry_dict(src, fields: tuple[str, ...]) -> dict[str, Any]:
+def _carry_dict(src: object, fields: tuple[str, ...]) -> dict[str, Any]:
     return {f: getattr(src, f) for f in fields}
 
 
@@ -169,52 +173,52 @@ def override_fiscal_year(
         )
         .all()
     )
-    for src in src_dy_rows:
+    for src_dy in src_dy_rows:
         # Demote any prior current row at the target fiscal year for this
         # department (different document or older override). The new
         # rewritten row will become current.
         session.query(DepartmentYearly).filter(
-            DepartmentYearly.department_id == src.department_id,
+            DepartmentYearly.department_id == src_dy.department_id,
             DepartmentYearly.fiscal_year == target_fy,
             DepartmentYearly.is_current.is_(True),
         ).update({"is_current": False}, synchronize_session="fetch")
 
         max_rev = _max_revision(
             session, DepartmentYearly,
-            department_id=src.department_id, fiscal_year=target_fy,
+            department_id=src_dy.department_id, fiscal_year=target_fy,
         )
 
         old_state = {
             "fiscal_year": source_fy,
-            "revision": src.revision,
+            "revision": src_dy.revision,
             "is_current": True,
         }
         # Demote the source row.
-        src.is_current = False
+        src_dy.is_current = False
 
-        new_row = DepartmentYearly(
-            department_id=src.department_id,
-            document_id=src.document_id,
+        new_dy_row = DepartmentYearly(
+            department_id=src_dy.department_id,
+            document_id=src_dy.document_id,
             fiscal_year=target_fy,
             revision=max_rev + 1,
             is_current=True,
-            **_carry_dict(src, _DEPT_YEARLY_CARRY),
+            **_carry_dict(src_dy, _DEPT_YEARLY_CARRY),
         )
-        session.add(new_row)
+        session.add(new_dy_row)
         session.flush()
 
         log_manual_action(
             session,
             action_type="fiscal_year_override",
             target_table="department_yearly",
-            target_id=src.id,
+            target_id=src_dy.id,
             document_id=doc_id,
             old_value=old_state,
             new_value={
                 "fiscal_year": target_fy,
-                "revision": new_row.revision,
+                "revision": new_dy_row.revision,
                 "is_current": True,
-                "new_id": new_row.id,
+                "new_id": new_dy_row.id,
             },
             reason=reason,
             actor=actor,
@@ -231,48 +235,48 @@ def override_fiscal_year(
         )
         .all()
     )
-    for src in src_sr_rows:
+    for src_sr in src_sr_rows:
         session.query(SupportRecipient).filter(
-            SupportRecipient.school_id == src.school_id,
+            SupportRecipient.school_id == src_sr.school_id,
             SupportRecipient.fiscal_year == target_fy,
             SupportRecipient.is_current.is_(True),
         ).update({"is_current": False}, synchronize_session="fetch")
 
         max_rev = _max_revision(
             session, SupportRecipient,
-            school_id=src.school_id, fiscal_year=target_fy,
+            school_id=src_sr.school_id, fiscal_year=target_fy,
         )
 
         old_state = {
             "fiscal_year": source_fy,
-            "revision": src.revision,
+            "revision": src_sr.revision,
             "is_current": True,
         }
-        src.is_current = False
+        src_sr.is_current = False
 
-        new_row = SupportRecipient(
-            school_id=src.school_id,
-            document_id=src.document_id,
+        new_sr_row = SupportRecipient(
+            school_id=src_sr.school_id,
+            document_id=src_sr.document_id,
             fiscal_year=target_fy,
             revision=max_rev + 1,
             is_current=True,
-            **_carry_dict(src, _SR_CARRY),
+            **_carry_dict(src_sr, _SR_CARRY),
         )
-        session.add(new_row)
+        session.add(new_sr_row)
         session.flush()
 
         log_manual_action(
             session,
             action_type="fiscal_year_override",
             target_table="support_recipient",
-            target_id=src.id,
+            target_id=src_sr.id,
             document_id=doc_id,
             old_value=old_state,
             new_value={
                 "fiscal_year": target_fy,
-                "revision": new_row.revision,
+                "revision": new_sr_row.revision,
                 "is_current": True,
-                "new_id": new_row.id,
+                "new_id": new_sr_row.id,
             },
             reason=reason,
             actor=actor,
@@ -289,48 +293,48 @@ def override_fiscal_year(
         )
         .all()
     )
-    for src in src_sys_rows:
+    for src_sys in src_sys_rows:
         session.query(SchoolYearStatus).filter(
-            SchoolYearStatus.school_id == src.school_id,
+            SchoolYearStatus.school_id == src_sys.school_id,
             SchoolYearStatus.fiscal_year == target_fy,
             SchoolYearStatus.is_current.is_(True),
         ).update({"is_current": False}, synchronize_session="fetch")
 
         max_rev = _max_revision(
             session, SchoolYearStatus,
-            school_id=src.school_id, fiscal_year=target_fy,
+            school_id=src_sys.school_id, fiscal_year=target_fy,
         )
 
         old_state = {
             "fiscal_year": source_fy,
-            "revision": src.revision,
+            "revision": src_sys.revision,
             "is_current": True,
         }
-        src.is_current = False
+        src_sys.is_current = False
 
-        new_row = SchoolYearStatus(
-            school_id=src.school_id,
-            document_id=src.document_id,
+        new_sys_row = SchoolYearStatus(
+            school_id=src_sys.school_id,
+            document_id=src_sys.document_id,
             fiscal_year=target_fy,
             revision=max_rev + 1,
             is_current=True,
-            **_carry_dict(src, _SYS_CARRY),
+            **_carry_dict(src_sys, _SYS_CARRY),
         )
-        session.add(new_row)
+        session.add(new_sys_row)
         session.flush()
 
         log_manual_action(
             session,
             action_type="fiscal_year_override",
             target_table="school_year_status",
-            target_id=src.id,
+            target_id=src_sys.id,
             document_id=doc_id,
             old_value=old_state,
             new_value={
                 "fiscal_year": target_fy,
-                "revision": new_row.revision,
+                "revision": new_sys_row.revision,
                 "is_current": True,
-                "new_id": new_row.id,
+                "new_id": new_sys_row.id,
             },
             reason=reason,
             actor=actor,
