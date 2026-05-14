@@ -1362,10 +1362,11 @@ def test_latest_url_search_evidence_reads_school_rows(tmp_path: Path) -> None:
         + "\n"
         + json.dumps(
             {
-                "school_id": 2,
-                "query": "別学校 情報公開",
+                "school_id": 1,
+                "query": "東京テスト大学 学校概要",
                 "decision": "rejected",
                 "reason": "low_confidence",
+                "score": 0.42,
             },
             ensure_ascii=False,
         )
@@ -1376,8 +1377,17 @@ def test_latest_url_search_evidence_reads_school_rows(tmp_path: Path) -> None:
     rows = latest_url_search_evidence(app_root=tmp_path, school_id=1)
 
     assert rows == [{
-        "採否": "accepted",
-        "理由": "registered_school_site",
+        "採否": "除外",
+        "理由": "信頼度不足",
+        "score": 0.42,
+        "query": "東京テスト大学 学校概要",
+        "候補URL": "",
+        "候補タイトル": "",
+        "provider": "",
+        "時刻": "",
+    }, {
+        "採否": "採用",
+        "理由": "学校サイト登録済み",
         "score": 0.95,
         "query": "東京テスト大学 情報公開",
         "候補URL": "https://example.edu/disclosure/",

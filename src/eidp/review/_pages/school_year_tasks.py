@@ -212,6 +212,23 @@ SITE_URL_TYPE_LABELS: dict[str, str] = {
 }
 PDF_SITE_URL_TYPES = {"direct_pdf", "pdf"}
 
+URL_SEARCH_DECISION_LABELS: dict[str, str] = {
+    "accepted": "採用",
+    "rejected": "除外",
+    "no_result": "候補なし",
+    "error": "検索エラー",
+}
+
+URL_SEARCH_REASON_LABELS: dict[str, str] = {
+    "registered_school_site": "学校サイト登録済み",
+    "low_confidence": "信頼度不足",
+    "unsafe_url": "安全でないURL",
+    "missing_host": "ホスト名なし",
+    "third_party_directory_domain": "第三者ディレクトリ",
+    "government_index_domain": "行政一覧ページ",
+    "provider_returned_no_results": "検索結果なし",
+}
+
 
 def school_type_from_filter_label(label: str) -> str | None:
     return None if label == "すべて" else label
@@ -249,6 +266,14 @@ def status_label(labels: dict[str, str], code: str | None) -> str:
     if not code:
         return ""
     return labels.get(code, code)
+
+
+def url_search_decision_label(decision: str | None) -> str:
+    return status_label(URL_SEARCH_DECISION_LABELS, decision)
+
+
+def url_search_reason_label(reason: str | None) -> str:
+    return status_label(URL_SEARCH_REASON_LABELS, reason)
 
 
 def site_url_type_label(url_type: str | None, url: str | None) -> str:
@@ -419,8 +444,8 @@ def latest_url_search_evidence(
             if payload.get("school_id") != school_id:
                 continue
             rows.append({
-                "採否": payload.get("decision", ""),
-                "理由": payload.get("reason", ""),
+                "採否": url_search_decision_label(str(payload.get("decision", ""))),
+                "理由": url_search_reason_label(str(payload.get("reason", ""))),
                 "score": payload.get("score", 0),
                 "query": payload.get("query", ""),
                 "候補URL": payload.get("result_url", ""),
