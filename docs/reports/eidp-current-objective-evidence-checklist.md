@@ -51,7 +51,12 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   paths, plus unit-test isolation for Streamlit AppTest's fake `__main__`
   module before multiprocessing spawn tests and restored source-wide `mypy src`
   coverage for all 83 source files.
-- These source-code fixes are not present in the existing v399 ZIP.
+- These source-code fixes are not present in the existing v399/v401 ZIPs.
+  A read-only rerun of the non-Windows package gate against v401 with the
+  current verifier confirms the package is stale relative to source HEAD: SHA256,
+  validator/distribution tests, validator mypy/Ruff, discovery gold-set summary,
+  and expected-prediction replay passed, but `package_verify` failed because the
+  ZIP does not contain the newer Stage 6 safety / audit-outbox verifier tokens.
 - Do not mark the goal complete until v399 or a future approved package completes
   operator-PC browser write-cycle evidence and the rolling FY yield gate.
 
@@ -83,6 +88,16 @@ Latest local checks performed against source-code evidence base `ed874cd`:
   -> `Success: no issues found in 5 source files`.
 - `uv run pytest tests/unit/test_eval_harness.py tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_cli_write_lock_contract.py -q`
   -> `54 passed in 1.94s`.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-skip-full-current-source.json`
+  -> `ok=false`; SHA256 sidecar matched
+  `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`;
+  validator/distribution unit tests passed with `154 passed`; validator mypy
+  and Ruff passed; discovery gold-set reported `44` entries, `10` strict
+  target-year successes, `17` publication-lag cases, and
+  `undemonstrated_pattern_sources=[]`; expected-prediction replay returned
+  `44` exact matches / `0` failures; `package_verify` failed because v401 lacks
+  the current verifier-required Stage 6 safety / audit-outbox tokens. This is a
+  stale-package finding, not evidence that `ed874cd` has been packaged.
 - `uv run mypy src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py`
   -> `Success: no issues found in 9 source files`.
 - `uv run ruff check src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py tests/unit/conftest.py tests/unit/test_manual_entry_contract.py tests/unit/test_review_pdf_manual_entry.py tests/unit/test_review_pdf_manual_entry_confidence.py tests/unit/test_review_audit_log.py tests/unit/test_review_audit_log_dashboard.py tests/unit/test_audit_outbox.py tests/unit/test_locking.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_ingest_evidence.py tests/unit/test_cli_ingest.py`
