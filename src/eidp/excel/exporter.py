@@ -684,7 +684,7 @@ def diff_workbook_values(
         wb_orig.close()
 
 
-_BUSINESS_DIFF_SHEETS = ("対象比率", "在籍のみ抜粋")
+_BUSINESS_DIFF_SHEETS = ("対象比率", "学科別", "在籍のみ抜粋")
 
 
 def _stringify_key(key: BusinessKey) -> str:
@@ -704,7 +704,7 @@ def _business_soft_key(sheet: str, key: BusinessKey) -> tuple[str, ...]:
     if sheet == "対象比率":
         year, prefecture, _corporation, school = key
         return tuple(_business_soft_key_part(part) for part in (year, prefecture, school))
-    if sheet == "在籍のみ抜粋":
+    if sheet in {"学科別", "在籍のみ抜粋"}:
         prefecture, _corporation, school, course, department, daynight, years = key
         parts = (prefecture, school, course, department, daynight, years)
         return tuple(_business_soft_key_part(part) for part in parts)
@@ -804,9 +804,37 @@ def _load_zaiseki_business_table(worksheet: Any) -> tuple[BusinessTable, list[st
     return table, [field for field, _index in field_columns]
 
 
+def _load_gakka_business_table(worksheet: Any) -> tuple[BusinessTable, list[str]]:
+    rows = list(worksheet.iter_rows(values_only=True))
+    if len(rows) < 2:
+        return {}, []
+    group_row = _forward_fill(tuple(rows[0]))
+    field_row = tuple(rows[1])
+    field_columns: list[tuple[str, int]] = []
+    for index in range(7, max(len(group_row), len(field_row))):
+        year = group_row[index] if index < len(group_row) else None
+        field = field_row[index] if index < len(field_row) else None
+        if year is not None and field is not None:
+            field_columns.append((f"{year}:{field}", index))
+
+    table: BusinessTable = {}
+    for raw in rows[2:]:
+        row = tuple(raw)
+        if not any(value is not None for value in row):
+            continue
+        key = tuple(row[index] if index < len(row) else None for index in range(7))
+        table[key] = {
+            field: _normalize_business_value(row[index] if index < len(row) else None)
+            for field, index in field_columns
+        }
+    return table, [field for field, _index in field_columns]
+
+
 def _load_business_table(worksheet: Any, sheet: str) -> tuple[BusinessTable, list[str]]:
     if sheet == "対象比率":
         return _load_taisho_business_table(worksheet)
+    if sheet == "学科別":
+        return _load_gakka_business_table(worksheet)
     if sheet == "在籍のみ抜粋":
         return _load_zaiseki_business_table(worksheet)
     raise ValueError(f"unsupported business diff sheet: {sheet}")

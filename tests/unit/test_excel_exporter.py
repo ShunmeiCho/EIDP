@@ -388,6 +388,77 @@ def test_diff_workbook_business_values_reports_row_gap_samples_and_soft_matches(
     ]
 
 
+def test_diff_workbook_business_values_reports_gakka_year_field_diff(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    key = ["東京都", "片柳学園", "日本工学院専門学校", "工業", "ITスペシャリスト科", "昼", 4]
+    _write_cells(
+        original,
+        {
+            "学科別": [
+                [None, None, None, None, None, None, None, "2024年度", None, None],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "収定", "在籍", "中退率"],
+                [*key, 100, 95, "#DIV/0!"],
+            ]
+        },
+    )
+    _write_cells(
+        exported,
+        {
+            "学科別": [
+                [None, None, None, None, None, None, None, "2024年度", None, None],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "収定", "在籍", "中退率"],
+                [*key, 100, 96, None],
+            ]
+        },
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["学科別"])
+    summary = result["sheet_summaries"]["学科別"]
+
+    assert result["missing_rows"] == 0
+    assert result["extra_rows"] == 0
+    assert result["differing_fields"] == 2
+    assert summary["category_counts"] == {
+        "numeric_mismatch": 1,
+        "export_blank_vs_original_error_or_unknown": 1,
+    }
+    assert summary["field_counts"] == {"2024年度:中退率": 1, "2024年度:在籍": 1}
+
+
+def test_diff_workbook_business_values_soft_matches_gakka_corporation_drift(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    _write_cells(
+        original,
+        {
+            "学科別": [
+                [None, None, None, None, None, None, None, "2024年度"],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "在籍"],
+                ["東京都", "旧法人", "日本工学院専門学校", "工業", "ITスペシャリスト科", "昼", 4, 95],
+            ]
+        },
+    )
+    _write_cells(
+        exported,
+        {
+            "学科別": [
+                [None, None, None, None, None, None, None, "2024年度"],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "在籍"],
+                ["東京都", "新法人", "日本工学院専門学校", "工業", "ITスペシャリスト科", "昼", 4, 95],
+            ]
+        },
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["学科別"])
+    summary = result["sheet_summaries"]["学科別"]
+
+    assert summary["missing_rows"] == 1
+    assert summary["extra_rows"] == 1
+    assert summary["missing_rows_soft_matched"] == 1
+    assert summary["extra_rows_soft_matched"] == 1
+
+
 def test_diff_workbook_business_values_soft_matches_nfkc_width_variants(tmp_path) -> None:
     exported = tmp_path / "exported.xlsx"
     original = tmp_path / "original.xlsx"
