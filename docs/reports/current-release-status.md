@@ -2,7 +2,7 @@
 
 Updated: 2026-05-14
 Branch: `sprint8-handoff-finalize`
-Current source evidence base: `c2a6f532075a8b02eb7a5853de3b3a564ab72107`
+Current source evidence base: `212820276d61ad7a40d265b7a58d400ad4c9b4dd`
 Current Mac-verifier-clean package for source HEAD: none
 Latest historical Mac-verifier-clean package: `dist/eidp-windows-v401.zip`
 Historical package commit: `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`
@@ -25,7 +25,7 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 There is currently no Mac-verifier-clean ZIP for source evidence base
-`c2a6f532075a8b02eb7a5853de3b3a564ab72107`. The latest historical clean ZIP is
+`212820276d61ad7a40d265b7a58d400ad4c9b4dd`. The latest historical clean ZIP is
 v401 at commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, SHA256
 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`; it passed
 the then-current package verifier, but a read-only rerun with the current
@@ -34,8 +34,11 @@ records a different source commit. Current source also includes the RCA triage
 fix that prioritizes explicit `target_fiscal_year_not_detected` target-form
 evidence over older-year target evidence for the same school, plus gold-set
 disclosure-entrypoint and section-heading context fixes that keep year-only
-target-form links in the download budget ahead of generic disclosure PDFs; no
-ZIP has been built or Windows-tested from that source evidence base. The older v399 ZIP is
+target-form links in the download budget ahead of generic disclosure PDFs.
+Subsequent Mac-side source fixes clarify the ship gate's operator-reviewable
+coverage helper, ignore audit-outbox archive symlinks, and centralize the
+extraction-confidence default thresholds. No ZIP has been built or
+Windows-tested from this current source evidence base. The older v399 ZIP is
 also intentionally rejected by the current verifier because its packaged runbook
 predates the corrected SSH tunnel guidance. For the normal
 `EIDP-start.bat` / `scripts\launch.bat` path, Streamlit defaults to Windows
