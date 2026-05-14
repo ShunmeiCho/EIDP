@@ -1,6 +1,7 @@
 """Database session management."""
 
 from collections.abc import Generator
+from typing import Any
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
@@ -26,7 +27,7 @@ def _install_sqlite_connect_hook(target_engine: Engine) -> None:
         return
 
     @event.listens_for(target_engine, "connect")
-    def _set_sqlite_pragmas(dbapi_connection, _connection_record):  # noqa: ANN001
+    def _set_sqlite_pragmas(dbapi_connection: Any, _connection_record: Any) -> None:
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute("PRAGMA foreign_keys=ON")

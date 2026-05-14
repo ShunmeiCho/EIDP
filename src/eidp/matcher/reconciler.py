@@ -9,7 +9,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import openpyxl
+import openpyxl  # type: ignore[import-untyped]
 import structlog
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -95,8 +95,7 @@ def reconcile(session: Session, data_dir: Path) -> ReconcileReport:
     targets = load_target_institutions(data_dir / "target_institutions.xlsx")
     report = ReconcileReport()
 
-    # Build target lookup by code and by normalized name+prefecture
-    target_by_code: dict[str, TargetInstitution] = {t.school_code: t for t in targets}
+    # Build target lookup by normalized name+prefecture.
     target_by_norm_pref: dict[tuple[str, str], list[TargetInstitution]] = defaultdict(list)
     for t in targets:
         target_by_norm_pref[(_norm(t.name), t.prefecture)].append(t)
@@ -265,7 +264,11 @@ def verify_identity(session: Session, data_dir: Path) -> dict[str, object]:
 
     # Check for duplicate codes
     dupes = session.execute(
-        text("SELECT school_code, count(*) FROM school WHERE school_code IS NOT NULL GROUP BY school_code HAVING count(*) > 1")
+        text(
+            "SELECT school_code, count(*) FROM school "
+            "WHERE school_code IS NOT NULL "
+            "GROUP BY school_code HAVING count(*) > 1"
+        )
     ).fetchall()
 
     # Count excluded schools (no code needed). Sprint 8.2.2: use the shared

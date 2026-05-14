@@ -482,7 +482,12 @@ def _is_investigation_path(value: str) -> bool:
 def _rca_key(payload: dict[str, Any]) -> tuple[int, int] | None:
     school_id = payload.get("school_id")
     target_fiscal_year = payload.get("target_fiscal_year")
-    if not _is_strict_int(school_id) or not _is_strict_int(target_fiscal_year):
+    if (
+        not isinstance(school_id, int)
+        or isinstance(school_id, bool)
+        or not isinstance(target_fiscal_year, int)
+        or isinstance(target_fiscal_year, bool)
+    ):
         return None
     return (school_id, target_fiscal_year)
 

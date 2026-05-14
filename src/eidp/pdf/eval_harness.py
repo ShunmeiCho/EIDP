@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation
+
+EvalError = dict[str, object]
 
 
 # Fields to evaluate on each DepartmentRecord
@@ -58,7 +60,7 @@ class FieldScore:
     field_name: str
     total: int = 0
     correct: int = 0
-    errors: list[dict] = field(default_factory=list)
+    errors: list[EvalError] = field(default_factory=list)
 
     @property
     def accuracy(self) -> float:
@@ -66,7 +68,7 @@ class FieldScore:
             return 0.0
         return self.correct / self.total
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "field": self.field_name,
             "total": self.total,
@@ -113,7 +115,7 @@ class EvalResult:
             return 0.0
         return self.matched_dept_count / self.parsed_dept_count
 
-    def summary(self) -> dict:
+    def summary(self) -> dict[str, object]:
         return {
             "school_name": self.school_name,
             "source_pdf": self.source_pdf,
@@ -275,7 +277,7 @@ def evaluate_parser(
     # Initialize field scores
     field_totals: dict[str, int] = {f: 0 for f in ALL_FIELDS}
     field_correct: dict[str, int] = {f: 0 for f in ALL_FIELDS}
-    field_errors: dict[str, list[dict]] = {f: [] for f in ALL_FIELDS}
+    field_errors: dict[str, list[EvalError]] = {f: [] for f in ALL_FIELDS}
 
     # Match departments
     used_parsed_indices: set[int] = set()

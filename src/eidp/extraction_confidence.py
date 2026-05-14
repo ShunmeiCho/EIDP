@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
@@ -76,6 +77,8 @@ DEFAULT_WEIGHTS: tuple[float, float, float] = (0.4, 0.4, 0.2)
 #: Methods that produce confidence rows.
 ExtractionMethod = Literal["pdf_parse", "ocr_tesseract", "manual"]
 ALLOWED_METHODS: frozenset[str] = frozenset({"pdf_parse", "ocr_tesseract", "manual"})
+ConfidenceRecordValue = str | int | float | None
+ConfidenceRecord = Mapping[str, ConfidenceRecordValue]
 
 
 @dataclass(frozen=True)
@@ -144,7 +147,7 @@ def compute_f1_pdf_parse(
     return 1.0 if required_fields_located >= required_fields_total else 0.5
 
 
-def compute_f1_ocr_tesseract(per_word_confidences: list[float] | list[int]) -> float:
+def compute_f1_ocr_tesseract(per_word_confidences: Sequence[float | int]) -> float:
     """F1 for the OCR path.
 
     Tesseract TSV ``conf`` is per word and ranges 0..100. Tesseract
@@ -154,7 +157,7 @@ def compute_f1_ocr_tesseract(per_word_confidences: list[float] | list[int]) -> f
     """
     if not per_word_confidences:
         return 0.0
-    usable = [float(c) for c in per_word_confidences if c is not None and c >= 0]
+    usable = [float(c) for c in per_word_confidences if c >= 0]
     if not usable:
         return 0.0
     return min(1.0, max(0.0, sum(usable) / len(usable) / 100.0))
@@ -166,7 +169,7 @@ def compute_f1_manual() -> float:
 
 
 def compute_f2_completeness(
-    record: dict,
+    record: ConfidenceRecord,
     *,
     required_fields: tuple[str, ...] = DEFAULT_REQUIRED_FIELDS,
 ) -> float:
@@ -189,6 +192,16 @@ def compute_f2_completeness(
             continue
         populated += 1
     return populated / len(required_fields)
+
+
+def _is_populated_value(value: ConfidenceRecordValue) -> bool:
+    if value is None:
+        return False
+    return not (isinstance(value, str) and not value.strip())
+
+
+def _numeric_or_none(value: ConfidenceRecordValue) -> float | int | None:
+    return value if isinstance(value, int | float) else None
 
 
 def compute_f3_yoy_sanity(
@@ -329,7 +342,7 @@ def breakdown_to_json(breakdown: ConfidenceBreakdown) -> str:
 
 
 def compute_pdf_parse_breakdown(
-    record: dict,
+    record: ConfidenceRecord,
     *,
     prior_enrollment: float | int | None,
     required_fields: tuple[str, ...] = DEFAULT_REQUIRED_FIELDS,
@@ -346,9 +359,7 @@ def compute_pdf_parse_breakdown(
     ``extraction_confidence`` (composite) and the ``confidence_breakdown``
     JSON column.
     """
-    populated = sum(1 for f in required_fields
-                    if record.get(f) is not None
-                    and not (isinstance(record.get(f), str) and not record.get(f).strip()))
+    populated = sum(1 for f in required_fields if _is_populated_value(record.get(f)))
     if populated == 0:
         f1 = 0.0
     elif populated >= len(required_fields):
@@ -358,17 +369,17 @@ def compute_pdf_parse_breakdown(
 
     f2 = compute_f2_completeness(record, required_fields=required_fields)
     f3 = compute_f3_yoy_sanity(
-        current_enrollment=record.get("enrollment"),
+        current_enrollment=_numeric_or_none(record.get("enrollment")),
         previous_enrollment=prior_enrollment,
     )
     return build_breakdown(f1=f1, f2=f2, f3=f3, method="pdf_parse", weights=weights)
 
 
 def compute_ocr_tesseract_breakdown(
-    record: dict,
+    record: ConfidenceRecord,
     *,
     prior_enrollment: float | int | None,
-    per_word_confidences: list[float] | list[int],
+    per_word_confidences: Sequence[float | int],
     required_fields: tuple[str, ...] = DEFAULT_REQUIRED_FIELDS,
     weights: tuple[float, float, float] = DEFAULT_WEIGHTS,
 ) -> ConfidenceBreakdown:
@@ -381,7 +392,7 @@ def compute_ocr_tesseract_breakdown(
     f1 = compute_f1_ocr_tesseract(per_word_confidences)
     f2 = compute_f2_completeness(record, required_fields=required_fields)
     f3 = compute_f3_yoy_sanity(
-        current_enrollment=record.get("enrollment"),
+        current_enrollment=_numeric_or_none(record.get("enrollment")),
         previous_enrollment=prior_enrollment,
     )
     return build_breakdown(f1=f1, f2=f2, f3=f3, method="ocr_tesseract", weights=weights)

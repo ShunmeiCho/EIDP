@@ -231,7 +231,7 @@ def parse_tesseract_tsv(tsv_text: str) -> OcrPageResult:
 
 
 # Type alias for the subprocess seam used by tests.
-RunnerResult = subprocess.CompletedProcess
+RunnerResult = subprocess.CompletedProcess[str]
 Runner = Callable[[list[str]], RunnerResult]
 
 

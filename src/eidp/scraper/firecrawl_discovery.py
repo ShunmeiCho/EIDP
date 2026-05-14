@@ -44,7 +44,7 @@ def _firecrawl_map(
     search: str,
     limit: int = 50,
     api_key: str = "",
-) -> list[dict]:
+) -> list[str]:
     """Call Firecrawl map API to discover URLs on a site."""
     if not api_key:
         from eidp.config import settings
@@ -72,9 +72,15 @@ def _firecrawl_map(
             )
             resp.raise_for_status()
             data = resp.json()
-            # API returns list of URL strings
+            # API returns URL strings; tolerate {"url": "..."} records from older responses.
             links = data.get("links", [])
-            return [url if isinstance(url, str) else url.get("url", "") for url in links]
+            urls: list[str] = []
+            for link in links:
+                if isinstance(link, str):
+                    urls.append(link)
+                elif isinstance(link, dict) and isinstance(link.get("url"), str):
+                    urls.append(link["url"])
+            return urls
     except httpx.HTTPStatusError as e:
         log.warning("firecrawl_map_http_error", url=base_url, status=e.response.status_code, error=str(e))
         return []
