@@ -38,6 +38,16 @@ The versioned ZIP and latest alias both pass
 gold-set entries, and
 `undemonstrated_pattern_sources=[]`. The v399 core SHA256 is
 `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
+The v399 residual cleanup helper was also hot-copied into the existing v397
+disposable operator-PC extraction and run in dry-run mode only:
+`scripts\stage6_residual_cleanup.bat --json` returned
+`mode=dry_run`, `existing_count=5`, `moved_count=0`, `errors=[]`, and wrote
+`C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe\logs\stage6-residual-cleanup-20260514-100231.json`.
+The dry-run identified these five old v384 smoke artifacts in
+`C:\Users\cyo20`: `v384_ocr_sr_smoke.ps1`, `eidp-windows-v384.zip`,
+`eidp-windows-v384.zip.sha256`, `eidp-ocr-addon-windows-v383-smoke.zip`, and
+`eidp_v384_ocr_sr_smoke.py`. No artifact was moved because `--apply` was not
+passed; actual archival still requires explicit operator/user approval.
 
 v397 has also been transferred to the operator PC and setup-validated in the
 disposable extraction
