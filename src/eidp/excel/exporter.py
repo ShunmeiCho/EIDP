@@ -83,6 +83,12 @@ class WorkbookBusinessDiffSheetSummary(TypedDict):
     extra_rows: int
     missing_rows_soft_matched: int
     extra_rows_soft_matched: int
+    exported_duplicate_keys: int
+    exported_duplicate_rows: int
+    exported_duplicate_key_samples: list[str]
+    original_duplicate_keys: int
+    original_duplicate_rows: int
+    original_duplicate_key_samples: list[str]
     category_counts: dict[str, int]
     field_counts: dict[str, int]
     missing_row_samples: list[str]
@@ -105,6 +111,12 @@ class WorkbookBusinessDiff(TypedDict):
 type BusinessKey = tuple[object, ...]
 type BusinessRow = dict[str, object]
 type BusinessTable = dict[BusinessKey, BusinessRow]
+
+
+class BusinessDuplicateStats(TypedDict):
+    duplicate_keys: int
+    duplicate_rows: int
+    samples: list[str]
 
 
 def _exportable_confidence_sql(alias: str) -> str:
@@ -840,6 +852,35 @@ def _load_business_table(worksheet: Any, sheet: str) -> tuple[BusinessTable, lis
     raise ValueError(f"unsupported business diff sheet: {sheet}")
 
 
+def _business_duplicate_stats(worksheet: Any, sheet: str, *, max_samples: int) -> BusinessDuplicateStats:
+    rows = list(worksheet.iter_rows(values_only=True))
+    key_indices: tuple[int, ...]
+    if sheet == "対象比率":
+        data_rows = rows[1:]
+        key_indices = (1, 3, 4, 5)
+    elif sheet in {"学科別", "在籍のみ抜粋"}:
+        data_rows = rows[2:]
+        key_indices = tuple(range(7))
+    else:
+        raise ValueError(f"unsupported business diff sheet: {sheet}")
+
+    counter: Counter[BusinessKey] = Counter()
+    for raw in data_rows:
+        row = tuple(raw)
+        if not any(value is not None for value in row):
+            continue
+        key = tuple(row[index] if index < len(row) else None for index in key_indices)
+        counter[key] += 1
+
+    duplicate_items = [(key, count) for key, count in counter.items() if count > 1]
+    duplicate_items.sort(key=lambda item: _stringify_key(item[0]))
+    return {
+        "duplicate_keys": len(duplicate_items),
+        "duplicate_rows": sum(count - 1 for _key, count in duplicate_items),
+        "samples": [f"{_stringify_key(key)} (rows={count})" for key, count in duplicate_items[:max_samples]],
+    }
+
+
 def diff_workbook_business_values(
     exported_path: Path,
     original_path: Path,
@@ -879,6 +920,8 @@ def diff_workbook_business_values(
                 continue
             exp_table, exp_fields = _load_business_table(wb_exp[sheet], sheet)
             orig_table, orig_fields = _load_business_table(wb_orig[sheet], sheet)
+            exp_duplicate_stats = _business_duplicate_stats(wb_exp[sheet], sheet, max_samples=max_diffs)
+            orig_duplicate_stats = _business_duplicate_stats(wb_orig[sheet], sheet, max_samples=max_diffs)
             exp_field_set = set(exp_fields)
             orig_field_set = set(orig_fields)
             missing_fields[sheet] = sorted(orig_field_set - exp_field_set)
@@ -936,6 +979,12 @@ def diff_workbook_business_values(
                 "extra_rows": len(extra_row_keys),
                 "missing_rows_soft_matched": missing_rows_soft_matched,
                 "extra_rows_soft_matched": extra_rows_soft_matched,
+                "exported_duplicate_keys": exp_duplicate_stats["duplicate_keys"],
+                "exported_duplicate_rows": exp_duplicate_stats["duplicate_rows"],
+                "exported_duplicate_key_samples": exp_duplicate_stats["samples"],
+                "original_duplicate_keys": orig_duplicate_stats["duplicate_keys"],
+                "original_duplicate_rows": orig_duplicate_stats["duplicate_rows"],
+                "original_duplicate_key_samples": orig_duplicate_stats["samples"],
                 "category_counts": dict(category_counts.most_common()),
                 "field_counts": dict(field_counts.most_common()),
                 "missing_row_samples": [_stringify_key(key) for key in missing_row_samples[:max_diffs]],
@@ -951,6 +1000,8 @@ def diff_workbook_business_values(
                 and differing_fields == 0
                 and all(not fields for fields in missing_fields.values())
                 and all(not fields for fields in extra_fields.values())
+                and all(summary["exported_duplicate_keys"] == 0 for summary in sheet_summaries.values())
+                and all(summary["original_duplicate_keys"] == 0 for summary in sheet_summaries.values())
             ),
             "missing_sheets": missing_sheets,
             "extra_sheets": extra_sheets,

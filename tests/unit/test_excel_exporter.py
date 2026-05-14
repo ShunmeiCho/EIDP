@@ -459,6 +459,47 @@ def test_diff_workbook_business_values_soft_matches_gakka_corporation_drift(tmp_
     assert summary["extra_rows_soft_matched"] == 1
 
 
+def test_diff_workbook_business_values_reports_duplicate_business_keys(tmp_path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    key = ["東京都", "片柳学園", "日本工学院専門学校", "工業", "ITスペシャリスト科", "昼", 4]
+    _write_cells(
+        original,
+        {
+            "学科別": [
+                [None, None, None, None, None, None, None, "2024年度"],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "在籍"],
+                [*key, 95],
+                [*key, 96],
+            ]
+        },
+    )
+    _write_cells(
+        exported,
+        {
+            "学科別": [
+                [None, None, None, None, None, None, None, "2024年度"],
+                ["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "在籍"],
+                [*key, 96],
+            ]
+        },
+    )
+
+    result = diff_workbook_business_values(exported, original, sheets=["学科別"], max_diffs=2)
+    summary = result["sheet_summaries"]["学科別"]
+
+    assert result["ok"] is False
+    assert result["differing_fields"] == 0
+    assert summary["original_duplicate_keys"] == 1
+    assert summary["original_duplicate_rows"] == 1
+    assert summary["exported_duplicate_keys"] == 0
+    assert summary["exported_duplicate_rows"] == 0
+    assert summary["original_duplicate_key_samples"] == [
+        "東京都 | 片柳学園 | 日本工学院専門学校 | 工業 | ITスペシャリスト科 | 昼 | 4 (rows=2)"
+    ]
+    assert summary["exported_duplicate_key_samples"] == []
+
+
 def test_diff_workbook_business_values_soft_matches_nfkc_width_variants(tmp_path) -> None:
     exported = tmp_path / "exported.xlsx"
     original = tmp_path / "original.xlsx"

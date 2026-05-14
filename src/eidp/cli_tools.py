@@ -265,8 +265,23 @@ def diff_excel(
                 f"  sheet_summary[{sheet}]: missing_rows={summary['missing_rows']} "
                 f"extra_rows={summary['extra_rows']} "
                 f"missing_soft_matches={summary['missing_rows_soft_matched']} "
-                f"extra_soft_matches={summary['extra_rows_soft_matched']}"
+                f"extra_soft_matches={summary['extra_rows_soft_matched']} "
+                f"exported_duplicate_keys={summary['exported_duplicate_keys']} "
+                f"original_duplicate_keys={summary['original_duplicate_keys']}"
             )
+            if summary["exported_duplicate_keys"] or summary["original_duplicate_keys"]:
+                typer.echo(
+                    f"    duplicate_rows: exported={summary['exported_duplicate_rows']} "
+                    f"original={summary['original_duplicate_rows']}"
+                )
+            if summary["exported_duplicate_key_samples"]:
+                typer.echo("    exported_duplicate_key_samples:")
+                for key in summary["exported_duplicate_key_samples"]:
+                    typer.echo(f"      * {key}")
+            if summary["original_duplicate_key_samples"]:
+                typer.echo("    original_duplicate_key_samples:")
+                for key in summary["original_duplicate_key_samples"]:
+                    typer.echo(f"      * {key}")
             if summary["category_counts"]:
                 typer.echo("    categories:")
                 for category, count in list(summary["category_counts"].items())[:8]:
