@@ -1138,6 +1138,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "SHIP_GATE_OPERATOR_COVERAGE_PCT",
             "post_bootstrap_operator_reviewable_coverage",
             "weekly_operator_reviewable_acquisition",
+            "ship_gate_status_from_operator_coverage",
             "ship_gate_status_from_yield",
         ),
         "requirements-windows.txt": (

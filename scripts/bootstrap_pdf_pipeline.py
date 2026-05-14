@@ -72,7 +72,7 @@ from ship_gate_contract import (  # noqa: E402
     BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
     SHIP_GATE_AUTO_YIELD_PCT,
     SHIP_GATE_OPERATOR_COVERAGE_PCT,
-    ship_gate_status_from_yield,
+    ship_gate_status_from_operator_coverage,
 )
 
 TOTAL_BOOTSTRAP_STEPS = 5
@@ -140,7 +140,7 @@ def bootstrap_target_pdf_yield_metrics(
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
             "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
             "ship_gate_metric_basis": BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
-            "ship_gate_status": ship_gate_status_from_yield(None),
+            "ship_gate_status": ship_gate_status_from_operator_coverage(None),
         }
 
     yield_pct = round(acquired / denominator * 100.0, 1)
@@ -156,7 +156,7 @@ def bootstrap_target_pdf_yield_metrics(
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
         "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
         "ship_gate_metric_basis": BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
-        "ship_gate_status": ship_gate_status_from_yield(operator_reviewable_pct),
+        "ship_gate_status": ship_gate_status_from_operator_coverage(operator_reviewable_pct),
     }
 
 

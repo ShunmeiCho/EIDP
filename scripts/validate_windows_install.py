@@ -25,7 +25,7 @@ from ship_gate_contract import (
     SHIP_GATE_OPERATOR_COVERAGE_PCT,
     SHIP_GATE_STATUSES,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
-    ship_gate_status_from_yield,
+    ship_gate_status_from_operator_coverage,
 )
 
 
@@ -467,7 +467,7 @@ def _validate_bootstrap_ship_gate_against_sqlite(
             f"{reported_reviewable} != {coverage['operator_reviewable_school_count']}"
         )
 
-    sqlite_status = ship_gate_status_from_yield(coverage["operator_reviewable_yield_pct"])
+    sqlite_status = ship_gate_status_from_operator_coverage(coverage["operator_reviewable_yield_pct"])
     check.details["sqlite_target_fy_operator_reviewable_ship_gate_status"] = sqlite_status
     if require_ship_gate and sqlite_status != "pass":
         check.fail(
@@ -555,7 +555,7 @@ def _validate_weekly_ship_gate_against_sqlite(
                 f"{reviewable} != {expected_reviewable}"
             )
     expected_yield = round(max(reviewable, 0) / denominator * 100.0, 1) if denominator > 0 else None
-    expected_status = ship_gate_status_from_yield(expected_yield)
+    expected_status = ship_gate_status_from_operator_coverage(expected_yield)
     if last_run.get("ship_gate_status") != expected_status:
         check.fail(
             "last_run.json ship_gate_status does not match operator_reviewable/denominator counts: "

@@ -40,7 +40,7 @@ from ship_gate_contract import (  # noqa: E402
     SHIP_GATE_AUTO_YIELD_PCT,
     SHIP_GATE_OPERATOR_COVERAGE_PCT,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
-    ship_gate_status_from_yield,
+    ship_gate_status_from_operator_coverage,
 )
 
 from eidp.config import settings  # noqa: E402
@@ -418,7 +418,7 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
             "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
             "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
-            "ship_gate_status": ship_gate_status_from_yield(None),
+            "ship_gate_status": ship_gate_status_from_operator_coverage(None),
         }
 
     yield_pct = round(acquired / target_missing * 100.0, 1)
@@ -434,7 +434,7 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
         "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
         "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
-        "ship_gate_status": ship_gate_status_from_yield(operator_reviewable_pct),
+        "ship_gate_status": ship_gate_status_from_operator_coverage(operator_reviewable_pct),
     }
 
 
