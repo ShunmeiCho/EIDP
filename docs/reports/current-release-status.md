@@ -74,41 +74,58 @@ the Streamlit HTML shell. This proves the default `18501 -> 8501` tunnel and
 UI health path for v407, but it is still not an operator browser-click write
 cycle.
 
-The v407 Stage 6 evidence bundle remains **not release-valid**. Running
+The first v407 Stage 6 evidence attempt was correctly rejected. Running
 `scripts\collect_stage6_evidence.bat --include-excel` produced
 `logs\stage6-evidence-20260514-170328.zip`, but
 `scripts\verify_stage6_evidence.bat` rejected it with
 `archive contains forbidden Excel exports`, missing required label `last_run`,
 and missing manifest patterns including `weekly_run_logs`, `bootstrap_logs`,
 `bootstrap_progress`, `last_run`, `discovery_rca`, `stage6_recovery`, and
-`stage6_residual_cleanup`. A v407 read-only recovery check also returned
-`ok=false`: the `EIDP Weekly Run` task exists, but scheduled-task XML parsing
-failed, the production action path was not verified, and the checker still sees
-five old v384 smoke artifacts in `C:\Users\cyo20`. The v407 residual cleanup was
-run in dry-run mode only and reported `existing_count=5`, `moved_count=0`,
-`errors=[]`.
+`stage6_residual_cleanup`. After that rejection, a non-mutating v407 weekly
+dry-run was executed with process-local `EIDP_TARGET_FISCAL_YEAR=2025`:
+`scripts\run_weekly_target_year_discovery.py --current-fy 2025 --dry-run
+--limit 1 --batch-size 1 --rate-limit 0 --request-timeout 3` wrote
+`data\output\last_run.json` and
+`logs\run-v407-retroactive-dryrun-20260515.log` with `status=success`,
+`dry_run=true`, `current_fy=2025`, `ship_gate_status=not_measured`, no new
+documents, and no measured yield. A second non-Excel bundle,
+`logs\stage6-evidence-20260514-171128.zip`, was then verified by
+`logs\stage6-evidence-verify-20260515-021129.json` with `ok=true`, present
+labels `build_info`, `diagnostics`, `last_run`, `stage6_recovery`,
+`stage6_residual_cleanup`, and `weekly_run_logs`, and no forbidden entries. This
+is structurally valid **diagnostic** evidence, not a Stage 6 release sign-off:
+the bundle still lacks bootstrap/discovery RCA patterns, operator
+browser-click/write evidence, and measured production yield. A v407 read-only
+recovery check also returned `ok=false`: the `EIDP Weekly Run` task exists, but
+scheduled-task XML parsing failed, the production action path was not verified,
+and the checker still sees five old v384 smoke artifacts in `C:\Users\cyo20`.
+The v407 residual cleanup was run in dry-run mode only and reported
+`existing_count=5`, `moved_count=0`, `errors=[]`.
 
 ## Current Stage 6 Boundary
 
 The active operator-PC lane is now the v407 extraction
-`C:\Users\cyo20\EIDP-v407-0974b60f`. It is transfer/setup/UI-health proven, but
-not Stage 6 complete. Do not treat the v407 evidence ZIP as release evidence:
-the verifier explicitly rejected the current bundle.
+`C:\Users\cyo20\EIDP-v407-0974b60f`. It is transfer/setup/UI-health proven, and
+it now has one verifier-accepted **diagnostic** Stage 6 evidence bundle. It is
+still not Stage 6 complete because the accepted bundle was based on a dry-run
+`last_run.json`, not an operator click-through/write cycle.
 
 Already supportable from v407 evidence: ZIP transfer and SHA256 match, clean
 `BUILD_INFO.json`, `EIDP-setup.bat` completion, offline wheelhouse install,
 `db-bootstrap`, master import, `school_fiscal_year_status` rebuild for `2418`
 schools, SQLite integrity, required-table presence, R7 retroactive Excel export,
 business-key Excel diff diagnostics, Windows-local Streamlit health, Mac tunnel
-health on `18501 -> 8501`, and Streamlit root HTML retrieval.
+health on `18501 -> 8501`, Streamlit root HTML retrieval, non-mutating R7 weekly
+dry-run `last_run.json`, and verifier-accepted non-Excel diagnostic evidence
+bundle `logs\stage6-evidence-20260514-171128.zip`.
 
 Still missing for Stage 6: browser click-through, `PDF確認・手入力` write,
 fiscal-year override write, R7 Excel preview/download through the UI,
-`監査ログ` page and outbox flush, post-click diagnostics with `last_run`,
-valid Stage 6 evidence ZIP verification, weekly-run task action confirmation,
-decision on whether to archive old v384 residual smoke artifacts, and
-owner/operator sign-off. Historical v397/v384/v399 UI proofs can inform the
-checklist, but they must not be recorded as a completed v407 one-cycle sign-off.
+`監査ログ` page and outbox flush, post-click diagnostics from the real operator
+cycle, weekly-run task action confirmation, decision on whether to archive old
+v384 residual smoke artifacts, and owner/operator sign-off. Historical
+v397/v384/v399 UI proofs can inform the checklist, but they must not be
+recorded as a completed v407 one-cycle sign-off.
 
 Historical v397/v384/v399 proofs below are retained as supporting evidence, but
 the current lane is v407. For v407, keep treating recovery task mismatches as
@@ -122,12 +139,12 @@ Stage 6 template fill map for the v407 lane:
 | --- | --- | --- |
 | 1. 実施情報 | v407 commit `0974b60fb3d404678828ddfa348c74f4dd740c79`; `dist/eidp-windows-v407.zip`; SHA256 `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`; extract path `C:\Users\cyo20\EIDP-v407-0974b60f` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Current v407 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
-| 3. 証跡採取コマンド | v407 hash/setup/validate/release-gate/export/UI-health evidence is available | `EIDP-diagnose.bat` after the click-through cycle; valid evidence bundle with `last_run` |
+| 3. 証跡採取コマンド | v407 hash/setup/validate/release-gate/export/UI-health evidence is available; dry-run `last_run.json` was included in verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-171128.zip` | `EIDP-diagnose.bat` after the click-through cycle; final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `first_setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, and Mac tunnel health | Task Scheduler action path confirmation |
 | 5. 4 工程 E2E | v407 R7 retroactive CLI export/diff proof exists; historical v397/v384 UI/write proofs can guide the exact clicks | v407 PDF/manual-entry write, fiscal-year override write, R7 Excel preview/download through UI, and any current PDF collection metrics |
-| 6. KPI 判定 | v407 setup evidence still shows FY2026 `excel_ready=0`; R7 retroactive export/diff exists | Current v407 diagnostics and yield fields; final `ship_readiness_rc` / retroactive gate values |
+| 6. KPI 判定 | v407 setup evidence still shows FY2026 `excel_ready=0`; R7 retroactive export/diff exists; dry-run `last_run.json` has `ship_gate_status=not_measured`, no new documents, and no measured yield | Real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
 | 7. 監査 / outbox | Historical v384 audit page and outbox flush proof exists | v407 `manual_action_log` delta, unexported count, flush result, and JSONL duplicate check |
-| 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; weekly task XML parsing failed; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v407 click-through failures and screenshots/log attachments |
+| 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; non-Excel dry-run bundle is diagnostic only; weekly task XML parsing failed; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v407 click-through failures and screenshots/log attachments |
 | 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |
 
 v397 was previously transferred to the operator PC and setup-validated in the
@@ -629,7 +646,7 @@ operator-action click-through remains unverified.
 | Append-only DepartmentYearly / SupportRecipient writes | Fresh full unit suite passed; source audits and targeted tests cover demote-plus-new-revision paths in ingest, manual entry, and fiscal-year override; Windows v384 `PDF確認・手入力` browser save smoke inserted one manual `DepartmentYearly` revision with `document_id=1`, `fiscal_year=2026`, `revision=1`, `is_current=1`, `extraction_method="manual"`, `extraction_confidence=1`, and `verified=1` in a disposable copied DB, promoted the document from `parse_failed` to `ingested`, emitted three `manual_entry` audit rows, and verified the real runtime DB had `0` matching document/department/yearly/audit rows. The same smoke confirmed this UI path does not write SupportRecipient rows (`support_recipient_rows_for_doc=0`). Windows v384 `③ 年度判定・修正` browser write smoke moved one seeded FY2025 ingested document to FY2026, demoted the FY2025 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows plus the pre-existing FY2026 target `DepartmentYearly` row, inserted new FY2026 current `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows, set `Document.fiscal_year=2026` and `fiscal_year_override=2026`, emitted four `fiscal_year_override` audit rows, and verified the real runtime DB had `0` matching document/school/department/audit rows. Windows v384 package-local backend ingest smoke then seeded two FY2026 target documents in a copied DB, monkeypatched the package parser boundary to return deterministic SupportRecipient annotations, called `ingest_document` twice, and verified two SupportRecipient rows: revision `1` demoted to `is_current=false` with `annual_total=100`, `grand_total=100`, and `extraction_confidence=0.94`; revision `2` current with `annual_total=120`, `grand_total=120`, and `extraction_confidence=1.0`; the real runtime DB had `0` matching documents, schools, and support-recipient rows. | DepartmentYearly Win UI E2E proven on v384; fiscal-year override Win UI E2E proven on v384; SupportRecipient Win package backend append-only proven on v384 |
 | Excel template output | v384 FY2026 Excel preview correctly keeps workbook generation disabled when current-year transcribed rows are `0`; v384 retroactive FY2025/R7 browser smoke generated the in-memory workbook and downloaded `eidp_master.xlsx` with size `3,728,651` bytes after showing `抽出済み学校 2031` and `Excel対象行 7150`; the downloaded workbook opened with sheets `採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋`, and `openpyxl` reported row counts `2419`, `10023`, `9721`, and `9721` including headers; v342 package verifier also includes Excel/export contracts and centralized confidence threshold contract | Partially proven for current FY, browser download proven for R7 retroactive on latest v384 |
 | ManualActionLog audit for operator actions | v384 sandboxed URL-candidate reject browser write smoke created one `url_candidate_rejected` audit row in a disposable copied database, resolved the `ReviewItem` as rejected, created no `SchoolSite` row, and verified the real runtime DB was not mutated; v384 sandboxed audit-outbox browser flush smoke exported one seeded `stage6_v384_ui_audit_flush_smoke` row to JSONL, stamped `jsonl_exported_at`, cleared pending count to `0`, and verified the real runtime DB was not mutated; v384 `PDF確認・手入力` browser save smoke emitted three `manual_entry` audit rows for `department`, `department_yearly`, and `document`; v384 `③ 年度判定・修正` browser write smoke emitted four `fiscal_year_override` audit rows for `department_yearly`, `support_recipient`, `school_year_status`, and `document`; v342 package verifier also includes audit contracts and outbox checks | Browser operator-action audit proven for URL-candidate, audit flush, manual-entry, and fiscal-year override paths |
-| ZIP distribution, double-click setup, browser UI offline operation | Historical v401 ZIP verified clean on the then-current macOS packaging gate with SHA256 `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`, commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and `undemonstrated_pattern_sources=[]`; a current-source read-only package-gate rerun now rejects v401 as stale because it predates newer Stage 6 safety / audit-outbox verifier tokens; the current verifier also intentionally rejects older v399 because its packaged runbook predates the corrected SSH tunnel troubleshooting, where the normal launcher path is `18501 -> 8501` and manual `8502` smokes are documented separately; v399 was transferred to the operator PC, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`, set up with the offline wheelhouse installer, imported the workbook, rebuilt `2418` FY2026 school-year task rows, returned `OK install`, passed after-setup validation with `ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, `wheel_count=78`, and `duplicate_wheel_distributions={}`, and returned `cli_help_rc=0`; v399 then served Streamlit on Windows `0.0.0.0:8502`, returned Windows-local `http://127.0.0.1:8502/_stcore/health` as `ok`, showed a `netstat` listener on PID `10104`, and was stopped with follow-up `listening_8502=0`; v401 Windows transfer/setup/UI smoke remains pending until SSH access resumes. v397 remains the latest browser-click proof: it rendered title `EIDP Operator Console`, default page `① 学校別タスク`, target `2026年度（令和8年度）`, build `3c100c7`, `対象年度 要対応 2418`, `Excel出力可 0/2418 校`, clicked only the non-mutating quick navigation buttons for `PDF確認・手入力`, `対象年度の判定・修正`, `Excel プレビュー`, `設定`, and back to `① 学校別タスク`, and kept the FY2026 Excel workbook-generation button disabled for empty current data. The v398 `stage6_recovery_check.py` WMI fix was hot-copied into the v397 disposable extraction and `EIDP-diagnose.bat` then completed, writing `logs\diagnostics-20260514-094322.txt` with `validate_core_rc=0`, `validate_after_setup_rc=0`, `ship_readiness_rc=1`, `retroactive_fiscal_year=2025`, and `retroactive_ship_readiness_rc=0`; its `stage6_recovery_rc=1` was an expected recovery-state failure because task action matched the v397 expected weekly action but old v384 OCR smoke files still existed under `C:\Users\cyo20`. v394 remains the latest Windows evidence-bundle verifier proof with root Stage 6 evidence/verify/recovery BAT launchers and positive minimal `stage6-evidence-*.zip` verification; v384 remains the latest package with package-local `eidp db-backup`, Windows environment / Task Scheduler capture, R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry browser save, and SupportRecipient append-only ingest proofs on disposable copied databases, leaving the real runtime DB unchanged. Full Stage 6 operator-action click-through remains unverified | Historical v401 Mac verifier proof is stale under the current verifier; v399 Windows transfer/setup/UI-service proof, v397 Windows browser render/read-only navigation proof, and older Stage 6 evidence-bundle/browser write proofs present; v401 Windows transfer/setup/UI smoke and full operator workflow still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v407 is the current clean package lane: `dist/eidp-windows-v407.zip` was built from source commit `0974b60fb3d404678828ddfa348c74f4dd740c79`, Mac-verified with SHA256 `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`, `entry_count=3077`, `wheel_count=78`, `47` prefecture seeds, `44` discovery gold-set entries, and no undemonstrated discovery pattern sources; the full non-Windows release gate passed with `1480` unit tests, `161` validator/distribution tests, mypy/Ruff, `44/44` discovery-gold expected predictions, sidecar SHA match, and package/source commit match. v407 was transferred to `C:\Users\cyo20`, SHA-checked on Windows, extracted to `C:\Users\cyo20\EIDP-v407-0974b60f`, set up with `EIDP-setup.bat`, validated with `OK install`, `school_count=2418`, `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`, and served Streamlit through the normal tunnel `127.0.0.1:18501 -> Windows 127.0.0.1:8501` with `/_stcore/health=ok` plus root Streamlit HTML retrieval. The first v407 evidence bundle with Excel export was verifier-rejected as intended; the second non-Excel dry-run bundle `logs\stage6-evidence-20260514-171128.zip` verified with `ok=true` and labels `build_info`, `diagnostics`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`, but remains diagnostic because `last_run` was `dry_run=true`, `ship_gate_status=not_measured`, no yield was measured, and no operator browser-click/write cycle was executed. Historical v397 remains the latest browser-click read-only navigation proof; v384 remains the latest package with browser write proofs for R7 Excel preview/download, URL-candidate reject, audit-outbox flush, fiscal-year override, `PDF確認・手入力` manual-entry save, and SupportRecipient append-only ingest on disposable copied databases. Full v407 Stage 6 operator-action click-through remains unverified | Current v407 package/setup/UI-health and diagnostic evidence-bundle proof present; historical browser read/write proofs present; full v407 operator workflow still missing |
 | Shipping threshold: operator-reviewable coverage sufficient for operator manual work <=30%, with strict Excel readiness retained as diagnostic output | v358 `ship-readiness` now reports `ok_operator_review` separately from `ok_strict`; Windows v342 50-site diagnostics report `target_pdf_auto_yield_pct=0.0`, `operator_reviewable_yield_pct=1.9`, `excel_ready=0`, `ship_gate_status=below_gate`, and `validate_after_bootstrap_ship_gate_rc=1` | Failing on latest Windows evidence |
 
 ## Current Non-Windows Evidence
@@ -698,9 +715,16 @@ Current v407 Windows setup and UI-health smoke:
   `-o ClearAllForwardings=no` returned `/_stcore/health` as `ok`, and the root
   page returned the Streamlit HTML shell.
 - Stage 6 evidence verifier status:
-  the current v407 evidence bundle was intentionally treated as invalid after
-  `scripts\verify_stage6_evidence.bat` rejected it for forbidden Excel exports
-  and missing `last_run` / weekly-run / bootstrap / discovery evidence labels.
+  `scripts\verify_stage6_evidence.bat` first rejected
+  `logs\stage6-evidence-20260514-170328.zip` for forbidden Excel exports and
+  missing `last_run` / weekly-run / bootstrap / discovery evidence labels. After
+  a process-local FY2025 dry-run weekly command wrote `data\output\last_run.json`,
+  `logs\stage6-evidence-20260514-171128.zip` verified with `ok=true`, no
+  forbidden entries, and present labels `build_info`, `diagnostics`, `last_run`,
+  `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. This is
+  diagnostic-only because the `last_run` was `dry_run=true`,
+  `ship_gate_status=not_measured`, and no operator write/yield evidence was
+  collected.
 
 Historical v399 Windows setup and UI-service smoke:
 
