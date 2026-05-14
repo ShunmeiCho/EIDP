@@ -451,21 +451,24 @@ def _validate_bootstrap_ship_gate_against_sqlite(
     reported_denominator = details.get("target_pdf_auto_denominator_count")
     reported_acquired = details.get("target_pdf_auto_acquired_count")
     if isinstance(reported_denominator, int) and reported_denominator != coverage["schools_total"]:
-        check.warn(
+        message = (
             "bootstrap target_pdf_auto_denominator_count does not match SQLite active specialty school count: "
             f"{reported_denominator} != {coverage['schools_total']}"
         )
+        (check.fail if require_ship_gate else check.warn)(message)
     if isinstance(reported_acquired, int) and reported_acquired != coverage["schools_with_target_pdf_current_fy"]:
-        check.warn(
+        message = (
             "bootstrap target_pdf_auto_acquired_count does not match SQLite target-FY target PDF count: "
             f"{reported_acquired} != {coverage['schools_with_target_pdf_current_fy']}"
         )
+        (check.fail if require_ship_gate else check.warn)(message)
     reported_reviewable = details.get("operator_reviewable_count")
     if isinstance(reported_reviewable, int) and reported_reviewable != coverage["operator_reviewable_school_count"]:
-        check.warn(
+        message = (
             "bootstrap operator_reviewable_count does not match SQLite operator-reviewable count: "
             f"{reported_reviewable} != {coverage['operator_reviewable_school_count']}"
         )
+        (check.fail if require_ship_gate else check.warn)(message)
 
     sqlite_status = ship_gate_status_from_operator_coverage(coverage["operator_reviewable_yield_pct"])
     check.details["sqlite_target_fy_operator_reviewable_ship_gate_status"] = sqlite_status

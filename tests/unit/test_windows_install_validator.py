@@ -728,6 +728,34 @@ def test_validate_after_bootstrap_release_gate_accepts_review_candidate_coverage
     assert check.details["sqlite_target_fy_operator_reviewable_yield_pct"] == 70.0
 
 
+def test_validate_after_bootstrap_release_gate_rejects_progress_count_mismatch_even_when_sqlite_passes(
+    tmp_path: Path,
+) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _bootstrap_artifacts(root)
+    _seed_target_fy_coverage(root, total=10, acquired=3, publication_lag=3, target_year_unverified=1, fy=2026)
+    payload = json.loads((root / "logs" / "bootstrap-pdfs-20260505-010203.json").read_text(encoding="utf-8"))
+    payload["details"].update(
+        {
+            "target_pdf_auto_acquired_count": 3,
+            "target_pdf_auto_yield_pct": 30.0,
+            "operator_reviewable_count": 6,
+            "operator_reviewable_yield_pct": 60.0,
+            "ship_gate_status": "pass",
+        }
+    )
+    _write(root, "logs/bootstrap-pdfs-20260505-010203.json", json.dumps(payload))
+
+    structure_only = module.validate_install(root, after_bootstrap=True)
+    release_gate = module.validate_install(root, after_bootstrap=True, require_ship_gate=True)
+
+    assert structure_only.ok, structure_only.errors
+    assert structure_only.warnings
+    assert not release_gate.ok
+    assert any("bootstrap operator_reviewable_count does not match SQLite" in error for error in release_gate.errors)
+
+
 def test_validate_after_weekly_accepts_discovery_rca_batch_plan(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
