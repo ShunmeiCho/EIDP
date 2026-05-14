@@ -7,11 +7,11 @@ Package commit: `12719c0dc929d3b8727f6e8486931239e29a7145`
 Package SHA256: `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v397.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v399.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v397.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v399.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v397.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v399.zip`
 Latest Windows-browser-UI-proven package: `dist/eidp-windows-v397.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
@@ -46,10 +46,30 @@ disposable operator-PC extraction and run in dry-run mode only:
 The dry-run identified these five old v384 smoke artifacts in
 `C:\Users\cyo20`: `v384_ocr_sr_smoke.ps1`, `eidp-windows-v384.zip`,
 `eidp-windows-v384.zip.sha256`, `eidp-ocr-addon-windows-v383-smoke.zip`, and
-`eidp_v384_ocr_sr_smoke.py`. No artifact was moved because `--apply` was not
-passed; actual archival still requires explicit operator/user approval.
+`eidp_v384_ocr_sr_smoke.py`. v399 was then transferred to the operator PC as
+`C:\Users\cyo20\eidp-windows-v399.zip`; Windows SHA256 matched
+`bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`, and the
+sidecar check reported `match=true` with size `211184728`. It was extracted
+into the new disposable directory
+`C:\Users\cyo20\EIDP-v399-12719c0-setup-probe`; `BUILD_INFO.json` reported
+commit `12719c0dc929d3b8727f6e8486931239e29a7145`, branch
+`sprint8-handoff-finalize`, and `git_dirty=false`, and the packaged
+`scripts\stage6_residual_cleanup.bat` was present. `EIDP-setup.bat` completed
+offline wheelhouse installation, `db-bootstrap`, `import-excel`, and school-year
+task rebuild. The setup log ended with `Import complete.`,
+`School year tasks rebuilt: fiscal_year=2026 school_type=専門学校 rebuilt=2418
+excel_ready=0`, and `OK install`. A standalone
+`runtime\python\python.exe scripts\validate_windows_install.py . --after-setup
+--json` run returned `ok=true`, `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+`sqlite_table_count=15`, `wheel_count=78`,
+`duplicate_wheel_distributions={}`, and required tables including
+`manual_action_log`, `department_yearly`, and `support_recipient`. CLI smoke
+also returned `cli_help_rc=0`. A non-WMI `netstat` check found
+`streamlit_port_listener=0`. No residual artifact was moved because `--apply`
+was not passed; actual archival still requires explicit operator/user approval.
 
-v397 has also been transferred to the operator PC and setup-validated in the
+v397 was previously transferred to the operator PC and setup-validated in the
 disposable extraction
 `C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe`. Windows SHA256 matched the
 same sidecar value, `BUILD_INFO.json` reported commit
