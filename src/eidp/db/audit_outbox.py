@@ -35,9 +35,21 @@ def _candidate_outbox_paths(jsonl_path: Path) -> list[Path]:
     """Return active and archived JSONL outbox files to use for dedup."""
 
     paths = [jsonl_path]
-    if jsonl_path.name == DEFAULT_OUTBOX_PATH.name and jsonl_path.parent.exists():
-        paths.extend(sorted(p for p in jsonl_path.parent.glob(OUTBOX_ARCHIVE_GLOB) if p.is_file()))
+    if jsonl_path.parent.exists():
+        paths.extend(
+            sorted(
+                p
+                for p in jsonl_path.parent.iterdir()
+                if p.is_file() and _is_matching_outbox_archive(jsonl_path, p)
+            )
+        )
     return list(dict.fromkeys(paths))
+
+
+def _is_matching_outbox_archive(jsonl_path: Path, archive_path: Path) -> bool:
+    """Return true for archives rotated from the same outbox filename stem."""
+
+    return archive_path.suffix == ".jsonl" and archive_path.name.startswith(f"{jsonl_path.stem}-")
 
 
 def _read_existing_action_ids(jsonl_path: Path) -> set[str]:

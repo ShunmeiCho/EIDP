@@ -1295,6 +1295,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'OUTBOX_ARCHIVE_GLOB = "manual-actions-*.jsonl"',
             "def flush_audit_outbox",
             "def _candidate_outbox_paths",
+            "def _is_matching_outbox_archive",
             "ManualActionLog",
             "jsonl_exported_at",
             "jsonl_export_error",
