@@ -1,7 +1,7 @@
 # EIDP 業務員 PC E2E 記録テンプレート
 
 Status: Stage 6 / v1.0 release candidate evidence template
-Updated: 2026-05-14
+Updated: 2026-05-15
 
 このテンプレートは、業務員の実 PC で 1 サイクル実行した結果を記録するためのものです。
 ここが未記入のままでは、EIDP Windows 版を v1.0 と判定しません。
@@ -15,6 +15,10 @@ Updated: 2026-05-14
   （真の対象年度 PDF 60-70% 自動取得、推定手作業 30% 以下）の証明には使いません。
 - v1.0 GA 判定は、このテンプレートの完了に加えて、現在の対象年度で
   `ship_readiness_rc=0` または同等の yield evidence が確認された後に行います。
+- v408 では ZIP / setup / UI health / R7 Excel / sandbox UI write / non-Excel
+  diagnostic evidence bundle まで実証済みです。ただし sandbox と dry-run は
+  業務員 PC 1 サイクル sign-off の代替ではありません。下表の「v408 既存証跡」
+  は転記補助であり、空欄のまま残る real-cycle / owner fields を埋める必要があります。
 
 ## 1. 実施情報
 
@@ -31,6 +35,16 @@ Updated: 2026-05-14
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
+v408 既存証跡（転記候補、real-cycle sign-off ではない）:
+
+| 項目 | 値 |
+| --- | --- |
+| EIDP commit | `f0c2715833b54e60fea85259e16ad0a1d9e6c106` |
+| core ZIP | `dist/eidp-windows-v408.zip` |
+| core ZIP sha256 | `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2` |
+| Windows extract path | `C:\Users\cyo20\EIDP-v408-f0c27158` |
+| transferred ZIP | `C:\Users\cyo20\eidp-windows-v408.zip` |
+
 ## 2. PC / 環境
 
 | 項目 | 記録 |
@@ -45,6 +59,16 @@ Updated: 2026-05-14
 | SmartScreen 表示 | none / shown |
 | ネットワーク | 社内 / VPN / offline / other |
 | Proxy / FW 影響 | none / observed |
+
+v408 既存証跡（要再確認）:
+
+| 項目 | 値 |
+| --- | --- |
+| Hostname / user | `JUNMING` / `junming` |
+| Home | `C:\Users\cyo20` |
+| Historical Windows version | Windows 11 Pro build `26200` |
+| Historical CPU/RAM | i9-13900HK / about 32 GB RAM |
+| 未確認の現行項目 | locale, console encoding, free disk, Defender, SmartScreen, network/proxy |
 
 ## 3. 証跡採取コマンド
 
@@ -105,6 +129,17 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 - `[stage6 recovery check]` JSON の `residual_paths`
 - `[stage6 recovery check]` JSON の `recommendations`
 
+v408 既存証跡（diagnostic-only）:
+
+```text
+logs\diagnostics-v408-ui-sandbox-proof-20260515-034848.txt
+logs\run-v408-retroactive-dryrun-20260515-040053.log
+logs\stage6-recovery-20260515-040010.json
+logs\stage6-residual-cleanup-20260515-040034.json
+logs\stage6-evidence-20260514-190257.zip
+logs\stage6-evidence-verify-20260515-040322.json
+```
+
 ## 4. Setup 結果
 
 | 手順 | 期待 | 結果 | 証跡 |
@@ -120,6 +155,18 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 | Mac tunnel health | `http://127.0.0.1:18501/_stcore/health` が `ok` | pass / fail / n/a | |
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
+
+v408 既存証跡（転記候補）:
+
+| 手順 | 結果 | 証跡 |
+| --- | --- | --- |
+| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v408-f0c27158` |
+| `EIDP-setup.bat` | pass | `logs\setup-v408-20260515.log` |
+| `.venv` 作成 | pass | `validate_windows_install.py --after-setup --json` |
+| DB bootstrap / master import | pass | `school_count=2418`, `sqlite_integrity_check=ok` |
+| 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418`, `excel_ready=0` |
+| Task Scheduler | pass | execute path `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat` |
+| Streamlit health | pass | Windows `8508`, Mac tunnel `18508 -> 8508`, `/_stcore/health=ok` |
 
 ## 5. 4 工程 E2E
 
@@ -149,6 +196,12 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 | override 後の coverage / Excel 突合 | pass / fail |
 | review_pending 文書数 | |
 
+v408 sandbox 例（real-cycle ではない）:
+
+| Document ID | 旧年度 | 新年度 | 理由 | audit action_id |
+| --- | ---: | ---: | --- | --- |
+| `2` | 2024 | 2025 | `stage6 v408 UI sandbox fiscal year override` | `4`-`7` |
+
 override 例:
 
 | Document ID | 旧年度 | 新年度 | 理由 | audit action_id |
@@ -175,6 +228,12 @@ override 例:
 | --- | --- | --- | ---: | --- | --- |
 | | | | | | |
 
+v408 sandbox 例（real-cycle ではない）:
+
+| Document ID | 学校 | 学科 | confidence | 対応 | audit action_id |
+| --- | --- | --- | ---: | --- | --- |
+| `1` | `EIDP v408 sandbox 専門学校` | `V408手入力学科` | `1.0` | manual entry, verified | `1`-`3` |
+
 ### 工程 4: Excel プレビュー / 出力
 
 | 指標 | 結果 |
@@ -192,6 +251,16 @@ override 例:
 ```text
 
 ```
+
+v408 R7 retroactive 既存証跡（FY2026 yield ではない）:
+
+| 指標 | 結果 |
+| --- | --- |
+| R7 CLI export | `data\output\v408-r7-retroactive-export.xlsx` |
+| R7 browser download | `_temp/v408-r7-browser-eidp_master.xlsx`, suggested `eidp_master.xlsx` |
+| Sheet counts | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
+| openpyxl dimensions | `2419x10`, `10023x22`, `9721x83`, `9721x19` |
+| Browser vs CLI business diff | `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, `differing_fields=0` |
 
 ## 6. KPI 判定
 
@@ -217,6 +286,22 @@ override 例:
 | interrupted smoke residue | `residual_paths[].exists=false` | | pass / watch / fail |
 | residual cleanup log | `logs\stage6-residual-cleanup-*.json` if cleanup was needed | | pass / watch / fail |
 
+v408 diagnostic-only KPI snapshot:
+
+| KPI | Actual | 判定 |
+| --- | ---: | --- |
+| `last_run.json status` | `success` | diagnostic pass |
+| `dry_run` | `true` | diagnostic only |
+| `current_fy` | `2025` | retroactive only |
+| `ship_gate_status` | `not_measured` | not release evidence |
+| `new_document_ids` | `[]` | diagnostic only |
+| `target_pdf_auto_yield_pct` | `null` | not measured |
+| `operator_reviewable_yield_pct` | `null` | not measured |
+| `stage6_recovery_rc` | `1` | watch: residual artifacts remain |
+| scheduled task action | `action_matches_expected=true` | pass |
+| interrupted smoke residue | `existing_count=5` | watch |
+| residual cleanup mode | `dry_run`, `moved_count=0` | intentional |
+
 KPI メモ:
 
 ```text
@@ -233,11 +318,29 @@ KPI メモ:
 | audit-flush 実行 | pass / fail / not needed |
 | JSONL action_id 重複 | none / observed |
 
+v408 sandbox 既存証跡（real-cycle ではない）:
+
+| 項目 | 結果 |
+| --- | --- |
+| 監査ログページ表示 | pass |
+| manual_action_log 件数 | `7` |
+| JSONL outbox 未送信件数 | before flush `7` |
+| audit-flush 実行 | `exported=7 already_present=0 failed=0` |
+| JSONL export stamp | all seven rows `jsonl_exported_at_present=true` |
+
 ## 8. 障害 / 回避策
 
 | 時刻 | 操作 | 現象 | 回避策 | 未解決 |
 | --- | --- | --- | --- | --- |
 | | | | | |
+
+既知の v408 diagnostic-only 障害 / 注意:
+
+| 時刻 | 操作 | 現象 | 回避策 | 未解決 |
+| --- | --- | --- | --- | --- |
+| 2026-05-15 | `stage6_recovery_check` | old v384 residual smoke artifacts make overall `ok=false` | cleanup dry-run recorded only; no `--apply` without approval | yes |
+| 2026-05-15 | `collect_stage6_evidence` | manifest missing `bootstrap_logs`, `bootstrap_progress`, `discovery_rca` | accepted by current verifier with required labels, but keep diagnostic-only | yes |
+| 2026-05-15 | UI write proof | copied-DB sandbox, not real operator cycle | repeat on approved full-cycle / real cycle | yes |
 
 添付する証跡:
 

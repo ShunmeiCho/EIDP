@@ -391,7 +391,7 @@ tokens; SHA256, validator/distribution tests, validator mypy/Ruff, gold-set
 summary, and expected-prediction replay still pass. Treat v401 as a stale
 package relative to the current source evidence base, not as a current
 Mac-verifier-clean candidate. The latest Windows UI health and seeded
-browser-write proof is now v407; v397 remains the historical read-only
+browser-write proof is now v408; v397 remains the historical read-only
 quick-navigation proof across the full sidebar. The existing
 `C:\Users\cyo20\EIDP-v397-3c100c7-setup-probe` disposable extraction started
 Streamlit on Windows `127.0.0.1:8502`; the local SSH tunnel
