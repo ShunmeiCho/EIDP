@@ -1,12 +1,12 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-14
-Code evidence HEAD: `447ba213509898945fb288fe5b30ac0fc1317bcd`
+Code evidence HEAD: `c2a6f532075a8b02eb7a5853de3b3a564ab72107`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally separate from ZIP packaging: no new ZIP has been built for
-the code evidence base `447ba213`, and the active operator-PC Stage 6 lane
+the code evidence base `c2a6f532`, and the active operator-PC Stage 6 lane
 remains the existing v399 extraction. Later documentation-only commits may
 extend this checklist without changing that source-code evidence base.
 
@@ -26,8 +26,8 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes | Partially proven; code evidence base not packaged after `447ba213` |
-| Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints and prioritizes yearless target-form evidence over older-year target evidence in RCA triage; current evidence records strict FY2026 auto-yield still `0.0` on bounded Windows smokes | Mechanically guarded; yield gate failing |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `c2a6f532` |
+| Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, and inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
 | Excel template export | v384 R7 retroactive Excel preview/download proof; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 rehearsal proven; FY2026 target-year output not ready |
@@ -42,7 +42,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v399, commit
   `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
   `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source-code evidence base: `447ba213`, with Stage 6 safety fixes for recovery check,
+- Current source-code evidence base: `c2a6f532`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling, and typed fiscal-year
@@ -61,21 +61,24 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   diagnostic build. Discovery RCA triage now prioritizes explicit
   `target_fiscal_year_not_detected` target-form evidence over older-year target
   evidence for the same school so operator review queues do not bury
-  yearless current candidates behind publication-lag labels.
+  yearless current candidates behind publication-lag labels. Gold-set seeding
+  now preserves semantic directory trailing slashes for disclosure entrypoints,
+  and PDF discovery now attaches same-section support-system headings to
+  year-only target-form links before candidate prioritization.
 - These source-code fixes are not present in the existing v399/v401 ZIPs.
   The latest recorded read-only rerun of the non-Windows package gate against
   v401 with the current verifier failed before downstream gates because
   `package_source_check` detected that packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd` did not match the then-current
   source HEAD. The same stale-package boundary still applies to code evidence
-  base `447ba213509898945fb288fe5b30ac0fc1317bcd`, because v401 packages
+  base `c2a6f532075a8b02eb7a5853de3b3a564ab72107`, because v401 packages
   commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`.
 - Do not mark the goal complete until v399 or a future approved package completes
   operator-PC browser write-cycle evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest local checks performed against source-code evidence base `447ba213`:
+Latest local checks performed against source-code evidence base `c2a6f532`:
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
@@ -89,6 +92,14 @@ Latest local checks performed against source-code evidence base `447ba213`:
   -> `16 passed in 0.43s`.
 - `uv run pytest tests/unit/test_cli_discovery_rca_packet.py -q`
   -> `24 passed in 0.60s`.
+- `uv run pytest tests/unit/test_pdf_discovery.py tests/unit/test_cli_pdf_discovery_strict.py tests/unit/test_discovery_gold_set_seed.py tests/unit/test_url_normalization.py -q`
+  -> `183 passed, 5 warnings in 12.42s`.
+- `uv run pytest tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_summary.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_cli_eval_discovery_gold.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_discovery_gold_set_seed.py -q`
+  -> `49 passed in 1.84s`.
+- `uv run ruff check src/eidp/scraper/pdf_discovery.py src/eidp/scraper/discovery_gold_set.py tests/unit/test_pdf_discovery.py tests/unit/test_discovery_gold_set_seed.py tests/unit/test_url_normalization.py`
+  -> `All checks passed`.
+- `uv run mypy src/eidp/scraper/pdf_discovery.py src/eidp/scraper/discovery_gold_set.py`
+  -> `Success: no issues found in 2 source files`.
 - `uv run ruff check src/eidp/scraper/discovery_evidence_summary.py tests/unit/test_discovery_evidence_summary.py`
   -> `All checks passed`.
 - `uv run mypy src/eidp/scraper/discovery_evidence_summary.py`
@@ -107,6 +118,17 @@ Latest local checks performed against source-code evidence base `447ba213`:
   `operator_reviewable_schools=9/44`, `operator_reviewable_rate=0.2045`,
   `strict_target_pdf_rate=0.0`, `excel_ready_schools=0`, and
   `ok_operator_review=false`.
+- Isolated central-animal follow-up after the entrypoint/context fix using
+  temporary app root `_temp/live-discovery-chuo-target-context-a17702f8-20260514-170031`:
+  `uv run eidp db-bootstrap --sqlite`; `uv run eidp seed-discovery-gold-sites --gold-set-dir data/discovery-gold-set --apply`;
+  `uv run eidp discover-pdfs --storage-dir "$run_dir/pdfs" --batch-size 1 --rate-limit 0.2 --request-timeout 12 --discovery-method discovery_gold_set --school-id 3205 --evidence-log "$run_dir/output/discovery.jsonl"`
+  -> `crawled=1`, `found=1`, `downloaded=0`, `failed=0`,
+  `rejection_reason_fiscal_year_mismatch=1`, and
+  `rejection_reason_classified_non_target=10`. The first evidence row is
+  `confirmation_2.pdf` with anchor text
+  `2025年度 高等教育の修学支援新制度 申請書様式第2号`, score `7.5`, reason
+  `fiscal_year_mismatch:2025`, and `pdf_type=target`; scoped summary reports
+  `publication_lag_or_old_target_pdf=1` and `no_evidence=43`.
 - `uv run ruff check scripts/build_windows_zip.py tests/unit/test_windows_packaging_spike.py`
   -> `All checks passed`.
 - `uv run mypy scripts/build_windows_zip.py`
@@ -154,7 +176,7 @@ Latest local checks performed against source-code evidence base `447ba213`:
   `stale=true`, and `results=[]`.
   This stale-package rerun predates the RCA triage-only patch and remains
   historical evidence that v401 is not a current package; it is not evidence
-  that `447ba213` has been packaged.
+  that `c2a6f532` has been packaged.
 - `uv run mypy src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py`
   -> `Success: no issues found in 9 source files`.
 - `uv run ruff check src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py tests/unit/conftest.py tests/unit/test_manual_entry_contract.py tests/unit/test_review_pdf_manual_entry.py tests/unit/test_review_pdf_manual_entry_confidence.py tests/unit/test_review_audit_log.py tests/unit/test_review_audit_log_dashboard.py tests/unit/test_audit_outbox.py tests/unit/test_locking.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_ingest_evidence.py tests/unit/test_cli_ingest.py`
