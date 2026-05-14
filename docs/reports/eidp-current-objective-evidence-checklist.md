@@ -1,12 +1,12 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-14
-Source HEAD: `3a59c08d3cd93baafb8c941e0555e2bc8ccbbfdc`
+Source HEAD: `ed51b9c8341e90c074e6a86e7854673909836e20`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally separate from ZIP packaging: no new ZIP has been built for
-`3a59c08`, and the active operator-PC Stage 6 lane remains the existing v399
+`ed51b9c`, and the active operator-PC Stage 6 lane remains the existing v399
 extraction.
 
 ## Objective Restatement
@@ -25,7 +25,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes | Partially proven; current source not packaged after `3a59c08` |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes | Partially proven; current source not packaged after `ed51b9c` |
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints; current evidence records strict FY2026 auto-yield still `0.0` on bounded Windows smokes | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
@@ -41,7 +41,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Active Windows transfer/setup proof: v399, commit
   `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
   `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source HEAD: `3a59c08`, with Stage 6 safety fixes for recovery check,
+- Current source HEAD: `ed51b9c`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, and stricter romanized renewal-form hint handling.
@@ -51,8 +51,10 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest local checks performed against source HEAD `3a59c08`:
+Latest local checks performed against source HEAD `ed51b9c`:
 
+- `uv run pytest tests/unit -q`
+  -> `1437 passed, 5 warnings in 41.56s`.
 - `uv run pytest tests/unit/test_pdf_discovery.py -q -k "renewal or koushin or english_renewal or target_form or pre_download"`
   -> `38 passed, 124 deselected, 5 warnings`.
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py`
