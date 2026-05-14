@@ -89,7 +89,7 @@ Latest local checks performed against source-code evidence base `c2f3ac3f`:
 - `uv run ruff check src`
   -> `All checks passed`.
 - `uv run pytest tests/unit -q`
-  -> `1449 passed, 5 warnings in 44.96s`.
+  -> `1456 passed, 5 warnings in 153.12s`.
 - `uv run pytest tests/unit/test_discovery_evidence_summary.py -q`
   -> `14 passed in 0.36s`.
 - `uv run pytest tests/unit/test_discovery_evidence_summary.py tests/unit/test_school_fiscal_year_status.py::test_rebuild_marks_publication_lag_evidence_as_review_state tests/unit/test_school_fiscal_year_status.py::test_rebuild_marks_target_form_without_year_evidence_as_review_state -q`
