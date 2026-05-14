@@ -39,7 +39,7 @@ import sys
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 def _configure_utf8_stdio(stdout: Any = sys.stdout, stderr: Any = sys.stderr) -> None:
@@ -634,6 +634,7 @@ def step_school_url_auto_crawl(
     """Step 2c: bounded Scrapling-backed completion for schools still missing URLs."""
     from eidp.db.session import SessionLocal
     from eidp.scraper.school_url_pipeline import run_school_url_auto_crawl
+    from eidp.scraper.scrapling_fetcher import ScraplingFetchMode
 
     stats = {
         "school_url_crawl_enabled": 1 if enabled else 0,
@@ -669,6 +670,11 @@ def step_school_url_auto_crawl(
         return stats
 
     session = SessionLocal()
+    crawl_fetch_mode: ScraplingFetchMode = (
+        cast(ScraplingFetchMode, fetch_mode)
+        if fetch_mode in {"static", "dynamic", "stealthy"}
+        else "static"
+    )
     try:
         def update_crawl_progress(crawl_stats: dict[str, int], total_schools: int) -> None:
             if progress is None:
@@ -715,7 +721,7 @@ def step_school_url_auto_crawl(
             batch_size=batch_size,
             evidence_path=evidence_log,
             progress_callback=update_crawl_progress,
-            fetch_mode=fetch_mode if fetch_mode in {"static", "dynamic", "stealthy"} else "static",
+            fetch_mode=crawl_fetch_mode,
         )
         for key, value in crawl_stats.items():
             stats[f"school_url_crawl_{key}"] = int(value)
