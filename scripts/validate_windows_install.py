@@ -825,6 +825,8 @@ def validate_install(
             if last_run_status == "lock_busy":
                 if last_run.get("selection_mode") != "lock_busy":
                     check.fail("last_run.json selection_mode must be lock_busy when status is lock_busy")
+                if require_ship_gate:
+                    check.fail("last_run.json status lock_busy cannot satisfy --require-ship-gate")
             elif last_run.get("selection_mode") not in {"target_missing", "stale_only"}:
                 check.fail("last_run.json selection_mode must be target_missing or stale_only")
             for key in (

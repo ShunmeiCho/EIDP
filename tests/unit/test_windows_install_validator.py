@@ -539,6 +539,26 @@ def test_validate_after_weekly_accepts_lock_busy_last_run(tmp_path: Path) -> Non
     assert check.details["last_run_status"] == "lock_busy"
 
 
+def test_validate_after_weekly_release_gate_rejects_lock_busy_even_if_payload_says_pass(tmp_path: Path) -> None:
+    root = _core_install(tmp_path / "EIDP")
+    _setup_artifacts(root)
+    _weekly_artifacts(root)
+    payload = json.loads((root / "data" / "output" / "last_run.json").read_text(encoding="utf-8"))
+    payload.update(
+        {
+            "status": "lock_busy",
+            "selection_mode": "lock_busy",
+            "ship_gate_status": "pass",
+        }
+    )
+    _write(root, "data/output/last_run.json", json.dumps(payload))
+
+    check = module.validate_install(root, after_setup=True, after_weekly=True, require_ship_gate=True)
+
+    assert not check.ok
+    assert any("lock_busy cannot satisfy --require-ship-gate" in error for error in check.errors)
+
+
 def test_validate_after_weekly_accepts_not_measured_yield(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
     _setup_artifacts(root)
