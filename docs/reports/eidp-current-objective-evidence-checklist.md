@@ -1,14 +1,15 @@
 # EIDP Current Objective Evidence Checklist
 
-Updated: 2026-05-14
-Latest code-affecting source evidence base: `4a16363d81db9bc0ab5f5607247e1a67290d9268`
+Updated: 2026-05-15
+Latest code-affecting source evidence base: `0974b60fb3d404678828ddfa348c74f4dd740c79`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
-It is intentionally separate from ZIP packaging: no new ZIP has been built for
-the code evidence base `4a16363d`, and the active operator-PC Stage 6 lane
-remains the existing v399 extraction. Later documentation-only commits may
-refresh this checklist without changing that code evidence base.
+It is intentionally separate from later documentation-only commits: the current
+package lane is `dist/eidp-windows-v407.zip` for code evidence base `0974b60f`,
+and the active operator-PC Stage 6 lane is
+`C:\Users\cyo20\EIDP-v407-0974b60f`. Later documentation-only commits may
+refresh this checklist without changing that packaged code evidence base.
 
 ## Objective Restatement
 
@@ -26,23 +27,23 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Partially proven; code evidence base not packaged after `4a16363d` |
+| 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Packaged in v407; live coverage remains partially proven |
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints in both strong application and weak form-shape detection, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, and inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation; source HEAD names the default `0.70` review threshold via `DEFAULT_CONFIDENCE_REVIEW` and keeps Excel/exporter env-threshold tests green | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
-| DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes | Proven on sandboxed/copy DB paths; not yet v399 one-cycle proof |
-| Excel template export | v384 R7 retroactive Excel preview/download proof; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 rehearsal proven; FY2026 target-year output not ready |
-| ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks | Proven on older sandboxed paths; v399 write-cycle still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v399 transfer, SHA match, setup completion, SQLite integrity, CLI smoke, and manual Streamlit health; v397 browser read-only navigation | Setup/service proven on v399; browser-click write-cycle missing |
+| DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current | Proven on sandboxed/copy DB paths; real operator one-cycle proof still missing |
+| Excel template export | v384 R7 retroactive Excel preview/download proof; v407 Windows R7/FY2025 CLI export/diff returned `diff_rc=0`; v407 disposable UI sandbox generated an Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 rehearsal and sandbox UI preview proven; FY2026 target-year output not ready |
+| ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows | Proven on sandboxed paths; real operator one-cycle proof still missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v407 transfer, SHA match, setup completion, SQLite integrity, CLI smoke, Streamlit health, `18501 -> 8501` tunnel health, and seeded browser write sandbox proof; v397 browser read-only navigation retained as historical support | Current v407 setup/service and sandbox browser-write proven; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | Latest recorded strict target PDF auto-yield remains `0.0%`; `ship_readiness_rc=1` in current Windows evidence | Failing |
 | Ship gate: estimated manual work <= 30% | Current evidence records operator-reviewable yield far below release threshold and manual workload effectively above target | Failing |
 
 ## Current Release Boundary
 
-- Active Windows transfer/setup proof: v399, commit
-  `12719c0dc929d3b8727f6e8486931239e29a7145`, SHA256
-  `bd4846796bdae16977d0aedfee6afcd56a7cee3abcaa2c9cfac5e9fabc6c6f97`.
-- Current source-code evidence base: `4a16363d`, with Stage 6 safety fixes for recovery check,
+- Active Windows transfer/setup proof: v407, commit
+  `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
+  `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
+- Current source-code evidence base: `0974b60f`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling across strong and weak
@@ -78,20 +79,21 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   bootstrap release-gate checks, progress-count mismatches against SQLite are
   fatal under `--require-ship-gate` while remaining warnings for structure-only
   validation.
-- These source-code fixes are not present in the existing v399/v401 ZIPs.
-  The latest recorded read-only rerun of the non-Windows package gate against
-  v401 with the current verifier failed before downstream gates because
-  `package_source_check` detected that packaged commit
+- These source-code fixes are present in the current v407 ZIP. v401 remains a
+  stale package: the latest recorded read-only rerun of the non-Windows package
+  gate against v401 with the current verifier failed before downstream gates
+  because `package_source_check` detected that packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd` did not match the then-current
-  source HEAD. The same stale-package boundary still applies to code evidence
-  base `4a16363d81db9bc0ab5f5607247e1a67290d9268`, because v401 packages
-  commit `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`.
-- Do not mark the goal complete until v399 or a future approved package completes
-  operator-PC browser write-cycle evidence and the rolling FY yield gate.
+  source HEAD.
+- Do not mark the goal complete until v407 completes real operator-PC
+  click-through evidence and the rolling FY yield gate.
 
 ## Current Local Verification
 
-Latest local checks performed against source-code evidence base `4a16363d`:
+Latest v407 package/local gate evidence is summarized in
+`docs/reports/current-release-status.md`. The retained detailed local checks
+below include source-code evidence base `4a16363d` and later documentation-only
+refreshes:
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
@@ -398,19 +400,19 @@ Known non-goal-wide lint boundary:
   surfaces above were checked with targeted Ruff/Mypy/tests.
 - `uv run mypy src` is now a usable source-wide gate for the tracked source
   tree and passes across 83 source files. This is still Mac-side evidence only;
-  it does not prove the Windows operator-PC Stage 6 browser write-cycle or the
-  rolling FY yield gate.
+  it does not prove the real Windows operator-PC Stage 6 one-cycle or the
+  rolling FY yield gate. The current v407 browser write proof is sandbox-only.
 
 ## Next Concrete Gate
 
-When Windows/SSH access is restored, continue the frozen v399 lane without
-building a new ZIP:
+Continue the active v407 lane on the operator PC:
 
 ```bash
 ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
 ```
 
 Then verify the UI at `http://127.0.0.1:18501/` and complete the Stage 6
-click-through: manual PDF entry write, fiscal-year override write, R7 Excel
-preview/download, audit log/outbox flush, diagnostics capture, evidence verify,
-and sign-off fields.
+click-through against the real operator cycle or an approved full-cycle copy:
+manual PDF entry write, fiscal-year override write, R7 Excel preview/download,
+audit log/outbox flush, diagnostics capture, evidence verify, and sign-off
+fields.

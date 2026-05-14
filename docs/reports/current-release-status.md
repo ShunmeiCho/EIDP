@@ -8,11 +8,12 @@ Current package SHA256: `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2
 Latest full non-Windows release-gate package: `dist/eidp-windows-v407.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v407.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v407.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v394.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v407.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v407.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v407.zip`
+Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v407.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
@@ -102,13 +103,37 @@ and the checker still sees five old v384 smoke artifacts in `C:\Users\cyo20`.
 The v407 residual cleanup was run in dry-run mode only and reported
 `existing_count=5`, `moved_count=0`, `errors=[]`.
 
+A disposable v407 UI sandbox was then created on the operator PC at
+`C:\Users\cyo20\EIDP-v407-0974b60f-ui-sandbox-20260515-01` with
+process-local `EIDP_APP_ROOT`, `EIDP_DATA_DIR`, `EIDP_DATABASE_URL`, and
+`EIDP_TARGET_FISCAL_YEAR=2025`. The packaged Streamlit app ran on Windows
+`127.0.0.1:8503` and was reached from the Mac through
+`127.0.0.1:18503 -> 127.0.0.1:8503`; `/_stcore/health` returned `ok`. Browser
+click-through saved one `PDF確認・手入力` row with reason
+`stage6 v407 UI sandbox manual entry`, applied one `年度判定・修正` override with
+reason `stage6 v407 UI sandbox fiscal year override`, generated the
+`Excel プレビュー` workbook with sheet counts `採録状況=2`, `対象比率=1`,
+`学科別=2`, and `在籍のみ抜粋=2`, and opened `監査ログ` where the outbox showed
+`JSONL outbox 未送信=7` before `Outbox を flush` returned
+`exported=7 already_present=0 failed=0`. Post-click SQLite verification in the
+sandbox reported `manual_doc.ingest_status=ingested`,
+`override_doc.fiscal_year=2025`, `override_doc.fiscal_year_override=2025`, a
+manual FY2025 `DepartmentYearly` row with `enrollment=28`,
+`extraction_method=manual`, and `verified=true`, cloned FY2025 current rows for
+`DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` while the
+original FY2024 rows were marked `is_current=false`, and seven
+`ManualActionLog` rows all had `jsonl_exported_at_present=true`. This is the
+first v407 operator-PC browser write proof, but it is still a seeded disposable
+sandbox proof rather than a real operator one-cycle sign-off.
+
 ## Current Stage 6 Boundary
 
 The active operator-PC lane is now the v407 extraction
-`C:\Users\cyo20\EIDP-v407-0974b60f`. It is transfer/setup/UI-health proven, and
-it now has one verifier-accepted **diagnostic** Stage 6 evidence bundle. It is
-still not Stage 6 complete because the accepted bundle was based on a dry-run
-`last_run.json`, not an operator click-through/write cycle.
+`C:\Users\cyo20\EIDP-v407-0974b60f`. It is transfer/setup/UI-health proven, it
+now has one verifier-accepted **diagnostic** Stage 6 evidence bundle, and it has
+one seeded disposable UI sandbox write proof. It is still not Stage 6 complete
+because the accepted bundle was based on a dry-run `last_run.json`, and the
+browser write proof was a seeded sandbox rather than the real operator cycle.
 
 Already supportable from v407 evidence: ZIP transfer and SHA256 match, clean
 `BUILD_INFO.json`, `EIDP-setup.bat` completion, offline wheelhouse install,
@@ -117,15 +142,17 @@ schools, SQLite integrity, required-table presence, R7 retroactive Excel export,
 business-key Excel diff diagnostics, Windows-local Streamlit health, Mac tunnel
 health on `18501 -> 8501`, Streamlit root HTML retrieval, non-mutating R7 weekly
 dry-run `last_run.json`, and verifier-accepted non-Excel diagnostic evidence
-bundle `logs\stage6-evidence-20260514-171128.zip`.
+bundle `logs\stage6-evidence-20260514-171128.zip`, plus the disposable sandbox
+browser proof for `PDF確認・手入力`, fiscal-year override, Excel preview
+generation, `監査ログ`, and outbox flush.
 
-Still missing for Stage 6: browser click-through, `PDF確認・手入力` write,
-fiscal-year override write, R7 Excel preview/download through the UI,
-`監査ログ` page and outbox flush, post-click diagnostics from the real operator
-cycle, weekly-run task action confirmation, decision on whether to archive old
-v384 residual smoke artifacts, and owner/operator sign-off. Historical
-v397/v384/v399 UI proofs can inform the checklist, but they must not be
-recorded as a completed v407 one-cycle sign-off.
+Still missing for Stage 6: the same browser click-through/write flow against
+the real operator cycle or an approved full-cycle copy, post-click diagnostics
+from that cycle, weekly-run task action confirmation, decision on whether to
+archive old v384 residual smoke artifacts, final KPI/yield evidence, and
+owner/operator sign-off. Historical v397/v384/v399 UI proofs and the new v407
+sandbox proof can inform the checklist, but they must not be recorded as a
+completed v407 one-cycle sign-off.
 
 Historical v397/v384/v399 proofs below are retained as supporting evidence, but
 the current lane is v407. For v407, keep treating recovery task mismatches as
@@ -141,10 +168,10 @@ Stage 6 template fill map for the v407 lane:
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Current v407 run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
 | 3. 証跡採取コマンド | v407 hash/setup/validate/release-gate/export/UI-health evidence is available; dry-run `last_run.json` was included in verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-171128.zip` | `EIDP-diagnose.bat` after the click-through cycle; final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `first_setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, and Mac tunnel health | Task Scheduler action path confirmation |
-| 5. 4 工程 E2E | v407 R7 retroactive CLI export/diff proof exists; historical v397/v384 UI/write proofs can guide the exact clicks | v407 PDF/manual-entry write, fiscal-year override write, R7 Excel preview/download through UI, and any current PDF collection metrics |
+| 5. 4 工程 E2E | v407 R7 retroactive CLI export/diff proof exists; a seeded disposable v407 UI sandbox proved manual-entry write, fiscal-year override write, and Excel preview workbook generation through the browser | Real operator-cycle click-through, final Excel download evidence, and any current PDF collection metrics |
 | 6. KPI 判定 | v407 setup evidence still shows FY2026 `excel_ready=0`; R7 retroactive export/diff exists; dry-run `last_run.json` has `ship_gate_status=not_measured`, no new documents, and no measured yield | Real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
-| 7. 監査 / outbox | Historical v384 audit page and outbox flush proof exists | v407 `manual_action_log` delta, unexported count, flush result, and JSONL duplicate check |
-| 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; non-Excel dry-run bundle is diagnostic only; weekly task XML parsing failed; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v407 click-through failures and screenshots/log attachments |
+| 7. 監査 / outbox | Seeded disposable v407 UI sandbox showed `JSONL outbox 未送信=7`, flush result `exported=7 already_present=0 failed=0`, and seven `ManualActionLog` rows with `jsonl_exported_at_present=true` | Real operator-cycle `manual_action_log` delta and final JSONL duplicate check |
+| 8. 障害 / 回避策 | Known current hazards: v407 evidence bundle with Excel export is verifier-rejected; non-Excel dry-run bundle is diagnostic only; v407 browser write proof is sandbox-only; weekly task XML parsing failed; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v407 full-cycle failures and screenshots/log attachments |
 | 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |
 
 v397 was previously transferred to the operator PC and setup-validated in the
