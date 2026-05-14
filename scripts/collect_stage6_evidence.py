@@ -29,6 +29,7 @@ EVIDENCE_PATTERNS: tuple[EvidencePattern, ...] = (
     EvidencePattern("build_info", "BUILD_INFO.json", 1),
     EvidencePattern("diagnostics", "logs/diagnostics-*.txt", 5),
     EvidencePattern("stage6_recovery", "logs/stage6-recovery-*.json", 5),
+    EvidencePattern("stage6_residual_cleanup", "logs/stage6-residual-cleanup-*.json", 5),
     EvidencePattern("weekly_run_logs", "logs/run-*.log", 5),
     EvidencePattern("bootstrap_progress", "logs/bootstrap-pdfs-*.json", 5),
     EvidencePattern("bootstrap_logs", "logs/bootstrap-pdfs-*.log", 3),

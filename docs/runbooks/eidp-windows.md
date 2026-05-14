@@ -703,6 +703,23 @@ Python helper を直接実行する場合:
   --json
 ```
 
+`residual_paths` に過去の検証用ファイルが残っている場合、まず dry-run で
+移動対象を確認する。既定では何も削除せず、`logs\stage6-residual-cleanup-*.json`
+に確認結果だけを書く:
+
+```powershell
+.\scripts\stage6_residual_cleanup.bat --json
+```
+
+表示された `actions[].destination` が妥当な場合だけ、`--apply` を付けて
+`logs\stage6-residual-archive\<timestamp>` へ移動する。これは削除ではなく
+アーカイブなので、必要なら後で戻せる:
+
+```powershell
+.\scripts\stage6_residual_cleanup.bat --apply --json
+.\scripts\stage6_recovery_check.bat
+```
+
 `EIDP Weekly Run` の action が検証用 sandbox を指したままなら、直近の本番
 runtime（例: `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`）へ戻してから
 Stage 6 検証を再開する。SSH が復旧するまで、未完了の copied-DB smoke を

@@ -233,6 +233,7 @@ def bat_files() -> dict[str, str]:
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
         "collect_stage6_evidence.bat", "verify_stage6_evidence.bat", "stage6_recovery_check.bat",
+        "stage6_residual_cleanup.bat",
     ):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
@@ -244,6 +245,7 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
         "collect_stage6_evidence.bat", "verify_stage6_evidence.bat", "stage6_recovery_check.bat",
+        "stage6_residual_cleanup.bat",
     }
 
 
@@ -258,6 +260,7 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
         "collect_stage6_evidence.bat",
         "verify_stage6_evidence.bat",
         "stage6_recovery_check.bat",
+        "stage6_residual_cleanup.bat",
     ],
 )
 def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
@@ -281,6 +284,7 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
         "collect_stage6_evidence.bat",
         "verify_stage6_evidence.bat",
         "stage6_recovery_check.bat",
+        "stage6_residual_cleanup.bat",
     ],
 )
 def test_python_bat_forces_utf8(bat_files: dict[str, str], name: str):
@@ -697,6 +701,19 @@ def test_stage6_recovery_check_bat_runs_packaged_helper(bat_files: dict[str, str
     assert "endlocal & exit /b %RC%" in body
 
 
+def test_stage6_residual_cleanup_bat_runs_packaged_helper(bat_files: dict[str, str]):
+    body = bat_files["stage6_residual_cleanup.bat"]
+    assert "stage6_residual_cleanup.py" in body
+    assert "--app-root" in body
+    assert "--apply" in body
+    assert "dry-run unless --apply" in body
+    assert "stage6_residual_cleanup" in body
+    assert ".venv\\Scripts\\python.exe" in body
+    assert "runtime\\python\\python.exe" in body
+    assert "set \"RC=%ERRORLEVEL%\"" in body
+    assert "endlocal & exit /b %RC%" in body
+
+
 def test_collect_stage6_evidence_bat_runs_packaged_helper(bat_files: dict[str, str]):
     body = bat_files["collect_stage6_evidence.bat"]
     assert "collect_stage6_evidence.py" in body
@@ -876,9 +893,13 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "stage6_recovery_check.py").write_text(
         "print('recovery')", encoding="utf-8",
     )
+    (fake_repo / "scripts" / "stage6_residual_cleanup.py").write_text(
+        "print('cleanup')", encoding="utf-8",
+    )
     (fake_repo / "scripts" / "collect_stage6_evidence.py").write_text("print('bundle')", encoding="utf-8")
     (fake_repo / "scripts" / "verify_stage6_evidence.py").write_text("print('verify bundle')", encoding="utf-8")
     (fake_repo / "scripts" / "stage6_recovery_check.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "scripts" / "stage6_residual_cleanup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "alembic.ini").write_text("[alembic]\n", encoding="utf-8")
     migrations = fake_repo / "migrations"
@@ -1024,6 +1045,12 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     )
     assert "scripts/stage6_recovery_check.bat" in arcs, (
         "Stage 6 recovery must have a Windows-local wrapper when SSH is unavailable"
+    )
+    assert "scripts/stage6_residual_cleanup.py" in arcs, (
+        "Stage 6 residual cleanup depends on this dry-run-first helper"
+    )
+    assert "scripts/stage6_residual_cleanup.bat" in arcs, (
+        "Stage 6 residual cleanup must have a Windows-local wrapper"
     )
     assert "scripts/collect_stage6_evidence.bat" in arcs, (
         "Stage 6 evidence bundle must have a Windows-local wrapper"

@@ -183,6 +183,9 @@ def _core_entries() -> dict[str, bytes | str]:
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
             "logs\\stage6-recovery-*.json\n"
             "EIDP-stage6-recovery.bat\n"
+            "stage6_residual_cleanup.bat\n"
+            "logs\\stage6-residual-cleanup-*.json\n"
+            "logs\\stage6-residual-archive\\<timestamp>\n"
             "logs\\stage6-evidence-*.zip\n"
             "EIDP-stage6-evidence.bat\n"
             "EIDP-stage6-verify-evidence.bat\n"
@@ -215,6 +218,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "task.expected_action\n"
             "task.action_matches_expected\n"
             "residual_paths\n"
+            "logs\\stage6-residual-cleanup-*.json\n"
             "recommendations\n"
             "strict target PDF 自動取得率\n"
             "推定手作業率\n"
@@ -242,6 +246,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/stage6_recovery_check.bat": (SCRIPTS_DIR / "stage6_recovery_check.bat").read_text(
             encoding="utf-8"
         ),
+        "scripts/stage6_residual_cleanup.bat": (SCRIPTS_DIR / "stage6_residual_cleanup.bat").read_text(
+            encoding="utf-8"
+        ),
         "scripts/atomic_write.py": (SCRIPTS_DIR / "atomic_write.py").read_text(encoding="utf-8"),
         "scripts/run_weekly_target_year_discovery.py": (
             SCRIPTS_DIR / "run_weekly_target_year_discovery.py"
@@ -260,6 +267,9 @@ def _core_entries() -> dict[str, bytes | str]:
             encoding="utf-8"
         ),
         "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
+            encoding="utf-8"
+        ),
+        "scripts/stage6_residual_cleanup.py": (SCRIPTS_DIR / "stage6_residual_cleanup.py").read_text(
             encoding="utf-8"
         ),
         "scripts/bootstrap_pdf_pipeline.py": (SCRIPTS_DIR / "bootstrap_pdf_pipeline.py").read_text(

@@ -200,6 +200,7 @@ override 例:
 | `stage6_recovery_rc` | 0 | | pass / watch / fail |
 | Stage 6 scheduled task action | `action_matches_expected=true` | | pass / watch / fail |
 | interrupted smoke residue | `residual_paths[].exists=false` | | pass / watch / fail |
+| residual cleanup log | `logs\stage6-residual-cleanup-*.json` if cleanup was needed | | pass / watch / fail |
 
 KPI メモ:
 
