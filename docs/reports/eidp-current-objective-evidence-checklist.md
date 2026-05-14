@@ -177,16 +177,15 @@ Latest local checks performed against source-code evidence base `c2f3ac3f`:
   -> `Success: no issues found in 5 source files`.
 - `uv run pytest tests/unit/test_eval_harness.py tests/unit/test_cli_discovery_rca_packet.py tests/unit/test_cli_write_lock_contract.py -q`
   -> `54 passed in 1.94s`.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-commit-ae835a1c.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-current-0e7e66d.json`
   -> `ok=false`; SHA256 sidecar matched
   `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`;
   `package_source_check` failed before downstream gates with packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, source commit
-  `ae835a1c2a47d0a245483ed5f097c27b9f901e86`, `source_dirty=false`,
+  `0e7e66d25a9e77193962c4385e06e9744ab9f09f`, `source_dirty=false`,
   `stale=true`, and `results=[]`.
-  This stale-package rerun predates later source fixes and remains historical
-  evidence that v401 is not a current package; it is not evidence that the
-  latest code-affecting source base `c2f3ac3f` has been packaged.
+  This current rerun confirms v401 is not a current package; it is not evidence
+  that the latest code-affecting source base `c2f3ac3f` has been packaged.
 - `uv run mypy src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py`
   -> `Success: no issues found in 9 source files`.
 - `uv run ruff check src/eidp/db/audit.py src/eidp/db/audit_outbox.py src/eidp/db/current_helpers.py src/eidp/db/locking.py src/eidp/pipeline/manual_entry.py src/eidp/pipeline/ingest.py src/eidp/pipeline/ingest_evidence.py src/eidp/review/_pages/audit_log.py src/eidp/review/_pages/pdf_manual_entry.py tests/unit/conftest.py tests/unit/test_manual_entry_contract.py tests/unit/test_review_pdf_manual_entry.py tests/unit/test_review_pdf_manual_entry_confidence.py tests/unit/test_review_audit_log.py tests/unit/test_review_audit_log_dashboard.py tests/unit/test_audit_outbox.py tests/unit/test_locking.py tests/unit/test_ingest_confidence_gating.py tests/unit/test_normal_ingest_appendonly.py tests/unit/test_ingest_evidence.py tests/unit/test_cli_ingest.py`

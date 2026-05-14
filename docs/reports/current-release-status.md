@@ -1316,12 +1316,12 @@ Historical v401 full non-Windows release-gate commands:
 
 Latest recorded current-verifier read-only v401 package-gate rerun:
 
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-commit-ae835a1c.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v401.zip --skip-full-unit --json --output _temp/v401-non-windows-release-gates-stale-current-0e7e66d.json`
   -> `ok=false`; SHA256 sidecar still matched
   `ff54f3a4c6a498ab9af89890e1ee614b31e57a87066277f1323f8f37d6f1bcf5`;
   `package_source_check` failed before downstream gates with packaged commit
   `2d9c9f690c6f955330ea49276ef1a87157ceb6cd`, source commit
-  `ae835a1c2a47d0a245483ed5f097c27b9f901e86`, `source_dirty=false`,
+  `0e7e66d25a9e77193962c4385e06e9744ab9f09f`, `source_dirty=false`,
   `stale=true`, and `results=[]`.
   This prevents mixing source test gates with an older ZIP snapshot. The same
   stale-package boundary applies to latest code-affecting source evidence base
