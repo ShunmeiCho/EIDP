@@ -5,12 +5,12 @@ Latest code-affecting source evidence base: `f0c2715833b54e60fea85259e16ad0a1d9e
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
-It is intentionally explicit about lane boundaries: the latest core-verified
-source package is `dist/eidp-windows-v408.zip` for code evidence base
-`f0c27158`, while the active operator-PC Stage 6 setup/UI lane remains
-`C:\Users\cyo20\EIDP-v407-0974b60f` until v408 setup/UI validation is run.
-Later documentation-only commits may refresh this checklist without changing
-the packaged code evidence base.
+It is intentionally explicit about lane boundaries: the active operator-PC
+Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v408-f0c27158` for
+`dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v407 remains the
+latest full non-Windows release-gate, diagnostic evidence-bundle, R7 browser
+Excel, and seeded UI-write sandbox evidence source until those proofs are
+repeated on v408 or replaced by a real operator cycle.
 
 ## Objective Restatement
 
@@ -34,24 +34,27 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current | Proven on sandboxed/copy DB paths; real operator one-cycle proof still missing |
 | Excel template export | v384 R7 retroactive Excel preview/download proof; v407 Windows R7/FY2025 CLI export/diff returned `diff_rc=0`; v407 real-install browser R7 preview/download with process-local `EIDP_TARGET_FISCAL_YEAR=2025` generated `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`, then downloaded `_temp/v407-r7-browser-eidp_master.xlsx` with sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` and row/column counts `2419x10`, `10023x22`, `9721x83`, `9721x19`; v407 disposable UI sandbox generated a smaller Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 rehearsal, real-install browser download, and sandbox UI preview proven; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows | Proven on sandboxed paths; real operator one-cycle proof still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v407 transfer, SHA match, setup completion, SQLite integrity, CLI smoke, Streamlit health, `18501 -> 8501` tunnel health, verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` carrying the R7 browser Excel proof and seeded UI write proof without Excel/SQLite/runtime exports, and seeded browser write sandbox proof; v408 transfer/SHA/extract plus packaged recovery checker proof confirms the scheduled-task XML parser fix and the existing task action path; v397 browser read-only navigation retained as historical support | Current v407 setup/service, diagnostic bundle, and sandbox browser-write proven; v408 recovery parser proven but not setup/UI lane; real operator one-cycle missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v408 transfer, SHA match, setup completion, SQLite integrity, scheduled-task action update to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, packaged recovery checker proof, Streamlit health, and `18508 -> 8508` tunnel health; v407 verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` carries the R7 browser Excel proof and seeded UI write proof without Excel/SQLite/runtime exports, and v407 seeded browser write sandbox proof remains supporting evidence; v397 browser read-only navigation retained as historical support | Current v408 setup/service/recovery/UI-health proven; v407 diagnostic bundle and sandbox browser-write proven; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | Latest recorded strict target PDF auto-yield remains `0.0%`; `ship_readiness_rc=1` in current Windows evidence | Failing |
 | Ship gate: estimated manual work <= 30% | Current evidence records operator-reviewable yield far below release threshold and manual workload effectively above target | Failing |
 
 ## Current Release Boundary
 
-- Active Windows transfer/setup proof: v407, commit
-  `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
-  `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
-- Latest core-verified package: v408, commit
+- Active Windows transfer/setup/UI-health proof: v408, commit
   `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, SHA256
   `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`.
   v408 was Mac core-verifier-clean, SHA-checked on Windows, extracted to
-  `C:\Users\cyo20\EIDP-v408-f0c27158`, and its packaged
-  `stage6_recovery_check.py` parsed the existing scheduled task XML
-  successfully with `action_matches_expected=true` for the v407 weekly runner.
-  It is not yet setup/UI/evidence-lane proven.
+  `C:\Users\cyo20\EIDP-v408-f0c27158`, setup-validated with
+  `school_count=2418`, `school_fiscal_year_status_count=2418`,
+  `sqlite_integrity_check=ok`, `wheel_count=78`, and required runtime tables,
+  served Streamlit through a Mac tunnel `18508 -> 8508`, and its packaged
+  `stage6_recovery_check.py` parsed the scheduled task XML successfully with
+  `action_matches_expected=true` for the v408 weekly runner. v408 is not yet
+  evidence-bundle/R7-browser-Excel/UI-write-sandbox proven.
+- Supporting Windows evidence lane: v407, commit
+  `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
+  `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
 - Current source-code evidence base: `f0c27158`, with Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
@@ -87,10 +90,10 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   ship-gate evidence even if the payload claims `ship_gate_status=pass`. For
   bootstrap release-gate checks, progress-count mismatches against SQLite are
   fatal under `--require-ship-gate` while remaining warnings for structure-only
-- The v407 active lane contains all v407-era fixes through
-  `0974b60f`. The latest scheduled-task XML decode fix is present in v408, and
-  should be used for the next setup/UI lane only after v408 setup validation.
-  v401 remains a
+  validation.
+- The v407 supporting lane contains all v407-era fixes through `0974b60f`, but
+  the latest scheduled-task XML decode fix and current setup/UI validation are
+  in v408. v401 remains a
   stale package: the latest recorded read-only rerun of the non-Windows package
   gate against v401 with the current verifier failed before downstream gates
   because `package_source_check` detected that packaged commit
@@ -101,7 +104,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest v408 recovery-parser package evidence and v407 setup/UI lane evidence
+Latest v408 setup/UI lane evidence and v407 supporting diagnostic evidence
 are summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
 below include source-code evidence base `4a16363d` and later documentation-only
@@ -128,9 +131,22 @@ refreshes:
   SHA256 matched the sidecar, `C:\Users\cyo20\EIDP-v408-f0c27158` expanded
   cleanly, and the packaged recovery checker returned `task.exists=true`,
   `task.error=null`, and `action_matches_expected=true` for
-  `C:\Users\cyo20\EIDP-v407-0974b60f\scripts\weekly_run.bat`; overall
+  `C:\Users\cyo20\EIDP-v407-0974b60f\scripts\weekly_run.bat` before v408
+  setup; overall
   `ok=false` remained solely because known v384 residual smoke artifacts still
   exist.
+- Windows v408 setup/validate/recovery/UI-health:
+  `EIDP-setup.bat` exited `0` and logged `OK install:
+  C:\Users\cyo20\EIDP-v408-f0c27158`; `validate_windows_install.py
+  C:\Users\cyo20\EIDP-v408-f0c27158 --after-setup --json` returned `ok=true`
+  with `school_count=2418`, `school_fiscal_year_status_count=2418`,
+  `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`;
+  the scheduled task now points to
+  `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`; a v408 packaged
+  recovery check against that path returned `task.error=null` and
+  `action_matches_expected=true`; Windows-local `/_stcore/health` on port
+  `8508` and Mac-tunnel `/_stcore/health` on `18508 -> 8508` both returned
+  `ok`, and the Streamlit root HTML shell was fetched.
 
 - `uv run mypy src`
   -> `Success: no issues found in 83 source files`.
@@ -438,11 +454,12 @@ Known non-goal-wide lint boundary:
 - `uv run mypy src` is now a usable source-wide gate for the tracked source
   tree and passes across 83 source files. This is still Mac-side evidence only;
   it does not prove the real Windows operator-PC Stage 6 one-cycle or the
-  rolling FY yield gate. The current v407 browser write proof is sandbox-only.
+  rolling FY yield gate. The current-package v408 setup/UI proof is not yet a
+  browser-write proof; the retained v407 browser write proof is sandbox-only.
 
 ## Next Concrete Gate
 
-Continue the active v407 lane on the operator PC:
+Continue the active v408 lane on the operator PC:
 
 ```bash
 ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
