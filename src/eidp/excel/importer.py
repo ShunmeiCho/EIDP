@@ -6,7 +6,7 @@ Sheets: 採録状況, 対象比率, 学科別, 在籍のみ抜粋 (snapshot, imp
 import unicodedata
 from pathlib import Path
 
-import openpyxl
+import openpyxl  # type: ignore[import-untyped]
 import structlog
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,8 @@ from eidp.department_normalization import normalize_course_name
 from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text
 
 log = structlog.get_logger()
+
+ImportStats = dict[str, int | str]
 
 
 def _norm(s: str) -> str:
@@ -402,7 +404,7 @@ def import_gakka(
         "yearly_skipped_non_excel_current": 0,
         "auto_created": 0,
     }
-    dept_cache: dict[tuple[int, str, str, str | None, int | None], int] = {}
+    dept_cache: dict[tuple[int, str, str, str, float | None], int] = {}
     yearly_seen: set[tuple[int, int]] = set()  # (department_id, fiscal_year)
 
     for row_idx, row in enumerate(ws.iter_rows(min_row=3, values_only=True), start=3):
@@ -667,18 +669,18 @@ def _parse_fiscal_year(val: str, *, max_fiscal_year: int | None = None) -> int |
     return None
 
 
-def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
+def import_all(excel_path: Path, session: Session) -> dict[str, ImportStats]:
     """Import all 4 sheets from master Excel. Returns stats per sheet."""
     log.info("import_start", path=str(excel_path))
 
     wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
 
     try:
-        results: dict[str, dict[str, int]] = {}
+        results: dict[str, ImportStats] = {}
 
         # Sheet 1: 採録状況 -> school + school_year_status
         ws_sairoku = wb["採録状況"]
-        results["採録状況"] = import_sairoku(ws_sairoku, session)
+        results["採録状況"] = dict(import_sairoku(ws_sairoku, session))
 
         # Build multi-level school resolver for cross-sheet matching
         resolver = SchoolResolver(session)
@@ -686,8 +688,9 @@ def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
 
         # Sheet 2: 対象比率 -> support_recipient
         ws_taisho = wb["対象比率"]
-        results["対象比率"] = import_taisho_hiritu(ws_taisho, session, resolver)
-        results["対象比率"]["auto_created"] = resolver.auto_created_count
+        taisho_stats: ImportStats = dict(import_taisho_hiritu(ws_taisho, session, resolver))
+        taisho_stats["auto_created"] = resolver.auto_created_count
+        results["対象比率"] = taisho_stats
 
         # Rebuild resolver indices after sheet 2 auto-creates
         if resolver.auto_created_count > 0:
@@ -697,8 +700,9 @@ def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
 
         # Sheet 3: 学科別 -> department + department_yearly
         ws_gakka = wb["学科別"]
-        results["学科別"] = import_gakka(ws_gakka, session, resolver)
-        results["学科別"]["auto_created"] = resolver.auto_created_count - pre_gakka_auto
+        gakka_stats: ImportStats = dict(import_gakka(ws_gakka, session, resolver))
+        gakka_stats["auto_created"] = resolver.auto_created_count - pre_gakka_auto
+        results["学科別"] = gakka_stats
 
         # Sheet 4: 在籍のみ抜粋 — snapshot, skip import (re-derivable from department_yearly)
         results["在籍のみ抜粋"] = {"skipped": 1, "reason": "re-derivable from department_yearly"}

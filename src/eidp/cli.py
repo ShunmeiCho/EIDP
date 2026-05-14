@@ -48,7 +48,7 @@ def _require_app_lock(owner: str) -> Iterator[None]:
         raise typer.Exit(5) from exc
 
 
-def _echo_import_excel_results(results: dict[str, dict[str, int]]) -> None:
+def _echo_import_excel_results(results: dict[str, dict[str, int | str]]) -> None:
     """Print import stats and make silent-row-drop counters visible."""
     for sheet, stats in results.items():
         typer.echo(f"  {sheet}: {stats}")
