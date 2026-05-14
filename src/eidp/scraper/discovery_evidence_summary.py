@@ -190,10 +190,10 @@ def _classify_school_bucket(rows: list[dict[str, Any]]) -> str:
         return "no_evidence"
     if any(str(row.get("reason") or "") == "accepted_downloaded" for row in rows):
         return "accepted_target_pdf"
-    if any(_is_old_year_target(row) for row in rows):
-        return "publication_lag_or_old_target_pdf"
     if any(str(row.get("reason") or "") == "target_fiscal_year_not_detected" for row in rows):
         return "target_form_without_year_evidence"
+    if any(_is_old_year_target(row) for row in rows):
+        return "publication_lag_or_old_target_pdf"
     if any(_is_image_only_review_candidate(row) for row in rows):
         return "target_form_without_year_evidence"
     if any(str(row.get("reason") or "") == "no_candidates_found" for row in rows):

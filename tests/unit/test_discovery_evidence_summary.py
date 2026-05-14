@@ -63,6 +63,36 @@ def test_load_pdf_discovery_evidence_skips_truncated_jsonl_lines(tmp_path: Path)
     assert [row["school_id"] for row in rows] == [1, 3]
 
 
+def test_summarize_pdf_discovery_evidence_prioritizes_yearless_target_over_old_year_target(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 1532,
+                "reason": "target_fiscal_year_not_detected",
+                "pdf_type": "target",
+                "pdf_url": "https://example.ac.jp/yosiki2.pdf",
+                "anchor_text": "確認申請",
+            },
+            {
+                "school_id": 1532,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "target",
+                "pdf_url": "https://example.ac.jp/yosiki2-2025.pdf",
+                "anchor_text": "2025年度 確認申請",
+            },
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    assert summary.school_bucket_counts == {"target_form_without_year_evidence": 1}
+    assert summary.school_summaries[0].bucket == "target_form_without_year_evidence"
+
+
 def test_summarize_pdf_discovery_evidence_is_stable_for_equal_count_ties(tmp_path: Path) -> None:
     rows = [
         {
