@@ -18,6 +18,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NoReturn
 from xml.etree import ElementTree
 
 TASK_NAME = "EIDP Weekly Run"
@@ -30,6 +31,27 @@ DEFAULT_INTERRUPTED_STAGE6_PATHS: tuple[str, ...] = (
     r"%USERPROFILE%\eidp_v384_ocr_sr_smoke.py",
     r"%USERPROFILE%\eidp-v384-ocr-sr-source.sqlite3",
 )
+
+
+def _disable_wmi_platform_queries() -> None:
+    """Avoid Windows WMI hangs before emitting diagnostics.
+
+    This script is run directly from the scripts directory during diagnostics, so it does
+    not import ``eidp`` and cannot rely on the package startup hook.
+    """
+
+    wmi_query = getattr(platform, "_wmi_query", None)
+    if wmi_query is None or getattr(wmi_query, "_eidp_wmi_disabled", False):
+        return
+
+    def _raise_oserror(*_args: object, **_kwargs: object) -> NoReturn:
+        raise OSError("WMI disabled for EIDP Windows platform detection")
+
+    setattr(_raise_oserror, "_eidp_wmi_disabled", True)
+    setattr(platform, "_wmi_query", _raise_oserror)
+
+
+_disable_wmi_platform_queries()
 
 
 @dataclass(frozen=True)

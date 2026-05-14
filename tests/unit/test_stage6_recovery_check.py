@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import platform
 import sys
 from pathlib import Path
+
+import pytest
 
 
 def _load_module():
@@ -97,3 +100,12 @@ def test_build_report_requires_expected_weekly_action(tmp_path: Path) -> None:
     assert report["ok"] is False
     assert report["task"]["action_matches_expected"] is False
     assert "Pass --expected-weekly-action" in " ".join(report["recommendations"])
+
+
+def test_direct_script_disables_wmi_platform_queries(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(platform, "_wmi_query", lambda *_args, **_kwargs: [], raising=False)
+
+    _load_module()
+
+    with pytest.raises(OSError, match="WMI disabled"):
+        platform._wmi_query("Win32_OperatingSystem", (), ())  # type: ignore[attr-defined]
