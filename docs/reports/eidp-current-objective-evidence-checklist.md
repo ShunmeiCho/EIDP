@@ -59,6 +59,10 @@ Latest local checks performed against source HEAD `ed51b9c`:
   -> `27 passed in 0.96s`; confirms low-confidence DepartmentYearly /
   SupportRecipient revisions are append-only but parked out of current Excel
   surfaces until operator review.
+- `uv run pytest tests/unit/test_manual_entry_contract.py tests/unit/test_review_pdf_manual_entry.py tests/unit/test_fiscal_year_override.py tests/unit/test_review_audit_log.py tests/unit/test_review_audit_log_dashboard.py tests/unit/test_excel_exporter.py tests/unit/test_review_excel_preview.py -q`
+  -> `101 passed, 5 warnings in 3.32s`; covers manual-entry append-only writes,
+  fiscal-year override audit rows, audit-log/outbox helpers, and Excel export /
+  preview surfaces at unit level.
 - `uv run pytest tests/unit/test_pdf_discovery.py -q -k "renewal or koushin or english_renewal or target_form or pre_download"`
   -> `38 passed, 124 deselected, 5 warnings`.
 - `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py`
