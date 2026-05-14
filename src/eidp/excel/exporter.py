@@ -18,17 +18,15 @@ from openpyxl.worksheet.worksheet import Worksheet  # type: ignore[import-untype
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.current_helpers import IS_CURRENT_TRUE_SQL
 from eidp.extraction_confidence import thresholds_from_env
 
 log = structlog.get_logger()
 
 def _compute_fiscal_years() -> list[int]:
-    """Compute fiscal years dynamically based on current date (April-March boundary)."""
-    from datetime import datetime
-    now = datetime.now()
-    current_fy = now.year if now.month >= 4 else now.year - 1
-    return list(range(2019, current_fy + 1))
+    """Compute Excel fiscal-year columns from the configured target FY."""
+    return list(range(2019, int(settings.target_fiscal_year) + 1))
 
 FISCAL_YEARS = _compute_fiscal_years()
 ENROLLMENT_YEARS = FISCAL_YEARS[:-1]  # enrollment data lags by 1 year

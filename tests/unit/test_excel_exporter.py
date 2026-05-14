@@ -280,6 +280,22 @@ def test_excel_exporter_confidence_thresholds_follow_central_env(monkeypatch) ->
         importlib.reload(exporter_module)
 
 
+def test_excel_exporter_year_windows_follow_target_fiscal_year(monkeypatch) -> None:
+    import eidp.config as config_module
+    import eidp.excel.exporter as exporter_module
+
+    monkeypatch.setenv("EIDP_TARGET_FISCAL_YEAR", "2025")
+    importlib.reload(config_module)
+    reloaded = importlib.reload(exporter_module)
+    try:
+        assert reloaded.FISCAL_YEARS[-1] == 2025
+        assert reloaded.ENROLLMENT_YEARS[-1] == 2024
+    finally:
+        monkeypatch.delenv("EIDP_TARGET_FISCAL_YEAR", raising=False)
+        importlib.reload(config_module)
+        importlib.reload(exporter_module)
+
+
 @pytest.fixture()
 def sqlite_engine(tmp_path):
     db_path = tmp_path / "exporter.sqlite3"
