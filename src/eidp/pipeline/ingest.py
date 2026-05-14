@@ -9,6 +9,7 @@ import unicodedata
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TypedDict
 
 import structlog
 from sqlalchemy.orm import Session
@@ -26,9 +27,23 @@ from eidp.extraction_confidence import (
 from eidp.fiscal_year import fiscal_year_from_japanese_era_text, has_fiscal_year_text
 from eidp.pdf.extractor import parse_pdf, parse_pdf_ocr
 from eidp.pdf.ocr import extract_text_ocr_result
+from eidp.pdf.schema import DepartmentRecord
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder, IngestRejection
 
 log = structlog.get_logger()
+
+
+class IngestDocumentStats(TypedDict):
+    departments_created: int
+    yearly_upserted: int
+    yearly_current: int
+    yearly_review_pending: int
+    support_recipient: int
+    support_recipient_current: int
+    support_recipient_review_pending: int
+    skipped: int
+    skip_reason: str | None
+
 
 def _norm(s: str) -> str:
     if not s:
@@ -80,19 +95,24 @@ def ingest_document(
     session: Session,
     doc: Document,
     recorder: IngestEvidenceRecorder | None = None,
-) -> dict[str, int]:
+) -> IngestDocumentStats:
     """Parse a downloaded PDF and write extracted data to DB.
 
     Quality gate: only commit department data when the parser extracts
     at least enrollment for every department. Support-recipient data
     is always committed when available (school-level, not dept-level).
     """
-    stats = {"departments_created": 0, "yearly_upserted": 0,
-             "yearly_current": 0, "yearly_review_pending": 0,
-             "support_recipient": 0, "support_recipient_current": 0,
-             "support_recipient_review_pending": 0,
-             "skipped": 0,
-             "skip_reason": None}
+    stats: IngestDocumentStats = {
+        "departments_created": 0,
+        "yearly_upserted": 0,
+        "yearly_current": 0,
+        "yearly_review_pending": 0,
+        "support_recipient": 0,
+        "support_recipient_current": 0,
+        "support_recipient_review_pending": 0,
+        "skipped": 0,
+        "skip_reason": None,
+    }
 
     if not doc.file_path:
         doc.ingest_status = "no_file"
@@ -132,7 +152,7 @@ def ingest_document(
                 # If twin was 'ingested', this doc is still a mismatch (same PDF
                 # can't belong to two schools), but if twin was 'non_target' or
                 # 'permanent_error', we inherit that reason directly.
-                twin_status = existing.ingest_status
+                twin_status = existing.ingest_status or "unknown"
                 inherited_status = {
                     "ingested": "school_mismatch",       # dup ingest to another school is a mismatch
                     "support_only": "school_mismatch",   # dup support data to another school
@@ -296,7 +316,7 @@ def ingest_document(
     # 1. Fiscal year must be extracted (otherwise data goes to wrong year)
     # 2. Dept must have enrollment (minimum viable data)
     # 3. Dept must have a non-empty name >= 2 chars (identity integrity)
-    valid_depts: list = []
+    valid_depts: list[DepartmentRecord] = []
     if annotation.departments and fiscal_year:
         valid_depts = [
             d for d in annotation.departments
@@ -770,8 +790,9 @@ def run_ingestion(
                 doc.ingest_status = "parse_failed"
 
             total_stats["processed"] += 1
-            for k in ("departments_created", "yearly_upserted", "skipped"):
-                total_stats[k] += stats.get(k, 0)
+            total_stats["departments_created"] += stats["departments_created"]
+            total_stats["yearly_upserted"] += stats["yearly_upserted"]
+            total_stats["skipped"] += stats["skipped"]
         except OSError as e:
             try:
                 nested.rollback()
