@@ -9,9 +9,9 @@ Produces 4 sheets matching the legacy format:
 
 from pathlib import Path
 
-import openpyxl
+import openpyxl  # type: ignore[import-untyped]
 import structlog
-from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl.worksheet.worksheet import Worksheet  # type: ignore[import-untyped]
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -45,6 +45,10 @@ _EXCEL_CONFIDENCE_THRESHOLDS = thresholds_from_env()
 EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review
 EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.auto
 LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"
+
+ExcelCell = object
+ExcelRow = list[ExcelCell]
+YearlyData = tuple[ExcelCell, ...]
 
 
 def _exportable_confidence_sql(alias: str) -> str:
@@ -211,7 +215,7 @@ def _write_gakka(ws: Worksheet, session: Session) -> int:
     Returns the number of data rows written.
     """
     # Row 1: year group header
-    row1 = [None] * 7  # key columns have no year label
+    row1: ExcelRow = [None] * 7  # key columns have no year label
     for year in FISCAL_YEARS:
         label = f"{year}年度"
         if year == 2019:
@@ -262,14 +266,14 @@ def _write_gakka(ws: Worksheet, session: Session) -> int:
     """)
     yearly_rows = session.execute(yearly_query).fetchall()
 
-    yearly_map: dict[tuple[int, int], tuple] = {}
+    yearly_map: dict[tuple[int, int], YearlyData] = {}
     for yr in yearly_rows:
-        yearly_map[(yr[0], yr[1])] = yr[2:]  # skip dept_id and fiscal_year
+        yearly_map[(yr[0], yr[1])] = tuple(yr[2:])  # skip dept_id and fiscal_year
 
     count = 0
     for dept in depts:
         prefecture, corp, school, course, dept_name, day_night, duration, dept_id = dept
-        row: list = [prefecture, corp, school, course, dept_name, day_night, duration]
+        row: ExcelRow = [prefecture, corp, school, course, dept_name, day_night, duration]
 
         for year in FISCAL_YEARS:
             yd = yearly_map.get((dept_id, year))
@@ -304,7 +308,7 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
     """
     # Row 1: group header (dynamic year count)
     n_years = len(ENROLLMENT_YEARS)
-    row1 = [None] * 7  # key columns
+    row1: ExcelRow = [None] * 7  # key columns
     row1.append("在籍者数")
     row1.extend([None] * (n_years - 1))
     row1.append("留学生数")
@@ -356,7 +360,7 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
     count = 0
     for dept in depts:
         prefecture, corp, school, course, dept_name, day_night, duration, dept_id = dept
-        row: list = [prefecture, corp, school, course, dept_name, day_night, duration]
+        row: ExcelRow = [prefecture, corp, school, course, dept_name, day_night, duration]
 
         # Enrollment values for the one-year-lag range.
         for year in ENROLLMENT_YEARS:
@@ -375,7 +379,7 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
     return count
 
 
-def _low_confidence_exclusion_rows(session: Session) -> list[list]:
+def _low_confidence_exclusion_rows(session: Session) -> list[ExcelRow]:
     params = {
         "min_confidence": EXCEL_MIN_EXTRACTION_CONFIDENCE,
         "low_confidence_reason": _low_confidence_reason(),
@@ -421,7 +425,7 @@ def _low_confidence_exclusion_rows(session: Session) -> list[list]:
         """),
         params,
     ).fetchall()
-    rows: list[list] = []
+    rows: list[ExcelRow] = []
     for row in [*department_rows, *support_rows]:
         raw = list(row)
         if raw[5] is not None:
@@ -430,7 +434,7 @@ def _low_confidence_exclusion_rows(session: Session) -> list[list]:
     return rows
 
 
-def _write_low_confidence_exclusions(ws: Worksheet, rows: list[list]) -> int:
+def _write_low_confidence_exclusions(ws: Worksheet, rows: list[ExcelRow]) -> int:
     ws.append(["種別", "行ID", "学校名", "学科名", "年度", "confidence", "理由", "転記先"])
     for row in rows:
         ws.append(row)
