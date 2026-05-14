@@ -14,6 +14,7 @@ Each department section in Form 2-4-2 contains:
 import re
 import unicodedata
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -759,7 +760,10 @@ def _strip_leading_field_prefix(name: str) -> str:
     return name
 
 
-def _find_dept_table(tables: list[list[list]]) -> tuple[list[list] | None, int]:
+PdfTable = list[list[Any]]
+
+
+def _find_dept_table(tables: list[PdfTable]) -> tuple[PdfTable | None, int]:
     """Find the table containing the dept identity header row (学科名 + 課程名).
 
     Some PDFs put 学校名/設置者名 or 財務諸表 tables before the dept table,
@@ -779,7 +783,7 @@ def _find_dept_table(tables: list[list[list]]) -> tuple[list[list] | None, int]:
     return None, -1
 
 
-def _extract_dept_identity_from_table(page) -> tuple[str, str, int | None, str]:
+def _extract_dept_identity_from_table(page: Any) -> tuple[str, str, int | None, str]:
     """Extract dept name, course name, duration, and day/night from table.
 
     Scans all tables for the dept identity header (学科名 + 課程名) instead
@@ -880,7 +884,7 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     with pdfplumber.open(str(pdf_path)) as pdf:
         full_text = ""
         page_texts: list[str] = []
-        page_objects: list = []
+        page_objects: list[Any] = []
         for page in pdf.pages:
             page_text = page.extract_text() or ""
             page_texts.append(page_text)

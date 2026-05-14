@@ -61,7 +61,7 @@ def _detect_device() -> str:
         return override
 
     try:
-        import paddle
+        import paddle  # type: ignore[import-not-found]
         if paddle.device.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0:
             return "gpu"
     except Exception:
@@ -88,7 +88,7 @@ def _get_paddleocr_instance() -> Any:
             return _paddleocr_instance
 
         import paddle
-        from paddleocr import PaddleOCR
+        from paddleocr import PaddleOCR  # type: ignore[import-not-found]
 
         device = _detect_device()
         os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
@@ -124,7 +124,7 @@ def _check_ocr_availability() -> str:
         pass
 
     try:
-        import fitz  # noqa: F401
+        import fitz  # type: ignore[import-untyped]  # noqa: F401
     except ImportError:
         return "none"
 
