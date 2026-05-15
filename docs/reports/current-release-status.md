@@ -18,10 +18,10 @@ Latest Windows-UI-health-proven package: `dist/eidp-windows-v441.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v441.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v440.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v440.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v441.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v441.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-203644.zip`
+Current Stage 6 evidence bundle: `logs/win-v441-stage6/stage6-evidence-20260515-204736.zip`
 
 ## Verdict
 
@@ -91,7 +91,9 @@ validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
 v441 has Mac/non-Windows package, Stage 6 evidence-bundle, Windows
-transfer/SHA, setup, recovery, and non-browser UI-smoke proof. The ZIP and sidecar were copied to `C:\EIDP-staging\`;
+transfer/SHA, setup, recovery, non-browser UI-smoke, URL-only bootstrap, and
+bounded backend canary proof. The ZIP and sidecar were copied to
+`C:\EIDP-staging\`;
 Win-side `Get-FileHash` matched SHA256
 `53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9`, and a
 read-only Win-side zipfile check confirmed `BUILD_INFO.git_commit` is
@@ -110,8 +112,32 @@ Streamlit smoke started v441 through `scripts\launch.bat`, received HTTP `200`
 from `http://127.0.0.1:8501`, and then stopped all v441-related
 Python/Streamlit/cmd processes (`remaining_processes=0`). The old v438
 deployment directory was removed after this smoke; Windows now retains v441 as
-current and v440 as fallback. v440 remains the latest package with bounded
-backend/bootstrap smoke proof. The v440 ZIP and sidecar were copied to
+current and v440 as fallback. v441 then ran
+`scripts\bootstrap_pdfs.bat --skip-discover --url-search off
+--school-url-crawl off`, which completed with `prefectures_ok=47`,
+`official_artifacts_parsed=55`, `official_index_rows_extracted=1951`,
+`official_index_rows_matched=1774`, `official_school_sites_added=1311`,
+`seed_imported=48`, and `corporation_inferred=294`, while skipping PDF
+discovery. A process-local FY2026 dry-run
+`run_weekly_target_year_discovery.py --dry-run --limit 24` then selected
+`target_missing_school_count=24` and reduced
+`no_crawlable_url_school_count` to `794`, proving the weekly runner can now
+select bounded target-missing schools from the registered URLs. Finally, a
+bounded actual canary
+`run_weekly_target_year_discovery.py --limit 5 --batch-size 5
+--request-timeout 8 --rate-limit 0.5` completed with `dry_run=false`,
+`crawled=5`, `found=3`, `downloaded=0`, `failed=3`,
+`target_missing_school_count=5`, `new_document_count=0`, and
+`ship_gate_status=below_gate`. The refreshed v441 evidence bundle
+`logs\stage6-evidence-20260515-204736.zip` verified on both Windows and Mac
+with `ok=true`, no forbidden entries, and present labels `bootstrap_logs`,
+`bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`,
+`discovery_rca`, `last_run`, and `stage6_recovery`. It still records missing
+`weekly_run_logs` and `stage6_residual_cleanup`, so this remains a bounded
+process-local canary, not a completed operator real-cycle Stage 6 sign-off.
+v440 remains the latest package with positive current-FY acquisition, ingest,
+Excel export, and stratified 24-school discovery evidence. The v440 ZIP and
+sidecar were copied to
 `C:\EIDP-staging\`; Win-side `Get-FileHash` matched SHA256
 `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`. The v440
 package was expanded to `C:\Users\cyo20\EIDP-v440-2f339ce8` without
