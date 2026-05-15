@@ -58,6 +58,32 @@ files`; validator/distribution Ruff returned `All checks passed!`;
 `--require-demonstrated-discovery-patterns`, passed. v409 has no Windows
 transfer/setup/UI proof yet because SSH-Win is currently disconnected.
 
+v409 also has an isolated Mac retroactive FY2025/R7 import/export regression
+proof that did not use SSH/Windows. A temporary app root
+`_temp/v409-mac-retroactive-20260515-105918` was created with its own
+`data/eidp.sqlite3` and copied `data/master.xlsx`. With process-local
+`EIDP_APP_ROOT`, `EIDP_DATABASE_URL`, and `EIDP_TARGET_FISCAL_YEAR=2025`,
+`eidp db-bootstrap --sqlite` completed, `eidp import-excel
+data/master.xlsx` imported `採録状況` with `schools=2212` and `statuses=17696`,
+`対象比率` with `rows=10022`, `duplicates=14`, and `invalid_year=0`, and
+`学科別` with `departments=9719`, `yearly_rows=40731`, and
+`yearly_dupes=29`. `eidp db-info` then reported `Schools=2418`,
+`Departments=9719`, `DepartmentYearly=40731`, `SchoolYearStatus=17696`, and
+`SupportRecipient=10022`. The FY2025 export wrote
+`_temp/v409-mac-retroactive-20260515-105918/output/v409-mac-r7-retroactive-export.xlsx`
+with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and
+`在籍のみ抜粋=9719`; quality counters for low-confidence and auto-flag current
+rows were all `0`. `openpyxl` opened the workbook at `3,673,083` bytes with
+four sheets and dimensions `2419x10`, `10023x22`, `9721x83`, and `9721x19`.
+Comparing the v409 Mac export against the already proven v408 CLI export with
+`eidp diff-excel --business-values --fail-on-diff --original
+_temp/v408-r7-cli-export.xlsx` returned `missing_sheets=0`, `extra_sheets=0`,
+`missing_rows=0`, `extra_rows=0`, and `differing_fields=0` across `対象比率`,
+`学科別`, and `在籍のみ抜粋`. A stricter direct `--fail-on-diff` comparison
+against `data/master.xlsx` is still not a clean release gate because the
+historical reference workbook contains known duplicate keys and normalization
+differences; it surfaced those diagnostics rather than a v409-v408 regression.
+
 The code-affecting delta carried by v409 from commit
 `15c88348f46ab3fbcc9383afe5830047e562b0c1` restored the documented 80% local
 coverage line without using SSH/Windows: `uv run pytest --cov=src/eidp
