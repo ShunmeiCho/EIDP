@@ -79,9 +79,15 @@ v442 既存証跡（要再確認）:
 | --- | --- |
 | Hostname / user | `JUNMING` / `junming` |
 | Home | `C:\Users\cyo20` |
-| Historical Windows version | Windows 11 Pro build `26200` |
-| Historical CPU/RAM | i9-13900HK / about 32 GB RAM |
-| 未確認の現行項目 | locale, console encoding, free disk, Defender, SmartScreen, network/proxy |
+| Windows version | Microsoft Windows 11 Pro `10.0.26200` build `26200` |
+| Locale | `culture=zh-CN`, `ui_culture=zh-CN`（日本語 locale ではない） |
+| Console encoding | output UTF-8 `65001`; input/ANSI/OEM `936` |
+| CPU/RAM | i9-13900HK, 14 cores / 20 logical processors, `31.69 GB` RAM |
+| C drive free | `1063.09 GB` free of `1888.66 GB` |
+| Defender | enabled; real-time, behavior, IOAV, and on-access protection all true |
+| SmartScreen | machine `Off`; user web-content evaluation `1` |
+| Network / proxy | Wi-Fi `M1nG_5G`; IPv4/IPv6 connected; WinHTTP direct access |
+| Evidence JSON | `logs/win-v442-stage6/v442-environment-snapshot-20260516.json` |
 
 ## 3. 証跡採取コマンド
 
