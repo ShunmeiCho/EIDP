@@ -17,7 +17,7 @@ Latest Windows-setup-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v442.zip`
-Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
+Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v442.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v442.zip`
@@ -149,7 +149,27 @@ save or weekly re-fetch. The evidence files are
 `output/playwright/v442-ui-smoke/settings-page.yml`, and
 `output/playwright/v442-ui-smoke/settings-page.png`; cleanup stopped the
 Windows `8501` listener, closed the local tunnel, and removed the transient
-`.playwright-cli` working directory. v441 remains the previous
+`.playwright-cli` working directory. A process-scoped v442 retroactive
+FY2025 browser Excel smoke then launched the same package with
+`EIDP_TARGET_FISCAL_YEAR=2025` only in the `launch.bat` process environment,
+opened the UI through the same tunnel, and rendered `④ Excel プレビュー` for
+`2025年度（令和7年度）`. The page reported `抽出済み学校 2031` and
+`Excel対象行 7150`; clicking `プレビュー workbook を生成` produced
+`シート行数: 採録状況=2418 / 対象比率=10022 / 学科別=9719 /
+在籍のみ抜粋=9719`, exposed `Excel ダウンロード`, and Playwright downloaded
+`eidp_master.xlsx` to
+`output/playwright/v442-r7-excel-smoke/eidp-master.xlsx`. Local `openpyxl`
+verification opened the workbook with sheets `採録状況`, `対象比率`,
+`学科別`, and `在籍のみ抜粋`, with row/column counts `2419x10`,
+`10023x22`, `9721x83`, and `9721x19`. Win-side `cmd` checks reported both
+`C:\Users\cyo20\EIDP-v442-22f1a98\.env` and
+`C:\Users\cyo20\EIDP-v442-22f1a98.env` missing, so the retroactive target year
+was not persisted. Evidence files are
+`output/playwright/v442-r7-excel-smoke/excel-preview-before-generate.yml`,
+`output/playwright/v442-r7-excel-smoke/excel-generating.yml`,
+`output/playwright/v442-r7-excel-smoke/excel-download.yml`, and the downloaded
+workbook. Cleanup closed the browser, stopped the Windows `8501` listener, and
+closed the local tunnel. v441 remains the previous
 fallback package with non-browser UI-smoke/default launcher proof. v441 has
 Mac/non-Windows package, Stage 6 evidence-bundle, Windows
 transfer/SHA, setup, recovery, non-browser UI-smoke, URL-only bootstrap, and
