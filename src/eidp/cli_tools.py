@@ -69,6 +69,7 @@ def _exit_database_not_ready_error(exc: SQLAlchemyError, *, output_json: bool, c
 
 def verify_identity(
     data_dir: Path = typer.Option(Path("data/mext"), help="MEXT data directory"),
+    school_type: str = typer.Option("専門学校", help="School type to verify (or 'all')"),
 ) -> None:
     """Verify all schools have stable IDs (Step 4 gate)."""
     from eidp.db.session import SessionLocal
@@ -76,8 +77,10 @@ def verify_identity(
 
     session = SessionLocal()
     try:
-        result = do_verify(session, data_dir)
+        st = None if school_type == "all" else school_type
+        result = do_verify(session, data_dir, school_type=st)
         typer.echo("\nIdentity Verification:")
+        typer.echo(f"  school_type: {st or 'all'}")
         for k, v in result.items():
             typer.echo(f"  {k}: {v}")
         if result["pass"]:

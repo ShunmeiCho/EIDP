@@ -29,13 +29,14 @@ def _school(
     name: str,
     corp: str = "法人",
     code: str | None = None,
+    school_type: str = "専門学校",
 ) -> School:
     school = School(
         id=school_id,
         prefecture="東京都",
         corporation_name=corp,
         school_name=name,
-        school_type="専門学校",
+        school_type=school_type,
         status="active",
         school_code=code,
     )
@@ -77,6 +78,27 @@ def test_load_target_institutions_filters_specialty_schools(tmp_path: Path) -> N
 
     assert [(target.school_code, target.school_type, target.name, target.prefecture) for target in targets] == [
         ("1001", "専門学校", "東京テスト専門学校", "東京都")
+    ]
+
+
+def test_load_target_institutions_can_filter_university_or_all_school_types(tmp_path: Path) -> None:
+    path = _write_target_list(
+        tmp_path,
+        [
+            {"code": "1001", "school_type": "専門学校", "name": "東京テスト専門学校", "setter": "法人A"},
+            {"code": "2001", "school_type": "大学", "name": "東京テスト大学", "setter": "法人B"},
+        ],
+    )
+
+    universities = load_target_institutions(path, school_type="大学")
+    all_targets = load_target_institutions(path, school_type=None)
+
+    assert [(target.school_code, target.school_type, target.name) for target in universities] == [
+        ("2001", "大学", "東京テスト大学")
+    ]
+    assert [(target.school_code, target.school_type, target.name) for target in all_targets] == [
+        ("1001", "専門学校", "東京テスト専門学校"),
+        ("2001", "大学", "東京テスト大学"),
     ]
 
 
@@ -122,6 +144,28 @@ def test_reconcile_assigns_exact_candidates_and_routes_fuzzy_or_excluded_to_manu
         (3, "excluded", "excluded:閉校")
     ]
     assert [target.school_code for target in report.missing_from_db] == ["1002", "1003"]
+
+
+def test_reconcile_can_scope_to_university_target_list_entries(tmp_path: Path) -> None:
+    _write_target_list(
+        tmp_path,
+        [
+            {"code": "1001", "school_type": "専門学校", "name": "東京テスト専門学校", "setter": "法人A"},
+            {"code": "2001", "school_type": "大学", "name": "東京テスト大学", "setter": "法人B"},
+        ],
+    )
+
+    with _session(tmp_path) as session:
+        _school(session, 1, name="東京テスト専門学校", corp="法人A")
+        _school(session, 2, name="東京テスト大学", corp="法人B", school_type="大学")
+        session.commit()
+
+        report = reconcile(session, tmp_path, school_type="大学")
+
+    assert [(row.school_id, row.candidate_code, row.match_method) for row in report.auto_assigned] == [
+        (2, "2001", "target_exact")
+    ]
+    assert [target.school_code for target in report.missing_from_db] == []
 
 
 def test_apply_reconciliation_assigns_auto_codes_aliases_and_skips_conflicts(tmp_path: Path) -> None:
@@ -215,3 +259,27 @@ def test_verify_identity_reports_target_gap_and_current_exclusion(tmp_path: Path
         "target_list_gap": 1,
         "pass": False,
     }
+
+
+def test_verify_identity_can_scope_target_gap_by_school_type(tmp_path: Path) -> None:
+    _write_target_list(
+        tmp_path,
+        [
+            {"code": "1001", "school_type": "専門学校", "name": "コードあり専門学校", "setter": "法人A"},
+            {"code": "2001", "school_type": "大学", "name": "コードあり大学", "setter": "法人B"},
+            {"code": "2002", "school_type": "大学", "name": "DB未収録大学", "setter": "法人C"},
+        ],
+    )
+
+    with _session(tmp_path) as session:
+        _school(session, 1, name="コードあり専門学校", code="1001")
+        _school(session, 2, name="コードあり大学", code="2001", school_type="大学")
+        session.commit()
+
+        specialty_report = verify_identity(session, tmp_path, school_type="専門学校")
+        university_report = verify_identity(session, tmp_path, school_type="大学")
+
+    assert specialty_report["target_list_gap"] == 0
+    assert specialty_report["pass"] is True
+    assert university_report["target_list_gap"] == 1
+    assert university_report["pass"] is False

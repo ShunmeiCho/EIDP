@@ -129,6 +129,7 @@ def match_mext(
 @app.command()
 def reconcile(
     data_dir: Path = typer.Option(Path("data/mext"), help="MEXT data directory"),
+    school_type: str = typer.Option("専門学校", help="School type to reconcile (or 'all')"),
     dry_run: bool = typer.Option(False, help="Show results without writing to DB"),
 ) -> None:
     """Reconcile unmatched schools against target institution list (Step 4)."""
@@ -139,9 +140,11 @@ def reconcile(
     with _require_app_lock("cli_reconcile"):
         session = SessionLocal()
         try:
-            report = do_reconcile(session, data_dir)
+            st = None if school_type == "all" else school_type
+            report = do_reconcile(session, data_dir, school_type=st)
 
             typer.echo("\nReconciliation Results:")
+            typer.echo(f"  School type:        {st or 'all'}")
             typer.echo(f"  Already resolved:   {report.already_resolved}")
             typer.echo(f"  Auto-assigned:      {len(report.auto_assigned)}")
             typer.echo(f"  Excluded:           {len(report.excluded)}")
