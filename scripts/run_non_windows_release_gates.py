@@ -161,8 +161,12 @@ def build_retroactive_excel_gate_commands(
     master_xlsx: Path,
     reference_xlsx: Path,
     fiscal_year: int,
+    numeric_tolerance: float = 0.0,
 ) -> list[GateCommand]:
     """Return isolated import/export/diff gates for a retroactive workbook check."""
+
+    if numeric_tolerance < 0:
+        raise ValueError("numeric_tolerance must be non-negative")
 
     py = sys.executable
     data_master = app_root / "data" / "master.xlsx"
@@ -190,6 +194,20 @@ def build_retroactive_excel_gate_commands(
         "shutil.copy2(master, data / 'master.xlsx')\n"
         "print(f'retroactive app root prepared: {root}')\n"
     )
+    diff_command = [
+        py,
+        "-m",
+        "eidp.cli",
+        "diff-excel",
+        str(exported),
+        "--original",
+        str(reference_xlsx),
+        "--business-values",
+        "--fail-on-diff",
+    ]
+    if numeric_tolerance > 0:
+        diff_command.extend(("--numeric-tolerance", str(numeric_tolerance)))
+
     return [
         GateCommand(
             "retroactive_excel_prepare",
@@ -212,17 +230,7 @@ def build_retroactive_excel_gate_commands(
         ),
         GateCommand(
             "retroactive_excel_diff_reference",
-            (
-                py,
-                "-m",
-                "eidp.cli",
-                "diff-excel",
-                str(exported),
-                "--original",
-                str(reference_xlsx),
-                "--business-values",
-                "--fail-on-diff",
-            ),
+            tuple(diff_command),
             env,
         ),
     ]
@@ -519,6 +527,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Master workbook to import for --retroactive-excel-reference.",
     )
     parser.add_argument(
+        "--retroactive-numeric-tolerance",
+        type=float,
+        default=0.0,
+        help=(
+            "Absolute numeric tolerance for the retroactive Excel business-value diff "
+            "(default: 0.0, exact numeric match)."
+        ),
+    )
+    parser.add_argument(
         "--retroactive-app-root",
         type=Path,
         help="Optional empty app root for --retroactive-excel-reference. Defaults to _temp/non-windows-retroactive-*.",
@@ -528,6 +545,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     package_zip = args.package_zip
+    if args.retroactive_numeric_tolerance < 0:
+        parser.error("--retroactive-numeric-tolerance must be non-negative")
     sha256_check = verify_sha256_sidecar(package_zip)
     package_source_check = verify_package_source_commit(
         package_zip,
@@ -550,6 +569,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "fiscal_year": args.retroactive_fiscal_year,
             "master_xlsx": str(args.retroactive_master),
             "reference_xlsx": str(args.retroactive_excel_reference),
+            "numeric_tolerance": args.retroactive_numeric_tolerance,
         }
         commands.extend(
             build_retroactive_excel_gate_commands(
@@ -557,6 +577,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 master_xlsx=args.retroactive_master,
                 reference_xlsx=args.retroactive_excel_reference,
                 fiscal_year=args.retroactive_fiscal_year,
+                numeric_tolerance=args.retroactive_numeric_tolerance,
             )
         )
     results = (

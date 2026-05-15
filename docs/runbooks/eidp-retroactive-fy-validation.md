@@ -72,6 +72,21 @@ its own SQLite database, imports `data/master.xlsx`, exports the requested
 fiscal year, and compares the workbook against the reference with
 `diff-excel --business-values --fail-on-diff`.
 
+Use `--retroactive-numeric-tolerance <value>` only when the reference workbook
+has known floating-point rounding noise. The tolerance is absolute and numeric
+only; row gaps, duplicate keys, formula errors, unknown-string placeholders, and
+field/schema drift still fail the gate and must be treated as reference
+preparation or data-quality work.
+
+Do not use the raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` as an FY2024 or
+FY2023 pass/fail reference without preparing it first. A local FY2024 diagnostic
+against that raw workbook still showed missing/extra rows, duplicate business
+keys, formula-error placeholders, and name drift even with
+`--retroactive-numeric-tolerance 1e-9`; that is reference-preparation evidence,
+not an algorithm failure. For N=3 backtests, first create or confirm canonical
+FY2025/FY2024/FY2023 reference workbooks whose business keys and formula-error
+policy match `diff-excel --business-values`.
+
 This proves that a source/package snapshot still reproduces a known
 previous-year Excel output. It should be logged as retroactive algorithm
 regression evidence, not current-year publication/yield evidence.

@@ -95,6 +95,12 @@ copies `data/master.xlsx`, bootstraps a SQLite database, imports the workbook,
 exports the requested fiscal year, and runs `eidp diff-excel --business-values
 --fail-on-diff` against the reference workbook.
 
+If a legacy reference workbook differs only by harmless floating-point
+rounding, pass `--retroactive-numeric-tolerance <value>` to forward an absolute
+numeric tolerance to `diff-excel`. Keep the default `0.0` for release snapshots;
+this option does not ignore missing/extra rows, duplicate business keys, formula
+errors, or other real business-value differences.
+
 Use this as an algorithm regression gate for rolling-FY Excel output. It does
 not replace the Windows transfer/setup/UI gates, and it does not prove the
 current FY2026/R8 60-70% target-PDF acquisition line.

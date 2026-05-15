@@ -89,7 +89,22 @@ def test_build_retroactive_excel_gate_commands_uses_isolated_app_root(tmp_path: 
     assert commands[2].command[-1] == str(app_root / "data" / "master.xlsx")
     assert "--business-values" in commands[-1].command
     assert "--fail-on-diff" in commands[-1].command
+    assert "--numeric-tolerance" not in commands[-1].command
     assert str(reference) in commands[-1].command
+
+
+def test_build_retroactive_excel_gate_commands_can_pass_numeric_tolerance(tmp_path: Path) -> None:
+    commands = module.build_retroactive_excel_gate_commands(
+        app_root=tmp_path / "retroactive",
+        master_xlsx=tmp_path / "master.xlsx",
+        reference_xlsx=tmp_path / "reference.xlsx",
+        fiscal_year=2025,
+        numeric_tolerance=1e-9,
+    )
+
+    assert "--numeric-tolerance" in commands[-1].command
+    tolerance_index = commands[-1].command.index("--numeric-tolerance")
+    assert commands[-1].command[tolerance_index + 1] == "1e-09"
 
 
 def test_retroactive_excel_prepare_command_creates_isolated_root(tmp_path: Path) -> None:
@@ -548,6 +563,8 @@ def test_main_adds_retroactive_excel_gate_when_reference_is_set(
             str(reference),
             "--retroactive-master",
             str(master),
+            "--retroactive-numeric-tolerance",
+            "1e-9",
             "--retroactive-app-root",
             str(app_root),
             "--json",
@@ -564,6 +581,7 @@ def test_main_adds_retroactive_excel_gate_when_reference_is_set(
         "fiscal_year": 2025,
         "master_xlsx": str(master),
         "reference_xlsx": str(reference),
+        "numeric_tolerance": 1e-9,
     }
     assert [command.name for command in captured_commands][-5:] == [
         "retroactive_excel_prepare",
@@ -572,6 +590,9 @@ def test_main_adds_retroactive_excel_gate_when_reference_is_set(
         "retroactive_excel_export",
         "retroactive_excel_diff_reference",
     ]
+    diff_command = captured_commands[-1].command
+    assert "--numeric-tolerance" in diff_command
+    assert diff_command[diff_command.index("--numeric-tolerance") + 1] == "1e-09"
 
 
 def test_text_summary_prints_package_source_check_error(capsys: pytest.CaptureFixture[str]) -> None:
