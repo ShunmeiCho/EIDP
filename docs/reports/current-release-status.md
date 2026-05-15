@@ -15,7 +15,7 @@ Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v447.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v446.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v447.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
@@ -31,8 +31,8 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v447-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 v447 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
-setup-proven, bounded-bootstrap-proven, bounded-weekly-proven, and
-evidence-bundle-proven package. It was built from package snapshot
+setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
+evidence-bundle-proven, and UI-health-proven package. It was built from package snapshot
 `55cbc1b4007a8a0e2798cc8d79f5adbff1944391`, which adds an `os.fsync()` before
 atomic text-output replacement and restores the reusable operator E2E template
 to version-neutral form for future ZIPs. The v447 strict non-Windows gate
@@ -65,7 +65,11 @@ residual cleanup dry-run both returned `ok=true`. The evidence bundle
 forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
 `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
 `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
-`stage6_residual_cleanup`, and `weekly_run_logs`. v447 is still not a completed
+`stage6_residual_cleanup`, and `weekly_run_logs`. v447 `scripts\launch.bat`
+then served `/_stcore/health` and `/` with HTTP `200`, and cleanup left no
+listener on `8501`; the pulled evidence is
+`logs/win-v447-stage6/v447-ui-smoke-20260516-084930.json`.
+v447 is still not a completed
 operator real-cycle Stage 6 sign-off and still fails the production yield gate.
 
 v446 is the previous Mac/non-Windows release-gate-clean, Windows transfer-proven,

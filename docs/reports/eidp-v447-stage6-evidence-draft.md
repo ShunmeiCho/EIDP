@@ -23,6 +23,7 @@ It is not a completed operator real-cycle Stage 6 sign-off.
 | Canary evidence | `logs/win-v447-stage6/20260515_234136-summary.json` |
 | RCA evidence | `logs/win-v447-stage6/20260515_234136-discovery-rca-batch-plan.json` |
 | Evidence bundle | `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` |
+| UI health evidence | `logs/win-v447-stage6/v447-ui-smoke-20260516-084930.json` |
 
 ## Evidence
 
@@ -41,6 +42,7 @@ It is not a completed operator real-cycle Stage 6 sign-off.
 | Recovery check | pass / action path skipped | `scripts\stage6_recovery_check.bat` returned `ok=true` in wrapper-default mode, with scheduled-task action check skipped. |
 | Residual cleanup dry-run | pass | `scripts\stage6_residual_cleanup.bat --json` returned `ok=true`, `existing_count=0`, and `moved_count=0`. |
 | Evidence bundle | pass | `logs\stage6-evidence-20260515-234300.zip` verified `ok=true` on Windows and Mac, with no forbidden/unsafe entries, no missing manifest patterns, and all expected evidence labels present. |
+| UI health smoke | pass | v447 launched through `scripts\launch.bat`; `/_stcore/health` and `/` both returned HTTP `200`, and cleanup left no listener on `8501`. |
 
 ## Canary Result
 

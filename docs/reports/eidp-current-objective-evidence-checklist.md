@@ -10,8 +10,8 @@ Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v447-55cbc1b` for
 `dist/eidp-windows-v447.zip` / package snapshot `55cbc1b`. v447 is the current
 Mac/non-Windows release-gate-clean package and the current Windows transfer,
 setup, URL-only bootstrap, evidence-bundle, bounded `weekly_run.bat`,
-release-artifact pruning, and fsync-hardened atomic-output lane. v446 remains
-the latest browser read-only navigation proof lane, v442 remains the
+release-artifact pruning, fsync-hardened atomic-output, and UI-health lane.
+v446 remains the latest browser read-only navigation proof lane, v442 remains the
 Windows fallback and R7 browser Excel proof lane, and v408 remains historical
 support for copied-DB UI write/audit sandbox proof. The real operator cycle is
 still missing, and the production yield gate is still failing/not proven.
@@ -38,7 +38,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current; current v408 disposable UI sandbox repeated the browser-write surface with one manual FY2025 `DepartmentYearly` row (`capacity=40`, `enrollment=28`, `extraction_method=manual`, `extraction_confidence=1.0`, `verified=true`) and one fiscal-year override that marked FY2024 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows non-current while FY2025 current rows were present | Proven on sandboxed/copy DB paths including current v408; real operator one-cycle proof still missing |
 | Excel template export | v442 process-scoped FY2025 browser Excel smoke launched with `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with `抽出済み学校 2031` and `Excel対象行 7150`, generated workbook rows `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`, exposed `Excel ダウンロード`, and downloaded `output/playwright/v442-r7-excel-smoke/eidp-master.xlsx`; local `openpyxl` verified sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` with dimensions `2419x10`, `10023x22`, `9721x83`, `9721x19`; Win-side checks reported both v442 `.env` locations missing, so the retroactive FY was not persisted. Historical v408 R7 CLI/browser exports and v437 FY2025/FY2024/FY2023 non-Windows retroactive matrix remain regression support. v446 FY2025/R7 browser probe is diagnostic only because the fresh v446 DB was initialized under FY2026 and remained `Excel出力可 0/2418`. FY2026 export remains disabled on current setup evidence | R7 browser Excel download proven on v442 fallback; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows; current v408 disposable UI sandbox repeated the audit path through `監査ログ`, showing `JSONL outbox 未送信=7`, `Outbox を flush` result `exported=7 already_present=0 failed=0`, and seven rows with `jsonl_exported_at_present=true` in direct DB verification | Proven on sandboxed paths including current v408; real operator one-cycle proof still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v447 ZIP/SHA was transferred to `C:\EIDP-staging`, expanded to `C:\Users\cyo20\EIDP-v447-55cbc1b`, and `EIDP-setup.bat` completed with SQLite integrity and `school_fiscal_year_status_count=2418`. v447 URL-only bootstrap downloaded and aggregated 47 prefecture seed artifacts, bounded real `scripts\weekly_run.bat` exited `0`, refreshed evidence bundle `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` verified with all required labels, and the bounded weekly wrote `last_run.json`, RCA, and summary outputs through the fsync-hardened `write_text_atomic` path. v446 remains browser read-only navigation proof, v442 remains fallback and R7 browser Excel proof. v408 remains historical copied-DB UI write/audit sandbox proof. | Current v447 setup/bootstrap/evidence/weekly launcher/atomic-output proven; browser nav remains v446; R7 Excel proof remains v442; real operator one-cycle missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v447 ZIP/SHA was transferred to `C:\EIDP-staging`, expanded to `C:\Users\cyo20\EIDP-v447-55cbc1b`, and `EIDP-setup.bat` completed with SQLite integrity and `school_fiscal_year_status_count=2418`. v447 URL-only bootstrap downloaded and aggregated 47 prefecture seed artifacts, bounded real `scripts\weekly_run.bat` exited `0`, refreshed evidence bundle `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` verified with all required labels, the bounded weekly wrote `last_run.json`, RCA, and summary outputs through the fsync-hardened `write_text_atomic` path, and `scripts\launch.bat` served health/root HTTP `200`. v446 remains browser read-only navigation proof, v442 remains fallback and R7 browser Excel proof. v408 remains historical copied-DB UI write/audit sandbox proof. | Current v447 setup/bootstrap/evidence/weekly launcher/atomic-output/UI health proven; browser nav remains v446; R7 Excel proof remains v442; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | v447 bounded real weekly canary crawled 5 target-missing schools, found 3 candidate pages, downloaded 0 PDFs, and recorded `ship_gate_status=below_gate`; latest strict target PDF auto-yield remains `0.0%` | Failing |
 | Ship gate: estimated manual work <= 30% | Current evidence records operator-reviewable yield far below release threshold and manual workload effectively above target | Failing |
@@ -56,8 +56,8 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   package verifier modes passing. Windows evidence proves transfer/SHA,
   setup/import, SQLite integrity, URL-only bootstrap, real bounded
   `scripts\weekly_run.bat` execution, fsync-hardened output writes,
-  evidence-bundle verification with `weekly_run_logs`, and release-artifact
-  pruning. v446 remains the latest browser read-only navigation proof, and v442
+  evidence-bundle verification with `weekly_run_logs`, UI health, and
+  release-artifact pruning. v446 remains the latest browser read-only navigation proof, and v442
   remains the R7 browser Excel fallback proof because the v446 FY2025 browser
   probe was diagnostic-only on a DB initialized under FY2026.
 - Historical v437 Mac/non-Windows release-gate proof: v437, package snapshot
@@ -191,8 +191,8 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest v447 Mac/non-Windows release-gate, Windows setup/bootstrap/evidence, and
-bounded weekly-launcher evidence are summarized in
+Latest v447 Mac/non-Windows release-gate, Windows setup/bootstrap/evidence/UI
+health, and bounded weekly-launcher evidence are summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
 below include historical source-code evidence base `4a16363d` and later
 refreshes:
@@ -703,9 +703,10 @@ Known non-goal-wide lint boundary:
 ## Next Concrete Gate
 
 SSH-Win is available and v447 is already transferred, SHA-verified, extracted,
-set up, bootstrapped, bounded-weekly-smoked, and evidence-bundle-verified. The
-next gate is not another transfer or audit; it is an owner/operator Stage 6
-real-cycle sign-off on v447, plus the later R8 production yield measurement.
+set up, bootstrapped, bounded-weekly-smoked, UI-health-smoked, and
+evidence-bundle-verified. The next gate is not another transfer or audit; it is
+an owner/operator Stage 6 real-cycle sign-off on v447, plus the later R8
+production yield measurement.
 
 Current v447 package:
 
