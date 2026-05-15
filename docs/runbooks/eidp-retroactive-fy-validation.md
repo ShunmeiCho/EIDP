@@ -79,13 +79,16 @@ field/schema drift still fail the gate and must be treated as reference
 preparation or data-quality work.
 
 Do not use the raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` as an FY2024 or
-FY2023 pass/fail reference without preparing it first. A local FY2024 diagnostic
-against that raw workbook still showed missing/extra rows, duplicate business
-keys, formula-error placeholders, and name drift even with
-`--retroactive-numeric-tolerance 1e-9`; that is reference-preparation evidence,
-not an algorithm failure. For N=3 backtests, first create or confirm canonical
-FY2025/FY2024/FY2023 reference workbooks whose business keys and formula-error
-policy match `diff-excel --business-values`.
+FY2023 pass/fail reference without preparing it first. The v414 preflight report
+`docs/reports/eidp-v414-retroactive-reference-preflight.md` records FY2024 and
+FY2023 raw-sample diagnostics: both isolated exports succeeded, but the raw
+sample comparison still showed missing/extra rows, duplicate business keys,
+formula-error placeholders, unknown-string placeholders, name drift, and
+field-year schema drift even with `--retroactive-numeric-tolerance 1e-9`.
+That is reference-preparation evidence, not an algorithm failure. For N=3
+backtests, first create or confirm canonical FY2025/FY2024/FY2023 reference
+workbooks whose business keys and formula-error policy match
+`diff-excel --business-values`.
 
 For reference-preparation automation, run the same comparison with `--json` and
 archive the payload. The JSON exposes `missing_rows`, `extra_rows`,

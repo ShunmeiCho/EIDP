@@ -97,6 +97,16 @@ low-confidence and auto-flag current rows were all `0`. The
 `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`
 across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 
+FY2024 and FY2023 raw-sample reference preflights were also recorded for v414 in
+`docs/reports/eidp-v414-retroactive-reference-preflight.md`. Both isolated
+exports succeeded with the same workbook row counts (`採録状況=2418`,
+`対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`), while comparison against
+the raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` workbook intentionally
+failed. FY2024 produced `missing_rows=1097`, `extra_rows=1557`, and
+`differing_fields=12548`; FY2023 produced `missing_rows=1097`,
+`extra_rows=1557`, and `differing_fields=9718`. These are
+reference-preparation diagnostics, not current-year yield or Stage 6 proof.
+
 The app-code delta inherited by v414 from v410 commit
 `15c88348f46ab3fbcc9383afe5830047e562b0c1` restored the documented 80% local
 coverage line without using SSH/Windows, and v414 adds JSON Excel-diff
