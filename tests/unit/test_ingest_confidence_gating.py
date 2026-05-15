@@ -151,6 +151,55 @@ def test_missing_fiscal_year_does_not_fallback_to_download_time(engine, tmp_path
         assert session.query(DepartmentYearly).count() == 0
 
 
+def test_future_fiscal_year_annotation_surfaces_invalid_year_stat(engine, tmp_path, monkeypatch):
+    """A future FY annotation must be operator-visible, not a silent no-year parse failure."""
+    from eidp.pipeline.ingest import run_ingestion
+
+    monkeypatch.setattr(ingest_module.settings, "target_fiscal_year", 2026)
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/future-year.pdf",
+            tmp_path=tmp_path,
+            file_hash="future-year",
+        )
+        doc.ingest_status = None
+        session.commit()
+        evidence_log = tmp_path / "ingest-evidence.jsonl"
+        ann = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="令和9年度",
+            source_pdf="test.pdf",
+            departments=[
+                DepartmentRecord(name="A学科", capacity=40, enrollment=35),
+            ],
+            support_recipient=None,
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            stats = run_ingestion(session, evidence_path=evidence_log)
+        session.commit()
+        session.refresh(doc)
+
+        assert stats["processed"] == 1
+        assert stats["skipped"] == 1
+        assert stats["invalid_fiscal_year"] == 1
+        assert doc.ingest_status == "parse_failed"
+        assert doc.fiscal_year is None
+        assert session.query(DepartmentYearly).count() == 0
+
+        evidence = [json.loads(line) for line in evidence_log.read_text(encoding="utf-8").splitlines()]
+        assert len(evidence) == 1
+        assert evidence[0]["reason"] == "invalid_fiscal_year"
+        assert evidence[0]["detail"]["parsed_fiscal_year"] == "2027"
+        assert evidence[0]["detail"]["target_fiscal_year"] == "2026"
+
+
 def test_ingest_preserves_prevalidated_document_fiscal_year(engine, tmp_path):
     """Strict discovery year evidence must beat stale dates inside the PDF body."""
 

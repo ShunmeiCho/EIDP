@@ -43,6 +43,7 @@ class IngestDocumentStats(TypedDict):
     support_recipient_review_pending: int
     skipped: int
     skip_reason: str | None
+    invalid_fiscal_year: int
 
 
 def _norm(s: str) -> str:
@@ -112,6 +113,7 @@ def ingest_document(
         "support_recipient_review_pending": 0,
         "skipped": 0,
         "skip_reason": None,
+        "invalid_fiscal_year": 0,
     }
 
     if not doc.file_path:
@@ -280,9 +282,17 @@ def ingest_document(
                 return stats
 
     # Determine fiscal year early — needed for both dept and support_recipient paths
+    fiscal_year_cap = settings.target_fiscal_year
+    parsed_fiscal_year_candidate = _parse_fiscal_year_candidate_from_annotation(annotation.fiscal_year)
     parsed_fiscal_year = _parse_fiscal_year_from_annotation(
         annotation.fiscal_year,
         source_url=doc.source_url,
+        max_fiscal_year=fiscal_year_cap,
+    )
+    invalid_fiscal_year = (
+        parsed_fiscal_year_candidate is not None
+        and parsed_fiscal_year_candidate > fiscal_year_cap
+        and parsed_fiscal_year is None
     )
     fiscal_year = doc.fiscal_year or parsed_fiscal_year
     if doc.fiscal_year is not None and parsed_fiscal_year is not None and doc.fiscal_year != parsed_fiscal_year:
@@ -303,13 +313,24 @@ def ingest_document(
         and annotation.fiscal_year
         and _has_fiscal_year_candidate(annotation.fiscal_year)
     ):
-        log.warning(
-            "invalid_fiscal_year_parsed",
-            path=str(pdf_path),
-            doc_id=doc.id,
-            fiscal_year=annotation.fiscal_year,
-            source_url=doc.source_url,
-        )
+        if invalid_fiscal_year:
+            log.warning(
+                "fiscal_year_exceeds_target_cap",
+                path=str(pdf_path),
+                doc_id=doc.id,
+                fiscal_year=annotation.fiscal_year,
+                parsed_fiscal_year=parsed_fiscal_year_candidate,
+                target_fiscal_year=fiscal_year_cap,
+                source_url=doc.source_url,
+            )
+        else:
+            log.warning(
+                "invalid_fiscal_year_parsed",
+                path=str(pdf_path),
+                doc_id=doc.id,
+                fiscal_year=annotation.fiscal_year,
+                source_url=doc.source_url,
+            )
 
     # Quality gate: partial ingest — accept valid depts, skip invalid ones
     # Requirements per dept:
@@ -331,9 +352,16 @@ def ingest_document(
                         skipped_depts=skipped_depts,
                         fiscal_year=fiscal_year)
     elif annotation.departments and not fiscal_year:
-        log.warning("no_fiscal_year_parsed",
-                    path=str(pdf_path), doc_id=doc.id,
-                    depts=len(annotation.departments))
+        if invalid_fiscal_year:
+            log.warning("invalid_fiscal_year_blocked",
+                        path=str(pdf_path), doc_id=doc.id,
+                        depts=len(annotation.departments),
+                        parsed_fiscal_year=parsed_fiscal_year_candidate,
+                        target_fiscal_year=fiscal_year_cap)
+        else:
+            log.warning("no_fiscal_year_parsed",
+                        path=str(pdf_path), doc_id=doc.id,
+                        depts=len(annotation.departments))
 
     # Guard: if we have data but no fiscal year, we can't write anything usable
     if not fiscal_year and (annotation.departments or annotation.support_recipient):
@@ -342,7 +370,25 @@ def ingest_document(
                     has_support=annotation.support_recipient is not None)
         doc.ingest_status = "parse_failed"
         stats["skipped"] = 1
-        stats["skip_reason"] = "no_fiscal_year"
+        if invalid_fiscal_year:
+            stats["invalid_fiscal_year"] = 1
+            stats["skip_reason"] = "invalid_fiscal_year"
+            _record_rejection(
+                recorder,
+                doc,
+                "invalid_fiscal_year",
+                fiscal_year=annotation.fiscal_year,
+                parsed_fiscal_year=parsed_fiscal_year_candidate,
+                target_fiscal_year=fiscal_year_cap,
+            )
+        else:
+            stats["skip_reason"] = "no_fiscal_year"
+            _record_rejection(
+                recorder,
+                doc,
+                "no_fiscal_year",
+                fiscal_year=annotation.fiscal_year or None,
+            )
         return stats
 
     if not valid_depts and not annotation.support_recipient:
@@ -660,6 +706,18 @@ def _has_fiscal_year_candidate(year_str: str) -> bool:
     return has_fiscal_year_text(year_str)
 
 
+def _parse_fiscal_year_candidate_from_annotation(year_str: str) -> int | None:
+    if not year_str:
+        return None
+    fiscal_year = fiscal_year_from_japanese_era_text(year_str)
+    if fiscal_year is not None:
+        return fiscal_year
+    m = re.search(r"(20\d{2})", year_str)
+    if m:
+        return int(m.group(1))
+    return None
+
+
 def _parse_fiscal_year_from_annotation(
     year_str: str,
     *,
@@ -672,12 +730,8 @@ def _parse_fiscal_year_from_annotation(
 
     cap = settings.target_fiscal_year if max_fiscal_year is None else max_fiscal_year
 
-    fiscal_year = fiscal_year_from_japanese_era_text(year_str)
+    fiscal_year = _parse_fiscal_year_candidate_from_annotation(year_str)
     if fiscal_year is not None:
-        return fiscal_year if fiscal_year <= cap else None
-    m = re.search(r"(20\d{2})", year_str)
-    if m:
-        fiscal_year = int(m.group(1))
         return fiscal_year if fiscal_year <= cap else None
     return None
 
@@ -700,7 +754,13 @@ def run_ingestion(
     - 'non_target': not a target disclosure document
     - 'transient_error': network/IO error, can be retried
     """
-    total_stats = {"processed": 0, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
+    total_stats = {
+        "processed": 0,
+        "departments_created": 0,
+        "yearly_upserted": 0,
+        "skipped": 0,
+        "invalid_fiscal_year": 0,
+    }
 
     # Find documents eligible for ingestion with row-level locking.
     # FOR UPDATE SKIP LOCKED lets multiple parallel ingest workers pick
@@ -793,6 +853,7 @@ def run_ingestion(
             total_stats["departments_created"] += stats["departments_created"]
             total_stats["yearly_upserted"] += stats["yearly_upserted"]
             total_stats["skipped"] += stats["skipped"]
+            total_stats["invalid_fiscal_year"] += stats["invalid_fiscal_year"]
         except OSError as e:
             try:
                 nested.rollback()
