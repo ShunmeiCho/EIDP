@@ -355,11 +355,12 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/fiscal_year.py": (REPO_ROOT / "src" / "eidp" / "fiscal_year.py").read_text(encoding="utf-8"),
         "src/eidp/excel/exporter.py": (
             "from eidp.extraction_confidence import thresholds_from_env\n"
-            "_EXCEL_CONFIDENCE_THRESHOLDS = thresholds_from_env()\n"
-            "EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review\n"
-            "EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.auto\n"
+            "def excel_confidence_thresholds(): pass\n"
+            "def excel_min_extraction_confidence(): pass\n"
+            "def excel_auto_flag_extraction_confidence(): pass\n"
             'LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"\n'
-            "def _exportable_confidence_sql(alias): pass\n"
+            "def _exportable_confidence_sql(alias):\n"
+            "    return excel_min_extraction_confidence()\n"
             "def export_quality_warnings(session): pass\n"
             "def _low_confidence_reason(): pass\n"
         ),
@@ -803,7 +804,7 @@ def test_verify_core_zip_requires_excel_confidence_export_gate(tmp_path: Path) -
     assert not check.ok
     assert any("src/eidp/excel/exporter.py missing required token" in error for error in check.errors)
     assert any(
-        "EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review" in error
+        "def excel_min_extraction_confidence()" in error
         for error in check.errors
     )
 

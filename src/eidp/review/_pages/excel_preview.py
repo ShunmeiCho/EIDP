@@ -36,12 +36,12 @@ from sqlalchemy.orm import Session
 from eidp.config import settings
 from eidp.db.locking import probe_lock
 from eidp.excel.exporter import (
-    EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE,
-    EXCEL_MIN_EXTRACTION_CONFIDENCE,
     _write_gakka,
     _write_sairoku,
     _write_taisho_hiritu,
     _write_zaiseki,
+    excel_auto_flag_extraction_confidence,
+    excel_min_extraction_confidence,
     export_quality_warnings,
 )
 from eidp.fiscal_year import format_fiscal_year_label
@@ -164,7 +164,7 @@ def count_unmatched_and_gap(
 
 def _low_confidence_message(row_count: int) -> str:
     return (
-        f"confidence {EXCEL_MIN_EXTRACTION_CONFIDENCE:.2f} 未満の current 行が {row_count} 件あります。"
+        f"confidence {excel_min_extraction_confidence():.2f} 未満の current 行が {row_count} 件あります。"
         "これらはExcel出力から除外されます。PDF確認または手入力で修正してください。"
     )
 
@@ -172,8 +172,8 @@ def _low_confidence_message(row_count: int) -> str:
 def _auto_flag_confidence_message(row_count: int) -> str:
     return (
         "confidence "
-        f"{EXCEL_MIN_EXTRACTION_CONFIDENCE:.2f}以上"
-        f"{EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE:.2f}未満の要確認行が {row_count} 件あります。"
+        f"{excel_min_extraction_confidence():.2f}以上"
+        f"{excel_auto_flag_extraction_confidence():.2f}未満の要確認行が {row_count} 件あります。"
         "Excelには含まれますが、配布前にPDF確認画面で内容を確認してください。"
     )
 

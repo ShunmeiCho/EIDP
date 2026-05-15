@@ -2094,39 +2094,13 @@ def _load_decision_index(audit_path: Path) -> dict[tuple[str, str], str]:
     return out
 
 
-def apply_school_alias_proposal(
+def _apply_school_alias_proposal_unlocked(
     session: Session,
     *,
     school_id: int,
     alias_name: str,
     source: str = "proposal_review_queue",
-    lock_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Idempotent SchoolAlias insert with cross-school conflict check.
-
-    Returns (created, reason). 'reason' values:
-      - inserted                       : new row added
-      - already_exists                 : same (school_id, alias_name) present
-      - conflict_other_school:<id>     : alias is registered to a different
-                                         school; refuse to insert. Matcher's
-                                         ambiguity guard would otherwise flip
-                                         the row to school_name_ambiguous.
-      - empty_alias                    : alias_name is blank after strip
-    """
-    if lock_path is not None:
-        try:
-            with acquire_lock(lock_path, owner="ui_school_alias_proposal"):
-                return apply_school_alias_proposal(
-                    session,
-                    school_id=school_id,
-                    alias_name=alias_name,
-                    source=source,
-                    lock_path=None,
-                )
-        except LockBusyError:
-            session.rollback()
-            return False, "lock_busy"
-
     alias_name = alias_name.strip()
     if not alias_name:
         return False, "empty_alias"
@@ -2162,31 +2136,47 @@ def apply_school_alias_proposal(
     return True, "inserted"
 
 
-def apply_dept_alias_proposal(
+def apply_school_alias_proposal(
+    session: Session,
+    *,
+    school_id: int,
+    alias_name: str,
+    source: str = "proposal_review_queue",
+    lock_path: Path,
+) -> tuple[bool, str]:
+    """Idempotent SchoolAlias insert with cross-school conflict check.
+
+    Returns (created, reason). 'reason' values:
+      - inserted                       : new row added
+      - already_exists                 : same (school_id, alias_name) present
+      - conflict_other_school:<id>     : alias is registered to a different
+                                         school; refuse to insert. Matcher's
+                                         ambiguity guard would otherwise flip
+                                         the row to school_name_ambiguous.
+      - empty_alias                    : alias_name is blank after strip
+      - lock_busy                      : weekly runner or another UI writer holds the app lock
+    """
+    try:
+        with acquire_lock(lock_path, owner="ui_school_alias_proposal"):
+            return _apply_school_alias_proposal_unlocked(
+                session,
+                school_id=school_id,
+                alias_name=alias_name,
+                source=source,
+            )
+    except LockBusyError:
+        session.rollback()
+        return False, "lock_busy"
+
+
+def _apply_dept_alias_proposal_unlocked(
     session: Session,
     *,
     department_id: int,
     old_name: str,
     source: str = "proposal_review_queue",
     actor: str = "operator",
-    lock_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Record a dept alias as DepartmentChange(change_type='alias')."""
-    if lock_path is not None:
-        try:
-            with acquire_lock(lock_path, owner="ui_dept_alias_proposal"):
-                return apply_dept_alias_proposal(
-                    session,
-                    department_id=department_id,
-                    old_name=old_name,
-                    source=source,
-                    actor=actor,
-                    lock_path=None,
-                )
-        except LockBusyError:
-            session.rollback()
-            return False, "lock_busy"
-
     old_name = old_name.strip()
     if not old_name:
         return False, "empty_old_name"
@@ -2237,29 +2227,37 @@ def apply_dept_alias_proposal(
     return True, "inserted"
 
 
-def void_department_change(
+def apply_dept_alias_proposal(
+    session: Session,
+    *,
+    department_id: int,
+    old_name: str,
+    source: str = "proposal_review_queue",
+    actor: str = "operator",
+    lock_path: Path,
+) -> tuple[bool, str]:
+    """Record a dept alias as DepartmentChange(change_type='alias')."""
+    try:
+        with acquire_lock(lock_path, owner="ui_dept_alias_proposal"):
+            return _apply_dept_alias_proposal_unlocked(
+                session,
+                department_id=department_id,
+                old_name=old_name,
+                source=source,
+                actor=actor,
+            )
+    except LockBusyError:
+        session.rollback()
+        return False, "lock_busy"
+
+
+def _void_department_change_unlocked(
     session: Session,
     *,
     change_id: int,
     actor: str = "operator",
     reason: str | None = None,
-    lock_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Mark an operator-approved DepartmentChange as void without deleting history."""
-    if lock_path is not None:
-        try:
-            with acquire_lock(lock_path, owner="ui_dept_change_void"):
-                return void_department_change(
-                    session,
-                    change_id=change_id,
-                    actor=actor,
-                    reason=reason,
-                    lock_path=None,
-                )
-        except LockBusyError:
-            session.rollback()
-            return False, "lock_busy"
-
     change = session.get(DepartmentChange, change_id)
     if change is None:
         return False, "not_found"
@@ -2293,6 +2291,28 @@ def void_department_change(
     )
     session.commit()
     return True, "voided"
+
+
+def void_department_change(
+    session: Session,
+    *,
+    change_id: int,
+    actor: str = "operator",
+    reason: str | None = None,
+    lock_path: Path,
+) -> tuple[bool, str]:
+    """Mark an operator-approved DepartmentChange as void without deleting history."""
+    try:
+        with acquire_lock(lock_path, owner="ui_dept_change_void"):
+            return _void_department_change_unlocked(
+                session,
+                change_id=change_id,
+                actor=actor,
+                reason=reason,
+            )
+    except LockBusyError:
+        session.rollback()
+        return False, "lock_busy"
 
 
 def _active_dept_alias_changes(session: Session, *, limit: int = 20) -> list[JsonDict]:
@@ -2330,7 +2350,7 @@ _SCHOOL_PROPOSAL_LABEL = {
 }
 
 
-def _render_school_proposals_tab(session: Session, *, lock_path: Path | None = None) -> None:
+def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
     proposals = _read_proposals(_DEFAULT_SCHOOL_PROPOSALS)
     if not proposals:
         st.info(
@@ -2482,7 +2502,7 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path | None = N
 
 
 def _render_school_focus_mode(
-    session: Session, focus_items: list[JsonDict], *, lock_path: Path | None = None
+    session: Session, focus_items: list[JsonDict], *, lock_path: Path
 ) -> None:
     """V2-inspired single-proposal focus card.
 
@@ -2661,7 +2681,7 @@ def _next_focus_idx_after_decision(ptr: int, total: int) -> int:
 
 
 def _render_school_candidate_picker(
-    session: Session, proposal: JsonDict, ptype: str, *, lock_path: Path | None = None
+    session: Session, proposal: JsonDict, ptype: str, *, lock_path: Path
 ) -> None:
     """Render one picker card with Approve / Defer buttons."""
     candidates = proposal.get("candidates") or []
@@ -2746,7 +2766,7 @@ def _render_school_candidate_picker(
             st.caption(f"保留しました: {template}")
 
 
-def _render_dept_proposals_tab(session: Session, *, lock_path: Path | None = None) -> None:
+def _render_dept_proposals_tab(session: Session, *, lock_path: Path) -> None:
     proposals = _read_proposals(_DEFAULT_DEPT_PROPOSALS)
     if not proposals:
         st.info(
@@ -2874,7 +2894,7 @@ def _render_dept_proposals_tab(session: Session, *, lock_path: Path | None = Non
                     st.info(f"未実行: {reason}")
 
 
-def page_proposals_review(session: Session, *, lock_path: Path | None = None) -> None:
+def page_proposals_review(session: Session, *, lock_path: Path) -> None:
     st.header("② マッチング提案の確認")
     st.caption(
         "競合校テンプレートと DB の学校名・学科名を自動照合した結果です。"

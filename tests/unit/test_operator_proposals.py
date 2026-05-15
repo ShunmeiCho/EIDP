@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 
@@ -33,13 +34,27 @@ def _session() -> Session:
     return Session(engine)
 
 
-def test_apply_school_alias_inserts_when_absent() -> None:
+def _lock_path(tmp_path: Path) -> Path:
+    return tmp_path / "data" / ".lock"
+
+
+def test_proposal_write_helpers_require_lock_path() -> None:
+    for helper in (
+        apply_school_alias_proposal,
+        apply_dept_alias_proposal,
+        void_department_change,
+    ):
+        parameter = inspect.signature(helper).parameters["lock_path"]
+        assert parameter.default is inspect.Parameter.empty
+
+
+def test_apply_school_alias_inserts_when_absent(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.flush()
         created, reason = apply_school_alias_proposal(
-            session, school_id=1, alias_name="A-short",
+            session, school_id=1, alias_name="A-short", lock_path=_lock_path(tmp_path),
         )
         assert created is True
         assert reason == "inserted"
@@ -54,14 +69,14 @@ def test_apply_school_alias_inserts_when_absent() -> None:
         session.close()
 
 
-def test_apply_school_alias_is_idempotent() -> None:
+def test_apply_school_alias_is_idempotent(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.add(SchoolAlias(school_id=1, alias_name="A-short", alias_type="x", source="y"))
         session.flush()
         created, reason = apply_school_alias_proposal(
-            session, school_id=1, alias_name="A-short",
+            session, school_id=1, alias_name="A-short", lock_path=_lock_path(tmp_path),
         )
         assert created is False
         assert reason == "already_exists"
@@ -69,14 +84,17 @@ def test_apply_school_alias_is_idempotent() -> None:
         session.close()
 
 
-def test_apply_dept_alias_records_department_change() -> None:
+def test_apply_dept_alias_records_department_change(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
         session.flush()
         created, reason = apply_dept_alias_proposal(
-            session, department_id=9, old_name="プロミュージシャン学科",
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is True
         dc = (
@@ -97,7 +115,7 @@ def test_apply_dept_alias_records_department_change() -> None:
         session.close()
 
 
-def test_apply_dept_alias_uses_operator_actor_in_audit() -> None:
+def test_apply_dept_alias_uses_operator_actor_in_audit(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
@@ -109,6 +127,7 @@ def test_apply_dept_alias_uses_operator_actor_in_audit() -> None:
             department_id=9,
             old_name="プロミュージシャン学科",
             actor="reviewer-a",
+            lock_path=_lock_path(tmp_path),
         )
 
         assert created is True
@@ -119,15 +138,21 @@ def test_apply_dept_alias_uses_operator_actor_in_audit() -> None:
         session.close()
 
 
-def test_apply_dept_alias_idempotent() -> None:
+def test_apply_dept_alias_idempotent(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
         session.flush()
-        apply_dept_alias_proposal(session, department_id=9, old_name="プロミュージシャン学科")
+        lock_path = _lock_path(tmp_path)
+        apply_dept_alias_proposal(
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            lock_path=lock_path,
+        )
         created, reason = apply_dept_alias_proposal(
-            session, department_id=9, old_name="プロミュージシャン学科",
+            session, department_id=9, old_name="プロミュージシャン学科", lock_path=lock_path,
         )
         assert created is False
         assert reason == "already_exists"
@@ -135,7 +160,7 @@ def test_apply_dept_alias_idempotent() -> None:
         session.close()
 
 
-def test_apply_dept_alias_allows_recreating_voided_alias() -> None:
+def test_apply_dept_alias_allows_recreating_voided_alias(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
@@ -156,7 +181,10 @@ def test_apply_dept_alias_allows_recreating_voided_alias() -> None:
         session.flush()
 
         created, reason = apply_dept_alias_proposal(
-            session, department_id=9, old_name="プロミュージシャン学科",
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is True
         assert reason == "inserted"
@@ -177,7 +205,7 @@ def test_apply_dept_alias_allows_recreating_voided_alias() -> None:
         session.close()
 
 
-def test_void_department_change_marks_row_and_writes_audit() -> None:
+def test_void_department_change_marks_row_and_writes_audit(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
@@ -198,6 +226,7 @@ def test_void_department_change_marks_row_and_writes_audit() -> None:
             change_id=change.id,
             actor="tester",
             reason="wrong department",
+            lock_path=_lock_path(tmp_path),
         )
         assert changed is True
         assert reason == "voided"
@@ -257,11 +286,14 @@ def test_active_dept_alias_changes_excludes_voided_rows() -> None:
         session.close()
 
 
-def test_apply_dept_alias_rejects_nonexistent_dept() -> None:
+def test_apply_dept_alias_rejects_nonexistent_dept(tmp_path: Path) -> None:
     session = _session()
     try:
         created, reason = apply_dept_alias_proposal(
-            session, department_id=99999, old_name="whatever",
+            session,
+            department_id=99999,
+            old_name="whatever",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is False
         assert reason == "dept_not_found"
@@ -387,7 +419,7 @@ def test_lock_busy_decision_does_not_hide_dept_proposal(tmp_path: Path) -> None:
     assert ("dept_alias", "プロミュージシャン学科") not in _load_decision_index(audit)
 
 
-def test_apply_preserves_school_context_on_picked_candidate() -> None:
+def test_apply_preserves_school_context_on_picked_candidate(tmp_path: Path) -> None:
     """D-scope: when operator picks a candidate from an ambiguous proposal,
     the resulting SchoolAlias is bound to THAT candidate, not any other.
     """
@@ -398,7 +430,10 @@ def test_apply_preserves_school_context_on_picked_candidate() -> None:
         session.flush()
         # Operator picks id=1 as the canonical 蒲田 school
         created, _ = apply_school_alias_proposal(
-            session, school_id=1, alias_name="日本工学院(蒲田)",
+            session,
+            school_id=1,
+            alias_name="日本工学院(蒲田)",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is True
         # Only id=1 gets the alias
@@ -409,7 +444,7 @@ def test_apply_preserves_school_context_on_picked_candidate() -> None:
         session.close()
 
 
-def test_apply_school_alias_refuses_cross_school_conflict() -> None:
+def test_apply_school_alias_refuses_cross_school_conflict(tmp_path: Path) -> None:
     """MEDIUM fix: alias already pointing to a different school must not be
     silently created — matcher's ambiguity guard would otherwise flip the
     row to school_name_ambiguous. Refuse up-front with a specific reason."""
@@ -420,7 +455,7 @@ def test_apply_school_alias_refuses_cross_school_conflict() -> None:
         session.add(SchoolAlias(school_id=1, alias_name="sharedKey", alias_type="x", source="y"))
         session.flush()
         created, reason = apply_school_alias_proposal(
-            session, school_id=2, alias_name="sharedKey",
+            session, school_id=2, alias_name="sharedKey", lock_path=_lock_path(tmp_path),
         )
         assert created is False
         assert reason.startswith("conflict_other_school:")

@@ -130,6 +130,32 @@ def test_cleanup_residuals_refuses_symlink_without_following_target(
     assert not (tmp_path / "archive" / "EIDP-v384-75732b0-ocr-sr-sandbox").exists()
 
 
+@pytest.mark.parametrize("filename", ["eidp.sqlite3", "manual-actions.jsonl", "master.xlsx"])
+def test_cleanup_residuals_refuses_protected_runtime_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    filename: str,
+) -> None:
+    module = _load_module()
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    protected = tmp_path / filename
+    protected.write_text("keep", encoding="utf-8")
+
+    report = module.cleanup_residuals(
+        app_root=tmp_path / "app",
+        check_paths=[str(protected)],
+        archive_dir=tmp_path / "archive",
+        apply=True,
+    )
+
+    assert report["ok"] is False
+    assert report["existing_count"] == 1
+    assert report["moved_count"] == 0
+    assert report["actions"][0]["error"] == "refusing to move protected runtime file"
+    assert protected.read_text(encoding="utf-8") == "keep"
+    assert not (tmp_path / "archive" / filename).exists()
+
+
 def test_write_cleanup_log_records_json(tmp_path: Path) -> None:
     module = _load_module()
     report = {"ok": True, "actions": []}

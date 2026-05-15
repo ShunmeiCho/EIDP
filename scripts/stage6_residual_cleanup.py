@@ -17,6 +17,12 @@ from typing import Any
 
 from stage6_recovery_check import DEFAULT_INTERRUPTED_STAGE6_PATHS
 
+PROTECTED_RUNTIME_FILENAMES = frozenset({
+    "eidp.sqlite3",
+    "manual-actions.jsonl",
+    "master.xlsx",
+})
+
 
 @dataclass
 class CleanupAction:
@@ -76,6 +82,10 @@ def _is_symlink_or_junction(path: Path) -> bool:
         return False
 
 
+def _is_protected_runtime_file(path: Path) -> bool:
+    return path.name.lower() in PROTECTED_RUNTIME_FILENAMES
+
+
 def _archive_by_rename(source: Path, destination: Path) -> None:
     try:
         source.replace(destination)
@@ -103,6 +113,10 @@ def cleanup_residuals(
             continue
         if not allow_outside_userprofile and not _is_under_user_profile(source):
             action.error = "refusing to move path outside USERPROFILE"
+            actions.append(action)
+            continue
+        if _is_protected_runtime_file(source):
+            action.error = "refusing to move protected runtime file"
             actions.append(action)
             continue
         if _is_symlink_or_junction(source):

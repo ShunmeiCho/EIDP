@@ -14,6 +14,7 @@ from eidp.excel.exporter import (
     diff_workbook_business_values,
     diff_workbook_values,
     export_master_workbook,
+    export_quality_warnings,
 )
 
 
@@ -547,6 +548,64 @@ def test_excel_exporter_confidence_thresholds_follow_central_env(monkeypatch) ->
         monkeypatch.delenv("EIDP_CONFIDENCE_REVIEW", raising=False)
         monkeypatch.delenv("EIDP_CONFIDENCE_AUTO", raising=False)
         importlib.reload(exporter_module)
+
+
+def test_excel_exporter_confidence_thresholds_are_read_per_call(
+    monkeypatch,
+    sqlite_engine,
+) -> None:
+    with Session(sqlite_engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="閾値法人",
+            school_name="閾値専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.flush()
+        dept = Department(school_id=school.id, canonical_name="閾値学科")
+        session.add(dept)
+        session.flush()
+        session.add_all(
+            [
+                DepartmentYearly(
+                    department_id=dept.id,
+                    fiscal_year=2026,
+                    revision=1,
+                    is_current=True,
+                    capacity=10,
+                    enrollment=8,
+                    extraction_confidence=0.75,
+                    extraction_method="pdf_parse",
+                ),
+                SupportRecipient(
+                    school_id=school.id,
+                    fiscal_year=2026,
+                    revision=1,
+                    is_current=True,
+                    annual_total=9,
+                    grand_total=9,
+                    extraction_confidence=0.90,
+                ),
+            ]
+        )
+        session.commit()
+
+        monkeypatch.setenv("EIDP_CONFIDENCE_REVIEW", "0.70")
+        monkeypatch.setenv("EIDP_CONFIDENCE_AUTO", "0.85")
+        baseline = export_quality_warnings(session)
+
+        monkeypatch.setenv("EIDP_CONFIDENCE_REVIEW", "0.80")
+        monkeypatch.setenv("EIDP_CONFIDENCE_AUTO", "0.95")
+        stricter = export_quality_warnings(session)
+
+    assert baseline["department_yearly_low_confidence_current"] == 0
+    assert baseline["department_yearly_auto_flag_current"] == 1
+    assert baseline["support_recipient_auto_flag_current"] == 0
+    assert stricter["department_yearly_low_confidence_current"] == 1
+    assert stricter["department_yearly_auto_flag_current"] == 0
+    assert stricter["support_recipient_auto_flag_current"] == 1
 
 
 def test_excel_exporter_year_windows_follow_target_fiscal_year(monkeypatch) -> None:

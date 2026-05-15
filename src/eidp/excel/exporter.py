@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.current_helpers import IS_CURRENT_TRUE_SQL
-from eidp.extraction_confidence import thresholds_from_env
+from eidp.extraction_confidence import ConfidenceThresholds, thresholds_from_env
 
 log = structlog.get_logger()
 
@@ -45,9 +45,20 @@ YEAR_BLOCK_HEADERS = [
     "収定", "在籍", "留学生", "卒業", "進学", "就職",
     "その他", "前年在籍", "中退", "中退率",
 ]
-_EXCEL_CONFIDENCE_THRESHOLDS = thresholds_from_env()
-EXCEL_MIN_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.review
-EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = _EXCEL_CONFIDENCE_THRESHOLDS.auto
+def excel_confidence_thresholds() -> ConfidenceThresholds:
+    return thresholds_from_env()
+
+
+def excel_min_extraction_confidence() -> float:
+    return excel_confidence_thresholds().review
+
+
+def excel_auto_flag_extraction_confidence() -> float:
+    return excel_confidence_thresholds().auto
+
+
+EXCEL_MIN_EXTRACTION_CONFIDENCE = excel_min_extraction_confidence()
+EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE = excel_auto_flag_extraction_confidence()
 LOW_CONFIDENCE_EXCLUSION_SHEET = "出力除外_低信頼"
 
 ExcelCell = object
@@ -122,19 +133,20 @@ class BusinessDuplicateStats(TypedDict):
 def _exportable_confidence_sql(alias: str) -> str:
     return (
         f"({alias}.extraction_confidence IS NULL "
-        f"OR {alias}.extraction_confidence >= {EXCEL_MIN_EXTRACTION_CONFIDENCE})"
+        f"OR {alias}.extraction_confidence >= {excel_min_extraction_confidence()})"
     )
 
 
 def _low_confidence_reason() -> str:
-    return f"confidence<{EXCEL_MIN_EXTRACTION_CONFIDENCE:.2f}"
+    return f"confidence<{excel_min_extraction_confidence():.2f}"
 
 
 def export_quality_warnings(session: Session) -> dict[str, int]:
     """Count current rows that need Excel export quality attention."""
+    thresholds = excel_confidence_thresholds()
     params = {
-        "min_confidence": EXCEL_MIN_EXTRACTION_CONFIDENCE,
-        "auto_flag_confidence": EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE,
+        "min_confidence": thresholds.review,
+        "auto_flag_confidence": thresholds.auto,
     }
     checks = {
         "department_yearly_low_confidence_current": text(f"""
@@ -449,7 +461,7 @@ def _write_zaiseki(ws: Worksheet, session: Session) -> int:
 
 def _low_confidence_exclusion_rows(session: Session) -> list[ExcelRow]:
     params = {
-        "min_confidence": EXCEL_MIN_EXTRACTION_CONFIDENCE,
+        "min_confidence": excel_min_extraction_confidence(),
         "low_confidence_reason": _low_confidence_reason(),
     }
     department_rows = session.execute(

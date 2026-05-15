@@ -151,8 +151,8 @@ def test_build_preview_workbook_reports_quality_warnings(engine):
 
 
 def test_quality_warning_messages_follow_configured_thresholds(monkeypatch):
-    monkeypatch.setattr(excel_preview_mod, "EXCEL_MIN_EXTRACTION_CONFIDENCE", 0.76)
-    monkeypatch.setattr(excel_preview_mod, "EXCEL_AUTO_FLAG_EXTRACTION_CONFIDENCE", 0.91)
+    monkeypatch.setenv("EIDP_CONFIDENCE_REVIEW", "0.76")
+    monkeypatch.setenv("EIDP_CONFIDENCE_AUTO", "0.91")
 
     assert "confidence 0.76 未満の current 行が 3 件" in excel_preview_mod._low_confidence_message(3)
     assert "confidence 0.76以上0.91未満の要確認行が 4 件" in excel_preview_mod._auto_flag_confidence_message(4)
