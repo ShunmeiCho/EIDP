@@ -21,7 +21,7 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v440.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v440.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-195110.zip`
+Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-200424.zip`
 
 ## Verdict
 
@@ -140,6 +140,31 @@ with `ok=true`, present labels `bootstrap_logs`, `bootstrap_progress`,
 records missing `weekly_run_logs` and `stage6_residual_cleanup`, so this is a
 bounded diagnostic canary, not a completed operator real-cycle Stage 6
 sign-off.
+
+The same v440 Windows installation also completed a targeted FY2026 acquisition
+and extraction smoke against four high-confidence `prefecture_aggregator`
+disclosure URLs that were registered by the URL-only bootstrap. The targeted
+command was
+`eidp discover-pdfs --discovery-method prefecture_aggregator --school-id 1317
+--school-id 1369 --school-id 1375 --school-id 1721 --batch-size 4
+--rate-limit 0.5 --request-timeout 12`, and it returned `crawled=4`,
+`found=4`, `downloaded=3`, `failed=1`, `skipped=0`, `prefiltered=0`,
+`candidate_school_mismatch=0`. The three downloaded documents were target
+FY2026 PDFs for school IDs `1317`, `1369`, and `1375`, with total
+`data\pdfs` size still under 1 MB. Targeted ingest of document IDs `1`, `2`,
+and `3` returned `processed=3`, `yearly_upserted=5`,
+`departments_created=3`, `skipped=0`, and `invalid_fiscal_year=0`; two
+documents ended `ingest_status=ingested` and one ended
+`ingest_status=review_pending`. Rebuilding FY2026 school-year tasks returned
+`rebuilt=2418` and `excel_ready=2`, and `export-excel --output
+data\output\v440-targeted-fy2026-canary.xlsx` completed with row counts
+`採録状況=2418`, `対象比率=10022`, `学科別=9722`, and
+`在籍のみ抜粋=9722`. `report ship-readiness --fy 2026 --json` still returned
+`ok=false`: `strict_target_pdf_schools=2`, `strict_target_pdf_rate=0.0008`,
+`operator_reviewable_schools=2`, `estimated_manual_workload_rate=0.9992`,
+and `excel_ready_rate=0.0008`. This proves the current-FY acquisition →
+ingest → Excel path on Windows for a bounded positive sample; it does not
+prove the 60% production yield gate.
 
 The docs-only stale-package replay path remains available for status-only
 follow-up commits:

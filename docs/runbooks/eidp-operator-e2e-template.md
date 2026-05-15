@@ -408,6 +408,11 @@ v440 setup/UI/recovery dry-run 証跡（operator real-cycle ではない）:
 | 2026-05-16 | FY2025 post-bootstrap dry-run | `--dry-run --limit 20` reported `target_missing_school_count=20`, `no_crawlable_url_school_count=794` | confirms selection surface, not acquisition yield | yes |
 | 2026-05-16 | FY2025 bounded actual canary | `--limit 5 --batch-size 5 --request-timeout 8 --rate-limit 0.5` reported `dry_run=false`, `crawled=5`, `found=3`, `downloaded=0`, `failed=3`, `new_document_count=0`, `discovery_rca.batch_plan_item_count=5` | sample had no downloadable target PDFs; keep full cycle gated | yes |
 | 2026-05-16 | refreshed evidence bundle | `logs\stage6-evidence-20260515-195110.zip` verified on Win and Mac with `bootstrap_logs`, `bootstrap_progress`, `discovery_rca`, and `last_run` required labels present | still diagnostic-only; missing `weekly_run_logs` and `stage6_residual_cleanup` | yes |
+| 2026-05-16 | FY2026 targeted acquisition smoke | 4 high-confidence `prefecture_aggregator` disclosure URLs, `crawled=4`, `found=4`, `downloaded=3`, `failed=1`, `prefiltered=0`, `candidate_school_mismatch=0` | positive sample only; not production yield | yes |
+| 2026-05-16 | FY2026 targeted ingest smoke | document IDs `1`, `2`, `3` ingested with `processed=3`, `yearly_upserted=5`, `departments_created=3`, `invalid_fiscal_year=0`; status split `ingested=2`, `review_pending=1` | SupportRecipient stayed `0` for this sample | yes |
+| 2026-05-16 | FY2026 targeted Excel smoke | `rebuild-school-year-tasks --fiscal-year 2026` reported `excel_ready=2`; `export-excel --output data\output\v440-targeted-fy2026-canary.xlsx` reported `採録状況=2418`, `対象比率=10022`, `学科別=9722`, `在籍のみ抜粋=9722` | generated workbook is diagnostic output, not operator sign-off artifact | yes |
+| 2026-05-16 | FY2026 targeted ship-readiness | `ship-readiness --fy 2026` returned `ok=false`, `strict_target_pdf_schools=2`, `strict_target_pdf_rate=0.0008`, `estimated_manual_workload_rate=0.9992`, `excel_ready_rate=0.0008` | production 60% gate remains open | yes |
+| 2026-05-16 | refreshed targeted evidence bundle | `logs\stage6-evidence-20260515-200424.zip` verified on Win and Mac with `ok=true`; latest diagnostics include `sqlite_target_fy_target_pdf_school_count=2` and `ship_readiness_rc=1` | still diagnostic-only; missing `weekly_run_logs` and `stage6_residual_cleanup` | yes |
 
 添付する証跡:
 
