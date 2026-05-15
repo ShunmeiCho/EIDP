@@ -15,12 +15,12 @@ Updated: 2026-05-16
   （真の対象年度 PDF 60-70% 自動取得、推定手作業 30% 以下）の証明には使いません。
 - v1.0 GA 判定は、このテンプレートの完了に加えて、現在の対象年度で
   `ship_readiness_rc=0` または同等の yield evidence が確認された後に行います。
-- v442 では ZIP transfer / setup / recovery / evidence bundle / bounded
-  weekly launcher / browser UI navigation / R7 browser Excel download まで
-  実証済みです。ただし Codex-driven smoke と bounded canary は、業務員 PC
-  1 サイクル sign-off の代替ではありません。下表の「v442 既存証跡」は
-  転記補助であり、空欄のまま残る real-cycle / owner fields を埋める必要があります。
-- 次の real-cycle Stage 6 は v442 lane で実施します。ZIP 内のこのテンプレートは
+- Package-specific transfer/setup/UI evidence is recorded outside this reusable
+  template in `docs/reports/current-release-status.md` and version-specific
+  Stage 6 evidence drafts. Codex-driven smokes and bounded canaries are not a
+  substitute for the owner/operator 1-cycle sign-off fields below.
+- The next real-cycle Stage 6 should use the latest approved Windows lane from
+  `docs/reports/current-release-status.md`. ZIP 内のこのテンプレートは
   自分自身の最終 SHA256 を持てないため、SHA256 は `.sha256` sidecar または
   release-status の値を転記します。
 - version-specific transfer steps, package SHA256, and release-gate logs are
@@ -43,20 +43,20 @@ Updated: 2026-05-16
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
-v442 既存証跡（転記候補、real-cycle sign-off ではない）:
+現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP package snapshot | `22f1a98ffbc3e0aeec2f658c5f1e77927045f14c` |
-| core ZIP | `dist/eidp-windows-v442.zip` |
-| core ZIP sha256 | `4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7` |
-| core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。ZIP を `C:\EIDP-staging\` に平置きした場合は、sidecar の digest 値と `Get-FileHash` の結果を比較する。 |
-| non-Windows gate log | `logs/release-gate-v442.json` |
-| docs-only stale gate logs | `logs/release-gate-v442-docs-only-stale-after-ui-smoke.json`; `logs/release-gate-v442-docs-only-stale-after-browser-smoke.json`; `logs/release-gate-v442-docs-only-stale-after-r7-browser-excel.json`; `logs/release-gate-v442-docs-only-stale-after-objective-checklist.json` |
-| Windows transfer checklist | v442 evidence summarized in `docs/reports/current-release-status.md` |
-| Windows extract path | `C:\Users\cyo20\EIDP-v442-22f1a98` |
-| transferred ZIP | `C:\EIDP-staging\eidp-windows-v442.zip` |
-| Stage 6 evidence bundle | `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip` |
+| EIDP package snapshot | `docs/reports/current-release-status.md` から転記 |
+| core ZIP | `dist/eidp-windows-vXXX.zip` |
+| core ZIP sha256 | `.sha256` sidecar または release-status から転記 |
+| core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。 |
+| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |
+| retroactive matrix log | `logs/release-gate-vXXX-retroactive-matrix.json` if used |
+| Windows transfer checklist | current version-specific checklist |
+| Windows extract path | 実施時に転記 |
+| transferred ZIP | 実施時に転記 |
+| Stage 6 evidence draft | version-specific draft under `docs/reports/` |
 
 ## 2. PC / 環境
 
@@ -73,21 +73,21 @@ v442 既存証跡（転記候補、real-cycle sign-off ではない）:
 | ネットワーク | 社内 / VPN / offline / other |
 | Proxy / FW 影響 | none / observed |
 
-v442 既存証跡（要再確認）:
+既存環境証跡（要再確認、version-specific evidence draft から転記）:
 
 | 項目 | 値 |
 | --- | --- |
-| Hostname / user | `JUNMING` / `junming` |
-| Home | `C:\Users\cyo20` |
-| Windows version | Microsoft Windows 11 Pro `10.0.26200` build `26200` |
-| Locale | `culture=zh-CN`, `ui_culture=zh-CN`（日本語 locale ではない） |
-| Console encoding | output UTF-8 `65001`; input/ANSI/OEM `936` |
-| CPU/RAM | i9-13900HK, 14 cores / 20 logical processors, `31.69 GB` RAM |
-| C drive free | `1063.09 GB` free of `1888.66 GB` |
-| Defender | enabled; real-time, behavior, IOAV, and on-access protection all true |
-| SmartScreen | machine `Off`; user web-content evaluation `1` |
-| Network / proxy | Wi-Fi `M1nG_5G`; IPv4/IPv6 connected; WinHTTP direct access |
-| Evidence JSON | `logs/win-v442-stage6/v442-environment-snapshot-20260516.json` |
+| Hostname / user | |
+| Home | |
+| Windows version | |
+| Locale | |
+| Console encoding | |
+| CPU/RAM | |
+| C drive free | |
+| Defender | |
+| SmartScreen | |
+| Network / proxy | |
+| Evidence JSON | |
 
 ## 3. 証跡採取コマンド
 
@@ -110,8 +110,8 @@ echo $LASTEXITCODE
 Mac preflight（転送前に実施）:
 
 ```text
-shasum -a 256 -c dist/eidp-windows-v442.zip.sha256 -> dist/eidp-windows-v442.zip: OK
-logs/release-gate-v442*.json -> ok=true
+shasum -a 256 -c dist/eidp-windows-vXXX.zip.sha256 -> dist/eidp-windows-vXXX.zip: OK
+logs/release-gate-vXXX-*.json -> ok=true
 package/source freshness, source_dirty, stale/docs_only_stale, validator slice,
 mypy, ruff, discovery-gold, and package verifier results are copied from the
 current release-status / release-gate JSON.
@@ -338,22 +338,22 @@ Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows �
 | interrupted smoke residue | `residual_paths[].exists=false` | | pass / watch / fail |
 | residual cleanup log | `logs\stage6-residual-cleanup-*.json` if cleanup was needed | | pass / watch / fail |
 
-v442 diagnostic-only KPI snapshot:
+Version-specific diagnostic-only KPI snapshot（real-cycle ではない）:
 
 | KPI | Actual | 判定 |
 | --- | ---: | --- |
-| `last_run.json status` | `success` | diagnostic pass |
-| `dry_run` | `false` | bounded canary only |
-| `current_fy` | `2026` | current rolling FY |
-| `selection_mode` | `target_missing` | diagnostic pass |
-| `crawled` | `5` | bounded canary only |
-| `found` | `3` | bounded canary only |
-| `downloaded` | `0` | release gate still open |
-| `new_document_count` | `0` | release gate still open |
-| `target_pdf_auto_yield_pct` | `0.0` | below gate |
-| `ship_gate_status` | `below_gate` | release gate still open |
-| scheduled task recovery | `action_matches_expected=true` | pass |
-| evidence bundle verify | `ok=true`, required labels present | diagnostic pass |
+| `last_run.json status` | version-specific draft から転記 | diagnostic pass / watch / fail |
+| `dry_run` | version-specific draft から転記 | diagnostic only / bounded canary / real cycle |
+| `current_fy` | version-specific draft から転記 | current rolling FY / retroactive only |
+| `selection_mode` | version-specific draft から転記 | diagnostic pass / watch / fail |
+| `crawled` | version-specific draft から転記 | diagnostic only |
+| `found` | version-specific draft から転記 | diagnostic only |
+| `downloaded` | version-specific draft から転記 | release gate status |
+| `new_document_count` | version-specific draft から転記 | release gate status |
+| `target_pdf_auto_yield_pct` | version-specific draft から転記 | release gate status |
+| `ship_gate_status` | version-specific draft から転記 | release gate status |
+| scheduled task recovery | version-specific draft から転記 | pass / watch / fail |
+| evidence bundle verify | version-specific draft から転記 | pass / watch / fail |
 
 KPI メモ:
 
@@ -387,28 +387,17 @@ v408 sandbox 既存証跡（real-cycle ではない、v442 real-cycle の代替�
 | --- | --- | --- | --- | --- |
 | | | | | |
 
-既知の v442 diagnostic-only 障害 / 注意:
+既知の diagnostic-only 障害 / 注意:
 
 | 時刻 | 操作 | 現象 | 回避策 | 未解決 |
 | --- | --- | --- | --- | --- |
-| 2026-05-16 | bounded `weekly_run.bat` canary | `downloaded=0`, `ship_gate_status=below_gate` | operator real-cycle and later R8 production yield are still required | yes |
-| 2026-05-16 | Browser UI / R7 Excel proof | Codex-driven validation, not owner/operator operation | repeat required real-cycle steps with owner/operator sign-off | yes |
-| 2026-05-16 | UI write/audit proof | current v442 lane has browser navigation and R7 Excel proof, but write/audit sandbox proof remains historical v408 copied-DB evidence | repeat manual-entry / fiscal override / audit flush on approved full-cycle copy or real operator cycle | yes |
+| | | | | |
 
-v442 setup/UI/recovery/launcher 証跡（operator real-cycle ではない）:
+Version-specific setup/UI/recovery/launcher 証跡（operator real-cycle ではない）:
 
 | 時刻 | 操作 | 現象 | 回避策 | 未解決 |
 | --- | --- | --- | --- | --- |
-| 2026-05-16 | ZIP/SHA transfer | `dist/eidp-windows-v442.zip` transferred to `C:\EIDP-staging`; Windows SHA matched `4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7` | none | no |
-| 2026-05-16 | `EIDP-setup.bat` | setup/import/SQLite validation all pass on `C:\Users\cyo20\EIDP-v442-22f1a98`; `school_fiscal_year_status_count=2418` | none | no |
-| 2026-05-16 | URL-only bootstrap | `bootstrap_pdfs.bat --skip-discover --url-search off --school-url-crawl off` parsed 47 prefectures and added `official_school_sites_added=1311` | none | no |
-| 2026-05-16 | bounded `weekly_run.bat` canary | process env limited to 5 schools; rc `0`; `crawled=5`, `found=3`, `downloaded=0`, `ship_gate_status=below_gate` | keep release yield gated | yes |
-| 2026-05-16 | `stage6_recovery_check.bat` | Task Scheduler action matches v442 expected action | none | no |
-| 2026-05-16 | `stage6_residual_cleanup.bat` | existing residual count `0`, moved count `0` | none | no |
-| 2026-05-16 | evidence bundle | `logs\stage6-evidence-20260515-205932.zip` verified on Win and Mac with `ok=true` and required labels including `weekly_run_logs` | still diagnostic-only because operator real-cycle is unsigned | yes |
-| 2026-05-16 | Streamlit launch smoke | `scripts\launch.bat` served health/root HTTP 200 on `127.0.0.1:8501` and process was stopped afterward | none | no |
-| 2026-05-16 | Browser navigation smoke | Mac tunnel `18501 -> 8501`; task, PDF/manual-entry, Excel preview, and settings pages rendered | owner/operator click-through still required | yes |
-| 2026-05-16 | FY2025 browser Excel smoke | process-scoped `EIDP_TARGET_FISCAL_YEAR=2025`; Excel preview/download produced row counts `2418/10022/9719/9719`; `.env` remained absent | current R8 production yield still required | yes |
+| | | Copy concrete rows from the version-specific Stage 6 evidence draft after execution. | | |
 
 添付する証跡:
 
