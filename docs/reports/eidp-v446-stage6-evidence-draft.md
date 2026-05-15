@@ -68,6 +68,47 @@ this v446 DB was initialized under FY2026 setup. The FY2025 Excel preview stayed
 at `Excel出力可 0/2418`, so this attempt is diagnostic only and does not replace
 the v442 R7 browser Excel proof.
 
+## Next Operator Real-Cycle Checklist
+
+Use this checklist for the next v446 operator-PC run. It is intentionally not a
+retroactive proof and not a bounded canary.
+
+1. Keep v446 as the current deploy and v442 as the fallback. If staging or
+   deploy roots have additional old versions, run
+   `python scripts\prune_release_artifacts.py --dist-dir C:\EIDP-staging --deploy-parent C:\Users\cyo20 --keep-latest 1 --keep-version 442 --json`
+   first, review the dry-run, and add `--apply` only if the candidates are old
+   versioned ZIPs, sidecars, or `EIDP-vNNN-<commit>` deploy directories.
+2. Do not delete or edit `data\eidp.sqlite3`,
+   `data\audit\manual-actions.jsonl`, `data\master.xlsx`, `data\pdfs\`, or
+   operator-generated `data\output\*.xlsx` files during the run.
+3. From `C:\Users\cyo20\EIDP-v446-e9f91cc`, verify the transferred ZIP hash
+   against the SHA256 above, then run
+   `scripts\validate_install.bat --after-setup --json`.
+4. Clear canary variables before the real cycle:
+   `EIDP_WEEKLY_LIMIT`, `EIDP_WEEKLY_BATCH_SIZE`, `EIDP_WEEKLY_RATE_LIMIT`, and
+   `EIDP_WEEKLY_REQUEST_TIMEOUT` must be unset unless the result is explicitly
+   recorded as diagnostic-only.
+5. Do not persist `EIDP_TARGET_FISCAL_YEAR` in `.env`. For the current v1.0
+   lane, use the default rolling target FY2026/R8 path.
+6. Launch through `EIDP-start.bat`, have the operator open the four quick pages
+   and the needed detailed pages, then run the normal weekly cycle from the
+   packaged launcher. Record start/end time and any Defender, SmartScreen, proxy,
+   Excel-lock, or UI error shown to the operator.
+7. After the run, execute
+   `scripts\validate_install.bat --after-setup --after-weekly --json`,
+   `EIDP-stage6-evidence.bat`, and `EIDP-stage6-verify-evidence.bat`.
+   Pull the evidence bundle back to Mac and verify it again with
+   `scripts/verify_stage6_evidence.py`.
+8. Copy the real values into
+   `docs/runbooks/eidp-operator-e2e-template.md`: `last_run.status`,
+   `current_fy`, crawled/found/downloaded counts, target PDF auto-yield,
+   operator-reviewable count, `ship_gate_status`, evidence bundle path,
+   recovery/residual-cleanup status, and owner/operator sign-off.
+
+Stop before a v1.0 tag if the run remains `ship_gate_status=below_gate`, if the
+target PDF auto-yield is still below the 60-70% ship line, or if the template
+real-cycle rows are not fully populated by the owner/operator.
+
 ## Remaining Blocker
 
 Do not sign this draft as Stage 6 complete. The remaining blocker is still the
