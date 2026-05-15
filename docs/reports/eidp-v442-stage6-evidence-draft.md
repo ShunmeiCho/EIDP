@@ -78,6 +78,31 @@ production yield gate are still missing.
 | Ship line 60-70% true target PDF / <=30% manual work | Latest v442 bounded canary has `target_pdf_auto_yield_pct=0.0` and `ship_gate_status=below_gate`. | Failing |
 | Owner/operator sign-off | `docs/runbooks/eidp-operator-e2e-template.md` still needs real-cycle rows and signatures. | Missing |
 
+## FY2026 Canary RCA
+
+The bounded v442 weekly canary is small, but its failure mode is useful because
+it points upstream of OCR and Excel. The run selected 5 target-missing schools.
+Discovery crawled all 5, found candidates for 3, downloaded 0 target PDFs, and
+produced 34 rejection rows.
+
+| RCA field | Result |
+| --- | --- |
+| Batch plan items | 5 |
+| Item buckets | `non_target_candidates_only=3`, `no_pdf_candidates=2` |
+| Rejection reasons | `candidate_school_mismatch=23`, `pre_filtered_non_target_hint=9`, `no_candidates_found=2` |
+| Affected sample | `日本工学院専門学校`, `日本工学院八王子専門学校`, `日本工学院北海道専門学校`, `東京モード学園`, `大阪モード学園` |
+| Primary implication | The v442 sample failed before PDF extraction. Next yield work should focus on school/site matching, shared corporate pages, target-year evidence, and no-PDF candidate discovery rather than OCR or Excel. |
+
+Examples from the RCA batch:
+
+- The 日本工学院 sample mostly surfaced GPA / diploma policy PDFs and historical
+  `令和7年度` or older disclosure PDFs on shared NEEC pages; these were correctly
+  rejected as non-target or school-mismatch evidence for FY2026.
+- 東京モード学園 and 大阪モード学園 landed in `no_pdf_candidates` from
+  `https://www.nkz.ac.jp/`, so the next investigation should inspect whether
+  the target PDFs are absent, moved behind a script-rendered disclosure page, or
+  reachable through a different official URL.
+
 ## Next Windows Steps
 
 1. Keep v442 as the current Stage 6 lane; keep v441 as fallback.
