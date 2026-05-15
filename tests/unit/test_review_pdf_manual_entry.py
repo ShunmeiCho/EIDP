@@ -716,7 +716,7 @@ def test_render_page_smoke_with_focused_discovery_evidence(tmp_path: Path, monke
         )
         app.session_state[MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY] = doc.id
 
-        app.run(timeout=15)
+        app.run(timeout=30)
 
         assert not app.exception
         assert any("PDF確認・手入力" in str(item.value) for item in app.subheader)

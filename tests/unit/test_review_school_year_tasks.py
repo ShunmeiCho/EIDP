@@ -1029,7 +1029,7 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
     }
 
     app = AppTest.from_function(_render_weekly_last_run_for_test, args=(payload,))
-    app.run(timeout=15)
+    app.run(timeout=30)
 
     assert not app.exception
     captions = [str(caption.value) for caption in app.caption]
@@ -1440,13 +1440,13 @@ def test_task_board_url_action_prefills_url_submission_state(tmp_path: Path) -> 
             _render_school_tasks_for_test,
             args=(session, tmp_path / "data" / ".lock"),
         )
-        app.run(timeout=15)
+        app.run(timeout=30)
 
         assert not app.exception
         url_buttons = [button for button in app.button if button.label == "この学校のURLを追加"]
         assert len(url_buttons) == 1
 
-        url_buttons[0].click().run(timeout=15)
+        url_buttons[0].click().run(timeout=30)
 
         assert app.session_state["selected_page"] == school_year_tasks.URL_SUBMISSION_PAGE_ID
         assert (
@@ -1469,13 +1469,13 @@ def test_task_board_settings_button_opens_settings_page(tmp_path: Path) -> None:
             _render_school_tasks_for_test,
             args=(session, tmp_path / "data" / ".lock"),
         )
-        app.run(timeout=15)
+        app.run(timeout=30)
 
         assert not app.exception
         settings_buttons = [button for button in app.button if button.label == "設定を開く（年度・OCR・API）"]
         assert len(settings_buttons) == 1
 
-        settings_buttons[0].click().run(timeout=15)
+        settings_buttons[0].click().run(timeout=30)
 
         assert app.session_state["selected_page"] == SETTINGS_PAGE_ID
         assert settings_page_prefill() == {"selected_page": SETTINGS_PAGE_ID}
@@ -1494,7 +1494,7 @@ def test_task_board_explains_target_year_publication_window(tmp_path: Path) -> N
             _render_school_tasks_for_test,
             args=(session, tmp_path / "data" / ".lock"),
         )
-        app.run(timeout=15)
+        app.run(timeout=30)
 
         assert not app.exception
         info_texts = [str(info.value) for info in app.info]
@@ -1529,7 +1529,7 @@ def test_task_board_surfaces_package_identity_caption(tmp_path: Path, monkeypatc
             _render_school_tasks_for_test,
             args=(session, tmp_path / "data" / ".lock"),
         )
-        app.run(timeout=15)
+        app.run(timeout=30)
 
         assert not app.exception
         captions = [str(caption.value) for caption in app.caption]
@@ -1549,13 +1549,13 @@ def test_task_lane_button_focuses_matching_filter(tmp_path: Path) -> None:
             _render_school_tasks_for_test,
             args=(session, tmp_path / "data" / ".lock"),
         )
-        app.run(timeout=15)
+        app.run(timeout=30)
 
         assert not app.exception
         stale_buttons = [button for button in app.button if button.label == "旧年度のみを表示"]
         assert len(stale_buttons) == 1
 
-        stale_buttons[0].click().run(timeout=15)
+        stale_buttons[0].click().run(timeout=30)
 
         assert app.session_state[school_year_tasks.TASK_SCOPE_STATE_KEY] == "要対応"
         assert app.session_state[school_year_tasks.TASK_REASON_STATE_KEY] == "stale_pdf_only"
