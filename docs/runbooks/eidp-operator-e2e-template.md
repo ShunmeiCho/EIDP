@@ -43,21 +43,20 @@ Updated: 2026-05-16
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
-現行投入候補（v446。Mac / non-Windows gate 済み、Windows diagnostic lane 済み、
-operator real-cycle 未完）:
+現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP package snapshot | `e9f91ccbb51f82cb594be6567076df50276cc97a` |
-| core ZIP | `dist/eidp-windows-v446.zip` |
-| core ZIP sha256 | `e0436a08d12d09987f15f96c814de2290010714477e54ae0dcff0f290a3d3878` |
+| EIDP package snapshot | `docs/reports/current-release-status.md` から転記 |
+| core ZIP | `dist/eidp-windows-vXXX.zip` |
+| core ZIP sha256 | `.sha256` sidecar または release-status から転記 |
 | core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。 |
-| non-Windows gate log | `logs/release-gate-v446.json` |
+| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |
 | retroactive matrix log | `logs/release-gate-vXXX-retroactive-matrix.json` if used |
-| Windows transfer checklist | `docs/reports/eidp-v446-stage6-evidence-draft.md` |
-| Windows extract path | `C:\Users\cyo20\EIDP-v446-e9f91cc` |
-| transferred ZIP | `C:\EIDP-staging\eidp-windows-v446.zip` |
-| Stage 6 evidence draft | `docs/reports/eidp-v446-stage6-evidence-draft.md` |
+| Windows transfer checklist | current version-specific checklist |
+| Windows extract path | 実施時に転記 |
+| transferred ZIP | 実施時に転記 |
+| Stage 6 evidence draft | version-specific draft under `docs/reports/` |
 
 ## 2. PC / 環境
 
