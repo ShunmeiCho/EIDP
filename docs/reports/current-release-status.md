@@ -2,10 +2,10 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `2f339ce82dbcfdb1a000fe378b304596823de4a6`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v440.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v440.zip`
-Latest Mac-core package SHA256: `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`
+Latest Mac/non-Windows package snapshot: `33044bd28b05c69b86ad0ebe1db96672b19632d3`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v441.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v441.zip`
+Latest Mac-core package SHA256: `53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v440.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v438.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v440.zip`
@@ -27,8 +27,11 @@ Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-
 
 Status: **NOT COMPLETE**
 
-v440 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `2f339ce82dbcfdb1a000fe378b304596823de4a6`, which
+v441 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `33044bd28b05c69b86ad0ebe1db96672b19632d3`, which
+adds raw target-year discovery rejection JSONL files to the Stage 6 evidence
+bundle so RCA evidence can be rechecked without returning to the operator PC.
+v440 was built from package snapshot `2f339ce82dbcfdb1a000fe378b304596823de4a6`, which
 includes the v437 structured logging hardening, v438/v439 release-gate
 cleanup, and v440 default cleanup for auto-generated retroactive Excel app
 roots. Excel export thresholds are read per call, proposal-review write
@@ -46,16 +49,16 @@ manual-entry yearly revision reads, writes manual-entry `SchoolYearStatus` and
 replays Stage 6 performance indexes for existing SQLite operator DBs, locks
 school URL crawl-evidence JSONL appends, and configures structured JSONL
 logging for the main operator entrypoints. The operator E2E template remains
-package-neutral. The v440 package was built with
+package-neutral. The v441 package was built with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
-dist/eidp-windows-v440.zip --latest-alias`. The build wrote
-`dist/eidp-windows-v440.zip`, `dist/eidp-windows-v440.zip.sha256`, and refreshed
+dist/eidp-windows-v441.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v441.zip`, `dist/eidp-windows-v441.zip.sha256`, and refreshed
 `dist/eidp-windows.zip`. The release gate confirmed SHA256
-`a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e` and
-`dist/eidp-windows-v440.zip.sha256` carries the same value.
-`scripts/verify_windows_distribution.py dist/eidp-windows-v440.zip` returned
-`ok=true` inside the full release gate with
-`git_commit=2f339ce82dbcfdb1a000fe378b304596823de4a6`, `git_dirty=false`,
+`53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9` and
+`dist/eidp-windows-v441.zip.sha256` carries the same value.
+`scripts/verify_windows_distribution.py dist/eidp-windows-v441.zip` returned
+`ok=true` inside the v441 package gate with
+`git_commit=33044bd28b05c69b86ad0ebe1db96672b19632d3`, `git_dirty=false`,
 `wheel_count=78`, `project_wheel_count=1`, `entry_count=3080`,
 `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
@@ -79,15 +82,17 @@ pytest --cov=src/eidp --cov-report=term --cov-fail-under=80` returned
 reached. Total coverage: 80.03%`.
 
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v440.zip --json --output logs/release-gate-v440-full.json`
+dist/eidp-windows-v441.zip --skip-full-unit --json --output logs/release-gate-v441.json`
 returned `ok=true`. The recorded package/source freshness check reported
-`package_commit=2f339ce82dbcfdb1a000fe378b304596823de4a6`,
-`source_commit=2f339ce82dbcfdb1a000fe378b304596823de4a6`,
-`source_dirty=false`, and `stale=false`; `unit_full` returned `1613 passed`; the
+`package_commit=33044bd28b05c69b86ad0ebe1db96672b19632d3`,
+`source_commit=33044bd28b05c69b86ad0ebe1db96672b19632d3`,
+`source_dirty=false`, and `stale=false`; the
 validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v440 has Windows transfer/setup/UI-smoke/evidence-smoke proof. The ZIP and
+v441 has Mac/non-Windows package and Stage 6 evidence-bundle proof only; it has
+not yet been transferred to Windows. v440 remains the latest package with
+Windows transfer/setup/UI-smoke/evidence-smoke proof. The ZIP and
 sidecar were copied to `C:\EIDP-staging\`; Win-side `Get-FileHash` matched
 SHA256 `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`.
 The package was expanded to `C:\Users\cyo20\EIDP-v440-2f339ce8` without
