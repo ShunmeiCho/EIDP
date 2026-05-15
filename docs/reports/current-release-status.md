@@ -35,7 +35,11 @@ release-gate helper, with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
 dist/eidp-windows-v410.zip --latest-alias`. The build wrote
 `dist/eidp-windows-v410.zip`, `dist/eidp-windows-v410.zip.sha256`, and refreshed
-`dist/eidp-windows.zip`. `scripts/verify_windows_distribution.py
+`dist/eidp-windows.zip`. The latest alias was rechecked after the docs-only
+status refresh: `shasum -a 256 dist/eidp-windows-v410.zip dist/eidp-windows.zip`
+reported the same SHA256 for both files, and `scripts/verify_windows_distribution.py
+dist/eidp-windows.zip --json` returned `ok=true` with packaged
+`git_commit=98d9f792860b40e537ec61a8b470859be7bb70c0`. `scripts/verify_windows_distribution.py
 dist/eidp-windows-v410.zip --json` returned `ok=true` with SHA256
 `cf7c444c38e023fc534986e21eddb0502cead9721124dffd78406d357f544714`,
 `git_commit=98d9f792860b40e537ec61a8b470859be7bb70c0`, `git_dirty=false`,
