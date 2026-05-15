@@ -60,11 +60,11 @@ instead of hand-editing the repo-local `data/eidp.sqlite3`:
 
 ```bash
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v414.zip \
+  dist/eidp-windows-v415.zip \
   --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx \
   --retroactive-fiscal-year 2025 \
   --json \
-  --output logs/release-gate-v414-retroactive.json
+  --output logs/release-gate-v415-retroactive.json
 ```
 
 The helper creates an isolated `_temp/non-windows-retroactive-*` app root with
