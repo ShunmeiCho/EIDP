@@ -8,7 +8,7 @@ Latest Mac-core-verifier-clean package: `dist/eidp-windows-v441.zip`
 Latest Mac-core package SHA256: `53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v440.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v438.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v440.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v441.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v438.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v440.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
@@ -90,9 +90,15 @@ returned `ok=true`. The recorded package/source freshness check reported
 validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v441 has Mac/non-Windows package and Stage 6 evidence-bundle proof only; it has
-not yet been transferred to Windows. v440 remains the latest package with
-Windows transfer/setup/UI-smoke/evidence-smoke proof. The ZIP and
+v441 has Mac/non-Windows package, Stage 6 evidence-bundle, and Windows
+transfer/SHA proof. The ZIP and sidecar were copied to `C:\EIDP-staging\`;
+Win-side `Get-FileHash` matched SHA256
+`53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9`, and a
+read-only Win-side zipfile check confirmed `BUILD_INFO.git_commit` is
+`33044bd28b05c69b86ad0ebe1db96672b19632d3` and that packaged
+`scripts/collect_stage6_evidence.py` contains the
+`*-discovery-rejections.jsonl` evidence pattern. v440 remains the latest
+package with Windows setup/UI-smoke/evidence-smoke proof. The v440 ZIP and
 sidecar were copied to `C:\EIDP-staging\`; Win-side `Get-FileHash` matched
 SHA256 `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`.
 The package was expanded to `C:\Users\cyo20\EIDP-v440-2f339ce8` without
