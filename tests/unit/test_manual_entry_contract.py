@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from eidp.db.models import (
     Department,
@@ -154,6 +154,37 @@ def test_append_only_demotes_prior_current_revision(engine):
         assert [r.revision for r in rows] == [1, 2]
         assert [r.is_current for r in rows] == [False, True]
         assert rows[1].enrollment == 12
+
+
+def test_manual_entry_locks_existing_yearly_rows_before_append(engine, monkeypatch):
+    """Manual entry shares the append-only revision contract with ingest.
+
+    SQLite does not enforce ``FOR UPDATE``, so this pins the SQLAlchemy call
+    shape directly. Without the row lock, two Postgres writers can both read
+    the same max revision/current row and then race on the insert/demotion pair.
+    """
+    lock_calls: list[tuple[object, ...]] = []
+    original_with_for_update = Query.with_for_update
+
+    def spy_with_for_update(self: Query, *args: object, **kwargs: object) -> Query:
+        entities = tuple(desc.get("entity") for desc in self.column_descriptions)
+        if DepartmentYearly in entities:
+            lock_calls.append(entities)
+        return original_with_for_update(self, *args, **kwargs)
+
+    monkeypatch.setattr(Query, "with_for_update", spy_with_for_update)
+
+    with Session(engine) as session:
+        _, doc = _seed(session)
+        session.commit()
+
+        save_manual_entries(
+            session, document_id=doc.id, fiscal_year=2026,
+            entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+        )
+        session.commit()
+
+    assert lock_calls, "save_manual_entries must lock DepartmentYearly rows before append"
 
 
 def test_department_change_only_written_when_explicit(engine):

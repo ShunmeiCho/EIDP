@@ -311,6 +311,7 @@ def save_manual_entries(
                 DepartmentYearly.department_id == dept.id,
                 DepartmentYearly.fiscal_year == fiscal_year,
             )
+            .with_for_update()
             .all()
         )
         prior_current = next((r for r in existing_rows if r.is_current), None)
