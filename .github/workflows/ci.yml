@@ -15,7 +15,7 @@ jobs:
   quality:
     name: Python quality gates
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       PYTHONUTF8: "1"
       PYTHONIOENCODING: "utf-8"
@@ -59,9 +59,41 @@ jobs:
           tests/unit/test_windows_distribution_verifier.py
           tests/unit/test_stage6_recovery_check.py
           tests/unit/test_stage6_residual_cleanup.py
+          tests/unit/test_ci_workflow_contract.py
+
+      - name: Bandit high-severity security scan
+        run: >
+          uv run --with bandit bandit
+          -q
+          --severity-level high
+          -r
+          src/eidp
+          scripts/build_windows_zip.py
+          scripts/validate_windows_install.py
+          scripts/verify_windows_distribution.py
+          scripts/run_non_windows_release_gates.py
+          scripts/run_retroactive_excel_matrix.py
+          scripts/collect_stage6_evidence.py
+          scripts/verify_stage6_evidence.py
+          scripts/stage6_recovery_check.py
+          scripts/stage6_residual_cleanup.py
 
       - name: Mypy
         run: uv run mypy src scripts/run_retroactive_excel_matrix.py
 
       - name: Pytest with coverage
         run: uv run pytest --cov=src/eidp --cov-report=term --cov-fail-under=80
+
+      - name: Download Windows runtime
+        run: uv run python scripts/download_windows_runtime.py
+
+      - name: Build Windows ZIP
+        run: uv run python scripts/build_windows_zip.py --out-zip dist/eidp-windows-ci.zip
+
+      - name: Non-Windows release gate
+        run: >
+          uv run python scripts/run_non_windows_release_gates.py
+          dist/eidp-windows-ci.zip
+          --skip-full-unit
+          --json
+          --output logs/release-gate-ci.json
