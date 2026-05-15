@@ -54,6 +54,9 @@ class SchoolResolver:
     def build(self) -> None:
         """Build all lookup indices from current School table."""
         schools = self._session.query(School).all()
+        self._exact.clear()
+        self._norm.clear()
+        self._pref_name.clear()
         self._name_only.clear()
         for s in schools:
             key = (s.prefecture, s.corporation_name, s.school_name)
@@ -72,7 +75,14 @@ class SchoolResolver:
         log.info("school_resolver_built", exact=len(self._exact),
                  norm=len(self._norm), pref_name=len(self._pref_name))
 
-    def resolve(self, prefecture: str, corporation_name: str, school_name: str) -> int | None:
+    def resolve(
+        self,
+        prefecture: str,
+        corporation_name: str,
+        school_name: str,
+        *,
+        reconcile_prefecture: bool = False,
+    ) -> int | None:
         """Resolve a school to its DB id using cascading lookup.
 
         Cascade: exact -> NFKC normalized -> (pref+name) -> name-only (unique) -> auto-create.
@@ -108,7 +118,11 @@ class SchoolResolver:
         candidates = self._name_only.get(norm_name, [])
         if len(candidates) == 1:
             sid = candidates[0]
+            if reconcile_prefecture:
+                self._reconcile_prefecture_for_unique_name_match(sid, prefecture, school_name)
             self._exact[key] = sid
+            self._norm[norm_key] = sid
+            self._pref_name[pn_key] = sid
             self._record_alias(sid, school_name, "name_only_match")
             return sid
 
@@ -150,6 +164,31 @@ class SchoolResolver:
                 source=source,
             )
             self._session.add(alias)
+
+    def _reconcile_prefecture_for_unique_name_match(
+        self,
+        school_id: int,
+        prefecture: str,
+        school_name: str,
+    ) -> None:
+        """Repair master.xlsx cross-sheet prefecture drift for a unique school name."""
+        if not prefecture:
+            return
+
+        school = self._session.get(School, school_id)
+        if school is None or school.prefecture == prefecture:
+            return
+
+        old_prefecture = school.prefecture
+        school.prefecture = prefecture
+        log.info(
+            "school_prefecture_reconciled",
+            school_id=school_id,
+            school_name=school_name,
+            old_prefecture=old_prefecture,
+            new_prefecture=prefecture,
+            source="name_only_match",
+        )
 
     @property
     def auto_created_count(self) -> int:
@@ -421,7 +460,7 @@ def import_gakka(
         if not dept_name:
             continue
 
-        school_id = resolver.resolve(prefecture, corp_name, school_name)
+        school_id = resolver.resolve(prefecture, corp_name, school_name, reconcile_prefecture=True)
         if school_id is None:
             stats["school_misses"] += 1
             continue

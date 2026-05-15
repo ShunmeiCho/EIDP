@@ -225,6 +225,38 @@ def test_taisho_hiritu_skips_unrealistic_future_fiscal_year(engine):
         assert session.query(SupportRecipient).count() == 0
 
 
+def test_taisho_hiritu_name_only_match_does_not_reconcile_school_prefecture(engine):
+    with Session(engine) as session:
+        school = School(
+            prefecture="愛知県",
+            corporation_name="テスト法人",
+            school_name="テスト専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.commit()
+
+        resolver = SchoolResolver(session)
+        resolver.build()
+        ws = _build_taisho_hiritu_ws([
+            {
+                "year": "令和7年度",
+                "prefecture": "東京都",
+                "corp": "テスト法人",
+                "school": "テスト専門学校",
+                "annual_total": 100,
+                "grand_total": 100,
+            },
+        ])
+
+        import_taisho_hiritu(ws, session, resolver)
+        session.flush()
+
+        session.refresh(school)
+        assert school.prefecture == "愛知県"
+
+
 def test_parse_fiscal_year_rejects_unrealistic_future_era_label() -> None:
     assert _parse_fiscal_year("令和99年度", max_fiscal_year=2027) is None
     assert _parse_fiscal_year("令和9年度", max_fiscal_year=2027) == 2027
@@ -316,6 +348,44 @@ def test_gakka_import_normalizes_specialized_course_suffix_to_field_label(engine
 
         dept = session.query(Department).filter(Department.school_id == school.id).one()
         assert dept.course_name == "医療"
+
+
+def test_gakka_import_reconciles_unique_school_prefecture_from_department_sheet(engine):
+    with Session(engine) as session:
+        school = School(
+            prefecture="東京都",
+            corporation_name="片柳学園",
+            school_name="日本工学院北海道専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+        session.add(school)
+        session.commit()
+
+        resolver = SchoolResolver(session)
+        resolver.build()
+        import_gakka(
+            _build_gakka_ws([
+                {
+                    "year": 2026,
+                    "prefecture": "北海道",
+                    "corp": "片柳学園",
+                    "school": "日本工学院北海道専門学校",
+                    "department": "情報処理科",
+                    "capacity": 40,
+                    "enrollment": 80,
+                }
+            ]),
+            session,
+            resolver,
+        )
+        session.flush()
+
+        session.refresh(school)
+        assert school.prefecture == "北海道"
+
+        resolved = resolver.resolve("北海道", "片柳学園", "日本工学院北海道専門学校")
+        assert resolved == school.id
 
 
 def test_gakka_reimport_does_not_overwrite_pdf_current_revision(engine):
