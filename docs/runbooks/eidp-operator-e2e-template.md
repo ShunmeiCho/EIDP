@@ -311,9 +311,9 @@ v408 R7 retroactive 既存証跡（FY2026 yield ではない）:
 
 | FY | Gate log | 判定 | Business diff | Export rows |
 | ---: | --- | --- | --- | --- |
-| 2025 | | | | |
-| 2024 | | | | |
-| 2023 | | | | |
+| 2025 | `logs/release-gate-v440-retroactive-fy2025-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
+| 2024 | `logs/release-gate-v440-retroactive-fy2024-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
+| 2023 | `logs/release-gate-v440-retroactive-fy2023-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
 
 ## 6. KPI 判定
 

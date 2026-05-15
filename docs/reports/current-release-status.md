@@ -1,16 +1,16 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-15
+Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `7553c7480a001a1ebec687dcb743c8bd9529d6d4`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v437.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v437.zip`
-Latest Mac-core package SHA256: `ed0d677fd2d36f7bd9f884185412180a6764beef9632543e5e36eb3c766ed33c`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v437.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v408.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v408.zip`
+Latest Mac/non-Windows package snapshot: `2f339ce82dbcfdb1a000fe378b304596823de4a6`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v440.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v440.zip`
+Latest Mac-core package SHA256: `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v440.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v438.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v438.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v438.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v438.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v408.zip`
@@ -21,48 +21,41 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence draft: `docs/reports/eidp-v437-stage6-evidence-draft.md`
+Current Stage 6 evidence draft: pending v440 transfer; latest draft remains `docs/reports/eidp-v437-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v437 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `7553c7480a001a1ebec687dcb743c8bd9529d6d4`, which
-includes the v424 configurable MEXT reconciliation school-type scope, the v425
-PR1 operator hardening, the v436 Mac-side hardening, and the v437 structured
-logging hardening. Excel export thresholds
-are read per call, proposal-review write helpers require an app lock, Stage 6
-residual cleanup refuses protected runtime files, and operator settings no
-longer persist `EIDP_TARGET_FISCAL_YEAR` into `.env`. v437 also preserves
-provider-specific OCR extraction methods for PaddleOCR/PyMuPDF, widens
-`DepartmentYearly` and `SupportRecipient` confidence precision to
-`Numeric(4,3)`, makes the fiscal-year override pipeline reject out-of-range
-target years directly, and audits collateral target-year current-row demotions
-before replacing them. v437 widens the CLI write-lock contract tests to cover
-all `cli_*.py` command modules and attribute-form write helper calls. v437 also
-surfaces future or otherwise out-of-cap ingest fiscal-year annotations through
-`invalid_fiscal_year` stats/evidence instead of collapsing them into a generic
-no-year parse failure, locks manual-entry `DepartmentYearly` revision reads
-before appending a new current row, writes manual-entry `SchoolYearStatus` and
+v440 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `2f339ce82dbcfdb1a000fe378b304596823de4a6`, which
+includes the v437 structured logging hardening, v438/v439 release-gate
+cleanup, and v440 default cleanup for auto-generated retroactive Excel app
+roots. Excel export thresholds are read per call, proposal-review write
+helpers require an app lock, Stage 6 residual cleanup refuses protected runtime
+files, and operator settings no longer persist `EIDP_TARGET_FISCAL_YEAR` into
+`.env`. v440 also preserves provider-specific OCR extraction methods for
+PaddleOCR/PyMuPDF, widens `DepartmentYearly` and `SupportRecipient` confidence
+precision to `Numeric(4,3)`, makes the fiscal-year override pipeline reject
+out-of-range target years directly, and audits collateral target-year
+current-row demotions before replacing them. v440 widens the CLI write-lock
+contract tests to cover all `cli_*.py` command modules and attribute-form
+write helper calls, surfaces invalid ingest fiscal-year annotations, locks
+manual-entry yearly revision reads, writes manual-entry `SchoolYearStatus` and
 `SupportRecipient` rows, aligns installed-wheel app-root/data-dir defaults,
-replays Stage 6 performance indexes for existing SQLite operator DBs, and locks
-school URL crawl-evidence JSONL appends. v437 configures `structlog` and stdlib
-logging through a shared JSON renderer, writes a rotating `logs/eidp.jsonl`, and
-wires logging setup into CLI, Streamlit, and weekly-runner entrypoints.
-The operator E2E
-template remains package-neutral after the
-rejected v421 build exposed hard-coded v420 package/SHA fields inside the
-packaged template. Do not transfer v421. The v437 package was built with
+replays Stage 6 performance indexes for existing SQLite operator DBs, locks
+school URL crawl-evidence JSONL appends, and configures structured JSONL
+logging for the main operator entrypoints. The operator E2E template remains
+package-neutral. The v440 package was built with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
-dist/eidp-windows-v437.zip --latest-alias`. The build wrote
-`dist/eidp-windows-v437.zip`, `dist/eidp-windows-v437.zip.sha256`, and refreshed
+dist/eidp-windows-v440.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v440.zip`, `dist/eidp-windows-v440.zip.sha256`, and refreshed
 `dist/eidp-windows.zip`. The release gate confirmed SHA256
-`ed0d677fd2d36f7bd9f884185412180a6764beef9632543e5e36eb3c766ed33c` and
-`dist/eidp-windows-v437.zip.sha256` carries the same value.
-`scripts/verify_windows_distribution.py dist/eidp-windows-v437.zip` returned
+`a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e` and
+`dist/eidp-windows-v440.zip.sha256` carries the same value.
+`scripts/verify_windows_distribution.py dist/eidp-windows-v440.zip` returned
 `ok=true` inside the full release gate with
-`git_commit=7553c7480a001a1ebec687dcb743c8bd9529d6d4`, `git_dirty=false`,
+`git_commit=2f339ce82dbcfdb1a000fe378b304596823de4a6`, `git_dirty=false`,
 `wheel_count=78`, `project_wheel_count=1`, `entry_count=3080`,
 `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
@@ -71,8 +64,9 @@ sources. The v437 full gate also covers the launch-script localhost contract,
 the URL-annotation URI filter, the operator review lock regressions, per-call
 Excel threshold regression, protected-runtime-file residual cleanup guard,
 target-fiscal-year non-persistence regression, OCR provider method regression,
-confidence precision contract, and fiscal-year override collateral-demotion
-audit regression. The v437 full unit suite also covers the expanded CLI
+confidence precision contract, fiscal-year override collateral-demotion audit
+regression, and retroactive Excel app-root cleanup regression. The v440 full
+unit suite also covers the expanded CLI
 write-lock AST contract and the `invalid_fiscal_year` ingest regression, plus
 the manual-entry row-lock, support-recipient, app-root/data-dir, and SQLite
 performance-index regressions. It also covers structured JSONL logging for both
@@ -85,45 +79,47 @@ pytest --cov=src/eidp --cov-report=term --cov-fail-under=80` returned
 reached. Total coverage: 80.03%`.
 
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v437.zip --json --output logs/release-gate-v437-full.json`
+dist/eidp-windows-v440.zip --json --output logs/release-gate-v440-full.json`
 returned `ok=true`. The recorded package/source freshness check reported
-`package_commit=7553c7480a001a1ebec687dcb743c8bd9529d6d4`,
-`source_commit=7553c7480a001a1ebec687dcb743c8bd9529d6d4`,
-`source_dirty=false`, and `stale=false`; `unit_full` returned `1600 passed`; the
+`package_commit=2f339ce82dbcfdb1a000fe378b304596823de4a6`,
+`source_commit=2f339ce82dbcfdb1a000fe378b304596823de4a6`,
+`source_dirty=false`, and `stale=false`; `unit_full` returned `1613 passed`; the
 validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v437 has no Windows transfer/setup/UI proof yet because SSH-Win is currently
-disconnected.
+v440 has no Windows transfer/setup/UI proof yet. The latest Windows-side
+package currently validated is v438, where residual cleanup, recovery check,
+evidence collection, and evidence verification all completed after old v384
+smoke files were archived.
 
 The docs-only stale-package replay path remains available for status-only
 follow-up commits:
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v437.zip --skip-full-unit --allow-docs-only-stale-package
---json --output logs/release-gate-v437-docs-only-stale-after-status-refresh.json`.
+dist/eidp-windows-v440.zip --skip-full-unit --allow-docs-only-stale-package
+--json --output logs/release-gate-v440-docs-only-stale-after-status-refresh.json`.
 Treat that as a
 current-source replay convenience only; it is not a Windows transfer/setup/UI
 proof and it must still reject dirty tracked source or any non-doc source delta.
 
-Mac-only v437 retroactive matrix gates passed for FY2025, FY2024, and FY2023
+Mac-only v440 retroactive matrix gates passed for FY2025, FY2024, and FY2023
 without SSH/Windows. The matrix run wrote
-`logs/release-gate-v437-retroactive-matrix.json` with `ok=true` and
-`case_count=3`. FY2025 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2025-20260515-184145` and compared against
-`_temp/v408-r7-cli-export.xlsx`; FY2024 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2024-20260515-190026` and compared against
-`_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx`;
-FY2023 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2023-20260515-190422` and compared against
-`_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx`.
-`logs/release-gate-v437-retroactive-fy2025-reference.json`,
-`logs/release-gate-v437-retroactive-fy2024-reference.json`, and
-`logs/release-gate-v437-retroactive-fy2023-reference.json` all returned
+`logs/release-gate-v440-retroactive-matrix.json` with `ok=true` and
+`case_count=3`. FY2025 compared against `_temp/v408-r7-cli-export.xlsx`;
+FY2024 compared against
+`_temp/non-windows-retroactive-fy2024-20260516-032017/output/retroactive-fy2024-export.xlsx`;
+FY2023 compared against
+`_temp/non-windows-retroactive-fy2023-20260516-032102/output/retroactive-fy2023-export.xlsx`.
+`logs/release-gate-v440-retroactive-fy2025-reference.json`,
+`logs/release-gate-v440-retroactive-fy2024-reference.json`, and
+`logs/release-gate-v440-retroactive-fy2023-reference.json` all returned
 `ok=true`; their validator/distribution unit slices returned `164 passed`,
 their package verifiers passed, all three isolated exports wrote
 `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`,
 and all three `retroactive_excel_diff_reference` steps returned
-`missing_rows=0`, `extra_rows=0`, and `differing_fields=0`.
+`missing_rows=0`, `extra_rows=0`, and `differing_fields=0`. The v440 per-FY
+gate JSONs also record `retroactive_excel_cleanup.ok=true` and
+`removed=true`, and the fresh FY2025/FY2024/FY2023 app roots no longer exist
+after the matrix run.
 
 FY2024 and FY2023 raw-sample reference preflights were refreshed for v415 in
 `docs/reports/eidp-v415-retroactive-reference-preflight.md`. Both isolated
