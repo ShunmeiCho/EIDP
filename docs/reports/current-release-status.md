@@ -21,7 +21,7 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v441.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v441.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v441-stage6/stage6-evidence-20260515-204736.zip`
+Current Stage 6 evidence bundle: `logs/win-v441-stage6/stage6-evidence-20260515-204955.zip`
 
 ## Verdict
 
@@ -129,12 +129,15 @@ bounded actual canary
 `crawled=5`, `found=3`, `downloaded=0`, `failed=3`,
 `target_missing_school_count=5`, `new_document_count=0`, and
 `ship_gate_status=below_gate`. The refreshed v441 evidence bundle
-`logs\stage6-evidence-20260515-204736.zip` verified on both Windows and Mac
+`logs\stage6-evidence-20260515-204955.zip` verified on both Windows and Mac
 with `ok=true`, no forbidden entries, and present labels `bootstrap_logs`,
 `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`,
-`discovery_rca`, `last_run`, and `stage6_recovery`. It still records missing
-`weekly_run_logs` and `stage6_residual_cleanup`, so this remains a bounded
-process-local canary, not a completed operator real-cycle Stage 6 sign-off.
+`discovery_rca`, `last_run`, `stage6_recovery`, and
+`stage6_residual_cleanup`. The residual-cleanup dry-run reported
+`existing_count=0`, `moved_count=0`, and `ok=true` for the known interrupted
+v384 smoke paths. The bundle still records missing `weekly_run_logs`, so this
+remains a bounded process-local canary, not a completed operator real-cycle
+Stage 6 sign-off.
 v440 remains the latest package with positive current-FY acquisition, ingest,
 Excel export, and stratified 24-school discovery evidence. The v440 ZIP and
 sidecar were copied to
