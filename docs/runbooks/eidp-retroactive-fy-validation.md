@@ -90,14 +90,14 @@ backtests, first create or confirm canonical FY2025/FY2024/FY2023 reference
 workbooks whose business keys and formula-error policy match
 `diff-excel --business-values`.
 
-Current stable-reference regression gates have been confirmed for v420 FY2025
-and the v419 FY2024/FY2023 support lane:
+Current stable-reference regression gates have been confirmed for the v420
+three-year lane:
 
 | Fiscal year | Reference | Gate output |
 | --- | --- | --- |
-| FY2025 / R7 | `_temp/v408-r7-cli-export.xlsx` | `logs/release-gate-v420-retroactive.json` |
-| FY2024 / R6 | `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx` | `logs/release-gate-v419-retroactive-fy2024-reference.json` |
-| FY2023 / R5 | `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx` | `logs/release-gate-v419-retroactive-fy2023-reference.json` |
+| FY2025 / R7 | `_temp/v408-r7-cli-export.xlsx` | `logs/release-gate-v420-retroactive-fy2025-reference.json` |
+| FY2024 / R6 | `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx` | `logs/release-gate-v420-retroactive-fy2024-reference.json` |
+| FY2023 / R5 | `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx` | `logs/release-gate-v420-retroactive-fy2023-reference.json` |
 
 The FY2024/FY2023 gates use generated stable references, not the raw sample
 workbook. They prove current source/package regression stability against the

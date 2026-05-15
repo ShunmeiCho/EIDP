@@ -15,7 +15,7 @@ Windows operator PC and has no v420 setup/UI/real-cycle proof.
 | v420 package integrity | pass | `dist/eidp-windows-v420.zip.sha256` and release gate report SHA256 `5585d303b97de1f29af3737a7c1fcd614eb5c23b51307fb2af57988612740de8`. |
 | v420 Mac/non-Windows release gate | pass | Full gate returned `ok=true`: unit suite `1555 passed`, validator slice `163 passed`, validator mypy/Ruff passed, discovery-gold expected predictions matched `44/44`, and package verifiers passed. |
 | v420 retroactive FY2025/R7 Excel regression | pass | Isolated app root `_temp/non-windows-retroactive-fy2025-20260515-140811` exported FY2025 and `retroactive_excel_diff_reference` returned zero missing/extra rows and zero differing fields against `_temp/v408-r7-cli-export.xlsx`. |
-| v419 retroactive FY2024/R6 and FY2023/R5 support | pass | `logs/release-gate-v419-retroactive-fy2024-reference.json` and `logs/release-gate-v419-retroactive-fy2023-reference.json` remain the current multi-year support evidence; both returned `ok=true` and zero business-value diffs against stable generated references. |
+| v420 retroactive FY2025/R7, FY2024/R6, and FY2023/R5 matrix | pass | `logs/release-gate-v420-retroactive-matrix.json` returned `ok=true` for all three cases. `logs/release-gate-v420-retroactive-fy2025-reference.json`, `logs/release-gate-v420-retroactive-fy2024-reference.json`, and `logs/release-gate-v420-retroactive-fy2023-reference.json` each returned `ok=true` and zero business-value diffs against stable references. |
 | v420 Windows transfer/setup/UI | missing | SSH-Win is disconnected; no v420 Windows SHA check, extraction, setup, launcher, UI health, or evidence bundle exists yet. |
 
 ## Package Record
@@ -35,7 +35,7 @@ Windows operator PC and has no v420 setup/UI/real-cycle proof.
 | --- | --- | --- |
 | ZIP distribution -> setup -> browser UI offline operation | v420 ZIP is built and Mac-verified; v408 remains the latest Windows transfer/setup/UI proof. | Missing for v420 |
 | Retroactive FY2025/R7 Excel export parity | v420 isolated Mac export matched the stable v408 R7 CLI reference with zero business-value diffs. | Mac proof only |
-| Retroactive FY2024/R6 and FY2023/R5 Excel export parity | v419 isolated Mac exports matched their stable references with zero business-value diffs. | Mac support evidence |
+| Retroactive FY2024/R6 and FY2023/R5 Excel export parity | v420 isolated Mac exports matched their stable references with zero business-value diffs. | Mac proof only |
 | ManualActionLog audit | Unit and v408 sandbox support exist; real v420 operator-cycle audit/outbox delta is not captured. | Missing for v420 real cycle |
 | Ship line 60-70% true target PDF / <=30% manual work | No v420 current-FY production yield evidence exists. | Missing / failing |
 

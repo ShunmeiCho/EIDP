@@ -92,23 +92,28 @@ low-confidence and auto-flag current rows were all `0`. The
 `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`
 across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 
-Follow-up Mac-only v419 retroactive reference gates remain the current
-three-year support evidence for FY2024 and FY2023 without SSH/Windows. Both
-runs used the v419 package snapshot with the docs-only stale replay guard
-(`source_dirty=false`, `docs_only_stale=true`). FY2024 wrote its fresh isolated
-export under
-`_temp/non-windows-retroactive-fy2024-20260515-135655` and compared against
+Follow-up Mac-only v420 retroactive matrix gates also passed for FY2025,
+FY2024, and FY2023 without SSH/Windows. The matrix run wrote
+`logs/release-gate-v420-retroactive-matrix.json` with `ok=true` and three
+passing cases. All cases used the v420 package snapshot with the docs-only
+stale replay guard (`source_dirty=false`, `docs_only_stale=true`) because the
+current HEAD only adds status/runbook documentation on top of the packaged
+commit. FY2025 wrote its fresh isolated export under
+`_temp/non-windows-retroactive-fy2025-20260515-141751` and compared against
+`_temp/v408-r7-cli-export.xlsx`; FY2024 wrote its fresh isolated export under
+`_temp/non-windows-retroactive-fy2024-20260515-141836` and compared against
 `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx`;
 FY2023 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2023-20260515-135744` and compared against
+`_temp/non-windows-retroactive-fy2023-20260515-141928` and compared against
 `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx`.
-Both `logs/release-gate-v419-retroactive-fy2024-reference.json` and
-`logs/release-gate-v419-retroactive-fy2023-reference.json` returned `ok=true`;
-their validator/distribution unit slices returned `163 passed`, their package
-verifiers passed, both isolated exports wrote `採録状況=2418`,
-`対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`, and both
-`retroactive_excel_diff_reference` steps returned `missing_rows=0`,
-`extra_rows=0`, and `differing_fields=0`.
+`logs/release-gate-v420-retroactive-fy2025-reference.json`,
+`logs/release-gate-v420-retroactive-fy2024-reference.json`, and
+`logs/release-gate-v420-retroactive-fy2023-reference.json` all returned
+`ok=true`; their validator/distribution unit slices returned `163 passed`,
+their package verifiers passed, all three isolated exports wrote
+`採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`,
+and all three `retroactive_excel_diff_reference` steps returned
+`missing_rows=0`, `extra_rows=0`, and `differing_fields=0`.
 
 FY2024 and FY2023 raw-sample reference preflights were refreshed for v415 in
 `docs/reports/eidp-v415-retroactive-reference-preflight.md`. Both isolated
