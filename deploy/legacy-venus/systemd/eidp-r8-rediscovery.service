@@ -14,7 +14,7 @@ Environment=PYTHONPATH=/home/junming/workspace/EIDP/src
 Environment=VIRTUAL_ENV=/home/junming/workspace/EIDP/.venv
 Environment=PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
 ExecStartPre=/home/junming/workspace/EIDP/.venv/bin/python -c "import sys, eidp; assert sys.prefix == '/home/junming/workspace/EIDP/.venv', f'venv isolation broken: {sys.prefix}'; print(f'venv ok: {sys.prefix}, eidp from {eidp.__file__}')"
-ExecStart=/home/junming/workspace/EIDP/.venv/bin/python scripts/run_r8_rediscovery_weekly.py --methods prefecture_aggregator --current-fy 2026 --batch-size 250 --ingest-batch-size 500 --rate-limit 1.5
+ExecStart=/home/junming/workspace/EIDP/.venv/bin/python scripts/run_r8_rediscovery_weekly.py --methods prefecture_aggregator seed_csv corporation_pattern operator_manual scrapling_stealth --current-fy 2026 --batch-size 250 --ingest-batch-size 500 --rate-limit 1.5
 TimeoutStartSec=6h
 Nice=5
 IOSchedulingClass=best-effort

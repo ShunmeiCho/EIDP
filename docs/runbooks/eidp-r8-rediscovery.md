@@ -12,7 +12,9 @@ Sprint 4 proved that one-time stale rediscovery has zero target-year yield befor
 scheduled job:
 
 1. Select 専門学校 with an older ingested target PDF and no FY2026 target PDF.
-2. Revisit trusted `prefecture_aggregator` URLs.
+2. Revisit the current rediscovery method set:
+   `prefecture_aggregator`, `seed_csv`, `corporation_pattern`,
+   `operator_manual`, and `scrapling_stealth`.
 3. Ingest only documents downloaded during the same run.
 4. Write a JSON summary and rejection evidence under
    `output/target-year-discovery/` in the renamed Windows runner.
@@ -74,6 +76,14 @@ Or invoke the cron wrapper directly with the same flock/log/marker semantics:
 bash deploy/legacy-venus/run_r8_rediscovery_cron.sh --limit 10
 ls -lt logs/r8-rediscovery/run-*.log | head -3
 cat logs/r8-rediscovery/.last_failure 2>/dev/null || echo "no failure marker"
+```
+
+To narrow a legacy run deliberately, pass a space-separated method list through
+`EIDP_REDISCOVERY_METHODS`:
+
+```bash
+EIDP_REDISCOVERY_METHODS="prefecture_aggregator seed_csv" \
+  bash deploy/legacy-venus/run_r8_rediscovery_cron.sh --limit 10
 ```
 
 ### Uninstall
