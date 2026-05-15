@@ -1025,6 +1025,48 @@ def test_submit_form_routes_through_save_with_lock(engine, tmp_path, monkeypatch
     assert captured["entries"][0].canonical_name == "A学科"
 
 
+def test_submit_form_allows_support_recipient_only_save(engine, tmp_path, monkeypatch):
+    from eidp.review._pages import pdf_manual_entry as page_mod
+
+    captured: dict = {}
+
+    def fake_save_with_lock(session, **kwargs):
+        captured.update(kwargs)
+        return SaveOutcome(ok=True)
+
+    monkeypatch.setattr(page_mod, "save_with_lock", fake_save_with_lock)
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="SR学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="sr", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[{"canonical_name": "", "enrollment": ""}],
+            support_row={
+                "annual_total": "100",
+                "grand_total": "100",
+                "first_half_total": "45",
+                "second_half_total": "55",
+            },
+            reason="対象比率のみ",
+            lock_path=lock,
+        )
+
+    assert validation.ok, validation.errors
+    assert outcome is not None
+    assert outcome.ok is True
+    assert captured["entries"] == []
+    assert captured["support_recipient"].annual_total == 100
+    assert captured["support_recipient"].grand_total == 100
+    assert captured["support_recipient"].first_half_total == 45
+    assert captured["support_recipient"].second_half_total == 55
+
+
 def test_submit_form_returns_validation_errors_without_calling_save(engine, tmp_path, monkeypatch):
     """If form validation fails, save_with_lock must NOT be called.
     Pins the contract that the lock is never held while the operator

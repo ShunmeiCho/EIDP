@@ -26,10 +26,13 @@ from eidp.db.models import (
     Document,
     ManualActionLog,
     School,
+    SchoolYearStatus,
+    SupportRecipient,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
 from eidp.pipeline.manual_entry import (
     DepartmentEntry,
+    SupportRecipientEntry,
     save_manual_entries,
 )
 
@@ -119,14 +122,89 @@ def test_audit_log_written_per_yearly_row(engine):
         session.commit()
 
         actions = session.query(ManualActionLog).all()
-        # Three actions (8.4.a.1): department create + department_yearly
-        # insert + document promotion from ocr_pending → ingested.
+        # Four actions: department create + department_yearly insert +
+        # school_year_status revision + document promotion.
         types = sorted(a.target_table for a in actions)
-        assert types == ["department", "department_yearly", "document"]
+        assert types == ["department", "department_yearly", "document", "school_year_status"]
         for a in actions:
             assert a.action_type == "manual_entry"
             assert a.actor == "operator"
             assert a.document_id == doc.id
+
+
+def test_manual_department_entry_creates_school_year_status_revision(engine):
+    """Manual department rescue must close the 採録状況 row too.
+
+    A parse_failed/image-only PDF rescued by the operator should not leave the
+    fiscal-year task dashboard stuck at parse_failed/blank after DY rows are
+    written.
+    """
+
+    with Session(engine) as session:
+        _, doc = _seed(session)
+        session.commit()
+
+        result = save_manual_entries(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+        )
+        session.commit()
+
+        assert result.school_year_status_written == 1
+        sys_row = session.query(SchoolYearStatus).one()
+        assert sys_row.school_id == doc.school_id
+        assert sys_row.fiscal_year == 2026
+        assert sys_row.status == "collected"
+        assert sys_row.document_id == doc.id
+        assert sys_row.revision == 1
+        assert sys_row.is_current is True
+
+
+def test_manual_support_recipient_entry_appends_current_revision(engine):
+    """対象比率 manual entry needs a first-class append-only path.
+
+    Operators can rescue a parse_failed PDF even when the only numbers they
+    can type are support-recipient totals; those rows must land in the same
+    table as normal ingest and update the year status as support-only.
+    """
+
+    with Session(engine) as session:
+        _, doc = _seed(session)
+        session.commit()
+
+        result = save_manual_entries(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=[],
+            support_recipient=SupportRecipientEntry(
+                annual_total=100,
+                grand_total=100,
+                first_half_total=45,
+                second_half_total=55,
+            ),
+        )
+        session.commit()
+
+        assert result.rows_written == 0
+        assert result.support_recipient_written == 1
+        sr = session.query(SupportRecipient).one()
+        assert sr.school_id == doc.school_id
+        assert sr.document_id == doc.id
+        assert sr.fiscal_year == 2026
+        assert sr.annual_total == 100
+        assert sr.grand_total == 100
+        assert sr.first_half_total == 45
+        assert sr.second_half_total == 55
+        assert sr.revision == 1
+        assert sr.is_current is True
+        assert float(sr.extraction_confidence) == 1.0
+
+        sys_row = session.query(SchoolYearStatus).one()
+        assert sys_row.status == "support_only"
+        assert sys_row.document_id == doc.id
 
 
 def test_append_only_demotes_prior_current_revision(engine):

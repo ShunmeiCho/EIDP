@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import unicodedata
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Literal
 
 from sqlalchemy.orm import Session
@@ -43,6 +44,8 @@ from eidp.db.models import (
     DepartmentChange,
     DepartmentYearly,
     Document,
+    SchoolYearStatus,
+    SupportRecipient,
 )
 
 ManualMethod = Literal["manual", "ocr_tesseract"]
@@ -72,6 +75,22 @@ _NON_NEGATIVE_INT_FIELDS: tuple[str, ...] = (
     "other",
     "prev_enrollment",
     "dropouts",
+)
+
+_SUPPORT_RECIPIENT_INT_FIELDS: tuple[str, ...] = (
+    "first_half_total",
+    "first_half_cat1",
+    "first_half_cat2",
+    "first_half_cat3",
+    "first_half_cat4",
+    "second_half_total",
+    "second_half_cat1",
+    "second_half_cat2",
+    "second_half_cat3",
+    "second_half_cat4",
+    "annual_total",
+    "household_change",
+    "grand_total",
 )
 
 
@@ -115,6 +134,27 @@ class DepartmentEntry:
     related_dept_id: int | None = None
 
 
+@dataclass(frozen=True)
+class SupportRecipientEntry:
+    """Support-recipient totals entered by the operator for 対象比率."""
+
+    school_number: str | None = None
+    first_half_total: int | None = None
+    first_half_cat1: int | None = None
+    first_half_cat2: int | None = None
+    first_half_cat3: int | None = None
+    first_half_cat4: int | None = None
+    second_half_total: int | None = None
+    second_half_cat1: int | None = None
+    second_half_cat2: int | None = None
+    second_half_cat3: int | None = None
+    second_half_cat4: int | None = None
+    annual_total: int | None = None
+    household_change: int | None = None
+    grand_total: int | None = None
+    notes: str | None = None
+
+
 @dataclass
 class ManualEntryResult:
     document_id: int
@@ -122,6 +162,8 @@ class ManualEntryResult:
     rows_written: int = 0
     departments_created: int = 0
     department_changes_written: int = 0
+    support_recipient_written: int = 0
+    school_year_status_written: int = 0
     audit_actions: list[int] = field(default_factory=list)
     document_status_changed_to: str | None = None
 
@@ -142,6 +184,15 @@ def _validate_entry_numeric_fields(entry: DepartmentEntry) -> None:
         raise ValueError(
             f"DepartmentEntry.dropout_rate must be within [0, 1]; got {entry.dropout_rate}"
         )
+
+
+def _validate_support_recipient_numeric_fields(entry: SupportRecipientEntry) -> None:
+    for field_name in _SUPPORT_RECIPIENT_INT_FIELDS:
+        value = getattr(entry, field_name)
+        if value is not None and value < 0:
+            raise ValueError(
+                f"SupportRecipientEntry.{field_name} must be non-negative; got {value}"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -207,6 +258,7 @@ def save_manual_entries(
     document_id: int,
     fiscal_year: int,
     entries: list[DepartmentEntry],
+    support_recipient: SupportRecipientEntry | None = None,
     method: ManualMethod = "manual",
     confidence_breakdown: dict[str, JSONValue] | None = None,
     actor: str = "operator",
@@ -239,7 +291,7 @@ def save_manual_entries(
     # DB mutation (fiscal_year backfill, status promotion) and BEFORE
     # validation runs. Otherwise an empty save would silently mutate
     # Document.fiscal_year without an audit row, breaking the contract.
-    if not entries:
+    if not entries and support_recipient is None:
         return ManualEntryResult(document_id=document_id, fiscal_year=fiscal_year)
 
     # 8.4.a.1: fiscal_year coherence. If the Document already has a
@@ -263,6 +315,8 @@ def save_manual_entries(
 
     for entry in entries:
         _validate_entry_numeric_fields(entry)
+    if support_recipient is not None:
+        _validate_support_recipient_numeric_fields(support_recipient)
 
     if method == "manual":
         extraction_confidence = 1.0
@@ -418,6 +472,139 @@ def save_manual_entries(
                 actor=actor,
             )
             result.audit_actions.append(audit_row.id)
+
+    if support_recipient is not None:
+        existing_sr_rows = (
+            session.query(SupportRecipient)
+            .filter(
+                SupportRecipient.school_id == doc.school_id,
+                SupportRecipient.fiscal_year == fiscal_year,
+            )
+            .with_for_update()
+            .all()
+        )
+        current_sr = next((row for row in existing_sr_rows if row.is_current), None)
+        max_sr_rev = max((row.revision for row in existing_sr_rows), default=0)
+        sr_field_names = _SUPPORT_RECIPIENT_INT_FIELDS
+        merged_sr_fields = {name: getattr(current_sr, name, None) for name in sr_field_names}
+        for name in sr_field_names:
+            manual_value = getattr(support_recipient, name)
+            if manual_value is not None:
+                merged_sr_fields[name] = manual_value
+
+        if current_sr is not None:
+            session.query(SupportRecipient).filter(
+                SupportRecipient.school_id == doc.school_id,
+                SupportRecipient.fiscal_year == fiscal_year,
+                SupportRecipient.is_current == True,  # noqa: E712
+            ).update({"is_current": False}, synchronize_session="fetch")
+
+        sr_row = SupportRecipient(
+            school_id=doc.school_id,
+            school_number=support_recipient.school_number or (
+                current_sr.school_number if current_sr is not None else None
+            ),
+            document_id=document_id,
+            fiscal_year=fiscal_year,
+            revision=max_sr_rev + 1,
+            is_current=True,
+            extraction_confidence=extraction_confidence,
+            confidence_breakdown=breakdown_text,
+            notes=support_recipient.notes,
+            **merged_sr_fields,
+        )
+        session.add(sr_row)
+        session.flush()
+
+        old_state = (
+            {
+                "revision": current_sr.revision,
+                "is_current": True,
+                "annual_total": current_sr.annual_total,
+                "grand_total": current_sr.grand_total,
+            }
+            if current_sr is not None
+            else None
+        )
+        audit_row = log_manual_action(
+            session,
+            action_type="manual_entry",
+            target_table="support_recipient",
+            target_id=sr_row.id,
+            document_id=document_id,
+            old_value=old_state,
+            new_value={
+                "revision": sr_row.revision,
+                "is_current": True,
+                "annual_total": sr_row.annual_total,
+                "grand_total": sr_row.grand_total,
+                "method": method,
+            },
+            reason=reason,
+            actor=actor,
+        )
+        result.audit_actions.append(audit_row.id)
+        result.support_recipient_written = 1
+
+    existing_sys_rows = (
+        session.query(SchoolYearStatus)
+        .filter(
+            SchoolYearStatus.school_id == doc.school_id,
+            SchoolYearStatus.fiscal_year == fiscal_year,
+        )
+        .with_for_update()
+        .all()
+    )
+    current_sys = next((row for row in existing_sys_rows if row.is_current), None)
+    max_sys_rev = max((row.revision for row in existing_sys_rows), default=0)
+    effective_status = "collected" if result.rows_written > 0 else "support_only"
+
+    if current_sys is not None:
+        session.query(SchoolYearStatus).filter(
+            SchoolYearStatus.school_id == doc.school_id,
+            SchoolYearStatus.fiscal_year == fiscal_year,
+            SchoolYearStatus.is_current == True,  # noqa: E712
+        ).update({"is_current": False}, synchronize_session="fetch")
+
+    sys_row = SchoolYearStatus(
+        school_id=doc.school_id,
+        fiscal_year=fiscal_year,
+        status=effective_status,
+        legacy_status=current_sys.legacy_status if current_sys is not None else None,
+        excluded_reason=current_sys.excluded_reason if current_sys is not None else None,
+        last_checked=current_sys.last_checked if current_sys is not None else None,
+        collected_at=datetime.now(UTC),
+        document_id=document_id,
+        revision=max_sys_rev + 1,
+        is_current=True,
+    )
+    session.add(sys_row)
+    session.flush()
+    audit_row = log_manual_action(
+        session,
+        action_type="manual_entry",
+        target_table="school_year_status",
+        target_id=sys_row.id,
+        document_id=document_id,
+        old_value=(
+            {
+                "revision": current_sys.revision,
+                "status": current_sys.status,
+                "is_current": True,
+            }
+            if current_sys is not None
+            else None
+        ),
+        new_value={
+            "revision": sys_row.revision,
+            "status": sys_row.status,
+            "is_current": True,
+        },
+        reason=reason,
+        actor=actor,
+    )
+    result.audit_actions.append(audit_row.id)
+    result.school_year_status_written = 1
 
     # 8.4.a.1: if the document was sitting in a manual-review queue
     # (ocr_pending / parse_failed / review_pending), promote it to

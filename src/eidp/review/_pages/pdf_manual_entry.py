@@ -46,6 +46,7 @@ from eidp.pipeline.manual_entry import (
     DepartmentEntry,
     DeptChangeType,
     ManualEntryResult,
+    SupportRecipientEntry,
     save_manual_entries,
 )
 from eidp.review.confidence_panels import (
@@ -941,6 +942,45 @@ def _coerce_float(value: Any, field_name: str, errors: list[ValidationError], *,
 
 
 _VALID_DEPT_CHANGE = {"新設", "廃科", "名称変更", "統合", None, ""}
+_SUPPORT_RECIPIENT_FORM_FIELDS: tuple[str, ...] = (
+    "first_half_total",
+    "first_half_cat1",
+    "first_half_cat2",
+    "first_half_cat3",
+    "first_half_cat4",
+    "second_half_total",
+    "second_half_cat1",
+    "second_half_cat2",
+    "second_half_cat3",
+    "second_half_cat4",
+    "annual_total",
+    "household_change",
+    "grand_total",
+)
+_DEPARTMENT_FORM_FIELDS: tuple[str, ...] = (
+    "canonical_name",
+    "course_type",
+    "course_name",
+    "duration_years",
+    "capacity",
+    "enrollment",
+    "intl_students",
+    "graduates",
+    "advanced",
+    "employed",
+    "other",
+    "prev_enrollment",
+    "dropouts",
+    "dropout_rate",
+    "notes",
+    "dept_change",
+    "old_name",
+    "related_dept_id",
+)
+
+
+def _row_has_any_value(row: dict[str, Any], field_names: tuple[str, ...]) -> bool:
+    return any(row.get(field_name) not in (None, "") for field_name in field_names)
 
 
 def form_data_to_entries(rows: list[dict[str, Any]]) -> FormValidation:
@@ -1030,6 +1070,29 @@ def form_data_to_entries(rows: list[dict[str, Any]]) -> FormValidation:
     return fv
 
 
+def form_data_to_support_recipient(
+    row: dict[str, Any] | None,
+) -> tuple[SupportRecipientEntry | None, list[ValidationError]]:
+    if not row or not _row_has_any_value(row, (*_SUPPORT_RECIPIENT_FORM_FIELDS, "school_number", "notes")):
+        return None, []
+
+    errors: list[ValidationError] = []
+    values = {
+        field_name: _coerce_int(row.get(field_name), f"support_recipient.{field_name}", errors)
+        for field_name in _SUPPORT_RECIPIENT_FORM_FIELDS
+    }
+    if errors:
+        return None, errors
+    return (
+        SupportRecipientEntry(
+            school_number=(row.get("school_number") or "").strip() or None,
+            notes=(row.get("notes") or "").strip() or None,
+            **values,
+        ),
+        [],
+    )
+
+
 # ---------------------------------------------------------------------------
 # Save with lock
 # ---------------------------------------------------------------------------
@@ -1041,6 +1104,7 @@ def save_with_lock(
     document_id: int,
     fiscal_year: int,
     entries: list[DepartmentEntry],
+    support_recipient: SupportRecipientEntry | None = None,
     method: str = "manual",
     confidence_breakdown: dict[str, Any] | None = None,
     actor: str = "operator",
@@ -1072,6 +1136,7 @@ def save_with_lock(
                     document_id=document_id,
                     fiscal_year=fiscal_year,
                     entries=entries,
+                    support_recipient=support_recipient,
                     method=method,  # type: ignore[arg-type]
                     confidence_breakdown=confidence_breakdown,
                     actor=actor,
@@ -1113,6 +1178,7 @@ def submit_form(
     document_id: int,
     fiscal_year: int,
     rows: list[dict[str, Any]],
+    support_row: dict[str, Any] | None = None,
     reason: str | None,
     lock_path: Path,
 ) -> tuple[FormValidation, SaveOutcome | None]:
@@ -1126,10 +1192,16 @@ def submit_form(
     invoke submit_form to verify the page wires through to it instead
     of writing directly.
     """
-    fv = form_data_to_entries(rows)
+    support_recipient, support_errors = form_data_to_support_recipient(support_row)
+    dept_rows = rows
+    if support_recipient is not None:
+        dept_rows = [row for row in rows if _row_has_any_value(row, _DEPARTMENT_FORM_FIELDS)]
+
+    fv = form_data_to_entries(dept_rows)
+    fv.errors.extend(support_errors)
     if not fv.ok:
         return fv, None
-    if not fv.entries:
+    if not fv.entries and support_recipient is None:
         # Form had only invalid rows — surface as a generic error.
         fv.errors.append(ValidationError(field="form", message="no valid rows to save"))
         return fv, None
@@ -1139,6 +1211,7 @@ def submit_form(
         document_id=document_id,
         fiscal_year=fiscal_year,
         entries=fv.entries,
+        support_recipient=support_recipient,
         reason=reason,
         lock_path=lock_path,
     )
@@ -1226,6 +1299,26 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
                 "dept_change": dept_change or None,
             })
 
+        st.markdown("**対象比率（任意）**")
+        sr1 = st.columns([1, 1, 1, 1])
+        first_half_total = sr1[0].text_input("前半期計", key=f"sr_fh_{row.document_id}")
+        second_half_total = sr1[1].text_input("後半期計", key=f"sr_sh_{row.document_id}")
+        annual_total = sr1[2].text_input("年間計", key=f"sr_ann_{row.document_id}")
+        grand_total = sr1[3].text_input("総計", key=f"sr_gt_{row.document_id}")
+        sr2 = st.columns([1, 1, 1])
+        household_change = sr2[0].text_input("家計急変", key=f"sr_hh_{row.document_id}")
+        school_number = sr2[1].text_input("学校番号", key=f"sr_no_{row.document_id}")
+        sr_notes = sr2[2].text_input("対象比率メモ", key=f"sr_note_{row.document_id}")
+        support_row = {
+            "first_half_total": first_half_total,
+            "second_half_total": second_half_total,
+            "annual_total": annual_total,
+            "grand_total": grand_total,
+            "household_change": household_change,
+            "school_number": school_number,
+            "notes": sr_notes,
+        }
+
         submitted = st.form_submit_button("保存", type="primary")
 
     if submitted:
@@ -1234,6 +1327,7 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
             document_id=row.document_id,
             fiscal_year=int(fiscal_year),
             rows=form_rows,
+            support_row=support_row,
             reason=reason or None,
             lock_path=lock_path,
         )
