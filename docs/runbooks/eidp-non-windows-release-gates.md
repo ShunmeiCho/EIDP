@@ -167,6 +167,33 @@ The cleanup helper is dry-run by default, scans only top-level entries under
 `_temp/`, refuses symlinks, and never touches `data/master.xlsx`,
 `data/eidp.sqlite3`, `data/pdfs/`, `dist/`, or Windows operator deployments.
 
+For release ZIP/deploy retention, use the separate release-artifact pruner.
+This tool is also dry-run by default and only matches versioned EIDP package
+names or extracted deploy directories:
+
+```bash
+uv run python scripts/prune_release_artifacts.py \
+  --keep-latest 1 \
+  --keep-version 442 \
+  --json
+```
+
+When the dry-run output is correct, add `--apply`. On a Windows staging or
+operator-PC test host, pass the staging and deploy roots explicitly:
+
+```powershell
+python scripts\prune_release_artifacts.py `
+  --dist-dir C:\EIDP-staging `
+  --deploy-parent C:\Users\cyo20 `
+  --keep-latest 1 `
+  --keep-version 442 `
+  --json
+```
+
+Use `--keep-version` for a non-latest fallback package with stronger evidence,
+such as v442. The pruner does not scan `data\`, `logs\`, `output\`, SQLite
+files, `master.xlsx`, or audit JSONL.
+
 ## What This Proves
 
 - The ZIP has the expected source, data, wheelhouse, runbook, and validator

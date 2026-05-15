@@ -295,6 +295,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/download_prefecture_artifacts.py": (SCRIPTS_DIR / "download_prefecture_artifacts.py").read_text(
             encoding="utf-8"
         ),
+        "scripts/prune_release_artifacts.py": (SCRIPTS_DIR / "prune_release_artifacts.py").read_text(
+            encoding="utf-8"
+        ),
         "src/eidp/windows_platform.py": (REPO_ROOT / "src" / "eidp" / "windows_platform.py").read_text(
             encoding="utf-8"
         ),

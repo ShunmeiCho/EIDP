@@ -1098,6 +1098,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "download_prefecture_artifacts.py").write_text(
         "print('download')", encoding="utf-8",
     )
+    (fake_repo / "scripts" / "prune_release_artifacts.py").write_text("print('prune')", encoding="utf-8")
 
     members = bw.collect_zip_members(repo_root=fake_repo, wheelhouse=wheelhouse)
     arcs = {arc for _, arc in members}
@@ -1228,6 +1229,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "scripts/download_prefecture_artifacts.py" in arcs, (
         "Sprint 8.7.e: download_prefecture_artifacts.py is imported "
         "by bootstrap_pdf_pipeline.py at runtime"
+    )
+    assert "scripts/prune_release_artifacts.py" in arcs, (
+        "Release artifact pruning must ship so the operator PC can dry-run "
+        "and prune stale staging ZIPs and deploy directories after handoff"
     )
 
 
