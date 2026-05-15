@@ -21,7 +21,7 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md`
+Current Stage 6 evidence draft: `docs/reports/eidp-v415-stage6-evidence-draft.md`
 
 ## Verdict
 
@@ -599,7 +599,7 @@ Saitama artifact, added `51` prefecture-aggregator SchoolSite rows, crawled `5`
 sites, wrote `2084` discovery evidence lines, generated an RCA batch with `5`
 items, rebuilt `2418` status rows, and left the real runtime DB unchanged.
 These observations are consolidated in
-`docs/reports/eidp-v380-stage6-evidence-draft.md` as a draft, not a completed
+`docs/reports/eidp-v415-stage6-evidence-draft.md` as a draft, not a completed
 operator sign-off. OCR add-on runtime proof is now stronger but still bounded:
 the v380 operator install has no `ocr-addon` directory and
 `detect_ocr_availability` correctly reports `can_run=false`; v381 carried the
