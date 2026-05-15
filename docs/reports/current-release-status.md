@@ -2,35 +2,56 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v442.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v442.zip`
-Latest Mac-core package SHA256: `4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v442.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v442.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v442.zip`
+Latest Mac/non-Windows package snapshot: `f14a49fb2036c6ff13869f7d932aea9e52084f87`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v444.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v444.zip`
+Latest Mac-core package SHA256: `7814b7d1212eb10ef8c9d5b187e24ecc4b7eb72e0f558d6a217c57af1dc53d65`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v444.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v444.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v444.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v444.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v442.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v444.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v444.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip`
-Current Stage 6 evidence draft: `docs/reports/eidp-v442-stage6-evidence-draft.md`
+Current Stage 6 evidence bundle: `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip` (latest verified bundle)
+Current Stage 6 evidence draft: `docs/reports/eidp-v444-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v442 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`, which lets
+v444 is the latest Mac/non-Windows release-gate-clean and Windows setup/canary
+package. It was built from package snapshot
+`f14a49fb2036c6ff13869f7d932aea9e52084f87` after the v443 canary showed a
+shared-corporation root could follow a more-specific sibling school homepage.
+v444 keeps the v443 group-root homepage follow behavior, but refuses a base
+school name such as `日本工学院専門学校` matching a more-specific sibling such as
+`日本工学院北海道専門学校`. The v444 non-Windows gate returned `ok=true` with
+SHA256 `7814b7d1212eb10ef8c9d5b187e24ecc4b7eb72e0f558d6a217c57af1dc53d65`,
+package/source commit match, validator/distribution tests `164 passed`,
+validator mypy/Ruff pass, discovery-gold expected predictions `44/44`, and both
+package verifier modes pass. Windows transfer SHA matched, setup completed with
+SQLite integrity ok, URL-only bootstrap completed, and the bounded 5-school
+weekly canary exited `0`. The canary still failed the production yield gate:
+`crawled=5`, `found=3`, `downloaded=0`, `target_pdf_auto_yield_pct=0.0`, and
+`ship_gate_status=below_gate`. The v444 RCA confirms `nkhs` no longer appears
+in the rejection evidence; remaining failures are `non_target_candidates_only`
+or `no_pdf_candidates`. Mac cleanup now keeps v444 current, v442 fallback, and
+the latest alias; Windows staging/deploy cleanup keeps only v444 current and
+v442 fallback.
+
+v442 remains the latest verified Stage 6 evidence-bundle/browser/R7 Excel
+fallback package. It was built from package snapshot
+`22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`, which lets
 `scripts\weekly_run.bat` keep its production default while accepting trusted
 bounded-smoke environment variables such as `EIDP_WEEKLY_LIMIT`,
 `EIDP_WEEKLY_BATCH_SIZE`, `EIDP_WEEKLY_RATE_LIMIT`, and
