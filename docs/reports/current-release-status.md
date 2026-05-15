@@ -7,21 +7,21 @@ Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-
 Latest Mac-core-verifier-clean package: `dist/eidp-windows-v441.zip`
 Latest Mac-core package SHA256: `53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v440.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v438.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v441.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v441.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v438.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v440.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v441.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v441.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v440.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v440.zip`
-Latest Windows-default-launcher-proven package: `dist/eidp-windows-v440.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v441.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v441.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v441.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v440.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v440.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-201709.zip`
+Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-203644.zip`
 
 ## Verdict
 
@@ -90,19 +90,32 @@ returned `ok=true`. The recorded package/source freshness check reported
 validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v441 has Mac/non-Windows package, Stage 6 evidence-bundle, and Windows
-transfer/SHA proof. The ZIP and sidecar were copied to `C:\EIDP-staging\`;
+v441 has Mac/non-Windows package, Stage 6 evidence-bundle, Windows
+transfer/SHA, setup, recovery, and non-browser UI-smoke proof. The ZIP and sidecar were copied to `C:\EIDP-staging\`;
 Win-side `Get-FileHash` matched SHA256
 `53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9`, and a
 read-only Win-side zipfile check confirmed `BUILD_INFO.git_commit` is
 `33044bd28b05c69b86ad0ebe1db96672b19632d3` and that packaged
 `scripts/collect_stage6_evidence.py` contains the
-`*-discovery-rejections.jsonl` evidence pattern. v440 remains the latest
-package with Windows setup/UI-smoke/evidence-smoke proof. The v440 ZIP and
-sidecar were copied to `C:\EIDP-staging\`; Win-side `Get-FileHash` matched
-SHA256 `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`.
-The package was expanded to `C:\Users\cyo20\EIDP-v440-2f339ce8` without
-overwriting v408/v438. `EIDP-setup.bat` completed, imported bundled
+`*-discovery-rejections.jsonl` evidence pattern. The package was expanded to
+`C:\Users\cyo20\EIDP-v441-33044bd` without overwriting v440. `EIDP-setup.bat`
+completed, imported bundled `master.xlsx`, rebuilt FY2026 school-year tasks
+with `school_count=2418` and `school_fiscal_year_status_count=2418`, and
+`scripts\validate_install.bat --after-setup --json` returned `ok=true` with
+`sqlite_integrity_check=ok`.
+`scripts\stage6_recovery_check.bat
+C:\Users\cyo20\EIDP-v441-33044bd\scripts\weekly_run.bat --json` returned
+`ok=true` and confirmed the Task Scheduler action matches v441. A non-browser
+Streamlit smoke started v441 through `scripts\launch.bat`, received HTTP `200`
+from `http://127.0.0.1:8501`, and then stopped all v441-related
+Python/Streamlit/cmd processes (`remaining_processes=0`). The old v438
+deployment directory was removed after this smoke; Windows now retains v441 as
+current and v440 as fallback. v440 remains the latest package with bounded
+backend/bootstrap smoke proof. The v440 ZIP and sidecar were copied to
+`C:\EIDP-staging\`; Win-side `Get-FileHash` matched SHA256
+`a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`. The v440
+package was expanded to `C:\Users\cyo20\EIDP-v440-2f339ce8` without
+overwriting older deployments. `EIDP-setup.bat` completed, imported bundled
 `master.xlsx`, rebuilt FY2026 school-year tasks with `school_count=2418` and
 `school_fiscal_year_status_count=2418`, and `validate_windows_install.py
 --after-setup --json` returned `ok=true` with `sqlite_integrity_check=ok`.
@@ -195,10 +208,17 @@ selected `--school-id` values, `--batch-size 24`, `--rate-limit 0.3`, and
 `pre_filtered_non_target_hint=127`, `classified_non_target=60`,
 `fiscal_year_mismatch:2025=25`, and
 `target_fiscal_year_not_detected=12`. No additional PDFs were stored:
-`data\pdfs` stayed under 1 MB. A refreshed evidence bundle
-`logs\stage6-evidence-20260515-201709.zip` verified on both Windows and Mac
-with `ok=true` and includes both the previous weekly RCA plan and the new
-`data/output/target-year-discovery/stratified-fy2026-24-discovery-rca-batch-plan.json`.
+`data\pdfs` stayed under 1 MB. The v441 evidence collector was then run against
+the v440 root to prove the new raw-evidence packaging path on real Stage 6
+artifacts. The refreshed bundle
+`logs\stage6-evidence-20260515-203644.zip` verified on both Windows and Mac
+with `ok=true`, no forbidden entries, and present labels
+`bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
+`discovery_evidence`, `discovery_rca`, `last_run`, and `stage6_recovery`.
+It includes the previous weekly RCA plan, the new
+`data/output/target-year-discovery/stratified-fy2026-24-discovery-rca-batch-plan.json`,
+and the raw
+`data/output/target-year-discovery/stratified-fy2026-24-discovery-rejections.jsonl`.
 This stratified run is the strongest current signal for the next production
 bottleneck: the pipeline mechanics work, but current FY2026 yield is dominated
 by publication lag/old-year PDFs, target forms without trusted year evidence,
