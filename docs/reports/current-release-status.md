@@ -81,7 +81,8 @@ The docs-only stale-package replay path remains available for status-only
 follow-up commits:
 `uv run python scripts/run_non_windows_release_gates.py
 dist/eidp-windows-v415.zip --skip-full-unit --allow-docs-only-stale-package
---json --output logs/release-gate-v415-docs-only-stale.json`. Treat that as a
+--json --output logs/release-gate-v415-docs-only-stale-after-sha-sidecar-note.json`.
+Treat that as a
 current-source replay convenience only; it is not a Windows transfer/setup/UI
 proof and it must still reject dirty tracked source or any non-doc source delta.
 

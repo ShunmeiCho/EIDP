@@ -56,6 +56,7 @@ v415 投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
 | EIDP package snapshot | `09ad5e6bfa80c8a03ab6f60b2f39a39333fdd42c` |
 | core ZIP | `dist/eidp-windows-v415.zip` |
 | core ZIP sha256 | `25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd` |
+| core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。ZIP を `C:\EIDP-staging\` に平置きした場合は、sidecar の digest 値と `Get-FileHash` の結果を比較する。 |
 | non-Windows gate log | `logs/release-gate-v415-retroactive.json` |
 | Windows extract path | 未実施 |
 | transferred ZIP | 未実施 |
@@ -92,7 +93,9 @@ PowerShell で実行し、exit code と出力ファイル名を記録します�
 
 ```powershell
 cd C:\Users\<user>\<EIDP-extract-dir>
-Get-FileHash C:\Users\<user>\Downloads\eidp-windows-*.zip -Algorithm SHA256
+$expected = "25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd"
+$actual = (Get-FileHash C:\EIDP-staging\eidp-windows-v415.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actual -ne $expected) { throw "SHA256 mismatch: $actual" }
 .\EIDP-setup.bat
 echo $LASTEXITCODE
 .\scripts\validate_install.bat --after-setup

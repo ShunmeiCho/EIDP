@@ -27,9 +27,10 @@ evidence.
 | Package | `dist/eidp-windows-v415.zip` |
 | SHA256 | `25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd` |
 | SHA256 sidecar | `dist/eidp-windows-v415.zip.sha256` |
+| SHA256 sidecar path note | The sidecar records the repo-relative package path. If the ZIP and sidecar are copied flat to `C:\EIDP-staging\`, use the digest value as the source of truth and compare it with `Get-FileHash`; do not rely on `sha256sum -c` unless the same `dist\` relative path is preserved. |
 | Package commit | `09ad5e6bfa80c8a03ab6f60b2f39a39333fdd42c` |
 | Full release-gate log | `logs/release-gate-v415-retroactive.json` |
-| Representative docs-only stale replay | `logs/release-gate-v415-docs-only-stale-after-stage6-draft.json` |
+| Representative docs-only stale replay | `logs/release-gate-v415-docs-only-stale-after-sha-sidecar-note.json` |
 | Suggested Windows extract path | `C:\Users\cyo20\EIDP-v415-09ad5e6b` |
 
 ## Prompt-To-Artifact Checklist
@@ -52,7 +53,13 @@ When SSH-Win is available again, execute the v415 lane in this order:
 1. Transfer `dist/eidp-windows-v415.zip` and `dist/eidp-windows-v415.zip.sha256`
    to `C:\EIDP-staging\` or the approved operator-PC staging path.
 2. Verify SHA256 on Windows before extraction. The expected value is
-   `25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd`.
+   `25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd`:
+
+   ```powershell
+   $expected = "25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd"
+   $actual = (Get-FileHash C:\EIDP-staging\eidp-windows-v415.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+   if ($actual -ne $expected) { throw "SHA256 mismatch: $actual" }
+   ```
 3. Extract to `C:\Users\cyo20\EIDP-v415-09ad5e6b` unless the operator chooses
    a different path.
 4. Run `EIDP-setup.bat` / `scripts\first_setup.bat` and save setup logs.
