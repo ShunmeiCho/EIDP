@@ -1,7 +1,7 @@
 # EIDP 業務員 PC E2E 記録テンプレート
 
 Status: Stage 6 / v1.0 release candidate evidence template
-Updated: 2026-05-15
+Updated: 2026-05-16
 
 このテンプレートは、業務員の実 PC で 1 サイクル実行した結果を記録するためのものです。
 ここが未記入のままでは、EIDP Windows 版を v1.0 と判定しません。
@@ -15,18 +15,18 @@ Updated: 2026-05-15
   （真の対象年度 PDF 60-70% 自動取得、推定手作業 30% 以下）の証明には使いません。
 - v1.0 GA 判定は、このテンプレートの完了に加えて、現在の対象年度で
   `ship_readiness_rc=0` または同等の yield evidence が確認された後に行います。
-- v408 では ZIP / setup / UI health / R7 Excel / sandbox UI write / non-Excel
-  diagnostic evidence bundle まで実証済みです。ただし sandbox と dry-run は
-  業務員 PC 1 サイクル sign-off の代替ではありません。下表の「v408 既存証跡」
-  は転記補助であり、空欄のまま残る real-cycle / owner fields を埋める必要があります。
-- 次の real-cycle Stage 6 は、明示的に v408 lane 継続を選ぶ場合を除き、
-  `docs/reports/current-release-status.md` が示す最新の Mac / non-Windows
-  release-gate-clean ZIP を転送して、下表の実施情報をその ZIP の値で埋めます。
-  ZIP 内のこのテンプレートは自分自身の最終 SHA256 を持てないため、SHA256 は
-  `.sha256` sidecar または release-status の値を転記します。
+- v442 では ZIP transfer / setup / recovery / evidence bundle / bounded
+  weekly launcher / browser UI navigation / R7 browser Excel download まで
+  実証済みです。ただし Codex-driven smoke と bounded canary は、業務員 PC
+  1 サイクル sign-off の代替ではありません。下表の「v442 既存証跡」は
+  転記補助であり、空欄のまま残る real-cycle / owner fields を埋める必要があります。
+- 次の real-cycle Stage 6 は v442 lane で実施します。ZIP 内のこのテンプレートは
+  自分自身の最終 SHA256 を持てないため、SHA256 は `.sha256` sidecar または
+  release-status の値を転記します。
 - version-specific transfer steps, package SHA256, and release-gate logs are
-  recorded in the current transfer checklist / release-status documents. Do not
-  hard-code those values into this reusable template before packaging.
+  recorded in the current release-status documents and may be copied here after
+  execution. Treat package-embedded copies of this template as stale if they were
+  built before the latest evidence lane.
 
 ## 1. 実施情報
 
@@ -43,29 +43,20 @@ Updated: 2026-05-15
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
-v408 既存証跡（転記候補、real-cycle sign-off ではない）:
+v442 既存証跡（転記候補、real-cycle sign-off ではない）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP commit | `f0c2715833b54e60fea85259e16ad0a1d9e6c106` |
-| core ZIP | `dist/eidp-windows-v408.zip` |
-| core ZIP sha256 | `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2` |
-| Windows extract path | `C:\Users\cyo20\EIDP-v408-f0c27158` |
-| transferred ZIP | `C:\Users\cyo20\eidp-windows-v408.zip` |
-
-現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
-
-| 項目 | 値 |
-| --- | --- |
-| EIDP package snapshot | `docs/reports/current-release-status.md` から転記 |
-| core ZIP | `dist/eidp-windows-vXXX.zip` |
-| core ZIP sha256 | `.sha256` sidecar または release-status から転記 |
+| EIDP package snapshot | `22f1a98ffbc3e0aeec2f658c5f1e77927045f14c` |
+| core ZIP | `dist/eidp-windows-v442.zip` |
+| core ZIP sha256 | `4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7` |
 | core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。ZIP を `C:\EIDP-staging\` に平置きした場合は、sidecar の digest 値と `Get-FileHash` の結果を比較する。 |
-| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |
-| retroactive matrix log | `logs/release-gate-vXXX-retroactive-matrix.json` if used |
-| Windows transfer checklist | current version-specific checklist |
-| Windows extract path | 未実施 |
-| transferred ZIP | 未実施 |
+| non-Windows gate log | `logs/release-gate-v442.json` |
+| docs-only stale gate logs | `logs/release-gate-v442-docs-only-stale-after-ui-smoke.json`; `logs/release-gate-v442-docs-only-stale-after-browser-smoke.json`; `logs/release-gate-v442-docs-only-stale-after-r7-browser-excel.json`; `logs/release-gate-v442-docs-only-stale-after-objective-checklist.json` |
+| Windows transfer checklist | v442 evidence summarized in `docs/reports/current-release-status.md` |
+| Windows extract path | `C:\Users\cyo20\EIDP-v442-22f1a98` |
+| transferred ZIP | `C:\EIDP-staging\eidp-windows-v442.zip` |
+| Stage 6 evidence bundle | `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip` |
 
 ## 2. PC / 環境
 
@@ -82,7 +73,7 @@ v408 既存証跡（転記候補、real-cycle sign-off ではない）:
 | ネットワーク | 社内 / VPN / offline / other |
 | Proxy / FW 影響 | none / observed |
 
-v408 既存証跡（要再確認）:
+v442 既存証跡（要再確認）:
 
 | 項目 | 値 |
 | --- | --- |
@@ -113,8 +104,8 @@ echo $LASTEXITCODE
 Mac preflight（転送前に実施）:
 
 ```text
-shasum -a 256 -c dist/eidp-windows-vXXX.zip.sha256 -> dist/eidp-windows-vXXX.zip: OK
-logs/release-gate-vXXX-*.json -> ok=true
+shasum -a 256 -c dist/eidp-windows-v442.zip.sha256 -> dist/eidp-windows-v442.zip: OK
+logs/release-gate-v442*.json -> ok=true
 package/source freshness, source_dirty, stale/docs_only_stale, validator slice,
 mypy, ruff, discovery-gold, and package verifier results are copied from the
 current release-status / release-gate JSON.
@@ -164,15 +155,15 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 - `[stage6 recovery check]` JSON の `residual_paths`
 - `[stage6 recovery check]` JSON の `recommendations`
 
-v408 既存証跡（diagnostic-only）:
+v442 既存証跡（diagnostic-only）:
 
 ```text
-logs\diagnostics-v408-ui-sandbox-proof-20260515-034848.txt
-logs\run-v408-retroactive-dryrun-20260515-040053.log
-logs\stage6-recovery-20260515-040010.json
-logs\stage6-residual-cleanup-20260515-040034.json
-logs\stage6-evidence-20260514-190257.zip
-logs\stage6-evidence-verify-20260515-040322.json
+logs\run-20260516.log
+data\output\last_run.json
+logs\stage6-recovery-*.json
+logs\stage6-residual-cleanup-*.json
+logs\stage6-evidence-20260515-205932.zip
+logs\stage6-evidence-verify-*.json
 ```
 
 Default launcher smoke:
@@ -200,18 +191,21 @@ The process was force-stopped after the health proof; launcher exit -1 is a stop
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
-v408 既存証跡（転記候補）:
+v442 既存証跡（転記候補）:
 
 | 手順 | 結果 | 証跡 |
 | --- | --- | --- |
-| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v408-f0c27158` |
-| `EIDP-setup.bat` | pass | `logs\setup-v408-20260515.log` |
+| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v442-22f1a98` |
+| `EIDP-setup.bat` | pass | setup completed; SQLite integrity ok |
 | `.venv` 作成 | pass | `validate_windows_install.py --after-setup --json` |
 | DB bootstrap / master import | pass | `school_count=2418`, `sqlite_integrity_check=ok` |
-| 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418`, `excel_ready=0` |
-| Task Scheduler | pass | execute path `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat` |
-| Streamlit health | pass | Windows `8508`, Mac tunnel `18508 -> 8508`, `/_stcore/health=ok` |
-| Default launcher health | pass | `EIDP-start.bat`, Windows `8501`, Mac tunnel `18501 -> 8501`, `/_stcore/health=ok` |
+| 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418` |
+| Task Scheduler recovery | pass | `action_matches_expected=true` |
+| URL-only bootstrap | pass | 47 prefectures; `official_school_sites_added=1311` |
+| bounded `weekly_run.bat` canary | pass | `rc=0`, `crawled=5`, `found=3`, `downloaded=0`, `ship_gate_status=below_gate` |
+| Evidence bundle verify | pass | `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip`, all required labels present |
+| Default launcher health | pass | `scripts\launch.bat`, Windows `8501`, Mac tunnel `18501 -> 8501`, health/root HTTP 200 |
+| Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定` rendered |
 
 ## 5. 4 工程 E2E
 
@@ -297,23 +291,22 @@ v408 sandbox 例（real-cycle ではない）:
 
 ```
 
-v408 R7 retroactive 既存証跡（FY2026 yield ではない）:
+v442 R7 retroactive 既存証跡（FY2026 yield ではない）:
 
 | 指標 | 結果 |
 | --- | --- |
-| R7 CLI export | `data\output\v408-r7-retroactive-export.xlsx` |
-| R7 browser download | `_temp/v408-r7-browser-eidp_master.xlsx`, suggested `eidp_master.xlsx` |
+| R7 browser download | `output/playwright/v442-r7-excel-smoke/eidp-master.xlsx`, suggested `eidp-master.xlsx` |
 | Sheet counts | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
 | openpyxl dimensions | `2419x10`, `10023x22`, `9721x83`, `9721x19` |
-| Browser vs CLI business diff | `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, `differing_fields=0` |
+| FY persistence check | v442 root/adjacent `.env` missing after process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` launch |
 
-現行 package Mac retroactive Excel matrix（FY2026 yield ではない。Windows 実走時の比較基準）:
+Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows 実走時の比較基準）:
 
 | FY | Gate log | 判定 | Business diff | Export rows |
 | ---: | --- | --- | --- | --- |
-| 2025 | `logs/release-gate-v440-retroactive-fy2025-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
-| 2024 | `logs/release-gate-v440-retroactive-fy2024-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
-| 2023 | `logs/release-gate-v440-retroactive-fy2023-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
+| 2025 | `logs/release-gate-v437-retroactive-fy2025-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
+| 2024 | `logs/release-gate-v437-retroactive-fy2024-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
+| 2023 | `logs/release-gate-v437-retroactive-fy2023-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
 
 ## 6. KPI 判定
 
@@ -339,21 +332,22 @@ v408 R7 retroactive 既存証跡（FY2026 yield ではない）:
 | interrupted smoke residue | `residual_paths[].exists=false` | | pass / watch / fail |
 | residual cleanup log | `logs\stage6-residual-cleanup-*.json` if cleanup was needed | | pass / watch / fail |
 
-v408 diagnostic-only KPI snapshot:
+v442 diagnostic-only KPI snapshot:
 
 | KPI | Actual | 判定 |
 | --- | ---: | --- |
 | `last_run.json status` | `success` | diagnostic pass |
-| `dry_run` | `true` | diagnostic only |
-| `current_fy` | `2025` | retroactive only |
-| `ship_gate_status` | `not_measured` | not release evidence |
-| `new_document_ids` | `[]` | diagnostic only |
-| `target_pdf_auto_yield_pct` | `null` | not measured |
-| `operator_reviewable_yield_pct` | `null` | not measured |
-| `stage6_recovery_rc` | `1` | watch: residual artifacts remain |
-| scheduled task action | `action_matches_expected=true` | pass |
-| interrupted smoke residue | `existing_count=5` | watch |
-| residual cleanup mode | `dry_run`, `moved_count=0` | intentional |
+| `dry_run` | `false` | bounded canary only |
+| `current_fy` | `2026` | current rolling FY |
+| `selection_mode` | `target_missing` | diagnostic pass |
+| `crawled` | `5` | bounded canary only |
+| `found` | `3` | bounded canary only |
+| `downloaded` | `0` | release gate still open |
+| `new_document_count` | `0` | release gate still open |
+| `target_pdf_auto_yield_pct` | `0.0` | below gate |
+| `ship_gate_status` | `below_gate` | release gate still open |
+| scheduled task recovery | `action_matches_expected=true` | pass |
+| evidence bundle verify | `ok=true`, required labels present | diagnostic pass |
 
 KPI メモ:
 
@@ -371,7 +365,7 @@ KPI メモ:
 | audit-flush 実行 | pass / fail / not needed |
 | JSONL action_id 重複 | none / observed |
 
-v408 sandbox 既存証跡（real-cycle ではない）:
+v408 sandbox 既存証跡（real-cycle ではない、v442 real-cycle の代替不可）:
 
 | 項目 | 結果 |
 | --- | --- |
@@ -387,35 +381,28 @@ v408 sandbox 既存証跡（real-cycle ではない）:
 | --- | --- | --- | --- | --- |
 | | | | | |
 
-既知の v408 diagnostic-only 障害 / 注意:
+既知の v442 diagnostic-only 障害 / 注意:
 
 | 時刻 | 操作 | 現象 | 回避策 | 未解決 |
 | --- | --- | --- | --- | --- |
-| 2026-05-15 | `stage6_recovery_check` | old v384 residual smoke artifacts make overall `ok=false` | cleanup dry-run recorded only; no `--apply` without approval | yes |
-| 2026-05-15 | `collect_stage6_evidence` | manifest missing `bootstrap_logs`, `bootstrap_progress`, `discovery_rca` | accepted by current verifier with required labels, but keep diagnostic-only | yes |
-| 2026-05-15 | UI write proof | copied-DB sandbox, not real operator cycle | repeat on approved full-cycle / real cycle | yes |
+| 2026-05-16 | bounded `weekly_run.bat` canary | `downloaded=0`, `ship_gate_status=below_gate` | operator real-cycle and later R8 production yield are still required | yes |
+| 2026-05-16 | Browser UI / R7 Excel proof | Codex-driven validation, not owner/operator operation | repeat required real-cycle steps with owner/operator sign-off | yes |
+| 2026-05-16 | UI write/audit proof | current v442 lane has browser navigation and R7 Excel proof, but write/audit sandbox proof remains historical v408 copied-DB evidence | repeat manual-entry / fiscal override / audit flush on approved full-cycle copy or real operator cycle | yes |
 
-v440 setup/UI/recovery dry-run 証跡（operator real-cycle ではない）:
+v442 setup/UI/recovery/launcher 証跡（operator real-cycle ではない）:
 
 | 時刻 | 操作 | 現象 | 回避策 | 未解決 |
 | --- | --- | --- | --- | --- |
-| 2026-05-16 | `EIDP-setup.bat` | setup/import/SQLite validation all pass on `C:\Users\cyo20\EIDP-v440-2f339ce8` | none | no |
-| 2026-05-16 | `stage6_recovery_check.bat` | Task Scheduler action matches v440 and old v384 residual paths are absent | none | no |
-| 2026-05-16 | Streamlit smoke | `127.0.0.1:8501` returned HTTP 200 and process was stopped afterward | none | no |
-| 2026-05-16 | FY2025 dry-run | `last_run.json` generated with `dry_run=true`, `new_document_ids=[]`, `ship_gate_status=not_measured` | run full operator cycle for release sign-off | yes |
-| 2026-05-16 | evidence bundle | `logs\stage6-evidence-20260515-193908.zip` verified on Win and Mac with required labels present | still diagnostic-only because weekly dry-run was not an operator real-cycle | yes |
-| 2026-05-16 | URL-only bootstrap | `bootstrap_pdfs.bat --skip-discover --url-search off --school-url-crawl off` registered `school_site_rows=1653`, `schools_with_site=1624/2418`, `document=0`, `data\pdfs=0 bytes` | proceed only with bounded canary before any full PDF cycle | yes |
-| 2026-05-16 | FY2025 post-bootstrap dry-run | `--dry-run --limit 20` reported `target_missing_school_count=20`, `no_crawlable_url_school_count=794` | confirms selection surface, not acquisition yield | yes |
-| 2026-05-16 | FY2025 bounded actual canary | `--limit 5 --batch-size 5 --request-timeout 8 --rate-limit 0.5` reported `dry_run=false`, `crawled=5`, `found=3`, `downloaded=0`, `failed=3`, `new_document_count=0`, `discovery_rca.batch_plan_item_count=5` | sample had no downloadable target PDFs; keep full cycle gated | yes |
-| 2026-05-16 | refreshed evidence bundle | `logs\stage6-evidence-20260515-195110.zip` verified on Win and Mac with `bootstrap_logs`, `bootstrap_progress`, `discovery_rca`, and `last_run` required labels present | still diagnostic-only; missing `weekly_run_logs` and `stage6_residual_cleanup` | yes |
-| 2026-05-16 | FY2026 targeted acquisition smoke | 4 high-confidence `prefecture_aggregator` disclosure URLs, `crawled=4`, `found=4`, `downloaded=3`, `failed=1`, `prefiltered=0`, `candidate_school_mismatch=0` | positive sample only; not production yield | yes |
-| 2026-05-16 | FY2026 targeted ingest smoke | document IDs `1`, `2`, `3` ingested with `processed=3`, `yearly_upserted=5`, `departments_created=3`, `invalid_fiscal_year=0`; status split `ingested=2`, `review_pending=1` | SupportRecipient stayed `0` for this sample | yes |
-| 2026-05-16 | FY2026 targeted Excel smoke | `rebuild-school-year-tasks --fiscal-year 2026` reported `excel_ready=2`; `export-excel --output data\output\v440-targeted-fy2026-canary.xlsx` reported `採録状況=2418`, `対象比率=10022`, `学科別=9722`, `在籍のみ抜粋=9722` | generated workbook is diagnostic output, not operator sign-off artifact | yes |
-| 2026-05-16 | FY2026 targeted ship-readiness | `ship-readiness --fy 2026` returned `ok=false`, `strict_target_pdf_schools=2`, `strict_target_pdf_rate=0.0008`, `estimated_manual_workload_rate=0.9992`, `excel_ready_rate=0.0008` | production 60% gate remains open | yes |
-| 2026-05-16 | refreshed targeted evidence bundle | `logs\stage6-evidence-20260515-200424.zip` verified on Win and Mac with `ok=true`; latest diagnostics include `sqlite_target_fy_target_pdf_school_count=2` and `ship_readiness_rc=1` | still diagnostic-only; missing `weekly_run_logs` and `stage6_residual_cleanup` | yes |
-| 2026-05-16 | FY2026 stratified 24-school discovery sample | deterministic sample from `1308` high-confidence verified `prefecture_aggregator` disclosure URLs across `37` prefectures; `crawled=24`, `found=20`, `downloaded=0`, `failed=3`, `skipped=232`, `prefiltered=151` | stronger production-distribution signal; no target PDFs acquired in this sample | yes |
-| 2026-05-16 | FY2026 stratified evidence summary | `evidence_rows=2205`; buckets: `publication_lag_or_old_target_pdf=12`, `target_form_without_year_evidence=5`, `no_pdf_candidates=4`, `non_target_candidates_only=3`; top reasons include `candidate_school_mismatch=1755`, `candidate_budget_dropped=179`, `pre_filtered_non_target_hint=127` | identifies next bottleneck as publication lag / year evidence / shared-site school matching | yes |
-| 2026-05-16 | refreshed stratified evidence bundle | `logs\stage6-evidence-20260515-201709.zip` verified on Win and Mac with `ok=true`; includes `stratified-fy2026-24-discovery-rca-batch-plan.json`; `data\pdfs` stayed under 1 MB | still diagnostic-only; missing `weekly_run_logs` and `stage6_residual_cleanup` | yes |
+| 2026-05-16 | ZIP/SHA transfer | `dist/eidp-windows-v442.zip` transferred to `C:\EIDP-staging`; Windows SHA matched `4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7` | none | no |
+| 2026-05-16 | `EIDP-setup.bat` | setup/import/SQLite validation all pass on `C:\Users\cyo20\EIDP-v442-22f1a98`; `school_fiscal_year_status_count=2418` | none | no |
+| 2026-05-16 | URL-only bootstrap | `bootstrap_pdfs.bat --skip-discover --url-search off --school-url-crawl off` parsed 47 prefectures and added `official_school_sites_added=1311` | none | no |
+| 2026-05-16 | bounded `weekly_run.bat` canary | process env limited to 5 schools; rc `0`; `crawled=5`, `found=3`, `downloaded=0`, `ship_gate_status=below_gate` | keep release yield gated | yes |
+| 2026-05-16 | `stage6_recovery_check.bat` | Task Scheduler action matches v442 expected action | none | no |
+| 2026-05-16 | `stage6_residual_cleanup.bat` | existing residual count `0`, moved count `0` | none | no |
+| 2026-05-16 | evidence bundle | `logs\stage6-evidence-20260515-205932.zip` verified on Win and Mac with `ok=true` and required labels including `weekly_run_logs` | still diagnostic-only because operator real-cycle is unsigned | yes |
+| 2026-05-16 | Streamlit launch smoke | `scripts\launch.bat` served health/root HTTP 200 on `127.0.0.1:8501` and process was stopped afterward | none | no |
+| 2026-05-16 | Browser navigation smoke | Mac tunnel `18501 -> 8501`; task, PDF/manual-entry, Excel preview, and settings pages rendered | owner/operator click-through still required | yes |
+| 2026-05-16 | FY2025 browser Excel smoke | process-scoped `EIDP_TARGET_FISCAL_YEAR=2025`; Excel preview/download produced row counts `2418/10022/9719/9719`; `.env` remained absent | current R8 production yield still required | yes |
 
 添付する証跡:
 
