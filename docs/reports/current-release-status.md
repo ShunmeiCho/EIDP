@@ -2,11 +2,11 @@
 
 Updated: 2026-05-15
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `f56b2e4b6bcd1bc26b94c2f9e38baab8438dde05`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v436.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v436.zip`
-Latest Mac-core package SHA256: `d94ec5f4c735b7730d83299fc484fbcd71e5c0544a0f484ae5d900b4c46e218e`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v436.zip`
+Latest Mac/non-Windows package snapshot: `7553c7480a001a1ebec687dcb743c8bd9529d6d4`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v437.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v437.zip`
+Latest Mac-core package SHA256: `ed0d677fd2d36f7bd9f884185412180a6764beef9632543e5e36eb3c766ed33c`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v437.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v408.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v408.zip`
@@ -21,58 +21,63 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence draft: `docs/reports/eidp-v436-stage6-evidence-draft.md`
+Current Stage 6 evidence draft: `docs/reports/eidp-v437-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v436 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `f56b2e4b6bcd1bc26b94c2f9e38baab8438dde05`, which
+v437 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `7553c7480a001a1ebec687dcb743c8bd9529d6d4`, which
 includes the v424 configurable MEXT reconciliation school-type scope, the v425
-PR1 operator hardening, and the v436 Mac-side hardening: Excel export thresholds
+PR1 operator hardening, the v436 Mac-side hardening, and the v437 structured
+logging hardening. Excel export thresholds
 are read per call, proposal-review write helpers require an app lock, Stage 6
 residual cleanup refuses protected runtime files, and operator settings no
-longer persist `EIDP_TARGET_FISCAL_YEAR` into `.env`. v436 also preserves
+longer persist `EIDP_TARGET_FISCAL_YEAR` into `.env`. v437 also preserves
 provider-specific OCR extraction methods for PaddleOCR/PyMuPDF, widens
 `DepartmentYearly` and `SupportRecipient` confidence precision to
 `Numeric(4,3)`, makes the fiscal-year override pipeline reject out-of-range
 target years directly, and audits collateral target-year current-row demotions
-before replacing them. v436 widens the CLI write-lock contract tests to cover
-all `cli_*.py` command modules and attribute-form write helper calls. v436 also
+before replacing them. v437 widens the CLI write-lock contract tests to cover
+all `cli_*.py` command modules and attribute-form write helper calls. v437 also
 surfaces future or otherwise out-of-cap ingest fiscal-year annotations through
 `invalid_fiscal_year` stats/evidence instead of collapsing them into a generic
 no-year parse failure, locks manual-entry `DepartmentYearly` revision reads
 before appending a new current row, writes manual-entry `SchoolYearStatus` and
 `SupportRecipient` rows, aligns installed-wheel app-root/data-dir defaults,
 replays Stage 6 performance indexes for existing SQLite operator DBs, and locks
-school URL crawl-evidence JSONL appends.
+school URL crawl-evidence JSONL appends. v437 configures `structlog` and stdlib
+logging through a shared JSON renderer, writes a rotating `logs/eidp.jsonl`, and
+wires logging setup into CLI, Streamlit, and weekly-runner entrypoints.
 The operator E2E
 template remains package-neutral after the
 rejected v421 build exposed hard-coded v420 package/SHA fields inside the
-packaged template. Do not transfer v421. The v436 package was built with
+packaged template. Do not transfer v421. The v437 package was built with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
-dist/eidp-windows-v436.zip --latest-alias`. The build wrote
-`dist/eidp-windows-v436.zip`, `dist/eidp-windows-v436.zip.sha256`, and refreshed
+dist/eidp-windows-v437.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v437.zip`, `dist/eidp-windows-v437.zip.sha256`, and refreshed
 `dist/eidp-windows.zip`. The release gate confirmed SHA256
-`d94ec5f4c735b7730d83299fc484fbcd71e5c0544a0f484ae5d900b4c46e218e` and
-`dist/eidp-windows-v436.zip.sha256` carries the same value.
-`scripts/verify_windows_distribution.py dist/eidp-windows-v436.zip` returned
+`ed0d677fd2d36f7bd9f884185412180a6764beef9632543e5e36eb3c766ed33c` and
+`dist/eidp-windows-v437.zip.sha256` carries the same value.
+`scripts/verify_windows_distribution.py dist/eidp-windows-v437.zip` returned
 `ok=true` inside the full release gate with
-`git_commit=f56b2e4b6bcd1bc26b94c2f9e38baab8438dde05`, `git_dirty=false`,
-`wheel_count=78`, `project_wheel_count=1`, `entry_count=3079`,
+`git_commit=7553c7480a001a1ebec687dcb743c8bd9529d6d4`, `git_dirty=false`,
+`wheel_count=78`, `project_wheel_count=1`, `entry_count=3080`,
 `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
 `discovery_gold_set_entries=44`, and no undemonstrated discovery pattern
-sources. The v436 full gate also covers the launch-script localhost contract,
+sources. The v437 full gate also covers the launch-script localhost contract,
 the URL-annotation URI filter, the operator review lock regressions, per-call
 Excel threshold regression, protected-runtime-file residual cleanup guard,
 target-fiscal-year non-persistence regression, OCR provider method regression,
 confidence precision contract, and fiscal-year override collateral-demotion
-audit regression. The v436 full unit suite also covers the expanded CLI
+audit regression. The v437 full unit suite also covers the expanded CLI
 write-lock AST contract and the `invalid_fiscal_year` ingest regression, plus
 the manual-entry row-lock, support-recipient, app-root/data-dir, and SQLite
-performance-index regressions.
+performance-index regressions. It also covers structured JSONL logging for both
+`structlog` and stdlib records, idempotent logging setup, and CLI/Streamlit/
+weekly-runner logging entrypoint wiring.
 
 The coverage gate is now machine-enforced in CI as well as locally. `uv run
 pytest --cov=src/eidp --cov-report=term --cov-fail-under=80` returned
@@ -80,40 +85,40 @@ pytest --cov=src/eidp --cov-report=term --cov-fail-under=80` returned
 reached. Total coverage: 80.03%`.
 
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v436.zip --json --output logs/release-gate-v436-full.json`
+dist/eidp-windows-v437.zip --json --output logs/release-gate-v437-full.json`
 returned `ok=true`. The recorded package/source freshness check reported
-`package_commit=f56b2e4b6bcd1bc26b94c2f9e38baab8438dde05`,
-`source_commit=f56b2e4b6bcd1bc26b94c2f9e38baab8438dde05`,
-`source_dirty=false`, and `stale=false`; `unit_full` returned `1592 passed`; the
+`package_commit=7553c7480a001a1ebec687dcb743c8bd9529d6d4`,
+`source_commit=7553c7480a001a1ebec687dcb743c8bd9529d6d4`,
+`source_dirty=false`, and `stale=false`; `unit_full` returned `1600 passed`; the
 validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v436 has no Windows transfer/setup/UI proof yet because SSH-Win is currently
+v437 has no Windows transfer/setup/UI proof yet because SSH-Win is currently
 disconnected.
 
 The docs-only stale-package replay path remains available for status-only
 follow-up commits:
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v436.zip --skip-full-unit --allow-docs-only-stale-package
---json --output logs/release-gate-v436-docs-only-stale-after-status-refresh.json`.
+dist/eidp-windows-v437.zip --skip-full-unit --allow-docs-only-stale-package
+--json --output logs/release-gate-v437-docs-only-stale-after-status-refresh.json`.
 Treat that as a
 current-source replay convenience only; it is not a Windows transfer/setup/UI
 proof and it must still reject dirty tracked source or any non-doc source delta.
 
-Mac-only v436 retroactive matrix gates passed for FY2025, FY2024, and FY2023
+Mac-only v437 retroactive matrix gates passed for FY2025, FY2024, and FY2023
 without SSH/Windows. The matrix run wrote
-`logs/release-gate-v436-retroactive-matrix.json` with `ok=true` and
+`logs/release-gate-v437-retroactive-matrix.json` with `ok=true` and
 `case_count=3`. FY2025 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2025-20260515-181906` and compared against
+`_temp/non-windows-retroactive-fy2025-20260515-184145` and compared against
 `_temp/v408-r7-cli-export.xlsx`; FY2024 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2024-20260515-181952` and compared against
+`_temp/non-windows-retroactive-fy2024-20260515-190026` and compared against
 `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx`;
 FY2023 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2023-20260515-182044` and compared against
+`_temp/non-windows-retroactive-fy2023-20260515-190422` and compared against
 `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx`.
-`logs/release-gate-v436-retroactive-fy2025-reference.json`,
-`logs/release-gate-v436-retroactive-fy2024-reference.json`, and
-`logs/release-gate-v436-retroactive-fy2023-reference.json` all returned
+`logs/release-gate-v437-retroactive-fy2025-reference.json`,
+`logs/release-gate-v437-retroactive-fy2024-reference.json`, and
+`logs/release-gate-v437-retroactive-fy2023-reference.json` all returned
 `ok=true`; their validator/distribution unit slices returned `164 passed`,
 their package verifiers passed, all three isolated exports wrote
 `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`,
@@ -483,11 +488,11 @@ containing Excel exports, and do not run
 
 Stage 6 template fill map for the v408 evidence lane:
 
-v436 is the next Windows execution candidate because it is the latest
+v437 is the next Windows execution candidate because it is the latest
 Mac/non-Windows release-gate-clean package. It has not been transferred to
 Windows, so the v408 rows below remain evidence support only; final Stage 6
-real-cycle sign-off should use a fresh v436 transfer/setup lane unless the owner
-explicitly freezes on v408. The v436 transfer checklist supports both
+real-cycle sign-off should use a fresh v437 transfer/setup lane unless the owner
+explicitly freezes on v408. The v437 transfer checklist supports both
 SSH/SCP and no-SSH manual transfer through USB or a trusted internal file share;
 both paths still require the Windows-side SHA256 check before extraction.
 
