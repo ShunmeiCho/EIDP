@@ -926,6 +926,8 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "Get-Date -Format yyyyMMdd",
             "run_weekly_target_year_discovery.py",
+            "EIDP_WEEKLY_LIMIT",
+            "--limit %EIDP_WEEKLY_LIMIT%",
             'set "RC=%ERRORLEVEL%"',
             "endlocal & exit /b %RC%",
         ),

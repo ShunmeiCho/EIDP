@@ -27,8 +27,18 @@ for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd"') do 
 if "%DATESTAMP%"=="" set "DATESTAMP=unknown-date"
 set "LOGFILE=%EIDP_APP_ROOT%\logs\run-%DATESTAMP%.log"
 
+set "WEEKLY_ARGS="
+if defined EIDP_WEEKLY_CURRENT_FY set "WEEKLY_ARGS=%WEEKLY_ARGS% --current-fy %EIDP_WEEKLY_CURRENT_FY%"
+if defined EIDP_WEEKLY_LIMIT set "WEEKLY_ARGS=%WEEKLY_ARGS% --limit %EIDP_WEEKLY_LIMIT%"
+if defined EIDP_WEEKLY_BATCH_SIZE set "WEEKLY_ARGS=%WEEKLY_ARGS% --batch-size %EIDP_WEEKLY_BATCH_SIZE%"
+if defined EIDP_WEEKLY_RATE_LIMIT set "WEEKLY_ARGS=%WEEKLY_ARGS% --rate-limit %EIDP_WEEKLY_RATE_LIMIT%"
+if defined EIDP_WEEKLY_REQUEST_TIMEOUT set "WEEKLY_ARGS=%WEEKLY_ARGS% --request-timeout %EIDP_WEEKLY_REQUEST_TIMEOUT%"
+if /I "%EIDP_WEEKLY_DRY_RUN%"=="1" set "WEEKLY_ARGS=%WEEKLY_ARGS% --dry-run"
+if /I "%EIDP_WEEKLY_DRY_RUN%"=="true" set "WEEKLY_ARGS=%WEEKLY_ARGS% --dry-run"
+
 echo [weekly_run] start %DATE% %TIME% >> "%LOGFILE%"
-"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\run_weekly_target_year_discovery.py" >> "%LOGFILE%" 2>&1
+if defined WEEKLY_ARGS echo [weekly_run] args%WEEKLY_ARGS% >> "%LOGFILE%"
+"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\run_weekly_target_year_discovery.py" %WEEKLY_ARGS% >> "%LOGFILE%" 2>&1
 set "RC=%ERRORLEVEL%"
 echo [weekly_run] end %DATE% %TIME% rc=%RC% >> "%LOGFILE%"
 

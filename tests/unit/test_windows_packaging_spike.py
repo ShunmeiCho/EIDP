@@ -751,6 +751,26 @@ def test_weekly_run_preserves_python_exit_code_after_endlocal(bat_files: dict[st
     assert "endlocal & exit /b %RC%" in body
 
 
+def test_weekly_run_supports_bounded_smoke_env_vars(bat_files: dict[str, str]):
+    """Stage 6 can run the real weekly launcher with a bounded scope.
+
+    The defaults stay production-sized, but SSH/operator-PC validation can set
+    these trusted environment variables before invoking weekly_run.bat to avoid
+    unbounded network and disk usage during smoke tests.
+    """
+    body = bat_files["weekly_run.bat"]
+    assert "EIDP_WEEKLY_LIMIT" in body
+    assert "--limit %EIDP_WEEKLY_LIMIT%" in body
+    assert "EIDP_WEEKLY_BATCH_SIZE" in body
+    assert "--batch-size %EIDP_WEEKLY_BATCH_SIZE%" in body
+    assert "EIDP_WEEKLY_RATE_LIMIT" in body
+    assert "--rate-limit %EIDP_WEEKLY_RATE_LIMIT%" in body
+    assert "EIDP_WEEKLY_REQUEST_TIMEOUT" in body
+    assert "--request-timeout %EIDP_WEEKLY_REQUEST_TIMEOUT%" in body
+    assert "EIDP_WEEKLY_DRY_RUN" in body
+    assert "--dry-run" in body
+
+
 def test_launch_preserves_streamlit_exit_code_after_endlocal(bat_files: dict[str, str]):
     """Delayed expansion is not enabled in launch.bat. Capture the
     Streamlit return code before `endlocal` so Task Scheduler / manual
