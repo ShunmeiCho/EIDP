@@ -29,7 +29,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from eidp.db import sqlite_bootstrap
-from eidp.db.models import Base, Department, DepartmentChange, DepartmentYearly, Document, School
+from eidp.db.models import Base, Department, DepartmentChange, DepartmentYearly, Document, School, SupportRecipient
 from eidp.db.sqlite_bootstrap import (
     apply_sqlite_pragmas,
     bootstrap_sqlite,
@@ -85,6 +85,14 @@ def test_alembic_version_is_stamped(bootstrapped_engine):
         rows = conn.execute(text("SELECT version_num FROM alembic_version")).all()
     assert len(rows) == 1, "alembic_version must hold exactly one head row after stamp"
     assert rows[0][0], "alembic head revision must be non-empty"
+
+
+def test_extraction_confidence_columns_keep_three_decimal_precision() -> None:
+    for model in (DepartmentYearly, SupportRecipient):
+        column_type = model.__table__.c.extraction_confidence.type
+
+        assert column_type.precision == 4
+        assert column_type.scale == 3
 
 
 def test_null_safe_department_index_present(bootstrapped_engine):

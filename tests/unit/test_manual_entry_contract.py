@@ -95,7 +95,7 @@ def test_save_manual_entries_creates_dept_yearly_with_manual_metadata(engine):
         assert dy.extraction_method == "manual"
         assert dy.verified is True
         assert dy.document_id == doc.id
-        # extraction_confidence is Numeric(3,2) — compare via float()
+        # extraction_confidence is Numeric(4,3) — compare via float()
         assert float(dy.extraction_confidence) == 1.0
         assert dy.is_current is True
         assert dy.revision == 1

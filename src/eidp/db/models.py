@@ -187,7 +187,7 @@ class DepartmentYearly(Base):
     prev_enrollment: Mapped[int | None] = mapped_column(Integer)
     dropouts: Mapped[int | None] = mapped_column(Integer)
     dropout_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
-    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
+    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(4, 3))
     extraction_method: Mapped[str | None] = mapped_column(String(20))
     confidence_breakdown: Mapped[str | None] = mapped_column(Text)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -311,7 +311,7 @@ class SupportRecipient(Base):
     grand_total: Mapped[int | None] = mapped_column(Integer)  # 総計
     prev_enrollment: Mapped[int | None] = mapped_column(Integer)
     recipient_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
-    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
+    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(4, 3))
     confidence_breakdown: Mapped[str | None] = mapped_column(Text)  # 8.2.c: JSON, mirrors DepartmentYearly
     notes: Mapped[str | None] = mapped_column(Text)
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
