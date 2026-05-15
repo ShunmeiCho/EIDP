@@ -21,7 +21,7 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v440.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v440.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-200424.zip`
+Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-201709.zip`
 
 ## Verdict
 
@@ -165,6 +165,33 @@ data\output\v440-targeted-fy2026-canary.xlsx` completed with row counts
 and `excel_ready_rate=0.0008`. This proves the current-FY acquisition →
 ingest → Excel path on Windows for a bounded positive sample; it does not
 prove the 60% production yield gate.
+
+To avoid overfitting to the positive smoke, v440 was then run against a
+deterministic stratified FY2026 sample of 24 schools: one random
+`prefecture_aggregator`, verified disclosure URL was selected per prefecture
+from the remaining 1,308 high-confidence candidates, shuffled with seed
+`20260516`, and capped at 24 schools. The command used
+`eidp discover-pdfs --discovery-method prefecture_aggregator` with the 24
+selected `--school-id` values, `--batch-size 24`, `--rate-limit 0.3`, and
+`--request-timeout 10`. It returned `crawled=24`, `found=20`,
+`downloaded=0`, `failed=3`, `skipped=232`, `prefiltered=151`,
+`candidate_budget_limited=2`, `candidate_budget_dropped=179`, and
+`candidate_school_mismatch=1755`. The evidence summary contained
+`evidence_rows=2205`; school-level buckets were `publication_lag_or_old_target_pdf=12`,
+`target_form_without_year_evidence=5`, `no_pdf_candidates=4`, and
+`non_target_candidates_only=3`. The leading rejection classes were
+`candidate_school_mismatch=1755`, `candidate_budget_dropped=179`,
+`pre_filtered_non_target_hint=127`, `classified_non_target=60`,
+`fiscal_year_mismatch:2025=25`, and
+`target_fiscal_year_not_detected=12`. No additional PDFs were stored:
+`data\pdfs` stayed under 1 MB. A refreshed evidence bundle
+`logs\stage6-evidence-20260515-201709.zip` verified on both Windows and Mac
+with `ok=true` and includes both the previous weekly RCA plan and the new
+`data/output/target-year-discovery/stratified-fy2026-24-discovery-rca-batch-plan.json`.
+This stratified run is the strongest current signal for the next production
+bottleneck: the pipeline mechanics work, but current FY2026 yield is dominated
+by publication lag/old-year PDFs, target forms without trusted year evidence,
+and large shared-site school-name mismatch surfaces.
 
 The docs-only stale-package replay path remains available for status-only
 follow-up commits:
