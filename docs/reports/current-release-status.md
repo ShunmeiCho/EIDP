@@ -482,7 +482,9 @@ v420 is the next Windows execution candidate because it is the latest
 Mac/non-Windows release-gate-clean package. It has not been transferred to
 Windows, so the v408 rows below remain evidence support only; final Stage 6
 real-cycle sign-off should use a fresh v420 transfer/setup lane unless the owner
-explicitly freezes on v408.
+explicitly freezes on v408. The v420 transfer checklist now supports both
+SSH/SCP and no-SSH manual transfer through USB or a trusted internal file share;
+both paths still require the Windows-side SHA256 check before extraction.
 
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |

@@ -17,7 +17,7 @@ Windows operator PC and has no v420 setup/UI/real-cycle proof.
 | v420 ZIP launcher/script consistency | pass | `unzip -l dist/eidp-windows-v420.zip` contains `EIDP-setup.bat`, `EIDP-start.bat`, `EIDP-diagnose.bat`, `EIDP-stage6-evidence.bat`, `EIDP-stage6-verify-evidence.bat`, `scripts/first_setup.bat`, `scripts/launch.bat`, `scripts/weekly_run.bat`, `scripts/validate_install.bat`, `scripts/collect_stage6_evidence.bat`, and `scripts/verify_stage6_evidence.bat`. The root Stage 6 evidence launchers call the packaged `scripts\collect_stage6_evidence.bat` and `scripts\verify_stage6_evidence.bat` wrappers. |
 | v420 retroactive FY2025/R7 Excel regression | pass | Isolated app root `_temp/non-windows-retroactive-fy2025-20260515-140811` exported FY2025 and `retroactive_excel_diff_reference` returned zero missing/extra rows and zero differing fields against `_temp/v408-r7-cli-export.xlsx`. |
 | v420 retroactive FY2025/R7, FY2024/R6, and FY2023/R5 matrix | pass | `logs/release-gate-v420-retroactive-matrix.json` returned `ok=true` for all three cases. `logs/release-gate-v420-retroactive-fy2025-reference.json`, `logs/release-gate-v420-retroactive-fy2024-reference.json`, and `logs/release-gate-v420-retroactive-fy2023-reference.json` each returned `ok=true` and zero business-value diffs against stable references. |
-| v420 Windows transfer/setup/UI | missing | SSH-Win is disconnected; no v420 Windows SHA check, extraction, setup, launcher, UI health, or evidence bundle exists yet. |
+| v420 Windows transfer/setup/UI | missing | SSH-Win is disconnected; `docs/runbooks/eidp-v420-windows-transfer-checklist.md` now includes a no-SSH manual transfer path, but no v420 Windows SHA check, extraction, setup, launcher, UI health, or evidence bundle exists yet. |
 
 ## Package Record
 
@@ -43,10 +43,12 @@ Windows operator PC and has no v420 setup/UI/real-cycle proof.
 
 ## Next Windows Steps
 
-When SSH-Win is available again, execute the v420 lane in this order:
+When SSH-Win is available again, or when the operator can manually move the ZIP
+through a USB drive or trusted internal file share, execute the v420 lane in
+this order:
 
 1. Transfer `dist/eidp-windows-v420.zip` and `dist/eidp-windows-v420.zip.sha256`
-   to `C:\EIDP-staging\` using
+   to `C:\EIDP-staging\` using either SSH/SCP or the no-SSH manual path in
    `docs/runbooks/eidp-v420-windows-transfer-checklist.md`.
 2. Verify SHA256 on Windows with `Get-FileHash` or `certutil`.
 3. Extract to `C:\Users\cyo20\EIDP-v420-99efba8a` unless the operator chooses
@@ -55,7 +57,7 @@ When SSH-Win is available again, execute the v420 lane in this order:
 5. Launch Streamlit on `127.0.0.1:8501`.
 6. Run the Stage 6 retroactive FY2025 operator dry-run.
 7. Build and verify the Stage 6 evidence bundle.
-8. Pull the evidence bundle back to Mac and verify it again.
+8. Pull or manually copy the evidence bundle back to Mac and verify it again.
 9. Fill `docs/runbooks/eidp-operator-e2e-template.md` with the real v420
    operator data.
 

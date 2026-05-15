@@ -9,9 +9,12 @@ It is intentionally explicit about lane boundaries: the active operator-PC
 Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v408-f0c27158` for
 `dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v420 is the
 latest Mac/non-Windows release-gate-clean package for the current source lane,
-but it has no Windows transfer/setup/UI proof because SSH-Win is currently
-disconnected. v408 now has R7 CLI Excel parity, R7 browser Excel download proof,
-a disposable copied-DB UI write/audit sandbox proof, and a verifier-accepted
+but it has no Windows transfer/setup/UI proof yet. SSH-Win is currently
+disconnected, so `docs/runbooks/eidp-v420-windows-transfer-checklist.md` now
+also documents a no-SSH manual transfer path through USB or a trusted internal
+file share; either path still requires Windows-side SHA256 verification before
+extraction. v408 now has R7 CLI Excel parity, R7 browser Excel download proof, a
+disposable copied-DB UI write/audit sandbox proof, and a verifier-accepted
 non-Excel diagnostic evidence bundle; the real operator cycle is still missing.
 v420 includes the v419 source/package lane plus
 `scripts/run_retroactive_excel_matrix.py` for multi-year Mac-side retroactive
@@ -672,11 +675,12 @@ Known non-goal-wide lint boundary:
 
 ## Next Concrete Gate
 
-When SSH-Win is available again, start the next Windows execution lane from the
-latest Mac/non-Windows-clean package, v420. v408 remains the latest
-Windows-proven setup/UI evidence lane and can be used as historical support,
-but it should not be treated as the final v1.0 real-cycle package unless the
-owner explicitly decides to freeze on v408.
+When SSH-Win is available again, or when the operator can manually move the ZIP
+through USB or a trusted internal file share, start the next Windows execution
+lane from the latest Mac/non-Windows-clean package, v420. v408 remains the
+latest Windows-proven setup/UI evidence lane and can be used as historical
+support, but it should not be treated as the final v1.0 real-cycle package
+unless the owner explicitly decides to freeze on v408.
 
 First transfer and verify `dist/eidp-windows-v420.zip`:
 
@@ -687,14 +691,17 @@ Suggested extract path: C:\Users\cyo20\EIDP-v420-99efba8a
 Checklist: docs/runbooks/eidp-v420-windows-transfer-checklist.md
 ```
 
-Then start the operator UI tunnel after Windows setup/validation has passed:
+For Mac-driven remote UI verification, start the operator UI tunnel after
+Windows setup/validation has passed:
 
 ```bash
 ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
 ```
 
-Then verify the UI at `http://127.0.0.1:18501/` and complete the Stage 6
-click-through against the real v420 operator cycle or an approved full-cycle copy:
-manual PDF entry write, fiscal-year override write, R7 Excel preview/download,
-audit log/outbox flush, diagnostics capture, evidence verify, and sign-off
-fields.
+If SSH remains unavailable, verify the UI locally on Windows at
+`http://127.0.0.1:8501/`, capture the same logs/evidence bundle through the
+manual return path, and then run the Mac verifier after copying the evidence
+back. In either case, complete the Stage 6 click-through against the real v420
+operator cycle or an approved full-cycle copy: manual PDF entry write,
+fiscal-year override write, R7 Excel preview/download, audit log/outbox flush,
+diagnostics capture, evidence verify, and sign-off fields.

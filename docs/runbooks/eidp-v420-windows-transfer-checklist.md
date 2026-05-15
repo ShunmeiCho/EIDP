@@ -1,12 +1,13 @@
 # EIDP v420 Windows Transfer Checklist
 
 Updated: 2026-05-15
-Status: ready for SSH-Win recovery / not executed on Windows
+Status: ready for SSH-Win recovery or manual transfer / not executed on Windows
 
-Use this checklist when SSH-Win is available again. It is intentionally scoped
-to v420 and should not be used as evidence by itself; evidence starts only after
-the Windows SHA check, setup, UI health check, retroactive dry-run, and Stage 6
-bundle verification have actually run.
+Use this checklist when SSH-Win is available again, or when the operator can
+manually move the package through a USB drive or trusted internal file share. It
+is intentionally scoped to v420 and should not be used as evidence by itself;
+evidence starts only after the Windows SHA check, setup, UI health check,
+retroactive dry-run, and Stage 6 bundle verification have actually run.
 
 ## Package
 
@@ -48,6 +49,8 @@ Expected:
 
 ## Transfer
 
+### Option A: SSH / SCP
+
 Create staging directory and copy the ZIP plus sidecar:
 
 ```bash
@@ -57,6 +60,29 @@ scp dist/eidp-windows-v420.zip dist/eidp-windows-v420.zip.sha256 win:C:/EIDP-sta
 
 If `scp` path handling fails on Windows OpenSSH, use `sftp win` and upload both
 files to `C:\EIDP-staging\`.
+
+### Option B: No-SSH Manual Transfer
+
+Use this path when SSH-Win is disconnected. Copy exactly these two files from
+Mac to a USB drive or trusted internal file share:
+
+- `dist/eidp-windows-v420.zip`
+- `dist/eidp-windows-v420.zip.sha256`
+
+On Windows, copy both files into the staging directory before running the SHA
+check:
+
+```powershell
+New-Item -ItemType Directory -Force C:\EIDP-staging | Out-Null
+$Source = "<USB_OR_SHARE_PATH>"
+Copy-Item -LiteralPath (Join-Path $Source "eidp-windows-v420.zip") -Destination "C:\EIDP-staging\eidp-windows-v420.zip"
+Copy-Item -LiteralPath (Join-Path $Source "eidp-windows-v420.zip.sha256") -Destination "C:\EIDP-staging\eidp-windows-v420.zip.sha256"
+Get-ChildItem C:\EIDP-staging\eidp-windows-v420.zip*
+```
+
+Manual transfer is acceptable only if the next Windows SHA check matches the
+expected digest below. Do not extract from the USB/share path directly; extract
+from `C:\EIDP-staging\` after the digest check passes.
 
 ## Windows SHA Check
 
@@ -183,6 +209,15 @@ Pull the bundle back to Mac and verify again:
 scp win:C:/Users/cyo20/EIDP-v420-99efba8a/logs/stage6-evidence-*.zip logs/
 uv run python scripts/verify_stage6_evidence.py logs/stage6-evidence-*.zip --json
 ```
+
+If SSH-Win is still disconnected, copy the newest Windows files below to USB or
+a trusted internal file share, then place them under the Mac repo's `logs/`
+directory before running the same Mac verifier:
+
+- `C:\Users\cyo20\EIDP-v420-99efba8a\logs\stage6-evidence-*.zip`
+- `C:\Users\cyo20\EIDP-v420-99efba8a\logs\stage6-evidence-verify-*.json`
+- `C:\Users\cyo20\EIDP-v420-99efba8a\logs\run-*.log`
+- `C:\Users\cyo20\EIDP-v420-99efba8a\data\output\last_run.json`
 
 Record the verified bundle path and verifier JSON in
 `docs/runbooks/eidp-operator-e2e-template.md` and
