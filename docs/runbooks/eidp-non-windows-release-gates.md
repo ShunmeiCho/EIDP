@@ -135,6 +135,33 @@ uv run python scripts/run_retroactive_excel_matrix.py \
 The runner writes per-year JSON outputs using the package label and fiscal year,
 then writes the optional matrix summary to `--output`.
 
+### Local Artifact Cleanup
+
+Release gates and retroactive Excel checks create disposable app roots and
+probe artifacts under `_temp/`. Do not let those directories accumulate between
+release candidates.
+
+After recording the gate JSONs you need, run a dry-run cleanup first:
+
+```bash
+uv run python scripts/cleanup_local_artifacts.py --aggressive --json
+```
+
+Then delete only generated artifacts, preserving the current retroactive
+references:
+
+```bash
+uv run python scripts/cleanup_local_artifacts.py --aggressive --apply \
+  --keep _temp/v408-r7-cli-export.xlsx \
+  --keep _temp/non-windows-retroactive-fy2025-<stamp> \
+  --keep _temp/non-windows-retroactive-fy2024-<stamp> \
+  --keep _temp/non-windows-retroactive-fy2023-<stamp>
+```
+
+The cleanup helper is dry-run by default, scans only top-level entries under
+`_temp/`, refuses symlinks, and never touches `data/master.xlsx`,
+`data/eidp.sqlite3`, `data/pdfs/`, `dist/`, or Windows operator deployments.
+
 ## What This Proves
 
 - The ZIP has the expected source, data, wheelhouse, runbook, and validator
