@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -87,8 +88,14 @@ def test_render_uses_supported_target_fiscal_year_bounds() -> None:
     assert "max_value=MAX_SUPPORTED_TARGET_FISCAL_YEAR" in source
 
 
-def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None:
+def test_target_fiscal_year_is_not_a_persistent_setting_key() -> None:
+    assert "EIDP_TARGET_FISCAL_YEAR" not in settings_page.SETTING_ENV_KEYS
+
+
+def test_save_operator_settings_writes_runtime_variables(tmp_path: Path, monkeypatch) -> None:
     env_path = tmp_path / ".env"
+    env_path.write_text("EIDP_TARGET_FISCAL_YEAR=2026\n", encoding="utf-8")
+    monkeypatch.setenv("EIDP_TARGET_FISCAL_YEAR", "2026")
     original = {key: getattr(settings, key) for key in (
         "target_fiscal_year",
         "fiscal_era_enabled",
@@ -136,6 +143,7 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None
             google_cx="",
             firecrawl_api_key="firecrawl-key",
         )
+        assert settings.target_fiscal_year == 2027
     finally:
         for key, value in original.items():
             setattr(settings, key, value)
@@ -143,7 +151,10 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path) -> None
         apply_runtime_env_settings(settings)
 
     body = env_path.read_text(encoding="utf-8")
-    assert updates["EIDP_TARGET_FISCAL_YEAR"] == "2027"
+    assert "EIDP_TARGET_FISCAL_YEAR" not in updates
+    assert "EIDP_TARGET_FISCAL_YEAR=2026" in body
+    assert "EIDP_TARGET_FISCAL_YEAR=2027" not in body
+    assert os.environ["EIDP_TARGET_FISCAL_YEAR"] == "2026"
     assert "EIDP_OCR_AUTO_ENABLE=off" in body
     assert "EIDP_SEARCH_PROVIDER=serper" in body
     assert "EIDP_URL_SEARCH_AUTO_ENABLE=on" in body

@@ -30,7 +30,6 @@ from eidp.pipeline.school_fiscal_year_status import (
 )
 
 SETTING_ENV_KEYS = (
-    "EIDP_TARGET_FISCAL_YEAR",
     "EIDP_FISCAL_ERA_ENABLED",
     "EIDP_FISCAL_ERA_NAME",
     "EIDP_FISCAL_ERA_ROMANIZED",
@@ -119,9 +118,12 @@ def save_operator_settings(
     google_cx: str,
     firecrawl_api_key: str,
 ) -> dict[str, str]:
-    """Persist operator settings to ``.env`` and current process settings."""
+    """Persist operator settings to ``.env`` and current process settings.
+
+    The target fiscal year is intentionally current-process only so the annual
+    rollover is not pinned by a saved operator setting.
+    """
     updates = {
-        "EIDP_TARGET_FISCAL_YEAR": str(target_fiscal_year),
         "EIDP_FISCAL_ERA_ENABLED": _bool_to_env(fiscal_era_enabled),
         "EIDP_FISCAL_ERA_NAME": fiscal_era_name.strip(),
         "EIDP_FISCAL_ERA_ROMANIZED": _clean_romanized(fiscal_era_romanized),
