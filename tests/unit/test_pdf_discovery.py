@@ -2197,6 +2197,60 @@ def test_discover_pdfs_prioritizes_school_named_disclosure_link_from_group_root(
     assert "https://www.sanko.ac.jp/disclosure/generic-0/" not in client.calls
 
 
+def test_discover_pdfs_follows_school_homepage_link_when_group_root_has_non_target_pdfs(monkeypatch) -> None:
+    """Shared corporation roots can expose unrelated PDFs before the real school homepage link."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://www.neec.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.nkhs.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.neec.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/assets/gpa.pdf">GPA等の客観的成績評価の指標の算出方法</a>
+                  <a href="https://www.nkhs.ac.jp/">日本工学院北海道専門学校</a>
+                </html>
+                """,
+                url="https://www.neec.ac.jp/",
+            ),
+            "https://www.nkhs.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/disclosure/">情報公開</a>
+                </html>
+                """,
+                url="https://www.nkhs.ac.jp/",
+            ),
+            "https://www.nkhs.ac.jp/disclosure/": _HtmlResponse(
+                """
+                <a href="/files/r8-kakunin.pdf">
+                  令和8年度 高等教育の修学支援新制度 確認申請書
+                </a>
+                """,
+                url="https://www.nkhs.ac.jp/disclosure/",
+            ),
+            "https://www.neec.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        3,
+        "https://www.neec.ac.jp/",
+        max_extra_pages=3,
+        school_name="日本工学院北海道専門学校",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://www.nkhs.ac.jp/files/r8-kakunin.pdf"
+    assert "https://www.nkhs.ac.jp/" in client.calls
+    assert "https://www.nkhs.ac.jp/disclosure/" in client.calls
+
+
 def test_discover_pdfs_inverts_stale_school_disclosure_path(monkeypatch) -> None:
     """Official indexes can carry /school/disclosure while live group pages use /disclosure/school."""
 

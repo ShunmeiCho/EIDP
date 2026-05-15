@@ -2412,7 +2412,7 @@ def discover_pdfs_for_site(
                     continue
 
         school_homepage_page_urls: list[str] = []
-        if max_depth > 0 and not candidates and school_name:
+        if max_depth > 0 and school_name:
             for homepage_url in _find_school_homepage_links(html, site_url, school_name):
                 if extra_page_budget_remaining() <= 0:
                     break
