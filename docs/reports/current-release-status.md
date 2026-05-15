@@ -2,11 +2,11 @@
 
 Updated: 2026-05-15
 Branch: `sprint8-handoff-finalize`
-Latest code-affecting source evidence base: `15c88348f46ab3fbcc9383afe5830047e562b0c1`
-Current Mac-core-verifier-clean package for latest code evidence base: `dist/eidp-windows-v409.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v409.zip`
-Latest Mac-core package SHA256: `3621947fc280412c30d056d77e3bd59af1410b0b07c55da21749ec75327e425e`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v409.zip`
+Latest code-affecting source evidence base: `98d9f792860b40e537ec61a8b470859be7bb70c0`
+Current Mac-core-verifier-clean package for latest code evidence base: `dist/eidp-windows-v410.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v410.zip`
+Latest Mac-core package SHA256: `cf7c444c38e023fc534986e21eddb0502cead9721124dffd78406d357f544714`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v410.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v408.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v408.zip`
@@ -27,17 +27,18 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-v409 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`, which
-contains the latest code-affecting source evidence base
-`15c88348f46ab3fbcc9383afe5830047e562b0c1`, with
+v410 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `98d9f792860b40e537ec61a8b470859be7bb70c0`, which
+contains the latest app-code evidence base
+`15c88348f46ab3fbcc9383afe5830047e562b0c1` plus the optional retroactive Excel
+release-gate helper, with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
-dist/eidp-windows-v409.zip --latest-alias`. The build wrote
-`dist/eidp-windows-v409.zip`, `dist/eidp-windows-v409.zip.sha256`, and refreshed
+dist/eidp-windows-v410.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v410.zip`, `dist/eidp-windows-v410.zip.sha256`, and refreshed
 `dist/eidp-windows.zip`. `scripts/verify_windows_distribution.py
-dist/eidp-windows-v409.zip --json` returned `ok=true` with SHA256
-`3621947fc280412c30d056d77e3bd59af1410b0b07c55da21749ec75327e425e`,
-`git_commit=e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`, `git_dirty=false`,
+dist/eidp-windows-v410.zip --json` returned `ok=true` with SHA256
+`cf7c444c38e023fc534986e21eddb0502cead9721124dffd78406d357f544714`,
+`git_commit=98d9f792860b40e537ec61a8b470859be7bb70c0`, `git_dirty=false`,
 `wheel_count=78`, `project_wheel_count=1`, `entry_count=3077`,
 `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
@@ -45,46 +46,37 @@ dist/eidp-windows-v409.zip --json` returned `ok=true` with SHA256
 sources.
 
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v409.zip --json --output logs/release-gate-v409.json`
+dist/eidp-windows-v410.zip --retroactive-excel-reference
+_temp/v408-r7-cli-export.xlsx --retroactive-fiscal-year 2025 --json --output
+logs/release-gate-v410-retroactive.json`
 returned `ok=true`. The recorded package/source freshness check reported
-`package_commit=e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`,
-`source_commit=e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`,
+`package_commit=98d9f792860b40e537ec61a8b470859be7bb70c0`,
+`source_commit=98d9f792860b40e537ec61a8b470859be7bb70c0`,
 `source_dirty=false`, and `stale=false`; `tests/unit -q` returned
-`1515 passed`; the validator/distribution unit slice returned `161 passed`;
+`1520 passed`; the validator/distribution unit slice returned `161 passed`;
 validator/distribution mypy returned `Success: no issues found in 3 source
 files`; validator/distribution Ruff returned `All checks passed!`;
 `eval-discovery-gold --fail-on-regression` returned `exact_matches=44` and
 `failed_predictions=0`; and both package verifier gates, including
-`--require-demonstrated-discovery-patterns`, passed. v409 has no Windows
+`--require-demonstrated-discovery-patterns`, passed. v410 has no Windows
 transfer/setup/UI proof yet because SSH-Win is currently disconnected.
 
-v409 also has an isolated Mac retroactive FY2025/R7 import/export regression
-proof that did not use SSH/Windows. A temporary app root
-`_temp/v409-mac-retroactive-20260515-105918` was created with its own
-`data/eidp.sqlite3` and copied `data/master.xlsx`. With process-local
-`EIDP_APP_ROOT`, `EIDP_DATABASE_URL`, and `EIDP_TARGET_FISCAL_YEAR=2025`,
-`eidp db-bootstrap --sqlite` completed, `eidp import-excel
-data/master.xlsx` imported `採録状況` with `schools=2212` and `statuses=17696`,
-`対象比率` with `rows=10022`, `duplicates=14`, and `invalid_year=0`, and
-`学科別` with `departments=9719`, `yearly_rows=40731`, and
-`yearly_dupes=29`. `eidp db-info` then reported `Schools=2418`,
-`Departments=9719`, `DepartmentYearly=40731`, `SchoolYearStatus=17696`, and
-`SupportRecipient=10022`. The FY2025 export wrote
-`_temp/v409-mac-retroactive-20260515-105918/output/v409-mac-r7-retroactive-export.xlsx`
-with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and
-`在籍のみ抜粋=9719`; quality counters for low-confidence and auto-flag current
-rows were all `0`. `openpyxl` opened the workbook at `3,673,083` bytes with
-four sheets and dimensions `2419x10`, `10023x22`, `9721x83`, and `9721x19`.
-Comparing the v409 Mac export against the already proven v408 CLI export with
-`eidp diff-excel --business-values --fail-on-diff --original
-_temp/v408-r7-cli-export.xlsx` returned `missing_sheets=0`, `extra_sheets=0`,
-`missing_rows=0`, `extra_rows=0`, and `differing_fields=0` across `対象比率`,
-`学科別`, and `在籍のみ抜粋`. A stricter direct `--fail-on-diff` comparison
-against `data/master.xlsx` is still not a clean release gate because the
-historical reference workbook contains known duplicate keys and normalization
-differences; it surfaced those diagnostics rather than a v409-v408 regression.
+v410 also has an integrated isolated Mac retroactive FY2025/R7 import/export
+regression proof through that same release-gate run. The helper created
+`_temp/non-windows-retroactive-fy2025-20260515-110923` with its own
+`data/eidp.sqlite3`, copied `data/master.xlsx`, bootstrapped SQLite, imported
+the workbook, exported FY2025, and compared against the already proven v408 CLI
+export. The import gate recorded `採録状況` with `schools=2212` and
+`statuses=17696`, `対象比率` with `rows=10022`, `duplicates=14`, and
+`invalid_year=0`, and `学科別` with `departments=9719`, `yearly_rows=40731`,
+and `yearly_dupes=29`. The export gate wrote `採録状況=2418`,
+`対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`; quality counters for
+low-confidence and auto-flag current rows were all `0`. The
+`retroactive_excel_diff_reference` gate returned `missing_sheets=0`,
+`extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`
+across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 
-The code-affecting delta carried by v409 from commit
+The app-code delta carried by v410 from commit
 `15c88348f46ab3fbcc9383afe5830047e562b0c1` restored the documented 80% local
 coverage line without using SSH/Windows: `uv run pytest --cov=src/eidp
 --cov-report=term-missing` returned `1515 passed` with `TOTAL 14186 2866 80%`;
