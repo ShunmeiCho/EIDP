@@ -235,6 +235,14 @@ def _core_entries() -> dict[str, bytes | str]:
             "logs\\stage6-evidence-*.zip\n"
             "logs\\stage6-evidence-verify-*.json\n"
             "logs\\stage6-recovery-*.json\n"
+            "現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:\n"
+            "| core ZIP | `dist/eidp-windows-vXXX.zip` |\n"
+            "| core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。 |\n"
+            "| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |\n"
+            "## 3. 証跡採取コマンド\n"
+            '$zip = "C:\\EIDP-staging\\<core-zip-file-name>"\n'
+            '$expected = "<copy SHA256 from .sha256 sidecar or current-release-status>"\n'
+            "Get-FileHash $zip -Algorithm SHA256\n"
             "v1.0-rc\n"
             "FY2026/R8 の current-year yield gate\n"
         ),
@@ -1779,6 +1787,42 @@ def test_verify_core_zip_requires_default_stage6_tunnel_guidance(tmp_path: Path)
     assert not check.ok
     assert any("127.0.0.1:18501:127.0.0.1:8501" in error for error in check.errors)
     assert any("127.0.0.1:18501/_stcore/health" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_hardcoded_current_e2e_package_fields(tmp_path: Path) -> None:
+    entries = _core_entries()
+    member = "docs/runbooks/eidp-operator-e2e-template.md"
+    entries[member] = (
+        str(entries[member])
+        .replace("dist/eidp-windows-vXXX.zip", "dist/eidp-windows-v999.zip")
+        .replace(
+            "<copy SHA256 from .sha256 sidecar or current-release-status>",
+            "b" * 64,
+        )
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("hard-coded Windows ZIP version" in error for error in check.errors)
+    assert any("hard-coded SHA256" in error for error in check.errors)
+
+
+def test_verify_core_zip_allows_historical_e2e_package_evidence(tmp_path: Path) -> None:
+    entries = _core_entries()
+    member = "docs/runbooks/eidp-operator-e2e-template.md"
+    entries[member] = (
+        str(entries[member])
+        + "\n## 4. Historical evidence\n"
+        + "| core ZIP | `dist/eidp-windows-v408.zip` |\n"
+        + "| core ZIP sha256 | `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2` |\n"
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert check.ok
 
 
 def test_verify_ocr_addon_accepts_manifest(tmp_path: Path) -> None:

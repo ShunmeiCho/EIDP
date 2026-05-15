@@ -15,6 +15,7 @@ import csv
 import hashlib
 import importlib.util
 import json
+import re
 import sys
 import zipfile
 from dataclasses import dataclass, field
@@ -52,6 +53,8 @@ MAX_SUPPORTED_TARGET_FISCAL_YEAR = 2099
 SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL = (
     f"[{MIN_SUPPORTED_TARGET_FISCAL_YEAR}, {MAX_SUPPORTED_TARGET_FISCAL_YEAR}]"
 )
+WINDOWS_ZIP_VERSION_RE = re.compile(r"(?:dist/|C:\\EIDP-staging\\)?eidp-windows-v\d+\.zip", re.IGNORECASE)
+SHA256_HEX_RE = re.compile(r"\b[0-9a-fA-F]{64}\b")
 
 
 @dataclass
@@ -778,6 +781,39 @@ def _reject_bare_rc_assignment(check: ZipCheck, body: str, member: str) -> None:
         stripped = line.strip()
         if stripped.startswith('"RC='):
             check.fail(f"{member} line {lineno} has bare RC assignment; use set \"RC=%ERRORLEVEL%\"")
+
+
+def _section_until_next_level2_heading(body: str, start_token: str) -> str | None:
+    start = body.find(start_token)
+    if start < 0:
+        return None
+    next_heading = re.search(r"\n##\s+\d+\.", body[start + 1 :])
+    if next_heading is None:
+        return body[start:]
+    return body[start : start + 1 + next_heading.start()]
+
+
+def _check_operator_e2e_template_version_neutral_fields(check: ZipCheck, body: str, member: str) -> None:
+    """Keep the current package handoff fields reusable across ZIP versions."""
+    guarded_sections = (
+        ("current candidate", "現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:"),
+        ("evidence collection commands", "## 3. 証跡採取コマンド"),
+    )
+    for label, start_token in guarded_sections:
+        section = _section_until_next_level2_heading(body, start_token)
+        if section is None:
+            check.fail(f"{member} missing version-neutral {label} section: {start_token}")
+            continue
+        if match := WINDOWS_ZIP_VERSION_RE.search(section):
+            check.fail(
+                f"{member} {label} section has hard-coded Windows ZIP version; "
+                f"use vXXX/<core-zip-file-name> placeholder instead: {match.group(0)}"
+            )
+        if match := SHA256_HEX_RE.search(section):
+            check.fail(
+                f"{member} {label} section has hard-coded SHA256; "
+                f"copy the digest from the sidecar/current release status at execution time: {match.group(0)}"
+            )
 
 
 def _check_bat_common(check: ZipCheck, member: str, body: str) -> None:
@@ -1612,10 +1648,17 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "logs\\stage6-evidence-verify-*.json",
         "logs\\stage6-recovery-*.json",
         "logs\\stage6-residual-cleanup-*.json",
+        "現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:",
+        "dist/eidp-windows-vXXX.zip",
+        "core ZIP sha256 sidecar note",
+        "logs/release-gate-vXXX-retroactive.json",
+        '$zip = "C:\\EIDP-staging\\<core-zip-file-name>"',
+        '$expected = "<copy SHA256 from .sha256 sidecar or current-release-status>"',
         "v1.0-rc",
         "FY2026/R8 の current-year yield gate",
     ):
         _require_text(check, e2e_body, e2e_member, token)
+    _check_operator_e2e_template_version_neutral_fields(check, e2e_body, e2e_member)
 
 
 def _check_build_info(check: ZipCheck, names: set[str]) -> None:
