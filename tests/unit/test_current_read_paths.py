@@ -131,6 +131,21 @@ def _seed_school_with_two_revisions(session: Session) -> School:
 # ---------------------------------------------------------------------------
 
 
+def test_current_query_helpers_filter_to_current_rows(engine):
+    """The shared current-read helpers must filter out demoted revisions."""
+    from eidp.db.current_helpers import current_school_year_status_q, current_support_recipient_q
+
+    with Session(engine) as session:
+        school = _seed_school_with_two_revisions(session)
+        session.commit()
+
+        statuses = current_school_year_status_q(session.query(SchoolYearStatus)).all()
+        recipients = current_support_recipient_q(session.query(SupportRecipient)).all()
+
+        assert [(row.school_id, row.status) for row in statuses] == [(school.id, "collected")]
+        assert [(row.school_id, row.annual_total) for row in recipients] == [(school.id, 110)]
+
+
 def test_taisho_hiritu_emits_only_current_support_recipient_row(engine):
     with Session(engine) as session:
         _seed_school_with_two_revisions(session)
