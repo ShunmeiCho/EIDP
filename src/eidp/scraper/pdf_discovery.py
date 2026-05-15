@@ -1984,6 +1984,19 @@ def _school_name_matches_link(text: str, school_name: str) -> bool:
     return len(school_label) >= 4 and school_label in link_label
 
 
+def _school_name_matches_homepage_link(text: str, school_name: str) -> bool:
+    if not _school_name_matches_link(text, school_name):
+        return False
+
+    school_label = _school_link_label(school_name)
+    for candidate_label in _candidate_named_school_labels(text):
+        if candidate_label == school_label:
+            return True
+        if school_label in candidate_label:
+            return False
+    return True
+
+
 def _candidate_mentions_different_school(candidate: PdfCandidate, school_name: str) -> bool:
     if not school_name:
         return False
@@ -2034,7 +2047,7 @@ def _find_school_homepage_links(html: str, base_url: str, school_name: str, *, l
         if href.lower().endswith(".pdf"):
             continue
         text = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
-        if not _school_name_matches_link(f"{text} {href}", school_name):
+        if not _school_name_matches_homepage_link(f"{text} {href}", school_name):
             continue
         url = urljoin(base_url, href)
         parsed = urlparse(url)

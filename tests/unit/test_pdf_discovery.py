@@ -2251,6 +2251,42 @@ def test_discover_pdfs_follows_school_homepage_link_when_group_root_has_non_targ
     assert "https://www.nkhs.ac.jp/disclosure/" in client.calls
 
 
+def test_discover_pdfs_does_not_follow_more_specific_sibling_school_homepage(monkeypatch) -> None:
+    """A base school name must not match a more specific sibling school homepage."""
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://www.neec.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.neec.ac.jp/": _HtmlResponse(
+                """
+                <html>
+                  <a href="/assets/gpa.pdf">GPA等の客観的成績評価の指標の算出方法</a>
+                  <a href="https://www.nkhs.ac.jp/">日本工学院北海道専門学校</a>
+                </html>
+                """,
+                url="https://www.neec.ac.jp/",
+            ),
+            "https://www.neec.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        1,
+        "https://www.neec.ac.jp/",
+        max_extra_pages=3,
+        school_name="日本工学院専門学校",
+        target_fiscal_year=2026,
+    )
+
+    assert result.error is None
+    assert "https://www.nkhs.ac.jp/" not in client.calls
+    assert result.best is not None
+    assert result.best.pdf_url == "https://www.neec.ac.jp/assets/gpa.pdf"
+
+
 def test_discover_pdfs_inverts_stale_school_disclosure_path(monkeypatch) -> None:
     """Official indexes can carry /school/disclosure while live group pages use /disclosure/school."""
 
