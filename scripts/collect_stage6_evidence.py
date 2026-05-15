@@ -34,6 +34,7 @@ BASE_EVIDENCE_PATTERNS: tuple[EvidencePattern, ...] = (
     EvidencePattern("bootstrap_progress", "logs/bootstrap-pdfs-*.json", 5),
     EvidencePattern("bootstrap_logs", "logs/bootstrap-pdfs-*.log", 3),
     EvidencePattern("last_run", "data/output/last_run.json", 1),
+    EvidencePattern("discovery_evidence", "data/output/target-year-discovery/*-discovery-rejections.jsonl", 5),
     EvidencePattern("discovery_rca", "data/output/target-year-discovery/*-discovery-rca-batch-plan.json", 5),
 )
 EXCEL_EVIDENCE_PATTERN = EvidencePattern("excel_exports", "data/output/**/*.xlsx", 5)

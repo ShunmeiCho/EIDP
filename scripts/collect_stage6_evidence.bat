@@ -2,7 +2,7 @@
 REM Build a read-only Stage 6 evidence ZIP for operator-PC handoff.
 REM
 REM This wrapper first refreshes diagnostics, then bundles the latest logs,
-REM last_run.json, RCA plan, and recovery JSON. It does not copy the live SQLite database,
+REM last_run.json, discovery evidence, RCA plan, and recovery JSON. It does not copy the live SQLite database,
 REM WAL/SHM sidecars, downloaded PDFs, Excel exports, runtime, or
 REM wheelhouse unless an explicit Python-level opt-in is passed.
 REM

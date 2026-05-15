@@ -45,6 +45,10 @@ def test_build_evidence_bundle_includes_stage6_artifacts_without_db_pdfs_or_exce
         '{"items": []}\n',
         encoding="utf-8",
     )
+    (root / "data" / "output" / "target-year-discovery" / "x-discovery-rejections.jsonl").write_text(
+        '{"reason": "target_fiscal_year_not_detected"}\n',
+        encoding="utf-8",
+    )
     (root / "data" / "eidp.sqlite3").write_bytes(b"sqlite")
     (root / "data" / "eidp.sqlite3-wal").write_bytes(b"wal")
     (root / "data" / "pdfs" / "1" / "target.pdf").write_bytes(b"%PDF")
@@ -65,6 +69,7 @@ def test_build_evidence_bundle_includes_stage6_artifacts_without_db_pdfs_or_exce
         assert "data/output/last_run.json" in names
         assert "data/output/eidp_master.xlsx" not in names
         assert "data/output/target-year-discovery/x-discovery-rca-batch-plan.json" in names
+        assert "data/output/target-year-discovery/x-discovery-rejections.jsonl" in names
         assert "stage6-evidence-manifest.json" in names
         assert "data/eidp.sqlite3" not in names
         assert "data/eidp.sqlite3-wal" not in names
