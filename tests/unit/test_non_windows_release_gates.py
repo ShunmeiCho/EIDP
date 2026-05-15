@@ -145,6 +145,37 @@ def test_retroactive_excel_prepare_command_rejects_non_empty_root(tmp_path: Path
     assert "retroactive app root is not empty" in result.stderr_tail
 
 
+def test_cleanup_retroactive_excel_app_root_removes_default_temp_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    app_root = tmp_path / "_temp" / "non-windows-retroactive-fy2025-20260516-120000"
+    (app_root / "output").mkdir(parents=True)
+    (app_root / "output" / "retroactive.xlsx").write_bytes(b"PK fake")
+
+    result = module.cleanup_retroactive_excel_app_root(app_root)
+
+    assert result == {"ok": True, "removed": True, "app_root": str(app_root)}
+    assert not app_root.exists()
+
+
+def test_cleanup_retroactive_excel_app_root_rejects_outside_temp(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    app_root = tmp_path / "not-temp" / "non-windows-retroactive-fy2025-20260516-120000"
+    app_root.mkdir(parents=True)
+
+    result = module.cleanup_retroactive_excel_app_root(app_root)
+
+    assert result["ok"] is False
+    assert result["removed"] is False
+    assert "outside _temp" in result["error"]
+    assert app_root.exists()
+
+
 def test_run_gate_merges_command_env(monkeypatch: pytest.MonkeyPatch) -> None:
     captured_env: dict[str, str] = {}
 
@@ -582,6 +613,7 @@ def test_main_adds_retroactive_excel_gate_when_reference_is_set(
         "master_xlsx": str(master),
         "reference_xlsx": str(reference),
         "numeric_tolerance": 1e-9,
+        "cleanup_after_run": False,
     }
     assert [command.name for command in captured_commands][-5:] == [
         "retroactive_excel_prepare",
@@ -593,6 +625,99 @@ def test_main_adds_retroactive_excel_gate_when_reference_is_set(
     diff_command = captured_commands[-1].command
     assert "--numeric-tolerance" in diff_command
     assert diff_command[diff_command.index("--numeric-tolerance") + 1] == "1e-09"
+
+
+def test_main_cleans_auto_retroactive_app_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    package = tmp_path / "eidp-windows.zip"
+    commit = "a" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr("BUILD_INFO.json", json.dumps({"git_commit": commit}))
+    digest = hashlib.sha256(package.read_bytes()).hexdigest()
+    package.with_suffix(".zip.sha256").write_text(f"{digest}  {package.name}\n", encoding="utf-8")
+    reference = tmp_path / "reference.xlsx"
+    reference.write_bytes(b"PK fake")
+    master = tmp_path / "master.xlsx"
+    master.write_bytes(b"PK fake")
+    app_root = tmp_path / "_temp" / "non-windows-retroactive-fy2025-20260516-120000"
+    output = tmp_path / "summary.json"
+
+    def fake_run_gates(commands: list[object], **kwargs: object) -> list[object]:
+        app_root.mkdir(parents=True)
+        (app_root / "temporary.sqlite3").write_bytes(b"db")
+        return []
+
+    monkeypatch.setattr(module, "_current_git_commit", lambda: commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+    monkeypatch.setattr(module, "default_retroactive_excel_app_root", lambda *, fiscal_year: app_root)
+    monkeypatch.setattr(module, "run_gates", fake_run_gates)
+
+    rc = module.main(
+        [
+            str(package),
+            "--skip-full-unit",
+            "--retroactive-excel-reference",
+            str(reference),
+            "--retroactive-master",
+            str(master),
+            "--json",
+            "--output",
+            str(output),
+        ]
+    )
+
+    summary = json.loads(output.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert summary["retroactive_excel_gate"]["cleanup_after_run"] is True
+    assert summary["retroactive_excel_cleanup"] == {"ok": True, "removed": True, "app_root": str(app_root)}
+    assert not app_root.exists()
+
+
+def test_main_can_keep_auto_retroactive_app_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    package = tmp_path / "eidp-windows.zip"
+    commit = "a" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr("BUILD_INFO.json", json.dumps({"git_commit": commit}))
+    digest = hashlib.sha256(package.read_bytes()).hexdigest()
+    package.with_suffix(".zip.sha256").write_text(f"{digest}  {package.name}\n", encoding="utf-8")
+    reference = tmp_path / "reference.xlsx"
+    reference.write_bytes(b"PK fake")
+    master = tmp_path / "master.xlsx"
+    master.write_bytes(b"PK fake")
+    app_root = tmp_path / "_temp" / "non-windows-retroactive-fy2025-20260516-120000"
+    output = tmp_path / "summary.json"
+
+    monkeypatch.setattr(module, "_current_git_commit", lambda: commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+    monkeypatch.setattr(module, "default_retroactive_excel_app_root", lambda *, fiscal_year: app_root)
+    monkeypatch.setattr(module, "run_gates", lambda *args, **kwargs: [])
+
+    rc = module.main(
+        [
+            str(package),
+            "--skip-full-unit",
+            "--retroactive-excel-reference",
+            str(reference),
+            "--retroactive-master",
+            str(master),
+            "--keep-retroactive-app-root",
+            "--json",
+            "--output",
+            str(output),
+        ]
+    )
+
+    summary = json.loads(output.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert summary["retroactive_excel_gate"]["cleanup_after_run"] is False
+    assert summary["retroactive_excel_cleanup"] is None
 
 
 def test_text_summary_prints_package_source_check_error(capsys: pytest.CaptureFixture[str]) -> None:

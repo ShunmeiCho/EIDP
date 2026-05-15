@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -153,6 +154,40 @@ def default_retroactive_excel_app_root(*, fiscal_year: int) -> Path:
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
     return REPO_ROOT / "_temp" / f"non-windows-retroactive-fy{fiscal_year}-{stamp}"
+
+
+def cleanup_retroactive_excel_app_root(app_root: Path) -> dict[str, Any]:
+    """Remove an auto-generated retroactive gate app root after a gate run."""
+
+    temp_root = (REPO_ROOT / "_temp").resolve()
+    root = app_root.resolve()
+    try:
+        root.relative_to(temp_root)
+    except ValueError:
+        return {
+            "ok": False,
+            "removed": False,
+            "app_root": str(app_root),
+            "error": f"refusing to clean retroactive app root outside _temp: {app_root}",
+        }
+    if root.is_symlink():
+        return {
+            "ok": False,
+            "removed": False,
+            "app_root": str(app_root),
+            "error": f"refusing to clean symlink retroactive app root: {app_root}",
+        }
+    if not root.name.startswith("non-windows-retroactive-"):
+        return {
+            "ok": False,
+            "removed": False,
+            "app_root": str(app_root),
+            "error": f"refusing to clean non-retroactive app root: {app_root}",
+        }
+    if not root.exists():
+        return {"ok": True, "removed": False, "app_root": str(app_root)}
+    shutil.rmtree(root)
+    return {"ok": True, "removed": True, "app_root": str(app_root)}
 
 
 def build_retroactive_excel_gate_commands(
@@ -460,11 +495,14 @@ def _summary_ok(
     sha256_check: dict[str, Any],
     package_source_check: dict[str, Any],
     results: Sequence[GateResult],
+    retroactive_excel_cleanup: dict[str, Any] | None = None,
 ) -> bool:
+    cleanup_ok = retroactive_excel_cleanup is None or bool(retroactive_excel_cleanup.get("ok"))
     return (
         bool(sha256_check.get("ok"))
         and bool(package_source_check.get("ok"))
         and all(result.returncode == 0 for result in results)
+        and cleanup_ok
     )
 
 
@@ -540,6 +578,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         help="Optional empty app root for --retroactive-excel-reference. Defaults to _temp/non-windows-retroactive-*.",
     )
+    parser.add_argument(
+        "--keep-retroactive-app-root",
+        action="store_true",
+        help=(
+            "Keep the auto-generated retroactive app root after the gate run. "
+            "By default, roots created under _temp/non-windows-retroactive-* are removed."
+        ),
+    )
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     parser.add_argument("--output", type=Path, help="Optional JSON summary output path")
     args = parser.parse_args(argv)
@@ -559,10 +605,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         pdf_evidence_paths=args.pdf_evidence,
     )
     retroactive_excel_gate = None
+    retroactive_app_root: Path | None = None
+    cleanup_retroactive_root = False
+    retroactive_excel_cleanup = None
     if args.retroactive_excel_reference is not None:
         retroactive_app_root = args.retroactive_app_root or default_retroactive_excel_app_root(
             fiscal_year=args.retroactive_fiscal_year,
         )
+        cleanup_retroactive_root = args.retroactive_app_root is None and not args.keep_retroactive_app_root
         retroactive_excel_gate = {
             "enabled": True,
             "app_root": str(retroactive_app_root),
@@ -570,6 +620,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "master_xlsx": str(args.retroactive_master),
             "reference_xlsx": str(args.retroactive_excel_reference),
             "numeric_tolerance": args.retroactive_numeric_tolerance,
+            "cleanup_after_run": cleanup_retroactive_root,
         }
         commands.extend(
             build_retroactive_excel_gate_commands(
@@ -580,17 +631,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 numeric_tolerance=args.retroactive_numeric_tolerance,
             )
         )
-    results = (
-        run_gates(commands, keep_going=args.keep_going)
-        if sha256_check.get("ok") and package_source_check.get("ok")
-        else []
-    )
+    try:
+        results = (
+            run_gates(commands, keep_going=args.keep_going)
+            if sha256_check.get("ok") and package_source_check.get("ok")
+            else []
+        )
+    finally:
+        if cleanup_retroactive_root and retroactive_app_root is not None:
+            retroactive_excel_cleanup = cleanup_retroactive_excel_app_root(retroactive_app_root)
     summary = {
-        "ok": _summary_ok(sha256_check, package_source_check, results),
+        "ok": _summary_ok(sha256_check, package_source_check, results, retroactive_excel_cleanup),
         "package_zip": str(package_zip),
         "sha256_check": sha256_check,
         "package_source_check": package_source_check,
         "retroactive_excel_gate": retroactive_excel_gate,
+        "retroactive_excel_cleanup": retroactive_excel_cleanup,
         "results": [asdict(result) for result in results],
     }
 

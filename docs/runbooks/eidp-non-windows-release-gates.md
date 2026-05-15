@@ -93,7 +93,9 @@ uv run python scripts/run_non_windows_release_gates.py \
 This option creates a temporary `_temp/non-windows-retroactive-*` app root,
 copies `data/master.xlsx`, bootstraps a SQLite database, imports the workbook,
 exports the requested fiscal year, and runs `eidp diff-excel --business-values
---fail-on-diff` against the reference workbook.
+--fail-on-diff` against the reference workbook. The auto-generated app root is
+removed after the gate run by default; pass `--keep-retroactive-app-root` only
+when you intentionally need to inspect the isolated SQLite or exported workbook.
 
 If a legacy reference workbook differs only by harmless floating-point
 rounding, pass `--retroactive-numeric-tolerance <value>` to forward an absolute
@@ -137,9 +139,12 @@ then writes the optional matrix summary to `--output`.
 
 ### Local Artifact Cleanup
 
-Release gates and retroactive Excel checks create disposable app roots and
-probe artifacts under `_temp/`. Do not let those directories accumulate between
-release candidates.
+Release gates and retroactive Excel checks can create disposable app roots and
+probe artifacts under `_temp/`. Current `run_non_windows_release_gates.py`
+removes its auto-generated retroactive app root by default, but historical
+probes, explicitly kept roots, and manually generated references still need
+periodic cleanup. Do not let those directories accumulate between release
+candidates.
 
 After recording the gate JSONs you need, run a dry-run cleanup first:
 
