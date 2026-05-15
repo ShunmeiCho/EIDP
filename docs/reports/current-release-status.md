@@ -14,17 +14,17 @@ Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v445.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v445.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v445.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v446.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v446.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v445-stage6/stage6-evidence-20260515-223848.zip` (latest v445 verified bundle; missing recovery/residual-cleanup labels)
-Current Stage 6 evidence draft: `docs/reports/eidp-v445-stage6-evidence-draft.md`
+Current Stage 6 evidence bundle: `logs/win-v446-stage6/stage6-evidence-20260515-225956.zip` (latest v446 verified bundle with complete required labels)
+Current Stage 6 evidence draft: `docs/reports/eidp-v446-stage6-evidence-draft.md`
 
 ## Verdict
 
@@ -47,11 +47,37 @@ packaged pruner dry-run reported only three v445 candidates:
 (`1103245161` bytes) and left Windows staging/deploy retention at v446 current
 plus v442 fallback. Mac retention now keeps v446 current, v442 fallback, and the
 latest alias; `_temp=0B`, `.claude/worktrees=0B`, `data=20M`, and `logs=3.6M`.
-This v446 pass is a release-hygiene packaging and cleanup proof; it does not
-replace v445 as the latest Windows setup/canary proof.
+`EIDP-setup.bat` then completed on v446, imported bundled `master.xlsx`, rebuilt
+FY2026 school-year tasks with `school_count=2418` and
+`school_fiscal_year_status_count=2418`, and `scripts\validate_install.bat
+--after-setup --json` returned `ok=true` with `sqlite_integrity_check=ok`.
+Setup logs again confirmed the master-data prefecture reconciliation for
+`日本工学院北海道専門学校` from `東京都` to `北海道`. URL-only bootstrap completed
+with `--skip-discover --url-search off --school-url-crawl off`, downloading and
+aggregating all 47 prefecture seed artifacts while avoiding a bulk PDF
+discovery run. The real `scripts\weekly_run.bat` launcher then ran with trusted
+bounded variables `EIDP_WEEKLY_LIMIT=5`, `EIDP_WEEKLY_BATCH_SIZE=5`,
+`EIDP_WEEKLY_RATE_LIMIT=0.5`, and `EIDP_WEEKLY_REQUEST_TIMEOUT=8`; it exited
+`0` with `run_id=20260515_225803`, `crawled=5`, `found=3`, `downloaded=0`,
+`operator_reviewable_count=1`, `target_pdf_auto_acquired_count=0`,
+`target_pdf_auto_yield_pct=0.0`, and `ship_gate_status=below_gate`.
+`scripts\validate_install.bat --after-setup --after-weekly --json` returned
+`ok=true`, reporting `last_run_status=success`,
+`sqlite_target_fy_target_pdf_school_count=0`,
+`sqlite_target_fy_operator_reviewable_school_count=1`, and
+`sqlite_target_fy_yield_pct=0.0`. The v446 recovery checker was also run in its
+wrapper-default action-check-skipped mode and returned `ok=true`; residual
+cleanup dry-run returned `ok=true`, `existing_count=0`, and `moved_count=0`.
+The evidence bundle `logs\stage6-evidence-20260515-225956.zip` verified on both
+Windows and Mac as `logs/win-v446-stage6/stage6-evidence-20260515-225956.zip`
+with `ok=true`, no forbidden or unsafe entries, `manifest_missing_patterns=[]`,
+and present labels `bootstrap_logs`, `bootstrap_progress`, `build_info`,
+`diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`,
+`stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. v446 is
+therefore now the latest Windows setup/bootstrap/bounded-backend/evidence-bundle
+proof, but it is still not a completed operator real-cycle Stage 6 sign-off.
 
-v445 is the latest Windows setup/canary
-package. It was built from package snapshot
+v445 is the previous Windows setup/canary package. It was built from package snapshot
 `19ceb0dee69fe7b90e32a9a90591018d9c5e773f` after the v444 canary showed that
 `日本工学院北海道専門学校` was stuck with `東京都` from `採録状況`/`対象比率`, preventing
 the Hokkaido prefecture aggregator from attaching the official disclosure URL.
