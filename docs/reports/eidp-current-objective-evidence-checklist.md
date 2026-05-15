@@ -7,11 +7,12 @@ Status: **NOT COMPLETE**
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally explicit about lane boundaries: the active operator-PC
 Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v408-f0c27158` for
-`dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v407 remains the
-latest full non-Windows release-gate source. v408 now has R7 CLI Excel parity,
-R7 browser Excel download proof, a disposable copied-DB UI write/audit sandbox
-proof, and a verifier-accepted non-Excel diagnostic evidence bundle; the real
-operator cycle is still missing.
+`dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v409 is the
+latest Mac/non-Windows release-gate-clean package for the current source lane,
+but it has no Windows transfer/setup/UI proof because SSH-Win is currently
+disconnected. v408 now has R7 CLI Excel parity, R7 browser Excel download proof,
+a disposable copied-DB UI write/audit sandbox proof, and a verifier-accepted
+non-Excel diagnostic evidence bundle; the real operator cycle is still missing.
 
 ## Objective Restatement
 
@@ -42,6 +43,19 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Release Boundary
 
+- Current Mac/non-Windows release-gate proof: v409, package snapshot
+  `e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`, code-affecting source evidence
+  base `15c88348f46ab3fbcc9383afe5830047e562b0c1`, SHA256
+  `3621947fc280412c30d056d77e3bd59af1410b0b07c55da21749ec75327e425e`.
+  `scripts/verify_windows_distribution.py dist/eidp-windows-v409.zip --json`
+  returned `ok=true`, `git_dirty=false`, `wheel_count=78`, and
+  `discovery_gold_set_entries=44`. `scripts/run_non_windows_release_gates.py
+  dist/eidp-windows-v409.zip --json --output logs/release-gate-v409.json`
+  returned `ok=true`, with `source_dirty=false`, `stale=false`, `tests/unit -q`
+  returning `1515 passed`, validator/distribution tests returning `161 passed`,
+  validator/distribution mypy and Ruff passing, expected discovery-gold
+  predictions matching `44/44`, and the demonstrated-pattern package verifier
+  passing. v409 is not Windows-proven.
 - Active Windows transfer/setup/UI-health proof: v408, commit
   `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, SHA256
   `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`.
@@ -112,12 +126,26 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest v408 setup/UI lane evidence and v407 supporting diagnostic evidence
-are summarized in
+Latest v409 Mac/non-Windows release-gate evidence, latest v408 setup/UI lane
+evidence, and v407 supporting diagnostic evidence are summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
-below include source-code evidence base `4a16363d` and later documentation-only
-refreshes:
+below include source-code evidence base `4a16363d` and later refreshes:
 
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v409.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v409.zip`, refreshed `dist/eidp-windows.zip`,
+  and wrote `dist/eidp-windows-v409.zip.sha256`.
+- `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v409.zip --json`
+  -> `ok=true`, SHA256
+  `3621947fc280412c30d056d77e3bd59af1410b0b07c55da21749ec75327e425e`,
+  packaged commit `e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`,
+  `git_dirty=false`, `wheel_count=78`, `project_wheel_count=1`,
+  `prefecture_seed_rows=47`, and `discovery_gold_set_entries=44`.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v409.zip --json --output logs/release-gate-v409.json`
+  -> `ok=true`, `package_source_check.stale=false`, `tests/unit -q`
+  reported `1515 passed`, validator/distribution tests reported `161 passed`,
+  validator/distribution mypy and Ruff passed, discovery-gold expected
+  predictions were `44/44`, and package verification with
+  `--require-demonstrated-discovery-patterns` passed.
 - `uv run pytest tests/unit/test_stage6_recovery_check.py -q`
   -> `7 passed`.
 - `uv run pytest tests/unit/test_stage6_recovery_check.py tests/unit/test_stage6_residual_cleanup.py tests/unit/test_stage6_evidence_bundle.py tests/unit/test_windows_packaging_spike.py tests/unit/test_windows_distribution_verifier.py -q`

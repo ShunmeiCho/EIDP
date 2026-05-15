@@ -3,10 +3,10 @@
 Updated: 2026-05-15
 Branch: `sprint8-handoff-finalize`
 Latest code-affecting source evidence base: `15c88348f46ab3fbcc9383afe5830047e562b0c1`
-Current Mac-core-verifier-clean package for latest code evidence base: none yet
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v408.zip`
-Latest Mac-core package SHA256: `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v407.zip`
+Current Mac-core-verifier-clean package for latest code evidence base: `dist/eidp-windows-v409.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v409.zip`
+Latest Mac-core package SHA256: `3621947fc280412c30d056d77e3bd59af1410b0b07c55da21749ec75327e425e`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v409.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v408.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v408.zip`
@@ -27,7 +27,52 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-v408 remains the latest core-verified package for source commit
+v409 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`, which
+contains the latest code-affecting source evidence base
+`15c88348f46ab3fbcc9383afe5830047e562b0c1`, with
+`uv run python scripts/build_windows_zip.py --skip-download --out-zip
+dist/eidp-windows-v409.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v409.zip`, `dist/eidp-windows-v409.zip.sha256`, and refreshed
+`dist/eidp-windows.zip`. `scripts/verify_windows_distribution.py
+dist/eidp-windows-v409.zip --json` returned `ok=true` with SHA256
+`3621947fc280412c30d056d77e3bd59af1410b0b07c55da21749ec75327e425e`,
+`git_commit=e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`, `git_dirty=false`,
+`wheel_count=78`, `project_wheel_count=1`, `entry_count=3077`,
+`prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
+`prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
+`discovery_gold_set_entries=44`, and no undemonstrated discovery pattern
+sources.
+
+`uv run python scripts/run_non_windows_release_gates.py
+dist/eidp-windows-v409.zip --json --output logs/release-gate-v409.json`
+returned `ok=true`. The recorded package/source freshness check reported
+`package_commit=e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`,
+`source_commit=e0b3e3c26cfe6987187a035eaded6fc118e3bb0d`,
+`source_dirty=false`, and `stale=false`; `tests/unit -q` returned
+`1515 passed`; the validator/distribution unit slice returned `161 passed`;
+validator/distribution mypy returned `Success: no issues found in 3 source
+files`; validator/distribution Ruff returned `All checks passed!`;
+`eval-discovery-gold --fail-on-regression` returned `exact_matches=44` and
+`failed_predictions=0`; and both package verifier gates, including
+`--require-demonstrated-discovery-patterns`, passed. v409 has no Windows
+transfer/setup/UI proof yet because SSH-Win is currently disconnected.
+
+The code-affecting delta carried by v409 from commit
+`15c88348f46ab3fbcc9383afe5830047e562b0c1` restored the documented 80% local
+coverage line without using SSH/Windows: `uv run pytest --cov=src/eidp
+--cov-report=term-missing` returned `1515 passed` with `TOTAL 14186 2866 80%`;
+`uv run mypy src` returned `Success: no issues found in 83 source files`; and
+focused `ruff check` passed for the touched source/test files. This commit
+covers previously weak local modules (`school_matcher.py`,
+`review/populate.py`, `firecrawl_discovery.py`, `reconciler.py`,
+`search_provider.py`, `pdf/ocr.py`, and `cli_reports.py`) and fixes two
+source-level precision defects found while writing those tests: MEXT short
+prefecture names `東京` / `大阪` / `京都` now normalize to their long Excel
+forms, and Firecrawl fallback matching no longer lets a generic `専門学校` suffix
+or a non-disclosure `docs/` directory pollute other schools' candidate URLs.
+
+v408 remains the latest Windows-proven package for source commit
 `f0c2715833b54e60fea85259e16ad0a1d9e6c106`. It was built with
 `scripts/build_windows_zip.py --skip-download --out-zip
 dist/eidp-windows-v408.zip --latest-alias`, and
@@ -44,23 +89,6 @@ matched after transfer to `C:\Users\cyo20\eidp-windows-v408.zip`; the package
 was extracted to `C:\Users\cyo20\EIDP-v408-f0c27158`. `BUILD_INFO.json`
 reported commit `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, branch
 `sprint8-handoff-finalize`, and `git_dirty=false`.
-
-After v408, source-only commit `15c88348f46ab3fbcc9383afe5830047e562b0c1`
-restored the documented 80% local coverage line without using SSH/Windows:
-`uv run pytest --cov=src/eidp --cov-report=term-missing` returned
-`1515 passed` with `TOTAL 14186 2866 80%`; `uv run mypy src` returned
-`Success: no issues found in 83 source files`; and focused `ruff check`
-passed for the touched source/test files. This commit covers previously weak
-local modules (`school_matcher.py`, `review/populate.py`,
-`firecrawl_discovery.py`, `reconciler.py`, `search_provider.py`,
-`pdf/ocr.py`, and `cli_reports.py`) and fixes two source-level precision
-defects found while writing those tests: MEXT short prefecture names
-`東京` / `大阪` / `京都` now normalize to their long Excel forms, and
-Firecrawl fallback matching no longer lets a generic `専門学校` suffix or a
-non-disclosure `docs/` directory pollute other schools' candidate URLs. No
-Windows ZIP has been built or Mac-verified for `15c88348`, so the latest
-Windows-proven package remains v408 and the release status remains
-**NOT COMPLETE**.
 
 v408 is also now setup/UI-health proven on the operator PC. Before setup,
 `.venv` and `data\eidp.sqlite3` were absent and the `EIDP Weekly Run` scheduled
@@ -182,7 +210,7 @@ main v408 logs as
 `bootstrap_progress`, and `discovery_rca`, so this is verifier-accepted
 diagnostic evidence, not a completed Stage 6 release sign-off.
 
-v407 remains the latest full non-Windows release-gate source for commit
+v407 remains a supporting full non-Windows release-gate source for commit
 `0974b60fb3d404678828ddfa348c74f4dd740c79`. It was built with
 `scripts/build_windows_zip.py --skip-download --out-zip
 dist/eidp-windows-v407.zip --latest-alias`, and
