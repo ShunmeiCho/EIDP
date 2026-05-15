@@ -22,6 +22,7 @@ bundle verification. It is not a completed operator real-cycle Stage 6 sign-off.
 | Rejection evidence | `logs/win-v446-stage6/20260515_225803-discovery-rejections.jsonl` |
 | Evidence bundle | `logs/win-v446-stage6/stage6-evidence-20260515-225956.zip` |
 | UI health evidence | `logs/win-v446-stage6/v446-ui-smoke-20260516-080445.json` |
+| Browser navigation evidence | `output/playwright/v446-ui-smoke/` |
 
 ## Evidence
 
@@ -40,11 +41,13 @@ bundle verification. It is not a completed operator real-cycle Stage 6 sign-off.
 | Residual cleanup dry-run | pass | `scripts\stage6_residual_cleanup.bat --json` returned `ok=true`, `existing_count=0`, and `moved_count=0`. |
 | Evidence bundle | pass | `logs\stage6-evidence-20260515-225956.zip` verified `ok=true` on Windows and Mac, with no forbidden/unsafe entries, no missing manifest patterns, and all expected evidence labels present. |
 | UI health smoke | pass | v446 launched through `scripts\launch.bat`; `/_stcore/health` and `/` both returned HTTP `200`, and cleanup left `listener_after_count=0`. |
+| Browser read-only navigation | pass | SSH tunnel `127.0.0.1:18501 -> Windows 127.0.0.1:8501` rendered the real Streamlit UI. Snapshots captured `① 学校別タスク`, `PDF確認・手入力`, `Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`; only navigation buttons were clicked. |
 
 ## Canary Result
 
 v446 proves the current package can be transferred, set up, bootstrapped, bounded
-through the real weekly launcher, and mechanically bundled for Stage 6 evidence.
+through the real weekly launcher, rendered through the browser UI, and
+mechanically bundled for Stage 6 evidence.
 The bounded canary still does not meet the production yield gate:
 
 | Metric | Value |
