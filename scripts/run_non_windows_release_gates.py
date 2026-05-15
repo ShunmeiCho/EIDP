@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -26,6 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 class GateCommand:
     name: str
     command: tuple[str, ...]
+    env: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -143,6 +145,86 @@ def build_gate_commands(
         ]
     )
     return commands
+
+
+def default_retroactive_excel_app_root(*, fiscal_year: int) -> Path:
+    """Return a fresh local app root for an isolated retroactive Excel gate."""
+
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    return REPO_ROOT / "_temp" / f"non-windows-retroactive-fy{fiscal_year}-{stamp}"
+
+
+def build_retroactive_excel_gate_commands(
+    *,
+    app_root: Path,
+    master_xlsx: Path,
+    reference_xlsx: Path,
+    fiscal_year: int,
+) -> list[GateCommand]:
+    """Return isolated import/export/diff gates for a retroactive workbook check."""
+
+    py = sys.executable
+    data_master = app_root / "data" / "master.xlsx"
+    database_path = app_root / "data" / "eidp.sqlite3"
+    exported = app_root / "output" / f"retroactive-fy{fiscal_year}-export.xlsx"
+    env = (
+        ("EIDP_APP_ROOT", str(app_root)),
+        ("EIDP_DATABASE_URL", f"sqlite:///{database_path}"),
+        ("EIDP_TARGET_FISCAL_YEAR", str(fiscal_year)),
+    )
+    prepare_code = (
+        "from pathlib import Path\n"
+        "import shutil\n"
+        "import sys\n"
+        "root = Path(sys.argv[1])\n"
+        "master = Path(sys.argv[2])\n"
+        "if root.exists() and any(root.iterdir()):\n"
+        "    raise SystemExit(f'retroactive app root is not empty: {root}')\n"
+        "data = root / 'data'\n"
+        "output = root / 'output'\n"
+        "logs = root / 'logs'\n"
+        "data.mkdir(parents=True, exist_ok=True)\n"
+        "output.mkdir(parents=True, exist_ok=True)\n"
+        "logs.mkdir(parents=True, exist_ok=True)\n"
+        "shutil.copy2(master, data / 'master.xlsx')\n"
+        "print(f'retroactive app root prepared: {root}')\n"
+    )
+    return [
+        GateCommand(
+            "retroactive_excel_prepare",
+            (py, "-c", prepare_code, str(app_root), str(master_xlsx)),
+        ),
+        GateCommand(
+            "retroactive_excel_db_bootstrap",
+            (py, "-m", "eidp.cli", "db-bootstrap", "--sqlite"),
+            env,
+        ),
+        GateCommand(
+            "retroactive_excel_import",
+            (py, "-m", "eidp.cli", "import-excel", str(data_master)),
+            env,
+        ),
+        GateCommand(
+            "retroactive_excel_export",
+            (py, "-m", "eidp.cli", "export-excel", "--output", str(exported)),
+            env,
+        ),
+        GateCommand(
+            "retroactive_excel_diff_reference",
+            (
+                py,
+                "-m",
+                "eidp.cli",
+                "diff-excel",
+                str(exported),
+                "--original",
+                str(reference_xlsx),
+                "--business-values",
+                "--fail-on-diff",
+            ),
+            env,
+        ),
+    ]
 
 
 def verify_sha256_sidecar(package_zip: Path) -> dict[str, Any]:
@@ -268,9 +350,14 @@ def _pdf_evidence_gate_error(stdout: str) -> str | None:
 
 def run_gate(command: GateCommand) -> GateResult:
     started = time.monotonic()
+    env = None
+    if command.env:
+        env = os.environ.copy()
+        env.update(dict(command.env))
     completed = subprocess.run(
         command.command,
         cwd=REPO_ROOT,
+        env=env,
         text=True,
         capture_output=True,
         check=False,
@@ -343,6 +430,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="Allow BUILD_INFO git_commit to differ from the current source HEAD for historical package checks",
     )
+    parser.add_argument(
+        "--retroactive-excel-reference",
+        type=Path,
+        help=(
+            "Optional reference workbook for an isolated retroactive Excel business-value gate. "
+            "When set, the helper bootstraps a temporary SQLite app root, imports master.xlsx, "
+            "exports the retroactive FY workbook, and diffs it against this reference."
+        ),
+    )
+    parser.add_argument(
+        "--retroactive-fiscal-year",
+        type=int,
+        default=2025,
+        help="Fiscal year for --retroactive-excel-reference (default: 2025).",
+    )
+    parser.add_argument(
+        "--retroactive-master",
+        type=Path,
+        default=Path("data/master.xlsx"),
+        help="Master workbook to import for --retroactive-excel-reference.",
+    )
+    parser.add_argument(
+        "--retroactive-app-root",
+        type=Path,
+        help="Optional empty app root for --retroactive-excel-reference. Defaults to _temp/non-windows-retroactive-*.",
+    )
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     parser.add_argument("--output", type=Path, help="Optional JSON summary output path")
     args = parser.parse_args(argv)
@@ -358,6 +471,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         include_full_unit=not args.skip_full_unit,
         pdf_evidence_paths=args.pdf_evidence,
     )
+    retroactive_excel_gate = None
+    if args.retroactive_excel_reference is not None:
+        retroactive_app_root = args.retroactive_app_root or default_retroactive_excel_app_root(
+            fiscal_year=args.retroactive_fiscal_year,
+        )
+        retroactive_excel_gate = {
+            "enabled": True,
+            "app_root": str(retroactive_app_root),
+            "fiscal_year": args.retroactive_fiscal_year,
+            "master_xlsx": str(args.retroactive_master),
+            "reference_xlsx": str(args.retroactive_excel_reference),
+        }
+        commands.extend(
+            build_retroactive_excel_gate_commands(
+                app_root=retroactive_app_root,
+                master_xlsx=args.retroactive_master,
+                reference_xlsx=args.retroactive_excel_reference,
+                fiscal_year=args.retroactive_fiscal_year,
+            )
+        )
     results = (
         run_gates(commands, keep_going=args.keep_going)
         if sha256_check.get("ok") and package_source_check.get("ok")
@@ -368,6 +501,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "package_zip": str(package_zip),
         "sha256_check": sha256_check,
         "package_source_check": package_source_check,
+        "retroactive_excel_gate": retroactive_excel_gate,
         "results": [asdict(result) for result in results],
     }
 

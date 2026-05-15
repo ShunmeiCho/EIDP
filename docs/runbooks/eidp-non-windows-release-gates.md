@@ -70,6 +70,29 @@ Current expected local replay results:
 - Tokyo v342 30-site evidence: `4` exact, `0` failed predictions
 - Saitama v342 bounded evidence: `16` exact, `0` failed predictions
 
+## Optional Retroactive Excel Gate
+
+When a previously proven R7/FY2025 workbook is available locally, add an
+isolated retroactive Excel business-value gate:
+
+```bash
+uv run python scripts/run_non_windows_release_gates.py \
+  dist/eidp-windows-v409.zip \
+  --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx \
+  --retroactive-fiscal-year 2025 \
+  --json \
+  --output logs/release-gate-v409-retroactive.json
+```
+
+This option creates a temporary `_temp/non-windows-retroactive-*` app root,
+copies `data/master.xlsx`, bootstraps a SQLite database, imports the workbook,
+exports the requested fiscal year, and runs `eidp diff-excel --business-values
+--fail-on-diff` against the reference workbook.
+
+Use this as an algorithm regression gate for rolling-FY Excel output. It does
+not replace the Windows transfer/setup/UI gates, and it does not prove the
+current FY2026/R8 60-70% target-PDF acquisition line.
+
 ## What This Proves
 
 - The ZIP has the expected source, data, wheelhouse, runbook, and validator
@@ -81,6 +104,9 @@ Current expected local replay results:
 - Existing bounded discovery evidence still maps to the expected gold outcomes.
 - Stale-year fallback and synthetic-only extractor sources are guarded before
   Windows handoff.
+- With `--retroactive-excel-reference`, the current source can rebuild a
+  previous-year database from `master.xlsx` and reproduce the already proven
+  retroactive Excel business values.
 
 ## What This Does Not Prove
 

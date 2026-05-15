@@ -53,6 +53,29 @@ In the `report ship-readiness --json` output, verify:
 - `is_retroactive_fiscal_year` is `true`.
 - `is_configured_target_fiscal_year` is `false` when `--fy 2025` is used against a normal current-year install.
 
+## Mac/Linux Isolated Excel Regression
+
+For package-source gates, prefer the optional non-Windows release-gate flag
+instead of hand-editing the repo-local `data/eidp.sqlite3`:
+
+```bash
+uv run python scripts/run_non_windows_release_gates.py \
+  dist/eidp-windows-v409.zip \
+  --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx \
+  --retroactive-fiscal-year 2025 \
+  --json \
+  --output logs/release-gate-v409-retroactive.json
+```
+
+The helper creates an isolated `_temp/non-windows-retroactive-*` app root with
+its own SQLite database, imports `data/master.xlsx`, exports the requested
+fiscal year, and compares the workbook against the reference with
+`diff-excel --business-values --fail-on-diff`.
+
+This proves that a source/package snapshot still reproduces a known
+previous-year Excel output. It should be logged as retroactive algorithm
+regression evidence, not current-year publication/yield evidence.
+
 ## Stage 6 Interpretation
 
 If FY2025 passes the operator workflow:
