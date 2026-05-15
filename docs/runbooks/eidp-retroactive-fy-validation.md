@@ -79,11 +79,11 @@ field/schema drift still fail the gate and must be treated as reference
 preparation or data-quality work.
 
 Do not use the raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` as an FY2024 or
-FY2023 pass/fail reference without preparing it first. The v414 preflight report
-`docs/reports/eidp-v414-retroactive-reference-preflight.md` records FY2024 and
-FY2023 raw-sample diagnostics: both isolated exports succeeded, but the raw
-sample comparison still showed missing/extra rows, duplicate business keys,
-formula-error placeholders, unknown-string placeholders, name drift, and
+FY2023 pass/fail reference without preparing it first. The v415 preflight report
+`docs/reports/eidp-v415-retroactive-reference-preflight.md` records current
+FY2024 and FY2023 raw-sample diagnostics: both isolated exports succeeded, but
+the raw sample comparison still showed missing/extra rows, duplicate business
+keys, formula-error placeholders, unknown-string placeholders, name drift, and
 field-year schema drift even with `--retroactive-numeric-tolerance 1e-9`.
 That is reference-preparation evidence, not an algorithm failure. For N=3
 backtests, first create or confirm canonical FY2025/FY2024/FY2023 reference

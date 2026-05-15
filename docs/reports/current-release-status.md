@@ -101,8 +101,8 @@ low-confidence and auto-flag current rows were all `0`. The
 `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`
 across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 
-FY2024 and FY2023 raw-sample reference preflights were also recorded for v414 in
-`docs/reports/eidp-v414-retroactive-reference-preflight.md`. Both isolated
+FY2024 and FY2023 raw-sample reference preflights were refreshed for v415 in
+`docs/reports/eidp-v415-retroactive-reference-preflight.md`. Both isolated
 exports succeeded with the same workbook row counts (`採録状況=2418`,
 `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`), while comparison against
 the raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` workbook intentionally
