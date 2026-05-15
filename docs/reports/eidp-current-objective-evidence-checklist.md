@@ -167,7 +167,7 @@ below include source-code evidence base `4a16363d` and later refreshes:
   package verification with `--require-demonstrated-discovery-patterns` passed,
   and `retroactive_excel_diff_reference` returned zero missing/extra rows and
   zero differing fields against `_temp/v408-r7-cli-export.xlsx`.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v415.zip --skip-full-unit --allow-docs-only-stale-package --json --output logs/release-gate-v415-docs-only-stale-after-sha-sidecar-note.json`
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v415.zip --skip-full-unit --allow-docs-only-stale-package --json --output logs/release-gate-v415-docs-only-stale-after-retroactive-reference-preflight.json`
   -> `ok=true`; SHA256 sidecar matched; `package_source_check` reported
   `stale=true`, `docs_only_stale=true`, `source_dirty=false`,
   `allowed_stale_reason=docs_only`, and changed paths limited to release/status

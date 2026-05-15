@@ -30,7 +30,7 @@ evidence.
 | SHA256 sidecar path note | The sidecar records the repo-relative package path. If the ZIP and sidecar are copied flat to `C:\EIDP-staging\`, use the digest value as the source of truth and compare it with `Get-FileHash`; do not rely on `sha256sum -c` unless the same `dist\` relative path is preserved. |
 | Package commit | `09ad5e6bfa80c8a03ab6f60b2f39a39333fdd42c` |
 | Full release-gate log | `logs/release-gate-v415-retroactive.json` |
-| Representative docs-only stale replay | `logs/release-gate-v415-docs-only-stale-after-sha-sidecar-note.json` |
+| Representative docs-only stale replay | `logs/release-gate-v415-docs-only-stale-after-retroactive-reference-preflight.json` |
 | Suggested Windows extract path | `C:\Users\cyo20\EIDP-v415-09ad5e6b` |
 
 ## Prompt-To-Artifact Checklist
