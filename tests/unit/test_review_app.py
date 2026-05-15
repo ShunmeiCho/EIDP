@@ -5,6 +5,7 @@ import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, ManualActionLog, ReviewItem, School
 from eidp.review.app import (
     DETAIL_PAGES,
@@ -159,6 +160,22 @@ def test_school_code_approve_writes_manual_action_log() -> None:
         session.close()
 
 
+def test_school_code_approve_refuses_when_weekly_lock_is_busy(tmp_path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        school, item = _seed_school_code_review(session)
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            _approve_item(session, item, school, lock_path=lock_path)
+
+        assert school.school_code is None
+        assert item.status == "pending"
+        assert session.query(ManualActionLog).count() == 0
+    finally:
+        session.close()
+
+
 def test_school_code_correction_writes_manual_action_log() -> None:
     session = _session()
     try:
@@ -171,6 +188,22 @@ def test_school_code_correction_writes_manual_action_log() -> None:
         assert audit.target_table == "school"
         assert audit.target_id == school.id
         assert json.loads(audit.new_value or "{}")["school_code"] == "H999999999999"
+    finally:
+        session.close()
+
+
+def test_school_code_correction_refuses_when_weekly_lock_is_busy(tmp_path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        school, item = _seed_school_code_review(session)
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            _approve_with_correction(session, item, school, "H999999999999", lock_path=lock_path)
+
+        assert school.school_code is None
+        assert item.status == "pending"
+        assert session.query(ManualActionLog).count() == 0
     finally:
         session.close()
 
@@ -192,6 +225,22 @@ def test_school_code_reject_writes_manual_action_log() -> None:
         session.close()
 
 
+def test_school_code_reject_refuses_when_weekly_lock_is_busy(tmp_path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        _school, item = _seed_school_code_review(session)
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            _reject_item(session, item, notes="busy", lock_path=lock_path)
+
+        assert item.status == "pending"
+        assert item.resolution is None
+        assert session.query(ManualActionLog).count() == 0
+    finally:
+        session.close()
+
+
 def test_school_code_skip_writes_manual_action_log() -> None:
     session = _session()
     try:
@@ -205,5 +254,20 @@ def test_school_code_skip_writes_manual_action_log() -> None:
         assert audit.target_id == item.id
         assert json.loads(audit.old_value or "{}")["priority"] == 1
         assert json.loads(audit.new_value or "{}")["priority"] == 3
+    finally:
+        session.close()
+
+
+def test_school_code_skip_refuses_when_weekly_lock_is_busy(tmp_path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        _school, item = _seed_school_code_review(session)
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            _skip_item(session, item, lock_path=lock_path)
+
+        assert item.priority == 1
+        assert session.query(ManualActionLog).count() == 0
     finally:
         session.close()

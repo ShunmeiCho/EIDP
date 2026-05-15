@@ -375,6 +375,28 @@ def test_extract_pdf_annotation_links_recovers_hidden_urls(tmp_path: Path):
     assert norm("見えない学校") not in links
 
 
+def test_extract_pdf_annotation_links_rejects_non_http_uri_schemes(tmp_path: Path):
+    schools = [
+        {"name": "安全な学校", "address": "東京都新宿区1-1",
+         "operator": "学校法人A", "op_address": "東京都新宿区1-1",
+         "url": "https://example.com/safe/"},
+        {"name": "JS注入学校", "address": "東京都港区2-2",
+         "operator": "学校法人B", "op_address": "東京都港区2-2",
+         "url": "javascript:alert(1)"},
+        {"name": "ローカル参照学校", "address": "東京都渋谷区3-3",
+         "operator": "学校法人C", "op_address": "東京都渋谷区3-3",
+         "url": "file:///C:/Users/operator/secret.xlsx"},
+    ]
+    pdf = tmp_path / "unsafe_annotation_links.pdf"
+    _make_5col_pdf_with_annotation(pdf, schools)
+
+    links = extract_pdf_annotation_links(pdf)
+
+    assert links.get(norm("安全な学校")) == "https://example.com/safe/"
+    assert norm("JS注入学校") not in links
+    assert norm("ローカル参照学校") not in links
+
+
 def test_parse_5col_uses_annotation_when_no_text_url(tmp_path: Path):
     """The owner-pinned Saitama path: 5col PDF whose 備考 column is empty
     BUT whose school-name cell carries a hyperlink annotation. The parser

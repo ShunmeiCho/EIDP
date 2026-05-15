@@ -13,6 +13,7 @@ import streamlit as st
 from sqlalchemy.orm import Session
 
 from eidp.db.audit import log_manual_action
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import ReviewItem, School, SchoolSite
 from eidp.scraper.school_url_persistence import REVIEW_ITEM_TYPE, REVIEW_PROPOSAL_SOURCE
 from eidp.scraper.url_normalization import normalize_candidate_url
@@ -160,7 +161,24 @@ def approve_url_candidate(
     url_override: str | None = None,
     url_type: str = "school",
     actor: str = "operator",
+    lock_path: Path | None = None,
 ) -> UrlCandidateActionOutcome:
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_url_candidate_review"):
+                outcome = approve_url_candidate(
+                    session,
+                    item_id=item_id,
+                    url_override=url_override,
+                    url_type=url_type,
+                    actor=actor,
+                    lock_path=None,
+                )
+                session.commit()
+                return outcome
+        except LockBusyError:
+            return UrlCandidateActionOutcome(item_id=item_id, decision="missing", skipped_reason="lock_busy")
+
     item = _pending_url_candidate(session, item_id)
     if item is None or item.reference_id is None:
         return UrlCandidateActionOutcome(item_id=item_id, decision="missing", skipped_reason="not_pending")
@@ -225,7 +243,23 @@ def reject_url_candidate(
     item_id: int,
     notes: str = "",
     actor: str = "operator",
+    lock_path: Path | None = None,
 ) -> UrlCandidateActionOutcome:
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_url_candidate_review"):
+                outcome = reject_url_candidate(
+                    session,
+                    item_id=item_id,
+                    notes=notes,
+                    actor=actor,
+                    lock_path=None,
+                )
+                session.commit()
+                return outcome
+        except LockBusyError:
+            return UrlCandidateActionOutcome(item_id=item_id, decision="missing", skipped_reason="lock_busy")
+
     item = _pending_url_candidate(session, item_id)
     if item is None:
         return UrlCandidateActionOutcome(item_id=item_id, decision="missing", skipped_reason="not_pending")
@@ -260,7 +294,7 @@ def _render_breakdown(row: UrlCandidateReviewRow) -> str:
 
 def render(session: Session, *, lock_path: Path | None = None) -> None:
     st.title("URL候補レビュー")
-    if lock_path is not None and lock_path.exists():
+    if lock_path is not None and probe_lock(lock_path).held:
         st.warning("初回取得または週次処理中です。完了後に確認してください。")
         return
 
@@ -307,8 +341,10 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
                     item_id=row.item_id,
                     url_override=edited_url,
                     url_type=selected_url_type,
+                    lock_path=lock_path,
                 )
-                session.commit()
+                if lock_path is None:
+                    session.commit()
                 st.rerun()
             reject_notes = st.text_input(
                 "却下理由",
@@ -317,6 +353,7 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
                 placeholder="却下理由",
             )
             if action_cols[1].button("却下", key=f"url_candidate_reject_{row.item_id}"):
-                reject_url_candidate(session, item_id=row.item_id, notes=reject_notes)
-                session.commit()
+                reject_url_candidate(session, item_id=row.item_id, notes=reject_notes, lock_path=lock_path)
+                if lock_path is None:
+                    session.commit()
                 st.rerun()

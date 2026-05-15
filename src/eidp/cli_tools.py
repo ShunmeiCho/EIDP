@@ -141,7 +141,17 @@ def review_ui(
     app_path = Path(__file__).parent / "review" / "app.py"
     typer.echo(f"Launching review UI on http://localhost:{port}")
     subprocess.run(
-        [sys.executable, "-m", "streamlit", "run", str(app_path), "--server.port", str(port)],
+        [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            str(app_path),
+            "--server.address",
+            "127.0.0.1",
+            "--server.port",
+            str(port),
+        ],
         check=True,
     )
 
@@ -153,7 +163,17 @@ def operator_ui(
     app_path = Path(__file__).parent / "review" / "app.py"
     typer.echo(f"Launching operator UI on http://localhost:{port}")
     subprocess.run(
-        [sys.executable, "-m", "streamlit", "run", str(app_path), "--server.port", str(port)],
+        [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            str(app_path),
+            "--server.address",
+            "127.0.0.1",
+            "--server.port",
+            str(port),
+        ],
         check=True,
     )
 

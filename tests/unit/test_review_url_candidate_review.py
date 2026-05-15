@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, ManualActionLog, ReviewItem, School, SchoolSite
 from eidp.review._pages.url_candidate_review import (
     approve_url_candidate,
@@ -165,6 +166,21 @@ def test_approve_url_candidate_can_store_disclosure_url_type(session: Session) -
     assert json.loads(audit.new_value)["url_type"] == "disclosure"
 
 
+def test_approve_url_candidate_refuses_when_weekly_lock_is_busy(session: Session, tmp_path) -> None:
+    _seed_url_candidate(session)
+    lock_path = tmp_path / "data" / ".lock"
+
+    with acquire_lock(lock_path, owner="weekly_runner"):
+        outcome = approve_url_candidate(session, item_id=10, actor="operator", lock_path=lock_path)
+
+    item = session.get(ReviewItem, 10)
+    assert outcome.skipped_reason == "lock_busy"
+    assert session.query(SchoolSite).count() == 0
+    assert session.query(ManualActionLog).count() == 0
+    assert item is not None
+    assert item.status == "pending"
+
+
 def test_approve_manual_required_candidate_requires_operator_url(session: Session) -> None:
     _seed_manual_required_url_candidate(session)
 
@@ -203,3 +219,17 @@ def test_reject_url_candidate_resolves_item_and_audits(session: Session) -> None
     assert audit.action_type == "url_candidate_rejected"
     assert audit.target_table == "review_item"
     assert audit.target_id == 10
+
+
+def test_reject_url_candidate_refuses_when_weekly_lock_is_busy(session: Session, tmp_path) -> None:
+    _seed_url_candidate(session)
+    lock_path = tmp_path / "data" / ".lock"
+
+    with acquire_lock(lock_path, owner="weekly_runner"):
+        outcome = reject_url_candidate(session, item_id=10, notes="busy", actor="operator", lock_path=lock_path)
+
+    item = session.get(ReviewItem, 10)
+    assert outcome.skipped_reason == "lock_busy"
+    assert session.query(ManualActionLog).count() == 0
+    assert item is not None
+    assert item.status == "pending"

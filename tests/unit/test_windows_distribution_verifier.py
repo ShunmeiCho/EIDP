@@ -1530,6 +1530,20 @@ def test_verify_core_zip_rejects_launcher_that_does_not_open_browser(tmp_path: P
     assert any("http://localhost:8501" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_launcher_without_localhost_bind(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/launch.bat"] = entries["scripts/launch.bat"].replace(
+        "--server.address 127.0.0.1",
+        "REM stale launcher missing localhost bind",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("--server.address 127.0.0.1" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_locale_dependent_weekly_bat(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/weekly_run.bat"] = entries["scripts/weekly_run.bat"] + "\nset DATESTAMP=%DATE:~0,8%\n"

@@ -915,6 +915,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "Start-Process 'http://localhost:8501'",
             "streamlit run",
+            "--server.address 127.0.0.1",
             "--server.headless true",
             "--browser.gatherUsageStats false",
             'set "RC=%ERRORLEVEL%"',

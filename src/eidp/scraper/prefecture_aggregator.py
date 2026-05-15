@@ -294,14 +294,15 @@ def extract_pdf_annotation_links(pdf_path: Path) -> dict[str, str]:
             for link in page.get_links():
                 uri = link.get("uri") or ""
                 rect = link.get("from")
-                if not uri or not rect:
+                safe_uri = _absolute_http_url(str(uri), None)
+                if not safe_uri or not rect:
                     continue
                 anchor_text = page.get_text("text", clip=rect).strip()
                 if not anchor_text:
                     continue
                 key = norm(anchor_text)
                 if key and key not in out:
-                    out[key] = uri
+                    out[key] = safe_uri
     finally:
         doc.close()
     return out

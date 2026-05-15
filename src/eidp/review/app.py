@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.audit import log_manual_action
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import ReviewItem, School, SchoolAlias
 from eidp.db.session import SessionLocal
 from eidp.fiscal_year import format_fiscal_year_label
@@ -217,11 +218,25 @@ def _load_school(session: Session, school_id: int) -> School | None:
 # Actions
 # ---------------------------------------------------------------------------
 
-def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
+def _show_lock_busy(lock_path: Path) -> None:
+    status = probe_lock(lock_path)
+    owner = status.owner or "weekly_runner"
+    st.warning(f"週次処理中です。編集は一時停止されています。({owner})")
+
+
+def _approve_item(session: Session, item: ReviewItem, school: School, *, lock_path: Path | None = None) -> bool:
     """Approve: apply the proposed MEXT code to the school."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _approve_item(session, item, school, lock_path=None)
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
     if item.proposal_value is None:
         st.error("No proposal to approve.")
-        return
+        return False
 
     proposal = json.loads(item.proposal_value)
     code = proposal.get("candidate_code")
@@ -229,7 +244,7 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
 
     if not code:
         st.error("Proposal has no candidate_code.")
-        return
+        return False
 
     # Check for code conflict
     existing = session.query(School).filter(School.school_code == code).first()
@@ -238,7 +253,7 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
             f"Code {code} already assigned to school id={existing.id} "
             f"({existing.school_name}). Cannot assign."
         )
-        return
+        return False
 
     old_code = school.school_code
     school.school_code = code
@@ -278,22 +293,36 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
         reason=item.proposal_reason or "Operator approved MEXT school code",
     )
     _commit(session)
+    return True
 
 
 def _approve_with_correction(
-    session: Session, item: ReviewItem, school: School, corrected_code: str
-) -> None:
+    session: Session,
+    item: ReviewItem,
+    school: School,
+    corrected_code: str,
+    *,
+    lock_path: Path | None = None,
+) -> bool:
     """Approve with a manually corrected MEXT code."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _approve_with_correction(session, item, school, corrected_code, lock_path=None)
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
     corrected_code = corrected_code.strip()
     if not corrected_code:
         st.error("Please enter a valid MEXT code.")
-        return
+        return False
 
     # Validate MEXT code format: 13-character alphanumeric starting with H (vocational)
     import re
     if not re.match(r"^[A-Z]\d{12}$", corrected_code):
         st.error(f"Invalid MEXT code format: '{corrected_code}'. Expected 13 chars like 'H101310100147'.")
-        return
+        return False
 
     # Check for code conflict
     existing = session.query(School).filter(School.school_code == corrected_code).first()
@@ -302,7 +331,7 @@ def _approve_with_correction(
             f"Code {corrected_code} already assigned to school id={existing.id} "
             f"({existing.school_name}). Cannot assign."
         )
-        return
+        return False
 
     old_code = school.school_code
     school.school_code = corrected_code
@@ -324,10 +353,19 @@ def _approve_with_correction(
         reason="Operator corrected MEXT school code",
     )
     _commit(session)
+    return True
 
 
-def _reject_item(session: Session, item: ReviewItem, notes: str = "") -> None:
+def _reject_item(session: Session, item: ReviewItem, notes: str = "", *, lock_path: Path | None = None) -> bool:
     """Reject: mark the proposal as wrong, leave school_code NULL."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _reject_item(session, item, notes, lock_path=None)
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
     item.status = "resolved"
     item.resolution = "rejected"
     item.resolved_at = datetime.now(UTC)
@@ -347,10 +385,19 @@ def _reject_item(session: Session, item: ReviewItem, notes: str = "") -> None:
         reason=notes or "Operator rejected MEXT school code proposal",
     )
     _commit(session)
+    return True
 
 
-def _skip_item(session: Session, item: ReviewItem) -> None:
+def _skip_item(session: Session, item: ReviewItem, *, lock_path: Path | None = None) -> bool:
     """Skip: lower priority so it appears later."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _skip_item(session, item, lock_path=None)
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
     old_priority = item.priority
     item.priority = min(item.priority + 2, 10)
     log_manual_action(
@@ -363,6 +410,7 @@ def _skip_item(session: Session, item: ReviewItem) -> None:
         reason="Operator skipped MEXT school code proposal",
     )
     _commit(session)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -391,7 +439,7 @@ def _render_dashboard(stats: dict[str, int]) -> None:
         st.write(f"- Review rejected: **{stats['rejected']}**")
 
 
-def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
+def _render_review_item(session: Session, item: ReviewItem, idx: int, *, lock_path: Path | None = None) -> bool:
     """Render a single review item card. Returns True if an action was taken."""
     school = _load_school(session, item.reference_id) if item.reference_id else None
     if school is None:
@@ -457,27 +505,30 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
                 key=f"approve_{item.id}_{idx}",
                 type="primary",
             ):
-                _approve_item(session, item, school)
-                st.success(f"Approved: {school.school_name} -> {candidate_code}")
-                return True
+                if _approve_item(session, item, school, lock_path=lock_path):
+                    st.success(f"Approved: {school.school_name} -> {candidate_code}")
+                    return True
+                return False
 
         # Reject
         if action_cols[1].button(
             "Reject",
             key=f"reject_{item.id}_{idx}",
         ):
-            _reject_item(session, item)
-            st.warning(f"Rejected proposal for {school.school_name}")
-            return True
+            if _reject_item(session, item, lock_path=lock_path):
+                st.warning(f"Rejected proposal for {school.school_name}")
+                return True
+            return False
 
         # Skip
         if action_cols[2].button(
             "Skip",
             key=f"skip_{item.id}_{idx}",
         ):
-            _skip_item(session, item)
-            st.info(f"Skipped {school.school_name} (lowered priority)")
-            return True
+            if _skip_item(session, item, lock_path=lock_path):
+                st.info(f"Skipped {school.school_name} (lowered priority)")
+                return True
+            return False
 
         # Manual correction
         corrected = action_cols[4].text_input(
@@ -491,9 +542,10 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
             key=f"apply_manual_{item.id}_{idx}",
         ):
             if corrected:
-                _approve_with_correction(session, item, school, corrected)
-                st.success(f"Applied manual code: {school.school_name} -> {corrected}")
-                return True
+                if _approve_with_correction(session, item, school, corrected, lock_path=lock_path):
+                    st.success(f"Applied manual code: {school.school_name} -> {corrected}")
+                    return True
+                return False
             else:
                 st.error("Enter a MEXT code first.")
 
@@ -504,9 +556,12 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
 # Page: Review Queue
 # ---------------------------------------------------------------------------
 
-def _page_review_queue(session: Session) -> None:
+def _page_review_queue(session: Session, *, lock_path: Path | None = None) -> None:
     """Main review queue page."""
     st.header("School Code Review Queue")
+    if lock_path is not None and probe_lock(lock_path).held:
+        st.warning("週次処理中です。編集は一時停止されています。完了後に確認してください。")
+        return
 
     stats = _load_dashboard_stats(session)
     _render_dashboard(stats)
@@ -565,7 +620,7 @@ def _page_review_queue(session: Session) -> None:
     page_items = items[start:end]
 
     for idx, item in enumerate(page_items):
-        acted = _render_review_item(session, item, start + idx)
+        acted = _render_review_item(session, item, start + idx, lock_path=lock_path)
         if acted:
             st.rerun()
 
@@ -668,7 +723,7 @@ def main() -> None:
             from eidp.review._pages.settings_page import render as render_settings
             render_settings(session, lock_path=Path(settings.data_dir) / ".lock")
         elif page == PAGE_SCHOOL_CODE:
-            _page_review_queue(session)
+            _page_review_queue(session, lock_path=Path(settings.data_dir) / ".lock")
         elif page == PAGE_HISTORY:
             _page_history(session)
         elif page == PAGE_MANUAL_ENTRY:

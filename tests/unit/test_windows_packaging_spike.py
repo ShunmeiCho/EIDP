@@ -766,6 +766,7 @@ def test_launch_opens_browser_for_double_click_users(bat_files: dict[str, str]):
     body = bat_files["launch.bat"]
     assert "Start-Sleep -Seconds 3" in body
     assert "Start-Process 'http://localhost:8501'" in body
+    assert "--server.address 127.0.0.1" in body
     assert "--server.headless true" in body
 
 
