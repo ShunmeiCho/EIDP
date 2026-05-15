@@ -16,6 +16,7 @@ Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v442.zip`
@@ -133,7 +134,22 @@ through `scripts\launch.bat`, received HTTP `200` from
 `http://127.0.0.1:8501/_stcore/health` and from `http://127.0.0.1:8501/`,
 and stopped the v442 Streamlit listener; the pulled evidence file is
 `logs/win-v442-stage6/v442-ui-smoke-20260516-061159.json` with `ok=true`,
-`errors=[]`, and no remaining `8501` listener. v441 remains the previous
+`errors=[]`, and no remaining `8501` listener. A separate v442 browser-level
+read-only navigation smoke kept `scripts\launch.bat` alive in an SSH session,
+opened `127.0.0.1:18501 -> Windows 127.0.0.1:8501` through an SSH tunnel, and
+used Playwright to render the real browser UI. The browser title was
+`EIDP Operator Console`; snapshots rendered `① 学校別タスク` with build
+`22f1a98`, `② PDF確認・手入力`, `④ Excel プレビュー`, and
+`⑤ 設定（年度・OCR・API）` without clicking write actions such as settings
+save or weekly re-fetch. The evidence files are
+`logs/win-v442-stage6/v442-browser-smoke-start-20260516-061648.json`,
+`logs/win-v442-stage6/v442-browser-smoke-stop-20260516-062052.json`,
+`output/playwright/v442-ui-smoke/pdf-manual-entry-page.yml`,
+`output/playwright/v442-ui-smoke/excel-preview-page.yml`,
+`output/playwright/v442-ui-smoke/settings-page.yml`, and
+`output/playwright/v442-ui-smoke/settings-page.png`; cleanup stopped the
+Windows `8501` listener, closed the local tunnel, and removed the transient
+`.playwright-cli` working directory. v441 remains the previous
 fallback package with non-browser UI-smoke/default launcher proof. v441 has
 Mac/non-Windows package, Stage 6 evidence-bundle, Windows
 transfer/SHA, setup, recovery, non-browser UI-smoke, URL-only bootstrap, and
