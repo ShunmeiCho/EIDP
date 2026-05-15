@@ -2,13 +2,14 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `19ceb0dee69fe7b90e32a9a90591018d9c5e773f`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v445.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v445.zip`
-Latest Mac-core package SHA256: `3cd36e11e281a4cd9646bcb865a006f5e99c9f15fae1f7700f65714aa56ba04b`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v445.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v445.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v445.zip`
+Latest Mac/non-Windows package snapshot: `e9f91ccbb51f82cb594be6567076df50276cc97a`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v446.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v446.zip`
+Latest Mac-core package SHA256: `e0436a08d12d09987f15f96c814de2290010714477e54ae0dcff0f290a3d3878`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v446.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v446.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v446.zip`
+Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
@@ -29,7 +30,27 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v445-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-v445 is the latest Mac/non-Windows release-gate-clean and Windows setup/canary
+v446 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+and release-artifact-pruner-proven package. It was built from package snapshot
+`e9f91ccbb51f82cb594be6567076df50276cc97a`, which adds
+`scripts/prune_release_artifacts.py` and wires it into both the Windows ZIP
+member collector and `scripts/verify_windows_distribution.py` core-required
+manifest. The v446 non-Windows gate returned `ok=true` with SHA256
+`e0436a08d12d09987f15f96c814de2290010714477e54ae0dcff0f290a3d3878`,
+package/source commit match, `source_dirty=false`, validator/distribution tests
+`164 passed`, validator mypy/Ruff pass, discovery-gold expected predictions
+`44/44`, and both package verifier modes pass. Windows transfer SHA matched,
+the package was expanded to `C:\Users\cyo20\EIDP-v446-e9f91cc`, and the
+packaged pruner dry-run reported only three v445 candidates:
+`C:\EIDP-staging\eidp-windows-v445.zip`, its `.sha256` sidecar, and
+`EIDP-v445-19ceb0d`. Applying the same command deleted those three candidates
+(`1103245161` bytes) and left Windows staging/deploy retention at v446 current
+plus v442 fallback. Mac retention now keeps v446 current, v442 fallback, and the
+latest alias; `_temp=0B`, `.claude/worktrees=0B`, `data=20M`, and `logs=3.6M`.
+This v446 pass is a release-hygiene packaging and cleanup proof; it does not
+replace v445 as the latest Windows setup/canary proof.
+
+v445 is the latest Windows setup/canary
 package. It was built from package snapshot
 `19ceb0dee69fe7b90e32a9a90591018d9c5e773f` after the v444 canary showed that
 `日本工学院北海道専門学校` was stuck with `東京都` from `採録状況`/`対象比率`, preventing
@@ -51,9 +72,7 @@ exited `0` and improved the failure shape: `candidate_school_mismatch=0`,
 `target_form_without_year_evidence`. It still failed the production yield gate:
 `target_pdf_auto_acquired_count=0`, `target_pdf_auto_yield_pct=0.0`, and
 `ship_gate_status=below_gate`, because the official page exposes 2025 and older
-申請書 files but no FY2026/R8 target-form evidence yet. Mac cleanup now keeps
-v445 current, v442 fallback, and the latest alias; Windows staging/deploy
-cleanup keeps only v445 current and v442 fallback. The v445 evidence bundle
+申請書 files but no FY2026/R8 target-form evidence yet. The v445 evidence bundle
 `logs/win-v445-stage6/stage6-evidence-20260515-223848.zip` verified on both
 Windows and Mac with `ok=true`, no forbidden or unsafe entries, and present
 labels `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
