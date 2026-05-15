@@ -23,6 +23,11 @@ htmlcov/
 
 # Context
 .context/
+.claude/
+.omc/
+.playwright-mcp/
+_temp/
+logs/
 
 # Secrets / environment
 .env
@@ -31,6 +36,9 @@ htmlcov/
 
 # Data (PDFs, exports, large binaries — not source)
 data/pdfs/
+data/.lock
+data/eidp.sqlite3
+data/prefecture-aggregators/artifacts/
 output/
 *.xlsx
 
@@ -41,3 +49,6 @@ output/
 findings.md
 progress.md
 task_plan.md
+
+# Local screenshots / smoke artifacts
+eidp-v34-school-task-bootstrap-warning.png
