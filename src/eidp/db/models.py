@@ -66,6 +66,7 @@ class SchoolSite(Base):
 
     __table_args__ = (
         UniqueConstraint("school_id", "url"),
+        Index("idx_school_site_school_id_http_status", "school_id", "http_status"),
         {"comment": "School website registry"},
     )
 
@@ -112,6 +113,8 @@ class Document(Base):
         # aligned with that probe so concurrent workers cannot attach the same
         # PDF bytes to multiple schools.
         Index("uq_document_file_hash", "file_hash", unique=True),
+        Index("idx_document_school_id", "school_id"),
+        Index("idx_document_fiscal_year_pdf_type_ingest_status", "fiscal_year", "pdf_type", "ingest_status"),
         {"comment": "PDF document registry"},
     )
 
@@ -163,6 +166,10 @@ class DepartmentChange(Base):
     voided_by: Mapped[str | None] = mapped_column(String(50))
     void_reason: Mapped[str | None] = mapped_column(Text)
 
+    __table_args__ = (
+        Index("idx_department_change_department_id", "department_id"),
+    )
+
     department: Mapped["Department"] = relationship(
         back_populates="changes", foreign_keys=[department_id]
     )
@@ -204,6 +211,7 @@ class DepartmentYearly(Base):
             postgresql_where=text("is_current = true"),
             sqlite_where=text("is_current = 1"),
         ),
+        Index("idx_department_yearly_document_id", "document_id"),
         {"comment": "Yearly department snapshot, append-only with revision support"},
     )
 
@@ -284,6 +292,10 @@ class SchoolAlias(Base):
     alias_type: Mapped[str | None] = mapped_column(String(30))
     source: Mapped[str | None] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_school_alias_school_id", "school_id"),
+    )
 
     school: Mapped["School"] = relationship(back_populates="aliases")
 
@@ -396,3 +408,12 @@ class ManualActionLog(Base):
     reason: Mapped[str | None] = mapped_column(Text)
     jsonl_exported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     jsonl_export_error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        Index(
+            "idx_manual_action_log_jsonl_exported_table_document",
+            "jsonl_exported_at",
+            "target_table",
+            "document_id",
+        ),
+    )

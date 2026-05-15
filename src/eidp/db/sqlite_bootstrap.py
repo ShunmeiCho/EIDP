@@ -43,6 +43,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_document_file_hash
 ON document (file_hash)
 """
 
+_SQLITE_PERFORMANCE_INDEX_DDLS = (
+    """
+    CREATE INDEX IF NOT EXISTS idx_document_school_id
+    ON document (school_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_document_fiscal_year_pdf_type_ingest_status
+    ON document (fiscal_year, pdf_type, ingest_status)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_school_site_school_id_http_status
+    ON school_site (school_id, http_status)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_department_yearly_document_id
+    ON department_yearly (document_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_manual_action_log_jsonl_exported_table_document
+    ON manual_action_log (jsonl_exported_at, target_table, document_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_school_alias_school_id
+    ON school_alias (school_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_department_change_department_id
+    ON department_change (department_id)
+    """,
+)
+
 _SQLITE_PRAGMAS = (
     "PRAGMA journal_mode=WAL",
     "PRAGMA foreign_keys=ON",
@@ -208,6 +239,15 @@ def ensure_sqlite_document_file_hash_index(engine: Engine) -> None:
         conn.execute(text(_DOCUMENT_FILE_HASH_UNIQUE_INDEX_DDL))
 
 
+def ensure_sqlite_performance_indexes(engine: Engine) -> None:
+    """Replay additive performance indexes on existing operator SQLite DBs."""
+    if not is_sqlite(engine):
+        return
+    with engine.begin() as conn:
+        for ddl in _SQLITE_PERFORMANCE_INDEX_DDLS:
+            conn.execute(text(ddl))
+
+
 def stamp_alembic_head(engine: Engine, alembic_ini: Path | None = None) -> None:
     """Mark the database as being at alembic ``head`` revision.
 
@@ -265,5 +305,6 @@ def bootstrap_sqlite(engine: Engine, *, alembic_ini: Path | None = None) -> None
     ensure_sqlite_additive_columns(engine)
     create_null_safe_dept_index(engine)
     ensure_sqlite_document_file_hash_index(engine)
+    ensure_sqlite_performance_indexes(engine)
     apply_sqlite_pragmas(engine)
     stamp_alembic_head(engine, alembic_ini=alembic_ini)

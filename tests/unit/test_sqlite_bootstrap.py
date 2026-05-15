@@ -34,8 +34,21 @@ from eidp.db.sqlite_bootstrap import (
     apply_sqlite_pragmas,
     bootstrap_sqlite,
     create_null_safe_dept_index,
+    ensure_sqlite_performance_indexes,
     is_sqlite,
 )
+
+_STAGE6_PERFORMANCE_INDEXES = {
+    "document": {
+        "idx_document_school_id",
+        "idx_document_fiscal_year_pdf_type_ingest_status",
+    },
+    "school_site": {"idx_school_site_school_id_http_status"},
+    "department_yearly": {"idx_department_yearly_document_id"},
+    "manual_action_log": {"idx_manual_action_log_jsonl_exported_table_document"},
+    "school_alias": {"idx_school_alias_school_id"},
+    "department_change": {"idx_department_change_department_id"},
+}
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -78,6 +91,60 @@ def test_bootstrap_creates_all_core_tables(bootstrapped_engine):
     }
     missing = expected_subset - tables
     assert not missing, f"missing tables after bootstrap: {sorted(missing)}"
+
+
+def test_models_declare_stage6_performance_indexes():
+    for table_name, expected_indexes in _STAGE6_PERFORMANCE_INDEXES.items():
+        declared_indexes = {index.name for index in Base.metadata.tables[table_name].indexes}
+        missing = expected_indexes - declared_indexes
+        assert not missing, f"{table_name} missing indexes: {sorted(missing)}"
+
+
+def test_bootstrap_adds_stage6_performance_indexes_to_legacy_sqlite_db(sqlite_engine):
+    """Operator ZIP upgrades must add indexes to existing SQLite DBs.
+
+    ``create_all(checkfirst=True)`` does not add indexes for pre-existing
+    tables, so bootstrap needs an explicit index replay step for low-spec
+    operator PCs.
+    """
+
+    with sqlite_engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE document (
+                id INTEGER PRIMARY KEY,
+                school_id INTEGER NOT NULL,
+                fiscal_year INTEGER,
+                pdf_type VARCHAR(30),
+                ingest_status VARCHAR(30),
+                file_hash VARCHAR(64)
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE school_site (
+                id INTEGER PRIMARY KEY,
+                school_id INTEGER NOT NULL,
+                http_status INTEGER
+            )
+        """))
+        conn.execute(text("CREATE TABLE department_yearly (id INTEGER PRIMARY KEY, document_id INTEGER)"))
+        conn.execute(text("""
+            CREATE TABLE manual_action_log (
+                id INTEGER PRIMARY KEY,
+                jsonl_exported_at DATETIME,
+                target_table VARCHAR(50),
+                document_id INTEGER
+            )
+        """))
+        conn.execute(text("CREATE TABLE school_alias (id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL)"))
+        conn.execute(text("CREATE TABLE department_change (id INTEGER PRIMARY KEY, department_id INTEGER NOT NULL)"))
+
+    ensure_sqlite_performance_indexes(sqlite_engine)
+
+    inspector = inspect(sqlite_engine)
+    for table_name, expected_indexes in _STAGE6_PERFORMANCE_INDEXES.items():
+        reflected_indexes = {str(index["name"]) for index in inspector.get_indexes(table_name)}
+        missing = expected_indexes - reflected_indexes
+        assert not missing, f"{table_name} missing indexes after bootstrap replay: {sorted(missing)}"
 
 
 def test_alembic_version_is_stamped(bootstrapped_engine):
