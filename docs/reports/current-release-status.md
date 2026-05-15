@@ -50,12 +50,18 @@ dist/eidp-windows-v410.zip --json` returned `ok=true` with SHA256
 sources.
 
 Current HEAD has later non-runtime commits for evidence documentation,
-Streamlit AppTest timeout stability, and local runtime-artifact ignore rules.
+Streamlit AppTest timeout stability, local runtime-artifact ignore rules,
+optional-adapter boundary tests, and coverage gate enforcement.
 Those commits do not change packaged application code, so v410 remains the
 current Mac/non-Windows runtime package for the latest app-code evidence base;
 strict package/source freshness checks still intentionally compare against the
 package snapshot `98d9f792860b40e537ec61a8b470859be7bb70c0` unless a future
 runtime-code change requires a rebuild.
+
+The post-v410 non-runtime coverage gate is now machine-enforced through
+`pyproject.toml` `[tool.coverage.report] fail_under = 80`. `uv run pytest
+--cov=src/eidp --cov-report=term` returned `1530 passed`, `TOTAL 14186 2837
+80%`, and `Required test coverage of 80.0% reached. Total coverage: 80.00%`.
 
 `uv run python scripts/run_non_windows_release_gates.py
 dist/eidp-windows-v410.zip --retroactive-excel-reference

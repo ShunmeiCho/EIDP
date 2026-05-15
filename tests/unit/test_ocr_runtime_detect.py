@@ -8,7 +8,9 @@ from eidp.ocr.runtime_detect import (
     DEFAULT_MIN_CPUS,
     DEFAULT_MIN_FREE_RAM_MB,
     RuntimeProfile,
+    _default_cpu_count_reader,
     _default_free_ram_reader,
+    _posix_available_memory_mb,
     detect_runtime,
     ocr_auto_enable,
 )
@@ -42,6 +44,25 @@ def test_detect_runtime_uses_injected_readers():
     assert profile == RuntimeProfile(cpu_count=6, free_ram_mb=10 * 1024)
 
 
+@pytest.mark.parametrize("cpu_count", [None, 0])
+def test_default_cpu_count_reader_falls_back_to_single_core(monkeypatch: pytest.MonkeyPatch, cpu_count: int | None):
+    import eidp.ocr.runtime_detect as runtime_detect
+
+    monkeypatch.setattr(runtime_detect.os, "cpu_count", lambda: cpu_count)
+
+    assert _default_cpu_count_reader() == 1
+
+
+def test_default_free_ram_reader_prefers_psutil_probe(monkeypatch: pytest.MonkeyPatch):
+    import eidp.ocr.runtime_detect as runtime_detect
+
+    monkeypatch.setattr(runtime_detect, "_psutil_available_memory_mb", lambda: 8 * 1024)
+    monkeypatch.setattr(runtime_detect, "_windows_available_memory_mb", lambda: None)
+    monkeypatch.setattr(runtime_detect, "_posix_available_memory_mb", lambda: None)
+
+    assert _default_free_ram_reader() == 8 * 1024
+
+
 def test_default_free_ram_reader_uses_windows_api_without_psutil(monkeypatch: pytest.MonkeyPatch):
     """Windows operator ZIPs do not have to bundle psutil; stdlib memory
     detection must still keep OCR auto-enable from failing closed on RAM."""
@@ -53,6 +74,28 @@ def test_default_free_ram_reader_uses_windows_api_without_psutil(monkeypatch: py
     monkeypatch.setattr(runtime_detect.os, "name", "nt")
 
     assert _default_free_ram_reader() == 12 * 1024
+
+
+def test_default_free_ram_reader_uses_posix_probe(monkeypatch: pytest.MonkeyPatch):
+    import eidp.ocr.runtime_detect as runtime_detect
+
+    monkeypatch.setattr(runtime_detect, "_psutil_available_memory_mb", lambda: None)
+    monkeypatch.setattr(runtime_detect, "_posix_available_memory_mb", lambda: 2 * 1024)
+    monkeypatch.setattr(runtime_detect.os, "name", "posix")
+
+    assert _default_free_ram_reader() == 2 * 1024
+
+
+def test_posix_available_memory_returns_none_for_non_positive_values(monkeypatch: pytest.MonkeyPatch):
+    import eidp.ocr.runtime_detect as runtime_detect
+
+    monkeypatch.setattr(
+        runtime_detect.os,
+        "sysconf",
+        lambda name: 0 if name == "SC_AVPHYS_PAGES" else 4096,
+    )
+
+    assert _posix_available_memory_mb() is None
 
 
 # ---------------------------------------------------------------------------

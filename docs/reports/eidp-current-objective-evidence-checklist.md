@@ -13,8 +13,9 @@ but it has no Windows transfer/setup/UI proof because SSH-Win is currently
 disconnected. v408 now has R7 CLI Excel parity, R7 browser Excel download proof,
 a disposable copied-DB UI write/audit sandbox proof, and a verifier-accepted
 non-Excel diagnostic evidence bundle; the real operator cycle is still missing.
-Current HEAD includes post-v410 non-runtime documentation, test-timeout, and
-local-ignore commits; v410 remains the current runtime package because no
+Current HEAD includes post-v410 non-runtime documentation, test-timeout,
+coverage-gate, optional-adapter test, and local-ignore commits; v410 remains
+the current runtime package because no
 packaged application code changed after snapshot `98d9f792860b40e537ec61a8b470859be7bb70c0`.
 
 ## Objective Restatement
@@ -72,6 +73,10 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   budget was raised from `15s` to `30s` for UI smoke tests, with
   `uv run pytest tests/unit/test_review_school_year_tasks.py
   tests/unit/test_review_pdf_manual_entry.py -q` returning `100 passed`;
+  optional Scrapling and OCR-runtime boundary tests now keep the local coverage
+  line above the configured threshold; `[tool.coverage.report] fail_under = 80`
+  is set in `pyproject.toml`; `uv run pytest --cov=src/eidp --cov-report=term`
+  returned `1530 passed`, `TOTAL 14186 2837 80%`, and `Total coverage: 80.00%`;
   local runtime/tool artifacts are ignored narrowly via `.gitignore`.
 - Active Windows transfer/setup/UI-health proof: v408, commit
   `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, SHA256
