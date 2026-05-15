@@ -36,6 +36,11 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from eidp.config import (
+    MAX_SUPPORTED_TARGET_FISCAL_YEAR,
+    MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+    SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL,
+)
 from eidp.db.audit import log_manual_action
 from eidp.db.models import (
     DepartmentYearly,
@@ -125,6 +130,52 @@ def _carry_dict(src: object, fields: tuple[str, ...]) -> dict[str, Any]:
     return {f: getattr(src, f) for f in fields}
 
 
+def _validate_target_fiscal_year(target_fy: int) -> None:
+    if target_fy < MIN_SUPPORTED_TARGET_FISCAL_YEAR or target_fy > MAX_SUPPORTED_TARGET_FISCAL_YEAR:
+        raise ValueError(
+            f"target fiscal_year {target_fy} outside supported range "
+            f"{SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}"
+        )
+
+
+def _audit_collateral_demote(
+    session: Session,
+    *,
+    row: DepartmentYearly | SupportRecipient | SchoolYearStatus,
+    target_table: str,
+    demoted_by_document_id: int,
+    actor: str,
+    reason: str | None,
+) -> None:
+    """Demote an already-current target-year row and audit the side effect."""
+    old_state = {
+        "fiscal_year": row.fiscal_year,
+        "revision": row.revision,
+        "is_current": True,
+        "document_id": row.document_id,
+    }
+    row.is_current = False
+    session.flush()
+    log_manual_action(
+        session,
+        action_type="fiscal_year_override",
+        target_table=target_table,
+        target_id=row.id,
+        document_id=demoted_by_document_id,
+        old_value=old_state,
+        new_value={
+            "operation": "collateral_demote",
+            "fiscal_year": row.fiscal_year,
+            "revision": row.revision,
+            "is_current": False,
+            "document_id": row.document_id,
+            "demoted_by_document_id": demoted_by_document_id,
+        },
+        reason=reason,
+        actor=actor,
+    )
+
+
 def override_fiscal_year(
     session: Session,
     doc_id: int,
@@ -143,6 +194,8 @@ def override_fiscal_year(
 
     Returns a stats dict with per-table counts.
     """
+    _validate_target_fiscal_year(target_fy)
+
     doc = session.get(Document, doc_id)
     if doc is None:
         raise ValueError(f"Document id={doc_id} not found")
@@ -177,11 +230,26 @@ def override_fiscal_year(
         # Demote any prior current row at the target fiscal year for this
         # department (different document or older override). The new
         # rewritten row will become current.
-        session.query(DepartmentYearly).filter(
-            DepartmentYearly.department_id == src_dy.department_id,
-            DepartmentYearly.fiscal_year == target_fy,
-            DepartmentYearly.is_current.is_(True),
-        ).update({"is_current": False}, synchronize_session="fetch")
+        target_dy_rows = (
+            session.query(DepartmentYearly)
+            .filter(
+                DepartmentYearly.department_id == src_dy.department_id,
+                DepartmentYearly.fiscal_year == target_fy,
+                DepartmentYearly.is_current.is_(True),
+            )
+            .all()
+        )
+        for target_dy in target_dy_rows:
+            if target_dy.id == src_dy.id:
+                continue
+            _audit_collateral_demote(
+                session,
+                row=target_dy,
+                target_table="department_yearly",
+                demoted_by_document_id=doc_id,
+                actor=actor,
+                reason=reason,
+            )
 
         max_rev = _max_revision(
             session, DepartmentYearly,
@@ -236,11 +304,26 @@ def override_fiscal_year(
         .all()
     )
     for src_sr in src_sr_rows:
-        session.query(SupportRecipient).filter(
-            SupportRecipient.school_id == src_sr.school_id,
-            SupportRecipient.fiscal_year == target_fy,
-            SupportRecipient.is_current.is_(True),
-        ).update({"is_current": False}, synchronize_session="fetch")
+        target_sr_rows = (
+            session.query(SupportRecipient)
+            .filter(
+                SupportRecipient.school_id == src_sr.school_id,
+                SupportRecipient.fiscal_year == target_fy,
+                SupportRecipient.is_current.is_(True),
+            )
+            .all()
+        )
+        for target_sr in target_sr_rows:
+            if target_sr.id == src_sr.id:
+                continue
+            _audit_collateral_demote(
+                session,
+                row=target_sr,
+                target_table="support_recipient",
+                demoted_by_document_id=doc_id,
+                actor=actor,
+                reason=reason,
+            )
 
         max_rev = _max_revision(
             session, SupportRecipient,
@@ -294,11 +377,26 @@ def override_fiscal_year(
         .all()
     )
     for src_sys in src_sys_rows:
-        session.query(SchoolYearStatus).filter(
-            SchoolYearStatus.school_id == src_sys.school_id,
-            SchoolYearStatus.fiscal_year == target_fy,
-            SchoolYearStatus.is_current.is_(True),
-        ).update({"is_current": False}, synchronize_session="fetch")
+        target_sys_rows = (
+            session.query(SchoolYearStatus)
+            .filter(
+                SchoolYearStatus.school_id == src_sys.school_id,
+                SchoolYearStatus.fiscal_year == target_fy,
+                SchoolYearStatus.is_current.is_(True),
+            )
+            .all()
+        )
+        for target_sys in target_sys_rows:
+            if target_sys.id == src_sys.id:
+                continue
+            _audit_collateral_demote(
+                session,
+                row=target_sys,
+                target_table="school_year_status",
+                demoted_by_document_id=doc_id,
+                actor=actor,
+                reason=reason,
+            )
 
         max_rev = _max_revision(
             session, SchoolYearStatus,

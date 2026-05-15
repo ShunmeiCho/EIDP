@@ -287,6 +287,131 @@ def test_override_back_creates_revision_2_at_original_year(engine):
         assert doc.fiscal_year_override == 2025
 
 
+def test_override_rejects_out_of_range_target_fy_at_pipeline_boundary(engine):
+    with Session(engine) as session:
+        _, doc, _ = _seed_one_doc(session, fiscal_year=2025)
+        session.commit()
+
+        with pytest.raises(ValueError, match="outside supported range"):
+            override_fiscal_year(session, doc.id, target_fy=9999)
+
+        session.rollback()
+        session.refresh(doc)
+        assert doc.fiscal_year == 2025
+        assert doc.fiscal_year_override is None
+        assert session.query(ManualActionLog).count() == 0
+
+
+def test_override_audits_collateral_target_current_demotes(engine):
+    with Session(engine) as session:
+        school, source_doc, dept = _seed_one_doc(session, fiscal_year=2025)
+        target_doc = Document(
+            school_id=school.id,
+            source_url="https://example.com/current-r8.pdf",
+            file_hash=("b" * 64),
+            pdf_type="target",
+            content_type="text",
+            fiscal_year=2026,
+            ingest_status="ingested",
+            downloaded_at=datetime.now(UTC),
+        )
+        session.add(target_doc)
+        session.flush()
+
+        target_dy = DepartmentYearly(
+            department_id=dept.id,
+            document_id=target_doc.id,
+            fiscal_year=2026,
+            revision=1,
+            is_current=True,
+            capacity=55,
+            enrollment=58,
+            extraction_method="pdf_parse",
+        )
+        target_sr = SupportRecipient(
+            school_id=school.id,
+            document_id=target_doc.id,
+            fiscal_year=2026,
+            revision=1,
+            is_current=True,
+            annual_total=222,
+            grand_total=222,
+        )
+        target_sys = SchoolYearStatus(
+            school_id=school.id,
+            document_id=target_doc.id,
+            fiscal_year=2026,
+            revision=1,
+            is_current=True,
+            status="collected",
+        )
+        session.add_all([target_dy, target_sr, target_sys])
+        session.commit()
+
+        stats = override_fiscal_year(
+            session,
+            source_doc.id,
+            target_fy=2026,
+            actor="operator-a",
+            reason="correct target FY",
+        )
+        session.commit()
+
+        assert stats == {
+            "department_yearly": 1,
+            "support_recipient": 1,
+            "school_year_status": 1,
+            "document": 1,
+        }
+        session.refresh(target_dy)
+        session.refresh(target_sr)
+        session.refresh(target_sys)
+        assert target_dy.is_current is False
+        assert target_sr.is_current is False
+        assert target_sys.is_current is False
+
+        new_dy = (
+            session.query(DepartmentYearly)
+            .filter_by(document_id=source_doc.id, fiscal_year=2026, is_current=True)
+            .one()
+        )
+        new_sr = (
+            session.query(SupportRecipient)
+            .filter_by(document_id=source_doc.id, fiscal_year=2026, is_current=True)
+            .one()
+        )
+        new_sys = (
+            session.query(SchoolYearStatus)
+            .filter_by(document_id=source_doc.id, fiscal_year=2026, is_current=True)
+            .one()
+        )
+        assert new_dy.revision == 2
+        assert new_sr.revision == 2
+        assert new_sys.revision == 2
+
+        collateral_actions = (
+            session.query(ManualActionLog)
+            .filter(ManualActionLog.action_type == "fiscal_year_override")
+            .filter(ManualActionLog.target_id.in_([target_dy.id, target_sr.id, target_sys.id]))
+            .order_by(ManualActionLog.target_table)
+            .all()
+        )
+        assert {a.target_table for a in collateral_actions} == {
+            "department_yearly",
+            "support_recipient",
+            "school_year_status",
+        }
+        assert {a.document_id for a in collateral_actions} == {source_doc.id}
+        for action in collateral_actions:
+            old = json.loads(action.old_value or "{}")
+            new = json.loads(action.new_value or "{}")
+            assert old["document_id"] == target_doc.id
+            assert old["is_current"] is True
+            assert new["operation"] == "collateral_demote"
+            assert new["demoted_by_document_id"] == source_doc.id
+            assert new["is_current"] is False
+
+
 def test_override_raises_when_document_missing(engine):
     with Session(engine) as session:
         with pytest.raises(ValueError, match="not found"):
