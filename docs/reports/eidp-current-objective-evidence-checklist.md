@@ -684,6 +684,7 @@ First transfer and verify `dist/eidp-windows-v420.zip`:
 Package snapshot: 99efba8a798d76611896be22e36abbb125a5eb71
 Expected SHA256: 5585d303b97de1f29af3737a7c1fcd614eb5c23b51307fb2af57988612740de8
 Suggested extract path: C:\Users\cyo20\EIDP-v420-99efba8a
+Checklist: docs/runbooks/eidp-v420-windows-transfer-checklist.md
 ```
 
 Then start the operator UI tunnel after Windows setup/validation has passed:

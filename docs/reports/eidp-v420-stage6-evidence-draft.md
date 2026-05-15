@@ -27,6 +27,7 @@ Windows operator PC and has no v420 setup/UI/real-cycle proof.
 | SHA256 sidecar | `dist/eidp-windows-v420.zip.sha256` |
 | Package commit | `99efba8a798d76611896be22e36abbb125a5eb71` |
 | Full release-gate log | `logs/release-gate-v420-retroactive.json` |
+| Windows transfer checklist | `docs/runbooks/eidp-v420-windows-transfer-checklist.md` |
 | Suggested Windows extract path | `C:\Users\cyo20\EIDP-v420-99efba8a` |
 
 ## Stage 6 Boundary
@@ -44,7 +45,8 @@ Windows operator PC and has no v420 setup/UI/real-cycle proof.
 When SSH-Win is available again, execute the v420 lane in this order:
 
 1. Transfer `dist/eidp-windows-v420.zip` and `dist/eidp-windows-v420.zip.sha256`
-   to `C:\EIDP-staging\`.
+   to `C:\EIDP-staging\` using
+   `docs/runbooks/eidp-v420-windows-transfer-checklist.md`.
 2. Verify SHA256 on Windows with `Get-FileHash` or `certutil`.
 3. Extract to `C:\Users\cyo20\EIDP-v420-99efba8a` unless the operator chooses
    a different staging path.
