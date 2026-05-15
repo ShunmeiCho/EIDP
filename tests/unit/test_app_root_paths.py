@@ -76,6 +76,18 @@ def test_resolve_app_root_fallback_is_not_site_packages(tmp_path: Path):
     )
 
 
+def test_resolve_app_root_requires_env_when_installed_wheel_has_no_marker(tmp_path: Path):
+    """Installed wheels must fail closed instead of writing under site-packages."""
+    blank = tmp_path / "blank"
+    blank.mkdir()
+    module_file = tmp_path / ".venv" / "Lib" / "site-packages" / "eidp" / "config.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text("# fake installed module\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="EIDP_APP_ROOT required when running from installed wheel"):
+        resolve_app_root(env={}, cwd=blank, module_file=module_file)
+
+
 def test_resolve_app_root_priority_env_beats_cwd(tmp_path: Path):
     """Env wins over cwd marker."""
     env_root = tmp_path / "from-env"

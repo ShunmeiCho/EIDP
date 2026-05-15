@@ -48,7 +48,6 @@ from eidp.review.target_year_status import target_year_overview
 from eidp.scraper.pdf_discovery import _classify_pdf_content, _safe_get
 from eidp.scraper.url_discovery import _is_safe_url
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _OUTPUT_DIR = Path("output")
 _SAMPLE_DIR = Path("sample")
 _DATA_DIR = Path("data")
@@ -93,10 +92,14 @@ class PathPolicyError(ValueError):
     """Raised when an operator-entered path is outside the allowed workspace roots."""
 
 
+def _project_root() -> Path:
+    return Path(settings.app_root).resolve()
+
+
 def _project_path(path: Path) -> Path:
     if path.is_absolute():
         return path.resolve()
-    return (_PROJECT_ROOT / path).resolve()
+    return (_project_root() / path).resolve()
 
 
 def resolve_allowed_path(
@@ -119,7 +122,8 @@ def resolve_allowed_path(
     resolved = _project_path(path)
     roots = tuple(_project_path(root) for root in allowed_roots)
     if not any(resolved == root or resolved.is_relative_to(root) for root in roots):
-        allowed = ", ".join(str(root.relative_to(_PROJECT_ROOT)) for root in roots)
+        project_root = _project_root()
+        allowed = ", ".join(str(root.relative_to(project_root)) for root in roots)
         raise PathPolicyError(f"path must be under: {allowed}")
     if suffixes and resolved.suffix.lower() not in suffixes:
         raise PathPolicyError(f"path suffix must be one of: {', '.join(suffixes)}")

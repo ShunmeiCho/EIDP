@@ -29,9 +29,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from eidp.fiscal_year import JapaneseEra, configure_japanese_eras, current_fiscal_year
@@ -43,7 +43,17 @@ SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL = (
 )
 
 
-def resolve_app_root(*, env: dict[str, str] | None = None, cwd: Path | None = None) -> Path:
+def _is_installed_module_path(module_file: Path) -> bool:
+    parts = {part.lower() for part in module_file.resolve().parts}
+    return "site-packages" in parts or "dist-packages" in parts
+
+
+def resolve_app_root(
+    *,
+    env: dict[str, str] | None = None,
+    cwd: Path | None = None,
+    module_file: Path | None = None,
+) -> Path:
     """Resolve the application root directory.
 
     ``env`` and ``cwd`` are injection seams used by tests; production
@@ -60,20 +70,24 @@ def resolve_app_root(*, env: dict[str, str] | None = None, cwd: Path | None = No
         return here
 
     # Last resort — repo source layout: src/eidp/config.py → parents[2] = repo root.
-    return Path(__file__).resolve().parents[2]
+    # Installed wheels must not fall back here: otherwise Task Scheduler runs
+    # from C:\Windows\System32 can write data beside site-packages.
+    source_file = module_file if module_file is not None else Path(__file__)
+    if _is_installed_module_path(source_file):
+        raise RuntimeError("EIDP_APP_ROOT required when running from installed wheel")
+    return source_file.resolve().parents[2]
 
 
 _DEFAULT_APP_ROOT = resolve_app_root()
 
 
-def _default_database_url() -> str:
-    """SQLite under the resolved app root by default."""
-    sqlite_path = (_DEFAULT_APP_ROOT / "data" / "eidp.sqlite3").as_posix()
+def _database_url_for_data_dir(data_dir: Path) -> str:
+    sqlite_path = (data_dir / "eidp.sqlite3").as_posix()
     return f"sqlite:///{sqlite_path}"
 
 
 class Settings(BaseSettings):
-    database_url: str = _default_database_url()
+    database_url: str = ""
     log_level: str = "INFO"
     data_dir: Path = _DEFAULT_APP_ROOT / "data"
     app_root: Path = _DEFAULT_APP_ROOT
@@ -148,6 +162,12 @@ class Settings(BaseSettings):
         if v < MIN_SUPPORTED_TARGET_FISCAL_YEAR or v > MAX_SUPPORTED_TARGET_FISCAL_YEAR:
             raise ValueError(f"target_fiscal_year outside supported range {SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL}")
         return v
+
+    @model_validator(mode="after")
+    def _derive_database_url_from_data_dir(self) -> Self:
+        if not self.database_url.strip():
+            self.database_url = _database_url_for_data_dir(self.data_dir)
+        return self
 
 
 settings = Settings()

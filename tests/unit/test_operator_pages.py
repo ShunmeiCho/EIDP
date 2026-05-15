@@ -56,6 +56,16 @@ def test_output_path_rejects_wrong_suffix() -> None:
         operator_pages.output_path("output/test.txt", (".xlsx",))
 
 
+def test_output_path_uses_runtime_app_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    app_root = tmp_path / "installed-eidp"
+    (app_root / "output").mkdir(parents=True)
+    monkeypatch.setattr(operator_pages.settings, "app_root", app_root)
+
+    path = operator_pages.output_path("output/test.xlsx", (".xlsx",))
+
+    assert path == (app_root / "output" / "test.xlsx").resolve()
+
+
 def test_export_error_message_explains_excel_file_lock() -> None:
     message = operator_pages._format_export_exception(
         PermissionError("[WinError 32] The process cannot access the file")

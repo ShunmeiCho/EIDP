@@ -81,10 +81,25 @@ def test_runtime_url_search_settings_can_be_pinned_by_env(monkeypatch) -> None:
     assert settings.url_search_batch_size == 300
 
 
-def test_env_example_is_windows_sqlite_operator_default() -> None:
-    body = Path(".env.example").read_text(encoding="utf-8")
+def test_default_database_url_follows_data_dir_env(monkeypatch, tmp_path: Path) -> None:
+    data_dir = tmp_path / "operator-data"
+    monkeypatch.setenv("EIDP_DATA_DIR", str(data_dir))
+    monkeypatch.delenv("EIDP_DATABASE_URL", raising=False)
 
-    assert "EIDP_DATABASE_URL=sqlite:///C:/EIDP/data/eidp.sqlite3" in body
+    settings = Settings(_env_file=None)
+
+    assert settings.data_dir == data_dir
+    assert settings.database_url == f"sqlite:///{(data_dir / 'eidp.sqlite3').as_posix()}"
+
+
+def test_env_example_lets_database_url_follow_data_dir() -> None:
+    body = Path(".env.example").read_text(encoding="utf-8")
+    active_lines = [
+        line.strip() for line in body.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+    assert not any(line.startswith("EIDP_DATABASE_URL=") for line in active_lines)
     assert "EIDP_DATA_DIR=C:/EIDP/data" in body
     assert "# EIDP_TARGET_FISCAL_YEAR=2026" in body
     assert "EIDP_FISCAL_ERA_NAME=令和" in body
@@ -92,6 +107,6 @@ def test_env_example_is_windows_sqlite_operator_default() -> None:
     assert "EIDP_URL_SEARCH_AUTO_ENABLE=auto" in body
     assert "EIDP_URL_SEARCH_BATCH_SIZE=200" in body
     assert "${APP_ROOT}" not in body
-    assert not body.splitlines()[0].startswith("EIDP_DATABASE_URL=postgresql"), (
+    assert not any(line.startswith("EIDP_DATABASE_URL=postgresql") for line in active_lines), (
         "operator .env example must not default to the old Venus/Postgres URL"
     )
