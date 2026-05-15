@@ -1,7 +1,7 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-15
-Latest code-affecting source evidence base: `f0c2715833b54e60fea85259e16ad0a1d9e6c106`
+Latest code-affecting source evidence base: `15c88348f46ab3fbcc9383afe5830047e562b0c1`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
@@ -59,7 +59,8 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Supporting Windows evidence lane: v407, commit
   `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
   `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
-- Current source-code evidence base: `f0c27158`, with Stage 6 safety fixes for recovery check,
+- Current source-code evidence base: `15c88348`, with post-v408 source-only
+  coverage recovery plus Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
   dedup, stricter romanized renewal-form hint handling across strong and weak
@@ -69,7 +70,10 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   manual audit / operator UI / bootstrap URL crawl / append-only audit-helper
   paths, plus unit-test isolation for Streamlit AppTest's fake `__main__`
   module before multiprocessing spawn tests, restored source-wide `mypy src`
-  coverage for all 83 source files, and a non-Windows release-gate guard that
+  coverage for all 83 source files, restored the documented local line
+  coverage target (`uv run pytest --cov=src/eidp --cov-report=term-missing`
+  -> `1515 passed`, `TOTAL 14186 2866 80%`), and a non-Windows
+  release-gate guard that
   rejects ZIPs whose packaged `BUILD_INFO.json` commit differs from the current
   source HEAD, or whose current source tree has uncommitted tracked changes,
   unless `--allow-stale-package` is explicitly used for historical checks.
