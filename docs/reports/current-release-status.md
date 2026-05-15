@@ -2,35 +2,41 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `33044bd28b05c69b86ad0ebe1db96672b19632d3`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v441.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v441.zip`
-Latest Mac-core package SHA256: `53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v440.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v441.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v441.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v441.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v441.zip`
+Latest Mac/non-Windows package snapshot: `22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v442.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v442.zip`
+Latest Mac-core package SHA256: `4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v442.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v442.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v441.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v441.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v441.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v441.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v441.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v442.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v442.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v441-stage6/stage6-evidence-20260515-204955.zip`
+Current Stage 6 evidence bundle: `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v441 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `33044bd28b05c69b86ad0ebe1db96672b19632d3`, which
-adds raw target-year discovery rejection JSONL files to the Stage 6 evidence
-bundle so RCA evidence can be rechecked without returning to the operator PC.
+v442 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`, which lets
+`scripts\weekly_run.bat` keep its production default while accepting trusted
+bounded-smoke environment variables such as `EIDP_WEEKLY_LIMIT`,
+`EIDP_WEEKLY_BATCH_SIZE`, `EIDP_WEEKLY_RATE_LIMIT`, and
+`EIDP_WEEKLY_REQUEST_TIMEOUT`. This allows Stage 6 to exercise the real
+Task-Scheduler launcher and generate `logs\run-*.log` without running an
+unbounded weekly crawl during validation. v441 added raw target-year discovery
+rejection JSONL files to the Stage 6 evidence bundle so RCA evidence can be
+rechecked without returning to the operator PC.
 v440 was built from package snapshot `2f339ce82dbcfdb1a000fe378b304596823de4a6`, which
 includes the v437 structured logging hardening, v438/v439 release-gate
 cleanup, and v440 default cleanup for auto-generated retroactive Excel app
@@ -49,16 +55,16 @@ manual-entry yearly revision reads, writes manual-entry `SchoolYearStatus` and
 replays Stage 6 performance indexes for existing SQLite operator DBs, locks
 school URL crawl-evidence JSONL appends, and configures structured JSONL
 logging for the main operator entrypoints. The operator E2E template remains
-package-neutral. The v441 package was built with
+package-neutral. The v442 package was built with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
-dist/eidp-windows-v441.zip --latest-alias`. The build wrote
-`dist/eidp-windows-v441.zip`, `dist/eidp-windows-v441.zip.sha256`, and refreshed
+dist/eidp-windows-v442.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v442.zip`, `dist/eidp-windows-v442.zip.sha256`, and refreshed
 `dist/eidp-windows.zip`. The release gate confirmed SHA256
-`53a4a237e3f4cd59becacfcc31bf7434de9a4a52a68f43e1c7478d432f8d13c9` and
-`dist/eidp-windows-v441.zip.sha256` carries the same value.
-`scripts/verify_windows_distribution.py dist/eidp-windows-v441.zip` returned
-`ok=true` inside the v441 package gate with
-`git_commit=33044bd28b05c69b86ad0ebe1db96672b19632d3`, `git_dirty=false`,
+`4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7` and
+`dist/eidp-windows-v442.zip.sha256` carries the same value.
+`scripts/verify_windows_distribution.py dist/eidp-windows-v442.zip` returned
+`ok=true` inside the v442 package gate with
+`git_commit=22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`, `git_dirty=false`,
 `wheel_count=78`, `project_wheel_count=1`, `entry_count=3080`,
 `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
@@ -82,15 +88,47 @@ pytest --cov=src/eidp --cov-report=term --cov-fail-under=80` returned
 reached. Total coverage: 80.03%`.
 
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v441.zip --skip-full-unit --json --output logs/release-gate-v441.json`
+dist/eidp-windows-v442.zip --skip-full-unit --json --output logs/release-gate-v442.json`
 returned `ok=true`. The recorded package/source freshness check reported
-`package_commit=33044bd28b05c69b86ad0ebe1db96672b19632d3`,
-`source_commit=33044bd28b05c69b86ad0ebe1db96672b19632d3`,
+`package_commit=22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`,
+`source_commit=22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`,
 `source_dirty=false`, and `stale=false`; the
 validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v441 has Mac/non-Windows package, Stage 6 evidence-bundle, Windows
+v442 has Mac/non-Windows package, Stage 6 evidence-bundle, Windows
+transfer/SHA, setup, recovery, URL-only bootstrap, real `weekly_run.bat`
+bounded canary, and full diagnostic evidence-label proof. The ZIP and sidecar
+were copied to `C:\EIDP-staging\`; Win-side `Get-FileHash` matched SHA256
+`4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7`. The
+package was expanded to `C:\Users\cyo20\EIDP-v442-22f1a98` without
+overwriting v441. `EIDP-setup.bat` completed, imported bundled `master.xlsx`,
+rebuilt FY2026 school-year tasks with `school_count=2418` and
+`school_fiscal_year_status_count=2418`, and `scripts\validate_install.bat
+--after-setup --json` returned `ok=true` with `sqlite_integrity_check=ok`.
+`scripts\bootstrap_pdfs.bat --skip-discover --url-search off
+--school-url-crawl off` completed with the same URL-only bootstrap shape as
+v441 (`prefectures_ok=47`, `official_school_sites_added=1311`,
+`seed_imported=48`, `corporation_inferred=294`) while skipping PDF discovery.
+The real launcher was then run through `scripts\weekly_run.bat` with trusted
+bounded environment variables `EIDP_WEEKLY_LIMIT=5`,
+`EIDP_WEEKLY_BATCH_SIZE=5`, `EIDP_WEEKLY_RATE_LIMIT=0.5`, and
+`EIDP_WEEKLY_REQUEST_TIMEOUT=8`; `logs\run-20260516.log` records those args
+and ended `rc=0`. The weekly summary reported `dry_run=false`, `crawled=5`,
+`found=3`, `downloaded=0`, `target_missing_school_count=5`,
+`new_document_count=0`, and `ship_gate_status=below_gate`.
+`scripts\validate_install.bat --after-setup --after-weekly --json` returned
+`ok=true`, and `scripts\stage6_recovery_check.bat
+C:\Users\cyo20\EIDP-v442-22f1a98\scripts\weekly_run.bat --json` returned
+`ok=true` with `action_matches_expected=true`. The refreshed v442 evidence
+bundle `logs\stage6-evidence-20260515-205932.zip` verified on both Windows and
+Mac with `ok=true`, `manifest_missing_patterns=[]`, no forbidden entries, and
+present labels `bootstrap_logs`, `bootstrap_progress`, `build_info`,
+`diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`,
+`stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. This is
+still a bounded launcher canary and not a completed operator real-cycle Stage 6
+sign-off. v441 remains the latest package with non-browser UI-smoke/default
+launcher proof. v441 has Mac/non-Windows package, Stage 6 evidence-bundle, Windows
 transfer/SHA, setup, recovery, non-browser UI-smoke, URL-only bootstrap, and
 bounded backend canary proof. The ZIP and sidecar were copied to
 `C:\EIDP-staging\`;
@@ -111,8 +149,9 @@ C:\Users\cyo20\EIDP-v441-33044bd\scripts\weekly_run.bat --json` returned
 Streamlit smoke started v441 through `scripts\launch.bat`, received HTTP `200`
 from `http://127.0.0.1:8501`, and then stopped all v441-related
 Python/Streamlit/cmd processes (`remaining_processes=0`). The old v438
-deployment directory was removed after this smoke; Windows now retains v441 as
-current and v440 as fallback. v441 then ran
+deployment directory was removed after this smoke; at that point Windows
+retained v441 as current and v440 as fallback. After v442 validation, Windows
+now retains v442 as current and v441 as fallback. v441 then ran
 `scripts\bootstrap_pdfs.bat --skip-discover --url-search off
 --school-url-crawl off`, which completed with `prefectures_ok=47`,
 `official_artifacts_parsed=55`, `official_index_rows_extracted=1951`,
@@ -139,7 +178,10 @@ v384 smoke paths. The bundle still records missing `weekly_run_logs`, so this
 remains a bounded process-local canary, not a completed operator real-cycle
 Stage 6 sign-off.
 v440 remains the latest package with positive current-FY acquisition, ingest,
-Excel export, and stratified 24-school discovery evidence. The v440 ZIP and
+Excel export, and stratified 24-school discovery evidence. Its Windows staging
+ZIP and expanded root were removed after v442 validation to keep only current
+plus previous fallback deployments, but the evidence bundle and status record
+remain. The v440 ZIP and
 sidecar were copied to
 `C:\EIDP-staging\`; Win-side `Get-FileHash` matched SHA256
 `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`. The v440
