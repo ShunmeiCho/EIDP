@@ -104,6 +104,23 @@ low-confidence and auto-flag current rows were all `0`. The
 `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`
 across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 
+Follow-up Mac-only v417 retroactive reference gates also passed for FY2024 and
+FY2023 without SSH/Windows. Both runs used the docs-only stale-package replay
+allowance because current HEAD is ahead of the packaged v417 snapshot only by
+status-documentation files. FY2024 wrote its fresh isolated export under
+`_temp/non-windows-retroactive-fy2024-20260515-132748` and compared against
+`_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx`;
+FY2023 wrote its fresh isolated export under
+`_temp/non-windows-retroactive-fy2023-20260515-132835` and compared against
+`_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx`.
+Both `logs/release-gate-v417-retroactive-fy2024-reference.json` and
+`logs/release-gate-v417-retroactive-fy2023-reference.json` returned `ok=true`;
+their validator/distribution unit slices returned `163 passed`, their package
+verifiers passed, both isolated exports wrote `採録状況=2418`,
+`対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`, and both
+`retroactive_excel_diff_reference` steps returned `missing_rows=0`,
+`extra_rows=0`, and `differing_fields=0`.
+
 FY2024 and FY2023 raw-sample reference preflights were refreshed for v415 in
 `docs/reports/eidp-v415-retroactive-reference-preflight.md`. Both isolated
 exports succeeded with the same workbook row counts (`採録状況=2418`,
