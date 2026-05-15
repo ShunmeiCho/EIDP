@@ -35,8 +35,8 @@ release-gate helper, with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
 dist/eidp-windows-v410.zip --latest-alias`. The build wrote
 `dist/eidp-windows-v410.zip`, `dist/eidp-windows-v410.zip.sha256`, and refreshed
-`dist/eidp-windows.zip`. The latest alias was rechecked after the docs-only
-status refresh: `shasum -a 256 dist/eidp-windows-v410.zip dist/eidp-windows.zip`
+`dist/eidp-windows.zip`. The latest alias was rechecked after the non-runtime
+status/test/local-ignore refresh: `shasum -a 256 dist/eidp-windows-v410.zip dist/eidp-windows.zip`
 reported the same SHA256 for both files, and `scripts/verify_windows_distribution.py
 dist/eidp-windows.zip --json` returned `ok=true` with packaged
 `git_commit=98d9f792860b40e537ec61a8b470859be7bb70c0`. `scripts/verify_windows_distribution.py
@@ -48,6 +48,14 @@ dist/eidp-windows-v410.zip --json` returned `ok=true` with SHA256
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
 `discovery_gold_set_entries=44`, and no undemonstrated discovery pattern
 sources.
+
+Current HEAD has later non-runtime commits for evidence documentation,
+Streamlit AppTest timeout stability, and local runtime-artifact ignore rules.
+Those commits do not change packaged application code, so v410 remains the
+current Mac/non-Windows runtime package for the latest app-code evidence base;
+strict package/source freshness checks still intentionally compare against the
+package snapshot `98d9f792860b40e537ec61a8b470859be7bb70c0` unless a future
+runtime-code change requires a rebuild.
 
 `uv run python scripts/run_non_windows_release_gates.py
 dist/eidp-windows-v410.zip --retroactive-excel-reference

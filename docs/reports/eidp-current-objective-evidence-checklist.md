@@ -13,6 +13,9 @@ but it has no Windows transfer/setup/UI proof because SSH-Win is currently
 disconnected. v408 now has R7 CLI Excel parity, R7 browser Excel download proof,
 a disposable copied-DB UI write/audit sandbox proof, and a verifier-accepted
 non-Excel diagnostic evidence bundle; the real operator cycle is still missing.
+Current HEAD includes post-v410 non-runtime documentation, test-timeout, and
+local-ignore commits; v410 remains the current runtime package because no
+packaged application code changed after snapshot `98d9f792860b40e537ec61a8b470859be7bb70c0`.
 
 ## Objective Restatement
 
@@ -65,6 +68,11 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   `retroactive_excel_diff_reference` returned zero missing/extra rows and zero
   differing fields against `_temp/v408-r7-cli-export.xlsx`. v410 is not
   Windows-proven.
+- Post-v410 non-runtime hardening at HEAD: Streamlit AppTest cold-start timeout
+  budget was raised from `15s` to `30s` for UI smoke tests, with
+  `uv run pytest tests/unit/test_review_school_year_tasks.py
+  tests/unit/test_review_pdf_manual_entry.py -q` returning `100 passed`;
+  local runtime/tool artifacts are ignored narrowly via `.gitignore`.
 - Active Windows transfer/setup/UI-health proof: v408, commit
   `f0c2715833b54e60fea85259e16ad0a1d9e6c106`, SHA256
   `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2`.
