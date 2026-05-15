@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
@@ -12,8 +13,10 @@ from eidp.db.models import Base, ManualActionLog, ReviewItem, School, SchoolSite
 from eidp.scraper.school_url_errors import ScraplingUnavailableError
 from eidp.scraper.school_url_persistence import REVIEW_ITEM_TYPE, REVIEW_PROPOSAL_SOURCE
 from eidp.scraper.school_url_pipeline import (
+    SchoolUrlCrawlEvidence,
     _accumulate_outcome,
     _default_crawl_throttle,
+    _EvidenceWriter,
     _school_website_queries_for_school,
     _schools_without_url,
     run_school_url_auto_crawl,
@@ -50,6 +53,22 @@ class MissingScraplingPageFetcher:
 class MissingRuntimeCrawler:
     def discover_for(self, **_kwargs: object) -> SchoolUrlDiscovery:
         raise ScraplingUnavailableError("scrapling missing after startup")
+
+
+def _crawl_evidence(*, school_id: int = 1, decision: str = "auto") -> SchoolUrlCrawlEvidence:
+    return SchoolUrlCrawlEvidence(
+        school_id=school_id,
+        school_name=f"学校{school_id}",
+        prefecture="東京都",
+        decision=decision,
+        candidate_url=f"https://example.com/{school_id}/",
+        score=0.91,
+        outcome="registered",
+        skipped_reason="",
+        queries=[f"学校{school_id} 公式"],
+        candidates=[],
+        notes=[],
+    )
 
 
 def _session() -> Session:
@@ -195,6 +214,39 @@ def test_run_school_url_auto_crawl_evidence_records_rejected_candidates(tmp_path
         ]
     finally:
         session.close()
+
+
+def test_evidence_writer_locks_each_jsonl_append(tmp_path: Path, monkeypatch) -> None:
+    import eidp.scraper.school_url_pipeline as pipeline
+
+    evidence_path = tmp_path / "school_url_crawl.jsonl"
+    lock_calls: list[tuple[Path, str, bool, float | None]] = []
+
+    @contextmanager
+    def spy_acquire_lock(
+        lock_path: Path,
+        *,
+        owner: str = "weekly_runner",
+        blocking: bool = False,
+        timeout: float | None = None,
+    ):
+        lock_calls.append((lock_path, owner, blocking, timeout))
+        yield
+
+    monkeypatch.setattr(pipeline, "acquire_lock", spy_acquire_lock, raising=False)
+
+    writer = _EvidenceWriter(evidence_path)
+    writer.write(_crawl_evidence(school_id=1))
+    writer.write(_crawl_evidence(school_id=2, decision="review"))
+    writer.close()
+
+    assert lock_calls == [
+        (evidence_path.with_suffix(".jsonl.lock"), "school_url_evidence_writer", True, 30.0),
+        (evidence_path.with_suffix(".jsonl.lock"), "school_url_evidence_writer", True, 30.0),
+    ]
+    rows = [json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines()]
+    assert [row["school_id"] for row in rows] == [1, 2]
+    assert [row["decision"] for row in rows] == ["auto", "review"]
 
 
 def test_run_school_url_auto_crawl_skips_when_scrapling_missing(monkeypatch) -> None:

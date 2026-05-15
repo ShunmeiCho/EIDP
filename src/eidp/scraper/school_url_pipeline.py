@@ -9,6 +9,7 @@ present.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -17,6 +18,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
+from eidp.db.locking import acquire_lock
 from eidp.db.models import ReviewItem, School, SchoolSite
 from eidp.scraper.anti_detection import CrawlThrottle
 from eidp.scraper.school_url_errors import ScraplingUnavailableError
@@ -337,18 +339,26 @@ def _candidate_evidence(discovery: object) -> list[dict[str, object]]:
 class _EvidenceWriter:
     def __init__(self, path: Path | None) -> None:
         self._path = path
-        self._fh = None
         if path is not None:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            self._fh = path.open("a", encoding="utf-8")
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                log.warning("school_url_evidence_prepare_failed", path=str(path), error=str(exc))
+                self._path = None
 
     def write(self, evidence: SchoolUrlCrawlEvidence) -> None:
-        if self._fh is None:
+        if self._path is None:
             return
-        self._fh.write(json.dumps(asdict(evidence), ensure_ascii=False, default=str) + "\n")
-        self._fh.flush()
+        lock_path = self._path.with_suffix(self._path.suffix + ".lock")
+        line = json.dumps(asdict(evidence), ensure_ascii=False, default=str) + "\n"
+        try:
+            with acquire_lock(lock_path, owner="school_url_evidence_writer", blocking=True, timeout=30.0):
+                with self._path.open("a", encoding="utf-8") as fh:
+                    fh.write(line)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+        except Exception as exc:  # pragma: no cover - disk full / stuck lock / permission
+            log.warning("school_url_evidence_write_failed", path=str(self._path), error=str(exc))
 
     def close(self) -> None:
-        if self._fh is not None:
-            self._fh.close()
-            self._fh = None
+        return
