@@ -404,6 +404,10 @@ v440 setup/UI/recovery dry-run 証跡（operator real-cycle ではない）:
 | 2026-05-16 | Streamlit smoke | `127.0.0.1:8501` returned HTTP 200 and process was stopped afterward | none | no |
 | 2026-05-16 | FY2025 dry-run | `last_run.json` generated with `dry_run=true`, `new_document_ids=[]`, `ship_gate_status=not_measured` | run full operator cycle for release sign-off | yes |
 | 2026-05-16 | evidence bundle | `logs\stage6-evidence-20260515-193908.zip` verified on Win and Mac with required labels present | still diagnostic-only because weekly dry-run was not an operator real-cycle | yes |
+| 2026-05-16 | URL-only bootstrap | `bootstrap_pdfs.bat --skip-discover --url-search off --school-url-crawl off` registered `school_site_rows=1653`, `schools_with_site=1624/2418`, `document=0`, `data\pdfs=0 bytes` | proceed only with bounded canary before any full PDF cycle | yes |
+| 2026-05-16 | FY2025 post-bootstrap dry-run | `--dry-run --limit 20` reported `target_missing_school_count=20`, `no_crawlable_url_school_count=794` | confirms selection surface, not acquisition yield | yes |
+| 2026-05-16 | FY2025 bounded actual canary | `--limit 5 --batch-size 5 --request-timeout 8 --rate-limit 0.5` reported `dry_run=false`, `crawled=5`, `found=3`, `downloaded=0`, `failed=3`, `new_document_count=0`, `discovery_rca.batch_plan_item_count=5` | sample had no downloadable target PDFs; keep full cycle gated | yes |
+| 2026-05-16 | refreshed evidence bundle | `logs\stage6-evidence-20260515-195110.zip` verified on Win and Mac with `bootstrap_logs`, `bootstrap_progress`, `discovery_rca`, and `last_run` required labels present | still diagnostic-only; missing `weekly_run_logs` and `stage6_residual_cleanup` | yes |
 
 添付する証跡:
 

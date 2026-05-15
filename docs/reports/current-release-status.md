@@ -18,10 +18,10 @@ Latest Windows-UI-health-proven package: `dist/eidp-windows-v440.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v440.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v440.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v440.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-193908.zip`
+Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-195110.zip`
 
 ## Verdict
 
@@ -111,6 +111,35 @@ with `ok=true`, present labels `build_info`, `diagnostics`, `last_run`, and
 `stage6_recovery`, and no forbidden or unsafe entries. This is still a
 setup/UI/recovery dry-run evidence bundle, not a completed operator real-cycle
 Stage 6 sign-off.
+
+After the disk cleanup pass, v440 was advanced through a bounded Windows
+bootstrap/backend canary without bulk PDF download. Running
+`scripts\bootstrap_pdfs.bat --skip-discover --url-search off
+--school-url-crawl off` completed and wrote
+`logs\bootstrap-pdfs-20260516-044352.{log,json}`. The URL-only bootstrap
+registered `school_site_rows=1653`, `schools_with_site=1624/2418`,
+`document=0`, and `data\pdfs` remained `0` bytes; the registered URL sources
+were `prefecture_aggregator=1311`, `corporation_pattern=294`, and
+`seed_csv=48`. A second process-local FY2025 dry-run
+`run_weekly_target_year_discovery.py --current-fy 2025 --dry-run --limit 20`
+then wrote `target_missing_school_count=20` and
+`no_crawlable_url_school_count=794`, proving the weekly runner can now select
+bounded target-missing schools from the registered URLs. Finally, a bounded
+actual canary
+`run_weekly_target_year_discovery.py --current-fy 2025 --limit 5
+--batch-size 5 --request-timeout 8 --rate-limit 0.5` completed with
+`dry_run=false`, `crawled=5`, `found=3`, `downloaded=0`, `failed=3`,
+`target_missing_school_count=5`, `new_document_count=0`,
+`ship_gate_status=below_gate`, and a `discovery_rca` batch plan containing
+`5` items. This canary increased the v440 root by less than 1 MB and left
+`data\pdfs` at `0` bytes. The refreshed evidence bundle
+`logs\stage6-evidence-20260515-195110.zip` verified on both Windows and Mac
+with `ok=true`, present labels `bootstrap_logs`, `bootstrap_progress`,
+`build_info`, `diagnostics`, `discovery_rca`, `last_run`, and
+`stage6_recovery`, and no forbidden or unsafe entries. Its manifest still
+records missing `weekly_run_logs` and `stage6_residual_cleanup`, so this is a
+bounded diagnostic canary, not a completed operator real-cycle Stage 6
+sign-off.
 
 The docs-only stale-package replay path remains available for status-only
 follow-up commits:
