@@ -24,9 +24,9 @@ Updated: 2026-05-15
   release-gate-clean ZIP を転送して、下表の実施情報をその ZIP の値で埋めます。
   ZIP 内のこのテンプレートは自分自身の最終 SHA256 を持てないため、SHA256 は
   `.sha256` sidecar または release-status の値を転記します。
-- 2026-05-15 時点の次回投入候補は v420 です。v420 は Mac / non-Windows gate と
-  FY2025/FY2024/FY2023 retroactive Excel matrix が pass 済みですが、Windows
-  業務員 PC への転送、セットアップ、UI 起動、実サイクルは未実施です。
+- version-specific transfer steps, package SHA256, and release-gate logs are
+  recorded in the current transfer checklist / release-status documents. Do not
+  hard-code those values into this reusable template before packaging.
 
 ## 1. 実施情報
 
@@ -57,15 +57,15 @@ v408 既存証跡（転記候補、real-cycle sign-off ではない）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP package snapshot | package commit `99efba8a798d76611896be22e36abbb125a5eb71`; current source/docs commit `e48385dc1f384d58e8a475cc30339eeaba9a91e4` |
-| core ZIP | `dist/eidp-windows-v420.zip` |
-| core ZIP sha256 | `5585d303b97de1f29af3737a7c1fcd614eb5c23b51307fb2af57988612740de8` |
-| core ZIP sha256 sidecar note | `dist/eidp-windows-v420.zip.sha256` は repo-relative path を記録する。ZIP を `C:\EIDP-staging\` に平置きした場合は、sidecar の digest 値と `Get-FileHash` の結果を比較する。 |
-| non-Windows gate log | `logs/release-gate-v420-retroactive.json` (`ok=true`) |
-| retroactive matrix log | `logs/release-gate-v420-retroactive-matrix.json` (`ok=true`; FY2025/FY2024/FY2023) |
-| Windows transfer checklist | `docs/runbooks/eidp-v420-windows-transfer-checklist.md` |
-| Windows extract path | 推奨: `C:\Users\cyo20\EIDP-v420-99efba8a` (未実施) |
-| transferred ZIP | 推奨: `C:\EIDP-staging\eidp-windows-v420.zip` (未実施) |
+| EIDP package snapshot | `docs/reports/current-release-status.md` から転記 |
+| core ZIP | `dist/eidp-windows-vXXX.zip` |
+| core ZIP sha256 | `.sha256` sidecar または release-status から転記 |
+| core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。ZIP を `C:\EIDP-staging\` に平置きした場合は、sidecar の digest 値と `Get-FileHash` の結果を比較する。 |
+| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |
+| retroactive matrix log | `logs/release-gate-vXXX-retroactive-matrix.json` if used |
+| Windows transfer checklist | current version-specific checklist |
+| Windows extract path | 未実施 |
+| transferred ZIP | 未実施 |
 
 ## 2. PC / 環境
 
@@ -98,9 +98,9 @@ PowerShell で実行し、exit code と出力ファイル名を記録します�
 解凍先に合わせて置き換えます。
 
 ```powershell
-cd C:\Users\cyo20\EIDP-v420-99efba8a
-$zip = "C:\EIDP-staging\eidp-windows-v420.zip"
-$expected = "5585d303b97de1f29af3737a7c1fcd614eb5c23b51307fb2af57988612740de8"
+cd C:\Users\<user>\<EIDP-extract-dir>
+$zip = "C:\EIDP-staging\<core-zip-file-name>"
+$expected = "<copy SHA256 from .sha256 sidecar or current-release-status>"
 $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($actual -ne $expected) { throw "SHA256 mismatch: $actual" }
 .\EIDP-setup.bat
@@ -110,13 +110,14 @@ echo $LASTEXITCODE
 .\EIDP-start.bat
 ```
 
-v420 Mac preflight（転送前確認済み）:
+Mac preflight（転送前に実施）:
 
 ```text
-shasum -a 256 -c dist/eidp-windows-v420.zip.sha256 -> dist/eidp-windows-v420.zip: OK
-logs/release-gate-v420-docs-only-stale-before-windows-transfer.json -> ok=true
-docs-only stale: package commit 99efba8a798d76611896be22e36abbb125a5eb71, source/docs commit e48385dc1f384d58e8a475cc30339eeaba9a91e4
-validator_distribution_unit=163 passed; mypy=pass; ruff=pass; discovery-gold=44/44; package verifiers=pass
+shasum -a 256 -c dist/eidp-windows-vXXX.zip.sha256 -> dist/eidp-windows-vXXX.zip: OK
+logs/release-gate-vXXX-*.json -> ok=true
+package/source freshness, source_dirty, stale/docs_only_stale, validator slice,
+mypy, ruff, discovery-gold, and package verifier results are copied from the
+current release-status / release-gate JSON.
 ```
 
 Mac / Playwright から業務員 PC のブラウザ UI を確認する場合は、既定 launcher
@@ -306,13 +307,13 @@ v408 R7 retroactive 既存証跡（FY2026 yield ではない）:
 | openpyxl dimensions | `2419x10`, `10023x22`, `9721x83`, `9721x19` |
 | Browser vs CLI business diff | `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, `differing_fields=0` |
 
-v420 Mac retroactive Excel matrix（FY2026 yield ではない。Windows 実走時の比較基準）:
+現行 package Mac retroactive Excel matrix（FY2026 yield ではない。Windows 実走時の比較基準）:
 
 | FY | Gate log | 判定 | Business diff | Export rows |
 | ---: | --- | --- | --- | --- |
-| 2025 | `logs/release-gate-v420-retroactive-fy2025-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
-| 2024 | `logs/release-gate-v420-retroactive-fy2024-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
-| 2023 | `logs/release-gate-v420-retroactive-fy2023-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
+| 2025 | | | | |
+| 2024 | | | | |
+| 2023 | | | | |
 
 ## 6. KPI 判定
 
