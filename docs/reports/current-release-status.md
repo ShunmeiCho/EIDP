@@ -2,52 +2,58 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `f14a49fb2036c6ff13869f7d932aea9e52084f87`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v444.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v444.zip`
-Latest Mac-core package SHA256: `7814b7d1212eb10ef8c9d5b187e24ecc4b7eb72e0f558d6a217c57af1dc53d65`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v444.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v444.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v444.zip`
+Latest Mac/non-Windows package snapshot: `19ceb0dee69fe7b90e32a9a90591018d9c5e773f`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v445.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v445.zip`
+Latest Mac-core package SHA256: `3cd36e11e281a4cd9646bcb865a006f5e99c9f15fae1f7700f65714aa56ba04b`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v445.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v445.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v445.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v444.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v445.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v444.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v444.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v445.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v445.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
 Current Stage 6 evidence bundle: `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip` (latest verified bundle)
-Current Stage 6 evidence draft: `docs/reports/eidp-v444-stage6-evidence-draft.md`
+Current Stage 6 evidence draft: `docs/reports/eidp-v445-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v444 is the latest Mac/non-Windows release-gate-clean and Windows setup/canary
+v445 is the latest Mac/non-Windows release-gate-clean and Windows setup/canary
 package. It was built from package snapshot
-`f14a49fb2036c6ff13869f7d932aea9e52084f87` after the v443 canary showed a
-shared-corporation root could follow a more-specific sibling school homepage.
-v444 keeps the v443 group-root homepage follow behavior, but refuses a base
-school name such as `日本工学院専門学校` matching a more-specific sibling such as
-`日本工学院北海道専門学校`. The v444 non-Windows gate returned `ok=true` with
-SHA256 `7814b7d1212eb10ef8c9d5b187e24ecc4b7eb72e0f558d6a217c57af1dc53d65`,
+`19ceb0dee69fe7b90e32a9a90591018d9c5e773f` after the v444 canary showed that
+`日本工学院北海道専門学校` was stuck with `東京都` from `採録状況`/`対象比率`, preventing
+the Hokkaido prefecture aggregator from attaching the official disclosure URL.
+v445 reconciles a unique school's prefecture from `学科別` during master import,
+while keeping `対象比率` from mutating the canonical school prefecture. The v445
+non-Windows gate returned `ok=true` with SHA256
+`3cd36e11e281a4cd9646bcb865a006f5e99c9f15fae1f7700f65714aa56ba04b`,
 package/source commit match, validator/distribution tests `164 passed`,
 validator mypy/Ruff pass, discovery-gold expected predictions `44/44`, and both
 package verifier modes pass. Windows transfer SHA matched, setup completed with
-SQLite integrity ok, URL-only bootstrap completed, and the bounded 5-school
-weekly canary exited `0`. The canary still failed the production yield gate:
-`crawled=5`, `found=3`, `downloaded=0`, `target_pdf_auto_yield_pct=0.0`, and
-`ship_gate_status=below_gate`. The v444 RCA confirms `nkhs` no longer appears
-in the rejection evidence; remaining failures are `non_target_candidates_only`
-or `no_pdf_candidates`. Mac cleanup now keeps v444 current, v442 fallback, and
-the latest alias; Windows staging/deploy cleanup keeps only v444 current and
-v442 fallback.
+SQLite integrity ok, and setup logs confirmed
+`school_prefecture_reconciled` for `日本工学院北海道専門学校` from `東京都` to `北海道`.
+URL-only bootstrap then attached
+`https://www.nkhs.ac.jp/about/publicindex/` as a `prefecture_aggregator`
+`disclosure` URL with confidence `0.95`. The bounded 5-school weekly canary
+exited `0` and improved the failure shape: `candidate_school_mismatch=0`,
+`operator_reviewable_count=1`, and the RCA bucket for school id 3 became
+`target_form_without_year_evidence`. It still failed the production yield gate:
+`target_pdf_auto_acquired_count=0`, `target_pdf_auto_yield_pct=0.0`, and
+`ship_gate_status=below_gate`, because the official page exposes 2025 and older
+申請書 files but no FY2026/R8 target-form evidence yet. Mac cleanup now keeps
+v445 current, v442 fallback, and the latest alias; Windows staging/deploy
+cleanup keeps only v445 current and v442 fallback.
 
 v442 remains the latest verified Stage 6 evidence-bundle/browser/R7 Excel
 fallback package. It was built from package snapshot
