@@ -2654,6 +2654,7 @@ def download_pdf(
         if strict_target_fiscal_year:
             target_year = target_fiscal_year or settings.target_fiscal_year
             trusted_year_evidence = candidate.trusted_year_evidence.strip()
+            target_year_hint = _has_target_year_hint(candidate, target_year=target_year)
             trusted_year_can_fill_missing_pdf_year = _trusted_year_evidence_can_fill_missing_pdf_year(
                 candidate,
                 pdf_type=pdf_type,
@@ -2684,16 +2685,16 @@ def download_pdf(
             ):
                 return None, None, 0, pdf_type, "target_application_not_detected"
             if detected_fiscal_year is None and not (
-                pdf_type == "image_only" and _has_target_application_hint(candidate)
+                pdf_type == "image_only" and _has_target_application_hint(candidate) and target_year_hint
             ) and not (
-                pdf_type == "target" and _has_target_year_hint(candidate, target_year=target_year)
+                pdf_type == "target" and target_year_hint
             ) and not (
                 trusted_year_can_fill_missing_pdf_year
             ):
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
             if detected_fiscal_year == target_year:
                 candidate.year_evidence = "pdf_text"
-            elif _has_target_year_hint(candidate, target_year=target_year):
+            elif target_year_hint:
                 candidate.year_evidence = "url_hint"
             elif trusted_year_can_fill_missing_pdf_year:
                 candidate.year_evidence = trusted_year_evidence

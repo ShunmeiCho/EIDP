@@ -1692,8 +1692,8 @@ def test_download_pdf_continues_after_failed_attempt(monkeypatch, tmp_path: Path
     assert reason is None
 
 
-def test_download_pdf_keeps_image_target_hint_for_ocr_queue(monkeypatch, tmp_path: Path) -> None:
-    """Image-only target-looking forms should be retained for OCR/manual review."""
+def test_download_pdf_rejects_image_target_hint_without_year_evidence(monkeypatch, tmp_path: Path) -> None:
+    """Image-only target-looking forms still need reliable target-year evidence."""
 
     url = "https://example.ac.jp/albums/abm.php?d=16&f=abm00001256.pdf"
     client = _AttemptPdfClient(
@@ -1719,11 +1719,12 @@ def test_download_pdf_keeps_image_target_hint_for_ocr_queue(monkeypatch, tmp_pat
         strict_target_fiscal_year=True,
     )
 
-    assert file_path is not None
-    assert file_hash is not None
-    assert file_size == 2005
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
     assert pdf_type == "image_only"
-    assert reason is None
+    assert reason == "target_fiscal_year_not_detected"
+    assert not list((tmp_path / "123").glob("*.pdf"))
 
 
 def test_download_pdf_keeps_image_with_strong_form_year_anchor(monkeypatch, tmp_path: Path) -> None:
