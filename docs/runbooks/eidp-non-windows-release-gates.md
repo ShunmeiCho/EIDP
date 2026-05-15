@@ -46,6 +46,12 @@ For archaeology or historical report regeneration only, rerun with
 `--allow-stale-package`. That flag intentionally bypasses the current-source
 commit and dirty-tree checks, so do not use it for current release readiness.
 
+If a ZIP was already built and the only later tracked changes are evidence
+documentation under `docs/`, use the narrower
+`--allow-docs-only-stale-package` flag. That flag still rejects dirty tracked
+source, unknown commits, non-ancestor package commits, and any non-`docs/`
+changed path between the ZIP `BUILD_INFO.json` commit and current `HEAD`.
+
 ## Bounded Evidence Replay
 
 When bounded Windows evidence JSONL already exists locally, include it in the
@@ -77,11 +83,11 @@ isolated retroactive Excel business-value gate:
 
 ```bash
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v409.zip \
+  dist/eidp-windows-v412.zip \
   --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx \
   --retroactive-fiscal-year 2025 \
   --json \
-  --output logs/release-gate-v409-retroactive.json
+  --output logs/release-gate-v412-retroactive.json
 ```
 
 This option creates a temporary `_temp/non-windows-retroactive-*` app root,
@@ -98,7 +104,9 @@ current FY2026/R8 60-70% target-PDF acquisition line.
 - The ZIP has the expected source, data, wheelhouse, runbook, and validator
   structure.
 - The ZIP belongs to the same clean tracked source tree being gated, unless the
-  run was explicitly marked as historical with `--allow-stale-package`.
+  run was explicitly marked as historical with `--allow-stale-package` or the
+  only stale delta was audited as docs-only with
+  `--allow-docs-only-stale-package`.
 - The package carries 47 prefecture seed rows and a complete discovery gold-set.
 - Production-tracked discovery pattern sources are demonstrated in the gold-set.
 - Existing bounded discovery evidence still maps to the expected gold outcomes.
