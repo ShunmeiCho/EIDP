@@ -1,26 +1,26 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-15
-Latest Mac/non-Windows package snapshot: `852d38734f03f62047c3b896b96a56857bb679c6`
+Latest Mac/non-Windows package snapshot: `a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally explicit about lane boundaries: the active operator-PC
 Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v408-f0c27158` for
-`dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v423 is the
+`dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v424 is the
 latest Mac/non-Windows release-gate-clean package for the current source lane,
 but it has no Windows transfer/setup/UI proof yet. v421 was rejected by the
 package verifier because its packaged E2E template still contained hard-coded
 v420 package/SHA fields; do not transfer v421. SSH-Win is currently
-disconnected, so `docs/runbooks/eidp-v423-windows-transfer-checklist.md` now
+disconnected, so `docs/runbooks/eidp-v424-windows-transfer-checklist.md` now
 also documents a no-SSH manual transfer path through USB or a trusted internal
 file share; either path still requires Windows-side SHA256 verification before
 extraction. v408 now has R7 CLI Excel parity, R7 browser Excel download proof, a
 disposable copied-DB UI write/audit sandbox proof, and a verifier-accepted
 non-Excel diagnostic evidence bundle; the real operator cycle is still missing.
-v423 includes the current source/package lane plus a package-neutral reusable
+v424 includes the current source/package lane plus a package-neutral reusable
 operator E2E template. Its packaged `BUILD_INFO.json` records snapshot
-`852d38734f03f62047c3b896b96a56857bb679c6`.
+`a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`.
 
 ## Objective Restatement
 
@@ -42,7 +42,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints in both strong application and weak form-shape detection, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, and inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs | Mechanically guarded; yield gate failing |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation; source HEAD names the default `0.70` review threshold via `DEFAULT_CONFIDENCE_REVIEW` and keeps Excel/exporter env-threshold tests green | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current; current v408 disposable UI sandbox repeated the browser-write surface with one manual FY2025 `DepartmentYearly` row (`capacity=40`, `enrollment=28`, `extraction_method=manual`, `extraction_confidence=1.0`, `verified=true`) and one fiscal-year override that marked FY2024 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows non-current while FY2025 current rows were present | Proven on sandboxed/copy DB paths including current v408; real operator one-cycle proof still missing |
-| Excel template export | v384 R7 retroactive Excel preview/download proof; v408 Windows R7/FY2025 CLI export wrote `v408-r7-retroactive-export.xlsx` with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`; v408 business diff against the proven v407 R7 export returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; `openpyxl` opened the v408 CLI workbook at `3,673,084` bytes with sheet dimensions `2419x10`, `10023x22`, `9721x83`, `9721x19`; v423 integrated non-Windows release gate created isolated app root `_temp/non-windows-retroactive-fy2025-20260515-153245`, imported `data/master.xlsx`, exported FY2025 with the same row counts, and the `retroactive_excel_diff_reference` gate returned zero missing/extra rows and zero differing fields against `_temp/v408-r7-cli-export.xlsx`; v423 matrix replays in `logs/release-gate-v423-retroactive-fy2025-reference.json`, `logs/release-gate-v423-retroactive-fy2024-reference.json`, and `logs/release-gate-v423-retroactive-fy2023-reference.json` exported FY2025/FY2024/FY2023 under fresh isolated app roots with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719` and returned `missing_rows=0`, `extra_rows=0`, `differing_fields=0`; v415 FY2024/FY2023 raw-sample reference preflights generated isolated exports with the same row counts, but intentionally failed against the unprepared raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` workbook (`FY2024: missing_rows=1097 extra_rows=1557 differing_fields=12548`; `FY2023: missing_rows=1097 extra_rows=1557 differing_fields=9718`), so the raw sample remains diagnostic rather than a canonical pass/fail reference; v408 real-install browser R7 preview/download generated `_temp/v408-r7-browser-eidp_master.xlsx`, suggested `eidp_master.xlsx`, and matched the v408 CLI export with `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; v407 disposable UI sandbox generated a smaller Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, and `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 CLI export/diff and browser download proven on v408; v423 FY2025/FY2024/FY2023 source-lane retroactive exports are regression-clean; raw sample is diagnostic-only until canonicalized; FY2026 target-year output not ready |
+| Excel template export | v384 R7 retroactive Excel preview/download proof; v408 Windows R7/FY2025 CLI export wrote `v408-r7-retroactive-export.xlsx` with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`; v408 business diff against the proven v407 R7 export returned `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; `openpyxl` opened the v408 CLI workbook at `3,673,084` bytes with sheet dimensions `2419x10`, `10023x22`, `9721x83`, `9721x19`; v424 matrix replays in `logs/release-gate-v424-retroactive-fy2025-reference.json`, `logs/release-gate-v424-retroactive-fy2024-reference.json`, and `logs/release-gate-v424-retroactive-fy2023-reference.json` exported FY2025/FY2024/FY2023 under fresh isolated app roots with `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719` and returned `missing_rows=0`, `extra_rows=0`, `differing_fields=0`; v415 FY2024/FY2023 raw-sample reference preflights generated isolated exports with the same row counts, but intentionally failed against the unprepared raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` workbook (`FY2024: missing_rows=1097 extra_rows=1557 differing_fields=12548`; `FY2023: missing_rows=1097 extra_rows=1557 differing_fields=9718`), so the raw sample remains diagnostic rather than a canonical pass/fail reference; v408 real-install browser R7 preview/download generated `_temp/v408-r7-browser-eidp_master.xlsx`, suggested `eidp_master.xlsx`, and matched the v408 CLI export with `missing_sheets=0`, `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`; v407 disposable UI sandbox generated a smaller Excel preview workbook with `採録状況=2`, `対象比率=1`, `学科別=2`, and `在籍のみ抜粋=2`; FY2026 export remains disabled with `Excel出力可 0/2418` on current setup evidence | R7 CLI export/diff and browser download proven on v408; v424 FY2025/FY2024/FY2023 source-lane retroactive exports are regression-clean; raw sample is diagnostic-only until canonicalized; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows; current v408 disposable UI sandbox repeated the audit path through `監査ログ`, showing `JSONL outbox 未送信=7`, `Outbox を flush` result `exported=7 already_present=0 failed=0`, and seven rows with `jsonl_exported_at_present=true` in direct DB verification | Proven on sandboxed paths including current v408; real operator one-cycle proof still missing |
 | ZIP distribution, double-click setup, browser UI offline operation | v408 transfer, SHA match, setup completion, SQLite integrity, scheduled-task action update to `C:\Users\cyo20\EIDP-v408-f0c27158\scripts\weekly_run.bat`, packaged recovery checker proof, Streamlit health, `18508 -> 8508` tunnel health, default `EIDP-start.bat` / `18501 -> 8501` launcher health, v408 R7 browser Excel proof through `18509 -> 8509`, v408 disposable UI write/audit proof through `18510 -> 8510`, and v408 non-Excel diagnostic bundle `logs\stage6-evidence-20260514-190257.zip` verified by `logs\stage6-evidence-verify-20260515-040322.json` with `ok=true`, no forbidden/unsafe entries, and labels `build_info`, `diagnostics`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`; v407 verifier-accepted diagnostic bundle `logs\stage6-evidence-20260514-174859.zip` and sandbox proof remain historical support; v397 browser read-only navigation retained as historical support | Current v408 setup/service/recovery/UI-health, default launcher, R7 browser Excel, sandbox browser-write/audit, and diagnostic evidence bundle proven; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
@@ -51,39 +51,28 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Release Boundary
 
-- Current Mac/non-Windows release-gate proof: v423, package snapshot
-  `852d38734f03f62047c3b896b96a56857bb679c6`, SHA256
-  `ff8d09b123c4d1b70738afdec5ed85b6366a932108cd8e5d1bbe5b1773df2b75`.
-  `scripts/verify_windows_distribution.py dist/eidp-windows-v423.zip`
+- Current Mac/non-Windows release-gate proof: v424, package snapshot
+  `a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`, SHA256
+  `e920a2cecc9868d5cf64c5c8d7eb66074d5031deff4f1c9995bac52fb5cbe2cd`.
+  `scripts/verify_windows_distribution.py dist/eidp-windows-v424.zip`
   returned `ok=true`, `git_dirty=false`, `wheel_count=78`, and
   `discovery_gold_set_entries=44`. `scripts/run_non_windows_release_gates.py
-  dist/eidp-windows-v423.zip --skip-full-unit --retroactive-excel-reference
-  _temp/v408-r7-cli-export.xlsx --retroactive-fiscal-year 2025 --json --output
-  logs/release-gate-v423-retroactive.json`
+  dist/eidp-windows-v424.zip --json --output logs/release-gate-v424-full.json`
   returned `ok=true`, with `source_dirty=false`, `stale=false`,
-  validator/distribution tests returning `163 passed`,
+  `unit_full` returning `1558 passed`, validator/distribution tests returning `163 passed`,
   validator/distribution mypy and Ruff passing, expected discovery-gold
   predictions matching `44/44`, and the demonstrated-pattern package verifier
-  passing. The standard full non-Windows release gate was also run before this
-  status refresh and exited `0` with `unit_full` returning `1555 passed`. v423
-  also has integrated isolated Mac retroactive FY2025/R7
-  import/export proof under `_temp/non-windows-retroactive-fy2025-20260515-153245`:
-  import produced `対象比率=10022`, `学科別=9719`, `DepartmentYearly=40731`,
-  and `SupportRecipient=10022`; export wrote `採録状況=2418`,
-  `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`; and
-  `retroactive_excel_diff_reference` returned zero missing/extra rows and zero
-  differing fields against `_temp/v408-r7-cli-export.xlsx`. The follow-up
-  `logs/release-gate-v423-retroactive-matrix.json` matrix returned `ok=true`
-  for FY2025, FY2024, and FY2023. The per-year outputs
-  `logs/release-gate-v423-retroactive-fy2025-reference.json`,
-  `logs/release-gate-v423-retroactive-fy2024-reference.json`, and
-  `logs/release-gate-v423-retroactive-fy2023-reference.json` all returned
+  passing. The follow-up `logs/release-gate-v424-retroactive-matrix.json`
+  matrix returned `ok=true` with `case_count=3` for FY2025, FY2024, and FY2023.
+  The per-year outputs `logs/release-gate-v424-retroactive-fy2025-reference.json`,
+  `logs/release-gate-v424-retroactive-fy2024-reference.json`, and
+  `logs/release-gate-v424-retroactive-fy2023-reference.json` all returned
   `ok=true`, with fresh isolated exports under
-  `_temp/non-windows-retroactive-fy2025-20260515-152607`,
-  `_temp/non-windows-retroactive-fy2024-20260515-152807`, and
-  `_temp/non-windows-retroactive-fy2023-20260515-152942`; all three produced
+  `_temp/non-windows-retroactive-fy2025-20260515-155125`,
+  `_temp/non-windows-retroactive-fy2024-20260515-155239`, and
+  `_temp/non-windows-retroactive-fy2023-20260515-155350`; all three produced
   the same four workbook row counts and zero business-value diffs against their
-  stable references. v423 is not Windows-proven. v421 is explicitly superseded
+  stable references. v424 is not Windows-proven. v421 is explicitly superseded
   and must not be transferred because its package verifier rejected hard-coded
   v420 package/SHA fields in the packaged E2E template.
 - Post-v410 non-runtime hardening included in v415: Streamlit AppTest cold-start timeout
@@ -112,7 +101,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 - Supporting Windows evidence lane: v407, commit
   `0974b60fb3d404678828ddfa348c74f4dd740c79`, SHA256
   `af48ed37d65695c044b520da78aad5307ed89b4b4a38cf27c6dc7e2737f50940`.
-- Current packaged source-code evidence base: `852d3873`, incorporating the
+- Current packaged source-code evidence base: `a2169e29`, incorporating the
   `15c88348` post-v408 source-only coverage recovery plus Stage 6 safety fixes for recovery check,
   evidence bundle Excel exclusion, residual cleanup symlink/junction safety,
   clarified ship-readiness criteria semantics, audit outbox custom-archive
@@ -151,7 +140,9 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   ship-gate evidence even if the payload claims `ship_gate_status=pass`. For
   bootstrap release-gate checks, progress-count mismatches against SQLite are
   fatal under `--require-ship-gate` while remaining warnings for structure-only
-  validation.
+  validation. The latest source lane also scopes MEXT reconciliation and
+  identity verification by configurable `school_type` while preserving
+  `専門学校` as the v1 default.
 - The v407 supporting lane contains all v407-era fixes through `0974b60f`, but
   the latest scheduled-task XML decode fix and current setup/UI validation are
   in v408. v401 remains a
@@ -165,34 +156,24 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest v423 Mac/non-Windows release-gate evidence, latest v408 setup/UI lane
+Latest v424 Mac/non-Windows release-gate evidence, latest v408 setup/UI lane
 evidence, and v407 supporting diagnostic evidence are summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
 below include source-code evidence base `4a16363d` and later refreshes:
 
-- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v423.zip --latest-alias`
-  -> wrote `dist/eidp-windows-v423.zip`, refreshed `dist/eidp-windows.zip`,
-  and wrote `dist/eidp-windows-v423.zip.sha256`.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v423.zip`
-  -> exited `0`: `unit_full` returned `1555 passed`, validator/distribution
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v424.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v424.zip`, refreshed `dist/eidp-windows.zip`,
+  and wrote `dist/eidp-windows-v424.zip.sha256`.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v424.zip --json --output logs/release-gate-v424-full.json`
+  -> exited `0`: `unit_full` returned `1558 passed`, validator/distribution
   tests reported `163 passed`, validator/distribution mypy and Ruff passed,
   discovery-gold expected predictions were `44/44`, and package verification
   with `--require-demonstrated-discovery-patterns` passed.
-- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v423.zip --skip-full-unit --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx --retroactive-fiscal-year 2025 --json --output logs/release-gate-v423-retroactive.json`
-  -> `ok=true`, SHA256
-  `ff8d09b123c4d1b70738afdec5ed85b6366a932108cd8e5d1bbe5b1773df2b75`,
-  packaged/source commit `852d38734f03f62047c3b896b96a56857bb679c6`,
-  `package_source_check.stale=false`, validator/distribution tests reported
-  `163 passed`, validator/distribution
-  mypy and Ruff passed, discovery-gold expected predictions were `44/44`,
-  package verification with `--require-demonstrated-discovery-patterns` passed,
-  and `retroactive_excel_diff_reference` returned zero missing/extra rows and
-  zero differing fields against `_temp/v408-r7-cli-export.xlsx`.
-- `uv run python scripts/run_retroactive_excel_matrix.py dist/eidp-windows-v423.zip --skip-full-unit --case 2025=_temp/v408-r7-cli-export.xlsx --case 2024=_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx --case 2023=_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx --json --output logs/release-gate-v423-retroactive-matrix.json`
+- `uv run python scripts/run_retroactive_excel_matrix.py dist/eidp-windows-v424.zip --skip-full-unit --case 2025=_temp/v408-r7-cli-export.xlsx --case 2024=_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx --case 2023=_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx --output logs/release-gate-v424-retroactive-matrix.json`
   -> `ok=true`, `case_count=3`; per-year outputs
-  `logs/release-gate-v423-retroactive-fy2025-reference.json`,
-  `logs/release-gate-v423-retroactive-fy2024-reference.json`, and
-  `logs/release-gate-v423-retroactive-fy2023-reference.json` all returned
+  `logs/release-gate-v424-retroactive-fy2025-reference.json`,
+  `logs/release-gate-v424-retroactive-fy2024-reference.json`, and
+  `logs/release-gate-v424-retroactive-fy2023-reference.json` all returned
   `ok=true`, validator/distribution tests reported `163 passed`, package
   verifiers passed, isolated exports wrote `採録状況=2418`,
   `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`, and
@@ -687,18 +668,18 @@ Known non-goal-wide lint boundary:
 
 When SSH-Win is available again, or when the operator can manually move the ZIP
 through USB or a trusted internal file share, start the next Windows execution
-lane from the latest Mac/non-Windows-clean package, v423. v408 remains the
+lane from the latest Mac/non-Windows-clean package, v424. v408 remains the
 latest Windows-proven setup/UI evidence lane and can be used as historical
 support, but it should not be treated as the final v1.0 real-cycle package
 unless the owner explicitly decides to freeze on v408.
 
-First transfer and verify `dist/eidp-windows-v423.zip`:
+First transfer and verify `dist/eidp-windows-v424.zip`:
 
 ```text
-Package snapshot: 852d38734f03f62047c3b896b96a56857bb679c6
-Expected SHA256: ff8d09b123c4d1b70738afdec5ed85b6366a932108cd8e5d1bbe5b1773df2b75
-Suggested extract path: C:\Users\cyo20\EIDP-v423-852d3873
-Checklist: docs/runbooks/eidp-v423-windows-transfer-checklist.md
+Package snapshot: a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac
+Expected SHA256: e920a2cecc9868d5cf64c5c8d7eb66074d5031deff4f1c9995bac52fb5cbe2cd
+Suggested extract path: C:\Users\cyo20\EIDP-v424-a2169e29
+Checklist: docs/runbooks/eidp-v424-windows-transfer-checklist.md
 ```
 
 For Mac-driven remote UI verification, start the operator UI tunnel after
