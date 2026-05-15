@@ -40,3 +40,46 @@ def test_write_text_atomic_creates_parent_and_replaces_target(tmp_path: Path) ->
     module.write_text_atomic(target, "new\n")
 
     assert target.read_text(encoding="utf-8") == "new\n"
+
+
+def test_write_text_atomic_fsyncs_before_replace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "queue.json"
+    events: list[str] = []
+    original_replace = Path.replace
+
+    def record_fsync(_fd: int) -> None:
+        events.append("fsync")
+
+    def record_replace(self: Path, target_path: Path) -> Path:
+        events.append("replace")
+        return original_replace(self, target_path)
+
+    monkeypatch.setattr(module.os, "fsync", record_fsync)
+    monkeypatch.setattr(Path, "replace", record_replace)
+
+    module.write_text_atomic(target, "new\n")
+
+    assert target.read_text(encoding="utf-8") == "new\n"
+    assert events == ["fsync", "replace"]
+
+
+def test_write_text_atomic_preserves_existing_file_when_fsync_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "queue.json"
+    target.write_text("old\n", encoding="utf-8")
+
+    def fail_fsync(_fd: int) -> None:
+        raise OSError("fsync failed")
+
+    monkeypatch.setattr(module.os, "fsync", fail_fsync)
+
+    with pytest.raises(OSError, match="fsync failed"):
+        module.write_text_atomic(target, "new\n")
+
+    assert target.read_text(encoding="utf-8") == "old\n"
+    assert list(tmp_path.glob("*.tmp")) == []
