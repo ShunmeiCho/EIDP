@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import openpyxl
@@ -167,6 +168,89 @@ def test_diff_excel_business_values_mode_exits_nonzero_when_fields_differ(tmp_pa
     assert "Workbook business-value comparison" in result.output
     assert "differing_fields: 3" in result.output
     assert "対象比率 | 2025年度 | 東京都 | 片柳学園 | 日本工学院専門学校 | 年間" in result.output
+
+
+def test_diff_excel_business_values_json_keeps_fail_on_diff_exit_code(tmp_path: Path) -> None:
+    exported = tmp_path / "exported.xlsx"
+    original = tmp_path / "original.xlsx"
+    header = [
+        "番号",
+        "年度",
+        "学校番号",
+        "都道府県",
+        "法人名",
+        "学校名",
+        "前年在籍",
+        "前半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "後半期",
+        "第Ⅰ区分",
+        "第Ⅱ区分",
+        "第Ⅲ区分",
+        "第Ⅳ区分",
+        "年間",
+        "家計急変多子世帯",
+        "総計",
+        "備考",
+        "受給比率",
+    ]
+    for path, annual_total in ((exported, 101), (original, 100)):
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = "対象比率"
+        worksheet.append(header)
+        worksheet.append(
+            [
+                None,
+                "2025年度",
+                None,
+                "東京都",
+                "片柳学園",
+                "日本工学院専門学校",
+                6319,
+                0,
+                None,
+                None,
+                None,
+                None,
+                0,
+                None,
+                None,
+                None,
+                None,
+                annual_total,
+                0,
+                annual_total,
+                None,
+                0.0158,
+            ]
+        )
+        workbook.save(path)
+        workbook.close()
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "diff-excel",
+            str(exported),
+            "--original",
+            str(original),
+            "--business-values",
+            "--json",
+            "--fail-on-diff",
+        ],
+    )
+
+    payload = json.loads(result.output)
+    assert result.exit_code == 1
+    assert payload["ok"] is False
+    assert payload["differing_fields"] == 2
+    assert payload["missing_rows"] == 0
+    assert payload["extra_rows"] == 0
+    assert payload["sheet_summaries"]["対象比率"]["field_counts"] == {"年間": 1, "総計": 1}
 
 
 def test_discover_pdfs_cli_uses_strict_target_fiscal_year(monkeypatch, tmp_path: Path) -> None:

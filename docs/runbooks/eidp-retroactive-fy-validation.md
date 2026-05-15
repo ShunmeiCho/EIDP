@@ -87,6 +87,21 @@ not an algorithm failure. For N=3 backtests, first create or confirm canonical
 FY2025/FY2024/FY2023 reference workbooks whose business keys and formula-error
 policy match `diff-excel --business-values`.
 
+For reference-preparation automation, run the same comparison with `--json` and
+archive the payload. The JSON exposes `missing_rows`, `extra_rows`,
+`differing_fields`, per-sheet duplicate-key counts, category counts, and sample
+rows without scraping the human-readable CLI output:
+
+```bash
+uv run eidp diff-excel \
+  _temp/non-windows-retroactive-fy2024-*/output/retroactive-fy2024-export.xlsx \
+  --original 'sample/◆2025専門学校無償化情報公開まとめ.xlsx' \
+  --business-values \
+  --numeric-tolerance 1e-9 \
+  --max-diffs 20 \
+  --json > _temp/fy2024-reference-preflight.json
+```
+
 This proves that a source/package snapshot still reproduces a known
 previous-year Excel output. It should be logged as retroactive algorithm
 regression evidence, not current-year publication/yield evidence.

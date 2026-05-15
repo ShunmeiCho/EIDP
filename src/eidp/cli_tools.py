@@ -232,6 +232,7 @@ def diff_excel(
         "--numeric-tolerance",
         help="Absolute tolerance for numeric value comparisons.",
     ),
+    json_output: bool = typer.Option(False, "--json", help="Emit machine-readable JSON."),
 ) -> None:
     """Compare exported vs original Excel workbooks."""
     from eidp.excel.exporter import diff_workbook_business_values, diff_workbook_values, diff_workbooks
@@ -250,6 +251,11 @@ def diff_excel(
             max_diffs=max_diffs,
             numeric_tolerance=numeric_tolerance,
         )
+        if json_output:
+            typer.echo(json.dumps(business_result, ensure_ascii=False, indent=2, sort_keys=True, default=str))
+            if fail_on_diff and not business_result["ok"]:
+                raise typer.Exit(1)
+            return
         typer.echo("Workbook business-value comparison (exported vs original):")
         typer.echo(f"  missing_sheets: {len(business_result['missing_sheets'])}")
         for sheet in business_result["missing_sheets"]:
@@ -322,6 +328,11 @@ def diff_excel(
             max_diffs=max_diffs,
             numeric_tolerance=numeric_tolerance,
         )
+        if json_output:
+            typer.echo(json.dumps(value_result, ensure_ascii=False, indent=2, sort_keys=True, default=str))
+            if fail_on_diff and not value_result["ok"]:
+                raise typer.Exit(1)
+            return
         typer.echo("Workbook value comparison (exported vs original):")
         typer.echo(f"  missing_sheets: {len(value_result['missing_sheets'])}")
         for sheet in value_result["missing_sheets"]:
@@ -342,6 +353,11 @@ def diff_excel(
         return
 
     results = diff_workbooks(exported, original)
+    if json_output:
+        typer.echo(json.dumps(results, ensure_ascii=False, indent=2, sort_keys=True, default=str))
+        if fail_on_diff and any(stats["diff"] != 0 for stats in results.values()):
+            raise typer.Exit(1)
+        return
     typer.echo("Sheet comparison (exported vs original):")
     typer.echo(f"  {'Sheet':<16} {'Exported':>10} {'Original':>10} {'Diff':>8}")
     typer.echo(f"  {'-' * 16} {'-' * 10} {'-' * 10} {'-' * 8}")
