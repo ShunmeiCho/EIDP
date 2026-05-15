@@ -90,14 +90,14 @@ backtests, first create or confirm canonical FY2025/FY2024/FY2023 reference
 workbooks whose business keys and formula-error policy match
 `diff-excel --business-values`.
 
-Current v419 stable-reference regression gates have been confirmed for FY2025;
-FY2024/FY2023 remain confirmed by the latest v418 Mac-only replays:
+Current v419 stable-reference regression gates have been confirmed for the
+three-year lane:
 
 | Fiscal year | Reference | Gate output |
 | --- | --- | --- |
 | FY2025 / R7 | `_temp/v408-r7-cli-export.xlsx` | `logs/release-gate-v419-retroactive.json` |
-| FY2024 / R6 | `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx` | `logs/release-gate-v418-retroactive-fy2024-reference.json` |
-| FY2023 / R5 | `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx` | `logs/release-gate-v418-retroactive-fy2023-reference.json` |
+| FY2024 / R6 | `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx` | `logs/release-gate-v419-retroactive-fy2024-reference.json` |
+| FY2023 / R5 | `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx` | `logs/release-gate-v419-retroactive-fy2023-reference.json` |
 
 The FY2024/FY2023 gates use generated stable references, not the raw sample
 workbook. They prove current source/package regression stability against the
@@ -108,22 +108,22 @@ To rerun the FY2024/FY2023 package-source checks:
 
 ```bash
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v418.zip \
+  dist/eidp-windows-v419.zip \
   --skip-full-unit \
   --allow-docs-only-stale-package \
   --retroactive-excel-reference _temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx \
   --retroactive-fiscal-year 2024 \
   --json \
-  --output logs/release-gate-v418-retroactive-fy2024-reference.json
+  --output logs/release-gate-v419-retroactive-fy2024-reference.json
 
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v418.zip \
+  dist/eidp-windows-v419.zip \
   --skip-full-unit \
   --allow-docs-only-stale-package \
   --retroactive-excel-reference _temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx \
   --retroactive-fiscal-year 2023 \
   --json \
-  --output logs/release-gate-v418-retroactive-fy2023-reference.json
+  --output logs/release-gate-v419-retroactive-fy2023-reference.json
 ```
 
 For reference-preparation automation, run the same comparison with `--json` and

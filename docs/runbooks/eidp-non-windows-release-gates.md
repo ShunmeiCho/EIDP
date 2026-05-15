@@ -105,18 +105,13 @@ Use this as an algorithm regression gate for rolling-FY Excel output. It does
 not replace the Windows transfer/setup/UI gates, and it does not prove the
 current FY2026/R8 60-70% target-PDF acquisition line.
 
-For v419, the current Mac-side FY2025 regression lane is:
+For v419, the current three-year Mac-side regression lane is:
 
 | Fiscal year | Reference workbook | Gate output |
 | --- | --- | --- |
 | FY2025 / R7 | `_temp/v408-r7-cli-export.xlsx` | `logs/release-gate-v419-retroactive.json` |
-
-The latest FY2024/FY2023 reference replays are still the v418 Mac-only runs:
-
-| Fiscal year | Reference workbook | Gate output |
-| --- | --- | --- |
-| FY2024 / R6 | `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx` | `logs/release-gate-v418-retroactive-fy2024-reference.json` |
-| FY2023 / R5 | `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx` | `logs/release-gate-v418-retroactive-fy2023-reference.json` |
+| FY2024 / R6 | `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx` | `logs/release-gate-v419-retroactive-fy2024-reference.json` |
+| FY2023 / R5 | `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx` | `logs/release-gate-v419-retroactive-fy2023-reference.json` |
 
 The FY2024/FY2023 references are generated stable references. Do not substitute
 the raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` workbook as a pass/fail

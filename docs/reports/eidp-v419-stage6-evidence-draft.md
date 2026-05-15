@@ -16,6 +16,8 @@ Windows operator PC and has no v419 setup/UI/real-cycle proof.
 | v419 Mac/non-Windows release gate | pass | Full gate returned `ok=true`: unit suite `1545 passed`, validator slice `163 passed`, validator mypy/Ruff passed, discovery-gold expected predictions matched `44/44`, and package verifiers passed. |
 | v419 local CI-equivalent gate | pass | `.github/workflows/ci.yml` now encodes locked uv install, scoped Ruff, `mypy src`, and `pytest --cov=src/eidp --cov-report=term --cov-fail-under=80`; the local equivalent returned `1545 passed` and `Total coverage: 80.03%`. |
 | v419 retroactive FY2025/R7 Excel regression | pass | Isolated app root `_temp/non-windows-retroactive-fy2025-20260515-135020` exported FY2025 and `retroactive_excel_diff_reference` returned zero missing/extra rows and zero differing fields against `_temp/v408-r7-cli-export.xlsx`. |
+| v419 retroactive FY2024/R6 Excel regression | pass | `logs/release-gate-v419-retroactive-fy2024-reference.json` returned `ok=true`; isolated app root `_temp/non-windows-retroactive-fy2024-20260515-135655` exported FY2024 and returned zero missing/extra rows and zero differing fields against the stable FY2024 generated reference. |
+| v419 retroactive FY2023/R5 Excel regression | pass | `logs/release-gate-v419-retroactive-fy2023-reference.json` returned `ok=true`; isolated app root `_temp/non-windows-retroactive-fy2023-20260515-135744` exported FY2023 and returned zero missing/extra rows and zero differing fields against the stable FY2023 generated reference. |
 | v419 Windows transfer/setup/UI | missing | SSH-Win is disconnected; no v419 Windows SHA check, extraction, setup, launcher, UI health, or evidence bundle exists yet. |
 
 ## Package Record
@@ -34,7 +36,7 @@ Windows operator PC and has no v419 setup/UI/real-cycle proof.
 | Requirement | Current v419 evidence | Status |
 | --- | --- | --- |
 | ZIP distribution -> setup -> browser UI offline operation | v419 ZIP is built and Mac-verified; v408 remains the latest Windows transfer/setup/UI proof. | Missing for v419 |
-| Retroactive FY2025/R7 Excel export parity | v419 isolated Mac export matched `_temp/v408-r7-cli-export.xlsx` with zero business-value diffs. | Mac proof only |
+| Retroactive FY2025/R7, FY2024/R6, and FY2023/R5 Excel export parity | v419 isolated Mac exports matched their stable references with zero business-value diffs. | Mac proof only |
 | ManualActionLog audit | Unit and v408 sandbox support exist; real v419 operator-cycle audit/outbox delta is not captured. | Missing for v419 real cycle |
 | Ship line 60-70% true target PDF / <=30% manual work | No v419 current-FY production yield evidence exists. | Missing / failing |
 

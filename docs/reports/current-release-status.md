@@ -94,17 +94,18 @@ low-confidence and auto-flag current rows were all `0`. The
 `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`
 across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 
-Follow-up Mac-only v418 retroactive reference gates also passed for FY2024 and
-FY2023 without SSH/Windows. Both runs used the same fresh v418 package snapshot
-as current source (`source_dirty=false`, `stale=false`). FY2024 wrote its fresh
+Follow-up Mac-only v419 retroactive reference gates also passed for FY2024 and
+FY2023 without SSH/Windows. Both runs used the v419 package snapshot with the
+docs-only stale replay guard (`source_dirty=false`, `docs_only_stale=true`).
+FY2024 wrote its fresh
 isolated export under
-`_temp/non-windows-retroactive-fy2024-20260515-133726` and compared against
+`_temp/non-windows-retroactive-fy2024-20260515-135655` and compared against
 `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx`;
 FY2023 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2023-20260515-133812` and compared against
+`_temp/non-windows-retroactive-fy2023-20260515-135744` and compared against
 `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx`.
-Both `logs/release-gate-v418-retroactive-fy2024-reference.json` and
-`logs/release-gate-v418-retroactive-fy2023-reference.json` returned `ok=true`;
+Both `logs/release-gate-v419-retroactive-fy2024-reference.json` and
+`logs/release-gate-v419-retroactive-fy2023-reference.json` returned `ok=true`;
 their validator/distribution unit slices returned `163 passed`, their package
 verifiers passed, both isolated exports wrote `採録状況=2418`,
 `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`, and both
