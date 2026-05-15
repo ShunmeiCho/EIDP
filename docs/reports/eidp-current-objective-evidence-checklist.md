@@ -95,7 +95,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   module before multiprocessing spawn tests, restored source-wide `mypy src`
   coverage for all 83 source files, restored the documented local line
   coverage target (`uv run pytest --cov=src/eidp --cov-report=term-missing`
-  -> `1515 passed`, `TOTAL 14186 2866 80%`), and a non-Windows
+  -> `1520 passed`, `TOTAL 14186 2866 80%`), and a non-Windows
   release-gate guard that
   rejects ZIPs whose packaged `BUILD_INFO.json` commit differs from the current
   source HEAD, or whose current source tree has uncommitted tracked changes,

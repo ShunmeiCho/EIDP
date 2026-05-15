@@ -79,7 +79,7 @@ across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 The app-code delta carried by v410 from commit
 `15c88348f46ab3fbcc9383afe5830047e562b0c1` restored the documented 80% local
 coverage line without using SSH/Windows: `uv run pytest --cov=src/eidp
---cov-report=term-missing` returned `1515 passed` with `TOTAL 14186 2866 80%`;
+--cov-report=term-missing` returned `1520 passed` with `TOTAL 14186 2866 80%`;
 `uv run mypy src` returned `Success: no issues found in 83 source files`; and
 focused `ruff check` passed for the touched source/test files. This commit
 covers previously weak local modules (`school_matcher.py`,
