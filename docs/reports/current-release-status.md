@@ -23,6 +23,7 @@ Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v442.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v442.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
 Current Stage 6 evidence bundle: `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip`
+Current Stage 6 evidence draft: `docs/reports/eidp-v442-stage6-evidence-draft.md`
 
 ## Verdict
 
