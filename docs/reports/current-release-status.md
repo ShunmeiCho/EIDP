@@ -2,11 +2,11 @@
 
 Updated: 2026-05-15
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v424.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v424.zip`
-Latest Mac-core package SHA256: `e920a2cecc9868d5cf64c5c8d7eb66074d5031deff4f1c9995bac52fb5cbe2cd`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v424.zip`
+Latest Mac/non-Windows package snapshot: `db84269e01c5eaea1a172acd83dbee1a3e5c65ea`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v425.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v425.zip`
+Latest Mac-core package SHA256: `85ccc5fc53ec89aaa2d779cd3005f1045c06700ffbe9a3c08412239c4a334533`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v425.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v408.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v408.zip`
@@ -21,32 +21,37 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence draft: `docs/reports/eidp-v424-stage6-evidence-draft.md`
+Current Stage 6 evidence draft: `docs/reports/eidp-v425-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v424 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`, which
-adds configurable MEXT reconciliation school-type scope on top of the v423
-package lane. The operator E2E template remains package-neutral after the
+v425 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `db84269e01c5eaea1a172acd83dbee1a3e5c65ea`, which
+includes the v424 configurable MEXT reconciliation school-type scope plus PR1
+operator hardening: Streamlit launchers bind to `127.0.0.1`, school-code and URL
+candidate review writes acquire the app lock before commit, and PDF annotation
+URIs are accepted only when they are absolute `http(s)` URLs. The operator E2E
+template remains package-neutral after the
 rejected v421 build exposed hard-coded v420 package/SHA fields inside the
-packaged template. Do not transfer v421. The v424 package was built with
+packaged template. Do not transfer v421. The v425 package was built with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
-dist/eidp-windows-v424.zip --latest-alias`. The build wrote
-`dist/eidp-windows-v424.zip`, `dist/eidp-windows-v424.zip.sha256`, and refreshed
+dist/eidp-windows-v425.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v425.zip`, `dist/eidp-windows-v425.zip.sha256`, and refreshed
 `dist/eidp-windows.zip`. The release gate confirmed SHA256
-`e920a2cecc9868d5cf64c5c8d7eb66074d5031deff4f1c9995bac52fb5cbe2cd` and
-`dist/eidp-windows-v424.zip.sha256` carries the same value.
-`scripts/verify_windows_distribution.py dist/eidp-windows-v424.zip` returned
+`85ccc5fc53ec89aaa2d779cd3005f1045c06700ffbe9a3c08412239c4a334533` and
+`dist/eidp-windows-v425.zip.sha256` carries the same value.
+`scripts/verify_windows_distribution.py dist/eidp-windows-v425.zip` returned
 `ok=true` inside the full release gate with
-`git_commit=a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`, `git_dirty=false`,
+`git_commit=db84269e01c5eaea1a172acd83dbee1a3e5c65ea`, `git_dirty=false`,
 `wheel_count=78`, `project_wheel_count=1`, `entry_count=3077`,
 `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
 `discovery_gold_set_entries=44`, and no undemonstrated discovery pattern
-sources.
+sources. The v425 full gate also covers the launch-script localhost contract,
+the URL-annotation URI filter, and the operator review lock regressions added in
+`db84269e`.
 
 The coverage gate is now machine-enforced in CI as well as locally. `uv run
 pytest --cov=src/eidp --cov-report=term --cov-fail-under=80` returned
@@ -54,41 +59,41 @@ pytest --cov=src/eidp --cov-report=term --cov-fail-under=80` returned
 reached. Total coverage: 80.03%`.
 
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v424.zip --json --output logs/release-gate-v424-full.json`
+dist/eidp-windows-v425.zip --json --output logs/release-gate-v425-full.json`
 returned `ok=true`. The recorded package/source freshness check reported
-`package_commit=a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`,
-`source_commit=a2169e29f6b9ec4c207c2ef8f29eb6c640ee58ac`,
-`source_dirty=false`, and `stale=false`; `unit_full` returned `1558 passed`; the
-validator/distribution unit slice returned `163 passed`, validator mypy/Ruff
+`package_commit=db84269e01c5eaea1a172acd83dbee1a3e5c65ea`,
+`source_commit=db84269e01c5eaea1a172acd83dbee1a3e5c65ea`,
+`source_dirty=false`, and `stale=false`; `unit_full` returned `1568 passed`; the
+validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v424 has no Windows transfer/setup/UI proof yet because SSH-Win is currently
+v425 has no Windows transfer/setup/UI proof yet because SSH-Win is currently
 disconnected.
 
 The docs-only stale-package replay path remains available for status-only
 follow-up commits:
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v424.zip --skip-full-unit --allow-docs-only-stale-package
---json --output logs/release-gate-v424-docs-only-stale-after-status-refresh.json`.
+dist/eidp-windows-v425.zip --skip-full-unit --allow-docs-only-stale-package
+--json --output logs/release-gate-v425-docs-only-stale-after-status-refresh.json`.
 Treat that as a
 current-source replay convenience only; it is not a Windows transfer/setup/UI
 proof and it must still reject dirty tracked source or any non-doc source delta.
 
-Mac-only v424 retroactive matrix gates passed for FY2025, FY2024, and FY2023
+Mac-only v425 retroactive matrix gates passed for FY2025, FY2024, and FY2023
 without SSH/Windows. The matrix run wrote
-`logs/release-gate-v424-retroactive-matrix.json` with `ok=true` and
+`logs/release-gate-v425-retroactive-matrix.json` with `ok=true` and
 `case_count=3`. FY2025 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2025-20260515-155125` and compared against
+`_temp/non-windows-retroactive-fy2025-20260515-161203` and compared against
 `_temp/v408-r7-cli-export.xlsx`; FY2024 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2024-20260515-155239` and compared against
+`_temp/non-windows-retroactive-fy2024-20260515-161256` and compared against
 `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx`;
 FY2023 wrote its fresh isolated export under
-`_temp/non-windows-retroactive-fy2023-20260515-155350` and compared against
+`_temp/non-windows-retroactive-fy2023-20260515-161349` and compared against
 `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx`.
-`logs/release-gate-v424-retroactive-fy2025-reference.json`,
-`logs/release-gate-v424-retroactive-fy2024-reference.json`, and
-`logs/release-gate-v424-retroactive-fy2023-reference.json` all returned
-`ok=true`; their validator/distribution unit slices returned `163 passed`,
+`logs/release-gate-v425-retroactive-fy2025-reference.json`,
+`logs/release-gate-v425-retroactive-fy2024-reference.json`, and
+`logs/release-gate-v425-retroactive-fy2023-reference.json` all returned
+`ok=true`; their validator/distribution unit slices returned `164 passed`,
 their package verifiers passed, all three isolated exports wrote
 `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`,
 and all three `retroactive_excel_diff_reference` steps returned
@@ -457,11 +462,11 @@ containing Excel exports, and do not run
 
 Stage 6 template fill map for the v408 evidence lane:
 
-v424 is the next Windows execution candidate because it is the latest
+v425 is the next Windows execution candidate because it is the latest
 Mac/non-Windows release-gate-clean package. It has not been transferred to
 Windows, so the v408 rows below remain evidence support only; final Stage 6
-real-cycle sign-off should use a fresh v424 transfer/setup lane unless the owner
-explicitly freezes on v408. The v424 transfer checklist supports both
+real-cycle sign-off should use a fresh v425 transfer/setup lane unless the owner
+explicitly freezes on v408. The v425 transfer checklist supports both
 SSH/SCP and no-SSH manual transfer through USB or a trusted internal file share;
 both paths still require the Windows-side SHA256 check before extraction.
 
