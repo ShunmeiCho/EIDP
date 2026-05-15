@@ -1,25 +1,23 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-15
-Latest Mac/non-Windows package snapshot: `5bddd499af26c0bbfe3c6d1f55d26cd61522fb8b`
+Latest Mac/non-Windows package snapshot: `45b9dffc3c02a844f792f3f0a3a31e98d46d1931`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally explicit about lane boundaries: the active operator-PC
 Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v408-f0c27158` for
-`dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v418 is the
+`dist/eidp-windows-v408.zip` / code evidence base `f0c27158`. v419 is the
 latest Mac/non-Windows release-gate-clean package for the current source lane,
 but it has no Windows transfer/setup/UI proof because SSH-Win is currently
 disconnected. v408 now has R7 CLI Excel parity, R7 browser Excel download proof,
 a disposable copied-DB UI write/audit sandbox proof, and a verifier-accepted
 non-Excel diagnostic evidence bundle; the real operator cycle is still missing.
-v418 includes the post-v410 non-runtime test-timeout, coverage-gate,
-optional-adapter test, local-ignore, docs-only stale-package replay, and
-`diff-excel --json` diagnostics commits, plus the legacy Venus multi-method
-rediscovery cron fix, version-neutral packaged operator E2E template, and
-verifier guard against hard-coded current package fields in that template. Its
+v419 includes the v418 source/package lane plus a GitHub Actions Python quality
+gate for `ruff`, `mypy`, and pytest coverage with explicit
+`--cov-fail-under=80`. Its
 packaged `BUILD_INFO.json` records snapshot
-`5bddd499af26c0bbfe3c6d1f55d26cd61522fb8b`.
+`45b9dffc3c02a844f792f3f0a3a31e98d46d1931`.
 
 ## Objective Restatement
 
@@ -50,27 +48,26 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Release Boundary
 
-- Current Mac/non-Windows release-gate proof: v418, package snapshot
-  `5bddd499af26c0bbfe3c6d1f55d26cd61522fb8b`, app-code evidence base
-  `15c88348f46ab3fbcc9383afe5830047e562b0c1`, SHA256
-  `52529db8739f7fb431c4a74cbe88522381471604a7313b3debd0e273f066d71d`.
-  `scripts/verify_windows_distribution.py dist/eidp-windows-v418.zip --json`
+- Current Mac/non-Windows release-gate proof: v419, package snapshot
+  `45b9dffc3c02a844f792f3f0a3a31e98d46d1931`, SHA256
+  `f1ce206e169a9f5ab2f1572c0528c47f0c59131af55750ef935aca906093c8e9`.
+  `scripts/verify_windows_distribution.py dist/eidp-windows-v419.zip`
   returned `ok=true`, `git_dirty=false`, `wheel_count=78`, and
   `discovery_gold_set_entries=44`. `scripts/run_non_windows_release_gates.py
-  dist/eidp-windows-v418.zip --retroactive-excel-reference
+  dist/eidp-windows-v419.zip --retroactive-excel-reference
   _temp/v408-r7-cli-export.xlsx --retroactive-fiscal-year 2025 --json --output
-  logs/release-gate-v418-retroactive.json`
+  logs/release-gate-v419-retroactive.json`
   returned `ok=true`, with `source_dirty=false`, `stale=false`, `tests/unit -q`
-  returning `1539 passed`, validator/distribution tests returning `163 passed`,
+  returning `1545 passed`, validator/distribution tests returning `163 passed`,
   validator/distribution mypy and Ruff passing, expected discovery-gold
   predictions matching `44/44`, and the demonstrated-pattern package verifier
-  passing. v418 also has integrated isolated Mac retroactive FY2025/R7
-  import/export proof under `_temp/non-windows-retroactive-fy2025-20260515-133602`:
+  passing. v419 also has integrated isolated Mac retroactive FY2025/R7
+  import/export proof under `_temp/non-windows-retroactive-fy2025-20260515-135020`:
   import produced `対象比率=10022`, `学科別=9719`, `DepartmentYearly=40731`,
   and `SupportRecipient=10022`; export wrote `採録状況=2418`,
   `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`; and
   `retroactive_excel_diff_reference` returned zero missing/extra rows and zero
-  differing fields against `_temp/v408-r7-cli-export.xlsx`. Follow-up Mac-only
+  differing fields against `_temp/v408-r7-cli-export.xlsx`. Earlier Mac-only
   FY2024/FY2023 reference-gate replays in
   `logs/release-gate-v418-retroactive-fy2024-reference.json` and
   `logs/release-gate-v418-retroactive-fy2023-reference.json` also returned
@@ -78,7 +75,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   `_temp/non-windows-retroactive-fy2024-20260515-133726` and
   `_temp/non-windows-retroactive-fy2023-20260515-133812`; both produced the same
   four workbook row counts and zero business-value diffs against their stable
-  generated references. v418 is not Windows-proven.
+  generated references. v419 is not Windows-proven.
 - Post-v410 non-runtime hardening included in v415: Streamlit AppTest cold-start timeout
   budget was raised from `15s` to `30s` for UI smoke tests, with
   `uv run pytest tests/unit/test_review_school_year_tasks.py
@@ -158,11 +155,29 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest v418 Mac/non-Windows release-gate evidence, latest v408 setup/UI lane
+Latest v419 Mac/non-Windows release-gate evidence, latest v408 setup/UI lane
 evidence, and v407 supporting diagnostic evidence are summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
 below include source-code evidence base `4a16363d` and later refreshes:
 
+- `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v419.zip --latest-alias`
+  -> wrote `dist/eidp-windows-v419.zip`, refreshed `dist/eidp-windows.zip`,
+  and wrote `dist/eidp-windows-v419.zip.sha256`.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v419.zip --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx --retroactive-fiscal-year 2025 --json --output logs/release-gate-v419-retroactive.json`
+  -> `ok=true`, SHA256
+  `f1ce206e169a9f5ab2f1572c0528c47f0c59131af55750ef935aca906093c8e9`,
+  packaged/source commit `45b9dffc3c02a844f792f3f0a3a31e98d46d1931`,
+  `package_source_check.stale=false`, `tests/unit -q` reported `1545 passed`,
+  validator/distribution tests reported `163 passed`, validator/distribution
+  mypy and Ruff passed, discovery-gold expected predictions were `44/44`,
+  package verification with `--require-demonstrated-discovery-patterns` passed,
+  and `retroactive_excel_diff_reference` returned zero missing/extra rows and
+  zero differing fields against `_temp/v408-r7-cli-export.xlsx`.
+- `.github/workflows/ci.yml` now runs the Python CI gate with locked uv
+  dependencies, scoped Ruff checks for `src` and release/Stage 6 scripts/tests,
+  `uv run mypy src`, and `uv run pytest --cov=src/eidp --cov-report=term
+  --cov-fail-under=80`. The local equivalent returned `1545 passed` and
+  `Total coverage: 80.03%`.
 - `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v418.zip --latest-alias`
   -> wrote `dist/eidp-windows-v418.zip`, refreshed `dist/eidp-windows.zip`,
   and wrote `dist/eidp-windows-v418.zip.sha256`.
@@ -633,17 +648,17 @@ Known non-goal-wide lint boundary:
 ## Next Concrete Gate
 
 When SSH-Win is available again, start the next Windows execution lane from the
-latest Mac/non-Windows-clean package, v418. v408 remains the latest
+latest Mac/non-Windows-clean package, v419. v408 remains the latest
 Windows-proven setup/UI evidence lane and can be used as historical support,
 but it should not be treated as the final v1.0 real-cycle package unless the
 owner explicitly decides to freeze on v408.
 
-First transfer and verify `dist/eidp-windows-v418.zip`:
+First transfer and verify `dist/eidp-windows-v419.zip`:
 
 ```text
-Package snapshot: 5bddd499af26c0bbfe3c6d1f55d26cd61522fb8b
-Expected SHA256: 52529db8739f7fb431c4a74cbe88522381471604a7313b3debd0e273f066d71d
-Suggested extract path: C:\Users\cyo20\EIDP-v418-5bddd499
+Package snapshot: 45b9dffc3c02a844f792f3f0a3a31e98d46d1931
+Expected SHA256: f1ce206e169a9f5ab2f1572c0528c47f0c59131af55750ef935aca906093c8e9
+Suggested extract path: C:\Users\cyo20\EIDP-v419-45b9dffc
 ```
 
 Then start the operator UI tunnel after Windows setup/validation has passed:
