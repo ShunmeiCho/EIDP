@@ -94,6 +94,16 @@ write action was invoked. Evidence is under
 local tunnel; both Windows `8501` and local `18501` had no remaining listener.
 v446 is still not a completed operator real-cycle Stage 6 sign-off.
 
+A process-scoped v446 FY2025/R7 Excel browser probe was also attempted after the
+browser navigation proof. The UI correctly rendered `2025年度（令和7年度）`, and
+post-cleanup checks confirmed neither `C:\Users\cyo20\EIDP-v446-e9f91cc\.env`
+nor `C:\Users\cyo20\EIDP-v446-e9f91cc.env` existed, so the target year was not
+persisted. However, this fresh v446 installation was set up under FY2026 and the
+FY2025 Excel preview remained at `Excel出力可 0/2418`; it therefore does not
+replace the v442 R7 browser Excel proof. Keep v442 as the current
+Windows-R7-browser-Excel-proven package until a v446-or-later DB is initialized
+specifically for the retroactive Excel path.
+
 v445 is the previous Windows setup/canary package. It was built from package snapshot
 `19ceb0dee69fe7b90e32a9a90591018d9c5e773f` after the v444 canary showed that
 `日本工学院北海道専門学校` was stuck with `東京都` from `採録状況`/`対象比率`, preventing

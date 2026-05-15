@@ -59,6 +59,15 @@ The bounded canary still does not meet the production yield gate:
 | `operator_reviewable_yield_pct` | `20.0` |
 | `ship_gate_status` | `below_gate` |
 
+## Retroactive Excel Boundary
+
+A process-scoped FY2025/R7 browser Excel probe was attempted after the v446
+browser navigation smoke. The UI rendered `2025年度（令和7年度）` and cleanup
+confirmed no `.env` file was created at either the app root or sibling path, but
+this v446 DB was initialized under FY2026 setup. The FY2025 Excel preview stayed
+at `Excel出力可 0/2418`, so this attempt is diagnostic only and does not replace
+the v442 R7 browser Excel proof.
+
 ## Remaining Blocker
 
 Do not sign this draft as Stage 6 complete. The remaining blocker is still the
