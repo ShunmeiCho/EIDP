@@ -14,6 +14,7 @@ import typer
 from eidp.cli_discovery import register_discovery_commands
 from eidp.cli_reports import report_app
 from eidp.cli_tools import register_tool_commands
+from eidp.logging_config import configure_logging
 
 
 def _configure_utf8_stdio(stdout: Any = sys.stdout, stderr: Any = sys.stderr) -> None:
@@ -781,5 +782,11 @@ def seed_discovery_gold_sites(
             session.close()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Console-script wrapper that installs structured logging."""
+    configure_logging()
     app()
+
+
+if __name__ == "__main__":
+    main()

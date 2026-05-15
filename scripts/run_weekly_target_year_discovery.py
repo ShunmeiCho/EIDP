@@ -47,6 +47,7 @@ from eidp.config import settings  # noqa: E402
 from eidp.db.locking import LockBusyError, acquire_lock  # noqa: E402
 from eidp.db.models import Document, School, SchoolSite  # noqa: E402
 from eidp.db.session import SessionLocal  # noqa: E402
+from eidp.logging_config import configure_logging  # noqa: E402
 from eidp.pipeline.ingest import run_ingestion  # noqa: E402
 from eidp.pipeline.school_fiscal_year_status import (  # noqa: E402
     operator_reviewable_status_count,
@@ -770,6 +771,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    configure_logging(app_root=settings.app_root)
     args = parse_args()
     summary = run_weekly(
         current_fy=args.current_fy,

@@ -19,6 +19,7 @@ from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import ReviewItem, School, SchoolAlias
 from eidp.db.session import SessionLocal
 from eidp.fiscal_year import format_fiscal_year_label
+from eidp.logging_config import configure_logging
 from eidp.review import operator_pages
 
 # ---------------------------------------------------------------------------
@@ -680,6 +681,7 @@ def _page_history(session: Session) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    configure_logging()
     st.set_page_config(
         page_title="EIDP Operator Console",
         page_icon=":material/school:",
