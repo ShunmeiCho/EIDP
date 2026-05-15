@@ -18,6 +18,7 @@ Windows operator PC and has no v419 setup/UI/real-cycle proof.
 | v419 retroactive FY2025/R7 Excel regression | pass | Isolated app root `_temp/non-windows-retroactive-fy2025-20260515-135020` exported FY2025 and `retroactive_excel_diff_reference` returned zero missing/extra rows and zero differing fields against `_temp/v408-r7-cli-export.xlsx`. |
 | v419 retroactive FY2024/R6 Excel regression | pass | `logs/release-gate-v419-retroactive-fy2024-reference.json` returned `ok=true`; isolated app root `_temp/non-windows-retroactive-fy2024-20260515-135655` exported FY2024 and returned zero missing/extra rows and zero differing fields against the stable FY2024 generated reference. |
 | v419 retroactive FY2023/R5 Excel regression | pass | `logs/release-gate-v419-retroactive-fy2023-reference.json` returned `ok=true`; isolated app root `_temp/non-windows-retroactive-fy2023-20260515-135744` exported FY2023 and returned zero missing/extra rows and zero differing fields against the stable FY2023 generated reference. |
+| v419 retroactive matrix runner | pass | `scripts/run_retroactive_excel_matrix.py` was added as a thin orchestrator over `run_non_windows_release_gates.py`; a FY2025 smoke wrote `logs/release-gate-v419-retroactive-matrix-smoke.json` and returned `ok=true`. |
 | v419 Windows transfer/setup/UI | missing | SSH-Win is disconnected; no v419 Windows SHA check, extraction, setup, launcher, UI health, or evidence bundle exists yet. |
 
 ## Package Record

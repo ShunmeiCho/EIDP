@@ -43,6 +43,7 @@ jobs:
           scripts/validate_windows_install.py
           scripts/verify_windows_distribution.py
           scripts/run_non_windows_release_gates.py
+          scripts/run_retroactive_excel_matrix.py
           scripts/collect_stage6_evidence.py
           scripts/verify_stage6_evidence.py
           scripts/stage6_recovery_check.py
@@ -51,6 +52,7 @@ jobs:
           tests/unit/test_db_session.py
           tests/unit/test_fiscal_year_evidence.py
           tests/unit/test_package_init.py
+          tests/unit/test_retroactive_excel_matrix.py
           tests/unit/test_windows_install_validator.py
           tests/unit/test_non_windows_release_gates.py
           tests/unit/test_stage6_evidence_bundle.py
@@ -59,7 +61,7 @@ jobs:
           tests/unit/test_stage6_residual_cleanup.py
 
       - name: Mypy
-        run: uv run mypy src
+        run: uv run mypy src scripts/run_retroactive_excel_matrix.py
 
       - name: Pytest with coverage
         run: uv run pytest --cov=src/eidp --cov-report=term --cov-fail-under=80

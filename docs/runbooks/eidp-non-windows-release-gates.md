@@ -118,6 +118,23 @@ the raw `sample/◆2025専門学校無償化情報公開まとめ.xlsx` workbook
 reference until its duplicate keys, formula-error placeholders, unknown values,
 name drift, and field-year policy have been canonicalized.
 
+To rerun the three-year lane without copying three separate release-gate
+commands, use the matrix runner:
+
+```bash
+uv run python scripts/run_retroactive_excel_matrix.py \
+  dist/eidp-windows-v419.zip \
+  --allow-docs-only-stale-package \
+  --case 2025=_temp/v408-r7-cli-export.xlsx \
+  --case 2024=_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx \
+  --case 2023=_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx \
+  --json \
+  --output logs/release-gate-v419-retroactive-matrix.json
+```
+
+The runner writes per-year JSON outputs using the package label and fiscal year,
+then writes the optional matrix summary to `--output`.
+
 ## What This Proves
 
 - The ZIP has the expected source, data, wheelhouse, runbook, and validator

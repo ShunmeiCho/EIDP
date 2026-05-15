@@ -104,27 +104,23 @@ workbook. They prove current source/package regression stability against the
 prepared reference lane; they do not convert the raw sample workbook into a
 canonical pass/fail reference.
 
-To rerun the FY2024/FY2023 package-source checks:
+To rerun the full matrix with one command:
 
 ```bash
-uv run python scripts/run_non_windows_release_gates.py \
+uv run python scripts/run_retroactive_excel_matrix.py \
   dist/eidp-windows-v419.zip \
-  --skip-full-unit \
   --allow-docs-only-stale-package \
-  --retroactive-excel-reference _temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx \
-  --retroactive-fiscal-year 2024 \
+  --case 2025=_temp/v408-r7-cli-export.xlsx \
+  --case 2024=_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx \
+  --case 2023=_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx \
   --json \
-  --output logs/release-gate-v419-retroactive-fy2024-reference.json
-
-uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v419.zip \
-  --skip-full-unit \
-  --allow-docs-only-stale-package \
-  --retroactive-excel-reference _temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx \
-  --retroactive-fiscal-year 2023 \
-  --json \
-  --output logs/release-gate-v419-retroactive-fy2023-reference.json
+  --output logs/release-gate-v419-retroactive-matrix.json
 ```
+
+The matrix runner calls `scripts/run_non_windows_release_gates.py` for each
+case and writes per-year gate JSON files under `logs/`. By default, the first
+case runs the full unit suite and later cases use `--skip-full-unit`; pass
+`--full-unit-each-case` only when deliberately stress-testing every case.
 
 For reference-preparation automation, run the same comparison with `--json` and
 archive the payload. The JSON exposes `missing_rows`, `extra_rows`,
