@@ -166,6 +166,15 @@ below include source-code evidence base `4a16363d` and later refreshes:
   package verification with `--require-demonstrated-discovery-patterns` passed,
   and `retroactive_excel_diff_reference` returned zero missing/extra rows and
   zero differing fields against `_temp/v408-r7-cli-export.xlsx`.
+- `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v412.zip --skip-full-unit --allow-docs-only-stale-package --json --output logs/release-gate-v412-docs-only-stale.json`
+  -> `ok=true`; SHA256 sidecar matched; `package_source_check` reported
+  `stale=true`, `docs_only_stale=true`, `source_dirty=false`,
+  `allowed_stale_reason=docs_only`, and changed paths limited to release/status
+  documentation under `docs/`; validator/distribution tests reported
+  `161 passed`, validator/distribution mypy and Ruff passed, discovery-gold
+  expected predictions were `44/44`, and package verification with
+  `--require-demonstrated-discovery-patterns` passed. This is a current-source
+  evidence replay convenience, not a Windows transfer/setup proof.
 - `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v411.zip --latest-alias`
   -> wrote `dist/eidp-windows-v411.zip`, refreshed `dist/eidp-windows.zip`,
   and wrote `dist/eidp-windows-v411.zip.sha256`.

@@ -72,6 +72,25 @@ files`; validator/distribution Ruff returned `All checks passed!`;
 `--require-demonstrated-discovery-patterns`, passed. v412 has no Windows
 transfer/setup/UI proof yet because SSH-Win is currently disconnected.
 
+After recording the v412 evidence, a follow-up lightweight non-Windows gate
+proved the new docs-only stale-package replay path without rebuilding the ZIP:
+`uv run python scripts/run_non_windows_release_gates.py
+dist/eidp-windows-v412.zip --skip-full-unit --allow-docs-only-stale-package
+--json --output logs/release-gate-v412-docs-only-stale.json` returned
+`ok=true`. The package/source check reported
+`package_commit=dbafdc34be4f8d753e6f5bcfb6bec35495fefce0`,
+`source_commit=4e832414c70951f3e21c66692df4cf27d5580d73`,
+`source_dirty=false`, `stale=true`, `docs_only_stale=true`, and
+`allowed_stale_reason=docs_only`; the changed paths were limited to
+`docs/reports/current-release-status.md`,
+`docs/reports/eidp-current-objective-evidence-checklist.md`,
+`docs/runbooks/eidp-non-windows-release-gates.md`,
+`docs/runbooks/eidp-operator-e2e-template.md`, and
+`docs/runbooks/eidp-retroactive-fy-validation.md`. The lightweight gate also
+reran the validator/distribution unit slice (`161 passed`), validator mypy,
+validator Ruff, discovery gold summary, expected-prediction replay, and both
+package verifier modes successfully.
+
 v412 also has an integrated isolated Mac retroactive FY2025/R7 import/export
 regression proof through that same release-gate run. The helper created
 `_temp/non-windows-retroactive-fy2025-20260515-114548` with its own
