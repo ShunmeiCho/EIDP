@@ -7,6 +7,9 @@ from sqlalchemy.exc import OperationalError
 from typer.testing import CliRunner
 
 from eidp.cli import app
+from eidp.reports.coverage import CoverageReport, PrefectureCoverage
+from eidp.reports.extraction import DeltaOutlier, ExtractionReport
+from eidp.reports.gaps import GapEntry, GapsReport
 from eidp.reports.ship_readiness import ShipReadinessCriterion, ShipReadinessReport
 
 
@@ -114,6 +117,150 @@ def test_report_coverage_text_fails_cleanly_when_database_schema_is_missing(monk
     assert "Traceback" not in result.output
     assert "ERROR: report query failed" in result.output
     assert "DETAIL:" in result.output
+    assert fake_session.closed is True
+
+
+def _coverage_report() -> CoverageReport:
+    tokyo = PrefectureCoverage(
+        prefecture="東京都",
+        schools_total=10,
+        schools_with_url=8,
+        schools_with_verified_url=7,
+        schools_with_any_pdf=6,
+        schools_with_target_pdf_any_fy=5,
+        schools_with_target_pdf_current_fy=4,
+        schools_with_current_fy_doc=4,
+        schools_with_current_fy_extracted=3,
+    )
+    osaka = PrefectureCoverage(
+        prefecture="大阪府",
+        schools_total=5,
+        schools_with_url=5,
+        schools_with_verified_url=4,
+        schools_with_any_pdf=4,
+        schools_with_target_pdf_any_fy=3,
+        schools_with_target_pdf_current_fy=2,
+        schools_with_current_fy_doc=2,
+        schools_with_current_fy_extracted=2,
+    )
+    totals = PrefectureCoverage(
+        prefecture="ALL",
+        schools_total=15,
+        schools_with_url=13,
+        schools_with_verified_url=11,
+        schools_with_any_pdf=10,
+        schools_with_target_pdf_any_fy=8,
+        schools_with_target_pdf_current_fy=6,
+        schools_with_current_fy_doc=6,
+        schools_with_current_fy_extracted=5,
+    )
+    return CoverageReport(
+        fiscal_year=2026,
+        school_type="専門学校",
+        by_prefecture=(tokyo, osaka),
+        totals=totals,
+    )
+
+
+def test_report_coverage_success_outputs_json_and_prefecture_table(monkeypatch) -> None:
+    fake_session = FakeSession()
+
+    import eidp.db.session as db_session
+    import eidp.reports.coverage as coverage
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(coverage, "compute_coverage", lambda *_args, **_kwargs: _coverage_report())
+
+    json_result = CliRunner().invoke(app, ["report", "coverage", "--json"])
+    text_result = CliRunner().invoke(app, ["report", "coverage", "--by-prefecture"])
+
+    assert json_result.exit_code == 0, json_result.output
+    payload = json.loads(json_result.output)
+    assert payload["fiscal_year"] == 2026
+    assert payload["totals"]["schools_total"] == 15
+    assert payload["totals"]["target_pdf_current_fy_rate"] == 0.4
+    assert payload["by_prefecture"][0]["prefecture"] == "東京都"
+    assert text_result.exit_code == 0, text_result.output
+    assert "FY: 2026  school_type: 専門学校" in text_result.output
+    assert "Schools: 15  url=13" in text_result.output
+    assert "東京都" in text_result.output
+    assert "大阪府" in text_result.output
+    assert fake_session.closed is True
+
+
+def test_report_extraction_success_outputs_json_and_outlier_text(monkeypatch) -> None:
+    fake_session = FakeSession()
+    report = ExtractionReport(
+        fiscal_year=2026,
+        documents_ingested=4,
+        documents_with_yearly_rows=3,
+        yearly_rows_total=5,
+        yearly_rows_with_capacity=4,
+        yearly_rows_with_enrollment=4,
+        delta_outliers=(
+            DeltaOutlier(
+                school_id=1,
+                department_id=10,
+                department_name="AI学科",
+                prev_value=100,
+                curr_value=160,
+                delta_pct=60.0,
+            ),
+        ),
+        delta_threshold_pct=50.0,
+    )
+
+    import eidp.db.session as db_session
+    import eidp.reports.extraction as extraction
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(extraction, "compute_extraction", lambda *_args, **_kwargs: report)
+
+    json_result = CliRunner().invoke(app, ["report", "extraction", "--fy", "2026", "--json"])
+    text_result = CliRunner().invoke(app, ["report", "extraction", "--fy", "2026"])
+
+    assert json_result.exit_code == 0, json_result.output
+    payload = json.loads(json_result.output)
+    assert payload["extraction_rate"] == 0.75
+    assert payload["capacity_fill_rate"] == 0.8
+    assert payload["delta_outliers"][0]["department_name"] == "AI学科"
+    assert text_result.exit_code == 0, text_result.output
+    assert "FY2026 extraction:" in text_result.output
+    assert "documents ingested: 4" in text_result.output
+    assert "AI学科: 100 -> 160 (+60.0%)" in text_result.output
+    assert fake_session.closed is True
+
+
+def test_report_gaps_success_outputs_json_and_reason_table(monkeypatch, tmp_path) -> None:
+    fake_session = FakeSession()
+    report = GapsReport(
+        kind="pdf",
+        total=2,
+        by_reason={"stale_pdf_only": 1, "parse_failed_only": 1},
+        sample=(
+            GapEntry(school_id=1, school_name="A専門学校", reason="stale_pdf_only", detail="FY2025"),
+            GapEntry(school_id=2, school_name="B専門学校", reason="parse_failed_only", detail="parse error"),
+        ),
+    )
+
+    import eidp.db.session as db_session
+    import eidp.reports.gaps as gaps
+
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(gaps, "compute_gaps", lambda *_args, **_kwargs: report)
+
+    json_result = CliRunner().invoke(app, ["report", "gaps", "--kind", "pdf", "--json"])
+    text_result = CliRunner().invoke(app, ["report", "gaps", "--kind", "pdf", "--fy", "2026"])
+
+    assert json_result.exit_code == 0, json_result.output
+    payload = json.loads(json_result.output)
+    assert payload["kind"] == "pdf"
+    assert payload["total"] == 2
+    assert payload["sample"][0]["school_name"] == "A専門学校"
+    assert text_result.exit_code == 0, text_result.output
+    assert "Gap kind: pdf  total: 2" in text_result.output
+    assert "stale_pdf_only: 1" in text_result.output
+    assert "#1 A専門学校" in text_result.output
     assert fake_session.closed is True
 
 

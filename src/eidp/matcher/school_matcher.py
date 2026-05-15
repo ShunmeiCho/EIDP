@@ -111,8 +111,17 @@ def _extract_prefecture(pref_field: str) -> str:
 
     # MEXT uses short names (青森), Excel uses long names (青森県)
     # Normalize to Excel format
-    if name in ("北海道", "東京都", "大阪府", "京都府"):
-        return name
+    special_prefectures = {
+        "北海道": "北海道",
+        "東京": "東京都",
+        "東京都": "東京都",
+        "大阪": "大阪府",
+        "大阪府": "大阪府",
+        "京都": "京都府",
+        "京都府": "京都府",
+    }
+    if name in special_prefectures:
+        return special_prefectures[name]
     if not name.endswith(("県", "府", "都", "道")):
         return name + "県"
     return name
@@ -257,6 +266,7 @@ def match_schools(session: Session, data_dir: Path) -> MatchReport:
 
         report.unmatched.append(result)
 
+    match_rate = (report.total_matched / report.total * 100) if report.total else 0.0
     log.info(
         "matching_complete",
         exact=len(report.exact),
@@ -264,7 +274,7 @@ def match_schools(session: Session, data_dir: Path) -> MatchReport:
         pref_partial=len(report.pref_partial),
         unmatched=len(report.unmatched),
         total=report.total,
-        match_rate=f"{report.total_matched / report.total * 100:.1f}%",
+        match_rate=f"{match_rate:.1f}%",
     )
     return report
 
