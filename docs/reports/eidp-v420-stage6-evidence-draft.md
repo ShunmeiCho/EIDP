@@ -31,6 +31,11 @@ Windows operator PC and has no v420 setup/UI/real-cycle proof.
 | Windows transfer checklist | `docs/runbooks/eidp-v420-windows-transfer-checklist.md` |
 | Suggested Windows extract path | `C:\Users\cyo20\EIDP-v420-99efba8a` |
 
+Note: the v420 ZIP predates the latest v420-specific checklist updates. Carry
+the current repo copies of `docs/runbooks/eidp-v420-windows-transfer-checklist.md`,
+`docs/runbooks/eidp-operator-e2e-template.md`, and this draft alongside the ZIP
+and SHA sidecar during manual transfer or operator-PC execution.
+
 ## Stage 6 Boundary
 
 | Requirement | Current v420 evidence | Status |

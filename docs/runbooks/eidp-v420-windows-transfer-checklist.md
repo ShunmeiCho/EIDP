@@ -21,6 +21,21 @@ retroactive dry-run, and Stage 6 bundle verification have actually run.
 | Suggested staging path | `C:\EIDP-staging\` |
 | Suggested extract path | `C:\Users\cyo20\EIDP-v420-99efba8a` |
 
+## Companion Docs
+
+The v420 ZIP was built before this v420-specific checklist existed. It contains
+the packaged Windows app and general runbooks, but not the latest checklist
+updates in the current repo. Carry or print these current repo documents
+alongside the ZIP and SHA sidecar:
+
+- `docs/runbooks/eidp-v420-windows-transfer-checklist.md`
+- `docs/runbooks/eidp-operator-e2e-template.md`
+- `docs/reports/eidp-v420-stage6-evidence-draft.md`
+
+Do not rely on the ZIP-embedded copy of `docs/runbooks/eidp-operator-e2e-template.md`
+for final sign-off if it lacks the v420 package, SHA256, no-SSH transfer, and
+Mac-side evidence verifier notes.
+
 ## Mac Preflight
 
 Run this before transfer:
