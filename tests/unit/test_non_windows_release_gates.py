@@ -214,6 +214,75 @@ def test_verify_package_source_commit_can_allow_stale_zip_for_history(
     assert result["source_commit"] == source_commit
 
 
+def test_verify_package_source_commit_can_allow_docs_only_stale_zip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": package_commit}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+    monkeypatch.setattr(
+        module,
+        "_docs_only_stale_check",
+        lambda base, head: {
+            "ok": True,
+            "changed_paths": ["docs/reports/current-release-status.md"],
+        },
+    )
+
+    result = module.verify_package_source_commit(
+        package,
+        allow_docs_only_stale_package=True,
+    )
+
+    assert result["ok"] is True
+    assert result["stale"] is True
+    assert result["docs_only_stale"] is True
+    assert result["allowed_stale_reason"] == "docs_only"
+    assert result["changed_paths"] == ["docs/reports/current-release-status.md"]
+
+
+def test_verify_package_source_commit_rejects_docs_only_override_for_source_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr(
+            "BUILD_INFO.json",
+            json.dumps({"git_commit": package_commit}),
+        )
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+    monkeypatch.setattr(
+        module,
+        "_docs_only_stale_check",
+        lambda base, head: {
+            "ok": False,
+            "changed_paths": ["src/eidp/cli.py"],
+            "error": "stale package has non-doc changes: src/eidp/cli.py",
+        },
+    )
+
+    result = module.verify_package_source_commit(
+        package,
+        allow_docs_only_stale_package=True,
+    )
+
+    assert result["ok"] is False
+    assert result["stale"] is True
+    assert result["docs_only_stale"] is False
+    assert result["changed_paths"] == ["src/eidp/cli.py"]
+    assert "non-doc changes" in result["error"]
+
+
 def test_verify_package_source_commit_allow_stale_still_rejects_dirty_source(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -398,6 +467,51 @@ def test_main_allows_stale_package_when_explicitly_requested(
         "source_dirty": False,
         "stale": True,
     }
+
+
+def test_main_allows_docs_only_stale_package_when_explicitly_requested(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package = tmp_path / "eidp-windows.zip"
+    package_commit = "a" * 40
+    source_commit = "b" * 40
+    with zipfile.ZipFile(package, "w") as zf:
+        zf.writestr("BUILD_INFO.json", json.dumps({"git_commit": package_commit}))
+    digest = hashlib.sha256(package.read_bytes()).hexdigest()
+    package.with_suffix(".zip.sha256").write_text(f"{digest}  {package.name}\n", encoding="utf-8")
+    output = tmp_path / "summary.json"
+
+    monkeypatch.setattr(module, "_current_git_commit", lambda: source_commit)
+    monkeypatch.setattr(module, "_current_git_dirty", lambda: False)
+    monkeypatch.setattr(
+        module,
+        "_docs_only_stale_check",
+        lambda base, head: {
+            "ok": True,
+            "changed_paths": ["docs/reports/current-release-status.md"],
+        },
+    )
+    monkeypatch.setattr(module, "run_gates", lambda *args, **kwargs: [])
+
+    rc = module.main(
+        [
+            str(package),
+            "--skip-full-unit",
+            "--allow-docs-only-stale-package",
+            "--json",
+            "--output",
+            str(output),
+        ]
+    )
+
+    summary = json.loads(output.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert summary["ok"] is True
+    assert summary["package_source_check"]["ok"] is True
+    assert summary["package_source_check"]["stale"] is True
+    assert summary["package_source_check"]["docs_only_stale"] is True
+    assert summary["package_source_check"]["allowed_stale_reason"] == "docs_only"
 
 
 def test_main_adds_retroactive_excel_gate_when_reference_is_set(

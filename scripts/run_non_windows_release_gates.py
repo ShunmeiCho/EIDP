@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+DOCS_ONLY_STALE_PREFIXES = ("docs/",)
 
 
 @dataclass(frozen=True)
@@ -268,10 +269,54 @@ def _current_git_dirty() -> bool:
     return bool(completed.stdout.strip()) if completed.returncode == 0 else True
 
 
+def _docs_only_stale_check(package_commit: str, source_commit: str) -> dict[str, Any]:
+    """Return whether stale package drift is limited to tracked docs files."""
+
+    ancestor = subprocess.run(
+        ("git", "merge-base", "--is-ancestor", package_commit, source_commit),
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if ancestor.returncode != 0:
+        return {
+            "ok": False,
+            "changed_paths": [],
+            "error": f"package commit {package_commit} is not an ancestor of source HEAD {source_commit}",
+        }
+
+    completed = subprocess.run(
+        ("git", "diff", "--name-only", f"{package_commit}..{source_commit}"),
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or "git diff failed"
+        return {"ok": False, "changed_paths": [], "error": detail}
+
+    changed_paths = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+    non_doc_paths = [
+        path for path in changed_paths if not path.startswith(DOCS_ONLY_STALE_PREFIXES)
+    ]
+    if non_doc_paths:
+        preview = ", ".join(non_doc_paths[:5])
+        suffix = "" if len(non_doc_paths) <= 5 else ", ..."
+        return {
+            "ok": False,
+            "changed_paths": changed_paths,
+            "error": f"stale package has non-doc changes: {preview}{suffix}",
+        }
+    return {"ok": True, "changed_paths": changed_paths}
+
+
 def verify_package_source_commit(
     package_zip: Path,
     *,
     allow_stale_package: bool = False,
+    allow_docs_only_stale_package: bool = False,
 ) -> dict[str, Any]:
     """Verify the ZIP BUILD_INFO commit matches the source tree being gated."""
 
@@ -300,17 +345,31 @@ def verify_package_source_commit(
     # for historical package replays.
     unknown_commit = package_commit == "unknown" or source_commit == "unknown"
     stale = unknown_commit or package_commit != source_commit
+    docs_only_check: dict[str, Any] | None = None
+    if stale and allow_docs_only_stale_package and not unknown_commit:
+        docs_only_check = _docs_only_stale_check(package_commit, source_commit)
+    docs_only_stale = bool(docs_only_check and docs_only_check.get("ok"))
+    stale_allowed = allow_stale_package or docs_only_stale
     result = {
-        "ok": (not source_dirty) and (allow_stale_package or not stale),
+        "ok": (not source_dirty) and (stale_allowed or not stale),
         "package_commit": package_commit,
         "source_commit": source_commit,
         "source_dirty": source_dirty,
         "stale": stale,
     }
+    if allow_docs_only_stale_package:
+        result["docs_only_stale"] = docs_only_stale
+        if docs_only_check is not None:
+            result["changed_paths"] = docs_only_check.get("changed_paths", [])
+        if docs_only_stale:
+            result["allowed_stale_reason"] = "docs_only"
     if source_dirty:
         result["error"] = "current source tree has uncommitted tracked changes"
         return result
-    if stale and not allow_stale_package:
+    if stale and not stale_allowed:
+        if docs_only_check and docs_only_check.get("error"):
+            result["error"] = docs_only_check["error"]
+            return result
         if unknown_commit:
             result["error"] = (
                 f"package BUILD_INFO git_commit {package_commit} vs source HEAD {source_commit}: "
@@ -431,6 +490,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Allow BUILD_INFO git_commit to differ from the current source HEAD for historical package checks",
     )
     parser.add_argument(
+        "--allow-docs-only-stale-package",
+        action="store_true",
+        help=(
+            "Allow BUILD_INFO git_commit to lag source HEAD only when the tracked diff from "
+            "package commit to HEAD is limited to docs/ files"
+        ),
+    )
+    parser.add_argument(
         "--retroactive-excel-reference",
         type=Path,
         help=(
@@ -465,6 +532,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     package_source_check = verify_package_source_commit(
         package_zip,
         allow_stale_package=args.allow_stale_package,
+        allow_docs_only_stale_package=args.allow_docs_only_stale_package,
     )
     commands = build_gate_commands(
         package_zip,
