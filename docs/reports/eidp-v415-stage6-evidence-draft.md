@@ -28,9 +28,8 @@ evidence.
 | SHA256 | `25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd` |
 | SHA256 sidecar | `dist/eidp-windows-v415.zip.sha256` |
 | Package commit | `09ad5e6bfa80c8a03ab6f60b2f39a39333fdd42c` |
-| Docs-only current HEAD after template alignment | `ed39f70065d3459668d7ac8610fe93d78875fb0d` |
 | Full release-gate log | `logs/release-gate-v415-retroactive.json` |
-| Docs-only stale replay after E2E template update | `logs/release-gate-v415-docs-only-stale-after-e2e-template.json` |
+| Representative docs-only stale replay | `logs/release-gate-v415-docs-only-stale-after-stage6-draft.json` |
 | Suggested Windows extract path | `C:\Users\cyo20\EIDP-v415-09ad5e6b` |
 
 ## Prompt-To-Artifact Checklist
@@ -69,8 +68,10 @@ When SSH-Win is available again, execute the v415 lane in this order:
 ## Known Boundaries
 
 - v408 Windows evidence is supporting evidence only. It does not sign off v415.
-- v415 docs-only stale replay is allowed only because the current HEAD differs
-  from the package commit by documentation paths.
+- v415 docs-only stale replay is allowed only when the current HEAD differs
+  from the package commit by documentation paths. Use the JSON
+  `package_source_check.changed_paths` field as the source of truth instead of
+  hard-coding a docs-only HEAD in this draft.
 - FY2025/R7 retroactive evidence proves rolling-FY mechanics and Excel
   regression, not FY2026/R8 publication yield.
 - Do not delete `data/eidp.sqlite3`, `data/audit/manual-actions.jsonl`, or
