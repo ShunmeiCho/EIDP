@@ -14,8 +14,8 @@ Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v442.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v441.zip`
-Latest Windows-default-launcher-proven package: `dist/eidp-windows-v441.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v442.zip`
@@ -97,8 +97,9 @@ validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
 v442 has Mac/non-Windows package, Stage 6 evidence-bundle, Windows
-transfer/SHA, setup, recovery, URL-only bootstrap, real `weekly_run.bat`
-bounded canary, and full diagnostic evidence-label proof. The ZIP and sidecar
+transfer/SHA, setup, recovery, non-browser UI/default launcher smoke,
+URL-only bootstrap, real `weekly_run.bat` bounded canary, and full diagnostic
+evidence-label proof. The ZIP and sidecar
 were copied to `C:\EIDP-staging\`; Win-side `Get-FileHash` matched SHA256
 `4bf15f953be371b506b131ba59cf59c205259be1d7b49f084b94ddb78f66e0c7`. The
 package was expanded to `C:\Users\cyo20\EIDP-v442-22f1a98` without
@@ -127,8 +128,14 @@ present labels `bootstrap_logs`, `bootstrap_progress`, `build_info`,
 `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`,
 `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. This is
 still a bounded launcher canary and not a completed operator real-cycle Stage 6
-sign-off. v441 remains the latest package with non-browser UI-smoke/default
-launcher proof. v441 has Mac/non-Windows package, Stage 6 evidence-bundle, Windows
+sign-off. A v442 non-browser UI/default launcher smoke then started the app
+through `scripts\launch.bat`, received HTTP `200` from
+`http://127.0.0.1:8501/_stcore/health` and from `http://127.0.0.1:8501/`,
+and stopped the v442 Streamlit listener; the pulled evidence file is
+`logs/win-v442-stage6/v442-ui-smoke-20260516-061159.json` with `ok=true`,
+`errors=[]`, and no remaining `8501` listener. v441 remains the previous
+fallback package with non-browser UI-smoke/default launcher proof. v441 has
+Mac/non-Windows package, Stage 6 evidence-bundle, Windows
 transfer/SHA, setup, recovery, non-browser UI-smoke, URL-only bootstrap, and
 bounded backend canary proof. The ZIP and sidecar were copied to
 `C:\EIDP-staging\`;
