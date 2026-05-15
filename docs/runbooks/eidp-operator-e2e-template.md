@@ -19,6 +19,10 @@ Updated: 2026-05-15
   diagnostic evidence bundle まで実証済みです。ただし sandbox と dry-run は
   業務員 PC 1 サイクル sign-off の代替ではありません。下表の「v408 既存証跡」
   は転記補助であり、空欄のまま残る real-cycle / owner fields を埋める必要があります。
+- v411 は最新の Mac / non-Windows release-gate-clean ZIP です。ただし
+  SSH-Win 断線中のため Windows transfer / setup / UI 証跡は未取得です。次の
+  real-cycle Stage 6 は、明示的に v408 lane 継続を選ぶ場合を除き、v411 を
+  転送して下表の実施情報を v411 値で埋めます。
 
 ## 1. 実施情報
 
@@ -44,6 +48,17 @@ v408 既存証跡（転記候補、real-cycle sign-off ではない）:
 | core ZIP sha256 | `61fe233e41c08b8684560778b25c36f12ad0848135e8930ef07d8fa265fbbbe2` |
 | Windows extract path | `C:\Users\cyo20\EIDP-v408-f0c27158` |
 | transferred ZIP | `C:\Users\cyo20\eidp-windows-v408.zip` |
+
+v411 投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
+
+| 項目 | 値 |
+| --- | --- |
+| EIDP package snapshot | `d673b020e2d702260aaeff78db4d59edf0a38aa7` |
+| core ZIP | `dist/eidp-windows-v411.zip` |
+| core ZIP sha256 | `31f2074506eff699d2d1c9349e03f2b0e09b2bf1d9044f3d374211dc22b15200` |
+| non-Windows gate log | `logs/release-gate-v411-retroactive.json` |
+| Windows extract path | 未実施 |
+| transferred ZIP | 未実施 |
 
 ## 2. PC / 環境
 

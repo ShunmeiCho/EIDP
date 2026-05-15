@@ -433,7 +433,13 @@ diagnostic until explicitly cleaned. Do not externally share any bundle
 containing Excel exports, and do not run
 `stage6_residual_cleanup.py --apply` without explicit operator/user approval.
 
-Stage 6 template fill map for the v408 lane:
+Stage 6 template fill map for the v408 evidence lane:
+
+v411 is the next Windows execution candidate because it is the latest
+Mac/non-Windows release-gate-clean package. It has not been transferred to
+Windows, so the v408 rows below remain evidence support only; final Stage 6
+real-cycle sign-off should use a fresh v411 transfer/setup lane unless the owner
+explicitly freezes on v408.
 
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |

@@ -599,14 +599,28 @@ Known non-goal-wide lint boundary:
 
 ## Next Concrete Gate
 
-Continue the active v408 lane on the operator PC:
+When SSH-Win is available again, start the next Windows execution lane from the
+latest Mac/non-Windows-clean package, v411. v408 remains the latest
+Windows-proven setup/UI evidence lane and can be used as historical support,
+but it should not be treated as the final v1.0 real-cycle package unless the
+owner explicitly decides to freeze on v408.
+
+First transfer and verify `dist/eidp-windows-v411.zip`:
+
+```text
+Package snapshot: d673b020e2d702260aaeff78db4d59edf0a38aa7
+Expected SHA256: 31f2074506eff699d2d1c9349e03f2b0e09b2bf1d9044f3d374211dc22b15200
+Suggested extract path: C:\Users\cyo20\EIDP-v411-d673b020
+```
+
+Then start the operator UI tunnel after Windows setup/validation has passed:
 
 ```bash
 ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
 ```
 
 Then verify the UI at `http://127.0.0.1:18501/` and complete the Stage 6
-click-through against the real operator cycle or an approved full-cycle copy:
+click-through against the real v411 operator cycle or an approved full-cycle copy:
 manual PDF entry write, fiscal-year override write, R7 Excel preview/download,
 audit log/outbox flush, diagnostics capture, evidence verify, and sign-off
 fields.
