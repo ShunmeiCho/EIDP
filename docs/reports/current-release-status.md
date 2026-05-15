@@ -22,7 +22,7 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v445.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v445.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v442-stage6/stage6-evidence-20260515-205932.zip` (latest verified bundle)
+Current Stage 6 evidence bundle: `logs/win-v445-stage6/stage6-evidence-20260515-223848.zip` (latest v445 verified bundle; missing recovery/residual-cleanup labels)
 Current Stage 6 evidence draft: `docs/reports/eidp-v445-stage6-evidence-draft.md`
 
 ## Verdict
@@ -53,7 +53,13 @@ exited `0` and improved the failure shape: `candidate_school_mismatch=0`,
 `ship_gate_status=below_gate`, because the official page exposes 2025 and older
 申請書 files but no FY2026/R8 target-form evidence yet. Mac cleanup now keeps
 v445 current, v442 fallback, and the latest alias; Windows staging/deploy
-cleanup keeps only v445 current and v442 fallback.
+cleanup keeps only v445 current and v442 fallback. The v445 evidence bundle
+`logs/win-v445-stage6/stage6-evidence-20260515-223848.zip` verified on both
+Windows and Mac with `ok=true`, no forbidden or unsafe entries, and present
+labels `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
+`discovery_evidence`, `discovery_rca`, `last_run`, and `weekly_run_logs`; it is
+still missing `stage6_recovery` and `stage6_residual_cleanup`, so v442 remains
+the broader recovery/browser/R7 Excel fallback proof.
 
 v442 remains the latest verified Stage 6 evidence-bundle/browser/R7 Excel
 fallback package. It was built from package snapshot
