@@ -8,20 +8,20 @@ Latest Mac-core-verifier-clean package: `dist/eidp-windows-v440.zip`
 Latest Mac-core package SHA256: `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v440.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v438.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v438.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v440.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v438.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v438.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v440.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-default-launcher-proven package: `dist/eidp-windows-v408.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v440.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v440.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v440.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v384.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v384.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence draft: pending v440 transfer; latest draft remains `docs/reports/eidp-v437-stage6-evidence-draft.md`
+Current Stage 6 evidence bundle: `logs/win-v440-stage6/stage6-evidence-20260515-193908.zip`
 
 ## Verdict
 
@@ -87,10 +87,30 @@ returned `ok=true`. The recorded package/source freshness check reported
 validator/distribution unit slice returned `164 passed`, validator mypy/Ruff
 passed, discovery-gold expected predictions matched `44/44`, and both package
 verifier modes passed, including `--require-demonstrated-discovery-patterns`.
-v440 has no Windows transfer/setup/UI proof yet. The latest Windows-side
-package currently validated is v438, where residual cleanup, recovery check,
-evidence collection, and evidence verification all completed after old v384
-smoke files were archived.
+v440 has Windows transfer/setup/UI-smoke/evidence-smoke proof. The ZIP and
+sidecar were copied to `C:\EIDP-staging\`; Win-side `Get-FileHash` matched
+SHA256 `a22f5c7ddb2c49f71264d8133e105b5857164868c4bd168e0781af7b454a237e`.
+The package was expanded to `C:\Users\cyo20\EIDP-v440-2f339ce8` without
+overwriting v408/v438. `EIDP-setup.bat` completed, imported bundled
+`master.xlsx`, rebuilt FY2026 school-year tasks with `school_count=2418` and
+`school_fiscal_year_status_count=2418`, and `validate_windows_install.py
+--after-setup --json` returned `ok=true` with `sqlite_integrity_check=ok`.
+`stage6_recovery_check.bat
+"C:\Users\cyo20\EIDP-v440-2f339ce8\scripts\weekly_run.bat"` returned
+`ok=true`, confirmed the Task Scheduler action matches v440, and confirmed the
+old v384 residual paths no longer exist. A non-browser Streamlit smoke started
+the v440 review app on `127.0.0.1:8501`, received HTTP `200`, observed
+`Uvicorn server started on 127.0.0.1:8501`, and then stopped the process; a
+follow-up process check found no remaining v440 Streamlit/Python process. A
+process-local FY2025 dry-run
+`run_weekly_target_year_discovery.py --current-fy 2025 --dry-run --limit 20`
+wrote `data/output/last_run.json` with `dry_run=true`, `new_document_ids=[]`,
+and `ship_gate_status=not_measured`. The resulting evidence bundle
+`logs/stage6-evidence-20260515-193908.zip` verified on both Windows and Mac
+with `ok=true`, present labels `build_info`, `diagnostics`, `last_run`, and
+`stage6_recovery`, and no forbidden or unsafe entries. This is still a
+setup/UI/recovery dry-run evidence bundle, not a completed operator real-cycle
+Stage 6 sign-off.
 
 The docs-only stale-package replay path remains available for status-only
 follow-up commits:

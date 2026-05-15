@@ -395,6 +395,16 @@ v408 sandbox 既存証跡（real-cycle ではない）:
 | 2026-05-15 | `collect_stage6_evidence` | manifest missing `bootstrap_logs`, `bootstrap_progress`, `discovery_rca` | accepted by current verifier with required labels, but keep diagnostic-only | yes |
 | 2026-05-15 | UI write proof | copied-DB sandbox, not real operator cycle | repeat on approved full-cycle / real cycle | yes |
 
+v440 setup/UI/recovery dry-run 証跡（operator real-cycle ではない）:
+
+| 時刻 | 操作 | 現象 | 回避策 | 未解決 |
+| --- | --- | --- | --- | --- |
+| 2026-05-16 | `EIDP-setup.bat` | setup/import/SQLite validation all pass on `C:\Users\cyo20\EIDP-v440-2f339ce8` | none | no |
+| 2026-05-16 | `stage6_recovery_check.bat` | Task Scheduler action matches v440 and old v384 residual paths are absent | none | no |
+| 2026-05-16 | Streamlit smoke | `127.0.0.1:8501` returned HTTP 200 and process was stopped afterward | none | no |
+| 2026-05-16 | FY2025 dry-run | `last_run.json` generated with `dry_run=true`, `new_document_ids=[]`, `ship_gate_status=not_measured` | run full operator cycle for release sign-off | yes |
+| 2026-05-16 | evidence bundle | `logs\stage6-evidence-20260515-193908.zip` verified on Win and Mac with required labels present | still diagnostic-only because weekly dry-run was not an operator real-cycle | yes |
+
 添付する証跡:
 
 - `logs\run-*.log`
