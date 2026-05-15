@@ -15,7 +15,7 @@ Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v446.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
@@ -75,7 +75,12 @@ and present labels `bootstrap_logs`, `bootstrap_progress`, `build_info`,
 `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`,
 `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. v446 is
 therefore now the latest Windows setup/bootstrap/bounded-backend/evidence-bundle
-proof, but it is still not a completed operator real-cycle Stage 6 sign-off.
+proof. A non-browser UI health smoke then launched v446 through
+`scripts\launch.bat`, received HTTP `200` from
+`http://127.0.0.1:8501/_stcore/health` and `http://127.0.0.1:8501/`, and
+stopped the v446 listener with `listener_after_count=0`; the pulled evidence is
+`logs/win-v446-stage6/v446-ui-smoke-20260516-080445.json`. v446 is still not a
+completed operator real-cycle Stage 6 sign-off.
 
 v445 is the previous Windows setup/canary package. It was built from package snapshot
 `19ceb0dee69fe7b90e32a9a90591018d9c5e773f` after the v444 canary showed that

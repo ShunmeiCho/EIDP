@@ -21,6 +21,7 @@ bundle verification. It is not a completed operator real-cycle Stage 6 sign-off.
 | RCA evidence | `logs/win-v446-stage6/20260515_225803-discovery-rca-batch-plan.json` |
 | Rejection evidence | `logs/win-v446-stage6/20260515_225803-discovery-rejections.jsonl` |
 | Evidence bundle | `logs/win-v446-stage6/stage6-evidence-20260515-225956.zip` |
+| UI health evidence | `logs/win-v446-stage6/v446-ui-smoke-20260516-080445.json` |
 
 ## Evidence
 
@@ -38,6 +39,7 @@ bundle verification. It is not a completed operator real-cycle Stage 6 sign-off.
 | Recovery check | pass / action path skipped | `scripts\stage6_recovery_check.bat` returned `ok=true` in wrapper-default mode, with scheduled-task action check skipped. |
 | Residual cleanup dry-run | pass | `scripts\stage6_residual_cleanup.bat --json` returned `ok=true`, `existing_count=0`, and `moved_count=0`. |
 | Evidence bundle | pass | `logs\stage6-evidence-20260515-225956.zip` verified `ok=true` on Windows and Mac, with no forbidden/unsafe entries, no missing manifest patterns, and all expected evidence labels present. |
+| UI health smoke | pass | v446 launched through `scripts\launch.bat`; `/_stcore/health` and `/` both returned HTTP `200`, and cleanup left `listener_after_count=0`. |
 
 ## Canary Result
 
