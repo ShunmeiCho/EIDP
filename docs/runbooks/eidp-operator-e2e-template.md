@@ -19,10 +19,11 @@ Updated: 2026-05-15
   diagnostic evidence bundle まで実証済みです。ただし sandbox と dry-run は
   業務員 PC 1 サイクル sign-off の代替ではありません。下表の「v408 既存証跡」
   は転記補助であり、空欄のまま残る real-cycle / owner fields を埋める必要があります。
-- v415 は最新の Mac / non-Windows release-gate-clean ZIP です。ただし
-  SSH-Win 断線中のため Windows transfer / setup / UI 証跡は未取得です。次の
-  real-cycle Stage 6 は、明示的に v408 lane 継続を選ぶ場合を除き、v415 を
-  転送して下表の実施情報を v415 値で埋めます。
+- 次の real-cycle Stage 6 は、明示的に v408 lane 継続を選ぶ場合を除き、
+  `docs/reports/current-release-status.md` が示す最新の Mac / non-Windows
+  release-gate-clean ZIP を転送して、下表の実施情報をその ZIP の値で埋めます。
+  ZIP 内のこのテンプレートは自分自身の最終 SHA256 を持てないため、SHA256 は
+  `.sha256` sidecar または release-status の値を転記します。
 
 ## 1. 実施情報
 
@@ -49,15 +50,15 @@ v408 既存証跡（転記候補、real-cycle sign-off ではない）:
 | Windows extract path | `C:\Users\cyo20\EIDP-v408-f0c27158` |
 | transferred ZIP | `C:\Users\cyo20\eidp-windows-v408.zip` |
 
-v415 投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
+現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP package snapshot | `09ad5e6bfa80c8a03ab6f60b2f39a39333fdd42c` |
-| core ZIP | `dist/eidp-windows-v415.zip` |
-| core ZIP sha256 | `25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd` |
+| EIDP package snapshot | `docs/reports/current-release-status.md` から転記 |
+| core ZIP | `dist/eidp-windows-vXXX.zip` |
+| core ZIP sha256 | `.sha256` sidecar または release-status から転記 |
 | core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。ZIP を `C:\EIDP-staging\` に平置きした場合は、sidecar の digest 値と `Get-FileHash` の結果を比較する。 |
-| non-Windows gate log | `logs/release-gate-v415-retroactive.json` |
+| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |
 | Windows extract path | 未実施 |
 | transferred ZIP | 未実施 |
 
@@ -93,8 +94,9 @@ PowerShell で実行し、exit code と出力ファイル名を記録します�
 
 ```powershell
 cd C:\Users\<user>\<EIDP-extract-dir>
-$expected = "25478903757785bec4ab34583878e0af344ceffc1f153a7de5ef219584d11ffd"
-$actual = (Get-FileHash C:\EIDP-staging\eidp-windows-v415.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+$zip = "C:\EIDP-staging\<core-zip-file-name>"
+$expected = "<copy SHA256 from .sha256 sidecar or current-release-status>"
+$actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($actual -ne $expected) { throw "SHA256 mismatch: $actual" }
 .\EIDP-setup.bat
 echo $LASTEXITCODE
