@@ -2,35 +2,73 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `e9f91ccbb51f82cb594be6567076df50276cc97a`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v446.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v446.zip`
-Latest Mac-core package SHA256: `e0436a08d12d09987f15f96c814de2290010714477e54ae0dcff0f290a3d3878`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v446.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v446.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v446.zip`
-Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v446.zip`
+Latest Mac/non-Windows package snapshot: `55cbc1b4007a8a0e2798cc8d79f5adbff1944391`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v447.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v447.zip`
+Latest Mac-core package SHA256: `cada1a77a2d52793939518c62a2433aee3fe959a21ad611a3fd37264c7a38557`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v447.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v447.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v447.zip`
+Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v447.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v446.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v447.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v446.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v446.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v447.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v447.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v446-stage6/stage6-evidence-20260515-225956.zip` (latest v446 verified bundle with complete required labels)
-Current Stage 6 evidence draft: `docs/reports/eidp-v446-stage6-evidence-draft.md`
+Current Stage 6 evidence bundle: `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` (latest v447 verified bundle with complete required labels)
+Current Stage 6 evidence draft: `docs/reports/eidp-v447-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v446 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+v447 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+setup-proven, bounded-bootstrap-proven, bounded-weekly-proven, and
+evidence-bundle-proven package. It was built from package snapshot
+`55cbc1b4007a8a0e2798cc8d79f5adbff1944391`, which adds an `os.fsync()` before
+atomic text-output replacement and restores the reusable operator E2E template
+to version-neutral form for future ZIPs. The v447 strict non-Windows gate
+returned `ok=true` with SHA256
+`cada1a77a2d52793939518c62a2433aee3fe959a21ad611a3fd37264c7a38557`,
+package/source commit match, `source_dirty=false`, `stale=false`,
+validator/distribution tests `164 passed`, validator mypy/Ruff pass,
+discovery-gold expected predictions `44/44`, and both package verifier modes
+pass. Windows transfer SHA matched, the package was expanded to
+`C:\Users\cyo20\EIDP-v447-55cbc1b`, and `EIDP-setup.bat` completed with
+`school_count=2418`, `school_fiscal_year_status_count=2418`, and
+`sqlite_integrity_check=ok`. The packaged pruner deleted only v446 staging and
+deploy artifacts, freeing `1104507037` bytes while preserving v447 current plus
+v442 fallback. URL-only bootstrap completed after downloading and aggregating
+all 47 prefecture seed artifacts. The real `scripts\weekly_run.bat` launcher
+then ran with trusted bounded variables `EIDP_WEEKLY_LIMIT=5`,
+`EIDP_WEEKLY_BATCH_SIZE=5`, `EIDP_WEEKLY_RATE_LIMIT=0.5`, and
+`EIDP_WEEKLY_REQUEST_TIMEOUT=8`; it exited `0` with `run_id=20260515_234136`,
+`crawled=5`, `found=3`, `downloaded=0`, `operator_reviewable_count=1`,
+`target_pdf_auto_acquired_count=0`, `target_pdf_auto_yield_pct=0.0`, and
+`ship_gate_status=below_gate`. The v447 bounded weekly wrote `last_run.json`,
+the RCA batch plan, and the summary JSON through the fsync-hardened
+`write_text_atomic` path. `scripts\validate_install.bat --after-setup
+--after-weekly --json` returned `ok=true`, reporting `last_run_status=success`,
+`sqlite_target_fy_target_pdf_school_count=0`, and
+`sqlite_target_fy_operator_reviewable_school_count=1`. Recovery check and
+residual cleanup dry-run both returned `ok=true`. The evidence bundle
+`logs\stage6-evidence-20260515-234300.zip` verified on both Windows and Mac as
+`logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` with `ok=true`, no
+forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
+`bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
+`discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
+`stage6_residual_cleanup`, and `weekly_run_logs`. v447 is still not a completed
+operator real-cycle Stage 6 sign-off and still fails the production yield gate.
+
+v446 is the previous Mac/non-Windows release-gate-clean, Windows transfer-proven,
 and release-artifact-pruner-proven package. It was built from package snapshot
 `e9f91ccbb51f82cb594be6567076df50276cc97a`, which adds
 `scripts/prune_release_artifacts.py` and wires it into both the Windows ZIP
