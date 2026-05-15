@@ -207,12 +207,16 @@ Pull the bundle back to Mac and verify again:
 
 ```bash
 scp win:C:/Users/cyo20/EIDP-v420-99efba8a/logs/stage6-evidence-*.zip logs/
-uv run python scripts/verify_stage6_evidence.py logs/stage6-evidence-*.zip --json
+latest_bundle="$(ls -t logs/stage6-evidence-*.zip | head -n 1)"
+test -n "$latest_bundle" || { echo "No logs/stage6-evidence-*.zip found"; exit 1; }
+verify_json="logs/stage6-evidence-verify-mac-v420-$(date +%Y%m%d-%H%M%S).json"
+uv run python scripts/verify_stage6_evidence.py "$latest_bundle" --json --require-label last_run > "$verify_json"
+printf 'verified %s -> %s\n' "$latest_bundle" "$verify_json"
 ```
 
 If SSH-Win is still disconnected, copy the newest Windows files below to USB or
 a trusted internal file share, then place them under the Mac repo's `logs/`
-directory before running the same Mac verifier:
+directory before running the same Mac verifier snippet above:
 
 - `C:\Users\cyo20\EIDP-v420-99efba8a\logs\stage6-evidence-*.zip`
 - `C:\Users\cyo20\EIDP-v420-99efba8a\logs\stage6-evidence-verify-*.json`
