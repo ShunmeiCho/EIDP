@@ -83,11 +83,11 @@ isolated retroactive Excel business-value gate:
 
 ```bash
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v419.zip \
+  dist/eidp-windows-v420.zip \
   --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx \
   --retroactive-fiscal-year 2025 \
   --json \
-  --output logs/release-gate-v419-retroactive.json
+  --output logs/release-gate-v420-retroactive.json
 ```
 
 This option creates a temporary `_temp/non-windows-retroactive-*` app root,
@@ -105,11 +105,12 @@ Use this as an algorithm regression gate for rolling-FY Excel output. It does
 not replace the Windows transfer/setup/UI gates, and it does not prove the
 current FY2026/R8 60-70% target-PDF acquisition line.
 
-For v419, the current three-year Mac-side regression lane is:
+The current Mac-side regression lane has v420 FY2025 proof plus v419
+FY2024/FY2023 support proof:
 
 | Fiscal year | Reference workbook | Gate output |
 | --- | --- | --- |
-| FY2025 / R7 | `_temp/v408-r7-cli-export.xlsx` | `logs/release-gate-v419-retroactive.json` |
+| FY2025 / R7 | `_temp/v408-r7-cli-export.xlsx` | `logs/release-gate-v420-retroactive.json` |
 | FY2024 / R6 | `_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx` | `logs/release-gate-v419-retroactive-fy2024-reference.json` |
 | FY2023 / R5 | `_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx` | `logs/release-gate-v419-retroactive-fy2023-reference.json` |
 
@@ -123,13 +124,13 @@ commands, use the matrix runner:
 
 ```bash
 uv run python scripts/run_retroactive_excel_matrix.py \
-  dist/eidp-windows-v419.zip \
+  dist/eidp-windows-v420.zip \
   --allow-docs-only-stale-package \
   --case 2025=_temp/v408-r7-cli-export.xlsx \
   --case 2024=_temp/non-windows-retroactive-fy2024-20260515-125437/output/retroactive-fy2024-export.xlsx \
   --case 2023=_temp/non-windows-retroactive-fy2023-20260515-125526/output/retroactive-fy2023-export.xlsx \
   --json \
-  --output logs/release-gate-v419-retroactive-matrix.json
+  --output logs/release-gate-v420-retroactive-matrix.json
 ```
 
 The runner writes per-year JSON outputs using the package label and fiscal year,
