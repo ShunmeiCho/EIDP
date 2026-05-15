@@ -2,11 +2,11 @@
 
 Updated: 2026-05-15
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `dbafdc34be4f8d753e6f5bcfb6bec35495fefce0`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v412.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v412.zip`
-Latest Mac-core package SHA256: `342996181d45eccdb4f9b141747572239579b6f03554d01b7f7721dc456186b1`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v412.zip`
+Latest Mac/non-Windows package snapshot: `35d5c48f4c77202502e16949e9ce5cc769d0b820`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v413.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v413.zip`
+Latest Mac-core package SHA256: `d8b4040019bc9a86558bfd3fef615c3c68d24638a9835776248cdcc3174ff697`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v413.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v408.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v408.zip`
@@ -27,8 +27,8 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v380-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-v412 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `dbafdc34be4f8d753e6f5bcfb6bec35495fefce0`, which
+v413 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `35d5c48f4c77202502e16949e9ce5cc769d0b820`, which
 contains the latest app-code evidence base
 `15c88348f46ab3fbcc9383afe5830047e562b0c1`, the optional retroactive Excel
 release-gate helper, and the post-v410 non-runtime hardening for AppTest
@@ -36,15 +36,15 @@ timeouts, local runtime-artifact ignores, optional-adapter tests, the
 machine-enforced 80% coverage floor, and the docs-only stale-package replay
 guard, with
 `uv run python scripts/build_windows_zip.py --skip-download --out-zip
-dist/eidp-windows-v412.zip --latest-alias`. The build wrote
-`dist/eidp-windows-v412.zip`, `dist/eidp-windows-v412.zip.sha256`, and refreshed
-`dist/eidp-windows.zip`. `shasum -a 256 dist/eidp-windows-v412.zip
+dist/eidp-windows-v413.zip --latest-alias`. The build wrote
+`dist/eidp-windows-v413.zip`, `dist/eidp-windows-v413.zip.sha256`, and refreshed
+`dist/eidp-windows.zip`. `shasum -a 256 dist/eidp-windows-v413.zip
 dist/eidp-windows.zip` reported the same SHA256 for both files, and
-`dist/eidp-windows-v412.zip.sha256` carried the same value.
-`scripts/verify_windows_distribution.py dist/eidp-windows-v412.zip --json`
+`dist/eidp-windows-v413.zip.sha256` carried the same value.
+`scripts/verify_windows_distribution.py dist/eidp-windows-v413.zip --json`
 returned `ok=true` with SHA256
-`342996181d45eccdb4f9b141747572239579b6f03554d01b7f7721dc456186b1`,
-`git_commit=dbafdc34be4f8d753e6f5bcfb6bec35495fefce0`, `git_dirty=false`,
+`d8b4040019bc9a86558bfd3fef615c3c68d24638a9835776248cdcc3174ff697`,
+`git_commit=35d5c48f4c77202502e16949e9ce5cc769d0b820`, `git_dirty=false`,
 `wheel_count=78`, `project_wheel_count=1`, `entry_count=3077`,
 `prefecture_seed_rows=47`, `prefecture_seed_parser_supported=47`,
 `prefecture_seed_downloadable=47`, `prefecture_seed_school_rows_total=2148`,
@@ -57,43 +57,32 @@ The post-v410 non-runtime coverage gate is now machine-enforced through
 80%`, and `Required test coverage of 80.0% reached. Total coverage: 80.00%`.
 
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v412.zip --retroactive-excel-reference
+dist/eidp-windows-v413.zip --retroactive-excel-reference
 _temp/v408-r7-cli-export.xlsx --retroactive-fiscal-year 2025 --json --output
-logs/release-gate-v412-retroactive.json`
+logs/release-gate-v413-retroactive.json`
 returned `ok=true`. The recorded package/source freshness check reported
-`package_commit=dbafdc34be4f8d753e6f5bcfb6bec35495fefce0`,
-`source_commit=dbafdc34be4f8d753e6f5bcfb6bec35495fefce0`,
+`package_commit=35d5c48f4c77202502e16949e9ce5cc769d0b820`,
+`source_commit=35d5c48f4c77202502e16949e9ce5cc769d0b820`,
 `source_dirty=false`, and `stale=false`; `tests/unit -q` returned
-`1533 passed`; the validator/distribution unit slice returned `161 passed`;
+`1534 passed`; the validator/distribution unit slice returned `161 passed`;
 validator/distribution mypy returned `Success: no issues found in 3 source
 files`; validator/distribution Ruff returned `All checks passed!`;
 `eval-discovery-gold --fail-on-regression` returned `exact_matches=44` and
 `failed_predictions=0`; and both package verifier gates, including
-`--require-demonstrated-discovery-patterns`, passed. v412 has no Windows
+`--require-demonstrated-discovery-patterns`, passed. v413 has no Windows
 transfer/setup/UI proof yet because SSH-Win is currently disconnected.
 
-After recording the v412 evidence, a follow-up lightweight non-Windows gate
-proved the new docs-only stale-package replay path without rebuilding the ZIP:
+The docs-only stale-package replay path remains available for status-only
+follow-up commits:
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v412.zip --skip-full-unit --allow-docs-only-stale-package
---json --output logs/release-gate-v412-docs-only-stale.json` returned
-`ok=true`. The package/source check reported
-`package_commit=dbafdc34be4f8d753e6f5bcfb6bec35495fefce0`,
-`source_commit=4e832414c70951f3e21c66692df4cf27d5580d73`,
-`source_dirty=false`, `stale=true`, `docs_only_stale=true`, and
-`allowed_stale_reason=docs_only`; the changed paths were limited to
-`docs/reports/current-release-status.md`,
-`docs/reports/eidp-current-objective-evidence-checklist.md`,
-`docs/runbooks/eidp-non-windows-release-gates.md`,
-`docs/runbooks/eidp-operator-e2e-template.md`, and
-`docs/runbooks/eidp-retroactive-fy-validation.md`. The lightweight gate also
-reran the validator/distribution unit slice (`161 passed`), validator mypy,
-validator Ruff, discovery gold summary, expected-prediction replay, and both
-package verifier modes successfully.
+dist/eidp-windows-v413.zip --skip-full-unit --allow-docs-only-stale-package
+--json --output logs/release-gate-v413-docs-only-stale.json`. Treat that as a
+current-source replay convenience only; it is not a Windows transfer/setup/UI
+proof and it must still reject dirty tracked source or any non-doc source delta.
 
-v412 also has an integrated isolated Mac retroactive FY2025/R7 import/export
+v413 also has an integrated isolated Mac retroactive FY2025/R7 import/export
 regression proof through that same release-gate run. The helper created
-`_temp/non-windows-retroactive-fy2025-20260515-114548` with its own
+`_temp/non-windows-retroactive-fy2025-20260515-120808` with its own
 `data/eidp.sqlite3`, copied `data/master.xlsx`, bootstrapped SQLite, imported
 the workbook, exported FY2025, and compared against the already proven v408 CLI
 export. The import gate recorded `採録状況` with `schools=2212` and
@@ -106,7 +95,7 @@ low-confidence and auto-flag current rows were all `0`. The
 `extra_sheets=0`, `missing_rows=0`, `extra_rows=0`, and `differing_fields=0`
 across `対象比率`, `学科別`, and `在籍のみ抜粋`.
 
-The app-code delta inherited by v412 from v410 commit
+The app-code delta inherited by v413 from v410 commit
 `15c88348f46ab3fbcc9383afe5830047e562b0c1` restored the documented 80% local
 coverage line without using SSH/Windows: `uv run pytest --cov=src/eidp
 --cov-report=term-missing` returned `1520 passed` with `TOTAL 14186 2866 80%`;
@@ -455,10 +444,10 @@ containing Excel exports, and do not run
 
 Stage 6 template fill map for the v408 evidence lane:
 
-v412 is the next Windows execution candidate because it is the latest
+v413 is the next Windows execution candidate because it is the latest
 Mac/non-Windows release-gate-clean package. It has not been transferred to
 Windows, so the v408 rows below remain evidence support only; final Stage 6
-real-cycle sign-off should use a fresh v412 transfer/setup lane unless the owner
+real-cycle sign-off should use a fresh v413 transfer/setup lane unless the owner
 explicitly freezes on v408.
 
 | Template section | Can be filled from current evidence | Still required |

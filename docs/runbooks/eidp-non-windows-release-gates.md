@@ -83,11 +83,11 @@ isolated retroactive Excel business-value gate:
 
 ```bash
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v412.zip \
+  dist/eidp-windows-v413.zip \
   --retroactive-excel-reference _temp/v408-r7-cli-export.xlsx \
   --retroactive-fiscal-year 2025 \
   --json \
-  --output logs/release-gate-v412-retroactive.json
+  --output logs/release-gate-v413-retroactive.json
 ```
 
 This option creates a temporary `_temp/non-windows-retroactive-*` app root,
