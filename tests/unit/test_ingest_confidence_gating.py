@@ -519,6 +519,49 @@ def test_image_ocr_ingest_marks_dept_and_sr_breakdowns_as_ocr(engine, tmp_path):
         assert json.loads(sr.confidence_breakdown)["method"] == "ocr_tesseract"
 
 
+def test_image_paddleocr_ingest_keeps_provider_specific_method(engine, tmp_path):
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/image-paddleocr.pdf",
+            tmp_path=tmp_path,
+            file_hash="p" * 64,
+        )
+        doc.content_type = "image"
+        ann = _annotation(
+            dept_record=DepartmentRecord(
+                name="PaddleOCR学科", capacity=40, enrollment=35, graduates=30,
+            ),
+            sr=SupportRecipientRecord(annual_total=100, grand_total=100),
+        )
+
+        with (
+            patch(
+                "eidp.pipeline.ingest.extract_text_ocr_result",
+                return_value=OcrExtraction(
+                    page_texts=["令和8年度\nPaddleOCR学科\n対象比率 100"],
+                    provider="paddleocr",
+                    conf_values=[],
+                ),
+            ),
+            patch("eidp.pipeline.ingest.parse_pdf_ocr", return_value=ann),
+        ):
+            stats = ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        assert stats["yearly_current"] == 1
+        assert stats["support_recipient_current"] == 1
+
+        dy = session.query(DepartmentYearly).one()
+        assert dy.extraction_method == "ocr_paddleocr"
+        assert json.loads(dy.confidence_breakdown)["method"] == "ocr_paddleocr"
+
+        sr = session.query(SupportRecipient).one()
+        assert json.loads(sr.confidence_breakdown)["method"] == "ocr_paddleocr"
+
+
 def test_sr_missing_required_lands_non_current(engine, tmp_path):
     with Session(engine) as session:
         school = _seed_school(session)

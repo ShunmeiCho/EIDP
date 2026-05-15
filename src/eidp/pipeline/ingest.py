@@ -58,6 +58,14 @@ def _normalize_pdf_course_name(course_name: str | None) -> str | None:
     return normalize_course_name(course_name)
 
 
+def _ocr_extraction_method(provider: str) -> str:
+    return {
+        "tesseract": "ocr_tesseract",
+        "paddleocr": "ocr_paddleocr",
+        "pymupdf": "ocr_pymupdf",
+    }.get(provider, "pdf_parse")
+
+
 def _collapse_ws(s: str) -> str:
     """Same as _norm but also strips ALL internal whitespace.
 
@@ -191,9 +199,7 @@ def ingest_document(
             return stats
         # Use OCR text for parsing
         annotation = parse_pdf_ocr(pdf_path, ocr_pages)
-        extraction_method = (
-            "ocr_tesseract" if ocr_result.provider == "tesseract" else "pdf_parse"
-        )
+        extraction_method = _ocr_extraction_method(ocr_result.provider)
         ocr_conf_values = ocr_result.conf_values
         # Continue to school-identity check and ingestion below
     else:
@@ -466,7 +472,9 @@ def ingest_document(
                 )
             else:
                 breakdown = compute_pdf_parse_breakdown(
-                    dept_record_dict, prior_enrollment=prior_enrollment,
+                    dept_record_dict,
+                    prior_enrollment=prior_enrollment,
+                    method=extraction_method,
                 )
             verdict = classify(breakdown.composite, thresholds_from_env())
             is_current_row = verdict in ("auto", "auto_flag")
@@ -573,6 +581,7 @@ def ingest_document(
                 sr_breakdown_record,
                 prior_enrollment=sr_prior_total,
                 required_fields=sr_required,
+                method=extraction_method,
             )
         sr_verdict = classify(sr_breakdown.composite, thresholds_from_env())
         sr_is_current = sr_verdict in ("auto", "auto_flag")

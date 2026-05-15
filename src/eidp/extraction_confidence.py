@@ -80,8 +80,14 @@ DEFAULT_CONFIDENCE_REVIEW = 0.70
 DEFAULT_CONFIDENCE_REJECT = 0.50
 
 #: Methods that produce confidence rows.
-ExtractionMethod = Literal["pdf_parse", "ocr_tesseract", "manual"]
-ALLOWED_METHODS: frozenset[str] = frozenset({"pdf_parse", "ocr_tesseract", "manual"})
+ExtractionMethod = Literal["pdf_parse", "ocr_tesseract", "ocr_paddleocr", "ocr_pymupdf", "manual"]
+ALLOWED_METHODS: frozenset[str] = frozenset({
+    "pdf_parse",
+    "ocr_tesseract",
+    "ocr_paddleocr",
+    "ocr_pymupdf",
+    "manual",
+})
 ConfidenceRecordValue = str | int | float | None
 ConfidenceRecord = Mapping[str, ConfidenceRecordValue]
 
@@ -352,8 +358,9 @@ def compute_pdf_parse_breakdown(
     prior_enrollment: float | int | None,
     required_fields: tuple[str, ...] = DEFAULT_REQUIRED_FIELDS,
     weights: tuple[float, float, float] = DEFAULT_WEIGHTS,
+    method: ExtractionMethod | str = "pdf_parse",
 ) -> ConfidenceBreakdown:
-    """Convenience wrapper used by ingest.py for the pdf_parse path.
+    """Convenience wrapper used by ingest.py for structured parser paths.
 
     F1 is approximated from required-field population (the v1 surrogate
     described in the plan): all 4 required → 1.0, partial → 0.5, none
@@ -377,7 +384,7 @@ def compute_pdf_parse_breakdown(
         current_enrollment=_numeric_or_none(record.get("enrollment")),
         previous_enrollment=prior_enrollment,
     )
-    return build_breakdown(f1=f1, f2=f2, f3=f3, method="pdf_parse", weights=weights)
+    return build_breakdown(f1=f1, f2=f2, f3=f3, method=method, weights=weights)
 
 
 def compute_ocr_tesseract_breakdown(
