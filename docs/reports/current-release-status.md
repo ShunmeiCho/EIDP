@@ -17,7 +17,7 @@ Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
-Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
@@ -58,7 +58,16 @@ and `action_matches_expected=true`. `rotate_audit_outbox.py --json` returned
 `rotate=false` for a missing outbox, and `prune_pdf_storage.py --json` returned
 `candidate_count=0`. The root-level packaged `EIDP-start.bat` started
 Streamlit on Windows `127.0.0.1:8501`, returned `_stcore/health=200` and root
-HTTP `200`, and cleanup left no remaining `8501` listener.
+HTTP `200`, and cleanup left no remaining `8501` listener. A follow-up
+read-only browser navigation smoke kept Streamlit alive in a foreground SSH
+session, used an SSH tunnel on Mac `127.0.0.1:18503`, clicked
+`① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, and
+`⑤ 設定（年度・OCR・API）`, and wrote
+`output/playwright/v459-ui-smoke/summary.json` with `hasJapaneseUi=true`,
+`hasTargetFiscalYear=true`, `hasErrorTraceback=false`, and
+`navAllClicked=true`; screenshots `00-home.png` through `04-settings.png` were
+captured, the temporary local Playwright dependency was deleted, all tunnels
+were closed, and Windows cleanup confirmed no remaining `8501` listener.
 
 The v459 URL-only bootstrap completed with all 47 prefecture seed artifacts
 downloaded/aggregated, Step 2b seed URL import `imported=48`,
