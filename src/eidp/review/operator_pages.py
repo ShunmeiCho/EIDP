@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
 from eidp.db.audit import log_manual_action
-from eidp.db.locking import LockBusyError, acquire_lock
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import (
     Department,
     DepartmentChange,
@@ -148,6 +148,19 @@ def _optional_operator_lock(lock_path: Path | None, owner: str) -> Iterator[None
         return
     with acquire_lock(lock_path, owner=owner):
         yield
+
+
+def _operator_lock_held(lock_path: Path | None) -> bool:
+    if lock_path is None:
+        return False
+    status = probe_lock(lock_path)
+    if not status.held:
+        return False
+    st.warning(
+        f"週次処理中、編集は一時停止しています "
+        f"(owner={status.owner}, started_at={status.started_at})"
+    )
+    return True
 
 
 @dataclass(frozen=True)
@@ -770,12 +783,13 @@ def _format_export_exception(exc: Exception) -> str:
     return f"Export failed: {exc}"
 
 
-def page_exports(session: Session) -> None:
+def page_exports(session: Session, *, lock_path: Path | None = None) -> None:
     st.header("Excel出力（管理者向け）")
     st.caption(
         "通常の週次業務では「Excel プレビュー」から確認・ダウンロードします。"
         "この詳細ページは、保存先やテンプレートを管理者が明示して出力するための画面です。"
     )
+    lock_held = _operator_lock_held(lock_path)
 
     st.subheader("マスターExcel（全体一覧）")
     st.caption("テンプレート不要。DB の現在データから新しい全体ワークブックを生成します。")
@@ -784,7 +798,7 @@ def page_exports(session: Session) -> None:
         value=str(_DEFAULT_MASTER),
         key="master_out",
     )
-    if st.button("マスターExcelを生成", type="primary", key="btn_master"):
+    if st.button("マスターExcelを生成", type="primary", key="btn_master", disabled=lock_held):
         try:
             master_path = output_path(master_out, (".xlsx",))
             stats = _run_master_export(session, master_path)
@@ -835,7 +849,7 @@ def page_exports(session: Session) -> None:
             "対象年度以外の出力は管理者向けの履歴/検証用途です。"
             "通常業務の成果物は対象年度で出力してください。"
         )
-    if st.button("競合校Excelを生成", type="primary", key="btn_comp"):
+    if st.button("競合校Excelを生成", type="primary", key="btn_comp", disabled=lock_held):
         try:
             fy = None if selected_fy == settings.target_fiscal_year else selected_fy
             template_path = sample_path(template_in, (".xlsx",))
@@ -1031,6 +1045,7 @@ def page_url_submission(session: Session, *, lock_path: Path | None = None) -> N
         "担当者が自分で見つけた情報公開ページまたは申請書PDFを登録する画面です。"
         "ページURLは来年度以降も再取得の入口として使います。"
     )
+    lock_held = _operator_lock_held(lock_path)
 
     _render_url_needed_worklist()
 
@@ -1072,7 +1087,7 @@ URLは登録前に以下のチェックを通します。
             key="operator_url_bulk_csv",
             help="例: school_id,url",
         )
-        if st.button("CSVを一括登録", disabled=uploaded_csv is None, key="operator_url_bulk_submit"):
+        if st.button("CSVを一括登録", disabled=uploaded_csv is None or lock_held, key="operator_url_bulk_submit"):
             if uploaded_csv is None:
                 st.error("CSVファイルを選択してください。")
             else:
@@ -1147,7 +1162,7 @@ URLは登録前に以下のチェックを通します。
         submitted = st.form_submit_button(
             "登録 + 検証",
             type="primary",
-            disabled=selected_school_id is None,
+            disabled=selected_school_id is None or lock_held,
         )
 
     if not submitted:
@@ -2905,6 +2920,8 @@ def page_proposals_review(session: Session, *, lock_path: Path) -> None:
         "「承認」するとその行は以降のExcel出力に反映されます。"
         "「保留」はDBに何も書かず、記録だけ残します。"
     )
+    if _operator_lock_held(lock_path):
+        return
     with st.expander("このページの使い方（初回は必読）", expanded=False):
         st.markdown(
             """

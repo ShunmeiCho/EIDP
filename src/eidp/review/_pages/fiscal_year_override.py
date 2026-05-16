@@ -243,7 +243,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             value=settings.target_fiscal_year, step=1,
         )
         reason = st.text_input("操作メモ (reason)")
-        submitted = st.form_submit_button("年度を確定", type="primary")
+        submitted = st.form_submit_button("年度を確定", type="primary", disabled=status.held)
 
     if submitted:
         candidate = label_to_doc[selected_label]

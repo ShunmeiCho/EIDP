@@ -1297,6 +1297,7 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
     row: QueueRow,
     *,
     lock_path: Path,
+    lock_held: bool = False,
 ) -> None:
     """Render the actual editable form for one save-eligible queue row."""
     import streamlit as st
@@ -1399,7 +1400,7 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
             "notes": sr_notes,
         }
 
-        submitted = st.form_submit_button("保存", type="primary")
+        submitted = st.form_submit_button("保存", type="primary", disabled=lock_held)
 
     if submitted:
         validation, outcome = submit_form(
@@ -1691,4 +1692,4 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                 continue
 
             with form_col:
-                _render_save_eligible_form(session, row, lock_path=lock_path)
+                _render_save_eligible_form(session, row, lock_path=lock_path, lock_held=status.held)

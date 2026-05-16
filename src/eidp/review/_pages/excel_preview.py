@@ -282,7 +282,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         st.warning(_auto_flag_confidence_message(auto_flag_rows))
 
     can_generate = export_gap.has_target_year_data
-    if st.button("プレビュー workbook を生成", type="primary", disabled=not can_generate):
+    if st.button("プレビュー workbook を生成", type="primary", disabled=status.held or not can_generate):
         with st.spinner("生成中..."):
             preview = build_preview_workbook(session)
             try:

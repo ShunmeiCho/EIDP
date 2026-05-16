@@ -1546,10 +1546,17 @@ def _blocking_reason_options(session: Session, *, fiscal_year: int, school_type:
     return [str(reason) for (reason,) in q.all() if reason]
 
 
-def _render_rebuild_button(session: Session, *, fiscal_year: int, school_type: str | None, lock_path: Path) -> None:
+def _render_rebuild_button(
+    session: Session,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+    lock_path: Path,
+    lock_held: bool = False,
+) -> None:
     import streamlit as st
 
-    if st.button("年度タスクを再計算", type="primary", width="stretch"):
+    if st.button("年度タスクを再計算", type="primary", disabled=lock_held, width="stretch"):
         from eidp.pipeline.school_fiscal_year_status import rebuild_school_fiscal_year_status
 
         try:
@@ -1836,7 +1843,13 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     summary = school_task_summary(session, fiscal_year=fiscal_year, school_type=school_type)
     if summary.total == 0:
         st.warning("学校別年度タスクがまだ作成されていません。初回は再計算してください。")
-        _render_rebuild_button(session, fiscal_year=fiscal_year, school_type=school_type, lock_path=lock_path)
+        _render_rebuild_button(
+            session,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            lock_path=lock_path,
+            lock_held=lock_status.held,
+        )
         return
 
     cols = st.columns(6)
@@ -1866,7 +1879,13 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     if needs_initial_url_bootstrap(summary):
         _render_initial_bootstrap_controls(summary, lock_path=lock_path)
 
-    _render_rebuild_button(session, fiscal_year=fiscal_year, school_type=school_type, lock_path=lock_path)
+    _render_rebuild_button(
+        session,
+        fiscal_year=fiscal_year,
+        school_type=school_type,
+        lock_path=lock_path,
+        lock_held=lock_status.held,
+    )
     _render_weekly_rediscovery_controls(summary, lock_path=lock_path)
 
     st.divider()
