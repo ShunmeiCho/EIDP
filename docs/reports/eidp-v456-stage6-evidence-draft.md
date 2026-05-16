@@ -5,6 +5,7 @@ Package: `dist/eidp-windows-v456.zip`
 Package snapshot: `f33ffc0e6fd801782f3e49fad3315adc64081f6f`
 SHA256: `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`
 Windows root: `C:\Users\cyo20\EIDP-v456-f33ffc0`
+Real-cycle card: `docs/runbooks/eidp-v456-real-cycle-card.md`
 
 ## Status
 
