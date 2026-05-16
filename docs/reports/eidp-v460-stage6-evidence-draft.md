@@ -15,7 +15,6 @@ staging. It is not the final Stage 6 operator-PC real-cycle sign-off.
 | Windows root | `C:\Users\cyo20\EIDP-v460-01e4427` |
 | Release gate | `logs/release-gate-v460.json`, `ok=true` |
 | Companion docs | `dist/eidp-v460-operator-docs-20260517.zip`; verify with `dist/eidp-v460-operator-docs-20260517.zip.sha256` |
-| Companion docs SHA256 | `882cc6ab081dccd15a1ca8bc8ad8aaf1c6ef6ee445c2698f97d998f047e0e382` |
 | Windows staging docs companion | `C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip`; Windows `Get-FileHash` matched the sidecar |
 | Windows staging docs directory | `C:\EIDP-staging\v460-operator-docs-20260517`, plus top-level `00-READ-ME-FIRST-v460.txt` |
 | Current docs HEAD | `3b3083a141e72a47e69ef10a2a7655b3382701d8` |
