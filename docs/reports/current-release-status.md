@@ -1454,7 +1454,7 @@ top-level readme is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, with SHA256
 `7c016d0943aafe0f65630fe6620f85f5843497c459b47c65c5d514d5900d86c1`, matching
 the v460 handoff manifest. The short owner/operator request is also mirrored as
 tracked source at `docs/runbooks/eidp-v460-owner-request-20260516.txt`, with
-SHA256 `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e`,
+SHA256 `cc19326ae5df0b1bd272256b95870a619b778045d4bf64c9879348b986d7ec71`,
 matching `dist/eidp-v460-owner-request-20260516.txt`.
 
 A post-doc-refresh recovery check wrote

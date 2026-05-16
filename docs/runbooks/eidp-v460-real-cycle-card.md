@@ -20,7 +20,7 @@ record.
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt` |
 | Top-level README SHA256 | `7c016d0943aafe0f65630fe6620f85f5843497c459b47c65c5d514d5900d86c1` |
 | Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt` |
-| Owner request SHA256 | `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e` |
+| Owner request SHA256 | `cc19326ae5df0b1bd272256b95870a619b778045d4bf64c9879348b986d7ec71` |
 | Companion docs ZIP | `dist/eidp-v460-operator-docs-20260517.zip` |
 | Windows staging docs ZIP | `C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip` |
 

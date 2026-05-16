@@ -1,5 +1,5 @@
 EIDP v460 Owner / Operator Real-Cycle Request
-Date: 2026-05-16
+Date: 2026-05-17
 
 Purpose
 -------
@@ -42,7 +42,7 @@ Short checklist for the operator
 6. After write actions, open the audit log page and run the outbox flush.
 
 7. Fill the real-cycle fields in:
-   C:\EIDP-staging\v460-operator-docs\eidp-operator-e2e-template.md
+   C:\EIDP-staging\v460-operator-docs-20260517\eidp-operator-e2e-template.md
 
 Required files to return
 ------------------------
@@ -84,11 +84,15 @@ Safety notes
 
 Reference documents
 -------------------
+Use the 20260517 companion docs refresh below. It supersedes the 20260516
+companion docs for operator reading only and does not change the v460 app root,
+scheduled task, database, or release gate.
+
 Detailed run card:
-  C:\EIDP-staging\v460-operator-docs\eidp-v460-real-cycle-card.md
+  C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-real-cycle-card.md
 
 Full evidence template:
-  C:\EIDP-staging\v460-operator-docs\eidp-operator-e2e-template.md
+  C:\EIDP-staging\v460-operator-docs-20260517\eidp-operator-e2e-template.md
 
 Current release boundary:
-  C:\EIDP-staging\v460-operator-docs\current-release-status.md
+  C:\EIDP-staging\v460-operator-docs-20260517\current-release-status.md
