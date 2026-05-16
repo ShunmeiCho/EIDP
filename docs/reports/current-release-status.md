@@ -10,15 +10,16 @@ Latest full non-Windows release-gate package: `dist/eidp-windows-v462.zip`
 Prior post-package docs rebuild: `dist/eidp-windows-v461.zip`, commit
 `b787a72bb1714b77583e4c0e904b1584fdaeba92`, SHA256
 `2c0d74ab382bf179f166bdb4d775cd414a08741eca3b27ba92c2e6c7a459850b`; not the
-current Windows-staged execution pointer
-Latest Windows-core-validated package: `dist/eidp-windows-v460.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v460.zip`
+current Windows scheduled-task execution pointer
+Latest Windows-core-validated package: `dist/eidp-windows-v462.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v462.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v460.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v462.zip`
+Latest Windows-shared-HTTP-cache-canary-proven package: `dist/eidp-windows-v462.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v460.zip`
@@ -52,13 +53,28 @@ dist/eidp-windows-v462.zip --json --output logs/release-gate-v462.json`
 returned `ok=true`: SHA256 sidecar matched, package/source commit matched, full
 unit returned `1666 passed`, validator distribution unit returned `166 passed`,
 validator mypy/Ruff passed, discovery-gold checks passed, package verification
-passed, and demonstrated-pattern package verification passed. v462 has not been
-transferred to Windows, extracted, setup-validated, or weekly-smoked on the
-operator PC.
+passed, and demonstrated-pattern package verification passed.
+
+v462 was then transferred side-by-side to Windows staging, SHA-checked against
+the same sidecar, extracted to `C:\Users\cyo20\EIDP-v462-e1da33f`, set up with
+`EIDP-setup.bat` exit `0`, and validated with
+`scripts\validate_install.bat --after-setup --json` returning `ok=true`,
+`warnings=[]`, and `errors=[]`. Because setup rewrites the weekly scheduled
+task, the `EIDP Weekly Run` task was immediately restored to the v460 runner and
+`scripts\stage6_recovery_check.bat` on v460 returned `ok=true` with
+`action_matches_expected=true`. A v462 Windows package-local stub cache canary
+using a copied temp SQLite DB then returned `ok=true` with `crawled=2`,
+`http_cache_hits=9`, `http_cache_misses=7`, `call_count=7`, and
+`shared_url_call_count=1`; the Mac copy is
+`logs/win-v462-cache-canary/cache-canary-stub-result.json`. This proves the
+packaged run-scoped HTTP cache behavior on Windows without touching the real
+v460 runtime DB or owner-cycle state. v462 has still not replaced the active
+scheduled-task pointer, and no v462 UI-health, weekly, evidence-bundle, or
+owner/operator cycle has been run.
 
 v460 remains the current Windows setup/recovery execution candidate at
-`C:\Users\cyo20\EIDP-v460-01e4427`; Windows staging and the scheduled task have
-not been moved to v461 or v462. v460 was built from package snapshot
+`C:\Users\cyo20\EIDP-v460-01e4427`; the scheduled task has not been moved to
+v461 or v462. v460 was built from package snapshot
 `01e44279238aaef9127ed9b578e29dc8e0070499` after the v460 Mac-side operator
 workflow hardening and version-neutral E2E template update. The operator-cycle
 hardening keeps Excel preview workbook handles out of Streamlit session state,
