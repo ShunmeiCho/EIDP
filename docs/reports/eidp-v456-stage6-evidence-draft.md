@@ -113,6 +113,15 @@ not satisfy the production R8 strict target-PDF 60-70% gate.
   It also reported the expected FY2026 incompleteness via
   `ship_readiness_rc=1`; this is a preflight snapshot, not a real-cycle
   sign-off.
+- Real-cycle preflight refresh: Mac SSH ran the v456 execution-card preflight
+  against `C:\Users\cyo20\EIDP-v456-f33ffc0`: staged ZIP SHA matched,
+  `scripts\validate_install.bat --after-setup` exited `0`,
+  `scripts\stage6_recovery_check.bat` exited `0` with
+  `action_matches_expected=true`, and `scripts\diagnose.bat` exited `0`.
+  Pulled evidence is `logs/win-v456-stage6/diagnostics-20260516-135714.txt`
+  and `logs/win-v456-stage6/stage6-recovery-20260516-135714.json`. The refresh
+  still reports `target_pdf_auto_yield_pct=40.0`,
+  `retroactive_ship_readiness_rc=0`, and current-year `ship_readiness_rc=1`.
 
 ## Caveats
 
