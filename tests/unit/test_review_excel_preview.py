@@ -24,6 +24,7 @@ from eidp.review._pages.excel_preview import (
     build_preview_workbook,
     count_unmatched_and_gap,
     format_sheet_preview,
+    format_sheet_preview_from_bytes,
 )
 
 
@@ -216,6 +217,35 @@ def test_format_sheet_preview_unknown_sheet_raises(engine):
         preview = build_preview_workbook(session)
     with pytest.raises(ValueError, match="not in workbook"):
         format_sheet_preview(preview.workbook, "未知シート")
+
+
+def test_format_sheet_preview_from_bytes_closes_workbook(monkeypatch):
+    calls: list[str] = []
+
+    class FakeWorkbook:
+        sheetnames = ["採録状況"]
+
+        def __getitem__(self, sheet_name: str):
+            assert sheet_name == "採録状況"
+            return self
+
+        def iter_rows(self, *, values_only: bool):
+            assert values_only is True
+            return iter([("header",), ("row",)])
+
+        def close(self) -> None:
+            calls.append("closed")
+
+    monkeypatch.setattr(
+        excel_preview_mod.openpyxl,
+        "load_workbook",
+        lambda *args, **kwargs: FakeWorkbook(),
+    )
+
+    rows = format_sheet_preview_from_bytes(b"fake-xlsx", "採録状況", max_rows=1)
+
+    assert rows == [["header"]]
+    assert calls == ["closed"]
 
 
 # ---------------------------------------------------------------------------

@@ -292,6 +292,15 @@ def _render_breakdown(row: UrlCandidateReviewRow) -> str:
     return " / ".join(f"{key}: {value}" for key, value in sorted(row.breakdown.items()))
 
 
+def action_warning_message(outcome: UrlCandidateActionOutcome) -> str | None:
+    """Operator-facing warning for action outcomes that did not write."""
+    if outcome.skipped_reason == "lock_busy":
+        return "週次処理中です。完了後にもう一度実行してください。"
+    if outcome.skipped_reason:
+        return f"URL候補を更新できませんでした: {outcome.skipped_reason}"
+    return None
+
+
 def render(session: Session, *, lock_path: Path | None = None) -> None:
     st.title("URL候補レビュー")
     if lock_path is not None and probe_lock(lock_path).held:
@@ -336,13 +345,17 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
             )
             action_cols = st.columns(2)
             if action_cols[0].button("承認", key=f"url_candidate_approve_{row.item_id}"):
-                approve_url_candidate(
+                outcome = approve_url_candidate(
                     session,
                     item_id=row.item_id,
                     url_override=edited_url,
                     url_type=selected_url_type,
                     lock_path=lock_path,
                 )
+                warning = action_warning_message(outcome)
+                if warning is not None:
+                    st.warning(warning)
+                    return
                 if lock_path is None:
                     session.commit()
                 st.rerun()
@@ -353,7 +366,11 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
                 placeholder="却下理由",
             )
             if action_cols[1].button("却下", key=f"url_candidate_reject_{row.item_id}"):
-                reject_url_candidate(session, item_id=row.item_id, notes=reject_notes, lock_path=lock_path)
+                outcome = reject_url_candidate(session, item_id=row.item_id, notes=reject_notes, lock_path=lock_path)
+                warning = action_warning_message(outcome)
+                if warning is not None:
+                    st.warning(warning)
+                    return
                 if lock_path is None:
                     session.commit()
                 st.rerun()

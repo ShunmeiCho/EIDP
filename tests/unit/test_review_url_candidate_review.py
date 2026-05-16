@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, ManualActionLog, ReviewItem, School, SchoolSite
 from eidp.review._pages.url_candidate_review import (
+    UrlCandidateActionOutcome,
+    action_warning_message,
     approve_url_candidate,
     list_url_candidate_reviews,
     reject_url_candidate,
@@ -233,3 +235,19 @@ def test_reject_url_candidate_refuses_when_weekly_lock_is_busy(session: Session,
     assert session.query(ManualActionLog).count() == 0
     assert item is not None
     assert item.status == "pending"
+
+
+def test_action_warning_message_surfaces_lock_busy() -> None:
+    message = action_warning_message(
+        UrlCandidateActionOutcome(item_id=10, decision="missing", skipped_reason="lock_busy")
+    )
+
+    assert message == "週次処理中です。完了後にもう一度実行してください。"
+
+
+def test_action_warning_message_surfaces_other_skip_reasons() -> None:
+    message = action_warning_message(
+        UrlCandidateActionOutcome(item_id=10, decision="missing", skipped_reason="missing_url")
+    )
+
+    assert message == "URL候補を更新できませんでした: missing_url"

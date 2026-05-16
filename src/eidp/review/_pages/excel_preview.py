@@ -68,6 +68,12 @@ class PreviewWorkbook:
         self.workbook.save(buf)
         return buf.getvalue()
 
+    def close(self) -> None:
+        """Release any workbook resources held by openpyxl."""
+        close = getattr(self.workbook, "close", None)
+        if callable(close):
+            close()
+
 
 # ---------------------------------------------------------------------------
 # In-memory workbook builder
@@ -129,6 +135,31 @@ def format_sheet_preview(
             break
         out.append(list(row))
     return out
+
+
+def format_sheet_preview_from_bytes(
+    workbook_bytes: bytes,
+    sheet_name: str,
+    *,
+    max_rows: int = 30,
+) -> list[list[Any]]:
+    """Load a preview workbook for one table render, then close it.
+
+    Streamlit reruns keep ``st.session_state`` alive, so the UI stores only
+    serialized XLSX bytes and reconstructs a read-only workbook for the small
+    visible table slice.
+    """
+    workbook = openpyxl.load_workbook(
+        io.BytesIO(workbook_bytes),
+        read_only=True,
+        data_only=True,
+    )
+    try:
+        return format_sheet_preview(workbook, sheet_name, max_rows=max_rows)
+    finally:
+        close = getattr(workbook, "close", None)
+        if callable(close):
+            close()
 
 
 # ---------------------------------------------------------------------------
@@ -254,15 +285,18 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     if st.button("プレビュー workbook を生成", type="primary", disabled=not can_generate):
         with st.spinner("生成中..."):
             preview = build_preview_workbook(session)
-            st.session_state["excel_preview_bytes"] = preview.to_bytes()
-            st.session_state["excel_preview_counts"] = preview.counts
-            st.session_state["excel_preview_workbook"] = preview.workbook
-            st.session_state["excel_preview_gap"] = export_gap
-            st.session_state["excel_preview_quality_warnings"] = preview.quality_warnings
+            try:
+                st.session_state["excel_preview_bytes"] = preview.to_bytes()
+                st.session_state["excel_preview_counts"] = preview.counts
+                st.session_state["excel_preview_gap"] = export_gap
+                st.session_state["excel_preview_quality_warnings"] = preview.quality_warnings
+                st.session_state.pop("excel_preview_workbook", None)
+            finally:
+                preview.close()
         st.rerun()
 
-    if "excel_preview_workbook" in st.session_state:
-        wb = st.session_state["excel_preview_workbook"]
+    if "excel_preview_bytes" in st.session_state:
+        workbook_bytes = st.session_state["excel_preview_bytes"]
         counts_map = st.session_state["excel_preview_counts"]
         st.caption(
             "シート行数: " + " / ".join(
@@ -270,7 +304,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             )
         )
         sheet_name = st.selectbox("シート選択", options=list(SHEET_ORDER))
-        rows = format_sheet_preview(wb, sheet_name, max_rows=30)
+        rows = format_sheet_preview_from_bytes(workbook_bytes, sheet_name, max_rows=30)
         if rows:
             st.table(rows)
         else:
