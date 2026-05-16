@@ -66,7 +66,11 @@ The v454 RCA queue also shows both NEEC target application PDFs as
 `target_form_without_year_evidence` instead of hiding them under
 `non_target_candidates_only`; they remain review-only because the PDFs lack
 strict FY2025 evidence. Tokyo Mode remains a yearless embedded target-form PDF.
-Recovery check and residual cleanup dry-run both returned `ok=true`. The
+Recovery check with explicit expected action
+`C:\Users\cyo20\EIDP-v454-48a346b\scripts\weekly_run.bat` returned `ok=true`,
+`action_matches_expected=true`, and `recommendations=[]`; the pulled JSON is
+`logs/win-v454-stage6/stage6-recovery-20260516-113412-expected-action.json`.
+Residual cleanup dry-run returned `ok=true`. The
 evidence bundle `logs\stage6-evidence-20260516-020943.zip` verified on both
 Windows and Mac as
 `logs/win-v454-stage6/stage6-evidence-20260516-020943.zip` with `ok=true`, no
