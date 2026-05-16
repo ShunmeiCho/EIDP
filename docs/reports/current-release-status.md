@@ -2,11 +2,11 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `f33ffc0e6fd801782f3e49fad3315adc64081f6f`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v456.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v456.zip`
-Latest Mac-core package SHA256: `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v456.zip`
+Latest Mac/non-Windows package snapshot: `a41181ec3177ed4e9569de4c594e80623e9c4ea2`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v458.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v458.zip`
+Latest Mac-core package SHA256: `cbd32630b86d042bc5b5cd59a88fdb9506754d5f371af934203a6d703847e8c2`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v458.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v456.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v452.zip`
@@ -31,8 +31,23 @@ Current Stage 6 real-cycle card: `docs/runbooks/eidp-v456-real-cycle-card.md`
 
 Status: **NOT COMPLETE**
 
-v456 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
-setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
+v458 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `a41181ec3177ed4e9569de4c594e80623e9c4ea2` after the
+Round 4 soft-blocker fixes for UI lock-disable, evidence-recorder lifecycle,
+manual-entry widget cleanup, Excel preview workbook lifecycle, guarded audit
+outbox rotation, and guarded PDF storage pruning. Its SHA256 sidecar is
+`cbd32630b86d042bc5b5cd59a88fdb9506754d5f371af934203a6d703847e8c2`, and
+`uv run python scripts/run_non_windows_release_gates.py
+dist/eidp-windows-v458.zip` returned pass for SHA256 sidecar, package/source
+commit match, full unit `1659 passed`, validator distribution unit/mypy/Ruff,
+discovery-gold checks, package verify, and demonstrated-pattern package verify.
+Mac disk cleanup after v458 removed obsolete v456 package artifacts and retained
+v458 current plus v454 fallback; `scripts/disk_health_check.py --profile
+mac-dev` reported `warn=0 block=0`, `dist=738.8MiB`, `_temp=0B`, protected
+`data=20.0MiB`, and `.claude/worktrees=0B`.
+
+v456 remains the latest Windows transfer-proven, setup-proven,
+bounded-bootstrap-proven, bounded-weekly-proven,
 evidence-bundle-proven, UI-health-proven, default-launcher-proven,
 browser-readonly-navigation-proven, R7-browser-Excel-proven, and
 UI-write-sandbox-proven package. It was built

@@ -1,19 +1,21 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-16
-Latest Mac/non-Windows package snapshot: `f33ffc0e6fd801782f3e49fad3315adc64081f6f`
+Latest Mac/non-Windows package snapshot: `a41181ec3177ed4e9569de4c594e80623e9c4ea2`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
-It is intentionally explicit about lane boundaries: the active operator-PC
-Stage 6 setup lane is now `C:\Users\cyo20\EIDP-v456-f33ffc0` for
-`dist/eidp-windows-v456.zip` / package snapshot `f33ffc0`. v456 is the current
-Mac/non-Windows release-gate-clean, Windows transfer, setup, URL-only bootstrap,
+It is intentionally explicit about lane boundaries: `dist/eidp-windows-v458.zip`
+is the latest Mac/non-Windows release-gate-clean package from package snapshot
+`a41181e`, while the active operator-PC Stage 6 setup lane remains
+`C:\Users\cyo20\EIDP-v456-f33ffc0` for `dist/eidp-windows-v456.zip` / package
+snapshot `f33ffc0`. v456 is the current Windows transfer, setup, URL-only bootstrap,
 evidence-bundle, bounded `weekly_run.bat`, school-domain-override wiring,
 UI-health, default launcher, browser read-only navigation, R7 browser Excel
 generation/download, UI write/audit sandbox, bounded canary, and disk-retention
 lane. v454 remains a retained fallback package with historical UI write/audit
-sandbox support.
+sandbox support. v456 has been pruned from Mac `dist/` after v458 build, but its
+Windows evidence remains valid for the already-executed v456 lane.
 v453 has been pruned from Windows staging/deploy after v456 validation; v442
 remains historical support for the fuller R7 parity workbook, and v408 remains
 historical support for broader copied-DB UI write paths. The real operator cycle
@@ -47,6 +49,17 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | Ship gate: estimated manual work <= 30% | v456 bounded R7 canary recorded `operator_reviewable_count=5`, `operator_reviewable_yield_pct=100.0`, and `ship_gate_status=pass` on the 5-school bounded sample; real operator sign-off and R8 production workload evidence remain missing | Partially proven |
 
 ## Current Release Boundary
+
+- Current v458 Mac/non-Windows package lane: package snapshot
+  `a41181ec3177ed4e9569de4c594e80623e9c4ea2`, SHA256
+  `cbd32630b86d042bc5b5cd59a88fdb9506754d5f371af934203a6d703847e8c2`.
+  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v458.zip`
+  returned pass for SHA sidecar, package/source freshness, full unit
+  `1659 passed`, validator distribution unit/mypy/Ruff, discovery-gold checks,
+  package verify, and demonstrated-pattern package verify. v458 contains the
+  Round 4 soft-blocker fixes for UI lock-disable, resource cleanup tooling,
+  evidence-recorder lifecycle, manual-entry widget cleanup, and Excel preview
+  workbook lifecycle. It has not yet replaced the v456 Windows operator-PC lane.
 
 - Current v456 package/Windows setup lane: package snapshot
   `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, SHA256
