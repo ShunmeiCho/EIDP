@@ -25,6 +25,7 @@ Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v456.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
 Current Stage 6 evidence bundle: `logs/win-v456-stage6/stage6-evidence-20260516-034752.zip` (latest v456 verified bundle with complete required labels)
 Current Stage 6 evidence draft: `docs/reports/eidp-v456-stage6-evidence-draft.md`
+Current Stage 6 real-cycle card: `docs/runbooks/eidp-v456-real-cycle-card.md`
 
 ## Verdict
 
@@ -135,6 +136,13 @@ returned `validate_core_rc=0`, `validate_after_setup_rc=0`,
 `validate_after_weekly_ship_gate_rc=0`, and `retroactive_ship_readiness_rc=0`
 for `retroactive_fiscal_year=2025`. It also reported `ship_readiness_rc=1`,
 which keeps FY2026/current-year real-cycle completion explicitly open.
+The short execution card `docs/runbooks/eidp-v456-real-cycle-card.md` now pins
+the v456 package SHA, Windows root, red-line files, preflight commands,
+real-cycle UI path, evidence-bundle commands, and owner/operator sign-off gates
+for the next Stage 6 run. The docs-only package gate
+`logs/release-gate-v456-docs-current-after-real-cycle-card.json` returned
+`ok=true` after adding this card, using `--allow-docs-only-stale-package`
+against the unchanged v456 ZIP.
 
 v454 remains a retained fallback and historical Windows disposable UI
 write/audit sandbox proof. It was built from package
