@@ -3355,6 +3355,58 @@ def test_run_pdf_discovery_prioritizes_target_like_candidate_before_prefilter_no
         session.close()
 
 
+def test_run_pdf_discovery_keeps_negative_score_target_application_for_review(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Target application links under a syllabus path must not be hidden."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/tuitionfree/", http_status=200))
+        session.flush()
+        target = PdfCandidate(
+            pdf_url="https://example.ac.jp/assets/portal/syllabus/kamata/yoshiki.pdf",
+            page_url="https://example.ac.jp/tuitionfree/",
+            anchor_text="大学等における修学の支援に関する法律第7条第1項の確認に係る申請書（様式第2号）",
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[target], best=target)
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int, **_kwargs: object):
+            download_calls.append(candidate.pdf_url)
+            return None, None, 0, "target", "target_fiscal_year_not_detected"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        assert target.score < 0
+        assert download_calls == ["https://example.ac.jp/assets/portal/syllabus/kamata/yoshiki.pdf"]
+        assert stats["downloaded"] == 0
+        job = session.query(CrawlJob).one()
+        assert job.status == "review"
+        assert job.error_message == "no 2026 PDF candidate confirmed"
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert [payload["reason"] for payload in payloads] == ["target_fiscal_year_not_detected"]
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_limits_general_candidate_scan_without_hiding_formish_target(
     monkeypatch, tmp_path: Path
 ) -> None:

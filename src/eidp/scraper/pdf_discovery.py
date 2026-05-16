@@ -2951,7 +2951,7 @@ def run_pdf_discovery(
                     _score_candidate(c, target_fiscal_year=target_year)
                 result.candidates.sort(key=lambda c: c.score, reverse=True)
             school_name = site.school.school_name if site.school is not None else ""
-            viable = [c for c in result.candidates if c.score >= 0]
+            viable = [c for c in result.candidates if c.score >= 0 or _has_target_application_hint(c)]
             school_mismatch_candidates = [
                 c for c in viable if _candidate_mentions_different_school(c, school_name)
             ]
