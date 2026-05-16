@@ -10,8 +10,8 @@ Windows root: `C:\Users\cyo20\EIDP-v456-f33ffc0`
 
 This is a bounded operator-PC smoke evidence draft. It proves transfer, setup,
 URL-only bootstrap, bounded weekly execution, recovery, UI health, default
-launcher, browser read-only navigation, disk retention, and evidence-bundle
-verification for v456. It is not the final
+launcher, browser read-only navigation, R7 browser Excel generation/download,
+disk retention, and evidence-bundle verification for v456. It is not the final
 operator real-cycle sign-off and does not satisfy the production R8 strict
 target-PDF 60-70% gate.
 
@@ -55,6 +55,16 @@ target-PDF 60-70% gate.
   and target FY `2026年度（令和8年度）`. Only sidebar navigation buttons were
   clicked; no write or workbook-generation action was invoked. Cleanup left no
   Mac `18501` or Windows `8501` listener.
+- R7 browser Excel: v456 was launched with process-scoped
+  `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with
+  `対象年度: 2025年度（令和7年度）`, `Excel出力可 2`, and `Excel対象行 7177`,
+  generated workbook rows `採録状況=2418`, `対象比率=10024`, `学科別=9746`,
+  and `在籍のみ抜粋=9746`, then downloaded
+  `output/playwright/v456-r7-excel-smoke/eidp-master.xlsx`. Local `openpyxl`
+  verified workbook size `3,677,041` bytes, sheets `採録状況`, `対象比率`,
+  `学科別`, `在籍のみ抜粋`, and dimensions `2419x10`, `10025x22`, `9748x83`,
+  and `9748x19`. Windows checks confirmed both checked v456 `.env` paths were
+  absent; cleanup left no Mac `18501` or Windows `8501` listener.
 - Recovery: `scripts\stage6_recovery_check.bat` with expected action
   `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` returned `ok=true`
   and `action_matches_expected=true`.

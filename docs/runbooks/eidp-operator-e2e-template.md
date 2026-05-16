@@ -302,7 +302,7 @@ v454 R7 retroactive 既存証跡（FY2026 yield ではない）:
 
 | 指標 | 結果 |
 | --- | --- |
-| R7 browser download | `output/playwright/v454-r7-excel-smoke/eidp-master.xlsx`, suggested `eidp-master.xlsx` |
+| R7 browser download | `output/playwright/v456-r7-excel-smoke/eidp-master.xlsx`, suggested `eidp_master.xlsx` |
 | Sheet counts | `採録状況=2418`, `対象比率=10024`, `学科別=9746`, `在籍のみ抜粋=9746` |
 | openpyxl dimensions | `2419x10`, `10025x22`, `9748x83`, `9748x19` |
 | FY persistence check | v454 root/adjacent `.env` missing after process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` launch |
