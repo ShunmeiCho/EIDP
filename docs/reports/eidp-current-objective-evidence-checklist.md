@@ -774,7 +774,12 @@ Package snapshot: f33ffc0e6fd801782f3e49fad3315adc64081f6f
 Expected SHA256: 73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2
 Extract path: C:\Users\cyo20\EIDP-v456-f33ffc0
 Evidence bundle: logs/win-v456-stage6/stage6-evidence-20260516-034752.zip
+Real-cycle card: docs/runbooks/eidp-v456-real-cycle-card.md
 ```
+
+The docs-only package gate
+`logs/release-gate-v456-docs-current-after-real-cycle-status.json` returned
+`ok=true` after linking the real-cycle card into the current release status.
 
 For Mac-driven remote UI verification, start the operator UI tunnel after
 Windows setup/validation has passed:
