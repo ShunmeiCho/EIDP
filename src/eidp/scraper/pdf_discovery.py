@@ -1226,6 +1226,23 @@ def _previous_html_block_text(html: str, before: int, tag: str) -> str:
     return ""
 
 
+def _previous_definition_term_context(html: str, before: int) -> str:
+    """Return the active fiscal-year term for a ``dd`` link."""
+
+    prefix = html[:before]
+    dl_start = prefix.lower().rfind("<dl")
+    dl_end = prefix.lower().rfind("</dl")
+    if dl_start == -1 or dl_end > dl_start:
+        return ""
+
+    dl_prefix = html[dl_start:before]
+    for match in reversed(list(re.finditer(r"<dt\b[^>]*>.*?</dt\s*>", dl_prefix, re.IGNORECASE | re.DOTALL))):
+        text = _html_text(match.group(0))
+        if text and _has_strong_fiscal_year_context(text):
+            return text
+    return ""
+
+
 def _has_fiscal_year_context(text: str) -> bool:
     return has_fiscal_year_text(text)
 
@@ -1420,7 +1437,12 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
             previous_text = _previous_fiscal_year_context(html, block_start)
         elif tag in {"p", "tr", "dd"}:
             previous_text = _previous_html_block_text(html, block_start, tag)
-            if tag in {"p", "dd"} and not _has_strong_fiscal_year_context(previous_text):
+            if tag == "dd" and not _has_strong_fiscal_year_context(previous_text):
+                previous_text = _previous_definition_term_context(html, block_start) or _previous_fiscal_year_context(
+                    html,
+                    block_start,
+                )
+            elif tag == "p" and not _has_strong_fiscal_year_context(previous_text):
                 previous_text = _previous_fiscal_year_context(html, block_start)
         has_current_year_context = any(_has_strong_fiscal_year_context(part) for part in parts)
         if previous_text and not has_current_year_context and _has_strong_fiscal_year_context(previous_text):

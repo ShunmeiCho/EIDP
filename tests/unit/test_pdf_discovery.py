@@ -509,6 +509,38 @@ def test_extract_pdf_links_uses_definition_list_context_without_pagewide_news_no
     assert _has_target_year_hint(application, target_year=2026)
 
 
+def test_extract_pdf_links_uses_previous_definition_term_for_application_link() -> None:
+    html = """
+    <div id="pdf_list">
+      <dl>
+        <dt>令和7年度</dt>
+        <dd><a href="https://mail.nkhs.ac.jp/release/2025/HA_koukai_2025.pdf">ITスペシャリスト科</a></dd>
+        <dd><a href="https://www.katayanagi.ac.jp/kokai/index.html">学校法人片柳学園情報公開</a></dd>
+        <dd>
+          <a href="https://mail.nkhs.ac.jp/release/2025/nkhs_application2025.pdf">
+            大学等における修学の支援に関する法律第７条第１項の確認に係る申請書
+          </a>
+        </dd>
+        <dt>令和6年度</dt>
+        <dd>
+          <a href="https://mail.nkhs.ac.jp/release/2024/nkhs_application2024.pdf">
+            大学等における修学の支援に関する法律第７条第１項の確認に係る申請書
+          </a>
+        </dd>
+      </dl>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(html, "https://www.nkhs.ac.jp/about/publicindex/", target_fiscal_year=2025)
+
+    current = next(candidate for candidate in candidates if candidate.pdf_url.endswith("nkhs_application2025.pdf"))
+    assert "令和7年度" in current.anchor_text
+    assert "令和6年度" not in current.anchor_text
+    assert _has_target_application_hint(current)
+    assert _has_target_year_hint(current, target_year=2025)
+    assert _pre_download_rejection(current, target_year=2025) is None
+
+
 def test_extract_pdf_links_does_not_assign_visible_sibling_anchor_text_to_empty_anchor() -> None:
     html = """
     <div class="text01">
