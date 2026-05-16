@@ -197,22 +197,22 @@ The process was force-stopped after the health proof; launcher exit -1 is a stop
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
-v454 既存証跡（転記候補。bounded diagnostic-only）:
+v456 既存証跡（転記候補。bounded diagnostic-only。UI write sandbox は v454 支持証跡）:
 
 | 手順 | 結果 | 証跡 |
 | --- | --- | --- |
-| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v454-48a346b` |
+| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v456-f33ffc0` |
 | `EIDP-setup.bat` | pass | setup completed; SQLite integrity ok |
 | `.venv` 作成 | pass | `validate_windows_install.py --after-setup --json` |
 | DB bootstrap / master import | pass | `school_count=2418`, `sqlite_integrity_check=ok` |
 | 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418` |
-| Task Scheduler recovery | pass | expected action `C:\Users\cyo20\EIDP-v454-48a346b\scripts\weekly_run.bat`, `action_matches_expected=true` |
+| Task Scheduler recovery | pass | expected action `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat`, `action_matches_expected=true` |
 | URL-only bootstrap | pass | 47 prefectures; `school_domain_overrides.csv` loaded with `count=6` |
 | bounded `weekly_run.bat` canary | pass | `rc=0`, `crawled=5`, `found=5`, `downloaded=2`, `operator_reviewable_count=5`, `ship_gate_status=pass` |
-| Evidence bundle verify | pass | `logs/win-v454-stage6/stage6-evidence-20260516-023620.zip`, all required labels present |
+| Evidence bundle verify | pass | `logs/win-v456-stage6/stage6-evidence-20260516-034752.zip`, all required labels present |
 | Default launcher health | pass | `scripts\launch.bat`, Windows `8501`, Mac tunnel `18501 -> 8501`, health/root HTTP 200 |
-| Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定` rendered under `output/playwright/v454-ui-smoke/` |
-| Browser UI write/audit sandbox | pass | rejected one seeded `URL候補レビュー` item, flushed `exported=2 already_present=0 failed=0`, and left real runtime DB marker counts `0` |
+| Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定` rendered under `output/playwright/v456-ui-smoke/` |
+| Browser UI write/audit sandbox | pass / v454 support | rejected one seeded `URL候補レビュー` item, flushed `exported=2 already_present=0 failed=0`, and left real runtime DB marker counts `0` |
 
 ## 5. 4 工程 E2E
 

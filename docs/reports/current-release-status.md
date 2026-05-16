@@ -17,7 +17,7 @@ Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v456.zip`
-Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v456.zip`
@@ -32,7 +32,8 @@ Status: **NOT COMPLETE**
 
 v456 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
 setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
-evidence-bundle-proven, UI-health-proven, and default-launcher-proven package. It was built
+evidence-bundle-proven, UI-health-proven, default-launcher-proven, and
+browser-readonly-navigation-proven package. It was built
 from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
 the operator E2E template version-neutral so future ZIPs do not embed stale
 package/SHA fields. The v456 strict non-Windows gate
@@ -85,10 +86,23 @@ with `run_id=20260516_034531`, `crawled=5`, `found=5`, `downloaded=2`,
 `stage6_residual_cleanup`, and `weekly_run_logs`. The URL-only bootstrap
 `--after-bootstrap` validator currently fails because `--skip-discover` progress
 does not emit ship-gate metric keys; the weekly validator is the authoritative
-bounded acquisition check for this v456 lane.
+bounded acquisition check for this v456 lane. A browser-level read-only
+navigation smoke then ran the v456 package through `scripts\launch.bat`, opened
+the Mac tunnel `127.0.0.1:18501 -> Windows 127.0.0.1:8501`, and rendered the
+real Streamlit UI through Playwright. The browser title was
+`EIDP Operator Console`; `output/playwright/v456-ui-smoke/browser-summary.json`
+recorded `quick`, `schoolTasks`, `pdfManual`, `excelPreview`, `settings`,
+`build`, and `targetFy` all `true`. Snapshots and screenshots under
+`output/playwright/v456-ui-smoke/` cover `① 学校別タスク`,
+`② PDF確認・手入力`, `④ Excel プレビュー`, and
+`⑤ 設定（年度・OCR・API）`. Only sidebar navigation buttons were clicked; no
+weekly re-fetch, workbook generation, settings save, or write action was
+invoked. Cleanup closed the browser tab, stopped the local tunnel, killed the
+Windows Streamlit process, and confirmed no remaining local `18501` or Windows
+`8501` listener.
 
-v454 remains the latest Windows browser-readonly-navigation, R7 browser-Excel,
-and disposable UI write/audit sandbox proof. It was built from package
+v454 remains the latest Windows R7 browser-Excel and disposable UI write/audit
+sandbox proof. It was built from package
 snapshot `48a346bb626be749adb72d1aeb6a684903f22049`, which keeps target
 application PDFs viable for RCA/operator review even when a negative path token
 such as `syllabus` lowers their discovery score. The v454 strict non-Windows
@@ -1095,8 +1109,8 @@ sandbox proof can inform the checklist, but they must not be recorded as a
 completed v454 one-cycle sign-off.
 
 Historical v397/v384/v399 proofs below are retained as supporting evidence, but
-the current setup/weekly/UI-health lane is v456, while v454 remains the latest
-browser-nav, R7 browser-Excel, default-launcher, and UI-write sandbox lane. Old residual smoke artifacts remain
+the current setup/weekly/UI-health/default-launcher/browser-nav lane is v456,
+while v454 remains the latest R7 browser-Excel and UI-write sandbox lane. Old residual smoke artifacts remain
 diagnostic until explicitly cleaned. Do not externally share any bundle
 containing Excel exports, and do not run
 `stage6_residual_cleanup.py --apply` without explicit operator/user approval.
@@ -1106,23 +1120,23 @@ Stage 6 template fill map for the v456 evidence lane:
 v456 is the current Windows execution candidate because it is the latest
 Mac/non-Windows release-gate-clean package that has also been transferred,
 SHA-checked, set up, UI-health-smoked, URL-bootstrapped, bounded-weekly-smoked,
-and evidence-bundle-verified on the operator PC. v454 remains supporting proof
-for browser navigation, R7 browser Excel, default launcher, and disposable UI
-write/audit paths. The rows below are still evidence support only until the
+browser-navigation-smoked, and evidence-bundle-verified on the operator PC. v454
+remains supporting proof for R7 browser Excel and disposable UI write/audit
+paths. The rows below are still evidence support only until the
 final operator real-cycle sign-off is captured. Future transfers should keep the same
 SSH/SCP or no-SSH manual transfer discipline, with Windows-side SHA256 checking
 before extraction.
 
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |
-| 1. 実施情報 | v454 package snapshot `48a346bb626be749adb72d1aeb6a684903f22049`; `dist/eidp-windows-v454.zip`; SHA256 `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`; extract path `C:\Users\cyo20\EIDP-v454-48a346b` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
-| 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Final v454/operator run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
-| 3. 証跡採取コマンド | v454 hash/setup/validate/recovery/evidence-bundle/UI-health/browser navigation/R7 browser Excel/default launcher/UI write-audit sandbox proofs are available; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; v454 final evidence bundle from the real operator cycle |
-| 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, default `EIDP-start.bat` / `18501 -> 8501` health, Mac tunnel health, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v454-48a346b\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle |
-| 5. 4 工程 E2E | v454 bounded R7 weekly downloaded two target PDFs, v454 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v454 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
-| 6. KPI 判定 | v454 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`; FY2026 production output and final R8 yield remain unproven | v454 real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
+| 1. 実施情報 | v456 package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`; `dist/eidp-windows-v456.zip`; SHA256 `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`; extract path `C:\Users\cyo20\EIDP-v456-f33ffc0` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
+| 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Final v456/operator run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
+| 3. 証跡採取コマンド | v456 hash/setup/validate/recovery/evidence-bundle/UI-health/default-launcher/browser-navigation proofs are available; v454 R7 browser Excel and UI write-audit sandbox proofs remain supporting evidence; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; v456 final evidence bundle from the real operator cycle |
+| 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, default `EIDP-start.bat` / `18501 -> 8501` health, Mac tunnel health, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle |
+| 5. 4 工程 E2E | v456 bounded R7 weekly downloaded two target PDFs and v456 browser navigation rendered the core operator pages without invoking writes; v454 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v454 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
+| 6. KPI 判定 | v456 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`; FY2026 production output and final R8 yield remain unproven | v456 real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
 | 7. 監査 / outbox | v454 disposable UI write/audit sandbox showed flush result `exported=2 already_present=0 failed=0`, `pending_outbox=0`, one seeded audit row plus one `url_candidate_rejected` row exported, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0`; v408/v407 sandboxes show broader historical surfaces | Real or approved full-cycle `manual_action_log` delta and final JSONL duplicate check |
-| 8. 障害 / 回避策 | Known current hazards: v454 UI-write proof is sandbox-only, v454 bounded strict auto-yield is `40.0%`, v407 evidence bundle with Excel export is verifier-rejected, old v384 residual smoke artifacts still exist, and SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v454 full-cycle failures and screenshots/log attachments |
+| 8. 障害 / 回避策 | Known current hazards: v454 UI-write proof is sandbox-only, v456 bounded strict auto-yield is `40.0%`, v407 evidence bundle with Excel export is verifier-rejected, old v384 residual smoke artifacts still exist, and SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v456 full-cycle failures and screenshots/log attachments |
 | 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |
 
 v397 was previously transferred to the operator PC and setup-validated in the

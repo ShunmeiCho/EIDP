@@ -10,7 +10,8 @@ Windows root: `C:\Users\cyo20\EIDP-v456-f33ffc0`
 
 This is a bounded operator-PC smoke evidence draft. It proves transfer, setup,
 URL-only bootstrap, bounded weekly execution, recovery, UI health, default
-launcher, disk retention, and evidence-bundle verification for v456. It is not the final
+launcher, browser read-only navigation, disk retention, and evidence-bundle
+verification for v456. It is not the final
 operator real-cycle sign-off and does not satisfy the production R8 strict
 target-PDF 60-70% gate.
 
@@ -44,6 +45,16 @@ target-PDF 60-70% gate.
   `_stcore/health=ok` and root HTTP `200` on Windows `127.0.0.1:8501`, observed
   listener owner process `25704` before forced cleanup, and cleanup left no
   remaining `8501` listener.
+- Browser read-only navigation: `scripts\launch.bat` ran the same v456 install,
+  Mac tunnel `127.0.0.1:18501 -> Windows 127.0.0.1:8501` returned health `ok`,
+  and Playwright rendered the real Streamlit UI with title
+  `EIDP Operator Console`. Snapshots and screenshots under
+  `output/playwright/v456-ui-smoke/` cover `① 学校別タスク`,
+  `② PDF確認・手入力`, `④ Excel プレビュー`, and
+  `⑤ 設定（年度・OCR・API）`; `browser-summary.json` confirms build `f33ffc0`
+  and target FY `2026年度（令和8年度）`. Only sidebar navigation buttons were
+  clicked; no write or workbook-generation action was invoked. Cleanup left no
+  Mac `18501` or Windows `8501` listener.
 - Recovery: `scripts\stage6_recovery_check.bat` with expected action
   `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` returned `ok=true`
   and `action_matches_expected=true`.
