@@ -72,9 +72,10 @@ Stage 6 operator-PC real-cycle sign-off.
 
 | Item | Result |
 | --- | --- |
-| Bundle | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip` |
-| Verify JSON | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-verify-20260516-150535.json` |
-| Verification | `ok=true`, `entry_count=10`, `missing_required_labels=[]` |
+| Bundle | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip` |
+| Verify JSON | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-verify-20260516-160115.json` |
+| Verification | `ok=true`, `entry_count=12`, `missing_required_labels=[]` |
+| Latest diagnostics | Root `EIDP-diagnose.bat` exited `0` and wrote `C:\Users\cyo20\EIDP-v459-50152a5\logs\diagnostics-20260516-160111.txt` before this bundle was collected |
 | Present labels | `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`, `weekly_run_logs` |
 | Expected missing | `stage6_residual_cleanup` was not run during this bounded smoke |
 

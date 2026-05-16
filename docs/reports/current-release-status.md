@@ -23,7 +23,7 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v459.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip`
+Current Stage 6 evidence bundle: `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`
 Current Stage 6 evidence draft: `docs/reports/eidp-v459-stage6-evidence-draft.md`
 Current Stage 6 real-cycle card: `docs/runbooks/eidp-v459-real-cycle-card.md`
 
@@ -118,9 +118,12 @@ with `run_id=20260516_060230`, `crawled=5`, `found=5`, `downloaded=2`,
 `ship_gate_status=pass`. `scripts\validate_install.bat --after-setup
 --after-weekly --json` returned `ok=true`, `last_run_status=success`,
 `sqlite_target_fy=2025`, `sqlite_target_fy_target_pdf_school_count=2`, and
-`sqlite_target_fy_operator_reviewable_school_count=5`. The v459 evidence bundle
-`C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip`
-verified with `ok=true`, `entry_count=10`, and `missing_required_labels=[]`.
+`sqlite_target_fy_operator_reviewable_school_count=5`. Root
+`EIDP-diagnose.bat` later exited `0` and wrote
+`C:\Users\cyo20\EIDP-v459-50152a5\logs\diagnostics-20260516-160111.txt`.
+The refreshed v459 evidence bundle
+`C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`
+verified with `ok=true`, `entry_count=12`, and `missing_required_labels=[]`.
 Mac cleanup retained v459 current plus v454 fallback and reported `warn=0
 block=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, protected
 `data=20.0MiB`, and `.claude/worktrees=0B`. Windows cleanup retained only
