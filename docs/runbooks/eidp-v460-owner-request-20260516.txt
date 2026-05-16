@@ -68,7 +68,8 @@ Do not approve v1.0 from these alone
 - v460 setup validator ok=true
 - read-only browser navigation smoke
 - diagnostic evidence ZIP rejected because last_run is missing
-- v459 bounded weekly / R7 Excel / UI write support evidence
+- v464 side-by-side R7 Excel support evidence
+- v459 bounded weekly / UI write support evidence
 
 These are support evidence only. The release decision needs the v460 real-cycle
 record and verifier-accepted v460 evidence bundle.
@@ -96,3 +97,6 @@ Full evidence template:
 
 Current release boundary:
   C:\EIDP-staging\v460-operator-docs-20260517\current-release-status.md
+
+Current completion audit:
+  C:\EIDP-staging\v460-operator-docs-20260517\2026-05-17-active-goal-completion-audit.md

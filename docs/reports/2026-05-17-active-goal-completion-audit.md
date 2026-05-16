@@ -2,7 +2,6 @@
 
 Date: 2026-05-17
 Branch: `sprint8-handoff-finalize`
-Audit HEAD: `55b3bdf66e982e461dbfa2f4f947bd550f9b7daf`
 Verdict: **NOT COMPLETE**
 
 This audit checks the active long-term objective against current artifacts. It
@@ -53,9 +52,9 @@ operator manual workload of 30% or lower. Full automation is not required.
   `9a94226b243fba691936db46c1fc11ef7c9debbd`, SHA256
   `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`.
 - Latest operator companion docs ZIP is
-  `dist/eidp-v460-operator-docs-20260517.zip`, SHA256
-  `96d717145376919e68da07d803ba32d30be29100578d60b02cd7137e4023a955`,
-  expanded on Windows under `C:\EIDP-staging\v460-operator-docs-20260517`.
+  `dist/eidp-v460-operator-docs-20260517.zip`; verify the generated artifact
+  with its sidecar. It is expanded on Windows under
+  `C:\EIDP-staging\v460-operator-docs-20260517`.
 - No tag, no main merge, and no release approval has been made from these
   support proofs.
 

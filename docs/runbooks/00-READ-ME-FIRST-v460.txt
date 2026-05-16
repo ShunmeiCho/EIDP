@@ -23,6 +23,7 @@ Read first:
 - C:\EIDP-staging\v460-operator-docs-20260517\eidp-operator-e2e-template.md
 - C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-stage6-evidence-draft.md
 - C:\EIDP-staging\v460-operator-docs-20260517\current-release-status.md
+- C:\EIDP-staging\v460-operator-docs-20260517\2026-05-17-active-goal-completion-audit.md
 
 The 20260517 companion docs refresh supersedes the 20260516 companion docs for
 operator reading only. It does not change the v460 core package, extracted app
@@ -30,4 +31,5 @@ root, scheduled task, database, or release approval gate.
 
 Do not approve v1.0 from setup proof alone. v460 still needs the owner/operator
 real-cycle, evidence bundle verification, KPI fill, and sign-off. v459 evidence
-is support only and is not a v460 real-cycle substitute.
+and v464 side-by-side evidence are support only and are not a v460 real-cycle
+substitute.

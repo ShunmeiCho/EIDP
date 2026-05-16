@@ -16,11 +16,12 @@ record.
 | Package snapshot | `01e44279238aaef9127ed9b578e29dc8e0070499` |
 | Windows root | `C:\Users\cyo20\EIDP-v460-01e4427` |
 | Evidence draft | `docs/reports/eidp-v460-stage6-evidence-draft.md` |
+| Completion audit | `docs/reports/2026-05-17-active-goal-completion-audit.md` |
 | Full template | `docs/runbooks/eidp-operator-e2e-template.md` |
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt` |
-| Top-level README SHA256 | `7c016d0943aafe0f65630fe6620f85f5843497c459b47c65c5d514d5900d86c1` |
+| Top-level README SHA256 | `514e23ed7c32b677a057e81eba53d884c0679b7e6eb16b1e17a9404dac7434d7` |
 | Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt` |
-| Owner request SHA256 | `cc19326ae5df0b1bd272256b95870a619b778045d4bf64c9879348b986d7ec71` |
+| Owner request SHA256 | `c13dd1018c60388266105c5e8b503867c9b9f0594dab96c6bfc2bb93f43cc258` |
 | Companion docs ZIP | `dist/eidp-v460-operator-docs-20260517.zip` |
 | Windows staging docs ZIP | `C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip` |
 
@@ -116,8 +117,8 @@ Expected before continuing:
 6. In `監査ログ`, run `Outbox を flush` after write actions.
 7. Record the actual KPI values in `docs/runbooks/eidp-operator-e2e-template.md`.
 
-Do not treat the existing v459 bounded canary, browser health/nav smoke,
-process-scoped R7 browser Excel proof, disposable UI write/audit sandbox, or R7
+Do not treat the existing v459 bounded canary, browser health/nav smoke, v464
+side-by-side R7 browser Excel proof, disposable UI write/audit sandbox, or R7
 retroactive support as the v460 real-cycle sign-off.
 
 ## Evidence Bundle
