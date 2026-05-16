@@ -187,7 +187,7 @@ The process was force-stopped after the health proof; launcher exit -1 is a stop
 | 手順 | 期待 | 結果 | 証跡 |
 | --- | --- | --- | --- |
 | ZIP 解凍 | 任意パスで解凍できる | pass / fail | |
-| `first_setup.bat` | exit code 0 | pass / fail | |
+| `EIDP-setup.bat` | exit code 0 | pass / fail | |
 | `.venv` 作成 | `.venv\Scripts\python.exe` が存在 | pass / fail | |
 | DB bootstrap | `data\eidp.sqlite3` が存在 | pass / fail | |
 | master import | 学校マスタが取り込まれる | pass / fail | |
