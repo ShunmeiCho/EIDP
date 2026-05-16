@@ -281,7 +281,7 @@ def test_gap_report_for_export_counts_ready_target_year_data() -> None:
 # --- ship readiness --------------------------------------------------------
 
 
-def test_ship_readiness_treats_strict_target_pdf_as_diagnostic_metric() -> None:
+def test_ship_readiness_keeps_operator_review_line_separate_from_strict_data_line() -> None:
     s = _session()
     for school_id in range(1, 11):
         _school(s, school_id, "東京")
@@ -315,7 +315,7 @@ def test_ship_readiness_treats_strict_target_pdf_as_diagnostic_metric() -> None:
     assert rep.ok_strict is False
     assert [criterion.name for criterion in rep.criteria] == ["estimated_manual_workload"]
     assert [criterion.name for criterion in rep.operator_review_criteria] == ["estimated_manual_workload"]
-    assert [criterion.name for criterion in rep.strict_data_criteria] == ["excel_ready"]
+    assert [criterion.name for criterion in rep.strict_data_criteria] == ["strict_target_pdf", "excel_ready"]
 
 
 def test_ship_readiness_passes_when_final_business_thresholds_are_met() -> None:
@@ -383,7 +383,7 @@ def test_ship_readiness_can_pass_with_review_candidate_operator_coverage() -> No
     assert rep.excel_ready_rate == pytest.approx(0.7)
     assert rep.ok is True
     assert rep.ok_operator_review is True
-    assert rep.ok_strict is True
+    assert rep.ok_strict is False
 
 
 # --- extraction ------------------------------------------------------------

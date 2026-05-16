@@ -244,7 +244,7 @@ def report_ship_readiness(
     strict_target_pdf_min: float = typer.Option(
         0.60,
         "--strict-target-pdf-min",
-        help="Minimum strict Excel-ready target-FY data rate",
+        help="Minimum strict target-FY PDF and Excel-ready data rate",
     ),
     manual_workload_max: float = typer.Option(
         0.30,

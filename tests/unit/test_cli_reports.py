@@ -275,6 +275,7 @@ def test_report_ship_readiness_json_uses_operator_review_gate(monkeypatch) -> No
             ShipReadinessCriterion("estimated_manual_workload", 0.3, 0.3, True),
         )
         strict_data_criteria = (
+            ShipReadinessCriterion("strict_target_pdf", 0.5, 0.6, False),
             ShipReadinessCriterion("excel_ready", 0.4, 0.6, False),
         )
         return ShipReadinessReport(
@@ -311,7 +312,7 @@ def test_report_ship_readiness_json_uses_operator_review_gate(monkeypatch) -> No
     assert payload["estimated_manual_workload_rate"] == 0.3
     assert [criterion["name"] for criterion in payload["criteria"]] == ["estimated_manual_workload"]
     assert payload["operator_review_criteria"][0]["name"] == "estimated_manual_workload"
-    assert payload["strict_data_criteria"][0]["name"] == "excel_ready"
+    assert [criterion["name"] for criterion in payload["strict_data_criteria"]] == ["strict_target_pdf", "excel_ready"]
     assert fake_session.closed is True
 
 
@@ -330,6 +331,7 @@ def test_report_ship_readiness_json_marks_retroactive_fiscal_year(monkeypatch) -
             ShipReadinessCriterion("estimated_manual_workload", 0.2, 0.3, True),
         )
         strict_data_criteria = (
+            ShipReadinessCriterion("strict_target_pdf", 0.7, 0.6, True),
             ShipReadinessCriterion("excel_ready", 0.7, 0.6, True),
         )
         return ShipReadinessReport(
@@ -381,6 +383,7 @@ def test_report_ship_readiness_json_can_fail_when_operator_review_gate_missing(m
             ShipReadinessCriterion("estimated_manual_workload", 0.4, 0.3, False),
         )
         strict_data_criteria = (
+            ShipReadinessCriterion("strict_target_pdf", 0.8, 0.6, True),
             ShipReadinessCriterion("excel_ready", 0.8, 0.6, True),
         )
         return ShipReadinessReport(

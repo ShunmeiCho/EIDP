@@ -1,9 +1,9 @@
 """Final-goal ship readiness report.
 
 This report keeps the long-term product target separate from lower-level
-package and unit-test gates. Strict target-FY PDF acquisition and Excel-ready
-data remain diagnostic metrics; the release-blocking business line is
-operator-reviewable coverage expressed as manual workload.
+package and unit-test gates. Operator-reviewable coverage is the RC/business
+workload line; strict target-FY PDF acquisition and Excel-ready data are the
+separate GA strict-data line.
 """
 
 from dataclasses import dataclass
@@ -96,6 +96,12 @@ def compute_ship_readiness(
         ),
     )
     strict_data_criteria = (
+        ShipReadinessCriterion(
+            name="strict_target_pdf",
+            value=strict_target_pdf_rate,
+            threshold=strict_auto_target_pdf_min,
+            passed=strict_target_pdf_rate >= strict_auto_target_pdf_min,
+        ),
         ShipReadinessCriterion(
             name="excel_ready",
             value=excel_ready_rate,
