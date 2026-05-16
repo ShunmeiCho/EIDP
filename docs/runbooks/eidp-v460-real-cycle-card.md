@@ -141,6 +141,21 @@ Copy these files back to Mac:
 
 Do not put Excel exports or live SQLite files into the shared evidence ZIP.
 
+After copying the returned files to Mac, run the Stage 6 return verifier against
+the completed E2E template, copied `last_run.json`, and copied verifier JSON:
+
+```bash
+uv run python scripts/verify_stage6_return.py \
+  --e2e-template docs/runbooks/eidp-operator-e2e-template.md \
+  --last-run logs/<returned-last_run.json> \
+  --evidence-verify-json logs/<stage6-evidence-verify-returned.json> \
+  --target-fy 2026 \
+  --json
+```
+
+This is stricter than the evidence ZIP verifier: it rejects blank KPI/sign-off
+rows and `last_run.json` values where the final yield remains `not_measured`.
+
 ## Sign-Off Gate
 
 The v1.0 line is still blocked until the owner/operator record contains:
