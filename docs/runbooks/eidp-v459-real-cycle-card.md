@@ -25,6 +25,25 @@ in both `dist/eidp-windows-v459.zip` and the extracted Windows root above:
 `scripts\weekly_run.bat`, `scripts\validate_install.bat`,
 `scripts\stage6_recovery_check.bat`, and `scripts\diagnose.bat`.
 
+## Owner / Operator Request
+
+Please run one real Stage 6 cycle on the operator PC using the v459 lane above.
+The goal is not another Codex smoke test; it is owner/operator confirmation that
+the Windows ZIP can be used for the actual workflow.
+
+Minimum record to return:
+
+- Completed `docs/runbooks/eidp-operator-e2e-template.md` real-cycle fields.
+- Latest `logs\diagnostics-*.txt`.
+- Latest `logs\stage6-evidence-*.zip` plus `logs\stage6-evidence-verify-*.json`.
+- `data\output\last_run.json`.
+- Final KPI values: `target_pdf_auto_yield_pct`,
+  `operator_reviewable_yield_pct`, `ship_gate_status`, `ship_readiness_rc`,
+  pending JSONL outbox count, and owner/operator sign-off.
+
+Do not approve v1.0 from the bounded v459 canary alone. The real-cycle row must
+be filled from an owner/operator run or an explicitly approved full-cycle copy.
+
 ## Do Not Touch
 
 - Do not delete `data\eidp.sqlite3`.
