@@ -17,7 +17,7 @@ owner/operator real-cycle Stage 6 sign-off.
 | Non-Windows gate | `logs/release-gate-v454.json` |
 | Canary evidence | `logs/win-v454-stage6/20260516_020806-summary.json` |
 | RCA evidence | `logs/win-v454-stage6/20260516_020806-discovery-rca-batch-plan.json` |
-| Evidence bundle | `logs/win-v454-stage6/stage6-evidence-20260516-020943.zip` |
+| Evidence bundle | `logs/win-v454-stage6/stage6-evidence-20260516-023620.zip` |
 
 ## Evidence
 
@@ -33,7 +33,7 @@ owner/operator real-cycle Stage 6 sign-off.
 | RCA bucket quality | pass | The two NEEC target application PDFs under `portal/syllabus/.../yoshiki.pdf` are now retained as `target_form_without_year_evidence` with `reason=target_fiscal_year_not_detected`; they are no longer hidden as `non_target_candidates_only`. |
 | Recovery check | pass | `scripts\stage6_recovery_check.bat "C:\Users\cyo20\EIDP-v454-48a346b\scripts\weekly_run.bat"` returned `ok=true`, `action_matches_expected=true`, and `recommendations=[]`; captured as `logs/win-v454-stage6/stage6-recovery-20260516-113412-expected-action.json`. |
 | Residual cleanup dry-run | pass | `scripts\stage6_residual_cleanup.bat --json` returned `ok=true`, `existing_count=0`, and `moved_count=0`. |
-| Evidence bundle | pass | `logs\stage6-evidence-20260516-020943.zip` verified `ok=true` on Windows and Mac, with no forbidden/unsafe entries, no missing manifest patterns, and labels `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. |
+| Evidence bundle | pass | Refreshed `logs\stage6-evidence-20260516-023620.zip` verified `ok=true` on Windows and Mac with `entry_count=13`, no forbidden/unsafe entries, no missing manifest patterns, and labels `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. |
 | UI health smoke | pass | v454 launched Streamlit directly on `127.0.0.1:8501`; `/` returned HTTP `200`, and cleanup left no listener on `8501`. |
 | Browser read-only navigation | pass | v454 rendered through SSH tunnel `127.0.0.1:18501 -> 127.0.0.1:8501` with Playwright title `EIDP Operator Console`. Snapshots/screenshots under `output/playwright/v454-ui-smoke/` cover `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`. Only navigation buttons were clicked; no write action was invoked. Cleanup left no listener on Windows `8501` or local `18501`. |
 | Process-scoped R7 Excel browser generation | pass / bounded DB | v454 rendered `④ Excel プレビュー` with `EIDP_TARGET_FISCAL_YEAR=2025`, `Excel出力可 2`, and `Excel対象行 7177`; it generated workbook rows `採録状況=2418`, `対象比率=10024`, `学科別=9746`, and `在籍のみ抜粋=9746`, then downloaded `output/playwright/v454-r7-excel-smoke/eidp-master.xlsx`. Local `openpyxl` opened the workbook with dimensions `2419x10`, `10025x22`, `9748x83`, and `9748x19`. The checked `.env` paths were absent after the run. |

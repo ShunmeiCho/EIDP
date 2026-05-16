@@ -23,7 +23,7 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v454.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v454.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v454-stage6/stage6-evidence-20260516-020943.zip` (latest v454 verified bundle with complete required labels)
+Current Stage 6 evidence bundle: `logs/win-v454-stage6/stage6-evidence-20260516-023620.zip` (latest v454 verified bundle with complete required labels)
 Current Stage 6 evidence draft: `docs/reports/eidp-v454-stage6-evidence-draft.md`
 
 ## Verdict
@@ -70,11 +70,13 @@ Recovery check with explicit expected action
 `C:\Users\cyo20\EIDP-v454-48a346b\scripts\weekly_run.bat` returned `ok=true`,
 `action_matches_expected=true`, and `recommendations=[]`; the pulled JSON is
 `logs/win-v454-stage6/stage6-recovery-20260516-113412-expected-action.json`.
-Residual cleanup dry-run returned `ok=true`. The
-evidence bundle `logs\stage6-evidence-20260516-020943.zip` verified on both
+Residual cleanup dry-run returned `ok=true`. After the later validator,
+expected-action recovery, default launcher, browser navigation, and R7 Excel
+browser proof, the refreshed evidence bundle
+`logs\stage6-evidence-20260516-023620.zip` verified on both
 Windows and Mac as
-`logs/win-v454-stage6/stage6-evidence-20260516-020943.zip` with `ok=true`, no
-forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
+`logs/win-v454-stage6/stage6-evidence-20260516-023620.zip` with `ok=true`,
+`entry_count=13`, no forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
 `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
 `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
 `stage6_residual_cleanup`, and `weekly_run_logs`. v454 direct Streamlit UI
