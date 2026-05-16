@@ -16,7 +16,7 @@ Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v456.zip`
-Latest Windows-default-launcher-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v454.zip`
@@ -32,7 +32,7 @@ Status: **NOT COMPLETE**
 
 v456 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
 setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
-evidence-bundle-proven, and UI-health-proven package. It was built
+evidence-bundle-proven, UI-health-proven, and default-launcher-proven package. It was built
 from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
 the operator E2E template version-neutral so future ZIPs do not embed stale
 package/SHA fields. The v456 strict non-Windows gate
@@ -54,7 +54,11 @@ Packaged disk health returned `warn_count=0`, `block_count=0`,
 `app_root_total=843.0MiB`, `data\pdfs=0B`, `data\output=0B`, and `logs=3.8KiB`.
 The UI health smoke started Streamlit on Windows `127.0.0.1:8501` and returned
 `/_stcore/health=ok` plus root HTTP `200`, then cleanup left no listener on
-`8501`. Recovery check with expected action
+`8501`. The root-level packaged `EIDP-start.bat` was also launched from
+`C:\Users\cyo20\EIDP-v456-f33ffc0`; it invoked `scripts\launch.bat`, started
+Streamlit on Windows `127.0.0.1:8501`, returned `_stcore/health=ok` and root
+HTTP `200`, observed listener owner process `25704` before forced cleanup, and
+cleanup then left no remaining `8501` listener. Recovery check with expected action
 `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` returned `ok=true`
 and `action_matches_expected=true`. Windows home loose test ZIP cleanup removed
 48 old `eidp-windows-v*.zip*` artifacts from `C:\Users\cyo20`, freeing about
@@ -83,8 +87,8 @@ with `run_id=20260516_034531`, `crawled=5`, `found=5`, `downloaded=2`,
 does not emit ship-gate metric keys; the weekly validator is the authoritative
 bounded acquisition check for this v456 lane.
 
-v454 remains the latest Windows default-launcher, browser-readonly-navigation,
-R7 browser-Excel, and disposable UI write/audit sandbox proof. It was built from package
+v454 remains the latest Windows browser-readonly-navigation, R7 browser-Excel,
+and disposable UI write/audit sandbox proof. It was built from package
 snapshot `48a346bb626be749adb72d1aeb6a684903f22049`, which keeps target
 application PDFs viable for RCA/operator review even when a negative path token
 such as `syllabus` lowers their discovery score. The v454 strict non-Windows

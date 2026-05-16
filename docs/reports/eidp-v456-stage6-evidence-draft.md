@@ -9,8 +9,8 @@ Windows root: `C:\Users\cyo20\EIDP-v456-f33ffc0`
 ## Status
 
 This is a bounded operator-PC smoke evidence draft. It proves transfer, setup,
-URL-only bootstrap, bounded weekly execution, recovery, UI health, disk
-retention, and evidence-bundle verification for v456. It is not the final
+URL-only bootstrap, bounded weekly execution, recovery, UI health, default
+launcher, disk retention, and evidence-bundle verification for v456. It is not the final
 operator real-cycle sign-off and does not satisfy the production R8 strict
 target-PDF 60-70% gate.
 
@@ -39,6 +39,11 @@ target-PDF 60-70% gate.
   current plus v454 fallback.
 - UI health: direct Streamlit smoke returned `_stcore/health=ok` and root HTTP
   `200` on Windows `127.0.0.1:8501`; cleanup left no listener on `8501`.
+- Default launcher: root-level packaged `EIDP-start.bat` launched
+  `scripts\launch.bat` from `C:\Users\cyo20\EIDP-v456-f33ffc0`, returned
+  `_stcore/health=ok` and root HTTP `200` on Windows `127.0.0.1:8501`, observed
+  listener owner process `25704` before forced cleanup, and cleanup left no
+  remaining `8501` listener.
 - Recovery: `scripts\stage6_recovery_check.bat` with expected action
   `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` returned `ok=true`
   and `action_matches_expected=true`.
