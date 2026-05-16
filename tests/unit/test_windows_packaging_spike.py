@@ -1104,6 +1104,8 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "print('download')", encoding="utf-8",
     )
     (fake_repo / "scripts" / "prune_release_artifacts.py").write_text("print('prune')", encoding="utf-8")
+    (fake_repo / "scripts" / "rotate_audit_outbox.py").write_text("print('audit rotate')", encoding="utf-8")
+    (fake_repo / "scripts" / "prune_pdf_storage.py").write_text("print('pdf prune')", encoding="utf-8")
     (fake_repo / "scripts" / "disk_health_check.py").write_text("print('disk')", encoding="utf-8")
 
     members = bw.collect_zip_members(repo_root=fake_repo, wheelhouse=wheelhouse)
@@ -1243,6 +1245,14 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "scripts/prune_release_artifacts.py" in arcs, (
         "Release artifact pruning must ship so the operator PC can dry-run "
         "and prune stale staging ZIPs and deploy directories after handoff"
+    )
+    assert "scripts/rotate_audit_outbox.py" in arcs, (
+        "Audit outbox rotation must ship so the operator PC can dry-run "
+        "append-only audit JSONL maintenance without touching protected data directly"
+    )
+    assert "scripts/prune_pdf_storage.py" in arcs, (
+        "PDF storage pruning must ship so the operator PC can dry-run "
+        "old PDF cleanup without deleting referenced evidence"
     )
     assert "scripts/disk_health_check.py" in arcs, (
         "Disk health checks must ship so Mac/Win can detect artifact growth "

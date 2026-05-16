@@ -113,6 +113,8 @@ CORE_REQUIRED_EXACT = (
     "scripts/ship_gate_contract.py",
     "scripts/download_prefecture_artifacts.py",
     "scripts/prune_release_artifacts.py",
+    "scripts/rotate_audit_outbox.py",
+    "scripts/prune_pdf_storage.py",
     "scripts/disk_health_check.py",
     "data/prefecture-aggregators/seed.csv",
     "data/url-discovery/discovered-urls-50.csv",
