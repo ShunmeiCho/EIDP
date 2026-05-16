@@ -393,7 +393,7 @@ KPI メモ:
 | audit-flush 実行 | pass / fail / not needed |
 | JSONL action_id 重複 | none / observed |
 
-v456 sandbox 既存証跡（real-cycle ではない、operator real-cycle の代替不可）:
+v459 sandbox 既存証跡（real-cycle ではない、operator real-cycle の代替不可）:
 
 | 項目 | 結果 |
 | --- | --- |
@@ -402,6 +402,7 @@ v456 sandbox 既存証跡（real-cycle ではない、operator real-cycle の代
 | JSONL outbox 未送信件数 | before flush `2`, after flush `0` |
 | audit-flush 実行 | `exported=2 already_present=0 failed=0` |
 | JSONL export stamp | both rows exported; `jsonl_export_error=null` |
+| JSONL action_id consistency | DB action IDs match JSONL action IDs |
 | real runtime DB marker counts | all `0` |
 
 v408 sandbox 既存証跡（broader UI write paths、real-cycle ではない）:
