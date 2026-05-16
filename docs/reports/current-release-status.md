@@ -16,7 +16,7 @@ Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v454.zip`
-Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
@@ -92,7 +92,14 @@ opened the workbook at `3,677,039` bytes with sheets `採録状況`, `対象比�
 `9748x83`, and `9748x19`. Windows checks confirmed both checked `.env` paths
 were absent after the process-scoped run. This proves the current v454 browser
 Excel path, while v442 remains historical support for the fuller R7 parity
-workbook. Mac cleanup left `dist=754M`, `_temp=0B`, `logs=4.5M`, and protected
+workbook. The root-level packaged `EIDP-start.bat` was also launched from
+`C:\Users\cyo20\EIDP-v454-48a346b`; it invoked `scripts\launch.bat`, started
+Streamlit on Windows `127.0.0.1:8501`, returned `_stcore/health=ok` and root
+HTTP `200` locally, and the default Mac tunnel `127.0.0.1:18501 -> Windows
+127.0.0.1:8501` returned `_stcore/health=ok` plus root HTTP `200`. The test
+then force-stopped the v454 Streamlit process for cleanup, so the wrapper
+printed its non-zero stop message; both Windows `8501` and local `18501` had no
+remaining listener afterward. Mac cleanup left `dist=754M`, `_temp=0B`, `logs=4.5M`, and protected
 `data=20M`; Windows cleanup preserved v454 current
 plus v453 fallback in both staging and deploy directories. v454 is still not a completed operator
 real-cycle Stage 6 sign-off, and its bounded `40.0%` strict auto-yield is not
