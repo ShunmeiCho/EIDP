@@ -1241,6 +1241,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         "src/eidp/reports/ship_readiness.py": (
             "compute_ship_readiness",
             "strict_target_pdf_rate",
+            'name="strict_target_pdf"',
             "estimated_manual_workload",
             "excel_ready",
             "strict_auto_target_pdf_min",

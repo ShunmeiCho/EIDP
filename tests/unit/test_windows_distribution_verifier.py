@@ -861,6 +861,23 @@ def test_verify_core_zip_requires_report_defaults_to_configured_target_year(tmp_
     )
 
 
+def test_verify_core_zip_requires_ship_readiness_strict_target_pdf_criterion(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/reports/ship_readiness.py"] = entries["src/eidp/reports/ship_readiness.py"].replace(
+        'name="strict_target_pdf"',
+        'name="excel_ready_only"',
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        'src/eidp/reports/ship_readiness.py missing required token: name="strict_target_pdf"' in error
+        for error in check.errors
+    )
+
+
 def test_verify_core_zip_requires_current_target_fy_coverage_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["src/eidp/reports/coverage.py"] = (
