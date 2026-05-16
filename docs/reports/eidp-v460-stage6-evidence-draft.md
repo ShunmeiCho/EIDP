@@ -18,6 +18,7 @@ staging. It is not the final Stage 6 operator-PC real-cycle sign-off.
 | Windows staging docs companion | `C:\EIDP-staging\eidp-v460-operator-docs-20260516.zip`; Windows `Get-FileHash` matched the sidecar |
 | Windows staging docs directory | `C:\EIDP-staging\v460-operator-docs` with `00-READ-ME-FIRST.txt` |
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt`; SHA256 `047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7` |
+| Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt`; SHA256 `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e` |
 
 The v460 core ZIP includes the current version-neutral E2E template. The
 companion docs ZIP carries this version-specific evidence draft, real-cycle card,

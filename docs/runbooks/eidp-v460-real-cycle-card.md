@@ -19,6 +19,8 @@ record.
 | Full template | `docs/runbooks/eidp-operator-e2e-template.md` |
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt` |
 | Top-level README SHA256 | `047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7` |
+| Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt` |
+| Owner request SHA256 | `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e` |
 | Companion docs ZIP | `dist/eidp-v460-operator-docs-20260516.zip` |
 | Windows staging docs ZIP | `C:\EIDP-staging\eidp-v460-operator-docs-20260516.zip` |
 

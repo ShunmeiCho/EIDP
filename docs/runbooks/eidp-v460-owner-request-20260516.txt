@@ -1,0 +1,94 @@
+EIDP v460 Owner / Operator Real-Cycle Request
+Date: 2026-05-16
+
+Purpose
+-------
+v460 is ready for one real Stage 6 owner/operator cycle.
+This is not another setup smoke test. v1.0 approval still requires real
+operator evidence, KPI values, and owner/operator sign-off.
+
+Use this Windows install
+------------------------
+App root:
+  C:\Users\cyo20\EIDP-v460-01e4427
+
+Package:
+  C:\EIDP-staging\eidp-windows-v460.zip
+
+Expected package SHA256:
+  ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c
+
+Short checklist for the operator
+--------------------------------
+1. Open:
+   C:\Users\cyo20\EIDP-v460-01e4427\EIDP-start.bat
+
+2. Confirm the browser opens:
+   http://127.0.0.1:8501
+
+3. Confirm the UI shows:
+   target fiscal year 2026 / Reiwa 8
+
+4. Run one normal weekly collection cycle with owner/operator present.
+
+5. Complete the real workflow in the browser UI:
+   - Page 1: school task board
+   - Page 2: PDF review and manual entry
+   - Page 3: fiscal-year judgment and correction
+   - Page 4: Excel preview
+   - Detail operator: URL candidate review
+   - Detail operator: audit log
+
+6. After write actions, open the audit log page and run the outbox flush.
+
+7. Fill the real-cycle fields in:
+   C:\EIDP-staging\v460-operator-docs\eidp-operator-e2e-template.md
+
+Required files to return
+------------------------
+- Latest logs\diagnostics-*.txt
+- Latest logs\stage6-evidence-*.zip
+- Latest logs\stage6-evidence-verify-*.json
+- data\output\last_run.json
+- Latest logs\run-*.log if present
+- Completed KPI/sign-off fields from eidp-operator-e2e-template.md
+
+Required KPI / sign-off fields
+------------------------------
+- target_pdf_auto_yield_pct
+- operator_reviewable_yield_pct
+- ship_gate_status
+- ship_readiness_rc
+- pending JSONL outbox count after flush
+- owner sign-off
+- operator sign-off
+
+Do not approve v1.0 from these alone
+------------------------------------
+- v460 setup validator ok=true
+- read-only browser navigation smoke
+- diagnostic evidence ZIP rejected because last_run is missing
+- v459 bounded weekly / R7 Excel / UI write support evidence
+
+These are support evidence only. The release decision needs the v460 real-cycle
+record and verifier-accepted v460 evidence bundle.
+
+Safety notes
+------------
+- Do not delete data\eidp.sqlite3
+- Do not delete data\audit\manual-actions.jsonl
+- Do not delete data\master.xlsx
+- Do not run uninstall.bat
+- Do not persist EIDP_TARGET_FISCAL_YEAR into .env
+- Do not overwrite the operator data directory without a backup
+
+Reference documents
+-------------------
+Detailed run card:
+  C:\EIDP-staging\v460-operator-docs\eidp-v460-real-cycle-card.md
+
+Full evidence template:
+  C:\EIDP-staging\v460-operator-docs\eidp-operator-e2e-template.md
+
+Current release boundary:
+  C:\EIDP-staging\v460-operator-docs\current-release-status.md
