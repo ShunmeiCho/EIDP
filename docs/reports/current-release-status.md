@@ -23,8 +23,11 @@ Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v459.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: pending for v460 real-cycle; latest support bundle
-is `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`
+Current Stage 6 evidence bundle: Plan A CLI bundle
+`C:\Users\cyo20\EIDP-v460-01e4427\logs\stage6-evidence-20260516-094432.zip`
+verified with `ok=true`, but the KPI remained `not_measured`; latest bounded
+support bundle before that was
+`C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`
 Current Stage 6 evidence draft: `docs/reports/eidp-v460-stage6-evidence-draft.md`
 Current Stage 6 real-cycle card: `docs/runbooks/eidp-v460-real-cycle-card.md`
 
@@ -97,10 +100,27 @@ cleanup retained v460 current plus v459 fallback on both Mac and Windows,
 pruned stale v454 package/deploy artifacts, and disk health reported `ok=true`,
 `warn_count=0`, and `block_count=0` on both sides.
 
-No v460 weekly run, write-path browser flow, verifier-accepted evidence bundle,
-or owner/operator real-cycle was executed during this staging update. Do not
-treat the v460 setup/recovery/UI smoke proof, the rejected diagnostic bundle, or
-v459 bounded support as a v460 real-cycle sign-off.
+Plan A CLI weekly was then run from
+`C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` after confirming the
+stale `data\.lock` marker was not held. A timestamped SQLite backup was created
+first under `data\backups\plan-a\`. The weekly runner exited `0` and wrote
+`data\output\last_run.json` with `status=success`, `dry_run=false`,
+`current_fy=2026`, `no_crawlable_url_school_count=2418`,
+`target_missing_school_count=0`, `target_pdf_auto_yield_pct=null`,
+`operator_reviewable_yield_pct=null`, and `ship_gate_status=not_measured`.
+`EIDP-stage6-evidence.bat` then created
+`C:\Users\cyo20\EIDP-v460-01e4427\logs\stage6-evidence-20260516-094432.zip`,
+and `EIDP-stage6-verify-evidence.bat` returned `ok=true`,
+`missing_required_labels=[]`, with labels `build_info`, `diagnostics`,
+`last_run`, `stage6_recovery`, and `weekly_run_logs`. The Mac copies under
+`logs/win-v460-plan-a/` have SHA256 values: diagnostics
+`040ecc9ced681c7d257f88312506b38cd0a38b130f3e51e83d7d6b2002770e46`,
+`last_run.json` `91ceb1fb4869d7592d19ef3effba4b09521de81b194772ec2ea1a546f5df4b31`,
+evidence ZIP `491129595c97191069708ec47386663d62321fb5ead35a827e6acbfd6aaf7e0e`,
+and verifier JSON `ba295b1abaaa25eb1590f6531f734ef47600152c9ae8723d1ad6b7635fcdb0c5`.
+Do not treat this Plan A evidence as release approval: it proves the CLI/evidence
+chain, but the current-FY yield and workload gates still fail and the
+owner/operator browser sign-off remains missing.
 
 v459 remains the latest evidence-bundle-proven, default-launcher-proven,
 R7-browser-Excel-proven, bounded-weekly-proven, and UI-write-sandbox-proven
@@ -1306,8 +1326,9 @@ exports, and do not run `stage6_residual_cleanup.py --apply` without explicit
 operator/user approval.
 
 Still missing for Stage 6: the real operator-cycle browser click-through/write
-flow or an explicitly approved full-cycle copy, final KPI/yield evidence,
-verifier-accepted v460 evidence bundle, and owner/operator sign-off.
+flow or an explicitly approved full-cycle copy, final KPI/yield evidence with
+measured non-null rates, and owner/operator sign-off. The v460 Plan A evidence
+bundle is verifier-accepted, but it is not KPI-passing evidence.
 
 Stage 6 template fill map for the v460 evidence lane:
 
@@ -1344,8 +1365,8 @@ that the current v460 Windows ZIP exposes the Step 2c school URL crawl defaults.
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; v460 disk health is `ok=true`, `warn_count=0`, `block_count=0`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Final v460/operator run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
 | 3. 証跡採取コマンド | v460 hash/setup/validate/recovery diagnostics, read-only browser navigation, and a correctly rejected diagnostic evidence bundle are available; v459 evidence-bundle/default-launcher/R7-browser-Excel/UI-write-sandbox proofs remain bounded support; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; verifier-accepted v460 final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, read-only navigation, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle; optional v460 default-launcher re-smoke if the owner requests it before the real run |
-| 5. 4 工程 E2E | v460 browser navigation rendered the core operator pages without invoking writes; v459 bounded R7 weekly downloaded two target PDFs, v459 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v459 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete v460 real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
-| 6. KPI 判定 | v459 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`. FY2026 production output and final R8 yield remain unproven | v460 real click-through diagnostics and final current-year `ship_readiness_rc=0` |
+| 5. 4 工程 E2E | v460 browser navigation rendered the core operator pages without invoking writes; v460 Plan A CLI weekly wrote `last_run.json` and a verifier-accepted evidence bundle; v459 bounded R7 weekly downloaded two target PDFs, v459 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v459 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete v460 real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
+| 6. KPI 判定 | v460 Plan A recorded `ship_gate_status=not_measured`, `target_pdf_auto_yield_pct=null`, `operator_reviewable_yield_pct=null`, and `ship_readiness_rc=1` because `no_crawlable_url_school_count=2418`; v459 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`. FY2026 production output and final R8 yield remain unproven | v460 real click-through diagnostics and final current-year `ship_readiness_rc=0` |
 | 7. 監査 / outbox | v459 disposable UI write/audit sandbox showed flush result `exported=2 already_present=0 failed=0`, `pending_outbox=0`, one seeded audit row plus one `url_candidate_rejected` row exported, matching JSONL action IDs, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0`; v408/v407 sandboxes show broader historical surfaces | Real or approved full-cycle `manual_action_log` delta and final JSONL duplicate check |
 | 8. 障害 / 回避策 | Known current hazards: v460 lacks real-cycle proof; v459 UI-write proof is sandbox-only; v459 bounded strict auto-yield is `40.0%`; v407 evidence bundle with Excel export is verifier-rejected; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v460 full-cycle failures and screenshots/log attachments |
 | 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |
