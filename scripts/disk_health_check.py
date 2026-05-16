@@ -96,7 +96,10 @@ def _operator_win_targets() -> tuple[DiskTarget, ...]:
             gib(5),
             gib(10),
             protected=True,
-            cleanup_hint="Protected: PDF cleanup is manual after the cycle owner confirms retention.",
+            cleanup_hint=(
+                "Protected: run python scripts/prune_pdf_storage.py --json first; "
+                "use --apply only after owner confirms candidates."
+            ),
         ),
         DiskTarget(
             "data/output",
@@ -118,7 +121,10 @@ def _operator_win_targets() -> tuple[DiskTarget, ...]:
             mib(100),
             None,
             protected=True,
-            cleanup_hint="Protected append-only audit outbox; archive only through the audit process.",
+            cleanup_hint=(
+                "Protected append-only audit outbox; rotate only through "
+                "python scripts/rotate_audit_outbox.py --json."
+            ),
         ),
     )
 
