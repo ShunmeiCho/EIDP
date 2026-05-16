@@ -2,11 +2,15 @@
 
 Updated: 2026-05-17
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `e1da33fa50a651f9059e9562be5bf0e381b6fa32`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v462.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v462.zip`
-Latest Mac-core package SHA256: `1b783b640e6c25249dd8efd6d8355aeed986c7ecad80c72c98bd4e168360a59a`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v462.zip`
+Latest Mac/non-Windows package snapshot: `4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v463.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v463.zip`
+Latest Mac-core package SHA256: `81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v463.zip`
+Prior Windows side-by-side cache package: `dist/eidp-windows-v462.zip`, commit
+`e1da33fa50a651f9059e9562be5bf0e381b6fa32`, SHA256
+`1b783b640e6c25249dd8efd6d8355aeed986c7ecad80c72c98bd4e168360a59a`; not the
+current Windows scheduled-task execution pointer
 Prior post-package docs rebuild: `dist/eidp-windows-v461.zip`, commit
 `b787a72bb1714b77583e4c0e904b1584fdaeba92`, SHA256
 `2c0d74ab382bf179f166bdb4d775cd414a08741eca3b27ba92c2e6c7a459850b`; not the
@@ -43,19 +47,21 @@ Current Stage 6 real-cycle card: `docs/runbooks/eidp-v460-real-cycle-card.md`
 
 Status: **NOT COMPLETE**
 
-v462 is the latest Mac/non-Windows release-gate-clean package. It was built
-from `e1da33fa50a651f9059e9562be5bf0e381b6fa32` and includes the run-scoped
-HTTP GET cache in `src/eidp/scraper/pdf_discovery.py` for repeated shared
-corporation roots, robots, sitemap, disclosure, and 404 page fetches. Its SHA256
-sidecar is `1b783b640e6c25249dd8efd6d8355aeed986c7ecad80c72c98bd4e168360a59a`,
+v463 is the latest Mac/non-Windows release-gate-clean package. It was built
+from `4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582` and adds explicit
+`target_fiscal_year` propagation through ingestion, so retroactive or forecast
+weekly runs do not stop at discovery with one FY while ingesting with the
+process default FY. Its SHA256 sidecar is
+`81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`,
 and `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v462.zip --json --output logs/release-gate-v462.json`
+dist/eidp-windows-v463.zip --json --output logs/release-gate-v463.json`
 returned `ok=true`: SHA256 sidecar matched, package/source commit matched, full
-unit returned `1666 passed`, validator distribution unit returned `166 passed`,
+unit returned `1669 passed`, validator distribution unit returned `166 passed`,
 validator mypy/Ruff passed, discovery-gold checks passed, package verification
 passed, and demonstrated-pattern package verification passed.
 
-v462 was then transferred side-by-side to Windows staging, SHA-checked against
+v462 remains the latest Windows side-by-side cache package. It was transferred
+side-by-side to Windows staging, SHA-checked against
 the same sidecar, extracted to `C:\Users\cyo20\EIDP-v462-e1da33f`, set up with
 `EIDP-setup.bat` exit `0`, and validated with
 `scripts\validate_install.bat --after-setup --json` returning `ok=true`,
@@ -70,11 +76,11 @@ using a copied temp SQLite DB then returned `ok=true` with `crawled=2`,
 packaged run-scoped HTTP cache behavior on Windows without touching the real
 v460 runtime DB or owner-cycle state. v462 has still not replaced the active
 scheduled-task pointer, and no v462 UI-health, weekly, evidence-bundle, or
-owner/operator cycle has been run.
+owner/operator cycle has been run. v463 has not been Windows-transferred yet.
 
 v460 remains the current Windows setup/recovery execution candidate at
 `C:\Users\cyo20\EIDP-v460-01e4427`; the scheduled task has not been moved to
-v461 or v462. v460 was built from package snapshot
+v461, v462, or v463. v460 was built from package snapshot
 `01e44279238aaef9127ed9b578e29dc8e0070499` after the v460 Mac-side operator
 workflow hardening and version-neutral E2E template update. The operator-cycle
 hardening keeps Excel preview workbook handles out of Streamlit session state,
