@@ -15,8 +15,10 @@ staging. It is not the final Stage 6 operator-PC real-cycle sign-off.
 | Windows root | `C:\Users\cyo20\EIDP-v460-01e4427` |
 | Release gate | `logs/release-gate-v460.json`, `ok=true` |
 | Companion docs | `dist/eidp-v460-operator-docs-20260517.zip`; verify with `dist/eidp-v460-operator-docs-20260517.zip.sha256` |
+| Companion docs SHA256 | `882cc6ab081dccd15a1ca8bc8ad8aaf1c6ef6ee445c2698f97d998f047e0e382` |
 | Windows staging docs companion | `C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip`; Windows `Get-FileHash` matched the sidecar |
 | Windows staging docs directory | `C:\EIDP-staging\v460-operator-docs-20260517`, plus top-level `00-READ-ME-FIRST-v460.txt` |
+| Current docs HEAD | `3b3083a141e72a47e69ef10a2a7655b3382701d8` |
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt`; SHA256 `7c016d0943aafe0f65630fe6620f85f5843497c459b47c65c5d514d5900d86c1` |
 | Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt`; SHA256 `cc19326ae5df0b1bd272256b95870a619b778045d4bf64c9879348b986d7ec71` |
 
@@ -60,6 +62,22 @@ contains later-year fields and is not a FY-specific pass/fail reference. This is
 algorithm regression evidence only; it does not replace the v460 owner/operator
 real-cycle, evidence ZIP sign-off, or FY2026/R8 live KPI record.
 
+## Windows Side-By-Side Support
+
+| Check | Result |
+| --- | --- |
+| v464 R7 browser Excel | Process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` Streamlit ran on Windows `127.0.0.1:8509` through Mac tunnel `127.0.0.1:18509`; `④ Excel プレビュー` rendered `2025年度（令和7年度）`, generated the preview workbook, exposed `Excel ダウンロード`, and downloaded `output/playwright/v464-r7-excel-smoke/eidp_master.xlsx` |
+| v464 R7 workbook hash | SHA256 `aff3dea57af4c6d96d8859e52748f8cecefb4e593f5da74b4f68646175937685` |
+| v464 R7 workbook verification | `output/playwright/v464-r7-excel-smoke/summary.json` returned `ok=true`; `openpyxl` verified `採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719` data rows with dimensions `2419x10`, `10023x22`, `9721x83`, and `9721x19` |
+| v464 R7 cleanup | Remote `8509` and local `18509` listeners were stopped; `EIDP Weekly Run` still executes `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` |
+
+This is side-by-side browser Excel support evidence only. It proves the current
+v464 package can still render and download the historical R7 workbook through
+the Windows browser path without persisting a target-FY override, invoking
+weekly collection, or moving the active scheduled-task pointer. It does not
+replace the v460 owner/operator real-cycle, FY2026/R8 yield record, or
+operator sign-off.
+
 ## Windows Setup Staging
 
 | Check | Result |
@@ -102,7 +120,7 @@ per school instead of being cached or de-duplicated at run scope.
 | --- | --- |
 | Mac dev | `ok=true`, `warn_count=1`, `block_count=0`, project `2.4GiB`, `dist=1.3GiB` (`warn`), `_temp=80.9MiB`, `logs=14.3MiB`, protected `data=20.0MiB`, `.claude/worktrees=0B` |
 | Win v460 root | Fresh read-only check copied to `logs/win-v460-stage6/disk-health-20260517-operator-win.json`: `ok=true`, `warn_count=0`, `block_count=0`, app root `992.9MiB`, `data\pdfs=4.6MiB`, `data\output=97.3MiB`, `logs=10.6MiB`; SHA256 `4d5f4566db7cc5d3effcf8eeb63fb8ab566e64874b9e224564c05de113e700c9` |
-| Retention | Mac retains the v459-v463 package/evidence chain and v459-derived retroactive reference workbooks; Win staging retains v460 current plus v459 fallback, with v462/v463 side-by-side proof directories separate from the owner-cycle lane |
+| Retention | Mac retains the v459-v464 package/evidence chain and v459-derived retroactive reference workbooks; Win staging retains v460 current plus v459 fallback, with v462/v463/v464 side-by-side proof directories separate from the owner-cycle lane |
 
 ## Open Gates
 
@@ -115,5 +133,5 @@ per school instead of being cached or de-duplicated at run scope.
   `estimated_manual_workload_rate=1.0`.
 - Production-scale weekly performance on URL-rich DBs remains open; the second
   post-bootstrap run exposed repeated corporation-domain recrawls.
-- v459 browser navigation, R7 browser Excel, and UI write/audit sandbox evidence
-  remain historical bounded support, not v460 real-cycle sign-off.
+- v464 R7 browser Excel evidence and v459 UI write/audit sandbox evidence remain
+  bounded support, not v460 real-cycle sign-off.
