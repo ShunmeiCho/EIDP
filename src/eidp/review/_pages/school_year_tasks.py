@@ -1003,7 +1003,7 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
                 line += f" / 自動取得 {auto_yield:.1f}% ({acquired}/{denominator}校)"
             if isinstance(gate, (int, float)):
                 gate_label = "達成" if gate_status == "pass" else "未達"
-                line += f" / 出荷目安 {gate:.0f}% {gate_label}"
+                line += f" / レビュー目安 {gate:.0f}% {gate_label}"
             lines.append(line)
         else:
             lines.append(f"操作員レビュー可能率: 未測定 ({reviewable}/{denominator}校)")
@@ -1705,7 +1705,7 @@ def _render_weekly_last_run(payload: dict[str, Any]) -> None:
         )
         st.caption(
             f"レビュー可能率: {reviewable_yield}% ({reviewable}/{target_missing})"
-            f"{auto_text}{gate_text} / 出荷判定: {gate_status}"
+            f"{auto_text}{gate_text} / レビュー判定: {gate_status}"
         )
     if payload.get("summary_path"):
         st.caption(f"詳細ログ: {payload['summary_path']}")

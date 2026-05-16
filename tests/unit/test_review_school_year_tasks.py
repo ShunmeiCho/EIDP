@@ -778,7 +778,7 @@ def test_bootstrap_progress_exposes_target_pdf_yield_gate(tmp_path) -> None:
 
     assert progress is not None
     assert bootstrap_progress_detail_lines(progress) == [
-        "操作員レビュー可能率: 60.0% (1020/1700校) / 出荷目安 60% 達成"
+        "操作員レビュー可能率: 60.0% (1020/1700校) / レビュー目安 60% 達成"
     ]
 
 
@@ -1039,7 +1039,7 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
     assert any("候補 7/12" in caption for caption in captions)
     assert any("run-discovery-rca-batch-plan.json" in caption for caption in captions)
     assert any("レビュー可能率: 60.0%" in caption for caption in captions)
-    assert any("出荷判定: pass" in caption for caption in captions)
+    assert any("レビュー判定: pass" in caption for caption in captions)
 
 
 def test_weekly_task_registration_warning_reads_setup_marker(tmp_path) -> None:

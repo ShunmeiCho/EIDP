@@ -157,7 +157,7 @@ http://localhost:8501
 この操作で対応済みの都道府県の確認大学等一覧から学校URLを登録し、対象年度PDFの探索を開始します。
 一覧PDF内の学校名リンクに埋め込まれたURLも自動で読み取ります。
 同梱済みの既知URLリストと法人ドメイン推定も補助入口として登録します。
-完了後、画面には真の対象年度PDFの自動取得率と出荷目安 (`ship_gate_status`) が表示されます。
+完了後、画面には真の対象年度PDFの自動取得率とレビュー目安 (`ship_gate_status`) が表示されます。
 PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キューを
 `data\output\target-year-discovery\bootstrap-{timestamp}-discovery-rca-batch-plan.json`
 に保存します。
@@ -198,7 +198,8 @@ PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キュー
 - 処理結果を `data\output\last_run.json` に保存します。
 - 真の対象年度PDFの自動取得率 (`target_pdf_auto_yield_pct`) と、旧年度最新版として
   業務員が確認できる学校を含めたレビュー可能率 (`operator_reviewable_yield_pct`) を保存します。
-  出荷判定 (`ship_gate_status`) はレビュー可能率で判定します。
+  レビュー判定 (`ship_gate_status`) はレビュー可能率で判定します。最終出荷判定では、
+  true target PDF 自動取得率の 60-70% gate を別途確認します。
   `ship_gate_metric_basis` は週次処理では `weekly_operator_reviewable_acquisition` です。
   初回 bootstrap の `post_bootstrap_operator_reviewable_coverage` とは分母が違います。
 - PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キューを
