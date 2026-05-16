@@ -793,7 +793,8 @@ Known non-goal-wide lint boundary:
 
 SSH-Win is available and v459 is already transferred, SHA-verified, extracted,
 set up, bootstrapped, bounded-weekly-smoked, UI-health-smoked,
-cleanup-tool-checked, disk-retention-checked, and evidence-bundle-verified. The
+cleanup-tool-checked, disk-retention-checked, evidence-bundle-verified, and
+real-cycle entrypoint-checked in both the ZIP and extracted Windows root. The
 next gate is not another transfer or audit; it is an owner/operator Stage 6
 real-cycle sign-off on the current v459 lane, plus the later R8 production
 yield measurement.
