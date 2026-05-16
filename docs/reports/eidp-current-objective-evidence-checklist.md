@@ -1,22 +1,22 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-16
-Latest Mac/non-Windows package snapshot: `48a346bb626be749adb72d1aeb6a684903f22049`
+Latest Mac/non-Windows package snapshot: `f33ffc0e6fd801782f3e49fad3315adc64081f6f`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally explicit about lane boundaries: the active operator-PC
 Stage 6 setup lane is now `C:\Users\cyo20\EIDP-v454-48a346b` for
-`dist/eidp-windows-v454.zip` / package snapshot `48a346b`. v454 is the current
-Mac/non-Windows release-gate-clean package and the current Windows transfer,
-setup, URL-only bootstrap, evidence-bundle, bounded `weekly_run.bat`,
-school-domain-override wiring, UI-health, browser read-only navigation, bounded
-canary, R7 browser Excel generation/download, default launcher, UI write/audit
-sandbox, and disk-retention lane. v453 is the retained Windows fallback package,
-v442 remains historical support for the fuller R7 parity workbook, and v408
-remains historical support for broader copied-DB UI write paths. The real
-operator cycle is still missing, and the production R8 yield gate is still not
-proven.
+`dist/eidp-windows-v454.zip` / package snapshot `48a346b`. v456 is the current
+Mac/non-Windows release-gate-clean package, but it has not yet been transferred
+to Windows. v454 remains the current Windows transfer, setup, URL-only
+bootstrap, evidence-bundle, bounded `weekly_run.bat`, school-domain-override
+wiring, UI-health, browser read-only navigation, bounded canary, R7 browser
+Excel generation/download, default launcher, UI write/audit sandbox, and
+disk-retention lane. v453 is the retained Windows fallback package, v442 remains
+historical support for the fuller R7 parity workbook, and v408 remains
+historical support for broader copied-DB UI write paths. The real operator cycle
+is still missing, and the production R8 yield gate is still not proven.
 
 ## Objective Restatement
 
@@ -47,6 +47,18 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Release Boundary
 
+- Current v456 Mac/non-Windows package lane: package snapshot
+  `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, SHA256
+  `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`.
+  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v456.zip
+  --output logs/release-gate-v456.json` returned `ok=true`, with
+  package/source freshness at `f33ffc0`, SHA sidecar match, full unit
+  `1637 passed`, validator/distribution tests returning `166 passed`,
+  validator mypy/Ruff passing, discovery-gold expected predictions passing,
+  and both package verifier modes passing. Mac cleanup then removed the failed
+  v455 package/sidecar while retaining v456/v454/v453; `disk_health_check`
+  reported `warn=0 block=0`. v456 still needs Windows transfer/setup smoke and
+  does not replace the v454 operator-PC evidence lane yet.
 - Current v454 package/Windows setup lane: package snapshot
   `48a346bb626be749adb72d1aeb6a684903f22049`, SHA256
   `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`.

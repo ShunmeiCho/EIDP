@@ -2,11 +2,11 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `48a346bb626be749adb72d1aeb6a684903f22049`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v454.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v454.zip`
-Latest Mac-core package SHA256: `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v454.zip`
+Latest Mac/non-Windows package snapshot: `f33ffc0e6fd801782f3e49fad3315adc64081f6f`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v456.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v456.zip`
+Latest Mac-core package SHA256: `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v456.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v454.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v452.zip`
@@ -30,7 +30,22 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v454-stage6-evidence-draft.md
 
 Status: **NOT COMPLETE**
 
-v454 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+v456 is the latest Mac/non-Windows release-gate-clean package. It was built
+from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
+the operator E2E template version-neutral so future ZIPs do not embed stale
+package/SHA fields. The v456 strict non-Windows gate
+`logs/release-gate-v456.json` returned `ok=true` with SHA256
+`73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`,
+package/source commit match, `source_dirty=false`, `stale=false`, full unit
+`1637 passed`, validator/distribution tests `166 passed`, validator mypy/Ruff
+pass, discovery-gold expected predictions, and both package verifier modes
+pass. Mac disk cleanup after v456 removed the failed v455 package/sidecar,
+left retained packages v456/v454/v453, and
+`scripts/disk_health_check.py --profile mac-dev` reported `warn=0 block=0` with `dist=940.2MiB`,
+`_temp=0B`, protected `data=20.0MiB`, and `.claude/worktrees=0B`. v456 has not
+yet been transferred to Windows or setup-smoked on the operator PC.
+
+v454 remains the latest Windows transfer-proven,
 setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
 evidence-bundle-proven, and UI-health-proven package. It was built from package
 snapshot `48a346bb626be749adb72d1aeb6a684903f22049`, which keeps target
