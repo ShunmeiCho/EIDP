@@ -18,7 +18,7 @@ Latest Windows-setup-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v454.zip`
-Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v454.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v454.zip`
@@ -79,8 +79,21 @@ display `2026年度（令和8年度）`. Snapshots were captured for `① 学校
 navigation buttons were clicked; no weekly re-fetch, workbook generation,
 settings save, or other write action was invoked. Cleanup stopped the Windows
 Streamlit process and closed the local tunnel; both Windows `8501` and local
-`18501` had no remaining listener. Mac cleanup left `dist=754M`, `_temp=0B`,
-`logs=4.5M`, and protected `data=20M`; Windows cleanup preserved v454 current
+`18501` had no remaining listener. A separate process-scoped FY2025/R7 browser
+Excel smoke launched the same v454 package with `EIDP_TARGET_FISCAL_YEAR=2025`
+without writing `.env`, rendered `④ Excel プレビュー` with
+`対象年度: 2025年度（令和7年度）`, `Excel出力可 2`, `Excel対象行 7177`,
+and generated an in-memory workbook with sheet row counts
+`採録状況=2418`, `対象比率=10024`, `学科別=9746`, and
+`在籍のみ抜粋=9746`. Playwright downloaded `eidp_master.xlsx` to
+`output/playwright/v454-r7-excel-smoke/eidp-master.xlsx`; local `openpyxl`
+opened the workbook at `3,677,039` bytes with sheets `採録状況`, `対象比率`,
+`学科別`, and `在籍のみ抜粋`, and dimensions `2419x10`, `10025x22`,
+`9748x83`, and `9748x19`. Windows checks confirmed both checked `.env` paths
+were absent after the process-scoped run. This proves the current v454 browser
+Excel path, while v442 remains historical support for the fuller R7 parity
+workbook. Mac cleanup left `dist=754M`, `_temp=0B`, `logs=4.5M`, and protected
+`data=20M`; Windows cleanup preserved v454 current
 plus v453 fallback in both staging and deploy directories. v454 is still not a completed operator
 real-cycle Stage 6 sign-off, and its bounded `40.0%` strict auto-yield is not
 the final production 60-70% R8 gate.
