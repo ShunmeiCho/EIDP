@@ -10,10 +10,10 @@ Windows root: `C:\Users\cyo20\EIDP-v456-f33ffc0`
 
 This is a bounded operator-PC smoke evidence draft. It proves transfer, setup,
 URL-only bootstrap, bounded weekly execution, recovery, UI health, default
-launcher, browser read-only navigation, R7 browser Excel generation/download,
-disk retention, and evidence-bundle verification for v456. It is not the final
-operator real-cycle sign-off and does not satisfy the production R8 strict
-target-PDF 60-70% gate.
+launcher, browser read-only navigation, UI write/audit sandbox,
+R7 browser Excel generation/download, disk retention, and evidence-bundle
+verification for v456. It is not the final operator real-cycle sign-off and does
+not satisfy the production R8 strict target-PDF 60-70% gate.
 
 ## Evidence
 
@@ -55,6 +55,20 @@ target-PDF 60-70% gate.
   and target FY `2026年度（令和8年度）`. Only sidebar navigation buttons were
   clicked; no write or workbook-generation action was invoked. Cleanup left no
   Mac `18501` or Windows `8501` listener.
+- Browser UI write/audit sandbox: v456 ran against a disposable SQLite copy
+  under `_temp\v456-ui-write-sandbox`. Playwright opened `URL候補レビュー`,
+  rejected seeded `review_item#37` for
+  `https://stage6-v456-ui-write-sandbox.example.invalid/` with reason
+  `v456 UI reject smoke`, then opened `監査ログ` and clicked
+  `Outbox を flush`. The UI reported `exported=2 already_present=0 failed=0`.
+  Pulled verifier JSON
+  `logs/win-v456-stage6/v456-ui-write-sandbox-result-final.json` returned
+  `ok=true`, with `pending_outbox=0`, exported
+  `stage6_v456_ui_audit_flush_smoke` and `url_candidate_rejected` rows, no
+  `SchoolSite` for the rejected URL, matching JSONL action IDs, and real v456
+  runtime DB marker counts all `0`. Screenshot/snapshot evidence is under
+  `output/playwright/v456-ui-write-sandbox/`; cleanup stopped Windows `8501`,
+  closed local `18501`, and removed the remote disposable sandbox.
 - R7 browser Excel: v456 was launched with process-scoped
   `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with
   `対象年度: 2025年度（令和7年度）`, `Excel出力可 2`, and `Excel対象行 7177`,

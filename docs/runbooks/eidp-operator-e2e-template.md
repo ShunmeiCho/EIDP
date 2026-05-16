@@ -197,7 +197,7 @@ The process was force-stopped after the health proof; launcher exit -1 is a stop
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
-v456 既存証跡（転記候補。bounded diagnostic-only。UI write sandbox は v454 支持証跡）:
+v456 既存証跡（転記候補。bounded diagnostic-only。UI write sandbox も v456 で実施済み）:
 
 | 手順 | 結果 | 証跡 |
 | --- | --- | --- |
@@ -212,7 +212,7 @@ v456 既存証跡（転記候補。bounded diagnostic-only。UI write sandbox �
 | Evidence bundle verify | pass | `logs/win-v456-stage6/stage6-evidence-20260516-034752.zip`, all required labels present |
 | Default launcher health | pass | `scripts\launch.bat`, Windows `8501`, Mac tunnel `18501 -> 8501`, health/root HTTP 200 |
 | Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定` rendered under `output/playwright/v456-ui-smoke/` |
-| Browser UI write/audit sandbox | pass / v454 support | rejected one seeded `URL候補レビュー` item, flushed `exported=2 already_present=0 failed=0`, and left real runtime DB marker counts `0` |
+| Browser UI write/audit sandbox | pass | v456 disposable DB rejected `review_item#37` in `URL候補レビュー`, flushed `exported=2 already_present=0 failed=0`, saved `logs/win-v456-stage6/v456-ui-write-sandbox-result-final.json`, and left real runtime DB marker counts `0` |
 
 ## 5. 4 工程 E2E
 
@@ -298,14 +298,14 @@ v408 sandbox 例（real-cycle ではない）:
 
 ```
 
-v454 R7 retroactive 既存証跡（FY2026 yield ではない）:
+v456 R7 retroactive 既存証跡（FY2026 yield ではない）:
 
 | 指標 | 結果 |
 | --- | --- |
 | R7 browser download | `output/playwright/v456-r7-excel-smoke/eidp-master.xlsx`, suggested `eidp_master.xlsx` |
 | Sheet counts | `採録状況=2418`, `対象比率=10024`, `学科別=9746`, `在籍のみ抜粋=9746` |
 | openpyxl dimensions | `2419x10`, `10025x22`, `9748x83`, `9748x19` |
-| FY persistence check | v454 root/adjacent `.env` missing after process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` launch |
+| FY persistence check | v456 root/adjacent `.env` missing after process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` launch |
 
 Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows 実走時の比較基準）:
 
@@ -372,7 +372,7 @@ KPI メモ:
 | audit-flush 実行 | pass / fail / not needed |
 | JSONL action_id 重複 | none / observed |
 
-v454 sandbox 既存証跡（real-cycle ではない、operator real-cycle の代替不可）:
+v456 sandbox 既存証跡（real-cycle ではない、operator real-cycle の代替不可）:
 
 | 項目 | 結果 |
 | --- | --- |
