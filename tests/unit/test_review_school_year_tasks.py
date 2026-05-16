@@ -557,6 +557,7 @@ def test_weekly_command_uses_target_year_runner_for_all_schools(tmp_path) -> Non
         "prefecture_aggregator",
         "seed_csv",
         "corporation_pattern",
+        "school_domain_override",
         "web_search",
         "operator_manual",
         "scrapling_stealth",
@@ -682,7 +683,7 @@ def test_bootstrap_progress_exposes_url_search_details(tmp_path) -> None:
 
     assert progress is not None
     assert bootstrap_progress_detail_lines(progress) == [
-        "補助URL登録: 既知URL 5 / 法人ドメイン推定 7",
+        "補助URL登録: 既知URL 5 / 学校別補正 0 / 法人ドメイン推定 7",
         "不足URL Web検索: 25校 / 入口候補 9 / 見つからず 15 / エラー 1",
     ]
 
@@ -947,6 +948,7 @@ def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatc
         "prefecture_aggregator",
         "seed_csv",
         "corporation_pattern",
+        "school_domain_override",
         "web_search",
         "operator_manual",
         "scrapling_stealth",
