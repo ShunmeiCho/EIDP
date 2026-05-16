@@ -214,6 +214,7 @@ v459 既存証跡（転記候補。bounded diagnostic-only。operator real-cycle
 | Default launcher health | pass | root `EIDP-start.bat`, Windows `8501`, health/root HTTP 200, cleanup left no listener |
 | Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定（年度・OCR・API）` rendered under `output/playwright/v459-ui-smoke/`; `summary.json` recorded `navAllClicked=true`, `hasErrorTraceback=false`; tunnel and Windows listener were cleaned up |
 | R7 browser Excel | pass | process-scoped `EIDP_TARGET_FISCAL_YEAR=2025`, `Excel出力可 2`, `Excel対象行 7177`, downloaded `output/playwright/v459-r7-excel-smoke/eidp_master.xlsx`; workbook dimensions `2419x10`, `10025x22`, `9748x83`, `9748x19`; checked `.env` paths absent |
+| Browser UI write/audit sandbox | pass | v459 disposable DB rejected `review_item#37` in `URL候補レビュー`, flushed `exported=2 already_present=0 failed=0`, saved `logs/win-v459-stage6/v459-ui-write-sandbox-result-final.json`, and left real runtime DB marker counts `0` |
 | Disk health | pass | Mac and Win both `warn_count=0`, `block_count=0`; v459 current plus v454 fallback retained |
 
 v456 既存証跡（historical。bounded diagnostic-only。UI write sandbox も v456 で実施済み）:
@@ -232,7 +233,7 @@ v456 既存証跡（historical。bounded diagnostic-only。UI write sandbox も 
 | Default launcher health | pass | `scripts\launch.bat`, Windows `8501`, Mac tunnel `18501 -> 8501`, health/root HTTP 200 |
 | Browser navigation | pass | Historical read-only nav support under `output/playwright/v456-ui-smoke/`; superseded by current v459 nav proof |
 | R7 browser Excel | pass | Historical R7 Excel browser support under `output/playwright/v456-r7-excel-smoke/`; superseded by current v459 R7 Excel proof |
-| Browser UI write/audit sandbox | pass | v456 disposable DB rejected `review_item#37` in `URL候補レビュー`, flushed `exported=2 already_present=0 failed=0`, saved `logs/win-v456-stage6/v456-ui-write-sandbox-result-final.json`, and left real runtime DB marker counts `0` |
+| Browser UI write/audit sandbox | pass | Historical URL-candidate reject / audit flush support under `logs/win-v456-stage6/v456-ui-write-sandbox-result-final.json`; superseded by current v459 UI write/audit sandbox proof |
 
 ## 5. 4 工程 E2E
 

@@ -19,7 +19,7 @@ Latest Windows-UI-health-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v459.zip`
-Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v459.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
@@ -80,6 +80,24 @@ v459 `.env` locations were absent after the process-scoped run. Cleanup removed
 the temporary local Playwright dependency, closed the tunnel, killed the
 Windows Streamlit process, and confirmed no remaining local `18504` or Windows
 `8501` listener.
+A disposable v459 UI write/audit sandbox then copied the v459 SQLite DB under
+`C:\Users\cyo20\EIDP-v459-50152a5\_temp\v459-ui-write-sandbox`, seeded
+`review_item#37` for
+`https://stage6-v459-ui-write-sandbox.example.invalid/`, launched the v459 UI
+with `EIDP_APP_ROOT` pointed at that sandbox, rejected the candidate in
+`URL候補レビュー` with reason `v459 UI reject smoke`, opened `監査ログ`, and
+clicked `Outbox を flush`. Browser evidence under
+`output/playwright/v459-ui-write-sandbox/` recorded the candidate before reject,
+the empty URL-candidate queue after reject, `JSONL outbox 未送信 2` before
+flush, and `exported=2 already_present=0 failed=0` after flush. The pulled
+verifier JSON
+`logs/win-v459-stage6/v459-ui-write-sandbox-result-final.json` returned
+`ok=true`, `pending_outbox=0`, `jsonl_line_count=2`,
+`jsonl_action_types=["stage6_v459_ui_audit_flush_smoke",
+"url_candidate_rejected"]`, matching JSONL/DB action IDs, no `SchoolSite` for
+the rejected URL, and real v459 runtime DB marker counts all `0`. Cleanup
+removed the remote sandbox, killed Windows `8501`, closed the local `18505`
+tunnel, and deleted the temporary local Playwright dependency.
 
 The v459 URL-only bootstrap completed with all 47 prefecture seed artifacts
 downloaded/aggregated, Step 2b seed URL import `imported=48`,
@@ -111,8 +129,9 @@ handoff.
 
 v456 remains historical browser-readonly-navigation-proven,
 R7-browser-Excel-proven, and UI-write-sandbox-proven support, but the current
-v459 lane now supersedes v456 for read-only navigation and R7 browser Excel
-generation/download. v456 was built
+v459 lane now supersedes v456 for read-only navigation, R7 browser Excel
+generation/download, and the URL-candidate reject / audit-outbox flush sandbox.
+v456 was built
 from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
 the operator E2E template version-neutral so future ZIPs do not embed stale
 package/SHA fields. The v456 strict non-Windows gate

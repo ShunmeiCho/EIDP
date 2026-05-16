@@ -55,6 +55,18 @@ Stage 6 operator-PC real-cycle sign-off.
 | FY persistence check | Both checked paths, `C:\Users\cyo20\EIDP-v459-50152a5\.env` and `C:\Users\cyo20\EIDP-v459-50152a5.env`, were absent after the process-scoped run |
 | Cleanup | Temporary local Playwright dependency, SSH tunnel, and Windows `8501` listener were removed |
 
+## UI Write / Audit Sandbox
+
+| Check | Result |
+| --- | --- |
+| Sandbox root | `C:\Users\cyo20\EIDP-v459-50152a5\_temp\v459-ui-write-sandbox`; copied SQLite DB, then removed after verification |
+| Seed | `review_item#37` for `https://stage6-v459-ui-write-sandbox.example.invalid/` plus one pending `stage6_v459_ui_audit_flush_smoke` audit row |
+| Browser action | Playwright opened `URL候補レビュー`, filled reason `v459 UI reject smoke`, clicked `却下`, opened `監査ログ`, and clicked `Outbox を flush` |
+| UI result | URL candidate queue became empty; audit page reported `exported=2 already_present=0 failed=0` |
+| Direct verification | `logs/win-v459-stage6/v459-ui-write-sandbox-result-final.json` returned `ok=true`, `pending_outbox=0`, `jsonl_line_count=2`, and `jsonl_action_ids_match_db=true` |
+| Runtime DB safety | Real v459 runtime DB marker counts were `review_item=0`, `school_site=0`, `manual_action_log=0` |
+| Cleanup | Remote sandbox, Windows `8501`, local `18505` tunnel, and temporary local Playwright dependency were removed |
+
 ## Evidence Bundle
 
 | Item | Result |

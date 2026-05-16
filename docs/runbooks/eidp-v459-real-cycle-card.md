@@ -71,8 +71,8 @@ Expected before continuing:
 7. Record the actual KPI values in `docs/runbooks/eidp-operator-e2e-template.md`.
 
 Do not treat the existing v459 bounded canary, browser health/nav smoke,
-process-scoped R7 browser Excel proof, or R7 retroactive support as the
-real-cycle sign-off.
+process-scoped R7 browser Excel proof, disposable UI write/audit sandbox, or R7
+retroactive support as the real-cycle sign-off.
 
 ## Evidence Bundle
 
