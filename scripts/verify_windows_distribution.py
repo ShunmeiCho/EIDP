@@ -1285,6 +1285,12 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'target_table="school_site"',
             'target_table="review_item"',
         ),
+        "src/eidp/review/_pages/school_year_tasks.py": (
+            "target_pdf_auto_yield_pct",
+            "operator_reviewable_yield_pct",
+            "レビュー目安",
+            "レビュー判定",
+        ),
         "src/eidp/review/operator_pages.py": (
             "log_manual_action",
             "apply_dept_alias_proposal",

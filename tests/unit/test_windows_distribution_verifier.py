@@ -347,7 +347,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "src/eidp/review/_pages/settings_page.py": (
             REPO_ROOT / "src" / "eidp" / "review" / "_pages" / "settings_page.py"
         ).read_text(encoding="utf-8"),
-        "src/eidp/review/_pages/school_year_tasks.py": "def render(session, *, lock_path): pass\n",
+        "src/eidp/review/_pages/school_year_tasks.py": (
+            REPO_ROOT / "src" / "eidp" / "review" / "_pages" / "school_year_tasks.py"
+        ).read_text(encoding="utf-8"),
         "src/eidp/review/_pages/pdf_manual_entry.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/prefecture_remarks.py": "def render(session, *, lock_path): pass\n",
         "src/eidp/review/_pages/url_candidate_review.py": (
@@ -932,6 +934,22 @@ def test_verify_core_zip_requires_operator_action_audit_contracts(tmp_path: Path
     assert any("dept_alias_approved" in error for error in check.errors)
     assert any("manual_entry" in error for error in check.errors)
     assert any("fiscal_year_override" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_review_coverage_gate_labels(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["src/eidp/review/_pages/school_year_tasks.py"] = entries[
+        "src/eidp/review/_pages/school_year_tasks.py"
+    ].replace("レビュー判定", "出荷判定")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        "src/eidp/review/_pages/school_year_tasks.py missing required token: レビュー判定" in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_requires_sqlite_bootstrap_data_loss_guards(tmp_path: Path) -> None:
