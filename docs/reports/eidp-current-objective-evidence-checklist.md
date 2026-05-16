@@ -1,15 +1,16 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-17
-Latest Mac/non-Windows package snapshot: `4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582`
+Latest Mac/non-Windows package snapshot: `9a94226b243fba691936db46c1fc11ef7c9debbd`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
-It is intentionally explicit about lane boundaries: `dist/eidp-windows-v463.zip`
+It is intentionally explicit about lane boundaries: `dist/eidp-windows-v464.zip`
 is the latest Mac/non-Windows release-gate-clean package from package snapshot
-`4de0aa8` and includes explicit target-FY propagation into ingestion for
-retroactive/forecast weekly runs. v463 has now been Windows-transferred,
-SHA-checked, extracted side-by-side to `C:\Users\cyo20\EIDP-v463-4de0aa8`,
+`9a94226` and includes explicit target-FY propagation into ingestion plus the
+packaged Stage 6 return-artifact verifier. v463 remains the latest
+Windows-transferred side-by-side target-FY override canary package: it was
+SHA-checked, extracted to `C:\Users\cyo20\EIDP-v463-4de0aa8`,
 setup-validated, and package-local FY override canary-proven. v462 remains the
 latest Windows side-by-side shared-cache canary package. v460 remains the active
 Windows scheduled-task, operator-cycle, companion handoff docs, disk-retention,
@@ -29,13 +30,14 @@ after about 9h41m because shared corporation domains were re-crawled repeatedly;
 it produced no new `last_run.json` and is a v1.1 performance finding, not
 release evidence.
 
-Package note: `dist/eidp-windows-v463.zip` was built from
-`4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582` with SHA256
-`81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`.
-`logs/release-gate-v463.json` returned `ok=true`, including `1669 passed` full
+Package note: `dist/eidp-windows-v464.zip` was built from
+`9a94226b243fba691936db46c1fc11ef7c9debbd` with SHA256
+`6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`.
+`logs/release-gate-v464.json` returned `ok=true`, including `1673 passed` full
 unit, validator unit/mypy/Ruff, discovery-gold checks, package verification,
-and demonstrated-pattern package verification.
-`logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
+and demonstrated-pattern package verification. v463 remains the latest
+retroactive-matrix package:
+`logs/release-gate-v463-retroactive-matrix.json` returned `ok=true` for
 FY2025/FY2024/FY2023 against old-package references regenerated from the frozen
 v459 ZIP/wheel into `_temp/v459-reference2-fy2025/`,
 `_temp/v459-reference2-fy2024/`, and `_temp/v459-reference2-fy2023/`; all three

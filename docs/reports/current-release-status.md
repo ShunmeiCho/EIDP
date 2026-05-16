@@ -2,11 +2,14 @@
 
 Updated: 2026-05-17
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v463.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v463.zip`
-Latest Mac-core package SHA256: `81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v463.zip`
+Latest Mac/non-Windows package snapshot: `9a94226b243fba691936db46c1fc11ef7c9debbd`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v464.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v464.zip`
+Latest Mac-core package SHA256: `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v464.zip`
+Prior Mac retroactive-matrix package: `dist/eidp-windows-v463.zip`, commit
+`4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582`, SHA256
+`81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`
 Prior Windows side-by-side cache package: `dist/eidp-windows-v462.zip`, commit
 `e1da33fa50a651f9059e9562be5bf0e381b6fa32`, SHA256
 `1b783b640e6c25249dd8efd6d8355aeed986c7ecad80c72c98bd4e168360a59a`; not the
@@ -48,19 +51,18 @@ Current Stage 6 real-cycle card: `docs/runbooks/eidp-v460-real-cycle-card.md`
 
 Status: **NOT COMPLETE**
 
-v463 is the latest Mac/non-Windows release-gate-clean package. It was built
-from `4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582` and adds explicit
-`target_fiscal_year` propagation through ingestion, so retroactive or forecast
-weekly runs do not stop at discovery with one FY while ingesting with the
-process default FY. Its SHA256 sidecar is
-`81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`,
-and `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v463.zip --json --output logs/release-gate-v463.json`
+v464 is the latest Mac/non-Windows release-gate-clean package. It was built from
+`9a94226b243fba691936db46c1fc11ef7c9debbd`, adds the packaged
+`scripts/verify_stage6_return.py` owner-artifact verifier, and keeps the v463
+explicit `target_fiscal_year` propagation through ingestion. Its SHA256 sidecar
+is `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`, and
+`uv run python scripts/run_non_windows_release_gates.py
+dist/eidp-windows-v464.zip --json --output logs/release-gate-v464.json`
 returned `ok=true`: SHA256 sidecar matched, package/source commit matched, full
-unit returned `1669 passed`, validator distribution unit returned `166 passed`,
+unit returned `1673 passed`, validator distribution unit returned `166 passed`,
 validator mypy/Ruff passed, discovery-gold checks passed, package verification
 passed, and demonstrated-pattern package verification passed.
-The follow-up Mac retroactive Excel matrix
+The v463 Mac retroactive Excel matrix
 `logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
 FY2025, FY2024, and FY2023. The references were regenerated from the frozen
 v459 package wheel plus the v459 ZIP `alembic.ini`/`migrations` into
@@ -70,10 +72,10 @@ references with `missing_rows=0`, `extra_rows=0`, and `differing_fields=0` for
 all three years. The earlier raw `data/master.xlsx` attempt was a reference
 selection error, because that workbook contains later-year fields and is not a
 FY-specific pass/fail reference.
-After this proof generation, Mac `scripts/disk_health_check.py --json` reports
+After the v463 proof generation, Mac `scripts/disk_health_check.py --json` reported
 `ok=true`, `warn_count=1`, and `block_count=0`: project `2.4GiB`, `dist=1.3GiB`
 (`warn`), `_temp=80.9MiB` (`ok`), `logs=14.3MiB` (`ok`), protected
-`data=20.0MiB`, and `.claude/worktrees=0B`. The retained v459-v463 packages and
+`data=20.0MiB`, and `.claude/worktrees=0B`. The retained v459-v464 packages and
 v459-derived reference workbooks are part of the current evidence chain, so no
 release-artifact pruning was performed automatically.
 
