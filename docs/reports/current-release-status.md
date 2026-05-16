@@ -124,6 +124,10 @@ with `run_id=20260516_060230`, `crawled=5`, `found=5`, `downloaded=2`,
 The refreshed v459 evidence bundle
 `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`
 verified with `ok=true`, `entry_count=12`, and `missing_required_labels=[]`.
+The bundle, verifier JSON, and latest diagnostics were copied back to Mac under
+`logs/win-v459-stage6/`; local `scripts/verify_stage6_evidence.py` returned
+`ok=true` for the copied ZIP, whose SHA256 is
+`c4e68ee5b5f8c1cb8b74938fb369edf4c53c00efdd5624bac3c05e51ab7caf28`.
 Mac cleanup retained v459 current plus v454 fallback and reported `warn=0
 block=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, protected
 `data=20.0MiB`, and `.claude/worktrees=0B`. Windows cleanup retained only

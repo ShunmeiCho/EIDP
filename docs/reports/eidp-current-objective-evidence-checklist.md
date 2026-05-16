@@ -76,6 +76,9 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   evidence bundle
   `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`
   verified with `ok=true`, `entry_count=12`, and `missing_required_labels=[]`.
+  Mac copy `logs/win-v459-stage6/stage6-evidence-20260516-070115.zip` also
+  verified locally with `ok=true`; SHA256
+  `c4e68ee5b5f8c1cb8b74938fb369edf4c53c00efdd5624bac3c05e51ab7caf28`.
   Mac disk health reported `warn=0 block=0`, and Win disk health reported
   `warn_count=0 block_count=0`.
 

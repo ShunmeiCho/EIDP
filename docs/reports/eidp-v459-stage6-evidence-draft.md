@@ -76,6 +76,9 @@ Stage 6 operator-PC real-cycle sign-off.
 | Verify JSON | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-verify-20260516-160115.json` |
 | Verification | `ok=true`, `entry_count=12`, `missing_required_labels=[]` |
 | Latest diagnostics | Root `EIDP-diagnose.bat` exited `0` and wrote `C:\Users\cyo20\EIDP-v459-50152a5\logs\diagnostics-20260516-160111.txt` before this bundle was collected |
+| Mac copy | `logs/win-v459-stage6/stage6-evidence-20260516-070115.zip`, `logs/win-v459-stage6/stage6-evidence-verify-20260516-160115.json`, and `logs/win-v459-stage6/diagnostics-20260516-160111.txt` |
+| Mac copy SHA256 | evidence ZIP `c4e68ee5b5f8c1cb8b74938fb369edf4c53c00efdd5624bac3c05e51ab7caf28`; verify JSON `66d1fc3f9b1247c8e1335a371a29b4f938a5dfa623ff55e2777b38289b627d78`; diagnostics `d79bc2c9a80eeaf385982a8fce177e4fec2ddfcb246cd537af220be224ffcb5c` |
+| Mac copy verification | `uv run python scripts/verify_stage6_evidence.py logs/win-v459-stage6/stage6-evidence-20260516-070115.zip` returned `ok=true`, `entry_count=12`, `missing_required_labels=[]` |
 | Present labels | `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`, `weekly_run_logs` |
 | Expected missing | `stage6_residual_cleanup` was not run during this bounded smoke |
 
