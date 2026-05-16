@@ -49,6 +49,7 @@ from eidp.review._pages.pdf_manual_entry import (
     SaveOutcome,
     SchoolSiteEvidenceRow,
     build_pdf_preview,
+    clear_manual_entry_form_state,
     coerce_focus_document_id,
     discovery_evidence_table_rows,
     discovery_reason_label,
@@ -61,11 +62,15 @@ from eidp.review._pages.pdf_manual_entry import (
     list_pending_documents,
     list_school_site_evidence,
     manual_action_filter_options,
+    manual_entry_row_widget_keys,
+    manual_entry_rows_state_key,
+    manual_entry_static_widget_keys,
     manual_next_action_for_row,
     manual_queue_summary,
     manual_queue_table,
     manual_queue_view_options,
     prioritize_queue_document,
+    prune_manual_entry_row_widgets,
     resolve_pdf_path,
     save_with_lock,
     school_site_evidence_table_rows,
@@ -75,6 +80,42 @@ from eidp.review._pages.pdf_manual_entry import (
 def test_manual_entry_fiscal_year_bounds_are_long_lived() -> None:
     assert MANUAL_ENTRY_MIN_FISCAL_YEAR == MIN_SUPPORTED_TARGET_FISCAL_YEAR
     assert MANUAL_ENTRY_MAX_FISCAL_YEAR == MAX_SUPPORTED_TARGET_FISCAL_YEAR
+
+
+def test_prune_manual_entry_row_widgets_removes_deleted_row_state() -> None:
+    state: dict[str, object] = {
+        manual_entry_rows_state_key(42): [{}, {}],
+        "name_42_0": "kept",
+        "cap_42_0": "10",
+        "name_42_1": "stale",
+        "cap_42_1": "20",
+        "name_43_1": "other-doc",
+        "reason_42": "memo",
+    }
+
+    prune_manual_entry_row_widgets(state, document_id=42, row_count=1)
+
+    assert state["name_42_0"] == "kept"
+    assert state["cap_42_0"] == "10"
+    assert "name_42_1" not in state
+    assert "cap_42_1" not in state
+    assert state["name_43_1"] == "other-doc"
+    assert state["reason_42"] == "memo"
+
+
+def test_clear_manual_entry_form_state_removes_all_form_widgets() -> None:
+    state: dict[str, object] = {
+        manual_entry_rows_state_key(42): [{}, {}],
+        "unrelated": "keep",
+    }
+    for key in manual_entry_row_widget_keys(42, 0) + manual_entry_row_widget_keys(42, 1):
+        state[key] = "stale"
+    for key in manual_entry_static_widget_keys(42):
+        state[key] = "stale"
+
+    clear_manual_entry_form_state(state, document_id=42)
+
+    assert state == {"unrelated": "keep"}
 
 
 @pytest.fixture()

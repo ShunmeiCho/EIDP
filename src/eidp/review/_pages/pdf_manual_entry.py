@@ -29,7 +29,7 @@ and refuses the save attempt. Read-only listing is unaffected.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, MutableMapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -86,6 +86,33 @@ MANUAL_ACTION_FILTER_ORDER: tuple[str, ...] = (
     "確認",
 )
 
+_MANUAL_ENTRY_ROW_WIDGET_PREFIXES: tuple[str, ...] = (
+    "name",
+    "cap",
+    "enr",
+    "intl",
+    "grad",
+    "adv",
+    "emp",
+    "oth",
+    "prev",
+    "drp",
+    "drprate",
+    "dur",
+    "chg",
+)
+_MANUAL_ENTRY_STATIC_WIDGET_PREFIXES: tuple[str, ...] = (
+    "fy",
+    "reason",
+    "sr_fh",
+    "sr_sh",
+    "sr_ann",
+    "sr_gt",
+    "sr_hh",
+    "sr_no",
+    "sr_note",
+)
+
 DISCOVERY_METHOD_LABELS: dict[str, str] = {
     "prefecture_aggregator": "都道府県公式一覧",
     "seed_csv": "既知URLシード",
@@ -104,6 +131,47 @@ DISCOVERY_REASON_LABELS: dict[str, str] = {
     "unsafe_url": "安全でないURLとして除外",
     "unsafe_resolved_url": "安全でない転送先として除外",
 }
+
+
+def manual_entry_rows_state_key(document_id: int) -> str:
+    return f"manual_entry_rows__{document_id}"
+
+
+def manual_entry_row_widget_keys(document_id: int, row_index: int) -> list[str]:
+    return [f"{prefix}_{document_id}_{row_index}" for prefix in _MANUAL_ENTRY_ROW_WIDGET_PREFIXES]
+
+
+def manual_entry_static_widget_keys(document_id: int) -> list[str]:
+    return [f"{prefix}_{document_id}" for prefix in _MANUAL_ENTRY_STATIC_WIDGET_PREFIXES]
+
+
+def prune_manual_entry_row_widgets(
+    state: MutableMapping[str, Any],
+    *,
+    document_id: int,
+    row_count: int,
+) -> None:
+    """Remove Streamlit widget keys for rows no longer present in the form."""
+    prefixes = tuple(f"{prefix}_{document_id}_" for prefix in _MANUAL_ENTRY_ROW_WIDGET_PREFIXES)
+    for key in list(state):
+        matching_prefix = next((prefix for prefix in prefixes if key.startswith(prefix)), None)
+        if matching_prefix is None:
+            continue
+        index_part = key[len(matching_prefix):]
+        if index_part.isdigit() and int(index_part) >= row_count:
+            state.pop(key, None)
+
+
+def clear_manual_entry_form_state(
+    state: MutableMapping[str, Any],
+    *,
+    document_id: int,
+) -> None:
+    """Clear all Streamlit form state for one document after a successful save."""
+    state.pop(manual_entry_rows_state_key(document_id), None)
+    for key in manual_entry_static_widget_keys(document_id):
+        state.pop(key, None)
+    prune_manual_entry_row_widgets(state, document_id=document_id, row_count=0)
 
 
 @dataclass(frozen=True)
@@ -1236,21 +1304,32 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
     from eidp.config import settings
 
     fy_default = row.fiscal_year or settings.target_fiscal_year
-    state_key = f"manual_entry_rows__{row.document_id}"
+    state_key = manual_entry_rows_state_key(row.document_id)
+    state = cast(MutableMapping[str, Any], st.session_state)
 
-    if state_key not in st.session_state:
-        st.session_state[state_key] = [
+    if state_key not in state:
+        state[state_key] = [
             {"canonical_name": "", "enrollment": "", "graduates": ""},
         ]
+    prune_manual_entry_row_widgets(
+        state,
+        document_id=row.document_id,
+        row_count=len(state[state_key]),
+    )
 
     cols = st.columns([1, 1, 1])
     if cols[0].button("行を追加", key=f"add_{row.document_id}"):
-        st.session_state[state_key].append(
+        state[state_key].append(
             {"canonical_name": "", "enrollment": "", "graduates": ""}
         )
     if cols[1].button("最終行を削除", key=f"del_{row.document_id}"):
-        if len(st.session_state[state_key]) > 1:
-            st.session_state[state_key].pop()
+        if len(state[state_key]) > 1:
+            state[state_key].pop()
+            prune_manual_entry_row_widgets(
+                state,
+                document_id=row.document_id,
+                row_count=len(state[state_key]),
+            )
 
     with st.form(key=f"form_{row.document_id}"):
         fiscal_year = st.number_input(
@@ -1264,7 +1343,7 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
         reason = st.text_input("操作メモ (reason)", key=f"reason_{row.document_id}")
 
         form_rows: list[dict[str, Any]] = []
-        for i, _ in enumerate(st.session_state[state_key]):
+        for i, _ in enumerate(state[state_key]):
             st.markdown(f"**学科 #{i + 1}**")
             c = st.columns([2, 1, 1, 1, 1, 1, 1])
             canonical = c[0].text_input("学科名", key=f"name_{row.document_id}_{i}")
@@ -1355,7 +1434,7 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
             f"監査ログ {len(outcome.result.audit_actions)} 件。"
         )
         # Clear form state so the next render starts fresh.
-        st.session_state.pop(state_key, None)
+        clear_manual_entry_form_state(state, document_id=row.document_id)
         st.rerun()
 
 
