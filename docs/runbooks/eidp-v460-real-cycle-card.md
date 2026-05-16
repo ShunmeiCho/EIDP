@@ -18,7 +18,7 @@ record.
 | Evidence draft | `docs/reports/eidp-v460-stage6-evidence-draft.md` |
 | Full template | `docs/runbooks/eidp-operator-e2e-template.md` |
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt` |
-| Top-level README SHA256 | `047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7` |
+| Top-level README SHA256 | `7c016d0943aafe0f65630fe6620f85f5843497c459b47c65c5d514d5900d86c1` |
 | Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt` |
 | Owner request SHA256 | `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e` |
 | Companion docs ZIP | `dist/eidp-v460-operator-docs-20260517.zip` |
@@ -30,8 +30,8 @@ snapshot, and v460 evidence draft.
 
 The 20260517 companion docs refresh supersedes the 20260516 companion docs for
 operator reading only. It does not change the v460 core package, Windows app
-root, scheduled task, or release approval gate. After transfer, verify the ZIP
-with Windows `Get-FileHash` and expand it to
+root, scheduled task, or release approval gate. It was copied to
+`C:\EIDP-staging`, verified with Windows `Get-FileHash`, and expanded to
 `C:\EIDP-staging\v460-operator-docs-20260517`.
 The top-level staging readme is `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`;
 its tracked source is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, and its SHA256

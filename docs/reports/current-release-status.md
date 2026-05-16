@@ -1445,13 +1445,13 @@ contains the v460 real-cycle card, E2E template, release-status snapshot, v460
 evidence draft, and the setup-entrypoint template correction. This 20260517
 refresh supersedes the 20260516 companion docs for operator reading only; it
 does not change the v460 core package, Windows app root, scheduled task, or
-release approval gate. After transfer, copy it to
-`C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip`, verify it on Windows
-with `Get-FileHash` against its sidecar, and expand it to
+release approval gate. It was copied to
+`C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip`, verified on Windows
+with `Get-FileHash` against its sidecar, and expanded to
 `C:\EIDP-staging\v460-operator-docs-20260517` with the top-level readme
 `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`. The tracked source for that
 top-level readme is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, with SHA256
-`047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7`, matching
+`7c016d0943aafe0f65630fe6620f85f5843497c459b47c65c5d514d5900d86c1`, matching
 the v460 handoff manifest. The short owner/operator request is also mirrored as
 tracked source at `docs/runbooks/eidp-v460-owner-request-20260516.txt`, with
 SHA256 `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e`,

@@ -1,5 +1,5 @@
 EIDP v460 operator handoff
-Date: 2026-05-16
+Date: 2026-05-17
 
 Current Windows lane:
 - Package: C:\EIDP-staging\eidp-windows-v460.zip
@@ -17,12 +17,16 @@ Pre-handoff checks already completed:
   (do not use the pre-owner diagnostic ZIP as release evidence)
 
 Read first:
-- C:\EIDP-staging\eidp-v460-handoff-manifest-20260516.txt
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-handoff-manifest-20260517.txt
 - C:\EIDP-staging\eidp-v460-owner-request-20260516.txt
-- eidp-v460-real-cycle-card.md
-- eidp-operator-e2e-template.md
-- eidp-v460-stage6-evidence-draft.md
-- current-release-status.md
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-real-cycle-card.md
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-operator-e2e-template.md
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-stage6-evidence-draft.md
+- C:\EIDP-staging\v460-operator-docs-20260517\current-release-status.md
+
+The 20260517 companion docs refresh supersedes the 20260516 companion docs for
+operator reading only. It does not change the v460 core package, extracted app
+root, scheduled task, database, or release approval gate.
 
 Do not approve v1.0 from setup proof alone. v460 still needs the owner/operator
 real-cycle, evidence bundle verification, KPI fill, and sign-off. v459 evidence
