@@ -800,11 +800,12 @@ Known non-goal-wide lint boundary:
 
 SSH-Win is available and v459 is already transferred, SHA-verified, extracted,
 set up, bootstrapped, bounded-weekly-smoked, UI-health-smoked,
-cleanup-tool-checked, disk-retention-checked, evidence-bundle-verified, and
-real-cycle entrypoint-checked in both the ZIP and extracted Windows root. The
-next gate is not another transfer or audit; it is an owner/operator Stage 6
-real-cycle sign-off on the current v459 lane, plus the later R8 production
-yield measurement.
+cleanup-tool-checked, disk-retention-checked, evidence-bundle-verified,
+Mac-copy-verified, and real-cycle entrypoint-checked in both the ZIP and
+extracted Windows root. The v459 real-cycle card now contains the
+owner/operator request and return-material list. The next gate is not another
+transfer or audit; it is an owner/operator Stage 6 real-cycle sign-off on the
+current v459 lane, plus the later R8 production yield measurement.
 
 Current v459 package:
 
@@ -830,6 +831,6 @@ ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:
 Complete the Stage 6 click-through against the real v459 operator cycle or an
 approved full-cycle copy: manual PDF entry write if needed, fiscal-year override
 write if needed, Excel preview/download for the active cycle, audit log/outbox
-  flush, diagnostics capture, evidence verify, and sign-off fields. Do not treat
-  the Codex-driven v456 bounded launcher, browser navigation, UI-write sandbox,
-  or R7 Excel proof as the final operator sign-off.
+flush, diagnostics capture, evidence verify, and sign-off fields. Do not treat
+the Codex-driven bounded launcher, browser navigation, UI-write sandbox, or R7
+Excel proof as the final operator sign-off.

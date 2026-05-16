@@ -43,6 +43,9 @@ commit match, full unit `1659 passed`, validator distribution unit/mypy/Ruff,
 discovery-gold checks, package verify, and demonstrated-pattern package verify.
 ZIP inspection confirmed `scripts/rotate_audit_outbox.py` and
 `scripts/prune_pdf_storage.py` are included.
+`docs/runbooks/eidp-v459-real-cycle-card.md` now includes the owner/operator
+request for the final Stage 6 real-cycle run and the minimum evidence that must
+come back before v1.0 can be approved.
 
 Windows transfer of v459 to `C:\EIDP-staging` matched the sidecar SHA, and
 staging now retains only v459 current plus v454 fallback ZIPs. Extraction to
@@ -1277,12 +1280,14 @@ Stage 6 template fill map for the v459 evidence lane:
 v459 is the current Windows execution candidate because it is the latest
 Mac/non-Windows release-gate-clean package that has also been transferred,
 SHA-checked, set up, UI-health-smoked, URL-bootstrapped, bounded-weekly-smoked,
-browser-navigation-smoked, R7-browser-Excel-smoked, and evidence-bundle-verified
-on the operator PC. v459 also has disposable UI write/audit sandbox proof; v454
-remains retained fallback support for the same URL-candidate/audit lane. The rows below are still evidence support only until the
-final operator real-cycle sign-off is captured. Future transfers should keep the same
-SSH/SCP or no-SSH manual transfer discipline, with Windows-side SHA256 checking
-before extraction.
+browser-navigation-smoked, R7-browser-Excel-smoked, evidence-bundle-verified,
+and copied back to Mac with matching Win/Mac SHA256. The v459 real-cycle card now
+contains an owner/operator request for the missing sign-off packet. v459 also has
+disposable UI write/audit sandbox proof; v454 remains retained fallback support
+for the same URL-candidate/audit lane. The rows below are still evidence support
+only until the final operator real-cycle sign-off is captured. Future transfers
+should keep the same SSH/SCP or no-SSH manual transfer discipline, with
+Windows-side SHA256 checking before extraction.
 
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |
