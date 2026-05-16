@@ -13,8 +13,9 @@ Windows-transferred side-by-side, SHA-checked, extracted to
 `C:\Users\cyo20\EIDP-v464-9a94226`, and setup-validated; the scheduled task was
 restored to v460 immediately afterward. v464 also has side-by-side read-only
 UI-health/browser-navigation proof on Windows port `8508` and evidence-verifier
-guard proof that setup-only bundles cannot pass without `last_run`. v463 remains the
-latest side-by-side target-FY override canary package, and v462 remains the
+guard proof that setup-only bundles cannot pass without `last_run`; its packaged
+return-artifact verifier also rejects the current Plan A/non-filled return on
+Windows. v463 remains the latest side-by-side target-FY override canary package, and v462 remains the
 latest Windows side-by-side shared-cache canary package. v460 remains the
 active Windows scheduled-task, operator-cycle, companion handoff docs, and
 disk-retention lane at
@@ -49,7 +50,10 @@ Windows-local and tunneled health `ok`, captured five screenshots under
 `write_actions_invoked=false`, and `weekly_invoked=false`. The v464 diagnostic
 evidence bundle smoke also produced `stage6-evidence-20260516-225040.zip`, and
 packaged verification correctly returned `ok=false` with
-`missing_required_labels=["last_run"]`. v463 remains the latest
+`missing_required_labels=["last_run"]`. The packaged v464
+`verify_stage6_return.py` was also executed on Windows against current v460
+Plan A artifacts and returned `ok=false` / exit `1` because KPI values were
+unmeasured and sign-off/template rows were blank. v463 remains the latest
 retroactive-matrix package:
 `logs/release-gate-v463-retroactive-matrix.json` returned `ok=true` for
 FY2025/FY2024/FY2023 against old-package references regenerated from the frozen
@@ -88,6 +92,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | Latest side-by-side package setup | v464 was transferred to `C:\EIDP-staging`, Windows SHA matched `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`, extracted to `C:\Users\cyo20\EIDP-v464-9a94226`, setup completed with exit `0`, and `logs/win-v464-stage6/validate-install-after-setup-20260517-073352.json` returned `ok=true`, `errors=[]`, `warnings=[]`. Post-setup recovery `logs/win-v464-stage6/post-v464-restore-stage6-recovery-20260517-073334.json` returned `ok=true` and `action_matches_expected=true` for the v460 scheduled-task pointer. | v464 Windows side-by-side transfer/setup proven; not the active owner-cycle lane |
 | Latest side-by-side UI health | v464 Streamlit was started directly on Windows `127.0.0.1:8508`; Windows-local health and Mac tunnel `127.0.0.1:18508 -> 127.0.0.1:8508` both returned `ok`. Playwright clicked only read-only quick navigation buttons for `① 学校別タスク`, `② PDF確認・手入力`, `③ 年度判定・修正`, `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`; `output/playwright/v464-ui-smoke/summary.json` reports `ok=true`, `has_v464_build=true`, `has_error_traceback=false`, `nav_all_clicked=true`, `write_actions_invoked=false`, and `weekly_invoked=false`. Screenshots `00-home.png` through `04-settings.png` were captured, and cleanup removed both listeners. | v464 Windows side-by-side UI-health/read-only nav proven; not a real operator cycle |
 | Latest side-by-side evidence guard | v464 `scripts\collect_stage6_evidence.bat` created `stage6-evidence-20260516-225040.zip`; `scripts\verify_stage6_evidence.bat` wrote `logs/win-v464-stage6/stage6-evidence-verify-20260517-075050.json` with `ok=false`, `present_labels=["build_info","diagnostics"]`, and `missing_required_labels=["last_run"]`. | v464 verifier correctly rejects setup/UI-only evidence; final release still needs real-cycle `last_run` |
+| Latest return-artifact verifier | v464 packaged `scripts\verify_stage6_return.py` was run on Windows against `C:\Users\cyo20\EIDP-v460-01e4427\data\output\last_run.json`, `stage6-evidence-verify-20260516-184433.json`, and the still-blank `eidp-operator-e2e-template.md`. `logs/win-v464-stage6/verify-stage6-return-plan-a-reject-20260517-0754.json` returned `ok=false` with errors for unmeasured KPI values, placeholder release rows, and missing owner/operator sign-off. | v464 return verifier runnable on Windows and rejects non-release return |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | v460 Plan A wrote `last_run.json` but recorded `target_pdf_auto_yield_pct=null` and `ship_gate_status=not_measured` because there were no crawlable URL schools in the fresh v460 DB. The second v460 FY2026 run after URL bootstrap did not complete and should not be used as KPI evidence; live R8 yield is record-only during the May publication-lag window, not the v1.0 algorithm-proof gate. v459 bounded real R7 weekly canary crawled 5 target-missing schools after URL-only bootstrap, found 5 candidate pages, downloaded 2 PDFs, ingested `new_document_ids=[1, 2]`, and recorded `target_pdf_auto_yield_pct=40.0`; this holds the v456/v454 strict yield while keeping reviewable target-form evidence visible. Current HEAD also prevents `ok_strict` from passing unless both `strict_target_pdf` and `excel_ready` meet the strict threshold | Failing; not a v1.0 algorithm verdict |
 | Ship gate: estimated manual work <= 30% | v460 Plan A recorded `operator_reviewable_yield_pct=null` and diagnostics report `estimated_manual_workload_rate=1.0`; v459 bounded R7 canary recorded `operator_reviewable_count=5`, `operator_reviewable_yield_pct=100.0`, and `ship_gate_status=pass` on the 5-school bounded sample. Real operator sign-off and R8 production workload evidence remain missing | Failing |

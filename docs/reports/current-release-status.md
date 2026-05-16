@@ -23,6 +23,7 @@ Latest Windows-transfer-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v464.zip`
+Latest Windows-return-artifact-verifier-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v464.zip`
@@ -100,6 +101,14 @@ pass as Stage 6 release evidence. The Mac copies are
 (SHA256 `a9471ba1af8236b50ab2c77a403616139c6a7bfd11fe99f36f4be24524df80dc`),
 and `logs/win-v464-stage6/diagnostics-20260517-075037.txt`
 (SHA256 `d58124385eba406e17a2f296f3d4aa191e05ac79790e186d46e5043c7d056ce2`).
+The packaged v464 return-artifact verifier was also executed on Windows against
+the current v460 Plan A `last_run.json`, verifier JSON, and still-blank E2E
+template. It exited `1` and returned `ok=false`, rejecting the return because
+KPI values were unmeasured and sign-off/template fields were still blank. The
+Mac copy is
+`logs/win-v464-stage6/verify-stage6-return-plan-a-reject-20260517-0754.json`
+with SHA256
+`bfab702236911a73f516a83c47e2e94ac1710e44cf6c7024885d43bc5473f310`.
 The v463 Mac retroactive Excel matrix
 `logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
 FY2025, FY2024, and FY2023. The references were regenerated from the frozen
