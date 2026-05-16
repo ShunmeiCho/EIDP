@@ -28,8 +28,9 @@ The companion docs ZIP was copied to `C:\EIDP-staging`, verified with
 Windows `Get-FileHash`, and expanded to `C:\EIDP-staging\v460-operator-docs`.
 The top-level staging readme is `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`.
 
-Before this card was handed off, v460 passed the Mac/non-Windows release gate
-and Windows setup staging. The scheduled task now points at:
+Before this card was handed off, v460 passed the Mac/non-Windows release gate,
+Windows setup staging, and a read-only browser navigation smoke. The scheduled
+task now points at:
 `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat`.
 
 ## Owner / Operator Request

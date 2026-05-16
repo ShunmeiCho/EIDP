@@ -15,9 +15,9 @@ Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v460.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v459.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
-Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v459.zip`
+Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
@@ -68,16 +68,28 @@ Mac copies under `logs/win-v460-stage6/` have SHA256
 `6b4d566433db64c730737f925f0559e9b06582eed4cb0b6cd51f0623f153b445` for
 diagnostics and
 `41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6` for the
-recovery JSON. Disk cleanup retained v460 current plus v459 fallback on both
-Mac and Windows, pruned stale v454 package/deploy artifacts, and disk health
-reported `ok=true`, `warn_count=0`, and `block_count=0` on both sides.
+recovery JSON. A read-only v460 UI smoke then started Streamlit directly on
+Windows `127.0.0.1:8501`, verified `_stcore/health=ok`, opened a Mac SSH tunnel
+on `127.0.0.1:18506`, and clicked `① 学校別タスク`,
+`② PDF確認・手入力`, `④ Excel プレビュー`, and
+`⑤ 設定（年度・OCR・API）`. `output/playwright/v460-ui-smoke/summary.json`
+recorded `hasV460Build=true`, `hasJapaneseUi=true`,
+`hasTargetFiscalYear=true`, `hasErrorTraceback=false`, and
+`navAllClicked=true`; screenshots `00-home.png` through `04-settings.png`
+were captured. Cleanup closed the browser tab, removed the local tunnel, and
+left no Windows listener on `8501`. Disk cleanup retained v460 current plus
+v459 fallback on both Mac and Windows, pruned stale v454 package/deploy
+artifacts, and disk health reported `ok=true`, `warn_count=0`, and
+`block_count=0` on both sides.
 
-No v460 weekly run, browser UI smoke, evidence bundle, or owner/operator
+No v460 weekly run, write-path browser flow, evidence bundle, or owner/operator
 real-cycle was executed during this staging update. Do not treat the v460
-setup/recovery proof or v459 bounded support as a v460 real-cycle sign-off.
+setup/recovery/UI smoke proof or v459 bounded support as a v460 real-cycle
+sign-off.
 
-v459 remains the latest evidence-bundle-proven, browser-navigation-proven,
-R7-browser-Excel-proven, and UI-write-sandbox-proven support package. Its
+v459 remains the latest evidence-bundle-proven, default-launcher-proven,
+R7-browser-Excel-proven, bounded-weekly-proven, and UI-write-sandbox-proven
+support package. Its
 operator docs bundle and support evidence remain useful for checklist shaping,
 but v459 is no longer the current Windows execution pointer after the v460
 staging update. For v459, the root-level packaged `EIDP-start.bat` started
@@ -1244,20 +1256,22 @@ sandbox proof rather than a real operator one-cycle sign-off.
 
 ## Current Stage 6 Boundary
 
-The active operator-PC setup lane is now the v460 extraction
+The active operator-PC setup/UI lane is now the v460 extraction
 `C:\Users\cyo20\EIDP-v460-01e4427`. It is Mac/non-Windows release-gate-clean,
 transferred to Windows, SHA-checked, extracted, set up, after-setup validated,
 recovery-parser validated, diagnostics-captured, and the scheduled task now
-points to the v460 weekly runner. It is still not Stage 6 complete because no
-v460 weekly run, browser click-through/write flow, evidence bundle, measured
-yield, or owner/operator sign-off has been captured.
+points to the v460 weekly runner. A direct Streamlit read-only browser smoke
+also passed. It is still not Stage 6 complete because no v460 weekly run,
+write-path browser flow, evidence bundle, measured yield, or owner/operator
+sign-off has been captured.
 
 Already supportable from v460 evidence: ZIP transfer and SHA256 match, clean
 `BUILD_INFO.json`, `EIDP-setup.bat` completion, offline wheelhouse install,
 SQLite bootstrap/import, `school_fiscal_year_status` rebuild for `2418`
 schools, SQLite integrity, required-table presence, scheduled-task XML parsing,
 scheduled-task action confirmation for the v460 weekly runner, diagnostics
-collection, and disk health with no warn/block findings. v460 also includes the
+collection, read-only Streamlit/browser navigation for the four operator quick
+pages, and disk health with no warn/block findings. v460 also includes the
 operator-cycle hardening for Excel preview session memory, lock-held
 manual-entry controls, manual-entry stale widget cleanup, and evidence recorder
 closing.
@@ -1306,9 +1320,9 @@ with `Get-FileHash` against its sidecar, and expanded to
 | --- | --- | --- |
 | 1. 実施情報 | v460 package snapshot `01e44279238aaef9127ed9b578e29dc8e0070499`; `dist/eidp-windows-v460.zip`; SHA256 `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c`; extract path `C:\Users\cyo20\EIDP-v460-01e4427` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; v460 disk health is `ok=true`, `warn_count=0`, `block_count=0`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Final v460/operator run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
-| 3. 証跡採取コマンド | v460 hash/setup/validate/recovery diagnostics are available; v459 evidence-bundle/UI-health/default-launcher/browser-navigation/R7-browser-Excel/UI-write-sandbox proofs remain bounded support; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; v460 final evidence bundle from the real operator cycle |
-| 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle; optional v460 UI health/default-launcher re-smoke if the owner requests it before the real run |
-| 5. 4 工程 E2E | v459 bounded R7 weekly downloaded two target PDFs, v459 browser navigation rendered the core operator pages without invoking writes, v459 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v459 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete v460 real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
+| 3. 証跡採取コマンド | v460 hash/setup/validate/recovery diagnostics and read-only browser navigation are available; v459 evidence-bundle/default-launcher/R7-browser-Excel/UI-write-sandbox proofs remain bounded support; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; v460 final evidence bundle from the real operator cycle |
+| 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, read-only navigation, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle; optional v460 default-launcher re-smoke if the owner requests it before the real run |
+| 5. 4 工程 E2E | v460 browser navigation rendered the core operator pages without invoking writes; v459 bounded R7 weekly downloaded two target PDFs, v459 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v459 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete v460 real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
 | 6. KPI 判定 | v459 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`. FY2026 production output and final R8 yield remain unproven | v460 real click-through diagnostics and final current-year `ship_readiness_rc=0` |
 | 7. 監査 / outbox | v459 disposable UI write/audit sandbox showed flush result `exported=2 already_present=0 failed=0`, `pending_outbox=0`, one seeded audit row plus one `url_candidate_rejected` row exported, matching JSONL action IDs, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0`; v408/v407 sandboxes show broader historical surfaces | Real or approved full-cycle `manual_action_log` delta and final JSONL duplicate check |
 | 8. 障害 / 回避策 | Known current hazards: v460 lacks real-cycle proof; v459 UI-write proof is sandbox-only; v459 bounded strict auto-yield is `40.0%`; v407 evidence bundle with Excel export is verifier-rejected; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v460 full-cycle failures and screenshots/log attachments |
