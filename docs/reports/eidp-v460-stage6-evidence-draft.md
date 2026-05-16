@@ -50,11 +50,13 @@ and release-status snapshot. The top-level staging readme is
 | Diagnostics | `C:\Users\cyo20\EIDP-v460-01e4427\logs\diagnostics-20260516-170035.txt`; Mac copy `logs/win-v460-stage6/diagnostics-20260516-170035.txt` |
 | Mac copy SHA256 | diagnostics `6b4d566433db64c730737f925f0559e9b06582eed4cb0b6cd51f0623f153b445`; recovery JSON `41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6` |
 | UI health / read-only nav | Direct Streamlit launch served Windows `127.0.0.1:8501/_stcore/health=ok`; Mac tunnel `127.0.0.1:18506` returned health `ok`; browser smoke wrote `output/playwright/v460-ui-smoke/summary.json` with `hasV460Build=true`, `hasJapaneseUi=true`, `hasTargetFiscalYear=true`, `hasErrorTraceback=false`, and `navAllClicked=true` |
+| Diagnostic evidence-bundle guard | `EIDP-stage6-evidence.bat` created `C:\Users\cyo20\EIDP-v460-01e4427\logs\stage6-evidence-20260516-082906.zip`, but `EIDP-stage6-verify-evidence.bat` correctly returned `ok=false`, `missing_required_labels=["last_run"]`; Mac copy SHA256: ZIP `35b2042dbd50c1fd5156975876d5c35eca97c80ad1f42ab327852eef4c621f29`, verify JSON `d774b02dd31e0b71d0531f0577b9f452a1f4ca9a85bff8cad8b3fd36230a19a9` |
 
-No v460 weekly run, write-path browser flow, evidence bundle, or
-owner/operator real-cycle was executed during this staging update. The v460
+No v460 weekly run, write-path browser flow, verifier-accepted evidence bundle,
+or owner/operator real-cycle was executed during this staging update. The v460
 browser smoke was read-only: it did not run weekly collection, generate a
-workbook, save settings, or commit operator writes.
+workbook, save settings, or commit operator writes. The diagnostic evidence ZIP
+is intentionally not release evidence because `last_run` is missing.
 
 ## Disk State
 

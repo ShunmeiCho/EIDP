@@ -53,6 +53,10 @@ Do not approve v1.0 from the v460 setup/staging proof alone. The real-cycle row
 must be filled from an owner/operator run or an explicitly approved full-cycle
 copy.
 
+A pre-owner diagnostic evidence ZIP was intentionally rejected by
+`EIDP-stage6-verify-evidence.bat` because `last_run` was missing. Treat that as
+a guardrail proof, not as release evidence.
+
 ## Do Not Touch
 
 - Do not delete `data\eidp.sqlite3`.
