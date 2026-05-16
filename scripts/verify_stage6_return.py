@@ -7,11 +7,16 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 REQUIRED_EVIDENCE_LABELS = ("build_info", "diagnostics", "last_run", "stage6_recovery", "weekly_run_logs")
 REQUIRED_KPI_ROWS = ("ship_readiness_rc", "strict target PDF 自動取得率", "推定手作業率")
 REQUIRED_RELEASE_ROWS = ("業務員 PC 1 サイクル完了", "KPI owner 承認", "残 P0/P1 bug")
+REQUIRED_RELEASE_VALUES = {
+    "業務員 PC 1 サイクル完了": "yes",
+    "KPI owner 承認": "yes",
+    "残 P0/P1 bug": "none",
+}
 PLACEHOLDER_RESULTS = {
     "",
     "pass / fail",
@@ -73,7 +78,19 @@ def _is_placeholder(value: str) -> bool:
     return value.strip().lower() in PLACEHOLDER_RESULTS
 
 
-def _verify_last_run(last_run: dict[str, Any], *, target_fy: int | None, require_kpi: bool, errors: list[str]) -> None:
+def _is_number(value: object) -> TypeGuard[int | float]:
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _verify_last_run(
+    last_run: dict[str, Any],
+    *,
+    target_fy: int | None,
+    require_kpi: bool,
+    min_target_pdf_auto_yield: float,
+    max_manual_workload: float,
+    errors: list[str],
+) -> None:
     if last_run.get("status") != "success":
         errors.append("last_run status must be success")
     if not last_run.get("finished_at"):
@@ -84,10 +101,27 @@ def _verify_last_run(last_run: dict[str, Any], *, target_fy: int | None, require
         errors.append(f"last_run current_fy must be {target_fy}")
 
     if require_kpi:
-        for field in ("target_pdf_auto_yield_pct", "operator_reviewable_yield_pct"):
-            value = last_run.get(field)
-            if not isinstance(value, int | float):
-                errors.append(f"last_run {field} must be numeric for final return evidence")
+        target_yield = last_run.get("target_pdf_auto_yield_pct")
+        operator_reviewable_yield = last_run.get("operator_reviewable_yield_pct")
+        if not _is_number(target_yield):
+            errors.append("last_run target_pdf_auto_yield_pct must be numeric for final return evidence")
+        else:
+            target_yield_value = float(target_yield)
+            if target_yield_value < min_target_pdf_auto_yield:
+                errors.append(
+                    "last_run target_pdf_auto_yield_pct below release threshold: "
+                    f"{target_yield_value:.1f} < {min_target_pdf_auto_yield:.1f}"
+                )
+        if not _is_number(operator_reviewable_yield):
+            errors.append("last_run operator_reviewable_yield_pct must be numeric for final return evidence")
+        else:
+            operator_reviewable_yield_value = float(operator_reviewable_yield)
+            manual_workload = 100.0 - operator_reviewable_yield_value
+            if manual_workload > max_manual_workload + 1e-9:
+                errors.append(
+                    "last_run estimated manual workload above release threshold: "
+                    f"{manual_workload:.1f} > {max_manual_workload:.1f}"
+                )
         if last_run.get("ship_gate_status") in {None, "", "not_measured"}:
             errors.append("last_run ship_gate_status must be measured")
 
@@ -119,6 +153,8 @@ def _verify_template(text: str, errors: list[str]) -> None:
             errors.append(f"E2E template KPI actual is blank: {row_label}")
         if _is_placeholder(verdict):
             errors.append(f"E2E template KPI verdict is still placeholder: {row_label}")
+        elif verdict.lower() != "pass":
+            errors.append(f"E2E template KPI verdict must be pass: {row_label}")
 
     for row_label in REQUIRED_RELEASE_ROWS:
         row = _table_row(text, row_label)
@@ -127,10 +163,14 @@ def _verify_template(text: str, errors: list[str]) -> None:
             continue
         if _is_placeholder(row[1]):
             errors.append(f"E2E template release row is still placeholder: {row_label}")
+        elif row[1].lower() != REQUIRED_RELEASE_VALUES[row_label]:
+            errors.append(f"E2E template release row must be {REQUIRED_RELEASE_VALUES[row_label]}: {row_label}")
 
     conclusion = _fenced_block_after(text, "結論:")
     if conclusion is None or _is_placeholder(conclusion.strip()):
         errors.append("E2E template release conclusion is missing or still placeholder")
+    elif conclusion.strip().lower() != "go":
+        errors.append("E2E template release conclusion must be go")
 
     for marker in ("Owner sign-off:", "業務員 sign-off:"):
         block = _fenced_block_after(text, marker)
@@ -149,13 +189,22 @@ def verify_stage6_return(
     evidence_verify_json: Path,
     target_fy: int | None = None,
     require_kpi: bool = True,
+    min_target_pdf_auto_yield: float = 60.0,
+    max_manual_workload: float = 30.0,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
 
     last_run_json = _load_json(last_run, errors, "last_run")
     if last_run_json is not None:
-        _verify_last_run(last_run_json, target_fy=target_fy, require_kpi=require_kpi, errors=errors)
+        _verify_last_run(
+            last_run_json,
+            target_fy=target_fy,
+            require_kpi=require_kpi,
+            min_target_pdf_auto_yield=min_target_pdf_auto_yield,
+            max_manual_workload=max_manual_workload,
+            errors=errors,
+        )
 
     verify_json = _load_json(evidence_verify_json, errors, "evidence verifier JSON")
     if verify_json is not None:
@@ -176,6 +225,8 @@ def verify_stage6_return(
             "evidence_verify_json": str(evidence_verify_json),
             "target_fy": target_fy,
             "require_kpi": require_kpi,
+            "min_target_pdf_auto_yield": min_target_pdf_auto_yield,
+            "max_manual_workload": max_manual_workload,
         },
         "required_evidence_labels": list(REQUIRED_EVIDENCE_LABELS),
         "required_kpi_rows": list(REQUIRED_KPI_ROWS),
@@ -189,6 +240,18 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--last-run", required=True, help="Returned data/output/last_run.json.")
     parser.add_argument("--evidence-verify-json", required=True, help="Returned stage6-evidence-verify-*.json.")
     parser.add_argument("--target-fy", type=int, help="Expected current_fy in last_run.json.")
+    parser.add_argument(
+        "--min-target-pdf-auto-yield",
+        type=float,
+        default=60.0,
+        help="Minimum target_pdf_auto_yield_pct for release approval.",
+    )
+    parser.add_argument(
+        "--max-manual-workload",
+        type=float,
+        default=30.0,
+        help="Maximum estimated manual workload percentage for release approval.",
+    )
     parser.add_argument(
         "--allow-unmeasured-kpi",
         action="store_true",
@@ -206,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
         evidence_verify_json=Path(args.evidence_verify_json),
         target_fy=args.target_fy,
         require_kpi=not args.allow_unmeasured_kpi,
+        min_target_pdf_auto_yield=args.min_target_pdf_auto_yield,
+        max_manual_workload=args.max_manual_workload,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))

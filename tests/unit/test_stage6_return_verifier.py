@@ -175,3 +175,54 @@ Decision:
     assert "evidence verifier JSON missing labels: last_run, stage6_recovery, weekly_run_logs" in result["errors"]
     assert "E2E template Owner sign-off: Name is blank" in result["errors"]
     assert "E2E template 業務員 sign-off: Decision is blank" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_below_threshold_and_non_go_decision(tmp_path: Path) -> None:
+    module = _load_module()
+    template = tmp_path / "eidp-operator-e2e-template.md"
+    template.write_text(
+        _complete_template()
+        .replace(
+            "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
+            "| strict target PDF 自動取得率 | >= 60% | 55.0 | watch |",
+        )
+        .replace("go\n```", "no-go\n```")
+        .replace("| KPI owner 承認 | yes |", "| KPI owner 承認 | no |"),
+        encoding="utf-8",
+    )
+    last_run = tmp_path / "last_run.json"
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": 55.0,
+            "operator_reviewable_yield_pct": 65.0,
+            "ship_gate_status": "pass",
+        },
+    )
+    verify_json = tmp_path / "stage6-evidence-verify.json"
+    _write_json(
+        verify_json,
+        {
+            "ok": True,
+            "missing_required_labels": [],
+            "present_labels": ["build_info", "diagnostics", "last_run", "stage6_recovery", "weekly_run_logs"],
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "last_run target_pdf_auto_yield_pct below release threshold: 55.0 < 60.0" in result["errors"]
+    assert "last_run estimated manual workload above release threshold: 35.0 > 30.0" in result["errors"]
+    assert "E2E template KPI verdict must be pass: strict target PDF 自動取得率" in result["errors"]
+    assert "E2E template release row must be yes: KPI owner 承認" in result["errors"]
+    assert "E2E template release conclusion must be go" in result["errors"]

@@ -154,7 +154,9 @@ uv run python scripts/verify_stage6_return.py \
 ```
 
 This is stricter than the evidence ZIP verifier: it rejects blank KPI/sign-off
-rows and `last_run.json` values where the final yield remains `not_measured`.
+rows, `last_run.json` values where the final yield remains `not_measured`,
+strict target PDF yield below `60.0`, and estimated manual workload above
+`30.0`.
 
 ## Sign-Off Gate
 
