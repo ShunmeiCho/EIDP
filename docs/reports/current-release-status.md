@@ -7,30 +7,32 @@ Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-
 Latest Mac-core-verifier-clean package: `dist/eidp-windows-v456.zip`
 Latest Mac-core package SHA256: `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v456.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v454.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v456.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v452.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v454.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v454.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v454.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v454.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v456.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v456.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v454-stage6/stage6-evidence-20260516-023620.zip` (latest v454 verified bundle with complete required labels)
-Current Stage 6 evidence draft: `docs/reports/eidp-v454-stage6-evidence-draft.md`
+Current Stage 6 evidence bundle: `logs/win-v456-stage6/stage6-evidence-20260516-034752.zip` (latest v456 verified bundle with complete required labels)
+Current Stage 6 evidence draft: `docs/reports/eidp-v456-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v456 is the latest Mac/non-Windows release-gate-clean package. It was built
+v456 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
+evidence-bundle-proven, and UI-health-proven package. It was built
 from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
 the operator E2E template version-neutral so future ZIPs do not embed stale
 package/SHA fields. The v456 strict non-Windows gate
@@ -42,12 +44,47 @@ pass, discovery-gold expected predictions, and both package verifier modes
 pass. Mac disk cleanup after v456 removed the failed v455 package/sidecar,
 left retained packages v456/v454/v453, and
 `scripts/disk_health_check.py --profile mac-dev` reported `warn=0 block=0` with `dist=940.2MiB`,
-`_temp=0B`, protected `data=20.0MiB`, and `.claude/worktrees=0B`. v456 has not
-yet been transferred to Windows or setup-smoked on the operator PC.
+`_temp=0B`, protected `data=20.0MiB`, and `.claude/worktrees=0B`. Windows
+transfer to `C:\EIDP-staging` matched the sidecar SHA, extraction to
+`C:\Users\cyo20\EIDP-v456-f33ffc0` succeeded, and `EIDP-setup.bat` exited `0`
+with `school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, and `wheel_count=78`. Independent packaged
+`scripts\validate_install.bat --after-setup --json` returned `ok=true`.
+Packaged disk health returned `warn_count=0`, `block_count=0`,
+`app_root_total=843.0MiB`, `data\pdfs=0B`, `data\output=0B`, and `logs=3.8KiB`.
+The UI health smoke started Streamlit on Windows `127.0.0.1:8501` and returned
+`/_stcore/health=ok` plus root HTTP `200`, then cleanup left no listener on
+`8501`. Recovery check with expected action
+`C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` returned `ok=true`
+and `action_matches_expected=true`. Windows home loose test ZIP cleanup removed
+48 old `eidp-windows-v*.zip*` artifacts from `C:\Users\cyo20`, freeing about
+`7.81GB`; the packaged pruner then removed v453 staging/deploy artifacts,
+freeing another `1.11GB`, while preserving v456 current plus v454 fallback.
+The URL-only bootstrap completed with all 47 prefecture seed artifacts
+downloaded/aggregated, Step 2b seed URL import `imported=48`, and
+`school_domain_override` loaded `count=6` / inferred `6`; the subsequent
+bounded R7 weekly smoke ran with `EIDP_TARGET_FISCAL_YEAR=2025`,
+`EIDP_WEEKLY_LIMIT=5`, `EIDP_WEEKLY_BATCH_SIZE=5`,
+`EIDP_WEEKLY_RATE_LIMIT=0.5`, and `EIDP_WEEKLY_REQUEST_TIMEOUT=8`, exiting `0`
+with `run_id=20260516_034531`, `crawled=5`, `found=5`, `downloaded=2`,
+`new_document_ids=[1, 2]`, `operator_reviewable_count=5`,
+`target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, and
+`ship_gate_status=pass`. `scripts\validate_install.bat --after-setup
+--after-weekly --json` returned `ok=true`, `last_run_status=success`,
+`sqlite_target_fy=2025`, `sqlite_target_fy_target_pdf_school_count=2`, and
+`sqlite_target_fy_operator_reviewable_school_count=5`. A v456 evidence bundle
+`logs\stage6-evidence-20260516-034752.zip` verified on Windows and Mac as
+`logs/win-v456-stage6/stage6-evidence-20260516-034752.zip` with `ok=true`,
+`entry_count=12`, `manifest_missing_patterns=[]`, and present labels
+`bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
+`discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
+`stage6_residual_cleanup`, and `weekly_run_logs`. The URL-only bootstrap
+`--after-bootstrap` validator currently fails because `--skip-discover` progress
+does not emit ship-gate metric keys; the weekly validator is the authoritative
+bounded acquisition check for this v456 lane.
 
-v454 remains the latest Windows transfer-proven,
-setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
-evidence-bundle-proven, and UI-health-proven package. It was built from package
+v454 remains the latest Windows default-launcher, browser-readonly-navigation,
+R7 browser-Excel, and disposable UI write/audit sandbox proof. It was built from package
 snapshot `48a346bb626be749adb72d1aeb6a684903f22049`, which keeps target
 application PDFs viable for RCA/operator review even when a negative path token
 such as `syllabus` lowers their discovery score. The v454 strict non-Windows
@@ -1054,18 +1091,21 @@ sandbox proof can inform the checklist, but they must not be recorded as a
 completed v454 one-cycle sign-off.
 
 Historical v397/v384/v399 proofs below are retained as supporting evidence, but
-the current setup/UI lane is v454. Old residual smoke artifacts remain
+the current setup/weekly/UI-health lane is v456, while v454 remains the latest
+browser-nav, R7 browser-Excel, default-launcher, and UI-write sandbox lane. Old residual smoke artifacts remain
 diagnostic until explicitly cleaned. Do not externally share any bundle
 containing Excel exports, and do not run
 `stage6_residual_cleanup.py --apply` without explicit operator/user approval.
 
-Stage 6 template fill map for the v454 evidence lane:
+Stage 6 template fill map for the v456 evidence lane:
 
-v454 is the current Windows execution candidate because it is the latest
+v456 is the current Windows execution candidate because it is the latest
 Mac/non-Windows release-gate-clean package that has also been transferred,
-SHA-checked, set up, browser-smoked, R7-Excel-smoked, and UI-write-smoked on
-the operator PC. The rows below are still evidence support only until the final
-operator real-cycle sign-off is captured. Future transfers should keep the same
+SHA-checked, set up, UI-health-smoked, URL-bootstrapped, bounded-weekly-smoked,
+and evidence-bundle-verified on the operator PC. v454 remains supporting proof
+for browser navigation, R7 browser Excel, default launcher, and disposable UI
+write/audit paths. The rows below are still evidence support only until the
+final operator real-cycle sign-off is captured. Future transfers should keep the same
 SSH/SCP or no-SSH manual transfer discipline, with Windows-side SHA256 checking
 before extraction.
 
