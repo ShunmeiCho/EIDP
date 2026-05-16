@@ -1,16 +1,17 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-17
-Latest Mac/non-Windows package snapshot: `01e44279238aaef9127ed9b578e29dc8e0070499`
+Latest Mac/non-Windows package snapshot: `e1da33fa50a651f9059e9562be5bf0e381b6fa32`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
-It is intentionally explicit about lane boundaries: `dist/eidp-windows-v460.zip`
+It is intentionally explicit about lane boundaries: `dist/eidp-windows-v462.zip`
 is the latest Mac/non-Windows release-gate-clean package from package snapshot
-`01e4427`. v460 replaces v459 for Windows transfer, setup, recovery,
-scheduled-task pointer, companion handoff docs, and disk-retention evidence at
-`C:\Users\cyo20\EIDP-v460-01e4427`. v460 is also read-only
-UI-health/browser-navigation-proven. v459 remains the latest
+`e1da33f` and includes the shared-corporation HTTP cache performance fix. v460
+replaces v459 for Windows transfer, setup, recovery, scheduled-task pointer,
+companion handoff docs, and disk-retention evidence at
+`C:\Users\cyo20\EIDP-v460-01e4427`; v462 has not been Windows-staged. v460 is
+also read-only UI-health/browser-navigation-proven. v459 remains the latest
 evidence-bundle-proven, default-launcher-proven, R7 browser Excel
 generation/download-proven, bounded-weekly-smoked, and UI write/audit sandbox
 support package. v456 and v454 remain historical support for broader UI
@@ -24,17 +25,14 @@ after about 9h41m because shared corporation domains were re-crawled repeatedly;
 it produced no new `last_run.json` and is a v1.1 performance finding, not
 release evidence.
 
-Post-package source note: branch HEAD includes docs-only commits after the
-frozen v460 Windows ZIP. `dist/eidp-windows-v461.zip` was built from
-`b787a72bb1714b77583e4c0e904b1584fdaeba92` with SHA256
-`2c0d74ab382bf179f166bdb4d775cd414a08741eca3b27ba92c2e6c7a459850b`, but the
-current Windows staging pointer remains v460 at
-`C:\Users\cyo20\EIDP-v460-01e4427` until v461 is explicitly staged.
-Source HEAD also includes a run-scoped HTTP GET cache for repeated shared
-corporation-site PDF discovery fetches. It is covered by
-`tests/unit/test_pdf_discovery.py::test_run_pdf_discovery_caches_repeated_http_gets_for_shared_corporation_site`
-and the full `tests/unit/test_pdf_discovery.py` suite, but it is not present in
-the frozen v460/v461 Windows ZIPs until a rebuild.
+Package note: `dist/eidp-windows-v462.zip` was built from
+`e1da33fa50a651f9059e9562be5bf0e381b6fa32` with SHA256
+`1b783b640e6c25249dd8efd6d8355aeed986c7ecad80c72c98bd4e168360a59a`.
+`logs/release-gate-v462.json` returned `ok=true`, including `1666 passed` full
+unit, validator unit/mypy/Ruff, discovery-gold checks, package verification,
+and demonstrated-pattern package verification. The current Windows staging
+pointer remains v460 at `C:\Users\cyo20\EIDP-v460-01e4427` until v462 is
+explicitly transferred, extracted, setup-validated, and weekly-smoked.
 
 ## Objective Restatement
 
@@ -53,7 +51,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | Requirement | Current artifacts / evidence | Status |
 | --- | --- | --- |
 | 47 prefecture official lists seed school URLs | `scripts/verify_windows_distribution.py` verifier contract; `docs/reports/current-release-status.md` records 47 prefecture seeds and official-index bounded smokes; source HEAD preserves semantic trailing slashes for gold-set disclosure seed entrypoints while keeping normalized idempotency | Packaged in v407; live coverage remains partially proven |
-| Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints in both strong application and weak form-shape detection, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs, and caches identical shared corporation-root HTTP GETs within one run without caching PDFs or per-school scoring decisions | Mechanically guarded; yield gate failing; URL-rich runtime performance needs rebuilt Windows proof |
+| Strict target-FY PDF discovery excludes stale fallback from success | `src/eidp/scraper/pdf_discovery.py`; `src/eidp/scraper/discovery_evidence_summary.py`; `tests/unit/test_pdf_discovery.py`; v375 heading/update-date tests pass; source HEAD also guards romanized-only renewal-form hints in both strong application and weak form-shape detection, prioritizes yearless target-form evidence over older-year target evidence in RCA triage, inherits same-section support-system headings for year-only target-form links so they enter the download budget before generic `様式4` PDFs, and caches identical shared corporation-root HTTP GETs within one run without caching PDFs or per-school scoring decisions. v462 packages this cache and passed the non-Windows gate. | Mechanically guarded; yield gate failing; URL-rich runtime performance still needs Windows proof |
 | PDF extraction uses pdfplumber / PyMuPDF / Tesseract and writes only confidence >= 0.70 | OCR/package verifier contracts; v384 OCR image/write smoke; unit coverage for confidence propagation; source HEAD names the default `0.70` review threshold via `DEFAULT_CONFIDENCE_REVIEW` and keeps Excel/exporter env-threshold tests green | Mechanically proven for smokes; no current strict target-form OCR workload evidence |
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current; v408 disposable UI sandbox repeated the browser-write surface with one manual FY2025 `DepartmentYearly` row (`capacity=40`, `enrollment=28`, `extraction_method=manual`, `extraction_confidence=1.0`, `verified=true`) and one fiscal-year override that marked FY2024 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows non-current while FY2025 current rows were present | Proven on sandboxed/copy DB paths including v408; real operator one-cycle proof still missing |
 | Excel template export | v459 process-scoped FY2025 browser Excel smoke launched with `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with `Excel出力可 2`, `Excel対象行 7177`, and `2025年度（令和7年度）`, clicked `プレビュー workbook を生成`, exposed `Excel ダウンロード`, and downloaded `output/playwright/v459-r7-excel-smoke/eidp_master.xlsx`; local `openpyxl` verified sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` with dimensions `2419x10`, `10025x22`, `9748x83`, `9748x19`; Win-side checks reported both checked v459 `.env` locations missing, so the retroactive FY was not persisted. v460 adds Mac-side hardening that serializes preview bytes and drops the workbook handle from Streamlit session state, but no v460 browser Excel run has been executed yet. v456, v454, and v442 remain historical support, while historical v408 R7 CLI/browser exports and v437 FY2025/FY2024/FY2023 non-Windows retroactive matrix remain regression support. FY2026 export remains disabled on current setup evidence | Latest browser Excel proof is v459 R7 support; v460 full operator-cycle Excel output still pending |

@@ -2,12 +2,12 @@
 
 Updated: 2026-05-17
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `01e44279238aaef9127ed9b578e29dc8e0070499`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v460.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v460.zip`
-Latest Mac-core package SHA256: `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v460.zip`
-Latest post-package docs rebuild: `dist/eidp-windows-v461.zip`, commit
+Latest Mac/non-Windows package snapshot: `e1da33fa50a651f9059e9562be5bf0e381b6fa32`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v462.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v462.zip`
+Latest Mac-core package SHA256: `1b783b640e6c25249dd8efd6d8355aeed986c7ecad80c72c98bd4e168360a59a`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v462.zip`
+Prior post-package docs rebuild: `dist/eidp-windows-v461.zip`, commit
 `b787a72bb1714b77583e4c0e904b1584fdaeba92`, SHA256
 `2c0d74ab382bf179f166bdb4d775cd414a08741eca3b27ba92c2e6c7a459850b`; not the
 current Windows-staged execution pointer
@@ -42,8 +42,23 @@ Current Stage 6 real-cycle card: `docs/runbooks/eidp-v460-real-cycle-card.md`
 
 Status: **NOT COMPLETE**
 
-v460 is the latest Mac/non-Windows release-gate-clean package and the current
-Windows setup/recovery execution candidate. It was built from package snapshot
+v462 is the latest Mac/non-Windows release-gate-clean package. It was built
+from `e1da33fa50a651f9059e9562be5bf0e381b6fa32` and includes the run-scoped
+HTTP GET cache in `src/eidp/scraper/pdf_discovery.py` for repeated shared
+corporation roots, robots, sitemap, disclosure, and 404 page fetches. Its SHA256
+sidecar is `1b783b640e6c25249dd8efd6d8355aeed986c7ecad80c72c98bd4e168360a59a`,
+and `uv run python scripts/run_non_windows_release_gates.py
+dist/eidp-windows-v462.zip --json --output logs/release-gate-v462.json`
+returned `ok=true`: SHA256 sidecar matched, package/source commit matched, full
+unit returned `1666 passed`, validator distribution unit returned `166 passed`,
+validator mypy/Ruff passed, discovery-gold checks passed, package verification
+passed, and demonstrated-pattern package verification passed. v462 has not been
+transferred to Windows, extracted, setup-validated, or weekly-smoked on the
+operator PC.
+
+v460 remains the current Windows setup/recovery execution candidate at
+`C:\Users\cyo20\EIDP-v460-01e4427`; Windows staging and the scheduled task have
+not been moved to v461 or v462. v460 was built from package snapshot
 `01e44279238aaef9127ed9b578e29dc8e0070499` after the v460 Mac-side operator
 workflow hardening and version-neutral E2E template update. The operator-cycle
 hardening keeps Excel preview workbook handles out of Streamlit session state,
@@ -54,25 +69,11 @@ recorders through exception paths. Its SHA256 sidecar is
 `uv run python scripts/run_non_windows_release_gates.py
 dist/eidp-windows-v460.zip --json --output logs/release-gate-v460.json`
 returned `ok=true` for SHA256 sidecar, package/source commit match, full unit
-`1665 passed`, validator distribution unit/mypy/Ruff,
-discovery-gold checks, package verify, and demonstrated-pattern package verify.
-`docs/runbooks/eidp-v460-real-cycle-card.md` now includes the owner/operator
+`1665 passed`, validator distribution unit/mypy/Ruff, discovery-gold checks,
+package verify, and demonstrated-pattern package verify.
+`docs/runbooks/eidp-v460-real-cycle-card.md` still carries the owner/operator
 request for the final Stage 6 real-cycle run and the minimum evidence that must
 come back before v1.0 can be approved.
-
-Post-package source note: branch HEAD now includes docs-only commits after the
-frozen v460 ZIP, including `2768f02`, `b787a72`, `c1e5d21`, and `8021cab`.
-`dist/eidp-windows-v461.zip` was built from `b787a72` to carry post-package
-handoff-doc fixes, but Windows staging and the current execution pointer remain
-on v460 at `C:\Users\cyo20\EIDP-v460-01e4427` until v461 is explicitly staged.
-The latest HEAD docs update `8021cab` is outside both v460 and v461.
-The source tree also now includes a run-scoped HTTP GET cache in
-`src/eidp/scraper/pdf_discovery.py` for repeated shared corporation roots,
-robots, sitemap, disclosure, and 404 page fetches. The focused regression
-`tests/unit/test_pdf_discovery.py::test_run_pdf_discovery_caches_repeated_http_gets_for_shared_corporation_site`
-proves identical URLs are fetched once per run while per-school scoring still
-runs independently. This performance fix is not inside v460 or v461 until an
-explicit rebuild is produced.
 
 Windows transfer of v460 to `C:\EIDP-staging` matched the sidecar SHA, and
 staging now retains v460 current plus v459 fallback ZIPs. Extraction to
