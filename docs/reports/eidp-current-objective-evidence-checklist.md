@@ -1,17 +1,17 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-16
-Latest Mac/non-Windows package snapshot: `328e9540e468b1b7bddb7b0354b2f12194c93453`
+Latest Mac/non-Windows package snapshot: `48a346bb626be749adb72d1aeb6a684903f22049`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally explicit about lane boundaries: the active operator-PC
-Stage 6 setup lane is now `C:\Users\cyo20\EIDP-v453-328e954` for
-`dist/eidp-windows-v453.zip` / package snapshot `328e954`. v453 is the current
+Stage 6 setup lane is now `C:\Users\cyo20\EIDP-v454-48a346b` for
+`dist/eidp-windows-v454.zip` / package snapshot `48a346b`. v454 is the current
 Mac/non-Windows release-gate-clean package and the current Windows transfer,
 setup, URL-only bootstrap, evidence-bundle, bounded `weekly_run.bat`,
 school-domain-override wiring, UI-health, bounded canary, and disk-retention
-lane. v452 is the retained Windows fallback package, v446 remains the
+lane. v453 is the retained Windows fallback package, v446 remains the
 latest browser read-only navigation proof lane, v442 remains the R7 browser
 Excel proof lane, and v408
 remains historical support for copied-DB UI write/audit sandbox proof. The real
@@ -40,27 +40,27 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current; current v408 disposable UI sandbox repeated the browser-write surface with one manual FY2025 `DepartmentYearly` row (`capacity=40`, `enrollment=28`, `extraction_method=manual`, `extraction_confidence=1.0`, `verified=true`) and one fiscal-year override that marked FY2024 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows non-current while FY2025 current rows were present | Proven on sandboxed/copy DB paths including current v408; real operator one-cycle proof still missing |
 | Excel template export | v442 process-scoped FY2025 browser Excel smoke launched with `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with `抽出済み学校 2031` and `Excel対象行 7150`, generated workbook rows `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`, exposed `Excel ダウンロード`, and downloaded `output/playwright/v442-r7-excel-smoke/eidp-master.xlsx`; local `openpyxl` verified sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` with dimensions `2419x10`, `10023x22`, `9721x83`, `9721x19`; Win-side checks reported both v442 `.env` locations missing, so the retroactive FY was not persisted. Historical v408 R7 CLI/browser exports and v437 FY2025/FY2024/FY2023 non-Windows retroactive matrix remain regression support. v446 FY2025/R7 browser probe is diagnostic only because the fresh v446 DB was initialized under FY2026 and remained `Excel出力可 0/2418`. FY2026 export remains disabled on current setup evidence | R7 browser Excel download proven on v442 fallback; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows; current v408 disposable UI sandbox repeated the audit path through `監査ログ`, showing `JSONL outbox 未送信=7`, `Outbox を flush` result `exported=7 already_present=0 failed=0`, and seven rows with `jsonl_exported_at_present=true` in direct DB verification | Proven on sandboxed paths including current v408; real operator one-cycle proof still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v453 ZIP/SHA was transferred to `C:\EIDP-staging`, expanded to `C:\Users\cyo20\EIDP-v453-328e954`, and `EIDP-setup.bat` completed with SQLite integrity, `school_fiscal_year_status_count=2418`, and `wheel_count=78`; v453 cleanup retained v453 current plus v452 fallback on Windows and left Mac `dist=753M`, `_temp=0B`, protected `data=20M`. v453 URL-only bootstrap downloaded and aggregated 47 prefecture seed artifacts, loaded `school_domain_overrides.csv` with `count=6`, and reported `school_override_inferred=6`. Bounded real `scripts\weekly_run.bat` exited `0` with `EIDP_TARGET_FISCAL_YEAR=2025`, methods including `school_domain_override`, `downloaded=2`, `new_document_ids=[1, 2]`, and `target_pdf_auto_yield_pct=40.0`; refreshed evidence bundle `logs/win-v453-stage6/stage6-evidence-20260516-014900.zip` verified with all required labels, and direct Streamlit UI smoke returned HTTP `200` on `127.0.0.1:8501`. v452 remains the retained Windows fallback, v446 remains browser read-only navigation proof, and v442 remains the R7 browser Excel proof. v408 remains historical copied-DB UI write/audit sandbox proof. | Current v453 setup/bootstrap/evidence/weekly launcher/school-domain-override/UI health/disk retention proven; browser nav remains v446; R7 Excel proof remains v442; real operator one-cycle missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v454 ZIP/SHA was transferred to `C:\EIDP-staging`, expanded to `C:\Users\cyo20\EIDP-v454-48a346b`, and `EIDP-setup.bat` completed with SQLite integrity, `school_fiscal_year_status_count=2418`, and `wheel_count=78`; v454 cleanup retained v454 current plus v453 fallback on Windows and left Mac `dist=754M`, `_temp=0B`, protected `data=20M`. v454 URL-only bootstrap downloaded and aggregated 47 prefecture seed artifacts, loaded `school_domain_overrides.csv` with `count=6`, and reported `school_override_inferred=6`. Bounded real `scripts\weekly_run.bat` exited `0` with `EIDP_TARGET_FISCAL_YEAR=2025`, methods including `school_domain_override`, `downloaded=2`, `new_document_ids=[1, 2]`, and `target_pdf_auto_yield_pct=40.0`; refreshed evidence bundle `logs/win-v454-stage6/stage6-evidence-20260516-020943.zip` verified with all required labels, and direct Streamlit UI smoke returned HTTP `200` on `127.0.0.1:8501`. v453 remains the retained Windows fallback, v446 remains browser read-only navigation proof, and v442 remains the R7 browser Excel proof. v408 remains historical copied-DB UI write/audit sandbox proof. | Current v454 setup/bootstrap/evidence/weekly launcher/school-domain-override/UI health/disk retention proven; browser nav remains v446; R7 Excel proof remains v442; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
-| Ship gate: true target-form auto-acquisition 60-70% | v453 bounded real R7 weekly canary crawled 5 target-missing schools, found 5 candidate pages, downloaded 2 PDFs, ingested `new_document_ids=[1, 2]`, and recorded `target_pdf_auto_yield_pct=40.0`; this improves the v452 `20.0%` canary but remains below the final 60-70% production gate | Failing |
-| Ship gate: estimated manual work <= 30% | v453 bounded R7 canary recorded `operator_reviewable_count=3`, `operator_reviewable_yield_pct=60.0`, and `ship_gate_status=pass` on the 5-school bounded sample; real operator sign-off and R8 production workload evidence remain missing | Partially proven |
+| Ship gate: true target-form auto-acquisition 60-70% | v454 bounded real R7 weekly canary crawled 5 target-missing schools, found 5 candidate pages, downloaded 2 PDFs, ingested `new_document_ids=[1, 2]`, and recorded `target_pdf_auto_yield_pct=40.0`; this holds the v453 strict yield while moving the two NEEC negative-path target application PDFs into `target_form_without_year_evidence` review/RCA instead of hiding them as non-target-only | Failing |
+| Ship gate: estimated manual work <= 30% | v454 bounded R7 canary recorded `operator_reviewable_count=5`, `operator_reviewable_yield_pct=100.0`, and `ship_gate_status=pass` on the 5-school bounded sample; real operator sign-off and R8 production workload evidence remain missing | Partially proven |
 
 ## Current Release Boundary
 
-- Current v453 package/Windows setup lane: package snapshot
-  `328e9540e468b1b7bddb7b0354b2f12194c93453`, SHA256
-  `3a01a893c422b27b2d82dba6c55c349f8545c7c9a498de66390a202eed5793c3`.
-  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v453.zip
-  --json --output logs/release-gate-v453.json` returned `ok=true`, with
-  package/source freshness at `328e954`, SHA sidecar match, full unit
-  `1634 passed`, validator/distribution tests returning `164 passed`,
+- Current v454 package/Windows setup lane: package snapshot
+  `48a346bb626be749adb72d1aeb6a684903f22049`, SHA256
+  `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`.
+  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v454.zip
+  --json --output logs/release-gate-v454.json` returned `ok=true`, with
+  package/source freshness at `48a346b`, SHA sidecar match, full unit
+  `1635 passed`, validator/distribution tests returning `164 passed`,
   validator mypy/Ruff passing, discovery-gold expected predictions matching
   `44/44`, and both package verifier modes passing. Windows evidence proves
   transfer/SHA, setup/import, SQLite integrity, URL-only bootstrap with six
   school-domain overrides, bounded R7 `scripts\weekly_run.bat` with
   `school_domain_override` included, `downloaded=2`,
   `target_pdf_auto_yield_pct=40.0`, evidence-bundle verification with
-  `weekly_run_logs`, UI health, and v453-current plus v452-fallback retention.
+  `weekly_run_logs`, UI health, and v454-current plus v453-fallback retention.
   v446 remains the latest browser read-only navigation proof,
   and v442 remains the R7 browser Excel fallback proof because the v446 FY2025
   browser probe was diagnostic-only on a DB initialized under FY2026.
@@ -195,7 +195,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest v453 Mac/non-Windows release-gate, Windows setup/bootstrap/evidence/UI
+Latest v454 Mac/non-Windows release-gate, Windows setup/bootstrap/evidence/UI
 health, disk-retention, and bounded weekly-launcher evidence are
 summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
@@ -707,20 +707,20 @@ Known non-goal-wide lint boundary:
 
 ## Next Concrete Gate
 
-SSH-Win is available and v453 is already transferred, SHA-verified, extracted,
+SSH-Win is available and v454 is already transferred, SHA-verified, extracted,
 set up, bootstrapped, bounded-weekly-smoked, UI-health-smoked,
 disk-retention-checked, and evidence-bundle-verified. The
 next gate is not another transfer or audit; it is an owner/operator Stage 6
-real-cycle sign-off on the current v453 lane, plus the later R8 production
+real-cycle sign-off on the current v454 lane, plus the later R8 production
 yield measurement.
 
-Current v453 package:
+Current v454 package:
 
 ```text
-Package snapshot: 328e9540e468b1b7bddb7b0354b2f12194c93453
-Expected SHA256: 3a01a893c422b27b2d82dba6c55c349f8545c7c9a498de66390a202eed5793c3
-Extract path: C:\Users\cyo20\EIDP-v453-328e954
-Evidence bundle: logs/win-v453-stage6/stage6-evidence-20260516-014900.zip
+Package snapshot: 48a346bb626be749adb72d1aeb6a684903f22049
+Expected SHA256: 0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3
+Extract path: C:\Users\cyo20\EIDP-v454-48a346b
+Evidence bundle: logs/win-v454-stage6/stage6-evidence-20260516-020943.zip
 ```
 
 For Mac-driven remote UI verification, start the operator UI tunnel after
@@ -730,7 +730,7 @@ Windows setup/validation has passed:
 ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
 ```
 
-Complete the Stage 6 click-through against the real v453 operator cycle or an
+Complete the Stage 6 click-through against the real v454 operator cycle or an
 approved full-cycle copy: manual PDF entry write if needed, fiscal-year override
 write if needed, Excel preview/download for the active cycle, audit log/outbox
 flush, diagnostics capture, evidence verify, and sign-off fields. Do not treat

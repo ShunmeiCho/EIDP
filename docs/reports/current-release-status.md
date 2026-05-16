@@ -2,47 +2,47 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `328e9540e468b1b7bddb7b0354b2f12194c93453`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v453.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v453.zip`
-Latest Mac-core package SHA256: `3a01a893c422b27b2d82dba6c55c349f8545c7c9a498de66390a202eed5793c3`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v453.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v453.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v453.zip`
+Latest Mac/non-Windows package snapshot: `48a346bb626be749adb72d1aeb6a684903f22049`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v454.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v454.zip`
+Latest Mac-core package SHA256: `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v454.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v454.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v452.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v453.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v453.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v453.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v453.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v454.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v453.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v453.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v454.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v454.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v453-stage6/stage6-evidence-20260516-014900.zip` (latest v453 verified bundle with complete required labels)
-Current Stage 6 evidence draft: `docs/reports/eidp-v453-stage6-evidence-draft.md`
+Current Stage 6 evidence bundle: `logs/win-v454-stage6/stage6-evidence-20260516-020943.zip` (latest v454 verified bundle with complete required labels)
+Current Stage 6 evidence draft: `docs/reports/eidp-v454-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v453 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+v454 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
 setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
 evidence-bundle-proven, and UI-health-proven package. It was built from package
-snapshot `328e9540e468b1b7bddb7b0354b2f12194c93453`, which inherits the active
-definition-list fiscal-year term for later `dd` application-form links and
-extends local temp cleanup to RCA HTML/XML artifacts. The v453 strict
-non-Windows gate `logs/release-gate-v453.json` returned `ok=true` with SHA256
-`3a01a893c422b27b2d82dba6c55c349f8545c7c9a498de66390a202eed5793c3`,
+snapshot `48a346bb626be749adb72d1aeb6a684903f22049`, which keeps target
+application PDFs viable for RCA/operator review even when a negative path token
+such as `syllabus` lowers their discovery score. The v454 strict non-Windows
+gate `logs/release-gate-v454.json` returned `ok=true` with SHA256
+`0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`,
 package/source commit match, `source_dirty=false`, `stale=false`, full unit
-`1634 passed`, validator/distribution tests `164 passed`, validator mypy/Ruff
+`1635 passed`, validator/distribution tests `164 passed`, validator mypy/Ruff
 pass, discovery-gold expected predictions `44/44`, and both package verifier
 modes pass. Windows transfer SHA matched, the package was expanded to
-`C:\Users\cyo20\EIDP-v453-328e954`, and `EIDP-setup.bat` completed with
+`C:\Users\cyo20\EIDP-v454-48a346b`, and `EIDP-setup.bat` completed with
 `school_count=2418`, `school_fiscal_year_status_count=2418`,
 `sqlite_integrity_check=ok`, and `wheel_count=78`. URL-only bootstrap completed
 after downloading and aggregating all 47 prefecture seed artifacts; Step 2b
@@ -51,25 +51,36 @@ loaded `school_domain_overrides.csv` with `count=6` and reported
 ran with `EIDP_TARGET_FISCAL_YEAR=2025`, `EIDP_WEEKLY_LIMIT=5`,
 `EIDP_WEEKLY_BATCH_SIZE=5`, `EIDP_WEEKLY_RATE_LIMIT=0.5`, and
 `EIDP_WEEKLY_REQUEST_TIMEOUT=8`; it exited `0` with
-`run_id=20260516_014639`, methods including `school_domain_override`,
+`run_id=20260516_020806`, methods including `school_domain_override`,
 `crawled=5`, `found=5`, `downloaded=2`, `new_document_ids=[1, 2]`,
-`operator_reviewable_count=3`, `target_pdf_auto_yield_pct=40.0`,
-`operator_reviewable_yield_pct=60.0`, and `ship_gate_status=pass`. The two
+`operator_reviewable_count=5`, `target_pdf_auto_yield_pct=40.0`,
+`operator_reviewable_yield_pct=100.0`, and `ship_gate_status=pass`. The two
 ingested FY2025 target PDFs were Osaka Mode and Japanese Institute Hokkaido.
+The v454 RCA queue also shows both NEEC target application PDFs as
+`target_form_without_year_evidence` instead of hiding them under
+`non_target_candidates_only`; they remain review-only because the PDFs lack
+strict FY2025 evidence. Tokyo Mode remains a yearless embedded target-form PDF.
 Recovery check and residual cleanup dry-run both returned `ok=true`. The
-evidence bundle `logs\stage6-evidence-20260516-014900.zip` verified on both
+evidence bundle `logs\stage6-evidence-20260516-020943.zip` verified on both
 Windows and Mac as
-`logs/win-v453-stage6/stage6-evidence-20260516-014900.zip` with `ok=true`, no
+`logs/win-v454-stage6/stage6-evidence-20260516-020943.zip` with `ok=true`, no
 forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
 `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
 `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
-`stage6_residual_cleanup`, and `weekly_run_logs`. v453 direct Streamlit UI
+`stage6_residual_cleanup`, and `weekly_run_logs`. v454 direct Streamlit UI
 smoke served `http://127.0.0.1:8501/` with HTTP `200`, and cleanup left no
-listener on `8501`. Mac cleanup left `dist=753M`, `_temp=0B`, `logs=4.4M`, and
-protected `data=20M`; Windows cleanup preserved v453 current plus v452 fallback
-in both staging and deploy directories. v453 is still not a completed operator
+listener on `8501`. Mac cleanup left `dist=754M`, `_temp=0B`, `logs=4.4M`, and
+protected `data=20M`; Windows cleanup preserved v454 current plus v453 fallback
+in both staging and deploy directories. v454 is still not a completed operator
 real-cycle Stage 6 sign-off, and its bounded `40.0%` strict auto-yield is not
 the final production 60-70% R8 gate.
+
+v453 is the previous Windows setup/bootstrap/bounded-weekly/UI-health evidence
+lane. It proved definition-list fiscal-year inheritance for NKHS and local
+cleanup of RCA HTML/XML artifacts, with the same bounded `40.0%` strict
+auto-yield, but it kept the NEEC negative-path target application PDFs out of
+the target-year RCA bucket. See
+`docs/reports/eidp-v453-stage6-evidence-draft.md`.
 
 v452 is the previous Windows setup/bootstrap/bounded-weekly/UI-health evidence
 lane. It proved exact NKZ disclosure overrides and moved the bounded canary from
