@@ -44,7 +44,13 @@ pass, discovery-gold expected predictions `44/44`, and both package verifier
 modes pass. Windows transfer SHA matched, the package was expanded to
 `C:\Users\cyo20\EIDP-v454-48a346b`, and `EIDP-setup.bat` completed with
 `school_count=2418`, `school_fiscal_year_status_count=2418`,
-`sqlite_integrity_check=ok`, and `wheel_count=78`. URL-only bootstrap completed
+`sqlite_integrity_check=ok`, and `wheel_count=78`. The independent packaged
+`scripts\validate_install.bat --after-setup --after-weekly --json` check later
+returned `ok=true`, `errors=[]`, `warnings=[]`, `sqlite_integrity_check=ok`,
+`last_run_status=success`, `sqlite_target_fy=2025`,
+`sqlite_target_fy_target_pdf_school_count=2`, and
+`sqlite_target_fy_operator_reviewable_school_count=5`; the captured JSON is
+`logs/win-v454-stage6/v454-validate-install-after-weekly.json`. URL-only bootstrap completed
 after downloading and aggregating all 47 prefecture seed artifacts; Step 2b
 loaded `school_domain_overrides.csv` with `count=6` and reported
 `school_override_inferred=6`. The real `scripts\weekly_run.bat` launcher then
