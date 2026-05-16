@@ -33,7 +33,7 @@ Latest Windows-shared-HTTP-cache-canary-proven package: `dist/eidp-windows-v462.
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v464.zip`
-Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v459.zip`
+Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v459.zip`
@@ -91,6 +91,21 @@ and `weekly_invoked=false`; screenshots `00-home.png` through
 `04-settings.png` were captured. Cleanup stopped the remote `8508` listener and
 the local `18508` tunnel, and a fresh scheduled-task check still pointed to the
 v460 runner.
+A process-scoped v464 FY2025/R7 browser Excel smoke then started the same
+side-by-side package with `EIDP_TARGET_FISCAL_YEAR=2025` on Windows
+`127.0.0.1:8509`, opened a Mac SSH tunnel on `127.0.0.1:18509`, rendered
+`④ Excel プレビュー` with `対象年度: 2025年度（令和7年度）`, generated the
+preview workbook, exposed `Excel ダウンロード`, and downloaded
+`output/playwright/v464-r7-excel-smoke/eidp_master.xlsx`. The summary
+`output/playwright/v464-r7-excel-smoke/summary.json` returned `ok=true` with
+`write_actions_invoked=false` and `weekly_invoked=false`; the downloaded
+workbook SHA256 is
+`aff3dea57af4c6d96d8859e52748f8cecefb4e593f5da74b4f68646175937685`.
+`openpyxl` verified the four sheets and data-row counts matching the UI:
+`採録状況=2418`, `対象比率=10022`, `学科別=9719`, and `在籍のみ抜粋=9719`
+with dimensions `2419x10`, `10023x22`, `9721x83`, and `9721x19`. Cleanup
+stopped the remote `8509` listener and local `18509` tunnel, and a fresh
+scheduled-task check still pointed to the v460 runner.
 A diagnostic v464 evidence-bundle smoke then created
 `C:\Users\cyo20\EIDP-v464-9a94226\logs\stage6-evidence-20260516-225040.zip`;
 packaged verification correctly returned `ok=false` with
@@ -1540,9 +1555,9 @@ that the current v460 Windows ZIP exposes the Step 2c school URL crawl defaults.
 | --- | --- | --- |
 | 1. 実施情報 | v460 package snapshot `01e44279238aaef9127ed9b578e29dc8e0070499`; `dist/eidp-windows-v460.zip`; SHA256 `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c`; extract path `C:\Users\cyo20\EIDP-v460-01e4427` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
 | 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; fresh v460 disk health is `ok=true`, `warn_count=0`, `block_count=0` with copy `logs/win-v460-stage6/disk-health-20260517-operator-win.json`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Final v460/operator run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
-| 3. 証跡採取コマンド | v460 hash/setup/validate/recovery diagnostics, read-only browser navigation, and a correctly rejected diagnostic evidence bundle are available; v459 evidence-bundle/default-launcher/R7-browser-Excel/UI-write-sandbox proofs remain bounded support; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; verifier-accepted v460 final evidence bundle from the real operator cycle |
+| 3. 証跡採取コマンド | v460 hash/setup/validate/recovery diagnostics, read-only browser navigation, and a correctly rejected diagnostic evidence bundle are available; v464 R7-browser-Excel proof is available; v459 evidence-bundle/default-launcher/UI-write-sandbox proofs remain bounded support; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; verifier-accepted v460 final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, read-only navigation, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle; optional v460 default-launcher re-smoke if the owner requests it before the real run |
-| 5. 4 工程 E2E | v460 browser navigation rendered the core operator pages without invoking writes; v460 Plan A CLI weekly wrote `last_run.json` and a verifier-accepted evidence bundle; v459 bounded R7 weekly downloaded two target PDFs, v459 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v459 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete v460 real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
+| 5. 4 工程 E2E | v460 browser navigation rendered the core operator pages without invoking writes; v460 Plan A CLI weekly wrote `last_run.json` and a verifier-accepted evidence bundle; v459 bounded R7 weekly downloaded two target PDFs, v464 process-scoped R7 browser Excel preview/download produced the expected workbook with sheet data rows `2418/10022/9719/9719`, and a disposable v459 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete v460 real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
 | 6. KPI 判定 | v460 Plan A recorded `ship_gate_status=not_measured`, `target_pdf_auto_yield_pct=null`, `operator_reviewable_yield_pct=null`, and `ship_readiness_rc=null` in the copied `last_run.json` because `no_crawlable_url_school_count=2418`; v459 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`. FY2026 production output and final R8 yield remain unproven | v460 real click-through diagnostics and final current-year `ship_readiness_rc=0` |
 | 7. 監査 / outbox | v459 disposable UI write/audit sandbox showed flush result `exported=2 already_present=0 failed=0`, `pending_outbox=0`, one seeded audit row plus one `url_candidate_rejected` row exported, matching JSONL action IDs, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0`; v408/v407 sandboxes show broader historical surfaces | Real or approved full-cycle `manual_action_log` delta and final JSONL duplicate check |
 | 8. 障害 / 回避策 | Known current hazards: v460 lacks real-cycle proof; v459 UI-write proof is sandbox-only; v459 bounded strict auto-yield is `40.0%`; v407 evidence bundle with Excel export is verifier-rejected; old v384 residual smoke artifacts still exist; SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v460 full-cycle failures and screenshots/log attachments |
