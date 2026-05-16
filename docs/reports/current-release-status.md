@@ -1329,7 +1329,10 @@ v460 evidence draft. The companion docs bundle was copied to
 `C:\EIDP-staging\eidp-v460-operator-docs-20260516.zip`, verified on Windows
 with `Get-FileHash` against its sidecar, and expanded to
 `C:\EIDP-staging\v460-operator-docs` with the top-level readme
-`C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`.
+`C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`. The tracked source for that
+top-level readme is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, with SHA256
+`047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7`, matching
+the v460 handoff manifest.
 
 The post-package `.env.example` source commit `2768f02` is a future-package
 configuration-documentation improvement only. It must not be used as evidence

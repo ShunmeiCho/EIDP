@@ -17,6 +17,8 @@ record.
 | Windows root | `C:\Users\cyo20\EIDP-v460-01e4427` |
 | Evidence draft | `docs/reports/eidp-v460-stage6-evidence-draft.md` |
 | Full template | `docs/runbooks/eidp-operator-e2e-template.md` |
+| Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt` |
+| Top-level README SHA256 | `047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7` |
 | Companion docs ZIP | `dist/eidp-v460-operator-docs-20260516.zip` |
 | Windows staging docs ZIP | `C:\EIDP-staging\eidp-v460-operator-docs-20260516.zip` |
 
@@ -26,7 +28,9 @@ snapshot, and v460 evidence draft.
 
 The companion docs ZIP was copied to `C:\EIDP-staging`, verified with
 Windows `Get-FileHash`, and expanded to `C:\EIDP-staging\v460-operator-docs`.
-The top-level staging readme is `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`.
+The top-level staging readme is `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`;
+its tracked source is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, and its SHA256
+matches the handoff manifest value above.
 
 Before this card was handed off, v460 passed the Mac/non-Windows release gate,
 Windows setup staging, and a read-only browser navigation smoke. The scheduled
