@@ -7,16 +7,16 @@ Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-
 Latest Mac-core-verifier-clean package: `dist/eidp-windows-v458.zip`
 Latest Mac-core package SHA256: `cbd32630b86d042bc5b5cd59a88fdb9506754d5f371af934203a6d703847e8c2`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v458.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v456.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v458.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v458.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v452.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v458.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v456.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v456.zip`
-Latest Windows-default-launcher-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v458.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v458.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v458.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v456.zip`
@@ -46,11 +46,26 @@ v458 current plus v454 fallback; `scripts/disk_health_check.py --profile
 mac-dev` reported `warn=0 block=0`, `dist=738.8MiB`, `_temp=0B`, protected
 `data=20.0MiB`, and `.claude/worktrees=0B`.
 
-v456 remains the latest Windows transfer-proven, setup-proven,
-bounded-bootstrap-proven, bounded-weekly-proven,
-evidence-bundle-proven, UI-health-proven, default-launcher-proven,
-browser-readonly-navigation-proven, R7-browser-Excel-proven, and
-UI-write-sandbox-proven package. It was built
+Windows transfer of v458 to `C:\EIDP-staging` matched the sidecar SHA, and
+staging now retains only v458 current plus v454 fallback ZIPs. Extraction to
+`C:\Users\cyo20\EIDP-v458-a41181e` succeeded with BUILD_INFO commit
+`a41181ec3177ed4e9569de4c594e80623e9c4ea2`. `EIDP-setup.bat` exited `0`,
+bootstrap/import completed with `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
+`sqlite_table_count=15`, and `wheel_count=78`; packaged
+`scripts\validate_install.bat --after-setup --json` returned `ok=true`.
+Packaged disk health returned `warn_count=0`, `block_count=0`,
+`app_root_total=844.0MiB`, `data\pdfs=0B`, `data\output=0B`, and
+`logs=3.8KiB`. `scripts\launch.bat` and root `EIDP-start.bat` each started
+Streamlit on Windows `127.0.0.1:8501`, returned `_stcore/health=200` and root
+HTTP `200`, and cleanup left no remaining `8501` listener. Recovery check with
+expected action `C:\Users\cyo20\EIDP-v458-a41181e\scripts\weekly_run.bat`
+returned `ok=true` and `action_matches_expected=true`
+(`logs\stage6-recovery-20260516-144636.json`).
+
+v456 remains the latest bounded-bootstrap-proven, bounded-weekly-proven,
+evidence-bundle-proven, browser-readonly-navigation-proven,
+R7-browser-Excel-proven, and UI-write-sandbox-proven package. It was built
 from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
 the operator E2E template version-neutral so future ZIPs do not embed stale
 package/SHA fields. The v456 strict non-Windows gate

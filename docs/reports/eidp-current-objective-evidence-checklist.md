@@ -7,15 +7,15 @@ Status: **NOT COMPLETE**
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally explicit about lane boundaries: `dist/eidp-windows-v458.zip`
 is the latest Mac/non-Windows release-gate-clean package from package snapshot
-`a41181e`, while the active operator-PC Stage 6 setup lane remains
-`C:\Users\cyo20\EIDP-v456-f33ffc0` for `dist/eidp-windows-v456.zip` / package
-snapshot `f33ffc0`. v456 is the current Windows transfer, setup, URL-only bootstrap,
-evidence-bundle, bounded `weekly_run.bat`, school-domain-override wiring,
-UI-health, default launcher, browser read-only navigation, R7 browser Excel
-generation/download, UI write/audit sandbox, bounded canary, and disk-retention
-lane. v454 remains a retained fallback package with historical UI write/audit
-sandbox support. v456 has been pruned from Mac `dist/` after v458 build, but its
-Windows evidence remains valid for the already-executed v456 lane.
+`a41181e`. v458 has now replaced v456 for Windows transfer, setup, recovery,
+UI-health, default launcher, and disk-retention evidence at
+`C:\Users\cyo20\EIDP-v458-a41181e`. v456 remains the active Windows evidence
+lane for URL-only bootstrap, evidence bundle, bounded `weekly_run.bat`,
+school-domain-override wiring, browser read-only navigation, R7 browser Excel
+generation/download, UI write/audit sandbox, and bounded canary. v454 remains a
+retained fallback package with historical UI write/audit sandbox support. v456
+has been pruned from Mac `dist/` after v458 build, but its Windows evidence
+remains valid for the already-executed v456 lane.
 v453 has been pruned from Windows staging/deploy after v456 validation; v442
 remains historical support for the fuller R7 parity workbook, and v408 remains
 historical support for broader copied-DB UI write paths. The real operator cycle
@@ -59,9 +59,25 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   package verify, and demonstrated-pattern package verify. v458 contains the
   Round 4 soft-blocker fixes for UI lock-disable, resource cleanup tooling,
   evidence-recorder lifecycle, manual-entry widget cleanup, and Excel preview
-  workbook lifecycle. It has not yet replaced the v456 Windows operator-PC lane.
+  workbook lifecycle. The v458 Windows lane currently covers transfer, setup,
+  recovery, UI health, default launcher, and disk health only; v456 still covers
+  bounded weekly/bootstrap/R7 browser Excel/UI write-sandbox evidence.
 
-- Current v456 package/Windows setup lane: package snapshot
+- Current v458 Windows setup/UI lane: `dist/eidp-windows-v458.zip` was copied to
+  `C:\EIDP-staging`, SHA-verified against its sidecar, and extracted to
+  `C:\Users\cyo20\EIDP-v458-a41181e`. `EIDP-setup.bat` exited `0`; packaged
+  `validate_install --after-setup --json` returned `ok=true` with
+  `school_count=2418`, `school_fiscal_year_status_count=2418`,
+  `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`.
+  `scripts\launch.bat` and root `EIDP-start.bat` each returned Streamlit
+  `_stcore/health=200` and root HTTP `200`; cleanup left `8501` listener count
+  `0`. `stage6_recovery_check.bat
+  C:\Users\cyo20\EIDP-v458-a41181e\scripts\weekly_run.bat --json` returned
+  `ok=true` with `action_matches_expected=true`. Packaged operator disk health
+  returned `warn_count=0`, `block_count=0`, `app_root_total=844.0MiB`,
+  `data\pdfs=0B`, `data\output=0B`, and `logs=3.8KiB`.
+
+- Current v456 bounded weekly/evidence lane: package snapshot
   `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, SHA256
   `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`.
   `scripts/run_non_windows_release_gates.py dist/eidp-windows-v456.zip
