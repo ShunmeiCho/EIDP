@@ -8,19 +8,20 @@ This checklist maps the long-term EIDP objective to concrete artifacts and gates
 It is intentionally explicit about lane boundaries: `dist/eidp-windows-v464.zip`
 is the latest Mac/non-Windows release-gate-clean package from package snapshot
 `9a94226` and includes explicit target-FY propagation into ingestion plus the
-packaged Stage 6 return-artifact verifier. v463 remains the latest
-Windows-transferred side-by-side target-FY override canary package: it was
-SHA-checked, extracted to `C:\Users\cyo20\EIDP-v463-4de0aa8`,
-setup-validated, and package-local FY override canary-proven. v462 remains the
-latest Windows side-by-side shared-cache canary package. v460 remains the active
-Windows scheduled-task, operator-cycle, companion handoff docs, disk-retention,
+packaged Stage 6 return-artifact verifier. v464 has now also been
+Windows-transferred side-by-side, SHA-checked, extracted to
+`C:\Users\cyo20\EIDP-v464-9a94226`, and setup-validated; the scheduled task was
+restored to v460 immediately afterward. v463 remains the latest side-by-side
+target-FY override canary package, and v462 remains the latest Windows
+side-by-side shared-cache canary package. v460 remains the active Windows
+scheduled-task, operator-cycle, companion handoff docs, disk-retention,
 read-only UI-health, and browser-navigation lane at
 `C:\Users\cyo20\EIDP-v460-01e4427`. v459 remains the latest
 evidence-bundle-proven, default-launcher-proven, R7 browser Excel
 generation/download-proven, bounded-weekly-smoked, and UI write/audit sandbox
 support package. v456 and v454 remain historical support for broader UI
 write/audit sandbox regression. The active owner/fallback Windows lane remains
-v460 current plus v459 fallback; v462/v463 are side-by-side proof lanes, and
+v460 current plus v459 fallback; v462/v463/v464 are side-by-side proof lanes, and
 stale v454 package/deploy artifacts were pruned after v460 validation. v442
 remains historical support for the fuller R7 parity workbook,
 and v408 remains historical support for broader copied-DB UI write paths. The
@@ -35,7 +36,12 @@ Package note: `dist/eidp-windows-v464.zip` was built from
 `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`.
 `logs/release-gate-v464.json` returned `ok=true`, including `1673 passed` full
 unit, validator unit/mypy/Ruff, discovery-gold checks, package verification,
-and demonstrated-pattern package verification. v463 remains the latest
+and demonstrated-pattern package verification. v464 Windows side-by-side
+transfer/setup validation also passed: Windows SHA matched the sidecar, setup
+completed at `C:\Users\cyo20\EIDP-v464-9a94226`, independent
+`validate_install --after-setup --json` returned `ok=true`, and the post-setup
+recovery check restored/confirmed the scheduled task at v460 with
+`action_matches_expected=true`. v463 remains the latest
 retroactive-matrix package:
 `logs/release-gate-v463-retroactive-matrix.json` returned `ok=true` for
 FY2025/FY2024/FY2023 against old-package references regenerated from the frozen
@@ -43,9 +49,10 @@ v459 ZIP/wheel into `_temp/v459-reference2-fy2025/`,
 `_temp/v459-reference2-fy2024/`, and `_temp/v459-reference2-fy2023/`; all three
 v463 isolated exports matched with `missing_rows=0`, `extra_rows=0`, and
 `differing_fields=0`. The current Windows staging execution pointer remains
-v460 at `C:\Users\cyo20\EIDP-v460-01e4427`: v463 side-by-side
-transfer/setup/FY-override canary passed, but v463 has not been weekly-smoked,
-UI-health-smoked, evidence-bundled, or made the scheduled-task target.
+v460 at `C:\Users\cyo20\EIDP-v460-01e4427`: v464 side-by-side transfer/setup
+passed, v463 side-by-side transfer/setup/FY-override canary passed, but neither
+v464 nor v463 has been weekly-smoked, UI-health-smoked, evidence-bundled, or
+made the scheduled-task target.
 
 ## Objective Restatement
 
@@ -70,6 +77,7 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | Excel template export | v459 process-scoped FY2025 browser Excel smoke launched with `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with `Excel出力可 2`, `Excel対象行 7177`, and `2025年度（令和7年度）`, clicked `プレビュー workbook を生成`, exposed `Excel ダウンロード`, and downloaded `output/playwright/v459-r7-excel-smoke/eidp_master.xlsx`; local `openpyxl` verified sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` with dimensions `2419x10`, `10025x22`, `9748x83`, `9748x19`; Win-side checks reported both checked v459 `.env` locations missing, so the retroactive FY was not persisted. v460 adds Mac-side hardening that serializes preview bytes and drops the workbook handle from Streamlit session state, but no v460 browser Excel run has been executed yet. v456, v454, and v442 remain historical browser support, while historical v408 R7 CLI/browser exports and v437 FY2025/FY2024/FY2023 non-Windows retroactive matrix remain regression support. Fresh v463 Mac retroactive matrix proof now passes FY2025/FY2024/FY2023 against references regenerated from the frozen v459 package, with zero missing/extra rows and zero differing fields. FY2026 export remains disabled on current setup evidence | Latest browser Excel proof is v459 R7 support; latest Mac algorithm regression proof is v463 three-year matrix; v460 full operator-cycle Excel output still pending |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows; v408 disposable UI sandbox repeated the audit path through `監査ログ`, showing `JSONL outbox 未送信=7`, `Outbox を flush` result `exported=7 already_present=0 failed=0`, and seven rows with `jsonl_exported_at_present=true` in direct DB verification; current v459 disposable UI write/audit sandbox rejected seeded `review_item#37` in `URL候補レビュー` and flushed two pending audit rows, with `logs/win-v459-stage6/v459-ui-write-sandbox-result-final.json` reporting `ok=true`, `pending_outbox=0`, exported `stage6_v459_ui_audit_flush_smoke` and `url_candidate_rejected` rows, matching JSONL action IDs, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0`. v460 adds Mac-side lock-held row-count control and stale manual-entry widget cleanup coverage, but no v460 real operator audit sequence has been run | Current v459 proves URL-candidate reject + audit-outbox flush on a disposable DB; broader manual-entry/fiscal-override UI write coverage remains historical v408/v384; real operator one-cycle proof still missing |
 | ZIP distribution, double-click setup, browser UI offline operation | v460 ZIP/SHA was transferred to `C:\EIDP-staging`, matched sidecar SHA `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c`, expanded to `C:\Users\cyo20\EIDP-v460-01e4427`, and `EIDP-setup.bat` completed with SQLite integrity, `school_fiscal_year_status_count=2418`, and `wheel_count=78`; independent `scripts\validate_install.bat --after-setup --json` returned `ok=true`. Recovery check with expected action `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` returned `ok=true` and `action_matches_expected=true`, and Task Scheduler now points to the v460 weekly runner. A post-doc-refresh recovery check also returned `ok=true`, `action_matches_expected=true`, all residual paths `exists=false`, and was copied to `logs/win-v460-stage6/stage6-recovery-20260517-064336.json` with SHA256 `41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6`. Root `EIDP-diagnose.bat` wrote `C:\Users\cyo20\EIDP-v460-01e4427\logs\diagnostics-20260516-170035.txt`; Mac copy SHA256 is `6b4d566433db64c730737f925f0559e9b06582eed4cb0b6cd51f0623f153b445`. v460 direct Streamlit read-only browser smoke over `127.0.0.1:18506` clicked `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`; `output/playwright/v460-ui-smoke/summary.json` reports `hasV460Build=true`, `hasErrorTraceback=false`, and `navAllClicked=true`. A diagnostic v460 evidence bundle was created but correctly rejected with `ok=false`, `missing_required_labels=["last_run"]`, proving setup evidence cannot pass as Stage 6 release evidence. Plan A then ran `scripts\weekly_run.bat` on v460, wrote `last_run.json`, and produced verifier-accepted evidence ZIP `stage6-evidence-20260516-094432.zip` with `ok=true`; however the run selected no schools (`no_crawlable_url_school_count=2418`) and KPI stayed `not_measured`. A later URL bootstrap populated `school_site_count=1838`, `schools_with_url=1805`, and `schools_with_verified_url=1312`; the second FY2026 weekly probe after that ran about 9h41m, wrote `234238` rejection rows, produced no new `last_run.json`, and exposed repeated corporation-domain recrawls rather than KPI evidence. v463 was transferred side-by-side, SHA-checked, extracted to `C:\Users\cyo20\EIDP-v463-4de0aa8`, setup-validated with `ok=true`, and then the scheduled task was restored to v460; a package-local v463 FY override canary using a temp DB returned `ok=true`. v462 remains support for the package-local shared-cache canary. v460 20260516 companion docs were transferred, Windows hash-checked, and expanded under `C:\EIDP-staging\v460-operator-docs`; the 20260517 companion docs refresh was then transferred, Windows hash-checked, and expanded under `C:\EIDP-staging\v460-operator-docs-20260517`, superseding the 20260516 package for operator reading without changing the core v460 package, Windows app root, scheduled task, or release gate. A focused first-read audit over the Windows staging README, owner request, real-cycle card, E2E template, and 20260517 manifest found no `first_setup.bat` and no old `v460-operator-docs\` path; the expected `v460-operator-docs-20260517` paths were present. The short owner/operator request is mirrored in git as `docs/runbooks/eidp-v460-owner-request-20260516.txt` with SHA256 matching `dist/eidp-v460-owner-request-20260516.txt`. Post-v460 cleanup retained v460 current plus v459 fallback as the active owner/fallback lane, with disk health `warn_count=0` / `block_count=0`; later v462/v463 side-by-side proof directories are separate. v459 remains support for URL-only bootstrap, bounded weekly, evidence-bundle verification, default launcher, R7 browser Excel, and disposable UI write/audit sandbox. v456 remains historical R7 browser Excel and UI write/audit sandbox support; v408 remains historical copied-DB coverage for broader UI write paths. | Current v460 transfer/setup/validate/recovery/scheduler/docs/UI health/read-only nav/disk retention proven; v463 side-by-side transfer/setup/FY-override canary proven; v462 side-by-side cache canary proven; v460 Plan A evidence bundle proven but KPI not measured; real operator one-cycle missing |
+| Latest side-by-side package setup | v464 was transferred to `C:\EIDP-staging`, Windows SHA matched `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`, extracted to `C:\Users\cyo20\EIDP-v464-9a94226`, setup completed with exit `0`, and `logs/win-v464-stage6/validate-install-after-setup-20260517-073352.json` returned `ok=true`, `errors=[]`, `warnings=[]`. Post-setup recovery `logs/win-v464-stage6/post-v464-restore-stage6-recovery-20260517-073334.json` returned `ok=true` and `action_matches_expected=true` for the v460 scheduled-task pointer. | v464 Windows side-by-side transfer/setup proven; not the active owner-cycle lane |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | v460 Plan A wrote `last_run.json` but recorded `target_pdf_auto_yield_pct=null` and `ship_gate_status=not_measured` because there were no crawlable URL schools in the fresh v460 DB. The second v460 FY2026 run after URL bootstrap did not complete and should not be used as KPI evidence; live R8 yield is record-only during the May publication-lag window, not the v1.0 algorithm-proof gate. v459 bounded real R7 weekly canary crawled 5 target-missing schools after URL-only bootstrap, found 5 candidate pages, downloaded 2 PDFs, ingested `new_document_ids=[1, 2]`, and recorded `target_pdf_auto_yield_pct=40.0`; this holds the v456/v454 strict yield while keeping reviewable target-form evidence visible. Current HEAD also prevents `ok_strict` from passing unless both `strict_target_pdf` and `excel_ready` meet the strict threshold | Failing; not a v1.0 algorithm verdict |
 | Ship gate: estimated manual work <= 30% | v460 Plan A recorded `operator_reviewable_yield_pct=null` and diagnostics report `estimated_manual_workload_rate=1.0`; v459 bounded R7 canary recorded `operator_reviewable_count=5`, `operator_reviewable_yield_pct=100.0`, and `ship_gate_status=pass` on the 5-school bounded sample. Real operator sign-off and R8 production workload evidence remain missing | Failing |
@@ -206,8 +214,8 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   artifacts plus v453 staging/deploy artifacts. After v459 validation, the
   v456 deploy directory was pruned; after v460 validation, v454 staging/deploy
   artifacts were pruned and v460 current plus v459 fallback became the active
-  owner/fallback Windows deploy directories before later v462/v463 side-by-side
-  proof directories were added.
+  owner/fallback Windows deploy directories before later v462/v463/v464
+  side-by-side proof directories were added.
 - Historical v454 fallback package/Windows setup lane: package snapshot
   `48a346bb626be749adb72d1aeb6a684903f22049`, SHA256
   `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`.

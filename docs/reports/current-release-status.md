@@ -18,14 +18,14 @@ Prior post-package docs rebuild: `dist/eidp-windows-v461.zip`, commit
 `b787a72bb1714b77583e4c0e904b1584fdaeba92`, SHA256
 `2c0d74ab382bf179f166bdb4d775cd414a08741eca3b27ba92c2e6c7a459850b`; not the
 current Windows scheduled-task execution pointer
-Latest Windows-core-validated package: `dist/eidp-windows-v463.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v463.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v464.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v463.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-target-FY-ingest-override-canary-proven package: `dist/eidp-windows-v463.zip`
 Latest Windows-shared-HTTP-cache-canary-proven package: `dist/eidp-windows-v462.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v460.zip`
@@ -62,6 +62,21 @@ returned `ok=true`: SHA256 sidecar matched, package/source commit matched, full
 unit returned `1673 passed`, validator distribution unit returned `166 passed`,
 validator mypy/Ruff passed, discovery-gold checks passed, package verification
 passed, and demonstrated-pattern package verification passed.
+v464 was then transferred side-by-side to Windows staging, SHA-checked against
+the sidecar, extracted to `C:\Users\cyo20\EIDP-v464-9a94226`, set up with
+`EIDP-setup.bat` exit `0`, and independently validated with
+`scripts\validate_install.bat --after-setup --json` returning `ok=true`,
+`warnings=[]`, and `errors=[]`. Because setup rewrites the weekly scheduled
+task, the `EIDP Weekly Run` task was restored to the v460 runner afterward;
+`scripts\stage6_recovery_check.bat` on v460 then returned `ok=true` with
+`action_matches_expected=true`. The Mac copies are
+`logs/win-v464-stage6/validate-install-after-setup-20260517-073352.json`
+(SHA256 `b4ea61ed6eaf4c7a97fc1885ba9f4efdcf90d9bb74ba968e9e8799f443ab66e6`)
+and
+`logs/win-v464-stage6/post-v464-restore-stage6-recovery-20260517-073334.json`
+(SHA256 `8efd41d2d9d80fd1b1744f0515fe827f131819228f4b460d73e8da475a468e4a`).
+v464 has still not replaced the active scheduled-task pointer, and no v464
+UI-health, weekly, evidence-bundle, or owner/operator cycle has been run.
 The v463 Mac retroactive Excel matrix
 `logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
 FY2025, FY2024, and FY2023. The references were regenerated from the frozen
@@ -79,7 +94,8 @@ After the v463 proof generation, Mac `scripts/disk_health_check.py --json` repor
 v459-derived reference workbooks are part of the current evidence chain, so no
 release-artifact pruning was performed automatically.
 
-v463 was then transferred side-by-side to Windows staging, SHA-checked with
+v463 remains the latest Windows target-FY override canary package. It was
+transferred side-by-side to Windows staging, SHA-checked with
 `certutil` against the sidecar, extracted to
 `C:\Users\cyo20\EIDP-v463-4de0aa8`, set up with `EIDP-setup.bat` exit `0`, and
 validated with `scripts\validate_install.bat --after-setup --json` returning
@@ -117,7 +133,7 @@ owner/operator cycle has been run.
 
 v460 remains the current Windows setup/recovery execution candidate at
 `C:\Users\cyo20\EIDP-v460-01e4427`; the scheduled task has not been moved to
-v461, v462, or v463. v460 was built from package snapshot
+v461, v462, v463, or v464 as the active owner-cycle pointer. v460 was built from package snapshot
 `01e44279238aaef9127ed9b578e29dc8e0070499` after the v460 Mac-side operator
 workflow hardening and version-neutral E2E template update. The operator-cycle
 hardening keeps Excel preview workbook handles out of Streamlit session state,
@@ -135,7 +151,7 @@ request for the final Stage 6 real-cycle run and the minimum evidence that must
 come back before v1.0 can be approved.
 
 Windows transfer of v460 to `C:\EIDP-staging` matched the sidecar SHA, and
-staging retains v460 current plus v459 fallback ZIPs, with later v462/v463
+staging retains v460 current plus v459 fallback ZIPs, with later v462/v463/v464
 side-by-side proof ZIPs kept separately. Extraction to
 `C:\Users\cyo20\EIDP-v460-01e4427` succeeded with BUILD_INFO commit
 `01e44279238aaef9127ed9b578e29dc8e0070499`. `EIDP-setup.bat` exited `0`,
@@ -178,7 +194,7 @@ read-only v460 Windows disk-health check later reported `ok=true`,
 `logs/win-v460-stage6/disk-health-20260517-operator-win.json` with SHA256
 `4d5f4566db7cc5d3effcf8eeb63fb8ab566e64874b9e224564c05de113e700c9`. Mac-side
 disk health also remained non-blocking;
-later v462/v463 side-by-side proof directories are not the owner-cycle lane.
+later v462/v463/v464 side-by-side proof directories are not the owner-cycle lane.
 
 Plan A CLI weekly was then run from
 `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` after confirming the
