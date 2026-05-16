@@ -66,6 +66,13 @@ frozen v460 ZIP, including `2768f02`, `b787a72`, `c1e5d21`, and `8021cab`.
 handoff-doc fixes, but Windows staging and the current execution pointer remain
 on v460 at `C:\Users\cyo20\EIDP-v460-01e4427` until v461 is explicitly staged.
 The latest HEAD docs update `8021cab` is outside both v460 and v461.
+The source tree also now includes a run-scoped HTTP GET cache in
+`src/eidp/scraper/pdf_discovery.py` for repeated shared corporation roots,
+robots, sitemap, disclosure, and 404 page fetches. The focused regression
+`tests/unit/test_pdf_discovery.py::test_run_pdf_discovery_caches_repeated_http_gets_for_shared_corporation_site`
+proves identical URLs are fetched once per run while per-school scoring still
+runs independently. This performance fix is not inside v460 or v461 until an
+explicit rebuild is produced.
 
 Windows transfer of v460 to `C:\EIDP-staging` matched the sidecar SHA, and
 staging now retains v460 current plus v459 fallback ZIPs. Extraction to

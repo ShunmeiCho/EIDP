@@ -43,6 +43,10 @@ MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR
 MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR
 
 
+class HttpGetClient(Protocol):
+    def get(self, url: str | httpx.URL, **kwargs: Any) -> httpx.Response: ...
+
+
 def _is_supported_fiscal_year(fiscal_year: int) -> bool:
     return MIN_SUPPORTED_FISCAL_YEAR <= fiscal_year <= MAX_SUPPORTED_FISCAL_YEAR
 
@@ -54,7 +58,7 @@ def _is_candidate_hint_year(fiscal_year: int, *, target_year: int) -> bool:
     )
 
 
-def _safe_get(client: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
+def _safe_get(client: HttpGetClient, url: str, **kwargs: Any) -> httpx.Response:
     """GET with manual redirect following + SSRF check on each hop.
 
     Raises httpx.HTTPStatusError on SSRF-blocked redirect or redirect loop.
@@ -101,7 +105,7 @@ def _origin_root_url(url: str) -> str | None:
     return f"{parsed.scheme}://{parsed.netloc}/"
 
 
-def _main_page_response_with_root_fallback(client: httpx.Client, site_url: str) -> tuple[httpx.Response, str]:
+def _main_page_response_with_root_fallback(client: HttpGetClient, site_url: str) -> tuple[httpx.Response, str]:
     """Fetch the registered page, retrying one transient timeout before root fallback."""
 
     last_timeout: httpx.TimeoutException | None = None
@@ -118,7 +122,7 @@ def _main_page_response_with_root_fallback(client: httpx.Client, site_url: str) 
     raise last_timeout
 
 
-def _main_page_response_with_root_fallback_once(client: httpx.Client, site_url: str) -> tuple[httpx.Response, str]:
+def _main_page_response_with_root_fallback_once(client: HttpGetClient, site_url: str) -> tuple[httpx.Response, str]:
     """Fetch the registered page, falling back to origin root for stale 404 paths."""
 
     resp = _safe_get(client, site_url)
@@ -398,6 +402,73 @@ class CachedPdfRejection:
 
 class RenderedHtmlFetcher(Protocol):
     def fetch_html(self, url: str) -> str | None: ...
+
+
+class _RunScopedHttpCache:
+    """Small GET cache for one PDF discovery run.
+
+    Corporation roots often appear once per school. Cache HTML, robots, sitemap,
+    and 404 responses so each school still gets its own scoring path without
+    re-requesting identical shared pages.
+    """
+
+    def __init__(self, client: HttpGetClient, *, stats: dict[str, int]) -> None:
+        self._client = client
+        self._stats = stats
+        self._cache: dict[str, httpx.Response] = {}
+
+    def get(self, url: str | httpx.URL, **kwargs: Any) -> httpx.Response:
+        url_str = str(url)
+        cache_key = self._cache_key(url_str, kwargs)
+        if cache_key is not None and cache_key in self._cache:
+            self._stats["http_cache_hits"] += 1
+            return self._cache[cache_key]
+
+        response = self._client.get(url_str, **kwargs)
+        if cache_key is not None and self._should_cache_response(response, url_str):
+            self._cache[cache_key] = response
+            self._stats["http_cache_misses"] += 1
+        return response
+
+    def has_cached_get(self, url: str, **kwargs: Any) -> bool:
+        cache_key = self._cache_key(url, kwargs)
+        return cache_key is not None and cache_key in self._cache
+
+    @staticmethod
+    def _cache_key(url: str, kwargs: dict[str, Any]) -> str | None:
+        if kwargs:
+            return None
+        return _without_url_fragment(url)
+
+    @staticmethod
+    def _should_cache_response(response: httpx.Response, request_url: str) -> bool:
+        headers = response.headers
+        if any(str(key).lower() == "set-cookie" for key in headers):
+            return False
+        content_type = str(headers.get("content-type", "")).split(";", 1)[0].strip().lower()
+        response_url = str(response.url or request_url)
+        if urlparse(response_url).path.lower().endswith(".pdf") or content_type == "application/pdf":
+            return False
+        content_length = headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > 2_000_000:
+                    return False
+            except ValueError:
+                return False
+        if response.status_code == 200 and content_type in {"", "text/html", "application/xhtml+xml"}:
+            text = getattr(response, "text", "")
+            if 0 < len(text) < 500:
+                return False
+        return response.status_code < 500
+
+
+def _sleep_before_uncached_get(client: HttpGetClient, url: str, seconds: float = 1.0) -> None:
+    if seconds <= 0:
+        return
+    if isinstance(client, _RunScopedHttpCache) and client.has_cached_get(url):
+        return
+    time.sleep(seconds)
 
 
 PDF_LINK_ATTRIBUTE_NAMES = ("data-downloadurl", "data-href", "data-url", "data-file", "data-pdf", "data-src")
@@ -2133,7 +2204,7 @@ def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]
 
 
 def _sitemap_urls_for_site(
-    client: httpx.Client,
+    client: HttpGetClient,
     site_url: str,
     *,
     limit: int = 5,
@@ -2188,7 +2259,7 @@ def _sitemap_urls_for_site(
     return urls
 
 
-def _sitemap_entry_urls_for_site(client: httpx.Client, site_url: str) -> list[str]:
+def _sitemap_entry_urls_for_site(client: HttpGetClient, site_url: str) -> list[str]:
     """Return sitemap URLs advertised by a site.
 
     Many school/corporation sites expose ``/sitemap_index.xml`` only via
@@ -2355,7 +2426,7 @@ def _append_rendered_html_candidates(
 
 
 def discover_pdfs_for_site(
-    client: httpx.Client,
+    client: HttpGetClient,
     school_id: int,
     site_url: str,
     max_depth: int = 2,
@@ -2407,7 +2478,7 @@ def discover_pdfs_for_site(
         except httpx.HTTPError:
             pass  # No robots.txt or unreachable, proceed
 
-        time.sleep(1.0)  # Per-request delay (design: max 1 req/sec per domain)
+        _sleep_before_uncached_get(client, site_url)  # Design: max 1 uncached req/sec per domain.
 
         # Fetch main page (with safe redirect following)
         resp, site_url = _main_page_response_with_root_fallback(client, site_url)
@@ -2433,7 +2504,7 @@ def discover_pdfs_for_site(
                 if not _is_safe_url(sub_url):
                     continue
                 try:
-                    time.sleep(1.0)  # Per-request delay
+                    _sleep_before_uncached_get(client, sub_url)
                     extra_pages_fetched += 1
                     sub_resp = _safe_get(client, sub_url)
                     if sub_resp.status_code == 200:
@@ -2453,7 +2524,7 @@ def discover_pdfs_for_site(
                 if extra_page_budget_remaining() <= 0:
                     break
                 try:
-                    time.sleep(1.0)
+                    _sleep_before_uncached_get(client, homepage_url)
                     extra_pages_fetched += 1
                     homepage_resp = _safe_get(client, homepage_url)
                     if homepage_resp.status_code != 200:
@@ -2472,7 +2543,7 @@ def discover_pdfs_for_site(
                         if not _is_safe_url(sub_url):
                             continue
                         try:
-                            time.sleep(1.0)
+                            _sleep_before_uncached_get(client, sub_url)
                             extra_pages_fetched += 1
                             sub_resp = _safe_get(client, sub_url)
                             if sub_resp.status_code == 200:
@@ -2509,7 +2580,7 @@ def discover_pdfs_for_site(
             if not _is_safe_url(derived_url):
                 continue
             try:
-                time.sleep(1.0)
+                _sleep_before_uncached_get(client, derived_url)
                 extra_pages_fetched += 1
                 derived_resp = _safe_get(client, derived_url)
                 if derived_resp.status_code == 200:
@@ -2543,7 +2614,7 @@ def discover_pdfs_for_site(
                 continue
             sitemap_page_urls.append(sitemap_url)
             try:
-                time.sleep(1.0)
+                _sleep_before_uncached_get(client, sitemap_url)
                 extra_pages_fetched += 1
                 sitemap_resp = _safe_get(client, sitemap_url)
                 if sitemap_resp.status_code == 200:
@@ -2612,7 +2683,7 @@ def _classify_pdf_content(content: bytes) -> str:
 
 
 def download_pdf(
-    client: httpx.Client,
+    client: HttpGetClient,
     candidate: PdfCandidate,
     storage_dir: Path,
     school_id: int,
@@ -2806,6 +2877,8 @@ def run_pdf_discovery(
         "candidate_budget_limited": 0,
         "candidate_budget_dropped": 0,
         "candidate_school_mismatch": 0,
+        "http_cache_hits": 0,
+        "http_cache_misses": 0,
     }
     recorder = EvidenceRecorder(evidence_path)
 
@@ -2869,7 +2942,8 @@ def run_pdf_discovery(
         timeout=max(float(request_timeout), 1.0),
         follow_redirects=False,
         headers=HEADERS,
-    ) as client:
+    ) as base_client:
+        client = _RunScopedHttpCache(cast(HttpGetClient, base_client), stats=stats)
         for index, site in enumerate(sites, start=1):
             if progress_callback is not None:
                 progress_callback(

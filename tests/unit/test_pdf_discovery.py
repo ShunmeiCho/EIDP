@@ -3201,6 +3201,55 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
         session.close()
 
 
+def test_run_pdf_discovery_caches_repeated_http_gets_for_shared_corporation_site(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Shared corporation roots should not refetch the same pages once per school."""
+
+    session = _session()
+    calls: list[str] = []
+    sleeps: list[float] = []
+
+    class SharedRootClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> SharedRootClient:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            if url == "https://www.shared.ac.jp/":
+                return _HtmlResponse(
+                    "<html><body>" + ("shared corporation root " * 40) + "</body></html>",
+                    url=url,
+                )
+            return _HtmlResponse("", status_code=404, url=url)
+
+    try:
+        session.add(SchoolSite(school_id=1, url="https://www.shared.ac.jp/", http_status=200))
+        session.add(SchoolSite(school_id=2, url="https://www.shared.ac.jp/", http_status=200))
+        session.flush()
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", SharedRootClient)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", sleeps.append)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=10, rate_limit=0)
+
+        assert stats["crawled"] == 2
+        assert stats["http_cache_hits"] > 0
+        assert len(calls) == len(set(calls))
+        assert calls.count("https://www.shared.ac.jp/") == 1
+        assert sleeps.count(1.0) <= len(calls)
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_prefilters_obvious_non_target_before_download(
     monkeypatch, tmp_path: Path
 ) -> None:
