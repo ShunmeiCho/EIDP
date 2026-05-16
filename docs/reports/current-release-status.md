@@ -1457,6 +1457,12 @@ tracked source at `docs/runbooks/eidp-v460-owner-request-20260516.txt`, with
 SHA256 `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e`,
 matching `dist/eidp-v460-owner-request-20260516.txt`.
 
+A post-doc-refresh recovery check wrote
+`logs/win-v460-stage6/stage6-recovery-20260517-064336.json` on the Mac side.
+It returned `ok=true`, `action_matches_expected=true`, all residual paths
+`exists=false`, and SHA256
+`41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6`.
+
 The post-package `.env.example` source commit `2768f02` is a future-package
 configuration-documentation improvement only. It must not be used as evidence
 that the current v460 Windows ZIP exposes the Step 2c school URL crawl defaults.
