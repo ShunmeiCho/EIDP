@@ -80,7 +80,8 @@ real-cycle, evidence ZIP sign-off, or FY2026/R8 live KPI record.
 Plan A proved that the v460 CLI weekly runner can create a `last_run` and a
 verifier-accepted evidence ZIP, but it did not prove the shipping KPI. The run
 selected no schools because the fresh v460 DB had `2418` schools with no
-crawlable URL, so `ship_gate_status=not_measured` and `ship_readiness_rc=1`.
+crawlable URL, so `ship_gate_status=not_measured` and `ship_readiness_rc=null`
+in the copied `last_run.json`.
 No v460 write-path browser flow or owner/operator real-cycle was executed. The
 v460 browser smoke was read-only: it did not generate a workbook, save settings,
 or commit operator writes.
