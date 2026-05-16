@@ -57,6 +57,7 @@ Updated: 2026-05-16
 | Windows extract path | `C:\Users\cyo20\EIDP-v459-50152a5` |
 | transferred ZIP | `C:\EIDP-staging\eidp-windows-v459.zip` |
 | Stage 6 evidence draft | `docs/reports/eidp-v459-stage6-evidence-draft.md` |
+| real-cycle entrypoints | ZIP and extracted Windows root both contain `EIDP-start.bat`, `EIDP-setup.bat`, `EIDP-stage6-evidence.bat`, `EIDP-stage6-verify-evidence.bat`, `EIDP-diagnose.bat`, `scripts\weekly_run.bat`, `scripts\validate_install.bat`, `scripts\stage6_recovery_check.bat`, and `scripts\diagnose.bat` |
 
 ## 2. PC / 環境
 
