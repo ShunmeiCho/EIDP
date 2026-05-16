@@ -59,8 +59,7 @@ Decision: go
 """
 
 
-def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) -> None:
-    module = _load_module()
+def _write_complete_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:
     template = tmp_path / "eidp-operator-e2e-template.md"
     template.write_text(_complete_template(), encoding="utf-8")
     last_run = tmp_path / "last_run.json"
@@ -85,6 +84,12 @@ def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) 
             "present_labels": ["build_info", "diagnostics", "last_run", "stage6_recovery", "weekly_run_logs"],
         },
     )
+    return template, last_run, verify_json
+
+
+def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
 
     result = module.verify_stage6_return(
         e2e_template=template,
@@ -95,6 +100,31 @@ def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) 
 
     assert result["ok"] is True
     assert result["errors"] == []
+
+
+def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+
+    rc = module.main(
+        [
+            "--e2e-template",
+            str(template),
+            "--last-run",
+            str(last_run),
+            "--evidence-verify-json",
+            str(verify_json),
+            "--target-fy",
+            "2026",
+            "--json",
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["inputs"]["min_target_pdf_auto_yield"] == 60.0
+    assert payload["inputs"]["max_manual_workload"] == 30.0
 
 
 def test_verify_stage6_return_rejects_unmeasured_kpi_and_blank_signoff(tmp_path: Path) -> None:
