@@ -21,9 +21,9 @@ record.
 Before this card was handed off, the real-cycle entrypoints below were verified
 in both `dist/eidp-windows-v459.zip` and the extracted Windows root above:
 `EIDP-start.bat`, `EIDP-setup.bat`, `EIDP-stage6-evidence.bat`,
-`EIDP-stage6-verify-evidence.bat`, `scripts\weekly_run.bat`,
-`scripts\validate_install.bat`, `scripts\stage6_recovery_check.bat`, and
-`scripts\diagnose.bat`.
+`EIDP-stage6-verify-evidence.bat`, `EIDP-diagnose.bat`,
+`scripts\weekly_run.bat`, `scripts\validate_install.bat`,
+`scripts\stage6_recovery_check.bat`, and `scripts\diagnose.bat`.
 
 ## Do Not Touch
 

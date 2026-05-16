@@ -25,7 +25,7 @@ Stage 6 operator-PC real-cycle sign-off.
 | Setup validator | `scripts\validate_install.bat --after-setup --json` returned `ok=true` |
 | Recovery check | `scripts\stage6_recovery_check.bat C:\Users\cyo20\EIDP-v459-50152a5\scripts\weekly_run.bat --json` returned `ok=true`, `action_matches_expected=true` |
 | Cleanup tools | `rotate_audit_outbox.py --json` returned `rotate=false` for missing outbox; `prune_pdf_storage.py --json` returned `candidate_count=0` |
-| Real-cycle entrypoints | ZIP and extracted Windows root both contain `EIDP-start.bat`, `EIDP-setup.bat`, `EIDP-stage6-evidence.bat`, `EIDP-stage6-verify-evidence.bat`, `scripts\weekly_run.bat`, `scripts\validate_install.bat`, `scripts\stage6_recovery_check.bat`, and `scripts\diagnose.bat` |
+| Real-cycle entrypoints | ZIP and extracted Windows root both contain `EIDP-start.bat`, `EIDP-setup.bat`, `EIDP-stage6-evidence.bat`, `EIDP-stage6-verify-evidence.bat`, `EIDP-diagnose.bat`, `scripts\weekly_run.bat`, `scripts\validate_install.bat`, `scripts\stage6_recovery_check.bat`, and `scripts\diagnose.bat` |
 | UI health | Root `EIDP-start.bat` served `_stcore/health=200` and root HTTP `200` on `127.0.0.1:8501`; cleanup left no listener |
 | Browser read-only navigation | Mac Playwright over SSH tunnel clicked `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`; `output/playwright/v459-ui-smoke/summary.json` reported `hasJapaneseUi=true`, `hasTargetFiscalYear=true`, `hasErrorTraceback=false`, `navAllClicked=true`; screenshots `00-home.png` through `04-settings.png` were captured; cleanup removed the tunnel and left no Windows `8501` listener |
 

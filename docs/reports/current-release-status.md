@@ -60,9 +60,10 @@ and `action_matches_expected=true`. `rotate_audit_outbox.py --json` returned
 entrypoints referenced by `docs/runbooks/eidp-v459-real-cycle-card.md` exist in
 both `dist/eidp-windows-v459.zip` and `C:\Users\cyo20\EIDP-v459-50152a5`:
 `EIDP-start.bat`, `EIDP-setup.bat`, `EIDP-stage6-evidence.bat`,
-`EIDP-stage6-verify-evidence.bat`, `scripts\weekly_run.bat`,
-`scripts\validate_install.bat`, `scripts\stage6_recovery_check.bat`, and
-`scripts\diagnose.bat`. The root-level packaged `EIDP-start.bat` started
+`EIDP-stage6-verify-evidence.bat`, `EIDP-diagnose.bat`,
+`scripts\weekly_run.bat`, `scripts\validate_install.bat`,
+`scripts\stage6_recovery_check.bat`, and `scripts\diagnose.bat`. The
+root-level packaged `EIDP-start.bat` started
 Streamlit on Windows `127.0.0.1:8501`, returned `_stcore/health=200` and root
 HTTP `200`, and cleanup left no remaining `8501` listener. A follow-up
 read-only browser navigation smoke kept Streamlit alive in a foreground SSH
