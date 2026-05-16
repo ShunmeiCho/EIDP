@@ -29,7 +29,13 @@ Short checklist for the operator
 3. Confirm the UI shows:
    target fiscal year 2026 / Reiwa 8
 
-4. Run one normal weekly collection cycle with owner/operator present.
+4. Do not start an unbounded full weekly collection cycle on v460 unless the
+   owner explicitly approves the long-running production probe. The latest
+   URL-rich v460 FY2026 probe ran for about 9h41m, was stopped, and did not
+   write a new last_run.json. For the current owner/operator cycle, prioritize
+   the double-click launcher, browser UI workflow, audit flush, evidence
+   bundle, KPI/sign-off fields, and any weekly result that has already been
+   produced or is explicitly started by the owner.
 
 5. Complete the real workflow in the browser UI:
    - Page 1: school task board
@@ -73,6 +79,15 @@ Do not approve v1.0 from these alone
 
 These are support evidence only. The release decision needs the v460 real-cycle
 record and verifier-accepted v460 evidence bundle.
+
+Known v460 full-weekly risk
+---------------------------
+v460 remains the active owner/operator UI and evidence lane, but it is not the
+best candidate for a new unbounded full-production weekly run. The URL-rich
+FY2026 probe exposed repeated shared-domain crawling and was stopped after
+about 9h41m without writing a new last_run.json. If the owner wants a fresh
+full weekly KPI run, reopen the change window and promote a newer package lane
+instead of silently using v460 as a long-running full-weekly probe.
 
 Safety notes
 ------------

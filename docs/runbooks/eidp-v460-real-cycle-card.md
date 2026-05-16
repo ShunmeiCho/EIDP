@@ -19,9 +19,9 @@ record.
 | Completion audit | `docs/reports/2026-05-17-active-goal-completion-audit.md` |
 | Full template | `docs/runbooks/eidp-operator-e2e-template.md` |
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt` |
-| Top-level README SHA256 | `514e23ed7c32b677a057e81eba53d884c0679b7e6eb16b1e17a9404dac7434d7` |
+| Top-level README SHA256 | `e7524506f4810dda199d1a1c4f4abb8d763348eef3e50ecebd99ac524abdff20` |
 | Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt` |
-| Owner request SHA256 | `c13dd1018c60388266105c5e8b503867c9b9f0594dab96c6bfc2bb93f43cc258` |
+| Owner request SHA256 | `f316bf55acdf8d7d36dd651fc49a269f8127b7ceba366aebc31c7bdf30ebb211` |
 | Companion docs ZIP | `dist/eidp-v460-operator-docs-20260517.zip` |
 | Windows staging docs ZIP | `C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip` |
 
@@ -106,7 +106,13 @@ Expected before continuing:
 1. Double-click `EIDP-start.bat`.
 2. Confirm the browser opens `http://127.0.0.1:8501`.
 3. Confirm the UI shows `2026年度（令和8年度）`.
-4. Run the normal weekly collection cycle only with owner/operator present.
+4. Do not start an unbounded full weekly collection cycle on v460 unless the
+   owner explicitly approves the long-running production probe. The latest
+   URL-rich v460 FY2026 probe ran for about 9h41m, was stopped, and did not
+   write a new `last_run.json`. For the current owner/operator cycle, prioritize
+   the double-click launcher, browser UI workflow, audit flush, evidence bundle,
+   KPI/sign-off fields, and any weekly result that has already been produced or
+   is explicitly started by the owner.
 5. Use the browser UI to resolve the real work queue:
    - `① 学校別タスク`
    - `② PDF確認・手入力`
@@ -120,6 +126,11 @@ Expected before continuing:
 Do not treat the existing v459 bounded canary, browser health/nav smoke, v464
 side-by-side R7 browser Excel proof, disposable UI write/audit sandbox, or R7
 retroactive support as the v460 real-cycle sign-off.
+
+If the owner wants a fresh full weekly KPI run, reopen the change window and
+promote a newer package lane instead of silently using v460 as a long-running
+full-weekly probe. v460 remains the active owner/operator UI and evidence lane,
+not the preferred lane for a new unbounded production-scale weekly run.
 
 ## Evidence Bundle
 

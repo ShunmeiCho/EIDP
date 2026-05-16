@@ -33,3 +33,10 @@ Do not approve v1.0 from setup proof alone. v460 still needs the owner/operator
 real-cycle, evidence bundle verification, KPI fill, and sign-off. v459 evidence
 and v464 side-by-side evidence are support only and are not a v460 real-cycle
 substitute.
+
+Do not start an unbounded full weekly collection cycle on v460 unless the owner
+explicitly approves the long-running production probe. The latest URL-rich
+v460 FY2026 probe ran for about 9h41m, was stopped, and did not write a new
+last_run.json. Use v460 for the launcher/UI/evidence/sign-off real-cycle path;
+if a fresh full weekly KPI run is required, reopen the change window and promote
+a newer package lane first.

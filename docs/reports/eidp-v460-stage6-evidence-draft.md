@@ -17,8 +17,8 @@ staging. It is not the final Stage 6 operator-PC real-cycle sign-off.
 | Companion docs | `dist/eidp-v460-operator-docs-20260517.zip`; verify with `dist/eidp-v460-operator-docs-20260517.zip.sha256` |
 | Windows staging docs companion | `C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip`; Windows `Get-FileHash` matched the sidecar |
 | Windows staging docs directory | `C:\EIDP-staging\v460-operator-docs-20260517`, plus top-level `00-READ-ME-FIRST-v460.txt` |
-| Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt`; SHA256 `514e23ed7c32b677a057e81eba53d884c0679b7e6eb16b1e17a9404dac7434d7` |
-| Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt`; SHA256 `c13dd1018c60388266105c5e8b503867c9b9f0594dab96c6bfc2bb93f43cc258` |
+| Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt`; SHA256 `e7524506f4810dda199d1a1c4f4abb8d763348eef3e50ecebd99ac524abdff20` |
+| Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt`; SHA256 `f316bf55acdf8d7d36dd651fc49a269f8127b7ceba366aebc31c7bdf30ebb211` |
 
 The v460 core ZIP includes the current version-neutral E2E template. The
 20260517 companion docs ZIP carries this version-specific evidence draft,

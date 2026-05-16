@@ -1531,10 +1531,10 @@ with `Get-FileHash` against its sidecar, and expanded to
 `C:\EIDP-staging\v460-operator-docs-20260517` with the top-level readme
 `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`. The tracked source for that
 top-level readme is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, with SHA256
-`514e23ed7c32b677a057e81eba53d884c0679b7e6eb16b1e17a9404dac7434d7`, matching
+`e7524506f4810dda199d1a1c4f4abb8d763348eef3e50ecebd99ac524abdff20`, matching
 the v460 handoff manifest. The short owner/operator request is also mirrored as
 tracked source at `docs/runbooks/eidp-v460-owner-request-20260516.txt`, with
-SHA256 `c13dd1018c60388266105c5e8b503867c9b9f0594dab96c6bfc2bb93f43cc258`,
+SHA256 `f316bf55acdf8d7d36dd651fc49a269f8127b7ceba366aebc31c7bdf30ebb211`,
 matching `dist/eidp-v460-owner-request-20260516.txt`.
 
 A post-doc-refresh recovery check wrote
