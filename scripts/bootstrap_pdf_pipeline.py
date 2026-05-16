@@ -980,7 +980,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--discovery-methods",
-        default="prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
+        default="prefecture_aggregator,seed_csv,corporation_pattern,school_domain_override,scrapling_stealth",
         help=(
             "Comma-separated school_site.discovery_method values crawled in Step 3. "
             "Default includes official prefecture URLs plus known seed/corporation/auto-crawl fallbacks."
@@ -1280,6 +1280,8 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         )
     print("\n=== Step 3: discover-pdfs ===")
     discovery_methods = [method.strip() for method in args.discovery_methods.split(",") if method.strip()]
+    if "school_domain_override" not in discovery_methods:
+        discovery_methods.append("school_domain_override")
     if known_url_stats.get("search_found", 0) > 0 and "web_search" not in discovery_methods:
         discovery_methods.append("web_search")
     if "scrapling_stealth" not in discovery_methods:

@@ -63,6 +63,7 @@ DEFAULT_METHODS = (
     "prefecture_aggregator",
     "seed_csv",
     "corporation_pattern",
+    "school_domain_override",
     "operator_manual",
     "scrapling_stealth",
 )

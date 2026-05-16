@@ -126,6 +126,7 @@ WEEKLY_DISCOVERY_METHODS = (
     "prefecture_aggregator",
     "seed_csv",
     "corporation_pattern",
+    "school_domain_override",
     "web_search",
     "operator_manual",
     "scrapling_stealth",
@@ -305,6 +306,8 @@ def site_entry_label(
         return "既知URLシードの入口"
     if method == "corporation_pattern":
         return "法人ドメイン推定の入口"
+    if method == "school_domain_override":
+        return "学校別URL補正の入口"
     if method == "scrapling_stealth":
         return "学校公式サイト自動発見の入口"
     if method == "operator_manual":

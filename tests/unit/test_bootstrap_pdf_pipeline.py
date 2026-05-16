@@ -811,6 +811,7 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
         "prefecture_aggregator",
         "seed_csv",
         "corporation_pattern",
+        "school_domain_override",
         "web_search",
         "scrapling_stealth",
     ]

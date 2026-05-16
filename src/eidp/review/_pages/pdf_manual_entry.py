@@ -90,6 +90,7 @@ DISCOVERY_METHOD_LABELS: dict[str, str] = {
     "prefecture_aggregator": "都道府県公式一覧",
     "seed_csv": "既知URLシード",
     "corporation_pattern": "法人ドメイン推定",
+    "school_domain_override": "学校別URL補正",
     "web_search": "Web検索",
     "operator_manual": "手動登録",
 }

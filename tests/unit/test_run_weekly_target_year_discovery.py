@@ -172,6 +172,8 @@ def test_default_methods_include_reusable_bootstrap_and_operator_urls() -> None:
         _site(session, 4, "seed_csv")
         _school(session, 5)
         _site(session, 5, "corporation_pattern")
+        _school(session, 6)
+        _site(session, 6, "school_domain_override")
         session.flush()
 
         ids = select_target_missing_school_ids(
@@ -181,7 +183,7 @@ def test_default_methods_include_reusable_bootstrap_and_operator_urls() -> None:
             school_type="専門学校",
         )
 
-        assert ids == [1, 2, 4, 5]
+        assert ids == [1, 2, 4, 5, 6]
     finally:
         session.close()
 
@@ -290,6 +292,7 @@ def test_parse_args_defaults_to_configured_target_fiscal_year(
         "prefecture_aggregator",
         "seed_csv",
         "corporation_pattern",
+        "school_domain_override",
         "operator_manual",
         "scrapling_stealth",
     ]

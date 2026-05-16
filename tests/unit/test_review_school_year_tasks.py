@@ -1233,6 +1233,9 @@ def test_site_entry_label_explains_source_and_reuse_quality() -> None:
     assert site_entry_label("corporation_pattern", "homepage", "https://school.example/") == (
         "法人ドメイン推定の入口"
     )
+    assert site_entry_label("school_domain_override", "homepage", "https://school.example/") == (
+        "学校別URL補正の入口"
+    )
     assert site_entry_label("operator_manual", "homepage", "https://school.example/") == "手動登録ページ入口"
     assert site_entry_label("operator_manual", "pdf", "https://school.example/r8.pdf") == (
         "PDF直リンク（今年度だけ弱い）"

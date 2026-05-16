@@ -1163,7 +1163,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "Step 2b",
             "known URL / corporation fallback discovery",
             "discovered-urls-50.csv",
-            "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
+            "prefecture_aggregator,seed_csv,corporation_pattern,school_domain_override,scrapling_stealth",
             "progress_callback",
             "write_text_atomic",
             "operator_reviewable_yield_pct",

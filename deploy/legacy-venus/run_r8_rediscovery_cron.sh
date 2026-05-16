@@ -22,7 +22,7 @@ LOCK_FILE="${LOG_DIR}/.lock"
 FAIL_MARKER="${LOG_DIR}/.last_failure"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG_FILE="${LOG_DIR}/run-${TS}.log"
-DEFAULT_REDISCOVERY_METHODS="prefecture_aggregator seed_csv corporation_pattern operator_manual scrapling_stealth"
+DEFAULT_REDISCOVERY_METHODS="prefecture_aggregator seed_csv corporation_pattern school_domain_override operator_manual scrapling_stealth"
 read -r -a REDISCOVERY_METHODS <<< "${EIDP_REDISCOVERY_METHODS:-${DEFAULT_REDISCOVERY_METHODS}}"
 
 mkdir -p "${LOG_DIR}"

@@ -1391,7 +1391,7 @@ def test_verify_core_zip_requires_all_navigated_operator_modules(tmp_path: Path)
 def test_verify_core_zip_validates_bootstrap_pipeline_contract(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/bootstrap_pdf_pipeline.py"] = entries["scripts/bootstrap_pdf_pipeline.py"].replace(
-        "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth",
+        "prefecture_aggregator,seed_csv,corporation_pattern,school_domain_override,scrapling_stealth",
         "prefecture_aggregator",
     )
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
@@ -1400,7 +1400,7 @@ def test_verify_core_zip_validates_bootstrap_pipeline_contract(tmp_path: Path) -
 
     assert not check.ok
     assert any(
-        "prefecture_aggregator,seed_csv,corporation_pattern,scrapling_stealth" in error
+        "prefecture_aggregator,seed_csv,corporation_pattern,school_domain_override,scrapling_stealth" in error
         for error in check.errors
     )
 
