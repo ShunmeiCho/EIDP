@@ -24,6 +24,7 @@ Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v460.z
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-return-artifact-verifier-proven package: `dist/eidp-windows-v464.zip`
+Latest Windows-disk-health-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v464.zip`
@@ -109,6 +110,14 @@ Mac copy is
 `logs/win-v464-stage6/verify-stage6-return-plan-a-reject-20260517-0754.json`
 with SHA256
 `bfab702236911a73f516a83c47e2e94ac1710e44cf6c7024885d43bc5473f310`.
+The packaged v464 disk-health check
+`scripts\disk_health_check.py --profile operator-win --json` returned `ok=true`,
+`warn_count=0`, and `block_count=0`: app root `844.1MiB`, `data/pdfs=0B`,
+`data/output=0B`, `logs=12.8KiB`, and protected
+`data/audit/manual-actions.jsonl` missing because no operator action has run in
+the v464 side-by-side lane. The Mac copy is
+`logs/win-v464-stage6/disk-health-20260517-operator-win.json` with SHA256
+`2ff02db2fff92af7f911f6c60546e7a7287c7bf059502fac4ec8d2b2d517003a`.
 The v463 Mac retroactive Excel matrix
 `logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
 FY2025, FY2024, and FY2023. The references were regenerated from the frozen
