@@ -659,6 +659,7 @@ def _run_weekly_inner(
                     batch_size=max(ingest_batch_size, len(new_document_ids)),
                     document_ids=new_document_ids,
                     evidence_path=ingest_evidence,
+                    target_fiscal_year=current_fy,
                 )
                 session.commit()
             rebuilt = rebuild_school_fiscal_year_status(

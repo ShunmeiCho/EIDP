@@ -704,7 +704,11 @@ def weekly_update(
             # Phase 3: Ingest new PDFs
             typer.echo("\n[3/4] Ingesting PDFs...")
             from eidp.pipeline.ingest import run_ingestion
-            ingest_stats = run_ingestion(session, batch_size=ingest_batch)
+            ingest_stats = run_ingestion(
+                session,
+                batch_size=ingest_batch,
+                target_fiscal_year=settings.target_fiscal_year,
+            )
             session.commit()
             typer.echo(f"  {ingest_stats}")
 

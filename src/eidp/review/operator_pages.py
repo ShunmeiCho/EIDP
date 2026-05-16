@@ -45,7 +45,7 @@ from eidp.db.models import (
 from eidp.fiscal_year import format_fiscal_year_label
 from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
 from eidp.review.target_year_status import target_year_overview
-from eidp.scraper.pdf_discovery import _classify_pdf_content, _safe_get
+from eidp.scraper.pdf_discovery import HttpGetClient, _classify_pdf_content, _safe_get
 from eidp.scraper.url_discovery import _is_safe_url
 
 _OUTPUT_DIR = Path("output")
@@ -205,7 +205,7 @@ class OperatorBulkUrlImportResult:
 
 def _fetch_pdf_bytes(url: str) -> tuple[int, bytes]:
     with httpx.Client(timeout=30.0, follow_redirects=False) as client:
-        resp = _safe_get(client, url)
+        resp = _safe_get(cast(HttpGetClient, client), url)
         return resp.status_code, resp.content
 
 
@@ -568,6 +568,7 @@ def run_operator_discovery_ingest(
             batch_size=len(document_ids),
             document_ids=document_ids,
             evidence_path=ingest_evidence_path,
+            target_fiscal_year=settings.target_fiscal_year,
         )
 
     return {

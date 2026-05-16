@@ -620,6 +620,53 @@ def test_run_weekly_separates_target_missing_from_stale_count(
     assert summary["no_crawlable_url_school_count"] == 0
 
 
+def test_run_weekly_passes_current_fy_to_ingestion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Manual FY overrides must reach ingestion, not stop at discovery."""
+
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    _school(session, 1)
+    _site(session, 1, "prefecture_aggregator")
+    session.commit()
+    captured: dict[str, object] = {}
+
+    def fake_run_pdf_discovery(session_arg, **_kwargs):  # noqa: ANN001, ANN003
+        _doc(session_arg, 20, 1, 2025, ingest_status="pending")
+        session_arg.flush()
+        return {"crawled": 1, "downloaded": 1, "skipped": 0, "failed": 0}
+
+    def fake_run_ingestion(session_arg, **kwargs):  # noqa: ANN001, ANN003
+        captured["session"] = session_arg
+        captured["kwargs"] = kwargs
+        return {"processed": 1, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
+
+    monkeypatch.setattr(module, "run_pdf_discovery", fake_run_pdf_discovery)
+    monkeypatch.setattr(module, "run_ingestion", fake_run_ingestion)
+
+    run_weekly(
+        current_fy=2025,
+        methods=["prefecture_aggregator"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=10,
+        rate_limit=1.5,
+        request_timeout=12.0,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=False,
+        lock_path=None,
+        last_run_path=None,
+    )
+
+    assert captured["session"] is session
+    assert captured["kwargs"]["document_ids"] == [20]
+    assert captured["kwargs"]["target_fiscal_year"] == 2025
+
+
 def test_run_weekly_writes_discovery_rca_batch_plan_artifact(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

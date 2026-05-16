@@ -271,6 +271,78 @@ def test_ingest_default_year_cap_uses_configured_target(engine, tmp_path, monkey
         assert yearly.fiscal_year == 2027
 
 
+def test_ingest_explicit_target_year_overrides_settings_cap(engine, tmp_path, monkeypatch):
+    """Forecast/retroactive callers must not inherit the process default cap."""
+
+    monkeypatch.setattr(ingest_module.settings, "target_fiscal_year", 2026)
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/target-2027.pdf",
+            tmp_path=tmp_path,
+            file_hash="target-2027-override",
+        )
+        ann = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="令和9年度",
+            source_pdf="test.pdf",
+            departments=[
+                DepartmentRecord(name="A学科", capacity=40, enrollment=35, graduates=30),
+            ],
+            support_recipient=None,
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            stats = ingest_document(session, doc, recorder=None, target_fiscal_year=2027)
+        session.commit()
+
+        assert stats["yearly_upserted"] == 1
+        assert doc.fiscal_year == 2027
+        assert doc.is_current_year is True
+        yearly = session.query(DepartmentYearly).one()
+        assert yearly.fiscal_year == 2027
+
+
+def test_ingest_explicit_target_year_controls_current_flag(engine, tmp_path, monkeypatch):
+    """Retroactive FY runs should mark that FY as current for the scoped run."""
+
+    monkeypatch.setattr(ingest_module.settings, "target_fiscal_year", 2027)
+    with Session(engine) as session:
+        school = _seed_school(session)
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/target-2026.pdf",
+            tmp_path=tmp_path,
+            file_hash="target-2026-override",
+        )
+        ann = SchoolAnnotation(
+            school_name="A学校",
+            school_type="専門学校",
+            operator_name="法人A",
+            fiscal_year="令和8年度",
+            source_pdf="test.pdf",
+            departments=[
+                DepartmentRecord(name="A学科", capacity=40, enrollment=35, graduates=30),
+            ],
+            support_recipient=None,
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            stats = ingest_document(session, doc, recorder=None, target_fiscal_year=2026)
+        session.commit()
+
+        assert stats["yearly_upserted"] == 1
+        assert doc.fiscal_year == 2026
+        assert doc.is_current_year is True
+        yearly = session.query(DepartmentYearly).one()
+        assert yearly.fiscal_year == 2026
+
+
 def test_pdf_course_name_specialized_suffix_matches_existing_field_department(engine, tmp_path):
     """PDFs often spell the course as 工業専門課程 while the Excel master stores 工業.
 

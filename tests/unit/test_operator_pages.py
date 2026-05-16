@@ -435,6 +435,7 @@ def test_run_operator_discovery_ingest_uses_strict_target_and_page_discovered_do
         assert discovery_kwargs["discovery_methods"] == ["operator_manual"]
         assert result["document_ids"] == [1]
         assert calls["ingest_kwargs"]["document_ids"] == [1]
+        assert calls["ingest_kwargs"]["target_fiscal_year"] == 2026
     finally:
         session.close()
 

@@ -104,6 +104,7 @@ def ingest_document(
     session: Session,
     doc: Document,
     recorder: IngestEvidenceRecorder | None = None,
+    target_fiscal_year: int | None = None,
 ) -> IngestDocumentStats:
     """Parse a downloaded PDF and write extracted data to DB.
 
@@ -288,7 +289,7 @@ def ingest_document(
                 return stats
 
     # Determine fiscal year early — needed for both dept and support_recipient paths
-    fiscal_year_cap = settings.target_fiscal_year
+    fiscal_year_cap = target_fiscal_year if target_fiscal_year is not None else settings.target_fiscal_year
     parsed_fiscal_year_candidate = _parse_fiscal_year_candidate_from_annotation(annotation.fiscal_year)
     parsed_fiscal_year = _parse_fiscal_year_from_annotation(
         annotation.fiscal_year,
@@ -704,7 +705,7 @@ def ingest_document(
     # Write fiscal year back to Document so crawler can filter already-collected schools
     if fiscal_year:
         doc.fiscal_year = fiscal_year
-        doc.is_current_year = fiscal_year >= settings.target_fiscal_year
+        doc.is_current_year = fiscal_year >= fiscal_year_cap
 
     session.flush()
     log.info("document_ingested", doc_id=doc.id, **stats)
@@ -750,6 +751,7 @@ def run_ingestion(
     batch_size: int = 50,
     document_ids: Sequence[int] | None = None,
     evidence_path: Path | None = None,
+    target_fiscal_year: int | None = None,
 ) -> dict[str, int]:
     """Ingest all un-ingested documents.
 
@@ -823,7 +825,12 @@ def run_ingestion(
         for doc in docs:
             try:
                 nested = session.begin_nested()
-                stats = ingest_document(session, doc, recorder=recorder)
+                stats = ingest_document(
+                    session,
+                    doc,
+                    recorder=recorder,
+                    target_fiscal_year=target_fiscal_year,
+                )
                 nested.commit()
 
                 # Mark ingest_status based on result.
