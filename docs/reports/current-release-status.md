@@ -1290,6 +1290,14 @@ only until the final operator real-cycle sign-off is captured. Future transfers
 should keep the same SSH/SCP or no-SSH manual transfer discipline, with
 Windows-side SHA256 checking before extraction.
 
+The v459 core ZIP predates the final handoff-doc updates and intentionally stays
+frozen at SHA256
+`1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2`. Use the
+ignored companion docs bundle `dist/eidp-v459-operator-docs-20260516.zip`
+and verify it with `dist/eidp-v459-operator-docs-20260516.zip.sha256`. It
+contains the current real-cycle card, E2E template, release-status snapshot, and
+v459 evidence draft.
+
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |
 | 1. 実施情報 | v459 package snapshot `50152a5f2bfc0b8f0a360ef87af5e4979b284f4a`; `dist/eidp-windows-v459.zip`; SHA256 `1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2`; extract path `C:\Users\cyo20\EIDP-v459-50152a5` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |

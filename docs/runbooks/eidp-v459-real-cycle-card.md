@@ -17,6 +17,13 @@ record.
 | Windows root | `C:\Users\cyo20\EIDP-v459-50152a5` |
 | Evidence draft | `docs/reports/eidp-v459-stage6-evidence-draft.md` |
 | Full template | `docs/runbooks/eidp-operator-e2e-template.md` |
+| Companion docs ZIP | `dist/eidp-v459-operator-docs-20260516.zip` |
+
+The v459 core ZIP was intentionally not rebuilt after the final documentation
+updates, so the package-embedded runbook/template may be stale. Use the
+companion docs ZIP above for the current real-cycle card, E2E template, release
+status, and v459 evidence draft while keeping the verified core ZIP SHA256
+unchanged.
 
 Before this card was handed off, the real-cycle entrypoints below were verified
 in both `dist/eidp-windows-v459.zip` and the extracted Windows root above:
