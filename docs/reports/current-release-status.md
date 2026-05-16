@@ -70,6 +70,12 @@ references with `missing_rows=0`, `extra_rows=0`, and `differing_fields=0` for
 all three years. The earlier raw `data/master.xlsx` attempt was a reference
 selection error, because that workbook contains later-year fields and is not a
 FY-specific pass/fail reference.
+After this proof generation, Mac `scripts/disk_health_check.py --json` reports
+`ok=true`, `warn_count=1`, and `block_count=0`: project `2.4GiB`, `dist=1.3GiB`
+(`warn`), `_temp=80.9MiB` (`ok`), `logs=14.3MiB` (`ok`), protected
+`data=20.0MiB`, and `.claude/worktrees=0B`. The retained v459-v463 packages and
+v459-derived reference workbooks are part of the current evidence chain, so no
+release-artifact pruning was performed automatically.
 
 v463 was then transferred side-by-side to Windows staging, SHA-checked with
 `certutil` against the sidecar, extracted to

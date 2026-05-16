@@ -94,9 +94,9 @@ per school instead of being cached or de-duplicated at run scope.
 
 | Environment | Result |
 | --- | --- |
-| Mac dev | `ok=true`, `warn_count=0`, `block_count=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, `logs=4.3MiB`, protected `data=20.0MiB` |
+| Mac dev | `ok=true`, `warn_count=1`, `block_count=0`, project `2.4GiB`, `dist=1.3GiB` (`warn`), `_temp=80.9MiB`, `logs=14.3MiB`, protected `data=20.0MiB`, `.claude/worktrees=0B` |
 | Win v460 root | `ok=true`, `warn_count=0`, `block_count=0`, app root `843.0MiB`, `data\pdfs=0B`, `data\output=0B`, `logs=10.6KiB` |
-| Retention | Mac and Win staging retain v460 current plus v459 fallback; stale v454 package/deploy artifacts were pruned |
+| Retention | Mac retains the v459-v463 package/evidence chain and v459-derived retroactive reference workbooks; Win staging retains v460 current plus v459 fallback, with v462/v463 side-by-side proof directories separate from the owner-cycle lane |
 
 ## Open Gates
 
