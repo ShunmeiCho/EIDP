@@ -1,20 +1,21 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-16
-Latest Mac/non-Windows package snapshot: `22f1a98ffbc3e0aeec2f658c5f1e77927045f14c`
+Latest Mac/non-Windows package snapshot: `639dbbbac5b1b957bb30e419d84f909b683aedec`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
 It is intentionally explicit about lane boundaries: the active operator-PC
-Stage 6 setup/UI lane is now `C:\Users\cyo20\EIDP-v447-55cbc1b` for
-`dist/eidp-windows-v447.zip` / package snapshot `55cbc1b`. v447 is the current
+Stage 6 setup lane is now `C:\Users\cyo20\EIDP-v448-639dbbb` for
+`dist/eidp-windows-v448.zip` / package snapshot `639dbbb`. v448 is the current
 Mac/non-Windows release-gate-clean package and the current Windows transfer,
-setup, URL-only bootstrap, evidence-bundle, bounded `weekly_run.bat`,
-release-artifact pruning, fsync-hardened atomic-output, and UI-health lane.
-v446 remains the latest browser read-only navigation proof lane, v442 remains the
-Windows fallback and R7 browser Excel proof lane, and v408 remains historical
-support for copied-DB UI write/audit sandbox proof. The real operator cycle is
-still missing, and the production yield gate is still failing/not proven.
+setup, disk-health, and release-artifact pruning lane. v447 remains the latest
+URL-only bootstrap, evidence-bundle, bounded `weekly_run.bat`,
+fsync-hardened atomic-output, and UI-health lane. v446 remains the latest
+browser read-only navigation proof lane, v442 remains the Windows fallback and
+R7 browser Excel proof lane, and v408 remains historical support for copied-DB
+UI write/audit sandbox proof. The real operator cycle is still missing, and the
+production yield gate is still failing/not proven.
 
 ## Objective Restatement
 
@@ -38,28 +39,29 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current; current v408 disposable UI sandbox repeated the browser-write surface with one manual FY2025 `DepartmentYearly` row (`capacity=40`, `enrollment=28`, `extraction_method=manual`, `extraction_confidence=1.0`, `verified=true`) and one fiscal-year override that marked FY2024 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows non-current while FY2025 current rows were present | Proven on sandboxed/copy DB paths including current v408; real operator one-cycle proof still missing |
 | Excel template export | v442 process-scoped FY2025 browser Excel smoke launched with `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with `抽出済み学校 2031` and `Excel対象行 7150`, generated workbook rows `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719`, exposed `Excel ダウンロード`, and downloaded `output/playwright/v442-r7-excel-smoke/eidp-master.xlsx`; local `openpyxl` verified sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` with dimensions `2419x10`, `10023x22`, `9721x83`, `9721x19`; Win-side checks reported both v442 `.env` locations missing, so the retroactive FY was not persisted. Historical v408 R7 CLI/browser exports and v437 FY2025/FY2024/FY2023 non-Windows retroactive matrix remain regression support. v446 FY2025/R7 browser probe is diagnostic only because the fresh v446 DB was initialized under FY2026 and remained `Excel出力可 0/2418`. FY2026 export remains disabled on current setup evidence | R7 browser Excel download proven on v442 fallback; FY2026 target-year output not ready |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows; current v408 disposable UI sandbox repeated the audit path through `監査ログ`, showing `JSONL outbox 未送信=7`, `Outbox を flush` result `exported=7 already_present=0 failed=0`, and seven rows with `jsonl_exported_at_present=true` in direct DB verification | Proven on sandboxed paths including current v408; real operator one-cycle proof still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v447 ZIP/SHA was transferred to `C:\EIDP-staging`, expanded to `C:\Users\cyo20\EIDP-v447-55cbc1b`, and `EIDP-setup.bat` completed with SQLite integrity and `school_fiscal_year_status_count=2418`. v447 URL-only bootstrap downloaded and aggregated 47 prefecture seed artifacts, bounded real `scripts\weekly_run.bat` exited `0`, refreshed evidence bundle `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` verified with all required labels, the bounded weekly wrote `last_run.json`, RCA, and summary outputs through the fsync-hardened `write_text_atomic` path, and `scripts\launch.bat` served health/root HTTP `200`. v446 remains browser read-only navigation proof, v442 remains fallback and R7 browser Excel proof. v408 remains historical copied-DB UI write/audit sandbox proof. | Current v447 setup/bootstrap/evidence/weekly launcher/atomic-output/UI health proven; browser nav remains v446; R7 Excel proof remains v442; real operator one-cycle missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v448 ZIP/SHA was transferred to `C:\EIDP-staging`, expanded to `C:\Users\cyo20\EIDP-v448-639dbbb`, and `EIDP-setup.bat` completed with SQLite integrity and `school_fiscal_year_status_count=2418`; v448 disk health returned `ok=true`, and release-artifact pruning now retains v448 current plus v442 fallback on Windows and Mac. v447 remains the latest URL-only bootstrap, bounded real `scripts\weekly_run.bat`, evidence-bundle, fsync atomic-output, and UI-health proof: it downloaded and aggregated 47 prefecture seed artifacts, exited bounded weekly `0`, verified `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip`, wrote `last_run.json`/RCA/summary through `write_text_atomic`, and served health/root HTTP `200`. v446 remains browser read-only navigation proof, v442 remains fallback and R7 browser Excel proof. v408 remains historical copied-DB UI write/audit sandbox proof. | Current v448 setup/disk-health/pruning proven; v447 bootstrap/evidence/weekly launcher/atomic-output/UI health proven; browser nav remains v446; R7 Excel proof remains v442; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
 | Ship gate: true target-form auto-acquisition 60-70% | v447 bounded real weekly canary crawled 5 target-missing schools, found 3 candidate pages, downloaded 0 PDFs, and recorded `ship_gate_status=below_gate`; latest strict target PDF auto-yield remains `0.0%` | Failing |
 | Ship gate: estimated manual work <= 30% | Current evidence records operator-reviewable yield far below release threshold and manual workload effectively above target | Failing |
 
 ## Current Release Boundary
 
-- Current v447 package/Windows evidence lane: package snapshot
-  `55cbc1b4007a8a0e2798cc8d79f5adbff1944391`, SHA256
-  `cada1a77a2d52793939518c62a2433aee3fe959a21ad611a3fd37264c7a38557`.
-  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v447.zip
-  --skip-full-unit --json --output logs/release-gate-v447.json` returned
-  `ok=true`, with package/source freshness at `55cbc1b`, SHA sidecar match,
+- Current v448 package/Windows setup lane: package snapshot
+  `639dbbbac5b1b957bb30e419d84f909b683aedec`, SHA256
+  `5306b983debe3aee743869d64ded5557eacb4ab70042e5e6862cdbf3a5a9a09e`.
+  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v448.zip
+  --skip-full-unit --json --output logs/release-gate-v448.json` returned
+  `ok=true`, with package/source freshness at `639dbbb`, SHA sidecar match,
   validator/distribution tests returning `164 passed`, validator mypy/Ruff
   passing, discovery-gold expected predictions matching `44/44`, and both
   package verifier modes passing. Windows evidence proves transfer/SHA,
-  setup/import, SQLite integrity, URL-only bootstrap, real bounded
-  `scripts\weekly_run.bat` execution, fsync-hardened output writes,
-  evidence-bundle verification with `weekly_run_logs`, UI health, and
-  release-artifact pruning. v446 remains the latest browser read-only navigation proof, and v442
-  remains the R7 browser Excel fallback proof because the v446 FY2025 browser
-  probe was diagnostic-only on a DB initialized under FY2026.
+  setup/import, SQLite integrity, read-only disk-health checks, and
+  release-artifact pruning. v447 remains the latest URL-only bootstrap,
+  bounded `scripts\weekly_run.bat`, fsync-hardened output-write,
+  evidence-bundle, and UI-health proof. v446 remains the latest browser
+  read-only navigation proof, and v442 remains the R7 browser Excel fallback
+  proof because the v446 FY2025 browser probe was diagnostic-only on a DB
+  initialized under FY2026.
 - Historical v437 Mac/non-Windows release-gate proof: v437, package snapshot
   `7553c7480a001a1ebec687dcb743c8bd9529d6d4`, SHA256
   `ed0d677fd2d36f7bd9f884185412180a6764beef9632543e5e36eb3c766ed33c`.
@@ -191,8 +193,9 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 
 ## Current Local Verification
 
-Latest v447 Mac/non-Windows release-gate, Windows setup/bootstrap/evidence/UI
-health, and bounded weekly-launcher evidence are summarized in
+Latest v448 Mac/non-Windows release-gate and Windows setup/disk-health/pruning
+evidence, plus the latest v447 bootstrap/evidence/UI-health and bounded
+weekly-launcher evidence, are summarized in
 `docs/reports/current-release-status.md`. The retained detailed local checks
 below include historical source-code evidence base `4a16363d` and later
 refreshes:
@@ -702,19 +705,20 @@ Known non-goal-wide lint boundary:
 
 ## Next Concrete Gate
 
-SSH-Win is available and v447 is already transferred, SHA-verified, extracted,
-set up, bootstrapped, bounded-weekly-smoked, UI-health-smoked, and
-evidence-bundle-verified. The next gate is not another transfer or audit; it is
-an owner/operator Stage 6 real-cycle sign-off on v447, plus the later R8
-production yield measurement.
+SSH-Win is available and v448 is already transferred, SHA-verified, extracted,
+set up, disk-health-smoked, and release-artifact-pruned. v447 remains the latest
+bootstrapped, bounded-weekly-smoked, UI-health-smoked, and
+evidence-bundle-verified lane. The next gate is not another transfer or audit;
+it is an owner/operator Stage 6 real-cycle sign-off on the current v448 setup
+lane, plus the later R8 production yield measurement.
 
-Current v447 package:
+Current v448 package:
 
 ```text
-Package snapshot: 55cbc1b4007a8a0e2798cc8d79f5adbff1944391
-Expected SHA256: cada1a77a2d52793939518c62a2433aee3fe959a21ad611a3fd37264c7a38557
-Extract path: C:\Users\cyo20\EIDP-v447-55cbc1b
-Evidence bundle: logs/win-v447-stage6/stage6-evidence-20260515-234300.zip
+Package snapshot: 639dbbbac5b1b957bb30e419d84f909b683aedec
+Expected SHA256: 5306b983debe3aee743869d64ded5557eacb4ab70042e5e6862cdbf3a5a9a09e
+Extract path: C:\Users\cyo20\EIDP-v448-639dbbb
+Latest evidence bundle remains: logs/win-v447-stage6/stage6-evidence-20260515-234300.zip
 ```
 
 For Mac-driven remote UI verification, start the operator UI tunnel after
@@ -724,7 +728,7 @@ Windows setup/validation has passed:
 ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
 ```
 
-Complete the Stage 6 click-through against the real v447 operator cycle or an
+Complete the Stage 6 click-through against the real v448 operator cycle or an
 approved full-cycle copy: manual PDF entry write if needed, fiscal-year override
 write if needed, Excel preview/download for the active cycle, audit log/outbox
 flush, diagnostics capture, evidence verify, and sign-off fields. Do not treat

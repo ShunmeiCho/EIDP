@@ -2,19 +2,19 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `55cbc1b4007a8a0e2798cc8d79f5adbff1944391`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v447.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v447.zip`
-Latest Mac-core package SHA256: `cada1a77a2d52793939518c62a2433aee3fe959a21ad611a3fd37264c7a38557`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v447.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v447.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v447.zip`
-Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v447.zip`
+Latest Mac/non-Windows package snapshot: `639dbbbac5b1b957bb30e419d84f909b683aedec`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v448.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v448.zip`
+Latest Mac-core package SHA256: `5306b983debe3aee743869d64ded5557eacb4ab70042e5e6862cdbf3a5a9a09e`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v448.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v448.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v448.zip`
+Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v448.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v447.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v448.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v447.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v446.zip`
@@ -24,14 +24,38 @@ Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v447.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v447.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
 Current Stage 6 evidence bundle: `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` (latest v447 verified bundle with complete required labels)
-Current Stage 6 evidence draft: `docs/reports/eidp-v447-stage6-evidence-draft.md`
+Current Stage 6 evidence draft: `docs/reports/eidp-v448-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v447 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
-setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
+v448 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+setup-proven, disk-health-proven, and release-artifact-pruner-proven package. It
+was built from package snapshot
+`639dbbbac5b1b957bb30e419d84f909b683aedec`, which adds the read-only
+`scripts/disk_health_check.py` helper and requires it in the Windows ZIP
+manifest. The v448 strict non-Windows gate `logs/release-gate-v448.json`
+returned `ok=true` with SHA256
+`5306b983debe3aee743869d64ded5557eacb4ab70042e5e6862cdbf3a5a9a09e`,
+package/source commit match, `source_dirty=false`, `stale=false`,
+validator/distribution tests `164 passed`, validator mypy/Ruff pass,
+discovery-gold expected predictions `44/44`, and both package verifier modes
+pass. Windows transfer SHA matched, the package was expanded to
+`C:\Users\cyo20\EIDP-v448-639dbbb`, and `EIDP-setup.bat` completed with
+`school_count=2418`, `school_fiscal_year_status_count=2418`, and
+`sqlite_integrity_check=ok`; the independent
+`scripts\validate_install.bat --after-setup --json` check also returned
+`ok=true`. The packaged disk-health helper returned `ok=true` after setup with
+`app_root_total=843.0MiB`, `data\pdfs=0B`, `data\output=0B`, and
+`logs=3.8KiB`. The v448 packaged pruner deleted only v447 staging/deploy
+artifacts, freeing `1104022134` bytes while preserving v448 current plus v442
+fallback. Mac pruning then deleted v446/v447 local ZIP sidecars and packages,
+freeing `422489392` bytes; Mac disk health reports `project_total=1.7GiB`,
+`dist=738.7MiB`, `_temp=0B`, `logs=3.4MiB`, and protected `data=20.0MiB`.
+v448 does not yet have a bounded weekly, evidence-bundle, or UI-health run.
+
+v447 remains the latest bounded-bootstrap-proven, bounded-weekly-proven,
 evidence-bundle-proven, and UI-health-proven package. It was built from package snapshot
 `55cbc1b4007a8a0e2798cc8d79f5adbff1944391`, which adds an `os.fsync()` before
 atomic text-output replacement and restores the reusable operator E2E template
@@ -69,8 +93,8 @@ forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
 then served `/_stcore/health` and `/` with HTTP `200`, and cleanup left no
 listener on `8501`; the pulled evidence is
 `logs/win-v447-stage6/v447-ui-smoke-20260516-084930.json`.
-v447 is still not a completed
-operator real-cycle Stage 6 sign-off and still fails the production yield gate.
+v447 is still not a completed operator real-cycle Stage 6 sign-off and still
+fails the production yield gate.
 
 v446 is the previous Mac/non-Windows release-gate-clean, Windows transfer-proven,
 and release-artifact-pruner-proven package. It was built from package snapshot
@@ -87,8 +111,9 @@ packaged pruner dry-run reported only three v445 candidates:
 `C:\EIDP-staging\eidp-windows-v445.zip`, its `.sha256` sidecar, and
 `EIDP-v445-19ceb0d`. Applying the same command deleted those three candidates
 (`1103245161` bytes) and left Windows staging/deploy retention at v446 current
-plus v442 fallback. Mac retention now keeps v446 current, v442 fallback, and the
-latest alias; `_temp=0B`, `.claude/worktrees=0B`, `data=20M`, and `logs=3.6M`.
+plus v442 fallback. At the v446 checkpoint, Mac retention kept v446 current,
+v442 fallback, and the latest alias; `_temp=0B`, `.claude/worktrees=0B`,
+`data=20M`, and `logs=3.6M`.
 `EIDP-setup.bat` then completed on v446, imported bundled `master.xlsx`, rebuilt
 FY2026 school-year tasks with `school_count=2418` and
 `school_fiscal_year_status_count=2418`, and `scripts\validate_install.bat
