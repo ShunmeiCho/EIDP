@@ -191,3 +191,31 @@ def test_probe_does_not_steal_lock_from_holder(tmp_path: Path):
     finally:
         release_event.set()
         proc.join(timeout=5)
+
+
+def test_unlock_logs_release_failures(monkeypatch):
+    """Unlock errors are diagnostic evidence and must not disappear silently."""
+    from eidp.db import locking
+
+    calls: list[tuple[str, dict[str, str]]] = []
+
+    class FakeLog:
+        def warning(self, event: str, **kwargs: str) -> None:
+            calls.append((event, kwargs))
+
+    def fail_unlock(fd: int, flags: int) -> None:
+        assert fd == 123
+        assert flags == locking.fcntl.LOCK_UN
+        raise OSError("unlock failed")
+
+    monkeypatch.setattr(locking, "log", FakeLog())
+    monkeypatch.setattr(locking.fcntl, "flock", fail_unlock)
+
+    locking._unlock(123)
+
+    assert calls == [
+        (
+            "lock_release_failed",
+            {"platform": "posix", "error": "unlock failed"},
+        ),
+    ]

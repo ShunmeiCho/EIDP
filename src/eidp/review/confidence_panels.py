@@ -89,6 +89,9 @@ _FACTOR_LABELS: dict[str, str] = {
 _METHOD_LABELS: dict[str, str] = {
     "pdf_parse": "PDF 直接抽出",
     "ocr_tesseract": "OCR (Tesseract)",
+    "ocr_paddleocr": "OCR (PaddleOCR)",
+    "ocr_pymupdf": "OCR (PyMuPDF)",
+    "excel_import": "Excel 取込",
     "manual": "手入力",
 }
 

@@ -67,6 +67,9 @@ def test_verdict_label_unknown_falls_back_to_gray():
 @pytest.mark.parametrize("method,expected", [
     ("pdf_parse", "PDF 直接抽出"),
     ("ocr_tesseract", "OCR (Tesseract)"),
+    ("ocr_paddleocr", "OCR (PaddleOCR)"),
+    ("ocr_pymupdf", "OCR (PyMuPDF)"),
+    ("excel_import", "Excel 取込"),
     ("manual", "手入力"),
 ])
 def test_method_label_known(method: str, expected: str):

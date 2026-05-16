@@ -48,11 +48,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+import structlog
+
 # Cross-platform file-lock primitives.
 if sys.platform == "win32":  # pragma: no cover — exercised in Windows VM tests
     import msvcrt
 else:
     import fcntl
+
+
+log = structlog.get_logger(__name__)
 
 
 class LockBusyError(RuntimeError):
@@ -109,13 +114,13 @@ def _unlock(fd: int) -> None:
     if sys.platform == "win32":  # pragma: no cover
         try:
             msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-        except OSError:
-            pass
+        except OSError as exc:
+            log.warning("lock_release_failed", platform="win32", error=str(exc))
     else:
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)
-        except OSError:
-            pass
+        except OSError as exc:
+            log.warning("lock_release_failed", platform="posix", error=str(exc))
 
 
 def _write_owner_metadata(path: Path, owner: str) -> None:
