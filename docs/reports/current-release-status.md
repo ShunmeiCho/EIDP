@@ -1,12 +1,16 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-16
+Updated: 2026-05-17
 Branch: `sprint8-handoff-finalize`
 Latest Mac/non-Windows package snapshot: `01e44279238aaef9127ed9b578e29dc8e0070499`
 Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v460.zip`
 Latest Mac-core-verifier-clean package: `dist/eidp-windows-v460.zip`
 Latest Mac-core package SHA256: `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v460.zip`
+Latest post-package docs rebuild: `dist/eidp-windows-v461.zip`, commit
+`b787a72bb1714b77583e4c0e904b1584fdaeba92`, SHA256
+`2c0d74ab382bf179f166bdb4d775cd414a08741eca3b27ba92c2e6c7a459850b`; not the
+current Windows-staged execution pointer
 Latest Windows-core-validated package: `dist/eidp-windows-v460.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v460.zip`
@@ -28,6 +32,9 @@ Current Stage 6 evidence bundle: Plan A CLI bundle
 verified with `ok=true`, but the KPI remained `not_measured`; latest bounded
 support bundle before that was
 `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`
+Current post-bootstrap FY2026 weekly probe: stopped after about 9h41m because
+the run repeatedly re-crawled shared corporation domains; it produced no new
+`last_run.json` and is not release evidence
 Current Stage 6 evidence draft: `docs/reports/eidp-v460-stage6-evidence-draft.md`
 Current Stage 6 real-cycle card: `docs/runbooks/eidp-v460-real-cycle-card.md`
 
@@ -53,12 +60,12 @@ discovery-gold checks, package verify, and demonstrated-pattern package verify.
 request for the final Stage 6 real-cycle run and the minimum evidence that must
 come back before v1.0 can be approved.
 
-Post-package source note: branch HEAD now includes
-`2768f02 docs: expose school URL crawl env defaults`, which only adds the
-existing Step 2c school URL crawl settings to `.env.example`. This commit is not
-inside `dist/eidp-windows-v460.zip`; keep the v460 package boundary pinned to
-`01e44279238aaef9127ed9b578e29dc8e0070499` unless a later v461/rebuild is
-explicitly produced.
+Post-package source note: branch HEAD now includes docs-only commits after the
+frozen v460 ZIP, including `2768f02`, `b787a72`, `c1e5d21`, and `8021cab`.
+`dist/eidp-windows-v461.zip` was built from `b787a72` to carry post-package
+handoff-doc fixes, but Windows staging and the current execution pointer remain
+on v460 at `C:\Users\cyo20\EIDP-v460-01e4427` until v461 is explicitly staged.
+The latest HEAD docs update `8021cab` is outside both v460 and v461.
 
 Windows transfer of v460 to `C:\EIDP-staging` matched the sidecar SHA, and
 staging now retains v460 current plus v459 fallback ZIPs. Extraction to
@@ -121,6 +128,28 @@ and verifier JSON `ba295b1abaaa25eb1590f6531f734ef47600152c9ae8723d1ad6b7635fcdb
 Do not treat this Plan A evidence as release approval: it proves the CLI/evidence
 chain, but the current-FY yield and workload gates still fail and the
 owner/operator browser sign-off remains missing.
+
+After that, a URL bootstrap was run on v460 to make the FY2026 probe meaningful:
+the pre-bootstrap backup is
+`C:\Users\cyo20\EIDP-v460-01e4427\data\backups\plan-a\eidp-before-url-bootstrap-20260516-184839.sqlite3`,
+and `logs\bootstrap-pdfs-20260516-184850.log` recorded seed URL import
+`imported=48`, corporation fallback `corporation_urls_inferred=296`, and
+`search_found=180`. The resulting DB had `school_site_count=1838`,
+`schools_with_url=1805`, `schools_with_verified_url=1312`, `Document=0`, and
+`CrawlJob=0`. A second FY2026 `scripts\weekly_run.bat` then started at
+`2026-05-16 19:24:43` JST, selected `1625` sites, and was stopped at
+`2026-05-17 05:06` JST after about 9h41m. It did not write a new
+`data\output\last_run.json` or summary; the existing `last_run.json` remains
+the first Plan A success from `20260516_094344`. The incomplete probe generated
+`data\output\target-year-discovery\20260516_102444-discovery-rejections.jsonl`
+with `234238` lines / `101997049` bytes, mostly strict rejections and cached
+non-target rows. The log showed repeated shared-domain crawls, including
+O-Hara `robots.txt=152`, O-Hara `sitemap.xml=52`, O-Hara `about/joho/=283`,
+Sanko `robots.txt=136`, and Jikei `post-sitemap2/3=16/16`. Treat this as a
+v1.1 performance finding for run-scope corporation-domain/sitemap caching or
+de-duplication, not as v1.0 release evidence or KPI failure. FY2026/R8 live
+yield remains record-only during the May publication-lag window; the v1.0
+algorithm evidence should remain separated from this production probe.
 
 v459 remains the latest evidence-bundle-proven, default-launcher-proven,
 R7-browser-Excel-proven, bounded-weekly-proven, and UI-write-sandbox-proven

@@ -1,6 +1,6 @@
 # EIDP v460 Stage 6 Evidence Draft
 
-Updated: 2026-05-16
+Updated: 2026-05-17
 
 This draft records the current v460 Mac/non-Windows gate and Windows setup
 staging. It is not the final Stage 6 operator-PC real-cycle sign-off.
@@ -56,6 +56,8 @@ handoff manifest.
 | Diagnostic evidence-bundle guard | `EIDP-stage6-evidence.bat` created `C:\Users\cyo20\EIDP-v460-01e4427\logs\stage6-evidence-20260516-082906.zip`, but `EIDP-stage6-verify-evidence.bat` correctly returned `ok=false`, `missing_required_labels=["last_run"]`; Mac copy SHA256: ZIP `35b2042dbd50c1fd5156975876d5c35eca97c80ad1f42ab327852eef4c621f29`, verify JSON `d774b02dd31e0b71d0531f0577b9f452a1f4ca9a85bff8cad8b3fd36230a19a9` |
 | Plan A CLI weekly | `scripts\weekly_run.bat` exited `0` on `2026-05-16T18:43:45`; `data\output\last_run.json` has `status=success`, `dry_run=false`, `current_fy=2026`, `no_crawlable_url_school_count=2418`, `target_missing_school_count=0`, `target_pdf_auto_yield_pct=null`, `operator_reviewable_yield_pct=null`, and `ship_gate_status=not_measured` |
 | Plan A evidence bundle | `C:\Users\cyo20\EIDP-v460-01e4427\logs\stage6-evidence-20260516-094432.zip`; verifier `ok=true`, `missing_required_labels=[]`, labels `build_info`, `diagnostics`, `last_run`, `stage6_recovery`, `weekly_run_logs`; Mac copy `logs/win-v460-plan-a/stage6-evidence-20260516-094432.zip` SHA256 `491129595c97191069708ec47386663d62321fb5ead35a827e6acbfd6aaf7e0e` |
+| Plan A URL bootstrap | Before the second run, a backup was written at `data\backups\plan-a\eidp-before-url-bootstrap-20260516-184839.sqlite3`; bootstrap log `logs\bootstrap-pdfs-20260516-184850.log` recorded `seed_urls_imported imported=48`, `corporation_urls_inferred=296`, `search_found=180`, and produced DB counts `school_count=2418`, `school_site_count=1838`, `schools_with_url=1805`, `schools_with_verified_url=1312`, `document_count=0`, `crawl_job_count=0` |
+| Plan A second FY2026 weekly after URL bootstrap | Started at `2026-05-16 19:24:43` JST and was stopped at `2026-05-17 05:06` JST after about 9h41m without writing a new summary or `last_run.json`; it generated `data\output\target-year-discovery\20260516_102444-discovery-rejections.jsonl` with `234238` lines / `101997049` bytes and left `Document=0`, `CrawlJob=0`; repeated-domain counts in the log included O-Hara `robots.txt=152`, O-Hara `sitemap.xml=52`, O-Hara `about/joho/=283`, Sanko `robots.txt=136`, and Jikei `post-sitemap2/3=16/16` |
 
 Plan A proved that the v460 CLI weekly runner can create a `last_run` and a
 verifier-accepted evidence ZIP, but it did not prove the shipping KPI. The run
@@ -64,6 +66,12 @@ crawlable URL, so `ship_gate_status=not_measured` and `ship_readiness_rc=1`.
 No v460 write-path browser flow or owner/operator real-cycle was executed. The
 v460 browser smoke was read-only: it did not generate a workbook, save settings,
 or commit operator writes.
+
+The second Plan A run is not release evidence and does not replace the first
+verifier-accepted evidence bundle. It is useful as a production-scale probe: the
+strict FY2026/R8 filters rejected large numbers of non-target PDFs, but the run
+also exposed a v1.1 performance issue where corporation domains are re-crawled
+per school instead of being cached or de-duplicated at run scope.
 
 ## Disk State
 
@@ -76,9 +84,13 @@ or commit operator writes.
 ## Open Gates
 
 - The real operator-PC one-cycle sign-off remains open.
-- FY2026/R8 production strict target-PDF auto-yield remains open; Plan A
-  returned `target_pdf_auto_yield_pct=null`.
+- FY2026/R8 live yield is record-only during the May publication-lag window; it
+  is not the v1.0 algorithm-proof gate. Plan A returned
+  `target_pdf_auto_yield_pct=null`, and the second post-bootstrap run did not
+  complete.
 - Operator workload `<=30%` remains open; Plan A diagnostics reported
   `estimated_manual_workload_rate=1.0`.
+- Production-scale weekly performance on URL-rich DBs remains open; the second
+  post-bootstrap run exposed repeated corporation-domain recrawls.
 - v459 browser navigation, R7 browser Excel, and UI write/audit sandbox evidence
   remain historical bounded support, not v460 real-cycle sign-off.
