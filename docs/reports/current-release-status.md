@@ -1439,13 +1439,16 @@ transfer discipline, with Windows-side SHA256 checking before extraction.
 The v460 core ZIP predates the final handoff-doc updates and intentionally stays
 frozen at SHA256
 `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c`. Use the
-ignored companion docs bundle `dist/eidp-v460-operator-docs-20260516.zip`
-and verify it with `dist/eidp-v460-operator-docs-20260516.zip.sha256`. It
-contains the v460 real-cycle card, E2E template, release-status snapshot, and
-v460 evidence draft. The companion docs bundle was copied to
-`C:\EIDP-staging\eidp-v460-operator-docs-20260516.zip`, verified on Windows
-with `Get-FileHash` against its sidecar, and expanded to
-`C:\EIDP-staging\v460-operator-docs` with the top-level readme
+ignored companion docs bundle `dist/eidp-v460-operator-docs-20260517.zip`
+and verify it with `dist/eidp-v460-operator-docs-20260517.zip.sha256`. It
+contains the v460 real-cycle card, E2E template, release-status snapshot, v460
+evidence draft, and the setup-entrypoint template correction. This 20260517
+refresh supersedes the 20260516 companion docs for operator reading only; it
+does not change the v460 core package, Windows app root, scheduled task, or
+release approval gate. After transfer, copy it to
+`C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip`, verify it on Windows
+with `Get-FileHash` against its sidecar, and expand it to
+`C:\EIDP-staging\v460-operator-docs-20260517` with the top-level readme
 `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`. The tracked source for that
 top-level readme is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, with SHA256
 `047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7`, matching

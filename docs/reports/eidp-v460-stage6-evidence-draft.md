@@ -14,15 +14,17 @@ staging. It is not the final Stage 6 operator-PC real-cycle sign-off.
 | BUILD_INFO commit | `01e44279238aaef9127ed9b578e29dc8e0070499` |
 | Windows root | `C:\Users\cyo20\EIDP-v460-01e4427` |
 | Release gate | `logs/release-gate-v460.json`, `ok=true` |
-| Companion docs | `dist/eidp-v460-operator-docs-20260516.zip`; verify with `dist/eidp-v460-operator-docs-20260516.zip.sha256` |
-| Windows staging docs companion | `C:\EIDP-staging\eidp-v460-operator-docs-20260516.zip`; Windows `Get-FileHash` matched the sidecar |
-| Windows staging docs directory | `C:\EIDP-staging\v460-operator-docs` with `00-READ-ME-FIRST.txt` |
+| Companion docs | `dist/eidp-v460-operator-docs-20260517.zip`; verify with `dist/eidp-v460-operator-docs-20260517.zip.sha256` |
+| Windows staging docs companion | `C:\EIDP-staging\eidp-v460-operator-docs-20260517.zip` after transfer; verify with Windows `Get-FileHash` |
+| Windows staging docs directory | `C:\EIDP-staging\v460-operator-docs-20260517` after expansion, plus top-level `00-READ-ME-FIRST-v460.txt` |
 | Top-level README source | `docs/runbooks/00-READ-ME-FIRST-v460.txt`; SHA256 `047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7` |
 | Owner request source | `docs/runbooks/eidp-v460-owner-request-20260516.txt`; SHA256 `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e` |
 
 The v460 core ZIP includes the current version-neutral E2E template. The
-companion docs ZIP carries this version-specific evidence draft, real-cycle card,
-and release-status snapshot. The top-level staging readme is
+20260517 companion docs ZIP carries this version-specific evidence draft,
+real-cycle card, release-status snapshot, and setup-entrypoint template
+correction. It supersedes the 20260516 companion docs for operator reading only;
+the v460 core package and Windows app root are unchanged. The top-level staging readme is
 `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`; it is mirrored in git as
 `docs/runbooks/00-READ-ME-FIRST-v460.txt` with the same SHA256 recorded in the
 handoff manifest.
