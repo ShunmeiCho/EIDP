@@ -282,6 +282,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/verify_stage6_evidence.py": (SCRIPTS_DIR / "verify_stage6_evidence.py").read_text(
             encoding="utf-8"
         ),
+        "scripts/verify_stage6_return.py": (SCRIPTS_DIR / "verify_stage6_return.py").read_text(encoding="utf-8"),
         "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
             encoding="utf-8"
         ),

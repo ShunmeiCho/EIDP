@@ -1015,6 +1015,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     )
     (fake_repo / "scripts" / "collect_stage6_evidence.py").write_text("print('bundle')", encoding="utf-8")
     (fake_repo / "scripts" / "verify_stage6_evidence.py").write_text("print('verify bundle')", encoding="utf-8")
+    (fake_repo / "scripts" / "verify_stage6_return.py").write_text("print('verify return')", encoding="utf-8")
     (fake_repo / "scripts" / "stage6_recovery_check.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "stage6_residual_cleanup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
@@ -1162,6 +1163,9 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     )
     assert "scripts/verify_stage6_evidence.py" in arcs, (
         "Stage 6 evidence bundle must have a mechanical receiver-side verifier"
+    )
+    assert "scripts/verify_stage6_return.py" in arcs, (
+        "Stage 6 returned owner/operator artifacts must have a mechanical release verifier"
     )
     assert "scripts/verify_stage6_evidence.bat" in arcs, (
         "Stage 6 evidence verifier must have a Windows-local wrapper"

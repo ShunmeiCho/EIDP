@@ -366,6 +366,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       scripts/run_r8_rediscovery_weekly.py        backward-compatible wrapper
       scripts/validate_windows_install.py    VM/operator evidence checker
       scripts/verify_stage6_evidence.py      Stage 6 evidence bundle checker
+      scripts/verify_stage6_return.py        Stage 6 returned-artifacts checker
       scripts/validate_install.bat           VM/operator wrapper for the checker
       alembic.ini                  required by db-bootstrap
       migrations/...               required by alembic stamp head
@@ -427,6 +428,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             "validate_windows_install.py",
             "collect_stage6_evidence.py",
             "verify_stage6_evidence.py",
+            "verify_stage6_return.py",
             "stage6_recovery_check.py",
             "stage6_residual_cleanup.py",
             "bootstrap_pdf_pipeline.py",
