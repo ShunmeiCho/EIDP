@@ -55,3 +55,13 @@ def test_recorder_path_none_is_silent_noop() -> None:
     with EvidenceRecorder(None) as rec:
         rec.record(RejectionEvidence(school_id=99, pdf_url="x", reason="r"))
         # No file, no exception
+
+
+def test_recorder_without_context_does_not_keep_file_handle(tmp_path: Path) -> None:
+    log_path = tmp_path / "rejections.jsonl"
+    rec = EvidenceRecorder(log_path)
+
+    rec.record(RejectionEvidence(school_id=1, pdf_url="x", reason="r"))
+
+    assert rec._fh is None
+    assert log_path.read_text(encoding="utf-8").strip()

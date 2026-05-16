@@ -819,80 +819,78 @@ def run_ingestion(
 
     log.info("ingestion_start", documents=len(docs))
 
-    recorder = IngestEvidenceRecorder(evidence_path)
-
-    for doc in docs:
-        try:
-            nested = session.begin_nested()
-            stats = ingest_document(session, doc, recorder=recorder)
-            nested.commit()
-
-            # Mark ingest_status based on result.
-            # ingest_document may have already set a specific status (school_mismatch,
-            # no_file, image_only, non_target, parse_failed). Only override if not set.
-            #
-            # Sprint 8.6.b.1: "ingested" requires at least one row to have
-            # actually reached is_current=True. If every dept and SR row
-            # was gated below the review threshold, the doc must surface
-            # in the manual-entry queue as ``review_pending`` — otherwise
-            # it disappears between Excel and the queue.
-            yearly_current = stats.get("yearly_current", 0)
-            sr_current = stats.get("support_recipient_current", 0)
-            yearly_review = stats.get("yearly_review_pending", 0)
-            sr_review = stats.get("support_recipient_review_pending", 0)
-
-            # Sprint 8.6.b.2 — mixed-confidence routing. Owner P1: if a
-            # PDF carries one high-conf dept and one low-conf dept, the
-            # low-conf row was parked but the document was being marked
-            # ``ingested`` because yearly_current > 0. The operator
-            # would never see this PDF in PDF確認・手入力 even though
-            # part of the data needs verification. Reverse the priority:
-            # any review-pending row routes the document to review_pending,
-            # regardless of how many rows landed at is_current=True.
-            if yearly_review > 0 or sr_review > 0:
-                doc.ingest_status = "review_pending"
-            elif yearly_current > 0:
-                doc.ingest_status = "ingested"
-            elif sr_current > 0:
-                doc.ingest_status = "support_only"
-            elif stats.get("skipped", 0) > 0 and not doc.ingest_status:
-                doc.ingest_status = "parse_failed"
-
-            total_stats["processed"] += 1
-            total_stats["departments_created"] += stats["departments_created"]
-            total_stats["yearly_upserted"] += stats["yearly_upserted"]
-            total_stats["skipped"] += stats["skipped"]
-            total_stats["invalid_fiscal_year"] += stats["invalid_fiscal_year"]
-        except OSError as e:
+    with IngestEvidenceRecorder(evidence_path) as recorder:
+        for doc in docs:
             try:
-                nested.rollback()
-            except Exception:
-                log.exception("rollback_failed_after_io_error", doc_id=doc.id)
-            doc.ingest_status = "transient_error"
-            total_stats["skipped"] += 1
-            log.exception("document_ingest_io_error", doc_id=doc.id, path=doc.file_path)
-            _record_rejection(recorder, doc, "transient_error", error_type=type(e).__name__)
-        except Exception as e:
-            try:
-                nested.rollback()
-            except Exception:
-                log.exception("rollback_failed_after_perm_error", doc_id=doc.id)
-            doc.ingest_status = "permanent_error"
-            total_stats["skipped"] += 1
-            log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
-            _record_rejection(recorder, doc, "permanent_error", error_type=type(e).__name__)
+                nested = session.begin_nested()
+                stats = ingest_document(session, doc, recorder=recorder)
+                nested.commit()
 
-        # Per-document commit — guarded so a commit failure on one doc does not
-        # kill the batch. On commit failure, rollback the session and continue.
-        try:
-            session.commit()
-        except Exception:
-            log.exception("per_doc_commit_failed", doc_id=doc.id, path=doc.file_path)
-            try:
-                session.rollback()
-            except Exception:
-                log.exception("rollback_failed_after_commit_error", doc_id=doc.id)
+                # Mark ingest_status based on result.
+                # ingest_document may have already set a specific status (school_mismatch,
+                # no_file, image_only, non_target, parse_failed). Only override if not set.
+                #
+                # Sprint 8.6.b.1: "ingested" requires at least one row to have
+                # actually reached is_current=True. If every dept and SR row
+                # was gated below the review threshold, the doc must surface
+                # in the manual-entry queue as ``review_pending`` — otherwise
+                # it disappears between Excel and the queue.
+                yearly_current = stats.get("yearly_current", 0)
+                sr_current = stats.get("support_recipient_current", 0)
+                yearly_review = stats.get("yearly_review_pending", 0)
+                sr_review = stats.get("support_recipient_review_pending", 0)
 
-    log.info("ingestion_complete", **total_stats)
-    recorder.close()
+                # Sprint 8.6.b.2 — mixed-confidence routing. Owner P1: if a
+                # PDF carries one high-conf dept and one low-conf dept, the
+                # low-conf row was parked but the document was being marked
+                # ``ingested`` because yearly_current > 0. The operator
+                # would never see this PDF in PDF確認・手入力 even though
+                # part of the data needs verification. Reverse the priority:
+                # any review-pending row routes the document to review_pending,
+                # regardless of how many rows landed at is_current=True.
+                if yearly_review > 0 or sr_review > 0:
+                    doc.ingest_status = "review_pending"
+                elif yearly_current > 0:
+                    doc.ingest_status = "ingested"
+                elif sr_current > 0:
+                    doc.ingest_status = "support_only"
+                elif stats.get("skipped", 0) > 0 and not doc.ingest_status:
+                    doc.ingest_status = "parse_failed"
+
+                total_stats["processed"] += 1
+                total_stats["departments_created"] += stats["departments_created"]
+                total_stats["yearly_upserted"] += stats["yearly_upserted"]
+                total_stats["skipped"] += stats["skipped"]
+                total_stats["invalid_fiscal_year"] += stats["invalid_fiscal_year"]
+            except OSError as e:
+                try:
+                    nested.rollback()
+                except Exception:
+                    log.exception("rollback_failed_after_io_error", doc_id=doc.id)
+                doc.ingest_status = "transient_error"
+                total_stats["skipped"] += 1
+                log.exception("document_ingest_io_error", doc_id=doc.id, path=doc.file_path)
+                _record_rejection(recorder, doc, "transient_error", error_type=type(e).__name__)
+            except Exception as e:
+                try:
+                    nested.rollback()
+                except Exception:
+                    log.exception("rollback_failed_after_perm_error", doc_id=doc.id)
+                doc.ingest_status = "permanent_error"
+                total_stats["skipped"] += 1
+                log.exception("document_ingest_failed", doc_id=doc.id, path=doc.file_path)
+                _record_rejection(recorder, doc, "permanent_error", error_type=type(e).__name__)
+
+            # Per-document commit — guarded so a commit failure on one doc does not
+            # kill the batch. On commit failure, rollback the session and continue.
+            try:
+                session.commit()
+            except Exception:
+                log.exception("per_doc_commit_failed", doc_id=doc.id, path=doc.file_path)
+                try:
+                    session.rollback()
+                except Exception:
+                    log.exception("rollback_failed_after_commit_error", doc_id=doc.id)
+
+        log.info("ingestion_complete", **total_stats)
     return total_stats

@@ -40,20 +40,34 @@ class IngestEvidenceRecorder:
     def __init__(self, path: Path | None) -> None:
         self.path = path
         self._fh: TextIO | None = None
-        if path is not None:
+
+    def _open_handle(self) -> TextIO | None:
+        if self.path is not None:
             try:
-                path.parent.mkdir(parents=True, exist_ok=True)
-                self._fh = path.open("a", encoding="utf-8")
+                self.path.parent.mkdir(parents=True, exist_ok=True)
+                return self.path.open("a", encoding="utf-8")
             except OSError as e:
-                log.warning("ingest_evidence_open_failed", path=str(path), error=str(e))
-                self._fh = None
+                log.warning("ingest_evidence_open_failed", path=str(self.path), error=str(e))
+        return None
+
+    def _write_json_line(self, fh: TextIO, ev: IngestRejection) -> None:
+        fh.write(json.dumps(asdict(ev), ensure_ascii=False) + "\n")
+        fh.flush()
 
     def record(self, ev: IngestRejection) -> None:
-        if self._fh is None:
+        if self.path is None:
             return
         try:
-            self._fh.write(json.dumps(asdict(ev), ensure_ascii=False) + "\n")
-            self._fh.flush()
+            if self._fh is not None:
+                self._write_json_line(self._fh, ev)
+                return
+            fh = self._open_handle()
+            if fh is None:
+                return
+            try:
+                self._write_json_line(fh, ev)
+            finally:
+                fh.close()
         except OSError as e:
             log.warning("ingest_evidence_write_failed", error=str(e))
 
@@ -66,6 +80,7 @@ class IngestEvidenceRecorder:
             self._fh = None
 
     def __enter__(self) -> IngestEvidenceRecorder:
+        self._fh = self._open_handle()
         return self
 
     def __exit__(
