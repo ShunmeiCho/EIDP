@@ -75,6 +75,8 @@ def test_collect_candidates_aggressive_matches_probe_artifacts(tmp_path: Path) -
     _touch(temp / "v140_all_japan" / "evidence.jsonl")
     _touch(temp / "win_setup_v104.code")
     _touch(temp / "eidp-v109-wheel.whl")
+    _touch(temp / "eidp-v452-rca" / "nkhs_publicindex.html")
+    _touch(temp / "mode_sitemap.xml")
     _touch(temp / "manual-reference" / "marker.txt")
 
     conservative = module.collect_candidates(temp)
@@ -83,8 +85,10 @@ def test_collect_candidates_aggressive_matches_probe_artifacts(tmp_path: Path) -
     assert conservative == []
     assert [candidate.path for candidate in aggressive] == [
         "_temp/eidp-v109-wheel.whl",
+        "_temp/eidp-v452-rca",
         "_temp/kousei-application_form2.pdf",
         "_temp/kousei-gold-v2",
+        "_temp/mode_sitemap.xml",
         "_temp/pdf-rca",
         "_temp/r7-window-check-db-abc",
         "_temp/saitama-current51-rerun-20260511-071951",
