@@ -1,0 +1,70 @@
+# EIDP v460 Stage 6 Evidence Draft
+
+Updated: 2026-05-16
+
+This draft records the current v460 Mac/non-Windows gate and Windows setup
+staging. It is not the final Stage 6 operator-PC real-cycle sign-off.
+
+## Package
+
+| Item | Evidence |
+| --- | --- |
+| Package | `dist/eidp-windows-v460.zip` |
+| SHA256 | `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c` |
+| BUILD_INFO commit | `01e44279238aaef9127ed9b578e29dc8e0070499` |
+| Windows root | `C:\Users\cyo20\EIDP-v460-01e4427` |
+| Release gate | `logs/release-gate-v460.json`, `ok=true` |
+| Companion docs | `dist/eidp-v460-operator-docs-20260516.zip`; verify with `dist/eidp-v460-operator-docs-20260516.zip.sha256` |
+| Windows staging docs companion | `C:\EIDP-staging\eidp-v460-operator-docs-20260516.zip`; Windows `Get-FileHash` matched the sidecar |
+| Windows staging docs directory | `C:\EIDP-staging\v460-operator-docs` with `00-READ-ME-FIRST.txt` |
+
+The v460 core ZIP includes the current version-neutral E2E template. The
+companion docs ZIP carries this version-specific evidence draft, real-cycle card,
+and release-status snapshot. The top-level staging readme is
+`C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`.
+
+## Mac / Non-Windows Gate
+
+| Check | Result |
+| --- | --- |
+| Source/package freshness | `package_commit=source_commit=01e44279238aaef9127ed9b578e29dc8e0070499`, `source_dirty=false`, `stale=false` |
+| SHA256 sidecar | matched `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c` |
+| Full unit | `1665 passed`, 5 PyMuPDF/import warnings |
+| Validator distribution unit | `166 passed` |
+| Validator mypy/Ruff | passed |
+| Discovery gold summary | 44 entries, no undemonstrated pattern sources |
+| Expected predictions | `exact_matches=44`, `failed_predictions=0` |
+| Package verifier | passed |
+| Demonstrated-pattern package verifier | passed |
+
+## Windows Setup Staging
+
+| Check | Result |
+| --- | --- |
+| Transfer SHA | Win `Get-FileHash` matched the sidecar SHA256 |
+| Extraction | `C:\Users\cyo20\EIDP-v460-01e4427` |
+| Setup | `EIDP-setup.bat` exited `0`; `sqlite_integrity_check=ok`; `school_count=2418`; `school_fiscal_year_status_count=2418`; `wheel_count=78` |
+| Setup validator | `scripts\validate_install.bat --after-setup --json` returned `ok=true` |
+| Recovery check | `scripts\stage6_recovery_check.bat C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat --json` returned `ok=true`, `action_matches_expected=true` |
+| Task Scheduler | `EIDP Weekly Run` now executes `"C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat"` |
+| Diagnostics | `C:\Users\cyo20\EIDP-v460-01e4427\logs\diagnostics-20260516-170035.txt`; Mac copy `logs/win-v460-stage6/diagnostics-20260516-170035.txt` |
+| Mac copy SHA256 | diagnostics `6b4d566433db64c730737f925f0559e9b06582eed4cb0b6cd51f0623f153b445`; recovery JSON `41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6` |
+
+No v460 weekly run, browser UI smoke, or owner/operator real-cycle was executed
+during this staging update.
+
+## Disk State
+
+| Environment | Result |
+| --- | --- |
+| Mac dev | `ok=true`, `warn_count=0`, `block_count=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, `logs=4.3MiB`, protected `data=20.0MiB` |
+| Win v460 root | `ok=true`, `warn_count=0`, `block_count=0`, app root `843.0MiB`, `data\pdfs=0B`, `data\output=0B`, `logs=10.6KiB` |
+| Retention | Mac and Win staging retain v460 current plus v459 fallback; stale v454 package/deploy artifacts were pruned |
+
+## Open Gates
+
+- The real operator-PC one-cycle sign-off remains open.
+- FY2026/R8 production strict target-PDF auto-yield remains open.
+- Operator workload `<=30%` remains open until a real cycle is measured.
+- v459 browser navigation, R7 browser Excel, and UI write/audit sandbox evidence
+  remain historical bounded support, not v460 real-cycle sign-off.
