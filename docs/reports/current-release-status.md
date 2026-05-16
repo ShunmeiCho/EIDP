@@ -10,20 +10,20 @@ Latest full non-Windows release-gate package: `dist/eidp-windows-v448.zip`
 Latest Windows-core-validated package: `dist/eidp-windows-v448.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v448.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v448.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v442.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v442.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v448.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v448.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v448.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v447.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v448.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v447.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v447.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v448.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v448.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v447-stage6/stage6-evidence-20260515-234300.zip` (latest v447 verified bundle with complete required labels)
+Current Stage 6 evidence bundle: `logs/win-v448-stage6/stage6-evidence-20260516-001548.zip` (latest v448 verified bundle with complete required labels)
 Current Stage 6 evidence draft: `docs/reports/eidp-v448-stage6-evidence-draft.md`
 
 ## Verdict
@@ -31,8 +31,9 @@ Current Stage 6 evidence draft: `docs/reports/eidp-v448-stage6-evidence-draft.md
 Status: **NOT COMPLETE**
 
 v448 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
-setup-proven, disk-health-proven, and release-artifact-pruner-proven package. It
-was built from package snapshot
+setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
+evidence-bundle-proven, UI-health-proven, disk-health-proven, and
+release-artifact-pruner-proven package. It was built from package snapshot
 `639dbbbac5b1b957bb30e419d84f909b683aedec`, which adds the read-only
 `scripts/disk_health_check.py` helper and requires it in the Windows ZIP
 manifest. The v448 strict non-Windows gate `logs/release-gate-v448.json`
@@ -50,10 +51,34 @@ pass. Windows transfer SHA matched, the package was expanded to
 `app_root_total=843.0MiB`, `data\pdfs=0B`, `data\output=0B`, and
 `logs=3.8KiB`. The v448 packaged pruner deleted only v447 staging/deploy
 artifacts, freeing `1104022134` bytes while preserving v448 current plus v442
-fallback. Mac pruning then deleted v446/v447 local ZIP sidecars and packages,
+fallback. URL-only bootstrap completed after downloading and aggregating all 47
+prefecture seed artifacts. The real `scripts\weekly_run.bat` launcher then ran
+with trusted bounded variables `EIDP_WEEKLY_LIMIT=5`,
+`EIDP_WEEKLY_BATCH_SIZE=5`, `EIDP_WEEKLY_RATE_LIMIT=0.5`, and
+`EIDP_WEEKLY_REQUEST_TIMEOUT=8`; it exited `0` with `run_id=20260516_001421`,
+`crawled=5`, `found=3`, `downloaded=0`, `operator_reviewable_count=1`,
+`target_pdf_auto_acquired_count=0`, `target_pdf_auto_yield_pct=0.0`, and
+`ship_gate_status=below_gate`. `scripts\validate_install.bat --after-setup
+--after-weekly --json` returned `ok=true`, reporting `last_run_status=success`,
+`sqlite_target_fy_target_pdf_school_count=0`, and
+`sqlite_target_fy_operator_reviewable_school_count=1`. Recovery check and
+residual cleanup dry-run both returned `ok=true`. The evidence bundle
+`logs\stage6-evidence-20260516-001548.zip` verified on both Windows and Mac as
+`logs/win-v448-stage6/stage6-evidence-20260516-001548.zip` with `ok=true`, no
+forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
+`bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
+`discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
+`stage6_residual_cleanup`, and `weekly_run_logs`. v448 `scripts\launch.bat`
+then served `/_stcore/health` and `/` with HTTP `200`, and cleanup left no
+listener on `8501`; the pulled evidence is
+`logs/win-v448-stage6/v448-ui-smoke-20260516-091650.json`. The final v448
+disk-health check returned `ok=true` with `app_root_total=851.4MiB`,
+`data\pdfs=0B`, `data\output=61.7KiB`, and `logs=123.0KiB`. Mac pruning then
+deleted v446/v447 local ZIP sidecars and packages,
 freeing `422489392` bytes; Mac disk health reports `project_total=1.7GiB`,
 `dist=738.7MiB`, `_temp=0B`, `logs=3.4MiB`, and protected `data=20.0MiB`.
-v448 does not yet have a bounded weekly, evidence-bundle, or UI-health run.
+v448 is still not a completed operator real-cycle Stage 6 sign-off and still
+fails the production yield gate.
 
 v447 remains the latest bounded-bootstrap-proven, bounded-weekly-proven,
 evidence-bundle-proven, and UI-health-proven package. It was built from package snapshot
