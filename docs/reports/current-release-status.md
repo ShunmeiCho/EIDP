@@ -50,6 +50,13 @@ discovery-gold checks, package verify, and demonstrated-pattern package verify.
 request for the final Stage 6 real-cycle run and the minimum evidence that must
 come back before v1.0 can be approved.
 
+Post-package source note: branch HEAD now includes
+`2768f02 docs: expose school URL crawl env defaults`, which only adds the
+existing Step 2c school URL crawl settings to `.env.example`. This commit is not
+inside `dist/eidp-windows-v460.zip`; keep the v460 package boundary pinned to
+`01e44279238aaef9127ed9b578e29dc8e0070499` unless a later v461/rebuild is
+explicitly produced.
+
 Windows transfer of v460 to `C:\EIDP-staging` matched the sidecar SHA, and
 staging now retains v460 current plus v459 fallback ZIPs. Extraction to
 `C:\Users\cyo20\EIDP-v460-01e4427` succeeded with BUILD_INFO commit
@@ -1323,6 +1330,10 @@ v460 evidence draft. The companion docs bundle was copied to
 with `Get-FileHash` against its sidecar, and expanded to
 `C:\EIDP-staging\v460-operator-docs` with the top-level readme
 `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`.
+
+The post-package `.env.example` source commit `2768f02` is a future-package
+configuration-documentation improvement only. It must not be used as evidence
+that the current v460 Windows ZIP exposes the Step 2c school URL crawl defaults.
 
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |

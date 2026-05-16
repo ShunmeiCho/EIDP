@@ -21,6 +21,12 @@ and v408 remains historical support for broader copied-DB UI write paths. The
 real operator cycle is still missing, and the production R8 yield gate is still
 not proven.
 
+Post-package source note: branch HEAD includes
+`2768f02 docs: expose school URL crawl env defaults`, which documents existing
+Step 2c school URL crawl settings in `.env.example`. That commit is not part of
+the frozen v460 Windows ZIP; the current package/evidence lane remains pinned to
+package snapshot `01e4427` until an explicit v461/rebuild is produced.
+
 ## Objective Restatement
 
 EIDP must let one Windows operator process 1,700+ Japanese vocational schools
@@ -69,6 +75,8 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   `docs/reports/current-release-status.md`,
   `docs/reports/eidp-v460-stage6-evidence-draft.md`, and
   `docs/runbooks/eidp-v460-real-cycle-card.md`.
+  A later source-only `.env.example` documentation commit `2768f02` is outside
+  the v460 ZIP and does not change the current Windows execution candidate.
 
 - Current v459 bounded weekly/evidence support lane: URL-only bootstrap downloaded and
   aggregated all 47 prefecture seed artifacts, Step 2b reported seed URL
@@ -829,7 +837,9 @@ Companion docs: C:\EIDP-staging\v460-operator-docs
 
 The v460 package gate returned `ok=true`; if additional docs-only status edits
 are made after this point, run the docs-only stale package gate before treating
-those docs as release-status current.
+those docs as release-status current. The post-package `.env.example` update is
+not docs-only for package freshness purposes and requires a future rebuild if it
+must be included in a Windows ZIP.
 
 For Mac-driven remote UI verification, start the operator UI tunnel after
 Windows setup/validation has passed:
