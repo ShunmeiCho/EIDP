@@ -888,7 +888,7 @@ Expected SHA256: ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129
 Extract path: C:\Users\cyo20\EIDP-v460-01e4427
 Evidence bundle: pending for v460 real-cycle
 Real-cycle card: docs/runbooks/eidp-v460-real-cycle-card.md
-Companion docs: C:\EIDP-staging\v460-operator-docs
+Companion docs: C:\EIDP-staging\v460-operator-docs-20260517
 ```
 
 The v460 package gate returned `ok=true`; if additional docs-only status edits
