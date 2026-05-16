@@ -128,6 +128,14 @@ v456 runtime DB marker counts all `0`. Screenshot/snapshot evidence is under
 `output/playwright/v456-ui-write-sandbox/`; cleanup stopped Windows `8501`,
 closed local `18501`, and removed the remote disposable sandbox.
 
+After those browser smokes, packaged `scripts\diagnose.bat` wrote
+`logs/win-v456-stage6/diagnostics-20260516-134458.txt`. The diagnostic preflight
+returned `validate_core_rc=0`, `validate_after_setup_rc=0`,
+`stage6_recovery_rc=0`, `validate_after_weekly_rc=0`,
+`validate_after_weekly_ship_gate_rc=0`, and `retroactive_ship_readiness_rc=0`
+for `retroactive_fiscal_year=2025`. It also reported `ship_readiness_rc=1`,
+which keeps FY2026/current-year real-cycle completion explicitly open.
+
 v454 remains a retained fallback and historical Windows disposable UI
 write/audit sandbox proof. It was built from package
 snapshot `48a346bb626be749adb72d1aeb6a684903f22049`, which keeps target
@@ -1161,7 +1169,7 @@ before extraction.
 | 3. 証跡採取コマンド | v456 hash/setup/validate/recovery/evidence-bundle/UI-health/default-launcher/browser-navigation/R7-browser-Excel/UI-write-sandbox proofs are available; v454 remains retained fallback support; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; v456 final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, default `EIDP-start.bat` / `18501 -> 8501` health, Mac tunnel health, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle |
 | 5. 4 工程 E2E | v456 bounded R7 weekly downloaded two target PDFs, v456 browser navigation rendered the core operator pages without invoking writes, v456 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v456 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
-| 6. KPI 判定 | v456 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`; FY2026 production output and final R8 yield remain unproven | v456 real click-through diagnostics and final `ship_readiness_rc` / retroactive gate values |
+| 6. KPI 判定 | v456 bounded R7 canary recorded `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, `ship_gate_status=pass`, and `new_document_ids=[1, 2]`; latest v456 diagnostics recorded `ship_readiness_rc=1` for FY2026 and `retroactive_ship_readiness_rc=0` for FY2025. FY2026 production output and final R8 yield remain unproven | v456 real click-through diagnostics and final current-year `ship_readiness_rc=0` |
 | 7. 監査 / outbox | v456 disposable UI write/audit sandbox showed flush result `exported=2 already_present=0 failed=0`, `pending_outbox=0`, one seeded audit row plus one `url_candidate_rejected` row exported, matching JSONL action IDs, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0`; v408/v407 sandboxes show broader historical surfaces | Real or approved full-cycle `manual_action_log` delta and final JSONL duplicate check |
 | 8. 障害 / 回避策 | Known current hazards: v456 UI-write proof is sandbox-only, v456 bounded strict auto-yield is `40.0%`, v407 evidence bundle with Excel export is verifier-rejected, old v384 residual smoke artifacts still exist, and SSH `ClearAllForwardings=no` is required for tunnel proof | Actual v456 full-cycle failures and screenshots/log attachments |
 | 9. Release 判定 | Current status remains no-go for GA and not yet rc1-tagged | Operator one-cycle completion, KPI owner approval, runbook fix confirmation, and sign-offs |

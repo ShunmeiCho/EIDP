@@ -86,7 +86,12 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   `exported=2 already_present=0 failed=0`, and saved
   `logs/win-v456-stage6/v456-ui-write-sandbox-result-final.json` with
   `ok=true`, `pending_outbox=0`, matching JSONL action IDs, and real runtime DB
-  marker counts all `0`. v456
+  marker counts all `0`. A fresh v456 `scripts\diagnose.bat` preflight wrote
+  `logs/win-v456-stage6/diagnostics-20260516-134458.txt` with
+  `validate_core_rc=0`, `validate_after_setup_rc=0`, `stage6_recovery_rc=0`,
+  `validate_after_weekly_rc=0`, `validate_after_weekly_ship_gate_rc=0`,
+  `retroactive_ship_readiness_rc=0`, and current-year `ship_readiness_rc=1`.
+  v456
   still lacks final operator real-cycle sign-off and does not prove the final R8
   strict target-PDF 60-70% gate. Windows cleanup removed 48 old loose home ZIP
   artifacts plus v453 staging/deploy artifacts, preserving v456 current plus

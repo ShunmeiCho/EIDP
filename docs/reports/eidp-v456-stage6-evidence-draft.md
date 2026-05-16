@@ -103,6 +103,15 @@ not satisfy the production R8 strict target-PDF 60-70% gate.
   labels `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
   `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
   `stage6_residual_cleanup`, and `weekly_run_logs`.
+- Real-cycle preflight diagnostics: `scripts\diagnose.bat` wrote
+  `logs/win-v456-stage6/diagnostics-20260516-134458.txt`. The diagnostic run
+  returned `validate_core_rc=0`, `validate_after_setup_rc=0`,
+  `stage6_recovery_rc=0`, `validate_after_weekly_rc=0`,
+  `validate_after_weekly_ship_gate_rc=0`, and
+  `retroactive_fiscal_year=2025` with `retroactive_ship_readiness_rc=0`.
+  It also reported the expected FY2026 incompleteness via
+  `ship_readiness_rc=1`; this is a preflight snapshot, not a real-cycle
+  sign-off.
 
 ## Caveats
 
