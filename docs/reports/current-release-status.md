@@ -17,7 +17,7 @@ Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
-Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v446.zip`
+Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v454.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v454.zip`
@@ -69,9 +69,19 @@ forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
 `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
 `stage6_residual_cleanup`, and `weekly_run_logs`. v454 direct Streamlit UI
 smoke served `http://127.0.0.1:8501/` with HTTP `200`, and cleanup left no
-listener on `8501`. Mac cleanup left `dist=754M`, `_temp=0B`, `logs=4.4M`, and
-protected `data=20M`; Windows cleanup preserved v454 current plus v453 fallback
-in both staging and deploy directories. v454 is still not a completed operator
+listener on `8501`. A browser-level read-only navigation smoke then kept v454
+running in a foreground SSH session, opened `127.0.0.1:18501 -> Windows
+127.0.0.1:8501`, and rendered the real Streamlit UI through Playwright. The
+page title became `EIDP Operator Console`, with build `48a346b` and target
+display `2026年度（令和8年度）`. Snapshots were captured for `① 学校別タスク`,
+`② PDF確認・手入力`, `④ Excel プレビュー`, and
+`⑤ 設定（年度・OCR・API）` under `output/playwright/v454-ui-smoke/`. Only
+navigation buttons were clicked; no weekly re-fetch, workbook generation,
+settings save, or other write action was invoked. Cleanup stopped the Windows
+Streamlit process and closed the local tunnel; both Windows `8501` and local
+`18501` had no remaining listener. Mac cleanup left `dist=754M`, `_temp=0B`,
+`logs=4.5M`, and protected `data=20M`; Windows cleanup preserved v454 current
+plus v453 fallback in both staging and deploy directories. v454 is still not a completed operator
 real-cycle Stage 6 sign-off, and its bounded `40.0%` strict auto-yield is not
 the final production 60-70% R8 gate.
 

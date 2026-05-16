@@ -34,7 +34,8 @@ owner/operator real-cycle Stage 6 sign-off.
 | Residual cleanup dry-run | pass | `scripts\stage6_residual_cleanup.bat --json` returned `ok=true`, `existing_count=0`, and `moved_count=0`. |
 | Evidence bundle | pass | `logs\stage6-evidence-20260516-020943.zip` verified `ok=true` on Windows and Mac, with no forbidden/unsafe entries, no missing manifest patterns, and labels `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. |
 | UI health smoke | pass | v454 launched Streamlit directly on `127.0.0.1:8501`; `/` returned HTTP `200`, and cleanup left no listener on `8501`. |
-| Disk and artifact retention | pass | Mac cleanup left `_temp=0B`, `dist=754M`, `logs=4.4M`, and protected `data=20M`. Windows cleanup preserved v454 current plus v453 fallback in both staging and deploy directories. |
+| Browser read-only navigation | pass | v454 rendered through SSH tunnel `127.0.0.1:18501 -> 127.0.0.1:8501` with Playwright title `EIDP Operator Console`. Snapshots/screenshots under `output/playwright/v454-ui-smoke/` cover `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`. Only navigation buttons were clicked; no write action was invoked. Cleanup left no listener on Windows `8501` or local `18501`. |
+| Disk and artifact retention | pass | Mac cleanup left `_temp=0B`, `dist=754M`, `logs=4.5M`, and protected `data=20M`. Windows cleanup preserved v454 current plus v453 fallback in both staging and deploy directories. |
 
 ## Canary Result
 
