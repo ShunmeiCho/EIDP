@@ -28,9 +28,9 @@ Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-target-FY-ingest-override-canary-proven package: `dist/eidp-windows-v463.zip`
 Latest Windows-shared-HTTP-cache-canary-proven package: `dist/eidp-windows-v462.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v460.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
-Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v460.zip`
+Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
@@ -76,7 +76,19 @@ and
 `logs/win-v464-stage6/post-v464-restore-stage6-recovery-20260517-073334.json`
 (SHA256 `8efd41d2d9d80fd1b1744f0515fe827f131819228f4b460d73e8da475a468e4a`).
 v464 has still not replaced the active scheduled-task pointer, and no v464
-UI-health, weekly, evidence-bundle, or owner/operator cycle has been run.
+weekly, evidence-bundle, or owner/operator cycle has been run. A v464
+side-by-side read-only UI smoke then started Streamlit on Windows
+`127.0.0.1:8508`, verified Windows-local `/_stcore/health=ok`, opened a Mac
+SSH tunnel on `127.0.0.1:18508`, and clicked only the quick navigation buttons
+for `① 学校別タスク`, `② PDF確認・手入力`, `③ 年度判定・修正`,
+`④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`.
+`output/playwright/v464-ui-smoke/summary.json` records `ok=true`,
+`has_v464_build=true`, `has_japanese_ui=true`, `has_target_fiscal_year=true`,
+`has_error_traceback=false`, `nav_all_clicked=true`, `write_actions_invoked=false`,
+and `weekly_invoked=false`; screenshots `00-home.png` through
+`04-settings.png` were captured. Cleanup stopped the remote `8508` listener and
+the local `18508` tunnel, and a fresh scheduled-task check still pointed to the
+v460 runner.
 The v463 Mac retroactive Excel matrix
 `logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
 FY2025, FY2024, and FY2023. The references were regenerated from the frozen
