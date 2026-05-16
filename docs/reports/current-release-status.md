@@ -128,6 +128,8 @@ The bundle, verifier JSON, and latest diagnostics were copied back to Mac under
 `logs/win-v459-stage6/`; local `scripts/verify_stage6_evidence.py` returned
 `ok=true` for the copied ZIP, whose SHA256 is
 `c4e68ee5b5f8c1cb8b74938fb369edf4c53c00efdd5624bac3c05e51ab7caf28`.
+Windows `Get-FileHash` returned the same SHA256 values for the remote ZIP,
+verifier JSON, and diagnostics file as the Mac copies.
 Mac cleanup retained v459 current plus v454 fallback and reported `warn=0
 block=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, protected
 `data=20.0MiB`, and `.claude/worktrees=0B`. Windows cleanup retained only
