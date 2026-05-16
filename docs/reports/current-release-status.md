@@ -2,70 +2,94 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `a41181ec3177ed4e9569de4c594e80623e9c4ea2`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v458.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v458.zip`
-Latest Mac-core package SHA256: `cbd32630b86d042bc5b5cd59a88fdb9506754d5f371af934203a6d703847e8c2`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v458.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v458.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v458.zip`
+Latest Mac/non-Windows package snapshot: `50152a5f2bfc0b8f0a360ef87af5e4979b284f4a`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v459.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v459.zip`
+Latest Mac-core package SHA256: `1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v459.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v459.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v452.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v458.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v459.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v458.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v458.zip`
-Latest Windows-default-launcher-proven package: `dist/eidp-windows-v458.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v459.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v459.zip`
+Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v456.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v456.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v459.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v456-stage6/stage6-evidence-20260516-034752.zip` (latest v456 verified bundle with complete required labels)
-Current Stage 6 evidence draft: `docs/reports/eidp-v456-stage6-evidence-draft.md`
-Current Stage 6 real-cycle card: `docs/runbooks/eidp-v456-real-cycle-card.md`
+Current Stage 6 evidence bundle: `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip`
+Current Stage 6 evidence draft: `docs/reports/eidp-v459-stage6-evidence-draft.md`
+Current Stage 6 real-cycle card: `docs/runbooks/eidp-v459-real-cycle-card.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v458 is the latest Mac/non-Windows release-gate-clean package. It was built
-from package snapshot `a41181ec3177ed4e9569de4c594e80623e9c4ea2` after the
-Round 4 soft-blocker fixes for UI lock-disable, evidence-recorder lifecycle,
-manual-entry widget cleanup, Excel preview workbook lifecycle, guarded audit
-outbox rotation, and guarded PDF storage pruning. Its SHA256 sidecar is
-`cbd32630b86d042bc5b5cd59a88fdb9506754d5f371af934203a6d703847e8c2`, and
+v459 is the latest Mac/non-Windows release-gate-clean and Windows bounded-smoke
+package. It was built from package snapshot
+`50152a5f2bfc0b8f0a360ef87af5e4979b284f4a` after fixing the v458 packaging gap
+where the guarded operator cleanup scripts were present in source but absent
+from the Windows ZIP. Its SHA256 sidecar is
+`1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2`, and
 `uv run python scripts/run_non_windows_release_gates.py
-dist/eidp-windows-v458.zip` returned pass for SHA256 sidecar, package/source
+dist/eidp-windows-v459.zip` returned pass for SHA256 sidecar, package/source
 commit match, full unit `1659 passed`, validator distribution unit/mypy/Ruff,
 discovery-gold checks, package verify, and demonstrated-pattern package verify.
-Mac disk cleanup after v458 removed obsolete v456 package artifacts and retained
-v458 current plus v454 fallback; `scripts/disk_health_check.py --profile
-mac-dev` reported `warn=0 block=0`, `dist=738.8MiB`, `_temp=0B`, protected
-`data=20.0MiB`, and `.claude/worktrees=0B`.
+ZIP inspection confirmed `scripts/rotate_audit_outbox.py` and
+`scripts/prune_pdf_storage.py` are included.
 
-Windows transfer of v458 to `C:\EIDP-staging` matched the sidecar SHA, and
-staging now retains only v458 current plus v454 fallback ZIPs. Extraction to
-`C:\Users\cyo20\EIDP-v458-a41181e` succeeded with BUILD_INFO commit
-`a41181ec3177ed4e9569de4c594e80623e9c4ea2`. `EIDP-setup.bat` exited `0`,
+Windows transfer of v459 to `C:\EIDP-staging` matched the sidecar SHA, and
+staging now retains only v459 current plus v454 fallback ZIPs. Extraction to
+`C:\Users\cyo20\EIDP-v459-50152a5` succeeded with BUILD_INFO commit
+`50152a5f2bfc0b8f0a360ef87af5e4979b284f4a`. `EIDP-setup.bat` exited `0`,
 bootstrap/import completed with `school_count=2418`,
 `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`,
 `sqlite_table_count=15`, and `wheel_count=78`; packaged
 `scripts\validate_install.bat --after-setup --json` returned `ok=true`.
-Packaged disk health returned `warn_count=0`, `block_count=0`,
-`app_root_total=844.0MiB`, `data\pdfs=0B`, `data\output=0B`, and
-`logs=3.8KiB`. `scripts\launch.bat` and root `EIDP-start.bat` each started
+Recovery check with expected action
+`C:\Users\cyo20\EIDP-v459-50152a5\scripts\weekly_run.bat` returned `ok=true`
+and `action_matches_expected=true`. `rotate_audit_outbox.py --json` returned
+`rotate=false` for a missing outbox, and `prune_pdf_storage.py --json` returned
+`candidate_count=0`. The root-level packaged `EIDP-start.bat` started
 Streamlit on Windows `127.0.0.1:8501`, returned `_stcore/health=200` and root
-HTTP `200`, and cleanup left no remaining `8501` listener. Recovery check with
-expected action `C:\Users\cyo20\EIDP-v458-a41181e\scripts\weekly_run.bat`
-returned `ok=true` and `action_matches_expected=true`
-(`logs\stage6-recovery-20260516-144636.json`).
+HTTP `200`, and cleanup left no remaining `8501` listener.
 
-v456 remains the latest bounded-bootstrap-proven, bounded-weekly-proven,
-evidence-bundle-proven, browser-readonly-navigation-proven,
-R7-browser-Excel-proven, and UI-write-sandbox-proven package. It was built
+The v459 URL-only bootstrap completed with all 47 prefecture seed artifacts
+downloaded/aggregated, Step 2b seed URL import `imported=48`,
+`school_domain_override` inferred `6`, and corporation fallback inferred `296`.
+The subsequent bounded R7 weekly smoke ran with `EIDP_TARGET_FISCAL_YEAR=2025`,
+`EIDP_WEEKLY_LIMIT=5`, `EIDP_WEEKLY_BATCH_SIZE=5`,
+`EIDP_WEEKLY_RATE_LIMIT=0.5`, and `EIDP_WEEKLY_REQUEST_TIMEOUT=8`, exiting `0`
+with `run_id=20260516_060230`, `crawled=5`, `found=5`, `downloaded=2`,
+`new_document_ids=[1, 2]`, `operator_reviewable_count=5`,
+`target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, and
+`ship_gate_status=pass`. `scripts\validate_install.bat --after-setup
+--after-weekly --json` returned `ok=true`, `last_run_status=success`,
+`sqlite_target_fy=2025`, `sqlite_target_fy_target_pdf_school_count=2`, and
+`sqlite_target_fy_operator_reviewable_school_count=5`. The v459 evidence bundle
+`C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip`
+verified with `ok=true`, `entry_count=10`, and `missing_required_labels=[]`.
+Mac cleanup retained v459 current plus v454 fallback and reported `warn=0
+block=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, protected
+`data=20.0MiB`, and `.claude/worktrees=0B`. Windows cleanup retained only
+`EIDP-v459-50152a5` current plus `EIDP-v454-48a346b` fallback; packaged disk
+health reported `warn_count=0`, `block_count=0`, `app_root_total=853.5MiB`,
+`data\pdfs=1.7MiB`, `data\output=40.0KiB`, and `logs=117.6KiB`.
+
+v458 is retained only as an intermediate superseded proof. It passed setup,
+recovery, UI health, default launcher, and disk health, but its cleanup dry-run
+exposed that `rotate_audit_outbox.py` and `prune_pdf_storage.py` were not in the
+Windows ZIP. v459 fixes that packaging gap and supersedes v458 for Stage 6
+handoff.
+
+v456 remains historical browser-readonly-navigation-proven,
+R7-browser-Excel-proven, and UI-write-sandbox-proven support. It was built
 from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
 the operator E2E template version-neutral so future ZIPs do not embed stale
 package/SHA fields. The v456 strict non-Windows gate
@@ -96,7 +120,9 @@ cleanup then left no remaining `8501` listener. Recovery check with expected act
 and `action_matches_expected=true`. Windows home loose test ZIP cleanup removed
 48 old `eidp-windows-v*.zip*` artifacts from `C:\Users\cyo20`, freeing about
 `7.81GB`; the packaged pruner then removed v453 staging/deploy artifacts,
-freeing another `1.11GB`, while preserving v456 current plus v454 fallback.
+freeing another `1.11GB`. After v459 validation, the v456 deploy directory was
+pruned and v459 current plus v454 fallback are the only retained Windows deploy
+directories.
 The URL-only bootstrap completed with all 47 prefecture seed artifacts
 downloaded/aggregated, Step 2b seed URL import `imported=48`, and
 `school_domain_override` loaded `count=6` / inferred `6`; the subsequent

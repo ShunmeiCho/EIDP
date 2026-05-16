@@ -1,0 +1,67 @@
+# EIDP v459 Stage 6 Evidence Draft
+
+Updated: 2026-05-16
+
+This draft records the current v459 Windows bounded smoke. It is not the final
+Stage 6 operator-PC real-cycle sign-off.
+
+## Package
+
+| Item | Evidence |
+| --- | --- |
+| Package | `dist/eidp-windows-v459.zip` |
+| SHA256 | `1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2` |
+| BUILD_INFO commit | `50152a5f2bfc0b8f0a360ef87af5e4979b284f4a` |
+| Windows root | `C:\Users\cyo20\EIDP-v459-50152a5` |
+| Release gate | `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v459.zip` passed |
+
+## Windows Smoke
+
+| Check | Result |
+| --- | --- |
+| Transfer SHA | Win `Get-FileHash` matched the sidecar SHA256 |
+| Extraction | `C:\Users\cyo20\EIDP-v459-50152a5` |
+| Setup | `EIDP-setup.bat` exited `0`; `sqlite_integrity_check=ok`; `school_count=2418`; `school_fiscal_year_status_count=2418`; `wheel_count=78` |
+| Setup validator | `scripts\validate_install.bat --after-setup --json` returned `ok=true` |
+| Recovery check | `scripts\stage6_recovery_check.bat C:\Users\cyo20\EIDP-v459-50152a5\scripts\weekly_run.bat --json` returned `ok=true`, `action_matches_expected=true` |
+| Cleanup tools | `rotate_audit_outbox.py --json` returned `rotate=false` for missing outbox; `prune_pdf_storage.py --json` returned `candidate_count=0` |
+| UI health | Root `EIDP-start.bat` served `_stcore/health=200` and root HTTP `200` on `127.0.0.1:8501`; cleanup left no listener |
+
+## Bounded Weekly
+
+| Metric | Value |
+| --- | --- |
+| Process env | `EIDP_TARGET_FISCAL_YEAR=2025`, `EIDP_WEEKLY_LIMIT=5`, `EIDP_WEEKLY_BATCH_SIZE=5`, `EIDP_WEEKLY_RATE_LIMIT=0.5`, `EIDP_WEEKLY_REQUEST_TIMEOUT=8` |
+| URL-only bootstrap | `seed_urls_imported=48`, `school_override_inferred=6`, `corporation_inferred=296` |
+| `run_id` | `20260516_060230` |
+| `last_run.status` | `success` |
+| Crawled / found / downloaded | `5 / 5 / 2` |
+| New documents | `[1, 2]` |
+| Target PDF auto-yield | `40.0%` on the bounded R7 sample |
+| Operator-reviewable yield | `100.0%` on the bounded R7 sample |
+| Ship-gate status | `pass` for the bounded sample |
+| Weekly validator | `scripts\validate_install.bat --after-setup --after-weekly --json` returned `ok=true` |
+
+## Evidence Bundle
+
+| Item | Result |
+| --- | --- |
+| Bundle | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip` |
+| Verify JSON | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-verify-20260516-150535.json` |
+| Verification | `ok=true`, `entry_count=10`, `missing_required_labels=[]` |
+| Present labels | `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`, `weekly_run_logs` |
+| Expected missing | `stage6_residual_cleanup` was not run during this bounded smoke |
+
+## Disk State
+
+| Environment | Result |
+| --- | --- |
+| Mac dev | `ok=true`, `warn_count=0`, `block_count=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, protected `data=20.0MiB` |
+| Win v459 root | `ok=true`, `warn_count=0`, `block_count=0`, app root `853.5MiB`, `data\pdfs=1.7MiB`, `data\output=40.0KiB`, `logs=117.6KiB` |
+| Retention | Mac and Win staging retain v459 current plus v454 fallback; stale v458 package/deploy artifacts and v456 deploy dir were pruned |
+
+## Open Gates
+
+- The real operator-PC one-cycle sign-off remains open.
+- FY2026/R8 production strict target-PDF auto-yield remains open.
+- Operator workload `<=30%` remains open until a real cycle is measured.

@@ -1,25 +1,24 @@
 # EIDP Current Objective Evidence Checklist
 
 Updated: 2026-05-16
-Latest Mac/non-Windows package snapshot: `a41181ec3177ed4e9569de4c594e80623e9c4ea2`
+Latest Mac/non-Windows package snapshot: `50152a5f2bfc0b8f0a360ef87af5e4979b284f4a`
 Status: **NOT COMPLETE**
 
 This checklist maps the long-term EIDP objective to concrete artifacts and gates.
-It is intentionally explicit about lane boundaries: `dist/eidp-windows-v458.zip`
+It is intentionally explicit about lane boundaries: `dist/eidp-windows-v459.zip`
 is the latest Mac/non-Windows release-gate-clean package from package snapshot
-`a41181e`. v458 has now replaced v456 for Windows transfer, setup, recovery,
-UI-health, default launcher, and disk-retention evidence at
-`C:\Users\cyo20\EIDP-v458-a41181e`. v456 remains the active Windows evidence
-lane for URL-only bootstrap, evidence bundle, bounded `weekly_run.bat`,
-school-domain-override wiring, browser read-only navigation, R7 browser Excel
-generation/download, UI write/audit sandbox, and bounded canary. v454 remains a
-retained fallback package with historical UI write/audit sandbox support. v456
-has been pruned from Mac `dist/` after v458 build, but its Windows evidence
-remains valid for the already-executed v456 lane.
-v453 has been pruned from Windows staging/deploy after v456 validation; v442
-remains historical support for the fuller R7 parity workbook, and v408 remains
-historical support for broader copied-DB UI write paths. The real operator cycle
-is still missing, and the production R8 yield gate is still not proven.
+`50152a5`. v459 replaces v458 for Windows transfer, setup, recovery,
+UI-health, default launcher, cleanup-tool packaging, URL-only bootstrap,
+bounded `weekly_run.bat`, evidence-bundle verification, and disk-retention
+evidence at `C:\Users\cyo20\EIDP-v459-50152a5`. v456 remains historical support
+for browser read-only navigation, R7 browser Excel generation/download, and the
+UI write/audit sandbox. v454 remains the retained fallback package with
+historical UI write/audit sandbox support. Mac and Win staging now retain v459
+current plus v454 fallback; stale v458 package/deploy artifacts and the v456
+deploy directory were pruned after v459 validation. v442 remains historical
+support for the fuller R7 parity workbook, and v408 remains historical support
+for broader copied-DB UI write paths. The real operator cycle is still missing,
+and the production R8 yield gate is still not proven.
 
 ## Objective Restatement
 
@@ -43,41 +42,43 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
 | DepartmentYearly / SupportRecipient append-only writes | Unit coverage plus v384 copied-DB UI/manual-entry, fiscal override, and SupportRecipient ingest smokes; v407 disposable operator-PC UI sandbox proved manual-entry write and fiscal-year override clones for DepartmentYearly, SupportRecipient, and SchoolYearStatus with prior FY2024 rows marked non-current; v408 disposable UI sandbox repeated the browser-write surface with one manual FY2025 `DepartmentYearly` row (`capacity=40`, `enrollment=28`, `extraction_method=manual`, `extraction_confidence=1.0`, `verified=true`) and one fiscal-year override that marked FY2024 `DepartmentYearly`, `SupportRecipient`, and `SchoolYearStatus` rows non-current while FY2025 current rows were present | Proven on sandboxed/copy DB paths including v408; real operator one-cycle proof still missing |
 | Excel template export | v456 process-scoped FY2025 browser Excel smoke launched with `EIDP_TARGET_FISCAL_YEAR=2025`, rendered `④ Excel プレビュー` with `Excel出力可 2`, `Excel対象行 7177`, and `対象年度: 2025年度（令和7年度）`, generated workbook rows `採録状況=2418`, `対象比率=10024`, `学科別=9746`, `在籍のみ抜粋=9746`, exposed `Excel ダウンロード`, and downloaded `output/playwright/v456-r7-excel-smoke/eidp-master.xlsx`; local `openpyxl` verified sheets `採録状況`, `対象比率`, `学科別`, `在籍のみ抜粋` with dimensions `2419x10`, `10025x22`, `9748x83`, `9748x19`; Win-side checks reported both checked v456 `.env` locations missing, so the retroactive FY was not persisted. v454 and v442 remain historical support, while historical v408 R7 CLI/browser exports and v437 FY2025/FY2024/FY2023 non-Windows retroactive matrix remain regression support. FY2026 export remains disabled on current setup evidence | Current v456 R7 browser Excel path proven; full operator-cycle Excel output still pending |
 | ManualActionLog audits every operator action | v384 manual-entry, fiscal override, URL-candidate reject, and audit outbox browser smokes; source HEAD dedups audit outbox archives by matching filename stem for both default and custom outbox paths and ignores archive symlinks; v407 disposable UI sandbox flushed seven operator actions with `exported=7 already_present=0 failed=0` and `jsonl_exported_at_present=true` for all seven rows; v408 disposable UI sandbox repeated the audit path through `監査ログ`, showing `JSONL outbox 未送信=7`, `Outbox を flush` result `exported=7 already_present=0 failed=0`, and seven rows with `jsonl_exported_at_present=true` in direct DB verification; current v456 disposable UI write/audit sandbox rejected seeded `review_item#37` in `URL候補レビュー` and flushed two pending audit rows, with `logs/win-v456-stage6/v456-ui-write-sandbox-result-final.json` reporting `ok=true`, `pending_outbox=0`, exported `stage6_v456_ui_audit_flush_smoke` and `url_candidate_rejected` rows, matching JSONL action IDs, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0` | Current v456 proves URL-candidate reject + audit-outbox flush on a disposable DB; broader manual-entry/fiscal-override UI write coverage remains historical v408/v384; real operator one-cycle proof still missing |
-| ZIP distribution, double-click setup, browser UI offline operation | v456 ZIP/SHA was transferred to `C:\EIDP-staging`, expanded to `C:\Users\cyo20\EIDP-v456-f33ffc0`, and `EIDP-setup.bat` completed with SQLite integrity, `school_fiscal_year_status_count=2418`, and `wheel_count=78`; independent `scripts\validate_install.bat --after-setup --json` returned `ok=true`. v456 Mac cleanup retained v456/v454/v453 and Win cleanup removed 48 old loose home ZIPs plus v453 staging/deploy artifacts, freeing about `8.91GB`; packaged disk health reported `warn_count=0` and `block_count=0`. v456 URL-only bootstrap downloaded/aggregated 47 prefecture seed artifacts, loaded `school_domain_overrides.csv` with `count=6`, and reported `school_override_inferred=6`; bounded `scripts\weekly_run.bat` exited `0` with `EIDP_TARGET_FISCAL_YEAR=2025`, methods including `school_domain_override`, `downloaded=2`, `new_document_ids=[1, 2]`, and `target_pdf_auto_yield_pct=40.0`; recovery check with expected action `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat` returned `ok=true` and `action_matches_expected=true`; refreshed evidence bundle `logs/win-v456-stage6/stage6-evidence-20260516-034752.zip` verified with all required labels and `entry_count=12`; direct Streamlit UI health smoke returned `_stcore/health=ok` and root HTTP `200` on `127.0.0.1:8501`, then cleanup left no listener; root-level packaged `EIDP-start.bat` launched `scripts\launch.bat`, returned `_stcore/health=ok` and root HTTP `200`, and cleanup again left no `8501` listener; browser read-only navigation through `127.0.0.1:18501 -> 8501` rendered `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）` under `output/playwright/v456-ui-smoke/` without invoking writes; process-scoped R7 browser Excel generated and downloaded `output/playwright/v456-r7-excel-smoke/eidp-master.xlsx`; disposable UI write/audit sandbox evidence under `output/playwright/v456-ui-write-sandbox/` proves URL-candidate reject plus outbox flush on a copied DB without touching the real runtime DB. v408 remains historical copied-DB coverage for broader UI write paths. | Current v456 setup/bootstrap/validate/recovery/evidence/weekly launcher/school-domain-override/UI health/default launcher/browser nav/R7 browser Excel/UI write sandbox/disk retention proven; real operator one-cycle missing |
+| ZIP distribution, double-click setup, browser UI offline operation | v459 ZIP/SHA was transferred to `C:\EIDP-staging`, matched sidecar SHA `1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2`, expanded to `C:\Users\cyo20\EIDP-v459-50152a5`, and `EIDP-setup.bat` completed with SQLite integrity, `school_fiscal_year_status_count=2418`, and `wheel_count=78`; independent `scripts\validate_install.bat --after-setup --json` returned `ok=true`. v459 fixes the v458 cleanup-script packaging gap: `scripts\rotate_audit_outbox.py` and `scripts\prune_pdf_storage.py` are present in the ZIP and dry-ran successfully (`rotate=false` for missing outbox, PDF `candidate_count=0`). v459 URL-only bootstrap downloaded/aggregated 47 prefecture seed artifacts, loaded `school_domain_overrides.csv`, and reported `school_override_inferred=6` plus `corporation_inferred=296`; bounded `scripts\weekly_run.bat` exited `0` with `EIDP_TARGET_FISCAL_YEAR=2025`, methods including `school_domain_override`, `downloaded=2`, `new_document_ids=[1, 2]`, and `target_pdf_auto_yield_pct=40.0`; recovery check with expected action `C:\Users\cyo20\EIDP-v459-50152a5\scripts\weekly_run.bat` returned `ok=true` and `action_matches_expected=true`; refreshed evidence bundle `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip` verified with `ok=true`, `entry_count=10`, and no missing required labels; root-level packaged `EIDP-start.bat` returned `_stcore/health=200` and root HTTP `200` on `127.0.0.1:8501`, then cleanup left no listener. Mac and Win cleanup now retain v459 current plus v454 fallback, with disk health `warn_count=0` / `block_count=0`. v456 remains historical browser nav, R7 browser Excel, and UI write/audit sandbox support; v408 remains historical copied-DB coverage for broader UI write paths. | Current v459 setup/bootstrap/validate/recovery/evidence/weekly launcher/school-domain-override/UI health/default launcher/cleanup tooling/disk retention proven; real operator one-cycle missing |
 | Stage 6 one operator-PC cycle | `docs/runbooks/eidp-operator-e2e-template.md`; `docs/reports/current-release-status.md` Stage 6 boundary | Missing |
-| Ship gate: true target-form auto-acquisition 60-70% | v456 bounded real R7 weekly canary crawled 5 target-missing schools after URL-only bootstrap, found 5 candidate pages, downloaded 2 PDFs, ingested `new_document_ids=[1, 2]`, and recorded `target_pdf_auto_yield_pct=40.0`; this holds the v454/v453 strict yield while keeping reviewable target-form evidence visible. Current HEAD also prevents `ok_strict` from passing unless both `strict_target_pdf` and `excel_ready` meet the strict threshold | Failing |
-| Ship gate: estimated manual work <= 30% | v456 bounded R7 canary recorded `operator_reviewable_count=5`, `operator_reviewable_yield_pct=100.0`, and `ship_gate_status=pass` on the 5-school bounded sample; real operator sign-off and R8 production workload evidence remain missing | Partially proven |
+| Ship gate: true target-form auto-acquisition 60-70% | v459 bounded real R7 weekly canary crawled 5 target-missing schools after URL-only bootstrap, found 5 candidate pages, downloaded 2 PDFs, ingested `new_document_ids=[1, 2]`, and recorded `target_pdf_auto_yield_pct=40.0`; this holds the v456/v454 strict yield while keeping reviewable target-form evidence visible. Current HEAD also prevents `ok_strict` from passing unless both `strict_target_pdf` and `excel_ready` meet the strict threshold | Failing |
+| Ship gate: estimated manual work <= 30% | v459 bounded R7 canary recorded `operator_reviewable_count=5`, `operator_reviewable_yield_pct=100.0`, and `ship_gate_status=pass` on the 5-school bounded sample; real operator sign-off and R8 production workload evidence remain missing | Partially proven |
 
 ## Current Release Boundary
 
-- Current v458 Mac/non-Windows package lane: package snapshot
-  `a41181ec3177ed4e9569de4c594e80623e9c4ea2`, SHA256
-  `cbd32630b86d042bc5b5cd59a88fdb9506754d5f371af934203a6d703847e8c2`.
-  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v458.zip`
+- Current v459 Mac/non-Windows and Windows bounded-smoke lane: package snapshot
+  `50152a5f2bfc0b8f0a360ef87af5e4979b284f4a`, SHA256
+  `1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2`.
+  `scripts/run_non_windows_release_gates.py dist/eidp-windows-v459.zip`
   returned pass for SHA sidecar, package/source freshness, full unit
   `1659 passed`, validator distribution unit/mypy/Ruff, discovery-gold checks,
-  package verify, and demonstrated-pattern package verify. v458 contains the
-  Round 4 soft-blocker fixes for UI lock-disable, resource cleanup tooling,
-  evidence-recorder lifecycle, manual-entry widget cleanup, and Excel preview
-  workbook lifecycle. The v458 Windows lane currently covers transfer, setup,
-  recovery, UI health, default launcher, and disk health only; v456 still covers
-  bounded weekly/bootstrap/R7 browser Excel/UI write-sandbox evidence.
+  package verify, and demonstrated-pattern package verify. v459 contains the
+  Round 4 soft-blocker fixes plus the packaging fix that ships
+  `rotate_audit_outbox.py` and `prune_pdf_storage.py` in the Windows ZIP.
+  Windows transfer/setup/recovery/cleanup dry-run/UI health/default launcher,
+  URL-only bootstrap, bounded weekly, `--after-weekly` validator, evidence
+  bundle verification, and disk health all passed on
+  `C:\Users\cyo20\EIDP-v459-50152a5`.
 
-- Current v458 Windows setup/UI lane: `dist/eidp-windows-v458.zip` was copied to
-  `C:\EIDP-staging`, SHA-verified against its sidecar, and extracted to
-  `C:\Users\cyo20\EIDP-v458-a41181e`. `EIDP-setup.bat` exited `0`; packaged
-  `validate_install --after-setup --json` returned `ok=true` with
-  `school_count=2418`, `school_fiscal_year_status_count=2418`,
-  `sqlite_integrity_check=ok`, `sqlite_table_count=15`, and `wheel_count=78`.
-  `scripts\launch.bat` and root `EIDP-start.bat` each returned Streamlit
-  `_stcore/health=200` and root HTTP `200`; cleanup left `8501` listener count
-  `0`. `stage6_recovery_check.bat
-  C:\Users\cyo20\EIDP-v458-a41181e\scripts\weekly_run.bat --json` returned
-  `ok=true` with `action_matches_expected=true`. Packaged operator disk health
-  returned `warn_count=0`, `block_count=0`, `app_root_total=844.0MiB`,
-  `data\pdfs=0B`, `data\output=0B`, and `logs=3.8KiB`.
+- Current v459 bounded weekly/evidence lane: URL-only bootstrap downloaded and
+  aggregated all 47 prefecture seed artifacts, Step 2b reported seed URL
+  `imported=48`, `school_override_inferred=6`, and `corporation_inferred=296`.
+  Bounded R7 weekly with `EIDP_TARGET_FISCAL_YEAR=2025`,
+  `EIDP_WEEKLY_LIMIT=5`, `EIDP_WEEKLY_BATCH_SIZE=5`,
+  `EIDP_WEEKLY_RATE_LIMIT=0.5`, and `EIDP_WEEKLY_REQUEST_TIMEOUT=8` returned
+  `run_id=20260516_060230`, `downloaded=2`, `new_document_ids=[1, 2]`,
+  `target_pdf_auto_yield_pct=40.0`, `operator_reviewable_yield_pct=100.0`, and
+  `ship_gate_status=pass`. `scripts\validate_install.bat --after-setup
+  --after-weekly --json` returned `ok=true`. The v459 evidence bundle
+  `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip`
+  verified with `ok=true`, `entry_count=10`, and `missing_required_labels=[]`.
+  Mac disk health reported `warn=0 block=0`, and Win disk health reported
+  `warn_count=0 block_count=0`.
 
-- Current v456 bounded weekly/evidence lane: package snapshot
+- Historical v456 browser/evidence lane: package snapshot
   `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, SHA256
   `73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2`.
   `scripts/run_non_windows_release_gates.py dist/eidp-windows-v456.zip
@@ -123,8 +124,9 @@ auto-acquisition of 60-70% and estimated operator manual work at 30% or lower.
   v456
   still lacks final operator real-cycle sign-off and does not prove the final R8
   strict target-PDF 60-70% gate. Windows cleanup removed 48 old loose home ZIP
-  artifacts plus v453 staging/deploy artifacts, preserving v456 current plus
-  v454 fallback.
+  artifacts plus v453 staging/deploy artifacts. After v459 validation, the
+  v456 deploy directory was pruned and v459 current plus v454 fallback are the
+  only retained Windows deploy directories.
 - Historical v454 fallback package/Windows setup lane: package snapshot
   `48a346bb626be749adb72d1aeb6a684903f22049`, SHA256
   `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3`.
@@ -789,26 +791,26 @@ Known non-goal-wide lint boundary:
 
 ## Next Concrete Gate
 
-SSH-Win is available and v456 is already transferred, SHA-verified, extracted,
+SSH-Win is available and v459 is already transferred, SHA-verified, extracted,
 set up, bootstrapped, bounded-weekly-smoked, UI-health-smoked,
-disk-retention-checked, and evidence-bundle-verified. The
+cleanup-tool-checked, disk-retention-checked, and evidence-bundle-verified. The
 next gate is not another transfer or audit; it is an owner/operator Stage 6
-real-cycle sign-off on the current v456 lane, plus the later R8 production
+real-cycle sign-off on the current v459 lane, plus the later R8 production
 yield measurement.
 
-Current v456 package:
+Current v459 package:
 
 ```text
-Package snapshot: f33ffc0e6fd801782f3e49fad3315adc64081f6f
-Expected SHA256: 73b429bd21504b95b10cf7c45b5eda4e3bcd6bf9198cf8017f2740c89d0155d2
-Extract path: C:\Users\cyo20\EIDP-v456-f33ffc0
-Evidence bundle: logs/win-v456-stage6/stage6-evidence-20260516-034752.zip
-Real-cycle card: docs/runbooks/eidp-v456-real-cycle-card.md
+Package snapshot: 50152a5f2bfc0b8f0a360ef87af5e4979b284f4a
+Expected SHA256: 1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2
+Extract path: C:\Users\cyo20\EIDP-v459-50152a5
+Evidence bundle: C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip
+Real-cycle card: docs/runbooks/eidp-v459-real-cycle-card.md
 ```
 
-The docs-only package gate
-`logs/release-gate-v456-docs-current-after-real-cycle-status.json` returned
-`ok=true` after linking the real-cycle card into the current release status.
+The v459 package gate returned `ok=true`; if additional docs-only status edits
+are made after this point, run the docs-only stale package gate before treating
+those docs as release-status current.
 
 For Mac-driven remote UI verification, start the operator UI tunnel after
 Windows setup/validation has passed:
@@ -817,7 +819,7 @@ Windows setup/validation has passed:
 ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:127.0.0.1:8501 win
 ```
 
-Complete the Stage 6 click-through against the real v456 operator cycle or an
+Complete the Stage 6 click-through against the real v459 operator cycle or an
 approved full-cycle copy: manual PDF entry write if needed, fiscal-year override
 write if needed, Excel preview/download for the active cycle, audit log/outbox
   flush, diagnostics capture, evidence verify, and sign-off fields. Do not treat
