@@ -40,6 +40,23 @@ handoff manifest.
 | Package verifier | passed |
 | Demonstrated-pattern package verifier | passed |
 
+## Mac Algorithm Regression Support
+
+| Check | Result |
+| --- | --- |
+| v463 retroactive Excel matrix | `logs/release-gate-v463-retroactive-matrix.json` returned `ok=true`, `case_count=3` |
+| FY2025 reference diff | `logs/release-gate-v463-retroactive-fy2025-reference.json` returned `ok=true`; reference `_temp/v459-reference2-fy2025/output/retroactive-fy2025-v459-reference.xlsx`; `missing_rows=0`, `extra_rows=0`, `differing_fields=0` |
+| FY2024 reference diff | `logs/release-gate-v463-retroactive-fy2024-reference.json` returned `ok=true`; reference `_temp/v459-reference2-fy2024/output/retroactive-fy2024-v459-reference.xlsx`; `missing_rows=0`, `extra_rows=0`, `differing_fields=0` |
+| FY2023 reference diff | `logs/release-gate-v463-retroactive-fy2023-reference.json` returned `ok=true`; reference `_temp/v459-reference2-fy2023/output/retroactive-fy2023-v459-reference.xlsx`; `missing_rows=0`, `extra_rows=0`, `differing_fields=0` |
+
+These v463 checks prove the current Mac package lane still reproduces the
+historical Excel business values for FY2025/FY2024/FY2023 when compared against
+references regenerated from the frozen v459 package. The earlier raw
+`data/master.xlsx` comparison attempt is not valid evidence because that workbook
+contains later-year fields and is not a FY-specific pass/fail reference. This is
+algorithm regression evidence only; it does not replace the v460 owner/operator
+real-cycle, evidence ZIP sign-off, or FY2026/R8 live KPI record.
+
 ## Windows Setup Staging
 
 | Check | Result |
