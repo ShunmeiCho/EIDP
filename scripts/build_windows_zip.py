@@ -433,6 +433,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             "ship_gate_contract.py",
             "download_prefecture_artifacts.py",
             "prune_release_artifacts.py",
+            "disk_health_check.py",
         ):
             script = scripts_root / name
             if script.is_file():

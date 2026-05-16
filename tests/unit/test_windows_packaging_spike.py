@@ -1099,6 +1099,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "print('download')", encoding="utf-8",
     )
     (fake_repo / "scripts" / "prune_release_artifacts.py").write_text("print('prune')", encoding="utf-8")
+    (fake_repo / "scripts" / "disk_health_check.py").write_text("print('disk')", encoding="utf-8")
 
     members = bw.collect_zip_members(repo_root=fake_repo, wheelhouse=wheelhouse)
     arcs = {arc for _, arc in members}
@@ -1233,6 +1234,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "scripts/prune_release_artifacts.py" in arcs, (
         "Release artifact pruning must ship so the operator PC can dry-run "
         "and prune stale staging ZIPs and deploy directories after handoff"
+    )
+    assert "scripts/disk_health_check.py" in arcs, (
+        "Disk health checks must ship so Mac/Win can detect artifact growth "
+        "without deleting protected operator data"
     )
 
 
