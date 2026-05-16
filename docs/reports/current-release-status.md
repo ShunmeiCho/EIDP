@@ -309,10 +309,10 @@ browser navigation proof. The UI correctly rendered `2025年度（令和7年度�
 post-cleanup checks confirmed neither `C:\Users\cyo20\EIDP-v446-e9f91cc\.env`
 nor `C:\Users\cyo20\EIDP-v446-e9f91cc.env` existed, so the target year was not
 persisted. However, this fresh v446 installation was set up under FY2026 and the
-FY2025 Excel preview remained at `Excel出力可 0/2418`; it therefore does not
-replace the v442 R7 browser Excel proof. Keep v442 as the current
-Windows-R7-browser-Excel-proven package until a v446-or-later DB is initialized
-specifically for the retroactive Excel path.
+FY2025 Excel preview remained at `Excel出力可 0/2418`; it therefore did not
+replace the historical v442 R7 browser Excel proof. v454 now supersedes this
+boundary with a process-scoped R7 browser Excel proof on the current Windows
+lane.
 
 v445 is the previous Windows setup/canary package. It was built from package snapshot
 `19ceb0dee69fe7b90e32a9a90591018d9c5e773f` after the v444 canary showed that

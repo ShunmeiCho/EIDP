@@ -708,8 +708,8 @@ Known non-goal-wide lint boundary:
 - `uv run mypy src` is now a usable source-wide gate for the tracked source
   tree. This is still Mac-side evidence only;
   it does not prove the real Windows operator-PC Stage 6 one-cycle or the
-  rolling FY yield gate. The v446 browser navigation and v442 R7 browser Excel
-  proof are real browser evidence, but they are still
+  rolling FY yield gate. The v454 browser navigation, v454 UI write/audit
+  sandbox, and v454 R7 browser Excel proof are real browser evidence, but they are still
   Codex-driven validation, not the owner/operator real-cycle sign-off.
 
 ## Next Concrete Gate
@@ -740,6 +740,6 @@ ssh -N -o ClearAllForwardings=no -o ExitOnForwardFailure=yes -L 127.0.0.1:18501:
 Complete the Stage 6 click-through against the real v454 operator cycle or an
 approved full-cycle copy: manual PDF entry write if needed, fiscal-year override
 write if needed, Excel preview/download for the active cycle, audit log/outbox
-flush, diagnostics capture, evidence verify, and sign-off fields. Do not treat
-the Codex-driven v447 bounded launcher, the v446 browser navigation, or the v442 R7 Excel
-proof as the final operator sign-off.
+  flush, diagnostics capture, evidence verify, and sign-off fields. Do not treat
+  the Codex-driven v454 bounded launcher, browser navigation, UI-write sandbox,
+  or R7 Excel proof as the final operator sign-off.
