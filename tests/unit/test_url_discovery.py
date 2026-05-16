@@ -203,6 +203,53 @@ def test_infer_school_domain_override_adds_alongside_existing_corporation_root(t
         session.close()
 
 
+def test_infer_school_domain_override_allows_multiple_urls_for_same_school(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    csv_dir = data_dir / "url-discovery"
+    csv_dir.mkdir(parents=True)
+    (csv_dir / "corporation_domains.csv").write_text(
+        "corporation_name,domain_url,notes\n"
+        "日本教育財団,https://www.nkz.ac.jp/,group portal\n",
+        encoding="utf-8",
+    )
+    (csv_dir / "school_domain_overrides.csv").write_text(
+        "prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes\n"
+        "東京都,日本教育財団,東京モード学園,https://www.mode.ac.jp/tokyo,school,0.95,brand homepage\n"
+        "東京都,日本教育財団,東京モード学園,"
+        "https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html,disclosure,0.98,target form page\n",
+        encoding="utf-8",
+    )
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="東京都",
+                corporation_name="日本教育財団",
+                school_name="東京モード学園",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.commit()
+
+        stats = url_discovery.infer_corporation_urls(session, data_dir=data_dir)
+        sites = session.query(SchoolSite).order_by(SchoolSite.confidence.desc(), SchoolSite.url.asc()).all()
+
+        assert stats["school_override_inferred"] == 2
+        assert stats["skipped_has_url"] == 1
+        assert [(site.url, site.url_type, float(site.confidence)) for site in sites] == [
+            (
+                "https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html",
+                "disclosure",
+                0.98,
+            ),
+            ("https://www.mode.ac.jp/tokyo", "school", 0.95),
+        ]
+    finally:
+        session.close()
+
+
 def test_search_and_discover_registers_best_result(tmp_path: Path, monkeypatch) -> None:
     import time as time_module
 

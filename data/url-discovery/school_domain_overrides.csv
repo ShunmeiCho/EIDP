@@ -1,4 +1,7 @@
 prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
 東京都,日本教育財団,東京モード学園,https://www.mode.ac.jp/tokyo,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+東京都,日本教育財団,東京モード学園,https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html,disclosure,0.98,NKZ disclosure page embeds the Mode target-form PDF; keep above brand homepage for bounded canaries.
 大阪府,日本教育財団,大阪モード学園,https://www.mode.ac.jp/osaka,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+大阪府,日本教育財団,大阪モード学園,https://www.nkz.ac.jp/clginfo/om/omZ-studyspt_13.html,disclosure,0.98,NKZ disclosure page lists fiscal-year target-form PDFs including 2025.
 愛知県,日本教育財団,名古屋モード学園,https://www.mode.ac.jp/nagoya,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+愛知県,日本教育財団,名古屋モード学園,https://www.nkz.ac.jp/clginfo/nm/nmZ-studyspt_13.html,disclosure,0.98,NKZ disclosure page embeds the Mode target-form PDF; keep above brand homepage for bounded canaries.

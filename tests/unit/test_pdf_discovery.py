@@ -2922,6 +2922,46 @@ def test_run_pdf_discovery_uses_stable_site_order_for_equal_confidence(monkeypat
         session.close()
 
 
+def test_run_pdf_discovery_prioritizes_high_confidence_disclosure_page(monkeypatch, tmp_path: Path) -> None:
+    session = _session()
+    crawled_urls: list[str] = []
+
+    def fake_discover(_client, school_id: int, site_url: str, **_kwargs: object) -> DiscoveryResult:
+        crawled_urls.append(site_url)
+        return DiscoveryResult(school_id=school_id)
+
+    try:
+        session.add_all(
+            [
+                SchoolSite(
+                    school_id=1,
+                    url="https://www.mode.ac.jp/tokyo",
+                    url_type="school",
+                    discovery_method="school_domain_override",
+                    http_status=200,
+                    confidence=0.95,
+                ),
+                SchoolSite(
+                    school_id=1,
+                    url="https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html",
+                    url_type="disclosure",
+                    discovery_method="school_domain_override",
+                    http_status=200,
+                    confidence=0.98,
+                ),
+            ]
+        )
+        session.flush()
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=1, rate_limit=0)
+
+        assert stats["crawled"] == 1
+        assert crawled_urls == ["https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html"]
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_continues_after_duplicate_hash(monkeypatch, tmp_path: Path) -> None:
     """Sprint 4 rediscovery must not stop on an already-downloaded PDF.
 
