@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -2865,6 +2866,43 @@ def _session() -> Session:
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     return Session(engine)
+
+
+def test_run_pdf_discovery_closes_evidence_recorder_when_http_client_raises(monkeypatch, tmp_path: Path) -> None:
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    closed: list[str] = []
+
+    class FakeRecorder:
+        def __init__(self, path: Path | None) -> None:
+            assert path == evidence
+
+        def record(self, _evidence: object) -> None:
+            pass
+
+        def close(self) -> None:
+            closed.append("closed")
+
+    class FailingClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> object:
+            raise RuntimeError("client boom")
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+    try:
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.EvidenceRecorder", FakeRecorder)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", FailingClient)
+
+        with pytest.raises(RuntimeError, match="client boom"):
+            run_pdf_discovery(session, tmp_path, batch_size=0, rate_limit=0, evidence_path=evidence)
+    finally:
+        session.close()
+
+    assert closed == ["closed"]
 
 
 def test_run_pdf_discovery_passes_school_name_to_site_crawler(monkeypatch, tmp_path: Path) -> None:

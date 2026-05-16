@@ -26,9 +26,10 @@ banner for visibility only.
 from __future__ import annotations
 
 import io
+from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import openpyxl  # type: ignore[import-untyped]
 from sqlalchemy.orm import Session
@@ -162,6 +163,23 @@ def format_sheet_preview_from_bytes(
             close()
 
 
+def store_preview_session_state(
+    state: MutableMapping[str, Any],
+    preview: PreviewWorkbook,
+    *,
+    export_gap: ExportGapReport,
+) -> None:
+    """Store only serialized XLSX data in Streamlit session state."""
+    try:
+        state["excel_preview_bytes"] = preview.to_bytes()
+        state["excel_preview_counts"] = preview.counts
+        state["excel_preview_gap"] = export_gap
+        state["excel_preview_quality_warnings"] = preview.quality_warnings
+        state.pop("excel_preview_workbook", None)
+    finally:
+        preview.close()
+
+
 # ---------------------------------------------------------------------------
 # Coverage / gap counts
 # ---------------------------------------------------------------------------
@@ -285,14 +303,11 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     if st.button("プレビュー workbook を生成", type="primary", disabled=status.held or not can_generate):
         with st.spinner("生成中..."):
             preview = build_preview_workbook(session)
-            try:
-                st.session_state["excel_preview_bytes"] = preview.to_bytes()
-                st.session_state["excel_preview_counts"] = preview.counts
-                st.session_state["excel_preview_gap"] = export_gap
-                st.session_state["excel_preview_quality_warnings"] = preview.quality_warnings
-                st.session_state.pop("excel_preview_workbook", None)
-            finally:
-                preview.close()
+            store_preview_session_state(
+                cast(MutableMapping[str, Any], st.session_state),
+                preview,
+                export_gap=export_gap,
+            )
         st.rerun()
 
     if "excel_preview_bytes" in st.session_state:

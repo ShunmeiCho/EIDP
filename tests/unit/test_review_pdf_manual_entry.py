@@ -103,6 +103,27 @@ def test_prune_manual_entry_row_widgets_removes_deleted_row_state() -> None:
     assert state["reason_42"] == "memo"
 
 
+def test_prune_manual_entry_row_widgets_removes_every_deleted_row_field() -> None:
+    state: dict[str, object] = {
+        manual_entry_rows_state_key(42): [{}],
+    }
+    for key in manual_entry_row_widget_keys(42, 0):
+        state[key] = "kept"
+    for key in manual_entry_row_widget_keys(42, 1):
+        state[key] = "stale"
+    for key in manual_entry_static_widget_keys(42):
+        state[key] = "static"
+
+    prune_manual_entry_row_widgets(state, document_id=42, row_count=1)
+
+    for key in manual_entry_row_widget_keys(42, 0):
+        assert state[key] == "kept"
+    for key in manual_entry_row_widget_keys(42, 1):
+        assert key not in state
+    for key in manual_entry_static_widget_keys(42):
+        assert state[key] == "static"
+
+
 def test_clear_manual_entry_form_state_removes_all_form_widgets() -> None:
     state: dict[str, object] = {
         manual_entry_rows_state_key(42): [{}, {}],
@@ -116,6 +137,15 @@ def test_clear_manual_entry_form_state_removes_all_form_widgets() -> None:
     clear_manual_entry_form_state(state, document_id=42)
 
     assert state == {"unrelated": "keep"}
+
+
+def test_manual_entry_row_count_controls_disable_while_lock_is_held() -> None:
+    source = Path("src/eidp/review/_pages/pdf_manual_entry.py").read_text(encoding="utf-8")
+
+    assert 'cols[0].button("行を追加", key=f"add_{row.document_id}", disabled=lock_held)' in source
+    assert '"最終行を削除"' in source
+    assert 'key=f"del_{row.document_id}"' in source
+    assert "disabled=lock_held or len(state[state_key]) <= 1" in source
 
 
 @pytest.fixture()

@@ -17,6 +17,7 @@ import re
 import time
 import unicodedata
 from collections.abc import Callable
+from contextlib import closing
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -2864,7 +2865,7 @@ def run_pdf_discovery(
     if progress_callback is not None:
         progress_callback(dict(stats), len(sites))
 
-    with httpx.Client(
+    with closing(recorder), httpx.Client(
         timeout=max(float(request_timeout), 1.0),
         follow_redirects=False,
         headers=HEADERS,
@@ -3179,7 +3180,11 @@ def run_pdf_discovery(
                             file_path=file_path,
                             file_hash=file_hash,
                             file_size=file_size,
-                            fiscal_year=target_year if strict_target_fiscal_year else candidate.detected_fiscal_year,
+                            fiscal_year=(
+                                target_year
+                                if strict_target_fiscal_year
+                                else candidate.detected_fiscal_year
+                            ),
                             is_current_year=(
                                 True
                                 if strict_target_fiscal_year
@@ -3295,7 +3300,5 @@ def run_pdf_discovery(
             if progress_callback is not None:
                 progress_callback(dict(stats), len(sites))
             time.sleep(rate_limit)
-
     log.info("pdf_discovery_complete", **stats)
-    recorder.close()
     return stats

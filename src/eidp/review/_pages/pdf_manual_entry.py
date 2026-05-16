@@ -1319,18 +1319,21 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
     )
 
     cols = st.columns([1, 1, 1])
-    if cols[0].button("行を追加", key=f"add_{row.document_id}"):
+    if cols[0].button("行を追加", key=f"add_{row.document_id}", disabled=lock_held):
         state[state_key].append(
             {"canonical_name": "", "enrollment": "", "graduates": ""}
         )
-    if cols[1].button("最終行を削除", key=f"del_{row.document_id}"):
-        if len(state[state_key]) > 1:
-            state[state_key].pop()
-            prune_manual_entry_row_widgets(
-                state,
-                document_id=row.document_id,
-                row_count=len(state[state_key]),
-            )
+    if cols[1].button(
+        "最終行を削除",
+        key=f"del_{row.document_id}",
+        disabled=lock_held or len(state[state_key]) <= 1,
+    ):
+        state[state_key].pop()
+        prune_manual_entry_row_widgets(
+            state,
+            document_id=row.document_id,
+            row_count=len(state[state_key]),
+        )
 
     with st.form(key=f"form_{row.document_id}"):
         fiscal_year = st.number_input(

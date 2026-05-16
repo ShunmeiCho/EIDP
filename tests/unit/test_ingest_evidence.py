@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from eidp.pipeline.ingest_evidence import (
     IngestEvidenceRecorder,
     IngestRejection,
@@ -61,6 +63,21 @@ def test_recorder_without_context_does_not_keep_file_handle(tmp_path: Path) -> N
 
     rec.record(IngestRejection(doc_id=1, school_id=1, file_path=None,
                                source_url=None, pdf_type=None, reason="x"))
+
+    assert rec._fh is None
+    assert log.read_text(encoding="utf-8").strip()
+
+
+def test_recorder_context_closes_handle_when_caller_raises(tmp_path: Path) -> None:
+    log = tmp_path / "ingest_rej.jsonl"
+    rec = IngestEvidenceRecorder(log)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        with rec:
+            rec.record(IngestRejection(doc_id=1, school_id=1, file_path=None,
+                                       source_url=None, pdf_type=None, reason="x"))
+            assert rec._fh is not None
+            raise RuntimeError("boom")
 
     assert rec._fh is None
     assert log.read_text(encoding="utf-8").strip()

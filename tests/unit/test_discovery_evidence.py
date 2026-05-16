@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from eidp.scraper.discovery_evidence import EvidenceRecorder, RejectionEvidence
 
 
@@ -62,6 +64,20 @@ def test_recorder_without_context_does_not_keep_file_handle(tmp_path: Path) -> N
     rec = EvidenceRecorder(log_path)
 
     rec.record(RejectionEvidence(school_id=1, pdf_url="x", reason="r"))
+
+    assert rec._fh is None
+    assert log_path.read_text(encoding="utf-8").strip()
+
+
+def test_recorder_context_closes_handle_when_caller_raises(tmp_path: Path) -> None:
+    log_path = tmp_path / "rejections.jsonl"
+    rec = EvidenceRecorder(log_path)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        with rec:
+            rec.record(RejectionEvidence(school_id=1, pdf_url="x", reason="r"))
+            assert rec._fh is not None
+            raise RuntimeError("boom")
 
     assert rec._fh is None
     assert log_path.read_text(encoding="utf-8").strip()

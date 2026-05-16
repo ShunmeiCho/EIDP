@@ -25,6 +25,7 @@ from eidp.review._pages.excel_preview import (
     count_unmatched_and_gap,
     format_sheet_preview,
     format_sheet_preview_from_bytes,
+    store_preview_session_state,
 )
 
 
@@ -246,6 +247,35 @@ def test_format_sheet_preview_from_bytes_closes_workbook(monkeypatch):
 
     assert rows == [["header"]]
     assert calls == ["closed"]
+
+
+def test_store_preview_session_state_serializes_bytes_and_drops_workbook_handle() -> None:
+    calls: list[str] = []
+    state: dict[str, object] = {
+        "excel_preview_workbook": object(),
+    }
+
+    class FakePreview:
+        counts = {"採録状況": 1}
+        quality_warnings = {"department_yearly_low_confidence_current": 0}
+
+        def to_bytes(self) -> bytes:
+            calls.append("to_bytes")
+            return b"fake-xlsx"
+
+        def close(self) -> None:
+            calls.append("close")
+
+    export_gap = object()
+
+    store_preview_session_state(state, FakePreview(), export_gap=export_gap)  # type: ignore[arg-type]
+
+    assert state["excel_preview_bytes"] == b"fake-xlsx"
+    assert state["excel_preview_counts"] == {"採録状況": 1}
+    assert state["excel_preview_gap"] is export_gap
+    assert state["excel_preview_quality_warnings"] == {"department_yearly_low_confidence_current": 0}
+    assert "excel_preview_workbook" not in state
+    assert calls == ["to_bytes", "close"]
 
 
 # ---------------------------------------------------------------------------
