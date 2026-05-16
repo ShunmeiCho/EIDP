@@ -1463,6 +1463,12 @@ It returned `ok=true`, `action_matches_expected=true`, all residual paths
 `exists=false`, and SHA256
 `41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6`.
 
+A focused first-read path audit over the Windows staging README, owner request,
+real-cycle card, E2E template, and 20260517 manifest found no `first_setup.bat`
+and no old `v460-operator-docs\` path. The expected
+`v460-operator-docs-20260517` paths were present in the operator-facing entry
+documents.
+
 The post-package `.env.example` source commit `2768f02` is a future-package
 configuration-documentation improvement only. It must not be used as evidence
 that the current v460 Windows ZIP exposes the Step 2c school URL crawl defaults.

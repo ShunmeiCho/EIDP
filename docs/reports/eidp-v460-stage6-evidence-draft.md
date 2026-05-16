@@ -70,6 +70,7 @@ real-cycle, evidence ZIP sign-off, or FY2026/R8 live KPI record.
 | Setup validator | `scripts\validate_install.bat --after-setup --json` returned `ok=true` |
 | Recovery check | `scripts\stage6_recovery_check.bat C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat --json` returned `ok=true`, `action_matches_expected=true` |
 | Post-doc-refresh recovery check | After the 20260517 docs refresh, `logs/win-v460-stage6/stage6-recovery-20260517-064336.json` returned `ok=true`, `action_matches_expected=true`, and all residual paths `exists=false`; SHA256 `41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6` |
+| Operator first-read path audit | Windows staging check across `00-READ-ME-FIRST-v460.txt`, `eidp-v460-owner-request-20260516.txt`, `eidp-v460-real-cycle-card.md`, `eidp-operator-e2e-template.md`, and `eidp-v460-handoff-manifest-20260517.txt` found no `first_setup.bat` and no old `v460-operator-docs\` path; expected `v460-operator-docs-20260517` paths were present |
 | Task Scheduler | `EIDP Weekly Run` now executes `"C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat"` |
 | Diagnostics | `C:\Users\cyo20\EIDP-v460-01e4427\logs\diagnostics-20260516-170035.txt`; Mac copy `logs/win-v460-stage6/diagnostics-20260516-170035.txt` |
 | Mac copy SHA256 | diagnostics `6b4d566433db64c730737f925f0559e9b06582eed4cb0b6cd51f0623f153b445`; recovery JSON `41dd47aee0a304371cab5633397017f45e4f1a1d090b186986d48c49cf38acf6` |
