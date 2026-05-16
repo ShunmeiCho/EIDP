@@ -60,6 +60,16 @@ returned `ok=true`: SHA256 sidecar matched, package/source commit matched, full
 unit returned `1669 passed`, validator distribution unit returned `166 passed`,
 validator mypy/Ruff passed, discovery-gold checks passed, package verification
 passed, and demonstrated-pattern package verification passed.
+The follow-up Mac retroactive Excel matrix
+`logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
+FY2025, FY2024, and FY2023. The references were regenerated from the frozen
+v459 package wheel plus the v459 ZIP `alembic.ini`/`migrations` into
+`_temp/v459-reference2-fy2025/`, `_temp/v459-reference2-fy2024/`, and
+`_temp/v459-reference2-fy2023/`; v463 isolated exports matched those old-package
+references with `missing_rows=0`, `extra_rows=0`, and `differing_fields=0` for
+all three years. The earlier raw `data/master.xlsx` attempt was a reference
+selection error, because that workbook contains later-year fields and is not a
+FY-specific pass/fail reference.
 
 v463 was then transferred side-by-side to Windows staging, SHA-checked with
 `certutil` against the sidecar, extracted to
