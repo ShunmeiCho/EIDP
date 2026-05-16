@@ -22,7 +22,7 @@ Latest Windows-core-validated package: `dist/eidp-windows-v464.zip`
 Latest Windows-transfer-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v460.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v459.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v464.zip`
@@ -89,6 +89,17 @@ and `weekly_invoked=false`; screenshots `00-home.png` through
 `04-settings.png` were captured. Cleanup stopped the remote `8508` listener and
 the local `18508` tunnel, and a fresh scheduled-task check still pointed to the
 v460 runner.
+A diagnostic v464 evidence-bundle smoke then created
+`C:\Users\cyo20\EIDP-v464-9a94226\logs\stage6-evidence-20260516-225040.zip`;
+packaged verification correctly returned `ok=false` with
+`missing_required_labels=["last_run"]`, proving setup/UI smoke evidence cannot
+pass as Stage 6 release evidence. The Mac copies are
+`logs/win-v464-stage6/stage6-evidence-20260516-225040.zip`
+(SHA256 `1872e53e747ef85c89152bbeba8659a5068a5c52929e83f62398a011f198cefa`),
+`logs/win-v464-stage6/stage6-evidence-verify-20260517-075050.json`
+(SHA256 `a9471ba1af8236b50ab2c77a403616139c6a7bfd11fe99f36f4be24524df80dc`),
+and `logs/win-v464-stage6/diagnostics-20260517-075037.txt`
+(SHA256 `d58124385eba406e17a2f296f3d4aa191e05ac79790e186d46e5043c7d056ce2`).
 The v463 Mac retroactive Excel matrix
 `logs/release-gate-v463-retroactive-matrix.json` also returned `ok=true` for
 FY2025, FY2024, and FY2023. The references were regenerated from the frozen
