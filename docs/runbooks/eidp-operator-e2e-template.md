@@ -43,20 +43,20 @@ Updated: 2026-05-16
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
-現行投入候補（v459: Mac / non-Windows gate 済み、Windows bounded smoke 済み）:
+現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP package snapshot | `50152a5f2bfc0b8f0a360ef87af5e4979b284f4a` |
-| core ZIP | `dist/eidp-windows-v459.zip` |
-| core ZIP sha256 | `1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2` |
+| EIDP package snapshot | `<package git commit>` |
+| core ZIP | `dist/eidp-windows-vXXX.zip` |
+| core ZIP sha256 | `<copy from dist/eidp-windows-vXXX.zip.sha256>` |
 | core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。 |
-| non-Windows gate | `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v459.zip` -> pass |
-| docs-only stale gate | `--skip-full-unit --allow-docs-only-stale-package` -> pass after v459 docs |
-| Windows transfer checklist | `docs/runbooks/eidp-v459-real-cycle-card.md` |
-| Windows extract path | `C:\Users\cyo20\EIDP-v459-50152a5` |
-| transferred ZIP | `C:\EIDP-staging\eidp-windows-v459.zip` |
-| Stage 6 evidence draft | `docs/reports/eidp-v459-stage6-evidence-draft.md` |
+| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` or `logs/release-gate-vXXX.json` -> ok=true |
+| docs-only stale gate | Use only after docs-only commits; record the exact gate JSON here. |
+| Windows transfer checklist | `<version-specific real-cycle-card path>` |
+| Windows extract path | `C:\Users\<user>\<EIDP-extract-dir>` |
+| transferred ZIP | `C:\EIDP-staging\<core-zip-file-name>` |
+| Stage 6 evidence draft | `<version-specific evidence draft path>` |
 | real-cycle entrypoints | ZIP and extracted Windows root both contain `EIDP-start.bat`, `EIDP-setup.bat`, `EIDP-stage6-evidence.bat`, `EIDP-stage6-verify-evidence.bat`, `EIDP-diagnose.bat`, `scripts\weekly_run.bat`, `scripts\validate_install.bat`, `scripts\stage6_recovery_check.bat`, and `scripts\diagnose.bat` |
 
 ## 2. PC / 環境
