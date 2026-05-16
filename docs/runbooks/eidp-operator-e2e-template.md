@@ -43,20 +43,21 @@ Updated: 2026-05-16
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
-現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
+現行投入候補（Mac / non-Windows gate 済み、Windows setup/UI smoke 済み、
+operator real-cycle 未了）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP package snapshot | `docs/reports/current-release-status.md` から転記 |
-| core ZIP | `dist/eidp-windows-vXXX.zip` |
-| core ZIP sha256 | `.sha256` sidecar または release-status から転記 |
+| EIDP package snapshot | `48a346bb626be749adb72d1aeb6a684903f22049` |
+| core ZIP | `dist/eidp-windows-v454.zip` |
+| core ZIP sha256 | `0bbed01d95fe320cee70b826c63e8c500303b8a62c42d325ef2481764660b2e3` |
 | core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。 |
-| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |
-| retroactive matrix log | `logs/release-gate-vXXX-retroactive-matrix.json` if used |
-| Windows transfer checklist | current version-specific checklist |
-| Windows extract path | 実施時に転記 |
-| transferred ZIP | 実施時に転記 |
-| Stage 6 evidence draft | version-specific draft under `docs/reports/` |
+| non-Windows gate log | `logs/release-gate-v454.json` |
+| retroactive matrix log | use `docs/reports/current-release-status.md` if copied into the final cycle |
+| Windows transfer checklist | v454 transfer/setup rows in `docs/reports/current-release-status.md` |
+| Windows extract path | `C:\Users\cyo20\EIDP-v454-48a346b` |
+| transferred ZIP | `C:\EIDP-staging\eidp-windows-v454.zip` |
+| Stage 6 evidence draft | `docs/reports/eidp-v454-stage6-evidence-draft.md` |
 
 ## 2. PC / 環境
 
@@ -161,14 +162,14 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 - `[stage6 recovery check]` JSON の `residual_paths`
 - `[stage6 recovery check]` JSON の `recommendations`
 
-v446 既存証跡（diagnostic-only、operator real-cycle の代替不可）:
+v454 既存証跡（diagnostic-only、operator real-cycle の代替不可）:
 
 ```text
 logs\run-20260516.log
 data\output\last_run.json
-logs\stage6-recovery-*.json
+logs\stage6-recovery-20260516-113412-expected-action.json
 logs\stage6-residual-cleanup-*.json
-logs\stage6-evidence-20260515-225956.zip
+logs\stage6-evidence-20260516-023620.zip
 logs\stage6-evidence-verify-*.json
 ```
 
@@ -197,21 +198,22 @@ The process was force-stopped after the health proof; launcher exit -1 is a stop
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
-v446 既存証跡（転記候補。bounded diagnostic-only）:
+v454 既存証跡（転記候補。bounded diagnostic-only）:
 
 | 手順 | 結果 | 証跡 |
 | --- | --- | --- |
-| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v446-e9f91cc` |
+| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v454-48a346b` |
 | `EIDP-setup.bat` | pass | setup completed; SQLite integrity ok |
 | `.venv` 作成 | pass | `validate_windows_install.py --after-setup --json` |
 | DB bootstrap / master import | pass | `school_count=2418`, `sqlite_integrity_check=ok` |
 | 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418` |
-| Task Scheduler recovery | pass | wrapper-default path check skipped; task exists and no residual interrupted-smoke paths |
-| URL-only bootstrap | pass | 47 prefectures; bulk PDF discovery skipped |
-| bounded `weekly_run.bat` canary | pass | `rc=0`, `crawled=5`, `found=3`, `downloaded=0`, `operator_reviewable_count=1`, `ship_gate_status=below_gate` |
-| Evidence bundle verify | pass | `logs/win-v446-stage6/stage6-evidence-20260515-225956.zip`, all required labels present |
+| Task Scheduler recovery | pass | expected action `C:\Users\cyo20\EIDP-v454-48a346b\scripts\weekly_run.bat`, `action_matches_expected=true` |
+| URL-only bootstrap | pass | 47 prefectures; `school_domain_overrides.csv` loaded with `count=6` |
+| bounded `weekly_run.bat` canary | pass | `rc=0`, `crawled=5`, `found=5`, `downloaded=2`, `operator_reviewable_count=5`, `ship_gate_status=pass` |
+| Evidence bundle verify | pass | `logs/win-v454-stage6/stage6-evidence-20260516-023620.zip`, all required labels present |
 | Default launcher health | pass | `scripts\launch.bat`, Windows `8501`, Mac tunnel `18501 -> 8501`, health/root HTTP 200 |
-| Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定` rendered under `output/playwright/v446-ui-smoke/` |
+| Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定` rendered under `output/playwright/v454-ui-smoke/` |
+| Browser UI write/audit sandbox | pass | rejected one seeded `URL候補レビュー` item, flushed `exported=2 already_present=0 failed=0`, and left real runtime DB marker counts `0` |
 
 ## 5. 4 工程 E2E
 
@@ -297,23 +299,14 @@ v408 sandbox 例（real-cycle ではない）:
 
 ```
 
-v442 R7 retroactive 既存証跡（FY2026 yield ではない）:
+v454 R7 retroactive 既存証跡（FY2026 yield ではない）:
 
 | 指標 | 結果 |
 | --- | --- |
-| R7 browser download | `output/playwright/v442-r7-excel-smoke/eidp-master.xlsx`, suggested `eidp-master.xlsx` |
-| Sheet counts | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
-| openpyxl dimensions | `2419x10`, `10023x22`, `9721x83`, `9721x19` |
-| FY persistence check | v442 root/adjacent `.env` missing after process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` launch |
-
-v446 R7 retroactive 境界（転記候補ではない）:
-
-| 指標 | 結果 |
-| --- | --- |
-| Process-scoped FY2025 UI | rendered `2025年度（令和7年度）` |
-| Excel preview | `Excel出力可 0/2418`; v446 fresh DB was initialized under FY2026 setup |
-| FY persistence check | v446 root/adjacent `.env` missing after process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` launch |
-| 判定 | diagnostic boundary only; keep v442 as R7 browser Excel proof |
+| R7 browser download | `output/playwright/v454-r7-excel-smoke/eidp-master.xlsx`, suggested `eidp-master.xlsx` |
+| Sheet counts | `採録状況=2418`, `対象比率=10024`, `学科別=9746`, `在籍のみ抜粋=9746` |
+| openpyxl dimensions | `2419x10`, `10025x22`, `9748x83`, `9748x19` |
+| FY persistence check | v454 root/adjacent `.env` missing after process-scoped `EIDP_TARGET_FISCAL_YEAR=2025` launch |
 
 Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows 実走時の比較基準）:
 
@@ -351,18 +344,18 @@ Version-specific diagnostic-only KPI snapshot（real-cycle ではない）:
 
 | KPI | Actual | 判定 |
 | --- | ---: | --- |
-| `last_run.json status` | version-specific draft から転記 | diagnostic pass / watch / fail |
-| `dry_run` | version-specific draft から転記 | diagnostic only / bounded canary / real cycle |
-| `current_fy` | version-specific draft から転記 | current rolling FY / retroactive only |
-| `selection_mode` | version-specific draft から転記 | diagnostic pass / watch / fail |
-| `crawled` | version-specific draft から転記 | diagnostic only |
-| `found` | version-specific draft から転記 | diagnostic only |
-| `downloaded` | version-specific draft から転記 | release gate status |
-| `new_document_count` | version-specific draft から転記 | release gate status |
-| `target_pdf_auto_yield_pct` | version-specific draft から転記 | release gate status |
-| `ship_gate_status` | version-specific draft から転記 | release gate status |
-| scheduled task recovery | version-specific draft から転記 | pass / watch / fail |
-| evidence bundle verify | version-specific draft から転記 | pass / watch / fail |
+| `last_run.json status` | `success` | diagnostic pass |
+| `dry_run` | bounded real `weekly_run.bat` canary | bounded canary |
+| `current_fy` | `2025` | retroactive R7 only |
+| `selection_mode` | bounded target-missing school set | diagnostic pass |
+| `crawled` | `5` | diagnostic only |
+| `found` | `5` | diagnostic pass |
+| `downloaded` | `2` | bounded pass |
+| `new_document_count` | `2` | bounded pass |
+| `target_pdf_auto_yield_pct` | `40.0` | below final 60-70% gate |
+| `ship_gate_status` | `pass` | bounded operator-reviewable basis |
+| scheduled task recovery | `ok=true`, `action_matches_expected=true` | pass |
+| evidence bundle verify | `ok=true`, `entry_count=13` | pass |
 
 KPI メモ:
 
@@ -380,7 +373,18 @@ KPI メモ:
 | audit-flush 実行 | pass / fail / not needed |
 | JSONL action_id 重複 | none / observed |
 
-v408 sandbox 既存証跡（real-cycle ではない、v442 real-cycle の代替不可）:
+v454 sandbox 既存証跡（real-cycle ではない、operator real-cycle の代替不可）:
+
+| 項目 | 結果 |
+| --- | --- |
+| 監査ログページ表示 | pass |
+| manual_action_log 件数 | `2` |
+| JSONL outbox 未送信件数 | before flush `2`, after flush `0` |
+| audit-flush 実行 | `exported=2 already_present=0 failed=0` |
+| JSONL export stamp | both rows exported; `jsonl_export_error=null` |
+| real runtime DB marker counts | all `0` |
+
+v408 sandbox 既存証跡（broader UI write paths、real-cycle ではない）:
 
 | 項目 | 結果 |
 | --- | --- |
