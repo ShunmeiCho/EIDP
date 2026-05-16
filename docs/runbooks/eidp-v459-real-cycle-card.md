@@ -70,8 +70,9 @@ Expected before continuing:
 6. In `監査ログ`, run `Outbox を flush` after write actions.
 7. Record the actual KPI values in `docs/runbooks/eidp-operator-e2e-template.md`.
 
-Do not treat the existing v459 bounded canary, browser health smoke, or R7
-retroactive support as the real-cycle sign-off.
+Do not treat the existing v459 bounded canary, browser health/nav smoke,
+process-scoped R7 browser Excel proof, or R7 retroactive support as the
+real-cycle sign-off.
 
 ## Evidence Bundle
 

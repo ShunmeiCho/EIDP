@@ -18,7 +18,7 @@ Latest Windows-setup-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v459.zip`
-Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v456.zip`
+Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v456.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v459.zip`
@@ -68,6 +68,18 @@ session, used an SSH tunnel on Mac `127.0.0.1:18503`, clicked
 `navAllClicked=true`; screenshots `00-home.png` through `04-settings.png` were
 captured, the temporary local Playwright dependency was deleted, all tunnels
 were closed, and Windows cleanup confirmed no remaining `8501` listener.
+Another process-scoped FY2025/R7 browser Excel smoke then launched the same
+v459 package with `EIDP_TARGET_FISCAL_YEAR=2025`, opened `④ Excel プレビュー`,
+observed `2025年度（令和7年度）`, `Excel出力可 2`, and `Excel対象行 7177`,
+clicked `プレビュー workbook を生成`, clicked `Excel ダウンロード`, and saved
+`output/playwright/v459-r7-excel-smoke/eidp_master.xlsx`. The downloaded
+workbook was `3,677,040` bytes, and local `openpyxl` verified sheets
+`採録状況`, `対象比率`, `学科別`, and `在籍のみ抜粋` with dimensions `2419x10`,
+`10025x22`, `9748x83`, and `9748x19`. Windows checks confirmed both checked
+v459 `.env` locations were absent after the process-scoped run. Cleanup removed
+the temporary local Playwright dependency, closed the tunnel, killed the
+Windows Streamlit process, and confirmed no remaining local `18504` or Windows
+`8501` listener.
 
 The v459 URL-only bootstrap completed with all 47 prefecture seed artifacts
 downloaded/aggregated, Step 2b seed URL import `imported=48`,
@@ -98,7 +110,9 @@ Windows ZIP. v459 fixes that packaging gap and supersedes v458 for Stage 6
 handoff.
 
 v456 remains historical browser-readonly-navigation-proven,
-R7-browser-Excel-proven, and UI-write-sandbox-proven support. It was built
+R7-browser-Excel-proven, and UI-write-sandbox-proven support, but the current
+v459 lane now supersedes v456 for read-only navigation and R7 browser Excel
+generation/download. v456 was built
 from package snapshot `f33ffc0e6fd801782f3e49fad3315adc64081f6f`, which keeps
 the operator E2E template version-neutral so future ZIPs do not embed stale
 package/SHA fields. The v456 strict non-Windows gate

@@ -43,6 +43,18 @@ Stage 6 operator-PC real-cycle sign-off.
 | Ship-gate status | `pass` for the bounded sample |
 | Weekly validator | `scripts\validate_install.bat --after-setup --after-weekly --json` returned `ok=true` |
 
+## Browser Excel
+
+| Check | Result |
+| --- | --- |
+| Process env | `EIDP_TARGET_FISCAL_YEAR=2025` only for the Streamlit process |
+| Preview page | `④ Excel プレビュー` showed `2025年度（令和7年度）`, `Excel出力可 2`, and `Excel対象行 7177` |
+| Workbook generation | Playwright clicked `プレビュー workbook を生成` and `Excel ダウンロード` |
+| Download | `output/playwright/v459-r7-excel-smoke/eidp_master.xlsx`, suggested filename `eidp_master.xlsx`, size `3,677,040` bytes |
+| Workbook dimensions | `採録状況=2419x10`, `対象比率=10025x22`, `学科別=9748x83`, `在籍のみ抜粋=9748x19` |
+| FY persistence check | Both checked paths, `C:\Users\cyo20\EIDP-v459-50152a5\.env` and `C:\Users\cyo20\EIDP-v459-50152a5.env`, were absent after the process-scoped run |
+| Cleanup | Temporary local Playwright dependency, SSH tunnel, and Windows `8501` listener were removed |
+
 ## Evidence Bundle
 
 | Item | Result |
