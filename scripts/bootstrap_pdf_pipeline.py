@@ -549,6 +549,9 @@ def step_known_url_discovery(
         "seed_imported": 0,
         "seed_skipped_no_school": 0,
         "seed_skipped_existing": 0,
+        "school_override_inferred": 0,
+        "school_override_skipped_existing": 0,
+        "school_override_skipped_no_school": 0,
         "corporation_inferred": 0,
         "corporation_skipped_has_url": 0,
         "search_enabled": 0,
@@ -568,6 +571,13 @@ def step_known_url_discovery(
         corporation_stats = infer_corporation_urls(session)
         stats["corporation_inferred"] = int(corporation_stats.get("inferred", 0))
         stats["corporation_skipped_has_url"] = int(corporation_stats.get("skipped_has_url", 0))
+        stats["school_override_inferred"] = int(corporation_stats.get("school_override_inferred", 0))
+        stats["school_override_skipped_existing"] = int(
+            corporation_stats.get("school_override_skipped_existing", 0)
+        )
+        stats["school_override_skipped_no_school"] = int(
+            corporation_stats.get("school_override_skipped_no_school", 0)
+        )
         if search_missing_urls and search_batch_size > 0:
             stats["search_enabled"] = 1
 
@@ -1197,6 +1207,9 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             "seed_imported": 0,
             "seed_skipped_no_school": 0,
             "seed_skipped_existing": 0,
+            "school_override_inferred": 0,
+            "school_override_skipped_existing": 0,
+            "school_override_skipped_no_school": 0,
             "corporation_inferred": 0,
             "corporation_skipped_has_url": 0,
             "search_enabled": 0,

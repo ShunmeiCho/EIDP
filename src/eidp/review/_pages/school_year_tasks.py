@@ -965,7 +965,9 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
     if "seed_imported" in details or "corporation_inferred" in details:
         lines.append(
             "補助URL登録: "
-            f"既知URL {details.get('seed_imported', 0)} / 法人ドメイン推定 {details.get('corporation_inferred', 0)}"
+            f"既知URL {details.get('seed_imported', 0)} / "
+            f"学校別補正 {details.get('school_override_inferred', 0)} / "
+            f"法人ドメイン推定 {details.get('corporation_inferred', 0)}"
         )
     if details.get("search_enabled") or "search_searched" in details:
         lines.append(

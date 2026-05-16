@@ -310,6 +310,10 @@ def _core_entries() -> dict[str, bytes | str]:
         "data/url-discovery/corporation_domains.csv": (
             "corporation_name,domain\n東京都公立大学法人,tmu.ac.jp\n"
         ),
+        "data/url-discovery/school_domain_overrides.csv": (
+            "prefecture,corporation_name,school_name,domain_url,url_type,confidence\n"
+            "東京都,東京都公立大学法人,東京都立大学,https://www.tmu.ac.jp/,school,0.95\n"
+        ),
         "data/discovery-gold-set/README.md": "# Discovery Gold Set\n",
         "data/discovery-gold-set/schema.json": '{"title": "test discovery gold-set schema"}\n',
         "data/discovery-gold-set/expected-predictions.jsonl": _discovery_gold_expected_predictions(),
@@ -611,6 +615,7 @@ def test_verify_core_zip_requires_bootstrap_seed_csvs(tmp_path: Path) -> None:
     entries = _core_entries()
     entries.pop("data/url-discovery/discovered-urls-50.csv")
     entries.pop("data/url-discovery/corporation_domains.csv")
+    entries.pop("data/url-discovery/school_domain_overrides.csv")
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
@@ -618,6 +623,7 @@ def test_verify_core_zip_requires_bootstrap_seed_csvs(tmp_path: Path) -> None:
     assert not check.ok
     assert any("data/url-discovery/discovered-urls-50.csv" in error for error in check.errors)
     assert any("data/url-discovery/corporation_domains.csv" in error for error in check.errors)
+    assert any("data/url-discovery/school_domain_overrides.csv" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_discovery_gold_set(tmp_path: Path) -> None:

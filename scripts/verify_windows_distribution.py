@@ -117,6 +117,7 @@ CORE_REQUIRED_EXACT = (
     "data/prefecture-aggregators/seed.csv",
     "data/url-discovery/discovered-urls-50.csv",
     "data/url-discovery/corporation_domains.csv",
+    "data/url-discovery/school_domain_overrides.csv",
     "data/discovery-gold-set/README.md",
     "data/discovery-gold-set/schema.json",
     "data/discovery-gold-set/expected-predictions.jsonl",

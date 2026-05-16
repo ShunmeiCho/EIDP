@@ -517,7 +517,13 @@ def test_step_known_url_discovery_imports_seed_and_corporation_fallbacks(tmp_pat
 
     def fake_infer_corporation_urls(session):  # noqa: ANN001
         calls.append(("corp", session))
-        return {"inferred": 4, "skipped_has_url": 5}
+        return {
+            "inferred": 4,
+            "skipped_has_url": 5,
+            "school_override_inferred": 2,
+            "school_override_skipped_existing": 3,
+            "school_override_skipped_no_school": 1,
+        }
 
     def fake_search_and_discover(  # noqa: ANN001
         session,
@@ -545,6 +551,9 @@ def test_step_known_url_discovery_imports_seed_and_corporation_fallbacks(tmp_pat
         "seed_imported": 2,
         "seed_skipped_no_school": 1,
         "seed_skipped_existing": 3,
+        "school_override_inferred": 2,
+        "school_override_skipped_existing": 3,
+        "school_override_skipped_no_school": 1,
         "corporation_inferred": 4,
         "corporation_skipped_has_url": 5,
         "search_enabled": 0,
@@ -581,7 +590,7 @@ def test_step_known_url_discovery_runs_search_when_enabled(tmp_path: Path, monke
 
     def fake_infer_corporation_urls(session):  # noqa: ANN001
         calls.append(("corp", session))
-        return {"inferred": 1, "skipped_has_url": 2}
+        return {"inferred": 1, "skipped_has_url": 2, "school_override_inferred": 1}
 
     def fake_search_and_discover(  # noqa: ANN001
         session,

@@ -508,7 +508,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
     # known school URL seeds and corporation-domain fallbacks before PDF
     # discovery. These are deterministic seed inputs, unlike downloaded
     # prefecture artifacts, so they must travel with the Windows ZIP.
-    for name in ("discovered-urls-50.csv", "corporation_domains.csv"):
+    for name in ("discovered-urls-50.csv", "corporation_domains.csv", "school_domain_overrides.csv"):
         seed = repo_root / "data" / "url-discovery" / name
         if seed.is_file():
             members.append((seed, f"data/url-discovery/{name}"))

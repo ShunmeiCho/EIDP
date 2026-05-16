@@ -1070,6 +1070,11 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "corporation_name,domain\n東京都公立大学法人,tmu.ac.jp\n",
         encoding="utf-8",
     )
+    (fake_repo / "data" / "url-discovery" / "school_domain_overrides.csv").write_text(
+        "prefecture,corporation_name,school_name,domain_url,url_type,confidence\n"
+        "東京都,東京都公立大学法人,東京都立大学,https://www.tmu.ac.jp/,school,0.95\n",
+        encoding="utf-8",
+    )
     # Developer-only fixture must stay out of the operator ZIP.
     (fake_repo / "data" / "url-discovery" / "test-schools-50.csv").write_text(
         "school_name\nfixture only\n",
@@ -1199,6 +1204,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "data/url-discovery/corporation_domains.csv" in arcs, (
         "Sprint 8.7.f: corporation-domain fallbacks must be in the ZIP so "
         "schools without prefecture-provided URLs still get deterministic discovery seeds"
+    )
+    assert "data/url-discovery/school_domain_overrides.csv" in arcs, (
+        "School-specific URL overrides must ship so multi-brand corporations "
+        "do not poison PDF discovery with a wrong corporation root"
     )
     assert "data/discovery-gold-set/README.md" in arcs
     assert "data/discovery-gold-set/schema.json" in arcs

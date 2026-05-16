@@ -159,6 +159,70 @@ class DiscoveredUrl:
     http_status: int | None = None
 
 
+@dataclass(frozen=True)
+class SchoolDomainOverride:
+    prefecture: str
+    corporation_name: str
+    school_name: str
+    domain_url: str
+    url_type: str
+    confidence: float
+
+
+def _is_absolute_http_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _load_school_domain_overrides(data_dir: Path | None = None) -> list[SchoolDomainOverride]:
+    """Load exact school -> official URL overrides.
+
+    Some corporations operate multiple branded domains. These exact overrides
+    prevent a corporation-root fallback from poisoning PDF discovery for schools
+    whose public pages live on a separate brand site.
+    """
+    from eidp.config import settings
+
+    base_dir = data_dir if data_dir is not None else settings.data_dir
+    csv_path = base_dir / "url-discovery" / "school_domain_overrides.csv"
+    overrides: list[SchoolDomainOverride] = []
+
+    if not csv_path.exists():
+        log.info("school_domain_overrides_csv_not_found", path=str(csv_path))
+        return overrides
+
+    with csv_path.open(encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            prefecture = row.get("prefecture", "").strip()
+            corp = row.get("corporation_name", "").strip()
+            school = row.get("school_name", "").strip()
+            url = row.get("domain_url", "").strip()
+            if not (prefecture and corp and school and _is_absolute_http_url(url)):
+                continue
+            confidence_text = row.get("confidence", "").strip()
+            try:
+                confidence = float(confidence_text) if confidence_text else 0.95
+            except ValueError:
+                confidence = 0.95
+            overrides.append(
+                SchoolDomainOverride(
+                    prefecture=prefecture,
+                    corporation_name=corp,
+                    school_name=school,
+                    domain_url=url,
+                    url_type=row.get("url_type", "").strip() or "school",
+                    confidence=max(0.0, min(confidence, 1.0)),
+                )
+            )
+
+    log.info("school_domain_overrides_loaded", count=len(overrides), path=str(csv_path))
+    return overrides
+
+
 def import_seed_urls(
     session: Session,
     csv_path: Path,
@@ -222,16 +286,58 @@ def import_seed_urls(
     return stats
 
 
-def infer_corporation_urls(session: Session) -> dict[str, int]:
+def _school_site_url_exists(session: Session, school_id: int, url: str) -> bool:
+    return (
+        session.query(SchoolSite)
+        .filter(SchoolSite.school_id == school_id, SchoolSite.url == url)
+        .first()
+        is not None
+    )
+
+
+def infer_corporation_urls(session: Session, data_dir: Path | None = None) -> dict[str, int]:
     """Register corporation domain roots for schools in known groups.
 
     Reads corporation->domain mapping from data/url-discovery/corporation_domains.csv.
     These are NOT exact page URLs. They are corporation-level entry points
     that Step 8 (PDF discovery) will crawl to find disclosure pages.
     """
-    stats = {"inferred": 0, "skipped_has_url": 0}
+    stats = {
+        "inferred": 0,
+        "skipped_has_url": 0,
+        "school_override_inferred": 0,
+        "school_override_skipped_existing": 0,
+        "school_override_skipped_no_school": 0,
+    }
 
-    corporation_domains = _load_corporation_domains()
+    for override in _load_school_domain_overrides(data_dir=data_dir):
+        school = (
+            session.query(School)
+            .filter(
+                School.prefecture == override.prefecture,
+                School.corporation_name == override.corporation_name,
+                School.school_name == override.school_name,
+            )
+            .first()
+        )
+        if school is None:
+            stats["school_override_skipped_no_school"] += 1
+            continue
+        if _school_site_url_exists(session, int(school.id), override.domain_url):
+            stats["school_override_skipped_existing"] += 1
+            continue
+        site = SchoolSite(
+            school_id=school.id,
+            url=override.domain_url,
+            url_type=override.url_type,
+            discovery_method="school_domain_override",
+            confidence=override.confidence,
+        )
+        session.add(site)
+        stats["inferred"] += 1
+        stats["school_override_inferred"] += 1
+
+    corporation_domains = _load_corporation_domains(data_dir=data_dir)
     for corp_name, domain in corporation_domains.items():
         schools = (
             session.query(School)

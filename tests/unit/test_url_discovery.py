@@ -74,6 +74,135 @@ def test_load_corporation_domains_reads_utf8_sig_csv(tmp_path: Path, monkeypatch
     assert domains == {"学校法人テスト": "https://corp.example"}
 
 
+def test_load_school_domain_overrides_reads_utf8_sig_csv(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    csv_dir = data_dir / "url-discovery"
+    csv_dir.mkdir(parents=True)
+    (csv_dir / "school_domain_overrides.csv").write_text(
+        "\ufeffprefecture,corporation_name,school_name,domain_url,url_type,confidence,notes\n"
+        "東京都,日本教育財団,東京モード学園,https://www.mode.ac.jp/tokyo,school,0.95,multi-brand\n",
+        encoding="utf-8",
+    )
+
+    overrides = url_discovery._load_school_domain_overrides(data_dir=data_dir)
+
+    assert len(overrides) == 1
+    assert overrides[0].school_name == "東京モード学園"
+    assert overrides[0].domain_url == "https://www.mode.ac.jp/tokyo"
+    assert overrides[0].confidence == 0.95
+
+
+def test_infer_corporation_urls_prefers_school_domain_overrides(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    csv_dir = data_dir / "url-discovery"
+    csv_dir.mkdir(parents=True)
+    (csv_dir / "corporation_domains.csv").write_text(
+        "corporation_name,domain_url,notes\n"
+        "日本教育財団,https://www.nkz.ac.jp/,group portal\n",
+        encoding="utf-8",
+    )
+    (csv_dir / "school_domain_overrides.csv").write_text(
+        "prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes\n"
+        "東京都,日本教育財団,東京モード学園,https://www.mode.ac.jp/tokyo,school,0.95,mode\n"
+        "大阪府,日本教育財団,大阪モード学園,https://www.mode.ac.jp/osaka,school,0.95,mode\n",
+        encoding="utf-8",
+    )
+    session = _session()
+    try:
+        session.add_all(
+            [
+                School(
+                    id=1,
+                    prefecture="東京都",
+                    corporation_name="日本教育財団",
+                    school_name="東京モード学園",
+                    school_type="専門学校",
+                    status="active",
+                ),
+                School(
+                    id=2,
+                    prefecture="大阪府",
+                    corporation_name="日本教育財団",
+                    school_name="大阪モード学園",
+                    school_type="専門学校",
+                    status="active",
+                ),
+                School(
+                    id=3,
+                    prefecture="東京都",
+                    corporation_name="日本教育財団",
+                    school_name="HAL東京",
+                    school_type="専門学校",
+                    status="active",
+                ),
+            ]
+        )
+        session.commit()
+
+        stats = url_discovery.infer_corporation_urls(session, data_dir=data_dir)
+        sites = session.query(SchoolSite).order_by(SchoolSite.school_id.asc()).all()
+
+        assert stats["inferred"] == 3
+        assert stats["school_override_inferred"] == 2
+        assert stats["skipped_has_url"] == 2
+        assert [(site.school_id, site.url, site.discovery_method) for site in sites] == [
+            (1, "https://www.mode.ac.jp/tokyo", "school_domain_override"),
+            (2, "https://www.mode.ac.jp/osaka", "school_domain_override"),
+            (3, "https://www.nkz.ac.jp/", "corporation_pattern"),
+        ]
+    finally:
+        session.close()
+
+
+def test_infer_school_domain_override_adds_alongside_existing_corporation_root(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    csv_dir = data_dir / "url-discovery"
+    csv_dir.mkdir(parents=True)
+    (csv_dir / "corporation_domains.csv").write_text(
+        "corporation_name,domain_url,notes\n"
+        "日本教育財団,https://www.nkz.ac.jp/,group portal\n",
+        encoding="utf-8",
+    )
+    (csv_dir / "school_domain_overrides.csv").write_text(
+        "prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes\n"
+        "東京都,日本教育財団,東京モード学園,https://www.mode.ac.jp/tokyo,school,0.95,mode\n",
+        encoding="utf-8",
+    )
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="東京都",
+                corporation_name="日本教育財団",
+                school_name="東京モード学園",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(
+            SchoolSite(
+                school_id=1,
+                url="https://www.nkz.ac.jp/",
+                url_type="corporation",
+                discovery_method="corporation_pattern",
+                confidence=0.5,
+            )
+        )
+        session.commit()
+
+        stats = url_discovery.infer_corporation_urls(session, data_dir=data_dir)
+        sites = session.query(SchoolSite).order_by(SchoolSite.confidence.desc()).all()
+
+        assert stats["school_override_inferred"] == 1
+        assert [(site.url, site.discovery_method) for site in sites] == [
+            ("https://www.mode.ac.jp/tokyo", "school_domain_override"),
+            ("https://www.nkz.ac.jp/", "corporation_pattern"),
+        ]
+    finally:
+        session.close()
+
+
 def test_search_and_discover_registers_best_result(tmp_path: Path, monkeypatch) -> None:
     import time as time_module
 

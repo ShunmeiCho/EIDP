@@ -1,0 +1,4 @@
+prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
+東京都,日本教育財団,東京モード学園,https://www.mode.ac.jp/tokyo,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+大阪府,日本教育財団,大阪モード学園,https://www.mode.ac.jp/osaka,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+愛知県,日本教育財団,名古屋モード学園,https://www.mode.ac.jp/nagoya,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
