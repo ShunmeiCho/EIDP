@@ -15,6 +15,7 @@ Stage 6 operator-PC real-cycle sign-off.
 | Windows root | `C:\Users\cyo20\EIDP-v459-50152a5` |
 | Release gate | `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v459.zip` passed |
 | Current docs companion | `dist/eidp-v459-operator-docs-20260516.zip`; verify with `dist/eidp-v459-operator-docs-20260516.zip.sha256` |
+| Windows staging docs companion | `C:\EIDP-staging\eidp-v459-operator-docs-20260516.zip`; Windows `Get-FileHash` matched the sidecar |
 
 The v459 core ZIP predates the final handoff-doc updates and is kept frozen to
 preserve the verified package SHA256. Use the companion docs ZIP for the current

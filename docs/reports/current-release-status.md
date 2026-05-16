@@ -1296,7 +1296,9 @@ frozen at SHA256
 ignored companion docs bundle `dist/eidp-v459-operator-docs-20260516.zip`
 and verify it with `dist/eidp-v459-operator-docs-20260516.zip.sha256`. It
 contains the current real-cycle card, E2E template, release-status snapshot, and
-v459 evidence draft.
+v459 evidence draft. The companion docs bundle was also copied to
+`C:\EIDP-staging\eidp-v459-operator-docs-20260516.zip` and verified on Windows
+with `Get-FileHash` against its sidecar.
 
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |
