@@ -48,6 +48,8 @@ the run repeatedly re-crawled shared corporation domains; it produced no new
 `last_run.json` and is not release evidence
 Current Stage 6 evidence draft: `docs/reports/eidp-v460-stage6-evidence-draft.md`
 Current Stage 6 real-cycle card: `docs/runbooks/eidp-v460-real-cycle-card.md`
+Current active-goal completion audit:
+`docs/reports/2026-05-17-active-goal-completion-audit.md`
 
 ## Verdict
 
