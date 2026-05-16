@@ -3,8 +3,8 @@
 Updated: 2026-05-16
 
 This draft records the v454 Windows setup, bounded R7 weekly canary, evidence
-bundle, UI-health, and disk-retention evidence. It is not a completed
-owner/operator real-cycle Stage 6 sign-off.
+bundle, UI-health, UI-write sandbox, and disk-retention evidence. It is not a
+completed owner/operator real-cycle Stage 6 sign-off.
 
 ## Package
 
@@ -36,6 +36,7 @@ owner/operator real-cycle Stage 6 sign-off.
 | Evidence bundle | pass | Refreshed `logs\stage6-evidence-20260516-023620.zip` verified `ok=true` on Windows and Mac with `entry_count=13`, no forbidden/unsafe entries, no missing manifest patterns, and labels `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`, `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`, `stage6_residual_cleanup`, and `weekly_run_logs`. |
 | UI health smoke | pass | v454 launched Streamlit directly on `127.0.0.1:8501`; `/` returned HTTP `200`, and cleanup left no listener on `8501`. |
 | Browser read-only navigation | pass | v454 rendered through SSH tunnel `127.0.0.1:18501 -> 127.0.0.1:8501` with Playwright title `EIDP Operator Console`. Snapshots/screenshots under `output/playwright/v454-ui-smoke/` cover `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, and `⑤ 設定（年度・OCR・API）`. Only navigation buttons were clicked; no write action was invoked. Cleanup left no listener on Windows `8501` or local `18501`. |
+| Browser UI write/audit sandbox | pass | v454 ran against a disposable SQLite copy under `_temp\v454-ui-write-sandbox`. Playwright rejected one seeded `URL候補レビュー` item with reason `v454 UI reject smoke`, then opened `監査ログ` and flushed the JSONL outbox. The UI reported `exported=2 already_present=0 failed=0`; pulled verification `logs/win-v454-stage6/v454-ui-write-sandbox-result-final.json` returned `ok=true`, with one `url_candidate_rejected` row and one seeded `stage6_v454_ui_audit_flush_smoke` row exported, `pending_outbox=0`, no `SchoolSite` for the rejected URL, and real runtime DB marker counts all `0`. Screenshot/snapshot evidence is under `output/playwright/v454-ui-write-sandbox/`. Cleanup stopped Windows `8501`, closed local `18501`, and removed the remote sandbox. |
 | Process-scoped R7 Excel browser generation | pass / bounded DB | v454 rendered `④ Excel プレビュー` with `EIDP_TARGET_FISCAL_YEAR=2025`, `Excel出力可 2`, and `Excel対象行 7177`; it generated workbook rows `採録状況=2418`, `対象比率=10024`, `学科別=9746`, and `在籍のみ抜粋=9746`, then downloaded `output/playwright/v454-r7-excel-smoke/eidp-master.xlsx`. Local `openpyxl` opened the workbook with dimensions `2419x10`, `10025x22`, `9748x83`, and `9748x19`. The checked `.env` paths were absent after the run. |
 | Default launcher | pass / forced stop noted | Root-level `EIDP-start.bat` invoked `scripts\launch.bat`, started Streamlit on Windows `127.0.0.1:8501`, returned `_stcore/health=ok` and root HTTP `200` locally, and returned `_stcore/health=ok` plus root HTTP `200` through the default Mac tunnel `127.0.0.1:18501 -> 127.0.0.1:8501`. The test force-stopped Streamlit for cleanup, so the wrapper printed its non-zero stop message; no Windows `8501` or local `18501` listener remained afterward. |
 | Disk and artifact retention | pass | Mac cleanup left `_temp=0B`, `dist=754M`, `logs=4.5M`, and protected `data=20M`. Windows cleanup preserved v454 current plus v453 fallback in both staging and deploy directories. |
@@ -78,6 +79,6 @@ The accepted bounded FY2025 target PDFs remain:
 ## Boundary
 
 v454 is the current Codex-driven Windows setup/bootstrap/bounded-weekly/UI
-health/evidence lane. It is still not the owner/operator real-cycle sign-off,
-and the bounded `40.0%` strict auto-yield is not the final production 60-70%
-R8 gate.
+health/UI-write/evidence lane. It is still not the owner/operator real-cycle
+sign-off, and the bounded `40.0%` strict auto-yield is not the final production
+60-70% R8 gate.
