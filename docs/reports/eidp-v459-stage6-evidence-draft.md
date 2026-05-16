@@ -87,8 +87,8 @@ Stage 6 operator-PC real-cycle sign-off.
 
 | Environment | Result |
 | --- | --- |
-| Mac dev | `ok=true`, `warn_count=0`, `block_count=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, protected `data=20.0MiB` |
-| Win v459 root | `ok=true`, `warn_count=0`, `block_count=0`, app root `853.5MiB`, `data\pdfs=1.7MiB`, `data\output=40.0KiB`, `logs=117.6KiB` |
+| Mac dev | `ok=true`, `warn_count=0`, `block_count=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, `logs=4.3MiB`, protected `data=20.0MiB` |
+| Win v459 root | `ok=true`, `warn_count=0`, `block_count=0`, app root `853.7MiB`, `data\pdfs=1.7MiB`, `data\output=40.0KiB`, `logs=244.0KiB` |
 | Retention | Mac and Win staging retain v459 current plus v454 fallback; stale v458 package/deploy artifacts and v456 deploy dir were pruned |
 
 ## Open Gates

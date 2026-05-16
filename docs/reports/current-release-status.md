@@ -133,12 +133,13 @@ The bundle, verifier JSON, and latest diagnostics were copied back to Mac under
 `c4e68ee5b5f8c1cb8b74938fb369edf4c53c00efdd5624bac3c05e51ab7caf28`.
 Windows `Get-FileHash` returned the same SHA256 values for the remote ZIP,
 verifier JSON, and diagnostics file as the Mac copies.
-Mac cleanup retained v459 current plus v454 fallback and reported `warn=0
-block=0`, project `1.7GiB`, `dist=738.8MiB`, `_temp=0B`, protected
-`data=20.0MiB`, and `.claude/worktrees=0B`. Windows cleanup retained only
+Mac cleanup retained v459 current plus v454 fallback and, after pulling the
+latest evidence copy, reported `warn=0 block=0`, project `1.7GiB`,
+`dist=738.8MiB`, `_temp=0B`, `logs=4.3MiB`, protected `data=20.0MiB`, and
+`.claude/worktrees=0B`. Windows cleanup retained only
 `EIDP-v459-50152a5` current plus `EIDP-v454-48a346b` fallback; packaged disk
-health reported `warn_count=0`, `block_count=0`, `app_root_total=853.5MiB`,
-`data\pdfs=1.7MiB`, `data\output=40.0KiB`, and `logs=117.6KiB`.
+health reported `warn_count=0`, `block_count=0`, `app_root_total=853.7MiB`,
+`data\pdfs=1.7MiB`, `data\output=40.0KiB`, and `logs=244.0KiB`.
 
 v458 is retained only as an intermediate superseded proof. It passed setup,
 recovery, UI health, default launcher, and disk health, but its cleanup dry-run
