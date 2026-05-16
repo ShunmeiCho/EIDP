@@ -1449,7 +1449,10 @@ with `Get-FileHash` against its sidecar, and expanded to
 `C:\EIDP-staging\00-READ-ME-FIRST-v460.txt`. The tracked source for that
 top-level readme is `docs/runbooks/00-READ-ME-FIRST-v460.txt`, with SHA256
 `047ae62bce4c8b419630dff777973a0cd5c285ecd01d2d4b69601f0d6fa9e8b7`, matching
-the v460 handoff manifest.
+the v460 handoff manifest. The short owner/operator request is also mirrored as
+tracked source at `docs/runbooks/eidp-v460-owner-request-20260516.txt`, with
+SHA256 `66989897067ba2443804200c88c4484d571e67611caa1af2825714f2f1afe08e`,
+matching `dist/eidp-v460-owner-request-20260516.txt`.
 
 The post-package `.env.example` source commit `2768f02` is a future-package
 configuration-documentation improvement only. It must not be used as evidence
