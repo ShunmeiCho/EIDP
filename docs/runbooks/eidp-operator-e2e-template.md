@@ -43,20 +43,20 @@ Updated: 2026-05-16
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
-現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
+現行投入候補（v459: Mac / non-Windows gate 済み、Windows bounded smoke 済み）:
 
 | 項目 | 値 |
 | --- | --- |
-| EIDP package snapshot | `docs/reports/current-release-status.md` から転記 |
-| core ZIP | `dist/eidp-windows-vXXX.zip` |
-| core ZIP sha256 | `.sha256` sidecar または release-status から転記 |
+| EIDP package snapshot | `50152a5f2bfc0b8f0a360ef87af5e4979b284f4a` |
+| core ZIP | `dist/eidp-windows-v459.zip` |
+| core ZIP sha256 | `1f50e574987a636b064c2a45ec870d1c6c8050ec036fc12a767caaed50e244b2` |
 | core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。 |
-| non-Windows gate log | `logs/release-gate-vXXX-retroactive.json` |
-| retroactive matrix log | `logs/release-gate-vXXX-retroactive-matrix.json` if used |
-| Windows transfer checklist | current version-specific checklist |
-| Windows extract path | 実施時に転記 |
-| transferred ZIP | 実施時に転記 |
-| Stage 6 evidence draft | version-specific draft under `docs/reports/` |
+| non-Windows gate | `uv run python scripts/run_non_windows_release_gates.py dist/eidp-windows-v459.zip` -> pass |
+| docs-only stale gate | `--skip-full-unit --allow-docs-only-stale-package` -> pass after v459 docs |
+| Windows transfer checklist | `docs/runbooks/eidp-v459-real-cycle-card.md` |
+| Windows extract path | `C:\Users\cyo20\EIDP-v459-50152a5` |
+| transferred ZIP | `C:\EIDP-staging\eidp-windows-v459.zip` |
+| Stage 6 evidence draft | `docs/reports/eidp-v459-stage6-evidence-draft.md` |
 
 ## 2. PC / 環境
 
@@ -197,7 +197,24 @@ The process was force-stopped after the health proof; launcher exit -1 is a stop
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |
 | `詳細 operator` 折りたたみ | 詳細ページは通常折りたたみ表示 | pass / fail | |
 
-v456 既存証跡（転記候補。bounded diagnostic-only。UI write sandbox も v456 で実施済み）:
+v459 既存証跡（転記候補。bounded diagnostic-only。operator real-cycle の代替不可）:
+
+| 手順 | 結果 | 証跡 |
+| --- | --- | --- |
+| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v459-50152a5` |
+| `EIDP-setup.bat` | pass | setup completed; SQLite integrity ok |
+| `.venv` 作成 | pass | `validate_windows_install.py --after-setup --json` |
+| DB bootstrap / master import | pass | `school_count=2418`, `sqlite_integrity_check=ok` |
+| 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418` |
+| Task Scheduler recovery | pass | expected action `C:\Users\cyo20\EIDP-v459-50152a5\scripts\weekly_run.bat`, `action_matches_expected=true` |
+| cleanup tooling | pass | `rotate_audit_outbox.py --json` rotate false; `prune_pdf_storage.py --json` candidate count 0 |
+| URL-only bootstrap | pass | 47 prefectures; `school_domain_overrides.csv` loaded; `school_override_inferred=6`; `corporation_inferred=296` |
+| bounded `weekly_run.bat` canary | pass | `rc=0`, `run_id=20260516_060230`, `crawled=5`, `found=5`, `downloaded=2`, `operator_reviewable_count=5`, `ship_gate_status=pass` |
+| Evidence bundle verify | pass | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-060520.zip`, `ok=true`, no missing required labels |
+| Default launcher health | pass | root `EIDP-start.bat`, Windows `8501`, health/root HTTP 200, cleanup left no listener |
+| Disk health | pass | Mac and Win both `warn_count=0`, `block_count=0`; v459 current plus v454 fallback retained |
+
+v456 既存証跡（historical。bounded diagnostic-only。UI write sandbox も v456 で実施済み）:
 
 | 手順 | 結果 | 証跡 |
 | --- | --- | --- |
@@ -354,7 +371,7 @@ Version-specific diagnostic-only KPI snapshot（real-cycle ではない）:
 | `target_pdf_auto_yield_pct` | `40.0` | below final 60-70% gate |
 | `ship_gate_status` | `pass` | bounded operator-reviewable basis |
 | scheduled task recovery | `ok=true`, `action_matches_expected=true` | pass |
-| evidence bundle verify | `ok=true`, `entry_count=13` | pass |
+| evidence bundle verify | `ok=true`, `entry_count=10` | pass |
 
 KPI メモ:
 
