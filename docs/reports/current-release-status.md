@@ -2,78 +2,79 @@
 
 Updated: 2026-05-16
 Branch: `sprint8-handoff-finalize`
-Latest Mac/non-Windows package snapshot: `ad6d0179c50258f3abc4e06c58812aa6dcf5a21e`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v450.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v450.zip`
-Latest Mac-core package SHA256: `07b64972c26c5f3d6e5d2ab3e3ec70b46a95bad56449b5f89ad71cd994c90cfb`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v450.zip`
-Latest Windows-core-validated package: `dist/eidp-windows-v450.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v450.zip`
-Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v450.zip`
-Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v450.zip`
-Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v450.zip`
+Latest Mac/non-Windows package snapshot: `d13cf3a212b2eedfe89e92c999f408a17cb06b62`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v452.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v452.zip`
+Latest Mac-core package SHA256: `fea164e8dc7bb8807a241a17d33a7bdaa7acaf9dadb66e85a9540618ee82c107`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v452.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v452.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v452.zip`
+Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v452.zip`
+Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v452.zip`
+Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v452.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v450.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v450.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v452.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v452.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v446.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v442.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v408.zip`
-Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v450.zip`
-Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v450.zip`
+Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v452.zip`
+Latest Windows-bounded-bootstrap-proven package: `dist/eidp-windows-v452.zip`
 Latest historical Windows-validated package: `dist/eidp-windows-v376.zip`
-Current Stage 6 evidence bundle: `logs/win-v450-stage6/stage6-evidence-20260516-005706.zip` (latest v450 verified bundle with complete required labels)
-Current Stage 6 evidence draft: `docs/reports/eidp-v450-stage6-evidence-draft.md`
+Current Stage 6 evidence bundle: `logs/win-v452-stage6/stage6-evidence-20260516-012808.zip` (latest v452 verified bundle with complete required labels)
+Current Stage 6 evidence draft: `docs/reports/eidp-v452-stage6-evidence-draft.md`
 
 ## Verdict
 
 Status: **NOT COMPLETE**
 
-v450 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
+v452 is the latest Mac/non-Windows release-gate-clean, Windows transfer-proven,
 setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
 evidence-bundle-proven, UI-health-proven, disk-health-proven, and
 release-artifact-retention-proven package. It was built from package snapshot
-`ad6d0179c50258f3abc4e06c58812aa6dcf5a21e`, which keeps school-domain override
-URLs in the default weekly/bootstrap discovery method list after v449 proved
-the seed rows but the weekly runner still skipped that method. The v450 strict
-non-Windows gate `logs/release-gate-v450.json` returned `ok=true` with SHA256
-`07b64972c26c5f3d6e5d2ab3e3ec70b46a95bad56449b5f89ad71cd994c90cfb`,
-package/source commit match, `source_dirty=false`, `stale=false`,
-validator/distribution tests `164 passed`, validator mypy/Ruff pass,
-discovery-gold expected predictions `44/44`, and both package verifier modes
-pass. Windows transfer SHA matched, the package was expanded to
-`C:\Users\cyo20\EIDP-v450-ad6d017`, and `EIDP-setup.bat` completed with
+`d13cf3a212b2eedfe89e92c999f408a17cb06b62`, which adds exact NKZ disclosure
+overrides for the three Mode schools and aligns the weekly UI tests with the
+`school_domain_override` method contract. The v452 strict non-Windows gate
+`logs/release-gate-v452.json` returned `ok=true` with SHA256
+`fea164e8dc7bb8807a241a17d33a7bdaa7acaf9dadb66e85a9540618ee82c107`,
+package/source commit match, `source_dirty=false`, `stale=false`, full unit
+`1633 passed`, validator/distribution tests `164 passed`, validator mypy/Ruff
+pass, discovery-gold expected predictions `44/44`, and both package verifier
+modes pass. Windows transfer SHA matched, the package was expanded to
+`C:\Users\cyo20\EIDP-v452-d13cf3a`, and `EIDP-setup.bat` completed with
 `school_count=2418`, `school_fiscal_year_status_count=2418`, and
-`sqlite_integrity_check=ok`; the independent
-`scripts\validate_install.bat --after-setup --json` check also returned
-`ok=true`. URL-only bootstrap completed after downloading and aggregating all 47
-prefecture seed artifacts; Step 2b loaded `school_domain_overrides.csv` with
-`count=3` and reported `school_override_inferred=3`. The real
-`scripts\weekly_run.bat` launcher then ran with trusted bounded variables
-`EIDP_WEEKLY_LIMIT=5`, `EIDP_WEEKLY_BATCH_SIZE=5`,
-`EIDP_WEEKLY_RATE_LIMIT=0.5`, and `EIDP_WEEKLY_REQUEST_TIMEOUT=8`; it exited
-`0` with `run_id=20260516_005535`, methods including
-`school_domain_override`, `crawled=5`, `found=3`, `downloaded=0`,
-`operator_reviewable_count=1`, `target_pdf_auto_acquired_count=0`,
-`target_pdf_auto_yield_pct=0.0`, and `ship_gate_status=below_gate`.
-`scripts\validate_install.bat --after-setup --after-weekly --json` returned
-`ok=true`. Recovery check and residual cleanup dry-run both returned `ok=true`.
-The evidence bundle `logs\stage6-evidence-20260516-005706.zip` verified on
-both Windows and Mac as
-`logs/win-v450-stage6/stage6-evidence-20260516-005706.zip` with `ok=true`, no
+`sqlite_integrity_check=ok`. URL-only bootstrap completed after downloading and
+aggregating all 47 prefecture seed artifacts; Step 2b loaded
+`school_domain_overrides.csv` with `count=6` and reported
+`school_override_inferred=6`. The real `scripts\weekly_run.bat` launcher then
+ran with `EIDP_TARGET_FISCAL_YEAR=2025`, `EIDP_WEEKLY_LIMIT=5`,
+`EIDP_WEEKLY_BATCH_SIZE=5`, `EIDP_WEEKLY_RATE_LIMIT=0.5`, and
+`EIDP_WEEKLY_REQUEST_TIMEOUT=8`; it exited `0` with
+`run_id=20260516_012251`, methods including `school_domain_override`,
+`crawled=5`, `found=5`, `downloaded=1`, `new_document_ids=[1]`,
+`operator_reviewable_count=3`, `target_pdf_auto_yield_pct=20.0`,
+`operator_reviewable_yield_pct=60.0`, and `ship_gate_status=pass`. Recovery
+check and residual cleanup dry-run both returned `ok=true`. The evidence bundle
+`logs\stage6-evidence-20260516-012808.zip` verified on both Windows and Mac as
+`logs/win-v452-stage6/stage6-evidence-20260516-012808.zip` with `ok=true`, no
 forbidden or unsafe entries, `manifest_missing_patterns=[]`, and present labels
 `bootstrap_logs`, `bootstrap_progress`, `build_info`, `diagnostics`,
 `discovery_evidence`, `discovery_rca`, `last_run`, `stage6_recovery`,
-`stage6_residual_cleanup`, and `weekly_run_logs`. v450 direct Streamlit UI
+`stage6_residual_cleanup`, and `weekly_run_logs`. v452 direct Streamlit UI
 smoke served `http://127.0.0.1:8501/` with HTTP `200`, and cleanup left no
-listener on `8501`; the pulled evidence is
-`logs/win-v450-stage6/v450-ui-smoke-20260516-100014.json`. Mac pruning deleted
-the old v442 ZIP/sidecar and test caches; Windows pruning deleted v448/v442
-staging ZIPs and deploy dirs, preserving v450 current plus v449 fallback.
-Final disk-health checks returned `ok=true` on both Mac and Windows. v450 is
-still not a completed operator real-cycle Stage 6 sign-off and still fails the
-production yield gate.
+listener on `8501`. Mac cleanup left `dist=753M`, `_temp=28K`, `logs=4.3M`,
+and protected `data=20M`; Windows cleanup preserved v452 current plus v450
+fallback. v452 is still not a completed operator real-cycle Stage 6 sign-off,
+and its bounded `20.0%` strict auto-yield is not the final production 60-70%
+R8 gate.
+
+v450 is the previous Windows setup/bootstrap/bounded-weekly/UI-health evidence
+lane. It proved that `school_domain_override` entered the weekly runner but
+remained below gate with `downloaded=0`, `target_pdf_auto_yield_pct=0.0`, and
+`ship_gate_status=below_gate`. See
+`docs/reports/eidp-v450-stage6-evidence-draft.md`.
 
 v448 is the previous Mac/non-Windows release-gate-clean, Windows transfer-proven,
 setup-proven, bounded-bootstrap-proven, bounded-weekly-proven,
