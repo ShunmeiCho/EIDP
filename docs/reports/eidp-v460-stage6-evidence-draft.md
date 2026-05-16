@@ -101,7 +101,7 @@ per school instead of being cached or de-duplicated at run scope.
 | Environment | Result |
 | --- | --- |
 | Mac dev | `ok=true`, `warn_count=1`, `block_count=0`, project `2.4GiB`, `dist=1.3GiB` (`warn`), `_temp=80.9MiB`, `logs=14.3MiB`, protected `data=20.0MiB`, `.claude/worktrees=0B` |
-| Win v460 root | `ok=true`, `warn_count=0`, `block_count=0`, app root `843.0MiB`, `data\pdfs=0B`, `data\output=0B`, `logs=10.6KiB` |
+| Win v460 root | Fresh read-only check copied to `logs/win-v460-stage6/disk-health-20260517-operator-win.json`: `ok=true`, `warn_count=0`, `block_count=0`, app root `992.9MiB`, `data\pdfs=4.6MiB`, `data\output=97.3MiB`, `logs=10.6MiB`; SHA256 `4d5f4566db7cc5d3effcf8eeb63fb8ab566e64874b9e224564c05de113e700c9` |
 | Retention | Mac retains the v459-v463 package/evidence chain and v459-derived retroactive reference workbooks; Win staging retains v460 current plus v459 fallback, with v462/v463 side-by-side proof directories separate from the owner-cycle lane |
 
 ## Open Gates

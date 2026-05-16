@@ -170,8 +170,12 @@ but packaged verification correctly returned `ok=false` with
 `35b2042dbd50c1fd5156975876d5c35eca97c80ad1f42ab327852eef4c621f29` and
 `d774b02dd31e0b71d0531f0577b9f452a1f4ca9a85bff8cad8b3fd36230a19a9`. The
 post-v460 disk cleanup retained v460 current plus v459 fallback as the active
-operator/fallback lane, pruned stale v454 package/deploy artifacts, and disk
-health reported `ok=true`, `warn_count=0`, and `block_count=0` on both sides;
+operator/fallback lane and pruned stale v454 package/deploy artifacts. A fresh
+read-only v460 Windows disk-health check later reported `ok=true`,
+`warn_count=0`, and `block_count=0`; the Mac copy is
+`logs/win-v460-stage6/disk-health-20260517-operator-win.json` with SHA256
+`4d5f4566db7cc5d3effcf8eeb63fb8ab566e64874b9e224564c05de113e700c9`. Mac-side
+disk health also remained non-blocking;
 later v462/v463 side-by-side proof directories are not the owner-cycle lane.
 
 Plan A CLI weekly was then run from
@@ -1476,7 +1480,7 @@ that the current v460 Windows ZIP exposes the Step 2c school URL crawl defaults.
 | Template section | Can be filled from current evidence | Still required |
 | --- | --- | --- |
 | 1. 実施情報 | v460 package snapshot `01e44279238aaef9127ed9b578e29dc8e0070499`; `dist/eidp-windows-v460.zip`; SHA256 `ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c`; extract path `C:\Users\cyo20\EIDP-v460-01e4427` | Operator/owner sign-off fields; final verifier JSON path; add-on SHA fields if used |
-| 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; v460 disk health is `ok=true`, `warn_count=0`, `block_count=0`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Final v460/operator run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
+| 2. PC / 環境 | Current operator-PC host is `JUNMING`, user `junming`, home `C:\Users\cyo20`; fresh v460 disk health is `ok=true`, `warn_count=0`, `block_count=0` with copy `logs/win-v460-stage6/disk-health-20260517-operator-win.json`; historical environment details from v380/v384 include Windows 11 Pro build `26200`, i9-13900HK, about 32 GB RAM | Final v460/operator run should recapture locale, Defender/SmartScreen, network, free disk, and console encoding in the final diagnostics bundle |
 | 3. 証跡採取コマンド | v460 hash/setup/validate/recovery diagnostics, read-only browser navigation, and a correctly rejected diagnostic evidence bundle are available; v459 evidence-bundle/default-launcher/R7-browser-Excel/UI-write-sandbox proofs remain bounded support; v408/v384 historical seeded UI write proofs are retained as support for broader write paths | `EIDP-diagnose.bat` after the real click-through cycle; verifier-accepted v460 final evidence bundle from the real operator cycle |
 | 4. Setup 結果 | ZIP extraction, `EIDP-setup.bat`, `.venv`, DB bootstrap, master import, `2418` fiscal-year status rows, SQLite integrity, required tables, Streamlit health, read-only navigation, and scheduled task action pointing to `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat` | Final setup diagnostics after the real operator cycle; optional v460 default-launcher re-smoke if the owner requests it before the real run |
 | 5. 4 工程 E2E | v460 browser navigation rendered the core operator pages without invoking writes; v460 Plan A CLI weekly wrote `last_run.json` and a verifier-accepted evidence bundle; v459 bounded R7 weekly downloaded two target PDFs, v459 process-scoped R7 browser Excel preview/download produced the expected workbook, and a disposable v459 UI sandbox proved URL-candidate reject plus audit-outbox flush through the browser; v408/v384 remain historical support for manual-entry and fiscal-year-override UI writes | Complete v460 real operator-cycle click-through or approved full-cycle copy; final current-FY PDF collection metrics |
