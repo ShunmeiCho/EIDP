@@ -66,10 +66,12 @@ operator manual workload of 30% or lower. Full automation is not required.
   `dist/eidp-windows-v464.zip`, package commit
   `9a94226b243fba691936db46c1fc11ef7c9debbd`, SHA256
   `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`.
-- Latest operator companion docs ZIP is
-  `dist/eidp-v460-operator-docs-20260517.zip`; verify the generated artifact
-  with its sidecar. It is expanded on Windows under
-  `C:\EIDP-staging\v460-operator-docs-20260517`.
+- Latest v466 operator companion docs ZIP is
+  `dist/eidp-v466-operator-docs-20260517.zip`, SHA256
+  `71a9a8d7e6616c662b499a6bea59293aab8dd6f8eb573e94efa992c32ff6c1e8`.
+  Its handoff manifest is `dist/eidp-v466-handoff-manifest-20260517.txt`,
+  SHA256 `4501cf7bd1e43616c0305480e88fa4949e0cb2fcdcbff89d0776e11dbaa061ed`.
+  It has not been transferred or expanded on Windows.
 - No tag, no main merge, and no release approval has been made from these
   support proofs.
 - GitHub PR #2 is green for the v466 package source head

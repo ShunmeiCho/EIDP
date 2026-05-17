@@ -11,6 +11,10 @@ Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-
 Latest Mac-core-verifier-clean package: `dist/eidp-windows-v466.zip`
 Latest Mac-core package SHA256: `8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`
 Latest full non-Windows release-gate package: `dist/eidp-windows-v466.zip`
+Latest v466 operator companion docs: `dist/eidp-v466-operator-docs-20260517.zip`,
+SHA256 `71a9a8d7e6616c662b499a6bea59293aab8dd6f8eb573e94efa992c32ff6c1e8`
+Latest v466 handoff manifest: `dist/eidp-v466-handoff-manifest-20260517.txt`,
+SHA256 `4501cf7bd1e43616c0305480e88fa4949e0cb2fcdcbff89d0776e11dbaa061ed`
 Prior Mac retroactive-matrix package: `dist/eidp-windows-v463.zip`, commit
 `4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582`, SHA256
 `81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`
