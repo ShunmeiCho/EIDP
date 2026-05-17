@@ -14,6 +14,7 @@ import typer
 from eidp.cli_discovery import register_discovery_commands
 from eidp.cli_reports import report_app
 from eidp.cli_tools import register_tool_commands
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR
 from eidp.logging_config import configure_logging
 
 
@@ -370,6 +371,13 @@ def ingest_pdfs(
         "--document-id",
         help="Specific document id to ingest. Repeat to target known PDFs.",
     ),
+    target_fiscal_year: int | None = typer.Option(
+        None,
+        "--target-fiscal-year",
+        min=MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+        max=MAX_SUPPORTED_TARGET_FISCAL_YEAR,
+        help="Target fiscal year for parsing. Defaults to settings.target_fiscal_year.",
+    ),
     evidence_log: Path = typer.Option(
         Path("output/ingest_rejections.jsonl"),
         help="JSONL file capturing every rejected document (doc_id, reason, "
@@ -394,6 +402,7 @@ def ingest_pdfs(
                 session,
                 batch_size=batch_size,
                 document_ids=document_id,
+                target_fiscal_year=target_fiscal_year,
                 evidence_path=evidence_path,
             )
             session.commit()

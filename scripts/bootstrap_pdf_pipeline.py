@@ -160,6 +160,12 @@ def bootstrap_target_pdf_yield_metrics(
     }
 
 
+def _effective_target_fiscal_year(target_fiscal_year: int | None) -> int:
+    from eidp.config import settings
+
+    return int(settings.target_fiscal_year if target_fiscal_year is None else target_fiscal_year)
+
+
 def write_bootstrap_discovery_rca_batch_plan(
     session: Any,
     *,
@@ -755,13 +761,14 @@ def step_discover_pdfs(
     discovery_methods: list[str],
     progress: BootstrapProgressWriter | None = None,
     allow_stale_fallback: bool = False,
+    target_fiscal_year: int | None = None,
 ) -> dict[str, int]:
     """Step 3: crawl school sites and download disclosure PDFs."""
-    from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.scraper.pdf_discovery import run_pdf_discovery
 
     storage_dir.mkdir(parents=True, exist_ok=True)
+    effective_target_fiscal_year = _effective_target_fiscal_year(target_fiscal_year)
     session = SessionLocal()
     try:
         def update_progress(stats: dict[str, int], total_sites: int) -> None:
@@ -797,7 +804,7 @@ def step_discover_pdfs(
             request_timeout=request_timeout,
             discovery_methods=discovery_methods,
             evidence_path=evidence_log,
-            target_fiscal_year=settings.target_fiscal_year,
+            target_fiscal_year=effective_target_fiscal_year,
             strict_target_fiscal_year=not allow_stale_fallback,
             progress_callback=update_progress,
         )
@@ -817,17 +824,20 @@ def step_ingest(
     *,
     batch_size: int,
     evidence_log: Path | None,
+    target_fiscal_year: int | None = None,
 ) -> dict[str, int]:
     """Step 4: parse downloaded PDFs into DB rows."""
     from eidp.db.session import SessionLocal
     from eidp.pipeline.ingest import run_ingestion
 
+    effective_target_fiscal_year = _effective_target_fiscal_year(target_fiscal_year)
     session = SessionLocal()
     try:
         stats = run_ingestion(
             session,
             batch_size=batch_size,
             evidence_path=evidence_log,
+            target_fiscal_year=effective_target_fiscal_year,
         )
         session.commit()
     except Exception:
@@ -839,9 +849,12 @@ def step_ingest(
     return stats
 
 
-def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
+def step_rebuild_status(
+    *,
+    evidence_log: Path | None = None,
+    target_fiscal_year: int | None = None,
+) -> dict[str, Any]:
     """Step 5: rebuild School x target fiscal-year status rows for the UI."""
-    from eidp.config import settings
     from eidp.db.session import SessionLocal
     from eidp.pipeline.school_fiscal_year_status import (
         operator_reviewable_status_count,
@@ -850,18 +863,19 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
     )
     from eidp.reports.coverage import compute_coverage
 
+    effective_target_fiscal_year = _effective_target_fiscal_year(target_fiscal_year)
     session = SessionLocal()
     try:
         stats = rebuild_school_fiscal_year_status(
             session,
-            fiscal_year=settings.target_fiscal_year,
+            fiscal_year=effective_target_fiscal_year,
             school_type=None,
             discovery_evidence_path=evidence_log,
         )
-        coverage = compute_coverage(session, school_type="専門学校", fiscal_year=settings.target_fiscal_year).totals
+        coverage = compute_coverage(session, school_type="専門学校", fiscal_year=effective_target_fiscal_year).totals
         status_counts = school_fiscal_year_status_counts(
             session,
-            fiscal_year=settings.target_fiscal_year,
+            fiscal_year=effective_target_fiscal_year,
             school_type="専門学校",
         )
         session.commit()
@@ -873,7 +887,7 @@ def step_rebuild_status(*, evidence_log: Path | None = None) -> dict[str, Any]:
     out = {
         "rebuilt": stats.rebuilt,
         "excel_ready": stats.excel_ready,
-        "current_fy": int(settings.target_fiscal_year),
+        "current_fy": effective_target_fiscal_year,
         **bootstrap_target_pdf_yield_metrics(
             schools_total=coverage.schools_total,
             schools_with_target_pdf_current_fy=coverage.schools_with_target_pdf_current_fy,
@@ -888,18 +902,19 @@ def step_write_discovery_rca_batch_plan(
     *,
     evidence_log: Path | None,
     output_dir: Path,
+    target_fiscal_year: int | None = None,
 ) -> dict[str, Any]:
     """Write the first-bootstrap Codex RCA queue for failed PDF discovery."""
-    from eidp.config import settings
     from eidp.db.session import SessionLocal
 
+    effective_target_fiscal_year = _effective_target_fiscal_year(target_fiscal_year)
     session = SessionLocal()
     try:
         stats = write_bootstrap_discovery_rca_batch_plan(
             session,
             evidence_log=evidence_log,
             output_dir=output_dir,
-            target_fiscal_year=int(settings.target_fiscal_year),
+            target_fiscal_year=effective_target_fiscal_year,
         )
     finally:
         session.close()
@@ -976,6 +991,15 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Allow older-year PDFs to be downloaded when the target fiscal year "
             "is not confirmed. Default rejects stale fallback candidates."
+        ),
+    )
+    parser.add_argument(
+        "--target-fiscal-year",
+        type=int,
+        default=None,
+        help=(
+            "Override the fiscal year used by bootstrap discovery, ingest, "
+            "status rebuild, and RCA artifacts. Default reads EIDP_TARGET_FISCAL_YEAR."
         ),
     )
     parser.add_argument(
@@ -1110,6 +1134,7 @@ def run_bootstrap_with_progress(args: argparse.Namespace, progress: BootstrapPro
 
 def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter | None = None) -> int:
     only = [p.strip() for p in args.pref.split(",") if p.strip()] or None
+    target_fiscal_year = getattr(args, "target_fiscal_year", None)
 
     if progress is not None:
         progress.write(
@@ -1295,6 +1320,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         discovery_methods=discovery_methods,
         progress=progress,
         allow_stale_fallback=args.allow_stale_fallback,
+        target_fiscal_year=target_fiscal_year,
     )
 
     if args.skip_ingest:
@@ -1313,6 +1339,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
     ingest_stats = step_ingest(
         batch_size=args.batch_size,
         evidence_log=None,
+        target_fiscal_year=target_fiscal_year,
     )
     if progress is not None:
         progress.write(
@@ -1323,10 +1350,14 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             details=ingest_progress_details(ingest_stats),
         )
     print("\n=== Step 5: rebuild school fiscal-year status ===")
-    status_stats = step_rebuild_status(evidence_log=args.evidence_log if str(args.evidence_log) else None)
+    status_stats = step_rebuild_status(
+        evidence_log=args.evidence_log if str(args.evidence_log) else None,
+        target_fiscal_year=target_fiscal_year,
+    )
     rca_stats = step_write_discovery_rca_batch_plan(
         evidence_log=args.evidence_log if str(args.evidence_log) else None,
         output_dir=args.discovery_rca_output_dir,
+        target_fiscal_year=target_fiscal_year,
     )
     final_status_details = {**status_stats, **rca_stats}
     if progress is not None:

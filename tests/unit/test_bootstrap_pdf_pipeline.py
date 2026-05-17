@@ -800,6 +800,7 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
             school_url_crawl_fetch_mode="settings",
             school_url_crawl_evidence_log=tmp_path / "school_url_crawl_evidence.jsonl",
             allow_stale_fallback=False,
+            target_fiscal_year=2025,
             skip_ingest=True,
         )
     )
@@ -818,6 +819,7 @@ def test_run_bootstrap_adds_web_search_sites_to_pdf_discovery(monkeypatch, tmp_p
     assert calls["school_url_crawl"]["enabled"] is True
     assert calls["school_url_crawl"]["batch_size"] == 25
     assert calls["discover"]["request_timeout"] == 12.0
+    assert calls["discover"]["target_fiscal_year"] == 2025
 
 
 def test_skip_discover_progress_preserves_known_url_yield(monkeypatch, tmp_path: Path) -> None:
@@ -918,7 +920,10 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
     def fake_run_pdf_discovery(session, storage_dir, **kwargs):  # noqa: ANN001
         calls.append(session)
         callback = kwargs["progress_callback"]
-        calls.append({"request_timeout": kwargs["request_timeout"]})
+        calls.append({
+            "request_timeout": kwargs["request_timeout"],
+            "target_fiscal_year": kwargs["target_fiscal_year"],
+        })
         callback({"crawled": 5, "found": 3, "downloaded": 1, "failed": 0, "skipped": 4}, 10)
         callback(
             {
@@ -962,7 +967,78 @@ def test_step_discover_pdfs_updates_progress_inside_long_step(tmp_path: Path, mo
     assert payload["details"]["downloaded"] == 1
     assert payload["details"]["active_school_id"] == 123
     assert "commit" in calls
-    assert {"request_timeout": 12} in calls
+    assert {"request_timeout": 12, "target_fiscal_year": 2026} in calls
+
+
+def test_step_discover_pdfs_explicit_target_year_overrides_settings(tmp_path: Path, monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append({"commit": True})
+
+        def rollback(self) -> None:
+            calls.append({"rollback": True})
+
+        def close(self) -> None:
+            calls.append({"close": True})
+
+    def fake_run_pdf_discovery(session, storage_dir, **kwargs):  # noqa: ANN001, ARG001, ANN003
+        calls.append({"target_fiscal_year": kwargs["target_fiscal_year"]})
+        return {"crawled": 1, "found": 0, "downloaded": 0, "failed": 0, "skipped": 1}
+
+    import eidp.config as config_mod
+    import eidp.db.session as db_session
+    import eidp.scraper.pdf_discovery as pdf_discovery
+
+    monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: FakeSession())
+    monkeypatch.setattr(pdf_discovery, "run_pdf_discovery", fake_run_pdf_discovery)
+
+    module.step_discover_pdfs(
+        storage_dir=tmp_path / "pdfs",
+        batch_size=10,
+        rate_limit=0.0,
+        request_timeout=12.0,
+        evidence_log=None,
+        discovery_methods=["prefecture_aggregator"],
+        target_fiscal_year=2025,
+    )
+
+    assert {"target_fiscal_year": 2025} in calls
+
+
+def test_step_ingest_explicit_target_year_overrides_settings(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeSession:
+        def commit(self) -> None:
+            calls.append({"commit": True})
+
+        def rollback(self) -> None:
+            calls.append({"rollback": True})
+
+        def close(self) -> None:
+            calls.append({"close": True})
+
+    def fake_run_ingestion(session, **kwargs):  # noqa: ANN001, ANN003
+        calls.append({"session": session, **kwargs})
+        return {"processed": 1, "departments_created": 0, "yearly_upserted": 0, "skipped": 0}
+
+    import eidp.config as config_mod
+    import eidp.db.session as db_session
+    import eidp.pipeline.ingest as ingest_mod
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(ingest_mod, "run_ingestion", fake_run_ingestion)
+
+    module.step_ingest(batch_size=10, evidence_log=None, target_fiscal_year=2025)
+
+    assert calls[0]["session"] is fake_session
+    assert calls[0]["target_fiscal_year"] == 2025
+    assert {"commit": True} in calls
 
 
 def test_bootstrap_target_pdf_yield_metrics_marks_gate_status() -> None:
@@ -1125,12 +1201,12 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
     monkeypatch.setattr(coverage_mod, "compute_coverage", fake_compute_coverage)
     monkeypatch.setattr(config_mod.settings, "target_fiscal_year", 2026)
 
-    result = module.step_rebuild_status(evidence_log=evidence_log)
+    result = module.step_rebuild_status(evidence_log=evidence_log, target_fiscal_year=2025)
 
     assert result == {
         "rebuilt": 3,
         "excel_ready": 1,
-        "current_fy": 2026,
+        "current_fy": 2025,
         "target_pdf_auto_acquired_count": 6,
         "target_pdf_auto_denominator_count": 10,
         "target_pdf_auto_denominator_scope": "active_specialty_schools",
@@ -1144,9 +1220,9 @@ def test_step_rebuild_status_uses_specialty_school_denominator_for_ship_gate(mon
     }
     assert calls[0] == {
         "session": fake_session,
-        "fiscal_year": 2026,
+        "fiscal_year": 2025,
         "school_type": None,
         "discovery_evidence_path": evidence_log,
     }
-    assert calls[1] == {"coverage_session": fake_session, "school_type": "専門学校", "fiscal_year": 2026}
-    assert calls[2] == {"status_session": fake_session, "school_type": "専門学校", "fiscal_year": 2026}
+    assert calls[1] == {"coverage_session": fake_session, "school_type": "専門学校", "fiscal_year": 2025}
+    assert calls[2] == {"status_session": fake_session, "school_type": "専門学校", "fiscal_year": 2025}
