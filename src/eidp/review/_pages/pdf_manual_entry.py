@@ -54,6 +54,7 @@ from eidp.review.confidence_panels import (
     build_panel,
     panel_summary_line,
 )
+from eidp.review.operator_actor import operator_actor_from_state
 from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
 
 # Statuses we surface in the manual-entry queue. Mirrors
@@ -1249,6 +1250,7 @@ def submit_form(
     rows: list[dict[str, Any]],
     support_row: dict[str, Any] | None = None,
     reason: str | None,
+    actor: str = "operator",
     lock_path: Path,
 ) -> tuple[FormValidation, SaveOutcome | None]:
     """Validate UI form rows then save through the locked pipeline.
@@ -1282,6 +1284,7 @@ def submit_form(
         entries=fv.entries,
         support_recipient=support_recipient,
         reason=reason,
+        actor=actor,
         lock_path=lock_path,
     )
     return fv, outcome
@@ -1413,6 +1416,7 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
             rows=form_rows,
             support_row=support_row,
             reason=reason or None,
+            actor=operator_actor_from_state(st.session_state),
             lock_path=lock_path,
         )
         if not validation.ok:

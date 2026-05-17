@@ -36,6 +36,7 @@ from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Document, School
 from eidp.fiscal_year import format_fiscal_year_label
 from eidp.pipeline.fiscal_year_override import override_fiscal_year
+from eidp.review.operator_actor import operator_actor_from_state
 
 # Documents in any of these statuses are eligible for fiscal-year correction:
 # they have data the operator can re-classify. Documents not yet
@@ -171,6 +172,7 @@ def submit_override_form(
     document_id: int,
     target_fy: int,
     reason: str | None,
+    actor: str = "operator",
     lock_path: Path,
 ) -> OverrideOutcome:
     """Single function the Streamlit form posts to. Tests monkeypatch
@@ -185,6 +187,7 @@ def submit_override_form(
         session,
         document_id=document_id,
         target_fy=target_fy,
+        actor=actor,
         reason=reason,
         lock_path=lock_path,
     )
@@ -252,6 +255,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             document_id=candidate.document_id,
             target_fy=int(target_fy),
             reason=reason or None,
+            actor=operator_actor_from_state(st.session_state),
             lock_path=lock_path,
         )
         if outcome.lock_busy:

@@ -1082,6 +1082,7 @@ def test_submit_form_routes_through_save_with_lock(engine, tmp_path, monkeypatch
             fiscal_year=2026,
             rows=[{"canonical_name": "A学科", "enrollment": 10}],
             reason="image PDF",
+            actor="山田",
             lock_path=lock,
         )
 
@@ -1092,6 +1093,7 @@ def test_submit_form_routes_through_save_with_lock(engine, tmp_path, monkeypatch
     assert captured["fiscal_year"] == 2026
     assert captured["lock_path"] == lock
     assert captured["reason"] == "image PDF"
+    assert captured["actor"] == "山田"
     assert len(captured["entries"]) == 1
     assert captured["entries"][0].canonical_name == "A学科"
 

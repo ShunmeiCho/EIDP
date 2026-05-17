@@ -149,12 +149,13 @@ def test_school_code_approve_writes_manual_action_log() -> None:
     try:
         school, item = _seed_school_code_review(session)
 
-        _approve_item(session, item, school)
+        _approve_item(session, item, school, actor="山田")
 
         audit = _one_audit(session)
         assert audit.action_type == "school_code_approved"
         assert audit.target_table == "school"
         assert audit.target_id == school.id
+        assert audit.actor == "山田"
         assert json.loads(audit.new_value or "{}")["school_code"] == "H123456789012"
     finally:
         session.close()

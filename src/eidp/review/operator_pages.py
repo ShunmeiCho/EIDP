@@ -43,6 +43,7 @@ from eidp.db.models import (
     SchoolYearStatus,
 )
 from eidp.fiscal_year import format_fiscal_year_label
+from eidp.review.operator_actor import operator_actor_from_state
 from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
 from eidp.review.target_year_status import target_year_overview
 from eidp.scraper.pdf_discovery import HttpGetClient, _classify_pdf_content, _safe_get
@@ -2839,7 +2840,7 @@ def _render_dept_proposals_tab(session: Session, *, lock_path: Path) -> None:
             )
             key = f"approve_dept_{p['db_dept_ids'][0]}_{p['template_dept']}"
             if cols[1].button("承認", key=key, type="primary"):
-                operator_name = st.session_state.get("operator_name", "") or "operator"
+                operator_name = operator_actor_from_state(st.session_state)
                 created, reason = apply_dept_alias_proposal(
                     session,
                     department_id=p["db_dept_ids"][0],
@@ -2904,7 +2905,7 @@ def _render_dept_proposals_tab(session: Session, *, lock_path: Path) -> None:
                 changed, reason = void_department_change(
                     session,
                     change_id=alias["change_id"],
-                    actor=st.session_state.get("operator_name", "operator") or "operator",
+                    actor=operator_actor_from_state(st.session_state),
                     reason="operator voided dept alias from proposal review page",
                     lock_path=lock_path,
                 )
@@ -2943,12 +2944,11 @@ def page_proposals_review(session: Session, *, lock_path: Path) -> None:
 - `DBに該当校なし` の行は法人情報が必要なため、現時点では対応外です（上長に報告）。
             """
         )
-    st.text_input(
-        "担当者名（監査ログに記録）",
-        key="operator_name",
-        value=st.session_state.get("operator_name", ""),
-        placeholder="例: 山田",
-    )
+    actor = operator_actor_from_state(st.session_state)
+    if actor == "operator":
+        st.caption("担当者名は左サイドバーの「担当者名（監査用）」に入力してください。")
+    else:
+        st.caption(f"監査ログ担当者: {actor}")
     st.checkbox(
         "処理済み（承認/保留）の行を隠す",
         key="hide_processed",

@@ -252,6 +252,7 @@ def test_submit_form_routes_through_override_with_lock(engine, tmp_path, monkeyp
             document_id=doc.id,
             target_fy=2026,
             reason="cover page says target fiscal year",
+            actor="山田",
             lock_path=lock,
         )
 
@@ -259,6 +260,7 @@ def test_submit_form_routes_through_override_with_lock(engine, tmp_path, monkeyp
     assert captured["document_id"] == doc.id
     assert captured["target_fy"] == 2026
     assert captured["reason"] == "cover page says target fiscal year"
+    assert captured["actor"] == "山田"
     assert captured["lock_path"] == lock
 
 

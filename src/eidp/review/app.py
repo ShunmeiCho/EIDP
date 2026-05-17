@@ -21,6 +21,7 @@ from eidp.db.session import SessionLocal
 from eidp.fiscal_year import format_fiscal_year_label
 from eidp.logging_config import configure_logging
 from eidp.review import operator_pages
+from eidp.review.operator_actor import operator_actor_from_state
 
 # ---------------------------------------------------------------------------
 # Session helpers
@@ -225,12 +226,19 @@ def _show_lock_busy(lock_path: Path) -> None:
     st.warning(f"週次処理中です。編集は一時停止されています。({owner})")
 
 
-def _approve_item(session: Session, item: ReviewItem, school: School, *, lock_path: Path | None = None) -> bool:
+def _approve_item(
+    session: Session,
+    item: ReviewItem,
+    school: School,
+    *,
+    actor: str = "operator",
+    lock_path: Path | None = None,
+) -> bool:
     """Approve: apply the proposed MEXT code to the school."""
     if lock_path is not None:
         try:
             with acquire_lock(lock_path, owner="ui_school_code_review"):
-                return _approve_item(session, item, school, lock_path=None)
+                return _approve_item(session, item, school, actor=actor, lock_path=None)
         except LockBusyError:
             _show_lock_busy(lock_path)
             return False
@@ -292,6 +300,7 @@ def _approve_item(session: Session, item: ReviewItem, school: School, *, lock_pa
             "resolution": "approved",
         },
         reason=item.proposal_reason or "Operator approved MEXT school code",
+        actor=actor,
     )
     _commit(session)
     return True
@@ -303,13 +312,21 @@ def _approve_with_correction(
     school: School,
     corrected_code: str,
     *,
+    actor: str = "operator",
     lock_path: Path | None = None,
 ) -> bool:
     """Approve with a manually corrected MEXT code."""
     if lock_path is not None:
         try:
             with acquire_lock(lock_path, owner="ui_school_code_review"):
-                return _approve_with_correction(session, item, school, corrected_code, lock_path=None)
+                return _approve_with_correction(
+                    session,
+                    item,
+                    school,
+                    corrected_code,
+                    actor=actor,
+                    lock_path=None,
+                )
         except LockBusyError:
             _show_lock_busy(lock_path)
             return False
@@ -352,17 +369,25 @@ def _approve_with_correction(
             "resolution": "corrected",
         },
         reason="Operator corrected MEXT school code",
+        actor=actor,
     )
     _commit(session)
     return True
 
 
-def _reject_item(session: Session, item: ReviewItem, notes: str = "", *, lock_path: Path | None = None) -> bool:
+def _reject_item(
+    session: Session,
+    item: ReviewItem,
+    notes: str = "",
+    *,
+    actor: str = "operator",
+    lock_path: Path | None = None,
+) -> bool:
     """Reject: mark the proposal as wrong, leave school_code NULL."""
     if lock_path is not None:
         try:
             with acquire_lock(lock_path, owner="ui_school_code_review"):
-                return _reject_item(session, item, notes, lock_path=None)
+                return _reject_item(session, item, notes, actor=actor, lock_path=None)
         except LockBusyError:
             _show_lock_busy(lock_path)
             return False
@@ -384,17 +409,24 @@ def _reject_item(session: Session, item: ReviewItem, notes: str = "", *, lock_pa
             "school_id": item.reference_id,
         },
         reason=notes or "Operator rejected MEXT school code proposal",
+        actor=actor,
     )
     _commit(session)
     return True
 
 
-def _skip_item(session: Session, item: ReviewItem, *, lock_path: Path | None = None) -> bool:
+def _skip_item(
+    session: Session,
+    item: ReviewItem,
+    *,
+    actor: str = "operator",
+    lock_path: Path | None = None,
+) -> bool:
     """Skip: lower priority so it appears later."""
     if lock_path is not None:
         try:
             with acquire_lock(lock_path, owner="ui_school_code_review"):
-                return _skip_item(session, item, lock_path=None)
+                return _skip_item(session, item, actor=actor, lock_path=None)
         except LockBusyError:
             _show_lock_busy(lock_path)
             return False
@@ -409,6 +441,7 @@ def _skip_item(session: Session, item: ReviewItem, *, lock_path: Path | None = N
         old_value={"priority": old_priority, "status": item.status},
         new_value={"priority": item.priority, "status": item.status},
         reason="Operator skipped MEXT school code proposal",
+        actor=actor,
     )
     _commit(session)
     return True
@@ -498,6 +531,7 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int, *, lock_pa
         # Action buttons
         st.divider()
         action_cols = st.columns([1, 1, 1, 1, 2])
+        actor = operator_actor_from_state(st.session_state)
 
         # Approve (only if there's a candidate)
         if candidate_code:
@@ -506,7 +540,7 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int, *, lock_pa
                 key=f"approve_{item.id}_{idx}",
                 type="primary",
             ):
-                if _approve_item(session, item, school, lock_path=lock_path):
+                if _approve_item(session, item, school, actor=actor, lock_path=lock_path):
                     st.success(f"Approved: {school.school_name} -> {candidate_code}")
                     return True
                 return False
@@ -516,7 +550,7 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int, *, lock_pa
             "Reject",
             key=f"reject_{item.id}_{idx}",
         ):
-            if _reject_item(session, item, lock_path=lock_path):
+            if _reject_item(session, item, actor=actor, lock_path=lock_path):
                 st.warning(f"Rejected proposal for {school.school_name}")
                 return True
             return False
@@ -526,7 +560,7 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int, *, lock_pa
             "Skip",
             key=f"skip_{item.id}_{idx}",
         ):
-            if _skip_item(session, item, lock_path=lock_path):
+            if _skip_item(session, item, actor=actor, lock_path=lock_path):
                 st.info(f"Skipped {school.school_name} (lowered priority)")
                 return True
             return False
@@ -543,7 +577,7 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int, *, lock_pa
             key=f"apply_manual_{item.id}_{idx}",
         ):
             if corrected:
-                if _approve_with_correction(session, item, school, corrected, lock_path=lock_path):
+                if _approve_with_correction(session, item, school, corrected, actor=actor, lock_path=lock_path):
                     st.success(f"Applied manual code: {school.school_name} -> {corrected}")
                     return True
                 return False
@@ -697,6 +731,12 @@ def main() -> None:
     with _get_session() as session:
         # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
         operator_pages.render_sidebar_todo(session)
+        st.sidebar.text_input(
+            "担当者名（監査用）",
+            key="operator_name",
+            value=st.session_state.get("operator_name", ""),
+            placeholder="例: 山田",
+        )
 
         page = _render_sidebar_navigation()
 

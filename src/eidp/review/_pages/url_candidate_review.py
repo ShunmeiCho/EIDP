@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from eidp.db.audit import log_manual_action
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import ReviewItem, School, SchoolSite
+from eidp.review.operator_actor import operator_actor_from_state
 from eidp.scraper.school_url_persistence import REVIEW_ITEM_TYPE, REVIEW_PROPOSAL_SOURCE
 from eidp.scraper.url_normalization import normalize_candidate_url
 
@@ -344,12 +345,14 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
                 key=f"url_candidate_type_{row.item_id}",
             )
             action_cols = st.columns(2)
+            actor = operator_actor_from_state(st.session_state)
             if action_cols[0].button("承認", key=f"url_candidate_approve_{row.item_id}"):
                 outcome = approve_url_candidate(
                     session,
                     item_id=row.item_id,
                     url_override=edited_url,
                     url_type=selected_url_type,
+                    actor=actor,
                     lock_path=lock_path,
                 )
                 warning = action_warning_message(outcome)
@@ -366,7 +369,13 @@ def render(session: Session, *, lock_path: Path | None = None) -> None:
                 placeholder="却下理由",
             )
             if action_cols[1].button("却下", key=f"url_candidate_reject_{row.item_id}"):
-                outcome = reject_url_candidate(session, item_id=row.item_id, notes=reject_notes, lock_path=lock_path)
+                outcome = reject_url_candidate(
+                    session,
+                    item_id=row.item_id,
+                    notes=reject_notes,
+                    actor=actor,
+                    lock_path=lock_path,
+                )
                 warning = action_warning_message(outcome)
                 if warning is not None:
                     st.warning(warning)
