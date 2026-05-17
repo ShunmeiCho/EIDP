@@ -110,6 +110,87 @@ def test_build_report_skips_expected_weekly_action_when_not_provided(tmp_path: P
     assert "Scheduled task action check skipped" in " ".join(report["recommendations"])
 
 
+def test_build_report_runs_weekly_dry_run_probe_when_requested(tmp_path: Path) -> None:
+    module = _load_module()
+    expected = str(tmp_path / "weekly_run.bat")
+    Path(expected).write_text("@echo off\n", encoding="utf-8")
+    seen: list[tuple[str, float]] = []
+    task = module.ScheduledTaskSnapshot(exists=True, execute=expected)
+
+    def fake_weekly_probe(path: str, *, timeout_seconds: float) -> dict[str, object]:
+        seen.append((path, timeout_seconds))
+        return {
+            "enabled": True,
+            "ok": True,
+            "path": path,
+            "returncode": 0,
+            "timeout_seconds": timeout_seconds,
+        }
+
+    report = module.build_report(
+        expected_weekly_action=expected,
+        check_paths=[str(tmp_path / "missing-sandbox")],
+        task=task,
+        probe_weekly_dry_run=True,
+        weekly_probe_timeout_seconds=12.5,
+        weekly_probe_runner=fake_weekly_probe,
+    )
+
+    assert report["ok"] is True
+    assert seen == [(expected, 12.5)]
+    assert report["weekly_dry_run_probe"]["ok"] is True
+
+
+def test_build_report_fails_when_weekly_dry_run_probe_fails(tmp_path: Path) -> None:
+    module = _load_module()
+    expected = str(tmp_path / "weekly_run.bat")
+    Path(expected).write_text("@echo off\n", encoding="utf-8")
+    task = module.ScheduledTaskSnapshot(exists=True, execute=expected)
+
+    report = module.build_report(
+        expected_weekly_action=expected,
+        check_paths=[str(tmp_path / "missing-sandbox")],
+        task=task,
+        probe_weekly_dry_run=True,
+        weekly_probe_runner=lambda _path, *, timeout_seconds: {
+            "enabled": True,
+            "ok": False,
+            "path": _path,
+            "returncode": 2,
+            "timeout_seconds": timeout_seconds,
+            "stderr_tail": "venv not found",
+        },
+    )
+
+    assert report["ok"] is False
+    assert report["weekly_dry_run_probe"]["returncode"] == 2
+    assert "weekly_run.bat dry-run probe failed" in " ".join(report["recommendations"])
+
+
+def test_build_report_fails_when_lock_probe_reports_held(tmp_path: Path) -> None:
+    module = _load_module()
+    expected = r"C:\Users\eidp_operator\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
+    task = module.ScheduledTaskSnapshot(exists=True, execute=expected)
+
+    report = module.build_report(
+        expected_weekly_action=expected,
+        check_paths=[str(tmp_path / "missing-sandbox")],
+        task=task,
+        probe_lock=True,
+        lock_probe_runner=lambda _path: {
+            "enabled": True,
+            "ok": False,
+            "path": _path,
+            "held": True,
+            "owner": "weekly_runner",
+        },
+    )
+
+    assert report["ok"] is False
+    assert report["lock_probe"]["held"] is True
+    assert "Wait for the current EIDP operation" in " ".join(report["recommendations"])
+
+
 def test_direct_script_disables_wmi_platform_queries(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(platform, "_wmi_query", lambda *_args, **_kwargs: [], raising=False)
 

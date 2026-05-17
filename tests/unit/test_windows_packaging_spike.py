@@ -845,7 +845,13 @@ def test_stage6_recovery_check_bat_runs_packaged_helper(bat_files: dict[str, str
     body = bat_files["stage6_recovery_check.bat"]
     assert "stage6_recovery_check.py" in body
     assert "--expected-weekly-action" in body
+    assert "--probe-weekly-dry-run" in body
+    assert "--probe-lock" in body
     assert "EIDP_EXPECTED_WEEKLY_ACTION" in body
+    assert "EIDP_RECOVERY_PROBE_WEEKLY_DRY_RUN" in body
+    assert "EIDP_RECOVERY_PROBE_LOCK" in body
+    assert "CLI_RECOVERY_ARGS" in body
+    assert "%*" not in body
     assert "expected weekly action: skipped" in body
     assert "%EIDP_APP_ROOT%\\scripts\\weekly_run.bat" not in body
     assert "expected weekly action" in body

@@ -17,6 +17,7 @@ import platform
 import socket
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
@@ -135,11 +136,128 @@ def _path_status(raw_path: str) -> dict[str, object]:
     }
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _default_lock_path() -> str:
+    app_root = Path(os.environ.get("EIDP_APP_ROOT") or _repo_root())
+    return str(app_root / "data" / ".lock")
+
+
+def _tail_text(value: str | bytes | None, *, max_chars: int = 2000) -> str:
+    if value is None:
+        return ""
+    text = value.decode(errors="replace") if isinstance(value, bytes) else value
+    return text[-max_chars:]
+
+
+def _weekly_probe_command(weekly_action: str) -> list[str]:
+    if os.name == "nt":  # pragma: no cover - exercised on the operator PC.
+        return ["cmd.exe", "/C", weekly_action]
+    return [weekly_action]
+
+
+def probe_weekly_dry_run(weekly_action: str, *, timeout_seconds: float = 60.0) -> dict[str, object]:
+    expanded = os.path.expandvars(weekly_action)
+    if not Path(expanded).exists():
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": expanded,
+            "error": "weekly_run.bat path does not exist",
+            "timeout_seconds": timeout_seconds,
+        }
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "EIDP_WEEKLY_DRY_RUN": "1",
+            "EIDP_WEEKLY_LIMIT": "0",
+            "EIDP_WEEKLY_BATCH_SIZE": "1",
+            "EIDP_WEEKLY_RATE_LIMIT": "0",
+            "EIDP_WEEKLY_REQUEST_TIMEOUT": "1",
+        }
+    )
+    try:
+        proc = subprocess.run(
+            _weekly_probe_command(expanded),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": expanded,
+            "error": "weekly_run.bat dry-run probe timed out",
+            "timeout_seconds": timeout_seconds,
+            "stdout_tail": _tail_text(exc.stdout),
+            "stderr_tail": _tail_text(exc.stderr),
+        }
+    except OSError as exc:
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": expanded,
+            "error": str(exc),
+            "timeout_seconds": timeout_seconds,
+        }
+
+    return {
+        "enabled": True,
+        "ok": proc.returncode == 0,
+        "path": expanded,
+        "returncode": proc.returncode,
+        "timeout_seconds": timeout_seconds,
+        "stdout_tail": _tail_text(proc.stdout),
+        "stderr_tail": _tail_text(proc.stderr),
+    }
+
+
+def probe_data_lock(lock_path: str | None = None) -> dict[str, object]:
+    expanded = os.path.expandvars(lock_path or _default_lock_path())
+    src_root = _repo_root() / "src"
+    if src_root.exists() and str(src_root) not in sys.path:
+        sys.path.insert(0, str(src_root))
+
+    try:
+        from eidp.db.locking import probe_lock as _probe_lock
+
+        status = _probe_lock(Path(expanded))
+    except Exception as exc:  # pragma: no cover - defensive Windows diagnostics path.
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": expanded,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+    return {
+        "enabled": True,
+        "ok": not status.held,
+        "path": expanded,
+        "held": status.held,
+        "owner": status.owner,
+        "pid": status.pid,
+        "started_at": status.started_at,
+    }
+
+
 def build_report(
     *,
     expected_weekly_action: str | None,
     check_paths: list[str],
     task: ScheduledTaskSnapshot | None = None,
+    probe_weekly_dry_run: bool = False,
+    weekly_probe_timeout_seconds: float = 60.0,
+    weekly_probe_runner: Callable[..., dict[str, object]] | None = None,
+    probe_lock: bool = False,
+    lock_path: str | None = None,
+    lock_probe_runner: Callable[..., dict[str, object]] | None = None,
 ) -> dict[str, object]:
     task = task or query_weekly_task()
     expected_norm = _normalise_windows_path(expected_weekly_action)
@@ -147,9 +265,34 @@ def build_report(
     action_matches = (actual_norm == expected_norm) if expected_norm is not None else None
     residual_paths = [_path_status(path) for path in check_paths]
     residual_existing = [item for item in residual_paths if item["exists"]]
+    weekly_probe: dict[str, object] = {"enabled": False}
+    if probe_weekly_dry_run:
+        probe_action = expected_weekly_action or task.execute
+        if probe_action:
+            runner = weekly_probe_runner or probe_weekly_dry_run_fn
+            weekly_probe = runner(probe_action, timeout_seconds=weekly_probe_timeout_seconds)
+        else:
+            weekly_probe = {
+                "enabled": True,
+                "ok": False,
+                "error": "no weekly_run.bat action available to probe",
+            }
+    lock_probe: dict[str, object] = {"enabled": False}
+    if probe_lock:
+        lock_runner = lock_probe_runner or probe_data_lock
+        lock_probe = lock_runner(lock_path)
 
     task_action_ok = expected_norm is None or action_matches is True
-    ok = bool(task.exists and not task.error and task_action_ok and not residual_existing)
+    weekly_probe_ok = not weekly_probe.get("enabled") or weekly_probe.get("ok") is True
+    lock_probe_ok = not lock_probe.get("enabled") or lock_probe.get("ok") is True
+    ok = bool(
+        task.exists
+        and not task.error
+        and task_action_ok
+        and not residual_existing
+        and weekly_probe_ok
+        and lock_probe_ok
+    )
     recommendations: list[str] = []
     if task.error:
         recommendations.append("Confirm the EIDP Weekly Run scheduled task manually.")
@@ -161,6 +304,12 @@ def build_report(
         recommendations.append("Restore EIDP Weekly Run to the production weekly_run.bat before resuming Stage 6.")
     if residual_existing:
         recommendations.append("Review and remove interrupted smoke artifacts before rerunning copied-DB smoke.")
+    if weekly_probe.get("enabled") and weekly_probe.get("ok") is not True:
+        recommendations.append(
+            "weekly_run.bat dry-run probe failed; rerun setup or inspect the weekly log before Stage 6."
+        )
+    if lock_probe.get("enabled") and lock_probe.get("ok") is not True:
+        recommendations.append("Wait for the current EIDP operation to finish, then rerun the recovery check.")
 
     return {
         "ok": ok,
@@ -175,9 +324,14 @@ def build_report(
             "expected_action": expected_weekly_action,
             "action_matches_expected": action_matches,
         },
+        "weekly_dry_run_probe": weekly_probe,
+        "lock_probe": lock_probe,
         "residual_paths": residual_paths,
         "recommendations": recommendations,
     }
+
+
+probe_weekly_dry_run_fn = probe_weekly_dry_run
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -195,6 +349,26 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default=[],
         help="Additional interrupted-smoke path to check. Can be repeated.",
     )
+    parser.add_argument(
+        "--probe-weekly-dry-run",
+        action="store_true",
+        help="Run weekly_run.bat with EIDP_WEEKLY_DRY_RUN=1 and EIDP_WEEKLY_LIMIT=0 to verify executability.",
+    )
+    parser.add_argument(
+        "--weekly-probe-timeout",
+        type=float,
+        default=60.0,
+        help="Timeout in seconds for --probe-weekly-dry-run.",
+    )
+    parser.add_argument(
+        "--probe-lock",
+        action="store_true",
+        help="Probe the shared EIDP data/.lock and fail if another process currently holds it.",
+    )
+    parser.add_argument(
+        "--lock-path",
+        help=r"Override lock path for --probe-lock. Defaults to %EIDP_APP_ROOT%\data\.lock.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
 
@@ -202,7 +376,14 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     check_paths = [*DEFAULT_INTERRUPTED_STAGE6_PATHS, *args.check_path]
-    report = build_report(expected_weekly_action=args.expected_weekly_action, check_paths=check_paths)
+    report = build_report(
+        expected_weekly_action=args.expected_weekly_action,
+        check_paths=check_paths,
+        probe_weekly_dry_run=args.probe_weekly_dry_run,
+        weekly_probe_timeout_seconds=args.weekly_probe_timeout,
+        probe_lock=args.probe_lock,
+        lock_path=args.lock_path,
+    )
     if args.json:
         print(json.dumps(report, ensure_ascii=False, sort_keys=True))
     else:
