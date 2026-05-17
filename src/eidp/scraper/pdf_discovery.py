@@ -41,6 +41,10 @@ log = structlog.get_logger()
 PdfDiscoveryProgressCallback = Callable[[dict[str, int], int], None]
 MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR
 MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR
+_DISCLOSURE_PATH_YEAR_RE = re.compile(
+    r"(?:/(?:public[_-]?info(?:rmation)?|disclosure)[_/-]|/pdf[_/-]?)(20\d{2})(?=[/_-])",
+    re.IGNORECASE,
+)
 
 
 class HttpGetClient(Protocol):
@@ -103,6 +107,13 @@ def _origin_root_url(url: str) -> str | None:
     if parsed.path in {"", "/"} and not parsed.query and not parsed.fragment:
         return None
     return f"{parsed.scheme}://{parsed.netloc}/"
+
+
+def _origin_key(url: str) -> str | None:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}"
 
 
 def _main_page_response_with_root_fallback(client: HttpGetClient, site_url: str) -> tuple[httpx.Response, str]:
@@ -329,6 +340,8 @@ MAX_DISCOVERY_EXTRA_PAGES = 6
 SITEMAP_DISCOVERY_RESERVED_PAGES = 2
 MAX_DISCOVERY_ELAPSED_SECONDS = 45.0
 MAX_RENDERED_DISCOVERY_PAGES = 3
+SHARED_ORIGIN_DERIVED_FALLBACK_THRESHOLD = 20
+SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES = 3
 SITEMAP_PAGE_KEYWORDS = (
     "disclosure",
     "public",
@@ -367,6 +380,7 @@ DERIVED_DISCLOSURE_PATHS = (
     "/public/",
     "/public_info/",
 )
+DISCLOSURE_DERIVATION_FILE_SUFFIXES = (".html", ".htm", ".php", ".aspx", ".jsp")
 
 
 @dataclass
@@ -441,10 +455,14 @@ class _RunScopedHttpCache:
         return _without_url_fragment(url)
 
     @staticmethod
+    def _is_public_discovery_metadata_url(url: str) -> bool:
+        path = urlparse(url).path.lower().rstrip("/")
+        filename = path.rsplit("/", 1)[-1]
+        return filename == "robots.txt" or (filename.endswith(".xml") and "sitemap" in filename)
+
+    @staticmethod
     def _should_cache_response(response: httpx.Response, request_url: str) -> bool:
         headers = response.headers
-        if any(str(key).lower() == "set-cookie" for key in headers):
-            return False
         content_type = str(headers.get("content-type", "")).split(";", 1)[0].strip().lower()
         response_url = str(response.url or request_url)
         if urlparse(response_url).path.lower().endswith(".pdf") or content_type == "application/pdf":
@@ -456,6 +474,13 @@ class _RunScopedHttpCache:
                     return False
             except ValueError:
                 return False
+        is_public_metadata = _RunScopedHttpCache._is_public_discovery_metadata_url(
+            request_url
+        ) or _RunScopedHttpCache._is_public_discovery_metadata_url(response_url)
+        if is_public_metadata and response.status_code in {200, 404, 410}:
+            return True
+        if any(str(key).lower() == "set-cookie" for key in headers):
+            return False
         if response.status_code == 200 and content_type in {"", "text/html", "application/xhtml+xml"}:
             text = getattr(response, "text", "")
             if 0 < len(text) < 500:
@@ -719,7 +744,17 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
             "様式2号",
         )
     )
-    if strong_form_context:
+    romanized_form_context = any(
+        token in text.lower()
+        for token in (
+            "kakunin",
+            "shinsei",
+            "koushinshinsei",
+            "koushin-shinsei",
+            "confirmation_application",
+        )
+    )
+    if strong_form_context or romanized_form_context:
         western_start_month = re.search(r"(?<!\d)(20\d{2})(?=\s*年\s*0?4\s*月)", text)
         if western_start_month is not None:
             year = int(western_start_month.group(1))
@@ -742,6 +777,18 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
         serial_filename_year = re.search(r"(?<!\d)(20\d{2})(?=\d{2,4}[^/\s]*\.pdf\b)", text, re.IGNORECASE)
         if serial_filename_year is not None:
             year = int(serial_filename_year.group(1))
+            if _is_candidate_hint_year(year, target_year=target_year):
+                return year
+        school_prefixed_year = re.search(
+            r"(?<!\d)(20\d{2})(?!\s*(?:年|年度|月|日|\d|[./-]\d))(?=\s*[\u3040-\u30ff\u3400-\u9fff])",
+            text,
+        )
+        if school_prefixed_year is not None:
+            year = int(school_prefixed_year.group(1))
+            if _is_candidate_hint_year(year, target_year=target_year):
+                return year
+        for path_year in _DISCLOSURE_PATH_YEAR_RE.finditer(text):
+            year = int(path_year.group(1))
             if _is_candidate_hint_year(year, target_year=target_year):
                 return year
 
@@ -767,6 +814,8 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
                             match.end(),
                         ):
                             return year
+                        continue
+                    if _is_followed_by_law_reference(lowered, match.end()):
                         continue
                     return year
     return None
@@ -876,7 +925,10 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
 
     text = _candidate_hint_text(candidate).lower()
     system_hint = any(token in text for token in ("修学支援", "修学の支援", "高等教育", "無償化"))
-    form_hint = any(token in text for token in ("確認申請", "申請書", "様式第2号", "様式第２号", "様式2号", "機関要件"))
+    form_hint = any(
+        token in text
+        for token in ("確認申請", "申請書", "申請様式", "様式第2号", "様式第２号", "様式2号", "機関要件")
+    )
     full_form_range_hint = re.search(r"様式第[2２]号の?[1１]\s*[〜～~\-－−ー―]\s*[4４]", text) is not None
     japanese_renewal_form_hint = "更新確認申請" in text
     romanized_renewal_form_hint = any(
@@ -1052,6 +1104,7 @@ _YEAR_LABEL_REJECT_CONTEXT_RE = re.compile(
     r"(完成年度|から|まで|任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学)"
 )
 _YEAR_MONTH_DATE_SUFFIX_RE = re.compile(r"\s*年\s*\d{1,2}\s*月")
+_LAW_REFERENCE_SUFFIX_RE = re.compile(r"\s*年\s*法律\s*第?\s*\d+\s*号")
 _SUPPORT_SYSTEM_START_MONTH_SUFFIX_RE = re.compile(r"\s*年\s*0?4\s*月\s*(?:から|より|以降)?")
 _SUPPORT_SYSTEM_START_MONTH_REJECT_CONTEXT_RE = re.compile(
     r"(任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学)"
@@ -1062,6 +1115,12 @@ def _is_followed_by_year_month_date(text: str, end_index: int) -> bool:
     """Return whether a year token is followed by a month, i.e. a date."""
 
     return _YEAR_MONTH_DATE_SUFFIX_RE.match(text[end_index:]) is not None
+
+
+def _is_followed_by_law_reference(text: str, end_index: int) -> bool:
+    """Return whether an era-year token is part of a legal citation."""
+
+    return _LAW_REFERENCE_SUFFIX_RE.match(text[end_index:]) is not None
 
 
 def _is_support_system_start_month_hint(text: str, start_index: int, end_index: int) -> bool:
@@ -1354,6 +1413,7 @@ def _has_application_form_context(text: str) -> bool:
             "確認申請",
             "確認申請書",
             "申請書",
+            "申請様式",
             "様式第2号",
             "様式第２号",
             "様式2号",
@@ -2161,6 +2221,11 @@ def _find_school_homepage_links(html: str, base_url: str, school_name: str, *, l
     return links
 
 
+def _is_file_like_disclosure_path(path_segment: str) -> bool:
+    lowered = path_segment.lower()
+    return any(lowered.endswith(suffix) for suffix in DISCLOSURE_DERIVATION_FILE_SUFFIXES)
+
+
 def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]:
     """Return conservative same-host disclosure URL guesses from a school homepage URL."""
     if limit <= 0:
@@ -2172,9 +2237,10 @@ def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]
 
     path = parsed.path.rstrip("/")
     raw_segments = [segment for segment in path.split("/") if segment]
-    slug = raw_segments[-1] if raw_segments else ""
+    file_like_path = bool(raw_segments) and _is_file_like_disclosure_path(raw_segments[-1])
+    slug = "" if file_like_path else raw_segments[-1] if raw_segments else ""
     root = f"{parsed.scheme}://{parsed.netloc}"
-    path_or_root = path or ""
+    path_or_root = "" if file_like_path else path or ""
     seen: set[str] = {normalize_candidate_url(site_url)}
     urls: list[str] = []
 
@@ -2201,6 +2267,25 @@ def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]
         if len(urls) >= limit:
             break
     return urls
+
+
+def _has_inverted_disclosure_url_probe(site_url: str) -> bool:
+    """Return whether the first derived URL is a school-specific path inversion.
+
+    Large corporation domains often publish official-index URLs as
+    ``/school/disclosure/`` while the live page is ``/disclosure/school``.
+    Shared-origin throttling may skip generic derived probing for performance,
+    but this one inverted URL is per-school rather than shared root work.
+    """
+
+    parsed = urlparse(site_url)
+    raw_segments = [segment for segment in parsed.path.rstrip("/").split("/") if segment]
+    return len(raw_segments) >= 2 and raw_segments[-1].lower() in {
+        "disclosure",
+        "information",
+        "public",
+        "public_info",
+    }
 
 
 def _sitemap_urls_for_site(
@@ -2432,6 +2517,7 @@ def discover_pdfs_for_site(
     max_depth: int = 2,
     max_extra_pages: int = MAX_DISCOVERY_EXTRA_PAGES,
     max_elapsed_seconds: float = MAX_DISCOVERY_ELAPSED_SECONDS,
+    derived_disclosure_limit: int | None = None,
     rendered_html_fetcher: RenderedHtmlFetcher | None = None,
     target_fiscal_year: int | None = None,
     school_name: str = "",
@@ -2560,6 +2646,8 @@ def discover_pdfs_for_site(
                     continue
 
         derived_budget = max(extra_page_budget_remaining() - SITEMAP_DISCOVERY_RESERVED_PAGES, 0)
+        if derived_disclosure_limit is not None:
+            derived_budget = min(derived_budget, max(derived_disclosure_limit, 0))
         derived_urls: list[str] = []
         derived_seen: set[str] = set()
         for derived_source_url in (registered_site_url, site_url):
@@ -2873,12 +2961,14 @@ def run_pdf_discovery(
         "failed": 0,
         "skipped": 0,
         "cached_rejections": 0,
+        "cached_rejection_evidence_suppressed": 0,
         "prefiltered": 0,
         "candidate_budget_limited": 0,
         "candidate_budget_dropped": 0,
         "candidate_school_mismatch": 0,
         "http_cache_hits": 0,
         "http_cache_misses": 0,
+        "shared_origin_derived_fallback_skipped": 0,
     }
     recorder = EvidenceRecorder(evidence_path)
 
@@ -2933,6 +3023,12 @@ def run_pdf_discovery(
         .limit(batch_size)
         .all()
     )
+    origin_site_counts: dict[str, int] = {}
+    for site in sites:
+        origin = _origin_key(site.url)
+        if origin is not None:
+            origin_site_counts[origin] = origin_site_counts.get(origin, 0) + 1
+    origin_derived_probe_counts: dict[str, int] = {}
 
     log.info("pdf_discovery_start", sites=len(sites))
     if progress_callback is not None:
@@ -2977,12 +3073,28 @@ def run_pdf_discovery(
                 result.candidates = [candidate]
                 result.best = candidate
             else:
+                derived_disclosure_limit: int | None = None
+                origin = _origin_key(site.url)
+                if (
+                    origin is not None
+                    and origin_site_counts.get(origin, 0) >= SHARED_ORIGIN_DERIVED_FALLBACK_THRESHOLD
+                ):
+                    probe_count = origin_derived_probe_counts.get(origin, 0)
+                    if probe_count >= SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES:
+                        if _has_inverted_disclosure_url_probe(site.url):
+                            derived_disclosure_limit = 1
+                        else:
+                            derived_disclosure_limit = 0
+                            stats["shared_origin_derived_fallback_skipped"] += 1
+                    else:
+                        origin_derived_probe_counts[origin] = probe_count + 1
                 result = discover_pdfs_for_site(
                     client,
                     site.school_id,
                     site.url,
                     school_name=site.school.school_name if site.school is not None else "",
                     target_fiscal_year=target_year,
+                    derived_disclosure_limit=derived_disclosure_limit,
                 )
             stats["crawled"] += 1
 
@@ -3118,17 +3230,21 @@ def run_pdf_discovery(
                         stats["skipped"] += 1
                     if _is_target_year_rejection(cached_rejection.reason):
                         target_year_rejection_seen = True
-                    record_discovery_evidence(RejectionEvidence(
-                        school_id=site.school_id,
-                        pdf_url=candidate.pdf_url,
-                        page_url=candidate.page_url,
-                        anchor_text=candidate.anchor_text,
-                        pattern_type=candidate.pattern_type,
-                        score=candidate.score,
-                        reason=cached_rejection.reason,
-                        pdf_type=cached_rejection.pdf_type,
-                        extra={"cached_rejection": "true"},
-                    ))
+                    if cached_rejection.pdf_type == "non_target":
+                        stats["cached_rejection_evidence_suppressed"] += 1
+                        _increment_rejection_reason(stats, cached_rejection.reason)
+                    else:
+                        record_discovery_evidence(RejectionEvidence(
+                            school_id=site.school_id,
+                            pdf_url=candidate.pdf_url,
+                            page_url=candidate.page_url,
+                            anchor_text=candidate.anchor_text,
+                            pattern_type=candidate.pattern_type,
+                            score=candidate.score,
+                            reason=cached_rejection.reason,
+                            pdf_type=cached_rejection.pdf_type,
+                            extra={"cached_rejection": "true"},
+                        ))
                     continue
 
                 pre_download_rejection = _pre_download_rejection(candidate, target_year=target_year)

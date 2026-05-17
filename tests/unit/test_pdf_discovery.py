@@ -17,6 +17,7 @@ from eidp.scraper.pdf_discovery import (
     DiscoveryResult,
     PdfCandidate,
     _append_unique_candidates,
+    _derived_disclosure_page_urls,
     _detect_fiscal_year_from_text,
     _download_attempt_urls,
     _extract_pdf_links,
@@ -759,6 +760,26 @@ def test_pre_download_site_family_guard_keeps_local_target_application_hint() ->
     assert rejection is None
 
 
+def test_sanko_support_application_form_heading_keeps_hashed_target_pdf() -> None:
+    html = """
+    <section>
+      <h3>高等教育の修学支援新制度　申請様式</h3>
+      <ul>
+        <li><a href="https://www.sanko.ac.jp/disclosure/sendai-med/docs/yoshiki2024.pdf">2024年度</a></li>
+        <li><a href="https://www.sanko.ac.jp/disclosure/sendai-med/docs/8c91f74126067006e03677c0b6e11cc53602859b.pdf">2025年度</a></li>
+      </ul>
+    </section>
+    """
+
+    candidates = _extract_pdf_links(html, "https://www.sanko.ac.jp/disclosure/sendai-med/", target_fiscal_year=2025)
+    current = next(candidate for candidate in candidates if "8c91f741" in candidate.pdf_url)
+
+    assert "2025年度" in current.anchor_text
+    assert "高等教育の修学支援新制度" in current.anchor_text
+    assert "申請様式" in current.anchor_text
+    assert _pre_download_rejection(current, target_year=2025) is None
+
+
 def test_pre_download_rejects_subject_pdf_with_adjacent_target_context() -> None:
     candidate = PdfCandidate(
         pdf_url="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/subject_kango.pdf",
@@ -902,6 +923,23 @@ def test_pre_download_does_not_treat_era_publication_date_as_stale_target_year()
 
     rejection = _pre_download_rejection(candidate, target_year=2026)
 
+    assert rejection is None
+
+
+def test_pre_download_ignores_support_law_enactment_year_reference() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.sendai-eco.ac.jp/assets/doc/school/public_info/2025/12/kakunin_02.pdf",
+        page_url="https://www.sendai-eco.ac.jp/school/public_info/",
+        anchor_text=(
+            "申請書様式第2号 本校は令和6年8月30日付で、大学等における"
+            "修学の支援に関する法律（令和元年法律第8号）による修学支援の対象校となりました。"
+        ),
+        score=4.5,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2025)
+
+    assert _stale_fiscal_year_from_candidate_hint(candidate, target_year=2025) is None
     assert rejection is None
 
 
@@ -1944,10 +1982,17 @@ def test_download_pdf_does_not_turn_boilerplate_year_image_into_publication_lag(
 
 
 class _HtmlResponse:
-    def __init__(self, text: str, *, status_code: int = 200, url: str = "https://example.ac.jp/") -> None:
+    def __init__(
+        self,
+        text: str,
+        *,
+        status_code: int = 200,
+        url: str = "https://example.ac.jp/",
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.text = text
         self.status_code = status_code
-        self.headers: dict[str, str] = {}
+        self.headers: dict[str, str] = headers or {}
         self.url = url
         self.request = None
 
@@ -2367,6 +2412,15 @@ def test_discover_pdfs_inverts_stale_school_disclosure_path(monkeypatch) -> None
     assert result.best.pdf_url == "https://www.sanko.ac.jp/disclosure/omiya-med/docs/r8-kakunin.pdf"
     assert result.best.page_url == "https://www.sanko.ac.jp/disclosure/omiya-med"
     assert "https://www.sanko.ac.jp/information/omiya-med" not in client.calls
+
+
+def test_derived_disclosure_pages_do_not_append_to_file_like_paths() -> None:
+    urls = _derived_disclosure_page_urls("https://www.sendai-iken.ac.jp/school/public_info.html", limit=10)
+
+    assert "https://www.sendai-iken.ac.jp/school/public_info.html/information" not in urls
+    assert "https://www.sendai-iken.ac.jp/school/public_info.html/school-support" not in urls
+    assert "https://www.sendai-iken.ac.jp/school/public_info.html/disclosure" not in urls
+    assert "https://www.sendai-iken.ac.jp/information/" in urls
 
 
 def test_discover_pdfs_does_not_fetch_pdf_query_links_as_subpages(monkeypatch) -> None:
@@ -3201,6 +3255,53 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
         session.close()
 
 
+def test_run_pdf_discovery_suppresses_cached_non_target_evidence_noise(monkeypatch, tmp_path: Path) -> None:
+    """Cached common non-target PDFs should count without bloating JSONL evidence."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    try:
+        session.add(SchoolSite(school_id=1, url="https://group.example.ac.jp/school-a/", http_status=200))
+        session.add(SchoolSite(school_id=2, url="https://group.example.ac.jp/school-b/", http_status=200))
+        session.flush()
+
+        common_pdf_url = "https://group.example.ac.jp/disclosure/school-evaluation.pdf"
+
+        def fake_discover(_client, school_id: int, url: str, **_kwargs: object) -> DiscoveryResult:
+            candidate = PdfCandidate(
+                pdf_url=common_pdf_url,
+                page_url="https://group.example.ac.jp/disclosure/",
+                anchor_text="学校関係者評価",
+                score=0.5,
+            )
+            return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert stats["cached_rejections"] == 1
+        assert stats["cached_rejection_evidence_suppressed"] == 1
+        assert stats["skipped"] == 2
+        assert stats["rejection_reason_pre_filtered_non_target_hint"] == 2
+
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert len(payloads) == 1
+        assert payloads[0]["reason"] == "pre_filtered_non_target_hint"
+        assert payloads[0]["extra"]["pre_download"] == "true"
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_caches_repeated_http_gets_for_shared_corporation_site(
     monkeypatch,
     tmp_path: Path,
@@ -3246,6 +3347,290 @@ def test_run_pdf_discovery_caches_repeated_http_gets_for_shared_corporation_site
         assert len(calls) == len(set(calls))
         assert calls.count("https://www.shared.ac.jp/") == 1
         assert sleeps.count(1.0) <= len(calls)
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_caches_shared_origin_robots_sitemap_and_disclosure_pages(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Different school paths on one corporation origin must share HTTP GETs."""
+
+    session = _session()
+    calls: list[str] = []
+    sleeps: list[float] = []
+    long_school_html = "<html><body>" + ("学校トップ " * 120) + "</body></html>"
+    long_disclosure_html = "<html><body>" + ("情報公開 " * 120) + "</body></html>"
+    long_sitemap_xml = (
+        "<urlset>"
+        "<url><loc>https://www.shared.ac.jp/about/disclosure.html</loc></url>"
+        f"{'<!-- filler -->' * 80}"
+        "</urlset>"
+    )
+
+    class SharedOriginClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> SharedOriginClient:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            if url in {
+                "https://www.shared.ac.jp/school-a/",
+                "https://www.shared.ac.jp/school-b/",
+                "https://www.shared.ac.jp/school-c/",
+            }:
+                return _HtmlResponse(long_school_html, url=url)
+            if url == "https://www.shared.ac.jp/robots.txt":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.shared.ac.jp/sitemap.xml":
+                return _HtmlResponse(long_sitemap_xml, url=url)
+            if url == "https://www.shared.ac.jp/about/disclosure.html":
+                return _HtmlResponse(long_disclosure_html, url=url)
+            return _HtmlResponse("", status_code=404, url=url)
+
+    try:
+        session.add(SchoolSite(school_id=1, url="https://www.shared.ac.jp/school-a/", http_status=200))
+        session.add(SchoolSite(school_id=2, url="https://www.shared.ac.jp/school-b/", http_status=200))
+        session.add(SchoolSite(school_id=3, url="https://www.shared.ac.jp/school-c/", http_status=200))
+        session.flush()
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", SharedOriginClient)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", sleeps.append)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=10, rate_limit=0)
+
+        assert stats["crawled"] == 3
+        assert stats["http_cache_hits"] >= 6
+        assert calls.count("https://www.shared.ac.jp/school-a/") == 1
+        assert calls.count("https://www.shared.ac.jp/school-b/") == 1
+        assert calls.count("https://www.shared.ac.jp/school-c/") == 1
+        assert calls.count("https://www.shared.ac.jp/robots.txt") == 1
+        assert calls.count("https://www.shared.ac.jp/sitemap.xml") == 1
+        assert calls.count("https://www.shared.ac.jp/about/disclosure.html") == 1
+        assert sleeps.count(1.0) <= len(calls)
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_caches_shared_robots_sitemap_404_with_set_cookie(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Some shared corp sites attach cookies to static 404 metadata responses."""
+
+    session = _session()
+    calls: list[str] = []
+    school_paths = ("school-a", "school-b", "school-c")
+    long_school_html = "<html><body>" + ("学校トップ " * 120) + "</body></html>"
+    cookie_headers = {"set-cookie": "route=corp; path=/; secure"}
+
+    class Cookie404Client:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> Cookie404Client:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            if url in {f"https://www.shared-cookie.ac.jp/{school_path}/" for school_path in school_paths}:
+                return _HtmlResponse(long_school_html, url=url)
+            if url == "https://www.shared-cookie.ac.jp/robots.txt":
+                return _HtmlResponse("", status_code=404, url=url, headers=cookie_headers)
+            if url == "https://www.shared-cookie.ac.jp/sitemap.xml":
+                return _HtmlResponse("", status_code=404, url=url, headers=cookie_headers)
+            return _HtmlResponse("", status_code=404, url=url)
+
+    try:
+        for school_id, school_path in enumerate(school_paths, start=1):
+            session.add(
+                SchoolSite(
+                    school_id=school_id,
+                    url=f"https://www.shared-cookie.ac.jp/{school_path}/",
+                    http_status=200,
+                )
+            )
+        session.flush()
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", Cookie404Client)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=10, rate_limit=0)
+
+        assert stats["crawled"] == len(school_paths)
+        assert calls.count("https://www.shared-cookie.ac.jp/robots.txt") == 1
+        assert calls.count("https://www.shared-cookie.ac.jp/sitemap.xml") == 1
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_shared_origin_cache_scales_to_many_school_paths(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """A large corporation group must not refetch shared discovery pages per school."""
+
+    session = _session()
+    calls: list[str] = []
+    sleeps: list[float] = []
+    school_count = 150
+    school_urls = {
+        f"https://www.shared-large.ac.jp/school-{index:03d}/"
+        for index in range(school_count)
+    }
+    long_school_html = "<html><body>" + ("学校トップ " * 120) + "</body></html>"
+    long_disclosure_html = "<html><body>" + ("情報公開 " * 120) + "</body></html>"
+    long_sitemap_xml = (
+        "<urlset>"
+        "<url><loc>https://www.shared-large.ac.jp/about/disclosure.html</loc></url>"
+        f"{'<!-- filler -->' * 80}"
+        "</urlset>"
+    )
+
+    class SharedLargeOriginClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> SharedLargeOriginClient:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            if url in school_urls:
+                return _HtmlResponse(long_school_html, url=url)
+            if url == "https://www.shared-large.ac.jp/robots.txt":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.shared-large.ac.jp/sitemap.xml":
+                return _HtmlResponse(long_sitemap_xml, url=url)
+            if url == "https://www.shared-large.ac.jp/about/disclosure.html":
+                return _HtmlResponse(long_disclosure_html, url=url)
+            return _HtmlResponse("", status_code=404, url=url)
+
+    try:
+        for index, url in enumerate(sorted(school_urls), start=1):
+            session.add(SchoolSite(school_id=index, url=url, http_status=200))
+        session.flush()
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", SharedLargeOriginClient)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", sleeps.append)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=school_count, rate_limit=0)
+
+        assert stats["crawled"] == school_count
+        assert stats["shared_origin_derived_fallback_skipped"] == school_count - 3
+        assert stats["http_cache_hits"] >= (school_count - 1) * 3
+        assert calls.count("https://www.shared-large.ac.jp/robots.txt") == 1
+        assert calls.count("https://www.shared-large.ac.jp/sitemap.xml") == 1
+        assert calls.count("https://www.shared-large.ac.jp/about/disclosure.html") == 1
+        assert sum(1 for url in calls if url in school_urls) == school_count
+        assert len(calls) <= school_count + 16
+        assert sleeps.count(1.0) <= len(calls)
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_keeps_inverted_disclosure_probe_for_shared_origin(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Shared-origin throttling must not skip per-school inverted disclosure URLs."""
+
+    session = _session()
+    calls: list[str] = []
+    school_count = 3
+    root_html = "<html><body>" + ("学校法人トップ " * 120) + "</body></html>"
+
+    class SharedDisclosureClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> SharedDisclosureClient:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            if url == "https://www.sanko.ac.jp/robots.txt":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.sanko.ac.jp/sitemap.xml":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.sanko.ac.jp/":
+                return _HtmlResponse(root_html, url=url)
+            for index in range(1, school_count + 1):
+                if url == f"https://www.sanko.ac.jp/school-{index:03d}/disclosure/":
+                    return _RaisingHtmlResponse("", status_code=404, url=url)
+                if url == f"https://www.sanko.ac.jp/disclosure/school-{index:03d}":
+                    return _HtmlResponse(
+                        f"""
+                        <section>
+                          <h3>高等教育の修学支援新制度 申請様式</h3>
+                          <a href="/disclosure/school-{index:03d}/docs/yoshiki2025.pdf">2025年度</a>
+                        </section>
+                        """,
+                        url=url,
+                    )
+            return _HtmlResponse("", status_code=404, url=url)
+
+    def fake_download(
+        _client,
+        candidate: PdfCandidate,
+        _storage_dir: Path,
+        school_id: int,
+        **_kwargs: object,
+    ):
+        candidate.detected_fiscal_year = 2025
+        candidate.year_evidence = "pdf_text"
+        return str(tmp_path / f"{school_id}.pdf"), f"hash-{school_id}", 3000, "target", None
+
+    try:
+        for index in range(1, school_count + 1):
+            session.add(
+                SchoolSite(
+                    school_id=index,
+                    url=f"https://www.sanko.ac.jp/school-{index:03d}/disclosure/",
+                    http_status=200,
+                )
+            )
+        session.flush()
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", SharedDisclosureClient)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.SHARED_ORIGIN_DERIVED_FALLBACK_THRESHOLD", 2)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES", 1)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=school_count,
+            rate_limit=0,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        assert stats["downloaded"] == school_count
+        assert stats["shared_origin_derived_fallback_skipped"] == 0
+        for index in range(1, school_count + 1):
+            assert f"https://www.sanko.ac.jp/disclosure/school-{index:03d}" in calls
     finally:
         session.close()
 
@@ -4605,6 +4990,99 @@ def test_download_pdf_accepts_western_year_anchor_when_body_is_target_form(
     assert pdf_type == "target"
     assert reason is None
     assert candidate.year_evidence == "url_hint"
+
+
+def test_download_pdf_accepts_bare_western_year_before_school_name_when_body_is_target_form(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Some disclosure pages label the form as ``様式第2号 2025札幌...``."""
+
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://www.snm.ac.jp/asset/doc/school/info/confirmation-application.pdf?date=2025",
+        page_url="https://www.snm.ac.jp/school/info/",
+        anchor_text="確認申請書（様式第2号 2025札幌看護医療専門学校）",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "url_hint"
+
+
+def test_download_pdf_accepts_disclosure_path_year_when_body_is_target_form(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Disclosure-publication folders can carry the target year for yearless forms."""
+
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://www.sendai-eco.ac.jp/assets/doc/school/public_info/2025/12/kakunin_02.pdf",
+        page_url="https://www.sendai-eco.ac.jp/school/public_info/",
+        anchor_text=(
+            "申請書様式第5号 本校は令和6年8月30日付で、大学等における"
+            "修学の支援に関する法律（令和元年法律第8号）による修学支援の対象校となりました。"
+        ),
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "url_hint"
+
+
+def test_pre_download_rejects_stale_disclosure_path_year_for_target_form() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.sca.ac.jp/school/public_info_2024/pdf/12/kakunin_02.pdf",
+        page_url="https://www.sca.ac.jp/school/public_info/",
+        anchor_text=(
+            "申請書様式第2号【PDF】 本校は令和6年8月30日付で、大学等における"
+            "修学の支援に関する法律（令和元年法律第8号）による修学支援の対象校となりました。"
+        ),
+        score=4.5,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2025)
+
+    assert rejection is not None
+    assert rejection.pdf_type == "target"
+    assert rejection.reason == "fiscal_year_mismatch:2024"
 
 
 def test_download_pdf_does_not_treat_anchor_publication_date_as_fiscal_year(
