@@ -26,8 +26,8 @@ Prior post-package docs rebuild: `dist/eidp-windows-v461.zip`, commit
 `b787a72bb1714b77583e4c0e904b1584fdaeba92`, SHA256
 `2c0d74ab382bf179f166bdb4d775cd414a08741eca3b27ba92c2e6c7a459850b`; not the
 current Windows scheduled-task execution pointer
-Latest Windows-core-validated package: `dist/eidp-windows-v464.zip`
-Latest Windows-transfer-proven package: `dist/eidp-windows-v464.zip`
+Latest Windows-core-validated package: `dist/eidp-windows-v466.zip`
+Latest Windows-transfer-proven package: `dist/eidp-windows-v466.zip`
 Latest Windows-release-artifact-pruner-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-recovery-parser-proven package: `dist/eidp-windows-v460.zip`
 Latest Windows-evidence-verifier-proven package: `dist/eidp-windows-v464.zip`
@@ -35,7 +35,7 @@ Latest Windows-return-artifact-verifier-proven package: `dist/eidp-windows-v464.
 Latest Windows-disk-health-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-OCR-runtime-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
-Latest Windows-setup-proven package: `dist/eidp-windows-v464.zip`
+Latest Windows-setup-proven package: `dist/eidp-windows-v466.zip`
 Latest Windows-target-FY-ingest-override-canary-proven package: `dist/eidp-windows-v463.zip`
 Latest Windows-shared-HTTP-cache-canary-proven package: `dist/eidp-windows-v462.zip`
 Latest Windows-UI-health-proven package: `dist/eidp-windows-v464.zip`
@@ -72,14 +72,37 @@ without `pip` in the uv-managed environment. A clean successor package
 `8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`,
 `scripts/verify_windows_distribution.py` returned `ok=true`, and
 `scripts/run_non_windows_release_gates.py --skip-full-unit` returned `ok=true`.
-It does not by itself approve release: v466 has not been transferred or set up
-on Windows, the active Scheduled Task still points to v460, v465 remains only a
-staged stale cache/perf candidate, and no owner/operator real cycle has
-produced final KPI, audit/outbox, evidence ZIP, or sign-off artifacts.
+It was then transferred to Windows staging as
+`C:\EIDP-staging\eidp-windows-v466.zip`, SHA-checked against the same
+`8712c5b...` digest, and expanded side-by-side to
+`C:\Users\<operator>\EIDP-v466-9a5d50b`. `EIDP-setup.bat` returned `0`,
+`scripts\validate_install.bat --after-setup --json` returned `ok=true`,
+`warnings=[]`, and `errors=[]`, and `scripts\diagnose.bat` returned `0`.
+Because setup rewrites the weekly scheduled task, the `EIDP Weekly Run` task was
+restored to the v460 runner afterward; `scripts\stage6_recovery_check.bat` on
+v460 returned `ok=true` with `action_matches_expected=true`, and a fresh
+scheduled-task XML check still executes
+`C:\Users\<operator>\EIDP-v460-01e4427\scripts\weekly_run.bat`.
+The Mac evidence copies are
+`logs/win-v466-stage6/v466-preflight-result-20260517-215028.json`
+(SHA256 `c59e8fdb0e4085a64fdc0f883268f2aae7c89bb7c86771a474377c2a51458c48`),
+`logs/win-v466-stage6/v466-validate-install-after-setup-20260517-215028.json`
+(SHA256 `282db3597db54eb9d54ac46e5dff575e2a5025f115ee8efab7dfa5f92e4d72d7`),
+`logs/win-v466-stage6/stage6-recovery-20260517-215355.json`
+(SHA256 `8efd41d2d9d80fd1b1744f0515fe827f131819228f4b460d73e8da475a468e4a`),
+`logs/win-v466-stage6/v466-diagnose-20260517-215028.txt`
+(SHA256 `fd4d056f0a9aa785550ffd57fef128a6dd1136b6e1ec264229f63368baa7b35b`),
+and `logs/win-v466-stage6/v466-setup-preflight-20260517-215028.log`
+(SHA256 `dcdb878fe997076a4292cbf0bd4ce46b70068d3f27ed358f8eda4c5f134c8f46`).
+This does not by itself approve release: the active Scheduled Task still points
+to v460, no v466 owner/operator real cycle has produced final KPI,
+audit/outbox, evidence ZIP, or sign-off artifacts, and v465 remains only a
+staged stale cache/perf candidate.
 
-v466 is now the latest Mac/non-Windows release-gate-clean package. v464 remains
-the latest broader Windows side-by-side support package with setup/UI/R7
-Excel/evidence guard/return verifier proof. v464 was built from
+v466 is now the latest Mac/non-Windows release-gate-clean and Windows
+setup-proven package. v464 remains the latest broader Windows side-by-side
+support package with UI/R7 Excel/evidence guard/return verifier proof. v464 was
+built from
 `9a94226b243fba691936db46c1fc11ef7c9debbd`, adds the packaged
 `scripts/verify_stage6_return.py` owner-artifact verifier, and keeps the v463
 explicit `target_fiscal_year` propagation through ingestion. Its SHA256 sidecar

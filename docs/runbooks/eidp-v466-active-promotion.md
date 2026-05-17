@@ -97,6 +97,22 @@ try {
 Expected restore evidence: `stage6_recovery_check.bat` returns `ok=true` and
 `action_matches_expected=true` for the v460 fallback action.
 
+Completed preflight evidence from 2026-05-17:
+
+- Windows root: `%USERPROFILE%\EIDP-v466-9a5d50b`
+- Setup rc: `0`
+- `scripts\validate_install.bat --after-setup --json`: `ok=true`,
+  `warnings=[]`, `errors=[]`
+- `scripts\diagnose.bat`: rc `0`
+- Restored task action:
+  `%USERPROFILE%\EIDP-v460-01e4427\scripts\weekly_run.bat`
+- Recovery JSON:
+  `%USERPROFILE%\EIDP-v460-01e4427\logs\stage6-recovery-20260517-215355.json`
+- Mac evidence copies:
+  `logs/win-v466-stage6/v466-preflight-result-20260517-215028.json`,
+  `logs/win-v466-stage6/v466-validate-install-after-setup-20260517-215028.json`,
+  `logs/win-v466-stage6/stage6-recovery-20260517-215355.json`
+
 ## Active Task Switch
 
 Approval boundary: this section changes external Windows state. Run it only

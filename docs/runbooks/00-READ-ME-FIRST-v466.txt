@@ -35,9 +35,20 @@ Current evidence
 - Distribution verifier: ok=true
 - Non-Windows release gate: ok=true
 - GitHub CI for v466 package source: success
-- Windows v466 setup/validation: not run yet
+- Windows v466 setup/validation: ok=true in side-by-side preflight
 - Windows active Scheduled Task switch: not approved yet
 - Owner/operator real cycle: not run yet
+
+Windows preflight evidence
+--------------------------
+- Root: %USERPROFILE%\EIDP-v466-9a5d50b
+- Setup rc: 0
+- validate_install --after-setup: ok=true, warnings=[], errors=[]
+- diagnose rc: 0
+- Task restored after setup:
+  %USERPROFILE%\EIDP-v460-01e4427\scripts\weekly_run.bat
+- Recovery evidence:
+  %USERPROFILE%\EIDP-v460-01e4427\logs\stage6-recovery-20260517-215355.json
 
 Safety
 ------

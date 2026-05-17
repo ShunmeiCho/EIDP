@@ -52,8 +52,16 @@ operator manual workload of 30% or lower. Full automation is not required.
   `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`, SHA256
   `8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`,
   with `BUILD_INFO.git_dirty=false`, distribution verifier `ok=true`, and
-  non-Windows release gate `ok=true` with `--skip-full-unit`. It has not been
-  transferred, set up, or promoted on Windows.
+  non-Windows release gate `ok=true` with `--skip-full-unit`. It was
+  transferred to Windows staging, SHA-checked, expanded side-by-side to
+  `C:\Users\<operator>\EIDP-v466-9a5d50b`, set up with `EIDP-setup.bat`
+  exit `0`, and validated with
+  `scripts\validate_install.bat --after-setup --json` returning `ok=true`,
+  `warnings=[]`, and `errors=[]`. Because setup rewrites the weekly scheduled
+  task, the `EIDP Weekly Run` task was restored to the v460 runner afterward;
+  `scripts\stage6_recovery_check.bat` on v460 returned `ok=true` with
+  `action_matches_expected=true`, and a fresh scheduled-task XML check still
+  points to `C:\Users\<operator>\EIDP-v460-01e4427\scripts\weekly_run.bat`.
 - Latest Windows-staged non-active cache/perf candidate is v465:
   `dist/eidp-windows-v465.zip`, package/source commit
   `be32eb29212f71f72e6ab7e6d2a4f013ccb66e42`, SHA256
@@ -71,7 +79,8 @@ operator manual workload of 30% or lower. Full automation is not required.
   `71a9a8d7e6616c662b499a6bea59293aab8dd6f8eb573e94efa992c32ff6c1e8`.
   Its handoff manifest is `dist/eidp-v466-handoff-manifest-20260517.txt`,
   SHA256 `4501cf7bd1e43616c0305480e88fa4949e0cb2fcdcbff89d0776e11dbaa061ed`.
-  It has not been transferred or expanded on Windows.
+  It was transferred to `C:\EIDP-staging`, SHA-checked, and expanded to
+  `C:\EIDP-staging\v466-operator-docs-20260517` with seven files.
 - No tag, no main merge, and no release approval has been made from these
   support proofs.
 - GitHub PR #2 is green for the v466 package source head
