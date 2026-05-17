@@ -202,16 +202,16 @@ v459 既存証跡（転記候補。bounded diagnostic-only。operator real-cycle
 
 | 手順 | 結果 | 証跡 |
 | --- | --- | --- |
-| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v459-50152a5` |
+| ZIP 解凍 | pass | `%USERPROFILE%\EIDP-v459-50152a5` |
 | `EIDP-setup.bat` | pass | setup completed; SQLite integrity ok |
 | `.venv` 作成 | pass | `validate_windows_install.py --after-setup --json` |
 | DB bootstrap / master import | pass | `school_count=2418`, `sqlite_integrity_check=ok` |
 | 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418` |
-| Task Scheduler recovery | pass | expected action `C:\Users\cyo20\EIDP-v459-50152a5\scripts\weekly_run.bat`, `action_matches_expected=true` |
+| Task Scheduler recovery | pass | expected action `%USERPROFILE%\EIDP-v459-50152a5\scripts\weekly_run.bat`, `action_matches_expected=true` |
 | cleanup tooling | pass | `rotate_audit_outbox.py --json` rotate false; `prune_pdf_storage.py --json` candidate count 0 |
 | URL-only bootstrap | pass | 47 prefectures; `school_domain_overrides.csv` loaded; `school_override_inferred=6`; `corporation_inferred=296` |
 | bounded `weekly_run.bat` canary | pass | `rc=0`, `run_id=20260516_060230`, `crawled=5`, `found=5`, `downloaded=2`, `operator_reviewable_count=5`, `ship_gate_status=pass` |
-| Evidence bundle verify | pass | `C:\Users\cyo20\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`, `ok=true`, `entry_count=12`, no missing required labels; Mac copy SHA256 `c4e68ee5b5f8c1cb8b74938fb369edf4c53c00efdd5624bac3c05e51ab7caf28` |
+| Evidence bundle verify | pass | `%USERPROFILE%\EIDP-v459-50152a5\logs\stage6-evidence-20260516-070115.zip`, `ok=true`, `entry_count=12`, no missing required labels; Mac copy SHA256 `c4e68ee5b5f8c1cb8b74938fb369edf4c53c00efdd5624bac3c05e51ab7caf28` |
 | Default launcher health | pass | root `EIDP-start.bat`, Windows `8501`, health/root HTTP 200, cleanup left no listener |
 | Browser navigation | pass | `① 学校別タスク`, `② PDF確認・手入力`, `④ Excel プレビュー`, `⑤ 設定（年度・OCR・API）` rendered under `output/playwright/v459-ui-smoke/`; `summary.json` recorded `navAllClicked=true`, `hasErrorTraceback=false`; tunnel and Windows listener were cleaned up |
 | R7 browser Excel | pass | process-scoped `EIDP_TARGET_FISCAL_YEAR=2025`, `Excel出力可 2`, `Excel対象行 7177`, downloaded `output/playwright/v459-r7-excel-smoke/eidp_master.xlsx`; workbook dimensions `2419x10`, `10025x22`, `9748x83`, `9748x19`; checked `.env` paths absent |
@@ -222,12 +222,12 @@ v456 既存証跡（historical。bounded diagnostic-only。UI write sandbox も 
 
 | 手順 | 結果 | 証跡 |
 | --- | --- | --- |
-| ZIP 解凍 | pass | `C:\Users\cyo20\EIDP-v456-f33ffc0` |
+| ZIP 解凍 | pass | `%USERPROFILE%\EIDP-v456-f33ffc0` |
 | `EIDP-setup.bat` | pass | setup completed; SQLite integrity ok |
 | `.venv` 作成 | pass | `validate_windows_install.py --after-setup --json` |
 | DB bootstrap / master import | pass | `school_count=2418`, `sqlite_integrity_check=ok` |
 | 年度タスク初期生成 | pass | `school_fiscal_year_status_count=2418` |
-| Task Scheduler recovery | pass | expected action `C:\Users\cyo20\EIDP-v456-f33ffc0\scripts\weekly_run.bat`, `action_matches_expected=true` |
+| Task Scheduler recovery | pass | expected action `%USERPROFILE%\EIDP-v456-f33ffc0\scripts\weekly_run.bat`, `action_matches_expected=true` |
 | URL-only bootstrap | pass | 47 prefectures; `school_domain_overrides.csv` loaded with `count=6` |
 | bounded `weekly_run.bat` canary | pass | `rc=0`, `crawled=5`, `found=5`, `downloaded=2`, `operator_reviewable_count=5`, `ship_gate_status=pass` |
 | Evidence bundle verify | pass | `logs/win-v456-stage6/stage6-evidence-20260516-034752.zip`, all required labels present |
@@ -352,6 +352,9 @@ Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows �
 | `ship_readiness_rc` | 0 | | pass / watch / fail |
 | strict target PDF 自動取得率 | >= 60% | | pass / watch / fail |
 | 推定手作業率 | <= 30% | | pass / watch / fail |
+| release exception reason | blank or `publication_lag` | | pass / watch / fail |
+| mature-year proof JSON | required when exception is used | | pass / watch / fail |
+| mature-year proof years | at least one FY before current target FY | | pass / watch / fail |
 | Excel ready 率 | >= 60% | | pass / watch / fail |
 | retroactive FY 診断年度 | 記録値 | | pass / watch / fail |
 | retroactive FY marker | `is_retroactive_fiscal_year=true` | | pass / watch / fail |

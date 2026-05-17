@@ -25,7 +25,7 @@ def test_parse_task_xml_reads_namespaced_exec_action() -> None:
 <Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <Actions Context="Author">
     <Exec>
-      <Command>C:\\Users\\cyo20\\EIDP-v380-f6a5e6d\\scripts\\weekly_run.bat</Command>
+      <Command>C:\\Users\\eidp_operator\\EIDP-v380-f6a5e6d\\scripts\\weekly_run.bat</Command>
       <Arguments></Arguments>
     </Exec>
   </Actions>
@@ -35,7 +35,7 @@ def test_parse_task_xml_reads_namespaced_exec_action() -> None:
     task = module.parse_task_xml(xml)
 
     assert task.exists is True
-    assert task.execute == r"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
+    assert task.execute == r"C:\Users\eidp_operator\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
     assert task.arguments is None
 
 
@@ -55,7 +55,7 @@ def test_decode_process_output_accepts_ascii_xml_mislabelled_as_utf16() -> None:
 
 def test_build_report_passes_when_task_matches_and_no_residuals(tmp_path: Path) -> None:
     module = _load_module()
-    expected = r"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
+    expected = r"C:\Users\eidp_operator\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
     task = module.ScheduledTaskSnapshot(exists=True, execute=expected)
 
     report = module.build_report(
@@ -75,11 +75,11 @@ def test_build_report_flags_task_mismatch_and_residual_paths(tmp_path: Path) -> 
     residual.mkdir()
     task = module.ScheduledTaskSnapshot(
         exists=True,
-        execute=r"C:\Users\cyo20\EIDP-v384-75732b0-ocr-sr-sandbox\scripts\weekly_run.bat",
+        execute=r"C:\Users\eidp_operator\EIDP-v384-75732b0-ocr-sr-sandbox\scripts\weekly_run.bat",
     )
 
     report = module.build_report(
-        expected_weekly_action=r"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat",
+        expected_weekly_action=r"C:\Users\eidp_operator\EIDP-v380-f6a5e6d\scripts\weekly_run.bat",
         check_paths=[str(residual)],
         task=task,
     )
@@ -95,7 +95,7 @@ def test_build_report_skips_expected_weekly_action_when_not_provided(tmp_path: P
     module = _load_module()
     task = module.ScheduledTaskSnapshot(
         exists=True,
-        execute=r"C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat",
+        execute=r"C:\Users\eidp_operator\EIDP-v380-f6a5e6d\scripts\weekly_run.bat",
     )
 
     report = module.build_report(

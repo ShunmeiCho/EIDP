@@ -184,7 +184,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--expected-weekly-action",
-        help=r"Expected production weekly_run.bat path, e.g. C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat",
+        help=(
+            r"Expected production weekly_run.bat path, "
+            r"e.g. C:\Users\eidp_operator\EIDP-vXXX-abcdef0\scripts\weekly_run.bat"
+        ),
     )
     parser.add_argument(
         "--check-path",

@@ -699,14 +699,14 @@ Mac 側から実行できない場合は、Windows 側でこの `.bat` を実行
 本番 runtime の scheduled task action まで確認する場合だけ、期待する production path を明示する:
 
 ```powershell
-.\EIDP-stage6-recovery.bat "C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
+.\EIDP-stage6-recovery.bat "%USERPROFILE%\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"
 ```
 
 Python helper を直接実行する場合:
 
 ```powershell
 .\runtime\python\python.exe .\scripts\stage6_recovery_check.py `
-  --expected-weekly-action "C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat" `
+  --expected-weekly-action "%USERPROFILE%\EIDP-v380-f6a5e6d\scripts\weekly_run.bat" `
   --json
 ```
 
@@ -728,7 +728,7 @@ Python helper を直接実行する場合:
 ```
 
 `EIDP Weekly Run` の action が検証用 sandbox を指したままなら、直近の本番
-runtime（例: `C:\Users\cyo20\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`）へ戻してから
+runtime（例: `%USERPROFILE%\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`）へ戻してから
 Stage 6 検証を再開する。SSH が復旧するまで、未完了の copied-DB smoke を
 Stage 6 証拠として数えない。
 

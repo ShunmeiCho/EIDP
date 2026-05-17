@@ -39,7 +39,7 @@ def test_collect_candidates_prunes_old_dist_packages_while_keeping_explicit_fall
 
 def test_collect_candidates_prunes_old_windows_staging_and_deploy_dirs(tmp_path: Path) -> None:
     staging = tmp_path / "EIDP-staging"
-    deploy_parent = tmp_path / "Users" / "cyo20"
+    deploy_parent = tmp_path / "Users" / "eidp_operator"
     for version in [442, 444, 445]:
         _touch(staging / f"eidp-windows-v{version}.zip", 10)
         _touch(staging / f"eidp-windows-v{version}.zip.sha256", 1)
@@ -57,7 +57,7 @@ def test_collect_candidates_prunes_old_windows_staging_and_deploy_dirs(tmp_path:
     assert [candidate.path for candidate in candidates] == [
         "EIDP-staging/eidp-windows-v444.zip",
         "EIDP-staging/eidp-windows-v444.zip.sha256",
-        "Users/cyo20/EIDP-v444-abcdef0",
+        "Users/eidp_operator/EIDP-v444-abcdef0",
     ]
 
 
