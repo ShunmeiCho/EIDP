@@ -47,6 +47,7 @@ _DISCLOSURE_PATH_YEAR_RE = re.compile(
 )
 RUN_SCOPED_METADATA_CACHE_MAX_BYTES = 2_000_000
 RUN_SCOPED_PDF_CACHE_MAX_BYTES = 5_000_000
+MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL = 10
 
 
 class HttpGetClient(Protocol):
@@ -3038,11 +3039,12 @@ def run_pdf_discovery(
     }
     recorder = EvidenceRecorder(evidence_path)
 
-    def record_discovery_evidence(evidence: RejectionEvidence) -> None:
+    def record_discovery_evidence(evidence: RejectionEvidence, *, persist: bool = True) -> None:
         if "target_fiscal_year" not in evidence.extra:
             evidence = replace(evidence, extra={**evidence.extra, "target_fiscal_year": str(target_year)})
         _increment_rejection_reason(stats, evidence.reason)
-        recorder.record(evidence)
+        if persist:
+            recorder.record(evidence)
 
     target_year = target_fiscal_year or settings.target_fiscal_year
     rejected_candidate_cache: dict[tuple[int, str, int | None, bool, str], CachedPdfRejection] = {}
@@ -3212,7 +3214,7 @@ def run_pdf_discovery(
                 stats["candidate_school_mismatch"] += len(school_mismatch_candidates)
                 mismatch_ids = {id(c) for c in school_mismatch_candidates}
                 viable = [c for c in viable if id(c) not in mismatch_ids]
-                for c in school_mismatch_candidates:
+                for evidence_index, c in enumerate(school_mismatch_candidates):
                     record_discovery_evidence(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=c.pdf_url,
@@ -3222,7 +3224,7 @@ def run_pdf_discovery(
                         score=c.score,
                         reason="candidate_school_mismatch",
                         pdf_type="non_target",
-                    ))
+                    ), persist=evidence_index < MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL)
             viable, candidate_budget_dropped_candidates = _prioritize_viable_candidates(
                 viable,
                 target_year=target_year,
@@ -3231,7 +3233,7 @@ def run_pdf_discovery(
             if candidate_budget_dropped_candidates:
                 stats["candidate_budget_limited"] += 1
                 stats["candidate_budget_dropped"] += len(candidate_budget_dropped_candidates)
-                for c in candidate_budget_dropped_candidates:
+                for evidence_index, c in enumerate(candidate_budget_dropped_candidates):
                     record_discovery_evidence(RejectionEvidence(
                         school_id=site.school_id,
                         pdf_url=c.pdf_url,
@@ -3243,7 +3245,7 @@ def run_pdf_discovery(
                         extra={
                             "candidate_budget": f"max_general_candidate_scan={MAX_GENERAL_CANDIDATE_SCAN}",
                         },
-                    ))
+                    ), persist=evidence_index < MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL)
             if not viable and school_mismatch_candidates:
                 job.status = "review"
                 job.error_message = "all viable candidates name a different school"

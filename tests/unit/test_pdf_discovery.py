@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from eidp.db.models import Base, CrawlJob, Document, School, SchoolSite
 from eidp.fiscal_year import JapaneseEra, active_japanese_eras, configure_japanese_eras
 from eidp.scraper.pdf_discovery import (
+    MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL,
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
     MAX_GENERAL_CANDIDATE_SCAN,
     RUN_SCOPED_PDF_CACHE_MAX_BYTES,
@@ -700,6 +701,78 @@ def test_run_pdf_discovery_skips_candidates_that_name_a_different_school(
         assert stats["downloaded"] == 1
         assert mismatch[0]["pdf_url"] == "https://www.o-hara.ac.jp/about/joho/pdf/2026-1-09-01-5.pdf"
         assert mismatch[0]["pdf_type"] == "non_target"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_limits_bulk_school_mismatch_evidence(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Shared corporation pages can mention many sibling schools; keep JSONL bounded."""
+
+    session = _session()
+    evidence = tmp_path / "evidence.jsonl"
+    try:
+        session.add(
+            School(
+                id=1,
+                school_name="大原医療秘書福祉専門学校大宮校",
+                prefecture="埼玉県",
+                corporation_name="大原学園",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=1, url="https://www.o-hara.ac.jp/about/joho/", http_status=200))
+        session.flush()
+        mismatch_candidates = [
+            PdfCandidate(
+                pdf_url=f"https://www.o-hara.ac.jp/about/joho/pdf/2026-1-{idx:02d}-01-5.pdf",
+                page_url="https://www.o-hara.ac.jp/about/joho/",
+                anchor_text=f"PDF 山形スポーツ医療福祉専門学校{idx}校 確認申請書",
+                score=5.0,
+            )
+            for idx in range(MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL + 3)
+        ]
+        target = PdfCandidate(
+            pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2026-1-37-01-5.pdf",
+            page_url="https://www.o-hara.ac.jp/about/joho/",
+            anchor_text="PDF 大原医療秘書福祉専門学校大宮校 修学支援新制度 確認申請書",
+            score=5.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[*mismatch_candidates, target], best=target)
+
+        def fake_download(
+            _client,
+            _candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            return str(tmp_path / "target.pdf"), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        payloads = [json.loads(line) for line in evidence.read_text(encoding="utf-8").splitlines()]
+        mismatch = [payload for payload in payloads if payload["reason"] == "candidate_school_mismatch"]
+        assert stats["candidate_school_mismatch"] == len(mismatch_candidates)
+        assert stats["rejection_reason_candidate_school_mismatch"] == len(mismatch_candidates)
+        assert len(mismatch) == MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL
+        assert stats["downloaded"] == 1
     finally:
         session.close()
 
@@ -4259,6 +4332,62 @@ def test_run_pdf_discovery_records_candidate_budget_dropped_evidence(
         assert dropped[0]["pdf_url"] == f"https://example.ac.jp/docs/generic-{MAX_GENERAL_CANDIDATE_SCAN:03d}.pdf"
         assert dropped[0]["extra"]["candidate_budget"] == f"max_general_candidate_scan={MAX_GENERAL_CANDIDATE_SCAN}"
         assert dropped[0]["extra"]["target_fiscal_year"] == "2026"
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_limits_bulk_candidate_budget_dropped_evidence(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Candidate budget stats stay exact while high-volume JSONL evidence is sampled."""
+
+    session = _session()
+    evidence = tmp_path / "evidence.jsonl"
+    dropped_count = MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL + 3
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.flush()
+        candidates = [
+            PdfCandidate(
+                pdf_url=f"https://example.ac.jp/docs/generic-{idx:03d}.pdf",
+                page_url="https://example.ac.jp/disclosure/",
+                anchor_text="情報公開資料",
+            )
+            for idx in range(MAX_GENERAL_CANDIDATE_SCAN + dropped_count)
+        ]
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=candidates, best=candidates[0])
+
+        def fake_download(
+            _client,
+            _candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            return None, None, 0, "unknown", "too_small"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+        )
+
+        payloads = [json.loads(line) for line in evidence.read_text(encoding="utf-8").splitlines()]
+        dropped = [payload for payload in payloads if payload["reason"] == "candidate_budget_dropped"]
+        assert stats["candidate_budget_limited"] == 1
+        assert stats["candidate_budget_dropped"] == dropped_count
+        assert stats["rejection_reason_candidate_budget_dropped"] == dropped_count
+        assert len(dropped) == MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL
     finally:
         session.close()
 
