@@ -14,6 +14,7 @@ import socket
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -29,6 +30,8 @@ from eidp.scraper.search_provider import SearchResult
 log = structlog.get_logger()
 
 SEARCH_RESULT_MIN_CONFIDENCE = 0.65
+DNS_SAFETY_TIMEOUT_SECONDS = 3.0
+DNS_SAFETY_CACHE_SIZE = 4096
 
 THIRD_PARTY_DIRECTORY_HOST_SUFFIXES = (
     "best-shingaku.net",
@@ -43,6 +46,30 @@ THIRD_PARTY_DIRECTORY_HOST_SUFFIXES = (
 
 # SSRF prevention: only allow http(s) to public hosts
 _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}
+
+
+@lru_cache(maxsize=DNS_SAFETY_CACHE_SIZE)
+def _resolve_host_addresses_for_safety(hostname: str) -> tuple[str, ...]:
+    """Resolve ``hostname`` for SSRF checks with a short timeout and run cache."""
+
+    previous_timeout = socket.getdefaulttimeout()
+    try:
+        socket.setdefaulttimeout(DNS_SAFETY_TIMEOUT_SECONDS)
+        resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    except (socket.gaierror, OSError, TimeoutError):
+        return ()
+    finally:
+        socket.setdefaulttimeout(previous_timeout)
+
+    addresses: list[str] = []
+    seen: set[str] = set()
+    for _, _, _, _, sockaddr in resolved:
+        addr = str(sockaddr[0])
+        if addr in seen:
+            continue
+        seen.add(addr)
+        addresses.append(addr)
+    return tuple(addresses)
 
 
 def _is_safe_url(url: str) -> bool:
@@ -72,16 +99,13 @@ def _is_safe_url(url: str) -> bool:
             return False
     except ValueError:
         # hostname is not an IP, resolve DNS to check actual IP
-        try:
-            resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-            for _, _, _, _, sockaddr in resolved:
-                addr = sockaddr[0]
-                ip = ipaddress.ip_address(addr)
-                if ip.is_private or ip.is_loopback or ip.is_link_local:
-                    return False
-        except (socket.gaierror, OSError):
-            # DNS resolution failed, reject the URL
+        addresses = _resolve_host_addresses_for_safety(hostname)
+        if not addresses:
             return False
+        for addr in addresses:
+            ip = ipaddress.ip_address(addr)
+            if ip.is_private or ip.is_loopback or ip.is_link_local:
+                return False
 
     return True
 

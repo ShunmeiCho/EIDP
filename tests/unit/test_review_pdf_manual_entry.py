@@ -124,6 +124,22 @@ def test_prune_manual_entry_row_widgets_removes_every_deleted_row_field() -> Non
         assert state[key] == "static"
 
 
+def test_prune_manual_entry_row_widgets_does_not_confuse_dropout_prefixes() -> None:
+    state: dict[str, object] = {
+        "drp_42_0": "kept-dropouts",
+        "drprate_42_0": "kept-rate",
+        "drp_42_1": "stale-dropouts",
+        "drprate_42_1": "stale-rate",
+    }
+
+    prune_manual_entry_row_widgets(state, document_id=42, row_count=1)
+
+    assert state["drp_42_0"] == "kept-dropouts"
+    assert state["drprate_42_0"] == "kept-rate"
+    assert "drp_42_1" not in state
+    assert "drprate_42_1" not in state
+
+
 def test_clear_manual_entry_form_state_removes_all_form_widgets() -> None:
     state: dict[str, object] = {
         manual_entry_rows_state_key(42): [{}, {}],

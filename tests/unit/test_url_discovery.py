@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import socket
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -28,6 +29,44 @@ def test_is_safe_url_rejects_raw_control_characters_before_urlparse() -> None:
     assert not url_discovery._is_safe_url("https://www.\nogosejidai.ac.jp/file.pdf")
     assert not url_discovery._is_safe_url("https://example.ac.jp/\rfile.pdf")
     assert not url_discovery._is_safe_url("https://example.ac.jp/\tfile.pdf")
+
+
+def test_is_safe_url_uses_bounded_cached_dns_resolution(monkeypatch) -> None:
+    calls: list[tuple[str, float | None]] = []
+    original_timeout = socket.getdefaulttimeout()
+
+    def fake_getaddrinfo(host: str, *_args: object) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+        calls.append((host, socket.getdefaulttimeout()))
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))]
+
+    url_discovery._resolve_host_addresses_for_safety.cache_clear()
+    monkeypatch.setattr(url_discovery.socket, "getaddrinfo", fake_getaddrinfo)
+
+    try:
+        assert url_discovery._is_safe_url("https://slow-dns.example.ac.jp/disclosure/")
+        assert url_discovery._is_safe_url("https://slow-dns.example.ac.jp/other/")
+        assert calls == [("slow-dns.example.ac.jp", url_discovery.DNS_SAFETY_TIMEOUT_SECONDS)]
+        assert socket.getdefaulttimeout() == original_timeout
+    finally:
+        url_discovery._resolve_host_addresses_for_safety.cache_clear()
+
+
+def test_is_safe_url_rejects_and_caches_dns_timeout(monkeypatch) -> None:
+    calls: list[str] = []
+
+    def fake_getaddrinfo(host: str, *_args: object) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+        calls.append(host)
+        raise TimeoutError("dns timeout")
+
+    url_discovery._resolve_host_addresses_for_safety.cache_clear()
+    monkeypatch.setattr(url_discovery.socket, "getaddrinfo", fake_getaddrinfo)
+
+    try:
+        assert not url_discovery._is_safe_url("https://timeout.example.ac.jp/disclosure/")
+        assert not url_discovery._is_safe_url("https://timeout.example.ac.jp/other/")
+        assert calls == ["timeout.example.ac.jp"]
+    finally:
+        url_discovery._resolve_host_addresses_for_safety.cache_clear()
 
 
 def test_import_seed_urls_reads_utf8_sig_csv(tmp_path: Path, monkeypatch) -> None:
