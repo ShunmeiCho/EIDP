@@ -200,6 +200,58 @@ def test_rebuild_counts_review_pending_target_pdf_as_acquired_but_not_excel_read
         session.close()
 
 
+def test_rebuild_counts_parse_failed_target_pdf_as_acquired_but_not_excel_ready() -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        session.add(
+            SchoolSite(
+                school_id=1,
+                url="https://s1.example/disclosure",
+                discovery_method="prefecture_aggregator",
+                http_status=200,
+            )
+        )
+        session.add(
+            Document(
+                id=1,
+                school_id=1,
+                source_url="https://s1.example/fy2026.pdf",
+                file_hash="p" * 64,
+                fiscal_year=2026,
+                pdf_type="target",
+                ingest_status="parse_failed",
+            )
+        )
+        session.commit()
+
+        stats = rebuild_school_fiscal_year_status(
+            session,
+            fiscal_year=2026,
+            school_type="専門学校",
+        )
+        session.commit()
+
+        row = session.get(SchoolFiscalYearStatus, (1, 2026))
+        assert row is not None
+        assert row.pdf_status == "confirmed_target"
+        assert row.extract_status == "parse_failed"
+        assert row.excel_ready is False
+        assert row.blocking_reason == "parse_failed"
+        assert stats.excel_ready == 0
+
+        counts = school_fiscal_year_status_counts(
+            session,
+            fiscal_year=2026,
+            school_type="専門学校",
+        )
+        assert counts["confirmed_target"] == 1
+        assert counts["review_or_parse"] == 1
+        assert counts["excel_ready"] == 0
+    finally:
+        session.close()
+
+
 def test_rebuild_marks_stale_pdf_text_as_conflict_even_with_target_year_url_hint() -> None:
     session = _session()
     try:

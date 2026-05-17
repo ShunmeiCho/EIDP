@@ -76,7 +76,7 @@ def _pdf_status(docs: list[Document], fiscal_year: int) -> str:
     if any(
         d.fiscal_year == fiscal_year
         and d.pdf_type == "target"
-        and d.ingest_status in {"ingested", "review_pending", "support_only"}
+        and d.ingest_status in {"ingested", "parse_failed", "review_pending", "support_only"}
         for d in docs
     ):
         return "confirmed_target"
