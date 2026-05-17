@@ -283,6 +283,41 @@ def test_build_windows_zip_allows_dirty_source_when_explicit(
     assert rc == 0
 
 
+def test_build_windows_zip_dirty_zip_requires_diagnostic_name(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bw = _load_build_script()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+    (wheelhouse / "structlog-25.0.0-py3-none-any.whl").write_bytes(b"dep")
+
+    def fail_build_project_wheel(**_kwargs):  # noqa: ANN003
+        raise AssertionError("release-like dirty ZIP must fail before building wheels")
+
+    monkeypatch.setattr(bw, "build_project_wheel", fail_build_project_wheel)
+
+    with pytest.raises(RuntimeError, match="diagnostic.*dirty"):
+        bw.main([
+            "--wheelhouse",
+            str(wheelhouse),
+            "--out-zip",
+            str(tmp_path / "eidp-windows-v466.zip"),
+            "--skip-download",
+            "--allow-dirty",
+        ])
+
+
+def test_dirty_build_diagnostic_name_allows_explicit_diagnostic_names(tmp_path: Path) -> None:
+    bw = _load_build_script()
+
+    bw.assert_dirty_build_diagnostic_name(tmp_path / "eidp-windows-v466-diagnostic.zip")
+    bw.assert_dirty_build_diagnostic_name(tmp_path / "eidp-windows-v466-dirty.zip")
+
+    with pytest.raises(RuntimeError, match="diagnostic.*dirty"):
+        bw.assert_dirty_build_diagnostic_name(tmp_path / "eidp-windows-v466.zip")
+
+
 def test_write_sha256_sidecar_records_relative_repo_path(tmp_path: Path):
     bw = _load_build_script()
     artifact = tmp_path / "dist" / "eidp-windows.zip"
@@ -326,8 +361,8 @@ def bat_files() -> dict[str, str]:
     for name in (
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
-        "collect_stage6_evidence.bat", "verify_stage6_evidence.bat", "stage6_recovery_check.bat",
-        "stage6_residual_cleanup.bat",
+        "collect_stage6_evidence.bat", "collect_bug_report.bat", "verify_stage6_evidence.bat",
+        "stage6_recovery_check.bat", "stage6_residual_cleanup.bat",
     ):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
@@ -338,8 +373,8 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
     assert set(bat_files.keys()) == {
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
-        "collect_stage6_evidence.bat", "verify_stage6_evidence.bat", "stage6_recovery_check.bat",
-        "stage6_residual_cleanup.bat",
+        "collect_stage6_evidence.bat", "collect_bug_report.bat", "verify_stage6_evidence.bat",
+        "stage6_recovery_check.bat", "stage6_residual_cleanup.bat",
     }
 
 
@@ -352,6 +387,7 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
         "diagnose.bat",
         "validate_install.bat",
         "collect_stage6_evidence.bat",
+        "collect_bug_report.bat",
         "verify_stage6_evidence.bat",
         "stage6_recovery_check.bat",
         "stage6_residual_cleanup.bat",
@@ -376,6 +412,7 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
         "diagnose.bat",
         "validate_install.bat",
         "collect_stage6_evidence.bat",
+        "collect_bug_report.bat",
         "verify_stage6_evidence.bat",
         "stage6_recovery_check.bat",
         "stage6_residual_cleanup.bat",
@@ -841,6 +878,16 @@ def test_collect_stage6_evidence_bat_runs_packaged_helper(bat_files: dict[str, s
     assert "endlocal & exit /b %BUNDLE_RC%" in body
 
 
+def test_collect_bug_report_bat_runs_packaged_helper(bat_files: dict[str, str]):
+    body = bat_files["collect_bug_report.bat"]
+    assert "collect_bug_report.py" in body
+    assert '--root "%EIDP_APP_ROOT%"' in body
+    assert ".venv\\Scripts\\python.exe" in body
+    assert "runtime\\python\\python.exe" in body
+    assert "[collect_bug_report] ERROR: no Python found" in body
+    assert "exit /b %ERRORLEVEL%" in body
+
+
 def test_verify_stage6_evidence_bat_runs_latest_zip_verifier(bat_files: dict[str, str]):
     body = bat_files["verify_stage6_evidence.bat"]
     assert "verify_stage6_evidence.py" in body
@@ -939,9 +986,7 @@ def test_skip_download_still_refreshes_project_wheel(
 
 
 def test_download_uses_pip_not_uv(monkeypatch: pytest.MonkeyPatch):
-    """Owner finding 8.5.a P0: ``uv pip download`` does not exist.
-    download_windows_wheels must shell out to ``python -m pip
-    download``."""
+    """The CI packaging contract shells out to ``python -m pip download``."""
     bw = _load_build_script()
     captured: dict[str, list[str]] = {}
 
@@ -960,8 +1005,8 @@ def test_download_uses_pip_not_uv(monkeypatch: pytest.MonkeyPatch):
     )
 
     cmd = captured["cmd"]
-    # Tokens must include "-m pip download" — owner explicitly required
-    # this and it is the smoke test that ran red on 8.5.a.
+    # Tokens must include "-m pip download" because the CI smoke path
+    # exercises this exact command surface.
     assert "-m" in cmd and "pip" in cmd and "download" in cmd
     assert "uv" not in cmd[0:1], "uv is not the entrypoint here"
     # Platform / abi tokens must be carried through.
@@ -1016,6 +1061,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "scripts" / "collect_stage6_evidence.py").write_text("print('bundle')", encoding="utf-8")
     (fake_repo / "scripts" / "verify_stage6_evidence.py").write_text("print('verify bundle')", encoding="utf-8")
     (fake_repo / "scripts" / "verify_stage6_return.py").write_text("print('verify return')", encoding="utf-8")
+    (fake_repo / "scripts" / "build_mature_year_acquisition_proof.py").write_text(
+        "print('mature proof')",
+        encoding="utf-8",
+    )
     (fake_repo / "scripts" / "stage6_recovery_check.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "stage6_residual_cleanup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "validate_install.bat").write_text("@echo off", encoding="utf-8")
@@ -1028,6 +1077,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "docs" / "runbooks" / "eidp-windows.md").write_text("# runbook", encoding="utf-8")
     (fake_repo / "docs" / "runbooks" / "eidp-operator-e2e-template.md").write_text(
         "# E2E\nship_readiness_rc\n",
+        encoding="utf-8",
+    )
+    (fake_repo / "docs" / "runbooks" / "eidp-v460-real-cycle-card.md").write_text(
+        r"%USERPROFILE%\EIDP-v460-01e4427",
         encoding="utf-8",
     )
     (fake_repo / "README.md").write_text("# EIDP", encoding="utf-8")
@@ -1167,6 +1220,9 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "scripts/verify_stage6_return.py" in arcs, (
         "Stage 6 returned owner/operator artifacts must have a mechanical release verifier"
     )
+    assert "scripts/build_mature_year_acquisition_proof.py" in arcs, (
+        "publication-lag release exceptions need a mechanical mature-year acquisition proof builder"
+    )
     assert "scripts/verify_stage6_evidence.bat" in arcs, (
         "Stage 6 evidence verifier must have a Windows-local wrapper"
     )
@@ -1193,6 +1249,15 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "wheelhouse/structlog-25.0.0-py3-none-any.whl" in arcs
     assert "docs/runbooks/eidp-windows.md" in arcs
     assert "docs/runbooks/eidp-operator-e2e-template.md" in arcs
+    historical_runbook_arcs = {
+        arc for arc in arcs
+        if arc.startswith("docs/runbooks/eidp-v")
+    }
+    assert historical_runbook_arcs == set(), (
+        "Historical handoff/runbook cards can contain tester-specific paths; "
+        "the operator ZIP must ship only current operator docs. Found: "
+        f"{sorted(historical_runbook_arcs)}"
+    )
     assert "README.md" in arcs
     assert "requirements-windows.txt" in arcs
     assert "data/master.xlsx" in arcs, (

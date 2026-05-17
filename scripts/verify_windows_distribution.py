@@ -12,9 +12,11 @@ from __future__ import annotations
 import argparse
 import ast
 import csv
+import getpass
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import sys
 import zipfile
@@ -55,6 +57,9 @@ SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL = (
 )
 WINDOWS_ZIP_VERSION_RE = re.compile(r"(?:dist/|C:\\EIDP-staging\\)?eidp-windows-v\d+\.zip", re.IGNORECASE)
 SHA256_HEX_RE = re.compile(r"\b[0-9a-fA-F]{64}\b")
+GENERIC_LOCAL_USERS = {"", "root", "runner", "vscode", "codespace"}
+WINDOWS_REAL_USER_PATH_RE = re.compile(r"C:[\\/]+Users[\\/]+(?!<user>(?:[\\/]|$))[^\\/\s`\"'<>]+", re.IGNORECASE)
+MAC_REAL_USER_PATH_RE = re.compile(r"/Users/(?!<user>(?:/|$))[^/\s`\"'<>]+")
 
 
 @dataclass
@@ -95,6 +100,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/bootstrap_pdfs.bat",
     "scripts/diagnose.bat",
     "scripts/collect_stage6_evidence.bat",
+    "scripts/collect_bug_report.bat",
     "scripts/verify_stage6_evidence.bat",
     "scripts/uninstall.bat",
     "scripts/validate_install.bat",
@@ -106,8 +112,10 @@ CORE_REQUIRED_EXACT = (
     "scripts/run_r8_rediscovery_weekly.py",
     "scripts/validate_windows_install.py",
     "scripts/collect_stage6_evidence.py",
+    "scripts/collect_bug_report.py",
     "scripts/verify_stage6_evidence.py",
     "scripts/verify_stage6_return.py",
+    "scripts/build_mature_year_acquisition_proof.py",
     "scripts/stage6_recovery_check.py",
     "scripts/stage6_residual_cleanup.py",
     "scripts/bootstrap_pdf_pipeline.py",
@@ -126,6 +134,9 @@ CORE_REQUIRED_EXACT = (
     "data/discovery-gold-set/expected-predictions.jsonl",
     "src/eidp/review/app.py",
     "src/eidp/review/operator_pages.py",
+    "src/eidp/review/_pages/bug_report.py",
+    "src/eidp/bug_signals/detector.py",
+    "src/eidp/bug_signals/bundle.py",
     "src/eidp/review/_pages/audit_log.py",
     "src/eidp/review/_pages/settings_page.py",
     "src/eidp/review/_pages/school_year_tasks.py",
@@ -355,6 +366,37 @@ def _check_no_runtime_data(check: ZipCheck, names: set[str]) -> None:
     )
     if runtime_entries:
         check.fail(f"zip contains mutable runtime data entries: {runtime_entries[:8]}")
+
+
+def _check_no_secret_files(check: ZipCheck, names: set[str]) -> None:
+    private_key_names = {
+        "id_dsa",
+        "id_ecdsa",
+        "id_ed25519",
+        "id_rsa",
+    }
+    secret_entries: list[str] = []
+    for name in sorted(names):
+        base_name = name.rsplit("/", 1)[-1].lower()
+        if base_name == ".env" or (base_name.startswith(".env.") and base_name != ".env.example"):
+            secret_entries.append(name)
+            continue
+        if base_name in private_key_names or base_name.endswith("_private_key.pem"):
+            secret_entries.append(name)
+    if secret_entries:
+        check.fail(f"zip contains local secret/key files: {secret_entries[:8]}")
+
+
+def _check_no_historical_runbooks(check: ZipCheck, names: set[str]) -> None:
+    historical_runbooks = sorted(
+        name for name in names
+        if name.startswith("docs/runbooks/eidp-v")
+    )
+    if historical_runbooks:
+        check.fail(
+            "zip contains historical handoff runbooks; ship only current operator docs: "
+            f"{historical_runbooks[:10]}"
+        )
 
 
 def _check_wheelhouse(check: ZipCheck, names: set[str], *, require_project: bool) -> None:
@@ -781,6 +823,27 @@ def _reject_text(check: ZipCheck, body: str, member: str, needle: str) -> None:
         check.fail(f"{member} contains forbidden token: {needle}")
 
 
+def _local_user_path_tokens() -> tuple[str, ...]:
+    users = {getpass.getuser(), Path.home().name}
+    users.update(
+        user.strip()
+        for user in os.environ.get("EIDP_FORBIDDEN_LOCAL_USERS", "").split(",")
+        if user.strip()
+    )
+    tokens: list[str] = []
+    for user in sorted(users - GENERIC_LOCAL_USERS):
+        tokens.extend((user, f"/Users/{user}", f"C:\\Users\\{user}", f"C:/Users/{user}"))
+    return tuple(tokens)
+
+
+def _reject_local_user_path_tokens(check: ZipCheck, body: str, member: str) -> None:
+    if WINDOWS_REAL_USER_PATH_RE.search(body) or MAC_REAL_USER_PATH_RE.search(body):
+        check.fail(f"{member} contains local-user path token")
+        return
+    if any(token in body for token in _local_user_path_tokens()):
+        check.fail(f"{member} contains local-user path token")
+
+
 def _reject_bare_rc_assignment(check: ZipCheck, body: str, member: str) -> None:
     """Catch stale launcher lines like ``"RC=-1"`` that cmd tries to execute."""
     for lineno, line in enumerate(body.splitlines(), start=1):
@@ -994,6 +1057,14 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "downloaded PDFs",
             "endlocal & exit /b %BUNDLE_RC%",
         ),
+        "scripts/collect_bug_report.bat": (
+            ".venv\\Scripts\\python.exe",
+            "runtime\\python\\python.exe",
+            "collect_bug_report.py",
+            '--root "%EIDP_APP_ROOT%"',
+            "[collect_bug_report] ERROR: no Python found",
+            "exit /b %ERRORLEVEL%",
+        ),
         "scripts/verify_stage6_evidence.bat": (
             ".venv\\Scripts\\python.exe",
             "runtime\\python\\python.exe",
@@ -1117,6 +1188,43 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "stage6-recovery-*.json",
             "discovery-rca-batch-plan.json",
         ),
+        "scripts/collect_bug_report.py": (
+            "build_bug_report_bundle",
+            "scrub_json_value",
+            "local bundle generation",
+            "--note",
+            "--json",
+            "never uploads data",
+        ),
+        "src/eidp/bug_signals/detector.py": (
+            "BugSignal",
+            "scan_bug_signals",
+            "scan_p0_bug_signals",
+            "weekly_run_error",
+            "weekly_run_timeout_no_last_run",
+            "stale_lock",
+            "weekly_run_log_error",
+            "PRAGMA integrity_check",
+        ),
+        "src/eidp/bug_signals/bundle.py": (
+            "build_bug_report_bundle",
+            "scrub_text",
+            "scrub_json_value",
+            "bug-signals.json",
+            "manifest.json",
+            "local-only bundle",
+            "data/eidp.sqlite3 and sidecars are never bundled",
+            "data/pdfs is never bundled",
+            "data/output/*.xlsx is never bundled",
+        ),
+        "src/eidp/review/_pages/bug_report.py": (
+            "不具合レポート",
+            "scan_bug_signals",
+            "build_bug_report_bundle",
+            "scrub_json_value",
+            "ローカルレポートZIPを作成",
+            "application/zip",
+        ),
         "scripts/verify_stage6_evidence.py": (
             "verify_stage6_evidence_bundle",
             "stage6-evidence-manifest.json",
@@ -1136,10 +1244,34 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "target_pdf_auto_yield_pct",
             "operator_reviewable_yield_pct",
             "ship_gate_status",
+            "SHIP_GATE_EXCEPTION_REASONS",
+            "release_exception_reason",
+            "mature_year_proof_json",
+            "release-exception actual is blank",
+            "release-exception row missing or malformed",
+            "release exception requires --mature-year-proof-json",
+            "mature-year proof JSON ok must be true",
+            "release exception cannot be combined with allow-unmeasured KPI mode",
             "Owner sign-off:",
             "業務員 sign-off:",
             "min_target_pdf_auto_yield",
+            "min_target_pdf_auto_denominator_count",
+            "target_pdf_auto_denominator_count",
+            "target_pdf_auto_denominator_scope",
             "max_manual_workload",
+        ),
+        "scripts/build_mature_year_acquisition_proof.py": (
+            "build_mature_year_acquisition_proof",
+            "MATURE_YEAR_SHIP_GATE_METRIC_BASIS",
+            "MATURE_YEAR_PROOF_MIN_DENOMINATOR",
+            "target_pdf_auto_denominator_count",
+            "target_pdf_auto_denominator_scope",
+            "target_pdf_auto_yield_pct",
+            "operator_reviewable_yield_pct",
+            "ship_gate_status",
+            "estimated_manual_workload_pct",
+            "--case",
+            "FY=path",
         ),
         "scripts/stage6_recovery_check.py": (
             "EIDP Weekly Run",
@@ -1163,6 +1295,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "acquire_lock",
             "last_run.json",
             "write_last_run",
+            "write_progress",
+            "--progress-file",
             "prune_run_logs",
             "prune_run_artifacts",
             "RUN_ARTIFACT_PATTERNS",
@@ -1177,6 +1311,10 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "known URL / corporation fallback discovery",
             "discovered-urls-50.csv",
             "prefecture_aggregator,seed_csv,corporation_pattern,school_domain_override,scrapling_stealth",
+            "--target-fiscal-year",
+            "_effective_target_fiscal_year",
+            "target_fiscal_year=effective_target_fiscal_year",
+            "target_fiscal_year=target_fiscal_year",
             "progress_callback",
             "write_text_atomic",
             "operator_reviewable_yield_pct",
@@ -1191,10 +1329,18 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "WEEKLY_SHIP_GATE_METRIC_BASIS",
             "SHIP_GATE_AUTO_YIELD_PCT",
             "SHIP_GATE_OPERATOR_COVERAGE_PCT",
+            "MATURE_YEAR_SHIP_GATE_METRIC_BASIS",
+            "MATURE_YEAR_PROOF_MIN_DENOMINATOR",
+            "WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE",
+            "SHIP_GATE_EXCEPTION_REASONS",
             "post_bootstrap_operator_reviewable_coverage",
             "weekly_operator_reviewable_acquisition",
+            "mature_year_retroactive_operator_reviewable_acquisition",
+            "target_missing_schools_before_run",
+            "publication_lag",
             "ship_gate_status_from_operator_coverage",
             "ship_gate_status_from_yield",
+            "is_ship_gate_exception_reason",
         ),
         "requirements-windows.txt": (
             "jsonschema>=4.0,<5.0",
@@ -1203,6 +1349,10 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "_echo_import_excel_results",
             "invalid_year",
             "想定外の年度",
+            "--target-fiscal-year",
+            "MIN_SUPPORTED_TARGET_FISCAL_YEAR",
+            "MAX_SUPPORTED_TARGET_FISCAL_YEAR",
+            "target_fiscal_year=target_fiscal_year",
             '_require_app_lock("cli_import_excel")',
             '_require_app_lock("cli_match_mext")',
             '_require_app_lock("cli_reconcile")',
@@ -1290,6 +1440,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             'action_type="school_code_corrected"',
             'action_type="school_code_rejected"',
             'action_type="school_code_skipped"',
+            "PAGE_BUG_REPORT",
+            "_render_bug_signal_banner",
+            "異常を",
+            "レポート作成",
+            "render_bug_report",
         ),
         "src/eidp/review/_pages/url_candidate_review.py": (
             "log_manual_action",
@@ -1605,6 +1760,7 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
     body = _read_zip_text(check, member)
     if body is None:
         return
+    _reject_local_user_path_tokens(check, body, member)
     for token in (
         "業務員クイック",
         "学校別タスク",
@@ -1655,6 +1811,7 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
     e2e_body = _read_zip_text(check, e2e_member)
     if e2e_body is None:
         return
+    _reject_local_user_path_tokens(check, e2e_body, e2e_member)
     for token in (
         "ship_readiness_rc",
         "retroactive_fiscal_year",
@@ -1669,6 +1826,9 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "recommendations",
         "strict target PDF 自動取得率",
         "推定手作業率",
+        "release exception reason",
+        "mature-year proof JSON",
+        "mature-year proof years",
         "Excel ready 率",
         "logs\\diagnostics-*.txt",
         "127.0.0.1:18501:127.0.0.1:8501",
@@ -1832,6 +1992,8 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_no_pycache(check, names)
     _check_windows_safe_paths(check, names)
     _check_no_runtime_data(check, names)
+    _check_no_secret_files(check, names)
+    _check_no_historical_runbooks(check, names)
     _check_wheelhouse(check, names, require_project=True)
     _check_bat_contracts(check, names)
     _check_python_entrypoint_contracts(check, names)

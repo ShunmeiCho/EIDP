@@ -114,11 +114,12 @@ def download_windows_wheels(
     """Download every transitive dep into ``dest`` constrained to a
     Windows / cp312 / abi cp312 wheel set.
 
-    ``uv`` does not yet ship a ``pip download`` subcommand (only
-    ``install`` / ``compile`` / ``sync``), so we use ``pip`` directly
-    via ``python -m pip download``. The build host needs a Python with
-    pip available; the resolved wheelhouse is platform-tagged so it is
-    safe to ship to Windows regardless of build host OS.
+    The CI and release contract intentionally use ``python -m pip
+    download`` from the synced dev environment. This keeps the command
+    surface aligned with the historical Windows packaging tests; the dev
+    extra must include ``pip`` so clean CI builds can execute this path.
+    The resolved wheelhouse is platform-tagged, so it is safe to ship to
+    Windows regardless of build host OS.
     """
     dest.mkdir(parents=True, exist_ok=True)
     py = python_executable or sys.executable
@@ -346,6 +347,18 @@ def assert_clean_tracked_source(repo_root: Path) -> None:
     )
 
 
+def assert_dirty_build_diagnostic_name(out_zip: Path) -> None:
+    """Refuse dirty ZIP builds that look like release handoff artifacts."""
+
+    name = out_zip.name.lower()
+    if "diagnostic" in name or "dirty" in name:
+        return
+    raise RuntimeError(
+        "--allow-dirty ZIP builds are diagnostic only; use an output filename "
+        "containing 'diagnostic' or 'dirty' to avoid mistaking it for a release package"
+    )
+
+
 def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path, str]]:
     """Enumerate every (source_path, arcname) pair the Windows ZIP must
     carry. Tested in isolation so we can assert on the manifest without
@@ -367,6 +380,8 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       scripts/validate_windows_install.py    VM/operator evidence checker
       scripts/verify_stage6_evidence.py      Stage 6 evidence bundle checker
       scripts/verify_stage6_return.py        Stage 6 returned-artifacts checker
+      scripts/build_mature_year_acquisition_proof.py
+                                             mature-year KPI proof builder
       scripts/validate_install.bat           VM/operator wrapper for the checker
       alembic.ini                  required by db-bootstrap
       migrations/...               required by alembic stamp head
@@ -429,6 +444,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             "collect_stage6_evidence.py",
             "verify_stage6_evidence.py",
             "verify_stage6_return.py",
+            "build_mature_year_acquisition_proof.py",
             "stage6_recovery_check.py",
             "stage6_residual_cleanup.py",
             "collect_bug_report.py",
@@ -598,6 +614,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.allow_dirty:
         assert_clean_tracked_source(REPO_ROOT)
+    elif not args.skip_zip:
+        assert_dirty_build_diagnostic_name(args.out_zip)
 
     if args.skip_download:
         build_project_wheel(repo_root=REPO_ROOT, out_dir=args.wheelhouse)

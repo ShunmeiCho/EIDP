@@ -44,22 +44,30 @@ jobs:
           scripts/verify_windows_distribution.py
           scripts/run_non_windows_release_gates.py
           scripts/run_retroactive_excel_matrix.py
+          scripts/build_mature_year_acquisition_proof.py
+          scripts/bootstrap_pdf_pipeline.py
           scripts/collect_stage6_evidence.py
           scripts/collect_bug_report.py
           scripts/verify_stage6_evidence.py
+          scripts/verify_stage6_return.py
           scripts/stage6_recovery_check.py
           scripts/stage6_residual_cleanup.py
+          scripts/ship_gate_contract.py
           tests/unit/test_current_read_paths.py
           tests/unit/test_db_session.py
           tests/unit/test_fiscal_year_evidence.py
           tests/unit/test_package_init.py
           tests/unit/test_retroactive_excel_matrix.py
+          tests/unit/test_mature_year_acquisition_proof.py
           tests/unit/test_windows_install_validator.py
           tests/unit/test_non_windows_release_gates.py
-          tests/unit/test_stage6_evidence_bundle.py
+          tests/unit/test_bootstrap_pdf_pipeline.py
           tests/unit/test_bug_signals.py
           tests/unit/test_review_bug_report.py
-          tests/unit/test_bug_report_packaging.py
+          tests/unit/test_stage6_evidence_bundle.py
+          tests/unit/test_stage6_return_verifier.py
+          tests/unit/test_ship_gate_contract.py
+          tests/unit/test_portability_contract.py
           tests/unit/test_windows_distribution_verifier.py
           tests/unit/test_stage6_recovery_check.py
           tests/unit/test_stage6_residual_cleanup.py
@@ -77,18 +85,26 @@ jobs:
           scripts/verify_windows_distribution.py
           scripts/run_non_windows_release_gates.py
           scripts/run_retroactive_excel_matrix.py
+          scripts/build_mature_year_acquisition_proof.py
+          scripts/bootstrap_pdf_pipeline.py
           scripts/collect_stage6_evidence.py
           scripts/collect_bug_report.py
           scripts/verify_stage6_evidence.py
+          scripts/verify_stage6_return.py
           scripts/stage6_recovery_check.py
           scripts/stage6_residual_cleanup.py
+          scripts/ship_gate_contract.py
 
       - name: Mypy
         run: >
           uv run mypy
           src
           scripts/run_retroactive_excel_matrix.py
+          scripts/build_mature_year_acquisition_proof.py
+          scripts/bootstrap_pdf_pipeline.py
           scripts/collect_bug_report.py
+          scripts/verify_stage6_return.py
+          scripts/ship_gate_contract.py
 
       - name: Pytest with coverage
         run: uv run pytest --cov=src/eidp --cov-report=term --cov-fail-under=80

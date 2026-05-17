@@ -227,6 +227,9 @@ def _core_entries() -> dict[str, bytes | str]:
             "recommendations\n"
             "strict target PDF 自動取得率\n"
             "推定手作業率\n"
+            "release exception reason\n"
+            "mature-year proof JSON\n"
+            "mature-year proof years\n"
             "Excel ready 率\n"
             "logs\\diagnostics-*.txt\n"
             "127.0.0.1:18501:127.0.0.1:8501\n"
@@ -254,6 +257,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/collect_stage6_evidence.bat": (SCRIPTS_DIR / "collect_stage6_evidence.bat").read_text(
             encoding="utf-8"
         ),
+        "scripts/collect_bug_report.bat": (SCRIPTS_DIR / "collect_bug_report.bat").read_text(encoding="utf-8"),
         "scripts/verify_stage6_evidence.bat": (SCRIPTS_DIR / "verify_stage6_evidence.bat").read_text(
             encoding="utf-8"
         ),
@@ -279,10 +283,14 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/collect_stage6_evidence.py": (SCRIPTS_DIR / "collect_stage6_evidence.py").read_text(
             encoding="utf-8"
         ),
+        "scripts/collect_bug_report.py": (SCRIPTS_DIR / "collect_bug_report.py").read_text(encoding="utf-8"),
         "scripts/verify_stage6_evidence.py": (SCRIPTS_DIR / "verify_stage6_evidence.py").read_text(
             encoding="utf-8"
         ),
         "scripts/verify_stage6_return.py": (SCRIPTS_DIR / "verify_stage6_return.py").read_text(encoding="utf-8"),
+        "scripts/build_mature_year_acquisition_proof.py": (
+            SCRIPTS_DIR / "build_mature_year_acquisition_proof.py"
+        ).read_text(encoding="utf-8"),
         "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
             encoding="utf-8"
         ),
@@ -347,6 +355,15 @@ def _core_entries() -> dict[str, bytes | str]:
         ),
         "src/eidp/review/operator_pages.py": (
             REPO_ROOT / "src" / "eidp" / "review" / "operator_pages.py"
+        ).read_text(encoding="utf-8"),
+        "src/eidp/review/_pages/bug_report.py": (
+            REPO_ROOT / "src" / "eidp" / "review" / "_pages" / "bug_report.py"
+        ).read_text(encoding="utf-8"),
+        "src/eidp/bug_signals/detector.py": (
+            REPO_ROOT / "src" / "eidp" / "bug_signals" / "detector.py"
+        ).read_text(encoding="utf-8"),
+        "src/eidp/bug_signals/bundle.py": (
+            REPO_ROOT / "src" / "eidp" / "bug_signals" / "bundle.py"
         ).read_text(encoding="utf-8"),
         "src/eidp/review/_pages/audit_log.py": "def render(session, *, lock_path, jsonl_path): pass\n",
         "src/eidp/review/_pages/settings_page.py": (
@@ -597,6 +614,20 @@ def test_verify_core_zip_validates_root_stage6_verify_evidence_launcher_contract
 
     assert not check.ok
     assert any("EIDP-stage6-verify-evidence.bat missing required token" in error for error in check.errors)
+
+
+def test_verify_core_zip_validates_collect_bug_report_launcher_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/collect_bug_report.bat"] = entries["scripts/collect_bug_report.bat"].replace(
+        'set "PYTHONUTF8=1"\n',
+        "",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("scripts/collect_bug_report.bat missing required token: PYTHONUTF8=1" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_macos_wheel(tmp_path: Path) -> None:
@@ -884,6 +915,80 @@ def test_verify_core_zip_requires_ship_readiness_strict_target_pdf_criterion(tmp
     assert not check.ok
     assert any(
         'src/eidp/reports/ship_readiness.py missing required token: name="strict_target_pdf"' in error
+        for error in check.errors
+    )
+
+
+def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/verify_stage6_return.py"] = (
+        entries["scripts/verify_stage6_return.py"]
+        .replace("release_exception_reason", "release_override_reason")
+        .replace("mature_year_proof_json", "historical_year_proof_json")
+        .replace("release exception requires --mature-year-proof-json", "release exception requires proof")
+        .replace("min_target_pdf_auto_denominator_count", "min_target_pdf_auto_sample_count")
+        .replace("target_pdf_auto_denominator_count", "target_pdf_auto_sample_count")
+        .replace("target_pdf_auto_denominator_scope", "target_pdf_auto_sample_scope")
+        .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
+        .replace("publication_lag", "publication_delay")
+    )
+    entries["scripts/ship_gate_contract.py"] = (
+        entries["scripts/ship_gate_contract.py"]
+        .replace("MATURE_YEAR_SHIP_GATE_METRIC_BASIS", "MATURE_YEAR_METRIC_BASIS")
+        .replace("MATURE_YEAR_PROOF_MIN_DENOMINATOR", "MATURE_YEAR_PROOF_MIN_SAMPLE")
+        .replace("WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE", "WEEKLY_SHIP_GATE_SAMPLE_SCOPE")
+        .replace("target_missing_schools_before_run", "target_missing_small_sample")
+        .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
+        .replace("publication_lag", "publication_delay")
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: release_exception_reason" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: mature_year_proof_json" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: release exception requires --mature-year-proof-json"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: min_target_pdf_auto_denominator_count" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: target_pdf_auto_denominator_scope" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: MATURE_YEAR_SHIP_GATE_METRIC_BASIS" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: MATURE_YEAR_PROOF_MIN_DENOMINATOR" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: target_missing_schools_before_run" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: SHIP_GATE_EXCEPTION_REASONS" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: publication_lag" in error
         for error in check.errors
     )
 
@@ -1309,6 +1414,8 @@ def test_verify_core_zip_requires_weekly_artifact_pruning_contract(tmp_path: Pat
 
     assert not check.ok
     assert any("scripts/run_weekly_target_year_discovery.py missing required token" in error for error in check.errors)
+    assert any("write_progress" in error for error in check.errors)
+    assert any("--progress-file" in error for error in check.errors)
     assert any("prune_run_artifacts" in error for error in check.errors)
     assert any("RUN_ARTIFACT_PATTERNS" in error for error in check.errors)
 
@@ -1544,6 +1651,38 @@ def test_verify_core_zip_rejects_mutable_runtime_data(tmp_path: Path, runtime_me
 
     assert not check.ok
     assert any("mutable runtime data" in error for error in check.errors)
+
+
+@pytest.mark.parametrize(
+    "secret_member",
+    [
+        ".env",
+        ".env.local",
+        "config/.env.production",
+        "secrets/id_rsa",
+        "secrets/id_ed25519",
+        "secrets/operator_private_key.pem",
+    ],
+)
+def test_verify_core_zip_rejects_local_secret_files(tmp_path: Path, secret_member: str) -> None:
+    entries = _core_entries()
+    entries[secret_member] = "local secret material must not ship"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("local secret/key files" in error for error in check.errors)
+
+
+def test_verify_core_zip_allows_env_example_template(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/.env.example"] = "FIRECRAWL_API_KEY=your-api-key-here\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert check.ok
 
 
 def test_verify_core_zip_rejects_stale_launch_bat_contract(tmp_path: Path) -> None:
@@ -1815,6 +1954,43 @@ def test_verify_core_zip_requires_current_operator_runbook_guidance(tmp_path: Pa
     assert any("アンチウイルスにより隔離" in error for error in check.errors)
     assert any("weekly_run.bat" in error for error in check.errors)
     assert any("data\\.lock" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_local_user_path_in_packaged_operator_docs(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-windows.md"] += "\nC:\\Users\\private_user\\EIDP-v999\n"
+    entries["docs/runbooks/eidp-operator-e2e-template.md"] += "\n/Users/private_user/workspace/EIDP\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    local_user_errors = [error for error in check.errors if "local-user path token" in error]
+    assert len(local_user_errors) == 2
+    assert all("docs/runbooks/" in error for error in local_user_errors)
+
+
+def test_verify_core_zip_rejects_eidp_operator_example_in_packaged_operator_docs(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-windows.md"] += "\nC:\\Users\\eidp_operator\\EIDP-vXXX-abcdef0\n"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("docs/runbooks/eidp-windows.md contains local-user path token" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_packaged_historical_runbooks(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-v460-real-cycle-card.md"] = r"%USERPROFILE%\EIDP-v460-01e4427"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("historical handoff runbooks" in error for error in check.errors)
+    assert any("eidp-v460-real-cycle-card.md" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_retroactive_fy_e2e_template_fields(tmp_path: Path) -> None:
