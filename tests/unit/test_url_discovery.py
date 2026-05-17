@@ -11,6 +11,8 @@ from eidp.db.models import Base, School, SchoolSite
 from eidp.scraper import url_discovery
 from eidp.scraper.search_provider import SearchResult
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 def _session() -> Session:
     engine = create_engine(
@@ -90,6 +92,25 @@ def test_load_school_domain_overrides_reads_utf8_sig_csv(tmp_path: Path) -> None
     assert overrides[0].school_name == "東京モード学園"
     assert overrides[0].domain_url == "https://www.mode.ac.jp/tokyo"
     assert overrides[0].confidence == 0.95
+
+
+def test_checked_in_school_domain_overrides_cover_nkz_multibrand_schools() -> None:
+    overrides = url_discovery._load_school_domain_overrides(data_dir=REPO_ROOT / "data")
+    by_school = {
+        (override.prefecture, override.school_name, override.domain_url)
+        for override in overrides
+    }
+
+    expected = {
+        ("東京都", "HAL東京", "https://www.nkz.ac.jp/clginfo/thinfo.html"),
+        ("大阪府", "HAL大阪", "https://www.nkz.ac.jp/clginfo/ohinfo.html"),
+        ("愛知県", "HAL名古屋", "https://www.nkz.ac.jp/clginfo/nhinfo.html"),
+        ("東京都", "首都医校", "https://www.nkz.ac.jp/clginfo/siinfo.html"),
+        ("大阪府", "大阪医専", "https://www.nkz.ac.jp/clginfo/oiinfo.html"),
+        ("愛知県", "名古屋医専", "https://www.nkz.ac.jp/clginfo/niinfo.html"),
+    }
+
+    assert expected <= by_school
 
 
 def test_infer_corporation_urls_prefers_school_domain_overrides(tmp_path: Path) -> None:
