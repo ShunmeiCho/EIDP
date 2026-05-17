@@ -47,7 +47,14 @@ operator manual workload of 30% or lower. Full automation is not required.
   `C:\Users\cyo20\EIDP-v460-01e4427`.
 - `EIDP Weekly Run` still executes
   `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat`.
-- Latest support package is v464:
+- Latest non-active future candidate is v465:
+  `dist/eidp-windows-v465.zip`, package/source commit
+  `be32eb29212f71f72e6ab7e6d2a4f013ccb66e42`, SHA256
+  `b8b6157261aae4986cab0050fa980265ddd6075660577157fe5a3360a04af041`.
+  It is staged on Windows but is not the active owner-cycle lane.
+- Previous side-by-side support package v464 remains the last broader
+  Windows support lane with setup/UI/R7 Excel/evidence guard/return verifier
+  proof:
   `dist/eidp-windows-v464.zip`, package commit
   `9a94226b243fba691936db46c1fc11ef7c9debbd`, SHA256
   `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`.
@@ -57,6 +64,29 @@ operator manual workload of 30% or lower. Full automation is not required.
   `C:\EIDP-staging\v460-operator-docs-20260517`.
 - No tag, no main merge, and no release approval has been made from these
   support proofs.
+
+## Fresh Return Verification
+
+Read-only Windows refresh at 2026-05-17 09:01 JST still found no Streamlit
+listener on 8501/8508/8509/18508/18509, and `data\output\last_run.json`
+remained the 2026-05-16 Plan A stub with `target_pdf_auto_yield_pct=null`,
+`operator_reviewable_yield_pct=null`, `ship_gate_status=not_measured`, and
+`ship_readiness_rc=null`.
+
+The current return verifier was rerun with:
+
+```bash
+uv run python scripts/verify_stage6_return.py \
+  --e2e-template docs/runbooks/eidp-operator-e2e-template.md \
+  --last-run logs/win-v460-plan-a/last_run.json \
+  --evidence-verify-json logs/win-v460-plan-a/stage6-evidence-verify-20260516-184433.json \
+  --target-fy 2026 \
+  --json
+```
+
+It exited `1` with `ok=false` because final KPI values are not measured and
+the E2E template KPI, release, owner sign-off, and operator sign-off rows are
+still blank or placeholders.
 
 ## Missing Gates
 
