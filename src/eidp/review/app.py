@@ -43,6 +43,7 @@ PAGE_AUDIT_LOG = "audit_log"
 PAGE_PREFECTURE_REMARKS = "prefecture_remarks"
 PAGE_URL_CANDIDATE_REVIEW = "url_candidate_review"
 PAGE_SETTINGS = "settings"
+PAGE_BUG_REPORT = "bug_report"
 
 QUICK_PAGES = [
     (PAGE_TASKS, "① 学校別タスク"),
@@ -62,6 +63,7 @@ DETAIL_PAGES = [
     (PAGE_PREFECTURE_REMARKS, "都道府県公式インデックス"),
     (PAGE_URL_CANDIDATE_REVIEW, "URL候補レビュー"),
     (PAGE_AUDIT_LOG, "監査ログ"),
+    (PAGE_BUG_REPORT, "不具合レポート"),
     (PAGE_SCHOOL_CODE, "学校コード確認"),
     (PAGE_HISTORY, "処理履歴"),
 ]
@@ -141,6 +143,24 @@ def _build_info_caption(app_root: Path) -> str:
     if built_at:
         parts.append(f"built: {built_at}")
     return " / ".join(parts)
+
+
+def _render_bug_signal_banner(app_root: Path) -> None:
+    """Show a lightweight bug-signal banner without running SQLite integrity checks."""
+
+    try:
+        from eidp.bug_signals.detector import scan_bug_signals
+
+        signals = scan_bug_signals(app_root, check_sqlite=False)
+    except Exception:
+        return
+    if not signals:
+        return
+    cols = st.columns([4, 1])
+    cols[0].error(f"異常を {len(signals)} 件検出しました。不具合レポートを作成してください。")
+    if cols[1].button("レポート作成", key="bug_report_banner_button"):
+        st.session_state.selected_page = PAGE_BUG_REPORT
+        st.rerun()
 
 
 def _commit(session: Session) -> None:
@@ -727,6 +747,7 @@ def main() -> None:
         '<span class="eidp-brand-sub">運用コンソール</span></div>',
         unsafe_allow_html=True,
     )
+    _render_bug_signal_banner(settings.app_root)
 
     with _get_session() as session:
         # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
@@ -794,6 +815,9 @@ def main() -> None:
                 lock_path=data_dir / ".lock",
                 jsonl_path=data_dir / "audit" / "manual-actions.jsonl",
             )
+        elif page == PAGE_BUG_REPORT:
+            from eidp.review._pages.bug_report import render as render_bug_report
+            render_bug_report(session, app_root=settings.app_root)
 
     # Sidebar info
     st.sidebar.divider()
