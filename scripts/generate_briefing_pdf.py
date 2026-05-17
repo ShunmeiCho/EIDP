@@ -13,7 +13,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from pathlib import Path
 
 # --- Font Registration ---
-FONT_PATH = Path("/Users/shunmei/Library/Fonts/NotoSansJP-VariableFont_wght.ttf")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+FONT_PATH = Path.home() / "Library" / "Fonts" / "NotoSansJP-VariableFont_wght.ttf"
 if FONT_PATH.exists():
     pdfmetrics.registerFont(TTFont("NotoSansJP", str(FONT_PATH)))
     BASE_FONT = "NotoSansJP"
@@ -433,7 +434,7 @@ def build_pdf(output_path):
 
 
 if __name__ == "__main__":
-    output = Path("/Users/shunmei/workspace/EIDP/docs/plans/2026-04-11-briefing-for-professor.pdf")
+    output = REPO_ROOT / "docs" / "plans" / "2026-04-11-briefing-for-professor.pdf"
     build_pdf(output)
     print(f"PDF generated: {output}")
     print(f"Size: {output.stat().st_size / 1024:.1f} KB")

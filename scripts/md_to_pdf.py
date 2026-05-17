@@ -29,7 +29,7 @@ from reportlab.platypus import (
 
 # --- Font Registration ---
 FONT_CANDIDATES = [
-    Path("/Users/shunmei/Library/Fonts/NotoSansJP-VariableFont_wght.ttf"),
+    Path.home() / "Library" / "Fonts" / "NotoSansJP-VariableFont_wght.ttf",
     Path("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc"),
 ]
 

@@ -3,12 +3,14 @@
 import openpyxl
 import warnings
 from collections import Counter
+from pathlib import Path
 
 warnings.filterwarnings('ignore')
 
-DATA_DIR = '/Users/shunmei/workspace/EIDP/data/mext'
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = REPO_ROOT / 'data' / 'mext'
 
-wb = openpyxl.load_workbook(f'{DATA_DIR}/target_institutions.xlsx', data_only=True)
+wb = openpyxl.load_workbook(DATA_DIR / 'target_institutions.xlsx', data_only=True)
 ws = wb['20260401']
 
 type_counts = Counter()
