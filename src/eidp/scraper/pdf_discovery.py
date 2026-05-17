@@ -1009,6 +1009,16 @@ def _has_specific_target_form_hint(candidate: PdfCandidate) -> bool:
     )
 
 
+def _has_known_embedded_study_support_target_form(candidate: PdfCandidate) -> bool:
+    """Return whether an embedded school override URL is a known yearless target form."""
+
+    parsed = urlparse(_candidate_url_hint_text(candidate))
+    return (
+        parsed.netloc == "www.nkz.ac.jp"
+        and re.search(r"/clginfo/[^/]+/pdf/[^/]+z-studyspt_13\.pdf$", parsed.path) is not None
+    )
+
+
 def _has_formish_candidate_hint(candidate: PdfCandidate) -> bool:
     """Return whether URL/anchor text is worth trying ahead of generic PDFs."""
 
@@ -1053,6 +1063,51 @@ def _is_support_law_reference_year(sample_text: str, *, fiscal_year: int) -> boo
         return False
     normed = unicodedata.normalize("NFKC", sample_text)
     return "修学の支援に関する法律" in normed and ("令和元年度" in normed or "令和元年" in normed)
+
+
+def _sample_has_explicit_stale_target_document_year(sample_text: str, *, target_year: int) -> bool:
+    """Return whether the PDF body itself labels the target form as a stale fiscal year."""
+
+    normed = unicodedata.normalize("NFKC", sample_text)
+    target_form_markers = ("確認申請", "更新確認申請", "様式第2号", "様式2号", "機関要件")
+    for line in normed.splitlines():
+        if not any(marker in line for marker in target_form_markers):
+            continue
+        fiscal_year = fiscal_year_from_japanese_era_text(
+            line,
+            include_fiscal_year_labels=True,
+            include_filing_dates=False,
+        )
+        if fiscal_year is not None and max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= fiscal_year < target_year:
+            return True
+        for match in re.finditer(r"(?<!\d)(20\d{2})\s*年度", line):
+            year = int(match.group(1))
+            if max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= year < target_year:
+                return True
+    return False
+
+
+def _target_url_hint_can_override_detected_year(
+    candidate: PdfCandidate,
+    sample_text: str,
+    *,
+    pdf_type: str,
+    detected_fiscal_year: int,
+    target_year: int,
+) -> bool:
+    """Return whether current-year URL evidence should beat noisy body years."""
+
+    if pdf_type != "target":
+        return False
+    if detected_fiscal_year >= target_year:
+        return False
+    if not _has_target_year_hint(candidate, target_year=target_year):
+        return False
+    if not _has_target_form_hint(candidate):
+        return False
+    if _has_explicit_stale_fiscal_year_label(candidate, target_year=target_year):
+        return False
+    return not _sample_has_explicit_stale_target_document_year(sample_text, target_year=target_year)
 
 
 def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> float:
@@ -1818,13 +1873,15 @@ def _trusted_year_evidence_can_fill_missing_pdf_year(
     explicit stale-year label.
     """
 
-    if trusted_year_evidence != "school_domain_override_disclosure":
-        return False
     if pdf_type != "target":
         return False
     if _has_explicit_stale_fiscal_year_label(candidate, target_year=target_year):
         return False
-    return _has_specific_target_form_hint(candidate)
+    if trusted_year_evidence == "school_domain_override_disclosure":
+        return _has_specific_target_form_hint(candidate) or _has_known_embedded_study_support_target_form(candidate)
+    if trusted_year_evidence == "prefecture_index_current_year":
+        return _has_specific_target_form_hint(candidate)
+    return False
 
 
 def _extract_pdf_links(
@@ -2931,6 +2988,12 @@ def download_pdf(
                     and target_year_hint
                     and _has_disclosure_path_target_year_hint(candidate, target_year=target_year)
                     and _is_support_law_reference_year(sample_text, fiscal_year=detected_fiscal_year)
+                ) or _target_url_hint_can_override_detected_year(
+                    candidate,
+                    sample_text,
+                    pdf_type=pdf_type,
+                    detected_fiscal_year=detected_fiscal_year,
+                    target_year=target_year,
                 ):
                     detected_fiscal_year = None
                     candidate.detected_fiscal_year = None
