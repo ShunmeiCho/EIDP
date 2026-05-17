@@ -59,6 +59,16 @@ Decision: go
 """
 
 
+def _complete_exception_template() -> str:
+    return _complete_template().replace(
+        "| 推定手作業率 | <= 30% | 28.0 | pass |",
+        "| 推定手作業率 | <= 30% | 100.0 | watch |\n"
+        "| release exception reason | `publication_lag` | publication_lag | pass |\n"
+        "| mature-year proof JSON | ok=true | logs/mature-year-proof.json | pass |\n"
+        "| mature-year proof years | at least one FY before target_fy | 2025, 2024, 2023 | pass |",
+    )
+
+
 def _write_complete_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:
     template = tmp_path / "eidp-operator-e2e-template.md"
     template.write_text(_complete_template(), encoding="utf-8")
@@ -85,6 +95,32 @@ def _write_complete_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:
         },
     )
     return template, last_run, verify_json
+
+
+def _write_mature_year_proof(tmp_path: Path, *, ok: bool = True, **case_overrides: object) -> Path:
+    proof = tmp_path / "mature-year-proof.json"
+    case = {
+        "fiscal_year": 2025,
+        "ok": ok,
+        "target_pdf_auto_denominator_count": 1625,
+        "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
+        "target_pdf_auto_yield_pct": 67.5,
+        "operator_reviewable_yield_pct": 72.0,
+        "ship_gate_status": "pass",
+        "results": [
+            {"name": "retroactive_weekly_discovery", "returncode": 0},
+        ],
+    }
+    case.update(case_overrides)
+    _write_json(
+        proof,
+        {
+            "ok": ok,
+            "basis": "mature_year_retroactive_operator_reviewable_acquisition",
+            "cases": [case],
+        },
+    )
+    return proof
 
 
 def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) -> None:
@@ -125,6 +161,253 @@ def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys)
     assert payload["ok"] is True
     assert payload["inputs"]["min_target_pdf_auto_yield"] == 60.0
     assert payload["inputs"]["max_manual_workload"] == 30.0
+
+
+def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_threshold_miss(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    template.write_text(
+        _complete_exception_template()
+        .replace("| `ship_readiness_rc` | 0 | 0 | pass |", "| `ship_readiness_rc` | 0 | 1 | watch |")
+        .replace(
+            "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
+            "| strict target PDF 自動取得率 | >= 60% | 22.0 | watch |",
+        ),
+        encoding="utf-8",
+    )
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": 22.0,
+            "operator_reviewable_yield_pct": 0.0,
+            "ship_gate_status": "below_gate",
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+    )
+
+    assert result["ok"] is True
+    assert result["errors"] == []
+    assert result["inputs"]["release_exception_reason"] == "publication_lag"
+    assert result["inputs"]["mature_year_proof_json"] == str(mature_year_proof)
+    assert result["mature_year_proof_years"] == [2025]
+    assert "publication_lag" in result["release_exception_reasons"]
+    assert any("target_pdf_auto_yield_pct below release threshold" in warning for warning in result["warnings"])
+    assert any("estimated manual workload above release threshold" in warning for warning in result["warnings"])
+    assert any("accepted KPI verdict watch: strict target PDF 自動取得率" in warning for warning in result["warnings"])
+
+
+def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": None,
+            "operator_reviewable_yield_pct": None,
+            "ship_gate_status": "not_measured",
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+    )
+
+    assert result["ok"] is False
+    assert "last_run target_pdf_auto_yield_pct must be numeric for final return evidence" in result["errors"]
+    assert "last_run operator_reviewable_yield_pct must be numeric for final return evidence" in result["errors"]
+    assert "last_run ship_gate_status must be measured" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operator_coverage(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    template.write_text(
+        _complete_exception_template()
+        .replace("| `ship_readiness_rc` | 0 | 0 | pass |", "| `ship_readiness_rc` | 0 | 1 | watch |")
+        .replace(
+            "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
+            "| strict target PDF 自動取得率 | >= 60% | 22.0 | watch |",
+        ),
+        encoding="utf-8",
+    )
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": 22.0,
+            "operator_reviewable_yield_pct": 0.0,
+            "ship_gate_status": "pass",
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "last_run ship_gate_status does not match operator_reviewable_yield_pct: pass != below_gate"
+        in result["errors"]
+    )
+
+
+def test_verify_stage6_return_exception_requires_mature_year_proof(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+    )
+
+    assert result["ok"] is False
+    assert "release exception requires --mature-year-proof-json" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_failed_mature_year_proof(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path, ok=False)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+    )
+
+    assert result["ok"] is False
+    assert "mature-year proof JSON ok must be true" in result["errors"]
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_small_mature_year_proof_denominator(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(
+        tmp_path,
+        target_pdf_auto_denominator_count=5,
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "mature-year proof case FY2025 target_pdf_auto_denominator_count below production-scale "
+        "threshold: 5 < 1000"
+    ) in result["errors"]
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_proof(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_exception_template()
+        .replace("| `ship_readiness_rc` | 0 | 0 | pass |", "| `ship_readiness_rc` | 0 | 1 | watch |")
+        .replace(
+            "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
+            "| strict target PDF 自動取得率 | >= 60% | 22.0 | watch |",
+        ),
+        encoding="utf-8",
+    )
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": 22.0,
+            "operator_reviewable_yield_pct": 0.0,
+            "ship_gate_status": "below_gate",
+        },
+    )
+    proof = tmp_path / "excel-business-diff-proof.json"
+    _write_json(
+        proof,
+        {
+            "ok": True,
+            "basis": "current_source_retroactive_excel_business_value_diff",
+            "cases": [
+                {
+                    "fiscal_year": 2025,
+                    "ok": True,
+                    "results": [
+                        {"name": "retroactive_excel_diff_reference", "returncode": 0},
+                    ],
+                },
+            ],
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=proof,
+    )
+
+    assert result["ok"] is False
+    assert any(
+        "mature-year proof JSON basis must be mature_year_retroactive_operator_reviewable_acquisition" in error
+        for error in result["errors"]
+    )
+    assert "mature-year proof case FY2025 target_pdf_auto_yield_pct must be numeric" in result["errors"]
+    assert "mature-year proof case FY2025 operator_reviewable_yield_pct must be numeric" in result["errors"]
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result["errors"]
 
 
 def test_verify_stage6_return_rejects_unmeasured_kpi_and_blank_signoff(tmp_path: Path) -> None:

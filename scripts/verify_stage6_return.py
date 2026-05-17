@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import sys
@@ -11,6 +12,7 @@ from typing import Any, TypeGuard
 
 REQUIRED_EVIDENCE_LABELS = ("build_info", "diagnostics", "last_run", "stage6_recovery", "weekly_run_logs")
 REQUIRED_KPI_ROWS = ("ship_readiness_rc", "strict target PDF 自動取得率", "推定手作業率")
+REQUIRED_EXCEPTION_ROWS = ("release exception reason", "mature-year proof JSON", "mature-year proof years")
 REQUIRED_RELEASE_ROWS = ("業務員 PC 1 サイクル完了", "KPI owner 承認", "残 P0/P1 bug")
 REQUIRED_RELEASE_VALUES = {
     "業務員 PC 1 サイクル完了": "yes",
@@ -26,6 +28,27 @@ PLACEHOLDER_RESULTS = {
     "none / exists",
     "go / no-go / beta continue",
 }
+EXCEPTION_KPI_VERDICTS = frozenset({"pass", "watch"})
+
+
+def _load_ship_gate_contract() -> Any:
+    script = Path(__file__).resolve().parent / "ship_gate_contract.py"
+    spec = importlib.util.spec_from_file_location("ship_gate_contract", script)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"failed to load ship gate contract: {script}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_SHIP_GATE_CONTRACT = _load_ship_gate_contract()
+SHIP_GATE_EXCEPTION_REASONS = _SHIP_GATE_CONTRACT.SHIP_GATE_EXCEPTION_REASONS
+SHIP_GATE_STATUSES = _SHIP_GATE_CONTRACT.SHIP_GATE_STATUSES
+MATURE_YEAR_SHIP_GATE_METRIC_BASIS = _SHIP_GATE_CONTRACT.MATURE_YEAR_SHIP_GATE_METRIC_BASIS
+MATURE_YEAR_PROOF_MIN_DENOMINATOR = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_MIN_DENOMINATOR
+WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = _SHIP_GATE_CONTRACT.WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE
+is_ship_gate_exception_reason = _SHIP_GATE_CONTRACT.is_ship_gate_exception_reason
+ship_gate_status_from_operator_coverage = _SHIP_GATE_CONTRACT.ship_gate_status_from_operator_coverage
 
 
 def _load_json(path: Path, errors: list[str], label: str) -> dict[str, Any] | None:
@@ -89,7 +112,9 @@ def _verify_last_run(
     require_kpi: bool,
     min_target_pdf_auto_yield: float,
     max_manual_workload: float,
+    release_exception_reason: str | None,
     errors: list[str],
+    warnings: list[str],
 ) -> None:
     if last_run.get("status") != "success":
         errors.append("last_run status must be success")
@@ -108,22 +133,40 @@ def _verify_last_run(
         else:
             target_yield_value = float(target_yield)
             if target_yield_value < min_target_pdf_auto_yield:
-                errors.append(
+                message = (
                     "last_run target_pdf_auto_yield_pct below release threshold: "
                     f"{target_yield_value:.1f} < {min_target_pdf_auto_yield:.1f}"
                 )
+                if release_exception_reason:
+                    warnings.append(f"release exception {release_exception_reason} accepted {message}")
+                else:
+                    errors.append(message)
         if not _is_number(operator_reviewable_yield):
             errors.append("last_run operator_reviewable_yield_pct must be numeric for final return evidence")
         else:
             operator_reviewable_yield_value = float(operator_reviewable_yield)
             manual_workload = 100.0 - operator_reviewable_yield_value
             if manual_workload > max_manual_workload + 1e-9:
-                errors.append(
+                message = (
                     "last_run estimated manual workload above release threshold: "
                     f"{manual_workload:.1f} > {max_manual_workload:.1f}"
                 )
-        if last_run.get("ship_gate_status") in {None, "", "not_measured"}:
+                if release_exception_reason:
+                    warnings.append(f"release exception {release_exception_reason} accepted {message}")
+                else:
+                    errors.append(message)
+        ship_gate_status = last_run.get("ship_gate_status")
+        if ship_gate_status in {None, "", "not_measured"}:
             errors.append("last_run ship_gate_status must be measured")
+        elif not isinstance(ship_gate_status, str) or ship_gate_status not in SHIP_GATE_STATUSES:
+            errors.append("last_run ship_gate_status must be pass, below_gate, or not_measured")
+        elif _is_number(operator_reviewable_yield):
+            expected_ship_gate_status = ship_gate_status_from_operator_coverage(float(operator_reviewable_yield))
+            if ship_gate_status != expected_ship_gate_status:
+                errors.append(
+                    "last_run ship_gate_status does not match operator_reviewable_yield_pct: "
+                    f"{ship_gate_status} != {expected_ship_gate_status}"
+                )
 
 
 def _verify_evidence_verify_json(verify_json: dict[str, Any], errors: list[str]) -> None:
@@ -141,7 +184,136 @@ def _verify_evidence_verify_json(verify_json: dict[str, Any], errors: list[str])
         errors.append(f"evidence verifier JSON missing labels: {', '.join(missing_labels)}")
 
 
-def _verify_template(text: str, errors: list[str]) -> None:
+def _case_fiscal_year(case: dict[str, Any]) -> int | None:
+    fiscal_year = case.get("fiscal_year")
+    if _is_number(fiscal_year):
+        return int(fiscal_year)
+    return None
+
+
+def _case_ok(case: dict[str, Any]) -> bool:
+    if case.get("ok") is not True:
+        return False
+    returncode = case.get("returncode")
+    return returncode in (None, 0)
+
+
+def _case_metric(case: dict[str, Any], field: str) -> Any:
+    for source in (case, case.get("metrics"), case.get("last_run"), case.get("summary")):
+        if isinstance(source, dict) and field in source:
+            return source[field]
+    return None
+
+
+def _case_denominator(case: dict[str, Any]) -> Any:
+    denominator = _case_metric(case, "target_pdf_auto_denominator_count")
+    if denominator is None:
+        denominator = _case_metric(case, "target_missing_school_count")
+    return denominator
+
+
+def _mature_year_cases(proof_json: dict[str, Any]) -> list[dict[str, Any]]:
+    cases = proof_json.get("cases")
+    if isinstance(cases, list):
+        return [case for case in cases if isinstance(case, dict)]
+    results = proof_json.get("results")
+    if isinstance(results, list):
+        return [case for case in results if isinstance(case, dict)]
+    return []
+
+
+def _verify_mature_year_proof(
+    proof_json: dict[str, Any],
+    *,
+    target_fy: int | None,
+    min_target_pdf_auto_yield: float,
+    min_target_pdf_auto_denominator_count: int,
+    max_manual_workload: float,
+    errors: list[str],
+) -> list[int]:
+    if proof_json.get("ok") is not True:
+        errors.append("mature-year proof JSON ok must be true")
+    basis = proof_json.get("basis") or proof_json.get("metric_basis")
+    if basis != MATURE_YEAR_SHIP_GATE_METRIC_BASIS:
+        errors.append(
+            "mature-year proof JSON basis must be "
+            f"{MATURE_YEAR_SHIP_GATE_METRIC_BASIS}: {basis!r}"
+        )
+    cases = _mature_year_cases(proof_json)
+    if not cases:
+        errors.append("mature-year proof JSON must contain cases or results")
+        return []
+    passing_years: list[int] = []
+    for case in cases:
+        fiscal_year = _case_fiscal_year(case)
+        if fiscal_year is None or not _case_ok(case):
+            continue
+        if target_fy is not None and fiscal_year >= target_fy:
+            continue
+
+        target_yield = _case_metric(case, "target_pdf_auto_yield_pct")
+        denominator = _case_denominator(case)
+        denominator_scope = _case_metric(case, "target_pdf_auto_denominator_scope")
+        operator_reviewable_yield = _case_metric(case, "operator_reviewable_yield_pct")
+        ship_gate_status = _case_metric(case, "ship_gate_status")
+        case_ok = True
+        if not _is_number(target_yield):
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} target_pdf_auto_yield_pct must be numeric"
+            )
+            case_ok = False
+        elif float(target_yield) < min_target_pdf_auto_yield:
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} target_pdf_auto_yield_pct below release threshold: "
+                f"{float(target_yield):.1f} < {min_target_pdf_auto_yield:.1f}"
+            )
+            case_ok = False
+        if not _is_number(denominator):
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_count must be numeric"
+            )
+            case_ok = False
+        elif float(denominator) < min_target_pdf_auto_denominator_count:
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_count below "
+                f"production-scale threshold: {float(denominator):.0f} < "
+                f"{min_target_pdf_auto_denominator_count}"
+            )
+            case_ok = False
+        if denominator_scope != WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE:
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_scope must be "
+                f"{WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE}: {denominator_scope!r}"
+            )
+            case_ok = False
+        if not _is_number(operator_reviewable_yield):
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} operator_reviewable_yield_pct must be numeric"
+            )
+            case_ok = False
+        else:
+            manual_workload = 100.0 - float(operator_reviewable_yield)
+            if manual_workload > max_manual_workload + 1e-9:
+                errors.append(
+                    f"mature-year proof case FY{fiscal_year} estimated manual workload above release threshold: "
+                    f"{manual_workload:.1f} > {max_manual_workload:.1f}"
+                )
+                case_ok = False
+            expected_ship_gate_status = ship_gate_status_from_operator_coverage(float(operator_reviewable_yield))
+            if ship_gate_status != expected_ship_gate_status:
+                errors.append(
+                    f"mature-year proof case FY{fiscal_year} ship_gate_status does not match "
+                    f"operator_reviewable_yield_pct: {ship_gate_status} != {expected_ship_gate_status}"
+                )
+                case_ok = False
+        if case_ok:
+            passing_years.append(fiscal_year)
+    if not passing_years:
+        errors.append("mature-year proof JSON must include at least one passing fiscal year before target_fy")
+    return sorted(set(passing_years), reverse=True)
+
+
+def _verify_template(text: str, release_exception_reason: str | None, errors: list[str], warnings: list[str]) -> None:
     for row_label in REQUIRED_KPI_ROWS:
         row = _table_row(text, row_label)
         if row is None or len(row) < 4:
@@ -153,8 +325,31 @@ def _verify_template(text: str, errors: list[str]) -> None:
             errors.append(f"E2E template KPI actual is blank: {row_label}")
         if _is_placeholder(verdict):
             errors.append(f"E2E template KPI verdict is still placeholder: {row_label}")
+        elif release_exception_reason and verdict.lower() in EXCEPTION_KPI_VERDICTS:
+            if verdict.lower() == "watch":
+                warnings.append(f"release exception {release_exception_reason} accepted KPI verdict watch: {row_label}")
         elif verdict.lower() != "pass":
             errors.append(f"E2E template KPI verdict must be pass: {row_label}")
+
+    if release_exception_reason:
+        for row_label in REQUIRED_EXCEPTION_ROWS:
+            row = _table_row(text, row_label)
+            if row is None or len(row) < 4:
+                errors.append(f"E2E template release-exception row missing or malformed: {row_label}")
+                continue
+            actual = row[2]
+            verdict = row[3]
+            if not actual:
+                errors.append(f"E2E template release-exception actual is blank: {row_label}")
+            if _is_placeholder(verdict):
+                errors.append(f"E2E template release-exception verdict is still placeholder: {row_label}")
+            elif verdict.lower() != "pass":
+                errors.append(f"E2E template release-exception verdict must be pass: {row_label}")
+            if row_label == "release exception reason" and actual != release_exception_reason:
+                errors.append(
+                    "E2E template release exception reason must match verifier argument: "
+                    f"{actual} != {release_exception_reason}"
+                )
 
     for row_label in REQUIRED_RELEASE_ROWS:
         row = _table_row(text, row_label)
@@ -190,10 +385,38 @@ def verify_stage6_return(
     target_fy: int | None = None,
     require_kpi: bool = True,
     min_target_pdf_auto_yield: float = 60.0,
+    min_target_pdf_auto_denominator_count: int = MATURE_YEAR_PROOF_MIN_DENOMINATOR,
     max_manual_workload: float = 30.0,
+    release_exception_reason: str | None = None,
+    mature_year_proof_json: Path | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
+    active_release_exception_reason: str | None = None
+    mature_year_proof_years: list[int] = []
+
+    if release_exception_reason:
+        if is_ship_gate_exception_reason(release_exception_reason):
+            active_release_exception_reason = release_exception_reason
+        else:
+            errors.append(f"unsupported release exception reason: {release_exception_reason}")
+        if not require_kpi:
+            errors.append("release exception cannot be combined with allow-unmeasured KPI mode")
+
+    if active_release_exception_reason:
+        if mature_year_proof_json is None:
+            errors.append("release exception requires --mature-year-proof-json")
+        else:
+            proof_json = _load_json(mature_year_proof_json, errors, "mature-year proof JSON")
+            if proof_json is not None:
+                mature_year_proof_years = _verify_mature_year_proof(
+                    proof_json,
+                    target_fy=target_fy,
+                    min_target_pdf_auto_yield=min_target_pdf_auto_yield,
+                    min_target_pdf_auto_denominator_count=min_target_pdf_auto_denominator_count,
+                    max_manual_workload=max_manual_workload,
+                    errors=errors,
+                )
 
     last_run_json = _load_json(last_run, errors, "last_run")
     if last_run_json is not None:
@@ -203,7 +426,9 @@ def verify_stage6_return(
             require_kpi=require_kpi,
             min_target_pdf_auto_yield=min_target_pdf_auto_yield,
             max_manual_workload=max_manual_workload,
+            release_exception_reason=active_release_exception_reason,
             errors=errors,
+            warnings=warnings,
         )
 
     verify_json = _load_json(evidence_verify_json, errors, "evidence verifier JSON")
@@ -213,7 +438,12 @@ def verify_stage6_return(
     if not e2e_template.is_file():
         errors.append(f"E2E template does not exist: {e2e_template}")
     else:
-        _verify_template(e2e_template.read_text(encoding="utf-8"), errors)
+        _verify_template(
+            e2e_template.read_text(encoding="utf-8"),
+            active_release_exception_reason,
+            errors,
+            warnings,
+        )
 
     return {
         "ok": not errors,
@@ -226,11 +456,17 @@ def verify_stage6_return(
             "target_fy": target_fy,
             "require_kpi": require_kpi,
             "min_target_pdf_auto_yield": min_target_pdf_auto_yield,
+            "min_target_pdf_auto_denominator_count": min_target_pdf_auto_denominator_count,
             "max_manual_workload": max_manual_workload,
+            "release_exception_reason": active_release_exception_reason,
+            "mature_year_proof_json": str(mature_year_proof_json) if mature_year_proof_json else None,
         },
+        "mature_year_proof_years": mature_year_proof_years,
         "required_evidence_labels": list(REQUIRED_EVIDENCE_LABELS),
         "required_kpi_rows": list(REQUIRED_KPI_ROWS),
+        "required_exception_rows": list(REQUIRED_EXCEPTION_ROWS),
         "required_release_rows": list(REQUIRED_RELEASE_ROWS),
+        "release_exception_reasons": sorted(SHIP_GATE_EXCEPTION_REASONS),
     }
 
 
@@ -247,6 +483,12 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="Minimum target_pdf_auto_yield_pct for release approval.",
     )
     parser.add_argument(
+        "--min-target-pdf-auto-denominator-count",
+        type=int,
+        default=MATURE_YEAR_PROOF_MIN_DENOMINATOR,
+        help="Minimum mature-year target-missing denominator required for production-scale proof.",
+    )
+    parser.add_argument(
         "--max-manual-workload",
         type=float,
         default=30.0,
@@ -256,6 +498,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--allow-unmeasured-kpi",
         action="store_true",
         help="Allow null/not_measured KPI values. Use only for diagnostic dry support, not release approval.",
+    )
+    parser.add_argument(
+        "--release-exception-reason",
+        choices=sorted(SHIP_GATE_EXCEPTION_REASONS),
+        help="Explicit release exception for measured KPI misses caused by a known external publication window.",
+    )
+    parser.add_argument(
+        "--mature-year-proof-json",
+        help="Required with --release-exception-reason: JSON proof that a mature fiscal-year matrix passed.",
     )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
@@ -270,7 +521,10 @@ def main(argv: list[str] | None = None) -> int:
         target_fy=args.target_fy,
         require_kpi=not args.allow_unmeasured_kpi,
         min_target_pdf_auto_yield=args.min_target_pdf_auto_yield,
+        min_target_pdf_auto_denominator_count=args.min_target_pdf_auto_denominator_count,
         max_manual_workload=args.max_manual_workload,
+        release_exception_reason=args.release_exception_reason,
+        mature_year_proof_json=Path(args.mature_year_proof_json) if args.mature_year_proof_json else None,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
