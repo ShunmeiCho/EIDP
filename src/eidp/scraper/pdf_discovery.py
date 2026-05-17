@@ -572,15 +572,17 @@ def _discovery_error_extra(result: DiscoveryResult) -> dict[str, str]:
 
 
 def _rejection_cache_key(
+    school_id: int,
     candidate_url: str,
     *,
     target_year: int,
     strict_target_fiscal_year: bool,
     trusted_year_evidence: str = "",
-) -> tuple[str, int | None, bool, str]:
+) -> tuple[int, str, int | None, bool, str]:
     attempt_urls = _download_attempt_urls(candidate_url)
     canonical_url = attempt_urls[0] if attempt_urls else candidate_url
     return (
+        school_id,
         canonical_url,
         target_year if strict_target_fiscal_year else None,
         strict_target_fiscal_year,
@@ -602,6 +604,8 @@ def _trusted_year_evidence_for_site(site: SchoolSite) -> str:
         and _has_recent_prefecture_index_refresh(site)
     ):
         return "prefecture_index_current_year"
+    if site.discovery_method == "school_domain_override" and site.url_type in {"disclosure", "disclosure_page"}:
+        return "school_domain_override_disclosure"
     return ""
 
 
@@ -967,6 +971,23 @@ def _has_target_form_hint(candidate: PdfCandidate) -> bool:
     )
 
 
+def _has_specific_target_form_hint(candidate: PdfCandidate) -> bool:
+    """Return whether URL/anchor text specifically names the target form."""
+
+    text = _candidate_hint_text(candidate).lower()
+    return _has_target_application_hint(candidate) or any(
+        token in text
+        for token in (
+            "様式第2号",
+            "様式第２号",
+            "様式2号",
+            "機関要件確認申請",
+            "kakuninshinsei",
+            "koushinshinsei",
+        )
+    )
+
+
 def _has_formish_candidate_hint(candidate: PdfCandidate) -> bool:
     """Return whether URL/anchor text is worth trying ahead of generic PDFs."""
 
@@ -993,6 +1014,24 @@ def _has_target_year_hint(candidate: PdfCandidate, *, target_year: int) -> bool:
         _candidate_hint_text(candidate),
         target_year=target_year,
     ) == target_year
+
+
+def _has_disclosure_path_target_year_hint(candidate: PdfCandidate, *, target_year: int) -> bool:
+    """Return whether the PDF URL itself carries a disclosure/public-info target-year path."""
+
+    for match in _DISCLOSURE_PATH_YEAR_RE.finditer(_candidate_url_hint_text(candidate)):
+        if int(match.group(1)) == target_year:
+            return True
+    return False
+
+
+def _is_support_law_reference_year(sample_text: str, *, fiscal_year: int) -> bool:
+    """Return whether a detected year is the support-law citation rather than the PDF year."""
+
+    if fiscal_year != 2019:
+        return False
+    normed = unicodedata.normalize("NFKC", sample_text)
+    return "修学の支援に関する法律" in normed and ("令和元年度" in normed or "令和元年" in normed)
 
 
 def _score_candidate(candidate: PdfCandidate, *, target_fiscal_year: int | None = None) -> float:
@@ -1750,14 +1789,21 @@ def _trusted_year_evidence_can_fill_missing_pdf_year(
 ) -> bool:
     """Return whether source freshness may replace PDF/link year evidence.
 
-    It currently must not. A current prefecture index proves that the registered
-    disclosure URL is worth crawling, but live Saitama evidence showed that many
-    current index rows still point at yearless or stale PDFs. Strict current-FY
-    success therefore requires PDF text or candidate URL/anchor year evidence.
+    Current prefecture indexes prove that the registered disclosure URL is
+    worth crawling, but not that a yearless PDF is the current target form.
+    Exact school-domain disclosure overrides are narrower: when they point to
+    a disclosure page and the candidate itself names the target form shape,
+    the override can fill the missing PDF year unless the candidate carries an
+    explicit stale-year label.
     """
 
-    _ = (candidate, pdf_type, trusted_year_evidence, target_year)
-    return False
+    if trusted_year_evidence != "school_domain_override_disclosure":
+        return False
+    if pdf_type != "target":
+        return False
+    if _has_explicit_stale_fiscal_year_label(candidate, target_year=target_year):
+        return False
+    return _has_specific_target_form_hint(candidate)
 
 
 def _extract_pdf_links(
@@ -2859,7 +2905,16 @@ def download_pdf(
             if pdf_type == "non_target":
                 return None, None, 0, "non_target", "classified_non_target"
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
-                return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
+                if (
+                    pdf_type == "target"
+                    and target_year_hint
+                    and _has_disclosure_path_target_year_hint(candidate, target_year=target_year)
+                    and _is_support_law_reference_year(sample_text, fiscal_year=detected_fiscal_year)
+                ):
+                    detected_fiscal_year = None
+                    candidate.detected_fiscal_year = None
+                else:
+                    return None, None, 0, pdf_type, f"fiscal_year_mismatch:{detected_fiscal_year}"
             stale_hint_year = _stale_fiscal_year_from_candidate_hint(candidate, target_year=target_year)
             if (
                 detected_fiscal_year is None
@@ -2979,7 +3034,7 @@ def run_pdf_discovery(
         recorder.record(evidence)
 
     target_year = target_fiscal_year or settings.target_fiscal_year
-    rejected_candidate_cache: dict[tuple[str, int | None, bool, str], CachedPdfRejection] = {}
+    rejected_candidate_cache: dict[tuple[int, str, int | None, bool, str], CachedPdfRejection] = {}
 
     # Get school_sites, excluding:
     # - schools with a document for the current target fiscal year
@@ -3218,6 +3273,7 @@ def run_pdf_discovery(
                 if strict_target_fiscal_year and not candidate.trusted_year_evidence:
                     candidate.trusted_year_evidence = _trusted_year_evidence_for_site(site)
                 cache_key = _rejection_cache_key(
+                    site.school_id,
                     candidate.pdf_url,
                     target_year=target_year,
                     strict_target_fiscal_year=strict_target_fiscal_year,

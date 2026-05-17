@@ -3196,31 +3196,34 @@ def test_run_pdf_discovery_duplicate_only_is_success_not_failed(monkeypatch, tmp
         session.close()
 
 
-def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp_path: Path) -> None:
-    """Common corporation sites can expose the same stale PDF for many schools.
-
-    Re-downloading and re-classifying that identical rejected URL for each
-    school makes the Windows bootstrap appear frozen during the PDF crawl.
-    """
+def test_run_pdf_discovery_reuses_rejected_candidate_within_same_school(monkeypatch, tmp_path: Path) -> None:
+    """Duplicate candidates in one school should not re-download the same rejected PDF."""
 
     session = _session()
     evidence = tmp_path / "rejections.jsonl"
     download_calls: list[str] = []
     try:
         session.add(SchoolSite(school_id=1, url="https://group.example.ac.jp/school-a/", http_status=200))
-        session.add(SchoolSite(school_id=2, url="https://group.example.ac.jp/school-b/", http_status=200))
         session.flush()
 
         stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/kakunin.pdf"
 
         def fake_discover(_client, school_id: int, url: str, **_kwargs: object) -> DiscoveryResult:
-            candidate = PdfCandidate(
-                pdf_url=stale_pdf_url,
-                page_url=url,
-                anchor_text="確認申請書",
-                score=10.0,
-            )
-            return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
+            candidates = [
+                PdfCandidate(
+                    pdf_url=stale_pdf_url,
+                    page_url=url,
+                    anchor_text="確認申請書",
+                    score=10.0,
+                ),
+                PdfCandidate(
+                    pdf_url=stale_pdf_url,
+                    page_url=url,
+                    anchor_text="確認申請書 duplicate",
+                    score=9.0,
+                ),
+            ]
+            return DiscoveryResult(school_id=school_id, candidates=candidates, best=candidates[0])
 
         def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
             download_calls.append(candidate.pdf_url)
@@ -3239,7 +3242,7 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
 
         assert download_calls == [stale_pdf_url]
         assert stats["cached_rejections"] == 1
-        assert stats["skipped"] == 2
+        assert stats["skipped"] == 1
         assert stats["rejection_reason_fiscal_year_mismatch"] == 2
 
         payloads = [
@@ -3255,8 +3258,63 @@ def test_run_pdf_discovery_reuses_rejected_candidate_within_run(monkeypatch, tmp
         session.close()
 
 
-def test_run_pdf_discovery_suppresses_cached_non_target_evidence_noise(monkeypatch, tmp_path: Path) -> None:
-    """Cached common non-target PDFs should count without bloating JSONL evidence."""
+def test_run_pdf_discovery_does_not_reuse_target_year_rejection_across_schools(monkeypatch, tmp_path: Path) -> None:
+    """A sister-school rejection must not silently suppress another school's candidate."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[tuple[int, str]] = []
+    try:
+        session.add(SchoolSite(school_id=1, url="https://group.example.ac.jp/school-a/", http_status=200))
+        session.add(SchoolSite(school_id=2, url="https://group.example.ac.jp/school-b/", http_status=200))
+        session.flush()
+
+        stale_pdf_url = "https://group.example.ac.jp/about/joho/pdf/kakunin.pdf"
+
+        def fake_discover(_client, school_id: int, url: str, **_kwargs: object) -> DiscoveryResult:
+            candidate = PdfCandidate(
+                pdf_url=stale_pdf_url,
+                page_url=url,
+                anchor_text="確認申請書",
+                score=10.0,
+            )
+            return DiscoveryResult(school_id=school_id, candidates=[candidate], best=candidate)
+
+        def fake_download(_client, candidate: PdfCandidate, _storage_dir: Path, school_id: int):
+            download_calls.append((school_id, candidate.pdf_url))
+            return None, None, 0, "target", "fiscal_year_mismatch:2025"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert download_calls == [(1, stale_pdf_url), (2, stale_pdf_url)]
+        assert stats["cached_rejections"] == 0
+        assert stats["skipped"] == 2
+        assert stats["rejection_reason_fiscal_year_mismatch"] == 2
+
+        payloads = [
+            json.loads(line)
+            for line in evidence.read_text(encoding="utf-8").splitlines()
+        ]
+        assert [payload["reason"] for payload in payloads] == [
+            "fiscal_year_mismatch:2025",
+            "fiscal_year_mismatch:2025",
+        ]
+        assert all(payload["extra"].get("cached_rejection") != "true" for payload in payloads)
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_keeps_rejected_candidate_cache_school_scoped(monkeypatch, tmp_path: Path) -> None:
+    """Cross-school common URLs must still be evaluated per school."""
 
     session = _session()
     evidence = tmp_path / "rejections.jsonl"
@@ -3286,8 +3344,8 @@ def test_run_pdf_discovery_suppresses_cached_non_target_evidence_noise(monkeypat
             evidence_path=evidence,
         )
 
-        assert stats["cached_rejections"] == 1
-        assert stats["cached_rejection_evidence_suppressed"] == 1
+        assert stats["cached_rejections"] == 0
+        assert stats["cached_rejection_evidence_suppressed"] == 0
         assert stats["skipped"] == 2
         assert stats["rejection_reason_pre_filtered_non_target_hint"] == 2
 
@@ -3295,9 +3353,11 @@ def test_run_pdf_discovery_suppresses_cached_non_target_evidence_noise(monkeypat
             json.loads(line)
             for line in evidence.read_text(encoding="utf-8").splitlines()
         ]
-        assert len(payloads) == 1
+        assert len(payloads) == 2
         assert payloads[0]["reason"] == "pre_filtered_non_target_hint"
         assert payloads[0]["extra"]["pre_download"] == "true"
+        assert payloads[1]["reason"] == "pre_filtered_non_target_hint"
+        assert payloads[1]["extra"]["pre_download"] == "true"
     finally:
         session.close()
 
@@ -4377,6 +4437,60 @@ def test_run_pdf_discovery_does_not_trust_prefecture_url_health_check_as_year_ev
         session.close()
 
 
+def test_run_pdf_discovery_marks_school_domain_override_disclosure_as_trusted_year_evidence(
+    monkeypatch, tmp_path: Path
+) -> None:
+    session = _session()
+    seen_trusted_evidence: list[str] = []
+    try:
+        session.add(SchoolSite(
+            school_id=1,
+            url="https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html",
+            url_type="disclosure",
+            discovery_method="school_domain_override",
+            http_status=200,
+        ))
+        session.flush()
+
+        target = PdfCandidate(
+            pdf_url="https://www.nkz.ac.jp/clginfo/tm/form2.pdf",
+            page_url="https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html",
+            anchor_text="様式第2号 確認申請書",
+            score=3.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[target], best=target)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            seen_trusted_evidence.append(candidate.trusted_year_evidence)
+            return None, None, 0, "target", "target_fiscal_year_not_detected"
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            target_fiscal_year=2026,
+            strict_target_fiscal_year=True,
+            discovery_methods=["school_domain_override"],
+        )
+
+        assert stats["downloaded"] == 0
+        assert seen_trusted_evidence == ["school_domain_override_disclosure"]
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_prefilters_encoded_non_target_query_before_download(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -4837,6 +4951,42 @@ def test_download_pdf_rejects_reiwa_first_year_anchor_for_image_only_target(
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
+def test_download_pdf_prefers_disclosure_path_target_year_over_support_law_reference_year(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes(
+        "様式第2号 高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員\n"
+        "令和元年度 大学等における修学の支援に関する法律 第7条第1項"
+    )
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/public_info/2025/kakunin.pdf",
+        page_url="https://example.ac.jp/public_info/2025/",
+        anchor_text="確認申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "url_hint"
+
+
 def test_download_pdf_rejects_stale_year_from_adjacent_html_context(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -5231,6 +5381,73 @@ def test_download_pdf_rejects_ambiguous_wordpress_download_manager_without_year_
         pattern_type="wordpress_download_manager",
     )
     candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "target_fiscal_year_not_detected"
+
+
+def test_download_pdf_accepts_school_domain_override_specific_yearless_target_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://www.nkz.ac.jp/clginfo/tm/form2.pdf",
+        page_url="https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html",
+        anchor_text="様式第2号 確認申請書",
+    )
+    candidate.trusted_year_evidence = "school_domain_override_disclosure"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "school_domain_override_disclosure"
+
+
+def test_download_pdf_rejects_school_domain_override_generic_yearless_target_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://www.nkz.ac.jp/clginfo/tm/application.pdf",
+        page_url="https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html",
+        anchor_text="確認申請",
+    )
+    candidate.trusted_year_evidence = "school_domain_override_disclosure"
 
     monkeypatch.setattr(
         "eidp.scraper.pdf_discovery._safe_get",
