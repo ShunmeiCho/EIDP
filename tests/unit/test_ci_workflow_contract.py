@@ -9,6 +9,13 @@ def test_ci_runs_bandit_security_gate() -> None:
     assert "src/eidp" in WORKFLOW
 
 
+def test_ci_uses_node24_github_actions() -> None:
+    assert "actions/checkout@v6" in WORKFLOW
+    assert "actions/setup-python@v6" in WORKFLOW
+    assert "actions/checkout@v4" not in WORKFLOW
+    assert "actions/setup-python@v5" not in WORKFLOW
+
+
 def test_ci_builds_windows_zip_before_release_gate() -> None:
     assert "scripts/download_windows_runtime.py" in WORKFLOW
     assert "scripts/build_windows_zip.py" in WORKFLOW
