@@ -476,6 +476,15 @@ class _RunScopedHttpCache:
             except ValueError:
                 return False
         is_pdf = urlparse(response_url).path.lower().endswith(".pdf") or content_type == "application/pdf"
+        response_content = getattr(response, "content", None)
+        if isinstance(response_content, bytes | bytearray):
+            actual_content_length = len(response_content)
+            if actual_content_length > 0:
+                parsed_content_length = (
+                    actual_content_length
+                    if parsed_content_length is None
+                    else max(parsed_content_length, actual_content_length)
+                )
         if is_pdf:
             return (
                 response.status_code == 200

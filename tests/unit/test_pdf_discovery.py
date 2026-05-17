@@ -3585,6 +3585,33 @@ def test_run_scoped_http_cache_reuses_small_pdf_responses() -> None:
     assert stats == {"http_cache_hits": 1, "http_cache_misses": 1}
 
 
+def test_run_scoped_http_cache_reuses_small_pdf_responses_without_content_length() -> None:
+    """Some slow shared PDF hosts omit Content-Length; cache by the downloaded body size."""
+
+    calls: list[str] = []
+    url = "https://www.shared.ac.jp/info/support.pdf"
+
+    class BodyPdfResponse(_HtmlResponse):
+        def __init__(self) -> None:
+            super().__init__("", url=url, headers={"content-type": "application/pdf"})
+            self.content = b"%PDF-1.7\n" + (b"x" * 1024)
+
+    class SmallPdfClient:
+        def get(self, url: str, **_kwargs: object) -> BodyPdfResponse:
+            calls.append(url)
+            return BodyPdfResponse()
+
+    stats = {"http_cache_hits": 0, "http_cache_misses": 0}
+    client = _RunScopedHttpCache(SmallPdfClient(), stats=stats)
+
+    first = client.get(url)
+    second = client.get(url)
+
+    assert first is second
+    assert calls == [url]
+    assert stats == {"http_cache_hits": 1, "http_cache_misses": 1}
+
+
 def test_run_scoped_http_cache_does_not_cache_unknown_or_large_pdf_responses() -> None:
     """PDF caching stays bounded by requiring a valid, small Content-Length."""
 
