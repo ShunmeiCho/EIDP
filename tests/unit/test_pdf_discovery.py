@@ -5166,6 +5166,42 @@ def test_download_pdf_rejects_reiwa_first_year_anchor_for_image_only_target(
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
+def test_download_pdf_accepts_image_only_specific_form_with_target_year_hint(
+    monkeypatch, tmp_path: Path
+) -> None:
+    url = "https://example.ac.jp/school/info-2025/koutou-kyuhu.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(
+        pdf_url=url,
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和7年度申請書（様式第2号）",
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", lambda _content: "")
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "image_only"
+    assert reason is None
+    assert candidate.year_evidence == "url_hint"
+    assert list((tmp_path / "1").glob("*.pdf"))
+
+
 def test_download_pdf_prefers_disclosure_path_target_year_over_support_law_reference_year(
     monkeypatch, tmp_path: Path
 ) -> None:

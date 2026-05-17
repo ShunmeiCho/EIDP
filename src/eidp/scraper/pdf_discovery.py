@@ -2986,6 +2986,11 @@ def download_pdf(
                 trusted_year_evidence=trusted_year_evidence,
                 target_year=target_year,
             )
+            image_only_target_year_form_hint = (
+                pdf_type == "image_only"
+                and target_year_hint
+                and _has_specific_target_form_hint(candidate)
+            )
             if pdf_type == "non_target":
                 return None, None, 0, "non_target", "classified_non_target"
             if detected_fiscal_year is not None and detected_fiscal_year != target_year:
@@ -3024,9 +3029,7 @@ def download_pdf(
                 and not _has_target_application_hint(candidate)
             ):
                 return None, None, 0, pdf_type, "target_application_not_detected"
-            if detected_fiscal_year is None and not (
-                pdf_type == "image_only" and _has_target_application_hint(candidate) and target_year_hint
-            ) and not (
+            if detected_fiscal_year is None and not image_only_target_year_form_hint and not (
                 pdf_type == "target" and target_year_hint
             ) and not (
                 trusted_year_can_fill_missing_pdf_year
