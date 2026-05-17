@@ -47,11 +47,19 @@ operator manual workload of 30% or lower. Full automation is not required.
   `C:\Users\<operator>\EIDP-v460-01e4427`.
 - `EIDP Weekly Run` still executes
   `C:\Users\<operator>\EIDP-v460-01e4427\scripts\weekly_run.bat`.
-- Latest non-active future candidate is v465:
+- Latest clean non-Windows successor package is v466:
+  `dist/eidp-windows-v466.zip`, package/source commit
+  `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`, SHA256
+  `8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`,
+  with `BUILD_INFO.git_dirty=false`, distribution verifier `ok=true`, and
+  non-Windows release gate `ok=true` with `--skip-full-unit`. It has not been
+  transferred, set up, or promoted on Windows.
+- Latest Windows-staged non-active cache/perf candidate is v465:
   `dist/eidp-windows-v465.zip`, package/source commit
   `be32eb29212f71f72e6ab7e6d2a4f013ccb66e42`, SHA256
   `b8b6157261aae4986cab0050fa980265ddd6075660577157fe5a3360a04af041`.
-  It is staged on Windows but is not the active owner-cycle lane.
+  It is staged on Windows but is stale against the current verifier contract and
+  is not the active owner-cycle lane.
 - Previous side-by-side support package v464 remains the last broader
   Windows support lane with setup/UI/R7 Excel/evidence guard/return verifier
   proof:
@@ -64,10 +72,11 @@ operator manual workload of 30% or lower. Full automation is not required.
   `C:\EIDP-staging\v460-operator-docs-20260517`.
 - No tag, no main merge, and no release approval has been made from these
   support proofs.
-- GitHub PR #2 is green at current head `844f093`: latest push CI run
-  `25990552563` and latest pull-request CI run `25990553361` both completed
-  with `conclusion=success` after Ruff, Bandit, mypy, full pytest coverage,
-  Windows ZIP build, and non-Windows release gate.
+- GitHub PR #2 is green for the v466 package source head
+  `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`: push CI run `25990716165` and
+  pull-request CI run `25990716814` both completed with `conclusion=success`
+  after Ruff, Bandit, mypy, full pytest coverage, Windows ZIP build, and
+  non-Windows release gate.
 
 ## Fresh Return Verification
 
@@ -271,15 +280,15 @@ because the strict target-yield, denominator, and manual-workload thresholds wer
 not met.
 
 The earlier local dirty tree has been split into focused commits through
-current head `844f093`. Fresh local and remote validation now covers those
-commits: local `uv run pytest --cov=src/eidp --cov-report=term
---cov-fail-under=80` returned `1750 passed` with total coverage `80.87%`, and
-GitHub push/PR CI completed successfully at runs `25990552563` and
-`25990553361`. The remaining local dirty state is limited to report drafts:
-two modified status reports and five untracked `docs/reports/2026-05-17-*.md`
-files. Those drafts are not release artifacts and do not change the completion
-verdict. The active thread goal remains `active`; this audit does not call
-`update_goal`.
+current head `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`. Fresh local and remote
+validation now covers those commits: local `uv run pytest --cov=src/eidp
+--cov-report=term --cov-fail-under=80` returned `1750 passed` with total
+coverage `80.87%`, and GitHub push/PR CI completed successfully at runs
+`25990552563` and `25990553361`. A clean v466 successor ZIP was also built and
+verified from that head. The remaining local dirty state is limited to these
+report updates and untracked report drafts. Those drafts are not release
+artifacts and do not change the completion verdict. The active thread goal
+remains `active`; this audit does not call `update_goal`.
 
 The safe next split is now: refresh/commit the status reports, build a clean
 successor Windows package from the green head if needed, prepare/promote the

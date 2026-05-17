@@ -2,14 +2,15 @@
 
 Updated: 2026-05-17
 Branch: `sprint8-handoff-finalize`
-Latest source head validated by GitHub CI: `844f093`
-Latest GitHub CI status: push run `25990552563` and pull-request run
-`25990553361` completed with `conclusion=success`
-Latest Mac/non-Windows package snapshot: `9a94226b243fba691936db46c1fc11ef7c9debbd`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v464.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v464.zip`
-Latest Mac-core package SHA256: `6b95d9f3e06d70a0018119b2665070cf3af735e01b61920f6492234e174bd378`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v464.zip`
+Latest v466 package source head validated by GitHub CI:
+`9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
+Latest GitHub CI status for that package source: push run `25990716165` and
+pull-request run `25990716814` completed with `conclusion=success`
+Latest Mac/non-Windows package snapshot: `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
+Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v466.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v466.zip`
+Latest Mac-core package SHA256: `8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v466.zip`
 Prior Mac retroactive-matrix package: `dist/eidp-windows-v463.zip`, commit
 `4de0aa8c3021cb5a2ac2e29ba5fc36a24fcc6582`, SHA256
 `81ffabd2d538e5b9757d7096b383acba5b081c9ee82c389184bb59676e38e3e0`
@@ -58,15 +59,23 @@ Current active-goal completion audit:
 
 Status: **NOT COMPLETE**
 
-Current source head `844f093` is CI-green on GitHub and locally validated with
-`1750 passed` / coverage `80.87%`. This removes the previous CI-red blocker
-caused by `python -m pip download` running without `pip` in the uv-managed
-environment. It does not by itself approve release: the latest clean
-operator-transfer package remains the older v464 support lane, v465 remains a
-non-active cache/perf candidate, and no owner/operator real cycle has produced
-final KPI, audit/outbox, evidence ZIP, or sign-off artifacts.
+Current source head `9a5d50b556484d89b30a2c349d5ee5b01ff0f195` is CI-green on
+GitHub and locally validated with `1750 passed` / coverage `80.87%`. This
+removes the previous CI-red blocker caused by `python -m pip download` running
+without `pip` in the uv-managed environment. A clean successor package
+`dist/eidp-windows-v466.zip` was built from that head without `--allow-dirty`;
+`BUILD_INFO.json` records `git_dirty=false`, SHA256 is
+`8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`,
+`scripts/verify_windows_distribution.py` returned `ok=true`, and
+`scripts/run_non_windows_release_gates.py --skip-full-unit` returned `ok=true`.
+It does not by itself approve release: v466 has not been transferred or set up
+on Windows, the active Scheduled Task still points to v460, v465 remains only a
+staged stale cache/perf candidate, and no owner/operator real cycle has
+produced final KPI, audit/outbox, evidence ZIP, or sign-off artifacts.
 
-v464 is the latest Mac/non-Windows release-gate-clean package. It was built from
+v466 is now the latest Mac/non-Windows release-gate-clean package. v464 remains
+the latest broader Windows side-by-side support package with setup/UI/R7
+Excel/evidence guard/return verifier proof. v464 was built from
 `9a94226b243fba691936db46c1fc11ef7c9debbd`, adds the packaged
 `scripts/verify_stage6_return.py` owner-artifact verifier, and keeps the v463
 explicit `target_fiscal_year` propagation through ingestion. Its SHA256 sidecar
