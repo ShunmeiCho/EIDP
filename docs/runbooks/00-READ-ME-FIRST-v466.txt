@@ -1,0 +1,56 @@
+EIDP v466 operator handoff
+Date: 2026-05-17
+
+Purpose
+-------
+v466 is the clean successor package prepared after the CI fix, shared-origin
+discovery cache fix, target-FY override fix, publication-lag verifier contract,
+weekly progress UI, local bug-report bundle, and packaging privacy guards.
+
+This file is a first-read checklist. It does not approve Scheduled Task
+promotion by itself.
+
+Package
+-------
+- ZIP: C:\EIDP-staging\eidp-windows-v466.zip
+- Expected SHA256:
+  8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5
+- Intended side-by-side root:
+  %USERPROFILE%\EIDP-v466-9a5d50b
+- Current fallback root:
+  %USERPROFILE%\EIDP-v460-01e4427
+
+Read first
+----------
+- C:\EIDP-staging\v466-operator-docs-20260517\eidp-v466-active-promotion.md
+- C:\EIDP-staging\v466-operator-docs-20260517\eidp-v466-owner-request-20260517.txt
+- C:\EIDP-staging\v466-operator-docs-20260517\eidp-operator-e2e-template.md
+- C:\EIDP-staging\v466-operator-docs-20260517\current-release-status.md
+- C:\EIDP-staging\v466-operator-docs-20260517\2026-05-17-active-goal-completion-audit.md
+
+Current evidence
+----------------
+- Mac clean ZIP build: ok
+- BUILD_INFO.git_dirty: false
+- Distribution verifier: ok=true
+- Non-Windows release gate: ok=true
+- GitHub CI for v466 package source: success
+- Windows v466 setup/validation: not run yet
+- Windows active Scheduled Task switch: not approved yet
+- Owner/operator real cycle: not run yet
+
+Safety
+------
+- Do not delete data\eidp.sqlite3
+- Do not delete data\audit\manual-actions.jsonl
+- Do not delete data\master.xlsx
+- Do not delete data\pdfs
+- Do not run uninstall.bat
+- Do not persist EIDP_TARGET_FISCAL_YEAR into .env
+- Keep v460 as fallback until the owner signs off
+
+Release boundary
+----------------
+Do not approve v1.0 from v466 setup proof alone. v1.0 still requires the real
+owner/operator cycle, measured KPI values, verifier-accepted Stage 6 evidence
+ZIP, audit/outbox delta, and owner/operator sign-off.
