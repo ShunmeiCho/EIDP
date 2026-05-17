@@ -546,6 +546,49 @@ def test_run_weekly_writes_last_run_json_under_lock(
     assert payload["dry_run"] is True
 
 
+def test_run_weekly_writes_ui_progress_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    _school(session, 1)
+    _site(session, 1, "prefecture_aggregator")
+    session.commit()
+
+    progress_path = tmp_path / "logs" / "weekly-rediscovery-20260517-120000.json"
+    log_path = tmp_path / "logs" / "weekly-rediscovery-20260517-120000.log"
+
+    run_weekly(
+        current_fy=2026,
+        methods=["prefecture_aggregator"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=10,
+        rate_limit=1.5,
+        request_timeout=12.0,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=True,
+        lock_path=tmp_path / "data" / ".lock",
+        last_run_path=tmp_path / "data" / "output" / "last_run.json",
+        progress_path=progress_path,
+        progress_log_path=log_path,
+    )
+
+    payload = json.loads(progress_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "succeeded"
+    assert payload["current_step"] == 5
+    assert payload["total_steps"] == 5
+    assert payload["percent"] == 1.0
+    assert payload["message"] == "週次URL/PDF再取得が完了しました。"
+    assert payload["log_path"] == str(log_path)
+    assert payload["details"]["sites_total"] == 1
+    assert payload["details"]["target_pdf_auto_denominator_count"] == 1
+    assert payload["details"]["operator_reviewable_yield_pct"] == 0.0
+
+
 def test_run_weekly_writes_summary_and_last_run_atomically(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

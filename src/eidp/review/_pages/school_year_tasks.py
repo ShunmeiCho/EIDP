@@ -918,6 +918,18 @@ def bootstrap_progress_stale_reason(
     return None
 
 
+def bootstrap_progress_blocks_start(
+    progress: BootstrapProgress | None,
+    *,
+    lock_held: bool,
+    now: datetime | None = None,
+) -> bool:
+    """Return True when a recent running progress file should block duplicate launches."""
+    if progress is None or progress.status != "running":
+        return False
+    return bootstrap_progress_stale_reason(progress, lock_held=lock_held, now=now) is None
+
+
 def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
     details = progress.details or {}
     lines: list[str] = []
@@ -1098,6 +1110,21 @@ def latest_bootstrap_progress(app_root: Path) -> BootstrapProgress | None:
     return read_bootstrap_progress(path)
 
 
+def latest_weekly_progress_path(app_root: Path) -> Path | None:
+    logs_dir = app_root / "logs"
+    if not logs_dir.is_dir():
+        return None
+    progress_files = sorted(logs_dir.glob("weekly-rediscovery-*.json"), key=lambda path: path.stat().st_mtime)
+    return progress_files[-1] if progress_files else None
+
+
+def latest_weekly_progress(app_root: Path) -> BootstrapProgress | None:
+    path = latest_weekly_progress_path(app_root)
+    if path is None:
+        return None
+    return read_bootstrap_progress(path)
+
+
 def weekly_task_registration_warning_path(app_root: Path) -> Path:
     return app_root / WEEKLY_TASK_REGISTRATION_WARNING_FILE
 
@@ -1167,6 +1194,47 @@ def _write_failed_bootstrap_progress(
     tmp_path.replace(progress_path)
 
 
+def _write_initial_weekly_progress(*, progress_path: Path, log_path: Path, started_at: datetime) -> None:
+    payload = {
+        "status": "running",
+        "current_step": 0,
+        "total_steps": 5,
+        "percent": 0.0,
+        "message": "週次再取得を準備中です。",
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "updated_at": started_at.isoformat(timespec="seconds"),
+        "log_path": str(log_path),
+    }
+    tmp_path = progress_path.with_suffix(progress_path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(progress_path)
+
+
+def _write_failed_weekly_progress(
+    *,
+    progress_path: Path,
+    log_path: Path,
+    started_at: datetime,
+    message: str,
+) -> None:
+    now = datetime.now()
+    payload = {
+        "status": "failed",
+        "current_step": 0,
+        "total_steps": 5,
+        "percent": 0.0,
+        "message": message,
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "updated_at": now.isoformat(timespec="seconds"),
+        "completed_at": now.isoformat(timespec="seconds"),
+        "log_path": str(log_path),
+        "error": message,
+    }
+    tmp_path = progress_path.with_suffix(progress_path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(progress_path)
+
+
 def bootstrap_command(
     app_root: Path,
     *,
@@ -1188,9 +1256,11 @@ def bootstrap_command(
 def weekly_command(
     app_root: Path,
     *,
+    progress_path: Path | None = None,
+    progress_log_path: Path | None = None,
     python_executable: str | None = None,
 ) -> list[str]:
-    return [
+    cmd = [
         python_executable or sys.executable,
         str(app_root / "scripts" / "run_weekly_target_year_discovery.py"),
         "--methods",
@@ -1198,6 +1268,11 @@ def weekly_command(
         "--school-type",
         "all",
     ]
+    if progress_path is not None:
+        cmd.extend(["--progress-file", str(progress_path)])
+    if progress_log_path is not None:
+        cmd.extend(["--progress-log-path", str(progress_log_path)])
+    return cmd
 
 
 def start_initial_url_bootstrap(
@@ -1311,13 +1386,20 @@ def start_weekly_rediscovery(
     logs_dir.mkdir(parents=True, exist_ok=True)
     started_at = now or datetime.now()
     log_path = logs_dir / f"weekly-rediscovery-{started_at.strftime('%Y%m%d-%H%M%S')}.log"
+    progress_path = log_path.with_suffix(".json")
     last_run_path = latest_weekly_last_run_path(app_root)
+    _write_initial_weekly_progress(progress_path=progress_path, log_path=log_path, started_at=started_at)
 
     env = os.environ.copy()
     env["EIDP_APP_ROOT"] = str(app_root)
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
-    cmd = weekly_command(app_root, python_executable=python_executable)
+    cmd = weekly_command(
+        app_root,
+        progress_path=progress_path,
+        progress_log_path=log_path,
+        python_executable=python_executable,
+    )
 
     try:
         with log_path.open("ab") as stream:
@@ -1342,16 +1424,25 @@ def start_weekly_rediscovery(
                     start_new_session=True,
                 )
     except OSError as exc:
+        message = f"週次再取得を開始できませんでした: {exc}"
+        _write_failed_weekly_progress(
+            progress_path=progress_path,
+            log_path=log_path,
+            started_at=started_at,
+            message=message,
+        )
         return BootstrapLaunchResult(
             started=False,
-            message=f"週次再取得を開始できませんでした: {exc}",
+            message=message,
             log_path=log_path,
+            progress_path=progress_path,
             last_run_path=last_run_path,
         )
     return BootstrapLaunchResult(
         started=True,
         message="週次URL/PDF再取得を開始しました。完了後、この画面を更新してください。",
         log_path=log_path,
+        progress_path=progress_path,
         last_run_path=last_run_path,
         pid=proc.pid,
     )
@@ -1578,7 +1669,13 @@ def _render_rebuild_button(
             st.rerun()
 
 
-def _render_bootstrap_progress(progress: BootstrapProgress, *, lock_held: bool | None = None) -> None:
+def _render_bootstrap_progress(
+    progress: BootstrapProgress,
+    *,
+    lock_held: bool | None = None,
+    process_label: str = "初回URL/PDF取得",
+    success_message: str | None = None,
+) -> None:
     import streamlit as st
 
     percent_label = f"{progress.percent:.0%}"
@@ -1591,7 +1688,10 @@ def _render_bootstrap_progress(progress: BootstrapProgress, *, lock_held: bool |
         stale_reason = bootstrap_progress_stale_reason(progress, lock_held=lock_held)
 
     if progress.status == "succeeded":
-        st.success("初回URL/PDF取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。")
+        st.success(
+            success_message
+            or "初回URL/PDF取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。"
+        )
     elif progress.status == "failed":
         st.error(progress.message)
         if progress.error:
@@ -1599,7 +1699,7 @@ def _render_bootstrap_progress(progress: BootstrapProgress, *, lock_held: bool |
     elif stale_reason:
         st.warning(stale_reason)
     elif progress.status == "running":
-        st.info("初回URL/PDF取得を実行中です。この画面は自動で進行状況を更新します。")
+        st.info(f"{process_label}を実行中です。この画面は自動で進行状況を更新します。")
     else:
         st.info(progress.message)
 
@@ -1644,6 +1744,7 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
     latest_progress = latest_bootstrap_progress(app_root)
     if latest_progress is not None:
         _render_bootstrap_progress(latest_progress, lock_held=lock_status.held)
+    progress_blocks_start = bootstrap_progress_blocks_start(latest_progress, lock_held=lock_status.held)
 
     latest_log = latest_bootstrap_log(app_root)
     if latest_log is not None and (latest_progress is None or latest_progress.log_path != str(latest_log)):
@@ -1652,7 +1753,7 @@ def _render_initial_bootstrap_controls(summary: SchoolTaskSummary, *, lock_path:
     if st.button(
         "初回URL/PDF取得を開始",
         type="primary",
-        disabled=lock_status.held,
+        disabled=lock_status.held or progress_blocks_start,
         width="stretch",
     ):
         result = start_initial_url_bootstrap(app_root, lock_path=lock_path)
@@ -1752,15 +1853,25 @@ def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path
     if needs_bootstrap:
         st.info("先に初回URL/PDF取得を実行してください。URL登録後に週次再取得を使えます。")
 
+    lock_status = probe_lock(lock_path)
+    latest_progress = latest_weekly_progress(app_root)
+    if latest_progress is not None:
+        _render_bootstrap_progress(
+            latest_progress,
+            lock_held=lock_status.held,
+            process_label="週次URL/PDF再取得",
+            success_message="週次URL/PDF再取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。",
+        )
+    progress_blocks_start = bootstrap_progress_blocks_start(latest_progress, lock_held=lock_status.held)
+
     last_run = read_weekly_last_run(app_root)
     if last_run is not None:
         _render_weekly_last_run(last_run)
 
-    lock_status = probe_lock(lock_path)
     if st.button(
         "週次URL/PDF再取得を開始",
         type="primary",
-        disabled=lock_status.held or needs_bootstrap,
+        disabled=lock_status.held or needs_bootstrap or progress_blocks_start,
         width="stretch",
     ):
         result = start_weekly_rediscovery(app_root, lock_path=lock_path)
@@ -1768,6 +1879,17 @@ def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path
             st.success(result.message)
             if result.log_path is not None:
                 st.caption(f"進行ログ: {result.log_path}")
+            if result.progress_path is not None:
+                progress = read_bootstrap_progress(result.progress_path)
+                if progress is not None:
+                    _render_bootstrap_progress(
+                        progress,
+                        lock_held=probe_lock(lock_path).held,
+                        process_label="週次URL/PDF再取得",
+                        success_message=(
+                            "週次URL/PDF再取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。"
+                        ),
+                    )
             if result.last_run_path is not None:
                 st.caption(f"完了後の結果: {result.last_run_path}")
         else:

@@ -20,6 +20,7 @@ from eidp.review._pages.school_year_tasks import (
     blocking_reason_label,
     bootstrap_command,
     bootstrap_progress_auto_refresh_html,
+    bootstrap_progress_blocks_start,
     bootstrap_progress_detail_lines,
     bootstrap_progress_stale_reason,
     discovery_evidence_stale_target_notice,
@@ -566,6 +567,25 @@ def test_weekly_command_uses_target_year_runner_for_all_schools(tmp_path) -> Non
     ]
 
 
+def test_weekly_command_can_emit_progress_file(tmp_path) -> None:
+    progress_path = tmp_path / "logs" / "weekly-rediscovery-20260506-110000.json"
+    log_path = tmp_path / "logs" / "weekly-rediscovery-20260506-110000.log"
+
+    cmd = weekly_command(
+        tmp_path,
+        progress_path=progress_path,
+        progress_log_path=log_path,
+        python_executable="python.exe",
+    )
+
+    assert cmd[-4:] == [
+        "--progress-file",
+        str(progress_path),
+        "--progress-log-path",
+        str(log_path),
+    ]
+
+
 def test_latest_bootstrap_log_and_progress_return_newest_files(tmp_path) -> None:
     logs = tmp_path / "logs"
     logs.mkdir()
@@ -868,6 +888,40 @@ def test_bootstrap_progress_warns_when_lock_held_but_not_updating() -> None:
     assert "診断ログ" in reason
 
 
+def test_recent_running_progress_blocks_duplicate_launch() -> None:
+    progress = BootstrapProgress(
+        status="running",
+        current_step=0,
+        total_steps=5,
+        percent=0.0,
+        message="週次再取得を準備中です。",
+        updated_at="2026-05-07T00:47:25",
+    )
+
+    assert bootstrap_progress_blocks_start(
+        progress,
+        lock_held=False,
+        now=datetime(2026, 5, 7, 0, 48, 25),
+    )
+
+
+def test_stale_released_progress_does_not_block_retry() -> None:
+    progress = BootstrapProgress(
+        status="running",
+        current_step=3,
+        total_steps=5,
+        percent=0.45,
+        message="学校サイトから対象年度PDFを探索しています。",
+        updated_at="2026-05-07T00:47:25",
+    )
+
+    assert not bootstrap_progress_blocks_start(
+        progress,
+        lock_held=False,
+        now=datetime(2026, 5, 7, 0, 52, 25),
+    )
+
+
 def test_start_initial_url_bootstrap_starts_background_process(tmp_path, monkeypatch) -> None:
     script = tmp_path / "scripts" / "bootstrap_pdf_pipeline.py"
     script.parent.mkdir(parents=True)
@@ -940,6 +994,7 @@ def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatc
     assert result.started is True
     assert result.pid == 5678
     assert result.log_path == tmp_path / "logs" / "weekly-rediscovery-20260506-110000.log"
+    assert result.progress_path == tmp_path / "logs" / "weekly-rediscovery-20260506-110000.json"
     assert result.last_run_path == tmp_path / "data" / "output" / "last_run.json"
     assert captured["cmd"] == [
         "python.exe",
@@ -954,10 +1009,18 @@ def test_start_weekly_rediscovery_starts_background_process(tmp_path, monkeypatc
         "scrapling_stealth",
         "--school-type",
         "all",
+        "--progress-file",
+        str(result.progress_path),
+        "--progress-log-path",
+        str(result.log_path),
     ]
     kwargs = captured["kwargs"]
     assert kwargs["cwd"] == tmp_path
     assert kwargs["env"]["EIDP_APP_ROOT"] == str(tmp_path)
+    progress = read_bootstrap_progress(result.progress_path)
+    assert progress is not None
+    assert progress.status == "running"
+    assert progress.message == "週次再取得を準備中です。"
 
 
 def test_start_initial_url_bootstrap_refuses_when_app_lock_is_held(tmp_path) -> None:

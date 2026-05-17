@@ -154,6 +154,48 @@ def write_last_run(
     return last_run_path
 
 
+def write_progress(
+    progress_path: Path | None,
+    *,
+    status: str,
+    current_step: int,
+    total_steps: int,
+    message: str,
+    started_at: datetime,
+    log_path: Path | None = None,
+    completed_at: datetime | None = None,
+    error: str | None = None,
+    details: dict[str, Any] | None = None,
+) -> Path | None:
+    """Write the small UI-facing progress file for manual weekly runs."""
+
+    if progress_path is None:
+        return None
+    progress_path.parent.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(UTC)
+    safe_total = max(total_steps, 1)
+    safe_step = min(max(current_step, 0), safe_total)
+    payload: dict[str, Any] = {
+        "status": status,
+        "current_step": safe_step,
+        "total_steps": safe_total,
+        "percent": round(safe_step / safe_total, 4),
+        "message": message,
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "updated_at": now.isoformat(timespec="seconds"),
+    }
+    if completed_at is not None:
+        payload["completed_at"] = completed_at.isoformat(timespec="seconds")
+    if log_path is not None:
+        payload["log_path"] = str(log_path)
+    if error:
+        payload["error"] = error
+    if details:
+        payload["details"] = details
+    write_text_atomic(progress_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    return progress_path
+
+
 def _prune_matching_files(directory: Path, pattern: str, *, keep: int) -> tuple[list[Path], list[tuple[Path, str]]]:
     if keep < 0:
         raise ValueError("keep must be >= 0")
@@ -504,6 +546,8 @@ def run_weekly(
     dry_run: bool,
     lock_path: Path | None = None,
     last_run_path: Path | None = None,
+    progress_path: Path | None = None,
+    progress_log_path: Path | None = None,
     stale_only: bool = False,
 ) -> dict[str, Any]:
     """Public entry. Acquires the shared UI lock when ``lock_path`` is
@@ -523,6 +567,8 @@ def run_weekly(
         limit=limit,
         dry_run=dry_run,
         last_run_path=last_run_path,
+        progress_path=progress_path,
+        progress_log_path=progress_log_path,
         stale_only=stale_only,
     )
     if lock_path is None:
@@ -573,6 +619,8 @@ def _run_weekly_inner(
     limit: int | None,
     dry_run: bool,
     last_run_path: Path | None,
+    progress_path: Path | None = None,
+    progress_log_path: Path | None = None,
     stale_only: bool = False,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -582,6 +630,16 @@ def _run_weekly_inner(
     ingest_evidence = output_dir / f"{run_id}-ingest-rejections.jsonl"
     discovery_rca_plan = output_dir / f"{run_id}-discovery-rca-batch-plan.json"
     summary_path = output_dir / f"{run_id}-summary.json"
+    total_progress_steps = 5
+    write_progress(
+        progress_path,
+        status="running",
+        current_step=1,
+        total_steps=total_progress_steps,
+        message="週次再取得の対象校を選定しています。",
+        started_at=started_at,
+        log_path=progress_log_path,
+    )
 
     session = SessionLocal()
     try:
@@ -618,6 +676,21 @@ def _run_weekly_inner(
             methods=methods,
             school_type=school_type,
         )
+        write_progress(
+            progress_path,
+            status="running",
+            current_step=2,
+            total_steps=total_progress_steps,
+            message=f"対象校 {len(selected_school_ids)} 校を確認しました。実行前状態を集計しています。",
+            started_at=started_at,
+            log_path=progress_log_path,
+            details={
+                "selection_mode": selection_mode,
+                "target_missing_school_count": len(selected_school_ids),
+                "stale_school_count": stale_school_count,
+                "no_crawlable_url_school_count": no_crawlable_url_school_count,
+            },
+        )
         before = _snapshot_reports(session, current_fy, school_type)
 
         max_doc_id_before = session.query(func.max(Document.id)).scalar() or 0
@@ -630,6 +703,23 @@ def _run_weekly_inner(
             session.rollback()
         else:
             effective_batch_size = max(batch_size, len(selected_school_ids))
+            write_progress(
+                progress_path,
+                status="running",
+                current_step=3,
+                total_steps=total_progress_steps,
+                message="学校サイトから対象年度PDFを再探索しています。",
+                started_at=started_at,
+                log_path=progress_log_path,
+                details={
+                    "sites_total": len(selected_school_ids),
+                    "crawled": 0,
+                    "found": 0,
+                    "downloaded": 0,
+                    "failed": 0,
+                    "skipped": 0,
+                },
+            )
             discovery_stats = run_pdf_discovery(
                 session,
                 storage_dir=storage_dir,
@@ -643,6 +733,25 @@ def _run_weekly_inner(
                 strict_target_fiscal_year=True,
             )
             session.commit()
+            write_progress(
+                progress_path,
+                status="running",
+                current_step=4,
+                total_steps=total_progress_steps,
+                message="PDF探索が完了しました。新規PDFを取り込んでいます。",
+                started_at=started_at,
+                log_path=progress_log_path,
+                details={
+                    "sites_total": len(selected_school_ids),
+                    "crawled": discovery_stats.get("crawled", 0),
+                    "found": discovery_stats.get("found", 0),
+                    "downloaded": discovery_stats.get("downloaded", 0),
+                    "failed": discovery_stats.get("failed", 0),
+                    "skipped": discovery_stats.get("skipped", 0),
+                    "prefiltered": discovery_stats.get("prefiltered", 0),
+                    "cached_rejections": discovery_stats.get("cached_rejections", 0),
+                },
+            )
 
             new_document_ids = [
                 int(doc_id)
@@ -713,6 +822,36 @@ def _run_weekly_inner(
         write_text_atomic(summary_path, json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
         if last_run_path is not None:
             write_last_run(summary, last_run_path, status="success")
+        write_progress(
+            progress_path,
+            status="succeeded",
+            current_step=total_progress_steps,
+            total_steps=total_progress_steps,
+            message="週次URL/PDF再取得が完了しました。",
+            started_at=started_at,
+            log_path=progress_log_path,
+            completed_at=datetime.now(UTC),
+            details={
+                "sites_total": len(selected_school_ids),
+                "crawled": discovery_stats.get("crawled", 0),
+                "found": discovery_stats.get("found", 0),
+                "downloaded": discovery_stats.get("downloaded", 0),
+                "failed": discovery_stats.get("failed", 0),
+                "skipped": discovery_stats.get("skipped", 0),
+                "target_pdf_auto_acquired_count": summary.get("target_pdf_auto_acquired_count"),
+                "target_pdf_auto_denominator_count": summary.get("target_pdf_auto_denominator_count"),
+                "target_pdf_auto_yield_pct": summary.get("target_pdf_auto_yield_pct"),
+                "operator_reviewable_count": summary.get("operator_reviewable_count"),
+                "operator_reviewable_yield_pct": summary.get("operator_reviewable_yield_pct"),
+                "ship_gate_auto_yield_pct": summary.get("ship_gate_auto_yield_pct"),
+                "ship_gate_operator_coverage_pct": summary.get("ship_gate_operator_coverage_pct"),
+                "ship_gate_status": summary.get("ship_gate_status"),
+                "discovery_rca_batch_plan_path": discovery_rca.get("batch_plan_path"),
+                "discovery_rca_batch_plan_item_count": discovery_rca.get("batch_plan_item_count"),
+                "discovery_rca_batch_plan_total_candidates": discovery_rca.get("batch_plan_total_candidates"),
+                "discovery_rca_error": discovery_rca.get("error"),
+            },
+        )
         return summary
     except Exception as exc:
         session.rollback()
@@ -740,6 +879,17 @@ def _run_weekly_inner(
                 status="failed",
                 error=f"{type(exc).__name__}: {exc}",
             )
+        write_progress(
+            progress_path,
+            status="failed",
+            current_step=0,
+            total_steps=total_progress_steps,
+            message="週次URL/PDF再取得がエラーで停止しました。",
+            started_at=started_at,
+            log_path=progress_log_path,
+            completed_at=datetime.now(UTC),
+            error=f"{type(exc).__name__}: {exc}",
+        )
         raise
     finally:
         session.close()
@@ -754,6 +904,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--storage-dir", type=Path, default=paths.storage_dir)
     parser.add_argument("--output-dir", type=Path, default=paths.output_dir)
     parser.add_argument("--last-run-path", type=Path, default=paths.last_run_path)
+    parser.add_argument("--progress-file", type=Path, default=None)
+    parser.add_argument("--progress-log-path", type=Path, default=None)
     parser.add_argument("--lock-path", type=Path, default=paths.lock_path)
     parser.add_argument("--logs-dir", type=Path, default=paths.logs_dir)
     parser.add_argument("--keep-logs", type=int, default=12)
@@ -789,6 +941,8 @@ def main() -> None:
         dry_run=args.dry_run,
         lock_path=None if args.no_lock else args.lock_path,
         last_run_path=args.last_run_path,
+        progress_path=args.progress_file,
+        progress_log_path=args.progress_log_path,
         stale_only=args.stale_only,
     )
     # Sprint 8.7: prune BEFORE the final print so a closed-pipe error on
