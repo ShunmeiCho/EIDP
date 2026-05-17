@@ -74,7 +74,9 @@ def _url_status(sites: list[SchoolSite]) -> str:
 
 def _pdf_status(docs: list[Document], fiscal_year: int) -> str:
     if any(
-        d.fiscal_year == fiscal_year and d.pdf_type == "target" and d.ingest_status == "ingested"
+        d.fiscal_year == fiscal_year
+        and d.pdf_type == "target"
+        and d.ingest_status in {"ingested", "review_pending", "support_only"}
         for d in docs
     ):
         return "confirmed_target"

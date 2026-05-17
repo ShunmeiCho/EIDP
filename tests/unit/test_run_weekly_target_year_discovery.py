@@ -381,6 +381,23 @@ def test_weekly_yield_metrics_count_review_candidate_statuses_as_operator_review
     assert payload["ship_gate_status"] == "pass"
 
 
+def test_weekly_yield_metrics_use_confirmed_target_status_delta_for_auto_acquisition() -> None:
+    payload = module._weekly_target_pdf_yield_metrics(
+        {
+            "target_missing_school_count": 10,
+            "delta": {
+                "coverage": {"schools_with_target_pdf_current_fy": 2},
+                "school_fiscal_year_status": {"confirmed_target": 5},
+            },
+        }
+    )
+
+    assert payload["target_pdf_auto_acquired_count"] == 5
+    assert payload["target_pdf_auto_yield_pct"] == 50.0
+    assert payload["operator_reviewable_count"] == 5
+    assert payload["operator_reviewable_yield_pct"] == 50.0
+
+
 def test_write_last_run_uses_atomic_replace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     summary = {
         "run_id": "20260505_010203",

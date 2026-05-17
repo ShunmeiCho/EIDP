@@ -447,9 +447,15 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     target_missing = int(summary.get("target_missing_school_count") or 0)
     delta = summary.get("delta")
     coverage_delta = delta.get("coverage") if isinstance(delta, dict) else {}
-    acquired = int((coverage_delta or {}).get("schools_with_target_pdf_current_fy") or 0)
-    acquired = max(acquired, 0)
     status_delta = delta.get("school_fiscal_year_status") if isinstance(delta, dict) else {}
+    acquired = int(
+        (status_delta or {}).get(
+            "confirmed_target",
+            (coverage_delta or {}).get("schools_with_target_pdf_current_fy") or 0,
+        )
+        or 0
+    )
+    acquired = max(acquired, 0)
     review_candidate_acquired = operator_reviewable_status_count(status_delta or {})
     if target_missing <= 0:
         return {
