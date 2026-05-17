@@ -14,6 +14,7 @@ from eidp.fiscal_year import JapaneseEra, active_japanese_eras, configure_japane
 from eidp.scraper.pdf_discovery import (
     MAX_CANDIDATE_DOWNLOAD_ATTEMPTS,
     MAX_GENERAL_CANDIDATE_SCAN,
+    RUN_SCOPED_PDF_CACHE_MAX_BYTES,
     DiscoveryResult,
     PdfCandidate,
     _append_unique_candidates,
@@ -27,6 +28,7 @@ from eidp.scraper.pdf_discovery import (
     _has_target_year_hint,
     _pre_download_rejection,
     _prioritize_viable_candidates,
+    _RunScopedHttpCache,
     _score_candidate,
     _sitemap_urls_for_site,
     _stale_fiscal_year_from_candidate_hint,
@@ -3479,6 +3481,62 @@ def test_run_pdf_discovery_caches_shared_origin_robots_sitemap_and_disclosure_pa
         assert sleeps.count(1.0) <= len(calls)
     finally:
         session.close()
+
+
+def test_run_scoped_http_cache_reuses_small_pdf_responses() -> None:
+    """Shared PDF URLs should not be re-downloaded for every school in one run."""
+
+    calls: list[str] = []
+    url = "https://www.shared.ac.jp/info/support.pdf"
+
+    class SmallPdfClient:
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            return _HtmlResponse(
+                "",
+                url=url,
+                headers={
+                    "content-type": "application/pdf",
+                    "content-length": "1024",
+                },
+            )
+
+    stats = {"http_cache_hits": 0, "http_cache_misses": 0}
+    client = _RunScopedHttpCache(SmallPdfClient(), stats=stats)
+
+    first = client.get(url)
+    second = client.get(url)
+
+    assert first is second
+    assert calls == [url]
+    assert stats == {"http_cache_hits": 1, "http_cache_misses": 1}
+
+
+def test_run_scoped_http_cache_does_not_cache_unknown_or_large_pdf_responses() -> None:
+    """PDF caching stays bounded by requiring a valid, small Content-Length."""
+
+    calls: list[str] = []
+    unknown_size_url = "https://www.shared.ac.jp/info/unknown.pdf"
+    large_pdf_url = "https://www.shared.ac.jp/info/large.pdf"
+
+    class PdfClient:
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            headers = {"content-type": "application/pdf"}
+            if url == large_pdf_url:
+                headers["content-length"] = str(RUN_SCOPED_PDF_CACHE_MAX_BYTES + 1)
+            return _HtmlResponse("", url=url, headers=headers)
+
+    stats = {"http_cache_hits": 0, "http_cache_misses": 0}
+    client = _RunScopedHttpCache(PdfClient(), stats=stats)
+
+    client.get(unknown_size_url)
+    client.get(unknown_size_url)
+    client.get(large_pdf_url)
+    client.get(large_pdf_url)
+
+    assert calls == [unknown_size_url, unknown_size_url, large_pdf_url, large_pdf_url]
+    assert stats == {"http_cache_hits": 0, "http_cache_misses": 0}
 
 
 def test_run_pdf_discovery_caches_shared_robots_sitemap_404_with_set_cookie(

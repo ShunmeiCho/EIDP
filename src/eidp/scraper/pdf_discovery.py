@@ -45,6 +45,8 @@ _DISCLOSURE_PATH_YEAR_RE = re.compile(
     r"(?:/(?:public[_-]?info(?:rmation)?|disclosure)[_/-]|/pdf[_/-]?)(20\d{2})(?=[/_-])",
     re.IGNORECASE,
 )
+RUN_SCOPED_METADATA_CACHE_MAX_BYTES = 2_000_000
+RUN_SCOPED_PDF_CACHE_MAX_BYTES = 5_000_000
 
 
 class HttpGetClient(Protocol):
@@ -465,15 +467,22 @@ class _RunScopedHttpCache:
         headers = response.headers
         content_type = str(headers.get("content-type", "")).split(";", 1)[0].strip().lower()
         response_url = str(response.url or request_url)
-        if urlparse(response_url).path.lower().endswith(".pdf") or content_type == "application/pdf":
-            return False
         content_length = headers.get("content-length")
+        parsed_content_length: int | None = None
         if content_length:
             try:
-                if int(content_length) > 2_000_000:
-                    return False
+                parsed_content_length = int(content_length)
             except ValueError:
                 return False
+        is_pdf = urlparse(response_url).path.lower().endswith(".pdf") or content_type == "application/pdf"
+        if is_pdf:
+            return (
+                response.status_code == 200
+                and parsed_content_length is not None
+                and 0 < parsed_content_length <= RUN_SCOPED_PDF_CACHE_MAX_BYTES
+            )
+        if parsed_content_length is not None and parsed_content_length > RUN_SCOPED_METADATA_CACHE_MAX_BYTES:
+            return False
         is_public_metadata = _RunScopedHttpCache._is_public_discovery_metadata_url(
             request_url
         ) or _RunScopedHttpCache._is_public_discovery_metadata_url(response_url)
