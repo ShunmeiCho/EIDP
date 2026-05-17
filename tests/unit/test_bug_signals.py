@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
 import os
 import zipfile
 from datetime import UTC, datetime, timedelta
@@ -10,33 +11,81 @@ from eidp.bug_signals.bundle import build_bug_report_bundle, scrub_json_value, s
 from eidp.bug_signals.detector import scan_bug_signals, scan_p0_bug_signals
 
 
-def test_scan_bug_signals_detects_weekly_error_stale_lock_and_log_error(tmp_path: Path) -> None:
+def _worker_hold_lock(lock_path: str, ready_event, release_event) -> None:  # noqa: ANN001
+    from eidp.db.locking import acquire_lock
+
+    with acquire_lock(Path(lock_path), owner="weekly_runner"):
+        ready_event.set()
+        release_event.wait(timeout=10)
+
+
+def test_scan_bug_signals_detects_weekly_error_and_log_error(tmp_path: Path) -> None:
     root = tmp_path / "eidp"
     (root / "data" / "output").mkdir(parents=True)
-    (root / "data").mkdir(exist_ok=True)
     (root / "logs").mkdir()
     (root / "data" / "output" / "last_run.json").write_text(
         json.dumps({"status": "error", "error": "weekly failed"}),
         encoding="utf-8",
     )
-    lock_path = root / "data" / ".lock"
-    lock_path.write_text("owner=weekly\n", encoding="utf-8")
-    now = datetime(2026, 5, 17, 12, 0, tzinfo=UTC)
-    stale_timestamp = (now - timedelta(hours=3)).timestamp()
-    os.utime(lock_path, (stale_timestamp, stale_timestamp))
     (root / "logs" / "run-20260517.log").write_text(
         "start\nTraceback (most recent call last)\nboom\n",
         encoding="utf-8",
     )
 
-    signals = scan_bug_signals(root, now=now, check_sqlite=False)
+    signals = scan_bug_signals(root, now=datetime(2026, 5, 17, 12, 0, tzinfo=UTC), check_sqlite=False)
 
     assert {signal.kind for signal in signals} == {
         "weekly_run_error",
-        "stale_lock",
         "weekly_run_log_error",
     }
     assert all(signal.severity == "P0" for signal in signals)
+
+
+def test_scan_bug_signals_ignores_unheld_stale_lock_file(tmp_path: Path) -> None:
+    root = tmp_path / "eidp"
+    (root / "data").mkdir(parents=True)
+    lock_path = root / "data" / ".lock"
+    lock_path.write_text("", encoding="utf-8")
+    now = datetime(2026, 5, 17, 12, 0, tzinfo=UTC)
+    stale_timestamp = (now - timedelta(days=6)).timestamp()
+    os.utime(lock_path, (stale_timestamp, stale_timestamp))
+
+    signals = scan_bug_signals(root, now=now, check_sqlite=False)
+
+    assert "stale_lock" not in {signal.kind for signal in signals}
+
+
+def test_scan_bug_signals_detects_held_stale_lock(tmp_path: Path) -> None:
+    root = tmp_path / "eidp"
+    (root / "data").mkdir(parents=True)
+    lock_path = root / "data" / ".lock"
+    now = datetime(2026, 5, 17, 12, 0, tzinfo=UTC)
+
+    ctx = multiprocessing.get_context("spawn")
+    ready_event = ctx.Event()
+    release_event = ctx.Event()
+    proc = ctx.Process(target=_worker_hold_lock, args=(str(lock_path), ready_event, release_event))
+    proc.start()
+    try:
+        assert ready_event.wait(timeout=5)
+        meta_path = lock_path.with_suffix(lock_path.suffix + ".meta")
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["started_at"] = (now - timedelta(hours=3)).isoformat()
+        meta_path.write_text(json.dumps(meta), encoding="utf-8")
+
+        signals = scan_bug_signals(root, now=now, check_sqlite=False)
+    finally:
+        release_event.set()
+        proc.join(timeout=5)
+        if proc.is_alive():
+            proc.terminate()
+
+    stale = next(signal for signal in signals if signal.kind == "stale_lock")
+    assert stale.title == "Application lock appears held for too long"
+    assert stale.evidence_path == meta_path.as_posix()
+    assert stale.detail["owner"] == "weekly_runner"
+    assert stale.detail["pid"] == str(proc.pid)
+    assert stale.detail["age_seconds"] == "10800"
 
 
 def test_scan_bug_signals_detects_weekly_timeout_without_fresh_last_run(tmp_path: Path) -> None:
@@ -66,13 +115,26 @@ def test_scan_bug_signals_uses_stable_ids_for_aging_signals(tmp_path: Path) -> N
     root = tmp_path / "eidp"
     (root / "data").mkdir(parents=True)
     lock_path = root / "data" / ".lock"
-    lock_path.write_text("owner=weekly\n", encoding="utf-8")
     started = datetime(2026, 5, 17, 12, 0, tzinfo=UTC)
-    stale_timestamp = (started - timedelta(hours=3)).timestamp()
-    os.utime(lock_path, (stale_timestamp, stale_timestamp))
+    ctx = multiprocessing.get_context("spawn")
+    ready_event = ctx.Event()
+    release_event = ctx.Event()
+    proc = ctx.Process(target=_worker_hold_lock, args=(str(lock_path), ready_event, release_event))
+    proc.start()
+    try:
+        assert ready_event.wait(timeout=5)
+        meta_path = lock_path.with_suffix(lock_path.suffix + ".meta")
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["started_at"] = (started - timedelta(hours=3)).isoformat()
+        meta_path.write_text(json.dumps(meta), encoding="utf-8")
 
-    first = scan_bug_signals(root, now=started, check_sqlite=False)
-    second = scan_bug_signals(root, now=started + timedelta(minutes=10), check_sqlite=False)
+        first = scan_bug_signals(root, now=started, check_sqlite=False)
+        second = scan_bug_signals(root, now=started + timedelta(minutes=10), check_sqlite=False)
+    finally:
+        release_event.set()
+        proc.join(timeout=5)
+        if proc.is_alive():
+            proc.terminate()
 
     first_lock = next(signal for signal in first if signal.kind == "stale_lock")
     second_lock = next(signal for signal in second if signal.kind == "stale_lock")

@@ -14,6 +14,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from eidp.db.locking import probe_lock
+
 SIGNAL_ID_VOLATILE_DETAIL_KEYS = frozenset({"age_seconds"})
 
 
@@ -98,6 +100,18 @@ def _signal(
     )
 
 
+def _parse_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
 def _sqlite_integrity_signal(app_root: Path, detected_at: datetime) -> BugSignal | None:
     db_path = app_root / "data" / "eidp.sqlite3"
     if not db_path.is_file():
@@ -160,22 +174,27 @@ def scan_bug_signals(
 
     lock_path = root / "data" / ".lock"
     if lock_path.exists():
-        mtime = datetime.fromtimestamp(lock_path.stat().st_mtime, tz=UTC)
-        age_seconds = int((detected_at - mtime).total_seconds())
-        if age_seconds >= int(lock_stale_after.total_seconds()):
-            signals.append(
-                _signal(
-                    kind="stale_lock",
-                    title="Application lock file appears stale",
-                    evidence_path=lock_path,
-                    detected_at=detected_at,
-                    detail={
-                        "lock_mtime_utc": mtime.isoformat(timespec="seconds"),
-                        "age_seconds": str(age_seconds),
-                    },
+        lock_status = probe_lock(lock_path)
+        if lock_status.held:
+            started_at = _parse_datetime(lock_status.started_at)
+            mtime = started_at or datetime.fromtimestamp(lock_path.stat().st_mtime, tz=UTC)
+            age_seconds = int((detected_at - mtime).total_seconds())
+            meta_path = lock_path.with_suffix(lock_path.suffix + ".meta")
+            if age_seconds >= int(lock_stale_after.total_seconds()):
+                signals.append(
+                    _signal(
+                        kind="stale_lock",
+                        title="Application lock appears held for too long",
+                        evidence_path=meta_path if meta_path.is_file() else lock_path,
+                        detected_at=detected_at,
+                        detail={
+                            "owner": lock_status.owner or "unknown",
+                            "pid": str(lock_status.pid or ""),
+                            "started_at_utc": mtime.isoformat(timespec="seconds"),
+                            "age_seconds": str(age_seconds),
+                        },
+                    )
                 )
-            )
-
     latest_run_log = _latest_file(root / "logs", "run-*.log")
     if latest_run_log is not None:
         tail = _tail_text(latest_run_log)
