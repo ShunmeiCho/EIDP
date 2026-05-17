@@ -62,6 +62,17 @@ operator manual workload of 30% or lower. Full automation is not required.
   `scripts\stage6_recovery_check.bat` on v460 returned `ok=true` with
   `action_matches_expected=true`, and a fresh scheduled-task XML check still
   points to `C:\Users\<operator>\EIDP-v460-01e4427\scripts\weekly_run.bat`.
+  A v466 side-by-side UI smoke then served Streamlit on Windows
+  `127.0.0.1:8511` through a Mac tunnel
+  `127.0.0.1:18511 -> 127.0.0.1:8511`, clicked only the read-only quick
+  navigation buttons for `① 学校別タスク`, `② PDF確認・手入力`,
+  `③ 年度判定・修正`, `④ Excel プレビュー`, and
+  `⑤ 設定（年度・OCR・API）`, and wrote
+  `output/playwright/v466-ui-smoke/summary.json` with `ok=true`,
+  `has_error_traceback=false`, `nav_all_clicked=true`,
+  `write_actions_invoked=false`, and `weekly_invoked=false`. Cleanup closed the
+  temporary ports, and a fresh scheduled-task XML check still pointed to the
+  v460 runner.
 - Latest Windows-staged non-active cache/perf candidate is v465:
   `dist/eidp-windows-v465.zip`, package/source commit
   `be32eb29212f71f72e6ab7e6d2a4f013ccb66e42`, SHA256

@@ -38,9 +38,9 @@ Latest Windows-OCR-image-write-proven package: `dist/eidp-windows-v384.zip`
 Latest Windows-setup-proven package: `dist/eidp-windows-v466.zip`
 Latest Windows-target-FY-ingest-override-canary-proven package: `dist/eidp-windows-v463.zip`
 Latest Windows-shared-HTTP-cache-canary-proven package: `dist/eidp-windows-v462.zip`
-Latest Windows-UI-health-proven package: `dist/eidp-windows-v464.zip`
+Latest Windows-UI-health-proven package: `dist/eidp-windows-v466.zip`
 Latest Windows-default-launcher-proven package: `dist/eidp-windows-v459.zip`
-Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v464.zip`
+Latest Windows-browser-readonly-nav-proven package: `dist/eidp-windows-v466.zip`
 Latest Windows-R7-browser-Excel-proven package: `dist/eidp-windows-v464.zip`
 Latest Windows-UI-write-sandbox-proven package: `dist/eidp-windows-v459.zip`
 Latest Windows-bounded-backend-smoke package: `dist/eidp-windows-v459.zip`
@@ -99,10 +99,24 @@ to v460, no v466 owner/operator real cycle has produced final KPI,
 audit/outbox, evidence ZIP, or sign-off artifacts, and v465 remains only a
 staged stale cache/perf candidate.
 
-v466 is now the latest Mac/non-Windows release-gate-clean and Windows
-setup-proven package. v464 remains the latest broader Windows side-by-side
-support package with UI/R7 Excel/evidence guard/return verifier proof. v464 was
-built from
+v466 is now the latest Mac/non-Windows release-gate-clean, Windows setup-proven,
+and Windows UI-health/read-only navigation package. After setup validation, a
+v466 side-by-side UI smoke started Streamlit directly on Windows
+`127.0.0.1:8511`, verified Windows-local health and Mac tunnel
+`127.0.0.1:18511 -> 127.0.0.1:8511`, and clicked only the read-only quick
+navigation buttons for `① 学校別タスク`, `② PDF確認・手入力`,
+`③ 年度判定・修正`, `④ Excel プレビュー`, and
+`⑤ 設定（年度・OCR・API）`. `output/playwright/v466-ui-smoke/summary.json`
+records `ok=true`, `has_v466_build=true`, `has_target_fiscal_year=true`,
+`target_fiscal_year_text=2026年度（令和8年度）`,
+`has_error_traceback=false`, `nav_all_clicked=true`,
+`write_actions_invoked=false`, and `weekly_invoked=false`. Screenshots
+`v466-ui-smoke-00-home.png` through `v466-ui-smoke-05-settings.png` were
+captured, cleanup closed local `18511` and Windows `8511`, and a fresh
+scheduled-task XML check still executes the v460 weekly runner.
+
+v464 remains the latest broader Windows side-by-side support package with R7
+Excel/evidence guard/return verifier proof. v464 was built from
 `9a94226b243fba691936db46c1fc11ef7c9debbd`, adds the packaged
 `scripts/verify_stage6_return.py` owner-artifact verifier, and keeps the v463
 explicit `target_fiscal_year` propagation through ingestion. Its SHA256 sidecar

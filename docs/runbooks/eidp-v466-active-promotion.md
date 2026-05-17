@@ -113,6 +113,19 @@ Completed preflight evidence from 2026-05-17:
   `logs/win-v466-stage6/v466-validate-install-after-setup-20260517-215028.json`,
   `logs/win-v466-stage6/stage6-recovery-20260517-215355.json`
 
+Completed read-only UI smoke from 2026-05-17:
+
+- Windows port: `127.0.0.1:8511`
+- Mac tunnel: `127.0.0.1:18511 -> 127.0.0.1:8511`
+- Pages clicked: `① 学校別タスク`, `② PDF確認・手入力`,
+  `③ 年度判定・修正`, `④ Excel プレビュー`,
+  `⑤ 設定（年度・OCR・API）`
+- Summary: `output/playwright/v466-ui-smoke/summary.json` with `ok=true`,
+  `has_error_traceback=false`, `nav_all_clicked=true`,
+  `write_actions_invoked=false`, and `weekly_invoked=false`
+- Cleanup closed the temporary UI listener and tunnel; the scheduled task still
+  points to the v460 fallback runner.
+
 ## Active Task Switch
 
 Approval boundary: this section changes external Windows state. Run it only
