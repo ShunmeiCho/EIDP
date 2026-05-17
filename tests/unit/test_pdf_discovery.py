@@ -3422,6 +3422,7 @@ def test_run_pdf_discovery_caches_shared_origin_robots_sitemap_and_disclosure_pa
     sleeps: list[float] = []
     long_school_html = "<html><body>" + ("学校トップ " * 120) + "</body></html>"
     long_disclosure_html = "<html><body>" + ("情報公開 " * 120) + "</body></html>"
+    cookie_headers = {"set-cookie": "XSRF-TOKEN=public-discovery-cookie; path=/; secure"}
     long_sitemap_xml = (
         "<urlset>"
         "<url><loc>https://www.shared.ac.jp/about/disclosure.html</loc></url>"
@@ -3452,7 +3453,7 @@ def test_run_pdf_discovery_caches_shared_origin_robots_sitemap_and_disclosure_pa
             if url == "https://www.shared.ac.jp/sitemap.xml":
                 return _HtmlResponse(long_sitemap_xml, url=url)
             if url == "https://www.shared.ac.jp/about/disclosure.html":
-                return _HtmlResponse(long_disclosure_html, url=url)
+                return _HtmlResponse(long_disclosure_html, url=url, headers=cookie_headers)
             return _HtmlResponse("", status_code=404, url=url)
 
     try:

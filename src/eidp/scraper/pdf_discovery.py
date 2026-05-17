@@ -479,8 +479,10 @@ class _RunScopedHttpCache:
         ) or _RunScopedHttpCache._is_public_discovery_metadata_url(response_url)
         if is_public_metadata and response.status_code in {200, 404, 410}:
             return True
-        if any(str(key).lower() == "set-cookie" for key in headers):
-            return False
+        # The run-scoped cache only serves unauthenticated discovery GETs inside
+        # one batch. Some public school disclosure pages attach routing/CSRF
+        # cookies to otherwise static HTML; do not let those headers force a
+        # shared corporation page to be fetched once per school.
         if response.status_code == 200 and content_type in {"", "text/html", "application/xhtml+xml"}:
             text = getattr(response, "text", "")
             if 0 < len(text) < 500:
