@@ -40,6 +40,9 @@ def test_review_main_configures_logging_before_streamlit(monkeypatch) -> None:
         def caption(self, _: str) -> None:
             pass
 
+        def text_input(self, *args: object, **kwargs: object) -> str:
+            return ""
+
     class FakeSession:
         def __enter__(self) -> FakeSession:
             return self
