@@ -321,8 +321,8 @@ algorithm evidence should remain separated from this production probe.
 Follow-up on 2026-05-17: do not treat the remaining state as a pure
 `HOLD waiting owner`. The v460 URL-rich weekly path can fail before owner
 sign-off by never producing a fresh `last_run.json`. Use
-`docs/runbooks/eidp-v465-active-promotion.md` as the explicit approval boundary
-for moving the Windows Scheduled Task to v465. Source verifier support now has
+`docs/runbooks/eidp-v466-active-promotion.md` as the explicit approval boundary
+for moving the Windows Scheduled Task to v466. Source verifier support now has
 an explicit `publication_lag` release-exception path for measured FY2026/R8 KPI
 misses; it requires mature-year target-PDF/operator-reviewable acquisition
 proof JSON and still rejects null KPI values and `ship_gate_status=not_measured`.

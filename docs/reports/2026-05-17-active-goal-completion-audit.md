@@ -312,7 +312,7 @@ The goal is not achieved because the following remain missing:
 
 The next release-relevant work is no longer a blind v460 owner-cycle retry.
 Before asking owner/operator to run an unbounded weekly cycle, use
-`docs/runbooks/eidp-v465-active-promotion.md` to prepare the v465 promotion
+`docs/runbooks/eidp-v466-active-promotion.md` to prepare the v466 promotion
 boundary, rerun mature-year proof if needed, and require explicit approval
 before switching the Windows Scheduled Task. Local side-by-side support work can
 continue, but it must not be counted as completion unless it produces the
