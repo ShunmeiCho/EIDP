@@ -684,6 +684,8 @@ def _has_target_application_url_hint(candidate: PdfCandidate) -> bool:
             "shinsei",
             "koushinshinsei",
             "koushin-shinsei",
+            "confirmation_application",
+            "confirmationapplication",
             "kikanyoken",
         )
     )
@@ -961,6 +963,8 @@ def _has_target_application_hint(candidate: PdfCandidate) -> bool:
         for token in (
             "koushinshinsei",
             "koushin-shinsei",
+            "confirmation_application",
+            "confirmationapplication",
         )
     ) and (system_hint or form_hint)
     strong_form_hint = "機関要件" in text and any(
@@ -1003,6 +1007,8 @@ def _has_specific_target_form_hint(candidate: PdfCandidate) -> bool:
             "様式第２号",
             "様式2号",
             "機関要件確認申請",
+            "confirmation_application",
+            "confirmationapplication",
             "kakuninshinsei",
             "koushinshinsei",
         )
@@ -1880,7 +1886,7 @@ def _trusted_year_evidence_can_fill_missing_pdf_year(
     if trusted_year_evidence == "school_domain_override_disclosure":
         return _has_specific_target_form_hint(candidate) or _has_known_embedded_study_support_target_form(candidate)
     if trusted_year_evidence == "prefecture_index_current_year":
-        return _has_specific_target_form_hint(candidate)
+        return _has_specific_target_form_hint(candidate) or _has_known_embedded_study_support_target_form(candidate)
     return False
 
 
