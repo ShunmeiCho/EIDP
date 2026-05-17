@@ -11,6 +11,8 @@ Stores results in school_site table.
 import csv
 import ipaddress
 import socket
+import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -32,6 +34,8 @@ log = structlog.get_logger()
 SEARCH_RESULT_MIN_CONFIDENCE = 0.65
 DNS_SAFETY_TIMEOUT_SECONDS = 3.0
 DNS_SAFETY_CACHE_SIZE = 4096
+DNS_SAFETY_CACHE_TTL_SECONDS = 300.0
+_DNS_RESOLUTION_LOCK = threading.Lock()
 
 THIRD_PARTY_DIRECTORY_HOST_SUFFIXES = (
     "best-shingaku.net",
@@ -48,18 +52,23 @@ THIRD_PARTY_DIRECTORY_HOST_SUFFIXES = (
 _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}
 
 
+def _dns_safety_cache_bucket() -> int:
+    return int(time.monotonic() // DNS_SAFETY_CACHE_TTL_SECONDS)
+
+
 @lru_cache(maxsize=DNS_SAFETY_CACHE_SIZE)
-def _resolve_host_addresses_for_safety(hostname: str) -> tuple[str, ...]:
+def _resolve_host_addresses_for_safety(hostname: str, cache_bucket: int) -> tuple[str, ...]:
     """Resolve ``hostname`` for SSRF checks with a short timeout and run cache."""
 
-    previous_timeout = socket.getdefaulttimeout()
-    try:
-        socket.setdefaulttimeout(DNS_SAFETY_TIMEOUT_SECONDS)
-        resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-    except (socket.gaierror, OSError, TimeoutError):
-        return ()
-    finally:
-        socket.setdefaulttimeout(previous_timeout)
+    with _DNS_RESOLUTION_LOCK:
+        previous_timeout = socket.getdefaulttimeout()
+        try:
+            socket.setdefaulttimeout(DNS_SAFETY_TIMEOUT_SECONDS)
+            resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        except (socket.gaierror, OSError, TimeoutError):
+            return ()
+        finally:
+            socket.setdefaulttimeout(previous_timeout)
 
     addresses: list[str] = []
     seen: set[str] = set()
@@ -99,7 +108,7 @@ def _is_safe_url(url: str) -> bool:
             return False
     except ValueError:
         # hostname is not an IP, resolve DNS to check actual IP
-        addresses = _resolve_host_addresses_for_safety(hostname)
+        addresses = _resolve_host_addresses_for_safety(hostname, _dns_safety_cache_bucket())
         if not addresses:
             return False
         for addr in addresses:

@@ -36,6 +36,7 @@ def test_is_safe_url_uses_bounded_cached_dns_resolution(monkeypatch) -> None:
     original_timeout = socket.getdefaulttimeout()
 
     def fake_getaddrinfo(host: str, *_args: object) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+        assert url_discovery._DNS_RESOLUTION_LOCK.locked()
         calls.append((host, socket.getdefaulttimeout()))
         return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))]
 
@@ -47,6 +48,35 @@ def test_is_safe_url_uses_bounded_cached_dns_resolution(monkeypatch) -> None:
         assert url_discovery._is_safe_url("https://slow-dns.example.ac.jp/other/")
         assert calls == [("slow-dns.example.ac.jp", url_discovery.DNS_SAFETY_TIMEOUT_SECONDS)]
         assert socket.getdefaulttimeout() == original_timeout
+    finally:
+        url_discovery._resolve_host_addresses_for_safety.cache_clear()
+
+
+def test_is_safe_url_refreshes_dns_cache_after_ttl_bucket_changes(monkeypatch) -> None:
+    calls: list[str] = []
+    bucket = 1
+
+    def fake_cache_bucket() -> int:
+        return bucket
+
+    def fake_getaddrinfo(host: str, *_args: object) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+        calls.append(host)
+        if len(calls) == 1:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))]
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("10.0.0.1", 0))]
+
+    url_discovery._resolve_host_addresses_for_safety.cache_clear()
+    monkeypatch.setattr(url_discovery, "_dns_safety_cache_bucket", fake_cache_bucket)
+    monkeypatch.setattr(url_discovery.socket, "getaddrinfo", fake_getaddrinfo)
+
+    try:
+        assert url_discovery._is_safe_url("https://ttl-refresh.example.ac.jp/disclosure/")
+        assert url_discovery._is_safe_url("https://ttl-refresh.example.ac.jp/other/")
+        assert calls == ["ttl-refresh.example.ac.jp"]
+
+        bucket = 2
+        assert not url_discovery._is_safe_url("https://ttl-refresh.example.ac.jp/disclosure/")
+        assert calls == ["ttl-refresh.example.ac.jp", "ttl-refresh.example.ac.jp"]
     finally:
         url_discovery._resolve_host_addresses_for_safety.cache_clear()
 
