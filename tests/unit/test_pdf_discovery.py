@@ -463,6 +463,51 @@ def test_extract_pdf_links_adds_table_header_context_for_generic_pdf_links() -> 
     assert _has_target_application_hint(application)
 
 
+def test_extract_pdf_links_reuses_table_context_for_dense_tables(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_html_table_cells = pdf_discovery_module._html_table_cells
+    call_count = 0
+
+    def counting_html_table_cells(row_fragment: str) -> list[tuple[int, int, str]]:
+        nonlocal call_count
+        call_count += 1
+        return original_html_table_cells(row_fragment)
+
+    monkeypatch.setattr(pdf_discovery_module, "_html_table_cells", counting_html_table_cells)
+    rows = "\n".join(
+        f"""
+          <tr>
+            <td>大原テスト専門学校{index:02d}</td>
+            <td><a href="pdf/2025-1-{index:02d}-01-1.pdf">PDF</a></td>
+            <td><a href="pdf/2025-1-{index:02d}-01-5.pdf">PDF</a></td>
+          </tr>
+        """
+        for index in range(1, 41)
+    )
+    html = f"""
+    <html>
+      <head><title>修学支援新制度に関連する情報提供資料について</title></head>
+      <body>
+        <table>
+          <tr>
+            <th>学校名</th>
+            <th>授業科目一覧</th>
+            <th>確認申請書</th>
+          </tr>
+          {rows}
+        </table>
+      </body>
+    </html>
+    """
+
+    candidates = _extract_pdf_links(html, "https://www.o-hara.ac.jp/about/joho/")
+
+    assert len(candidates) == 80
+    application = next(candidate for candidate in candidates if candidate.pdf_url.endswith("2025-1-20-01-5.pdf"))
+    assert "確認申請書" in application.anchor_text
+    assert "大原テスト専門学校20" in application.anchor_text
+    assert call_count <= 130
+
+
 def test_extract_pdf_links_adds_table_row_school_context_for_mismatch_filtering() -> None:
     html = """
     <table>

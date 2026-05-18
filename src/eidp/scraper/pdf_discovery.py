@@ -1679,7 +1679,109 @@ def _html_table_cells(row_fragment: str) -> list[tuple[int, int, str]]:
     ]
 
 
-def _table_column_header_context(html: str, block_start: int, block_fragment: str, match: re.Match[str]) -> str:
+@dataclass(frozen=True)
+class _TableRowContext:
+    start: int
+    end: int
+    cells: tuple[tuple[int, int, str], ...]
+
+
+@dataclass
+class _HtmlContextCache:
+    lower_html: str
+    table_rows_by_start: dict[int, tuple[_TableRowContext, ...]] = field(default_factory=dict)
+    table_column_headers: dict[tuple[int, int], str] = field(default_factory=dict)
+    table_section_headings: dict[int, str] = field(default_factory=dict)
+    table_context_built: set[int] = field(default_factory=set)
+    title_text: str | None = None
+
+
+def _table_start_before(html: str, block_start: int, *, context: _HtmlContextCache | None = None) -> int:
+    lower_html = context.lower_html if context is not None else html.lower()
+    table_start = lower_html.rfind("<table", 0, block_start)
+    table_end = lower_html.rfind("</table", 0, block_start)
+    if table_start == -1 or table_end > table_start:
+        return -1
+    return table_start
+
+
+def _table_rows_for_context(
+    html: str,
+    table_start: int,
+    *,
+    context: _HtmlContextCache | None = None,
+) -> tuple[_TableRowContext, ...]:
+    if context is not None and table_start in context.table_rows_by_start:
+        return context.table_rows_by_start[table_start]
+
+    lower_html = context.lower_html if context is not None else html.lower()
+    table_close = lower_html.find("</table", table_start)
+    table_end = len(html)
+    if table_close != -1:
+        close_end = lower_html.find(">", table_close)
+        table_end = close_end + 1 if close_end != -1 else table_close
+    table_fragment = html[table_start:table_end]
+    rows = tuple(
+        _TableRowContext(
+            start=table_start + match.start(),
+            end=table_start + match.end(),
+            cells=tuple(_html_table_cells(match.group(0))),
+        )
+        for match in re.finditer(r"<tr\b[^>]*>.*?</tr\s*>", table_fragment, re.IGNORECASE | re.DOTALL)
+    )
+    if context is not None:
+        context.table_rows_by_start[table_start] = rows
+    return rows
+
+
+def _table_row_start_for_block(
+    rows: tuple[_TableRowContext, ...],
+    block_start: int,
+) -> int:
+    for row in rows:
+        if row.start <= block_start < row.end:
+            return row.start
+    return block_start
+
+
+def _ensure_table_context_maps(html: str, table_start: int, *, context: _HtmlContextCache) -> None:
+    if table_start in context.table_context_built:
+        return
+
+    rows = _table_rows_for_context(html, table_start, context=context)
+    latest_header_by_cell: dict[int, str] = {}
+    latest_section_heading = ""
+    for row in rows:
+        for cell_index, header_text in latest_header_by_cell.items():
+            context.table_column_headers[(row.start, cell_index)] = header_text
+        if latest_section_heading:
+            context.table_section_headings[row.start] = latest_section_heading
+
+        for cell_index, (_, _, cell_fragment) in enumerate(row.cells):
+            cell_text = _html_text(cell_fragment)
+            if cell_text and _has_application_form_context(cell_text):
+                if context.title_text is None:
+                    context.title_text = _html_title_text(html)
+                if context.title_text and _has_support_system_context(context.title_text):
+                    latest_header_by_cell[cell_index] = f"{context.title_text} {cell_text}"
+                else:
+                    latest_header_by_cell[cell_index] = cell_text
+
+            th_match = re.match(r"<th\b([^>]*)>", cell_fragment, re.IGNORECASE | re.DOTALL)
+            if th_match and re.search(r"\bcolspan\s*=", th_match.group(1), re.IGNORECASE) and cell_text:
+                latest_section_heading = cell_text
+
+    context.table_context_built.add(table_start)
+
+
+def _table_column_header_context(
+    html: str,
+    block_start: int,
+    block_fragment: str,
+    match: re.Match[str],
+    *,
+    context: _HtmlContextCache | None = None,
+) -> str:
     """Return same-column table header text for generic PDF links.
 
     Some school groups render disclosure tables with column headers such as
@@ -1698,16 +1800,18 @@ def _table_column_header_context(html: str, block_start: int, block_fragment: st
     if cell_index is None:
         return ""
 
-    prefix = html[:block_start]
-    table_start = prefix.lower().rfind("<table")
-    table_end = prefix.lower().rfind("</table")
-    if table_start == -1 or table_end > table_start:
+    table_start = _table_start_before(html, block_start, context=context)
+    if table_start == -1:
         return ""
 
-    table_prefix = html[table_start:block_start]
-    previous_rows = list(re.finditer(r"<tr\b[^>]*>.*?</tr\s*>", table_prefix, re.IGNORECASE | re.DOTALL))
-    for row in reversed(previous_rows):
-        cells = _html_table_cells(row.group(0))
+    rows = _table_rows_for_context(html, table_start, context=context)
+    row_start = _table_row_start_for_block(rows, block_start)
+    if context is not None:
+        _ensure_table_context_maps(html, table_start, context=context)
+        return context.table_column_headers.get((row_start, cell_index), "")
+
+    for row in reversed([row for row in rows if row.start < block_start]):
+        cells = row.cells
         if cell_index >= len(cells):
             continue
         header_text = _html_text(cells[cell_index][2])
@@ -1720,7 +1824,12 @@ def _table_column_header_context(html: str, block_start: int, block_fragment: st
     return ""
 
 
-def _table_section_heading_context(html: str, block_start: int) -> str:
+def _table_section_heading_context(
+    html: str,
+    block_start: int,
+    *,
+    context: _HtmlContextCache | None = None,
+) -> str:
     """Return the closest school/section table heading before a row.
 
     O-Hara-style group disclosure pages put many schools into one table. The
@@ -1728,20 +1837,24 @@ def _table_section_heading_context(html: str, block_start: int) -> str:
     nearest preceding colspan header identifies the school section.
     """
 
-    prefix = html[:block_start]
-    table_start = prefix.lower().rfind("<table")
-    table_end = prefix.lower().rfind("</table")
-    if table_start == -1 or table_end > table_start:
+    table_start = _table_start_before(html, block_start, context=context)
+    if table_start == -1:
         return ""
 
-    table_prefix = html[table_start:block_start]
-    for heading in reversed(list(re.finditer(r"<th\b([^>]*)>(.*?)</th\s*>", table_prefix, re.IGNORECASE | re.DOTALL))):
-        attrs = heading.group(1)
-        if not re.search(r"\bcolspan\s*=", attrs, re.IGNORECASE):
-            continue
-        text = _html_text(heading.group(2))
-        if text:
-            return text
+    rows = _table_rows_for_context(html, table_start, context=context)
+    row_start = _table_row_start_for_block(rows, block_start)
+    if context is not None:
+        _ensure_table_context_maps(html, table_start, context=context)
+        return context.table_section_headings.get(row_start, "")
+
+    for row in reversed([row for row in rows if row.start < block_start]):
+        for _, _, cell_fragment in row.cells:
+            th_match = re.match(r"<th\b([^>]*)>", cell_fragment, re.IGNORECASE | re.DOTALL)
+            if not th_match or not re.search(r"\bcolspan\s*=", th_match.group(1), re.IGNORECASE):
+                continue
+            text = _html_text(cell_fragment)
+            if text:
+                return text
     return ""
 
 
@@ -1752,7 +1865,13 @@ def _has_visible_anchor_text(fragment: str) -> bool:
     )
 
 
-def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str = "") -> str:
+def _pdf_element_context_text(
+    html: str,
+    match: re.Match[str],
+    element_text: str = "",
+    *,
+    context: _HtmlContextCache | None = None,
+) -> str:
     """Return element text plus nearby fiscal-year context when the CMS splits it.
 
     Some CMS pages, notably Goope, render a year header in one paragraph and the
@@ -1816,10 +1935,10 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
         if tag == "tr":
             if current_text and _candidate_named_school_labels(current_text) and current_text not in parts:
                 parts.append(current_text)
-            section_heading = _table_section_heading_context(html, block_start)
+            section_heading = _table_section_heading_context(html, block_start, context=context)
             if section_heading and section_heading not in parts:
                 parts.append(section_heading)
-            table_header = _table_column_header_context(html, block_start, block_fragment, match)
+            table_header = _table_column_header_context(html, block_start, block_fragment, match, context=context)
             if table_header and table_header not in parts:
                 parts.append(table_header)
     else:
@@ -1831,12 +1950,22 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
     return " ".join(dict.fromkeys(part for part in parts if part))
 
 
-def _pdf_anchor_context_text(html: str, match: re.Match[str]) -> str:
-    return _pdf_element_context_text(html, match, match.group(2))
+def _pdf_anchor_context_text(
+    html: str,
+    match: re.Match[str],
+    *,
+    context: _HtmlContextCache | None = None,
+) -> str:
+    return _pdf_element_context_text(html, match, match.group(2), context=context)
 
 
-def _wordpress_download_manager_anchor_context_text(html: str, match: re.Match[str]) -> str:
-    parts = [_pdf_anchor_context_text(html, match)]
+def _wordpress_download_manager_anchor_context_text(
+    html: str,
+    match: re.Match[str],
+    *,
+    context: _HtmlContextCache | None = None,
+) -> str:
+    parts = [_pdf_anchor_context_text(html, match, context=context)]
     block_text = _nearest_wordpress_download_manager_block_text(html, match.start())
     if block_text:
         parts.append(block_text)
@@ -1999,6 +2128,7 @@ def _extract_pdf_links(
 ) -> list[PdfCandidate]:
     """Extract PDF link candidates from HTML using known PDF delivery patterns."""
     html = re.sub(r"<!--.*?-->", "", html, flags=re.DOTALL)
+    context = _HtmlContextCache(lower_html=html.lower())
     candidates: list[PdfCandidate] = []
     candidate_index_by_key: dict[str, int] = {}
     experimental_enabled = (
@@ -2018,7 +2148,7 @@ def _extract_pdf_links(
         if not href or ".pdf" not in unquote(href).lower():
             continue
         url = urljoin(base_url, href)
-        anchor = _pdf_anchor_context_text(html, m)
+        anchor = _pdf_anchor_context_text(html, m, context=context)
         pattern = _pdf_delivery_pattern(url, href)
         _append_or_upgrade_candidate(
             candidates,
@@ -2075,7 +2205,7 @@ def _extract_pdf_links(
                 PdfCandidate(
                     pdf_url=url,
                     page_url=base_url,
-                    anchor_text=_pdf_anchor_context_text(html, m),
+                    anchor_text=_pdf_anchor_context_text(html, m, context=context),
                     pattern_type=pattern,
                 ),
                 target_fiscal_year=target_fiscal_year,
@@ -2098,7 +2228,7 @@ def _extract_pdf_links(
                 PdfCandidate(
                     pdf_url=url,
                     page_url=base_url,
-                    anchor_text=_pdf_element_context_text(html, m, _pdf_form_control_text(m.group(2))),
+                    anchor_text=_pdf_element_context_text(html, m, _pdf_form_control_text(m.group(2)), context=context),
                     pattern_type=pattern,
                 ),
                 target_fiscal_year=target_fiscal_year,
@@ -2122,7 +2252,7 @@ def _extract_pdf_links(
                     PdfCandidate(
                         pdf_url=url,
                         page_url=base_url,
-                        anchor_text=_pdf_anchor_context_text(html, m),
+                        anchor_text=_pdf_anchor_context_text(html, m, context=context),
                         pattern_type=pattern,
                     ),
                     target_fiscal_year=target_fiscal_year,
@@ -2146,7 +2276,7 @@ def _extract_pdf_links(
                     PdfCandidate(
                         pdf_url=url,
                         page_url=base_url,
-                        anchor_text=_pdf_anchor_context_text(html, m),
+                        anchor_text=_pdf_anchor_context_text(html, m, context=context),
                         pattern_type=pattern,
                     ),
                     target_fiscal_year=target_fiscal_year,
@@ -2173,7 +2303,7 @@ def _extract_pdf_links(
                     PdfCandidate(
                         pdf_url=url,
                         page_url=base_url,
-                        anchor_text=_pdf_element_context_text(html, m, element_text),
+                        anchor_text=_pdf_element_context_text(html, m, element_text, context=context),
                         pattern_type=pattern,
                     ),
                     target_fiscal_year=target_fiscal_year,
@@ -2190,7 +2320,7 @@ def _extract_pdf_links(
                     PdfCandidate(
                         pdf_url=url,
                         page_url=base_url,
-                        anchor_text=_pdf_element_context_text(html, m, element_text),
+                        anchor_text=_pdf_element_context_text(html, m, element_text, context=context),
                         pattern_type=pattern,
                     ),
                     target_fiscal_year=target_fiscal_year,
@@ -2216,7 +2346,7 @@ def _extract_pdf_links(
             PdfCandidate(
                 pdf_url=url,
                 page_url=base_url,
-                anchor_text=_wordpress_download_manager_anchor_context_text(html, m),
+                anchor_text=_wordpress_download_manager_anchor_context_text(html, m, context=context),
                 pattern_type="wordpress_download_manager",
             ),
             target_fiscal_year=target_fiscal_year,
@@ -2237,7 +2367,7 @@ def _extract_pdf_links(
                     PdfCandidate(
                         pdf_url=url,
                         page_url=base_url,
-                        anchor_text=_pdf_element_context_text(html, m),
+                        anchor_text=_pdf_element_context_text(html, m, context=context),
                         pattern_type="embed",
                     ),
                     target_fiscal_year=target_fiscal_year,
