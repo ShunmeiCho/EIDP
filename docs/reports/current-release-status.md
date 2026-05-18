@@ -2,20 +2,25 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v485`.
+Latest package family: `v487`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
-tracked status file is included in release ZIPs, so it intentionally avoids
-embedding exact self-referential package commit / ZIP SHA values that would make
-the release-gate HEAD check stale immediately after documentation updates.
+tracked status file is included in release ZIPs, so exact package values below
+are evidence for the named ZIP artifact, not proof that this newer status file
+is already embedded in that ZIP.
 
 Post-v480 source fixes now include checked-in weekly URL source application,
 application-style year hints, critical silent-failure logging, malformed-vs-
 unsafe URL classification, G4/G5 documentation drift correction, strict-yield
 table/context cache fixes, ASO disclosure overrides, NSG exact school /
-disclosure overrides, v485 owner-cycle helpers, and final-objective audit
-helpers through the current `sprint8-handoff-finalize` head.
+disclosure overrides, v485 owner-cycle helpers, final-objective audit helpers,
+the FY2026 strict-yield no-go report, and the v487 side-by-side setup guard
+through the current `sprint8-handoff-finalize` head.
+PR merge-chain status:
+PR #1 (`backup-2026-05-05`) is an ancestor of PR #2 and is superseded by
+PR #2. Current PR #2 head `5893393` is `mergeStateStatus=CLEAN`; GitHub checks
+`Python quality gates` and `Ship gate contract` both passed for that head.
 Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
 rebuild is:
 `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`.
@@ -45,6 +50,32 @@ evidence collection, and evidence-folder shortcuts. The active v485 DB still
 had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
+Current Windows side-by-side package candidate:
+`dist/eidp-windows-v487.zip`, SHA256
+`552ae87354b0e0f11d9a2dcb6a47f85bd43334cdac613b78a7860bf44af7d514`.
+`BUILD_INFO.json` inside the ZIP records
+`git_commit=589339371be0114858e15216655b2e096f14dbd7`,
+`git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
+verification is recorded in
+`logs/win-v487-stage6-v487-verify-windows-distribution-20260519.json`
+(`ok=true`, `wheel_count=84`, `entry_count=3100`) and
+`logs/win-v487-stage6-v487-non-windows-release-gates-20260519.json`
+(`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
+returned `0`).
+Current v487 Windows side-by-side preflight:
+the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
+the Mac sidecar, and the package expanded to
+`C:\Users\cyo20\EIDP-v487-5893393`. Setup was run with
+`EIDP_REGISTER_WEEKLY_TASK=0`; `first_setup.bat` printed that Task Scheduler
+registration was skipped, `EIDP-setup.bat` exited `0`, and
+`logs/win-v487-stage6-v487-validate-after-setup-20260519.json` returned
+`ok=true`, `errors=[]`, `warnings=[]`, `school_count=2418`,
+`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and
+`build_dirty=false`. The recovery check
+`logs/win-v487-stage6-v487-recovery-expected-v485-20260519.json` returned
+`ok=true`, `recommendations=[]`, and `action_matches_expected=true` for the
+v485 production action. Therefore v487 is validated side-by-side without
+promoting the active weekly task.
 Post-status Mac-side strict-yield replay:
 `docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
 strict metric / parser / targeted discovery changes described there were an
@@ -52,16 +83,16 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current Mac package candidate:
-`dist/eidp-windows-v485.zip`
-Current v485 SHA256 sidecar:
-`dist/eidp-windows-v485.zip.sha256`
-Current v485 package build evidence:
-`dist/eidp-windows-v485.zip` was built from clean source and is the current
-deployed Windows lane. Its authoritative package commit and ZIP SHA remain
-`BUILD_INFO.json` inside the ZIP and `dist/eidp-windows-v485.zip.sha256`. This
-tracked status update is newer than the v485 ZIP documentation payload; rebuild
-a v486 package only if the updated status report itself must be included in the
-distributed ZIP.
+`dist/eidp-windows-v487.zip`
+Current v487 SHA256 sidecar:
+`dist/eidp-windows-v487.zip.sha256`
+Current v487 package build evidence:
+`dist/eidp-windows-v487.zip` was built from clean source and validated on both
+Mac and Windows side-by-side. Its authoritative package commit and ZIP SHA
+remain `BUILD_INFO.json` inside the ZIP and
+`dist/eidp-windows-v487.zip.sha256`. This tracked status update is newer than
+the v487 ZIP documentation payload; rebuild a successor package only if the
+updated status report itself must be included in the distributed ZIP.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The final objective audit at
