@@ -85,7 +85,7 @@ Current active-goal completion audit:
 
 Status: **NOT COMPLETE**
 
-Current local source head `63fc6116264e0dfc8f0a0dcdbd7a8ded3738abd1` is
+Current local package source head `63fc6116264e0dfc8f0a0dcdbd7a8ded3738abd1` is
 Mac-validated with `1803 passed`, `mypy src` clean, CI-scope Ruff clean,
 Bandit high-severity clean, and
 `scripts/run_non_windows_release_gates.py dist/eidp-windows-v473.zip --skip-full-unit --json`
@@ -93,7 +93,9 @@ returning `ok=true`. A clean successor package `dist/eidp-windows-v473.zip`
 was built from that head without `--allow-dirty`; `BUILD_INFO.json` records
 `git_dirty=false`, SHA256 is
 `bafb63310ddacc0ec664f7ddc9dc2a98fab40db7e65fbf8a27613ccabfa717c7`, and
-`scripts/verify_windows_distribution.py` returned `ok=true`. The latest
+`scripts/verify_windows_distribution.py` returned `ok=true`. After this status
+note, `--allow-docs-only-stale-package` also returned `ok=true` against
+`_temp/v473-docs-only-stale-release-gates.json`. The latest
 GitHub-pushed v466 package source
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195` remains CI-green on GitHub. This
 removes the previous CI-red blocker caused by `python -m pip download` running
