@@ -3206,6 +3206,45 @@ def _remove_duplicate_candidate_file(file_path: str, existing: Document | None) 
     Path(file_path).unlink(missing_ok=True)
 
 
+def _restore_same_school_no_file_duplicate(
+    existing: Document,
+    *,
+    school_id: int,
+    candidate: PdfCandidate,
+    file_path: str,
+    file_size: int,
+    pdf_type: str,
+    target_year: int,
+    strict_target_fiscal_year: bool,
+) -> bool:
+    """Relink a same-school duplicate when the canonical row lost its file."""
+
+    if existing.ingest_status != "no_file":
+        return False
+    if existing.school_id != school_id:
+        return False
+
+    existing.file_path = file_path
+    existing.file_size = file_size
+    existing.pdf_type = pdf_type
+    existing.discovered_from = candidate.page_url
+    existing.fiscal_year = target_year if strict_target_fiscal_year else candidate.detected_fiscal_year
+    existing.is_current_year = (
+        True
+        if strict_target_fiscal_year
+        else (
+            candidate.detected_fiscal_year >= target_year
+            if candidate.detected_fiscal_year is not None
+            else None
+        )
+    )
+    existing.content_type = "image" if pdf_type == "image_only" else "text"
+    existing.confidence = min(candidate.score / 10.0, 0.99)
+    existing.downloaded_at = datetime.now(UTC)
+    existing.ingest_status = "pending"
+    return True
+
+
 def run_pdf_discovery(
     session: Session,
     storage_dir: Path,
@@ -3650,6 +3689,36 @@ def run_pdf_discovery(
                         .first()
                     )
                     if existing:
+                        if _restore_same_school_no_file_duplicate(
+                            existing,
+                            school_id=site.school_id,
+                            candidate=candidate,
+                            file_path=file_path,
+                            file_size=file_size,
+                            pdf_type=pdf_type,
+                            target_year=target_year,
+                            strict_target_fiscal_year=strict_target_fiscal_year,
+                        ):
+                            stats["downloaded"] += 1
+                            record_discovery_evidence(RejectionEvidence(
+                                school_id=site.school_id,
+                                pdf_url=candidate.pdf_url,
+                                page_url=candidate.page_url,
+                                anchor_text=candidate.anchor_text,
+                                pattern_type=candidate.pattern_type,
+                                score=candidate.score,
+                                reason="duplicate_hash_same_school_file_restored",
+                                pdf_type=pdf_type,
+                                extra={
+                                    "existing_doc_id": str(existing.id),
+                                    "existing_school_id": str(existing.school_id),
+                                    "target_fiscal_year": str(target_year),
+                                },
+                            ))
+                            job.status = "success"
+                            job.finished_at = datetime.now(UTC)
+                            downloaded = True
+                            break
                         duplicate_seen = True
                         stats["skipped"] += 1
                         if existing.school_id != site.school_id:

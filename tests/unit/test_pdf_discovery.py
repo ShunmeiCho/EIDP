@@ -3622,6 +3622,69 @@ def test_run_pdf_discovery_same_school_duplicate_preserves_existing_file(
         session.close()
 
 
+def test_run_pdf_discovery_relinks_same_school_duplicate_when_existing_file_missing(
+    monkeypatch, tmp_path: Path
+) -> None:
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    restored_pdf = tmp_path / "pdfs" / "1" / "samehash.pdf"
+    restored_pdf.parent.mkdir(parents=True)
+    restored_pdf.write_bytes(b"%PDF-" + b"x" * 2000)
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.add(
+            Document(
+                school_id=1,
+                source_url="https://example.ac.jp/kakunin.pdf",
+                file_hash="samehash",
+                file_path=str(tmp_path / "missing" / "samehash.pdf"),
+                pdf_type="target",
+                ingest_status="no_file",
+                fiscal_year=2025,
+            )
+        )
+        session.flush()
+        duplicate = PdfCandidate(
+            pdf_url="https://example.ac.jp/kakunin.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="令和7年度 確認申請書",
+            score=10.0,
+            detected_fiscal_year=2025,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[duplicate], best=duplicate)
+
+        def fake_download(_client, _candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            return str(restored_pdf), "samehash", restored_pdf.stat().st_size, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+        )
+
+        assert stats["downloaded"] == 1
+        assert stats["skipped"] == 0
+        assert restored_pdf.exists()
+        got = session.query(Document).one()
+        assert got.file_path == str(restored_pdf)
+        assert got.ingest_status == "pending"
+        assert got.fiscal_year == 2025
+        job = session.query(CrawlJob).one()
+        assert job.status == "success"
+        payload = json.loads(evidence.read_text(encoding="utf-8").strip())
+        assert payload["reason"] == "duplicate_hash_same_school_file_restored"
+        assert payload["extra"]["existing_school_id"] == "1"
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_reuses_rejected_candidate_within_same_school(monkeypatch, tmp_path: Path) -> None:
     """Duplicate candidates in one school should not re-download the same rejected PDF."""
 
