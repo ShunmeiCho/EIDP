@@ -58,6 +58,7 @@ from eidp.reports.coverage import compute_coverage  # noqa: E402
 from eidp.reports.extraction import compute_extraction  # noqa: E402
 from eidp.reports.gaps import compute_gaps  # noqa: E402
 from eidp.scraper.pdf_discovery import run_pdf_discovery  # noqa: E402
+from eidp.scraper.url_discovery import import_seed_urls, infer_corporation_urls  # noqa: E402
 
 DEFAULT_METHODS = (
     "prefecture_aggregator",
@@ -74,6 +75,7 @@ RUN_ARTIFACT_PATTERNS = (
     "*-discovery-rejections.jsonl",
     "*-ingest-rejections.jsonl",
 )
+URL_DISCOVERY_SEED_CSV_NAME = "discovered-urls-50.csv"
 
 
 @dataclass(frozen=True)
@@ -144,6 +146,7 @@ def write_last_run(
         **yield_metrics,
         "new_document_count": len(new_document_ids),
         "new_document_ids": new_document_ids,
+        "url_source_stats": summary.get("url_source_stats") or {},
         "discovery_stats": summary.get("discovery_stats") or {},
         "ingest_stats": summary.get("ingest_stats") or {},
         "discovery_rca": summary.get("discovery_rca") or {},
@@ -239,6 +242,54 @@ def prune_run_artifacts(output_dir: Path, *, keep: int = 12) -> tuple[list[Path]
         removed.extend(pattern_removed)
         failed.extend(pattern_failed)
     return removed, failed
+
+
+def apply_weekly_url_sources(
+    session: Session,
+    *,
+    data_dir: Path,
+    methods: list[str] | None,
+) -> dict[str, int]:
+    """Apply checked-in URL sources before weekly school selection.
+
+    The Windows weekly runner is the production entrypoint, so it must use the
+    same reusable seed CSV and corporation/school-domain overrides as the
+    bootstrap flow. The imports are idempotent at ``SchoolSite`` level.
+    """
+
+    active_methods = set(methods or DEFAULT_METHODS)
+    stats = {
+        "seed_imported": 0,
+        "seed_skipped_no_school": 0,
+        "seed_skipped_existing": 0,
+        "corporation_inferred": 0,
+        "corporation_skipped_has_url": 0,
+        "school_override_inferred": 0,
+        "school_override_skipped_existing": 0,
+        "school_override_skipped_no_school": 0,
+    }
+
+    if "seed_csv" in active_methods:
+        seed_csv = data_dir / "url-discovery" / URL_DISCOVERY_SEED_CSV_NAME
+        if seed_csv.is_file():
+            seed_stats = import_seed_urls(session, seed_csv)
+            stats["seed_imported"] = int(seed_stats.get("imported", 0))
+            stats["seed_skipped_no_school"] = int(seed_stats.get("skipped_no_school", 0))
+            stats["seed_skipped_existing"] = int(seed_stats.get("skipped_existing", 0))
+
+    if active_methods & {"corporation_pattern", "school_domain_override"}:
+        corporation_stats = infer_corporation_urls(session, data_dir=data_dir)
+        stats["corporation_inferred"] = int(corporation_stats.get("inferred", 0))
+        stats["corporation_skipped_has_url"] = int(corporation_stats.get("skipped_has_url", 0))
+        stats["school_override_inferred"] = int(corporation_stats.get("school_override_inferred", 0))
+        stats["school_override_skipped_existing"] = int(
+            corporation_stats.get("school_override_skipped_existing", 0)
+        )
+        stats["school_override_skipped_no_school"] = int(
+            corporation_stats.get("school_override_skipped_no_school", 0)
+        )
+
+    return stats
 
 
 def select_stale_school_ids(
@@ -626,6 +677,7 @@ def run_weekly(
                     "no_crawlable_url_school_count": 0,
                     "target_missing_school_count": 0,
                     "new_document_ids": [],
+                    "url_source_stats": {},
                     "discovery_stats": {},
                     "ingest_stats": {},
                     "discovery_rca": {},
@@ -676,6 +728,14 @@ def _run_weekly_inner(
 
     session = SessionLocal()
     try:
+        url_source_stats: dict[str, int] = {}
+        if not dry_run:
+            url_source_stats = apply_weekly_url_sources(
+                session,
+                data_dir=storage_dir.parent,
+                methods=methods,
+            )
+            session.commit()
         if stale_only:
             selected_school_ids = select_stale_school_ids(
                 session,
@@ -839,6 +899,7 @@ def _run_weekly_inner(
             "school_type": school_type,
             "methods": methods,
             "selection_mode": selection_mode,
+            "url_source_stats": url_source_stats,
             "stale_school_count": stale_school_count,
             "no_crawlable_url_school_count": no_crawlable_url_school_count,
             "target_missing_school_count": len(selected_school_ids),
@@ -908,6 +969,7 @@ def _run_weekly_inner(
                 "no_crawlable_url_school_count": 0,
                 "target_missing_school_count": 0,
                 "new_document_ids": [],
+                "url_source_stats": {},
                 "discovery_stats": {},
                 "ingest_stats": {},
                 "discovery_rca": {},
@@ -998,6 +1060,7 @@ def main() -> None:
         "no_crawlable_url_school_count": summary["no_crawlable_url_school_count"],
         "target_missing_school_count": summary["target_missing_school_count"],
         "new_document_ids": summary["new_document_ids"],
+        "url_source_stats": summary.get("url_source_stats") or {},
         "discovery_stats": summary["discovery_stats"],
         "ingest_stats": summary["ingest_stats"],
         "discovery_rca": summary.get("discovery_rca") or {},

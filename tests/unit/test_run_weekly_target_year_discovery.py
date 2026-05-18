@@ -188,6 +188,136 @@ def test_default_methods_include_reusable_bootstrap_and_operator_urls() -> None:
         session.close()
 
 
+def test_apply_weekly_url_sources_imports_configured_seed_and_override_methods(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        _school(session, 2)
+        session.flush()
+        data_dir = tmp_path / "data"
+        seed_csv = data_dir / "url-discovery" / "discovered-urls-50.csv"
+        seed_csv.parent.mkdir(parents=True)
+        seed_csv.write_text("placeholder\n", encoding="utf-8")
+        calls: list[tuple[str, Path | None]] = []
+
+        def fake_import_seed_urls(session_arg: Session, csv_path: Path) -> dict[str, int]:
+            calls.append(("seed", csv_path))
+            session_arg.add(
+                SchoolSite(
+                    school_id=1,
+                    url="https://seed.example.edu/disclosure/",
+                    discovery_method="seed_csv",
+                    http_status=200,
+                )
+            )
+            session_arg.flush()
+            return {"imported": 1, "skipped_no_school": 0, "skipped_existing": 0}
+
+        def fake_infer_corporation_urls(session_arg: Session, data_dir: Path | None = None) -> dict[str, int]:
+            calls.append(("infer", data_dir))
+            session_arg.add(
+                SchoolSite(
+                    school_id=2,
+                    url="https://override.example.edu/disclosure/",
+                    discovery_method="school_domain_override",
+                    http_status=200,
+                )
+            )
+            session_arg.flush()
+            return {
+                "inferred": 1,
+                "skipped_has_url": 0,
+                "school_override_inferred": 1,
+                "school_override_skipped_existing": 0,
+                "school_override_skipped_no_school": 0,
+            }
+
+        monkeypatch.setattr(module, "import_seed_urls", fake_import_seed_urls)
+        monkeypatch.setattr(module, "infer_corporation_urls", fake_infer_corporation_urls)
+
+        stats = module.apply_weekly_url_sources(
+            session,
+            data_dir=data_dir,
+            methods=["seed_csv", "school_domain_override"],
+        )
+
+        assert calls == [("seed", seed_csv), ("infer", data_dir)]
+        assert stats["seed_imported"] == 1
+        assert stats["school_override_inferred"] == 1
+        ids = select_target_missing_school_ids(
+            session,
+            current_fy=2026,
+            methods=["seed_csv", "school_domain_override"],
+            school_type="専門学校",
+        )
+        assert ids == [1, 2]
+    finally:
+        session.close()
+
+
+def test_run_weekly_applies_url_sources_before_target_missing_selection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    _school(session, 1)
+    session.commit()
+    captured: dict[str, object] = {}
+
+    def fake_infer_corporation_urls(session_arg: Session, data_dir: Path | None = None) -> dict[str, int]:
+        captured["data_dir"] = data_dir
+        session_arg.add(
+            SchoolSite(
+                school_id=1,
+                url="https://override.example.edu/disclosure/",
+                discovery_method="school_domain_override",
+                http_status=200,
+            )
+        )
+        session_arg.flush()
+        return {
+            "inferred": 1,
+            "skipped_has_url": 0,
+            "school_override_inferred": 1,
+            "school_override_skipped_existing": 0,
+            "school_override_skipped_no_school": 0,
+        }
+
+    def fake_run_pdf_discovery(session_arg: Session, **kwargs: object) -> dict[str, int]:
+        captured["session"] = session_arg
+        captured["school_ids"] = kwargs["school_ids"]
+        return {"crawled": 1, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
+
+    monkeypatch.setattr(module, "infer_corporation_urls", fake_infer_corporation_urls)
+    monkeypatch.setattr(module, "run_pdf_discovery", fake_run_pdf_discovery)
+
+    summary = run_weekly(
+        current_fy=2026,
+        methods=["school_domain_override"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=10,
+        rate_limit=1.5,
+        request_timeout=12.0,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=False,
+        lock_path=None,
+        last_run_path=None,
+    )
+
+    assert captured["data_dir"] == tmp_path / "data"
+    assert captured["session"] is session
+    assert captured["school_ids"] == [1]
+    assert summary["target_missing_school_count"] == 1
+    assert summary["url_source_stats"]["school_override_inferred"] == 1
+
+
 def test_count_no_crawlable_url_schools_ignores_method_filter() -> None:
     session = _session()
     try:
