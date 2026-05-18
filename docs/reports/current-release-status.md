@@ -3,28 +3,30 @@
 Updated: 2026-05-18
 Branch: `sprint8-handoff-finalize`
 Latest runtime source commit:
-`d535c74` (`fix(discovery): restore same-school no-file duplicates`). This
-post-v480 runtime fix relinks same-school duplicate PDFs when the canonical
-Document row has `ingest_status=no_file`, preserving cross-school duplicate
-guardrails. A 35-school copied-DB smoke hit this recovery path for schools
-`191`, `254`, and `255` via `duplicate_hash_same_school_file_restored=3`.
-Focused verification: `uv run pytest tests/unit/test_pdf_discovery.py -q`
-(`213 passed`), `uv run ruff check src/eidp/scraper/pdf_discovery.py
-tests/unit/test_pdf_discovery.py`, `uv run mypy
-src/eidp/scraper/pdf_discovery.py`, and `git diff --check`.
+`6841b26` (`fix(status): count exportable review-pending rows as parsed`).
+Post-v480 runtime fixes now include `d535c74`, which relinks same-school
+duplicate PDFs when the canonical Document row has `ingest_status=no_file`, and
+`6841b26`, which makes `SchoolFiscalYearStatus` count high-confidence
+current-year DepartmentYearly rows as parsed/exportable even when the source
+Document remains `review_pending` because non-current or support rows need
+operator review. Focused verification: `uv run pytest
+tests/unit/test_pdf_discovery.py -q` (`213 passed`), `uv run pytest
+tests/unit/test_school_fiscal_year_status.py tests/unit/test_reports.py
+tests/unit/test_cli_reports.py tests/unit/test_run_weekly_target_year_discovery.py
+-q` (`85 passed`), Ruff and mypy on touched modules, and `git diff --check`.
 Current selected-school strict-yield check after discovery, ingest, and rebuild
 with the original FY2025 replay evidence plus the 35-school recovery evidence:
-`_temp/same-school-duplicate-restore-smoke-35/output/strict-yield-analysis-selected1000-after-ingest-combined-evidence.json`.
+`_temp/same-school-duplicate-restore-smoke-35/output/strict-yield-analysis-selected1000-after-exportable-review-pending-fix.json`.
 It reports FY2025 selected denominator `1000`, strict/excel-ready
-`392/1000 (39.2%)`, broad confirmed `498/1000 (49.8%)`, and
-operator-reviewable `755/1000 (75.5%)`. This confirms the fix is a real
-resilience repair (`+3/1000` strict schools after ingest), not a strict-yield
-unblock. The strict release line remains below gate.
+`498/1000 (49.8%)`, broad confirmed `498/1000 (49.8%)`, and
+operator-reviewable `755/1000 (75.5%)`. This is a real strict/excel-ready
+uplift from status granularity, but the strict release line remains below the
+60% gate.
 Current Windows active lane:
 read-only SSH probe on 2026-05-18 showed `EIDP Weekly Run` still points to
 `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat`; v480 exists only as
 side-by-side `%USERPROFILE%\EIDP-v480-d5eb115` plus staging ZIP. Do not promote
-v480 as-is after `d535c74`, because it no longer contains latest runtime source
+v480 as-is after `6841b26`, because it no longer contains latest runtime source
 and the production-scale strict gate is still below 60%.
 Post-status Mac-side strict-yield replay:
 `docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
