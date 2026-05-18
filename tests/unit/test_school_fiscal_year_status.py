@@ -221,6 +221,93 @@ def test_rebuild_counts_review_pending_target_pdf_as_acquired_but_not_excel_read
         session.close()
 
 
+def test_rebuild_counts_review_pending_doc_with_exportable_current_rows_as_excel_ready() -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        session.add(
+            Document(
+                id=1,
+                school_id=1,
+                source_url="https://s1.example/fy2026.pdf",
+                file_hash="e" * 64,
+                fiscal_year=2026,
+                pdf_type="target",
+                ingest_status="review_pending",
+            )
+        )
+        session.add(Department(id=1, school_id=1, canonical_name="情報学科"))
+        session.add(
+            DepartmentYearly(
+                department_id=1,
+                document_id=1,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                capacity=40,
+                enrollment=38,
+                extraction_confidence=0.94,
+            )
+        )
+        session.commit()
+
+        stats = rebuild_school_fiscal_year_status(session, fiscal_year=2026, school_type="専門学校")
+        session.commit()
+
+        row = session.get(SchoolFiscalYearStatus, (1, 2026))
+        assert row is not None
+        assert row.pdf_status == "confirmed_target"
+        assert row.extract_status == "parsed"
+        assert row.excel_ready is True
+        assert row.blocking_reason is None
+        assert stats.excel_ready == 1
+    finally:
+        session.close()
+
+
+def test_rebuild_does_not_count_low_confidence_current_rows_as_excel_ready() -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        session.add(
+            Document(
+                id=1,
+                school_id=1,
+                source_url="https://s1.example/fy2026.pdf",
+                file_hash="l" * 64,
+                fiscal_year=2026,
+                pdf_type="target",
+                ingest_status="review_pending",
+            )
+        )
+        session.add(Department(id=1, school_id=1, canonical_name="情報学科"))
+        session.add(
+            DepartmentYearly(
+                department_id=1,
+                document_id=1,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                capacity=40,
+                enrollment=38,
+                extraction_confidence=0.54,
+            )
+        )
+        session.commit()
+
+        stats = rebuild_school_fiscal_year_status(session, fiscal_year=2026, school_type="専門学校")
+        session.commit()
+
+        row = session.get(SchoolFiscalYearStatus, (1, 2026))
+        assert row is not None
+        assert row.pdf_status == "confirmed_target"
+        assert row.extract_status == "none"
+        assert row.excel_ready is False
+        assert stats.excel_ready == 0
+    finally:
+        session.close()
+
+
 def test_rebuild_does_not_count_parked_low_confidence_rows_as_strict_parsed() -> None:
     session = _session()
     try:

@@ -18,6 +18,7 @@ from eidp.db.models import (
     SchoolFiscalYearStatus,
     SchoolSite,
 )
+from eidp.extraction_confidence import thresholds_from_env
 from eidp.fiscal_year_evidence import fiscal_year_evidence_for_document
 
 REVIEW_STATUSES: tuple[str, ...] = (
@@ -111,8 +112,6 @@ def _pdf_status(docs: list[Document], fiscal_year: int) -> str:
 
 def _extract_status(docs: list[Document], has_current_rows: bool) -> str:
     if has_current_rows:
-        if any(d.ingest_status == "review_pending" for d in docs):
-            return "manual_entered"
         return "parsed"
     if any(d.ingest_status == "ocr_pending" for d in docs):
         return "ocr_pending"
@@ -308,6 +307,7 @@ def rebuild_school_fiscal_year_status(
     )
     discovery_evidence_buckets = _discovery_evidence_school_buckets(discovery_evidence_path)
 
+    exportable_confidence_min = thresholds_from_env().review
     extracted_school_ids = {
         int(sid)
         for (sid,) in (
@@ -318,6 +318,10 @@ def rebuild_school_fiscal_year_status(
                 DepartmentYearly.fiscal_year == fiscal_year,
                 DepartmentYearly.is_current.is_(True),
                 DepartmentYearly.capacity.is_not(None),
+                (
+                    DepartmentYearly.extraction_confidence.is_(None)
+                    | (DepartmentYearly.extraction_confidence >= exportable_confidence_min)
+                ),
             )
             .distinct()
             .all()
