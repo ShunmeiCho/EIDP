@@ -17,6 +17,7 @@ def _db(path: Path) -> Path:
             """
             create table school (
                 id integer primary key,
+                school_name text,
                 school_type text,
                 status text
             );
@@ -32,6 +33,7 @@ def _db(path: Path) -> Path:
             create table document (
                 id integer primary key,
                 school_id integer,
+                source_url text,
                 fiscal_year integer,
                 pdf_type text,
                 ingest_status text
@@ -55,13 +57,13 @@ def _db(path: Path) -> Path:
             """
         )
         conn.executemany(
-            "insert into school (id, school_type, status) values (?, ?, ?)",
+            "insert into school (id, school_name, school_type, status) values (?, ?, ?, ?)",
             [
-                (1, "専門学校", "active"),
-                (2, "専門学校", "active"),
-                (3, "専門学校", "active"),
-                (4, "大学", "active"),
-                (5, "専門学校", "inactive"),
+                (1, "Alpha専門学校", "専門学校", "active"),
+                (2, "Beta専門学校", "専門学校", "active"),
+                (3, "Gamma専門学校", "専門学校", "active"),
+                (4, "Delta大学", "大学", "active"),
+                (5, "Inactive専門学校", "専門学校", "inactive"),
             ],
         )
         conn.executemany(
@@ -79,11 +81,14 @@ def _db(path: Path) -> Path:
             ],
         )
         conn.executemany(
-            "insert into document (id, school_id, fiscal_year, pdf_type, ingest_status) values (?, ?, ?, ?, ?)",
+            """
+            insert into document (id, school_id, source_url, fiscal_year, pdf_type, ingest_status)
+            values (?, ?, ?, ?, ?, ?)
+            """,
             [
-                (1, 1, 2025, "target", "ingested"),
-                (2, 2, 2025, "target", "review_pending"),
-                (3, 3, 2025, "image_only", "parse_failed"),
+                (1, 1, "https://school.example/alpha.pdf", 2025, "target", "ingested"),
+                (2, 2, "https://school.example/beta.pdf", 2025, "target", "review_pending"),
+                (3, 3, "https://school.example/gamma.pdf", 2025, "image_only", "parse_failed"),
             ],
         )
         conn.executemany(
@@ -203,7 +208,10 @@ def test_analyze_database_can_include_all_school_types(tmp_path: Path) -> None:
 def test_analyze_database_counts_discovered_candidates_as_operator_reviewable(tmp_path: Path) -> None:
     db_path = _db(tmp_path / "eidp.sqlite3")
     with sqlite3.connect(db_path) as conn:
-        conn.execute("insert into school (id, school_type, status) values (?, ?, ?)", (6, "専門学校", "active"))
+        conn.execute(
+            "insert into school (id, school_name, school_type, status) values (?, ?, ?, ?)",
+            (6, "Discovered専門学校", "専門学校", "active"),
+        )
         conn.execute(
             """
             insert into school_fiscal_year_status
@@ -218,6 +226,60 @@ def test_analyze_database_counts_discovered_candidates_as_operator_reviewable(tm
     assert result["schools_total"] == 4
     assert result["operator_reviewable_schools"] == 4
     assert result["estimated_manual_workload_rate_pct"] == 0.0
+
+
+def test_analyze_database_reports_school_mismatch_source_buckets(tmp_path: Path) -> None:
+    db_path = _db(tmp_path / "eidp.sqlite3")
+    with sqlite3.connect(db_path) as conn:
+        conn.executemany(
+            """
+            insert into document (id, school_id, source_url, fiscal_year, pdf_type, ingest_status)
+            values (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (10, 1, "https://group.example/a.pdf", 2025, "target", "school_mismatch"),
+                (11, 2, "https://group.example/b.pdf", 2025, "target", "school_mismatch"),
+                (12, 3, "https://other.example/c.pdf", 2025, "target", "school_mismatch"),
+                (13, 4, "https://unscoped.example/d.pdf", 2025, "target", "school_mismatch"),
+            ],
+        )
+
+    result = module.analyze_database(db_path, fiscal_year=2025, school_type="専門学校")
+
+    assert result["school_mismatch_source_buckets"] == [
+        {
+            "source_host": "group.example",
+            "documents": 2,
+            "schools": 2,
+            "examples": [
+                {
+                    "doc_id": 10,
+                    "school_id": 1,
+                    "school_name": "Alpha専門学校",
+                    "source_url": "https://group.example/a.pdf",
+                },
+                {
+                    "doc_id": 11,
+                    "school_id": 2,
+                    "school_name": "Beta専門学校",
+                    "source_url": "https://group.example/b.pdf",
+                },
+            ],
+        },
+        {
+            "source_host": "other.example",
+            "documents": 1,
+            "schools": 1,
+            "examples": [
+                {
+                    "doc_id": 12,
+                    "school_id": 3,
+                    "school_name": "Gamma専門学校",
+                    "source_url": "https://other.example/c.pdf",
+                },
+            ],
+        },
+    ]
 
 
 def test_analyze_database_can_scope_to_school_ids_file(tmp_path: Path) -> None:

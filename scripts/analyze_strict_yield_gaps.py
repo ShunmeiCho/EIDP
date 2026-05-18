@@ -6,8 +6,10 @@ import argparse
 import json
 import sqlite3
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 OPERATOR_REVIEWABLE_PDF_STATUSES = frozenset(
     {
@@ -169,6 +171,73 @@ def _document_buckets(
     ]
 
 
+def _source_host(source_url: str) -> str:
+    if not source_url:
+        return ""
+    return urlparse(source_url).netloc.lower()
+
+
+def _school_mismatch_source_buckets(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+    school_ids: set[int] | None,
+) -> list[dict[str, Any]]:
+    school_type_sql, school_type_params = _school_type_clause(school_type)
+    school_ids_sql, school_ids_params = _school_ids_clause("d.school_id", school_ids)
+    rows = conn.execute(
+        f"""
+        select
+          d.id,
+          d.school_id,
+          coalesce(sc.school_name, ''),
+          coalesce(d.source_url, '')
+        from document d
+        join school sc on sc.id = d.school_id
+        where d.fiscal_year = ?
+          and d.ingest_status = 'school_mismatch'
+          and sc.status = 'active'
+          {school_type_sql}
+          {school_ids_sql}
+        order by d.school_id, d.id
+        """,
+        (fiscal_year, *school_type_params, *school_ids_params),
+    ).fetchall()
+
+    grouped: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {"documents": 0, "school_ids": set(), "examples": []}
+    )
+    for doc_id, school_id, school_name, source_url in rows:
+        source_host = _source_host(str(source_url)) or "unknown"
+        bucket = grouped[source_host]
+        bucket["documents"] += 1
+        bucket["school_ids"].add(int(school_id))
+        examples = bucket["examples"]
+        if len(examples) < 5:
+            examples.append(
+                {
+                    "doc_id": int(doc_id),
+                    "school_id": int(school_id),
+                    "school_name": str(school_name),
+                    "source_url": str(source_url),
+                }
+            )
+
+    return [
+        {
+            "source_host": source_host,
+            "documents": int(bucket["documents"]),
+            "schools": len(bucket["school_ids"]),
+            "examples": bucket["examples"],
+        }
+        for source_host, bucket in sorted(
+            grouped.items(),
+            key=lambda item: (-int(item[1]["documents"]), item[0]),
+        )
+    ]
+
+
 def _yearly_row_buckets(
     conn: sqlite3.Connection,
     *,
@@ -326,6 +395,12 @@ def analyze_database(
             school_ids=school_ids,
         )
         document_buckets = _document_buckets(conn, fiscal_year=fiscal_year, school_ids=school_ids)
+        school_mismatch_source_buckets = _school_mismatch_source_buckets(
+            conn,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            school_ids=school_ids,
+        )
         yearly_row_buckets = _yearly_row_buckets(
             conn,
             fiscal_year=fiscal_year,
@@ -372,6 +447,7 @@ def analyze_database(
         ),
         "status_buckets": status_buckets,
         "url_pdf_gap_buckets": url_pdf_gap_buckets,
+        "school_mismatch_source_buckets": school_mismatch_source_buckets,
         "non_ready_buckets": non_ready_buckets,
         "document_buckets": document_buckets,
         "yearly_row_buckets": yearly_row_buckets,
