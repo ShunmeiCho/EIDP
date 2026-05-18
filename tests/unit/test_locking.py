@@ -219,3 +219,72 @@ def test_unlock_logs_release_failures(monkeypatch):
             {"platform": "posix", "error": "unlock failed"},
         ),
     ]
+
+
+def test_owner_metadata_write_failure_is_logged(tmp_path: Path, monkeypatch):
+    """Metadata is best-effort, but failure must leave diagnostic evidence."""
+    from eidp.db import locking
+
+    calls: list[tuple[str, dict[str, str]]] = []
+    meta_path = tmp_path / ".lock.meta"
+
+    class FakeLog:
+        def exception(self, event: str, **kwargs: str) -> None:
+            calls.append((event, kwargs))
+
+    def fail_write_text(path: Path, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        assert path == meta_path
+        raise OSError("metadata write failed")
+
+    monkeypatch.setattr(locking, "log", FakeLog())
+    monkeypatch.setattr(Path, "write_text", fail_write_text)
+
+    locking._write_owner_metadata(meta_path, "weekly_runner")
+
+    assert calls == [
+        (
+            "lock_owner_metadata_write_failed",
+            {
+                "meta_path": str(meta_path),
+                "owner": "weekly_runner",
+                "error_type": "OSError",
+            },
+        )
+    ]
+
+
+def test_owner_metadata_unlink_failure_is_logged(tmp_path: Path, monkeypatch):
+    """Stale sidecar cleanup failures must not disappear silently."""
+    from eidp.db import locking
+
+    calls: list[tuple[str, dict[str, str]]] = []
+    lock_path = tmp_path / ".lock"
+    meta_path = lock_path.with_suffix(lock_path.suffix + ".meta")
+
+    class FakeLog:
+        def exception(self, event: str, **kwargs: str) -> None:
+            calls.append((event, kwargs))
+
+    original_unlink = Path.unlink
+
+    def fail_meta_unlink(path: Path, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        if path == meta_path:
+            raise OSError("metadata unlink failed")
+        original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(locking, "log", FakeLog())
+    monkeypatch.setattr(Path, "unlink", fail_meta_unlink)
+
+    with acquire_lock(lock_path, owner="weekly_runner"):
+        assert meta_path.exists()
+
+    assert calls == [
+        (
+            "lock_owner_metadata_unlink_failed",
+            {
+                "meta_path": str(meta_path),
+                "owner": "weekly_runner",
+                "error_type": "OSError",
+            },
+        )
+    ]

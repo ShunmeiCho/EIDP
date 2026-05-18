@@ -154,6 +154,45 @@ def test_flush_outbox_does_not_stamp_when_fsync_fails(engine, tmp_path, monkeypa
         assert row.jsonl_export_error == "disk flush failed"
 
 
+def test_flush_outbox_logs_export_failures(engine, tmp_path, monkeypatch):
+    jsonl = tmp_path / "manual-actions.jsonl"
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class FakeLog:
+        def exception(self, event: str, **kwargs: object) -> None:
+            calls.append((event, kwargs))
+
+    def fail_fsync(_fd):
+        raise OSError("disk flush failed")
+
+    with Session(engine) as session:
+        row = log_manual_action(
+            session,
+            action_type="manual_entry",
+            target_table="department_yearly",
+            target_id=1,
+            new_value={"enrollment": 100},
+        )
+        session.commit()
+        action_id = row.action_id
+        monkeypatch.setattr("eidp.db.audit_outbox.os.fsync", fail_fsync)
+        monkeypatch.setattr("eidp.db.audit_outbox.log", FakeLog())
+
+        stats = flush_audit_outbox(session, jsonl_path=jsonl)
+
+    assert stats == {"exported": 0, "already_present": 0, "failed": 1}
+    assert calls == [
+        (
+            "audit_outbox_export_failed",
+            {
+                "action_id": action_id,
+                "jsonl_path": str(jsonl),
+                "error_type": "OSError",
+            },
+        )
+    ]
+
+
 def test_flush_outbox_retry_after_fsync_failure_dedups_partial_line(engine, tmp_path, monkeypatch):
     jsonl = tmp_path / "manual-actions.jsonl"
 

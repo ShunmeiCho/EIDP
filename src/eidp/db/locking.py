@@ -134,8 +134,13 @@ def _write_owner_metadata(path: Path, owner: str) -> None:
             "started_at": datetime.now(UTC).isoformat(),
         }
         path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
-    except OSError:
-        pass
+    except OSError as exc:
+        log.exception(
+            "lock_owner_metadata_write_failed",
+            meta_path=str(path),
+            owner=owner,
+            error_type=type(exc).__name__,
+        )
 
 
 def _read_owner_metadata(path: Path) -> dict[str, Any] | None:
@@ -221,8 +226,13 @@ def acquire_lock(
             # waiter wake up and find a clean meta file.
             try:
                 meta_path.unlink(missing_ok=True)
-            except OSError:
-                pass
+            except OSError as exc:
+                log.exception(
+                    "lock_owner_metadata_unlink_failed",
+                    meta_path=str(meta_path),
+                    owner=owner,
+                    error_type=type(exc).__name__,
+                )
     finally:
         _unlock(fd)
         os.close(fd)

@@ -22,6 +22,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
+import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -29,6 +30,7 @@ from eidp.db.models import ManualActionLog
 
 DEFAULT_OUTBOX_PATH = Path("data/audit/manual-actions.jsonl")
 OUTBOX_ARCHIVE_GLOB = "manual-actions-*.jsonl"
+log = structlog.get_logger(__name__)
 
 
 def _candidate_outbox_paths(jsonl_path: Path) -> list[Path]:
@@ -128,6 +130,12 @@ def flush_audit_outbox(
                 row.jsonl_exported_at = now
                 row.jsonl_export_error = None
             except Exception as exc:  # pragma: no cover — disk full / permission
+                log.exception(
+                    "audit_outbox_export_failed",
+                    action_id=row.action_id,
+                    jsonl_path=str(target_path),
+                    error_type=type(exc).__name__,
+                )
                 row.jsonl_export_error = str(exc)[:500]
                 stats["failed"] += 1
 
