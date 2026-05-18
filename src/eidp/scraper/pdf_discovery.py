@@ -679,6 +679,7 @@ def _has_target_application_url_hint(candidate: PdfCandidate) -> bool:
             "確認申請",
             "更新確認申請",
             "機関要件",
+            "申請書様式",
             "様式第2号",
             "様式第２号",
             "様式2号",
@@ -784,13 +785,14 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
             "koushinshinsei",
             "koushin-shinsei",
             "confirmation_application",
+            "application_style",
         )
     )
     bare_form_year_patterns = (
-        r"(?:確認申請|更新確認申請|機関要件|申請様式|様式第[2２]号|様式2号)"
+        r"(?:確認申請|更新確認申請|機関要件|申請様式|申請書様式|様式第[2２]号|様式2号)"
         r"[^0-9/\n]{0,16}(20\d{2})(?!\s*(?:年\s*\d{1,2}\s*月|月|日|\d))",
         r"(?<!\d)(20\d{2})(?!\s*(?:年\s*\d{1,2}\s*月|月|日|\d))"
-        r"[^0-9/\n]{0,16}(?:確認申請|更新確認申請|機関要件|申請様式|様式第[2２]号|様式2号)",
+        r"[^0-9/\n]{0,16}(?:確認申請|更新確認申請|機関要件|申請様式|申請書様式|様式第[2２]号|様式2号)",
     )
     for pattern in bare_form_year_patterns:
         form_year = re.search(pattern, text, re.IGNORECASE)
