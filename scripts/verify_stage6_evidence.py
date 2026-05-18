@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import zipfile
@@ -90,6 +91,31 @@ def _manifest_included_paths(manifest: dict[str, Any], errors: list[str]) -> tup
     return labels, paths
 
 
+def _check_manifest_entry_hashes(
+    zf: zipfile.ZipFile,
+    manifest: dict[str, Any],
+    errors: list[str],
+) -> None:
+    included = manifest.get("included")
+    if not isinstance(included, list):
+        return
+    for index, item in enumerate(included):
+        if not isinstance(item, dict):
+            continue
+        path = item.get("path")
+        expected_sha = item.get("sha256")
+        if not isinstance(path, str) or not isinstance(expected_sha, str):
+            continue
+        normalized_path = path.replace("\\", "/")
+        try:
+            raw = zf.read(normalized_path)
+        except KeyError:
+            continue
+        actual_sha = hashlib.sha256(raw).hexdigest()
+        if actual_sha != expected_sha:
+            errors.append(f"manifest included[{index}].sha256 mismatch for {normalized_path}")
+
+
 def verify_stage6_evidence_bundle(
     archive: Path,
     *,
@@ -148,6 +174,7 @@ def verify_stage6_evidence_bundle(
                 if missing_manifest_paths:
                     errors.append("manifest references files that are not in the archive")
                     warnings.extend(f"missing manifest path: {path}" for path in missing_manifest_paths)
+                _check_manifest_entry_hashes(zf, manifest, errors)
 
             missing_required_labels = sorted(label for label in required_labels if label not in present_labels)
             if missing_required_labels:

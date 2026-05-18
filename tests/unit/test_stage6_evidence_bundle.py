@@ -77,6 +77,9 @@ def test_build_evidence_bundle_includes_stage6_artifacts_without_db_pdfs_or_exce
 
         manifest = json.loads(zf.read("stage6-evidence-manifest.json").decode("utf-8"))
         assert manifest["excluded"]["data"] == ["eidp.sqlite3", "eidp.sqlite3-shm", "eidp.sqlite3-wal", "pdfs"]
+        build_info = next(item for item in manifest["included"] if item["path"] == "BUILD_INFO.json")
+        assert isinstance(build_info["sha256"], str)
+        assert len(build_info["sha256"]) == 64
 
     verify_module = _load_verify_module()
     verification = verify_module.verify_stage6_evidence_bundle(
@@ -195,3 +198,55 @@ def test_verify_stage6_evidence_rejects_manifest_path_not_in_zip(tmp_path: Path)
     assert result["ok"] is False
     assert "manifest references files that are not in the archive" in result["errors"]
     assert result["warnings"] == ["missing manifest path: logs/diagnostics-20260514-010000.txt"]
+
+
+def test_verify_stage6_evidence_rejects_truncated_zip(tmp_path: Path) -> None:
+    module = _load_verify_module()
+    archive = tmp_path / "stage6-evidence-truncated.zip"
+    archive.write_bytes(b"PK\x03\x04truncated")
+
+    result = module.verify_stage6_evidence_bundle(archive)
+
+    assert result["ok"] is False
+    assert any(error.startswith("invalid zip file:") for error in result["errors"])
+
+
+def test_verify_stage6_evidence_rejects_non_list_missing_patterns(tmp_path: Path) -> None:
+    module = _load_verify_module()
+    archive = tmp_path / "stage6-evidence-bad-missing-patterns.zip"
+    manifest = {
+        "included": [{"label": "build_info", "path": "BUILD_INFO.json", "size": 2}],
+        "missing_patterns": "diagnostics",
+    }
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("stage6-evidence-manifest.json", json.dumps(manifest))
+        zf.writestr("BUILD_INFO.json", "{}")
+
+    result = module.verify_stage6_evidence_bundle(archive, required_labels=("build_info",))
+
+    assert result["ok"] is False
+    assert "manifest missing_patterns must be a list of strings" in result["errors"]
+
+
+def test_verify_stage6_evidence_rejects_manifest_sha256_mismatch(tmp_path: Path) -> None:
+    module = _load_verify_module()
+    archive = tmp_path / "stage6-evidence-bad-sha.zip"
+    manifest = {
+        "included": [
+            {
+                "label": "build_info",
+                "path": "BUILD_INFO.json",
+                "size": 2,
+                "sha256": "0" * 64,
+            }
+        ],
+        "missing_patterns": [],
+    }
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("stage6-evidence-manifest.json", json.dumps(manifest))
+        zf.writestr("BUILD_INFO.json", "{}")
+
+    result = module.verify_stage6_evidence_bundle(archive, required_labels=("build_info",))
+
+    assert result["ok"] is False
+    assert "manifest included[0].sha256 mismatch for BUILD_INFO.json" in result["errors"]

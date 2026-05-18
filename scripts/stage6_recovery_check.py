@@ -24,6 +24,7 @@ from typing import NoReturn
 from xml.etree import ElementTree
 
 TASK_NAME = "EIDP Weekly Run"
+CMD_META_CHARS = frozenset('&|<>^%!"\r\n')
 DEFAULT_INTERRUPTED_STAGE6_PATHS: tuple[str, ...] = (
     r"%USERPROFILE%\EIDP-v384-75732b0-ocr-sr-sandbox",
     r"%USERPROFILE%\v384_ocr_sr_smoke.ps1",
@@ -154,7 +155,9 @@ def _tail_text(value: str | bytes | None, *, max_chars: int = 2000) -> str:
 
 def _weekly_probe_command(weekly_action: str) -> list[str]:
     if os.name == "nt":  # pragma: no cover - exercised on the operator PC.
-        return ["cmd.exe", "/C", weekly_action]
+        if any(char in weekly_action for char in CMD_META_CHARS):
+            raise ValueError("weekly_run.bat path contains unsafe cmd.exe metacharacters")
+        return ["cmd.exe", "/D", "/C", f'call "{weekly_action}"']
     return [weekly_action]
 
 
@@ -197,6 +200,14 @@ def probe_weekly_dry_run(weekly_action: str, *, timeout_seconds: float = 60.0) -
             "timeout_seconds": timeout_seconds,
             "stdout_tail": _tail_text(exc.stdout),
             "stderr_tail": _tail_text(exc.stderr),
+        }
+    except ValueError as exc:
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": expanded,
+            "error": str(exc),
+            "timeout_seconds": timeout_seconds,
         }
     except OSError as exc:
         return {

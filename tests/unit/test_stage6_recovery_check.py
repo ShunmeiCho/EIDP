@@ -167,6 +167,26 @@ def test_build_report_fails_when_weekly_dry_run_probe_fails(tmp_path: Path) -> N
     assert "weekly_run.bat dry-run probe failed" in " ".join(report["recommendations"])
 
 
+def test_weekly_probe_command_quotes_windows_batch_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module.os, "name", "nt")
+
+    assert module._weekly_probe_command(r"C:\Users\operator\EIDP\scripts\weekly_run.bat") == [
+        "cmd.exe",
+        "/D",
+        "/C",
+        r'call "C:\Users\operator\EIDP\scripts\weekly_run.bat"',
+    ]
+
+
+def test_weekly_probe_command_rejects_windows_shell_metacharacters(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module.os, "name", "nt")
+
+    with pytest.raises(ValueError, match="unsafe cmd.exe metacharacters"):
+        module._weekly_probe_command(r"C:\Users\operator\EIDP\scripts\weekly_run.bat & calc.exe")
+
+
 def test_build_report_fails_when_lock_probe_reports_held(tmp_path: Path) -> None:
     module = _load_module()
     expected = r"C:\Users\eidp_operator\EIDP-v380-f6a5e6d\scripts\weekly_run.bat"

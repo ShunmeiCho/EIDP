@@ -9,6 +9,7 @@ copying live application state or personal data.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import zipfile
@@ -73,6 +74,14 @@ def _latest_matches(root: Path, pattern: EvidencePattern) -> list[Path]:
     return matches[: pattern.limit]
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def build_evidence_bundle(root: Path, out_path: Path | None = None, *, include_excel: bool = False) -> dict[str, Any]:
     root = root.resolve()
     if not root.is_dir():
@@ -108,6 +117,7 @@ def build_evidence_bundle(root: Path, out_path: Path | None = None, *, include_e
                         "label": pattern.label,
                         "path": arcname,
                         "size": path.stat().st_size,
+                        "sha256": _sha256_file(path),
                     }
                 )
 
