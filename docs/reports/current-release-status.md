@@ -51,6 +51,12 @@ reported `git_commit=d5eb1154e55f0d73454ca86618fc0a8ac00e8aef` and
 v460 fallback action and `stage6_recovery_check.bat` returned `ok=true` with
 `action_matches_expected=true`. This is side-by-side validation only; active
 Task Scheduler promotion was not performed.
+Current v480 Windows UI smoke:
+`logs/win-v480-stage6/v480-ui-smoke-20260518-211858.json`, `ok=true`. A
+temporary Streamlit listener was started from `%USERPROFILE%\EIDP-v480-d5eb115`
+on `127.0.0.1:8512`, `_stcore/health` returned `200` with content `ok`, the
+root page returned HTTP `200`, and the smoke stopped the temporary process
+after the check. This did not use the active `8501` operator port.
 Previous full non-Windows release-gate package: `dist/eidp-windows-v478.zip`
 Previous v478 non-Windows release gate output:
 `_temp/v478-non-windows-release-gates.json`, `ok=true`. The ZIP was built
