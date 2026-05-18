@@ -61,6 +61,15 @@ host buckets are led by `no_url/no_site=613`,
 `school_mismatch` samples are mostly sibling-school PDFs, so ingest school-name
 guardrails should stay strict; the safe path is better candidate ranking and
 URL coverage, not alias broadening.
+`fd78972` adds `no_url_corporation_buckets`, with current-source output at
+`_temp/fy2025-targeted-discovery-current-20260518_144205/output/strict-yield-gap-analysis-v481-no-url-corporations.json`.
+The largest no-site URL coverage gaps are `国立病院機構=26`,
+`有坂中央学園=8`, `山崎学園=6`, `厚生労働省=5`,
+`国際ビジネス学院金沢=5`, and `平松学園=5`. This points to audited
+corporation-domain / school-domain seed additions as the next offline-safe URL
+coverage task. The current Mac environment has no Scrapling optional runtime
+and no Brave/Google/Serper API key, so `school_url_auto_crawl` is not available
+as a reliable local v1.0 unblock path.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
