@@ -84,7 +84,7 @@ def _collapse_ws(s: str) -> str:
 def _collapse_school_name_variant(s: str) -> str:
     """Normalize low-risk school-name orthographic variants for identity matching."""
 
-    return _collapse_ws(s).replace("ー", "")
+    return _collapse_ws(s).lower().replace("アンド", "&").replace("&", "").replace("ー", "")
 
 
 _NON_IDENTITY_SCHOOL_NAME_LABELS = frozenset({

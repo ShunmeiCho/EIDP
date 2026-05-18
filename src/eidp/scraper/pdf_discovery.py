@@ -2338,7 +2338,8 @@ _GENERIC_SCHOOL_ENTITY_CONTEXT_RE = re.compile(r"(?:における|に関する|�
 def _school_link_label(text: str) -> str:
     normalized = unicodedata.normalize("NFKC", text).lower()
     normalized = normalized.replace("専門学校", "")
-    return re.sub(r"[\s　・･\-ー–—_/／|｜()（）［］\\[\\]{}]+", "", normalized)
+    normalized = normalized.replace("アンド", "&")
+    return re.sub(r"[\s・･ー－\-–—_/／|｜()（）［］\[\]{}&]+", "", normalized)
 
 
 def _school_name_matches_link(text: str, school_name: str) -> bool:

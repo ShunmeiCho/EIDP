@@ -265,12 +265,29 @@ After `ingest-pdfs`, `rebuild-school-year-tasks`, and
 | --- | ---: | ---: | ---: | ---: | ---: |
 | current v481 replay baseline | 389 | 16.1% status-scope | 494 | 20.4% status-scope | 389 |
 | Sanko exact-site copied replay | 397 | 16.4% status-scope | 503 | 20.8% status-scope | 397 |
+| Sanko exact-site + school-label variant replay | 404 | 16.7% status-scope | 510 | 21.1% status-scope | 404 |
 
 This is a real offline URL-coverage improvement (`+8` strict/excel-ready
 schools on the full 2418-school status scope). It also confirms the remaining
 Sanko failures are not a single URL-root issue. Many beauty / AI pages either
 publish stale-year target forms, body-name mismatches, or target-form candidates
 that still require stricter candidate ranking / year-evidence handling.
+
+A follow-up copied-DB smoke at
+`_temp/sanko-school-label-smoke-20260518_181242/` adds code-side school-label
+normalization for low-risk Sanko orthographic variants:
+
+- `AI&IT` vs `AIアンドIT`
+- `ビューティー` vs `ビューティ`
+- full-width `＆` vs ASCII `&`
+
+The same 22-school Sanko discovery then produced `crawled=22`, `found=22`,
+`downloaded=18`, `failed=0`, and `candidate_school_mismatch=0`. Accepted
+schools were `16`, `23`, `25`, `26`, `28`, `31`, `37`, `39`, `43`, `46`,
+`47`, `48`, `49`, `50`, `54`, `59`, `60`, and `68`. After ingest, rebuild,
+and gap analysis, strict/excel-ready rose to `404/2418 (16.7%)`, a `+15`
+strict/excel-ready improvement over the v481 status-scope baseline and `+7`
+over the exact-site-only Sanko replay.
 
 ## Verification
 

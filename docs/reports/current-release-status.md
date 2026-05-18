@@ -199,6 +199,18 @@ on that copied DB, strict/excel-ready moved from the v481 status-scope baseline
 `494/2418 (20.4%)` to `503/2418 (20.8%)`. This is a real offline URL-coverage
 improvement, but remaining Sanko failures still require candidate ranking,
 year-evidence, or school-name evidence work.
+The follow-up school-label normalization patch handles low-risk Sanko
+orthographic variants such as `AI&IT` vs `AIアンドIT`, `ビューティー` vs
+`ビューティ`, and full-width `＆` vs ASCII `&` consistently in discovery and
+ingest. A fresh copied-DB smoke at
+`_temp/sanko-school-label-smoke-20260518_181242/` over the same 22 exact-site
+schools produced `crawled=22`, `found=22`, `downloaded=18`, `failed=0`, and
+`candidate_school_mismatch=0`; accepted schools were `16`, `23`, `25`, `26`,
+`28`, `31`, `37`, `39`, `43`, `46`, `47`, `48`, `49`, `50`, `54`, `59`, `60`,
+and `68`. After ingest, rebuild, and `analyze_strict_yield_gaps.py`,
+strict/excel-ready reached `404/2418 (16.7%)` and broad confirmed reached
+`510/2418 (21.1%)`, a `+15` strict/excel-ready improvement over the v481
+status-scope baseline and `+7` over the exact-site-only Sanko replay.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`

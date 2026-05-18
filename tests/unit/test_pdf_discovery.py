@@ -579,6 +579,28 @@ def test_candidate_school_mismatch_allows_ampersand_school_name_before_old_name(
     )
 
 
+def test_downloaded_pdf_school_mismatch_allows_sanko_symbol_and_long_vowel_variants() -> None:
+    cases = [
+        ("大宮みらいAI&IT専門学校", "大宮みらいAIアンドIT専門学校"),
+        ("沖縄みらいAI&IT専門学校", "沖縄みらいAIアンドIT専門学校"),
+        ("札幌ビューティーアート専門学校", "札幌ビューティアート専門学校"),
+        ("広島ビューティー&ブライダル専門学校", "広島ビューティ＆ブライダル専門学校"),
+    ]
+
+    for detected_school_name, target_school_name in cases:
+        candidate = PdfCandidate(
+            pdf_url="https://www.sanko.ac.jp/disclosure/example/yoshiki2025.pdf",
+            page_url="https://www.sanko.ac.jp/disclosure/example/",
+            anchor_text="2025年度 高等教育の修学支援新制度 申請様式",
+            detected_school_name=detected_school_name,
+        )
+
+        assert not pdf_discovery_module._candidate_pdf_mentions_different_school(
+            candidate,
+            [target_school_name],
+        )
+
+
 def test_candidate_school_mismatch_rejects_substring_only_different_school() -> None:
     candidate = PdfCandidate(
         pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-02-01-5.pdf",
