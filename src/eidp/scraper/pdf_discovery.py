@@ -394,6 +394,7 @@ class PdfCandidate:
     pattern_type: str = ""
     score: float = 0.0
     detected_fiscal_year: int | None = None
+    detected_school_name: str = ""
     year_evidence: str = ""
     trusted_year_evidence: str = ""
 
@@ -1232,6 +1233,33 @@ def _extract_pdf_sample_text(content: bytes) -> str:
         for page in pdf.pages[:5]:
             sample_text += (page.extract_text() or "") + "\n"
     return sample_text
+
+
+def _extract_pdf_sample_school_name(sample_text: str) -> str:
+    """Extract the declared school name from a target-form PDF sample."""
+
+    normed = unicodedata.normalize("NFKC", sample_text)
+    match = re.search(r"学校名(?:\(学部等名\))?[\s:：]*(.+?)(?:\n|$)", normed)
+    if match is None:
+        return ""
+    school_name = match.group(1).strip()
+    school_name = re.sub(r"\s*(?:設置者名|設置者|学校法人).*$", "", school_name)
+    school_name = re.sub(r"^(?:名称】|称】|名】|】|\])+\s*", "", school_name)
+    school_name = re.sub(r"\s*校長\s*.*$", "", school_name)
+    return school_name.strip()
+
+
+def _candidate_pdf_mentions_different_school(candidate: PdfCandidate, school_names: list[str]) -> bool:
+    if not candidate.detected_school_name or not school_names:
+        return False
+    candidate_label = _school_link_label(candidate.detected_school_name)
+    if len(candidate_label) < 4:
+        return False
+    for school_name in school_names:
+        school_label = _school_link_label(school_name)
+        if _school_label_is_same_or_campus_variant(candidate_label, school_label):
+            return False
+    return True
 
 
 _FILING_DATE_CONTEXT_RE = re.compile(r"(提出日|提出年月日|申請日|申請年月日|届出日|届出年月日|作成日|作成年月日)")
@@ -2999,6 +3027,7 @@ def download_pdf(
         detected_fiscal_year: int | None = None
         try:
             sample_text = _extract_pdf_sample_text(content)
+            candidate.detected_school_name = _extract_pdf_sample_school_name(sample_text)
             pdf_type = _classify_pdf_sample_text(sample_text)
             max_detectable_year = None
             if strict_target_fiscal_year:
@@ -3336,6 +3365,9 @@ def run_pdf_discovery(
                     _score_candidate(c, target_fiscal_year=target_year)
                 result.candidates.sort(key=lambda c: c.score, reverse=True)
             school_name = site.school.school_name if site.school is not None else ""
+            school_names = [school_name] if school_name else []
+            if site.school is not None:
+                school_names.extend(alias.alias_name for alias in site.school.aliases if alias.alias_name)
             viable = [c for c in result.candidates if c.score >= 0 or _has_target_application_hint(c)]
             school_mismatch_candidates = [
                 c for c in viable if _candidate_mentions_different_school(c, school_name)
@@ -3529,6 +3561,26 @@ def run_pdf_discovery(
                     ))
 
                 if file_path:
+                    if _candidate_pdf_mentions_different_school(candidate, school_names):
+                        Path(file_path).unlink(missing_ok=True)
+                        stats["skipped"] += 1
+                        record_discovery_evidence(RejectionEvidence(
+                            school_id=site.school_id,
+                            pdf_url=candidate.pdf_url,
+                            page_url=candidate.page_url,
+                            anchor_text=candidate.anchor_text,
+                            pattern_type=candidate.pattern_type,
+                            score=candidate.score,
+                            reason="pdf_school_mismatch",
+                            pdf_type=pdf_type,
+                            extra={
+                                "parsed_school_name": candidate.detected_school_name,
+                                "target_school_name": school_name,
+                            },
+                        ))
+                        time.sleep(0.5)
+                        continue
+
                     # Check for duplicate hash
                     existing = (
                         session.query(Document)

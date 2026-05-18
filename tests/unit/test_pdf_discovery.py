@@ -769,6 +769,91 @@ def test_run_pdf_discovery_skips_candidates_that_name_a_different_school(
         session.close()
 
 
+def test_run_pdf_discovery_continues_after_downloaded_pdf_names_sibling_school(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    wrong_pdf = tmp_path / "wrong-school.pdf"
+    target_pdf = tmp_path / "target-school.pdf"
+    download_calls: list[str] = []
+    try:
+        session.add(
+            School(
+                id=293,
+                school_name="専門学校日本鉄道＆スポーツビジネスカレッジ21",
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=293, url="https://www.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        wrong_school = PdfCandidate(
+            pdf_url="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/15221259/academic_support.pdf",
+            page_url="https://www.all-japan.ac.jp/disclosure/",
+            anchor_text="academic_support.pdf",
+            score=5.0,
+        )
+        target_school = PdfCandidate(
+            pdf_url="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/15222917/academic_support.pdf",
+            page_url="https://www.all-japan.ac.jp/disclosure/",
+            anchor_text="academic_support.pdf",
+            score=5.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[wrong_school, target_school], best=wrong_school)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = 2025
+            candidate.year_evidence = "pdf_text"
+            if candidate is wrong_school:
+                wrong_pdf.write_bytes(b"%PDF wrong")
+                candidate.detected_school_name = "東京IT会計公務員専門学校千葉校"
+                return str(wrong_pdf), "wronghash", 3000, "target", None
+            target_pdf.write_bytes(b"%PDF target")
+            candidate.detected_school_name = "専門学校日本鉄道＆スポーツビジネスカレッジ２１"
+            return str(target_pdf), "targethash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        payloads = [json.loads(line) for line in evidence.read_text(encoding="utf-8").splitlines()]
+        mismatch = [payload for payload in payloads if payload["reason"] == "pdf_school_mismatch"]
+        stored = session.query(Document).one()
+        assert download_calls == [wrong_school.pdf_url, target_school.pdf_url]
+        assert stats["downloaded"] == 1
+        assert stats["rejection_reason_pdf_school_mismatch"] == 1
+        assert not wrong_pdf.exists()
+        assert target_pdf.exists()
+        assert stored.source_url == target_school.pdf_url
+        assert mismatch[0]["extra"]["parsed_school_name"] == "東京IT会計公務員専門学校千葉校"
+        assert mismatch[0]["extra"]["target_school_name"] == "専門学校日本鉄道＆スポーツビジネスカレッジ21"
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_limits_bulk_school_mismatch_evidence(
     monkeypatch,
     tmp_path: Path,
