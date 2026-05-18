@@ -11,25 +11,33 @@ the 60-70% strict ship line and points to dense / multibrand candidate ranking
 as the next algorithmic blocker. These are local replay results, not a packaged
 Windows active-lane proof.
 Latest local Mac/non-Windows package snapshot:
-`34ded9fecf7ddf27f37e9c8e3eee89e624e69260`
+`d5eb1154e55f0d73454ca86618fc0a8ac00e8aef`
 Current Mac-core-verifier-clean package for latest package snapshot:
-`dist/eidp-windows-v478.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v478.zip`
+`dist/eidp-windows-v480.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v480.zip`
 Latest Mac-core package SHA256:
-`9abf7ab7686815130ed60eb49cd2cdfdd97887e4d6ac77e61208c822ced3e5c0`
+`130ab6957d2444d08b10430cbabec556a139a9194d7b72a9f4082ef41726c635`
 Current Mac-core-verifier-clean package from HEAD:
-`dist/eidp-windows-v479.zip`
-Current v479 package SHA256:
-`9c70ce445c734e2675c99a96a2c57d2354682e0719263d1ca2f096297c6c7e4c`
-Current v479 non-Windows release gate output:
-`_temp/v479-non-windows-release-gates.json`, `ok=true`. The ZIP was built
+`dist/eidp-windows-v480.zip`
+Current v480 package SHA256:
+`130ab6957d2444d08b10430cbabec556a139a9194d7b72a9f4082ef41726c635`
+Current v480 non-Windows release gate output:
+`_temp/v480-non-windows-release-gates.json`, `ok=true`. The ZIP was built
 from `git_dirty=false` source and `BUILD_INFO.json` records commit
-`fe1cc5455fc52982101d7421712b414f02d7729f`, matching the local source commit.
+`d5eb1154e55f0d73454ca86618fc0a8ac00e8aef`, matching the local source commit.
 `scripts/verify_windows_distribution.py --json` also passed for
-`dist/eidp-windows-v479.zip`, with `has_runtime=true`, `wheel_count=84`,
+`dist/eidp-windows-v480.zip`, with `has_runtime=true`, `wheel_count=84`,
 `prefecture_seed_downloadable=47`, and ZIP SHA256 matching the sidecar.
-Latest full non-Windows release-gate package: `dist/eidp-windows-v478.zip`
-Latest v478 non-Windows release gate output:
+Current v480 retroactive Excel matrix:
+`logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
+FY2024, and FY2023. The case logs
+`logs/release-gate-v480-retroactive-fy2025-reference.json`,
+`logs/release-gate-v480-retroactive-fy2024-reference.json`, and
+`logs/release-gate-v480-retroactive-fy2023-reference.json` all have matching
+package/source commit `d5eb1154e55f0d73454ca86618fc0a8ac00e8aef` and business
+Excel diffs of `missing_rows=0`, `extra_rows=0`, `differing_fields=0`.
+Previous full non-Windows release-gate package: `dist/eidp-windows-v478.zip`
+Previous v478 non-Windows release gate output:
 `_temp/v478-non-windows-release-gates.json`, `ok=true`. The ZIP was built
 from `git_dirty=false` source and `BUILD_INFO.json` records the same
 `34ded9fecf7ddf27f37e9c8e3eee89e624e69260` commit. This package includes the
