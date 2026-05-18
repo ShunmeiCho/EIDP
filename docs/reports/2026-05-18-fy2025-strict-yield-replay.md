@@ -154,6 +154,35 @@ algorithm work, most likely in dense-page ranking / per-school candidate
 selection. Local AI / LLM candidate ranking may be useful for v1.1, but the
 current v1.0 code path remains below the strict release gate.
 
+## Post-Report All-Japan Group-Page Probe
+
+Commit `47f47ab` adds WordPress group-heading context for dense All-Japan
+`academic_support.pdf` links and expands school-label parsing for leading
+`専門学校...` names plus NFKC ampersand names.
+
+A copied-DB smoke at `_temp/all-japan-expanded-smoke/` reran all schools with
+an All-Japan `school_site` (`40` sites):
+
+- discovery: `downloaded=23`, `failed=15`
+- evidence buckets: `accepted_target_pdf=23`, `school_identity_mismatch=1`,
+  `non_target_candidates_only=15`
+- public disclosure-page slice `289`-`312`: all exact current-year target PDFs
+  were accepted except school `294`, whose PDF body school name still needs
+  operator-reviewed alias evidence
+
+After `ingest-pdfs`, `rebuild-school-year-tasks`, and
+`analyze_strict_yield_gaps.py` on that copied DB:
+
+| Scenario | strict parsed | strict pct | broad confirmed | broad pct | excel-ready |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| targeted discovery + original replay | 389 | 16.1% status-scope | 494 | 20.4% status-scope | 389 |
+| All-Japan group-heading copied replay | 408 | 16.9% status-scope | 514 | 21.3% status-scope | 408 |
+
+This is a real dense-page ranking improvement (`+19` strict/excel-ready schools
+on the full 2418-school status scope), but it still leaves the strict line far
+below 60-70%. The next algorithmic blockers remain O-Hara / Sanko / other dense
+group hosts and no-url coverage.
+
 ## Verification
 
 After the related local code changes and this report:

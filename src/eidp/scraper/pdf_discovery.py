@@ -1624,6 +1624,25 @@ def _section_heading_context(html: str, block_start: int) -> str:
     return " ".join(dict.fromkeys(headings))
 
 
+def _div_heading_context(html: str, before: int) -> str:
+    """Return the nearest WordPress group school heading for CMS sections."""
+
+    window = html[max(0, before - 6000):before]
+    group_starts = list(re.finditer(r"<div\b[^>]*\bwp-block-group\b[^>]*>", window, re.IGNORECASE | re.DOTALL))
+    if not group_starts:
+        return ""
+
+    fragment = window[group_starts[-1].start():]
+    headings = [
+        _html_text(heading.group(0))
+        for heading in re.finditer(r"<h[1-6]\b[^>]*>.*?</h[1-6]\s*>", fragment, re.IGNORECASE | re.DOTALL)
+    ]
+    for text in reversed([heading for heading in headings if heading]):
+        if _candidate_named_school_labels(text):
+            return text
+    return ""
+
+
 def _html_table_cells(row_fragment: str) -> list[tuple[int, int, str]]:
     return [
         (match.start(), match.end(), match.group(0))
@@ -1762,6 +1781,9 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
                 and section_context not in parts
             ):
                 parts.append(section_context)
+        div_heading = _div_heading_context(html, block_start)
+        if div_heading and div_heading not in parts:
+            parts.append(div_heading)
         if tag == "tr":
             if current_text and _candidate_named_school_labels(current_text) and current_text not in parts:
                 parts.append(current_text)
@@ -1771,8 +1793,12 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
             table_header = _table_column_header_context(html, block_start, block_fragment, match)
             if table_header and table_header not in parts:
                 parts.append(table_header)
-    elif previous_text := _previous_fiscal_year_context(html, match.start()):
-        parts.append(previous_text)
+    else:
+        div_heading = _div_heading_context(html, match.start())
+        if div_heading and div_heading not in parts:
+            parts.append(div_heading)
+        if previous_text := _previous_fiscal_year_context(html, match.start()):
+            parts.append(previous_text)
     return " ".join(dict.fromkeys(part for part in parts if part))
 
 
@@ -2294,8 +2320,12 @@ _EXTERNAL_SCHOOL_LINK_BLOCKED_HOST_PARTS = (
     "google.",
 )
 _SCHOOL_ENTITY_RE = re.compile(
-    r"[一-龯ぁ-んァ-ヶA-Za-z0-9・･ー－\-（）()]{2,}"
+    r"[一-龯ぁ-んァ-ヶA-Za-z0-9&・･ー－\-（）()]{2,}"
     r"(?:専門学校|大学校|短期大学|高等専門学校)",
+    re.IGNORECASE,
+)
+_LEADING_SPECIALIZED_SCHOOL_ENTITY_RE = re.compile(
+    r"専門学校[一-龯ぁ-んァ-ヶA-Za-z0-9&・･ー－\-]{2,}",
     re.IGNORECASE,
 )
 _GENERIC_SCHOOL_ENTITY_CONTEXT_RE = re.compile(r"(?:における|に関する|対象となる|学校一覧)")
@@ -2364,16 +2394,21 @@ def _candidate_mentions_different_school(candidate: PdfCandidate, school_name: s
 
 def _candidate_named_school_labels(text: str) -> list[str]:
     labels: list[str] = []
-    for match in _SCHOOL_ENTITY_RE.finditer(text):
-        raw_label = match.group(0)
-        if _GENERIC_SCHOOL_ENTITY_CONTEXT_RE.search(raw_label):
-            continue
-        prefix = re.split(r"専門学校|大学校|短期大学|高等専門学校", raw_label, maxsplit=1)[0]
-        if not re.search(r"[一-龯ァ-ヶA-Za-z0-9]", prefix):
-            continue
-        label = _school_link_label(raw_label)
-        if len(label) >= 4:
-            labels.append(label)
+    normalized = unicodedata.normalize("NFKC", text)
+    for pattern in (_SCHOOL_ENTITY_RE, _LEADING_SPECIALIZED_SCHOOL_ENTITY_RE):
+        for match in pattern.finditer(normalized):
+            raw_label = match.group(0)
+            if _GENERIC_SCHOOL_ENTITY_CONTEXT_RE.search(raw_label):
+                continue
+            if raw_label.startswith("専門学校"):
+                prefix = raw_label.removeprefix("専門学校")
+            else:
+                prefix = re.split(r"専門学校|大学校|短期大学|高等専門学校", raw_label, maxsplit=1)[0]
+            if not re.search(r"[一-龯ァ-ヶA-Za-z0-9]", prefix):
+                continue
+            label = _school_link_label(raw_label)
+            if len(label) >= 4 and label not in labels:
+                labels.append(label)
     return labels
 
 

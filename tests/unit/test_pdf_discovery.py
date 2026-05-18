@@ -500,6 +500,85 @@ def test_extract_pdf_links_adds_table_row_school_context_for_mismatch_filtering(
     )
 
 
+def test_extract_pdf_links_adds_wordpress_group_heading_context_for_school_sections() -> None:
+    html = """
+    <div id="tokyo-horitsu" class="wp-block-group">
+      <div class="wp-block-group__inner-container">
+        <h3 class="wp-block-heading">東京法律公務員専門学校<em>（旧校名 東京法律専門学校）</em></h3>
+        <div class="mod-grid-list">
+          <a href="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/16021913/summary.pdf">
+            <div>学校情報提供</div>
+          </a>
+          <a href="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/16021941/academic_support.pdf">
+            <div>2025年修学支援新制度様式2号</div>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div id="suginami-horitsu" class="wp-block-group">
+      <div class="wp-block-group__inner-container">
+        <h3 class="wp-block-heading">東京法律公務員専門学校杉並校<em>（旧校名 東京法律専門学校杉並校）</em></h3>
+        <div class="mod-grid-list">
+          <a href="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/16221128/summary.pdf">
+            <div>学校情報提供</div>
+          </a>
+          <a href="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/16221134/academic_support.pdf">
+            <div>2025年修学支援新制度様式2号</div>
+          </a>
+        </div>
+      </div>
+    </div>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://www.all-japan.ac.jp/about/disclosure/",
+        target_fiscal_year=2025,
+    )
+
+    support_candidates = [candidate for candidate in candidates if candidate.pdf_url.endswith("academic_support.pdf")]
+    base_school, suginami_school = support_candidates
+    assert "東京法律公務員専門学校" in base_school.anchor_text
+    assert "東京法律公務員専門学校杉並校" in suginami_school.anchor_text
+    assert not pdf_discovery_module._candidate_mentions_different_school(
+        suginami_school,
+        "東京法律公務員専門学校杉並校",
+    )
+
+    ordered, dropped = _prioritize_viable_candidates(
+        support_candidates,
+        target_year=2025,
+        school_name="東京法律公務員専門学校杉並校",
+    )
+
+    assert dropped == []
+    assert ordered[0].pdf_url.endswith("/16221134/academic_support.pdf")
+
+
+def test_candidate_named_school_labels_handles_leading_specialized_school_names() -> None:
+    labels = pdf_discovery_module._candidate_named_school_labels(
+        "専門学校日本鉄道＆スポーツビジネスカレッジ２１ （旧校名 専門学校日本スクールオブビジネス２１）"
+    )
+
+    assert pdf_discovery_module._school_link_label("専門学校日本鉄道＆スポーツビジネスカレッジ21") in labels
+
+
+def test_candidate_school_mismatch_allows_ampersand_school_name_before_old_name() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/16213658/academic_support.pdf",
+        page_url="https://www.all-japan.ac.jp/about/disclosure/",
+        anchor_text=(
+            "2025年修学支援新制度様式2号 "
+            "東京ITプログラミング＆会計専門学校杉並校 （旧校名 東京IT会計専門学校杉並校）"
+        ),
+    )
+
+    assert not pdf_discovery_module._candidate_mentions_different_school(
+        candidate,
+        "東京ITプログラミング＆会計専門学校杉並校",
+    )
+
+
 def test_candidate_school_mismatch_rejects_substring_only_different_school() -> None:
     candidate = PdfCandidate(
         pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-02-01-5.pdf",

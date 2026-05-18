@@ -129,6 +129,43 @@ body `学校名` disagrees with the target school. Focused verification:
 src/eidp/review/_pages/school_year_tasks.py
 tests/unit/test_review_school_year_tasks.py` -> clean; `uv run mypy
 src/eidp/review/_pages/school_year_tasks.py` -> clean.
+Current-source All-Japan group-page ranking now carries nearby WordPress
+`wp-block-group` school headings into generic `academic_support.pdf` candidates
+and recognizes leading-form `専門学校...` school names plus ampersand school
+names after NFKC normalization. A copied-DB smoke at
+`_temp/all-japan-group-context-smoke/` reran school IDs `293`-`299` from a
+cleaned copy of the FY2025 replay DB. It improved the All-Japan slice from the
+prior exact-body smoke `downloaded=5`, `failed=2` to `downloaded=6`, `failed=0`
+with accepted target PDFs for `293`, `295`, `296`, `297`, `298`, and `299`;
+school `299` now resolves to the exact杉並 legal-school PDF
+`.../16221134/academic_support.pdf`, and `298` keeps the exact杉並 IT-school PDF
+`.../16213658/academic_support.pdf`. School `294` remains
+`school_identity_mismatch`: the current target page and URL context match, but
+the PDF body reports `東京IT会計プログラミング&会計専門学校`, so it still needs
+operator-reviewed alias evidence rather than automatic acceptance. Focused
+verification: `uv run pytest tests/unit/test_pdf_discovery.py -q` -> `209
+passed`; `uv run ruff check src/eidp/scraper/pdf_discovery.py
+tests/unit/test_pdf_discovery.py` -> clean; `uv run mypy
+src/eidp/scraper/pdf_discovery.py` -> clean.
+An expanded copied-DB smoke at `_temp/all-japan-expanded-smoke/` reran every
+school with an All-Japan `school_site` (`40` sites). It produced
+`downloaded=23`, `failed=15`, and evidence summary buckets
+`accepted_target_pdf=23`, `school_identity_mismatch=1`,
+`non_target_candidates_only=15`. The public disclosure-page slice `289`-`312`
+now accepts all available exact current-year target PDFs except school `294`;
+the remaining `486` / `2280`-series failures are root/corporation URL paths that
+surface non-target candidates only and need separate URL/path evidence rather
+than sibling-PDF broadening.
+Running `ingest-pdfs`, `rebuild-school-year-tasks`, and
+`analyze_strict_yield_gaps.py` on the same copied DB showed the strict/excel-ready
+impact: `strict_target_parsed_schools=408/2418 (16.9%)`,
+`broad_confirmed_target_schools=514/2418 (21.3%)`, and
+`excel_ready_schools=408/2418 (16.9%)`. Compared with the current v481 replay
+status-scope `strict=389`, `broad=494`, this local copied-DB experiment adds
+`+19` strict/excel-ready schools and `+20` broad confirmed schools. The
+operator-reviewable count from this copied rebuild is not comparable to v481
+because the rebuild used only the scoped All-Japan evidence log, not the full
+FY2025 replay discovery evidence.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
