@@ -1068,6 +1068,14 @@ def _has_known_embedded_study_support_target_form(candidate: PdfCandidate) -> bo
     )
 
 
+def _has_yearless_school_override_target_filename(candidate: PdfCandidate) -> bool:
+    """Return whether a yearless exact-disclosure PDF URL names an application form."""
+
+    parsed = urlparse(_candidate_url_hint_text(candidate))
+    filename = unquote(Path(parsed.path).name).lower()
+    return "shinsei" in filename
+
+
 def _has_formish_candidate_hint(candidate: PdfCandidate) -> bool:
     """Return whether URL/anchor text is worth trying ahead of generic PDFs."""
 
@@ -2127,7 +2135,11 @@ def _trusted_year_evidence_can_fill_missing_pdf_year(
     ):
         return False
     if trusted_year_evidence == "school_domain_override_disclosure":
-        return _has_specific_target_form_hint(candidate) or _has_known_embedded_study_support_target_form(candidate)
+        return (
+            _has_specific_target_form_hint(candidate)
+            or _has_known_embedded_study_support_target_form(candidate)
+            or _has_yearless_school_override_target_filename(candidate)
+        )
     if trusted_year_evidence == "prefecture_index_current_year":
         return _has_specific_target_form_hint(candidate) or _has_known_embedded_study_support_target_form(candidate)
     return False

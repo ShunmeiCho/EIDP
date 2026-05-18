@@ -56,3 +56,33 @@ prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
 福岡県,麻生塾,専門学校麻生医療福祉＆観光カレッジ,https://asojuku.ac.jp/about/disclosure/amtc/,disclosure,0.98,ASO exact disclosure URL; live school portal link resolves to AMTC disclosure on 2026-05-19.
 福岡県,麻生塾,麻生公務員専門学校北九州校,https://asojuku.ac.jp/about/disclosure/apkc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
 福岡県,麻生塾,専門学校麻生看護大学校,https://asojuku.ac.jp/about/disclosure/anc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+新潟県,国際総合学園,新潟ビジネス専門学校,https://www.nbc.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟会計ビジネス専門学校,https://www.nabi.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟公務員専門学校,https://ncool.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟法律大学校,https://nleed.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟コンピュータ専門学校,https://www.ncc-net.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟デザイン専門学校,https://ncadnet.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,日本アニメ・マンガ専門学校,https://web-jam.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際映像メディア専門学校,https://www.i-media.cc/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際映像メディア専門学校,https://www.i-media.cc/information/,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際音楽・ダンス・エンタテイメント専門学校,http://show-net.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際音楽・ダンス・エンタテイメント専門学校,https://show-net.jp/information/,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際トータルファッション専門学校,https://nitf.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際ホテル・ブライダル専門学校,http://www.wish-web.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際外語・観光・エアライン専門学校,http://www.air.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際外語・観光・エアライン専門学校,https://www.air.ac.jp/koukai,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際メディカル専門学校,https://www.icm-net.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際こども・福祉カレッジ,https://www.wm-c.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟工科専門学校,https://www.nit-web.net/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,専門学校新潟国際自動車大学校,https://www.gia.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,専門学校新潟国際自動車大学校,https://www.gia.ac.jp/about/disclosure/,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際調理製菓専門学校,https://food-673.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟農業・バイオ専門学校,https://abio.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際ペットワールド専門学校,https://www.wan-c.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,アップルスポーツカレッジ,https://www.applesports.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,JAPANサッカーカレッジ,https://cupsnet.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,三条看護・医療・歯科衛生専門学校,https://www.hospi.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際自然環境アウトドア専門学校,https://www.i-nac.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際スノーボード＆スケートボード専門学校,https://jwsc-snow.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際スノーボード＆スケートボード専門学校,https://jwsc-snow.com/disclosure,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,伝統文化と環境福祉の専門学校,http://www.sado-nsg.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.

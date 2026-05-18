@@ -6480,6 +6480,40 @@ def test_download_pdf_rejects_school_domain_override_generic_yearless_target_for
     assert reason == "target_fiscal_year_not_detected"
 
 
+def test_download_pdf_accepts_school_domain_override_yearless_shinsei_target_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/wp-content/themes/site/pdf/information/shinsei.pdf",
+        page_url="https://example.ac.jp/information/",
+        anchor_text="pdf",
+    )
+    candidate.trusted_year_evidence = "school_domain_override_disclosure"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "school_domain_override_disclosure"
+
+
 def test_download_pdf_accepts_school_domain_override_embedded_studyspt_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:

@@ -270,6 +270,49 @@ def test_checked_in_school_domain_overrides_cover_aso_exact_disclosure_pages() -
     assert expected <= by_school
 
 
+def test_checked_in_school_domain_overrides_cover_nsg_exact_sites_and_disclosures() -> None:
+    overrides = url_discovery._load_school_domain_overrides(data_dir=REPO_ROOT / "data")
+    by_school = {
+        (override.prefecture, override.school_name, override.domain_url)
+        for override in overrides
+    }
+
+    expected = {
+        ("新潟県", "新潟ビジネス専門学校", "https://www.nbc.ac.jp/"),
+        ("新潟県", "新潟会計ビジネス専門学校", "https://www.nabi.ac.jp/"),
+        ("新潟県", "新潟公務員専門学校", "https://ncool.jp/"),
+        ("新潟県", "新潟法律大学校", "https://nleed.jp/"),
+        ("新潟県", "新潟コンピュータ専門学校", "https://www.ncc-net.ac.jp/"),
+        ("新潟県", "新潟デザイン専門学校", "https://ncadnet.jp/"),
+        ("新潟県", "日本アニメ・マンガ専門学校", "https://web-jam.jp/"),
+        ("新潟県", "国際映像メディア専門学校", "https://www.i-media.cc/"),
+        ("新潟県", "国際映像メディア専門学校", "https://www.i-media.cc/information/"),
+        ("新潟県", "国際音楽・ダンス・エンタテイメント専門学校", "http://show-net.jp/"),
+        ("新潟県", "国際音楽・ダンス・エンタテイメント専門学校", "https://show-net.jp/information/"),
+        ("新潟県", "国際トータルファッション専門学校", "https://nitf.jp/"),
+        ("新潟県", "国際ホテル・ブライダル専門学校", "http://www.wish-web.com/"),
+        ("新潟県", "国際外語・観光・エアライン専門学校", "http://www.air.ac.jp/"),
+        ("新潟県", "国際外語・観光・エアライン専門学校", "https://www.air.ac.jp/koukai"),
+        ("新潟県", "国際メディカル専門学校", "https://www.icm-net.jp/"),
+        ("新潟県", "国際こども・福祉カレッジ", "https://www.wm-c.ac.jp/"),
+        ("新潟県", "新潟工科専門学校", "https://www.nit-web.net/"),
+        ("新潟県", "専門学校新潟国際自動車大学校", "https://www.gia.ac.jp/"),
+        ("新潟県", "専門学校新潟国際自動車大学校", "https://www.gia.ac.jp/about/disclosure/"),
+        ("新潟県", "国際調理製菓専門学校", "https://food-673.jp/"),
+        ("新潟県", "新潟農業・バイオ専門学校", "https://abio.jp/"),
+        ("新潟県", "国際ペットワールド専門学校", "https://www.wan-c.jp/"),
+        ("新潟県", "アップルスポーツカレッジ", "https://www.applesports.jp/"),
+        ("新潟県", "JAPANサッカーカレッジ", "https://cupsnet.com/"),
+        ("新潟県", "三条看護・医療・歯科衛生専門学校", "https://www.hospi.ac.jp/"),
+        ("新潟県", "国際自然環境アウトドア専門学校", "https://www.i-nac.ac.jp/"),
+        ("新潟県", "国際スノーボード＆スケートボード専門学校", "https://jwsc-snow.com/"),
+        ("新潟県", "国際スノーボード＆スケートボード専門学校", "https://jwsc-snow.com/disclosure"),
+        ("新潟県", "伝統文化と環境福祉の専門学校", "http://www.sado-nsg.com/"),
+    }
+
+    assert expected <= by_school
+
+
 def test_checked_in_corporation_domains_cover_hachimonji_group() -> None:
     domains = url_discovery._load_corporation_domains(data_dir=REPO_ROOT / "data")
 
