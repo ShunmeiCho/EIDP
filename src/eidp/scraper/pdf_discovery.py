@@ -383,6 +383,10 @@ DERIVED_DISCLOSURE_PATHS = (
     "/public/",
     "/public_info/",
 )
+HOST_SPECIFIC_DERIVED_DISCLOSURE_PATHS = {
+    "o-hara.ac.jp": ("/about/joho/",),
+    "www.o-hara.ac.jp": ("/about/joho/",),
+}
 DISCLOSURE_DERIVATION_FILE_SUFFIXES = (".html", ".htm", ".php", ".aspx", ".jsp")
 
 
@@ -2481,6 +2485,16 @@ def _derived_disclosure_page_urls(site_url: str, *, limit: int = 6) -> list[str]
         if len(urls) >= limit:
             return urls
 
+    for host_path in HOST_SPECIFIC_DERIVED_DISCLOSURE_PATHS.get((parsed.hostname or "").lower(), ()):
+        candidate_url = urljoin(root + "/", host_path.lstrip("/"))
+        key = normalize_candidate_url(candidate_url)
+        if key in seen:
+            continue
+        seen.add(key)
+        urls.append(candidate_url)
+        if len(urls) >= limit:
+            return urls
+
     for pattern in DERIVED_DISCLOSURE_PATHS:
         if "{slug}" in pattern and not slug:
             continue
@@ -2515,6 +2529,17 @@ def _has_inverted_disclosure_url_probe(site_url: str) -> bool:
         "public",
         "public_info",
     }
+
+
+def _has_host_specific_disclosure_url_probe(site_url: str) -> bool:
+    parsed = urlparse(site_url)
+    return (parsed.hostname or "").lower() in HOST_SPECIFIC_DERIVED_DISCLOSURE_PATHS
+
+
+def _has_priority_derived_disclosure_url_probe(site_url: str) -> bool:
+    """Return whether one derived disclosure URL should bypass shared-origin throttling."""
+
+    return _has_inverted_disclosure_url_probe(site_url) or _has_host_specific_disclosure_url_probe(site_url)
 
 
 def _sitemap_urls_for_site(
@@ -3343,7 +3368,7 @@ def run_pdf_discovery(
                 ):
                     probe_count = origin_derived_probe_counts.get(origin, 0)
                     if probe_count >= SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES:
-                        if _has_inverted_disclosure_url_probe(site.url):
+                        if _has_priority_derived_disclosure_url_probe(site.url):
                             derived_disclosure_limit = 1
                         else:
                             derived_disclosure_limit = 0

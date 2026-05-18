@@ -2740,6 +2740,45 @@ def test_derived_disclosure_pages_do_not_append_to_file_like_paths() -> None:
     assert "https://www.sendai-iken.ac.jp/information/" in urls
 
 
+def test_o_hara_root_derives_about_joho_first_for_shared_origin_budget(monkeypatch) -> None:
+    monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    client = _HtmlClient(
+        {
+            "https://www.o-hara.ac.jp/robots.txt": _HtmlResponse("", status_code=404),
+            "https://www.o-hara.ac.jp/": _HtmlResponse(
+                "<html><a href='/news/'>news</a></html>",
+                url="https://www.o-hara.ac.jp/",
+            ),
+            "https://www.o-hara.ac.jp/about/joho/": _HtmlResponse(
+                """
+                <a href="/about/joho/pdf/2025/kakunin-shinsei.pdf">
+                  令和7年度 高等教育の修学支援新制度 機関要件確認申請書
+                </a>
+                """,
+                url="https://www.o-hara.ac.jp/about/joho/",
+            ),
+            "https://www.o-hara.ac.jp/sitemap.xml": _HtmlResponse("", status_code=404),
+        }
+    )
+
+    result = discover_pdfs_for_site(
+        client,
+        205,
+        "https://www.o-hara.ac.jp/",
+        school_name="大原簿記公務員専門学校千葉校",
+        target_fiscal_year=2025,
+        derived_disclosure_limit=1,
+    )
+
+    assert result.error is None
+    assert result.best is not None
+    assert result.best.pdf_url == "https://www.o-hara.ac.jp/about/joho/pdf/2025/kakunin-shinsei.pdf"
+    assert result.best.page_url == "https://www.o-hara.ac.jp/about/joho/"
+    assert "https://www.o-hara.ac.jp/about/joho/" in client.calls
+    assert "https://www.o-hara.ac.jp/information" not in client.calls
+
+
 def test_discover_pdfs_does_not_fetch_pdf_query_links_as_subpages(monkeypatch) -> None:
     monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
     monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
@@ -4139,6 +4178,86 @@ def test_run_pdf_discovery_keeps_inverted_disclosure_probe_for_shared_origin(
         assert stats["shared_origin_derived_fallback_skipped"] == 0
         for index in range(1, school_count + 1):
             assert f"https://www.sanko.ac.jp/disclosure/school-{index:03d}" in calls
+    finally:
+        session.close()
+
+
+def test_run_pdf_discovery_keeps_host_specific_disclosure_probe_for_shared_origin(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Shared-origin throttling must keep known host-specific disclosure URLs."""
+
+    session = _session()
+    calls: list[str] = []
+    school_count = 3
+    root_html = "<html><body>" + ("学校法人トップ " * 120) + "</body></html>"
+
+    class OHaraClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> OHaraClient:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            if url == "https://www.o-hara.ac.jp/robots.txt":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.o-hara.ac.jp/sitemap.xml":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.o-hara.ac.jp/":
+                return _HtmlResponse(root_html, url=url)
+            if url == "https://www.o-hara.ac.jp/about/joho/":
+                return _HtmlResponse(
+                    """
+                    <section>
+                      <h3>高等教育の修学支援新制度 申請様式</h3>
+                      <a href="/about/joho/pdf/2025/kakunin-shinsei.pdf">2025年度</a>
+                    </section>
+                    """,
+                    url=url,
+                )
+            return _HtmlResponse("", status_code=404, url=url)
+
+    def fake_download(
+        _client,
+        candidate: PdfCandidate,
+        _storage_dir: Path,
+        school_id: int,
+        **_kwargs: object,
+    ):
+        candidate.detected_fiscal_year = 2025
+        candidate.year_evidence = "url_hint"
+        return str(tmp_path / f"{school_id}.pdf"), f"hash-{school_id}", 3000, "target", None
+
+    try:
+        for index in range(1, school_count + 1):
+            session.add(SchoolSite(school_id=index, url="https://www.o-hara.ac.jp/", http_status=200))
+        session.flush()
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", OHaraClient)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.SHARED_ORIGIN_DERIVED_FALLBACK_THRESHOLD", 2)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES", 1)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=school_count,
+            rate_limit=0,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        assert stats["downloaded"] == school_count
+        assert stats["shared_origin_derived_fallback_skipped"] == 0
+        assert "https://www.o-hara.ac.jp/about/joho/" in calls
     finally:
         session.close()
 

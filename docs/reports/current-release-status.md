@@ -166,6 +166,23 @@ status-scope `strict=389`, `broad=494`, this local copied-DB experiment adds
 operator-reviewable count from this copied rebuild is not comparable to v481
 because the rebuild used only the scoped All-Japan evidence log, not the full
 FY2025 replay discovery evidence.
+Current local O-Hara follow-up gives `www.o-hara.ac.jp` a host-specific first
+derived disclosure URL, `https://www.o-hara.ac.jp/about/joho/`, and lets that
+single high-confidence URL bypass shared-origin derived fallback throttling.
+Focused unit coverage proves both the root-site ordering and the shared-origin
+throttle bypass. A copied-DB smoke at `_temp/o-hara-about-joho-smoke-small/`
+reran five O-Hara root-site schools (`179`, `180`, `182`, `183`, `205`) after
+deleting their existing `Document` and `CrawlJob` rows. It produced
+`crawled=5`, `found=5`, `downloaded=1`, `failed=0`, and
+`shared_origin_derived_fallback_skipped=0`; school `205`
+`大原簿記公務員専門学校千葉校` accepted
+`https://www.o-hara.ac.jp/about/joho/pdf/2025-1-29-01-5.pdf` from
+`page_url=https://www.o-hara.ac.jp/about/joho/` with `year_evidence=url_hint`.
+The remaining sampled failures are mostly dense-page school-name mismatch /
+rename evidence issues, for example the DB target `大原簿記公務員情報医療専門学校函館校`
+versus the public PDF label `大原公務員・医療事務・語学専門学校函館校`, so the next
+O-Hara layer is per-school candidate selection plus operator-reviewed alias
+evidence rather than broad school-name acceptance.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`

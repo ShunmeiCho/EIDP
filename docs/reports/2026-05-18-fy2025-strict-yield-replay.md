@@ -156,7 +156,7 @@ current v1.0 code path remains below the strict release gate.
 
 ## Post-Report All-Japan Group-Page Probe
 
-Commit `47f47ab` adds WordPress group-heading context for dense All-Japan
+Commit `a642416` adds WordPress group-heading context for dense All-Japan
 `academic_support.pdf` links and expands school-label parsing for leading
 `専門学校...` names plus NFKC ampersand names.
 
@@ -182,6 +182,45 @@ This is a real dense-page ranking improvement (`+19` strict/excel-ready schools
 on the full 2418-school status scope), but it still leaves the strict line far
 below 60-70%. The next algorithmic blockers remain O-Hara / Sanko / other dense
 group hosts and no-url coverage.
+
+## Post-Report O-Hara Shared-Disclosure Probe
+
+The current local patch gives `www.o-hara.ac.jp` a host-specific first derived
+disclosure URL, `https://www.o-hara.ac.jp/about/joho/`, and lets that single
+high-confidence URL bypass shared-origin derived-fallback throttling in the
+same way as per-school inverted disclosure URLs.
+
+Focused unit coverage:
+
+- `test_o_hara_root_derives_about_joho_first_for_shared_origin_budget`
+- `test_run_pdf_discovery_keeps_host_specific_disclosure_probe_for_shared_origin`
+
+A copied-DB smoke at `_temp/o-hara-about-joho-smoke-small/` reran five O-Hara
+root-site schools (`179`, `180`, `182`, `183`, `205`) after deleting their
+existing `Document` and `CrawlJob` rows:
+
+- discovery: `crawled=5`, `found=5`, `downloaded=1`, `failed=0`
+- `shared_origin_derived_fallback_skipped=0`
+- accepted school: `205` / `大原簿記公務員専門学校千葉校`
+- accepted PDF:
+  `https://www.o-hara.ac.jp/about/joho/pdf/2025-1-29-01-5.pdf`
+- accepted evidence: `page_url=https://www.o-hara.ac.jp/about/joho/`,
+  `year_evidence=url_hint`
+
+The failed sample rows show the next O-Hara blocker is not URL reachability:
+
+- school `179` target name is `大原簿記公務員情報医療専門学校函館校`, while the
+  matching O-Hara PDF label is
+  `大原公務員・医療事務・語学専門学校函館校`; discovery correctly records
+  `candidate_school_mismatch` without alias evidence.
+- school `180` target name is `大原簿記情報ビジネス医療福祉専門学校盛岡校`, while
+  the current O-Hara PDF labels include `大原ビジネス公務員専門学校盛岡校` and
+  `盛岡情報ITクリエイター専門学校`.
+
+Therefore the O-Hara fix is a real shared-disclosure reachability improvement,
+but it is not enough to move O-Hara into the strict 60-70% line. The next
+O-Hara layer needs dense-page per-school candidate selection and
+operator-reviewed rename / alias evidence, not broad school-name acceptance.
 
 ## Verification
 
