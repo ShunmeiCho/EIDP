@@ -222,6 +222,56 @@ but it is not enough to move O-Hara into the strict 60-70% line. The next
 O-Hara layer needs dense-page per-school candidate selection and
 operator-reviewed rename / alias evidence, not broad school-name acceptance.
 
+## Post-Report Sanko Exact-Site Override Probe
+
+The current local data patch adds `22` exact Sanko school-site overrides to
+`data/url-discovery/school_domain_overrides.csv`. Each added URL was checked on
+2026-05-18 by fetching the live page and requiring HTTP `200` plus a `<title>`
+that matched the target school name after local normalization. Candidate URLs
+with a title mismatch, HTTP `503`, or HTTP `404` were intentionally excluded.
+
+`test_checked_in_school_domain_overrides_cover_sanko_exact_school_sites`
+guards the checked-in Sanko override set.
+
+A copied-DB write smoke at `_temp/sanko-overrides-smoke/` called
+`infer_corporation_urls(..., data_dir=Path("data"))` against the FY2025 replay
+DB copy. It added exactly `22` Sanko `school_domain_override` rows, including
+root-bucket schools such as:
+
+- `16` / `千葉医療秘書&IT専門学校` ->
+  `https://www.sanko.ac.jp/chiba-med/`
+- `23` / `神戸元町医療秘書専門学校` ->
+  `https://www.sanko.ac.jp/kobe-med/`
+- `25` / `福岡医療秘書福祉専門学校` ->
+  `https://www.sanko.ac.jp/fukuoka-med/`
+- `31` / `千葉リゾート＆スポーツ専門学校` ->
+  `https://www.sanko.ac.jp/chiba-sports/`
+- `68` / `福岡ウェディング＆ブライダル専門学校` ->
+  `https://www.sanko.ac.jp/fukuoka-bridal/`
+
+The 22-school discovery smoke then deleted existing `Document` / `CrawlJob`
+rows for those schools and reran targeted discovery on the copied DB:
+
+- discovery: `crawled=44`, `found=44`, `downloaded=9`, `failed=22`
+- `school_domain_override` successes accepted via `year_evidence=url_hint`
+- accepted schools: `16`, `23`, `25`, `31`, `37`, `54`, `59`, `60`, `68`
+- representative accepted PDF:
+  `https://www.sanko.ac.jp/disclosure/chiba-med/docs/yoshiki2025.pdf`
+
+After `ingest-pdfs`, `rebuild-school-year-tasks`, and
+`analyze_strict_yield_gaps.py` on that copied DB:
+
+| Scenario | strict parsed | strict pct | broad confirmed | broad pct | excel-ready |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| current v481 replay baseline | 389 | 16.1% status-scope | 494 | 20.4% status-scope | 389 |
+| Sanko exact-site copied replay | 397 | 16.4% status-scope | 503 | 20.8% status-scope | 397 |
+
+This is a real offline URL-coverage improvement (`+8` strict/excel-ready
+schools on the full 2418-school status scope). It also confirms the remaining
+Sanko failures are not a single URL-root issue. Many beauty / AI pages either
+publish stale-year target forms, body-name mismatches, or target-form candidates
+that still require stricter candidate ranking / year-evidence handling.
+
 ## Verification
 
 After the related local code changes and this report:

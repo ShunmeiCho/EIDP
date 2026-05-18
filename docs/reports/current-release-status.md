@@ -183,6 +183,22 @@ rename evidence issues, for example the DB target `大原簿記公務員情報�
 versus the public PDF label `大原公務員・医療事務・語学専門学校函館校`, so the next
 O-Hara layer is per-school candidate selection plus operator-reviewed alias
 evidence rather than broad school-name acceptance.
+Current local Sanko follow-up adds `22` exact school-site overrides to
+`data/url-discovery/school_domain_overrides.csv`. Each added URL was live-checked
+on 2026-05-18 with HTTP `200` and a `<title>` matching the target school name;
+title mismatches, HTTP `503`, and HTTP `404` candidates were excluded. A
+copied-DB write smoke at `_temp/sanko-overrides-smoke/` confirmed
+`infer_corporation_urls(..., data_dir=Path("data"))` adds exactly `22` Sanko
+`school_domain_override` rows. Targeted discovery over those 22 schools produced
+`crawled=44`, `found=44`, `downloaded=9`, `failed=22`, accepting target PDFs for
+schools `16`, `23`, `25`, `31`, `37`, `54`, `59`, `60`, and `68`, for example
+`https://www.sanko.ac.jp/disclosure/chiba-med/docs/yoshiki2025.pdf`. After
+`ingest-pdfs`, `rebuild-school-year-tasks`, and `analyze_strict_yield_gaps.py`
+on that copied DB, strict/excel-ready moved from the v481 status-scope baseline
+`389/2418 (16.1%)` to `397/2418 (16.4%)`, and broad confirmed moved from
+`494/2418 (20.4%)` to `503/2418 (20.8%)`. This is a real offline URL-coverage
+improvement, but remaining Sanko failures still require candidate ranking,
+year-evidence, or school-name evidence work.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`

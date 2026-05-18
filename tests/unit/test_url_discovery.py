@@ -182,6 +182,41 @@ def test_checked_in_school_domain_overrides_cover_nkz_multibrand_schools() -> No
     assert expected <= by_school
 
 
+def test_checked_in_school_domain_overrides_cover_sanko_exact_school_sites() -> None:
+    overrides = url_discovery._load_school_domain_overrides(data_dir=REPO_ROOT / "data")
+    by_school = {
+        (override.prefecture, override.school_name, override.domain_url)
+        for override in overrides
+    }
+
+    expected = {
+        ("千葉県", "千葉医療秘書&IT専門学校", "https://www.sanko.ac.jp/chiba-med/"),
+        ("兵庫県", "神戸元町医療秘書専門学校", "https://www.sanko.ac.jp/kobe-med/"),
+        ("福岡県", "福岡医療秘書福祉専門学校", "https://www.sanko.ac.jp/fukuoka-med/"),
+        ("埼玉県", "大宮みらいAIアンドIT専門学校", "https://www.sanko.ac.jp/omiya-ai/"),
+        ("東京都", "東京みらいAIアンドIT専門学校", "https://www.sanko.ac.jp/tokyo-ai/"),
+        ("沖縄県", "沖縄みらいAIアンドIT専門学校", "https://www.sanko.ac.jp/okinawa-ai/"),
+        ("千葉県", "千葉リゾート＆スポーツ専門学校", "https://www.sanko.ac.jp/chiba-sports/"),
+        ("福岡県", "福岡リゾート＆スポーツ専門学校", "https://www.sanko.ac.jp/fukuoka-sports/"),
+        ("北海道", "札幌ビューティアート専門学校", "https://www.sanko.ac.jp/sapporo-beauty/"),
+        ("埼玉県", "大宮ビューティ＆ブライダル専門学校", "https://www.sanko.ac.jp/omiya-beauty/"),
+        ("千葉県", "千葉ビューティ＆ブライダル専門学校", "https://www.sanko.ac.jp/chiba-beauty/"),
+        ("東京都", "東京ビューティアート専門学校", "https://www.sanko.ac.jp/tokyo-beauty/"),
+        ("神奈川県", "横浜ビューティアート専門学校", "https://www.sanko.ac.jp/yokohama-beauty/"),
+        ("愛知県", "名古屋ビューティアート専門学校", "https://www.sanko.ac.jp/nagoya-beauty/"),
+        ("大阪府", "大阪ビューティアート専門学校", "https://www.sanko.ac.jp/osaka-beauty/"),
+        ("広島県", "広島ビューティ＆ブライダル専門学校", "https://www.sanko.ac.jp/hiroshima-beauty/"),
+        ("福岡県", "福岡ビューティアート専門学校", "https://www.sanko.ac.jp/fukuoka-beauty/"),
+        ("沖縄県", "沖縄ビューティ＆ブライダル専門学校", "https://www.sanko.ac.jp/okinawa-beauty/"),
+        ("千葉県", "千葉こども専門学校", "https://www.sanko.ac.jp/chiba-child/"),
+        ("兵庫県", "神戸元町こども専門学校", "https://www.sanko.ac.jp/kobe-child/"),
+        ("福岡県", "福岡こども専門学校", "https://www.sanko.ac.jp/fukuoka-child/"),
+        ("福岡県", "福岡ウェディング＆ブライダル専門学校", "https://www.sanko.ac.jp/fukuoka-bridal/"),
+    }
+
+    assert expected <= by_school
+
+
 def test_checked_in_corporation_domains_cover_hachimonji_group() -> None:
     domains = url_discovery._load_corporation_domains(data_dir=REPO_ROOT / "data")
 

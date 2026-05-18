@@ -17,3 +17,25 @@ prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
 大阪府,日本教育財団,大阪医専,https://www.nkz.ac.jp/clginfo/oiinfo.html,disclosure,0.98,NKZ disclosure index links to the Osaka Iko target-form subpage.
 愛知県,日本教育財団,名古屋医専,https://www.iko.ac.jp/nagoya,school,0.95,Iko brand uses iko.ac.jp rather than the NKZ corporation portal.
 愛知県,日本教育財団,名古屋医専,https://www.nkz.ac.jp/clginfo/niinfo.html,disclosure,0.98,NKZ disclosure index links to the Nagoya Iko target-form subpage.
+千葉県,三幸学園,千葉医療秘書&IT専門学校,https://www.sanko.ac.jp/chiba-med/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+兵庫県,三幸学園,神戸元町医療秘書専門学校,https://www.sanko.ac.jp/kobe-med/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡医療秘書福祉専門学校,https://www.sanko.ac.jp/fukuoka-med/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+埼玉県,三幸学園,大宮みらいAIアンドIT専門学校,https://www.sanko.ac.jp/omiya-ai/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+東京都,三幸学園,東京みらいAIアンドIT専門学校,https://www.sanko.ac.jp/tokyo-ai/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+沖縄県,三幸学園,沖縄みらいAIアンドIT専門学校,https://www.sanko.ac.jp/okinawa-ai/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+千葉県,三幸学園,千葉リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/chiba-sports/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/fukuoka-sports/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+北海道,三幸学園,札幌ビューティアート専門学校,https://www.sanko.ac.jp/sapporo-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+埼玉県,三幸学園,大宮ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/omiya-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+千葉県,三幸学園,千葉ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/chiba-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+東京都,三幸学園,東京ビューティアート専門学校,https://www.sanko.ac.jp/tokyo-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+神奈川県,三幸学園,横浜ビューティアート専門学校,https://www.sanko.ac.jp/yokohama-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+愛知県,三幸学園,名古屋ビューティアート専門学校,https://www.sanko.ac.jp/nagoya-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+大阪府,三幸学園,大阪ビューティアート専門学校,https://www.sanko.ac.jp/osaka-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+広島県,三幸学園,広島ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/hiroshima-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡ビューティアート専門学校,https://www.sanko.ac.jp/fukuoka-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+沖縄県,三幸学園,沖縄ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/okinawa-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+千葉県,三幸学園,千葉こども専門学校,https://www.sanko.ac.jp/chiba-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+兵庫県,三幸学園,神戸元町こども専門学校,https://www.sanko.ac.jp/kobe-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡こども専門学校,https://www.sanko.ac.jp/fukuoka-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡ウェディング＆ブライダル専門学校,https://www.sanko.ac.jp/fukuoka-bridal/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
