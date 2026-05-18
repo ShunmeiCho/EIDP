@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+import eidp.scraper.pdf_discovery as pdf_discovery_module
 from eidp.db.models import Base, CrawlJob, Document, School, SchoolSite
 from eidp.fiscal_year import JapaneseEra, active_japanese_eras, configure_japanese_eras
 from eidp.scraper.pdf_discovery import (
@@ -460,6 +461,43 @@ def test_extract_pdf_links_adds_table_header_context_for_generic_pdf_links() -> 
     assert "修学支援新制度" in application.anchor_text
     assert not _has_target_application_hint(subject)
     assert _has_target_application_hint(application)
+
+
+def test_extract_pdf_links_adds_table_row_school_context_for_mismatch_filtering() -> None:
+    html = """
+    <table>
+      <tr>
+        <th>学校名</th>
+        <th>確認申請書</th>
+      </tr>
+      <tr>
+        <td>山形スポーツ医療福祉専門学校</td>
+        <td><a href="pdf/yamagata-2026.pdf">PDF</a></td>
+      </tr>
+      <tr>
+        <td>大原医療秘書福祉専門学校大宮校</td>
+        <td><a href="pdf/omiya-2026.pdf">PDF</a></td>
+      </tr>
+    </table>
+    """
+
+    candidates = _extract_pdf_links(
+        html,
+        "https://www.o-hara.ac.jp/about/joho/",
+        target_fiscal_year=2026,
+    )
+
+    other, target = candidates
+    assert "山形スポーツ医療福祉専門学校" in other.anchor_text
+    assert "大原医療秘書福祉専門学校大宮校" in target.anchor_text
+    assert pdf_discovery_module._candidate_mentions_different_school(
+        other,
+        "大原医療秘書福祉専門学校大宮校",
+    )
+    assert not pdf_discovery_module._candidate_mentions_different_school(
+        target,
+        "大原医療秘書福祉専門学校大宮校",
+    )
 
 
 def test_extract_pdf_links_keeps_previous_support_year_statement_for_application_link() -> None:
@@ -3271,6 +3309,53 @@ def test_run_pdf_discovery_duplicate_only_is_success_not_failed(monkeypatch, tmp
         session.close()
 
 
+def test_run_pdf_discovery_same_school_duplicate_preserves_existing_file(
+    monkeypatch, tmp_path: Path
+) -> None:
+    session = _session()
+    existing_pdf = tmp_path / "pdfs" / "1" / "samehash.pdf"
+    existing_pdf.parent.mkdir(parents=True)
+    existing_pdf.write_bytes(b"%PDF-" + b"x" * 2000)
+    try:
+        session.add(SchoolSite(school_id=1, url="https://example.ac.jp/disclosure/", http_status=200))
+        session.add(
+            Document(
+                school_id=1,
+                source_url="https://example.ac.jp/kakunin.pdf",
+                file_hash="samehash",
+                file_path=str(existing_pdf),
+                pdf_type="target",
+                ingest_status="pending",
+                fiscal_year=2025,
+            )
+        )
+        session.flush()
+        duplicate = PdfCandidate(
+            pdf_url="https://example.ac.jp/kakunin-copy.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            anchor_text="確認申請書",
+            score=10.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[duplicate], best=duplicate)
+
+        def fake_download(_client, _candidate: PdfCandidate, _storage_dir: Path, _school_id: int):
+            return str(existing_pdf), "samehash", existing_pdf.stat().st_size, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(session, tmp_path, batch_size=10, rate_limit=0)
+
+        assert stats["downloaded"] == 0
+        assert stats["skipped"] == 1
+        assert existing_pdf.exists()
+        assert session.query(Document).count() == 1
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_reuses_rejected_candidate_within_same_school(monkeypatch, tmp_path: Path) -> None:
     """Duplicate candidates in one school should not re-download the same rejected PDF."""
 
@@ -5307,6 +5392,38 @@ def test_download_pdf_rejects_stale_body_document_year_despite_target_url_hint(
     assert reason == "fiscal_year_mismatch:2024"
 
 
+def test_download_pdf_rejects_adjacent_stale_body_year_despite_target_url_hint(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("2024年度\n高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/public_info/2025/kakunin_shinsei.pdf",
+        page_url="https://example.ac.jp/public_info/2025/",
+        anchor_text="2025年度 確認申請書",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "fiscal_year_mismatch:2024"
+
+
 def test_download_pdf_rejects_stale_year_from_adjacent_html_context(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -5553,6 +5670,31 @@ def test_pre_download_rejects_stale_disclosure_path_year_for_target_form() -> No
     assert rejection is not None
     assert rejection.pdf_type == "target"
     assert rejection.reason == "fiscal_year_mismatch:2024"
+
+
+def test_pre_download_keeps_target_form_when_target_path_hint_overrides_noisy_year(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.sca.ac.jp/school/public_info_2025/pdf/12/confirmation_application.pdf",
+        page_url="https://www.sca.ac.jp/school/public_info/",
+        anchor_text="申請書様式第2号 修学支援に関する法律（令和元年法律第8号）",
+        score=4.5,
+    )
+    monkeypatch.setattr(
+        pdf_discovery_module,
+        "_fiscal_year_from_strong_candidate_hint",
+        lambda _text, *, target_year: 2019,
+    )
+    monkeypatch.setattr(
+        pdf_discovery_module,
+        "_has_explicit_stale_fiscal_year_label",
+        lambda _candidate, *, target_year: False,
+    )
+
+    rejection = _pre_download_rejection(candidate, target_year=2025)
+
+    assert rejection is None
 
 
 def test_download_pdf_does_not_treat_anchor_publication_date_as_fiscal_year(

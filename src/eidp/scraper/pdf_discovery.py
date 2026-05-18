@@ -928,6 +928,11 @@ def _pre_download_rejection(candidate: PdfCandidate, *, target_year: int) -> Cac
             reason="pre_filtered_non_target_hint",
         )
     if detected_year is not None and detected_year != target_year and _has_target_application_hint(candidate):
+        if _has_disclosure_path_target_year_hint(
+            candidate,
+            target_year=target_year,
+        ) and not _has_explicit_stale_fiscal_year_label(candidate, target_year=target_year):
+            return None
         return CachedPdfRejection(
             pdf_type="target",
             reason=f"fiscal_year_mismatch:{detected_year}",
@@ -1076,9 +1081,11 @@ def _sample_has_explicit_stale_target_document_year(sample_text: str, *, target_
 
     normed = unicodedata.normalize("NFKC", sample_text)
     target_form_markers = ("確認申請", "更新確認申請", "様式第2号", "様式2号", "機関要件")
-    for line in normed.splitlines():
-        if not any(marker in line for marker in target_form_markers):
-            continue
+    lines = normed.splitlines()
+
+    def _line_has_stale_year(line: str) -> bool:
+        if _YEAR_LABEL_REJECT_CONTEXT_RE.search(line):
+            return False
         fiscal_year = fiscal_year_from_japanese_era_text(
             line,
             include_fiscal_year_labels=True,
@@ -1089,6 +1096,14 @@ def _sample_has_explicit_stale_target_document_year(sample_text: str, *, target_
         for match in re.finditer(r"(?<!\d)(20\d{2})\s*年度", line):
             year = int(match.group(1))
             if max(MIN_SUPPORTED_FISCAL_YEAR, target_year - 8) <= year < target_year:
+                return True
+        return False
+
+    for index, line in enumerate(lines):
+        if not any(marker in line for marker in target_form_markers):
+            continue
+        for nearby in lines[max(0, index - 1) : min(len(lines), index + 2)]:
+            if _line_has_stale_year(nearby):
                 return True
     return False
 
@@ -1222,7 +1237,7 @@ def _extract_pdf_sample_text(content: bytes) -> str:
 _FILING_DATE_CONTEXT_RE = re.compile(r"(提出日|提出年月日|申請日|申請年月日|届出日|届出年月日|作成日|作成年月日)")
 _FILING_DATE_REJECT_CONTEXT_RE = re.compile(r"(から|まで|任期|期間|在任|現職|前職|卒業|終了|修了)")
 _YEAR_LABEL_REJECT_CONTEXT_RE = re.compile(
-    r"(完成年度|から|まで|任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学)"
+    r"(完成年度|から|まで|任期|期間|在任|現職|前職|卒業|終了|修了|就職|進学|退学|時間)"
 )
 _YEAR_MONTH_DATE_SUFFIX_RE = re.compile(r"\s*年\s*\d{1,2}\s*月")
 _LAW_REFERENCE_SUFFIX_RE = re.compile(r"\s*年\s*法律\s*第?\s*\d+\s*号")
@@ -1720,6 +1735,8 @@ def _pdf_element_context_text(html: str, match: re.Match[str], element_text: str
             ):
                 parts.append(section_context)
         if tag == "tr":
+            if current_text and _candidate_named_school_labels(current_text) and current_text not in parts:
+                parts.append(current_text)
             section_heading = _table_section_heading_context(html, block_start)
             if section_heading and section_heading not in parts:
                 parts.append(section_heading)
@@ -3066,6 +3083,19 @@ def download_pdf(
         return None, None, 0, "unknown", f"http_error:{type(e).__name__}"
 
 
+def _remove_duplicate_candidate_file(file_path: str, existing: Document | None) -> None:
+    """Remove a duplicate candidate download without deleting the canonical stored file."""
+
+    if existing is not None and existing.file_path:
+        candidate_path = Path(file_path)
+        existing_path = Path(existing.file_path)
+        if candidate_path == existing_path:
+            return
+        if candidate_path.resolve(strict=False) == existing_path.resolve(strict=False):
+            return
+    Path(file_path).unlink(missing_ok=True)
+
+
 def run_pdf_discovery(
     session: Session,
     storage_dir: Path,
@@ -3494,7 +3524,7 @@ def run_pdf_discovery(
                             reason = "duplicate_hash_other_school"
                         else:
                             reason = "duplicate_hash"
-                        Path(file_path).unlink(missing_ok=True)
+                        _remove_duplicate_candidate_file(file_path, existing)
                         record_discovery_evidence(RejectionEvidence(
                             school_id=site.school_id,
                             pdf_url=candidate.pdf_url,
@@ -3572,7 +3602,7 @@ def run_pdf_discovery(
                                     "integrity_error": "true",
                                     "error": str(exc.orig or exc),
                                 }
-                            Path(file_path).unlink(missing_ok=True)
+                            _remove_duplicate_candidate_file(file_path, existing)
                             record_discovery_evidence(RejectionEvidence(
                                 school_id=site.school_id,
                                 pdf_url=candidate.pdf_url,
