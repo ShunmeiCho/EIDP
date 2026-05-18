@@ -43,3 +43,16 @@ prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
 東京都,三幸学園,東京墨田看護専門学校,https://www.sanko.ac.jp/tokyo-nurse/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
 大阪府,三幸学園,辻学園調理製菓専門学校,https://www.sanko.ac.jp/osaka-chori/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded target PDF for operator review on 2026-05-18.
 大阪府,三幸学園,辻学園栄養専門学校,https://www.sanko.ac.jp/osaka-eiyo/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
+福岡県,麻生塾,麻生情報ビジネス専門学校,https://asojuku.ac.jp/about/disclosure/abcc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生外語観光&ブライダル専門学校,https://asojuku.ac.jp/about/disclosure/aftc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生医療福祉&保育専門学校福岡校,https://asojuku.ac.jp/about/disclosure/amfc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay found target PDF on 2026-05-19.
+福岡県,麻生塾,麻生建築&デザイン専門学校,https://asojuku.ac.jp/about/disclosure/aadc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生公務員専門学校福岡校,https://asojuku.ac.jp/about/disclosure/apfc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,ASOポップカルチャー専門学校,https://asojuku.ac.jp/about/disclosure/apc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生美容専門学校,https://asojuku.ac.jp/about/disclosure/abc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生リハビリテーション大学校,https://asojuku.ac.jp/about/disclosure/arc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生工科自動車大学校,https://asojuku.ac.jp/about/disclosure/acet/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生情報ビジネス専門学校北九州校,https://asojuku.ac.jp/about/disclosure/abkc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生医療福祉＆観光カレッジ,https://asojuku.ac.jp/about/disclosure/amtc/,disclosure,0.98,ASO exact disclosure URL; live school portal link resolves to AMTC disclosure on 2026-05-19.
+福岡県,麻生塾,麻生公務員専門学校北九州校,https://asojuku.ac.jp/about/disclosure/apkc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生看護大学校,https://asojuku.ac.jp/about/disclosure/anc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.

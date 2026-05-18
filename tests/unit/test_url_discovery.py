@@ -244,6 +244,32 @@ def test_checked_in_school_domain_overrides_cover_sanko_exact_school_sites() -> 
     assert expected <= by_school
 
 
+def test_checked_in_school_domain_overrides_cover_aso_exact_disclosure_pages() -> None:
+    overrides = url_discovery._load_school_domain_overrides(data_dir=REPO_ROOT / "data")
+    by_school = {
+        (override.prefecture, override.school_name, override.domain_url)
+        for override in overrides
+    }
+
+    expected = {
+        ("福岡県", "麻生情報ビジネス専門学校", "https://asojuku.ac.jp/about/disclosure/abcc/"),
+        ("福岡県", "麻生外語観光&ブライダル専門学校", "https://asojuku.ac.jp/about/disclosure/aftc/"),
+        ("福岡県", "麻生医療福祉&保育専門学校福岡校", "https://asojuku.ac.jp/about/disclosure/amfc/"),
+        ("福岡県", "麻生建築&デザイン専門学校", "https://asojuku.ac.jp/about/disclosure/aadc/"),
+        ("福岡県", "麻生公務員専門学校福岡校", "https://asojuku.ac.jp/about/disclosure/apfc/"),
+        ("福岡県", "ASOポップカルチャー専門学校", "https://asojuku.ac.jp/about/disclosure/apc/"),
+        ("福岡県", "麻生美容専門学校", "https://asojuku.ac.jp/about/disclosure/abc/"),
+        ("福岡県", "専門学校麻生リハビリテーション大学校", "https://asojuku.ac.jp/about/disclosure/arc/"),
+        ("福岡県", "専門学校麻生工科自動車大学校", "https://asojuku.ac.jp/about/disclosure/acet/"),
+        ("福岡県", "麻生情報ビジネス専門学校北九州校", "https://asojuku.ac.jp/about/disclosure/abkc/"),
+        ("福岡県", "専門学校麻生医療福祉＆観光カレッジ", "https://asojuku.ac.jp/about/disclosure/amtc/"),
+        ("福岡県", "麻生公務員専門学校北九州校", "https://asojuku.ac.jp/about/disclosure/apkc/"),
+        ("福岡県", "専門学校麻生看護大学校", "https://asojuku.ac.jp/about/disclosure/anc/"),
+    }
+
+    assert expected <= by_school
+
+
 def test_checked_in_corporation_domains_cover_hachimonji_group() -> None:
     domains = url_discovery._load_corporation_domains(data_dir=REPO_ROOT / "data")
 
