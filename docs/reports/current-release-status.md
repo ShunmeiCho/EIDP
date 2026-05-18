@@ -211,6 +211,19 @@ and `68`. After ingest, rebuild, and `analyze_strict_yield_gaps.py`,
 strict/excel-ready reached `404/2418 (16.7%)` and broad confirmed reached
 `510/2418 (21.1%)`, a `+15` strict/excel-ready improvement over the v481
 status-scope baseline and `+7` over the exact-site-only Sanko replay.
+`7a418d0` adds the next safe Sanko exact-site slice and CJK variation-selector
+school-name normalization. The checked-in override set now also covers
+`大阪ウェディング＆ブライダル専門学校`, `東京墨田看護専門学校`,
+`辻学園調理製菓専門学校`, and `辻学園栄養専門学校`; current `&IT` URLs that
+appear to be rename/successor-school cases were deliberately excluded. A
+copied-DB smoke at `_temp/sanko-more-overrides-smoke-20260518_182258/` showed
+school IDs `77` and `78` now download their 2025 target PDFs with
+`candidate_school_mismatch=0`. After targeted ingest and rebuild, IDs `67`,
+`78`, and `79` were strict/excel-ready, while `77` was target-PDF
+operator-reviewable (`review_pending`, 4 rows). The copied-DB status-scope
+strict/excel-ready count reached `408/2418 (16.9%)`, with broad confirmed
+`516/2418 (21.3%)`. This is a real small improvement but remains far below the
+60-70% strict ship line.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
