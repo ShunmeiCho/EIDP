@@ -96,6 +96,52 @@ Sidebar mounts 12 pages from `src/eidp/review/app.py` + `_pages/*`. `unsafe_allo
 - **Logging**: `from eidp.logging_config import configure_logging`; entry points call once. Use `log.exception` (not `log.warning(error=str(e))`) for non-expected errors.
 - **No timeline output** in plans / runbooks unless user explicitly requests time estimates.
 
+## Engineering Goals (G1–G15)
+
+5 categories, 15 goals. Each has a measurable target and current phase. Plans, PRs, and sprint reviews track progress against these. "高性能・稳定・轻量化" alone is shallow — these 15 axes are what make EIDP production-grade.
+
+### Results
+
+- **G1 Correctness** — retroactive matrix FY2023/2024/2025 diff vs `sample/master.xlsx` = `0`; strict target PDF auto-yield (Excel-producing) ≥ `60%` at mature year; alembic head consistency check passes. [v1.0]
+- **G2 Contract integrity** — 4-table append-only `revision++` violations = `0`; `file_hash` UNIQUE violations = `0`; audit JSONL ↔ `manual_action_log` dedup = `100%`. [v1.0]
+- **G3 Data quality** — `school` unmatched < `5%`; no single `discovery_rejections` bucket dominates (each < `30%`); `parse_failed` / `image_only` / `review_pending` routed to operator queue (never silently accepted). [v1.0–v1.1]
+
+### Engineering
+
+- **G4 Maintainability** — each `src/eidp/*.py` < `800` lines (current debt: `pdf_discovery.py` 3494, `operator_pages.py` 2994 — split in v1.2); new discovery method onboarding < 1 dev-day; operator-UI test coverage ≥ `70%`. [v1.1–v1.2]
+- **G5 Observability** — `/health/full` aggregator endpoint (DB + lock + disk + last_run + audit); `log.exception` enforced for non-expected errors (no `log.warning(error=str(e))`); `silent_failure_hunter` runs in CI nightly. [v1.1]
+- **G6 Testability** — `tests/integration/` carries real on-disk SQLite + WAL contract tests; chaos tests for `kill -9 mid-run` / network partition / disk full / lock starvation; every CLI write has `--dry-run`. [v1.1–v1.3]
+- **G7 Extensibility** — `DEFAULT_METHODS` becomes a plugin registry; ingest stages are an insertable chain; LLM addon is optional with `--no-llm` deterministic flag. [v1.2]
+- **G8 Configurability** — every hard-coded threshold (60 / 30 / 0.85 / 0.70 / 0.50) moves to `ship_gate_contract.py` or `extraction_confidence.py` config; every path / timeout / batch_size / rate_limit reachable via `EIDP_*` env. **Red line**: `EIDP_TARGET_FISCAL_YEAR` never written to `.env` from settings UI. [v1.1]
+
+### Operations
+
+- **G9 Recoverability** — nightly `db-backup → fake-corrupt → restore → integrity_check` drill; crash-dump auto-collect → bug bundle → GitHub Issue (Phase 2 from `bug_signals/`); recovery time objective ≤ `30 min` for documented failure modes; `v(N-1)` lane retained side-by-side for fallback. [v1.1–v1.2]
+- **G10 Idempotency + fault tolerance** — every write helper has a `test_*_returns_lock_busy_without_writing` (enforced by `WRITE_HELPER_CALLS` AST gate); same `file_hash` re-insert → UNIQUE conflict → graceful retry; same `action_id` re-flush → dedup; weekly mid-batch crash → resume from last WAL-committed txn. [v1.0–v1.1]
+- **G11 Scheduling + human-in-loop** — Windows Task Scheduler retry-on-failure explicit (default Win = no retry); confidence < `0.70` → `review_pending` queue; `image_only` without OCR add-on → `image_pending` queue + UI banner; high-risk operator actions require two-stage confirm dialog. [v1.0–v1.1]
+- **G12 Cost / SLO** — weekly run wall-clock < `30 min`; operator manual workload ≤ `30%` of `target_missing` schools; Streamlit cold-start < `2 s`; single-weekly bandwidth < `2 GB` (≈ `2418` schools × < `1 MB`); audit/log monthly growth < `100 MB`. [v1.1]
+
+### Security
+
+- **G13 Credentials / secrets / PII** — bandit high-severity = `0`; no secrets in logs (`silent_failure_hunter` + nightly secret-scan); no hard-coded `/Users/` or `C:\Users\<name>` paths in tracked code; Streamlit binds `127.0.0.1` only. [v1.0]
+- **G14 Release integrity** — `BUILD_INFO.json` rejected if `git_commit="unknown"` or `git_dirty=true`; SHA256 sidecar required; cosign / sigstore signing (v1.2); branch protection on `main` + `sprint8-handoff-finalize` requires `Python quality gates` + `Ship gate contract` checks (already enabled). [v1.0–v1.2]
+
+### Business
+
+- **G15 Business KPI** — operator real-cycle ≥ `1` per quarter (production validation); owner sign-off required before any `v1.x` tag (no auto-tag); manual workload ≤ `30%` of `target_missing` measured monthly; Excel-producing yield ≥ `60%` at mature FY. [v1.0]
+
+### Phase mapping
+
+| Phase | Primary goals landing |
+|---|---|
+| **v1.0** (current ship) | G1 / G2 / G3 (partial) / G10 (partial) / G11 (partial) / G13 / G14 (branch protection) / G15 (initial owner cycle) |
+| **v1.1** (stability foundation) | G5 / G6 (integration tests) / G8 / G9 (backup drill) / G11 / G12 |
+| **v1.2** (operational maturity) | G4 (file split) / G7 (plugin registry) / G9 (auto-recovery) / G14 (cosign) |
+| **v1.3** (chaos hardening) | G6 (kill -9 / disk-full / partition) / G9 (drill expansion) |
+| **v2.0** (algorithm + UX) | G3 (LLM-assist) / G6 (full chaos) / G7 (multi-agent) |
+
+PRs add a single line: `Goals: G<x>, G<y>` (e.g. `Goals: G1, G10`) so sprint reviews can roll up. Plans place each task under the relevant G.
+
 ## CLI surface
 
 `pyproject.toml` `project.scripts.eidp = "eidp.cli:main"`. Subcommand modules:
