@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-import eidp.pipeline.ingest as ingest_module
 from eidp.fiscal_year import (
     JapaneseEra,
     active_japanese_eras,
@@ -18,10 +17,9 @@ def test_future_reiwa_year_is_rejected() -> None:
     assert _parse_fiscal_year_from_annotation("令和9年度", max_fiscal_year=2026) is None
 
 
-def test_default_annotation_cap_uses_configured_target(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(ingest_module.settings, "target_fiscal_year", 2027)
-
-    assert _parse_fiscal_year_from_annotation("令和9年度") == 2027
+def test_annotation_cap_must_be_explicit() -> None:
+    with pytest.raises(TypeError):
+        _parse_fiscal_year_from_annotation("令和9年度")
 
 
 def test_past_reiwa_year_is_accepted() -> None:

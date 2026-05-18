@@ -4,6 +4,7 @@ from pathlib import Path
 
 from eidp.pdf.extractor import (
     _extract_dept_identity_from_table,
+    _extract_school_name,
     _find_dept_table,
     _is_template_header_text,
     _parse_department_section,
@@ -34,6 +35,11 @@ def test_jec_enrollment_row_keeps_capacity_without_person_suffix() -> None:
     assert dept.capacity == 160
     assert dept.enrollment == 153
     assert dept.intl_students == 54
+
+
+def test_school_name_noise_strip_preserves_legitimate_leading_name_character() -> None:
+    assert _extract_school_name("学校名 名古屋医専\n設置者名 学校法人") == "名古屋医専"
+    assert _extract_school_name("学校名 称】名古屋医専\n設置者名 学校法人") == "名古屋医専"
 
 
 def test_graduation_row_with_blank_advanced_and_other_keeps_graduate_count() -> None:

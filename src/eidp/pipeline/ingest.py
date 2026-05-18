@@ -81,6 +81,26 @@ def _collapse_ws(s: str) -> str:
     return _re.sub(r"\s+", "", unicodedata.normalize("NFKC", s)).strip()
 
 
+def _collapse_school_name_variant(s: str) -> str:
+    """Normalize low-risk school-name orthographic variants for identity matching."""
+
+    return _collapse_ws(s).replace("ー", "")
+
+
+_NON_IDENTITY_SCHOOL_NAME_LABELS = frozenset({
+    "設置認可年月日",
+    "学校名",
+    "法人名",
+    "設置者名",
+})
+
+
+def _is_non_identity_school_name_label(value: str) -> bool:
+    """Return whether parser output is a form/table label, not school identity evidence."""
+
+    return _collapse_ws(value) in _NON_IDENTITY_SCHOOL_NAME_LABELS
+
+
 def _record_rejection(
     recorder: IngestEvidenceRecorder | None,
     doc: Document,
@@ -231,6 +251,8 @@ def ingest_document(
         target_school = session.query(School).filter(School.id == doc.school_id).first()
         if target_school:
             parsed_name = _norm(annotation.school_name)
+            if _is_non_identity_school_name_label(parsed_name):
+                parsed_name = ""
             target_name = _norm(target_school.school_name)
             candidate_names: list[str] = [target_name] if target_name else []
             aliases = (
@@ -253,13 +275,14 @@ def ingest_document(
                 # parser variants like '専門学校 ちば愛犬' vs DB
                 # '専門学校ちば愛犬' without requiring a SchoolAlias row.
                 parsed_c = _collapse_ws(parsed)
+                parsed_v = _collapse_school_name_variant(parsed)
                 for c in candidates:
                     if not c:
                         continue
-                    if parsed == c or parsed_c == _collapse_ws(c):
+                    c_collapsed = _collapse_ws(c)
+                    if parsed == c or parsed_c == c_collapsed or parsed_v == _collapse_school_name_variant(c):
                         return c
                     if len(c) >= min_substr_len and len(parsed) >= min_substr_len:
-                        c_collapsed = _collapse_ws(c)
                         if (
                             parsed in c
                             or c in parsed
@@ -732,17 +755,15 @@ def _parse_fiscal_year_from_annotation(
     year_str: str,
     *,
     source_url: str | None = None,
-    max_fiscal_year: int | None = None,
+    max_fiscal_year: int,
 ) -> int | None:
     """Convert fiscal-year annotations to a western year."""
     if not year_str:
         return None
 
-    cap = settings.target_fiscal_year if max_fiscal_year is None else max_fiscal_year
-
     fiscal_year = _parse_fiscal_year_candidate_from_annotation(year_str)
     if fiscal_year is not None:
-        return fiscal_year if fiscal_year <= cap else None
+        return fiscal_year if fiscal_year <= max_fiscal_year else None
     return None
 
 

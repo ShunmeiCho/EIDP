@@ -15,7 +15,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Base, Document, School, SchoolAlias
-from eidp.pdf.schema import SchoolAnnotation
+from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation
 from eidp.pipeline.ingest import ingest_document
 from eidp.pipeline.ingest_evidence import IngestEvidenceRecorder
 
@@ -145,6 +145,31 @@ def test_ingest_records_evidence_on_mismatch_including_aliases_tried(tmp_path: P
         session.close()
 
 
+def test_ingest_ignores_form_label_when_parser_misreads_school_name(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="東京", corporation_name="A",
+            school_name="東京医薬看護専門学校",
+        ))
+        doc = _setup_doc(session, b"%PDF-1.5\n" + b"x" * 2000, tmp_path)
+        fake = SchoolAnnotation(
+            school_name="設置認可年月日",
+            fiscal_year="令和7年度",
+            departments=[
+                DepartmentRecord(name="医療事務学科", capacity=40, enrollment=35, graduates=30),
+            ],
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=fake):
+            stats = ingest_document(session, doc, recorder=None)
+
+        assert doc.ingest_status != "school_mismatch"
+        assert stats.get("skip_reason") != "school_mismatch"
+    finally:
+        session.close()
+
+
 def test_ingest_match_collapses_internal_whitespace(tmp_path: Path) -> None:
     """Sprint 5 D'-2 fix: parsed school names with extra internal spaces
     around inserted Latin segments must match the DB name without
@@ -195,6 +220,28 @@ def test_ingest_match_collapses_internal_whitespace_with_latin(tmp_path: Path) -
         )
         with patch("eidp.pipeline.ingest.parse_pdf", return_value=fake):
             ingest_document(session, doc, recorder=None)
+        assert doc.ingest_status != "school_mismatch"
+    finally:
+        session.close()
+
+
+def test_ingest_match_accepts_katakana_prolonged_sound_variant(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="宮城", corporation_name="三幸",
+            school_name="仙台ビューティアート専門学校",
+        ))
+        doc = _setup_doc(session, b"%PDF-1.5\n" + b"x" * 2000, tmp_path)
+        fake = SchoolAnnotation(
+            school_name="仙台ビューティーアート専門学校",
+            fiscal_year="令和7年度",
+            departments=[],
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=fake):
+            ingest_document(session, doc, recorder=None)
+
         assert doc.ingest_status != "school_mismatch"
     finally:
         session.close()
