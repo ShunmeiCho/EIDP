@@ -194,6 +194,35 @@ def test_summarize_pdf_discovery_evidence_tracks_actionable_candidate_count(
     assert school_summary.top_actionable_reasons == [("fiscal_year_mismatch:2025", 1)]
 
 
+def test_summarize_pdf_discovery_evidence_buckets_pdf_school_mismatch_as_identity_gap(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 293,
+                "reason": "pdf_school_mismatch",
+                "pdf_type": "target",
+                "pdf_url": "https://storage-production.all-japan.dev/example/academic_support.pdf",
+                "extra": {
+                    "parsed_school_name": "東京IT会計公務員専門学校千葉校",
+                    "target_school_name": "専門学校日本鉄道＆スポーツビジネスカレッジ21",
+                },
+            }
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+    school_summary = summary.school_summaries[0]
+
+    assert summary.school_bucket_counts == {"school_identity_mismatch": 1}
+    assert school_summary.bucket == "school_identity_mismatch"
+    assert school_summary.actionable_candidate_count == 1
+    assert school_summary.top_actionable_reasons == [("pdf_school_mismatch", 1)]
+
+
 def test_summarize_pdf_discovery_evidence_rejects_weak_image_only_form_or_support_hints(
     tmp_path: Path,
 ) -> None:
