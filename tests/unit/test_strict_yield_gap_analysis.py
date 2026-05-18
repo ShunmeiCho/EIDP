@@ -17,6 +17,8 @@ def _db(path: Path) -> Path:
             """
             create table school (
                 id integer primary key,
+                prefecture text,
+                corporation_name text,
                 school_name text,
                 school_type text,
                 status text
@@ -62,13 +64,16 @@ def _db(path: Path) -> Path:
             """
         )
         conn.executemany(
-            "insert into school (id, school_name, school_type, status) values (?, ?, ?, ?)",
+            """
+            insert into school (id, prefecture, corporation_name, school_name, school_type, status)
+            values (?, ?, ?, ?, ?, ?)
+            """,
             [
-                (1, "Alpha専門学校", "専門学校", "active"),
-                (2, "Beta専門学校", "専門学校", "active"),
-                (3, "Gamma専門学校", "専門学校", "active"),
-                (4, "Delta大学", "大学", "active"),
-                (5, "Inactive専門学校", "専門学校", "inactive"),
+                (1, "東京都", "学校法人テスト", "Alpha専門学校", "専門学校", "active"),
+                (2, "東京都", "学校法人テスト", "Beta専門学校", "専門学校", "active"),
+                (3, "東京都", "学校法人テスト", "Gamma専門学校", "専門学校", "active"),
+                (4, "東京都", "学校法人テスト", "Delta大学", "大学", "active"),
+                (5, "東京都", "学校法人テスト", "Inactive専門学校", "専門学校", "inactive"),
             ],
         )
         conn.executemany(
@@ -129,6 +134,30 @@ def _db(path: Path) -> Path:
             ],
         )
     return path
+
+
+def _add_no_url_schools(conn: sqlite3.Connection) -> None:
+    conn.executemany(
+        """
+        insert into school (id, prefecture, corporation_name, school_name, school_type, status)
+        values (?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (6, "東京都", "学校法人テスト", "NoUrl A専門学校", "専門学校", "active"),
+            (7, "東京都", "学校法人テスト", "NoUrl B専門学校", "専門学校", "active"),
+        ],
+    )
+    conn.executemany(
+        """
+        insert into school_fiscal_year_status
+          (school_id, fiscal_year, url_status, pdf_status, extract_status, excel_ready, blocking_reason)
+        values (?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (6, 2025, "no_url", "none", "none", 0, "no_url"),
+            (7, 2025, "no_url", "none", "none", 0, "no_url"),
+        ],
+    )
 
 
 def test_analyze_database_reports_strict_broad_excel_and_reviewable_rates(tmp_path: Path) -> None:
@@ -211,9 +240,32 @@ def test_analyze_database_reports_strict_broad_excel_and_reviewable_rates(tmp_pa
 
 
 def test_analyze_database_reports_site_source_gap_buckets(tmp_path: Path) -> None:
-    result = module.analyze_database(_db(tmp_path / "eidp.sqlite3"), fiscal_year=2025, school_type="専門学校")
+    db_path = _db(tmp_path / "eidp.sqlite3")
+    with sqlite3.connect(db_path) as conn:
+        _add_no_url_schools(conn)
 
-    assert result["site_source_gap_buckets"][:2] == [
+    result = module.analyze_database(db_path, fiscal_year=2025, school_type="専門学校")
+
+    assert result["site_source_gap_buckets"][:3] == [
+        {
+            "url_status": "no_url",
+            "pdf_status": "none",
+            "blocking_reason": "no_url",
+            "source_host": "no_site",
+            "schools": 2,
+            "examples": [
+                {
+                    "school_id": 6,
+                    "school_name": "NoUrl A専門学校",
+                    "site_url": "",
+                },
+                {
+                    "school_id": 7,
+                    "school_name": "NoUrl B専門学校",
+                    "site_url": "",
+                },
+            ],
+        },
         {
             "url_status": "pref_url",
             "pdf_status": "confirmed_target",
@@ -245,6 +297,34 @@ def test_analyze_database_reports_site_source_gap_buckets(tmp_path: Path) -> Non
     ]
 
 
+def test_analyze_database_reports_no_url_corporation_buckets(tmp_path: Path) -> None:
+    db_path = _db(tmp_path / "eidp.sqlite3")
+    with sqlite3.connect(db_path) as conn:
+        _add_no_url_schools(conn)
+
+    result = module.analyze_database(db_path, fiscal_year=2025, school_type="専門学校")
+
+    assert result["no_url_corporation_buckets"] == [
+        {
+            "corporation_name": "学校法人テスト",
+            "schools": 2,
+            "prefectures": {"東京都": 2},
+            "examples": [
+                {
+                    "school_id": 6,
+                    "prefecture": "東京都",
+                    "school_name": "NoUrl A専門学校",
+                },
+                {
+                    "school_id": 7,
+                    "prefecture": "東京都",
+                    "school_name": "NoUrl B専門学校",
+                },
+            ],
+        }
+    ]
+
+
 def test_analyze_database_can_include_all_school_types(tmp_path: Path) -> None:
     result = module.analyze_database(_db(tmp_path / "eidp.sqlite3"), fiscal_year=2025, school_type=None)
 
@@ -257,8 +337,11 @@ def test_analyze_database_counts_discovered_candidates_as_operator_reviewable(tm
     db_path = _db(tmp_path / "eidp.sqlite3")
     with sqlite3.connect(db_path) as conn:
         conn.execute(
-            "insert into school (id, school_name, school_type, status) values (?, ?, ?, ?)",
-            (6, "Discovered専門学校", "専門学校", "active"),
+            """
+            insert into school (id, prefecture, corporation_name, school_name, school_type, status)
+            values (?, ?, ?, ?, ?, ?)
+            """,
+            (6, "東京都", "学校法人テスト", "Discovered専門学校", "専門学校", "active"),
         )
         conn.execute(
             """

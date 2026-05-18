@@ -309,6 +309,70 @@ def _site_source_gap_buckets(
     ]
 
 
+def _no_url_corporation_buckets(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+    school_ids: set[int] | None,
+) -> list[dict[str, Any]]:
+    school_type_sql, school_type_params = _school_type_clause(school_type)
+    school_ids_sql, school_ids_params = _school_ids_clause("s.school_id", school_ids)
+    rows = conn.execute(
+        f"""
+        select
+          s.school_id,
+          coalesce(sc.prefecture, ''),
+          coalesce(sc.corporation_name, ''),
+          coalesce(sc.school_name, '')
+        from school_fiscal_year_status s
+        join school sc on sc.id = s.school_id
+        where s.fiscal_year = ?
+          and sc.status = 'active'
+          and s.url_status = 'no_url'
+          and s.pdf_status = 'none'
+          and s.blocking_reason = 'no_url'
+          {school_type_sql}
+          {school_ids_sql}
+        order by sc.corporation_name, sc.prefecture, s.school_id
+        """,
+        (fiscal_year, *school_type_params, *school_ids_params),
+    ).fetchall()
+
+    grouped: dict[str, dict[str, Any]] = defaultdict(lambda: {"prefectures": defaultdict(int), "examples": []})
+    for school_id, prefecture, corporation_name, school_name in rows:
+        corp = str(corporation_name) or "unknown"
+        bucket = grouped[corp]
+        bucket["prefectures"][str(prefecture)] += 1
+        examples = bucket["examples"]
+        if len(examples) < 5:
+            examples.append(
+                {
+                    "school_id": int(school_id),
+                    "prefecture": str(prefecture),
+                    "school_name": str(school_name),
+                }
+            )
+
+    return [
+        {
+            "corporation_name": corporation_name,
+            "schools": sum(int(count) for count in bucket["prefectures"].values()),
+            "prefectures": dict(
+                sorted(
+                    bucket["prefectures"].items(),
+                    key=lambda item: (-int(item[1]), item[0]),
+                )
+            ),
+            "examples": bucket["examples"],
+        }
+        for corporation_name, bucket in sorted(
+            grouped.items(),
+            key=lambda item: (-sum(int(count) for count in item[1]["prefectures"].values()), item[0]),
+        )
+    ]
+
+
 def _yearly_row_buckets(
     conn: sqlite3.Connection,
     *,
@@ -478,6 +542,12 @@ def analyze_database(
             school_type=school_type,
             school_ids=school_ids,
         )
+        no_url_corporation_buckets = _no_url_corporation_buckets(
+            conn,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            school_ids=school_ids,
+        )
         yearly_row_buckets = _yearly_row_buckets(
             conn,
             fiscal_year=fiscal_year,
@@ -526,6 +596,7 @@ def analyze_database(
         "url_pdf_gap_buckets": url_pdf_gap_buckets,
         "school_mismatch_source_buckets": school_mismatch_source_buckets,
         "site_source_gap_buckets": site_source_gap_buckets,
+        "no_url_corporation_buckets": no_url_corporation_buckets,
         "non_ready_buckets": non_ready_buckets,
         "document_buckets": document_buckets,
         "yearly_row_buckets": yearly_row_buckets,
