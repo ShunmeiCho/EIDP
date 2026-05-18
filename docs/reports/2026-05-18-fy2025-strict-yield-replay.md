@@ -289,6 +289,56 @@ and gap analysis, strict/excel-ready rose to `404/2418 (16.7%)`, a `+15`
 strict/excel-ready improvement over the v481 status-scope baseline and `+7`
 over the exact-site-only Sanko replay.
 
+### Second Sanko Exact-Site Probe And Variation Selectors
+
+A follow-up copied-DB smoke at
+`_temp/sanko-more-overrides-smoke-20260518_182258/` tested additional live
+Sanko exact-school URLs that were not part of the first checked-in override
+set. The safe rows now added to `school_domain_overrides.csv` are:
+
+- `67` / `大阪ウェディング＆ブライダル専門学校` ->
+  `https://www.sanko.ac.jp/osaka-bridal/`
+- `79` / `東京墨田看護専門学校` ->
+  `https://www.sanko.ac.jp/tokyo-nurse/`
+- `77` / `辻学園調理製菓専門学校` ->
+  `https://www.sanko.ac.jp/osaka-chori/`
+- `78` / `辻学園栄養専門学校` ->
+  `https://www.sanko.ac.jp/osaka-eiyo/`
+
+The same smoke intentionally did not add current `&IT` school URLs for old
+medical-secretary target rows, because those hits appear to be rename /
+successor-school cases and require separate owner-reviewed identity evidence.
+
+The first discovery pass showed that the Tsuji PDFs use the ideographic
+variation selector form `辻󠄀` and interpunct-separated labels such as
+`辻󠄀学園調理・製菓専門学校`, while the Excel school master uses
+`辻学園調理製菓専門学校`. The local code now strips CJK variation selectors
+and low-risk interpuncts in school-identity normalization.
+
+Targeted discovery after that normalization:
+
+- command scope: school IDs `77` and `78`, `school_domain_override` only
+- discovery: `crawled=2`, `found=2`, `downloaded=2`, `failed=0`
+- `candidate_school_mismatch=0`
+- accepted PDFs:
+  - `https://www.sanko.ac.jp/osaka-chori/disclosure/yoshiki2025.pdf`
+  - `https://www.sanko.ac.jp/osaka-eiyo/disclosure/yoshiki2025.pdf`
+
+After targeted ingestion and rebuild:
+
+| school_id | school | status result | rows | strict/excel-ready |
+| ---: | --- | --- | ---: | --- |
+| 67 | 大阪ウェディング＆ブライダル専門学校 | `ingested` | 2 | yes |
+| 77 | 辻学園調理製菓専門学校 | `review_pending` | 4 | no; operator review required |
+| 78 | 辻学園栄養専門学校 | `ingested` | 1 | yes |
+| 79 | 東京墨田看護専門学校 | `ingested` | 1 | yes |
+
+The copied-DB rebuild reported `excel_ready=408`, and
+`analyze_strict_yield_gaps.py` reported `strict_target_parsed_schools=408`
+and `broad_confirmed_target_schools=516` on the full 2418-school status
+scope. This is a small real improvement, but still far below the 60-70%
+strict release line.
+
 ## Verification
 
 After the related local code changes and this report:
@@ -308,4 +358,27 @@ Observed:
 - `1795 passed, 5 warnings`
 - `mypy`: success, 89 source files
 - `ruff`: all checks passed for the targeted files
+- `git diff --check`: clean
+
+Additional targeted verification for the second Sanko / variation-selector
+patch:
+
+```bash
+uv run pytest tests/unit/test_url_discovery.py::test_checked_in_school_domain_overrides_cover_sanko_exact_school_sites \
+  tests/unit/test_ingest_alias_consultation.py -q
+uv run pytest tests/unit/test_pdf_discovery.py -k "school_mismatch" -q
+uv run ruff check src/eidp/scraper/pdf_discovery.py src/eidp/pipeline/ingest.py \
+  src/eidp/scraper/url_discovery.py tests/unit/test_pdf_discovery.py \
+  tests/unit/test_ingest_alias_consultation.py tests/unit/test_url_discovery.py
+uv run mypy src/eidp/scraper/pdf_discovery.py src/eidp/pipeline/ingest.py \
+  src/eidp/scraper/url_discovery.py
+git diff --check
+```
+
+Observed:
+
+- `10 passed`
+- `6 passed, 206 deselected`
+- `ruff`: all checks passed for targeted Python files
+- `mypy`: success for 3 source files
 - `git diff --check`: clean

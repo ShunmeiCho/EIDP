@@ -78,13 +78,23 @@ def _collapse_ws(s: str) -> str:
     if not s:
         return ""
     import re as _re
-    return _re.sub(r"\s+", "", unicodedata.normalize("NFKC", s)).strip()
+    normalized = unicodedata.normalize("NFKC", s)
+    normalized = _re.sub(r"[\ufe00-\ufe0f\U000e0100-\U000e01ef]", "", normalized)
+    return _re.sub(r"\s+", "", normalized).strip()
 
 
 def _collapse_school_name_variant(s: str) -> str:
     """Normalize low-risk school-name orthographic variants for identity matching."""
 
-    return _collapse_ws(s).lower().replace("アンド", "&").replace("&", "").replace("ー", "")
+    return (
+        _collapse_ws(s)
+        .lower()
+        .replace("アンド", "&")
+        .replace("&", "")
+        .replace("ー", "")
+        .replace("・", "")
+        .replace("･", "")
+    )
 
 
 _NON_IDENTITY_SCHOOL_NAME_LABELS = frozenset({

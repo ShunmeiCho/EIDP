@@ -39,3 +39,7 @@ prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
 兵庫県,三幸学園,神戸元町こども専門学校,https://www.sanko.ac.jp/kobe-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
 福岡県,三幸学園,福岡こども専門学校,https://www.sanko.ac.jp/fukuoka-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
 福岡県,三幸学園,福岡ウェディング＆ブライダル専門学校,https://www.sanko.ac.jp/fukuoka-bridal/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+大阪府,三幸学園,大阪ウェディング＆ブライダル専門学校,https://www.sanko.ac.jp/osaka-bridal/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
+東京都,三幸学園,東京墨田看護専門学校,https://www.sanko.ac.jp/tokyo-nurse/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
+大阪府,三幸学園,辻学園調理製菓専門学校,https://www.sanko.ac.jp/osaka-chori/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded target PDF for operator review on 2026-05-18.
+大阪府,三幸学園,辻学園栄養専門学校,https://www.sanko.ac.jp/osaka-eiyo/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.

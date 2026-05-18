@@ -212,6 +212,10 @@ def test_checked_in_school_domain_overrides_cover_sanko_exact_school_sites() -> 
         ("兵庫県", "神戸元町こども専門学校", "https://www.sanko.ac.jp/kobe-child/"),
         ("福岡県", "福岡こども専門学校", "https://www.sanko.ac.jp/fukuoka-child/"),
         ("福岡県", "福岡ウェディング＆ブライダル専門学校", "https://www.sanko.ac.jp/fukuoka-bridal/"),
+        ("大阪府", "大阪ウェディング＆ブライダル専門学校", "https://www.sanko.ac.jp/osaka-bridal/"),
+        ("東京都", "東京墨田看護専門学校", "https://www.sanko.ac.jp/tokyo-nurse/"),
+        ("大阪府", "辻学園調理製菓専門学校", "https://www.sanko.ac.jp/osaka-chori/"),
+        ("大阪府", "辻学園栄養専門学校", "https://www.sanko.ac.jp/osaka-eiyo/"),
     }
 
     assert expected <= by_school

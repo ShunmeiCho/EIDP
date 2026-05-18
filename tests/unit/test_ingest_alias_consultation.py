@@ -268,3 +268,26 @@ def test_ingest_match_accepts_sanko_ai_and_ampersand_variant(tmp_path: Path) -> 
         assert stats.get("skip_reason") != "school_mismatch"
     finally:
         session.close()
+
+
+def test_ingest_match_accepts_kanji_variation_selector_variant(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        session.add(School(
+            id=1, prefecture="大阪", corporation_name="三幸",
+            school_name="辻学園調理製菓専門学校",
+        ))
+        doc = _setup_doc(session, b"%PDF-1.5\n" + b"x" * 2000, tmp_path)
+        fake = SchoolAnnotation(
+            school_name="辻󠄀学園調理・製菓専門学校",
+            fiscal_year="令和7年度",
+            departments=[],
+        )
+
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=fake):
+            stats = ingest_document(session, doc, recorder=None)
+
+        assert doc.ingest_status != "school_mismatch"
+        assert stats.get("skip_reason") != "school_mismatch"
+    finally:
+        session.close()
