@@ -23,6 +23,7 @@ def _db(path: Path) -> Path:
             create table school_fiscal_year_status (
                 school_id integer,
                 fiscal_year integer,
+                url_status text,
                 pdf_status text,
                 extract_status text,
                 excel_ready integer,
@@ -66,15 +67,15 @@ def _db(path: Path) -> Path:
         conn.executemany(
             """
             insert into school_fiscal_year_status
-              (school_id, fiscal_year, pdf_status, extract_status, excel_ready, blocking_reason)
-            values (?, ?, ?, ?, ?, ?)
+              (school_id, fiscal_year, url_status, pdf_status, extract_status, excel_ready, blocking_reason)
+            values (?, ?, ?, ?, ?, ?, ?)
             """,
             [
-                (1, 2025, "confirmed_target", "parsed", 1, None),
-                (2, 2025, "confirmed_target", "manual_entered", 0, "review_required"),
-                (3, 2025, "image_pending", "ocr_pending", 0, "ocr_pending"),
-                (4, 2025, "confirmed_target", "parsed", 1, None),
-                (5, 2025, "confirmed_target", "parsed", 1, None),
+                (1, 2025, "pref_url", "confirmed_target", "parsed", 1, None),
+                (2, 2025, "pref_url", "confirmed_target", "manual_entered", 0, "review_required"),
+                (3, 2025, "unknown", "image_pending", "ocr_pending", 0, "ocr_pending"),
+                (4, 2025, "pref_url", "confirmed_target", "parsed", 1, None),
+                (5, 2025, "pref_url", "confirmed_target", "parsed", 1, None),
             ],
         )
         conn.executemany(
@@ -125,6 +126,26 @@ def test_analyze_database_reports_strict_broad_excel_and_reviewable_rates(tmp_pa
     assert result["operator_reviewable_rate_pct"] == 100.0
     assert result["estimated_manual_workload_rate_pct"] == 0.0
     assert result["non_ready_buckets"][0]["pdf_status"] == "confirmed_target"
+    assert result["url_pdf_gap_buckets"][:3] == [
+        {
+            "url_status": "pref_url",
+            "pdf_status": "confirmed_target",
+            "blocking_reason": None,
+            "schools": 1,
+        },
+        {
+            "url_status": "pref_url",
+            "pdf_status": "confirmed_target",
+            "blocking_reason": "review_required",
+            "schools": 1,
+        },
+        {
+            "url_status": "unknown",
+            "pdf_status": "image_pending",
+            "blocking_reason": "ocr_pending",
+            "schools": 1,
+        },
+    ]
     assert result["document_buckets"][0] == {
         "pdf_type": "image_only",
         "ingest_status": "parse_failed",

@@ -97,6 +97,44 @@ def _status_buckets(
     ]
 
 
+def _url_pdf_gap_buckets(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+    school_ids: set[int] | None,
+) -> list[dict[str, Any]]:
+    school_type_sql, school_type_params = _school_type_clause(school_type)
+    school_ids_sql, school_ids_params = _school_ids_clause("s.school_id", school_ids)
+    rows = conn.execute(
+        f"""
+        select
+          coalesce(s.url_status, ''),
+          coalesce(s.pdf_status, ''),
+          coalesce(s.blocking_reason, ''),
+          count(*)
+        from school_fiscal_year_status s
+        join school sc on sc.id = s.school_id
+        where s.fiscal_year = ?
+          and sc.status = 'active'
+          {school_type_sql}
+          {school_ids_sql}
+        group by s.url_status, s.pdf_status, s.blocking_reason
+        order by count(*) desc, s.url_status, s.pdf_status, s.blocking_reason
+        """,
+        (fiscal_year, *school_type_params, *school_ids_params),
+    ).fetchall()
+    return [
+        {
+            "url_status": str(url_status),
+            "pdf_status": str(pdf_status),
+            "blocking_reason": str(blocking_reason) or None,
+            "schools": int(count),
+        }
+        for url_status, pdf_status, blocking_reason, count in rows
+    ]
+
+
 def _document_buckets(
     conn: sqlite3.Connection,
     *,
@@ -280,6 +318,12 @@ def analyze_database(
             school_type=school_type,
             school_ids=school_ids,
         )
+        url_pdf_gap_buckets = _url_pdf_gap_buckets(
+            conn,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            school_ids=school_ids,
+        )
         document_buckets = _document_buckets(conn, fiscal_year=fiscal_year, school_ids=school_ids)
         yearly_row_buckets = _yearly_row_buckets(
             conn,
@@ -326,6 +370,7 @@ def analyze_database(
             round(100.0 - (operator_reviewable / total * 100.0), 1) if total else None
         ),
         "status_buckets": status_buckets,
+        "url_pdf_gap_buckets": url_pdf_gap_buckets,
         "non_ready_buckets": non_ready_buckets,
         "document_buckets": document_buckets,
         "yearly_row_buckets": yearly_row_buckets,
