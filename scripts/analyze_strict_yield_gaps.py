@@ -130,6 +130,56 @@ def _document_buckets(
     ]
 
 
+def _yearly_row_buckets(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+    school_ids: set[int] | None,
+) -> list[dict[str, Any]]:
+    school_type_sql, school_type_params = _school_type_clause(school_type)
+    school_ids_sql, school_ids_params = _school_ids_clause("d.school_id", school_ids)
+    rows = conn.execute(
+        f"""
+        select
+          coalesce(d.ingest_status, ''),
+          count(distinct d.id),
+          count(dy.id),
+          sum(case when dy.is_current then 1 else 0 end),
+          sum(case when dy.is_current and dy.capacity is not null then 1 else 0 end),
+          round(avg(case when dy.is_current then dy.extraction_confidence end), 3)
+        from document d
+        join school sc on sc.id = d.school_id
+        left join department_yearly dy on dy.document_id = d.id
+        where d.fiscal_year = ?
+          and sc.status = 'active'
+          {school_type_sql}
+          {school_ids_sql}
+        group by d.ingest_status
+        order by count(distinct d.id) desc, d.ingest_status
+        """,
+        (fiscal_year, *school_type_params, *school_ids_params),
+    ).fetchall()
+    return [
+        {
+            "ingest_status": str(ingest_status),
+            "documents": int(documents),
+            "yearly_rows": int(yearly_rows),
+            "current_rows": int(current_rows or 0),
+            "current_rows_with_capacity": int(current_rows_with_capacity or 0),
+            "avg_current_confidence": float(avg_current_confidence) if avg_current_confidence is not None else None,
+        }
+        for (
+            ingest_status,
+            documents,
+            yearly_rows,
+            current_rows,
+            current_rows_with_capacity,
+            avg_current_confidence,
+        ) in rows
+    ]
+
+
 def analyze_database(
     database: Path,
     *,
@@ -145,6 +195,12 @@ def analyze_database(
             school_ids=school_ids,
         )
         document_buckets = _document_buckets(conn, fiscal_year=fiscal_year, school_ids=school_ids)
+        yearly_row_buckets = _yearly_row_buckets(
+            conn,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            school_ids=school_ids,
+        )
 
     total = sum(bucket["count"] for bucket in status_buckets)
     strict = sum(
@@ -180,6 +236,7 @@ def analyze_database(
         "status_buckets": status_buckets,
         "non_ready_buckets": non_ready_buckets,
         "document_buckets": document_buckets,
+        "yearly_row_buckets": yearly_row_buckets,
     }
 
 

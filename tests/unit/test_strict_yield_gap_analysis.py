@@ -35,6 +35,14 @@ def _db(path: Path) -> Path:
                 pdf_type text,
                 ingest_status text
             );
+            create table department_yearly (
+                id integer primary key,
+                document_id integer,
+                fiscal_year integer,
+                is_current integer,
+                capacity integer,
+                extraction_confidence real
+            );
             """
         )
         conn.executemany(
@@ -69,6 +77,18 @@ def _db(path: Path) -> Path:
                 (3, 3, 2025, "image_only", "parse_failed"),
             ],
         )
+        conn.executemany(
+            """
+            insert into department_yearly
+              (id, document_id, fiscal_year, is_current, capacity, extraction_confidence)
+            values (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (1, 1, 2025, 1, 40, 0.94),
+                (2, 2, 2025, 1, 30, 0.94),
+                (3, 2, 2025, 0, 20, 0.54),
+            ],
+        )
     return path
 
 
@@ -91,6 +111,24 @@ def test_analyze_database_reports_strict_broad_excel_and_reviewable_rates(tmp_pa
         "fiscal_year": 2025,
         "count": 1,
     }
+    assert result["yearly_row_buckets"][:2] == [
+        {
+            "ingest_status": "ingested",
+            "documents": 1,
+            "yearly_rows": 1,
+            "current_rows": 1,
+            "current_rows_with_capacity": 1,
+            "avg_current_confidence": 0.94,
+        },
+        {
+            "ingest_status": "parse_failed",
+            "documents": 1,
+            "yearly_rows": 0,
+            "current_rows": 0,
+            "current_rows_with_capacity": 0,
+            "avg_current_confidence": None,
+        },
+    ]
 
 
 def test_analyze_database_can_include_all_school_types(tmp_path: Path) -> None:
