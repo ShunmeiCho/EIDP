@@ -12,6 +12,7 @@ from typing import Any
 OPERATOR_REVIEWABLE_PDF_STATUSES = frozenset(
     {
         "confirmed_target",
+        "discovered",
         "publication_lag",
         "target_year_unverified",
         "image_pending",

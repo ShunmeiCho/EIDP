@@ -200,6 +200,26 @@ def test_analyze_database_can_include_all_school_types(tmp_path: Path) -> None:
     assert result["excel_ready_schools"] == 2
 
 
+def test_analyze_database_counts_discovered_candidates_as_operator_reviewable(tmp_path: Path) -> None:
+    db_path = _db(tmp_path / "eidp.sqlite3")
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("insert into school (id, school_type, status) values (?, ?, ?)", (6, "専門学校", "active"))
+        conn.execute(
+            """
+            insert into school_fiscal_year_status
+              (school_id, fiscal_year, url_status, pdf_status, extract_status, excel_ready, blocking_reason)
+            values (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (6, 2025, "pref_url", "discovered", "none", 0, "not_extracted"),
+        )
+
+    result = module.analyze_database(db_path, fiscal_year=2025, school_type="専門学校")
+
+    assert result["schools_total"] == 4
+    assert result["operator_reviewable_schools"] == 4
+    assert result["estimated_manual_workload_rate_pct"] == 0.0
+
+
 def test_analyze_database_can_scope_to_school_ids_file(tmp_path: Path) -> None:
     school_ids = tmp_path / "school_ids.txt"
     school_ids.write_text("# replay denominator\n1\n3\n", encoding="utf-8")

@@ -455,6 +455,28 @@ def test_weekly_yield_metrics_count_image_pending_as_operator_reviewable_not_aut
     assert payload["ship_gate_status"] == "below_gate"
 
 
+def test_weekly_yield_metrics_count_discovered_candidates_as_operator_reviewable() -> None:
+    payload = module._weekly_target_pdf_yield_metrics(
+        {
+            "target_missing_school_count": 10,
+            "delta": {
+                "school_fiscal_year_status": {
+                    "confirmed_target": 4,
+                    "confirmed_target_parsed": 4,
+                    "discovered": 2,
+                    "target_year_unverified": 1,
+                },
+            },
+        }
+    )
+
+    assert payload["target_pdf_auto_acquired_count"] == 4
+    assert payload["broad_target_pdf_auto_acquired_count"] == 4
+    assert payload["operator_reviewable_count"] == 7
+    assert payload["operator_reviewable_yield_pct"] == 70.0
+    assert payload["ship_gate_status"] == "below_gate"
+
+
 def test_weekly_yield_metrics_prefer_selected_school_status_counts_over_global_delta() -> None:
     payload = module._weekly_target_pdf_yield_metrics(
         {

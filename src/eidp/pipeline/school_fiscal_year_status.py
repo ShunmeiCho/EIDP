@@ -27,6 +27,7 @@ REVIEW_STATUSES: tuple[str, ...] = (
     "school_mismatch",
 )
 OPERATOR_REVIEWABLE_PDF_STATUSES: tuple[str, ...] = (
+    "discovered",
     "publication_lag",
     "target_year_unverified",
     "image_pending",

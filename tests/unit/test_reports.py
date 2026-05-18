@@ -386,6 +386,47 @@ def test_ship_readiness_can_pass_with_review_candidate_operator_coverage() -> No
     assert rep.ok_strict is False
 
 
+def test_ship_readiness_counts_discovered_pdf_candidates_as_operator_reviewable() -> None:
+    s = _session()
+    for school_id in range(1, 11):
+        _school(s, school_id, "東京")
+        s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
+        pdf_status = (
+            "confirmed_target"
+            if school_id <= 4
+            else "publication_lag"
+            if school_id <= 5
+            else "target_year_unverified"
+            if school_id == 6
+            else "discovered"
+            if school_id == 7
+            else "none"
+        )
+        s.add(
+            SchoolFiscalYearStatus(
+                school_id=school_id,
+                fiscal_year=2026,
+                pdf_status=pdf_status,
+                excel_ready=school_id <= 4,
+                blocking_reason="not_extracted" if pdf_status == "discovered" else None,
+            )
+        )
+    for school_id in range(1, 5):
+        _doc(s, 100 + school_id, school_id, 2026, "ingested", pdf_type="target")
+        dept = _dept(s, 200 + school_id, school_id)
+        _yearly(s, 300 + school_id, dept.id, 2026, document_id=100 + school_id)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.strict_target_pdf_rate == pytest.approx(0.4)
+    assert rep.operator_reviewable_schools == 7
+    assert rep.operator_reviewable_rate == pytest.approx(0.7)
+    assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is False
+
+
 # --- extraction ------------------------------------------------------------
 
 
