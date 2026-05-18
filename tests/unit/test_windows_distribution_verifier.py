@@ -444,9 +444,11 @@ def _core_entries() -> dict[str, bytes | str]:
             "verdict = classify(breakdown.composite, thresholds_from_env())\n"
             'is_current_row = verdict in ("auto", "auto_flag")\n'
             "revision=next_revision\n"
-            "is_current=is_current_row\n"
+            "if is_current_row:\n                dy = DepartmentYearly(\n"
+            "is_current=True\n"
             'stats["yearly_review_pending"] += 1\n'
             'sr_is_current = sr_verdict in ("auto", "auto_flag")\n'
+            "if sr_is_current:\n            sr = SupportRecipient(\n"
             "support_recipient_review_pending\n"
             'stats["support_recipient_review_pending"] = 1\n'
             "if yearly_review > 0 or sr_review > 0:\n"
