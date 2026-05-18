@@ -224,6 +224,11 @@ operator-reviewable (`review_pending`, 4 rows). The copied-DB status-scope
 strict/excel-ready count reached `408/2418 (16.9%)`, with broad confirmed
 `516/2418 (21.3%)`. This is a real small improvement but remains far below the
 60-70% strict ship line.
+GitHub branch protection remains unset as of 2026-05-18: read-only
+`gh api repos/ShunmeiCho/EIDP/branches/main/protection` and
+`gh api repos/ShunmeiCho/EIDP/branches/sprint8-handoff-finalize/protection`
+both returned HTTP `404` / `Branch not protected`. No admin-side `PUT` was
+performed from this Mac-side cleanup pass.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
