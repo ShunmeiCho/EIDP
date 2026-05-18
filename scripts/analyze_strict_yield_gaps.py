@@ -238,6 +238,77 @@ def _school_mismatch_source_buckets(
     ]
 
 
+def _site_source_gap_buckets(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+    school_ids: set[int] | None,
+) -> list[dict[str, Any]]:
+    school_type_sql, school_type_params = _school_type_clause(school_type)
+    school_ids_sql, school_ids_params = _school_ids_clause("s.school_id", school_ids)
+    rows = conn.execute(
+        f"""
+        select
+          s.school_id,
+          coalesce(sc.school_name, ''),
+          coalesce(s.url_status, ''),
+          coalesce(s.pdf_status, ''),
+          coalesce(s.blocking_reason, ''),
+          coalesce(ss.url, '')
+        from school_fiscal_year_status s
+        join school sc on sc.id = s.school_id
+        left join school_site ss on ss.school_id = s.school_id
+        where s.fiscal_year = ?
+          and sc.status = 'active'
+          and case when s.excel_ready then 1 else 0 end = 0
+          {school_type_sql}
+          {school_ids_sql}
+        order by s.school_id
+        """,
+        (fiscal_year, *school_type_params, *school_ids_params),
+    ).fetchall()
+
+    grouped: dict[tuple[str, str, str, str], dict[str, Any]] = defaultdict(
+        lambda: {"school_ids": set(), "examples": []}
+    )
+    seen_school_host_keys: set[tuple[str, str, str, str, int]] = set()
+    for school_id, school_name, url_status, pdf_status, blocking_reason, site_url in rows:
+        source_host = _source_host(str(site_url)) or "no_site"
+        key = (str(url_status), str(pdf_status), str(blocking_reason), source_host)
+        dedupe_key = (*key, int(school_id))
+        if dedupe_key in seen_school_host_keys:
+            continue
+        seen_school_host_keys.add(dedupe_key)
+
+        bucket = grouped[key]
+        bucket["school_ids"].add(int(school_id))
+        examples = bucket["examples"]
+        if len(examples) < 5:
+            examples.append(
+                {
+                    "school_id": int(school_id),
+                    "school_name": str(school_name),
+                    "site_url": str(site_url),
+                }
+            )
+
+    return [
+        {
+            "url_status": url_status,
+            "pdf_status": pdf_status,
+            "blocking_reason": blocking_reason or None,
+            "source_host": source_host,
+            "schools": len(bucket["school_ids"]),
+            "examples": bucket["examples"],
+        }
+        for (url_status, pdf_status, blocking_reason, source_host), bucket in sorted(
+            grouped.items(),
+            key=lambda item: (-len(item[1]["school_ids"]), item[0]),
+        )
+    ]
+
+
 def _yearly_row_buckets(
     conn: sqlite3.Connection,
     *,
@@ -401,6 +472,12 @@ def analyze_database(
             school_type=school_type,
             school_ids=school_ids,
         )
+        site_source_gap_buckets = _site_source_gap_buckets(
+            conn,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            school_ids=school_ids,
+        )
         yearly_row_buckets = _yearly_row_buckets(
             conn,
             fiscal_year=fiscal_year,
@@ -448,6 +525,7 @@ def analyze_database(
         "status_buckets": status_buckets,
         "url_pdf_gap_buckets": url_pdf_gap_buckets,
         "school_mismatch_source_buckets": school_mismatch_source_buckets,
+        "site_source_gap_buckets": site_source_gap_buckets,
         "non_ready_buckets": non_ready_buckets,
         "document_buckets": document_buckets,
         "yearly_row_buckets": yearly_row_buckets,

@@ -30,6 +30,11 @@ def _db(path: Path) -> Path:
                 excel_ready integer,
                 blocking_reason text
             );
+            create table school_site (
+                id integer primary key,
+                school_id integer,
+                url text
+            );
             create table document (
                 id integer primary key,
                 school_id integer,
@@ -78,6 +83,14 @@ def _db(path: Path) -> Path:
                 (3, 2025, "unknown", "image_pending", "ocr_pending", 0, "ocr_pending"),
                 (4, 2025, "pref_url", "confirmed_target", "parsed", 1, None),
                 (5, 2025, "pref_url", "confirmed_target", "parsed", 1, None),
+            ],
+        )
+        conn.executemany(
+            "insert into school_site (id, school_id, url) values (?, ?, ?)",
+            [
+                (1, 1, "https://alpha.example/"),
+                (2, 2, "https://group.example/beta/"),
+                (3, 2, "https://group.example/beta/duplicate"),
             ],
         )
         conn.executemany(
@@ -193,6 +206,41 @@ def test_analyze_database_reports_strict_broad_excel_and_reviewable_rates(tmp_pa
             "schools": 1,
             "min_confidence": 0.54,
             "max_confidence": 0.54,
+        },
+    ]
+
+
+def test_analyze_database_reports_site_source_gap_buckets(tmp_path: Path) -> None:
+    result = module.analyze_database(_db(tmp_path / "eidp.sqlite3"), fiscal_year=2025, school_type="専門学校")
+
+    assert result["site_source_gap_buckets"][:2] == [
+        {
+            "url_status": "pref_url",
+            "pdf_status": "confirmed_target",
+            "blocking_reason": "review_required",
+            "source_host": "group.example",
+            "schools": 1,
+            "examples": [
+                {
+                    "school_id": 2,
+                    "school_name": "Beta専門学校",
+                    "site_url": "https://group.example/beta/",
+                },
+            ],
+        },
+        {
+            "url_status": "unknown",
+            "pdf_status": "image_pending",
+            "blocking_reason": "ocr_pending",
+            "source_host": "no_site",
+            "schools": 1,
+            "examples": [
+                {
+                    "school_id": 3,
+                    "school_name": "Gamma専門学校",
+                    "site_url": "",
+                },
+            ],
         },
     ]
 
