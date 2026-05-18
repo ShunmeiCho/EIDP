@@ -52,6 +52,12 @@ THIRD_PARTY_DIRECTORY_HOST_SUFFIXES = (
 _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}
 
 
+@dataclass(frozen=True)
+class UrlSafetyDecision:
+    safe: bool
+    reason: str
+
+
 def _dns_safety_cache_bucket() -> int:
     return int(time.monotonic() // DNS_SAFETY_CACHE_TTL_SECONDS)
 
@@ -81,42 +87,47 @@ def _resolve_host_addresses_for_safety(hostname: str, cache_bucket: int) -> tupl
     return tuple(addresses)
 
 
-def _is_safe_url(url: str) -> bool:
+def _url_safety_decision(url: str) -> UrlSafetyDecision:
     """Validate URL is http(s) and not targeting internal/cloud metadata endpoints.
 
     Performs DNS resolution to block rebinding-style hostnames (e.g.
     169.254.169.254.nip.io) that resolve to private/metadata IPs.
     """
     if not url or any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
-        return False
+        return UrlSafetyDecision(False, "invalid_characters")
     try:
         parsed = urlparse(url)
-    except Exception:
-        return False
+        hostname = (parsed.hostname or "").lower()
+    except Exception as exc:
+        log.exception("url_safety_parse_failed", error_type=type(exc).__name__)
+        return UrlSafetyDecision(False, "parse_error")
     if parsed.scheme not in ("http", "https"):
-        return False
-    hostname = (parsed.hostname or "").lower()
+        return UrlSafetyDecision(False, "unsupported_scheme")
     if not hostname:
-        return False
+        return UrlSafetyDecision(False, "missing_hostname")
     if hostname in _BLOCKED_HOSTS:
-        return False
+        return UrlSafetyDecision(False, "blocked_host")
 
     # Check if hostname is a literal IP
     try:
         ip = ipaddress.ip_address(hostname)
         if ip.is_private or ip.is_loopback or ip.is_link_local:
-            return False
+            return UrlSafetyDecision(False, "blocked_ip")
     except ValueError:
         # hostname is not an IP, resolve DNS to check actual IP
         addresses = _resolve_host_addresses_for_safety(hostname, _dns_safety_cache_bucket())
         if not addresses:
-            return False
+            return UrlSafetyDecision(False, "dns_unresolved")
         for addr in addresses:
             ip = ipaddress.ip_address(addr)
             if ip.is_private or ip.is_loopback or ip.is_link_local:
-                return False
+                return UrlSafetyDecision(False, "blocked_dns_ip")
 
-    return True
+    return UrlSafetyDecision(True, "safe")
+
+
+def _is_safe_url(url: str) -> bool:
+    return _url_safety_decision(url).safe
 
 
 def _load_corporation_domains(data_dir: Path | None = None) -> dict[str, str]:

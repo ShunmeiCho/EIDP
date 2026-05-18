@@ -273,6 +273,35 @@ def test_is_storable_operator_url_avoids_network_dependent_dns_checks() -> None:
     assert not operator_pages.is_storable_operator_url("not-a-url")
 
 
+def test_operator_url_safety_decision_distinguishes_parse_error_from_unsafe() -> None:
+    malformed = operator_pages.operator_url_safety_decision("http://[::1")
+    loopback = operator_pages.operator_url_safety_decision("http://127.0.0.1/public_info/")
+
+    assert malformed.safe is False
+    assert malformed.reason == "parse_error"
+    assert loopback.safe is False
+    assert loopback.reason == "blocked_host"
+
+
+def test_import_operator_url_csv_reports_malformed_url_separately() -> None:
+    session = _session()
+    try:
+        session.add(School(id=100, prefecture="東京", corporation_name="A法人", school_name="A大学"))
+        session.flush()
+
+        result = operator_pages.import_operator_url_csv(
+            session,
+            "school_id,url\n"
+            "100,http://[::1\n",
+        )
+
+        assert result.inserted == 0
+        assert result.skipped == 1
+        assert result.errors == ["line 2: malformed URL"]
+    finally:
+        session.close()
+
+
 def test_import_operator_url_csv_inserts_reusable_manual_urls() -> None:
     session = _session()
     try:

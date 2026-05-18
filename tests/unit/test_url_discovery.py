@@ -31,6 +31,29 @@ def test_is_safe_url_rejects_raw_control_characters_before_urlparse() -> None:
     assert not url_discovery._is_safe_url("https://example.ac.jp/\tfile.pdf")
 
 
+def test_url_safety_decision_logs_parse_errors(monkeypatch) -> None:
+    calls: list[tuple[str, dict[str, str]]] = []
+
+    class FakeLog:
+        def exception(self, event: str, **kwargs: str) -> None:
+            calls.append((event, kwargs))
+
+    monkeypatch.setattr(url_discovery, "log", FakeLog())
+
+    decision = url_discovery._url_safety_decision("http://[::1")
+
+    assert decision.safe is False
+    assert decision.reason == "parse_error"
+    assert calls == [
+        (
+            "url_safety_parse_failed",
+            {
+                "error_type": "ValueError",
+            },
+        )
+    ]
+
+
 def test_is_safe_url_uses_bounded_cached_dns_resolution(monkeypatch) -> None:
     calls: list[tuple[str, float | None]] = []
     original_timeout = socket.getdefaulttimeout()
