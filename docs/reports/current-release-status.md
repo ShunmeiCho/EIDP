@@ -1,8 +1,8 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-18
+Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v482`.
+Latest package family: `v485`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -10,21 +10,18 @@ tracked status file is included in release ZIPs, so it intentionally avoids
 embedding exact self-referential package commit / ZIP SHA values that would make
 the release-gate HEAD check stale immediately after documentation updates.
 
-Post-v480 source fixes now include checked-in weekly URL source application
-(`f54c76c`), application-style year hints (`958f156`), critical silent-failure
-logging for audit outbox / lock metadata (`948ad8e`), malformed-vs-unsafe URL
-classification (`d07c27c`), and G4/G5 documentation drift correction
-(`c115a52`). Focused verification: targeted Layer 2 pytest (`78 passed`), Ruff
-on touched modules, `uv run mypy src`, CI push + pull_request success through the
-Layer 2 documentation fix, and `git diff --check`.
-Current selected-school strict-yield check after discovery, ingest, and rebuild
-with the original FY2025 replay evidence plus the 35-school recovery evidence:
-`_temp/same-school-duplicate-restore-smoke-35/output/strict-yield-analysis-selected1000-after-exportable-review-pending-fix.json`.
-It reports FY2025 selected denominator `1000`, strict/excel-ready
-`498/1000 (49.8%)`, broad confirmed `498/1000 (49.8%)`, and
-operator-reviewable `755/1000 (75.5%)`. This is a real strict/excel-ready
-uplift from status granularity, but the strict release line remains below the
-60% gate.
+Post-v480 source fixes now include checked-in weekly URL source application,
+application-style year hints, critical silent-failure logging, malformed-vs-
+unsafe URL classification, G4/G5 documentation drift correction, strict-yield
+table/context cache fixes, ASO disclosure overrides, and NSG exact school /
+disclosure overrides through `c257abb`.
+Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
+rebuild is:
+`_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`.
+It reports denominator `1000`, strict/excel-ready `600/1000 (60.0%)`, broad
+confirmed `601/1000 (60.1%)`, operator-reviewable `798/1000 (79.8%)`, and
+estimated manual workload `20.2%`. This satisfies the mature-year strict
+Excel-importable ship line for the selected FY2025 production-scale replay.
 Current Windows active lane:
 read-only SSH probe on 2026-05-18 showed `EIDP Weekly Run` still points to
 `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat`; v480 exists only as
@@ -34,22 +31,20 @@ for the next Mac-side release gates and any future Windows side-by-side
 promotion.
 Post-status Mac-side strict-yield replay:
 `docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
-strict metric / parser / targeted discovery changes improve FY2025 limit-1000
-strict Excel-importable acquisition from `38.4%` to `38.9%` (`+5/1000` schools),
-while broad confirmed reach moves from `48.8%` to `49.4%`. This remains below
-the 60-70% strict ship line and points to dense / multibrand candidate ranking
-as the next algorithmic blocker. These are local replay results, not a packaged
-Windows active-lane proof.
+strict metric / parser / targeted discovery changes described there were an
+intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
+NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
+These are local replay results, not a Windows active-lane proof.
 Current Mac package candidate:
-`dist/eidp-windows-v482.zip`
-Current v482 SHA256 sidecar:
-`dist/eidp-windows-v482.zip.sha256`
-Current v482 package build evidence:
-`dist/eidp-windows-v482.zip` is rebuilt from `git_dirty=false` source before
-Layer 4. `dist/eidp-windows.zip` and its sidecar are refreshed as the latest
-alias during the same build. Non-Windows release gates, Windows distribution
-verifier, retroactive matrix, and production-scale strict-yield proof are the
-next Layer 4 gates; do not use v482 for owner E2E before those gates pass.
+`dist/eidp-windows-v485.zip`
+Current v485 SHA256 sidecar:
+`dist/eidp-windows-v485.zip.sha256`
+Current v485 package build evidence:
+`dist/eidp-windows-v485.zip` must be rebuilt from `git_dirty=false` source after
+this status update. `dist/eidp-windows.zip` and its sidecar should be refreshed
+as the latest alias during the same build. The authoritative package commit and
+ZIP SHA are `BUILD_INFO.json` and `dist/eidp-windows-v485.zip.sha256`;
+Windows side-by-side promotion has not yet been performed for v485.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs
