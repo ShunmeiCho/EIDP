@@ -12,13 +12,14 @@ Focused verification: `uv run pytest tests/unit/test_pdf_discovery.py -q`
 (`213 passed`), `uv run ruff check src/eidp/scraper/pdf_discovery.py
 tests/unit/test_pdf_discovery.py`, `uv run mypy
 src/eidp/scraper/pdf_discovery.py`, and `git diff --check`.
-Current selected-school strict-yield check after this fix:
-`_temp/same-school-duplicate-restore-smoke-35/output/strict-yield-analysis-selected1000.json`.
+Current selected-school strict-yield check after discovery, ingest, and rebuild
+with the original FY2025 replay evidence plus the 35-school recovery evidence:
+`_temp/same-school-duplicate-restore-smoke-35/output/strict-yield-analysis-selected1000-after-ingest-combined-evidence.json`.
 It reports FY2025 selected denominator `1000`, strict/excel-ready
-`389/1000 (38.9%)`, broad confirmed `494/1000 (49.4%)`, and
+`392/1000 (39.2%)`, broad confirmed `498/1000 (49.8%)`, and
 operator-reviewable `755/1000 (75.5%)`. This confirms the fix is a real
-resilience repair, not a strict-yield unblock. The strict release line remains
-below gate.
+resilience repair (`+3/1000` strict schools after ingest), not a strict-yield
+unblock. The strict release line remains below gate.
 Current Windows active lane:
 read-only SSH probe on 2026-05-18 showed `EIDP Weekly Run` still points to
 `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat`; v480 exists only as
