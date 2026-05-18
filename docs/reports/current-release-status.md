@@ -89,6 +89,19 @@ That negative result means the repo-local audited corporation-root evidence has
 been exhausted after the Hachimonji promotion; remaining no-url schools need new
 operator-reviewed or externally verified URL evidence rather than automatic
 domain guessing.
+`a33cd4c` adds a dense/group-page safety improvement for downloaded candidates:
+when a target-looking PDF is downloaded but its own `学校名` field names a
+different school, discovery now removes the temporary file, records
+`pdf_school_mismatch`, and continues to the next candidate instead of storing a
+Document that ingest will later mark `school_mismatch`. This keeps existing
+link-text sibling-school guardrails strict while addressing generic dense-page
+cases such as All-Japan `academic_support.pdf`, where the link text does not
+name the school and the mismatch is only visible inside the PDF body. Focused
+verification: `uv run pytest tests/unit/test_pdf_discovery.py -q` -> `205
+passed`; `uv run ruff check src/eidp/scraper/pdf_discovery.py
+tests/unit/test_pdf_discovery.py` -> clean; `uv run mypy
+src/eidp/scraper/pdf_discovery.py` -> clean. Current replay metrics are not
+updated until the FY2025 discovery replay is rerun from this source.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
