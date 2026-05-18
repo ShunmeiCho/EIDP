@@ -121,6 +121,14 @@ returned bucket counts `accepted_target_pdf=5` and
 `school_identity_mismatch=2`, matching the copied DB result and making the two
 remaining schools visible as identity/alias work rather than generic
 `non_target_candidates_only`.
+`1f473d3` surfaces that bucket in the operator task board as
+`学校名不一致`, so the `PDF探索ログ` filter can isolate downloaded PDFs whose
+body `学校名` disagrees with the target school. Focused verification:
+`uv run pytest tests/unit/test_review_school_year_tasks.py -k discovery_evidence
+-q` -> `4 passed`; `uv run ruff check
+src/eidp/review/_pages/school_year_tasks.py
+tests/unit/test_review_school_year_tasks.py` -> clean; `uv run mypy
+src/eidp/review/_pages/school_year_tasks.py` -> clean.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
