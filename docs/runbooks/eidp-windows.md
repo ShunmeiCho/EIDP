@@ -129,6 +129,21 @@ robocopy "$old\data" "$new\data" /E /XF ".lock" "eidp.sqlite3-wal" "eidp.sqlite3
 3. 画面上部の `実行中のパッケージ` が新版 commit を指すことを確認します。
 4. 新版で問題がないことを確認してから、旧版フォルダを削除します。
 
+管理者が side-by-side preflight だけを行い、まだ `EIDP Weekly Run` を
+新版へ切り替えない場合は、同じ PowerShell で一時的に次を設定してから
+`EIDP-setup.bat` を実行します。通常の業務員向け初回 setup では不要です。
+
+```powershell
+$env:EIDP_REGISTER_WEEKLY_TASK = "0"
+.\EIDP-setup.bat
+Remove-Item Env:EIDP_REGISTER_WEEKLY_TASK -ErrorAction SilentlyContinue
+```
+
+この場合、`.venv`、SQLite、学校マスタ、年度タスクは検証できますが、既存の
+`EIDP Weekly Run` scheduled task は旧 production root を指したまま残ります。
+active lane を切り替える時だけ、明示的に Task Scheduler の action を新版
+`scripts\weekly_run.bat` へ変更してください。
+
 ## 3. 通常起動
 
 1. `C:\EIDP\EIDP-start.bat` をダブルクリックします。

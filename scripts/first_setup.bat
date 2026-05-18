@@ -8,7 +8,8 @@ REM EIDP_APP_ROOT, creates an isolated .venv from the bundled
 REM python-build-standalone runtime, installs from the bundled
 REM wheelhouse with no network, bootstraps the SQLite database, imports
 REM the master school list (if present), and registers the weekly Task
-REM Scheduler entry.
+REM Scheduler entry unless EIDP_REGISTER_WEEKLY_TASK=0 is set for
+REM side-by-side preflight.
 
 setlocal EnableExtensions EnableDelayedExpansion
 
@@ -188,6 +189,13 @@ if errorlevel 1 (
 )
 
 REM 10. Register weekly Task Scheduler entry (Mondays 02:00 local).
+REM     Side-by-side validation can skip this step so setup does not
+REM     silently promote a candidate root to the active weekly lane.
+if /I "%EIDP_REGISTER_WEEKLY_TASK%"=="0" (
+    echo [first_setup] skipping Task Scheduler registration because EIDP_REGISTER_WEEKLY_TASK=0.
+    if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" del "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" >nul 2>nul
+    goto :after_weekly_task_registration
+)
 schtasks /Create /F /SC WEEKLY /D MON /ST 02:00 ^
     /TN "EIDP Weekly Run" ^
     /TR "\"%EIDP_APP_ROOT%\scripts\weekly_run.bat\"" >nul
@@ -197,6 +205,7 @@ if errorlevel 1 (
 ) else (
     if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" del "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" >nul 2>nul
 )
+:after_weekly_task_registration
 
 REM 11. Run the same after-setup validator used by the VM/operator gate.
 REM     This catches broken extracted installs before the operator opens

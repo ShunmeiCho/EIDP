@@ -975,6 +975,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "-m eidp.cli db-bootstrap --sqlite",
             "import-excel",
             "rebuild-school-year-tasks",
+            "EIDP_REGISTER_WEEKLY_TASK",
             "schtasks",
             "validate_install.bat",
             "--after-setup",

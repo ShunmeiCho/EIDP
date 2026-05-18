@@ -515,6 +515,14 @@ def test_first_setup_registers_weekly_task(bat_files: dict[str, str]):
     body = bat_files["first_setup.bat"]
     assert "schtasks" in body
     assert "EIDP Weekly Run" in body
+    assert "EIDP_REGISTER_WEEKLY_TASK" in body
+
+
+def test_first_setup_can_skip_weekly_task_for_side_by_side_preflight(bat_files: dict[str, str]):
+    body = bat_files["first_setup.bat"]
+    assert 'if /I "%EIDP_REGISTER_WEEKLY_TASK%"=="0"' in body
+    assert "skipping Task Scheduler registration because EIDP_REGISTER_WEEKLY_TASK=0" in body
+    assert ":after_weekly_task_registration" in body
 
 
 def test_uninstall_does_not_delete_data(bat_files: dict[str, str]):
@@ -720,6 +728,15 @@ def test_operator_runbook_documents_diagnose_validation_rcs():
     assert "report ship-readiness --json --fail-on-missing-goal" in body
     assert "--after-bootstrap" in body
     assert "--after-weekly" in body
+
+
+def test_operator_runbook_documents_side_by_side_scheduler_skip():
+    body = OPERATOR_RUNBOOK_PATH.read_text(encoding="utf-8")
+
+    assert "side-by-side preflight" in body
+    assert "EIDP_REGISTER_WEEKLY_TASK" in body
+    assert 'EIDP_REGISTER_WEEKLY_TASK = "0"' in body
+    assert "旧 production root" in body
 
 
 def test_bootstrap_pdfs_bat_invokes_pipeline_script(bat_files: dict[str, str]):
