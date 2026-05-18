@@ -44,6 +44,7 @@ jobs:
           scripts/verify_windows_distribution.py
           scripts/run_non_windows_release_gates.py
           scripts/run_retroactive_excel_matrix.py
+          scripts/analyze_strict_yield_gaps.py
           scripts/build_mature_year_acquisition_proof.py
           scripts/bootstrap_pdf_pipeline.py
           scripts/collect_stage6_evidence.py
@@ -58,6 +59,7 @@ jobs:
           tests/unit/test_fiscal_year_evidence.py
           tests/unit/test_package_init.py
           tests/unit/test_retroactive_excel_matrix.py
+          tests/unit/test_strict_yield_gap_analysis.py
           tests/unit/test_mature_year_acquisition_proof.py
           tests/unit/test_windows_install_validator.py
           tests/unit/test_non_windows_release_gates.py
