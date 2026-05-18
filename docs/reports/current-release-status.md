@@ -79,6 +79,16 @@ no-url Hachimonji schools (`420`-`423`) while leaving the existing seed CSV row
 for `424` intact. This is a small offline URL-coverage improvement; it does not
 change the current v478 package or the FY2025 strict replay numbers until the
 URL inference and downstream PDF discovery are rerun.
+`e642f75` adds a read-only proposal tool,
+`scripts/propose_no_url_corporation_domains.py`, to cross-check
+`no_url_corporation_buckets` against checked-in `discovered-urls-50.csv`
+corporation evidence while excluding already registered `corporation_domains`.
+Running it against the current v481 replay output produced `proposals=0` at
+`_temp/fy2025-targeted-discovery-current-20260518_144205/output/no-url-corporation-domain-proposals-v482.json`.
+That negative result means the repo-local audited corporation-root evidence has
+been exhausted after the Hachimonji promotion; remaining no-url schools need new
+operator-reviewed or externally verified URL evidence rather than automatic
+domain guessing.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
