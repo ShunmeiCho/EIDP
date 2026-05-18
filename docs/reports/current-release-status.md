@@ -70,6 +70,15 @@ corporation-domain / school-domain seed additions as the next offline-safe URL
 coverage task. The current Mac environment has no Scrapling optional runtime
 and no Brave/Google/Serper API key, so `school_url_auto_crawl` is not available
 as a reliable local v1.0 unblock path.
+`c7c23d1` promotes the checked-in `discovered-urls-50.csv` corporation evidence
+for `八文字学園` into `data/url-discovery/corporation_domains.csv`
+(`https://www.mito.ac.jp/`). A replay-DB copy smoke
+(`_temp/url-seed-smoke/eidp-hachimonji-smoke.sqlite3`) showed
+`infer_corporation_urls` adding the corporation-pattern URL for four currently
+no-url Hachimonji schools (`420`-`423`) while leaving the existing seed CSV row
+for `424` intact. This is a small offline URL-coverage improvement; it does not
+change the current v478 package or the FY2025 strict replay numbers until the
+URL inference and downstream PDF discovery are rerun.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
