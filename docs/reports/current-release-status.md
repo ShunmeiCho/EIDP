@@ -13,8 +13,9 @@ the release-gate HEAD check stale immediately after documentation updates.
 Post-v480 source fixes now include checked-in weekly URL source application,
 application-style year hints, critical silent-failure logging, malformed-vs-
 unsafe URL classification, G4/G5 documentation drift correction, strict-yield
-table/context cache fixes, ASO disclosure overrides, and NSG exact school /
-disclosure overrides through `c257abb`.
+table/context cache fixes, ASO disclosure overrides, NSG exact school /
+disclosure overrides, v485 owner-cycle helpers, and final-objective audit
+helpers through the current `sprint8-handoff-finalize` head.
 Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
 rebuild is:
 `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`.
@@ -22,13 +23,28 @@ It reports denominator `1000`, strict/excel-ready `600/1000 (60.0%)`, broad
 confirmed `601/1000 (60.1%)`, operator-reviewable `798/1000 (79.8%)`, and
 estimated manual workload `20.2%`. This satisfies the mature-year strict
 Excel-importable ship line for the selected FY2025 production-scale replay.
+Current FY2026/R8 production-scale strict-yield proof:
+`logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json`
+and `logs/win-v485-stage6/fy2026-strict-yield-rca-20260519.json` are the
+current blocking evidence. A sandbox copy of the URL-rich DB was run against a
+1,000-school denominator for target FY2026. After `607/1000` denominator
+schools, `document.fiscal_year=2026` was still `0`; even if every remaining
+school succeeded, the maximum possible strict yield would be `39.3%`, below
+the required `60.0%`. The RCA buckets are dominated by non-target 2026-hinted
+materials, sibling-school mismatches, and FY2025/R7 target-form PDFs. The
+sample probe
+`logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json`
+checked four 2026-path target-looking PDFs and found only `令和6年度` text,
+so URL/upload-date hints cannot be counted as FY2026 success.
 Current Windows active lane:
-read-only SSH probe on 2026-05-18 showed `EIDP Weekly Run` still points to
-`C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat`; v480 exists only as
-side-by-side `%USERPROFILE%\EIDP-v480-d5eb115` plus staging ZIP. Do not promote
-v480 as-is after the post-v480 runtime fixes above. Use the v482 package below
-for the next Mac-side release gates and any future Windows side-by-side
-promotion.
+read-only SSH probes on 2026-05-19 showed `EIDP Weekly Run` points to
+`C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`, with
+`C:\Users\cyo20\EIDP-v460-01e4427` retained as the fallback lane. The owner
+desktop handoff includes readiness, UI, initial PDF bootstrap, weekly batch,
+evidence collection, and evidence-folder shortcuts. The active v485 DB still
+had `school_site_count=0` and `document_count=0` in the latest readiness
+probe, so the owner must run initial PDF bootstrap before any normal weekly
+cycle.
 Post-status Mac-side strict-yield replay:
 `docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
 strict metric / parser / targeted discovery changes described there were an
@@ -40,11 +56,21 @@ Current Mac package candidate:
 Current v485 SHA256 sidecar:
 `dist/eidp-windows-v485.zip.sha256`
 Current v485 package build evidence:
-`dist/eidp-windows-v485.zip` must be rebuilt from `git_dirty=false` source after
-this status update. `dist/eidp-windows.zip` and its sidecar should be refreshed
-as the latest alias during the same build. The authoritative package commit and
-ZIP SHA are `BUILD_INFO.json` and `dist/eidp-windows-v485.zip.sha256`;
-Windows side-by-side promotion has not yet been performed for v485.
+`dist/eidp-windows-v485.zip` was built from clean source and is the current
+deployed Windows lane. Its authoritative package commit and ZIP SHA remain
+`BUILD_INFO.json` inside the ZIP and `dist/eidp-windows-v485.zip.sha256`. This
+tracked status update is newer than the v485 ZIP documentation payload; rebuild
+a v486 package only if the updated status report itself must be included in the
+distributed ZIP.
+Current release decision:
+do not merge/tag v1.0 or request owner sign-off under the strict current-FY
+FY2026 contract. The final objective audit at
+`logs/win-v485-stage6/final-objective-audit-current.json` is `ok=false` with
+three open blockers: current FY2026 production-scale strict proof, owner real
+Windows cycle evidence, and final release preflight. To continue, either keep
+v1.0 blocked until FY2026/R8 public target PDFs become available, or record an
+explicit release exception that scopes v1.0 to the mature FY2025 proof instead
+of the rolling FY2026 ship line.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs
