@@ -440,10 +440,11 @@ def test_pdf_nursing_course_name_matches_existing_medical_field_department(engin
 # ---------------------------------------------------------------------------
 
 
-def test_partial_record_lands_with_is_current_false(engine, tmp_path):
+def test_partial_record_does_not_write_department_yearly(engine, tmp_path):
     """Only 2 of 4 required fields populated → F1=0.5, F2=0.5, F3=0.7
-    (no prior wins) → composite = 0.54 → review_pending. Plan v6:
-    do not flow into Excel — assert is_current=False.
+    (no prior wins) → composite = 0.54 → review_pending. Final product
+    contract: rows below the confidence gate must not be written to
+    DepartmentYearly at all.
 
     Note: ``ingest.py`` requires ``enrollment is not None`` for a dept
     to reach the gating code at all (it filters on minimum viable
@@ -457,17 +458,13 @@ def test_partial_record_lands_with_is_current_false(engine, tmp_path):
             name="B学科", capacity=None, enrollment=35, graduates=None,
         ))
         with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
-            ingest_document(session, doc, recorder=None)
+            stats = ingest_document(session, doc, recorder=None)
         session.commit()
 
-        rows = session.query(DepartmentYearly).all()
-        assert len(rows) == 1
-        row = rows[0]
-        assert row.is_current is False, (
-            "low-confidence rows must be parked at is_current=False so they "
-            "don't surface in Excel until the operator reviews them"
-        )
-        assert float(row.extraction_confidence) < 0.70
+        assert stats["yearly_upserted"] == 0
+        assert stats["yearly_current"] == 0
+        assert stats["yearly_review_pending"] == 1
+        assert session.query(DepartmentYearly).count() == 0
 
 
 # ---------------------------------------------------------------------------
@@ -634,7 +631,7 @@ def test_image_paddleocr_ingest_keeps_provider_specific_method(engine, tmp_path)
         assert json.loads(sr.confidence_breakdown)["method"] == "ocr_paddleocr"
 
 
-def test_sr_missing_required_lands_non_current(engine, tmp_path):
+def test_sr_missing_required_does_not_write_support_recipient(engine, tmp_path):
     with Session(engine) as session:
         school = _seed_school(session)
         doc = _seed_doc(session, school.id, url="https://x/sr.pdf",
@@ -646,12 +643,13 @@ def test_sr_missing_required_lands_non_current(engine, tmp_path):
             sr=SupportRecipientRecord(annual_total=None, grand_total=None),
         )
         with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
-            ingest_document(session, doc, recorder=None)
+            stats = ingest_document(session, doc, recorder=None)
         session.commit()
 
-        sr_rows = session.query(SupportRecipient).all()
-        assert len(sr_rows) == 1
-        assert sr_rows[0].is_current is False
+        assert stats["support_recipient"] == 0
+        assert stats["support_recipient_current"] == 0
+        assert stats["support_recipient_review_pending"] == 1
+        assert session.query(SupportRecipient).count() == 0
 
 
 # ---------------------------------------------------------------------------
@@ -663,9 +661,9 @@ def test_env_override_promotes_borderline_row_to_current(
     engine, tmp_path, monkeypatch: pytest.MonkeyPatch,
 ):
     """If the operator lowers the review threshold to 0.40, a row that
-    would otherwise sit at is_current=False (composite ≈ 0.44) gets
-    promoted to current. Confirms thresholds_from_env is consulted on
-    every ingest, not cached at import."""
+    would otherwise be rejected from DepartmentYearly (composite ≈ 0.44)
+    gets promoted to current. Confirms thresholds_from_env is consulted
+    on every ingest, not cached at import."""
     monkeypatch.setenv("EIDP_CONFIDENCE_AUTO", "0.95")
     monkeypatch.setenv("EIDP_CONFIDENCE_REVIEW", "0.40")
     monkeypatch.setenv("EIDP_CONFIDENCE_REJECT", "0.20")
@@ -685,8 +683,8 @@ def test_env_override_promotes_borderline_row_to_current(
 
         rows = session.query(DepartmentYearly).all()
         assert len(rows) == 1
-        # Row would be is_current=False with default thresholds; lowered
-        # review threshold flips it to True.
+        # Row would be rejected with default thresholds; lowered review
+        # threshold flips it to True.
         assert rows[0].is_current is True
         assert float(rows[0].extraction_confidence) < 0.70
 
@@ -743,8 +741,8 @@ def test_compute_pdf_parse_breakdown_zero_required():
 
 def test_low_conf_revision_does_not_demote_existing_current(engine, tmp_path):
     """Owner P0: a low-confidence second ingest must NOT clear out the
-    previously-verified current row. Old current stays current; new
-    low-conf row lands at is_current=False alongside it."""
+    previously-verified current row. Old current stays current; the
+    low-confidence parsed revision is not written to DepartmentYearly."""
     with Session(engine) as session:
         school = _seed_school(session)
         doc1 = _seed_doc(session, school.id, url="https://x/v1.pdf",
@@ -773,17 +771,11 @@ def test_low_conf_revision_does_not_demote_existing_current(engine, tmp_path):
             .order_by(DepartmentYearly.revision)
             .all()
         )
-        assert len(rows) == 2
-        # Old revision keeps is_current=True. New low-conf revision is
-        # parked at False — Excel still sees verified data, queue sees
-        # the parked row for review.
+        assert len(rows) == 1
         assert rows[0].is_current is True, (
             "low-confidence revision must not demote the trusted current row"
         )
-        assert rows[1].is_current is False
-        # Composite proves which row is which.
         assert float(rows[0].extraction_confidence) >= 0.85
-        assert float(rows[1].extraction_confidence) < 0.70
 
 
 def test_low_conf_sr_revision_does_not_demote_existing_current(engine, tmp_path):
@@ -930,7 +922,7 @@ def test_all_low_conf_does_not_mark_school_year_status_collected(engine, tmp_pat
 
 def test_mixed_high_and_low_dept_routes_doc_to_review_pending(engine, tmp_path):
     """Owner P1: 1 high-conf dept + 1 low-conf dept → the low row is
-    parked, the high row reaches Excel, but the Document MUST surface
+    rejected from DepartmentYearly, the high row reaches Excel, but the Document MUST surface
     in PDF確認・手入力 because part of the data needs review. Previously
     such a doc was marked 'ingested' and disappeared from the queue."""
     from eidp.pipeline.ingest import run_ingestion
@@ -965,13 +957,10 @@ def test_mixed_high_and_low_dept_routes_doc_to_review_pending(engine, tmp_path):
             f"low-conf row gets operator attention; got {doc.ingest_status!r}"
         )
 
-        # Both rows exist in the DB; one is current, one is parked.
         rows = session.query(DepartmentYearly).all()
-        assert len(rows) == 2
-        currents = [r for r in rows if r.is_current]
-        parked = [r for r in rows if not r.is_current]
-        assert len(currents) == 1
-        assert len(parked) == 1
+        assert len(rows) == 1
+        assert rows[0].is_current is True
+        assert rows[0].capacity == 40
 
 
 def test_mixed_high_and_low_dept_does_not_mark_sys_collected(engine, tmp_path):
@@ -1006,7 +995,7 @@ def test_mixed_high_and_low_dept_does_not_mark_sys_collected(engine, tmp_path):
         )
         assert len(sys_rows) == 1
         assert sys_rows[0].status != "collected", (
-            "any parked row in the same fiscal_year must prevent the "
+            "any low-confidence parsed row in the same fiscal_year must prevent the "
             f"year from being declared collected; got {sys_rows[0].status!r}"
         )
 
@@ -1100,15 +1089,11 @@ def test_sr_low_conf_keeps_prior_current_when_breakdown_forced_low(
             .order_by(SupportRecipient.revision)
             .all()
         )
-        assert len(srs) == 2
-        # Old current must still be is_current=True. New low-conf row
-        # must be parked at False.
+        assert len(srs) == 1
         assert srs[0].is_current is True, (
             "low-confidence SR revision must NOT demote the prior current row"
         )
-        assert srs[1].is_current is False
         assert float(srs[0].extraction_confidence) >= 0.85
-        assert float(srs[1].extraction_confidence) < 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -1126,7 +1111,7 @@ def test_prior_collected_does_not_mask_mixed_review_pending(engine, tmp_path):
 
     Before the fix, the latest SYS revision was 'collected'. Operators
     looking at the dashboard would think the year was closed even though
-    parked rows exist for them to verify."""
+    low-confidence parsed rows still needed manual entry."""
     from eidp.db.models import SchoolYearStatus
 
     with Session(engine) as session:
@@ -1178,7 +1163,7 @@ def test_prior_collected_does_not_mask_mixed_review_pending(engine, tmp_path):
         assert len(sys_rows) == 2
         assert sys_rows[1].is_current is True
         assert sys_rows[1].status != "collected", (
-            "current ingest produced parked rows — SYS must NOT inherit "
+            "current ingest produced low-confidence rows — SYS must NOT inherit "
             f"the prior 'collected' status; got {sys_rows[1].status!r}"
         )
 

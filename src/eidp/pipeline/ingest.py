@@ -503,12 +503,6 @@ def ingest_document(
             verdict = classify(breakdown.composite, thresholds_from_env())
             is_current_row = verdict in ("auto", "auto_flag")
 
-            # Sprint 8.6.b.1 — only demote the prior trusted current row when
-            # we're inserting a row that will replace it as current. A low-
-            # confidence new revision must NOT clear out previously-verified
-            # data; instead it lands at is_current=False alongside the
-            # existing current row, and the operator can promote it from the
-            # review queue.
             if is_current_row:
                 session.query(DepartmentYearly).filter(
                     DepartmentYearly.department_id == dept.id,
@@ -516,40 +510,37 @@ def ingest_document(
                     DepartmentYearly.is_current == True,  # noqa: E712
                 ).update({"is_current": False}, synchronize_session="fetch")
 
-            dy = DepartmentYearly(
-                department_id=dept.id,
-                document_id=doc.id,
-                fiscal_year=fiscal_year,
-                revision=next_revision,
-                is_current=is_current_row,
-                capacity=dept_record.capacity,
-                enrollment=dept_record.enrollment,
-                intl_students=dept_record.intl_students,
-                graduates=dept_record.graduates,
-                advanced=dept_record.advanced,
-                employed=dept_record.employed,
-                other=dept_record.other,
-                prev_enrollment=dept_record.prev_enrollment,
-                dropouts=dept_record.dropouts,
-                dropout_rate=dept_record.dropout_rate,
-                extraction_method=extraction_method,
-                extraction_confidence=breakdown.composite,
-                confidence_breakdown=breakdown_to_json(breakdown),
-            )
-            session.add(dy)
-
-            stats["yearly_upserted"] += 1
             if is_current_row:
+                dy = DepartmentYearly(
+                    department_id=dept.id,
+                    document_id=doc.id,
+                    fiscal_year=fiscal_year,
+                    revision=next_revision,
+                    is_current=True,
+                    capacity=dept_record.capacity,
+                    enrollment=dept_record.enrollment,
+                    intl_students=dept_record.intl_students,
+                    graduates=dept_record.graduates,
+                    advanced=dept_record.advanced,
+                    employed=dept_record.employed,
+                    other=dept_record.other,
+                    prev_enrollment=dept_record.prev_enrollment,
+                    dropouts=dept_record.dropouts,
+                    dropout_rate=dept_record.dropout_rate,
+                    extraction_method=extraction_method,
+                    extraction_confidence=breakdown.composite,
+                    confidence_breakdown=breakdown_to_json(breakdown),
+                )
+                session.add(dy)
+                stats["yearly_upserted"] += 1
                 stats["yearly_current"] += 1
             else:
                 stats["yearly_review_pending"] += 1
 
     # Ingest support recipient data (対象比率)
-    # Sprint 8.2.b: append-only with revision support. Old current row is
-    # flipped to is_current=False and a new revision is inserted. The merge
-    # semantics from before are preserved: the new revision row inherits any
-    # previously-known values for fields where the PDF didn't supply one
-    # (typically Excel-imported defaults).
+    # Sprint 8.2.b: append-only with revision support for rows that pass
+    # the confidence gate. Low-confidence SR parses route to review_pending
+    # without writing business-table rows.
     if fiscal_year and annotation.support_recipient:
         sr_data = annotation.support_recipient
         existing_sr_rows = (
@@ -610,9 +601,6 @@ def ingest_document(
         sr_verdict = classify(sr_breakdown.composite, thresholds_from_env())
         sr_is_current = sr_verdict in ("auto", "auto_flag")
 
-        # Sprint 8.6.b.1 — same demote-only-if-promoting rule as
-        # DepartmentYearly. A low-confidence SR row lands beside the
-        # prior current row, never replaces it.
         if sr_is_current and current_sr is not None:
             session.query(SupportRecipient).filter(
                 SupportRecipient.school_id == doc.school_id,
@@ -620,19 +608,19 @@ def ingest_document(
                 SupportRecipient.is_current == True,  # noqa: E712
             ).update({"is_current": False}, synchronize_session="fetch")
 
-        sr = SupportRecipient(
-            school_id=doc.school_id,
-            document_id=doc.id,
-            fiscal_year=fiscal_year,
-            revision=max_sr_rev + 1,
-            is_current=sr_is_current,
-            extraction_confidence=sr_breakdown.composite,
-            confidence_breakdown=breakdown_to_json(sr_breakdown),
-            **merged_sr_fields,
-        )
-        session.add(sr)
-        stats["support_recipient"] = 1
         if sr_is_current:
+            sr = SupportRecipient(
+                school_id=doc.school_id,
+                document_id=doc.id,
+                fiscal_year=fiscal_year,
+                revision=max_sr_rev + 1,
+                is_current=True,
+                extraction_confidence=sr_breakdown.composite,
+                confidence_breakdown=breakdown_to_json(sr_breakdown),
+                **merged_sr_fields,
+            )
+            session.add(sr)
+            stats["support_recipient"] = 1
             stats["support_recipient_current"] = 1
         else:
             stats["support_recipient_review_pending"] = 1
@@ -653,9 +641,9 @@ def ingest_document(
         stats["yearly_review_pending"] == 0
         and stats["support_recipient_review_pending"] == 0
     )
-    # Sprint 8.6.b.2 — owner P1: even one parked row means the year is
-    # not "collected" yet, regardless of how many rows landed at
-    # is_current=True. Operator must finish review first.
+    # Sprint 8.6.b.2 — owner P1: even one low-confidence parsed row means
+    # the year is not "collected" yet, regardless of how many rows landed
+    # at is_current=True. Operator must finish review first.
     if stats["yearly_current"] > 0 and full_recognition and no_review_pending:
         collection_status = "collected"
     elif stats["yearly_current"] > 0:
@@ -689,7 +677,7 @@ def ingest_document(
         # ingest produced review-pending rows. Sprint 8.6.b.3 owner P1:
         # the legacy inheritance rule was masking mixed-confidence
         # downgrades, leaving SYS at 'collected' even when the latest
-        # data has parked rows that need operator review.
+        # data has low-confidence rows that need operator review.
         effective_status = collection_status
         has_review_pending = (
             stats["yearly_review_pending"] > 0
@@ -870,7 +858,7 @@ def run_ingestion(
 
                 # Sprint 8.6.b.2 — mixed-confidence routing. Owner P1: if a
                 # PDF carries one high-conf dept and one low-conf dept, the
-                # low-conf row was parked but the document was being marked
+                # low-conf row was rejected from business tables but the document was being marked
                 # ``ingested`` because yearly_current > 0. The operator
                 # would never see this PDF in PDF確認・手入力 even though
                 # part of the data needs verification. Reverse the priority:
