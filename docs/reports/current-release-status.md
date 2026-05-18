@@ -39,6 +39,18 @@ FY2024, and FY2023. The case logs
 `logs/release-gate-v480-retroactive-fy2023-reference.json` all have matching
 package/source commit `d5eb1154e55f0d73454ca86618fc0a8ac00e8aef` and business
 Excel diffs of `missing_rows=0`, `extra_rows=0`, `differing_fields=0`.
+Current v480 Windows side-by-side preflight:
+`logs/win-v480-stage6/v480-preflight-result-20260518-211343.json`, `ok=true`.
+The ZIP and sidecar were copied to `C:\EIDP-staging`; Windows SHA256 matched
+`130ab6957d2444d08b10430cbabec556a139a9194d7b72a9f4082ef41726c635`; the
+package expanded to `%USERPROFILE%\EIDP-v480-d5eb115`; `BUILD_INFO.json`
+reported `git_commit=d5eb1154e55f0d73454ca86618fc0a8ac00e8aef` and
+`git_dirty=false`; `EIDP-setup.bat` returned `rc=0`; and
+`scripts\validate_install.bat --after-setup --json` returned `ok=true`,
+`errors=[]`, `warnings=[]`. The preflight restored `EIDP Weekly Run` to the
+v460 fallback action and `stage6_recovery_check.bat` returned `ok=true` with
+`action_matches_expected=true`. This is side-by-side validation only; active
+Task Scheduler promotion was not performed.
 Previous full non-Windows release-gate package: `dist/eidp-windows-v478.zip`
 Previous v478 non-Windows release gate output:
 `_temp/v478-non-windows-release-gates.json`, `ok=true`. The ZIP was built
