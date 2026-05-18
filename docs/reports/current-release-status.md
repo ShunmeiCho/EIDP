@@ -17,7 +17,7 @@ Current Mac-core-verifier-clean package for latest package snapshot:
 Latest Mac-core-verifier-clean package: `dist/eidp-windows-v480.zip`
 Latest Mac-core package SHA256:
 `130ab6957d2444d08b10430cbabec556a139a9194d7b72a9f4082ef41726c635`
-Current Mac-core-verifier-clean package from HEAD:
+Current Mac-core-verifier-clean package from latest package source commit:
 `dist/eidp-windows-v480.zip`
 Current v480 package SHA256:
 `130ab6957d2444d08b10430cbabec556a139a9194d7b72a9f4082ef41726c635`
@@ -28,6 +28,9 @@ from `git_dirty=false` source and `BUILD_INFO.json` records commit
 `scripts/verify_windows_distribution.py --json` also passed for
 `dist/eidp-windows-v480.zip`, with `has_runtime=true`, `wheel_count=84`,
 `prefecture_seed_downloadable=47`, and ZIP SHA256 matching the sidecar.
+This status file may advance after the package source commit when documenting
+evidence. Treat v480 as fresh for runtime code at `d5eb1154...`; rebuild before
+Windows lane promotion if any non-documentation runtime source changes land.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs
