@@ -189,9 +189,14 @@ C:\Program Files\EIDP
 - `data\output\last_run.json` が作成される
 - `last_run.json` に `status=success`、`run_id`、`started_at`、`finished_at` がある
 - `last_run.json` に `current_fy`、`selection_mode`、`target_missing_school_count` がある
-- `last_run.json` に `target_pdf_auto_yield_pct`、`operator_reviewable_yield_pct`、
-  `target_pdf_auto_denominator_scope`、`ship_gate_metric_basis`、`ship_gate_status` がある
-- 週次処理の `ship_gate_metric_basis` は `weekly_operator_reviewable_acquisition` です。
+- `last_run.json` に `target_pdf_auto_yield_pct`、`strict_target_pdf_auto_yield_pct`、
+  `target_pdf_excel_ready_yield_pct`、`broad_target_pdf_auto_yield_pct`、
+  `operator_reviewable_yield_pct`、`target_pdf_auto_denominator_scope`、
+  `ship_gate_metric_basis`、`ship_gate_status` がある
+- `strict_target_pdf_auto_yield_pct` は PDF から Excel データ列が抽出できた学校だけを数え、
+  `broad_target_pdf_auto_yield_pct` は対象年度PDF候補の発見率として参考表示だけに使う
+- 週次処理の `ship_gate_metric_basis` は
+  `weekly_strict_target_pdf_and_operator_reviewable_acquisition` です。
   分母は実行前に対象年度PDFが未取得だった学校数です。
 - `selection_mode` は通常 `target_missing`
 - Excel は自動生成されない

@@ -196,11 +196,14 @@ PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キュー
   新しい対象年度 PDF を探します。
 - 新しく見つかった PDF だけを取り込みます。
 - 処理結果を `data\output\last_run.json` に保存します。
-- 真の対象年度PDFの自動取得率 (`target_pdf_auto_yield_pct`) と、旧年度最新版として
-  業務員が確認できる学校を含めたレビュー可能率 (`operator_reviewable_yield_pct`) を保存します。
-  レビュー判定 (`ship_gate_status`) はレビュー可能率で判定します。最終出荷判定では、
-  true target PDF 自動取得率の 60-70% gate を別途確認します。
-  `ship_gate_metric_basis` は週次処理では `weekly_operator_reviewable_acquisition` です。
+- strict 対象年度PDFの自動取得率 (`target_pdf_auto_yield_pct` /
+  `strict_target_pdf_auto_yield_pct`) は、PDF から Excel データ列が抽出できた学校だけを数えます。
+  Excel 出力可能率 (`target_pdf_excel_ready_yield_pct`)、
+  broad 発見率 (`broad_target_pdf_auto_yield_pct`)、および旧年度最新版として業務員が確認できる
+  学校を含めたレビュー可能率 (`operator_reviewable_yield_pct`) を保存します。
+  レビュー判定 (`ship_gate_status`) は strict 自動取得率と推定手作業率の両方で判定します。
+  `ship_gate_metric_basis` は週次処理では
+  `weekly_strict_target_pdf_and_operator_reviewable_acquisition` です。
   初回 bootstrap の `post_bootstrap_operator_reviewable_coverage` とは分母が違います。
 - PDF探索で失敗証跡が出た場合、管理者向けの Codex RCA キューを
   `data\output\target-year-discovery\{run_id}-discovery-rca-batch-plan.json`

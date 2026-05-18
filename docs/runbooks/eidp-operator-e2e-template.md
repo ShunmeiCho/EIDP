@@ -148,6 +148,9 @@ Get-ChildItem .\data\output\target-year-discovery\*-discovery-rca-batch-plan.jso
 - `validate_after_bootstrap_ship_gate_rc`
 - `ship_readiness_rc`
 - `target_pdf_auto_yield_pct`
+- `strict_target_pdf_auto_yield_pct`
+- `target_pdf_excel_ready_yield_pct`
+- `broad_target_pdf_auto_yield_pct`
 - `operator_reviewable_yield_pct`
 - `excel_ready`
 - `ship_gate_status`
@@ -350,7 +353,7 @@ Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows �
 | 手入力件数 | 記録値 | | pass / watch / fail |
 | review_pending 残件 | 記録値 | | pass / watch / fail |
 | `ship_readiness_rc` | 0 | | pass / watch / fail |
-| strict target PDF 自動取得率 | >= 60% | | pass / watch / fail |
+| strict target PDF 自動取得率（PDF から Excel データ列が抽出できた学校） | >= 60% | | pass / watch / fail |
 | 推定手作業率 | <= 30% | | pass / watch / fail |
 | release exception reason | blank or `publication_lag` | | pass / watch / fail |
 | mature-year proof JSON | required when exception is used | | pass / watch / fail |
@@ -376,8 +379,9 @@ Version-specific diagnostic-only KPI snapshot（real-cycle ではない）:
 | `found` | `5` | diagnostic pass |
 | `downloaded` | `2` | bounded pass |
 | `new_document_count` | `2` | bounded pass |
-| `target_pdf_auto_yield_pct` | `40.0` | below final 60-70% gate |
-| `ship_gate_status` | `pass` | bounded operator-reviewable basis |
+| `target_pdf_auto_yield_pct` / `strict_target_pdf_auto_yield_pct` | `40.0` | below final 60-70% gate |
+| `broad_target_pdf_auto_yield_pct` | `40.0` | discovery reach only |
+| `ship_gate_status` | `below_gate` | strict weekly basis |
 | scheduled task recovery | `ok=true`, `action_matches_expected=true` | pass |
 | evidence bundle verify | `ok=true`, `entry_count=12` | pass |
 

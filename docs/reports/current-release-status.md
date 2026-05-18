@@ -1,7 +1,15 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-17
+Updated: 2026-05-18
 Branch: `sprint8-handoff-finalize`
+Post-status Mac-side strict-yield replay:
+`docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
+strict metric / parser / targeted discovery changes improve FY2025 limit-1000
+strict Excel-importable acquisition from `38.4%` to `38.9%` (`+5/1000` schools),
+while broad confirmed reach moves from `48.8%` to `49.4%`. This remains below
+the 60-70% strict ship line and points to dense / multibrand candidate ranking
+as the next algorithmic blocker. These are local replay results, not a packaged
+Windows active-lane proof.
 Latest v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that package source: push run `25990716165` and
