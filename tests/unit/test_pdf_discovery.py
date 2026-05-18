@@ -526,6 +526,20 @@ def test_candidate_school_mismatch_allows_campus_suffix_variant() -> None:
     )
 
 
+def test_downloaded_pdf_school_mismatch_rejects_campus_suffix_sibling() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://storage-production.all-japan.dev/www.all-japan.ac.jp/2026/04/16213658/academic_support.pdf",
+        page_url="https://www.all-japan.ac.jp/disclosure/",
+        anchor_text="academic_support.pdf",
+        detected_school_name="東京ITプログラミング＆会計専門学校杉並校",
+    )
+
+    assert pdf_discovery_module._candidate_pdf_mentions_different_school(
+        candidate,
+        ["東京ITプログラミング＆会計専門学校"],
+    )
+
+
 def test_extract_pdf_links_keeps_previous_support_year_statement_for_application_link() -> None:
     html = """
     <section>

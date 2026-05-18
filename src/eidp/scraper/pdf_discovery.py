@@ -1257,7 +1257,7 @@ def _candidate_pdf_mentions_different_school(candidate: PdfCandidate, school_nam
         return False
     for school_name in school_names:
         school_label = _school_link_label(school_name)
-        if _school_label_is_same_or_campus_variant(candidate_label, school_label):
+        if candidate_label == school_label:
             return False
     return True
 
