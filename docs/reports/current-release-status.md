@@ -11,33 +11,35 @@ the 60-70% strict ship line and points to dense / multibrand candidate ranking
 as the next algorithmic blocker. These are local replay results, not a packaged
 Windows active-lane proof.
 Latest local Mac/non-Windows package snapshot:
-`32ca06bbddb503e556bcd08535a5fc0f9beb5335`
+`10e58a101ec388a5d49493a1312e1d779fe1901b`
 Current Mac-core-verifier-clean package for latest package snapshot:
-`dist/eidp-windows-v476.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v476.zip`
+`dist/eidp-windows-v477.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v477.zip`
 Latest Mac-core package SHA256:
-`74b7202a39ff3ce54aaf07fa37d715f28ba9976df4f10e4ebb0eb465320c01d5`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v476.zip`
-Latest v476 non-Windows release gate output:
-`_temp/v476-non-windows-release-gates.json`, `ok=true`. The ZIP was built
+`53298b847c4944273b98668b9fbd1429298bb7a14239bb9057cf144b525ce7b3`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v477.zip`
+Latest v477 non-Windows release gate output:
+`_temp/v477-non-windows-release-gates.json`, `ok=true`. The ZIP was built
 from `git_dirty=false` source and `BUILD_INFO.json` records the same
-`32ca06bbddb503e556bcd08535a5fc0f9beb5335` commit. This package includes the
+`10e58a101ec388a5d49493a1312e1d779fe1901b` commit. This package includes the
 confidence-gated ingest contract update: low-confidence DepartmentYearly and
 SupportRecipient parses now route to review_pending without writing business
 table rows. The packaged strict-yield gap analyzer now also reports
-`low_confidence_business_row_buckets`, so existing DBs can be audited for
-pre-v475 low-confidence business-table residue. Current-source strict yield gap
-analyzer output:
-`_temp/fy2025-targeted-discovery-current-20260518_144205/output/strict-yield-gap-analysis-v475-contract.json`
+`low_confidence_business_row_buckets` and `url_pdf_gap_buckets`, so existing DBs
+can be audited for pre-v475 low-confidence business-table residue and for
+URL/PDF discovery bottlenecks. Current-source strict yield gap analyzer output:
+`_temp/fy2025-targeted-discovery-current-20260518_144205/output/strict-yield-gap-analysis-v476-url-gaps.json`
 records full FY2025 status-scope `strict=389/2418`, `broad=494/2418`,
 `excel_ready=389/2418`, and `operator_reviewable=714/2418`; it also shows
 historical low-confidence business-table residue from the pre-v475 replay:
 `department_yearly=132` rows across `86` schools and `support_recipient=23` rows
 across `23` schools, all `review_pending` and `is_current=false`. Future
 low-confidence rows should not accumulate in Excel-facing tables before
-operator review. The next strict-yield lever remains mixed-confidence /
-partial-review handling and dense / multibrand candidate ranking rather than
-package integrity.
+operator review. The largest URL/PDF buckets are now explicit:
+`pref_url + no_target_pdf=617`, `no_url=613`, and
+`unknown + no_target_pdf=430`; therefore the next strict-yield lever is URL
+coverage and PDF candidate discovery/ranking, with mixed-confidence /
+partial-review handling as a secondary workflow lever.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
@@ -94,21 +96,22 @@ Current active-goal completion audit:
 
 Status: **NOT COMPLETE**
 
-Current local package source head `32ca06bbddb503e556bcd08535a5fc0f9beb5335` is
+Current local package source head `10e58a101ec388a5d49493a1312e1d779fe1901b` is
 Mac-validated with `1803 passed`, `mypy src` clean, CI-scope Ruff clean,
 Bandit high-severity clean, and
-`scripts/run_non_windows_release_gates.py dist/eidp-windows-v476.zip --skip-full-unit --json`
-returning `ok=true`. A clean successor package `dist/eidp-windows-v476.zip`
+`scripts/run_non_windows_release_gates.py dist/eidp-windows-v477.zip --skip-full-unit --json`
+returning `ok=true`. A clean successor package `dist/eidp-windows-v477.zip`
 was built from that head without `--allow-dirty`; `BUILD_INFO.json` records
 `git_dirty=false`, SHA256 is
-`74b7202a39ff3ce54aaf07fa37d715f28ba9976df4f10e4ebb0eb465320c01d5`, and
+`53298b847c4944273b98668b9fbd1429298bb7a14239bb9057cf144b525ce7b3`, and
 `scripts/verify_windows_distribution.py` returned `ok=true`. The package also
 updates the distribution verifier to enforce the confidence-gated ingest
 contract, so a future ZIP that reintroduces low-confidence business-table writes
 will fail package verification. It also packages a strict-yield gap analyzer
-field that surfaces low-confidence business-table residue in existing DBs. After
+field that surfaces low-confidence business-table residue and URL/PDF discovery
+buckets in existing DBs. After
 this status note, the docs-only stale-package replay path must be rerun against
-v476 if more status-only edits
+v477 if more status-only edits
 are added. The latest
 GitHub-pushed v466 package source
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195` remains CI-green on GitHub. This
