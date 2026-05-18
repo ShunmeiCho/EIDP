@@ -221,6 +221,55 @@ def test_rebuild_counts_review_pending_target_pdf_as_acquired_but_not_excel_read
         session.close()
 
 
+def test_rebuild_does_not_count_parked_low_confidence_rows_as_strict_parsed() -> None:
+    session = _session()
+    try:
+        _school(session, 1)
+        session.add(
+            Document(
+                id=1,
+                school_id=1,
+                source_url="https://s1.example/fy2026.pdf",
+                file_hash="p" * 64,
+                fiscal_year=2026,
+                pdf_type="target",
+                ingest_status="review_pending",
+            )
+        )
+        session.add(Department(id=1, school_id=1, canonical_name="情報学科"))
+        session.add(
+            DepartmentYearly(
+                department_id=1,
+                document_id=1,
+                fiscal_year=2026,
+                revision=1,
+                is_current=False,
+                capacity=40,
+                enrollment=38,
+                extraction_confidence=0.54,
+            )
+        )
+        session.commit()
+
+        stats = rebuild_school_fiscal_year_status(session, fiscal_year=2026, school_type="専門学校")
+        session.commit()
+
+        row = session.get(SchoolFiscalYearStatus, (1, 2026))
+        assert row is not None
+        assert row.pdf_status == "confirmed_target"
+        assert row.extract_status == "none"
+        assert row.excel_ready is False
+        assert stats.excel_ready == 0
+
+        counts = school_fiscal_year_status_counts(session, fiscal_year=2026, school_type="専門学校")
+        assert counts["confirmed_target"] == 1
+        assert counts["confirmed_target_parsed"] == 0
+        assert counts["confirmed_target_excel_ready"] == 0
+        assert counts["excel_ready"] == 0
+    finally:
+        session.close()
+
+
 def test_rebuild_counts_parse_failed_target_pdf_as_acquired_but_not_excel_ready() -> None:
     session = _session()
     try:
