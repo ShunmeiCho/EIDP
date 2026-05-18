@@ -55,6 +55,17 @@ def test_ci_runs_non_windows_release_gate_on_built_zip() -> None:
     assert "logs/release-gate-ci.json" in WORKFLOW
 
 
+def test_ci_exposes_ship_gate_contract_as_required_check_candidate() -> None:
+    assert "name: Ship gate contract" in WORKFLOW
+    assert "tests/unit/test_ship_gate_contract.py" in WORKFLOW
+    assert "tests/unit/test_run_weekly_target_year_discovery.py" in WORKFLOW
+    assert "tests/unit/test_mature_year_acquisition_proof.py" in WORKFLOW
+    assert "scripts/build_mature_year_acquisition_proof.py" in WORKFLOW
+    assert "logs/ship-gate-contract-ci.json" in WORKFLOW
+    assert '"target_pdf_auto_denominator_scope": "target_missing_schools_before_run"' in WORKFLOW
+    assert '"target_pdf_auto_yield_pct": 62.5' in WORKFLOW
+
+
 def test_ci_quality_gates_cover_release_critical_scripts() -> None:
     for path in RELEASE_CRITICAL_SCRIPTS:
         assert path in WORKFLOW

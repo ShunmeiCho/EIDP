@@ -122,3 +122,58 @@ jobs:
           --skip-full-unit
           --json
           --output logs/release-gate-ci.json
+
+  ship-gate:
+    name: Ship gate contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: python -m pip install --upgrade uv
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev --extra scraper-basic --extra pdf
+
+      - name: Strict ship-gate tests
+        run: >
+          uv run pytest
+          tests/unit/test_ship_gate_contract.py
+          tests/unit/test_run_weekly_target_year_discovery.py
+          tests/unit/test_mature_year_acquisition_proof.py
+          tests/unit/test_stage6_return_verifier.py
+          tests/unit/test_windows_install_validator.py
+          -q
+
+      - name: Mature-year strict-threshold smoke
+        run: |
+          mkdir -p _temp/ci-ship-gate logs
+          cat > _temp/ci-ship-gate/fy2025-last-run.json <<'JSON'
+          {
+            "status": "success",
+            "finished_at": "2026-05-18T00:00:00+00:00",
+            "dry_run": false,
+            "current_fy": 2025,
+            "target_pdf_auto_denominator_count": 1200,
+            "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
+            "target_missing_school_count": 1200,
+            "target_pdf_auto_yield_pct": 62.5,
+            "operator_reviewable_yield_pct": 70.0,
+            "ship_gate_status": "pass"
+          }
+          JSON
+          uv run python scripts/build_mature_year_acquisition_proof.py \
+            --case 2025=_temp/ci-ship-gate/fy2025-last-run.json \
+            --json \
+            --output logs/ship-gate-contract-ci.json
