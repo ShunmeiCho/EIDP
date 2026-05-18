@@ -10,15 +10,22 @@ while broad confirmed reach moves from `48.8%` to `49.4%`. This remains below
 the 60-70% strict ship line and points to dense / multibrand candidate ranking
 as the next algorithmic blocker. These are local replay results, not a packaged
 Windows active-lane proof.
-Latest v466 package source head validated by GitHub CI:
+Latest local Mac/non-Windows package snapshot:
+`3b83520904e7f5c41ceecb8e40d14a8912a206d9`
+Current Mac-core-verifier-clean package for latest package snapshot:
+`dist/eidp-windows-v470.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v470.zip`
+Latest Mac-core package SHA256:
+`49ba41d12f6f42da5e36b19d39897acdd179fcc5ff9186d8c3e24b4d474c6531`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v470.zip`
+Latest v470 non-Windows release gate output:
+`_temp/v470-non-windows-release-gates.json`, `ok=true`. The ZIP was built
+from `git_dirty=false` source and `BUILD_INFO.json` records the same
+`3b83520904e7f5c41ceecb8e40d14a8912a206d9` commit.
+Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
-Latest GitHub CI status for that package source: push run `25990716165` and
-pull-request run `25990716814` completed with `conclusion=success`
-Latest Mac/non-Windows package snapshot: `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
-Current Mac-core-verifier-clean package for latest package snapshot: `dist/eidp-windows-v466.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v466.zip`
-Latest Mac-core package SHA256: `8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v466.zip`
+Latest GitHub CI status for that v466 package source: push run `25990716165`
+and pull-request run `25990716814` completed with `conclusion=success`
 Latest v466 operator companion docs: `dist/eidp-v466-operator-docs-20260517.zip`,
 SHA256 `71a9a8d7e6616c662b499a6bea59293aab8dd6f8eb573e94efa992c32ff6c1e8`
 Latest v466 handoff manifest: `dist/eidp-v466-handoff-manifest-20260517.txt`,
@@ -71,16 +78,20 @@ Current active-goal completion audit:
 
 Status: **NOT COMPLETE**
 
-Current source head `9a5d50b556484d89b30a2c349d5ee5b01ff0f195` is CI-green on
-GitHub and locally validated with `1750 passed` / coverage `80.87%`. This
+Current local source head `3b83520904e7f5c41ceecb8e40d14a8912a206d9` is
+Mac-validated with `1795 passed`, `mypy src` clean, touched-file Ruff clean,
+Bandit high-severity clean, and
+`scripts/run_non_windows_release_gates.py dist/eidp-windows-v470.zip --json`
+returning `ok=true`. A clean successor package `dist/eidp-windows-v470.zip`
+was built from that head without `--allow-dirty`; `BUILD_INFO.json` records
+`git_dirty=false`, SHA256 is
+`49ba41d12f6f42da5e36b19d39897acdd179fcc5ff9186d8c3e24b4d474c6531`, and
+`scripts/verify_windows_distribution.py` returned `ok=true`. The latest
+GitHub-pushed v466 package source
+`9a5d50b556484d89b30a2c349d5ee5b01ff0f195` remains CI-green on GitHub. This
 removes the previous CI-red blocker caused by `python -m pip download` running
-without `pip` in the uv-managed environment. A clean successor package
-`dist/eidp-windows-v466.zip` was built from that head without `--allow-dirty`;
-`BUILD_INFO.json` records `git_dirty=false`, SHA256 is
-`8712c5b2687fa34de35c35a52b7df8bf8fe8f2ad82f153c30d24d551ac503db5`,
-`scripts/verify_windows_distribution.py` returned `ok=true`, and
-`scripts/run_non_windows_release_gates.py --skip-full-unit` returned `ok=true`.
-It was then transferred to Windows staging as
+without `pip` in the uv-managed environment.
+The v466 package was then transferred to Windows staging as
 `C:\EIDP-staging\eidp-windows-v466.zip`, SHA-checked against the same
 `8712c5b...` digest, and expanded side-by-side to
 `C:\Users\<operator>\EIDP-v466-9a5d50b`. `EIDP-setup.bat` returned `0`,
