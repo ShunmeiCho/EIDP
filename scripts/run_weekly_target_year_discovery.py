@@ -40,7 +40,7 @@ from ship_gate_contract import (  # noqa: E402
     SHIP_GATE_AUTO_YIELD_PCT,
     SHIP_GATE_OPERATOR_COVERAGE_PCT,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
-    ship_gate_status_from_operator_coverage,
+    ship_gate_status_from_weekly_metrics,
 )
 
 from eidp.config import settings  # noqa: E402
@@ -447,44 +447,71 @@ def _weekly_target_pdf_yield_metrics(summary: dict[str, Any]) -> dict[str, Any]:
     target_missing = int(summary.get("target_missing_school_count") or 0)
     delta = summary.get("delta")
     coverage_delta = delta.get("coverage") if isinstance(delta, dict) else {}
-    status_delta = delta.get("school_fiscal_year_status") if isinstance(delta, dict) else {}
-    acquired = int(
-        (status_delta or {}).get(
+    selected_status = summary.get("selected_school_fiscal_year_status")
+    status_counts = selected_status if isinstance(selected_status, dict) else None
+    if status_counts is None:
+        status_counts = delta.get("school_fiscal_year_status") if isinstance(delta, dict) else {}
+    broad_acquired = int(
+        (status_counts or {}).get(
             "confirmed_target",
             (coverage_delta or {}).get("schools_with_target_pdf_current_fy") or 0,
         )
         or 0
     )
-    acquired = max(acquired, 0)
-    review_candidate_acquired = operator_reviewable_status_count(status_delta or {})
+    broad_acquired = max(broad_acquired, 0)
+    strict_acquired = int((status_counts or {}).get("confirmed_target_parsed", broad_acquired) or 0)
+    strict_acquired = max(strict_acquired, 0)
+    excel_ready_acquired = int((status_counts or {}).get("confirmed_target_excel_ready", strict_acquired) or 0)
+    excel_ready_acquired = max(excel_ready_acquired, 0)
+    review_candidate_acquired = operator_reviewable_status_count(status_counts or {})
     if target_missing <= 0:
         return {
-            "target_pdf_auto_acquired_count": acquired,
+            "target_pdf_auto_acquired_count": strict_acquired,
             "target_pdf_auto_denominator_count": 0,
             "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
             "target_pdf_auto_yield_pct": None,
+            "strict_target_pdf_auto_acquired_count": strict_acquired,
+            "strict_target_pdf_auto_yield_pct": None,
+            "target_pdf_excel_ready_acquired_count": excel_ready_acquired,
+            "target_pdf_excel_ready_yield_pct": None,
+            "broad_target_pdf_auto_acquired_count": broad_acquired,
+            "broad_target_pdf_auto_yield_pct": None,
             "operator_reviewable_count": 0,
             "operator_reviewable_yield_pct": None,
             "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
             "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
             "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
-            "ship_gate_status": ship_gate_status_from_operator_coverage(None),
+            "ship_gate_status": ship_gate_status_from_weekly_metrics(
+                target_pdf_auto_yield_pct=None,
+                operator_reviewable_yield_pct=None,
+            ),
         }
 
-    yield_pct = round(acquired / target_missing * 100.0, 1)
-    operator_reviewable = min(acquired + review_candidate_acquired, target_missing)
+    yield_pct = round(strict_acquired / target_missing * 100.0, 1)
+    broad_yield_pct = round(broad_acquired / target_missing * 100.0, 1)
+    excel_ready_yield_pct = round(excel_ready_acquired / target_missing * 100.0, 1)
+    operator_reviewable = min(broad_acquired + review_candidate_acquired, target_missing)
     operator_reviewable_pct = round(operator_reviewable / target_missing * 100.0, 1)
     return {
-        "target_pdf_auto_acquired_count": acquired,
+        "target_pdf_auto_acquired_count": strict_acquired,
         "target_pdf_auto_denominator_count": target_missing,
         "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
         "target_pdf_auto_yield_pct": yield_pct,
+        "strict_target_pdf_auto_acquired_count": strict_acquired,
+        "strict_target_pdf_auto_yield_pct": yield_pct,
+        "target_pdf_excel_ready_acquired_count": excel_ready_acquired,
+        "target_pdf_excel_ready_yield_pct": excel_ready_yield_pct,
+        "broad_target_pdf_auto_acquired_count": broad_acquired,
+        "broad_target_pdf_auto_yield_pct": broad_yield_pct,
         "operator_reviewable_count": operator_reviewable,
         "operator_reviewable_yield_pct": operator_reviewable_pct,
         "ship_gate_auto_yield_pct": SHIP_GATE_AUTO_YIELD_PCT,
         "ship_gate_operator_coverage_pct": SHIP_GATE_OPERATOR_COVERAGE_PCT,
         "ship_gate_metric_basis": WEEKLY_SHIP_GATE_METRIC_BASIS,
-        "ship_gate_status": ship_gate_status_from_operator_coverage(operator_reviewable_pct),
+        "ship_gate_status": ship_gate_status_from_weekly_metrics(
+            target_pdf_auto_yield_pct=yield_pct,
+            operator_reviewable_yield_pct=operator_reviewable_pct,
+        ),
     }
 
 
@@ -790,6 +817,12 @@ def _run_weekly_inner(
             session.commit()
 
         after = _snapshot_reports(session, current_fy, school_type)
+        selected_status_counts = school_fiscal_year_status_counts(
+            session,
+            fiscal_year=current_fy,
+            school_type=school_type,
+            school_ids=selected_school_ids,
+        )
         discovery_rca = _write_discovery_rca_batch_plan(
             session,
             evidence_log=discovery_evidence,
@@ -814,6 +847,7 @@ def _run_weekly_inner(
             "discovery_stats": discovery_stats,
             "ingest_stats": ingest_stats,
             "school_fiscal_year_status_stats": status_stats,
+            "selected_school_fiscal_year_status": selected_status_counts,
             "before": before,
             "after": after,
             "delta": delta,

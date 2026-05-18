@@ -254,6 +254,8 @@ def test_school_task_summary_groups_operator_counts() -> None:
         assert summary.excel_ready == 1
         assert summary.needs_action == 5
         assert summary.confirmed_target == 2
+        assert summary.strict_target_parsed == 2
+        assert summary.image_pending == 1
         assert summary.target_pdf_wait == 0
         assert summary.stale_fallback == 1
         assert summary.publication_lag == 1
@@ -1081,6 +1083,12 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
         "stale_school_count": 1,
         "target_pdf_auto_acquired_count": 6,
         "target_pdf_auto_yield_pct": 60.0,
+        "strict_target_pdf_auto_acquired_count": 4,
+        "strict_target_pdf_auto_yield_pct": 40.0,
+        "target_pdf_excel_ready_acquired_count": 3,
+        "target_pdf_excel_ready_yield_pct": 30.0,
+        "broad_target_pdf_auto_acquired_count": 7,
+        "broad_target_pdf_auto_yield_pct": 70.0,
         "operator_reviewable_count": 6,
         "operator_reviewable_yield_pct": 60.0,
         "ship_gate_auto_yield_pct": 60.0,
@@ -1102,6 +1110,9 @@ def test_weekly_last_run_surfaces_discovery_rca_batch_plan() -> None:
     assert any("候補 7/12" in caption for caption in captions)
     assert any("run-discovery-rca-batch-plan.json" in caption for caption in captions)
     assert any("レビュー可能率: 60.0%" in caption for caption in captions)
+    assert any("strict自動取得: 40.0%" in caption for caption in captions)
+    assert any("Excel出力可能: 30.0%" in caption for caption in captions)
+    assert any("broad発見: 70.0%" in caption for caption in captions)
     assert any("レビュー判定: pass" in caption for caption in captions)
 
 

@@ -39,6 +39,8 @@ class SchoolTaskSummary:
     review_or_parse: int
     dept_change_review: int
     publication_lag: int = 0
+    strict_target_parsed: int = 0
+    image_pending: int = 0
 
     @property
     def needs_action(self) -> int:
@@ -468,6 +470,12 @@ def task_progress_label(summary: SchoolTaskSummary) -> str:
     )
 
 
+def _format_rate(numerator: int, denominator: int) -> str:
+    if denominator <= 0:
+        return "未測定"
+    return f"{(numerator / denominator * 100):.1f}%"
+
+
 def task_lanes_for_summary(summary: SchoolTaskSummary) -> list[TaskLane]:
     """Return the operator's top-level work lanes in recommended order."""
     return [
@@ -636,6 +644,8 @@ def school_task_summary(
     total = 0
     excel_ready = 0
     confirmed_target = 0
+    strict_target_parsed = 0
+    image_pending = 0
     target_pdf_wait = 0
     stale_fallback = 0
     publication_lag = 0
@@ -654,6 +664,10 @@ def school_task_summary(
             excel_ready += count
         if pdf_status == "confirmed_target":
             confirmed_target += count
+            if extract_status == "parsed":
+                strict_target_parsed += count
+        if pdf_status == "image_pending":
+            image_pending += count
         if blocker == "no_target_pdf":
             target_pdf_wait += count
         if blocker == "publication_lag_latest_public":
@@ -679,6 +693,8 @@ def school_task_summary(
         review_or_parse=review_or_parse,
         dept_change_review=dept_change_review,
         publication_lag=publication_lag,
+        strict_target_parsed=strict_target_parsed,
+        image_pending=image_pending,
     )
 
 
@@ -1005,14 +1021,28 @@ def bootstrap_progress_detail_lines(progress: BootstrapProgress) -> list[str]:
         auto_yield = details.get("target_pdf_auto_yield_pct")
         acquired = _int_or_default(details.get("target_pdf_auto_acquired_count"), 0)
         denominator = _int_or_default(details.get("target_pdf_auto_denominator_count"), 0)
+        strict_yield = details.get("strict_target_pdf_auto_yield_pct")
+        strict_acquired = _int_or_default(details.get("strict_target_pdf_auto_acquired_count"), acquired)
+        excel_ready_yield = details.get("target_pdf_excel_ready_yield_pct")
+        excel_ready = _int_or_default(details.get("target_pdf_excel_ready_acquired_count"), 0)
+        broad_yield = details.get("broad_target_pdf_auto_yield_pct")
+        broad_acquired = _int_or_default(details.get("broad_target_pdf_auto_acquired_count"), acquired)
         reviewable_yield = details.get("operator_reviewable_yield_pct", auto_yield)
         reviewable = _int_or_default(details.get("operator_reviewable_count"), acquired)
         gate = details.get("ship_gate_operator_coverage_pct", details.get("ship_gate_auto_yield_pct"))
         gate_status = str(details.get("ship_gate_status") or "unknown")
         if isinstance(reviewable_yield, (int, float)):
             line = f"操作員レビュー可能率: {reviewable_yield:.1f}% ({reviewable}/{denominator}校)"
-            if isinstance(auto_yield, (int, float)) and (auto_yield != reviewable_yield or acquired != reviewable):
+            if isinstance(strict_yield, (int, float)):
+                line += f" / strict自動取得 {strict_yield:.1f}% ({strict_acquired}/{denominator}校)"
+            elif isinstance(auto_yield, (int, float)) and (auto_yield != reviewable_yield or acquired != reviewable):
                 line += f" / 自動取得 {auto_yield:.1f}% ({acquired}/{denominator}校)"
+            if isinstance(excel_ready_yield, (int, float)):
+                line += f" / Excel出力可能 {excel_ready_yield:.1f}% ({excel_ready}/{denominator}校)"
+            if isinstance(broad_yield, (int, float)) and (
+                broad_yield != strict_yield or broad_acquired != strict_acquired
+            ):
+                line += f" / broad発見 {broad_yield:.1f}% ({broad_acquired}/{denominator}校)"
             if isinstance(gate, (int, float)):
                 gate_label = "達成" if gate_status == "pass" else "未達"
                 line += f" / レビュー目安 {gate:.0f}% {gate_label}"
@@ -1800,20 +1830,44 @@ def _render_weekly_last_run(payload: dict[str, Any]) -> None:
     auto_yield = payload.get("target_pdf_auto_yield_pct")
     if auto_yield is not None:
         acquired = _int_or_default(payload.get("target_pdf_auto_acquired_count"), 0)
-        target_missing = _int_or_default(payload.get("target_missing_school_count"), 0)
+        target_missing = _int_or_default(
+            payload.get("target_pdf_auto_denominator_count"),
+            _int_or_default(payload.get("target_missing_school_count"), 0),
+        )
+        strict_yield = payload.get("strict_target_pdf_auto_yield_pct")
+        strict_acquired = _int_or_default(payload.get("strict_target_pdf_auto_acquired_count"), acquired)
+        excel_ready_yield = payload.get("target_pdf_excel_ready_yield_pct")
+        excel_ready = _int_or_default(payload.get("target_pdf_excel_ready_acquired_count"), 0)
+        broad_yield = payload.get("broad_target_pdf_auto_yield_pct")
+        broad_acquired = _int_or_default(payload.get("broad_target_pdf_auto_acquired_count"), acquired)
         reviewable_yield = payload.get("operator_reviewable_yield_pct", auto_yield)
         reviewable = _int_or_default(payload.get("operator_reviewable_count"), acquired)
         gate = payload.get("ship_gate_operator_coverage_pct", payload.get("ship_gate_auto_yield_pct"))
         gate_status = str(payload.get("ship_gate_status") or "unknown")
         gate_text = f" / gate {gate}%" if gate is not None else ""
-        auto_text = (
+        strict_text = (
+            f" / strict自動取得: {strict_yield}% ({strict_acquired}/{target_missing})"
+            if strict_yield is not None
+            else ""
+        )
+        legacy_auto_text = (
             f" / 自動取得率: {auto_yield}% ({acquired}/{target_missing})"
-            if auto_yield != reviewable_yield or acquired != reviewable
+            if strict_yield is None and (auto_yield != reviewable_yield or acquired != reviewable)
+            else ""
+        )
+        excel_text = (
+            f" / Excel出力可能: {excel_ready_yield}% ({excel_ready}/{target_missing})"
+            if excel_ready_yield is not None
+            else ""
+        )
+        broad_text = (
+            f" / broad発見: {broad_yield}% ({broad_acquired}/{target_missing})"
+            if broad_yield is not None and (broad_yield != strict_yield or broad_acquired != strict_acquired)
             else ""
         )
         st.caption(
             f"レビュー可能率: {reviewable_yield}% ({reviewable}/{target_missing})"
-            f"{auto_text}{gate_text} / レビュー判定: {gate_status}"
+            f"{strict_text}{legacy_auto_text}{excel_text}{broad_text}{gate_text} / レビュー判定: {gate_status}"
         )
     if payload.get("summary_path"):
         st.caption(f"詳細ログ: {payload['summary_path']}")
@@ -1926,6 +1980,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
 
     from eidp.config import settings
     from eidp.fiscal_year import format_fiscal_year_label
+    from eidp.ocr import detect_ocr_availability
     from eidp.review._pages.pdf_manual_entry import latest_discovery_evidence
 
     fiscal_year = settings.target_fiscal_year
@@ -1985,6 +2040,33 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         summary.excel_ready / summary.total,
         text=task_progress_label(summary),
     )
+    kpi_cols = st.columns(3)
+    kpi_cols[0].metric(
+        "strict自動取得",
+        _format_rate(summary.strict_target_parsed, summary.total),
+        f"{summary.strict_target_parsed}/{summary.total} 校",
+    )
+    kpi_cols[1].metric(
+        "broad発見",
+        _format_rate(summary.confirmed_target, summary.total),
+        f"{summary.confirmed_target}/{summary.total} 校",
+    )
+    kpi_cols[2].metric(
+        "Excel出力可能",
+        _format_rate(summary.excel_ready, summary.total),
+        f"{summary.excel_ready}/{summary.total} 校",
+    )
+    st.caption(
+        "strict自動取得 = PDF から Excel データ列が抽出できた学校。"
+        " broad発見 = 対象年度PDF候補はあるが、Excel 出力可能とは限らない学校。"
+    )
+    if summary.image_pending > 0:
+        ocr_detection = detect_ocr_availability(app_root=Path(settings.app_root))
+        if not ocr_detection.can_run:
+            st.warning(
+                f"画像PDF/OCR待ちが {summary.image_pending} 校あります。"
+                "OCR add-on 未導入の環境では自動抽出されないため、PDF確認・手入力で確認してください。"
+            )
     evidence_summary = school_year_discovery_evidence_summary(
         session,
         app_root=Path(settings.app_root),

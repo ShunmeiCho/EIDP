@@ -48,7 +48,7 @@ MATURE_YEAR_SHIP_GATE_METRIC_BASIS = _SHIP_GATE_CONTRACT.MATURE_YEAR_SHIP_GATE_M
 MATURE_YEAR_PROOF_MIN_DENOMINATOR = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_MIN_DENOMINATOR
 WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = _SHIP_GATE_CONTRACT.WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE
 is_ship_gate_exception_reason = _SHIP_GATE_CONTRACT.is_ship_gate_exception_reason
-ship_gate_status_from_operator_coverage = _SHIP_GATE_CONTRACT.ship_gate_status_from_operator_coverage
+ship_gate_status_from_weekly_metrics = _SHIP_GATE_CONTRACT.ship_gate_status_from_weekly_metrics
 
 
 def _load_json(path: Path, errors: list[str], label: str) -> dict[str, Any] | None:
@@ -160,11 +160,14 @@ def _verify_last_run(
             errors.append("last_run ship_gate_status must be measured")
         elif not isinstance(ship_gate_status, str) or ship_gate_status not in SHIP_GATE_STATUSES:
             errors.append("last_run ship_gate_status must be pass, below_gate, or not_measured")
-        elif _is_number(operator_reviewable_yield):
-            expected_ship_gate_status = ship_gate_status_from_operator_coverage(float(operator_reviewable_yield))
+        elif _is_number(target_yield) and _is_number(operator_reviewable_yield):
+            expected_ship_gate_status = ship_gate_status_from_weekly_metrics(
+                target_pdf_auto_yield_pct=float(target_yield),
+                operator_reviewable_yield_pct=float(operator_reviewable_yield),
+            )
             if ship_gate_status != expected_ship_gate_status:
                 errors.append(
-                    "last_run ship_gate_status does not match operator_reviewable_yield_pct: "
+                    "last_run ship_gate_status does not match target_pdf_auto_yield_pct/operator_reviewable_yield_pct: "
                     f"{ship_gate_status} != {expected_ship_gate_status}"
                 )
 
@@ -299,11 +302,15 @@ def _verify_mature_year_proof(
                     f"{manual_workload:.1f} > {max_manual_workload:.1f}"
                 )
                 case_ok = False
-            expected_ship_gate_status = ship_gate_status_from_operator_coverage(float(operator_reviewable_yield))
+            expected_ship_gate_status = ship_gate_status_from_weekly_metrics(
+                target_pdf_auto_yield_pct=float(target_yield) if _is_number(target_yield) else None,
+                operator_reviewable_yield_pct=float(operator_reviewable_yield),
+            )
             if ship_gate_status != expected_ship_gate_status:
                 errors.append(
                     f"mature-year proof case FY{fiscal_year} ship_gate_status does not match "
-                    f"operator_reviewable_yield_pct: {ship_gate_status} != {expected_ship_gate_status}"
+                    "target_pdf_auto_yield_pct/operator_reviewable_yield_pct: "
+                    f"{ship_gate_status} != {expected_ship_gate_status}"
                 )
                 case_ok = False
         if case_ok:

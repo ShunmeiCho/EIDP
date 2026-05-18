@@ -116,7 +116,7 @@ def _write_mature_year_proof(tmp_path: Path, *, ok: bool = True, **case_override
         proof,
         {
             "ok": ok,
-            "basis": "mature_year_retroactive_operator_reviewable_acquisition",
+            "basis": "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition",
             "cases": [case],
         },
     )
@@ -283,7 +283,8 @@ def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operato
 
     assert result["ok"] is False
     assert (
-        "last_run ship_gate_status does not match operator_reviewable_yield_pct: pass != below_gate"
+        "last_run ship_gate_status does not match target_pdf_auto_yield_pct/operator_reviewable_yield_pct: "
+        "pass != below_gate"
         in result["errors"]
     )
 
@@ -402,7 +403,11 @@ def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_
 
     assert result["ok"] is False
     assert any(
-        "mature-year proof JSON basis must be mature_year_retroactive_operator_reviewable_acquisition" in error
+        (
+            "mature-year proof JSON basis must be "
+            "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition"
+        )
+        in error
         for error in result["errors"]
     )
     assert "mature-year proof case FY2025 target_pdf_auto_yield_pct must be numeric" in result["errors"]

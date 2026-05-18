@@ -139,9 +139,30 @@ def test_rebuild_creates_one_target_year_row_per_active_school() -> None:
         assert counts == {
             "total": 3,
             "confirmed_target": 1,
+            "confirmed_target_parsed": 1,
+            "confirmed_target_excel_ready": 1,
             "publication_lag": 0,
             "target_year_unverified": 0,
+            "image_pending": 0,
             "stale_or_old": 1,
+            "review_or_parse": 0,
+            "excel_ready": 1,
+        }
+        selected_counts = school_fiscal_year_status_counts(
+            session,
+            fiscal_year=2026,
+            school_type="専門学校",
+            school_ids=[1],
+        )
+        assert selected_counts == {
+            "total": 1,
+            "confirmed_target": 1,
+            "confirmed_target_parsed": 1,
+            "confirmed_target_excel_ready": 1,
+            "publication_lag": 0,
+            "target_year_unverified": 0,
+            "image_pending": 0,
+            "stale_or_old": 0,
             "review_or_parse": 0,
             "excel_ready": 1,
         }
@@ -252,7 +273,7 @@ def test_rebuild_counts_parse_failed_target_pdf_as_acquired_but_not_excel_ready(
         session.close()
 
 
-def test_rebuild_counts_parse_failed_image_only_target_pdf_as_acquired() -> None:
+def test_rebuild_keeps_parse_failed_image_only_target_pdf_out_of_acquired_count() -> None:
     session = _session()
     try:
         _school(session, 1)
@@ -286,17 +307,17 @@ def test_rebuild_counts_parse_failed_image_only_target_pdf_as_acquired() -> None
 
         row = session.get(SchoolFiscalYearStatus, (1, 2026))
         assert row is not None
-        assert row.pdf_status == "confirmed_target"
+        assert row.pdf_status == "image_pending"
         assert row.extract_status == "parse_failed"
         assert row.excel_ready is False
-        assert row.blocking_reason == "parse_failed"
+        assert row.blocking_reason == "ocr_pending"
 
         counts = school_fiscal_year_status_counts(
             session,
             fiscal_year=2026,
             school_type="専門学校",
         )
-        assert counts["confirmed_target"] == 1
+        assert counts["confirmed_target"] == 0
         assert counts["review_or_parse"] == 1
     finally:
         session.close()

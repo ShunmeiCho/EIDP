@@ -331,7 +331,7 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
                 "schools_with_target_pdf_current_fy": 6,
             },
             "school_fiscal_year_status": {
-                "publication_lag": 0,
+                "publication_lag": 1,
             },
         },
         "summary_path": str(tmp_path / "summary.json"),
@@ -350,11 +350,17 @@ def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     assert payload["target_pdf_auto_denominator_count"] == 10
     assert payload["target_pdf_auto_denominator_scope"] == "target_missing_schools_before_run"
     assert payload["target_pdf_auto_yield_pct"] == 60.0
-    assert payload["operator_reviewable_count"] == 6
-    assert payload["operator_reviewable_yield_pct"] == 60.0
+    assert payload["strict_target_pdf_auto_acquired_count"] == 6
+    assert payload["strict_target_pdf_auto_yield_pct"] == 60.0
+    assert payload["target_pdf_excel_ready_acquired_count"] == 6
+    assert payload["target_pdf_excel_ready_yield_pct"] == 60.0
+    assert payload["broad_target_pdf_auto_acquired_count"] == 6
+    assert payload["broad_target_pdf_auto_yield_pct"] == 60.0
+    assert payload["operator_reviewable_count"] == 7
+    assert payload["operator_reviewable_yield_pct"] == 70.0
     assert payload["ship_gate_auto_yield_pct"] == 60.0
     assert payload["ship_gate_operator_coverage_pct"] == 60.0
-    assert payload["ship_gate_metric_basis"] == "weekly_operator_reviewable_acquisition"
+    assert payload["ship_gate_metric_basis"] == "weekly_strict_target_pdf_and_operator_reviewable_acquisition"
     assert payload["ship_gate_status"] == "pass"
     assert payload["new_document_count"] == 2
     assert payload["new_document_ids"] == [10, 11]
@@ -375,10 +381,12 @@ def test_weekly_yield_metrics_count_review_candidate_statuses_as_operator_review
 
     assert payload["target_pdf_auto_acquired_count"] == 2
     assert payload["target_pdf_auto_yield_pct"] == 20.0
+    assert payload["broad_target_pdf_auto_acquired_count"] == 2
+    assert payload["broad_target_pdf_auto_yield_pct"] == 20.0
     assert payload["operator_reviewable_count"] == 7
     assert payload["operator_reviewable_yield_pct"] == 70.0
-    assert payload["ship_gate_metric_basis"] == "weekly_operator_reviewable_acquisition"
-    assert payload["ship_gate_status"] == "pass"
+    assert payload["ship_gate_metric_basis"] == "weekly_strict_target_pdf_and_operator_reviewable_acquisition"
+    assert payload["ship_gate_status"] == "below_gate"
 
 
 def test_weekly_yield_metrics_use_confirmed_target_status_delta_for_auto_acquisition() -> None:
@@ -396,6 +404,84 @@ def test_weekly_yield_metrics_use_confirmed_target_status_delta_for_auto_acquisi
     assert payload["target_pdf_auto_yield_pct"] == 50.0
     assert payload["operator_reviewable_count"] == 5
     assert payload["operator_reviewable_yield_pct"] == 50.0
+
+
+def test_weekly_yield_metrics_gate_on_strict_auto_yield_not_broad_reach() -> None:
+    payload = module._weekly_target_pdf_yield_metrics(
+        {
+            "target_missing_school_count": 10,
+            "delta": {
+                "school_fiscal_year_status": {
+                    "confirmed_target": 7,
+                    "confirmed_target_parsed": 4,
+                    "confirmed_target_excel_ready": 3,
+                    "publication_lag": 3,
+                },
+            },
+        }
+    )
+
+    assert payload["target_pdf_auto_acquired_count"] == 4
+    assert payload["target_pdf_auto_yield_pct"] == 40.0
+    assert payload["strict_target_pdf_auto_acquired_count"] == 4
+    assert payload["strict_target_pdf_auto_yield_pct"] == 40.0
+    assert payload["target_pdf_excel_ready_acquired_count"] == 3
+    assert payload["target_pdf_excel_ready_yield_pct"] == 30.0
+    assert payload["broad_target_pdf_auto_acquired_count"] == 7
+    assert payload["broad_target_pdf_auto_yield_pct"] == 70.0
+    assert payload["operator_reviewable_count"] == 10
+    assert payload["operator_reviewable_yield_pct"] == 100.0
+    assert payload["ship_gate_status"] == "below_gate"
+
+
+def test_weekly_yield_metrics_count_image_pending_as_operator_reviewable_not_auto_acquired() -> None:
+    payload = module._weekly_target_pdf_yield_metrics(
+        {
+            "target_missing_school_count": 10,
+            "delta": {
+                "school_fiscal_year_status": {
+                    "confirmed_target": 4,
+                    "confirmed_target_parsed": 4,
+                    "image_pending": 2,
+                },
+            },
+        }
+    )
+
+    assert payload["target_pdf_auto_acquired_count"] == 4
+    assert payload["broad_target_pdf_auto_acquired_count"] == 4
+    assert payload["operator_reviewable_count"] == 6
+    assert payload["operator_reviewable_yield_pct"] == 60.0
+    assert payload["ship_gate_status"] == "below_gate"
+
+
+def test_weekly_yield_metrics_prefer_selected_school_status_counts_over_global_delta() -> None:
+    payload = module._weekly_target_pdf_yield_metrics(
+        {
+            "target_missing_school_count": 10,
+            "selected_school_fiscal_year_status": {
+                "confirmed_target": 6,
+                "confirmed_target_parsed": 6,
+                "confirmed_target_excel_ready": 5,
+                "publication_lag": 1,
+            },
+            "delta": {
+                "school_fiscal_year_status": {
+                    "confirmed_target": 20,
+                    "confirmed_target_parsed": 20,
+                    "confirmed_target_excel_ready": 20,
+                },
+            },
+        }
+    )
+
+    assert payload["target_pdf_auto_acquired_count"] == 6
+    assert payload["target_pdf_auto_yield_pct"] == 60.0
+    assert payload["target_pdf_excel_ready_acquired_count"] == 5
+    assert payload["broad_target_pdf_auto_acquired_count"] == 6
+    assert payload["operator_reviewable_count"] == 7
+    assert payload["operator_reviewable_yield_pct"] == 70.0
+    assert payload["ship_gate_status"] == "pass"
 
 
 def test_write_last_run_uses_atomic_replace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -41,7 +41,7 @@ def test_build_proof_accepts_mature_year_acquisition_case(tmp_path: Path) -> Non
     proof = module.build_proof([(2025, last_run)])
 
     assert proof["ok"] is True
-    assert proof["basis"] == "mature_year_retroactive_operator_reviewable_acquisition"
+    assert proof["basis"] == "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition"
     assert proof["min_target_pdf_auto_denominator_count"] == 1000
     assert proof["cases"][0]["ok"] is True
     assert proof["cases"][0]["target_pdf_auto_denominator_count"] == 1625
@@ -123,5 +123,5 @@ def test_cli_writes_json_and_returns_failure_for_missing_case(tmp_path: Path, ca
     output_payload = json.loads(output.read_text(encoding="utf-8"))
     assert stdout_payload == output_payload
     assert output_payload["ok"] is False
-    assert output_payload["basis"] == "mature_year_retroactive_operator_reviewable_acquisition"
+    assert output_payload["basis"] == "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition"
     assert output_payload["cases"][0]["errors"] == [f"last_run does not exist: {missing}"]

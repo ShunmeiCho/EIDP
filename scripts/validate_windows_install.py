@@ -22,10 +22,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from ship_gate_contract import (
     BOOTSTRAP_SHIP_GATE_METRIC_BASIS,
+    LEGACY_WEEKLY_SHIP_GATE_METRIC_BASES,
     SHIP_GATE_OPERATOR_COVERAGE_PCT,
     SHIP_GATE_STATUSES,
     WEEKLY_SHIP_GATE_METRIC_BASIS,
     ship_gate_status_from_operator_coverage,
+    ship_gate_status_from_weekly_metrics,
 )
 
 
@@ -94,7 +96,7 @@ SETUP_FILES = (
     ".venv/Scripts/python.exe",
     "data/eidp.sqlite3",
 )
-OPERATOR_REVIEWABLE_PDF_STATUSES = frozenset({"publication_lag", "target_year_unverified"})
+OPERATOR_REVIEWABLE_PDF_STATUSES = frozenset({"publication_lag", "target_year_unverified", "image_pending"})
 
 SETUP_DIRS = (
     "data",
@@ -541,6 +543,7 @@ def _validate_weekly_ship_gate_against_sqlite(
 
     denominator = _coerce_int(last_run.get("target_pdf_auto_denominator_count"))
     acquired = _coerce_int(last_run.get("target_pdf_auto_acquired_count"))
+    broad_acquired = _coerce_int(last_run.get("broad_target_pdf_auto_acquired_count"))
     reviewable = _coerce_int(last_run.get("operator_reviewable_count"))
     if denominator is None or reviewable is None:
         return
@@ -550,18 +553,26 @@ def _validate_weekly_ship_gate_against_sqlite(
         reviewable_delta = sum(
             max(_coerce_int(status_delta.get(status)) or 0, 0) for status in OPERATOR_REVIEWABLE_PDF_STATUSES
         )
-        expected_reviewable = min(max(acquired, 0) + reviewable_delta, denominator)
+        reviewable_base = broad_acquired if broad_acquired is not None else (acquired or 0)
+        expected_reviewable = min(
+            max(reviewable_base, 0) + reviewable_delta,
+            denominator,
+        )
         if reviewable != expected_reviewable:
             check.fail(
                 "last_run.json operator_reviewable_count does not match acquired plus "
                 "operator-reviewable status delta: "
                 f"{reviewable} != {expected_reviewable}"
             )
-    expected_yield = round(max(reviewable, 0) / denominator * 100.0, 1) if denominator > 0 else None
-    expected_status = ship_gate_status_from_operator_coverage(expected_yield)
+    expected_target_yield = round(max(acquired or 0, 0) / denominator * 100.0, 1) if denominator > 0 else None
+    expected_operator_yield = round(max(reviewable, 0) / denominator * 100.0, 1) if denominator > 0 else None
+    expected_status = ship_gate_status_from_weekly_metrics(
+        target_pdf_auto_yield_pct=expected_target_yield,
+        operator_reviewable_yield_pct=expected_operator_yield,
+    )
     if last_run.get("ship_gate_status") != expected_status:
         check.fail(
-            "last_run.json ship_gate_status does not match operator_reviewable/denominator counts: "
+            "last_run.json ship_gate_status does not match target_pdf_auto/operator_reviewable denominator counts: "
             f"{last_run.get('ship_gate_status')} != {expected_status}"
         )
 
@@ -869,9 +880,15 @@ def validate_install(
             ):
                 check.fail("last_run.json target_pdf_auto_denominator_scope must be a string")
             if "ship_gate_metric_basis" in last_run:
-                if not isinstance(last_run.get("ship_gate_metric_basis"), str):
+                weekly_basis = last_run.get("ship_gate_metric_basis")
+                if not isinstance(weekly_basis, str):
                     check.fail("last_run.json ship_gate_metric_basis must be a string")
-                elif last_run.get("ship_gate_metric_basis") != WEEKLY_SHIP_GATE_METRIC_BASIS:
+                elif weekly_basis in LEGACY_WEEKLY_SHIP_GATE_METRIC_BASES:
+                    check.warn(
+                        "last_run.json ship_gate_metric_basis uses a legacy pre-strict weekly basis; "
+                        "re-run weekly_run.bat before treating ship_gate_status as v1.0 release evidence"
+                    )
+                elif weekly_basis != WEEKLY_SHIP_GATE_METRIC_BASIS:
                     check.fail(f"last_run.json ship_gate_metric_basis must be {WEEKLY_SHIP_GATE_METRIC_BASIS}")
             if require_ship_gate and weekly_gate_status != "pass":
                 check.fail("last_run.json ship_gate_status must be pass when --require-ship-gate is used")

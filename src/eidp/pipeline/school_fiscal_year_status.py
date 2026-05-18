@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +29,7 @@ REVIEW_STATUSES: tuple[str, ...] = (
 OPERATOR_REVIEWABLE_PDF_STATUSES: tuple[str, ...] = (
     "publication_lag",
     "target_year_unverified",
+    "image_pending",
 )
 SHIP_REVIEWABLE_PDF_STATUSES: tuple[str, ...] = (
     "confirmed_target",
@@ -75,11 +76,23 @@ def _url_status(sites: list[SchoolSite]) -> str:
 def _pdf_status(docs: list[Document], fiscal_year: int) -> str:
     if any(
         d.fiscal_year == fiscal_year
-        and d.pdf_type in {"image_only", "target"}
-        and d.ingest_status in {"ingested", "parse_failed", "review_pending", "support_only"}
+        and (
+            (
+                d.pdf_type == "target"
+                and d.ingest_status in {"ingested", "parse_failed", "review_pending", "support_only"}
+            )
+            or (d.pdf_type == "image_only" and d.ingest_status in {"ingested", "review_pending", "support_only"})
+        )
         for d in docs
     ):
         return "confirmed_target"
+    if any(
+        d.fiscal_year == fiscal_year
+        and d.pdf_type == "image_only"
+        and d.ingest_status in {"ocr_pending", "parse_failed"}
+        for d in docs
+    ):
+        return "image_pending"
     if any(d.ingest_status == "ocr_pending" for d in docs):
         return "image_pending"
     if any(
@@ -377,13 +390,33 @@ def rebuild_school_fiscal_year_status(
     )
 
 
+def _empty_status_counts() -> dict[str, int]:
+    return {
+        "total": 0,
+        "confirmed_target": 0,
+        "confirmed_target_parsed": 0,
+        "confirmed_target_excel_ready": 0,
+        "publication_lag": 0,
+        "target_year_unverified": 0,
+        "image_pending": 0,
+        "stale_or_old": 0,
+        "review_or_parse": 0,
+        "excel_ready": 0,
+    }
+
+
 def school_fiscal_year_status_counts(
     session: Session,
     *,
     fiscal_year: int,
     school_type: str | None = "専門学校",
+    school_ids: Iterable[int] | None = None,
 ) -> dict[str, int]:
     """Return compact counts for dashboard / Excel-readiness surfaces."""
+    selected_school_ids = set(school_ids or ())
+    if school_ids is not None and not selected_school_ids:
+        return _empty_status_counts()
+
     q = (
         session.query(
             SchoolFiscalYearStatus.pdf_status,
@@ -396,16 +429,10 @@ def school_fiscal_year_status_counts(
     )
     if school_type is not None:
         q = q.filter(School.school_type == school_type)
+    if school_ids is not None:
+        q = q.filter(SchoolFiscalYearStatus.school_id.in_(selected_school_ids))
 
-    counts: dict[str, int] = {
-        "total": 0,
-        "confirmed_target": 0,
-        "publication_lag": 0,
-        "target_year_unverified": 0,
-        "stale_or_old": 0,
-        "review_or_parse": 0,
-        "excel_ready": 0,
-    }
+    counts = _empty_status_counts()
     for pdf_status, extract_status, excel_ready, n in q.group_by(
         SchoolFiscalYearStatus.pdf_status,
         SchoolFiscalYearStatus.extract_status,
@@ -415,10 +442,16 @@ def school_fiscal_year_status_counts(
         counts["total"] += count
         if pdf_status == "confirmed_target":
             counts["confirmed_target"] += count
+            if extract_status == "parsed":
+                counts["confirmed_target_parsed"] += count
+            if excel_ready:
+                counts["confirmed_target_excel_ready"] += count
         if pdf_status == "publication_lag":
             counts["publication_lag"] += count
         if pdf_status == "target_year_unverified":
             counts["target_year_unverified"] += count
+        if pdf_status == "image_pending":
+            counts["image_pending"] += count
         if pdf_status in {"publication_lag", "rejected_stale"}:
             counts["stale_or_old"] += count
         if extract_status in REVIEW_STATUSES or pdf_status in {

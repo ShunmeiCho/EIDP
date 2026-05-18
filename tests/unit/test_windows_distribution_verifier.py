@@ -456,7 +456,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "fiscal_year_cap = target_fiscal_year if target_fiscal_year is not None else settings.target_fiscal_year\n"
             "doc.is_current_year = fiscal_year >= fiscal_year_cap\n"
             "target_fiscal_year=target_fiscal_year\n"
-            "settings.target_fiscal_year if max_fiscal_year is None\n"
+            "max_fiscal_year=fiscal_year_cap\n"
             "has_fiscal_year_text\n"
         ),
         "src/eidp/pipeline/manual_entry.py": (

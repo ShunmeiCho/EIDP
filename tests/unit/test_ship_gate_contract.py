@@ -22,8 +22,12 @@ def test_ship_gate_contract_names_distinct_bootstrap_and_weekly_metrics() -> Non
     assert module.SHIP_GATE_AUTO_YIELD_PCT == module.SHIP_GATE_OPERATOR_COVERAGE_PCT
     assert module.SHIP_GATE_STATUSES == frozenset({"pass", "below_gate", "not_measured"})
     assert module.BOOTSTRAP_SHIP_GATE_METRIC_BASIS == "post_bootstrap_operator_reviewable_coverage"
-    assert module.WEEKLY_SHIP_GATE_METRIC_BASIS == "weekly_operator_reviewable_acquisition"
-    assert module.MATURE_YEAR_SHIP_GATE_METRIC_BASIS == "mature_year_retroactive_operator_reviewable_acquisition"
+    assert module.WEEKLY_SHIP_GATE_METRIC_BASIS == "weekly_strict_target_pdf_and_operator_reviewable_acquisition"
+    assert module.LEGACY_WEEKLY_SHIP_GATE_METRIC_BASES == frozenset({"weekly_operator_reviewable_acquisition"})
+    assert (
+        module.MATURE_YEAR_SHIP_GATE_METRIC_BASIS
+        == "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition"
+    )
     assert module.SHIP_GATE_EXCEPTION_REASONS == frozenset({"publication_lag"})
     assert module.BOOTSTRAP_SHIP_GATE_METRIC_BASIS != module.WEEKLY_SHIP_GATE_METRIC_BASIS
     assert module.MATURE_YEAR_SHIP_GATE_METRIC_BASIS != module.WEEKLY_SHIP_GATE_METRIC_BASIS
@@ -39,6 +43,30 @@ def test_ship_gate_status_from_yield_remains_compatibility_alias() -> None:
     assert module.ship_gate_status_from_yield(None) == module.ship_gate_status_from_operator_coverage(None)
     assert module.ship_gate_status_from_yield(59.9) == module.ship_gate_status_from_operator_coverage(59.9)
     assert module.ship_gate_status_from_yield(60.0) == module.ship_gate_status_from_operator_coverage(60.0)
+
+
+def test_ship_gate_status_from_weekly_metrics_requires_strict_auto_yield_and_workload() -> None:
+    assert (
+        module.ship_gate_status_from_weekly_metrics(
+            target_pdf_auto_yield_pct=41.7,
+            operator_reviewable_yield_pct=70.8,
+        )
+        == "below_gate"
+    )
+    assert (
+        module.ship_gate_status_from_weekly_metrics(
+            target_pdf_auto_yield_pct=60.0,
+            operator_reviewable_yield_pct=70.0,
+        )
+        == "pass"
+    )
+    assert (
+        module.ship_gate_status_from_weekly_metrics(
+            target_pdf_auto_yield_pct=None,
+            operator_reviewable_yield_pct=70.0,
+        )
+        == "not_measured"
+    )
 
 
 def test_ship_gate_exception_reasons_are_explicit() -> None:

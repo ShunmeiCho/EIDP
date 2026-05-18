@@ -27,7 +27,7 @@ MATURE_YEAR_PROOF_MIN_DENOMINATOR = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_MIN_DE
 WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = _SHIP_GATE_CONTRACT.WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE
 SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT = _SHIP_GATE_CONTRACT.SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT
 SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT = _SHIP_GATE_CONTRACT.SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT
-ship_gate_status_from_operator_coverage = _SHIP_GATE_CONTRACT.ship_gate_status_from_operator_coverage
+ship_gate_status_from_weekly_metrics = _SHIP_GATE_CONTRACT.ship_gate_status_from_weekly_metrics
 ship_gate_threshold_gaps = _SHIP_GATE_CONTRACT.ship_gate_threshold_gaps
 
 
@@ -139,10 +139,13 @@ def build_case(
                 "estimated manual workload above release threshold: "
                 f"{manual_workload:.1f} > {max_manual_workload:.1f}"
             )
-        expected_ship_gate_status = ship_gate_status_from_operator_coverage(float(operator_reviewable_yield))
+        expected_ship_gate_status = ship_gate_status_from_weekly_metrics(
+            target_pdf_auto_yield_pct=float(target_yield) if _is_number(target_yield) else None,
+            operator_reviewable_yield_pct=float(operator_reviewable_yield),
+        )
         if ship_gate_status != expected_ship_gate_status:
             errors.append(
-                "ship_gate_status does not match operator_reviewable_yield_pct: "
+                "ship_gate_status does not match target_pdf_auto_yield_pct/operator_reviewable_yield_pct: "
                 f"{ship_gate_status} != {expected_ship_gate_status}"
             )
 
