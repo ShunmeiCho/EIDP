@@ -786,6 +786,29 @@ def _fiscal_year_from_strong_candidate_hint(text: str, *, target_year: int) -> i
             "confirmation_application",
         )
     )
+    bare_form_year_patterns = (
+        r"(?:確認申請|更新確認申請|機関要件|申請様式|様式第[2２]号|様式2号)"
+        r"[^0-9/\n]{0,16}(20\d{2})(?!\s*(?:年\s*\d{1,2}\s*月|月|日|\d))",
+        r"(?<!\d)(20\d{2})(?!\s*(?:年\s*\d{1,2}\s*月|月|日|\d))"
+        r"[^0-9/\n]{0,16}(?:確認申請|更新確認申請|機関要件|申請様式|様式第[2２]号|様式2号)",
+    )
+    for pattern in bare_form_year_patterns:
+        form_year = re.search(pattern, text, re.IGNORECASE)
+        if form_year is not None:
+            year = int(form_year.group(1))
+            if _is_candidate_hint_year(year, target_year=target_year):
+                return year
+
+    form_filename_year = re.search(
+        r"(?<![a-z0-9])(?:yoshiki|youshiki|yousiki)[_-]?(20\d{2})(?=[^/\s]*\.pdf\b)",
+        text,
+        re.IGNORECASE,
+    )
+    if form_filename_year is not None:
+        year = int(form_filename_year.group(1))
+        if _is_candidate_hint_year(year, target_year=target_year):
+            return year
+
     if strong_form_context or romanized_form_context:
         western_start_month = re.search(r"(?<!\d)(20\d{2})(?=\s*年\s*0?4\s*月)", text)
         if western_start_month is not None:

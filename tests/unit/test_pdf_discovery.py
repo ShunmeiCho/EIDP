@@ -6140,6 +6140,39 @@ def test_download_pdf_does_not_treat_anchor_publication_date_as_fiscal_year(
     assert not list((tmp_path / "1").glob("*.pdf"))
 
 
+def test_download_pdf_accepts_form_adjacent_bare_year_when_body_is_target_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/disclosure/yoshiki2025.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="申請様式2025",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "url_hint"
+
+
 def test_download_pdf_accepts_reiwa_year_anchor_when_body_is_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:
