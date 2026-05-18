@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session
 
 from eidp.config import settings
 from eidp.db.models import School, SchoolFiscalYearStatus
-from eidp.pipeline.school_fiscal_year_status import SHIP_REVIEWABLE_PDF_STATUSES
-from eidp.reports.coverage import compute_coverage, gap_report_for_export
+from eidp.pipeline.school_fiscal_year_status import SHIP_REVIEWABLE_PDF_STATUSES, school_fiscal_year_status_counts
+from eidp.reports.coverage import compute_coverage
 
 
 @dataclass(frozen=True)
@@ -73,12 +73,12 @@ def compute_ship_readiness(
 
     fy = fiscal_year if fiscal_year is not None else settings.target_fiscal_year
     coverage = compute_coverage(session, school_type=school_type, fiscal_year=fy).totals
-    export_gap = gap_report_for_export(session, fiscal_year=fy, school_type=school_type)
+    status_counts = school_fiscal_year_status_counts(session, fiscal_year=fy, school_type=school_type)
 
     total = int(coverage.schools_total)
-    strict_target_pdf = int(coverage.schools_with_target_pdf_current_fy)
+    strict_target_pdf = int(status_counts["confirmed_target_parsed"])
     extracted = int(coverage.schools_with_current_fy_extracted)
-    excel_ready = int(export_gap.excel_ready_schools)
+    excel_ready = int(status_counts["confirmed_target_excel_ready"])
     operator_reviewable = _operator_reviewable_school_count(session, fiscal_year=fy, school_type=school_type)
 
     strict_target_pdf_rate = _rate(strict_target_pdf, total)
