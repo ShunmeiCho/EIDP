@@ -102,6 +102,17 @@ passed`; `uv run ruff check src/eidp/scraper/pdf_discovery.py
 tests/unit/test_pdf_discovery.py` -> clean; `uv run mypy
 src/eidp/scraper/pdf_discovery.py` -> clean. Current replay metrics are not
 updated until the FY2025 discovery replay is rerun from this source.
+`8542a32` tightens that downloaded-PDF identity check: link-stage school
+matching still allows known campus-suffix variants, but a PDF body's own
+`学校名` must now match the target school or an alias exactly after
+normalization. A copied-DB All-Japan smoke at
+`_temp/all-japan-pdf-mismatch-smoke/` deleted prior Documents for school IDs
+`293`-`299` and reran targeted discovery. It produced `crawled=7`,
+`downloaded=5`, `rejection_reason_pdf_school_mismatch=54`, and stored exact
+body-name matches for schools `293`, `295`, `296`, `297`, and `298`; schools
+`294` and `299` remained failed rather than accepting sibling/campus PDFs. This
+confirms the fix removes stale `school_mismatch` writes and surfaces remaining
+name-alias/ranking gaps without weakening school identity.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
