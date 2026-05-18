@@ -12,6 +12,7 @@ from streamlit.testing.v1 import AppTest
 
 from eidp.db.locking import acquire_lock
 from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, SchoolSite
+from eidp.ocr.availability import OcrAvailability
 from eidp.review._pages import school_year_tasks
 from eidp.review._pages.school_year_tasks import (
     SETTINGS_PAGE_ID,
@@ -1558,6 +1559,45 @@ def test_task_board_settings_button_opens_settings_page(tmp_path: Path) -> None:
 
         assert app.session_state["selected_page"] == SETTINGS_PAGE_ID
         assert settings_page_prefill() == {"selected_page": SETTINGS_PAGE_ID}
+    finally:
+        session.close()
+
+
+def test_task_board_warns_when_image_pending_and_ocr_unavailable(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    session = _session()
+    try:
+        _school(session, 3, name="画像PDF学校")
+        _status(
+            session,
+            3,
+            pdf_status="image_pending",
+            extract_status="ocr_pending",
+            blocking_reason="ocr_pending",
+        )
+        session.commit()
+
+        def fake_detect_ocr_availability(**kwargs):  # noqa: ANN003, ANN202
+            return OcrAvailability(
+                binary_path=None,
+                tessdata_dir=None,
+                has_jpn_traineddata=False,
+                auto_enabled=False,
+            )
+
+        import eidp.ocr
+
+        monkeypatch.setattr(eidp.ocr, "detect_ocr_availability", fake_detect_ocr_availability)
+
+        app = AppTest.from_function(
+            _render_school_tasks_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.run(timeout=30)
+
+        assert not app.exception
+        warning_texts = [str(warning.value) for warning in app.warning]
+        assert any("画像PDF/OCR待ちが 1 校あります" in text for text in warning_texts)
+        assert any("OCR add-on 未導入" in text for text in warning_texts)
     finally:
         session.close()
 
