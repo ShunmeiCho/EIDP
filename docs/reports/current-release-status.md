@@ -2,15 +2,21 @@
 
 Updated: 2026-05-18
 Branch: `sprint8-handoff-finalize`
-Latest package source commit:
-`c115a52` (`docs: align engineering goals with current debt`).
+Latest package family: `v482`.
+
+The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
+The authoritative package SHA256 is the versioned `.sha256` sidecar. This
+tracked status file is included in release ZIPs, so it intentionally avoids
+embedding exact self-referential package commit / ZIP SHA values that would make
+the release-gate HEAD check stale immediately after documentation updates.
+
 Post-v480 source fixes now include checked-in weekly URL source application
 (`f54c76c`), application-style year hints (`958f156`), critical silent-failure
 logging for audit outbox / lock metadata (`948ad8e`), malformed-vs-unsafe URL
 classification (`d07c27c`), and G4/G5 documentation drift correction
 (`c115a52`). Focused verification: targeted Layer 2 pytest (`78 passed`), Ruff
-on touched modules, `uv run mypy src`, CI push + pull_request success for
-`c115a52`, and `git diff --check`.
+on touched modules, `uv run mypy src`, CI push + pull_request success through the
+Layer 2 documentation fix, and `git diff --check`.
 Current selected-school strict-yield check after discovery, ingest, and rebuild
 with the original FY2025 replay evidence plus the 35-school recovery evidence:
 `_temp/same-school-duplicate-restore-smoke-35/output/strict-yield-analysis-selected1000-after-exportable-review-pending-fix.json`.
@@ -34,22 +40,16 @@ while broad confirmed reach moves from `48.8%` to `49.4%`. This remains below
 the 60-70% strict ship line and points to dense / multibrand candidate ranking
 as the next algorithmic blocker. These are local replay results, not a packaged
 Windows active-lane proof.
-Latest local Mac/non-Windows package snapshot:
-`c115a52cfdb7a65b08c30b473b5b9fd96e39ca4a`
-Current Mac package for latest package snapshot:
+Current Mac package candidate:
 `dist/eidp-windows-v482.zip`
-Latest Mac package SHA256:
-`ed2a6c9cb6b15d9a50b8c7f3c488c2d681eedd1bb359af7b04934e30340d7153`
-Current v482 package SHA256:
-`ed2a6c9cb6b15d9a50b8c7f3c488c2d681eedd1bb359af7b04934e30340d7153`
+Current v482 SHA256 sidecar:
+`dist/eidp-windows-v482.zip.sha256`
 Current v482 package build evidence:
-`dist/eidp-windows-v482.zip` was built from `git_dirty=false` source and
-`BUILD_INFO.json` records commit
-`c115a52cfdb7a65b08c30b473b5b9fd96e39ca4a`, matching the local source commit.
-`dist/eidp-windows.zip` and its sidecar were refreshed as the latest alias and
-have the same SHA256. Non-Windows release gates, Windows distribution verifier,
-retroactive matrix, and production-scale strict-yield proof are the next Layer 4
-gates; do not use v482 for owner E2E before those gates pass.
+`dist/eidp-windows-v482.zip` is rebuilt from `git_dirty=false` source before
+Layer 4. `dist/eidp-windows.zip` and its sidecar are refreshed as the latest
+alias during the same build. Non-Windows release gates, Windows distribution
+verifier, retroactive matrix, and production-scale strict-yield proof are the
+next Layer 4 gates; do not use v482 for owner E2E before those gates pass.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs
