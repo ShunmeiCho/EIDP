@@ -113,6 +113,14 @@ body-name matches for schools `293`, `295`, `296`, `297`, and `298`; schools
 `294` and `299` remained failed rather than accepting sibling/campus PDFs. This
 confirms the fix removes stale `school_mismatch` writes and surfaces remaining
 name-alias/ranking gaps without weakening school identity.
+`f889416` adds a distinct `school_identity_mismatch` bucket for downloaded-PDF
+body-name mismatches in the discovery evidence summary. Running
+`eidp summarize-discovery-evidence --evidence-log
+_temp/all-japan-pdf-mismatch-smoke/output/discovery-rejections.jsonl --json`
+returned bucket counts `accepted_target_pdf=5` and
+`school_identity_mismatch=2`, matching the copied DB result and making the two
+remaining schools visible as identity/alias work rather than generic
+`non_target_candidates_only`.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
