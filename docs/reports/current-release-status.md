@@ -11,17 +11,17 @@ the 60-70% strict ship line and points to dense / multibrand candidate ranking
 as the next algorithmic blocker. These are local replay results, not a packaged
 Windows active-lane proof.
 Latest local Mac/non-Windows package snapshot:
-`3b83520904e7f5c41ceecb8e40d14a8912a206d9`
+`7c6ba77ac4f1d08cb434e44feb8f8794ec8908f2`
 Current Mac-core-verifier-clean package for latest package snapshot:
-`dist/eidp-windows-v470.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v470.zip`
+`dist/eidp-windows-v471.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v471.zip`
 Latest Mac-core package SHA256:
-`49ba41d12f6f42da5e36b19d39897acdd179fcc5ff9186d8c3e24b4d474c6531`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v470.zip`
-Latest v470 non-Windows release gate output:
-`_temp/v470-non-windows-release-gates.json`, `ok=true`. The ZIP was built
+`851fee4edf4ae790d10cd53c0999bd84b6d33c491eb143d646127980afb9a171`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v471.zip`
+Latest v471 non-Windows release gate output:
+`_temp/v471-non-windows-release-gates.json`, `ok=true`. The ZIP was built
 from `git_dirty=false` source and `BUILD_INFO.json` records the same
-`3b83520904e7f5c41ceecb8e40d14a8912a206d9` commit.
+`7c6ba77ac4f1d08cb434e44feb8f8794ec8908f2` commit.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
@@ -78,14 +78,14 @@ Current active-goal completion audit:
 
 Status: **NOT COMPLETE**
 
-Current local source head `3b83520904e7f5c41ceecb8e40d14a8912a206d9` is
-Mac-validated with `1795 passed`, `mypy src` clean, touched-file Ruff clean,
+Current local source head `7c6ba77ac4f1d08cb434e44feb8f8794ec8908f2` is
+Mac-validated with `1796 passed`, `mypy src` clean, touched-file Ruff clean,
 Bandit high-severity clean, and
-`scripts/run_non_windows_release_gates.py dist/eidp-windows-v470.zip --json`
-returning `ok=true`. A clean successor package `dist/eidp-windows-v470.zip`
+`scripts/run_non_windows_release_gates.py dist/eidp-windows-v471.zip --json`
+returning `ok=true`. A clean successor package `dist/eidp-windows-v471.zip`
 was built from that head without `--allow-dirty`; `BUILD_INFO.json` records
 `git_dirty=false`, SHA256 is
-`49ba41d12f6f42da5e36b19d39897acdd179fcc5ff9186d8c3e24b4d474c6531`, and
+`851fee4edf4ae790d10cd53c0999bd84b6d33c491eb143d646127980afb9a171`, and
 `scripts/verify_windows_distribution.py` returned `ok=true`. The latest
 GitHub-pushed v466 package source
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195` remains CI-green on GitHub. This
