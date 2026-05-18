@@ -284,9 +284,13 @@ def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candida
                 json.dumps(
                     {
                         "school_id": 2,
-                        "reason": "classified_non_target",
-                        "pdf_type": "non_target",
-                        "pdf_url": "https://b/non-target.pdf",
+                        "reason": "pdf_school_mismatch",
+                        "pdf_type": "target",
+                        "pdf_url": "https://b/academic_support.pdf",
+                        "extra": {
+                            "parsed_school_name": "学校2杉並校",
+                            "target_school_name": "学校2",
+                        },
                     }
                 ),
             ]
@@ -312,8 +316,8 @@ def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candida
         assert summary is not None
         assert summary.site_scope_schools == 2
         assert summary.school_bucket_counts == {
-            "non_target_candidates_only": 1,
             "publication_lag_or_old_target_pdf": 1,
+            "school_identity_mismatch": 1,
         }
         assert school_year_discovery_evidence_summary_notice(summary, target_fiscal_year=2026) == (
             "PDF探索ログ: 旧年度または公開待ちの確認申請書候補が 1校あります。"
@@ -321,7 +325,7 @@ def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candida
         )
         assert school_year_discovery_evidence_bucket_by_school(summary) == {
             1: "publication_lag_or_old_target_pdf",
-            2: "non_target_candidates_only",
+            2: "school_identity_mismatch",
         }
         assert school_year_discovery_evidence_bucket_label("publication_lag_or_old_target_pdf") == (
             "旧年度候補あり"
@@ -329,9 +333,12 @@ def test_school_year_discovery_evidence_summary_surfaces_publication_lag_candida
         assert school_year_discovery_evidence_bucket_label("tls_certificate_verify_failed") == (
             "証明書エラー"
         )
+        assert school_year_discovery_evidence_bucket_label("school_identity_mismatch") == (
+            "学校名不一致"
+        )
         assert school_year_discovery_evidence_bucket_options(summary) == [
-            "non_target_candidates_only",
             "publication_lag_or_old_target_pdf",
+            "school_identity_mismatch",
         ]
 
         rows = [

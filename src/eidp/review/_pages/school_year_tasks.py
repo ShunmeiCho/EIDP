@@ -761,6 +761,7 @@ def school_year_discovery_evidence_bucket_label(bucket: str | None) -> str:
         "no_pdf_candidates": "候補なし",
         "site_fetch_error_only": "入口取得エラー",
         "mixed_with_site_fetch_error": "一部取得エラー",
+        "school_identity_mismatch": "学校名不一致",
         "non_target_candidates_only": "対象外候補のみ",
     }
     return labels.get(bucket or "", "")
