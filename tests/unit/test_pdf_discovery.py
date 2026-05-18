@@ -631,6 +631,7 @@ def test_downloaded_pdf_school_mismatch_allows_sanko_symbol_and_long_vowel_varia
         ("札幌ビューティーアート専門学校", "札幌ビューティアート専門学校"),
         ("広島ビューティー&ブライダル専門学校", "広島ビューティ＆ブライダル専門学校"),
         ("辻󠄀学園調理・製菓専門学校", "辻学園調理製菓専門学校"),
+        ("郡 山 看 護 専 門 学 校", "郡山看護専門学校"),
     ]
 
     for detected_school_name, target_school_name in cases:

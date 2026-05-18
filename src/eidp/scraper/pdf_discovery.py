@@ -2533,6 +2533,10 @@ _SPECIFIC_TARGET_FORM_HINT_RE = re.compile(
 def _school_link_label(text: str) -> str:
     normalized = unicodedata.normalize("NFKC", text).lower()
     normalized = re.sub(r"[\ufe00-\ufe0f\U000e0100-\U000e01ef]", "", normalized)
+    normalized = re.sub(r"専\s*門\s*学\s*校", "専門学校", normalized)
+    normalized = re.sub(r"高\s*等\s*専\s*門\s*学\s*校", "高等専門学校", normalized)
+    normalized = re.sub(r"短\s*期\s*大\s*学", "短期大学", normalized)
+    normalized = re.sub(r"大\s*学\s*校", "大学校", normalized)
     normalized = normalized.replace("専門学校", "")
     normalized = normalized.replace("アンド", "&")
     return re.sub(r"[\s・･ー－\-–—_/／|｜()（）［］\[\]{}&]+", "", normalized)
