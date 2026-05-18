@@ -44,6 +44,23 @@ on the FY2025 replay this moves operator-reviewable coverage from
 `unknown + no_target_pdf=430`; therefore the next strict-yield lever is URL
 coverage and PDF candidate discovery/ranking, with mixed-confidence /
 partial-review handling as a secondary workflow lever.
+Post-v478 current-source diagnostics add two read-only gap buckets, not a new
+Windows package: `109b934` adds `school_mismatch_source_buckets`, and `2526876`
+adds `site_source_gap_buckets`. Current-source analyzer outputs are
+`_temp/fy2025-targeted-discovery-current-20260518_144205/output/strict-yield-gap-analysis-v479-school-mismatch.json`
+and
+`_temp/fy2025-targeted-discovery-current-20260518_144205/output/strict-yield-gap-analysis-v480-site-source-gaps.json`.
+They keep `strict=389/2418 (16.1%)` and `operator_reviewable=755/2418 (31.2%)`
+unchanged, but expose the next discovery/ranking targets: `school_mismatch` is
+clustered on dense group hosts such as `www.o-hara.ac.jp=9`,
+`storage-production.all-japan.dev=7`, and `www.ohara.ac.jp=4`; non-ready site
+host buckets are led by `no_url/no_site=613`,
+`unknown/no_target_pdf/www.o-hara.ac.jp=49`,
+`unknown/no_target_pdf/www.sanko.ac.jp=40`, and
+`pref_url/no_target_pdf/www.all-japan.ac.jp=14`. The parsed
+`school_mismatch` samples are mostly sibling-school PDFs, so ingest school-name
+guardrails should stay strict; the safe path is better candidate ranking and
+URL coverage, not alias broadening.
 Latest GitHub-pushed v466 package source head validated by GitHub CI:
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195`
 Latest GitHub CI status for that v466 package source: push run `25990716165`
