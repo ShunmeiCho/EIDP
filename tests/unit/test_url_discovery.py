@@ -182,6 +182,12 @@ def test_checked_in_school_domain_overrides_cover_nkz_multibrand_schools() -> No
     assert expected <= by_school
 
 
+def test_checked_in_corporation_domains_cover_hachimonji_group() -> None:
+    domains = url_discovery._load_corporation_domains(data_dir=REPO_ROOT / "data")
+
+    assert domains["八文字学園"] == "https://www.mito.ac.jp/"
+
+
 def test_infer_corporation_urls_prefers_school_domain_overrides(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     csv_dir = data_dir / "url-discovery"
