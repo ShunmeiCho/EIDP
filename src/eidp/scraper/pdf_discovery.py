@@ -2298,6 +2298,27 @@ def _school_name_matches_homepage_link(text: str, school_name: str) -> bool:
     return True
 
 
+def _school_label_is_same_or_campus_variant(candidate_label: str, school_label: str) -> bool:
+    """Return whether two normalized school labels refer to the same school.
+
+    Plain substring matching is too broad for dense corporation pages:
+    ``大原法律`` must not match ``大原法律公務員``.  We only allow containment
+    when the extra suffix is a campus/location suffix such as ``大宮校``.
+    """
+
+    if candidate_label == school_label:
+        return True
+    if len(candidate_label) < 4 or len(school_label) < 4:
+        return False
+    for base, extended in ((candidate_label, school_label), (school_label, candidate_label)):
+        if not extended.startswith(base):
+            continue
+        suffix = extended[len(base):]
+        if suffix and re.fullmatch(r"[\u3040-\u30ff\u3400-\u9fffA-Za-z0-9]+校", suffix):
+            return True
+    return False
+
+
 def _candidate_mentions_different_school(candidate: PdfCandidate, school_name: str) -> bool:
     if not school_name:
         return False
@@ -2305,11 +2326,9 @@ def _candidate_mentions_different_school(candidate: PdfCandidate, school_name: s
         "NFKC",
         f"{candidate.anchor_text or ''} {candidate.pdf_url or ''} {unquote(candidate.pdf_url or '')}",
     )
-    if _school_name_matches_link(text, school_name):
-        return False
     school_label = _school_link_label(school_name)
     for candidate_label in _candidate_named_school_labels(text):
-        if candidate_label in school_label or school_label in candidate_label:
+        if _school_label_is_same_or_campus_variant(candidate_label, school_label):
             return False
         return True
     return False

@@ -500,6 +500,32 @@ def test_extract_pdf_links_adds_table_row_school_context_for_mismatch_filtering(
     )
 
 
+def test_candidate_school_mismatch_rejects_substring_only_different_school() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-02-01-5.pdf",
+        page_url="https://www.o-hara.ac.jp/about/joho/",
+        anchor_text="PDF 大原法律公務員専門学校 修学支援新制度 確認申請書",
+    )
+
+    assert pdf_discovery_module._candidate_mentions_different_school(
+        candidate,
+        "大原法律専門学校",
+    )
+
+
+def test_candidate_school_mismatch_allows_campus_suffix_variant() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-36-01-5.pdf",
+        page_url="https://www.o-hara.ac.jp/about/joho/",
+        anchor_text="PDF 大原法律公務員専門学校大宮校 修学支援新制度 確認申請書",
+    )
+
+    assert not pdf_discovery_module._candidate_mentions_different_school(
+        candidate,
+        "大原法律公務員専門学校",
+    )
+
+
 def test_extract_pdf_links_keeps_previous_support_year_statement_for_application_link() -> None:
     html = """
     <section>
