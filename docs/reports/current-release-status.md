@@ -17,6 +17,17 @@ Current Mac-core-verifier-clean package for latest package snapshot:
 Latest Mac-core-verifier-clean package: `dist/eidp-windows-v478.zip`
 Latest Mac-core package SHA256:
 `9abf7ab7686815130ed60eb49cd2cdfdd97887e4d6ac77e61208c822ced3e5c0`
+Current Mac-core-verifier-clean package from HEAD:
+`dist/eidp-windows-v479.zip`
+Current v479 package SHA256:
+`9c70ce445c734e2675c99a96a2c57d2354682e0719263d1ca2f096297c6c7e4c`
+Current v479 non-Windows release gate output:
+`_temp/v479-non-windows-release-gates.json`, `ok=true`. The ZIP was built
+from `git_dirty=false` source and `BUILD_INFO.json` records commit
+`fe1cc5455fc52982101d7421712b414f02d7729f`, matching the local source commit.
+`scripts/verify_windows_distribution.py --json` also passed for
+`dist/eidp-windows-v479.zip`, with `has_runtime=true`, `wheel_count=84`,
+`prefecture_seed_downloadable=47`, and ZIP SHA256 matching the sidecar.
 Latest full non-Windows release-gate package: `dist/eidp-windows-v478.zip`
 Latest v478 non-Windows release gate output:
 `_temp/v478-non-windows-release-gates.json`, `ok=true`. The ZIP was built
