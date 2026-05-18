@@ -43,6 +43,14 @@ def _db(path: Path) -> Path:
                 capacity integer,
                 extraction_confidence real
             );
+            create table support_recipient (
+                id integer primary key,
+                school_id integer,
+                document_id integer,
+                fiscal_year integer,
+                is_current integer,
+                extraction_confidence real
+            );
             """
         )
         conn.executemany(
@@ -89,6 +97,18 @@ def _db(path: Path) -> Path:
                 (3, 2, 2025, 0, 20, 0.54),
             ],
         )
+        conn.executemany(
+            """
+            insert into support_recipient
+              (id, school_id, document_id, fiscal_year, is_current, extraction_confidence)
+            values (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (1, 1, 1, 2025, 1, 0.94),
+                (2, 2, 2, 2025, 0, 0.54),
+                (3, 4, None, 2025, 0, 0.54),
+            ],
+        )
     return path
 
 
@@ -127,6 +147,26 @@ def test_analyze_database_reports_strict_broad_excel_and_reviewable_rates(tmp_pa
             "current_rows": 0,
             "current_rows_with_capacity": 0,
             "avg_current_confidence": None,
+        },
+    ]
+    assert result["low_confidence_business_row_buckets"] == [
+        {
+            "table": "department_yearly",
+            "ingest_status": "review_pending",
+            "is_current": False,
+            "rows": 1,
+            "schools": 1,
+            "min_confidence": 0.54,
+            "max_confidence": 0.54,
+        },
+        {
+            "table": "support_recipient",
+            "ingest_status": "review_pending",
+            "is_current": False,
+            "rows": 1,
+            "schools": 1,
+            "min_confidence": 0.54,
+            "max_confidence": 0.54,
         },
     ]
 

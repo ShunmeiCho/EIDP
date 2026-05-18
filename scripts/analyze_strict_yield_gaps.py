@@ -180,6 +180,92 @@ def _yearly_row_buckets(
     ]
 
 
+def _low_confidence_business_row_buckets(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+    school_ids: set[int] | None,
+    min_confidence: float = 0.70,
+) -> list[dict[str, Any]]:
+    school_type_sql, school_type_params = _school_type_clause(school_type)
+    dy_school_ids_sql, dy_school_ids_params = _school_ids_clause("d.school_id", school_ids)
+    sr_school_ids_sql, sr_school_ids_params = _school_ids_clause("sr.school_id", school_ids)
+
+    rows = conn.execute(
+        f"""
+        select
+          'department_yearly' as table_name,
+          coalesce(d.ingest_status, '') as ingest_status,
+          case when dy.is_current then 1 else 0 end as is_current,
+          count(*) as row_count,
+          count(distinct d.school_id) as school_count,
+          round(min(dy.extraction_confidence), 3) as min_confidence,
+          round(max(dy.extraction_confidence), 3) as max_confidence
+        from department_yearly dy
+        join document d on d.id = dy.document_id
+        join school sc on sc.id = d.school_id
+        where dy.fiscal_year = ?
+          and sc.status = 'active'
+          and dy.extraction_confidence is not null
+          and dy.extraction_confidence < ?
+          {school_type_sql}
+          {dy_school_ids_sql}
+        group by d.ingest_status, dy.is_current
+        union all
+        select
+          'support_recipient' as table_name,
+          coalesce(d.ingest_status, '') as ingest_status,
+          case when sr.is_current then 1 else 0 end as is_current,
+          count(*) as row_count,
+          count(distinct sr.school_id) as school_count,
+          round(min(sr.extraction_confidence), 3) as min_confidence,
+          round(max(sr.extraction_confidence), 3) as max_confidence
+        from support_recipient sr
+        left join document d on d.id = sr.document_id
+        join school sc on sc.id = sr.school_id
+        where sr.fiscal_year = ?
+          and sc.status = 'active'
+          and sr.extraction_confidence is not null
+          and sr.extraction_confidence < ?
+          {school_type_sql}
+          {sr_school_ids_sql}
+        group by d.ingest_status, sr.is_current
+        order by table_name, row_count desc, ingest_status, is_current
+        """,
+        (
+            fiscal_year,
+            min_confidence,
+            *school_type_params,
+            *dy_school_ids_params,
+            fiscal_year,
+            min_confidence,
+            *school_type_params,
+            *sr_school_ids_params,
+        ),
+    ).fetchall()
+    return [
+        {
+            "table": str(table_name),
+            "ingest_status": str(ingest_status) or None,
+            "is_current": bool(is_current),
+            "rows": int(row_count),
+            "schools": int(school_count),
+            "min_confidence": float(row_min_confidence) if row_min_confidence is not None else None,
+            "max_confidence": float(row_max_confidence) if row_max_confidence is not None else None,
+        }
+        for (
+            table_name,
+            ingest_status,
+            is_current,
+            row_count,
+            school_count,
+            row_min_confidence,
+            row_max_confidence,
+        ) in rows
+    ]
+
+
 def analyze_database(
     database: Path,
     *,
@@ -196,6 +282,12 @@ def analyze_database(
         )
         document_buckets = _document_buckets(conn, fiscal_year=fiscal_year, school_ids=school_ids)
         yearly_row_buckets = _yearly_row_buckets(
+            conn,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+            school_ids=school_ids,
+        )
+        low_confidence_business_row_buckets = _low_confidence_business_row_buckets(
             conn,
             fiscal_year=fiscal_year,
             school_type=school_type,
@@ -237,6 +329,7 @@ def analyze_database(
         "non_ready_buckets": non_ready_buckets,
         "document_buckets": document_buckets,
         "yearly_row_buckets": yearly_row_buckets,
+        "low_confidence_business_row_buckets": low_confidence_business_row_buckets,
     }
 
 
