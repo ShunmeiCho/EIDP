@@ -1018,7 +1018,7 @@ def _has_target_form_hint(candidate: PdfCandidate) -> bool:
     """Return whether URL/anchor text names an application-form shape."""
 
     text = _candidate_hint_text(candidate).lower()
-    return _has_target_application_hint(candidate) or any(
+    return _has_target_application_hint(candidate) or _STYLE2_TARGET_FORM_HINT_RE.search(text) is not None or any(
         token in text
         for token in (
             "確認申請",
@@ -1035,17 +1035,25 @@ def _has_specific_target_form_hint(candidate: PdfCandidate) -> bool:
     """Return whether URL/anchor text specifically names the target form."""
 
     text = _candidate_hint_text(candidate).lower()
-    return _has_target_application_hint(candidate) or any(
+    return _has_target_application_hint(candidate) or _SPECIFIC_TARGET_FORM_HINT_RE.search(text) is not None or any(
         token in text
         for token in (
-            "様式第2号",
-            "様式第２号",
-            "様式2号",
+            "機関要件確認申請",
+        )
+    )
+
+
+def _has_visible_specific_target_form_hint(candidate: PdfCandidate) -> bool:
+    """Return whether visible anchor context specifically names the target form."""
+
+    text = unicodedata.normalize("NFKC", candidate.anchor_text or "").lower()
+    return _SPECIFIC_TARGET_FORM_HINT_RE.search(text) is not None or any(
+        token in text
+        for token in (
             "機関要件確認申請",
             "confirmation_application",
             "confirmationapplication",
-            "kakuninshinsei",
-            "koushinshinsei",
+            "confirmappli",
         )
     )
 
@@ -2112,6 +2120,12 @@ def _trusted_year_evidence_can_fill_missing_pdf_year(
         return False
     if _has_explicit_stale_fiscal_year_label(candidate, target_year=target_year):
         return False
+    if (
+        candidate.pattern_type == "wordpress_download_manager"
+        and not _has_target_application_hint(candidate)
+        and not _has_visible_specific_target_form_hint(candidate)
+    ):
+        return False
     if trusted_year_evidence == "school_domain_override_disclosure":
         return _has_specific_target_form_hint(candidate) or _has_known_embedded_study_support_target_form(candidate)
     if trusted_year_evidence == "prefecture_index_current_year":
@@ -2488,6 +2502,32 @@ _LEADING_SPECIALIZED_SCHOOL_ENTITY_RE = re.compile(
     re.IGNORECASE,
 )
 _GENERIC_SCHOOL_ENTITY_CONTEXT_RE = re.compile(r"(?:における|に関する|対象となる|学校一覧)")
+_SCHOOL_LABEL_CONTEXT_PREFIX_RE = re.compile(
+    r"^(?:"
+    r"20\d{2}(?:年度)?"
+    r"|r\d{1,2}(?:年度)?"
+    r"|令和\d{1,2}(?:年度)?"
+    r"|確認申請書"
+    r"|更新確認申請書"
+    r"|修学支援申請書"
+    r"|申請書"
+    r"|申請様式"
+    r"|様式第?\d+号(?:の\d+)?(?:別紙)?"
+    r")"
+)
+_STYLE2_TARGET_FORM_HINT_RE = re.compile(
+    r"様式\s*(?:第\s*)?[（(]?\s*[2２]\s*[)）]?\s*(?:号)?",
+    re.IGNORECASE,
+)
+_SPECIFIC_TARGET_FORM_HINT_RE = re.compile(
+    r"(?:"
+    r"様式\s*(?:第\s*)?[（(]?\s*[2２]\s*[)）]?\s*(?:号)?"
+    r"|confirmation[_-]?written[_-]?application"
+    r"|confirmappli"
+    r"|kakuninshinsei"
+    r")",
+    re.IGNORECASE,
+)
 
 
 def _school_link_label(text: str) -> str:
@@ -2496,6 +2536,18 @@ def _school_link_label(text: str) -> str:
     normalized = normalized.replace("専門学校", "")
     normalized = normalized.replace("アンド", "&")
     return re.sub(r"[\s・･ー－\-–—_/／|｜()（）［］\[\]{}&]+", "", normalized)
+
+
+def _school_label_without_context_prefixes(label: str) -> str:
+    """Strip non-school words that leaked into a candidate school label."""
+
+    current = label
+    while current:
+        stripped = _SCHOOL_LABEL_CONTEXT_PREFIX_RE.sub("", current, count=1)
+        if stripped == current:
+            return current
+        current = stripped
+    return current
 
 
 def _school_name_matches_link(text: str, school_name: str) -> bool:
@@ -2525,6 +2577,7 @@ def _school_label_is_same_or_campus_variant(candidate_label: str, school_label: 
     when the extra suffix is a campus/location suffix such as ``大宮校``.
     """
 
+    candidate_label = _school_label_without_context_prefixes(candidate_label)
     if candidate_label == school_label:
         return True
     if len(candidate_label) < 4 or len(school_label) < 4:

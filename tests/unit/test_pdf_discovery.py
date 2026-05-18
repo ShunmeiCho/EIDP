@@ -660,6 +660,32 @@ def test_candidate_school_mismatch_rejects_substring_only_different_school() -> 
     )
 
 
+def test_candidate_school_mismatch_allows_current_school_after_year_prefix() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://www.snm.ac.jp/asset/doc/school/info/confirmation-application.pdf?date=2025",
+        page_url="https://www.snm.ac.jp/school/info/",
+        anchor_text="確認申請書（様式第2号 2025札幌看護医療専門学校）",
+    )
+
+    assert not pdf_discovery_module._candidate_mentions_different_school(
+        candidate,
+        "札幌看護医療専門学校",
+    )
+
+
+def test_candidate_school_mismatch_allows_current_school_after_form_prefix() -> None:
+    candidate = PdfCandidate(
+        pdf_url="https://iryoufukushi.kawahara.ac.jp/wp-content/uploads/2025/08/form.pdf",
+        page_url="https://iryoufukushi.kawahara.ac.jp/disclosure/",
+        anchor_text="修学支援申請書 様式第2号（河原医療福祉専門学校）",
+    )
+
+    assert not pdf_discovery_module._candidate_mentions_different_school(
+        candidate,
+        "河原医療福祉専門学校",
+    )
+
+
 def test_candidate_school_mismatch_allows_campus_suffix_variant() -> None:
     candidate = PdfCandidate(
         pdf_url="https://www.o-hara.ac.jp/about/joho/pdf/2025-1-36-01-5.pdf",
@@ -6496,6 +6522,74 @@ def test_download_pdf_accepts_trusted_prefecture_specific_yearless_target_form(
         pdf_url="https://www.neec.ac.jp/assets/contents/documents/portal/syllabus/kamata/yoshiki.pdf",
         page_url="https://www.neec.ac.jp/portal/public/mext-scholarship/",
         anchor_text="大学等における修学の支援に関する法律第7条第1項の確認に係る申請書（様式第2号）",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "prefecture_index_current_year"
+
+
+def test_download_pdf_accepts_trusted_prefecture_parenthesized_style2_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://car.ttc.ac.jp/wp-content/themes/ttc_car_theme/pdf/nakano/shugakusien7_1/nk_00_001.pdf",
+        page_url="https://car.ttc.ac.jp/school/disclosure/nakano/",
+        anchor_text="申請様式（2号）",
+    )
+    candidate.trusted_year_evidence = "prefecture_index_current_year"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2025,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size > 1000
+    assert pdf_type == "target"
+    assert reason is None
+    assert candidate.year_evidence == "prefecture_index_current_year"
+
+
+def test_download_pdf_accepts_trusted_prefecture_confirmation_written_application_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 確認申請書 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="http://www.ncfl.ac.jp/img/school/syugakusien/Confirmation_written_application_ncfl.pdf",
+        page_url="http://www.ncfl.ac.jp/school/syugakusien.html",
+        anchor_text="確認に係る申請書",
     )
     candidate.trusted_year_evidence = "prefecture_index_current_year"
 
