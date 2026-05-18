@@ -11,17 +11,17 @@ the 60-70% strict ship line and points to dense / multibrand candidate ranking
 as the next algorithmic blocker. These are local replay results, not a packaged
 Windows active-lane proof.
 Latest local Mac/non-Windows package snapshot:
-`10e58a101ec388a5d49493a1312e1d779fe1901b`
+`34ded9fecf7ddf27f37e9c8e3eee89e624e69260`
 Current Mac-core-verifier-clean package for latest package snapshot:
-`dist/eidp-windows-v477.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v477.zip`
+`dist/eidp-windows-v478.zip`
+Latest Mac-core-verifier-clean package: `dist/eidp-windows-v478.zip`
 Latest Mac-core package SHA256:
-`53298b847c4944273b98668b9fbd1429298bb7a14239bb9057cf144b525ce7b3`
-Latest full non-Windows release-gate package: `dist/eidp-windows-v477.zip`
-Latest v477 non-Windows release gate output:
-`_temp/v477-non-windows-release-gates.json`, `ok=true`. The ZIP was built
+`9abf7ab7686815130ed60eb49cd2cdfdd97887e4d6ac77e61208c822ced3e5c0`
+Latest full non-Windows release-gate package: `dist/eidp-windows-v478.zip`
+Latest v478 non-Windows release gate output:
+`_temp/v478-non-windows-release-gates.json`, `ok=true`. The ZIP was built
 from `git_dirty=false` source and `BUILD_INFO.json` records the same
-`10e58a101ec388a5d49493a1312e1d779fe1901b` commit. This package includes the
+`34ded9fecf7ddf27f37e9c8e3eee89e624e69260` commit. This package includes the
 confidence-gated ingest contract update: low-confidence DepartmentYearly and
 SupportRecipient parses now route to review_pending without writing business
 table rows. The packaged strict-yield gap analyzer now also reports
@@ -35,7 +35,11 @@ historical low-confidence business-table residue from the pre-v475 replay:
 `department_yearly=132` rows across `86` schools and `support_recipient=23` rows
 across `23` schools, all `review_pending` and `is_current=false`. Future
 low-confidence rows should not accumulate in Excel-facing tables before
-operator review. The largest URL/PDF buckets are now explicit:
+operator review. v478 also counts `discovered` PDF candidates as
+operator-reviewable workload because the UI already routes them to `PDF確認`;
+on the FY2025 replay this moves operator-reviewable coverage from
+`714/2418 (29.5%)` to `755/2418 (31.2%)`, while strict/excel-ready remains
+`389/2418 (16.1%)`. The largest URL/PDF buckets are now explicit:
 `pref_url + no_target_pdf=617`, `no_url=613`, and
 `unknown + no_target_pdf=430`; therefore the next strict-yield lever is URL
 coverage and PDF candidate discovery/ranking, with mixed-confidence /
@@ -96,22 +100,24 @@ Current active-goal completion audit:
 
 Status: **NOT COMPLETE**
 
-Current local package source head `10e58a101ec388a5d49493a1312e1d779fe1901b` is
+Current local package source head `34ded9fecf7ddf27f37e9c8e3eee89e624e69260` is
 Mac-validated with `1803 passed`, `mypy src` clean, CI-scope Ruff clean,
 Bandit high-severity clean, and
-`scripts/run_non_windows_release_gates.py dist/eidp-windows-v477.zip --skip-full-unit --json`
-returning `ok=true`. A clean successor package `dist/eidp-windows-v477.zip`
+`scripts/run_non_windows_release_gates.py dist/eidp-windows-v478.zip --skip-full-unit --json`
+returning `ok=true`. A clean successor package `dist/eidp-windows-v478.zip`
 was built from that head without `--allow-dirty`; `BUILD_INFO.json` records
 `git_dirty=false`, SHA256 is
-`53298b847c4944273b98668b9fbd1429298bb7a14239bb9057cf144b525ce7b3`, and
+`9abf7ab7686815130ed60eb49cd2cdfdd97887e4d6ac77e61208c822ced3e5c0`, and
 `scripts/verify_windows_distribution.py` returned `ok=true`. The package also
 updates the distribution verifier to enforce the confidence-gated ingest
 contract, so a future ZIP that reintroduces low-confidence business-table writes
 will fail package verification. It also packages a strict-yield gap analyzer
 field that surfaces low-confidence business-table residue and URL/PDF discovery
-buckets in existing DBs. After
+buckets in existing DBs. v478 additionally aligns the operator-reviewable
+metric with the UI by counting `discovered` PDF candidates as reviewable rather
+than manually missing. After
 this status note, the docs-only stale-package replay path must be rerun against
-v477 if more status-only edits
+v478 if more status-only edits
 are added. The latest
 GitHub-pushed v466 package source
 `9a5d50b556484d89b30a2c349d5ee5b01ff0f195` remains CI-green on GitHub. This
