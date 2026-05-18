@@ -2,18 +2,15 @@
 
 Updated: 2026-05-18
 Branch: `sprint8-handoff-finalize`
-Latest runtime source commit:
-`6841b26` (`fix(status): count exportable review-pending rows as parsed`).
-Post-v480 runtime fixes now include `d535c74`, which relinks same-school
-duplicate PDFs when the canonical Document row has `ingest_status=no_file`, and
-`6841b26`, which makes `SchoolFiscalYearStatus` count high-confidence
-current-year DepartmentYearly rows as parsed/exportable even when the source
-Document remains `review_pending` because non-current or support rows need
-operator review. Focused verification: `uv run pytest
-tests/unit/test_pdf_discovery.py -q` (`213 passed`), `uv run pytest
-tests/unit/test_school_fiscal_year_status.py tests/unit/test_reports.py
-tests/unit/test_cli_reports.py tests/unit/test_run_weekly_target_year_discovery.py
--q` (`85 passed`), Ruff and mypy on touched modules, and `git diff --check`.
+Latest package source commit:
+`c115a52` (`docs: align engineering goals with current debt`).
+Post-v480 source fixes now include checked-in weekly URL source application
+(`f54c76c`), application-style year hints (`958f156`), critical silent-failure
+logging for audit outbox / lock metadata (`948ad8e`), malformed-vs-unsafe URL
+classification (`d07c27c`), and G4/G5 documentation drift correction
+(`c115a52`). Focused verification: targeted Layer 2 pytest (`78 passed`), Ruff
+on touched modules, `uv run mypy src`, CI push + pull_request success for
+`c115a52`, and `git diff --check`.
 Current selected-school strict-yield check after discovery, ingest, and rebuild
 with the original FY2025 replay evidence plus the 35-school recovery evidence:
 `_temp/same-school-duplicate-restore-smoke-35/output/strict-yield-analysis-selected1000-after-exportable-review-pending-fix.json`.
@@ -26,8 +23,9 @@ Current Windows active lane:
 read-only SSH probe on 2026-05-18 showed `EIDP Weekly Run` still points to
 `C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat`; v480 exists only as
 side-by-side `%USERPROFILE%\EIDP-v480-d5eb115` plus staging ZIP. Do not promote
-v480 as-is after `6841b26`, because it no longer contains latest runtime source
-and the production-scale strict gate is still below 60%.
+v480 as-is after the post-v480 runtime fixes above. Use the v482 package below
+for the next Mac-side release gates and any future Windows side-by-side
+promotion.
 Post-status Mac-side strict-yield replay:
 `docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
 strict metric / parser / targeted discovery changes improve FY2025 limit-1000
@@ -37,26 +35,21 @@ the 60-70% strict ship line and points to dense / multibrand candidate ranking
 as the next algorithmic blocker. These are local replay results, not a packaged
 Windows active-lane proof.
 Latest local Mac/non-Windows package snapshot:
-`d5eb1154e55f0d73454ca86618fc0a8ac00e8aef`
-Current Mac-core-verifier-clean package for latest package snapshot:
-`dist/eidp-windows-v480.zip`
-Latest Mac-core-verifier-clean package: `dist/eidp-windows-v480.zip`
-Latest Mac-core package SHA256:
-`130ab6957d2444d08b10430cbabec556a139a9194d7b72a9f4082ef41726c635`
-Current Mac-core-verifier-clean package from latest package source commit:
-`dist/eidp-windows-v480.zip`
-Current v480 package SHA256:
-`130ab6957d2444d08b10430cbabec556a139a9194d7b72a9f4082ef41726c635`
-Current v480 non-Windows release gate output:
-`_temp/v480-non-windows-release-gates.json`, `ok=true`. The ZIP was built
-from `git_dirty=false` source and `BUILD_INFO.json` records commit
-`d5eb1154e55f0d73454ca86618fc0a8ac00e8aef`, matching the local source commit.
-`scripts/verify_windows_distribution.py --json` also passed for
-`dist/eidp-windows-v480.zip`, with `has_runtime=true`, `wheel_count=84`,
-`prefecture_seed_downloadable=47`, and ZIP SHA256 matching the sidecar.
-This status file may advance after the package source commit when documenting
-evidence. Treat v480 as fresh for runtime code at `d5eb1154...`; rebuild before
-Windows lane promotion if any non-documentation runtime source changes land.
+`c115a52cfdb7a65b08c30b473b5b9fd96e39ca4a`
+Current Mac package for latest package snapshot:
+`dist/eidp-windows-v482.zip`
+Latest Mac package SHA256:
+`ed2a6c9cb6b15d9a50b8c7f3c488c2d681eedd1bb359af7b04934e30340d7153`
+Current v482 package SHA256:
+`ed2a6c9cb6b15d9a50b8c7f3c488c2d681eedd1bb359af7b04934e30340d7153`
+Current v482 package build evidence:
+`dist/eidp-windows-v482.zip` was built from `git_dirty=false` source and
+`BUILD_INFO.json` records commit
+`c115a52cfdb7a65b08c30b473b5b9fd96e39ca4a`, matching the local source commit.
+`dist/eidp-windows.zip` and its sidecar were refreshed as the latest alias and
+have the same SHA256. Non-Windows release gates, Windows distribution verifier,
+retroactive matrix, and production-scale strict-yield proof are the next Layer 4
+gates; do not use v482 for owner E2E before those gates pass.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs
