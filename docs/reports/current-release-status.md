@@ -2,7 +2,7 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v492` for Mac-side package/source verification.
+Latest package family: `v493` for Mac-side package/source verification.
 Latest Windows side-by-side smoke evidence remains `v489`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -23,12 +23,14 @@ add a reusable strict-yield upper-bound evaluator, require that evaluator in
 future Windows ZIPs, reject legacy `streamlit.main` launchers, bind the
 packaged Streamlit config to `127.0.0.1` as defense in depth, and add a
 dry-run-by-default `repair_streamlit_launcher.py` helper for stale extracted
-launchers.
+launchers. Post-v492 source fixes document the Streamlit launcher hotfix path,
+promote PDF classification parse failures to `log.exception`, and add
+`FOR UPDATE` call shape to fiscal-year override rewrites.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
 `ec2ec94`, PR #1 head at `e3becc4`, and `e3becc4` as an ancestor of PR #2
-head `fc2294155c05b2a03de7f08f19184293e0d461e8`. PR #2 is now the single
+head `a3fbf4a728917defb5ef9bff7568322deb7f99dd`. PR #2 is now the single
 active landing surface; its body has been updated to remove the old
 "Depends on PR #1" statement and to keep the FY2026 release blocker explicit.
 Before this status-file update, PR #2 had `mergeStateStatus=CLEAN`; GitHub
@@ -71,22 +73,22 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current Mac package candidate:
-`dist/eidp-windows-v492.zip`, SHA256
-`83d39bcc11970d943c74c24e2eef8ff26449aed1155432e26c567dc098787d93`.
+`dist/eidp-windows-v493.zip`, SHA256
+`77d98222d9e5474b5db173e6a4ec252b0c06295d1f1c6fce63a2fc1732d34e9b`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=d8ba1bbce5191b48e326acc3a627a80a99f785e8`,
+`git_commit=a3fbf4a728917defb5ef9bff7568322deb7f99dd`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v492-stage6-v492-verify-windows-distribution-20260519.json`
+`logs/win-v493-stage6-v493-verify-windows-distribution-20260519.json`
 (`ok=true`, `wheel_count=84`, `entry_count=3104`) and
-`logs/win-v492-stage6-v492-non-windows-release-gates-20260519.json`
+`logs/win-v493-stage6-v493-non-windows-release-gates-20260519.json`
 (`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
-returned `0`; full unit count `1862 passed`). v492 includes
+returned `0`; full unit count `1865 passed`). v493 includes
 `EIDP-repair-launcher.bat`, `scripts/repair_streamlit_launcher.bat`,
 `scripts/repair_streamlit_launcher.py`, and `scripts/evaluate_strict_yield_bound.py`;
 keeps the image-pending OCR warning verifier contract; rejects packaged
 launchers that contain `streamlit.main`; and ships `.streamlit/config.toml`
-with `address = "127.0.0.1"`. v492 has not been Windows side-by-side validated.
+with `address = "127.0.0.1"`. v493 has not been Windows side-by-side validated.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
