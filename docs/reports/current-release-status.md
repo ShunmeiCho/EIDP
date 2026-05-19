@@ -152,6 +152,8 @@ and verifier proof is
 `logs/win-v500-stage6-v500-stage6-evidence-verify-20260520-011707.json`
 (`ok=true`). The active scheduled task stayed on v485 and was verified by
 `logs/win-v500-stage6-v500-recovery-probe-lock-after-canary-clean-20260520.json`.
+The version-specific owner/operator request for any future v500 real cycle is
+`docs/runbooks/eidp-v500-owner-request-20260520.txt`.
 
 Superseded v498 Windows side-by-side validation:
 the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
