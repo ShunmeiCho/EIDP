@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v495.zip`
-Package SHA256: `e55c1b2de2b74181f9d29120ba9b074c5d14c82bf4d74ef41c07ff8e84e623c8`
+Package candidate: `dist/eidp-windows-v496.zip`
+Package SHA256: `cce8193244d68e41710195564eabf62cfabd22f93f12e8e1133f8daddda63273`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -39,11 +39,10 @@ evidence or Stage 6 return verification.
 | FY2026/R8 RCA | `logs/win-v485-stage6/fy2026-strict-yield-rca-20260519.json` | required |
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
-| Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json` | `ok=true` |
-| v495 package verifier | `logs/win-v495-stage6-v495-verify-windows-distribution-20260519.json` | `ok=true` |
-| v495 non-Windows release gates | `logs/win-v495-stage6-v495-non-windows-release-gates-20260519.json` | `ok=true` |
-| v495 docs-only head gate | `logs/win-v495-stage6-v495-non-windows-release-gates-docs-only-head-20260519.json` | `ok=true`, `allowed_stale_reason=docs_only` |
-| v495 final objective audit | `docs/reports/2026-05-19-final-objective-audit-v495.md` | `NOT COMPLETE` |
+| Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v496-20260519.json` | `ok=true` |
+| v496 package verifier | `logs/win-v496-stage6-v496-verify-windows-distribution-20260519.json` | `ok=true` |
+| v496 non-Windows release gates | `logs/win-v496-stage6-v496-non-windows-release-gates-20260519.json` | `ok=true` |
+| v496 final objective audit | `docs/reports/2026-05-19-final-objective-audit-v496.md` | `NOT COMPLETE` |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
 ## Return Verification
@@ -56,7 +55,7 @@ uv run python scripts/verify_stage6_return.py \
   --last-run <returned-data-output-last_run.json> \
   --evidence-verify-json <returned-stage6-evidence-verify.json> \
   --release-exception-reason publication_lag \
-  --mature-year-proof-json logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json \
+  --mature-year-proof-json logs/mature-year-acquisition-proof-fy2025-release-exception-v496-20260519.json \
   --release-exception-record docs/reports/2026-05-19-publication-lag-release-exception-record.md \
   --json
 ```
