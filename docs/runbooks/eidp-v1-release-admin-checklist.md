@@ -9,11 +9,11 @@ decision for FY2026/R8 publication lag.
 ## Do Not Proceed If
 
 - PR #2 is not clean or either required check is not green.
-- v497 has not been Windows side-by-side validated.
+- v498 has not been Windows side-by-side validated.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
-- OCR is included in the v1.0 release scope but there is no v497 Windows
+- OCR is included in the v1.0 release scope but there is no v498 Windows
   OCR add-on/runtime proof, or no explicit decision that OCR remains an
   optional/manual fallback for v1.0.
 - The signed tag command would use an unsigned or unknown signing identity.
@@ -38,13 +38,13 @@ Expected:
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v497.zip
-cat dist/eidp-windows-v497.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v497.zip --json
+shasum -a 256 dist/eidp-windows-v498.zip
+cat dist/eidp-windows-v498.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v498.zip --json
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v497.zip \
+  dist/eidp-windows-v498.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -52,7 +52,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075
+05f7dee2b6a487a798ae3121ea55ceb5593794126ef82e18afe2925ba7262930
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -85,8 +85,16 @@ Do not create `v1.0` until the release gates below are complete.
 
 Before merging or tagging, attach or reference:
 
-- v497 Windows side-by-side validator JSON;
-- v497 Windows UI smoke notes;
+- v498 Windows side-by-side validator JSON:
+  `logs/win-v498-stage6-v498-validate-after-setup-20260519.json`;
+- v498 Windows UI smoke notes:
+  `logs/win-v498-stage6-v498-ui-smoke-20260519.json`;
+- v498 OCR runtime proof:
+  `logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json`;
+- v498 Excel smoke proof:
+  `logs/win-v498-stage6-v498-excel-summary-20260519.json`;
+- v498 active-task recovery proof:
+  `logs/win-v498-stage6-v498-recovery-expected-v485-after-restore-20260519.json`;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
 - ManualActionLog / JSONL audit proof: audit page status, `manual_action_log`
