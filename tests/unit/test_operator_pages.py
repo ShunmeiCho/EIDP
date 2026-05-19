@@ -273,12 +273,23 @@ def test_is_storable_operator_url_avoids_network_dependent_dns_checks() -> None:
     assert not operator_pages.is_storable_operator_url("not-a-url")
 
 
-def test_operator_url_safety_decision_distinguishes_parse_error_from_unsafe() -> None:
+def test_operator_url_safety_decision_distinguishes_parse_error_from_unsafe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logged: list[dict[str, str]] = []
+
+    class FakeLogger:
+        def exception(self, event: str, **kwargs: str) -> None:
+            logged.append({"event": event, **kwargs})
+
+    monkeypatch.setattr(operator_pages, "log", FakeLogger())
+
     malformed = operator_pages.operator_url_safety_decision("http://[::1")
     loopback = operator_pages.operator_url_safety_decision("http://127.0.0.1/public_info/")
 
     assert malformed.safe is False
     assert malformed.reason == "parse_error"
+    assert logged == [{"event": "operator_url_safety_parse_failed", "error_type": "ValueError"}]
     assert loopback.safe is False
     assert loopback.reason == "blocked_host"
 

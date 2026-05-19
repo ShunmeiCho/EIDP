@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 
 import httpx
 import streamlit as st
+import structlog
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -76,6 +77,8 @@ _OPERATOR_BLOCKED_HOSTS = {
     "169.254.169.254",
     "metadata.google.internal",
 }
+
+log = structlog.get_logger(__name__)
 
 JsonDict = dict[str, Any]
 
@@ -419,7 +422,8 @@ def operator_url_safety_decision(url: str) -> OperatorUrlSafetyDecision:
     try:
         parsed = urlparse(url)
         hostname = (parsed.hostname or "").lower()
-    except Exception:
+    except Exception as exc:
+        log.exception("operator_url_safety_parse_failed", error_type=type(exc).__name__)
         return OperatorUrlSafetyDecision(False, "parse_error")
     if parsed.scheme not in ("http", "https"):
         return OperatorUrlSafetyDecision(False, "unsupported_scheme")

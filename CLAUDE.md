@@ -108,8 +108,8 @@ Sidebar mounts 12 pages from `src/eidp/review/app.py` + `_pages/*`. `unsafe_allo
 
 ### Engineering
 
-- **G4 Maintainability** — each `src/eidp/*.py` < `800` lines (current debt as of 2026-05-18: `pdf_discovery.py` 3901, `operator_pages.py` 3023, `ingest.py` 922 — split in v1.2); new discovery method onboarding < 1 dev-day; operator-UI test coverage ≥ `70%`. [v1.1–v1.2]
-- **G5 Observability** — `/health/full` aggregator endpoint (DB + lock + disk + last_run + audit); v1.0-critical silent failures use `log.exception`, while the remaining legacy logging debt is tracked for v1.1 (current scan as of 2026-05-19: `log.warning` 58, `log.exception` 13); `silent_failure_hunter` runs in CI nightly. [v1.1]
+- **G4 Maintainability** — each `src/eidp/*.py` < `800` lines (current debt as of 2026-05-19: `pdf_discovery.py` 4100, `operator_pages.py` 3027, `ingest.py` 922 — split in v1.2); new discovery method onboarding < 1 dev-day; operator-UI test coverage ≥ `70%`. [v1.1–v1.2]
+- **G5 Observability** — `/health/full` aggregator endpoint (DB + lock + disk + last_run + audit); v1.0-critical silent failures use `log.exception`, while the remaining legacy logging debt is tracked for v1.1 (current scan as of 2026-05-19: `log.warning` 58, `log.exception` 14); `silent_failure_hunter` runs in CI nightly. [v1.1]
 - **G6 Testability** — `tests/integration/` carries real on-disk SQLite + WAL contract tests; chaos tests for `kill -9 mid-run` / network partition / disk full / lock starvation; every CLI write has `--dry-run`. [v1.1–v1.3]
 - **G7 Extensibility** — `DEFAULT_METHODS` becomes a plugin registry; ingest stages are an insertable chain; LLM addon is optional with `--no-llm` deterministic flag. [v1.2]
 - **G8 Configurability** — every hard-coded threshold (60 / 30 / 0.85 / 0.70 / 0.50) moves to `ship_gate_contract.py` or `extraction_confidence.py` config; every path / timeout / batch_size / rate_limit reachable via `EIDP_*` env. **Red line**: `EIDP_TARGET_FISCAL_YEAR` never written to `.env` from settings UI. [v1.1]
