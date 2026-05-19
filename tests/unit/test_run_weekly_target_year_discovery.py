@@ -440,6 +440,17 @@ def test_parse_args_allows_explicit_all_school_types(
     assert args.school_type == "all"
 
 
+def test_parse_args_accepts_json_flag_for_batch_wrapper_compatibility(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["run_weekly_target_year_discovery.py", "--limit", "10", "--json"])
+
+    args = module.parse_args()
+
+    assert args.limit == 10
+    assert args.json is True
+
+
 def test_write_last_run_json_operator_summary(tmp_path: Path) -> None:
     """last_run.json is the Streamlit banner contract. Keep it small,
     stable, and independent from the full timestamped summary."""

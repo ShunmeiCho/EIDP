@@ -1024,6 +1024,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             "run_weekly_target_year_discovery.py",
             "EIDP_WEEKLY_LIMIT",
             "--limit %EIDP_WEEKLY_LIMIT%",
+            "%*",
             'set "RC=%ERRORLEVEL%"',
             "endlocal & exit /b %RC%",
         ),

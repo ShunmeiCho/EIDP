@@ -832,6 +832,12 @@ def test_weekly_run_supports_bounded_smoke_env_vars(bat_files: dict[str, str]):
     assert "--dry-run" in body
 
 
+def test_weekly_run_forwards_cli_args_for_ssh_canaries(bat_files: dict[str, str]):
+    body = bat_files["weekly_run.bat"]
+    assert "%WEEKLY_ARGS% %*" in body
+    assert "[weekly_run] cli_args %*" in body
+
+
 def test_launch_preserves_streamlit_exit_code_after_endlocal(bat_files: dict[str, str]):
     """Delayed expansion is not enabled in launch.bat. Capture the
     Streamlit return code before `endlocal` so Task Scheduler / manual

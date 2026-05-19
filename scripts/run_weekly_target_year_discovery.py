@@ -1019,6 +1019,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-lock", action="store_true")
     parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Compatibility flag for batch/SSH callers. The runner prints JSON on success by default.",
+    )
+    parser.add_argument(
         "--stale-only",
         action="store_true",
         help="Legacy mode: crawl only schools with an older ingested target PDF.",

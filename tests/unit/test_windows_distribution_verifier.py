@@ -1837,6 +1837,17 @@ def test_verify_core_zip_rejects_locale_dependent_weekly_bat(tmp_path: Path) -> 
     assert any("%date:~" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_weekly_bat_cli_arg_forwarding(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/weekly_run.bat"] = entries["scripts/weekly_run.bat"].replace(" %*", "")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("scripts/weekly_run.bat missing required token: %*" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_uninstall_that_deletes_data(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["scripts/uninstall.bat"] = entries["scripts/uninstall.bat"] + "\nrmdir /s /q data\n"

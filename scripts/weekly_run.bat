@@ -38,7 +38,8 @@ if /I "%EIDP_WEEKLY_DRY_RUN%"=="true" set "WEEKLY_ARGS=%WEEKLY_ARGS% --dry-run"
 
 echo [weekly_run] start %DATE% %TIME% >> "%LOGFILE%"
 if defined WEEKLY_ARGS echo [weekly_run] args%WEEKLY_ARGS% >> "%LOGFILE%"
-"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\run_weekly_target_year_discovery.py" %WEEKLY_ARGS% >> "%LOGFILE%" 2>&1
+if not "%~1"=="" echo [weekly_run] cli_args %* >> "%LOGFILE%"
+"%VENV_PY%" "%EIDP_APP_ROOT%\scripts\run_weekly_target_year_discovery.py" %WEEKLY_ARGS% %* >> "%LOGFILE%" 2>&1
 set "RC=%ERRORLEVEL%"
 echo [weekly_run] end %DATE% %TIME% rc=%RC% >> "%LOGFILE%"
 
