@@ -219,6 +219,7 @@ def test_action_types_and_target_tables_are_pinned():
         "url_candidate_approved",
         "url_candidate_rejected",
         "proposal_decision_recorded",
+        "bug_report_generated",
         "prefecture_remark_approved",
         "prefecture_remark_rejected",
         "school_code_approved",
@@ -244,4 +245,5 @@ def test_action_types_and_target_tables_are_pinned():
         "school_site",
         "excel_export",
         "operator_settings",
+        "bug_report",
     }

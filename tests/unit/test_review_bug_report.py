@@ -3,7 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
 from eidp.bug_signals.detector import BugSignal
+from eidp.db.models import Base, ManualActionLog
 from eidp.review._pages import bug_report
 
 
@@ -52,6 +56,12 @@ def _signal() -> BugSignal:
     )
 
 
+def _session() -> Session:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    return Session(engine)
+
+
 def test_bug_report_page_shows_no_p0_state_without_building_bundle(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -82,6 +92,7 @@ def test_bug_report_page_builds_downloadable_zip_when_clicked(monkeypatch, tmp_p
     signal = _signal()
     fake_st = FakeStreamlit(button_clicked=True, note="operator saw traceback")
     build_calls: list[dict[str, Any]] = []
+    session = _session()
 
     def fake_scan(root: Path, *, check_sqlite: bool = True) -> list[BugSignal]:
         return [signal]
@@ -94,9 +105,16 @@ def test_bug_report_page_builds_downloadable_zip_when_clicked(monkeypatch, tmp_p
     monkeypatch.setattr(bug_report, "scan_bug_signals", fake_scan)
     monkeypatch.setattr(bug_report, "build_bug_report_bundle", fake_build)
 
-    bug_report.render(None, app_root=tmp_path)  # type: ignore[arg-type]
+    bug_report.render(session, app_root=tmp_path)
 
     assert build_calls == [{"root": tmp_path, "signals": [signal], "operator_note": "operator saw traceback"}]
+    audit = session.query(ManualActionLog).one()
+    assert audit.action_type == "bug_report_generated"
+    assert audit.target_table == "bug_report"
+    payload = audit.new_value
+    assert payload is not None
+    assert "bug-report.zip" in payload
+    assert "operator saw traceback" not in payload
     assert ("error", "異常を 1 件検出しました。レポートZIPを作成してください。") in fake_st.calls
     assert any(
         name == "json" and "/Users/operator" not in str(value) and "/Users/<REDACTED>" in str(value)
