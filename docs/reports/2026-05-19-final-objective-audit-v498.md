@@ -63,6 +63,7 @@ The objective is complete only when all of the following are true:
 | PR mergeability | Live check after v498 push: PR #2 `MERGEABLE` / `CLEAN`, two `Python quality gates` and two `Ship gate contract` checks `SUCCESS` | PASS at time of audit; re-check before merge |
 | Package/source freshness | `logs/win-v498-stage6-v498-non-windows-release-gates-20260519.json`: `package_source_check.ok=true`, `source_dirty=false`, `stale=false` | PASS |
 | Publication-lag exception record | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED` | BLOCKED |
+| Unapproved exception cannot pass return verifier | `logs/win-v498-stage6-v498-verify-stage6-return-not-approved-exception-20260519.json`: verifier exit code `1`, `ok=false`, and errors include `release exception record Status must be APPROVED` plus `release exception record Decision must be APPROVED` | PASS for negative gate |
 | Owner real Windows cycle | v498 has a bounded canary and Stage 6 bundle; owner real-cycle KPI table and sign-off are missing | BLOCKED |
 | v1.0 tag / main merge | Not allowed while FY2026 strict proof and owner cycle are incomplete, absent explicit release exception approval | BLOCKED |
 
@@ -81,6 +82,9 @@ The objective is complete only when all of the following are true:
   verification. It is still a bounded validation, not owner approval.
 - The FY2025 mature-year proof is valid only as release-exception support. It
   must not be counted as strict FY2026/R8 ship proof.
+- `verify_stage6_return.py` rejects the current `publication_lag` path while
+  the exception record remains `NOT_APPROVED`, even when the mature-year proof
+  JSON and Stage 6 evidence verifier JSON are supplied.
 
 ## Required Next Actions
 
