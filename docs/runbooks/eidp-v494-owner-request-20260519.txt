@@ -1,6 +1,12 @@
 EIDP v494 Owner / Operator Request
 Date: 2026-05-19
 
+SUPERSEDED
+----------
+Superseded by v495 and later v496 package candidates. Do not transfer or
+validate v494 unless a release engineer explicitly requests a historical
+reproduction.
+
 Purpose
 -------
 v494 is ready for Windows side-by-side validation. It is not v1.0 approval and

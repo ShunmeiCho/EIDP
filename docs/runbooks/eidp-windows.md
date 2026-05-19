@@ -651,17 +651,23 @@ Get-ChildItem C:\workspace\EIDP -Recurse | Unblock-File
 ```powershell
 $root = "$env:USERPROFILE\EIDP-v485-70e3db4"
 $launcher = "$root\scripts\launch.bat"
+Get-Process -Name python -ErrorAction SilentlyContinue | Stop-Process -Force
 Select-String -Path $launcher -Pattern "streamlit.main| -m streamlit run"
 Copy-Item $launcher "$launcher.pre-streamlit-main-fix.bak" -Force
 $body = [IO.File]::ReadAllText($launcher, [Text.Encoding]::UTF8)
 $body = $body.Replace("-m streamlit.main run", "-m streamlit run").Replace("-m streamlit.main", "-m streamlit run")
 [IO.File]::WriteAllText($launcher, $body, [Text.UTF8Encoding]::new($false))
 Select-String -Path $launcher -Pattern "streamlit.main| -m streamlit run"
+if (Select-String -Path $launcher -Pattern "streamlit.main" -Quiet) {
+  Copy-Item "$launcher.pre-streamlit-main-fix.bak" $launcher -Force
+  throw "streamlit.main still remains; restored backup"
+}
 ```
 
 最後の `Select-String` で `streamlit.main` が残らず、`-m streamlit run` だけが
 見えることを確認する。この hotfix は `launch.bat` だけを修正し、DB や
-Task Scheduler action は変更しない。
+Task Scheduler action は変更しない。失敗時は `.pre-streamlit-main-fix.bak`
+から `launch.bat` を戻してから停止する。
 
 ### 14.5 SSH 鍵認証で接続できない（管理者アカウント）
 

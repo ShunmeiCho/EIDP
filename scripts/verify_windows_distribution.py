@@ -1133,6 +1133,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
         "scripts/repair_streamlit_launcher.bat": (
             ".venv\\Scripts\\python.exe",
             "runtime\\python\\python.exe",
+            'set "PYTHONPATH=%EIDP_APP_ROOT%\\src;%PYTHONPATH%"',
             "repair_streamlit_launcher.py",
             "dry-run unless --apply",
             'set "RC=%ERRORLEVEL%"',
@@ -1325,6 +1326,11 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "--apply",
             ".bak",
             "dry-run",
+            "resolve(strict=True)",
+            "_unique_backup_path",
+            "backup already exists",
+            "acquire_lock",
+            "post-repair validation failed",
         ),
         "scripts/stage6_recovery_check.py": (
             "EIDP Weekly Run",

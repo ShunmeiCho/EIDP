@@ -2,6 +2,12 @@
 
 Updated: 2026-05-19
 
+## Superseded
+
+Superseded by v495 and later v496 package candidates. Do not transfer or
+validate v494 unless a release engineer explicitly requests a historical
+reproduction.
+
 This runbook validates v494 on the Windows operator PC without promoting the
 active `EIDP Weekly Run` scheduled task. It is not approval to tag v1.0 or to
 switch the active lane.
