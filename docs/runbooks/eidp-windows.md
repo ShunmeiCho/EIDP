@@ -774,7 +774,32 @@ runtime（例: `%USERPROFILE%\EIDP-v380-f6a5e6d\scripts\weekly_run.bat`）へ戻
 Stage 6 検証を再開する。SSH が復旧するまで、未完了の copied-DB smoke を
 Stage 6 証拠として数えない。
 
-### 14.7 「業務員傻瓜式部署」の前提
+### 14.7 Mac の `Host win` が古い LAN IP を指している
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| Mac から `ssh win hostname` が `Network is unreachable` / timeout になり、`nc -vz <旧IP> 22` も失敗する | 業務員 PC が別 Wi-Fi / LAN セグメントへ移動し、Mac 側の `~/.ssh/config` の `Host win` が古い IPv4 を指している | 業務員 PC 側で `ipconfig` を実行し、現在の IPv4 を確認する。Mac 側ではまず `ssh -o ConnectTimeout=8 <WindowsUser>@<新IPv4> hostname` で一時確認し、通った場合だけ `Host win` の `HostName` を更新する |
+
+Windows 側で確認:
+
+```powershell
+ipconfig
+Get-Service sshd
+```
+
+Mac 側で確認:
+
+```bash
+ping -c 1 <新IPv4>
+ssh-keyscan -T 3 <新IPv4>
+ssh -o ConnectTimeout=8 -o ControlMaster=no <WindowsUser>@<新IPv4> hostname
+```
+
+`ssh-keyscan` が無反応なら、IP が違うか、Windows Defender Firewall / OpenSSH
+Server が止まっている。`ssh-keyscan` は返るが `hostname` が失敗する場合は、
+14.5 の鍵/ACL、または 14.6 の sshd session 復旧を確認する。
+
+### 14.8 「業務員傻瓜式部署」の前提
 
 最新 ZIP を使う限り、業務員側の操作は次の 3 ステップのみで完了します：
 
@@ -785,7 +810,7 @@ Stage 6 証拠として数えない。
 それ以上の手作業（CRLF 変換、wheelhouse 追加、`.venv` 削除、ACL 修正など）は、本ランブックを書き終えた時点で全て build pipeline 側で済んでいます。
 業務員に渡る前に管理者側でこの章のチェックリストに従って ZIP の品質を確認してください。
 
-### 14.8 リモートからの HTTP アクセスが「業務員 PC では繋がる、外からは繋がらない」
+### 14.9 リモートからの HTTP アクセスが「業務員 PC では繋がる、外からは繋がらない」
 
 | 症状 | 原因 | 対処 |
 |------|------|------|
