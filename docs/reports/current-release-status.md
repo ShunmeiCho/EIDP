@@ -2,7 +2,7 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v488`.
+Latest package family: `v489` for Mac-side package/source verification.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -15,13 +15,15 @@ application-style year hints, critical silent-failure logging, malformed-vs-
 unsafe URL classification, G4/G5 documentation drift correction, strict-yield
 table/context cache fixes, ASO disclosure overrides, NSG exact school /
 disclosure overrides, v485 owner-cycle helpers, final-objective audit helpers,
-the FY2026 strict-yield no-go report, the side-by-side setup guard, and the
-owner E2E preflight checklist through the current `sprint8-handoff-finalize`
-head.
+the FY2026 strict-yield no-go report, the side-by-side setup guard, the owner
+E2E preflight checklist, and the image-pending OCR warning packaging contract
+through the current `sprint8-handoff-finalize` head.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is an ancestor of PR #2 and is superseded by
-PR #2. Current PR #2 head `58b9768` is `mergeStateStatus=CLEAN`; GitHub checks
-`Python quality gates` and `Ship gate contract` both passed for that head.
+PR #2. Last fully checked PR #2 head before this status update was `a09bb30`
+with `mergeStateStatus=CLEAN`; GitHub checks `Python quality gates` and
+`Ship gate contract` both passed for that head. Any newer status-only or
+packaging-contract commit must let those required checks rerun before merge.
 Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
 rebuild is:
 `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`.
@@ -51,6 +53,20 @@ evidence collection, and evidence-folder shortcuts. The active v485 DB still
 had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
+Current Mac package candidate:
+`dist/eidp-windows-v489.zip`, SHA256
+`37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
+`BUILD_INFO.json` inside the ZIP records
+`git_commit=870d7712f4ad09307ce78648a3eff2c14eca2486`,
+`git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
+verification is recorded in
+`logs/win-v489-stage6-v489-verify-windows-distribution-20260519.json`
+(`ok=true`, `wheel_count=84`, `entry_count=3100`) and
+`logs/win-v489-stage6-v489-non-windows-release-gates-20260519.json`
+(`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
+returned `0`). v489 adds a packaging verifier contract that requires the
+school-year task board to keep the image-pending OCR warning strings
+`画像PDF/OCR待ちが` and `OCR add-on 未導入`.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v488.zip`, SHA256
 `7497f3daeed13c560b207d384c1eb247e7a541d4bce03a004dee312987469eaf`.
@@ -90,17 +106,16 @@ strict metric / parser / targeted discovery changes described there were an
 intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
-Current Mac package candidate:
+Current Windows side-by-side support package:
 `dist/eidp-windows-v488.zip`
 Current v488 SHA256 sidecar:
 `dist/eidp-windows-v488.zip.sha256`
 Current v488 package build evidence:
 `dist/eidp-windows-v488.zip` was built from clean source and validated on both
-Mac and Windows side-by-side. Its authoritative package commit and ZIP SHA
-remain `BUILD_INFO.json` inside the ZIP and
-`dist/eidp-windows-v488.zip.sha256`. This tracked status update is newer than
-the v488 ZIP documentation payload; rebuild a successor package only if the
-updated status report itself must be included in the distributed ZIP.
+Mac and Windows side-by-side. v489 has fresher Mac-side package/source evidence,
+but it has not yet been Windows side-by-side promoted or UI-smoked. Use v488
+as the latest Windows-proven package until v489 receives the same Windows
+side-by-side preflight.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
