@@ -2,7 +2,7 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v496` for Mac-side package/source verification.
+Latest package family: `v497` for Mac-side package/source verification.
 Latest Windows side-by-side smoke evidence remains `v489`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -32,6 +32,9 @@ Post-v494 fixes add operator URL parse-failure exception logging and rebuild
 the Windows ZIP as v495. Post-v495 fixes make `publication_lag` release
 approval machine-verifiable by requiring an approved exception Markdown record
 in `scripts/verify_stage6_return.py`, then rebuild the Windows ZIP as v496.
+Post-v496 fixes harden the Streamlit launcher repair helper against symlink
+escape, backup overwrite, concurrent app-lock bypass, and post-write corruption;
+document v494 as superseded; and rebuild the Windows ZIP as v497.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -52,9 +55,9 @@ It reports denominator `1000`, strict/excel-ready `600/1000 (60.0%)`, broad
 confirmed `601/1000 (60.1%)`, operator-reviewable `798/1000 (79.8%)`, and
 estimated manual workload `20.2%`. This satisfies the mature-year strict
 Excel-importable ship line for the selected FY2025 production-scale replay.
-v496 converted that `strict_yield_gap_analysis` artifact into the
+v497 converted that `strict_yield_gap_analysis` artifact into the
 verifier-accepted mature-year proof JSON at
-`logs/mature-year-acquisition-proof-fy2025-release-exception-v496-20260519.json`.
+`logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`.
 That proof has `ok=true`, basis
 `mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition`,
 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
@@ -91,28 +94,31 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current Mac package candidate:
-`dist/eidp-windows-v496.zip`, SHA256
-`cce8193244d68e41710195564eabf62cfabd22f93f12e8e1133f8daddda63273`.
+`dist/eidp-windows-v497.zip`, SHA256
+`11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=6e3228934b3fd4ea1103475ebfc9cd9d6397089b`,
+`git_commit=f0cdfa262dd1be0814dab021e766f3b6958eec24`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v496-stage6-v496-verify-windows-distribution-20260519.json`
+`logs/win-v497-stage6-v497-verify-windows-distribution-20260519.json`
 (`ok=true`, `wheel_count=84`, `entry_count=3104`) and
-`logs/win-v496-stage6-v496-non-windows-release-gates-20260519.json`
-(`ok=true`; package/source check is fresh, full unit suite returned `1871 passed`,
+`logs/win-v497-stage6-v497-non-windows-release-gates-20260519.json`
+(`ok=true`; package/source check is fresh, full unit suite returned `1875 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
-demonstrated-pattern package verify returned `0`). v496 includes
+demonstrated-pattern package verify returned `0`). v497 includes
 `EIDP-repair-launcher.bat`, `scripts/repair_streamlit_launcher.bat`,
 `scripts/repair_streamlit_launcher.py`, and `scripts/evaluate_strict_yield_bound.py`;
 keeps the image-pending OCR warning verifier contract; rejects packaged
 launchers that contain `streamlit.main`; and ships `.streamlit/config.toml`
 with `address = "127.0.0.1"`. It also ships the stricter Stage 6 return verifier
 that requires `--release-exception-record` when `--release-exception-reason`
-is used. v496 has not been Windows side-by-side
+is used. The v497 repair helper additionally resolves the launcher with
+`resolve(strict=True)`, refuses symlink escapes, uses a unique non-overwriting
+backup path, acquires the EIDP app lock before applying, and re-reads the
+launcher after rewrite with rollback on validation failure. v497 has not been Windows side-by-side
 validated. The prepared side-by-side validation runbook is
-`docs/runbooks/eidp-v496-side-by-side-validation.md`, with owner-facing
-handoff text in `docs/runbooks/eidp-v496-owner-request-20260519.txt`.
+`docs/runbooks/eidp-v497-side-by-side-validation.md`, with owner-facing
+handoff text in `docs/runbooks/eidp-v497-owner-request-20260519.txt`.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.

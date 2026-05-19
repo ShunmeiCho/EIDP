@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v496.zip`
-Package SHA256: `cce8193244d68e41710195564eabf62cfabd22f93f12e8e1133f8daddda63273`
+Package candidate: `dist/eidp-windows-v497.zip`
+Package SHA256: `11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -39,10 +39,10 @@ evidence or Stage 6 return verification.
 | FY2026/R8 RCA | `logs/win-v485-stage6/fy2026-strict-yield-rca-20260519.json` | required |
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
-| Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v496-20260519.json` | `ok=true` |
-| v496 package verifier | `logs/win-v496-stage6-v496-verify-windows-distribution-20260519.json` | `ok=true` |
-| v496 non-Windows release gates | `logs/win-v496-stage6-v496-non-windows-release-gates-20260519.json` | `ok=true` |
-| v496 final objective audit | `docs/reports/2026-05-19-final-objective-audit-v496.md` | `NOT COMPLETE` |
+| Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
+| v497 package verifier | `logs/win-v497-stage6-v497-verify-windows-distribution-20260519.json` | `ok=true` |
+| v497 non-Windows release gates | `logs/win-v497-stage6-v497-non-windows-release-gates-20260519.json` | `ok=true` |
+| v497 final objective audit | `docs/reports/2026-05-19-final-objective-audit-v497.md` | `NOT COMPLETE` |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
 ## Return Verification
@@ -55,7 +55,7 @@ uv run python scripts/verify_stage6_return.py \
   --last-run <returned-data-output-last_run.json> \
   --evidence-verify-json <returned-stage6-evidence-verify.json> \
   --release-exception-reason publication_lag \
-  --mature-year-proof-json logs/mature-year-acquisition-proof-fy2025-release-exception-v496-20260519.json \
+  --mature-year-proof-json logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json \
   --release-exception-record docs/reports/2026-05-19-publication-lag-release-exception-record.md \
   --json
 ```

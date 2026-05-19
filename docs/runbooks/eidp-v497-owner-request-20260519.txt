@@ -1,0 +1,108 @@
+EIDP v497 Owner / Operator Request
+Date: 2026-05-19
+
+Purpose
+-------
+v497 is ready for Windows side-by-side validation. It is not v1.0 approval and
+it is not permission to switch the active weekly task.
+
+Use this package
+----------------
+Package:
+  C:\EIDP-staging\eidp-windows-v497.zip
+
+Expected SHA256:
+  11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075
+
+Side-by-side root:
+  %USERPROFILE%\EIDP-v497-f0cdfa2
+
+Current active root to preserve:
+  %USERPROFILE%\EIDP-v485-70e3db4
+
+Fallback root to preserve:
+  %USERPROFILE%\EIDP-v460-01e4427
+
+Known active-lane UI issue
+--------------------------
+If the current v485 Start EIDP UI shortcut fails with:
+
+  No module named streamlit.main; 'streamlit' is a package and cannot be directly executed
+
+do not treat that as a v497 package failure. It means the already-extracted
+v485 root still has a stale scripts\launch.bat entrypoint. The non-SSH repair
+steps are documented in docs\runbooks\eidp-windows.md under the
+"No module named streamlit.main" troubleshooting row. v497 itself must still be
+validated side-by-side from %USERPROFILE%\EIDP-v497-f0cdfa2 before promotion.
+
+Short checklist
+---------------
+1. Follow:
+   docs\runbooks\eidp-v497-side-by-side-validation.md
+
+2. Run only the side-by-side setup and UI smoke first. Confirm:
+   - SHA256 matches
+   - validate_install.bat returns ok=true
+   - stage6_recovery_check.bat confirms the active task still points to v485
+   - temporary Streamlit health check returns 200/ok on port 8518
+
+3. Stop after side-by-side validation. Do not promote v497 to active unless an
+   explicit release-scope decision is made.
+
+4. If the release decision is strict FY2026/R8:
+   - do not request owner sign-off yet;
+   - wait until public FY2026/R8 target PDFs are available enough for strict
+     yield to reach 60%.
+
+5. If the release decision is publication-lag exception:
+   - fill and approve:
+     docs\reports\2026-05-19-publication-lag-release-exception-record.md
+   - acknowledge FY2026/R8 strict yield is below gate;
+   - use mature-year proof:
+     logs\mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json
+   - then schedule the owner real cycle.
+
+Required files to return after side-by-side validation
+-----------------------------------------------------
+- logs\win-v497-stage6-v497-validate-after-setup-20260519.json
+- logs\win-v497-stage6-v497-recovery-expected-v485-20260519.json
+- UI smoke notes: port, health status, root status, and whether Streamlit was
+  stopped cleanly
+- Any console error text if setup or UI launch fails
+
+Required files to return after owner real cycle
+----------------------------------------------
+- data\output\last_run.json
+- latest logs\run-*.log
+- latest logs\diagnostics-*.txt
+- latest logs\stage6-evidence-*.zip
+- latest logs\stage6-evidence-verify-*.json
+- completed eidp-operator-e2e-template.md with KPI rows and sign-off
+
+Required KPI / sign-off fields
+------------------------------
+- target_pdf_auto_yield_pct
+- operator_reviewable_yield_pct
+- ship_gate_status
+- ship_readiness_rc
+- pending JSONL outbox count after flush
+- release exception reason, if any
+- release exception approval record, if used
+- mature-year proof JSON, if exception is used
+- owner sign-off
+- operator sign-off
+
+Do not approve v1.0 from these alone
+------------------------------------
+- Mac clean ZIP build
+- GitHub CI success
+- Windows setup validator ok=true
+- Read-only browser navigation smoke
+- Mature-year proof JSON by itself
+- Diagnostic evidence ZIP without a real owner cycle
+
+Release approval still requires either:
+
+- strict FY2026/R8 gate passing at production scale; or
+- explicit publication_lag exception approval plus measured owner-cycle
+  evidence verified by scripts\verify_stage6_return.py.
