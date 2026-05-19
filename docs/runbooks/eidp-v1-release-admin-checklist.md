@@ -9,7 +9,7 @@ decision for FY2026/R8 publication lag.
 ## Do Not Proceed If
 
 - PR #2 is not clean or either required check is not green.
-- v494 has not been Windows side-by-side validated.
+- v497 has not been Windows side-by-side validated.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
@@ -35,15 +35,15 @@ Expected:
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v494.zip
-cat dist/eidp-windows-v494.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v494.zip --json
+shasum -a 256 dist/eidp-windows-v497.zip
+cat dist/eidp-windows-v497.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v497.zip --json
 ```
 
 Expected ZIP SHA256:
 
 ```text
-ea6d6884be27b5ff3408439bffc82eef7763158fa941f886afec94677da7724c
+11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075
 ```
 
 ## Signing Preflight
@@ -70,11 +70,11 @@ Do not create `v1.0` until the release gates below are complete.
 
 Before merging or tagging, attach or reference:
 
-- v494 Windows side-by-side validator JSON;
-- v494 Windows UI smoke notes;
+- v497 Windows side-by-side validator JSON;
+- v497 Windows UI smoke notes;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
-- `logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json`
+- `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`
   if the approved release path is `publication_lag`;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
