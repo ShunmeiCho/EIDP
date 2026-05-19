@@ -155,7 +155,9 @@ def _core_entries() -> dict[str, bytes | str]:
         ),
         ".streamlit/config.toml": (
             "[server]\n"
+            'address = "127.0.0.1"\n'
             "headless = true\n"
+            "runOnSave = false\n"
             "\n"
             "[browser]\n"
             "gatherUsageStats = false\n"
@@ -296,6 +298,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/build_mature_year_acquisition_proof.py": (
             SCRIPTS_DIR / "build_mature_year_acquisition_proof.py"
         ).read_text(encoding="utf-8"),
+        "scripts/evaluate_strict_yield_bound.py": (SCRIPTS_DIR / "evaluate_strict_yield_bound.py").read_text(
+            encoding="utf-8"
+        ),
         "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
             encoding="utf-8"
         ),
@@ -1750,6 +1755,37 @@ def test_verify_core_zip_rejects_launcher_without_localhost_bind(tmp_path: Path)
 
     assert not check.ok
     assert any("--server.address 127.0.0.1" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_legacy_streamlit_main_launcher(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/launch.bat"] = entries["scripts/launch.bat"].replace(
+        "-m streamlit run",
+        "-m streamlit.main run",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("scripts/launch.bat contains forbidden token: streamlit.main" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_streamlit_config_without_localhost_address(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries[".streamlit/config.toml"] = entries[".streamlit/config.toml"].replace(
+        'address = "127.0.0.1"\n',
+        "",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        '.streamlit/config.toml missing required token: address = "127.0.0.1"' in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_rejects_locale_dependent_weekly_bat(tmp_path: Path) -> None:

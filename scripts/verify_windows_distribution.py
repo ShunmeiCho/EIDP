@@ -116,6 +116,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/verify_stage6_evidence.py",
     "scripts/verify_stage6_return.py",
     "scripts/build_mature_year_acquisition_proof.py",
+    "scripts/evaluate_strict_yield_bound.py",
     "scripts/stage6_recovery_check.py",
     "scripts/stage6_residual_cleanup.py",
     "scripts/bootstrap_pdf_pipeline.py",
@@ -984,12 +985,21 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
             ".venv\\Scripts\\python.exe",
             "PYTHONPATH=%EIDP_APP_ROOT%\\src",
             "Start-Process 'http://localhost:8501'",
+            "-m streamlit run",
             "streamlit run",
             "--server.address 127.0.0.1",
             "--server.headless true",
             "--browser.gatherUsageStats false",
             'set "RC=%ERRORLEVEL%"',
             "endlocal & exit /b %RC%",
+        ),
+        ".streamlit/config.toml": (
+            "[server]",
+            'address = "127.0.0.1"',
+            "headless = true",
+            "runOnSave = false",
+            "[browser]",
+            "gatherUsageStats = false",
         ),
         "scripts/weekly_run.bat": (
             ".venv\\Scripts\\python.exe",
@@ -1118,6 +1128,7 @@ def _check_bat_contracts(check: ZipCheck, names: set[str]) -> None:
     }
     forbidden_tokens: dict[str, tuple[str, ...]] = {
         "scripts/first_setup.bat": ("import-master",),
+        "scripts/launch.bat": ("streamlit.main",),
         "scripts/weekly_run.bat": ("%date:~",),
         "scripts/uninstall.bat": ("rmdir", "del ", "erase ", "rd "),
     }
@@ -1277,6 +1288,15 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "estimated_manual_workload_pct",
             "--case",
             "FY=path",
+        ),
+        "scripts/evaluate_strict_yield_bound.py": (
+            "evaluate_bound",
+            "strict_yield_upper_bound",
+            "no_go_upper_bound_below_required",
+            "still_possible_below_gate",
+            "max_possible_strict_yield_pct_if_all_remaining_pass",
+            "--strict-gap-json",
+            "--strict-successes",
         ),
         "scripts/stage6_recovery_check.py": (
             "EIDP Weekly Run",
