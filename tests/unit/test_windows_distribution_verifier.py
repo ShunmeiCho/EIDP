@@ -238,6 +238,11 @@ def _core_entries() -> dict[str, bytes | str]:
             "logs\\stage6-evidence-*.zip\n"
             "logs\\stage6-evidence-verify-*.json\n"
             "logs\\stage6-recovery-*.json\n"
+            "Get-Volume C\n"
+            "ipconfig /flushdns\n"
+            "data\\.lock.meta\n"
+            "Get-ScheduledTaskInfo -TaskName\n"
+            "Task Scheduler retry\n"
             "現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:\n"
             "| core ZIP | `dist/eidp-windows-vXXX.zip` |\n"
             "| core ZIP sha256 sidecar note | `.sha256` は repo-relative path を記録する。 |\n"
@@ -2019,6 +2024,19 @@ def test_verify_core_zip_requires_stage6_recovery_e2e_template_fields(tmp_path: 
 
     assert not check.ok
     assert any("stage6_recovery_rc" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_operator_e2e_preflight_fields(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-operator-e2e-template.md"] = entries[
+        "docs/runbooks/eidp-operator-e2e-template.md"
+    ].replace("Get-Volume C", "Get-PSDrive C")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("Get-Volume C" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_default_stage6_tunnel_guidance(tmp_path: Path) -> None:

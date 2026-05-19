@@ -90,6 +90,43 @@ Updated: 2026-05-16
 | Network / proxy | |
 | Evidence JSON | |
 
+### 2.1 実行前 preflight
+
+Owner/operator real cycle の前に、PowerShell で以下を実行して結果を転記します。
+この preflight は業務データを書き換えません。`C:` の空き容量、DNS cache、既存 lock、
+Task Scheduler retry 設定を確認してから setup / weekly run に進みます。
+
+| 項目 | 期待 | 結果 | 証跡 |
+| --- | --- | --- | --- |
+| Disk preflight | `Get-Volume C` の空き容量が 5GB 以上 | pass / fail | |
+| DNS flush | `ipconfig /flushdns` exit code 0 | pass / fail | |
+| lock-file check | `data\.lock` / `data\.lock.meta` が無い、または recovery check で安全確認済み | pass / fail | |
+| Task Scheduler retry | `EIDP Weekly Run` の retry 設定と next run を確認 | pass / fail | |
+| Task Scheduler retry screenshot | タスク設定画面または XML を保存 | pass / fail | |
+
+```powershell
+cd C:\Users\<user>\<EIDP-extract-dir>
+$root = (Get-Location).Path
+$volume = Get-Volume C
+if ($volume.SizeRemaining -lt 5GB) {
+  throw "C drive free space is below 5GB: $($volume.SizeRemaining)"
+}
+
+ipconfig /flushdns
+echo $LASTEXITCODE
+
+Get-ChildItem "$root\data\.lock*" -Force -ErrorAction SilentlyContinue
+if ((Test-Path "$root\data\.lock") -or (Test-Path "$root\data\.lock.meta")) {
+  .\scripts\stage6_recovery_check.bat .\scripts\weekly_run.bat --json
+  echo $LASTEXITCODE
+}
+
+Get-ScheduledTask -TaskName "EIDP Weekly Run" | Select-Object TaskName,State
+Get-ScheduledTaskInfo -TaskName "EIDP Weekly Run" |
+  Select-Object LastRunTime,LastTaskResult,NextRunTime
+schtasks /query /tn "EIDP Weekly Run" /xml > "$root\logs\task-scheduler-eidp-weekly-run.xml"
+```
+
 ## 3. 証跡採取コマンド
 
 PowerShell で実行し、exit code と出力ファイル名を記録します。パスは実際の
