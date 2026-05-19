@@ -39,29 +39,29 @@ If the current v485 Start EIDP UI shortcut fails with:
 do not treat that as a v494 package failure. It means the already-extracted
 v485 root still has a stale scripts\launch.bat entrypoint. The non-SSH repair
 steps are documented in docs\runbooks\eidp-windows.md under the
-"No module named streamlit.main" troubleshooting row. v494 itself must still be
-validated side-by-side from %USERPROFILE%\EIDP-v494-0d693c6 before promotion.
+"No module named streamlit.main" troubleshooting row. The v494 path below is
+historical only; use v497 for current side-by-side validation.
 
-Short checklist
----------------
-1. Follow:
+Historical checklist (do not execute)
+-------------------------------------
+1. Historical reference:
    docs\runbooks\eidp-v494-side-by-side-validation.md
 
-2. Run only the side-by-side setup and UI smoke first. Confirm:
+2. The historical flow ran only the side-by-side setup and UI smoke first:
    - SHA256 matches
    - validate_install.bat returns ok=true
    - stage6_recovery_check.bat confirms the active task still points to v485
    - temporary Streamlit health check returns 200/ok on port 8517
 
-3. Stop after side-by-side validation. Do not promote v494 to active unless an
-   explicit release-scope decision is made.
+3. The historical flow stopped after side-by-side validation. Do not promote
+   v494 to active.
 
 4. If the release decision is strict FY2026/R8:
    - do not request owner sign-off yet;
    - wait until public FY2026/R8 target PDFs are available enough for strict
      yield to reach 60%.
 
-5. If the release decision is publication-lag exception:
+5. If the historical release decision had been publication-lag exception:
    - record explicit approval for reason publication_lag;
    - acknowledge FY2026/R8 strict yield is below gate;
    - use mature-year proof:
