@@ -2,8 +2,7 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v500` for Mac-side package/source verification and
-Windows side-by-side validation.
+Latest package family: `v501` for Mac-side package/source verification.
 Latest Windows side-by-side smoke evidence is `v500`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -42,7 +41,10 @@ Scheduler retry-on-failure settings during setup and rebuild the Windows ZIP as
 v499. v499 Windows validation found that `weekly_run.bat --limit 10 --json`
 was not a real bounded canary because the batch wrapper ignored CLI arguments.
 v500 forwards `%*`, accepts `--json`, and has fresh package/source plus Windows
-side-by-side validation.
+side-by-side validation. Post-v500 fixes add 17 live-verified Sanko exact
+school URL overrides from the v500 limit-50 RCA, then rebuild the Windows ZIP as
+v501 with fresh package/source verification. v501 has not yet replaced v500 as
+the latest Windows side-by-side validated package.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -102,20 +104,30 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v500.zip`, SHA256
-`e8d1a736aa725e1a17a4b060daf62f19666ff51ccb0ccb19310d0062de1e42cf`.
+`dist/eidp-windows-v501.zip`, SHA256
+`a301e4dbc295f5bfd3dc11bc4778db1887f2b8a55dda65f16708e9d8abff3f83`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=e79ac128cf7063b564f1b0c7c3bb89b6854e51e4`,
+`git_commit=d2fa01d4f060e803f173ecae59bfb0867dbe3afd`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v500-stage6-v500-non-windows-release-gates-20260520.json`
-(`ok=true`; package/source check is fresh, validator/distribution unit, mypy,
-ruff, discovery gold, package verify, and demonstrated-pattern package verify
-returned `0`). Later docs-only commits use the
+`logs/win-v501-stage6-v501-non-windows-release-gates-20260520.json`
+(`ok=true`; package/source check is fresh, full unit suite `1880 passed`,
+validator/distribution unit, mypy, ruff, discovery gold, package verify, and
+demonstrated-pattern package verify returned `0`). Core and OCR add-on package
+verification are recorded in
+`logs/win-v501-stage6-v501-verify-windows-distribution-20260520.json` and
+`logs/win-v501-stage6-v501-verify-windows-distribution-with-ocr-addon-20260520.json`
+(`ok=true`). Later docs-only commits use the
 `--allow-docs-only-stale-package` gate with `allowed_stale_reason=docs_only`;
 use the PR body for the latest exact docs-only gate artifact.
 
-v500 includes `EIDP-repair-launcher.bat`,
+v501 includes all v500 package features plus the v500 RCA follow-up Sanko exact
+school URL overrides for medical-secretary and resort/sports schools that were
+previously falling back to `https://www.sanko.ac.jp/` corporation-root crawling.
+The follow-up package evidence is recorded in
+`docs/reports/2026-05-20-v501-sanko-url-overrides-package.md`.
+
+v500/v501 include `EIDP-repair-launcher.bat`,
 `scripts/repair_streamlit_launcher.bat`, `scripts/repair_streamlit_launcher.py`,
 `scripts/evaluate_strict_yield_bound.py`, the image-pending OCR warning
 verifier contract, packaged `.streamlit/config.toml` with
@@ -200,20 +212,22 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v500.zip`
-Current v500 SHA256 sidecar:
-`dist/eidp-windows-v500.zip.sha256`
-Current v500 package build evidence:
-`dist/eidp-windows-v500.zip` was built from clean source and validated by the
-non-Windows release gate plus Windows side-by-side validation. It has not been
+`dist/eidp-windows-v501.zip`
+Current v501 SHA256 sidecar:
+`dist/eidp-windows-v501.zip.sha256`
+Current v501 package build evidence:
+`dist/eidp-windows-v501.zip` was built from clean source and validated by the
+full non-Windows release gate. It has not been Windows side-by-side validated or
 promoted to the active weekly Task Scheduler lane; the active production action
-remains v485 until an explicit promotion decision is made.
+remains v485 until an explicit promotion decision is made. The latest Windows
+side-by-side package remains v500.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/2026-05-20-final-objective-audit-v500.md` is `NOT COMPLETE`.
-v500 is Mac-side package/source verified and Windows side-by-side validated,
-but current FY2026 production-scale strict proof and owner real Windows cycle
+v501 is Mac-side package/source verified, and v500 remains the latest Windows
+side-by-side validated package, but current FY2026 production-scale strict proof
+and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
