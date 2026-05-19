@@ -13,6 +13,9 @@ decision for FY2026/R8 publication lag.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
+- OCR is included in the v1.0 release scope but there is no v497 Windows
+  OCR add-on/runtime proof, or no explicit decision that OCR remains an
+  optional/manual fallback for v1.0.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
@@ -76,6 +79,9 @@ Before merging or tagging, attach or reference:
 - evidence ZIP and evidence verification JSON;
 - `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`
   if the approved release path is `publication_lag`;
+- if OCR is in release scope, v497 OCR add-on SHA256 plus Windows runtime /
+  image-write proof; otherwise a written release-scope decision that OCR is
+  optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
 ## Final Commands

@@ -62,12 +62,21 @@ Short checklist
      logs\mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json
    - then schedule the owner real cycle.
 
+6. If OCR is included in the v1.0 release scope:
+   - attach the OCR add-on ZIP and SHA256;
+   - validate Tesseract availability on the v497 Windows root;
+   - return the OCR runtime / image-write proof.
+   If OCR is not included in v1.0 release scope, record that it remains an
+   optional/manual fallback for this release.
+
 Required files to return after side-by-side validation
 -----------------------------------------------------
 - logs\win-v497-stage6-v497-validate-after-setup-20260519.json
 - logs\win-v497-stage6-v497-recovery-expected-v485-20260519.json
 - UI smoke notes: port, health status, root status, and whether Streamlit was
   stopped cleanly
+- OCR scope decision: either v497 OCR add-on/runtime proof, or an explicit note
+  that OCR remains optional/manual fallback for v1.0
 - Any console error text if setup or UI launch fails
 
 Required files to return after owner real cycle
@@ -86,6 +95,7 @@ Required KPI / sign-off fields
 - ship_gate_status
 - ship_readiness_rc
 - pending JSONL outbox count after flush
+- OCR scope decision and OCR add-on/runtime proof, if OCR is in release scope
 - release exception reason, if any
 - release exception approval record, if used
 - mature-year proof JSON, if exception is used
