@@ -23,6 +23,18 @@ Current active root to preserve:
 Fallback root to preserve:
   %USERPROFILE%\EIDP-v460-01e4427
 
+Known active-lane UI issue
+--------------------------
+If the current v485 Start EIDP UI shortcut fails with:
+
+  No module named streamlit.main; 'streamlit' is a package and cannot be directly executed
+
+do not treat that as a v494 package failure. It means the already-extracted
+v485 root still has a stale scripts\launch.bat entrypoint. The non-SSH repair
+steps are documented in docs\runbooks\eidp-windows.md under the
+"No module named streamlit.main" troubleshooting row. v494 itself must still be
+validated side-by-side from %USERPROFILE%\EIDP-v494-0d693c6 before promotion.
+
 Short checklist
 ---------------
 1. Follow:
