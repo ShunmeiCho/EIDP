@@ -1,6 +1,12 @@
 EIDP v495 Owner / Operator Request
 Date: 2026-05-19
 
+SUPERSEDED
+----------
+Superseded by v497. Do not transfer or validate v495 unless a release engineer
+explicitly requests a historical reproduction. Use
+docs/runbooks/eidp-v497-owner-request-20260519.txt for the current candidate.
+
 Purpose
 -------
 v495 is ready for Windows side-by-side validation. It is not v1.0 approval and

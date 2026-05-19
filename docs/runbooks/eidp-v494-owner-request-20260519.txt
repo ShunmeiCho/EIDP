@@ -3,9 +3,9 @@ Date: 2026-05-19
 
 SUPERSEDED
 ----------
-Superseded by v495 and later v496 package candidates. Do not transfer or
-validate v494 unless a release engineer explicitly requests a historical
-reproduction.
+Superseded by v497. Do not transfer or validate v494 unless a release engineer
+explicitly requests a historical reproduction. Use
+docs/runbooks/eidp-v497-owner-request-20260519.txt for the current candidate.
 
 Purpose
 -------
