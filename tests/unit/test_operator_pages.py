@@ -75,6 +75,35 @@ def test_export_error_message_explains_excel_file_lock() -> None:
     assert "Export failed" not in message
 
 
+def test_audit_excel_export_generated_writes_manual_action_log() -> None:
+    session = _session()
+    try:
+        operator_pages.audit_excel_export_generated(
+            session,
+            export_kind="master",
+            output_path=Path("output/master.xlsx"),
+            result={"school_rows": 2},
+            target_fiscal_year=2026,
+        )
+        session.commit()
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "excel_export_generated"
+        assert audit.target_table == "excel_export"
+        assert audit.target_id is None
+        assert '"export_kind": "master"' in (audit.new_value or "")
+        assert '"output_path": "output/master.xlsx"' in (audit.new_value or "")
+        assert '"target_fiscal_year": 2026' in (audit.new_value or "")
+    finally:
+        session.close()
+
+
+def test_page_exports_records_generated_workbooks_in_manual_action_log() -> None:
+    source = inspect.getsource(operator_pages.page_exports)
+
+    assert source.count("audit_excel_export_generated(") >= 2
+
+
 def test_v1_theme_css_uses_streamlit_theme_tokens() -> None:
     css = operator_pages.v1_theme_css()
 

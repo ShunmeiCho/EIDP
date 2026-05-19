@@ -880,6 +880,32 @@ def _run_competition_export(
     )
 
 
+def audit_excel_export_generated(
+    session: Session,
+    *,
+    export_kind: str,
+    output_path: Path,
+    result: dict[str, Any],
+    target_fiscal_year: int | None = None,
+    actor: str = "operator",
+) -> ManualActionLog:
+    """Audit an operator-triggered Excel file export."""
+    return log_manual_action(
+        session,
+        action_type="excel_export_generated",
+        target_table="excel_export",
+        old_value=None,
+        new_value={
+            "export_kind": export_kind,
+            "output_path": str(output_path),
+            "target_fiscal_year": target_fiscal_year,
+            "result": result,
+        },
+        reason=f"Operator generated {export_kind} Excel export",
+        actor=actor,
+    )
+
+
 _EXCEL_FILE_LOCK_MESSAGE = "Excelを閉じてから再実行してください"
 
 
@@ -911,6 +937,14 @@ def page_exports(session: Session, *, lock_path: Path | None = None) -> None:
         try:
             master_path = output_path(master_out, (".xlsx",))
             stats = _run_master_export(session, master_path)
+            audit_excel_export_generated(
+                session,
+                export_kind="master",
+                output_path=master_path,
+                result=stats,
+                target_fiscal_year=settings.target_fiscal_year,
+            )
+            session.commit()
             st.success(f"出力完了: {master_out}")
             st.json(stats)
         except PathPolicyError as exc:
@@ -971,6 +1005,14 @@ def page_exports(session: Session, *, lock_path: Path | None = None) -> None:
                 gap_path,
                 fy,
             )
+            audit_excel_export_generated(
+                session,
+                export_kind="competition",
+                output_path=comp_path,
+                result=result,
+                target_fiscal_year=selected_fy,
+            )
+            session.commit()
             st.success(f"出力完了: {comp_out}")
             st.json(result)
         except PathPolicyError as exc:
