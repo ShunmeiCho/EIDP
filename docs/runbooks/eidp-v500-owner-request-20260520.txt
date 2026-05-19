@@ -35,6 +35,10 @@ Current side-by-side evidence
   logs\win-v500-stage6-v500-last-run-after-weekly-canary-limit10-20260520.json
 - weekly canary wrapper proof:
   logs\win-v500-stage6-v500-weekly-canary-limit10-run-20260520.log
+- fresh FY2026 limit-50 re-probe:
+  logs\win-v500-stage6-v500-last-run-after-weekly-canary-limit50-20260520.json
+- fresh FY2026 limit-50 recovery:
+  logs\win-v500-stage6-v500-recovery-probe-lock-after-limit50-canary-20260520.json
 - Excel smoke:
   logs\win-v500-stage6-v500-excel-summary-20260520.json
 - evidence bundle:

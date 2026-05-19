@@ -29,6 +29,7 @@ or promoting the active lane. The active `EIDP Weekly Run` task stayed on v485.
 | OCR runtime validator | `logs/win-v500-stage6-v500-validate-ocr-runtime-20260520.json` | `ok=true`, Tesseract `5.4.0.20240606`, `jpn` and `jpn_vert` present |
 | UI smoke | `logs/win-v500-stage6-v500-ui-smoke-20260520.json` | `ok=true`, port `8521`, health `200/ok`, root `200`, stopped cleanly |
 | Weekly canary | `logs/win-v500-stage6-v500-last-run-after-weekly-canary-limit10-20260520.json` and `logs/win-v500-stage6-v500-weekly-canary-limit10-run-20260520.log` | `ok=true`, CLI args forwarded, rc `0`, `ship_gate_status=below_gate` |
+| Fresh FY2026 limit-50 re-probe | `logs/win-v500-stage6-v500-last-run-after-weekly-canary-limit50-20260520.json` and `logs/win-v500-stage6-v500-weekly-canary-limit50-run-20260520.log` | `status=success`, denominator `50`, strict/Excel-ready yield `4.0%`, `ship_gate_status=below_gate` |
 | Excel smoke | `logs/win-v500-stage6-v500-excel-summary-20260520.json` | `ok=true`, master, competition workbook, and gap report exist |
 | Stage 6 evidence bundle | `logs/win-v500-stage6-v500-stage6-evidence-20260519-161653.zip` | SHA256 `674e2fdcaf6f09611c7ffd00ecff3c714a3913b6727478dac3df1917102e2a3e` |
 | Stage 6 verifier | `logs/win-v500-stage6-v500-stage6-evidence-verify-20260520-011707.json` | `ok=true`, required labels present |
@@ -48,5 +49,6 @@ Stop after this side-by-side validation unless the release path is explicitly
 approved. v500 is validated as a candidate package, but v1.0 remains blocked by:
 
 - FY2026/R8 strict current-FY yield remains below gate.
+- The fresh v500 limit-50 re-probe remained below gate at `4.0%` strict yield.
 - `publication_lag` exception record remains `NOT_APPROVED`.
 - Owner real cycle and sign-off are still required.

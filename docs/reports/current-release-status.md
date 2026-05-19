@@ -144,7 +144,12 @@ health `200/ok`, root `200`). Weekly canary is
 (`status=success`, `current_fy=2026`, `ship_gate_status=below_gate`,
 `target_pdf_auto_yield_pct=50.0`, `operator_reviewable_yield_pct=100.0`);
 `logs/win-v500-stage6-v500-weekly-canary-limit10-run-20260520.log` confirms
-`cli_args --limit 10 --json` and rc `0`. Excel smoke is
+`cli_args --limit 10 --json` and rc `0`. A larger fresh FY2026 limit-50
+re-probe is recorded in
+`logs/win-v500-stage6-v500-last-run-after-weekly-canary-limit50-20260520.json`
+and `logs/win-v500-stage6-v500-weekly-canary-limit50-run-20260520.log`:
+`status=success`, denominator `50`, strict/Excel-ready yield `4.0%`,
+operator-reviewable yield `56.0%`, and `ship_gate_status=below_gate`. Excel smoke is
 `logs/win-v500-stage6-v500-excel-summary-20260520.json` (`ok=true`). Stage 6
 bundle proof is `logs/win-v500-stage6-v500-stage6-evidence-20260519-161653.zip`
 with SHA256 `674e2fdcaf6f09611c7ffd00ecff3c714a3913b6727478dac3df1917102e2a3e`,
@@ -152,6 +157,9 @@ and verifier proof is
 `logs/win-v500-stage6-v500-stage6-evidence-verify-20260520-011707.json`
 (`ok=true`). The active scheduled task stayed on v485 and was verified by
 `logs/win-v500-stage6-v500-recovery-probe-lock-after-canary-clean-20260520.json`.
+The post-limit-50 recovery probe is
+`logs/win-v500-stage6-v500-recovery-probe-lock-after-limit50-canary-20260520.json`
+(`ok=true`, lock not held, active task still v485).
 The version-specific owner/operator request for any future v500 real cycle is
 `docs/runbooks/eidp-v500-owner-request-20260520.txt`.
 
