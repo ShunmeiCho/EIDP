@@ -15,7 +15,7 @@ from streamlit.testing.v1 import AppTest
 from typer.testing import CliRunner
 
 from eidp.cli import app
-from eidp.db.models import Base, Document, ReviewItem, School, SchoolAlias, SchoolSite
+from eidp.db.models import Base, Document, ManualActionLog, ReviewItem, School, SchoolAlias, SchoolSite
 from eidp.review import operator_pages
 
 
@@ -206,6 +206,16 @@ def test_submit_operator_url_inserts_verified_school_site(monkeypatch: pytest.Mo
         assert site.verified is True
         assert float(site.confidence) == 1.0
         assert site.http_status == 200
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "operator_url_submitted"
+        assert audit.target_table == "school_site"
+        assert audit.target_id == site.id
+        assert audit.actor == "op"
+        assert audit.reason == "manual check"
+        assert '"school_id": 100' in (audit.new_value or "")
+        assert '"classifier": "target"' in (audit.new_value or "")
+        assert '"site_created": true' in (audit.new_value or "")
     finally:
         session.close()
 
@@ -345,6 +355,14 @@ def test_import_operator_url_csv_inserts_reusable_manual_urls() -> None:
         assert [site.url_type for site in sites] == ["disclosure_page", "pdf"]
         assert [bool(site.verified) for site in sites] == [False, False]
         assert [site.http_status for site in sites] == [None, None]
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "operator_url_bulk_imported"
+        assert audit.target_table == "school_site"
+        assert audit.target_id is None
+        assert '"inserted": 2' in (audit.new_value or "")
+        assert '"updated": 0' in (audit.new_value or "")
+        assert '"skipped": 0' in (audit.new_value or "")
     finally:
         session.close()
 

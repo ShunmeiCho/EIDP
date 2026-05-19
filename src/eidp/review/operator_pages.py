@@ -37,6 +37,7 @@ from eidp.db.models import (
     DepartmentChange,
     DepartmentYearly,
     Document,
+    ManualActionLog,
     ReviewItem,
     School,
     SchoolAlias,
@@ -322,6 +323,7 @@ def submit_operator_url(
         .first()
     )
     created = existing is None
+    old_value = _school_site_audit_value(existing) if existing is not None else None
     if existing is None:
         site = SchoolSite(
             school_id=school_id,
@@ -346,7 +348,7 @@ def submit_operator_url(
         site.http_status = validation.http_status
 
     session.flush()
-    return OperatorUrlSubmission(
+    result = OperatorUrlSubmission(
         accepted=True,
         school_id=school_id,
         school_name=school.school_name,
@@ -361,6 +363,50 @@ def submit_operator_url(
         operator_name=operator_name.strip(),
         operator_note=operator_note.strip(),
         timestamp=timestamp,
+    )
+    audit_operator_url_submitted(session, result=result, old_value=old_value)
+    return result
+
+
+def _school_site_audit_value(site: SchoolSite) -> dict[str, object | None]:
+    return {
+        "school_id": site.school_id,
+        "url": site.url,
+        "url_type": site.url_type,
+        "discovery_method": site.discovery_method,
+        "confidence": float(site.confidence or 0),
+        "verified": bool(site.verified),
+        "http_status": site.http_status,
+    }
+
+
+def audit_operator_url_submitted(
+    session: Session,
+    *,
+    result: OperatorUrlSubmission,
+    old_value: dict[str, object | None] | None = None,
+    actor: str | None = None,
+) -> ManualActionLog:
+    """Audit an accepted operator URL registration."""
+    return log_manual_action(
+        session,
+        action_type="operator_url_submitted",
+        target_table="school_site",
+        target_id=result.site_id,
+        old_value=old_value,
+        new_value={
+            "school_id": result.school_id,
+            "school_name": result.school_name,
+            "url": result.url,
+            "classifier": result.classifier,
+            "reason": result.reason,
+            "http_status": result.http_status,
+            "size_bytes": result.size_bytes,
+            "sha256": result.sha256,
+            "site_created": result.site_created,
+        },
+        reason=result.operator_note or "Operator registered manual school URL",
+        actor=actor or result.operator_name or "operator",
     )
 
 
@@ -540,7 +586,35 @@ def import_operator_url_csv(session: Session, csv_text: str) -> OperatorBulkUrlI
         existing.last_checked = now
         updated += 1
 
-    return OperatorBulkUrlImportResult(inserted=inserted, updated=updated, skipped=skipped, errors=errors)
+    result = OperatorBulkUrlImportResult(inserted=inserted, updated=updated, skipped=skipped, errors=errors)
+    if result.accepted:
+        audit_operator_url_bulk_imported(session, result=result)
+    return result
+
+
+def audit_operator_url_bulk_imported(
+    session: Session,
+    *,
+    result: OperatorBulkUrlImportResult,
+    actor: str = "operator",
+) -> ManualActionLog:
+    """Audit a CSV bulk import of operator-known school URLs."""
+    return log_manual_action(
+        session,
+        action_type="operator_url_bulk_imported",
+        target_table="school_site",
+        old_value=None,
+        new_value={
+            "inserted": result.inserted,
+            "updated": result.updated,
+            "skipped": result.skipped,
+            "error_count": len(result.errors),
+            "errors_sample": result.errors[:20],
+            "errors_truncated": max(0, len(result.errors) - 20),
+        },
+        reason="Operator bulk-imported school URLs from CSV",
+        actor=actor,
+    )
 
 
 def record_operator_submission(result: OperatorUrlSubmission, audit_path: Path) -> None:
