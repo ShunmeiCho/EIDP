@@ -2,8 +2,8 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v489` for Mac-side package/source verification and
-Windows side-by-side smoke evidence.
+Latest package family: `v490` for Mac-side package/source verification.
+Latest Windows side-by-side smoke evidence remains `v489`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -18,7 +18,10 @@ table/context cache fixes, ASO disclosure overrides, NSG exact school /
 disclosure overrides, v485 owner-cycle helpers, final-objective audit helpers,
 the FY2026 strict-yield no-go report, the side-by-side setup guard, the owner
 E2E preflight checklist, and the image-pending OCR warning packaging contract
-through the current `sprint8-handoff-finalize` head.
+through the current `sprint8-handoff-finalize` head. Post-v489 source fixes
+add a reusable strict-yield upper-bound evaluator, require that evaluator in
+future Windows ZIPs, reject legacy `streamlit.main` launchers, and bind the
+packaged Streamlit config to `127.0.0.1` as defense in depth.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -50,7 +53,12 @@ materials, sibling-school mismatches, and FY2025/R7 target-form PDFs. The
 sample probe
 `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json`
 checked four 2026-path target-looking PDFs and found only `令和6年度` text,
-so URL/upload-date hints cannot be counted as FY2026 success.
+so URL/upload-date hints cannot be counted as FY2026 success. The v490
+source-side upper-bound evaluator re-computed the same no-go condition in
+`logs/win-v490-stage6-v490-fy2026-strict-yield-upper-bound-reeval-20260519.json`
+with `status=no_go_upper_bound_below_required` and
+`max_possible=393/1000 (39.3%)`; its rc is intentionally `1` for no-go
+evidence.
 Current Windows active lane:
 read-only SSH probes on 2026-05-19 showed `EIDP Weekly Run` points to
 `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`, with
@@ -61,19 +69,20 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current Mac package candidate:
-`dist/eidp-windows-v489.zip`, SHA256
-`37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
+`dist/eidp-windows-v490.zip`, SHA256
+`f82fb1eedd75d4a6a9b71c75c474c2f0c93045f5153a331662350753925396ee`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=870d7712f4ad09307ce78648a3eff2c14eca2486`,
+`git_commit=41a147f7a9ee7968bc0260ab7d18f02fe3685af7`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v489-stage6-v489-verify-windows-distribution-20260519.json`
-(`ok=true`, `wheel_count=84`, `entry_count=3100`) and
-`logs/win-v489-stage6-v489-non-windows-release-gates-20260519.json`
+`logs/win-v490-stage6-v490-verify-windows-distribution-20260519.json`
+(`ok=true`, `wheel_count=84`, `entry_count=3101`) and
+`logs/win-v490-stage6-v490-non-windows-release-gates-20260519.json`
 (`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
-returned `0`). v489 adds a packaging verifier contract that requires the
-school-year task board to keep the image-pending OCR warning strings
-`画像PDF/OCR待ちが` and `OCR add-on 未導入`.
+returned `0`). v490 includes `scripts/evaluate_strict_yield_bound.py`, keeps
+the image-pending OCR warning verifier contract, rejects packaged launchers
+that contain `streamlit.main`, and ships `.streamlit/config.toml` with
+`address = "127.0.0.1"`. v490 has not been Windows side-by-side validated.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
