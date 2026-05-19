@@ -95,13 +95,13 @@ the v487 ZIP documentation payload; rebuild a successor package only if the
 updated status report itself must be included in the distributed ZIP.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
-FY2026 contract. The final objective audit at
-`logs/win-v485-stage6/final-objective-audit-current.json` is `ok=false` with
-three open blockers: current FY2026 production-scale strict proof, owner real
-Windows cycle evidence, and final release preflight. To continue, either keep
-v1.0 blocked until FY2026/R8 public target PDFs become available, or record an
-explicit release exception that scopes v1.0 to the mature FY2025 proof instead
-of the rolling FY2026 ship line.
+FY2026 contract. The tracked final-objective audit at
+`docs/reports/2026-05-19-final-objective-audit-v487.md` is `NOT COMPLETE`:
+v487 is validated side-by-side, but current FY2026 production-scale strict
+proof and owner real Windows cycle evidence remain incomplete. To continue,
+either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
+or record an explicit release exception that scopes v1.0 to the mature FY2025
+proof instead of the rolling FY2026 ship line.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs
