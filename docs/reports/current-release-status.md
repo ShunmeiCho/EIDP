@@ -76,6 +76,13 @@ registration was skipped, `EIDP-setup.bat` exited `0`, and
 `ok=true`, `recommendations=[]`, and `action_matches_expected=true` for the
 v485 production action. Therefore v487 is validated side-by-side without
 promoting the active weekly task.
+Current v487 Windows UI smoke:
+`logs/win-v487-stage6-v487-ui-smoke-20260519.json` returned `ok=true` after
+starting Streamlit directly from `C:\Users\cyo20\EIDP-v487-5893393` on
+`127.0.0.1:8514`. The smoke captured health `200/ok`, root page `200`, response
+length `5381`, `stopped=true`, and `listener_after_stop=false`, so the
+side-by-side browser shell is proven without leaving a background listener or
+changing the active Task Scheduler lane.
 Post-status Mac-side strict-yield replay:
 `docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
 strict metric / parser / targeted discovery changes described there were an

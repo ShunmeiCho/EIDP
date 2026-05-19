@@ -3,7 +3,7 @@
 Date: 2026-05-19
 Branch: `sprint8-handoff-finalize`
 PR: `#2`
-PR head at audit time: `fb04db6d23ad39c2ccee016b4103da16cb074049`
+PR head at audit time: `6ad80bd9e875fe25a0a37b60234bbc0a17942b5a`
 
 ## Verdict
 
@@ -52,9 +52,9 @@ The objective is complete only when all of the following are true:
 | Excel template transfer | `logs/release-gate-v485-retroactive-matrix.json`: `ok=true`, `case_count=3`; this is retroactive/mature-year evidence, not FY2026 owner-cycle output | PARTIAL |
 | ManualActionLog audit | CI passed relevant tests; owner real-cycle audit evidence remains incomplete | PARTIAL |
 | ZIP distribution and offline setup | v487 ZIP SHA256 `552ae87354b0e0f11d9a2dcb6a47f85bd43334cdac613b78a7860bf44af7d514`; `BUILD_INFO.git_commit=5893393`, `git_dirty=false`; Windows setup `rc=0`; validator `ok=true` | PASS |
-| Browser UI on Windows | v487 has setup validation only; earlier v485 UI smoke exists, but v487 browser UI was not smoked after side-by-side setup in this audit | PARTIAL |
+| Browser UI on Windows | v487 side-by-side UI smoke `logs/win-v487-stage6-v487-ui-smoke-20260519.json`: health `200/ok`, root page `200`, body length `5381`, process stopped, and `listener_after_stop=false` | PASS |
 | Active scheduled task safety | v487 setup was run with `EIDP_REGISTER_WEEKLY_TASK=0`; recovery check `logs/win-v487-stage6-v487-recovery-expected-v485-20260519.json` returned `ok=true`, `action_matches_expected=true`; active task stayed on v485 | PASS |
-| PR mergeability | PR #2 head `fb04db6`; GitHub `Python quality gates` and `Ship gate contract` both success; `mergeStateStatus=CLEAN` | PASS |
+| PR mergeability | PR #2 head `6ad80bd`; GitHub `Python quality gates` and `Ship gate contract` both success; `mergeStateStatus=CLEAN` | PASS |
 | Owner real Windows cycle | Latest owner evidence remains incomplete; active v485 DB previously had `school_site_count=0` and `document_count=0`; owner must run initial bootstrap before weekly cycle | BLOCKED |
 | v1.0 tag / main merge | Not allowed while FY2026 strict proof and owner cycle are incomplete | BLOCKED |
 
@@ -69,6 +69,9 @@ The objective is complete only when all of the following are true:
 - Windows `validate_install.bat --after-setup --json` proves extracted install
   health, SQLite integrity, school count, and wheel count. It does not prove
   PDF discovery, extraction, Excel output, or owner sign-off.
+- Windows v487 UI smoke proves the side-by-side package can start Streamlit,
+  serve the health endpoint, and return the root browser shell. It does not
+  prove the owner workflow or data pipeline.
 - The FY2025 strict replay proves mature-year algorithm capability. It must not
   be used as current FY2026 ship proof.
 - The FY2026 upper-bound proof is the controlling current-FY evidence and is
@@ -83,4 +86,3 @@ The objective is complete only when all of the following are true:
    owner E2E with evidence collection and sign-off.
 3. If no exception is approved, do not promote owner sign-off as release-ready;
    keep v487 as side-by-side validated package evidence only.
-
