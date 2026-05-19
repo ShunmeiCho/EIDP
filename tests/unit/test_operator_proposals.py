@@ -416,6 +416,37 @@ def test_record_decision_writes_audit_jsonl(tmp_path: Path) -> None:
     assert row["proposal_kind"] == "school_alias"
 
 
+def test_record_decision_can_write_manual_action_log(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        decision = ProposalDecision(
+            decision="deferred",
+            proposal_kind="school_alias_branch_of_existing",
+            template_name="A-branch",
+            target_id=None,
+            operator_name="reviewer-a",
+            note="needs school confirmation",
+            timestamp="2026-05-20T00:00:00+00:00",
+        )
+        audit_path = tmp_path / "proposal-decisions.jsonl"
+
+        row = _record_decision(decision, audit_path, session=session)
+
+        assert row is not None
+        audit = session.query(ManualActionLog).one()
+        assert audit.id == row.id
+        assert audit.action_type == "proposal_decision_recorded"
+        assert audit.target_table == "proposal_decision"
+        assert audit.target_id is None
+        assert audit.actor == "reviewer-a"
+        payload = json.loads(audit.new_value or "{}")
+        assert payload["decision"] == "deferred"
+        assert payload["proposal_kind"] == "school_alias_branch_of_existing"
+        assert payload["template_name"] == "A-branch"
+    finally:
+        session.close()
+
+
 def test_lock_busy_decision_does_not_hide_dept_proposal(tmp_path: Path) -> None:
     audit = tmp_path / "decisions.jsonl"
     _record_decision(

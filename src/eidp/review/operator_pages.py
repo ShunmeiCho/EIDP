@@ -2223,10 +2223,29 @@ def _read_proposals(path: Path) -> list[JsonDict]:
     return out
 
 
-def _record_decision(decision: ProposalDecision, audit_path: Path) -> None:
+def _record_decision(
+    decision: ProposalDecision,
+    audit_path: Path,
+    *,
+    session: Session | None = None,
+) -> ManualActionLog | None:
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     with audit_path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(asdict(decision), ensure_ascii=False) + "\n")
+    if session is None:
+        return None
+    row = log_manual_action(
+        session,
+        action_type="proposal_decision_recorded",
+        target_table="proposal_decision",
+        target_id=decision.target_id,
+        old_value=None,
+        new_value=asdict(decision),
+        reason=f"Operator recorded {decision.proposal_kind} proposal decision: {decision.decision}",
+        actor=decision.operator_name or "operator",
+    )
+    session.commit()
+    return row
 
 
 def _load_decision_index(audit_path: Path) -> dict[tuple[str, str], str]:
@@ -2637,6 +2656,7 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
                         timestamp=datetime.now(UTC).isoformat(),
                     ),
                     _DEFAULT_PROPOSAL_DECISIONS,
+                    session=session,
                 )
                 if created:
                     st.success(
@@ -2812,6 +2832,7 @@ def _render_school_focus_mode(
                         timestamp=datetime.now(UTC).isoformat(),
                     ),
                     _DEFAULT_PROPOSAL_DECISIONS,
+                    session=session,
                 )
                 if reason.startswith("conflict_other_school:"):
                     other = reason.split(":")[1]
@@ -2841,6 +2862,7 @@ def _render_school_focus_mode(
                     timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
+                session=session,
             )
             st.session_state.school_focus_idx = _next_focus_idx_after_decision(ptr, total)
             st.rerun()
@@ -2925,6 +2947,7 @@ def _render_school_candidate_picker(
                     timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
+                session=session,
             )
             if created:
                 st.success(
@@ -2954,6 +2977,7 @@ def _render_school_candidate_picker(
                     timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
+                session=session,
             )
             st.caption(f"保留しました: {template}")
 
@@ -3031,6 +3055,7 @@ def _render_dept_proposals_tab(session: Session, *, lock_path: Path) -> None:
                             timestamp=datetime.now(UTC).isoformat(),
                         ),
                         _DEFAULT_PROPOSAL_DECISIONS,
+                        session=session,
                     )
                 if created:
                     st.success(
