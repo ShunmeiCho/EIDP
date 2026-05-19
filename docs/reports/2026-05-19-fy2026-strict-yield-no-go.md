@@ -136,11 +136,11 @@ Required evidence before owner E2E under the exception:
 | FY2026 RCA | `logs/win-v485-stage6/fy2026-strict-yield-rca-20260519.json` |
 | 2026-hint direct PDF probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` |
 | Mature-year strict replay evidence | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` |
-| Verifier-accepted mature-year proof JSON | `logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json` |
+| Verifier-accepted mature-year proof JSON | `logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json` |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` |
 
 The FY2025 strict replay evidence above proves the `600/1000 (60.0%)`
-algorithm result, but it is a `strict_yield_gap_analysis` artifact. v494 adds
+algorithm result, but it is a `strict_yield_gap_analysis` artifact. v495 keeps
 an explicit `--strict-gap-analysis-case` input path to
 `scripts/build_mature_year_acquisition_proof.py`, and the archived proof JSON
 listed above now has
@@ -152,7 +152,7 @@ Mature-year proof generation command:
 ```bash
 uv run python scripts/build_mature_year_acquisition_proof.py \
   --strict-gap-analysis-case 2025=_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json \
-  --output logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json \
+  --output logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json \
   --json
 ```
 
@@ -175,7 +175,7 @@ uv run python scripts/verify_stage6_return.py \
   --last-run <returned-data-output-last_run.json> \
   --evidence-verify-json <returned-stage6-evidence-verify.json> \
   --release-exception-reason publication_lag \
-  --mature-year-proof-json logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json \
+  --mature-year-proof-json logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json \
   --json
 ```
 

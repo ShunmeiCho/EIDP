@@ -57,6 +57,10 @@ That proof has `ok=true`, basis
 `mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition`,
 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
 and estimated manual workload `20.2%`.
+The explicit publication-lag approval record is prepared at
+`docs/reports/2026-05-19-publication-lag-release-exception-record.md`, but its
+status remains `NOT_APPROVED`; it does not unblock release until filled and
+signed.
 Current FY2026/R8 production-scale strict-yield proof:
 `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json`
 and `logs/win-v485-stage6/fy2026-strict-yield-rca-20260519.json` are the
