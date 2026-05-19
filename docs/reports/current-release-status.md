@@ -2,7 +2,8 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v489` for Mac-side package/source verification.
+Latest package family: `v489` for Mac-side package/source verification and
+Windows side-by-side smoke evidence.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -20,7 +21,7 @@ E2E preflight checklist, and the image-pending OCR warning packaging contract
 through the current `sprint8-handoff-finalize` head.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is an ancestor of PR #2 and is superseded by
-PR #2. Last fully checked PR #2 head before this status update was `a09bb30`
+PR #2. Last fully checked PR #2 head before this status update was `7ddc595`
 with `mergeStateStatus=CLEAN`; GitHub checks `Python quality gates` and
 `Ship gate contract` both passed for that head. Any newer status-only or
 packaging-contract commit must let those required checks rerun before merge.
@@ -68,35 +69,35 @@ returned `0`). v489 adds a packaging verifier contract that requires the
 school-year task board to keep the image-pending OCR warning strings
 `画像PDF/OCR待ちが` and `OCR add-on 未導入`.
 Current Windows side-by-side package candidate:
-`dist/eidp-windows-v488.zip`, SHA256
-`7497f3daeed13c560b207d384c1eb247e7a541d4bce03a004dee312987469eaf`.
+`dist/eidp-windows-v489.zip`, SHA256
+`37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=58b976890d102dcc9588037b66749ec6a80b61e9`,
+`git_commit=870d7712f4ad09307ce78648a3eff2c14eca2486`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v488-stage6-v488-verify-windows-distribution-20260519.json`
+`logs/win-v489-stage6-v489-verify-windows-distribution-20260519.json`
 (`ok=true`, `wheel_count=84`, `entry_count=3100`) and
-`logs/win-v488-stage6-v488-non-windows-release-gates-20260519.json`
+`logs/win-v489-stage6-v489-non-windows-release-gates-20260519.json`
 (`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
 returned `0`).
-Current v488 Windows side-by-side preflight:
+Current v489 Windows side-by-side preflight:
 the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
 the Mac sidecar, and the package expanded to
-`C:\Users\cyo20\EIDP-v488-58b9768`. Setup was run with
+`C:\Users\cyo20\EIDP-v489-870d771`. Setup was run with
 `EIDP_REGISTER_WEEKLY_TASK=0`; `scripts\first_setup.bat` printed that Task
 Scheduler registration was skipped, exited `0`, and
-`logs/win-v488-stage6-v488-validate-after-setup-20260519.json` returned
+`logs/win-v489-stage6-v489-validate-after-setup-20260519.json` returned
 `ok=true`, `errors=[]`, `warnings=[]`, `school_count=2418`,
 `school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and
 `build_dirty=false`. The recovery check
-`logs/win-v488-stage6-v488-recovery-expected-v485-20260519.json` returned
+`logs/win-v489-stage6-v489-recovery-expected-v485-20260519.json` returned
 `ok=true`, `recommendations=[]`, and `action_matches_expected=true` for the
-v485 production action. Therefore v488 is validated side-by-side without
+v485 production action. Therefore v489 is validated side-by-side without
 promoting the active weekly task.
-Current v488 Windows UI smoke:
-`logs/win-v488-stage6-v488-ui-smoke-20260519.json` returned `ok=true` after
-starting Streamlit directly from `C:\Users\cyo20\EIDP-v488-58b9768` on
-`127.0.0.1:8515`. The smoke captured health `200/ok`, root page `200`, response
+Current v489 Windows UI smoke:
+`logs/win-v489-stage6-v489-ui-smoke-20260519.json` returned `ok=true` after
+starting Streamlit directly from `C:\Users\cyo20\EIDP-v489-870d771` on
+`127.0.0.1:8516`. The smoke captured health `200/ok`, root page `200`, response
 length `5381`, `stopped=true`, and `listener_after_stop=false`, so the
 side-by-side browser shell is proven without leaving a background listener or
 changing the active Task Scheduler lane.
@@ -107,20 +108,19 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current Windows side-by-side support package:
-`dist/eidp-windows-v488.zip`
-Current v488 SHA256 sidecar:
-`dist/eidp-windows-v488.zip.sha256`
-Current v488 package build evidence:
-`dist/eidp-windows-v488.zip` was built from clean source and validated on both
-Mac and Windows side-by-side. v489 has fresher Mac-side package/source evidence,
-but it has not yet been Windows side-by-side promoted or UI-smoked. Use v488
-as the latest Windows-proven package until v489 receives the same Windows
-side-by-side preflight.
+`dist/eidp-windows-v489.zip`
+Current v489 SHA256 sidecar:
+`dist/eidp-windows-v489.zip.sha256`
+Current v489 package build evidence:
+`dist/eidp-windows-v489.zip` was built from clean source and validated on both
+Mac and Windows side-by-side. It has not been promoted to the active weekly
+Task Scheduler lane; the active production action remains v485 until an
+explicit promotion decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/2026-05-19-final-objective-audit-v488.md` is `NOT COMPLETE`:
-v488 is validated side-by-side, but current FY2026 production-scale strict
+`docs/reports/2026-05-19-final-objective-audit-v489.md` is `NOT COMPLETE`:
+v489 is validated side-by-side, but current FY2026 production-scale strict
 proof and owner real Windows cycle evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
