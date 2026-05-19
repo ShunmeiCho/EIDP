@@ -9,13 +9,15 @@ decision for FY2026/R8 publication lag.
 ## Do Not Proceed If
 
 - PR #2 is not clean or either required check is not green.
-- v498 has not been Windows side-by-side validated.
+- The selected release candidate has not been Windows side-by-side validated
+  after its last code/package change. Current v498 is validated; rebuilds or
+  package-changing commits require fresh Windows evidence.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
-- OCR is included in the v1.0 release scope but there is no v498 Windows
-  OCR add-on/runtime proof, or no explicit decision that OCR remains an
-  optional/manual fallback for v1.0.
+- OCR is included in the v1.0 release scope but the v498 Windows OCR runtime
+  proof or OCR add-on SHA/runtime verifier is missing. Current v498 has OCR
+  runtime proof; rebuilds or OCR add-on changes require fresh evidence.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
