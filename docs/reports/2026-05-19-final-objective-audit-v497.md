@@ -12,12 +12,14 @@ Package source commit: `f0cdfa262dd1be0814dab021e766f3b6958eec24`
 
 `NOT COMPLETE`.
 
-v497 is the current Mac-side package/source-verified candidate. After the v497
-commit is pushed, PR #2 required checks must rerun before merge. That is not
-sufficient for the final rolling-FY objective. The controlling business blocker remains the FY2026/R8
-production-scale strict-yield proof: currently available public PDFs cannot
-reach the 60% strict current-FY target-PDF/excel-ready gate. Owner real Windows
-cycle evidence is also still missing.
+v497 is the current Mac-side package/source-verified candidate. PR #2 check
+state is intentionally not pinned in this audit because docs-only status commits
+can advance the moving head; use live `gh pr view 2` before merge. A clean PR is
+not sufficient for the final rolling-FY objective. The controlling business
+blocker remains the FY2026/R8 production-scale strict-yield proof: currently
+available public PDFs cannot reach the 60% strict current-FY
+target-PDF/excel-ready gate. Owner real Windows cycle evidence is also still
+missing.
 
 Do not tag `v1.0`, merge to `main`, or request owner sign-off under the strict
 FY2026 contract unless an explicit release exception is approved.
@@ -62,7 +64,7 @@ The objective is complete only when all of the following are true:
 | Active scheduled task safety | v489 recovery check `logs/win-v489-stage6-v489-recovery-expected-v485-20260519.json`: `ok=true`, `action_matches_expected=true`; active task stayed on v485 | PASS |
 | v485 `streamlit.main` launcher issue | `docs/runbooks/eidp-windows.md` documents `No module named streamlit.main` and a non-SSH hotfix; `docs/runbooks/eidp-operator-e2e-template.md` checks launcher entrypoint before UI smoke; local ZIP inspection on 2026-05-19 confirmed the current package `scripts/launch.bat` uses `-m streamlit run` and ships the repair helper | PASS for runbook/package, PENDING for Win-side applied repair |
 | v497 launcher repair hardening | `uv run pytest tests/unit/test_repair_streamlit_launcher.py tests/unit/test_windows_distribution_verifier.py::test_verify_core_zip_rejects_legacy_streamlit_main_launcher -q` returned `9 passed`; full v497 non-Windows gate returned `1875 passed` for `tests/unit` and package verifier `ok=true` | PASS |
-| PR mergeability | Live `gh pr view 2` / PR body are the current source of truth. v497 introduces a newer source/docs commit, so required checks must rerun before merge | PENDING |
+| PR mergeability | Live `gh pr view 2` / PR body are the current source of truth. This audit does not pin mutable PR check state; re-check immediately before merge. | CHECK LIVE |
 | Package/source freshness | v497 package was built from `f0cdfa262dd1be0814dab021e766f3b6958eec24`. `logs/win-v497-stage6-v497-non-windows-release-gates-20260519.json`: `package_source_check.ok=true`, `source_dirty=false`, `stale=false`. Any later docs-only status commit must be checked with `--allow-docs-only-stale-package` before merge/release. | PASS |
 | Publication-lag exception record | `docs/reports/2026-05-19-publication-lag-release-exception-record.md` exists, but status is `NOT_APPROVED` | BLOCKED |
 | Owner real Windows cycle | Latest owner evidence remains incomplete; active v485 DB previously had `school_site_count=0` and `document_count=0`; owner must run initial bootstrap before weekly cycle | BLOCKED |
