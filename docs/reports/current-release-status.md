@@ -170,9 +170,10 @@ explicit promotion decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/2026-05-19-final-objective-audit-v489.md` is `NOT COMPLETE`:
-v489 is validated side-by-side, but current FY2026 production-scale strict
-proof and owner real Windows cycle evidence remain incomplete. To continue,
+`docs/reports/2026-05-19-final-objective-audit-v497.md` is `NOT COMPLETE`:
+v497 is Mac-side package/source verified, v489 remains the latest Windows
+side-by-side smoke evidence, and current FY2026 production-scale strict proof
+plus owner real Windows cycle evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
