@@ -64,6 +64,7 @@ The objective is complete only when all of the following are true:
 | Package/source freshness | `logs/win-v500-stage6-v500-non-windows-release-gates-20260520.json`: package/source check fresh at package commit. Later docs-only commits require a `--allow-docs-only-stale-package` gate and should be recorded in the PR body rather than pinned here | PASS |
 | PR mergeability | `gh pr view 2` reported `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, and checks `SUCCESS` during this audit. This audit intentionally avoids pinning a moving PR head; re-check before merge | PASS at audit time; re-check before merge |
 | Publication-lag exception record | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED`, package candidate v500/SHA pinned | BLOCKED |
+| Unapproved exception cannot pass return verifier | `logs/win-v500-stage6-v500-verify-stage6-return-not-approved-exception-20260520.json`: verifier exit code `1`, `ok=false`, and errors include `release exception record Status must be APPROVED` plus `release exception record Decision must be APPROVED` | PASS for negative gate |
 | Owner real Windows cycle | v500 has bounded canary and Stage 6 bundle; owner real-cycle KPI table and sign-off are missing | BLOCKED |
 | v1.0 tag / main merge | Not allowed while FY2026 strict proof and owner cycle are incomplete, absent explicit release exception approval | BLOCKED |
 
@@ -85,9 +86,9 @@ The objective is complete only when all of the following are true:
   validation, not owner approval.
 - The FY2025 mature-year proof is valid only as release-exception support. It
   must not be counted as strict FY2026/R8 ship proof.
-- `verify_stage6_return.py` must still reject the current `publication_lag`
-  path while the exception record remains `NOT_APPROVED`, even if mature-year
-  proof and Stage 6 evidence verifier JSON are supplied.
+- `verify_stage6_return.py` rejects the current `publication_lag` path while
+  the exception record remains `NOT_APPROVED`, even when mature-year proof and
+  v500 Stage 6 evidence verifier JSON are supplied.
 
 ## Required Next Actions
 
