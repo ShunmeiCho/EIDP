@@ -3,7 +3,7 @@
 Date: 2026-05-19
 Branch: `sprint8-handoff-finalize`
 PR: `#2`
-PR head when written: `555fe014feba49e13badd66ef6fcbb434f879d26`
+Package source commit: `555fe014feba49e13badd66ef6fcbb434f879d26`
 Package: `dist/eidp-windows-v498.zip`
 Package SHA256: `05f7dee2b6a487a798ae3121ea55ceb5593794126ef82e18afe2925ba7262930`
 
@@ -13,8 +13,9 @@ Package SHA256: `05f7dee2b6a487a798ae3121ea55ceb5593794126ef82e18afe2925ba726293
 
 v498 is now the current package candidate and has fresh Mac-side package/source
 verification plus Windows side-by-side setup, OCR runtime, UI, weekly canary,
-Excel export, and Stage 6 evidence-bundle proof. PR #2 was live-checked as
-`MERGEABLE` / `CLEAN` with all required checks `SUCCESS` after the v498 push.
+Excel export, and Stage 6 evidence-bundle proof. PR #2 mergeability is a live
+gate and must be re-checked before merge; this audit intentionally pins the
+package source commit, not a moving docs-only PR head.
 
 This still is not v1.0 approval. The controlling business blocker remains the
 FY2026/R8 strict current-year yield: the current proof is below the 60% ship
@@ -64,7 +65,7 @@ The objective is complete only when all of the following are true:
 | SQLite backup recoverability smoke | `logs/win-v498-stage6-v498-env0-db-backup-summary-20260519.json`: `ok=true`, backup exists, `size_bytes=9383936`, SQLite `integrity_check=ok`, `school_count=2418` | PASS |
 | High-severity static security scan | `logs/win-v498-stage6-v498-bandit-high-current-head-20260519.rc`: exit `0` for `uv run --with bandit bandit -q --severity-level high -r src/eidp` plus release scripts | PASS |
 | Windows path safety | `logs/win-v498-stage6-v498-windows-path-safety-current-head-20260519.json`: issue count `0`; focused path-safety and CI Bandit contract tests returned `7 passed` | PASS |
-| PR mergeability | Live check after v498 push: PR #2 `MERGEABLE` / `CLEAN`, two `Python quality gates` and two `Ship gate contract` checks `SUCCESS` | PASS at time of audit; re-check before merge |
+| PR mergeability | Live gate checked with `gh pr view 2`; the PR body records the current head and check-run URLs. This audit intentionally avoids pinning docs-only PR heads to prevent freshness churn. | PASS at time of external audit; re-check before merge |
 | Package/source freshness | `logs/win-v498-stage6-v498-non-windows-release-gates-20260519.json`: `package_source_check.ok=true`, `source_dirty=false`, `stale=false` | PASS |
 | Publication-lag exception record | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED` | BLOCKED |
 | Unapproved exception cannot pass return verifier | `logs/win-v498-stage6-v498-verify-stage6-return-not-approved-exception-20260519.json`: verifier exit code `1`, `ok=false`, and errors include `release exception record Status must be APPROVED` plus `release exception record Decision must be APPROVED` | PASS for negative gate |
