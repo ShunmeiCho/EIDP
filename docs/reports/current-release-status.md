@@ -2,7 +2,7 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v494` for Mac-side package/source verification.
+Latest package family: `v495` for Mac-side package/source verification.
 Latest Windows side-by-side smoke evidence remains `v489`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -28,6 +28,8 @@ promote PDF classification parse failures to `log.exception`, and add
 `FOR UPDATE` call shape to fiscal-year override rewrites. Post-v493 source
 fixes add a verifier-accepted mature-year proof path from production-scale
 `strict_yield_gap_analysis` evidence and rebuild the Windows ZIP as v494.
+Post-v494 fixes add operator URL parse-failure exception logging and rebuild
+the Windows ZIP as v495.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -48,9 +50,9 @@ It reports denominator `1000`, strict/excel-ready `600/1000 (60.0%)`, broad
 confirmed `601/1000 (60.1%)`, operator-reviewable `798/1000 (79.8%)`, and
 estimated manual workload `20.2%`. This satisfies the mature-year strict
 Excel-importable ship line for the selected FY2025 production-scale replay.
-v494 converted that `strict_yield_gap_analysis` artifact into the
+v495 converted that `strict_yield_gap_analysis` artifact into the
 verifier-accepted mature-year proof JSON at
-`logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json`.
+`logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json`.
 That proof has `ok=true`, basis
 `mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition`,
 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
@@ -83,26 +85,26 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current Mac package candidate:
-`dist/eidp-windows-v494.zip`, SHA256
-`ea6d6884be27b5ff3408439bffc82eef7763158fa941f886afec94677da7724c`.
+`dist/eidp-windows-v495.zip`, SHA256
+`e55c1b2de2b74181f9d29120ba9b074c5d14c82bf4d74ef41c07ff8e84e623c8`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=0d693c6b9e36cda7bb61ba9750f9b8b2b90b1e32`,
+`git_commit=37b5118d3bf9a9a50b281ec0d87bedcf2242d475`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v494-stage6-v494-verify-windows-distribution-20260519.json`
+`logs/win-v495-stage6-v495-verify-windows-distribution-20260519.json`
 (`ok=true`, `wheel_count=84`, `entry_count=3104`) and
-`logs/win-v494-stage6-v494-non-windows-release-gates-20260519.json`
-(`ok=true`; package/source check is fresh, validator/distribution unit, mypy,
-ruff, discovery gold, package verify, and demonstrated-pattern package verify
-returned `0`). v494 includes
+`logs/win-v495-stage6-v495-non-windows-release-gates-20260519.json`
+(`ok=true`; package/source check is fresh, full unit suite returned `1869 passed`,
+validator/distribution unit, mypy, ruff, discovery gold, package verify, and
+demonstrated-pattern package verify returned `0`). v495 includes
 `EIDP-repair-launcher.bat`, `scripts/repair_streamlit_launcher.bat`,
 `scripts/repair_streamlit_launcher.py`, and `scripts/evaluate_strict_yield_bound.py`;
 keeps the image-pending OCR warning verifier contract; rejects packaged
 launchers that contain `streamlit.main`; and ships `.streamlit/config.toml`
-with `address = "127.0.0.1"`. v494 has not been Windows side-by-side
+with `address = "127.0.0.1"`. v495 has not been Windows side-by-side
 validated. The prepared side-by-side validation runbook is
-`docs/runbooks/eidp-v494-side-by-side-validation.md`, with owner-facing
-handoff text in `docs/runbooks/eidp-v494-owner-request-20260519.txt`.
+`docs/runbooks/eidp-v495-side-by-side-validation.md`, with owner-facing
+handoff text in `docs/runbooks/eidp-v495-owner-request-20260519.txt`.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
