@@ -7,13 +7,14 @@ Superseded by v497. Do not transfer or validate v494 unless a release engineer
 explicitly requests a historical reproduction. Use
 docs/runbooks/eidp-v497-owner-request-20260519.txt for the current candidate.
 
-Purpose
--------
-v494 is ready for Windows side-by-side validation. It is not v1.0 approval and
-it is not permission to switch the active weekly task.
+Historical purpose
+------------------
+v494 was prepared for Windows side-by-side validation before v497 superseded
+it. It is not v1.0 approval and it is not permission to switch the active
+weekly task.
 
-Use this package
-----------------
+Historical package (do not use for current validation)
+------------------------------------------------------
 Package:
   C:\EIDP-staging\eidp-windows-v494.zip
 

@@ -8,11 +8,11 @@ Superseded by v497. Do not transfer or validate v494 unless a release engineer
 explicitly requests a historical reproduction. Use
 `docs/runbooks/eidp-v497-side-by-side-validation.md` for the current candidate.
 
-This runbook validates v494 on the Windows operator PC without promoting the
-active `EIDP Weekly Run` scheduled task. It is not approval to tag v1.0 or to
-switch the active lane.
+This historical runbook validated v494 on the Windows operator PC without
+promoting the active `EIDP Weekly Run` scheduled task. Do not use it for the
+current validation lane.
 
-## Package
+## Historical Package
 
 | Item | Value |
 | --- | --- |
