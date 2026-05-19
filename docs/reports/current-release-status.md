@@ -2,13 +2,14 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v506` for Mac-side package/source verification after
-adding `ManualActionLog` coverage for operator URL registration. `v502` remains
+Latest package family: `v507` for Mac-side package/source verification after
+adding `ManualActionLog` coverage for prefecture remark review decisions.
+`v502` remains
 the latest package with partial Windows side-by-side setup, validate, recovery,
 and limit-50 canary evidence. `v501` remains the latest package with complete
 Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
 runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification, until
-v506 full Windows smoke finishes.
+v507 full Windows smoke finishes.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -69,7 +70,11 @@ rebuild the Windows ZIP as v505 with fresh Mac-side package/source
 verification. Post-v505 fixes add `operator_url_submitted` and
 `operator_url_bulk_imported` `ManualActionLog` coverage for manual URL
 registration and CSV bulk URL import, then rebuild the Windows ZIP as v506
-with fresh Mac-side package/source verification.
+with fresh Mac-side package/source verification. Post-v506 fixes add
+`prefecture_remark_approved` and `prefecture_remark_rejected`
+`ManualActionLog` coverage for official prefecture index remark decisions,
+then rebuild the Windows ZIP as v507 with fresh Mac-side package/source
+verification.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -129,26 +134,26 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v506.zip`, SHA256
-`f2221af5d82352085bbf470335d3c726eb9b31ce133d876ec6e4e5c74df8927e`.
+`dist/eidp-windows-v507.zip`, SHA256
+`e73ffe8112d0468e6d0e49654d8e287002e5a6dc20a1e0e023a240939a71d675`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=2d266c5f39399e71d19f12b2d99aa87f5e1333e8`,
+`git_commit=0ddc6570c294667a3802f7f3b45a5f53a5d6e9b1`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v506-stage6-v506-non-windows-release-gates-20260520.json`
+`logs/win-v507-stage6-v507-non-windows-release-gates-20260520.json`
 (`ok=true`; package/source check is fresh, full unit suite `1886 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
 verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
 `dist/eidp-ocr-addon-windows-v497-smoke.zip`.
 
-v506 includes all v505 package features plus operator URL audit hardening:
-successful `登録 + 検証` writes now emit `ManualActionLog` row
-`operator_url_submitted`, and successful `CSVを一括登録` writes emit
-`operator_url_bulk_imported`. The package evidence is recorded in
-`docs/reports/2026-05-20-v506-operator-url-audit-package.md`.
+v507 includes all v506 package features plus prefecture remark audit hardening:
+`確認済みにする` and `対象外として閉じる` now emit `ManualActionLog` rows
+`prefecture_remark_approved` or `prefecture_remark_rejected`. The package
+evidence is recorded in
+`docs/reports/2026-05-20-v507-prefecture-remark-audit-package.md`.
 
-v506 has not completed Windows side-by-side validation because the Windows
+v507 has not completed Windows side-by-side validation because the Windows
 OpenSSH/IP blocker remains unresolved. v502 remains the latest partial Windows
 side-by-side setup/canary package, and v501 remains the latest complete
 Windows side-by-side smoke package.
@@ -313,11 +318,11 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v506.zip`
-Current v506 SHA256 sidecar:
-`dist/eidp-windows-v506.zip.sha256`
-Current v506 package build evidence:
-`dist/eidp-windows-v506.zip` was built from clean source and validated by the
+`dist/eidp-windows-v507.zip`
+Current v507 SHA256 sidecar:
+`dist/eidp-windows-v507.zip.sha256`
+Current v507 package build evidence:
+`dist/eidp-windows-v507.zip` was built from clean source and validated by the
 full non-Windows release gate. It has not completed Windows side-by-side setup
 because the Windows OpenSSH/IP blocker remains unresolved. v502 remains the
 latest partial automated Windows side-by-side setup, validation, recovery, and
@@ -328,9 +333,9 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v506 is Mac-side package/source verified, v502 is partially Windows side-by-side
+v507 is Mac-side package/source verified, v502 is partially Windows side-by-side
 validated, and v501 is the latest complete Windows-smoke proof. Current FY2026
-production-scale strict proof, v506 Windows smoke, and owner real Windows cycle
+production-scale strict proof, v507 Windows smoke, and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
