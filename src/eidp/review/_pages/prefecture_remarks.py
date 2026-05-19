@@ -17,8 +17,9 @@ from pathlib import Path
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from eidp.db.audit import log_manual_action
 from eidp.db.locking import LockBusyError, acquire_lock
-from eidp.db.models import ReviewItem, School
+from eidp.db.models import ManualActionLog, ReviewItem, School
 from eidp.scraper.prefecture_aggregator import PARSERS
 
 
@@ -304,6 +305,7 @@ def resolve_prefecture_remark_review(
     item_id: int,
     resolution: str,
     notes: str = "",
+    actor: str = "operator",
 ) -> bool:
     """Close a pending prefecture remark review item."""
     if resolution not in RESOLUTION_LABELS:
@@ -320,11 +322,45 @@ def resolve_prefecture_remark_review(
     if item is None:
         return False
 
+    old_value: dict[str, object | None] = {
+        "status": item.status,
+        "resolution": item.resolution,
+        "notes": item.notes,
+    }
     item.status = "resolved"
     item.resolution = resolution
     item.resolved_at = datetime.now(UTC)
     item.notes = notes or None
+    audit_prefecture_remark_resolved(session, item=item, old_value=old_value, actor=actor)
     return True
+
+
+def audit_prefecture_remark_resolved(
+    session: Session,
+    *,
+    item: ReviewItem,
+    old_value: dict[str, object | None],
+    actor: str = "operator",
+) -> ManualActionLog:
+    tags, remarks = parse_prefecture_remark_payload(item.proposal_value)
+    return log_manual_action(
+        session,
+        action_type=f"prefecture_remark_{item.resolution}",
+        target_table="review_item",
+        target_id=item.id,
+        old_value=old_value,
+        new_value={
+            "item_id": item.id,
+            "school_id": item.reference_id,
+            "resolution": item.resolution,
+            "notes": item.notes,
+            "tags": tags,
+            "remarks": remarks,
+            "evidence_url": item.evidence_url,
+        },
+        reason=item.notes or "Operator resolved prefecture remark review",
+        actor=actor,
+    )
 
 
 def _tag_text(tags: tuple[str, ...]) -> str:

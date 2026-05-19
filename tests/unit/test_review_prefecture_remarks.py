@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from eidp.db.models import Base, ReviewItem, School
+from eidp.db.models import Base, ManualActionLog, ReviewItem, School
 from eidp.review._pages import prefecture_remarks
 from eidp.review._pages.prefecture_remarks import (
     count_pending_prefecture_remark_reviews,
@@ -176,6 +176,14 @@ def test_resolve_prefecture_remark_review_closes_pending_item() -> None:
         assert item.resolution == "approved"
         assert item.notes == "確認済"
         assert item.resolved_at is not None
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "prefecture_remark_approved"
+        assert audit.target_table == "review_item"
+        assert audit.target_id == 11
+        assert '"item_id": 11' in (audit.new_value or "")
+        assert '"school_id": 1' in (audit.new_value or "")
+        assert '"resolution": "approved"' in (audit.new_value or "")
         assert resolve_prefecture_remark_review(session, item_id=11, resolution="approved") is False
     finally:
         session.close()
