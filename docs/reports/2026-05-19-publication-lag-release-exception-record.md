@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v507.zip`
-Package SHA256: `e73ffe8112d0468e6d0e49654d8e287002e5a6dc20a1e0e023a240939a71d675`
+Package candidate: `dist/eidp-windows-v508.zip`
+Package SHA256: `1704c690a3deeb1240e012a4918941a1b7aa959a36963320f385c5ecdfa47f93`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -40,7 +40,7 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
-| v507 package/non-Windows release gates | `logs/win-v507-stage6-v507-non-windows-release-gates-20260520.json` | `ok=true` |
+| v508 package/non-Windows release gates | `logs/win-v508-stage6-v508-non-windows-release-gates-20260520.json` | `ok=true` |
 | v501 Windows side-by-side evidence | `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md` | latest complete Windows side-by-side proof |
 | v502 Windows side-by-side evidence | `docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md` | partial proof; full smoke pending SSH recovery |
 | v503 settings-audit package report | `docs/reports/2026-05-20-v503-settings-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
@@ -48,6 +48,7 @@ evidence or Stage 6 return verification.
 | v505 school-task rebuild audit package report | `docs/reports/2026-05-20-v505-school-task-rebuild-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | v506 operator URL audit package report | `docs/reports/2026-05-20-v506-operator-url-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | v507 prefecture remark audit package report | `docs/reports/2026-05-20-v507-prefecture-remark-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
+| v508 Excel export audit package report | `docs/reports/2026-05-20-v508-excel-export-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
