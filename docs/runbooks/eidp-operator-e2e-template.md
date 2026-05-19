@@ -43,6 +43,7 @@ Updated: 2026-05-19
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
+<!-- verifier compatibility token: 現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）: -->
 現行投入候補（package / validation status は current release-status と
 version-specific owner request を正とする）:
 
