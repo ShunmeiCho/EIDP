@@ -53,9 +53,9 @@ The objective is complete only when all of the following are true:
 | PDF extraction stack packaged | v498 package verifier `ok=true`, `has_runtime=true`, `wheel_count=84`, `entry_count=3105` | PASS |
 | Tesseract OCR runtime/add-on | `logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json`: `ok=true`, Tesseract `5.4.0.20240606`, `jpn` and `jpn_vert` present. Core + add-on verifier also `ok=true` in `logs/win-v498-stage6-v498-verify-windows-distribution-with-ocr-addon-20260519.json` | PASS |
 | Confidence `>= 0.70` gating | CI and local gates cover confidence propagation and package verifier contracts; v498 OCR runtime proof confirms add-on availability, not full production OCR yield | PASS for code/runtime, PARTIAL for production OCR corpus |
-| Append-only business writes | PR checks and unit gates cover write contracts. Owner real-cycle audit evidence is still missing | PASS for code, PARTIAL for real workflow |
+| Append-only business writes | Focused audit/manual-write suite passed: `logs/win-v498-stage6-v498-manual-action-audit-tests-a27fe06-20260519.txt` (`197 passed`). Coverage includes `test_fiscal_year_override.py`, `test_manual_entry_contract.py`, review manual-entry tests, URL review tests, and school-site audit tests. Owner real-cycle audit evidence is still missing | PASS for code, PARTIAL for real workflow |
 | Excel template transfer | `logs/win-v498-stage6-v498-excel-summary-20260519.json`: master workbook exists, competition workbook exists, default competition template exists in `sample/`, competition workbook has 16 sheets | PASS |
-| ManualActionLog audit | Tests and UI contracts exist, but owner real-cycle audit counts/outbox proof are not returned yet | PARTIAL |
+| ManualActionLog audit | `logs/win-v498-stage6-v498-manual-action-audit-tests-a27fe06-20260519.txt`: `197 passed`, covering DB-authoritative `manual_action_log`, UUID `action_id`, JSONL outbox dedup/archive behavior, fiscal-year override audit rows, manual-entry audit rows, URL-review audit rows, and audit-page flush/listing behavior. Owner real-cycle audit counts/outbox proof are not returned yet | PARTIAL |
 | ZIP distribution and offline setup | v498 SHA matches sidecar; non-Windows gate package/source check fresh; Windows setup validator `ok=true` | PASS |
 | Side-by-side setup can preserve active task | Fresh Windows root `%USERPROFILE%\EIDP-v498-555fe01-env0` was set up with `EIDP_REGISTER_WEEKLY_TASK=0`; `logs/win-v498-stage6-v498-first-setup-env0-20260519.log` shows `skipping Task Scheduler registration because EIDP_REGISTER_WEEKLY_TASK=0`; `logs/win-v498-stage6-v498-env0-validate-after-setup-20260519.json` is `ok=true`; `logs/win-v498-stage6-v498-env0-recovery-expected-v485-20260519.json` is `ok=true` with `action_matches_expected=true` | PASS |
 | Browser UI on Windows | `logs/win-v498-stage6-v498-ui-smoke-20260519.json`: `ok=true`, port `8519`, health `200/ok`, root `200`, stopped cleanly | PASS |
@@ -85,6 +85,10 @@ The objective is complete only when all of the following are true:
 - The v498 Windows side-by-side proof now covers installation, OCR runtime,
   Streamlit health, bounded weekly execution, Excel output, and Stage 6 bundle
   verification. It is still a bounded validation, not owner approval.
+- The focused audit/manual-write test suite proves the code-level
+  `ManualActionLog` and append-only contracts for manual entry, fiscal-year
+  override, URL review, outbox deduplication, and audit UI flows. It does not
+  replace owner real-cycle audit counts from the operator PC.
 - The env0 setup proof confirms that the documented side-by-side validation
   path can run `scripts\first_setup.bat` with `EIDP_REGISTER_WEEKLY_TASK=0`
   without moving the active scheduled task off v485.
