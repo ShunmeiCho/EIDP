@@ -77,6 +77,9 @@ Before merging or tagging, attach or reference:
 - v497 Windows UI smoke notes;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
+- Excel preview/export proof: output workbook path or redacted workbook
+  metadata, plus consistency evidence that the Excel-ready coverage in the
+  owner template matches the current DB/run metrics;
 - `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`
   if the approved release path is `publication_lag`;
 - if OCR is in release scope, v497 OCR add-on SHA256 plus Windows runtime /

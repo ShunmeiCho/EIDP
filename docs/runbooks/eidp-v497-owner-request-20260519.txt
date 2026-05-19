@@ -87,11 +87,16 @@ Required files to return after owner real cycle
 - latest logs\stage6-evidence-*.zip
 - latest logs\stage6-evidence-verify-*.json
 - completed eidp-operator-e2e-template.md with KPI rows and sign-off
+- Excel proof from 工程 4: output workbook path or redacted workbook metadata,
+  plus the Excel consistency / Excel ready fields filled in the template
 
 Required KPI / sign-off fields
 ------------------------------
 - target_pdf_auto_yield_pct
 - operator_reviewable_yield_pct
+- target_pdf_excel_ready_yield_pct
+- Excel ready 率
+- Excel 整合性
 - ship_gate_status
 - ship_readiness_rc
 - pending JSONL outbox count after flush
