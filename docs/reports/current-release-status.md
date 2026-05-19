@@ -293,22 +293,24 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v501.zip`
-Current v501 SHA256 sidecar:
-`dist/eidp-windows-v501.zip.sha256`
-Current v501 package build evidence:
-`dist/eidp-windows-v501.zip` was built from clean source and validated by the
-full non-Windows release gate. It has also completed the automated Windows
-side-by-side smoke set, but it has not been promoted to the active weekly Task
-Scheduler lane. The active production action remains v485 until an explicit
+`dist/eidp-windows-v502.zip`
+Current v502 SHA256 sidecar:
+`dist/eidp-windows-v502.zip.sha256`
+Current v502 package build evidence:
+`dist/eidp-windows-v502.zip` was built from clean source and validated by the
+full non-Windows release gate. It has completed partial automated Windows
+side-by-side setup, validation, recovery, and limit-50 canary evidence, but it
+has not completed the full v502 Windows smoke set and has not been promoted to
+the active weekly Task Scheduler lane. v501 remains the latest complete Windows
+smoke package. The active production action remains v485 until an explicit
 promotion decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/2026-05-20-final-objective-audit-v501.md` is `NOT COMPLETE`.
-v501 is Mac-side package/source verified and Windows side-by-side smoke
-validated. Current FY2026 production-scale strict proof and owner real Windows
-cycle evidence remain incomplete. To continue,
+`docs/reports/2026-05-20-final-objective-audit-v502.md` is `NOT COMPLETE`.
+v502 is Mac-side package/source verified and partially Windows side-by-side
+validated. Current FY2026 production-scale strict proof, v502 full Windows
+smoke, and owner real Windows cycle evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
