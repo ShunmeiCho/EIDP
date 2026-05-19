@@ -518,6 +518,11 @@ def test_first_setup_registers_weekly_task(bat_files: dict[str, str]):
     assert "schtasks" in body
     assert "EIDP Weekly Run" in body
     assert "EIDP_REGISTER_WEEKLY_TASK" in body
+    assert "New-ScheduledTaskSettingsSet" in body
+    assert "-RestartCount 3" in body
+    assert "-RestartInterval (New-TimeSpan -Minutes 30)" in body
+    assert "Set-ScheduledTask -TaskName 'EIDP Weekly Run'" in body
+    assert "retry-on-failure is not configured" in body
 
 
 def test_first_setup_can_skip_weekly_task_for_side_by_side_preflight(bat_files: dict[str, str]):

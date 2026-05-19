@@ -203,7 +203,13 @@ if errorlevel 1 (
     echo [first_setup] WARNING: schtasks registration failed; operator may need to run weekly_run.bat manually.
     > "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" echo Task Scheduler registration failed during setup. Use the UI weekly rediscovery button, or run setup as a user allowed to create scheduled tasks.
 ) else (
-    if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" del "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" >nul 2>nul
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 30); Set-ScheduledTask -TaskName 'EIDP Weekly Run' -Settings $settings | Out-Null"
+    if errorlevel 1 (
+        echo [first_setup] WARNING: Task Scheduler retry settings failed; weekly task was registered without retry-on-failure.
+        > "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" echo Task Scheduler retry settings failed during setup. Weekly task exists, but retry-on-failure is not configured.
+    ) else (
+        if exist "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" del "%EIDP_APP_ROOT%\data\weekly-task-registration-warning.txt" >nul 2>nul
+    )
 )
 :after_weekly_task_registration
 

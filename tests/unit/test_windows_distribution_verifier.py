@@ -658,6 +658,17 @@ def test_verify_core_zip_validates_collect_bug_report_launcher_contract(tmp_path
     assert any("scripts/collect_bug_report.bat missing required token: PYTHONUTF8=1" in error for error in check.errors)
 
 
+def test_verify_core_zip_requires_weekly_task_retry_settings(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["scripts/first_setup.bat"] = entries["scripts/first_setup.bat"].replace("-RestartCount 3", "")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("scripts/first_setup.bat missing required token: -RestartCount 3" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_macos_wheel(tmp_path: Path) -> None:
     entries = _core_entries()
     entries["wheelhouse/pymupdf-1.25.0-cp312-cp312-macosx_11_0_arm64.whl"] = b"wheel"
