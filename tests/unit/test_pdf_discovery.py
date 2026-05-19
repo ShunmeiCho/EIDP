@@ -2137,6 +2137,63 @@ class _AttemptPdfClient:
         return self.responses[url]
 
 
+class _FakePdfDiscoveryLog:
+    def __init__(self) -> None:
+        self.exceptions: list[tuple[str, dict[str, object]]] = []
+
+    def exception(self, event: str, **kwargs: object) -> None:
+        self.exceptions.append((event, kwargs))
+
+
+def test_classify_pdf_content_logs_exception_on_parse_failure(monkeypatch) -> None:
+    fake_log = _FakePdfDiscoveryLog()
+
+    def raise_parse_error(_content: bytes) -> str:
+        raise ValueError("broken pdf")
+
+    monkeypatch.setattr(pdf_discovery_module, "log", fake_log)
+    monkeypatch.setattr(pdf_discovery_module, "_extract_pdf_sample_text", raise_parse_error)
+
+    assert pdf_discovery_module._classify_pdf_content(b"%PDF-" + (b"x" * 2000)) == "unknown"
+    assert fake_log.exceptions == [
+        ("pdf_classify_failed", {"error": "broken pdf", "error_type": "ValueError"})
+    ]
+
+
+def test_download_pdf_logs_exception_on_sample_parse_failure(monkeypatch, tmp_path: Path) -> None:
+    fake_log = _FakePdfDiscoveryLog()
+    url = "https://example.ac.jp/broken.pdf"
+    client = _AttemptPdfClient(
+        {
+            url: _AttemptPdfResponse(url, status_code=200, content=b"%PDF-" + (b"x" * 2000)),
+        }
+    )
+    candidate = PdfCandidate(pdf_url=url, page_url="https://example.ac.jp/disclosure/")
+
+    def raise_parse_error(_content: bytes) -> str:
+        raise ValueError("sample parse failed")
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr(pdf_discovery_module, "log", fake_log)
+    monkeypatch.setattr(pdf_discovery_module, "_extract_pdf_sample_text", raise_parse_error)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        client,
+        candidate,
+        tmp_path,
+        123,
+    )
+
+    assert file_path is not None
+    assert file_hash is not None
+    assert file_size == 2005
+    assert pdf_type == "unknown"
+    assert reason is None
+    assert fake_log.exceptions == [
+        ("pdf_classify_failed", {"error": "sample parse failed", "error_type": "ValueError"})
+    ]
+
+
 def test_download_pdf_continues_after_failed_attempt(monkeypatch, tmp_path: Path) -> None:
     """A failed resolved URL must not prevent trying the original wrapper URL."""
 

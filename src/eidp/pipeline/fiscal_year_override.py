@@ -196,7 +196,7 @@ def override_fiscal_year(
     """
     _validate_target_fiscal_year(target_fy)
 
-    doc = session.get(Document, doc_id)
+    doc = session.get(Document, doc_id, with_for_update=True)
     if doc is None:
         raise ValueError(f"Document id={doc_id} not found")
 
@@ -224,6 +224,7 @@ def override_fiscal_year(
             DepartmentYearly.fiscal_year == source_fy,
             DepartmentYearly.is_current.is_(True),
         )
+        .with_for_update()
         .all()
     )
     for src_dy in src_dy_rows:
@@ -237,6 +238,7 @@ def override_fiscal_year(
                 DepartmentYearly.fiscal_year == target_fy,
                 DepartmentYearly.is_current.is_(True),
             )
+            .with_for_update()
             .all()
         )
         for target_dy in target_dy_rows:
@@ -301,6 +303,7 @@ def override_fiscal_year(
             SupportRecipient.fiscal_year == source_fy,
             SupportRecipient.is_current.is_(True),
         )
+        .with_for_update()
         .all()
     )
     for src_sr in src_sr_rows:
@@ -311,6 +314,7 @@ def override_fiscal_year(
                 SupportRecipient.fiscal_year == target_fy,
                 SupportRecipient.is_current.is_(True),
             )
+            .with_for_update()
             .all()
         )
         for target_sr in target_sr_rows:
@@ -374,6 +378,7 @@ def override_fiscal_year(
             SchoolYearStatus.fiscal_year == source_fy,
             SchoolYearStatus.is_current.is_(True),
         )
+        .with_for_update()
         .all()
     )
     for src_sys in src_sys_rows:
@@ -384,6 +389,7 @@ def override_fiscal_year(
                 SchoolYearStatus.fiscal_year == target_fy,
                 SchoolYearStatus.is_current.is_(True),
             )
+            .with_for_update()
             .all()
         )
         for target_sys in target_sys_rows:

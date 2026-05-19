@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from eidp.config import SUPPORTED_TARGET_FISCAL_YEAR_RANGE_LABEL
 from eidp.db.locking import acquire_lock
@@ -170,6 +170,41 @@ def test_override_with_lock_writes_when_lock_free(engine, tmp_path):
         session.refresh(doc)
         assert doc.fiscal_year == 2026
         assert doc.fiscal_year_override == 2026
+
+
+def test_override_with_lock_locks_yearly_rows_before_rewrite(engine, tmp_path, monkeypatch):
+    """Pin the SQLAlchemy call shape for Postgres row-level locking.
+
+    SQLite ignores ``FOR UPDATE``, but the call is still visible here. Without
+    it, two Postgres operators can race while demoting current rows and
+    appending the next revision.
+    """
+    locked_entities: list[tuple[object, ...]] = []
+    original_with_for_update = Query.with_for_update
+
+    def spy_with_for_update(self: Query, *args: object, **kwargs: object) -> Query:
+        entities = tuple(desc.get("entity") for desc in self.column_descriptions)
+        if DepartmentYearly in entities:
+            locked_entities.append(entities)
+        return original_with_for_update(self, *args, **kwargs)
+
+    monkeypatch.setattr(Query, "with_for_update", spy_with_for_update)
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        _, doc, _ = _seed_full_doc(session, name="LOCK", file_hash_seed="lock", fiscal_year=2025)
+        session.commit()
+
+        outcome = override_with_lock(
+            session,
+            document_id=doc.id,
+            target_fy=2026,
+            reason="confirmed target fiscal year",
+            lock_path=lock,
+        )
+
+    assert outcome.ok is True
+    assert locked_entities, "fiscal-year override must lock DepartmentYearly rows before rewrite"
 
 
 def test_override_with_lock_returns_lock_busy_without_writing(engine, tmp_path):

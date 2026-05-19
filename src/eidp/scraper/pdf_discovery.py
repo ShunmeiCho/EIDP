@@ -3246,7 +3246,7 @@ def _classify_pdf_content(content: bytes) -> str:
     try:
         return _classify_pdf_sample_text(_extract_pdf_sample_text(content))
     except Exception as e:
-        log.warning("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
+        log.exception("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
         return "unknown"
 
 
@@ -3324,7 +3324,7 @@ def download_pdf(
             )
             candidate.detected_fiscal_year = detected_fiscal_year
         except Exception as e:
-            log.warning("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
+            log.exception("pdf_classify_failed", error=str(e), error_type=type(e).__name__)
             pdf_type = "unknown"
 
         if strict_target_fiscal_year:
