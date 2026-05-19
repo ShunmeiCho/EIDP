@@ -105,7 +105,8 @@ keeps the image-pending OCR warning verifier contract; rejects packaged
 launchers that contain `streamlit.main`; and ships `.streamlit/config.toml`
 with `address = "127.0.0.1"`. v494 has not been Windows side-by-side
 validated. The prepared side-by-side validation runbook is
-`docs/runbooks/eidp-v494-side-by-side-validation.md`.
+`docs/runbooks/eidp-v494-side-by-side-validation.md`, with owner-facing
+handoff text in `docs/runbooks/eidp-v494-owner-request-20260519.txt`.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
