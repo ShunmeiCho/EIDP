@@ -7,12 +7,13 @@ Run ID: `20260519_175624`
 
 ## Verdict
 
-`PARTIAL_WINDOWS_VALIDATED_BELOW_GATE`.
+`PARTIAL_WINDOWS_VALIDATED_BELOW_GATE`; later superseded for Windows-smoke
+completeness by `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md`.
 
-v501 completed the SSH-driven Windows setup, validation, recovery, and
-FY2026/R8 limit-50 canary path. It has not completed the full v500-equivalent
-Windows validation set because UI smoke, Excel smoke, OCR runtime validation,
-and Stage 6 evidence-bundle verification were not rerun for v501.
+This report records the initial SSH-driven Windows setup, validation, recovery,
+and FY2026/R8 limit-50 canary path. The follow-up full smoke report adds OCR
+runtime, UI, Excel, and Stage 6 evidence-bundle verification for the same v501
+root.
 
 The Sanko URL override follow-up materially improved the bounded canary result
 from v500, but v501 remains below the strict current-year ship gate.
@@ -84,10 +85,10 @@ the sample, which is consistent with the current publication-lag blocker.
 
 ## Release Impact
 
-v501 is now partially Windows-validated for setup, validate, recovery, and a
-bounded FY2026/R8 canary. v500 remains the latest package with the fuller
-Windows validation set that includes UI smoke, Excel smoke, OCR runtime proof,
-and Stage 6 evidence-bundle verification.
+This partial report is superseded for Windows-smoke completeness by
+`docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md`, which adds
+OCR runtime, UI, Excel, and Stage 6 evidence-bundle verification for the same
+v501 root.
 
 v1.0 remains blocked unless current FY2026/R8 strict yield reaches the release
 line or the owner explicitly approves the `publication_lag` exception and then

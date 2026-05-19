@@ -3,9 +3,8 @@
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
 Latest package family: `v501` for Mac-side package/source verification and
-partial Windows setup/validate/recovery plus limit-50 canary evidence.
-Latest complete Windows side-by-side smoke evidence, including UI/Excel/OCR
-runtime and Stage 6 bundle verification, is still `v500`.
+Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
+runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -46,10 +45,9 @@ v500 forwards `%*`, accepts `--json`, and has fresh package/source plus Windows
 side-by-side validation. Post-v500 fixes add 17 live-verified Sanko exact
 school URL overrides from the v500 limit-50 RCA, then rebuild the Windows ZIP as
 v501 with fresh package/source verification. v501 has since completed Windows
-setup, validate, recovery, and a limit-50 canary, but has not yet replaced v500
-as the latest complete Windows side-by-side package because UI smoke, Excel
-smoke, OCR runtime validation, and Stage 6 evidence-bundle verification were
-not rerun for v501.
+setup, validate, recovery, OCR runtime validation, UI smoke, Excel smoke, Stage
+6 evidence-bundle verification, and a limit-50 canary; it replaces v500 as the
+latest Windows side-by-side smoke package.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -132,7 +130,7 @@ previously falling back to `https://www.sanko.ac.jp/` corporation-root crawling.
 The follow-up package evidence is recorded in
 `docs/reports/2026-05-20-v501-sanko-url-overrides-package.md`.
 
-Current v501 Windows partial side-by-side validation:
+Current v501 Windows side-by-side smoke validation:
 the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
 the Mac sidecar, and the package expanded to
 `C:\Users\cyo20\EIDP-v501-d2fa01d-env0`. Setup and validation are recorded in
@@ -157,6 +155,19 @@ batch plan had 20 items across 45 total candidates, with buckets
 `3 target_form_without_year_evidence`. This improves the v500 limit-50 result
 from strict/Excel-ready `4.0%` and operator-reviewable `56.0%` to `10.0%` and
 `80.0%`, but remains below the strict FY2026/R8 release line.
+OCR runtime proof is
+`logs/win-v501-stage6-v501-validate-ocr-runtime-20260520.json` (`ok=true`,
+Tesseract `5.4.0.20240606`, `jpn` and `jpn_vert`). UI smoke is
+`logs/win-v501-stage6-v501-ui-smoke-20260520.json` (`ok=true`, port `8522`,
+health `200/ok`, root `200`, no traceback, stopped cleanly). Excel smoke is
+`logs/win-v501-stage6-v501-excel-summary-20260520.json` (`ok=true`, master
+workbook, competition workbook, and gap report generated). Stage 6 bundle proof
+is `logs/win-v501-stage6-v501-stage6-evidence-20260519-182045.zip` with SHA256
+`2270956e1511285b6e0ad5c737faa7766ad1fd7a62e5092ae28bec5c6a186336`, and
+verifier proof is
+`logs/win-v501-stage6-v501-stage6-evidence-verify-20260520-032045.json`
+(`ok=true`). The full v501 Windows-smoke report is
+`docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md`.
 
 v500/v501 include `EIDP-repair-launcher.bat`,
 `scripts/repair_streamlit_launcher.bat`, `scripts/repair_streamlit_launcher.py`,
@@ -248,20 +259,17 @@ Current v501 SHA256 sidecar:
 `dist/eidp-windows-v501.zip.sha256`
 Current v501 package build evidence:
 `dist/eidp-windows-v501.zip` was built from clean source and validated by the
-full non-Windows release gate. It has also completed partial Windows
-setup/validate/recovery and a limit-50 canary, but it has not been promoted to
-the active weekly Task Scheduler lane and has not completed the full
-v500-equivalent Windows side-by-side smoke set. The active production action
-remains v485 until an explicit promotion decision is made. The latest complete
-Windows side-by-side package remains v500.
+full non-Windows release gate. It has also completed the automated Windows
+side-by-side smoke set, but it has not been promoted to the active weekly Task
+Scheduler lane. The active production action remains v485 until an explicit
+promotion decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/2026-05-20-final-objective-audit-v500.md` is `NOT COMPLETE`.
-v501 is Mac-side package/source verified and partially Windows-validated, while
-v500 remains the latest complete Windows side-by-side package. Current FY2026
-production-scale strict proof and owner real Windows cycle evidence remain
-incomplete. To continue,
+`docs/reports/2026-05-20-final-objective-audit-v501.md` is `NOT COMPLETE`.
+v501 is Mac-side package/source verified and Windows side-by-side smoke
+validated. Current FY2026 production-scale strict proof and owner real Windows
+cycle evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
