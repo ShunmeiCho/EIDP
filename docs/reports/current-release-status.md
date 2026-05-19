@@ -50,6 +50,12 @@ It reports denominator `1000`, strict/excel-ready `600/1000 (60.0%)`, broad
 confirmed `601/1000 (60.1%)`, operator-reviewable `798/1000 (79.8%)`, and
 estimated manual workload `20.2%`. This satisfies the mature-year strict
 Excel-importable ship line for the selected FY2025 production-scale replay.
+It is still a `strict_yield_gap_analysis` artifact, not the
+`build_mature_year_acquisition_proof.py` proof schema required by
+`scripts/verify_stage6_return.py` when `--release-exception-reason
+publication_lag` is used. Before an exception-based owner return can pass, a
+verifier-accepted mature-year proof JSON with `ok=true` must be generated and
+archived.
 Current FY2026/R8 production-scale strict-yield proof:
 `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json`
 and `logs/win-v485-stage6/fy2026-strict-yield-rca-20260519.json` are the

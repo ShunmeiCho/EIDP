@@ -51,6 +51,7 @@ The objective is complete only when all of the following are true:
 | Strict current-FY success excludes old-year fallback | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json`: after `607/1000`, FY2026 discovered documents were `0`; FY2025/R7 PDFs were not counted as FY2026 success | PASS for contract, FAIL for yield |
 | Current FY2026 strict yield `>= 60%` | Same proof: maximum possible strict yield after the mathematical failure bound is `39.3%` | FAIL |
 | Mature FY2025 strict proof | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`: FY2025 denominator `1000`, strict `600/1000 (60.0%)`, excel-ready `600/1000 (60.0%)`, manual workload `20.2%` | PASS for mature-year algorithm evidence only |
+| Verifier-accepted mature-year proof JSON | Existing `logs/mature-year-acquisition-proof-*.json` files are `ok=false`; the FY2025 `strict-gap-analysis` artifact is not the schema consumed by `scripts/verify_stage6_return.py` | BLOCKED for release-exception path |
 | PDF extraction stack | v493 package verifier passed; package includes the project wheel and runtime, with `wheel_count=84`, `entry_count=3104`, and `has_runtime=true` | PASS |
 | Confidence `>= 0.70` gating | v493 non-Windows gate `logs/win-v493-stage6-v493-non-windows-release-gates-20260519.json` returned `ok=true`; full unit count `1865 passed` | PASS for tested code path |
 | Append-only business writes | PR #2 CI passed; local focused checks passed after the fiscal-year override `FOR UPDATE` hardening. This is code/test evidence, not owner-cycle evidence | PASS for code contract, PARTIAL for real workflow |
@@ -79,6 +80,10 @@ The objective is complete only when all of the following are true:
   on the operator PC. It does not prove v493 Windows operability.
 - The FY2025 strict replay proves mature-year algorithm capability. It must not
   be used as current FY2026 ship proof.
+- A publication-lag release exception also requires a verifier-accepted
+  mature-year proof JSON. The currently cited FY2025 `strict-gap-analysis`
+  replay is not that schema, so the exception path is still missing one
+  proof-generation step before owner return verification can pass.
 - The FY2026 upper-bound proof is the controlling current-FY evidence and is
   below gate.
 
