@@ -1467,6 +1467,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "operator_reviewable_yield_pct",
             "レビュー目安",
             "レビュー判定",
+            "画像PDF/OCR待ちが",
+            "OCR add-on 未導入",
         ),
         "src/eidp/review/operator_pages.py": (
             "log_manual_action",

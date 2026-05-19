@@ -1060,7 +1060,7 @@ def test_verify_core_zip_requires_review_coverage_gate_labels(tmp_path: Path) ->
     entries = _core_entries()
     entries["src/eidp/review/_pages/school_year_tasks.py"] = entries[
         "src/eidp/review/_pages/school_year_tasks.py"
-    ].replace("レビュー判定", "出荷判定")
+    ].replace("レビュー判定", "出荷判定").replace("OCR add-on 未導入", "OCR 設定未完了")
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
@@ -1068,6 +1068,10 @@ def test_verify_core_zip_requires_review_coverage_gate_labels(tmp_path: Path) ->
     assert not check.ok
     assert any(
         "src/eidp/review/_pages/school_year_tasks.py missing required token: レビュー判定" in error
+        for error in check.errors
+    )
+    assert any(
+        "src/eidp/review/_pages/school_year_tasks.py missing required token: OCR add-on 未導入" in error
         for error in check.errors
     )
 
