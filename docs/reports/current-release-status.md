@@ -35,16 +35,12 @@ separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
 head `a3fbf4a728917defb5ef9bff7568322deb7f99dd`. PR #2 is now the single
 active landing surface; its body has been updated to remove the old
 "Depends on PR #1" statement and to keep the FY2026 release blocker explicit.
-Before this status-file update, PR #2 had `mergeStateStatus=CLEAN`; GitHub
-checks `Python quality gates` and `Ship gate contract` both passed for
-`a3fbf4a728917defb5ef9bff7568322deb7f99dd`. `main` and
-`sprint8-handoff-finalize` branch protection require both checks and disallow
-force-pushes and branch deletion. Any newer status-only commit must let the
-required checks rerun before merge.
-Before this status refresh, PR #2 was rechecked at head
-`9e05cdc0c498858b7cc59654de74286c0761d1c1`: `mergeStateStatus=CLEAN`, and
-both required checks (`Python quality gates` and `Ship gate contract`) were
-`SUCCESS`.
+PR #2 is the active landing surface. The tracked status file does not pin the
+moving PR head because docs-only status commits intentionally advance it. Use
+live `gh pr view 2` or the PR body for the current head/check state. `main` and
+`sprint8-handoff-finalize` branch protection require `Python quality gates` and
+`Ship gate contract`, and disallow force-pushes and branch deletion. Any newer
+commit must let those required checks rerun before merge.
 Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
 rebuild is:
 `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`.

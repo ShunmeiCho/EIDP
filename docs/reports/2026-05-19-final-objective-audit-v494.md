@@ -3,8 +3,8 @@
 Date: 2026-05-19
 Branch: `sprint8-handoff-finalize`
 PR: `#2`
-PR head last checked before this report update:
-`9e05cdc0c498858b7cc59654de74286c0761d1c1`
+PR status source: use live `gh pr view 2`; this audit does not pin the
+moving docs-only PR head.
 Mac package: `dist/eidp-windows-v494.zip`
 Package source commit: `0d693c6b9e36cda7bb61ba9750f9b8b2b90b1e32`
 
@@ -61,7 +61,7 @@ The objective is complete only when all of the following are true:
 | Browser UI on Windows | Latest Windows UI smoke remains v489: `logs/win-v489-stage6-v489-ui-smoke-20260519.json` returned `ok=true`, health `200/ok`, root `200`, stopped cleanly | PASS for v489, PENDING for v494 |
 | Active scheduled task safety | v489 recovery check `logs/win-v489-stage6-v489-recovery-expected-v485-20260519.json`: `ok=true`, `action_matches_expected=true`; active task stayed on v485 | PASS |
 | v485 `streamlit.main` launcher issue | `docs/runbooks/eidp-windows.md` documents `No module named streamlit.main` and a non-SSH hotfix; `docs/runbooks/eidp-operator-e2e-template.md` checks launcher entrypoint before UI smoke; local ZIP inspection on 2026-05-19 confirmed the current package `scripts/launch.bat` uses `-m streamlit run` and ships the repair helper | PASS for runbook/package, PENDING for Win-side applied repair |
-| PR mergeability | `gh pr view 2` before this report update: head `9e05cdc0c498858b7cc59654de74286c0761d1c1`, `mergeStateStatus=CLEAN`; `Python quality gates` and `Ship gate contract` both `SUCCESS` | PASS |
+| PR mergeability | Live `gh pr view 2` / PR body are the current source of truth. Before this audit cleanup, PR #2 was `CLEAN` and required checks `Python quality gates` / `Ship gate contract` were `SUCCESS`; any newer commit must rerun those checks before merge | PASS |
 | Package/source freshness | v494 package was built from `0d693c6b9e36cda7bb61ba9750f9b8b2b90b1e32`. `logs/win-v494-stage6-v494-non-windows-release-gates-20260519.json`: `package_source_check.ok=true`, `source_dirty=false`, `stale=false` | PASS |
 | Owner real Windows cycle | Latest owner evidence remains incomplete; active v485 DB previously had `school_site_count=0` and `document_count=0`; owner must run initial bootstrap before weekly cycle | BLOCKED |
 | v1.0 tag / main merge | Not allowed while FY2026 strict proof and owner cycle are incomplete, absent an explicit release exception | BLOCKED |
