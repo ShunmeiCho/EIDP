@@ -22,7 +22,9 @@ from eidp.config import (
     apply_runtime_env_settings,
     settings,
 )
+from eidp.db.audit import log_manual_action
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
+from eidp.db.models import ManualActionLog
 from eidp.fiscal_year import JapaneseEra, format_fiscal_year_label
 from eidp.pipeline.school_fiscal_year_status import (
     SchoolFiscalYearStatusStats,
@@ -56,6 +58,15 @@ BUILD_INFO_DISPLAY_KEYS = (
     "git_branch",
     "built_at_utc",
     "git_dirty",
+)
+
+SECRET_SETTING_ENV_KEYS = frozenset(
+    {
+        "EIDP_SERPER_API_KEY",
+        "EIDP_BRAVE_API_KEY",
+        "EIDP_GOOGLE_API_KEY",
+        "EIDP_FIRECRAWL_API_KEY",
+    }
 )
 
 
@@ -174,6 +185,45 @@ def save_operator_settings(
     settings.firecrawl_api_key = updates["EIDP_FIRECRAWL_API_KEY"]
     apply_runtime_env_settings(settings)
     return updates
+
+
+def _audit_setting_value(key: str, value: str) -> str:
+    if key in SECRET_SETTING_ENV_KEYS:
+        return "[set]" if value else ""
+    return value
+
+
+def audit_operator_settings_saved(
+    session: Session,
+    *,
+    old_target_fiscal_year: int,
+    target_fiscal_year: int,
+    updates: dict[str, str],
+    rebuild_stats: SchoolFiscalYearStatusStats | None,
+    actor: str = "operator",
+) -> ManualActionLog:
+    """Audit a successful operator settings save without exposing secrets."""
+    new_value: dict[str, object] = {
+        "target_fiscal_year": int(target_fiscal_year),
+        "settings": {key: _audit_setting_value(key, value) for key, value in sorted(updates.items())},
+    }
+    if rebuild_stats is not None:
+        new_value["school_year_status_rebuild"] = {
+            "fiscal_year": rebuild_stats.fiscal_year,
+            "school_type": rebuild_stats.school_type,
+            "rebuilt": rebuild_stats.rebuilt,
+            "excel_ready": rebuild_stats.excel_ready,
+        }
+
+    return log_manual_action(
+        session,
+        action_type="operator_settings_saved",
+        target_table="operator_settings",
+        old_value={"target_fiscal_year": int(old_target_fiscal_year)},
+        new_value=new_value,
+        reason="Operator saved runtime settings",
+        actor=actor,
+    )
 
 
 def maybe_rebuild_school_year_tasks_after_target_change(
@@ -425,7 +475,7 @@ def render(_session: object, *, lock_path: Path) -> None:
             return
         try:
             with acquire_lock(lock_path, owner="ui_settings"):
-                save_operator_settings(
+                updates = save_operator_settings(
                     env_path,
                     target_fiscal_year=target_fiscal_year,
                     fiscal_era_enabled=fiscal_era_enabled,
@@ -452,6 +502,13 @@ def render(_session: object, *, lock_path: Path) -> None:
                     session,
                     old_target_fiscal_year=old_target_fiscal_year,
                     target_fiscal_year=target_fiscal_year,
+                )
+                audit_operator_settings_saved(
+                    session,
+                    old_target_fiscal_year=old_target_fiscal_year,
+                    target_fiscal_year=target_fiscal_year,
+                    updates=updates,
+                    rebuild_stats=rebuild_stats,
                 )
                 session.commit()
         except LockBusyError:

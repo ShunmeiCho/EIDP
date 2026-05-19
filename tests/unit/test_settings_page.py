@@ -9,9 +9,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from eidp.config import apply_fiscal_era_settings, apply_runtime_env_settings, settings
-from eidp.db.models import Base, School, SchoolFiscalYearStatus
+from eidp.db.models import Base, ManualActionLog, School, SchoolFiscalYearStatus
 from eidp.review._pages import settings_page
 from eidp.review._pages.settings_page import (
+    audit_operator_settings_saved,
     build_info_summary,
     maybe_rebuild_school_year_tasks_after_target_change,
     read_build_info,
@@ -160,6 +161,46 @@ def test_save_operator_settings_writes_runtime_variables(tmp_path: Path, monkeyp
     assert "EIDP_URL_SEARCH_AUTO_ENABLE=on" in body
     assert "EIDP_URL_SEARCH_BATCH_SIZE=300" in body
     assert "EIDP_FIRECRAWL_API_KEY=firecrawl-key" in body
+
+
+def test_audit_operator_settings_saved_redacts_secret_values() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        audit_operator_settings_saved(
+            session,
+            old_target_fiscal_year=2026,
+            target_fiscal_year=2027,
+            updates={
+                "EIDP_SEARCH_PROVIDER": "serper",
+                "EIDP_SERPER_API_KEY": "super-secret",
+                "EIDP_GOOGLE_API_KEY": "",
+                "EIDP_URL_SEARCH_BATCH_SIZE": "300",
+            },
+            rebuild_stats=None,
+        )
+        session.commit()
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "operator_settings_saved"
+        assert audit.target_table == "operator_settings"
+        assert audit.target_id is None
+        assert audit.old_value == '{"target_fiscal_year": 2026}'
+        assert '"target_fiscal_year": 2027' in (audit.new_value or "")
+        assert '"EIDP_SEARCH_PROVIDER": "serper"' in (audit.new_value or "")
+        assert '"EIDP_SERPER_API_KEY": "[set]"' in (audit.new_value or "")
+        assert "super-secret" not in (audit.new_value or "")
+        assert audit.reason == "Operator saved runtime settings"
+
+
+def test_render_records_settings_save_in_manual_action_log_contract() -> None:
+    source = inspect.getsource(settings_page.render)
+
+    assert "audit_operator_settings_saved(" in source
 
 
 def test_target_year_change_rebuilds_school_task_rows_for_all_school_types() -> None:
