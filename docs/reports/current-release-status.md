@@ -2,14 +2,15 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v512` for Mac-side package/source verification after
-adding `ManualActionLog` coverage for local bug-report ZIP generation.
+Latest package family: `v513` for Mac-side package/source verification after
+keeping Sanko per-school `/disclosure/{slug}` probes under shared-origin
+throttling.
 `v502` remains
 the latest package with partial Windows side-by-side setup, validate, recovery,
 and limit-50 canary evidence. `v501` remains the latest package with complete
 Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
 runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification, until
-v512 full Windows smoke finishes.
+v513 full Windows smoke finishes.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -91,6 +92,13 @@ Post-v511 fixes add `bug_report_generated` `ManualActionLog` coverage for
 operator-generated local support ZIPs without storing free-text operator notes,
 then rebuild the Windows ZIP as v512 with fresh Mac-side package/source
 verification.
+Post-v512 fixes keep one Sanko per-school `/disclosure/{slug}` derived probe
+under shared-origin throttling, addressing the v502 limit-50
+`no_pdf_candidates` bucket for Sanko medical-secretary schools whose school
+roots are sparse but whose disclosure pages live at `www.sanko.ac.jp/disclosure/<slug>/`.
+The fix remains scoped to Sanko hosts so large unrelated shared origins keep
+the existing throttle behavior. The Windows ZIP is rebuilt as v513 with fresh
+Mac-side package/source verification.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -150,28 +158,29 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v512.zip`, SHA256
-`6548e79d51378281c20cbe97bd1a652453f8b207efa391db1f3e40ccd8744d34`.
+`dist/eidp-windows-v513.zip`, SHA256
+`92dc137bdb5c7d2ec662102367daec11ebe1ebd3d1e34f6cbd617f82f02e8fca`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=51a3c771dd2c15e831d9f1e2b96119d11b9eadbd`,
+`git_commit=2905397b0d9f0e595b3a0f79d375c360e5eb5e43`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v512-stage6-v512-non-windows-release-gates-20260520.json`
-(`ok=true`; package/source check is fresh, full unit suite `1889 passed`,
+`logs/win-v513-stage6-v513-non-windows-release-gates-20260520.json`
+(`ok=true`; package/source check is fresh, full unit suite `1890 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
 verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
 `dist/eidp-ocr-addon-windows-v497-smoke.zip`.
 
-v512 includes all v511 package features plus bug-report audit hardening:
-operator-generated local support ZIPs now emit a `ManualActionLog` row
-`bug_report_generated` targeting `bug_report`. The audit payload records the
-archive name/path, detected signal count, and whether an operator note was
-present, but not the raw note text. The audit-log filters expose the new
-action/target vocabulary. The package evidence is recorded in
-`docs/reports/2026-05-20-v512-bug-report-audit-package.md`.
+v513 includes all v512 package features plus Sanko disclosure probe hardening:
+for Sanko exact school roots such as `https://www.sanko.ac.jp/chiba-med/`, the
+shared-origin throttle still allows the per-school derived probe
+`https://www.sanko.ac.jp/disclosure/chiba-med`. This converts sparse-root
+cases from `no_pdf_candidates` into concrete disclosure-page evidence when the
+page exists, while preserving the strict rule that stale FY2025 forms do not
+count as FY2026/R8 success. The package evidence is recorded in
+`docs/reports/2026-05-20-v513-sanko-disclosure-probe-package.md`.
 
-v512 has not completed Windows side-by-side validation because the Windows
+v513 has not completed Windows side-by-side validation because the Windows
 OpenSSH/IP blocker remains unresolved. v502 remains the latest partial Windows
 side-by-side setup/canary package, and v501 remains the latest complete
 Windows side-by-side smoke package.
@@ -336,11 +345,11 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v512.zip`
-Current v512 SHA256 sidecar:
-`dist/eidp-windows-v512.zip.sha256`
-Current v512 package build evidence:
-`dist/eidp-windows-v512.zip` was built from clean source and validated by the
+`dist/eidp-windows-v513.zip`
+Current v513 SHA256 sidecar:
+`dist/eidp-windows-v513.zip.sha256`
+Current v513 package build evidence:
+`dist/eidp-windows-v513.zip` was built from clean source and validated by the
 full non-Windows release gate. It has not completed Windows side-by-side setup
 because the Windows OpenSSH/IP blocker remains unresolved. v502 remains the
 latest partial automated Windows side-by-side setup, validation, recovery, and
@@ -351,9 +360,9 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v512 is Mac-side package/source verified, v502 is partially Windows side-by-side
+v513 is Mac-side package/source verified, v502 is partially Windows side-by-side
 validated, and v501 is the latest complete Windows-smoke proof. Current FY2026
-production-scale strict proof, v512 Windows smoke, and owner real Windows cycle
+production-scale strict proof, v513 Windows smoke, and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
