@@ -1,18 +1,18 @@
-# Final Objective Audit - v493 Mac-side State
+# Final Objective Audit - v494 Mac-side State
 
 Date: 2026-05-19
 Branch: `sprint8-handoff-finalize`
 PR: `#2`
 PR head last checked before this report update:
 `9e05cdc0c498858b7cc59654de74286c0761d1c1`
-Mac package: `dist/eidp-windows-v493.zip`
-Package source commit: `a3fbf4a728917defb5ef9bff7568322deb7f99dd`
+Mac package: `dist/eidp-windows-v494.zip`
+Package source commit: `0d693c6b9e36cda7bb61ba9750f9b8b2b90b1e32`
 
 ## Verdict
 
 `NOT COMPLETE`.
 
-v493 is the current Mac-side package/source-verified candidate, and PR #2 is
+v494 is the current Mac-side package/source-verified candidate, and PR #2 is
 clean with the required checks passing. That is not sufficient for the final
 rolling-FY objective. The controlling business blocker remains the FY2026/R8
 production-scale strict-yield proof: currently available public PDFs cannot
@@ -45,24 +45,24 @@ The objective is complete only when all of the following are true:
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official-list seeds | `logs/win-v493-stage6-v493-verify-windows-distribution-20260519.json`: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47` | PASS |
+| 47 prefecture official-list seeds | `logs/win-v494-stage6-v494-verify-windows-distribution-20260519.json`: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47` | PASS |
 | 1,700+ specialty-school scope | v489 Windows setup validator `logs/win-v489-stage6-v489-validate-after-setup-20260519.json`: `school_count=2418`, `school_fiscal_year_status_count=2418`, SQLite integrity `ok` | PASS |
 | Current rolling FY is FY2026/Reiwa 8 | `docs/reports/2026-05-19-fy2026-strict-yield-no-go.md`; no-go proof targets `target_fiscal_year=2026` | PASS |
 | Strict current-FY success excludes old-year fallback | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json`: after `607/1000`, FY2026 discovered documents were `0`; FY2025/R7 PDFs were not counted as FY2026 success | PASS for contract, FAIL for yield |
 | Current FY2026 strict yield `>= 60%` | Same proof: maximum possible strict yield after the mathematical failure bound is `39.3%` | FAIL |
 | Mature FY2025 strict proof | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`: FY2025 denominator `1000`, strict `600/1000 (60.0%)`, excel-ready `600/1000 (60.0%)`, manual workload `20.2%` | PASS for mature-year algorithm evidence only |
-| Verifier-accepted mature-year proof JSON | Existing `logs/mature-year-acquisition-proof-*.json` files are `ok=false`; the FY2025 `strict-gap-analysis` artifact is not the schema consumed by `scripts/verify_stage6_return.py` | BLOCKED for release-exception path |
-| PDF extraction stack | v493 package verifier passed; package includes the project wheel and runtime, with `wheel_count=84`, `entry_count=3104`, and `has_runtime=true` | PASS |
-| Confidence `>= 0.70` gating | v493 non-Windows gate `logs/win-v493-stage6-v493-non-windows-release-gates-20260519.json` returned `ok=true`; full unit count `1865 passed` | PASS for tested code path |
+| Verifier-accepted mature-year proof JSON | `logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json`: `ok=true`, basis `mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition`, FY2025 denominator `1000`, strict `60.0%`, Excel-ready `60.0%`, manual workload `20.2%` | PASS for release-exception proof input |
+| PDF extraction stack | v494 package verifier passed; package includes the project wheel and runtime, with `wheel_count=84`, `entry_count=3104`, and `has_runtime=true` | PASS |
+| Confidence `>= 0.70` gating | v494 non-Windows gate `logs/win-v494-stage6-v494-non-windows-release-gates-20260519.json` returned `ok=true`; validator/distribution subset passed with package/source freshness | PASS for tested code path |
 | Append-only business writes | PR #2 CI passed; local focused checks passed after the fiscal-year override `FOR UPDATE` hardening. This is code/test evidence, not owner-cycle evidence | PASS for code contract, PARTIAL for real workflow |
 | Excel template transfer | `logs/release-gate-v485-retroactive-matrix.json`: `ok=true`, `case_count=3`; this is retroactive/mature-year evidence, not FY2026 owner-cycle output | PARTIAL |
 | ManualActionLog audit | PR #2 CI passed relevant tests; owner real-cycle audit evidence remains incomplete | PARTIAL |
-| ZIP distribution and offline setup | `dist/eidp-windows-v493.zip`, SHA256 `77d98222d9e5474b5db173e6a4ec252b0c06295d1f1c6fce63a2fc1732d34e9b`; `BUILD_INFO.git_dirty=false`; Mac package verifier `ok=true` | PASS for Mac-side package, PENDING for Windows side-by-side |
-| Browser UI on Windows | Latest Windows UI smoke remains v489: `logs/win-v489-stage6-v489-ui-smoke-20260519.json` returned `ok=true`, health `200/ok`, root `200`, stopped cleanly | PASS for v489, PENDING for v493 |
+| ZIP distribution and offline setup | `dist/eidp-windows-v494.zip`, SHA256 `ea6d6884be27b5ff3408439bffc82eef7763158fa941f886afec94677da7724c`; `BUILD_INFO.git_dirty=false`; Mac package verifier `ok=true` | PASS for Mac-side package, PENDING for Windows side-by-side |
+| Browser UI on Windows | Latest Windows UI smoke remains v489: `logs/win-v489-stage6-v489-ui-smoke-20260519.json` returned `ok=true`, health `200/ok`, root `200`, stopped cleanly | PASS for v489, PENDING for v494 |
 | Active scheduled task safety | v489 recovery check `logs/win-v489-stage6-v489-recovery-expected-v485-20260519.json`: `ok=true`, `action_matches_expected=true`; active task stayed on v485 | PASS |
-| v485 `streamlit.main` launcher issue | `docs/runbooks/eidp-windows.md` documents `No module named streamlit.main` and a non-SSH hotfix; `docs/runbooks/eidp-operator-e2e-template.md` checks launcher entrypoint before UI smoke; local ZIP inspection on 2026-05-19 confirmed v493 `scripts/launch.bat` uses `-m streamlit run` and ships the repair helper | PASS for runbook/package, PENDING for Win-side applied repair |
+| v485 `streamlit.main` launcher issue | `docs/runbooks/eidp-windows.md` documents `No module named streamlit.main` and a non-SSH hotfix; `docs/runbooks/eidp-operator-e2e-template.md` checks launcher entrypoint before UI smoke; local ZIP inspection on 2026-05-19 confirmed the current package `scripts/launch.bat` uses `-m streamlit run` and ships the repair helper | PASS for runbook/package, PENDING for Win-side applied repair |
 | PR mergeability | `gh pr view 2` before this report update: head `9e05cdc0c498858b7cc59654de74286c0761d1c1`, `mergeStateStatus=CLEAN`; `Python quality gates` and `Ship gate contract` both `SUCCESS` | PASS |
-| Package/source freshness | v493 package was built from `a3fbf4a728917defb5ef9bff7568322deb7f99dd`; last checked PR head `9e05cdc...` was docs-only ahead. `logs/win-v493-stage6-v493-docs-only-stale-after-audit-20260519.json`: `ok=true`, `docs_only_stale=true`, `allowed_stale_reason=docs_only` | PASS |
+| Package/source freshness | v494 package was built from `0d693c6b9e36cda7bb61ba9750f9b8b2b90b1e32`. `logs/win-v494-stage6-v494-non-windows-release-gates-20260519.json`: `package_source_check.ok=true`, `source_dirty=false`, `stale=false` | PASS |
 | Owner real Windows cycle | Latest owner evidence remains incomplete; active v485 DB previously had `school_site_count=0` and `document_count=0`; owner must run initial bootstrap before weekly cycle | BLOCKED |
 | v1.0 tag / main merge | Not allowed while FY2026 strict proof and owner cycle are incomplete, absent an explicit release exception | BLOCKED |
 
@@ -77,21 +77,23 @@ The objective is complete only when all of the following are true:
   package/source freshness. It does not prove Windows active-lane promotion or
   real operator E2E.
 - v489 Windows setup/UI smoke proves a previous side-by-side package can start
-  on the operator PC. It does not prove v493 Windows operability.
+  on the operator PC. It does not prove v494 Windows operability.
 - The FY2025 strict replay proves mature-year algorithm capability. It must not
   be used as current FY2026 ship proof.
 - A publication-lag release exception also requires a verifier-accepted
-  mature-year proof JSON. The currently cited FY2025 `strict-gap-analysis`
-  replay is not that schema, so the exception path is still missing one
-  proof-generation step before owner return verification can pass.
+  mature-year proof JSON. v494 adds an explicit strict-gap-analysis input path
+  to `scripts/build_mature_year_acquisition_proof.py`; the generated FY2025
+  proof JSON is now available at
+  `logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json`.
 - The FY2026 upper-bound proof is the controlling current-FY evidence and is
   below gate.
 
-## Non-SSH Follow-up Evidence
+## Earlier v493 Non-SSH Follow-up Evidence
 
-SSH/Windows access was intentionally avoided after the v493 audit because the
+SSH/Windows access was intentionally avoided after the v493/v494 audit because the
 operator PC connection was at risk of dropping. The following Mac-side checks
-were re-run without touching the Windows active lane:
+were re-run against v493 without touching the Windows active lane. v494 package
+verification and source-freshness evidence are recorded in the checklist above.
 
 - `unzip -p dist/eidp-windows-v493.zip scripts/launch.bat` confirmed the ZIP
   launcher uses `"%VENV_PY%" -m streamlit run`, not `streamlit.main`.
@@ -123,10 +125,10 @@ were re-run without touching the Windows active lane:
 1. Keep v1.0 blocked until FY2026/R8 public target PDFs become available, or
    record an explicit release exception that scopes v1.0 to mature FY2025
    evidence.
-2. When SSH/operator PC access is stable, side-by-side validate v493 on Windows
+2. When SSH/operator PC access is stable, side-by-side validate v494 on Windows
    before any active-lane promotion.
 3. If an exception is approved, promote intentionally, run owner E2E with
    evidence collection and sign-off, then consider signed `v1.0` tagging.
 4. If no exception is approved, do not promote owner sign-off as release-ready;
-   keep v493 as Mac-side package evidence and v489 as Windows side-by-side
+   keep v494 as Mac-side package evidence and v489 as Windows side-by-side
    evidence only.

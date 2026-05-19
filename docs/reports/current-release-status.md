@@ -2,7 +2,7 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v493` for Mac-side package/source verification.
+Latest package family: `v494` for Mac-side package/source verification.
 Latest Windows side-by-side smoke evidence remains `v489`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -25,7 +25,9 @@ packaged Streamlit config to `127.0.0.1` as defense in depth, and add a
 dry-run-by-default `repair_streamlit_launcher.py` helper for stale extracted
 launchers. Post-v492 source fixes document the Streamlit launcher hotfix path,
 promote PDF classification parse failures to `log.exception`, and add
-`FOR UPDATE` call shape to fiscal-year override rewrites.
+`FOR UPDATE` call shape to fiscal-year override rewrites. Post-v493 source
+fixes add a verifier-accepted mature-year proof path from production-scale
+`strict_yield_gap_analysis` evidence and rebuild the Windows ZIP as v494.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -50,12 +52,13 @@ It reports denominator `1000`, strict/excel-ready `600/1000 (60.0%)`, broad
 confirmed `601/1000 (60.1%)`, operator-reviewable `798/1000 (79.8%)`, and
 estimated manual workload `20.2%`. This satisfies the mature-year strict
 Excel-importable ship line for the selected FY2025 production-scale replay.
-It is still a `strict_yield_gap_analysis` artifact, not the
-`build_mature_year_acquisition_proof.py` proof schema required by
-`scripts/verify_stage6_return.py` when `--release-exception-reason
-publication_lag` is used. Before an exception-based owner return can pass, a
-verifier-accepted mature-year proof JSON with `ok=true` must be generated and
-archived.
+v494 converted that `strict_yield_gap_analysis` artifact into the
+verifier-accepted mature-year proof JSON at
+`logs/mature-year-acquisition-proof-fy2025-release-exception-v494-20260519.json`.
+That proof has `ok=true`, basis
+`mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition`,
+denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
+and estimated manual workload `20.2%`.
 Current FY2026/R8 production-scale strict-yield proof:
 `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json`
 and `logs/win-v485-stage6/fy2026-strict-yield-rca-20260519.json` are the
@@ -84,33 +87,23 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current Mac package candidate:
-`dist/eidp-windows-v493.zip`, SHA256
-`77d98222d9e5474b5db173e6a4ec252b0c06295d1f1c6fce63a2fc1732d34e9b`.
+`dist/eidp-windows-v494.zip`, SHA256
+`ea6d6884be27b5ff3408439bffc82eef7763158fa941f886afec94677da7724c`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=a3fbf4a728917defb5ef9bff7568322deb7f99dd`,
+`git_commit=0d693c6b9e36cda7bb61ba9750f9b8b2b90b1e32`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v493-stage6-v493-verify-windows-distribution-20260519.json`
+`logs/win-v494-stage6-v494-verify-windows-distribution-20260519.json`
 (`ok=true`, `wheel_count=84`, `entry_count=3104`) and
-`logs/win-v493-stage6-v493-non-windows-release-gates-20260519.json`
-(`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
-returned `0`; full unit count `1865 passed`). v493 includes
+`logs/win-v494-stage6-v494-non-windows-release-gates-20260519.json`
+(`ok=true`; package/source check is fresh, validator/distribution unit, mypy,
+ruff, discovery gold, package verify, and demonstrated-pattern package verify
+returned `0`). v494 includes
 `EIDP-repair-launcher.bat`, `scripts/repair_streamlit_launcher.bat`,
 `scripts/repair_streamlit_launcher.py`, and `scripts/evaluate_strict_yield_bound.py`;
 keeps the image-pending OCR warning verifier contract; rejects packaged
 launchers that contain `streamlit.main`; and ships `.streamlit/config.toml`
-with `address = "127.0.0.1"`. After this status-only commit, the
-docs-only-stale package check
-`logs/win-v493-stage6-v493-docs-only-stale-check-20260519.json` returned
-`ok=true`, `docs_only_stale=true`, and `allowed_stale_reason=docs_only`.
-The later docs-only stale check
-`logs/win-v493-stage6-v493-docs-only-stale-after-audit-20260519.json` also
-returned `ok=true`, `docs_only_stale=true`, and
-`allowed_stale_reason=docs_only`. A non-SSH Mac-side rerun of
-`scripts/verify_windows_distribution.py` is recorded in
-`logs/win-v493-stage6-v493-verify-windows-distribution-rerun-20260519.json`;
-it returned `ok=true` for the same v493 SHA256 and confirmed the packaged
-launcher/repair-helper contract. v493 has not been Windows side-by-side
+with `address = "127.0.0.1"`. v494 has not been Windows side-by-side
 validated.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
