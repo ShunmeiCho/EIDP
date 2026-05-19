@@ -117,6 +117,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/verify_stage6_return.py",
     "scripts/build_mature_year_acquisition_proof.py",
     "scripts/evaluate_strict_yield_bound.py",
+    "scripts/repair_streamlit_launcher.py",
     "scripts/stage6_recovery_check.py",
     "scripts/stage6_residual_cleanup.py",
     "scripts/bootstrap_pdf_pipeline.py",
@@ -1297,6 +1298,14 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "max_possible_strict_yield_pct_if_all_remaining_pass",
             "--strict-gap-json",
             "--strict-successes",
+        ),
+        "scripts/repair_streamlit_launcher.py": (
+            "repair_launcher",
+            "streamlit.main",
+            "-m streamlit run",
+            "--apply",
+            ".bak",
+            "dry-run",
         ),
         "scripts/stage6_recovery_check.py": (
             "EIDP Weekly Run",

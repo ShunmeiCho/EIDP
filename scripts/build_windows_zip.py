@@ -383,6 +383,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       scripts/build_mature_year_acquisition_proof.py
                                              mature-year KPI proof builder
       scripts/evaluate_strict_yield_bound.py current-FY no-go bound evaluator
+      scripts/repair_streamlit_launcher.py   stale launcher repair helper
       scripts/validate_install.bat           VM/operator wrapper for the checker
       alembic.ini                  required by db-bootstrap
       migrations/...               required by alembic stamp head
@@ -447,6 +448,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             "verify_stage6_return.py",
             "build_mature_year_acquisition_proof.py",
             "evaluate_strict_yield_bound.py",
+            "repair_streamlit_launcher.py",
             "stage6_recovery_check.py",
             "stage6_residual_cleanup.py",
             "collect_bug_report.py",

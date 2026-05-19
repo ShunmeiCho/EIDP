@@ -301,6 +301,9 @@ def _core_entries() -> dict[str, bytes | str]:
         "scripts/evaluate_strict_yield_bound.py": (SCRIPTS_DIR / "evaluate_strict_yield_bound.py").read_text(
             encoding="utf-8"
         ),
+        "scripts/repair_streamlit_launcher.py": (SCRIPTS_DIR / "repair_streamlit_launcher.py").read_text(
+            encoding="utf-8"
+        ),
         "scripts/stage6_recovery_check.py": (SCRIPTS_DIR / "stage6_recovery_check.py").read_text(
             encoding="utf-8"
         ),
