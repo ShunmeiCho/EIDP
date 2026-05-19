@@ -55,7 +55,8 @@ Short checklist
      yield to reach 60%.
 
 5. If the release decision is publication-lag exception:
-   - record explicit approval for reason publication_lag;
+   - fill and approve:
+     docs\reports\2026-05-19-publication-lag-release-exception-record.md
    - acknowledge FY2026/R8 strict yield is below gate;
    - use mature-year proof:
      logs\mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json
@@ -86,6 +87,7 @@ Required KPI / sign-off fields
 - ship_readiness_rc
 - pending JSONL outbox count after flush
 - release exception reason, if any
+- release exception approval record, if used
 - mature-year proof JSON, if exception is used
 - owner sign-off
 - operator sign-off

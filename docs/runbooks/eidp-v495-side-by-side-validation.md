@@ -113,6 +113,8 @@ Current release blockers:
 - FY2026/R8 strict current-FY yield remains below gate.
 - v495 Windows side-by-side evidence is not complete until this runbook passes.
 - Owner real cycle and sign-off are still required.
-- If the `publication_lag` exception path is chosen, the completed owner return
-  must be verified with `scripts/verify_stage6_return.py` and
+- If the `publication_lag` exception path is chosen,
+  `docs/reports/2026-05-19-publication-lag-release-exception-record.md` must
+  be filled and approved, and the completed owner return must be verified with
+  `scripts/verify_stage6_return.py` and
   `logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json`.
