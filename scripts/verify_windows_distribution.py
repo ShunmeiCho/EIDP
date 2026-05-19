@@ -132,6 +132,7 @@ CORE_REQUIRED_EXACT = (
     "data/url-discovery/discovered-urls-50.csv",
     "data/url-discovery/corporation_domains.csv",
     "data/url-discovery/school_domain_overrides.csv",
+    "sample/20250826更新版_競合校の在校生数.xlsx",
     "data/discovery-gold-set/README.md",
     "data/discovery-gold-set/schema.json",
     "data/discovery-gold-set/expected-predictions.jsonl",

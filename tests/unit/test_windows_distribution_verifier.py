@@ -341,6 +341,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "prefecture,corporation_name,school_name,domain_url,url_type,confidence\n"
             "東京都,東京都公立大学法人,東京都立大学,https://www.tmu.ac.jp/,school,0.95\n"
         ),
+        "sample/20250826更新版_競合校の在校生数.xlsx": b"PK\x03\x04 competition template",
         "data/discovery-gold-set/README.md": "# Discovery Gold Set\n",
         "data/discovery-gold-set/schema.json": '{"title": "test discovery gold-set schema"}\n',
         "data/discovery-gold-set/expected-predictions.jsonl": _discovery_gold_expected_predictions(),
@@ -518,6 +519,17 @@ def test_verify_core_zip_accepts_complete_distribution(tmp_path: Path) -> None:
     assert check.details["size_bytes"] == zip_path.stat().st_size
     assert check.details["sha256"] == hashlib.sha256(zip_path.read_bytes()).hexdigest()
     assert check.details["build_info"]["git_commit"] == "a" * 40
+
+
+def test_verify_core_zip_requires_competition_excel_template(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries.pop("sample/20250826更新版_競合校の在校生数.xlsx")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("sample/20250826更新版_競合校の在校生数.xlsx" in error for error in check.errors)
 
 
 def test_verify_core_zip_rejects_dirty_build_info(tmp_path: Path) -> None:

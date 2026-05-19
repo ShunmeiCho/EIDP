@@ -1136,6 +1136,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     # first_setup.bat → eidp import-excel populates the DB on day 1.
     (fake_repo / "data").mkdir(parents=True, exist_ok=True)
     (fake_repo / "data" / "master.xlsx").write_bytes(b"PK\x03\x04 fake xlsx")
+    (fake_repo / "sample").mkdir(parents=True, exist_ok=True)
+    (fake_repo / "sample" / "20250826更新版_競合校の在校生数.xlsx").write_bytes(
+        b"PK\x03\x04 competition template"
+    )
 
     # Sprint 8.7.e: prefecture seed.csv must be carried so the
     # bootstrap_pdfs.bat pipeline can read artifact URLs and run the
@@ -1305,6 +1309,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "data/master.xlsx" in arcs, (
         "Sprint 8.7.d data-visibility gate: master.xlsx must be in the "
         "Windows ZIP so the operator's first launch shows real data"
+    )
+    assert "sample/20250826更新版_競合校の在校生数.xlsx" in arcs, (
+        "export-competition-excel ships in the Windows ZIP, so its default "
+        "offline template must ship too"
     )
     assert "data/prefecture-aggregators/seed.csv" in arcs, (
         "Sprint 8.7.e: prefecture seed.csv carries artifact URLs and "

@@ -516,6 +516,13 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
     if master_xlsx is not None:
         members.append((master_xlsx, "data/master.xlsx"))
 
+    # sample/20250826更新版_競合校の在校生数.xlsx — default template used by
+    # `eidp export-competition-excel`. The command is shipped in the Windows
+    # ZIP, so the default offline template must travel with it.
+    competition_template = repo_root / "sample" / "20250826更新版_競合校の在校生数.xlsx"
+    if competition_template.is_file():
+        members.append((competition_template, "sample/20250826更新版_競合校の在校生数.xlsx"))
+
     # data/prefecture-aggregators/seed.csv — Sprint 8.7.e bootstrap
     # automation gate. seed.csv carries the 47-prefecture metadata
     # (artifact URLs, parser keys, verified status). The operator PC
