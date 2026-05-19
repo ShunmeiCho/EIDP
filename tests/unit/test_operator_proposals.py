@@ -54,7 +54,11 @@ def test_apply_school_alias_inserts_when_absent(tmp_path: Path) -> None:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.flush()
         created, reason = apply_school_alias_proposal(
-            session, school_id=1, alias_name="A-short", lock_path=_lock_path(tmp_path),
+            session,
+            school_id=1,
+            alias_name="A-short",
+            actor="reviewer-a",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is True
         assert reason == "inserted"
@@ -65,6 +69,17 @@ def test_apply_school_alias_inserts_when_absent(tmp_path: Path) -> None:
         )
         assert got is not None
         assert got.alias_type == "competition_template"
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "school_alias_approved"
+        assert audit.actor == "reviewer-a"
+        assert audit.target_table == "school_alias"
+        assert audit.target_id == got.id
+        assert json.loads(audit.new_value or "{}") == {
+            "school_id": 1,
+            "alias_name": "A-short",
+            "alias_type": "competition_template",
+            "source": "proposal_review_queue",
+        }
     finally:
         session.close()
 

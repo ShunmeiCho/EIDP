@@ -2270,6 +2270,7 @@ def _apply_school_alias_proposal_unlocked(
     school_id: int,
     alias_name: str,
     source: str = "proposal_review_queue",
+    actor: str = "operator",
 ) -> tuple[bool, str]:
     alias_name = alias_name.strip()
     if not alias_name:
@@ -2294,13 +2295,28 @@ def _apply_school_alias_proposal_unlocked(
     )
     if conflict is not None:
         return False, f"conflict_other_school:{conflict.school_id}"
-    session.add(
-        SchoolAlias(
-            school_id=school_id,
-            alias_name=alias_name,
-            alias_type="competition_template",
-            source=source,
-        )
+    alias = SchoolAlias(
+        school_id=school_id,
+        alias_name=alias_name,
+        alias_type="competition_template",
+        source=source,
+    )
+    session.add(alias)
+    session.flush()
+    log_manual_action(
+        session,
+        action_type="school_alias_approved",
+        target_table="school_alias",
+        target_id=alias.id,
+        old_value=None,
+        new_value={
+            "school_id": school_id,
+            "alias_name": alias_name,
+            "alias_type": "competition_template",
+            "source": source,
+        },
+        reason="Operator approved school alias proposal",
+        actor=actor,
     )
     session.commit()
     return True, "inserted"
@@ -2312,6 +2328,7 @@ def apply_school_alias_proposal(
     school_id: int,
     alias_name: str,
     source: str = "proposal_review_queue",
+    actor: str = "operator",
     lock_path: Path,
 ) -> tuple[bool, str]:
     """Idempotent SchoolAlias insert with cross-school conflict check.
@@ -2333,6 +2350,7 @@ def apply_school_alias_proposal(
                 school_id=school_id,
                 alias_name=alias_name,
                 source=source,
+                actor=actor,
             )
     except LockBusyError:
         session.rollback()
@@ -2600,10 +2618,12 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
                 key=f"approve_sch_{p['matched_school_id']}_{p['template_name']}",
                 type="primary",
             ):
+                operator_name = operator_actor_from_state(st.session_state)
                 created, reason = apply_school_alias_proposal(
                     session,
                     school_id=p["matched_school_id"],
                     alias_name=p["template_name"],
+                    actor=operator_name,
                     lock_path=lock_path,
                 )
                 _record_decision(
@@ -2612,7 +2632,7 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
                         proposal_kind="school_alias",
                         template_name=p["template_name"],
                         target_id=p["matched_school_id"],
-                        operator_name=st.session_state.get("operator_name", ""),
+                        operator_name=operator_name,
                         note=reason,
                         timestamp=datetime.now(UTC).isoformat(),
                     ),
@@ -2778,6 +2798,7 @@ def _render_school_focus_mode(
                     session,
                     school_id=int(picked["school_id"]),
                     alias_name=item["template_name"],
+                    actor=operator_actor_from_state(st.session_state),
                     lock_path=lock_path,
                 )
                 _record_decision(
@@ -2890,6 +2911,7 @@ def _render_school_candidate_picker(
                 session,
                 school_id=int(picked["school_id"]),
                 alias_name=template,
+                actor=operator_actor_from_state(st.session_state),
                 lock_path=lock_path,
             )
             _record_decision(

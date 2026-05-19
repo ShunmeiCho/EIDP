@@ -115,6 +115,7 @@ ACTION_TYPES: tuple[str, ...] = (
     "school_code_corrected",
     "school_code_rejected",
     "school_code_skipped",
+    "school_alias_approved",
     "dept_alias_approved",
     "dept_change_void",
 )
@@ -129,6 +130,7 @@ TARGET_TABLES: tuple[str, ...] = (
     "school_year_status",
     "school_fiscal_year_status",
     "school",
+    "school_alias",
     "review_item",
     "school_site",
     "excel_export",
