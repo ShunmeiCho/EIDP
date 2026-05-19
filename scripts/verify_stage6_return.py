@@ -13,6 +13,13 @@ from typing import Any, TypeGuard
 REQUIRED_EVIDENCE_LABELS = ("build_info", "diagnostics", "last_run", "stage6_recovery", "weekly_run_logs")
 REQUIRED_KPI_ROWS = ("ship_readiness_rc", "strict target PDF 自動取得率", "推定手作業率")
 REQUIRED_EXCEPTION_ROWS = ("release exception reason", "mature-year proof JSON", "mature-year proof years")
+REQUIRED_EXCEPTION_RECORD_ROWS = (
+    "Exception reason",
+    "Decision",
+    "Approver",
+    "Approval date",
+    "FY2026/R8 status acknowledged",
+)
 REQUIRED_RELEASE_ROWS = ("業務員 PC 1 サイクル完了", "KPI owner 承認", "残 P0/P1 bug")
 REQUIRED_RELEASE_VALUES = {
     "業務員 PC 1 サイクル完了": "yes",
@@ -94,6 +101,13 @@ def _block_field_value(block: str, field: str) -> str:
     for line in block.splitlines():
         if line.strip().lower().startswith(f"{field.lower()}:"):
             return line.split(":", 1)[1].strip()
+    return ""
+
+
+def _status_value(text: str) -> str:
+    for line in text.splitlines():
+        if line.strip().lower().startswith("status:"):
+            return _clean_cell(line.split(":", 1)[1])
     return ""
 
 
@@ -185,6 +199,25 @@ def _verify_evidence_verify_json(verify_json: dict[str, Any], errors: list[str])
     missing_labels = sorted(label for label in REQUIRED_EVIDENCE_LABELS if label not in set(present))
     if missing_labels:
         errors.append(f"evidence verifier JSON missing labels: {', '.join(missing_labels)}")
+
+
+def _verify_release_exception_record(text: str, reason: str, errors: list[str]) -> None:
+    status = _status_value(text)
+    if status != "APPROVED":
+        errors.append("release exception record Status must be APPROVED")
+
+    for row_label in REQUIRED_EXCEPTION_RECORD_ROWS:
+        row = _table_row(text, row_label)
+        if row is None or len(row) < 2:
+            errors.append(f"release exception record row missing or malformed: {row_label}")
+            continue
+        value = row[1]
+        if _is_placeholder(value):
+            errors.append(f"release exception record row is still placeholder: {row_label}")
+        if row_label == "Exception reason" and value != reason:
+            errors.append(f"release exception record Exception reason mismatch: {value} != {reason}")
+        elif row_label == "Decision" and value != "APPROVED":
+            errors.append("release exception record Decision must be APPROVED")
 
 
 def _case_fiscal_year(case: dict[str, Any]) -> int | None:
@@ -396,6 +429,7 @@ def verify_stage6_return(
     max_manual_workload: float = 30.0,
     release_exception_reason: str | None = None,
     mature_year_proof_json: Path | None = None,
+    release_exception_record: Path | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -424,6 +458,16 @@ def verify_stage6_return(
                     max_manual_workload=max_manual_workload,
                     errors=errors,
                 )
+        if release_exception_record is None:
+            errors.append("release exception requires --release-exception-record")
+        elif not release_exception_record.is_file():
+            errors.append(f"release exception record does not exist: {release_exception_record}")
+        else:
+            _verify_release_exception_record(
+                release_exception_record.read_text(encoding="utf-8"),
+                active_release_exception_reason,
+                errors,
+            )
 
     last_run_json = _load_json(last_run, errors, "last_run")
     if last_run_json is not None:
@@ -467,6 +511,7 @@ def verify_stage6_return(
             "max_manual_workload": max_manual_workload,
             "release_exception_reason": active_release_exception_reason,
             "mature_year_proof_json": str(mature_year_proof_json) if mature_year_proof_json else None,
+            "release_exception_record": str(release_exception_record) if release_exception_record else None,
         },
         "mature_year_proof_years": mature_year_proof_years,
         "required_evidence_labels": list(REQUIRED_EVIDENCE_LABELS),
@@ -515,6 +560,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--mature-year-proof-json",
         help="Required with --release-exception-reason: JSON proof that a mature fiscal-year matrix passed.",
     )
+    parser.add_argument(
+        "--release-exception-record",
+        help="Required with --release-exception-reason: approved release exception Markdown record.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
 
@@ -532,6 +581,7 @@ def main(argv: list[str] | None = None) -> int:
         max_manual_workload=args.max_manual_workload,
         release_exception_reason=args.release_exception_reason,
         mature_year_proof_json=Path(args.mature_year_proof_json) if args.mature_year_proof_json else None,
+        release_exception_record=Path(args.release_exception_record) if args.release_exception_record else None,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))

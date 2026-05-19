@@ -123,6 +123,29 @@ def _write_mature_year_proof(tmp_path: Path, *, ok: bool = True, **case_override
     return proof
 
 
+def _write_approved_exception_record(tmp_path: Path, *, decision: str = "APPROVED") -> Path:
+    record = tmp_path / "release-exception.md"
+    record.write_text(
+        f"""# Publication-Lag Release Exception Record
+
+Date: 2026-05-19
+Status: `{decision}`
+
+| Field | Value |
+| --- | --- |
+| Exception reason | `publication_lag` |
+| Decision | `{decision}` |
+| Approver | Owner Name |
+| Approval date | 2026-05-19 |
+| Release scope | v1.0 may ship on mature FY2025 production-scale proof only |
+| FY2026/R8 status acknowledged | yes |
+| Required follow-up | Re-run FY2026/R8 strict-yield upper-bound proof when R8 target-form publication baseline exists |
+""",
+        encoding="utf-8",
+    )
+    return record
+
+
 def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
@@ -169,6 +192,7 @@ def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_th
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
     mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
     template.write_text(
         _complete_exception_template()
         .replace("| `ship_readiness_rc` | 0 | 0 | pass |", "| `ship_readiness_rc` | 0 | 1 | watch |")
@@ -198,12 +222,14 @@ def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_th
         target_fy=2026,
         release_exception_reason="publication_lag",
         mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
     )
 
     assert result["ok"] is True
     assert result["errors"] == []
     assert result["inputs"]["release_exception_reason"] == "publication_lag"
     assert result["inputs"]["mature_year_proof_json"] == str(mature_year_proof)
+    assert result["inputs"]["release_exception_record"] == str(exception_record)
     assert result["mature_year_proof_years"] == [2025]
     assert "publication_lag" in result["release_exception_reasons"]
     assert any("target_pdf_auto_yield_pct below release threshold" in warning for warning in result["warnings"])
@@ -215,6 +241,7 @@ def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: P
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
     mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
     template.write_text(_complete_exception_template(), encoding="utf-8")
     _write_json(
         last_run,
@@ -236,6 +263,7 @@ def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: P
         target_fy=2026,
         release_exception_reason="publication_lag",
         mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
     )
 
     assert result["ok"] is False
@@ -250,6 +278,7 @@ def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operato
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
     mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
     template.write_text(
         _complete_exception_template()
         .replace("| `ship_readiness_rc` | 0 | 0 | pass |", "| `ship_readiness_rc` | 0 | 1 | watch |")
@@ -279,6 +308,7 @@ def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operato
         target_fy=2026,
         release_exception_reason="publication_lag",
         mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
     )
 
     assert result["ok"] is False
@@ -292,6 +322,7 @@ def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operato
 def test_verify_stage6_return_exception_requires_mature_year_proof(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
     template.write_text(_complete_exception_template(), encoding="utf-8")
 
     result = module.verify_stage6_return(
@@ -300,16 +331,18 @@ def test_verify_stage6_return_exception_requires_mature_year_proof(tmp_path: Pat
         evidence_verify_json=verify_json,
         target_fy=2026,
         release_exception_reason="publication_lag",
+        release_exception_record=exception_record,
     )
 
     assert result["ok"] is False
     assert "release exception requires --mature-year-proof-json" in result["errors"]
 
 
-def test_verify_stage6_return_rejects_failed_mature_year_proof(tmp_path: Path) -> None:
+def test_verify_stage6_return_exception_requires_approved_exception_record(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
-    mature_year_proof = _write_mature_year_proof(tmp_path, ok=False)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
 
     result = module.verify_stage6_return(
         e2e_template=template,
@@ -318,6 +351,48 @@ def test_verify_stage6_return_rejects_failed_mature_year_proof(tmp_path: Path) -
         target_fy=2026,
         release_exception_reason="publication_lag",
         mature_year_proof_json=mature_year_proof,
+    )
+
+    assert result["ok"] is False
+    assert "release exception requires --release-exception-record" in result["errors"]
+
+
+def test_verify_stage6_return_exception_rejects_not_approved_exception_record(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path, decision="NOT_APPROVED")
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "release exception record Status must be APPROVED" in result["errors"]
+    assert "release exception record Decision must be APPROVED" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_failed_mature_year_proof(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path, ok=False)
+    exception_record = _write_approved_exception_record(tmp_path)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
     )
 
     assert result["ok"] is False
@@ -332,6 +407,7 @@ def test_verify_stage6_return_rejects_small_mature_year_proof_denominator(tmp_pa
         tmp_path,
         target_pdf_auto_denominator_count=5,
     )
+    exception_record = _write_approved_exception_record(tmp_path)
 
     result = module.verify_stage6_return(
         e2e_template=template,
@@ -340,6 +416,7 @@ def test_verify_stage6_return_rejects_small_mature_year_proof_denominator(tmp_pa
         target_fy=2026,
         release_exception_reason="publication_lag",
         mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
     )
 
     assert result["ok"] is False
@@ -353,6 +430,7 @@ def test_verify_stage6_return_rejects_small_mature_year_proof_denominator(tmp_pa
 def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_proof(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
     template.write_text(
         _complete_exception_template()
         .replace("| `ship_readiness_rc` | 0 | 0 | pass |", "| `ship_readiness_rc` | 0 | 1 | watch |")
@@ -399,6 +477,7 @@ def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_
         target_fy=2026,
         release_exception_reason="publication_lag",
         mature_year_proof_json=proof,
+        release_exception_record=exception_record,
     )
 
     assert result["ok"] is False

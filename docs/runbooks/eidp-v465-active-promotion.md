@@ -226,9 +226,10 @@ uv run python scripts/verify_stage6_return.py \
   --target-fy 2026 \
   --release-exception-reason publication_lag \
   --mature-year-proof-json logs/mature-year-acquisition-proof.json \
+  --release-exception-record docs/reports/2026-05-19-publication-lag-release-exception-record.md \
   --json
 ```
 
 The exception does not allow null KPI values, `ship_gate_status=not_measured`,
-missing mature-year proof, missing evidence labels, missing audit/outbox
-evidence, or missing sign-off.
+missing mature-year proof, missing approved exception record, missing evidence
+labels, missing audit/outbox evidence, or missing sign-off.

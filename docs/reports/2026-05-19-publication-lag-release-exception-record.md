@@ -57,6 +57,7 @@ uv run python scripts/verify_stage6_return.py \
   --evidence-verify-json <returned-stage6-evidence-verify.json> \
   --release-exception-reason publication_lag \
   --mature-year-proof-json logs/mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json \
+  --release-exception-record docs/reports/2026-05-19-publication-lag-release-exception-record.md \
   --json
 ```
 
