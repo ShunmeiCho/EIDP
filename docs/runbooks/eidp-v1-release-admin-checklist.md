@@ -1,6 +1,6 @@
 # EIDP v1.0 Release Admin Checklist
 
-Updated: 2026-05-19
+Updated: 2026-05-20
 
 This checklist is for local release administration only. It does not replace
 Windows side-by-side validation, the owner real cycle, or the release-scope
@@ -10,14 +10,16 @@ decision for FY2026/R8 publication lag.
 
 - PR #2 is not clean or either required check is not green.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current v498 is validated; rebuilds or
-  package-changing commits require fresh Windows evidence.
+  after its last code/package change. Current v499 is package/source verified
+  but still needs fresh Windows evidence because it changes setup behavior.
+  v498 is the latest Windows side-by-side validated package.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
-- OCR is included in the v1.0 release scope but the v498 Windows OCR runtime
-  proof or OCR add-on SHA/runtime verifier is missing. Current v498 has OCR
-  runtime proof; rebuilds or OCR add-on changes require fresh evidence.
+- OCR is included in the v1.0 release scope but the Windows OCR runtime proof
+  or OCR add-on SHA/runtime verifier is missing for the selected candidate.
+  Current v498 has OCR runtime proof; selecting v499 requires fresh Windows
+  evidence or an explicit decision that the v498 OCR proof still applies.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
@@ -40,13 +42,13 @@ Expected:
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v498.zip
-cat dist/eidp-windows-v498.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v498.zip --json
+shasum -a 256 dist/eidp-windows-v499.zip
+cat dist/eidp-windows-v499.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v499.zip --json
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v498.zip \
+  dist/eidp-windows-v499.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -54,7 +56,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-05f7dee2b6a487a798ae3121ea55ceb5593794126ef82e18afe2925ba7262930
+8f8b01f4a81496a95f9f9e2c2a9760919243807b7f300e2ad12c188f2ac18f54
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -87,15 +89,19 @@ Do not create `v1.0` until the release gates below are complete.
 
 Before merging or tagging, attach or reference:
 
-- v498 Windows side-by-side validator JSON:
+- v499 Windows side-by-side validator JSON after fresh setup:
+  `<pending>`;
+- v499 Task Scheduler retry-on-failure proof after fresh setup:
+  `<pending>`;
+- v498 historical Windows side-by-side validator JSON:
   `logs/win-v498-stage6-v498-validate-after-setup-20260519.json`;
-- v498 Windows UI smoke notes:
+- v498 historical Windows UI smoke notes:
   `logs/win-v498-stage6-v498-ui-smoke-20260519.json`;
-- v498 OCR runtime proof:
+- v498 historical OCR runtime proof:
   `logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json`;
-- v498 Excel smoke proof:
+- v498 historical Excel smoke proof:
   `logs/win-v498-stage6-v498-excel-summary-20260519.json`;
-- v498 active-task recovery proof:
+- v498 historical active-task recovery proof:
   `logs/win-v498-stage6-v498-recovery-expected-v485-after-restore-20260519.json`;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;

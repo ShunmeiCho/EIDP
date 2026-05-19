@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v498.zip`
-Package SHA256: `05f7dee2b6a487a798ae3121ea55ceb5593794126ef82e18afe2925ba7262930`
+Package candidate: `dist/eidp-windows-v499.zip`
+Package SHA256: `8f8b01f4a81496a95f9f9e2c2a9760919243807b7f300e2ad12c188f2ac18f54`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -40,9 +40,9 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
-| v498 package verifier | `logs/win-v498-stage6-v498-verify-windows-distribution-20260519.json` | `ok=true` |
-| v498 non-Windows release gates | `logs/win-v498-stage6-v498-non-windows-release-gates-20260519.json` | `ok=true` |
-| v498 final objective audit | `docs/reports/2026-05-19-final-objective-audit-v498.md` | `NOT COMPLETE` |
+| v499 package/non-Windows release gates | `logs/win-v499-stage6-v499-non-windows-release-gates-20260520.json` | `ok=true` |
+| v498 Windows side-by-side evidence | `docs/runbooks/eidp-v498-side-by-side-validation.md` | latest Windows side-by-side proof; v499 fresh Windows proof pending |
+| v498 final objective audit | `docs/reports/2026-05-19-final-objective-audit-v498.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/v499 Windows proof |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
 ## Return Verification
