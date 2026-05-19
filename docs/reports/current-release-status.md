@@ -39,6 +39,10 @@ checks `Python quality gates` and `Ship gate contract` both passed for
 `sprint8-handoff-finalize` branch protection require both checks and disallow
 force-pushes and branch deletion. Any newer status-only commit must let the
 required checks rerun before merge.
+Before this status refresh, PR #2 was rechecked at head
+`9e05cdc0c498858b7cc59654de74286c0761d1c1`: `mergeStateStatus=CLEAN`, and
+both required checks (`Python quality gates` and `Ship gate contract`) were
+`SUCCESS`.
 Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
 rebuild is:
 `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`.
@@ -93,7 +97,15 @@ with `address = "127.0.0.1"`. After this status-only commit, the
 docs-only-stale package check
 `logs/win-v493-stage6-v493-docs-only-stale-check-20260519.json` returned
 `ok=true`, `docs_only_stale=true`, and `allowed_stale_reason=docs_only`.
-v493 has not been Windows side-by-side validated.
+The later docs-only stale check
+`logs/win-v493-stage6-v493-docs-only-stale-after-audit-20260519.json` also
+returned `ok=true`, `docs_only_stale=true`, and
+`allowed_stale_reason=docs_only`. A non-SSH Mac-side rerun of
+`scripts/verify_windows_distribution.py` is recorded in
+`logs/win-v493-stage6-v493-verify-windows-distribution-rerun-20260519.json`;
+it returned `ok=true` for the same v493 SHA256 and confirmed the packaged
+launcher/repair-helper contract. v493 has not been Windows side-by-side
+validated.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
