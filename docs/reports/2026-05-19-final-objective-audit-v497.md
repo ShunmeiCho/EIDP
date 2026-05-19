@@ -55,7 +55,7 @@ The objective is complete only when all of the following are true:
 | Mature FY2025 strict proof | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`: FY2025 denominator `1000`, strict `600/1000 (60.0%)`, excel-ready `600/1000 (60.0%)`, manual workload `20.2%` | PASS for mature-year algorithm evidence only |
 | Verifier-accepted mature-year proof JSON | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: `ok=true`, basis `mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition`, FY2025 denominator `1000`, strict `60.0%`, Excel-ready `60.0%`, manual workload `20.2%` | PASS for release-exception proof input |
 | PDF extraction stack | v497 package verifier passed; package includes the project wheel and runtime, with `wheel_count=84`, `entry_count=3104`, and `has_runtime=true`. ZIP inspection confirms the core package includes `src/eidp/pdf/ocr.py` and `src/eidp/ocr/tesseract.py`. | PASS for core code/package |
-| Tesseract OCR runtime/add-on | Local focused OCR suite returned `49 passed` for Tesseract wrapper, provider routing, OCR add-on packaging, availability, and provider-specific ingest confidence tests. However no OCR add-on ZIP is present in `dist/`, and the latest Windows OCR-runtime/image-write proof in `docs/reports/current-release-status.md` remains v384, not v497. | PARTIAL; v497 Windows OCR runtime proof pending |
+| Tesseract OCR runtime/add-on | Local focused OCR suite returned `49 passed` for Tesseract wrapper, provider routing, OCR add-on packaging, availability, and provider-specific ingest confidence tests. v497 OCR add-on `dist/eidp-ocr-addon-windows-v497-smoke.zip` was built from UB Mannheim Windows Tesseract `5.4.0.20240606` after installer SHA256 `c885fff6998e0608ba4bb8ab51436e1c6775c2bafc2559a19b423e18678b60c9` matched the winget manifest, plus local `jpn.traineddata` and `configs/tsv`; add-on SHA256 is `3d0d03d4b49eb1bf5d8acc2030c00189702519d01ac80886bb7507a1d619450f`. `logs/win-v497-stage6-v497-verify-windows-distribution-with-ocr-addon-20260519.json` verifies core and OCR add-on with `ok=true`, `entry_count=266`, `manifest_files=265`, no errors, and no warnings. The latest Windows OCR-runtime/image-write proof in `docs/reports/current-release-status.md` remains v384, not v497. | PASS for Mac-side add-on packaging; PARTIAL for v497 Windows OCR runtime proof |
 | Confidence `>= 0.70` gating | v497 non-Windows gate `logs/win-v497-stage6-v497-non-windows-release-gates-20260519.json` returned `ok=true`; validator/distribution subset passed with package/source freshness. OCR confidence propagation is code-tested for `ocr_tesseract` and `ocr_paddleocr`, but v497 has not re-proven OCR on the operator PC. | PASS for tested code path; PARTIAL for v497 Windows OCR |
 | Append-only business writes | PR #2 CI passed; local focused checks passed after the fiscal-year override `FOR UPDATE` hardening. This is code/test evidence, not owner-cycle evidence | PASS for code contract, PARTIAL for real workflow |
 | Excel template transfer | `logs/release-gate-v485-retroactive-matrix.json`: `ok=true`, `case_count=3`; this is retroactive/mature-year evidence, not FY2026 owner-cycle output. The v497 release admin checklist and owner request now require Excel preview/export proof and consistency evidence before v1.0 approval. | PARTIAL; v497 owner-cycle Excel proof pending |
@@ -75,9 +75,10 @@ The objective is complete only when all of the following are true:
 
 - `verify_windows_distribution.py` proves package structure, wheelhouse,
   build metadata, seed packaging, required files, Streamlit launcher guard, and
-  packaging contracts. It does not prove FY2026 strict target-PDF yield or owner
-  workflow completion. It also does not prove that the optional OCR add-on is
-  present and executable on the v497 Windows operator root.
+  packaging contracts. With `--ocr-addon`, it now also proves the v497 OCR
+  add-on manifest, required files, and payload checksums. It does not prove
+  FY2026 strict target-PDF yield, owner workflow completion, or OCR runtime
+  execution on the v497 Windows operator root.
 - `run_non_windows_release_gates.py` proves Mac-side unit tests, validator
   tests, type/lint checks, discovery gold-set checks, package verification, and
   package/source freshness. It does not prove Windows active-lane promotion or
@@ -93,10 +94,11 @@ The objective is complete only when all of the following are true:
   `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`.
 - The FY2026 upper-bound proof is the controlling current-FY evidence and is
   below gate.
-- The Tesseract OCR objective is implemented and unit/package-tested, but the
-  current v497 release candidate still needs a Windows-side OCR add-on/runtime
-  proof if OCR is treated as in-scope for v1.0 release approval rather than an
-  optional/manual fallback.
+- The Tesseract OCR objective is implemented and unit/package-tested, and a
+  verifier-clean v497 OCR add-on ZIP now exists. The current v497 release
+  candidate still needs a Windows-side OCR runtime/image-write proof if OCR is
+  treated as in-scope for v1.0 release approval rather than an optional/manual
+  fallback.
 
 ## Earlier v493 Non-SSH Follow-up Evidence
 
@@ -137,9 +139,10 @@ verification and source-freshness evidence are recorded in the checklist above.
    evidence.
 2. When SSH/operator PC access is stable, side-by-side validate v497 on Windows
    before any active-lane promotion.
-3. If OCR is required for v1.0 approval, attach and validate an OCR add-on on
-   the v497 Windows root or explicitly document OCR as optional/manual fallback
-   for the release scope.
+3. If OCR is required for v1.0 approval, attach
+   `dist/eidp-ocr-addon-windows-v497-smoke.zip` and validate it on the v497
+   Windows root, or explicitly document OCR as optional/manual fallback for the
+   release scope.
 4. Return v497 owner-cycle Excel preview/export proof and ManualActionLog /
    JSONL audit proof; the release admin checklist now treats both as explicit
    v1.0 gates.

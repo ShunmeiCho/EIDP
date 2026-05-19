@@ -41,12 +41,24 @@ Confirm the current package evidence:
 shasum -a 256 dist/eidp-windows-v497.zip
 cat dist/eidp-windows-v497.zip.sha256
 uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v497.zip --json
+shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
+cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
+uv run python scripts/verify_windows_distribution.py \
+  dist/eidp-windows-v497.zip \
+  --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
+  --json
 ```
 
 Expected ZIP SHA256:
 
 ```text
 11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075
+```
+
+Expected OCR add-on SHA256, if OCR is in v1.0 scope:
+
+```text
+3d0d03d4b49eb1bf5d8acc2030c00189702519d01ac80886bb7507a1d619450f
 ```
 
 ## Signing Preflight
@@ -84,9 +96,9 @@ Before merging or tagging, attach or reference:
   owner template matches the current DB/run metrics;
 - `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`
   if the approved release path is `publication_lag`;
-- if OCR is in release scope, v497 OCR add-on SHA256 plus Windows runtime /
-  image-write proof; otherwise a written release-scope decision that OCR is
-  optional/manual fallback for v1.0;
+- if OCR is in release scope, `dist/eidp-ocr-addon-windows-v497-smoke.zip`
+  SHA256 plus Windows runtime / image-write proof; otherwise a written
+  release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
 ## Final Commands
