@@ -712,17 +712,17 @@ Restart-Service sshd
 Get-ScheduledTask -TaskName "EIDP Weekly Run" | Select-Object State
 (Get-ScheduledTask -TaskName "EIDP Weekly Run").Actions.Execute
 
-Test-Path "$env:USERPROFILE\EIDP-v384-75732b0-ocr-sr-sandbox"
-Test-Path "$env:USERPROFILE\v384_ocr_sr_smoke.ps1"
-Test-Path "$env:USERPROFILE\eidp-windows-v384.zip"
-Test-Path "$env:USERPROFILE\eidp-windows-v384.zip.sha256"
-Test-Path "$env:USERPROFILE\eidp-ocr-addon-windows-v383-smoke.zip"
-Test-Path "$env:USERPROFILE\eidp_v384_ocr_sr_smoke.py"
-Test-Path "$env:USERPROFILE\eidp-v384-ocr-sr-source.sqlite3"
+Get-ChildItem "$env:USERPROFILE" -Directory -Filter "EIDP-v*-*-sandbox" -ErrorAction SilentlyContinue
+Get-ChildItem "$env:USERPROFILE" -File -Include "eidp-windows-v*.zip","eidp-windows-v*.zip.sha256","eidp-ocr-addon-windows-v*.zip" -ErrorAction SilentlyContinue
+Get-ChildItem "$env:USERPROFILE\AppData\Local\Temp" -File -Include "eidp-*-smoke.ps1","eidp-*-smoke.py" -ErrorAction SilentlyContinue
 ```
 
+表示された side-by-side 検証用の一時ファイルや sandbox は、証跡を回収してから削除する。
+`EIDP-v485-*` のような production / fallback lane は、promotion または cleanup 手順で
+明示されない限り削除しない。
+
 同じ確認は、ZIP 同梱の読み取り専用 helper でも実行できる。SSH が不安定で
-Mac 側から実行できない場合は、Windows 側でこの `.bat` を実行して
+Mac 側から実行できない場合は、Windows 側で対象の ZIP 展開 root に移動し、この `.bat` を実行して
 `logs\stage6-recovery-*.json` を回収する:
 
 ```powershell
