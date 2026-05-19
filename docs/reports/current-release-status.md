@@ -149,7 +149,11 @@ re-probe is recorded in
 `logs/win-v500-stage6-v500-last-run-after-weekly-canary-limit50-20260520.json`
 and `logs/win-v500-stage6-v500-weekly-canary-limit50-run-20260520.log`:
 `status=success`, denominator `50`, strict/Excel-ready yield `4.0%`,
-operator-reviewable yield `56.0%`, and `ship_gate_status=below_gate`. Excel smoke is
+operator-reviewable yield `56.0%`, and `ship_gate_status=below_gate`.
+The limit-50 RCA is recorded in
+`docs/reports/2026-05-20-v500-limit50-rca.md`; its batch plan had 20 items,
+with 17 `non_target_candidates_only` and 3 `target_form_without_year_evidence`.
+Excel smoke is
 `logs/win-v500-stage6-v500-excel-summary-20260520.json` (`ok=true`). Stage 6
 bundle proof is `logs/win-v500-stage6-v500-stage6-evidence-20260519-161653.zip`
 with SHA256 `674e2fdcaf6f09611c7ffd00ecff3c714a3913b6727478dac3df1917102e2a3e`,
