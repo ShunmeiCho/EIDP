@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v511.zip`
-Package SHA256: `fbe868839d19249383445105b5d0caab0e2303e38116df4a2b448c92cf0276ea`
+Package candidate: `dist/eidp-windows-v512.zip`
+Package SHA256: `6548e79d51378281c20cbe97bd1a652453f8b207efa391db1f3e40ccd8744d34`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -40,7 +40,7 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
-| v511 package/non-Windows release gates | `logs/win-v511-stage6-v511-non-windows-release-gates-20260520.json` | `ok=true` |
+| v512 package/non-Windows release gates | `logs/win-v512-stage6-v512-non-windows-release-gates-20260520.json` | `ok=true` |
 | v501 Windows side-by-side evidence | `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md` | latest complete Windows side-by-side proof |
 | v502 Windows side-by-side evidence | `docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md` | partial proof; full smoke pending SSH recovery |
 | v503 settings-audit package report | `docs/reports/2026-05-20-v503-settings-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
@@ -52,6 +52,7 @@ evidence or Stage 6 return verification.
 | v509 audit-log filter package report | `docs/reports/2026-05-20-v509-audit-log-filter-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | v510 school alias audit package report | `docs/reports/2026-05-20-v510-school-alias-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | v511 proposal decision audit package report | `docs/reports/2026-05-20-v511-proposal-decision-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
+| v512 bug-report audit package report | `docs/reports/2026-05-20-v512-bug-report-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
