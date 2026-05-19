@@ -2,12 +2,13 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v502` for Mac-side package/source verification and
-partial Windows side-by-side setup, validate, recovery, and limit-50 canary
-evidence. `v501` remains the latest package with complete Windows side-by-side
-smoke evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
-limit-50 canary, and Stage 6 bundle verification, until v502 full smoke
-finishes.
+Latest package family: `v503` for Mac-side package/source verification after
+adding `ManualActionLog` coverage for operator settings saves. `v502` remains
+the latest package with partial Windows side-by-side setup, validate, recovery,
+and limit-50 canary evidence. `v501` remains the latest package with complete
+Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
+runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification, until
+v503 full Windows smoke finishes.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -56,7 +57,10 @@ RCA and rebuild the Windows ZIP as v502 with fresh package/source verification
 and partial Windows side-by-side evidence. v502 removes the residual
 `non_target_candidates_only` RCA bucket, but its full Windows smoke is still
 pending because the Windows OpenSSH service began resetting new SSH sessions
-during the follow-up smoke.
+during the follow-up smoke. Post-v502 fixes add `operator_settings_saved`
+`ManualActionLog` coverage for the settings page with API-key value redaction
+and rebuild the Windows ZIP as v503 with fresh Mac-side package/source
+verification.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -116,22 +120,29 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v502.zip`, SHA256
-`6764d4ee67dfd4db42272e87cbebb1b3c63c743d8388004b607b9b8590b41c05`.
+`dist/eidp-windows-v503.zip`, SHA256
+`66a118d2ab16d2f314c25e00c7e0acbead288f0755e67a7f8ae24b3e93b8c52c`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=dd1524c48240890a8260795b54259342d7648867`,
+`git_commit=990060129da1a118835a4a2ab64ef8c081f4c336`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v502-stage6-v502-non-windows-release-gates-20260520.json`
-(`ok=true`; package/source check is fresh, full unit suite `1880 passed`,
+`logs/win-v503-stage6-v503-non-windows-release-gates-20260520.json`
+(`ok=true`; package/source check is fresh, full unit suite `1882 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
-demonstrated-pattern package verify returned `0`). Core and OCR add-on package
-verification are recorded in
-`logs/win-v502-stage6-v502-verify-windows-distribution-20260520.json` and
-`logs/win-v502-stage6-v502-verify-windows-distribution-with-ocr-addon-20260520.json`
-(`ok=true`). Later docs-only commits use the
-`--allow-docs-only-stale-package` gate with `allowed_stale_reason=docs_only`;
-use the PR body for the latest exact docs-only gate artifact.
+demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
+verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
+`dist/eidp-ocr-addon-windows-v497-smoke.zip`.
+
+v503 includes all v502 package features plus settings-page audit hardening:
+successful `設定を保存` writes now emit `ManualActionLog` row
+`operator_settings_saved`, and API-key values are redacted in the audit JSON.
+The package evidence is recorded in
+`docs/reports/2026-05-20-v503-settings-audit-package.md`.
+
+v503 has not completed Windows side-by-side validation because the Windows
+OpenSSH/IP blocker remains unresolved. v502 remains the latest partial Windows
+side-by-side setup/canary package, and v501 remains the latest complete
+Windows side-by-side smoke package.
 
 v502 includes all v501 package features plus the v501 RCA follow-up residual
 Sanko exact school URL overrides for the two remaining corporation-root cases.
@@ -293,24 +304,25 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v502.zip`
-Current v502 SHA256 sidecar:
-`dist/eidp-windows-v502.zip.sha256`
-Current v502 package build evidence:
-`dist/eidp-windows-v502.zip` was built from clean source and validated by the
-full non-Windows release gate. It has completed partial automated Windows
-side-by-side setup, validation, recovery, and limit-50 canary evidence, but it
-has not completed the full v502 Windows smoke set and has not been promoted to
-the active weekly Task Scheduler lane. v501 remains the latest complete Windows
-smoke package. The active production action remains v485 until an explicit
-promotion decision is made.
+`dist/eidp-windows-v503.zip`
+Current v503 SHA256 sidecar:
+`dist/eidp-windows-v503.zip.sha256`
+Current v503 package build evidence:
+`dist/eidp-windows-v503.zip` was built from clean source and validated by the
+full non-Windows release gate. It has not completed Windows side-by-side setup
+because the Windows OpenSSH/IP blocker remains unresolved. v502 remains the
+latest partial automated Windows side-by-side setup, validation, recovery, and
+limit-50 canary package. v501 remains the latest complete Windows smoke
+package. The active production action remains v485 until an explicit promotion
+decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/2026-05-20-final-objective-audit-v502.md` is `NOT COMPLETE`.
-v502 is Mac-side package/source verified and partially Windows side-by-side
-validated. Current FY2026 production-scale strict proof, v502 full Windows
-smoke, and owner real Windows cycle evidence remain incomplete. To continue,
+`docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
+v503 is Mac-side package/source verified, v502 is partially Windows side-by-side
+validated, and v501 is the latest complete Windows-smoke proof. Current FY2026
+production-scale strict proof, v503 Windows smoke, and owner real Windows cycle
+evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.

@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v502.zip`
-Package SHA256: `6764d4ee67dfd4db42272e87cbebb1b3c63c743d8388004b607b9b8590b41c05`
+Package candidate: `dist/eidp-windows-v503.zip`
+Package SHA256: `66a118d2ab16d2f314c25e00c7e0acbead288f0755e67a7f8ae24b3e93b8c52c`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -40,10 +40,11 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
-| v502 package/non-Windows release gates | `logs/win-v502-stage6-v502-non-windows-release-gates-20260520.json` | `ok=true` |
+| v503 package/non-Windows release gates | `logs/win-v503-stage6-v503-non-windows-release-gates-20260520.json` | `ok=true` |
 | v501 Windows side-by-side evidence | `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md` | latest complete Windows side-by-side proof |
 | v502 Windows side-by-side evidence | `docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md` | partial proof; full smoke pending SSH recovery |
-| v502 final objective audit | `docs/reports/2026-05-20-final-objective-audit-v502.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
+| v503 settings-audit package report | `docs/reports/2026-05-20-v503-settings-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
+| current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
 ## Return Verification
