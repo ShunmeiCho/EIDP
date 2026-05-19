@@ -1,7 +1,7 @@
 # EIDP 業務員 PC E2E 記録テンプレート
 
 Status: Stage 6 / v1.0 release candidate evidence template
-Updated: 2026-05-16
+Updated: 2026-05-19
 
 このテンプレートは、業務員の実 PC で 1 サイクル実行した結果を記録するためのものです。
 ここが未記入のままでは、EIDP Windows 版を v1.0 と判定しません。
@@ -43,7 +43,8 @@ Updated: 2026-05-16
 | Playwright add-on ZIP sha256 | |
 | `windows-distribution-verification.json` 保存場所 | |
 
-現行投入候補（Mac / non-Windows gate 済み、Windows 未実証）:
+現行投入候補（package / validation status は current release-status と
+version-specific owner request を正とする）:
 
 | 項目 | 値 |
 | --- | --- |
