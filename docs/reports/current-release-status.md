@@ -96,7 +96,11 @@ verification is recorded in
 `logs/win-v495-stage6-v495-non-windows-release-gates-20260519.json`
 (`ok=true`; package/source check is fresh, full unit suite returned `1869 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
-demonstrated-pattern package verify returned `0`). v495 includes
+demonstrated-pattern package verify returned `0`). After the v495 evidence
+docs were committed, the docs-only freshness gate
+`logs/win-v495-stage6-v495-non-windows-release-gates-docs-only-head-20260519.json`
+also returned `ok=true`, with `docs_only_stale=true` and
+`allowed_stale_reason=docs_only`. v495 includes
 `EIDP-repair-launcher.bat`, `scripts/repair_streamlit_launcher.bat`,
 `scripts/repair_streamlit_launcher.py`, and `scripts/evaluate_strict_yield_bound.py`;
 keeps the image-pending OCR warning verifier contract; rejects packaged
