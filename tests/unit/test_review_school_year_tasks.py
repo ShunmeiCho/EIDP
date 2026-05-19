@@ -11,13 +11,15 @@ from sqlalchemy.pool import StaticPool
 from streamlit.testing.v1 import AppTest
 
 from eidp.db.locking import acquire_lock
-from eidp.db.models import Base, Document, School, SchoolFiscalYearStatus, SchoolSite
+from eidp.db.models import Base, Document, ManualActionLog, School, SchoolFiscalYearStatus, SchoolSite
 from eidp.ocr.availability import OcrAvailability
+from eidp.pipeline.school_fiscal_year_status import SchoolFiscalYearStatusStats
 from eidp.review._pages import school_year_tasks
 from eidp.review._pages.school_year_tasks import (
     SETTINGS_PAGE_ID,
     BootstrapProgress,
     SchoolTaskSummary,
+    audit_school_year_tasks_rebuilt,
     blocking_reason_label,
     bootstrap_command,
     bootstrap_progress_auto_refresh_html,
@@ -1607,6 +1609,39 @@ def test_task_board_warns_when_image_pending_and_ocr_unavailable(tmp_path: Path,
         assert any("OCR add-on 未導入" in text for text in warning_texts)
     finally:
         session.close()
+
+
+def test_audit_school_year_tasks_rebuilt_writes_manual_action_log() -> None:
+    session = _session()
+    try:
+        audit_school_year_tasks_rebuilt(
+            session,
+            stats=SchoolFiscalYearStatusStats(
+                fiscal_year=2026,
+                school_type="専門学校",
+                rebuilt=2,
+                excel_ready=1,
+            ),
+        )
+        session.commit()
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "school_year_tasks_rebuilt"
+        assert audit.target_table == "school_fiscal_year_status"
+        assert audit.target_id is None
+        assert '"fiscal_year": 2026' in (audit.new_value or "")
+        assert '"rebuilt": 2' in (audit.new_value or "")
+        assert '"excel_ready": 1' in (audit.new_value or "")
+    finally:
+        session.close()
+
+
+def test_rebuild_button_records_manual_action_log_contract() -> None:
+    import inspect
+
+    source = inspect.getsource(school_year_tasks._render_rebuild_button)
+
+    assert "audit_school_year_tasks_rebuilt(" in source
 
 
 def test_task_board_explains_target_year_publication_window(tmp_path: Path) -> None:

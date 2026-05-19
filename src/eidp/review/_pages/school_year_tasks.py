@@ -21,8 +21,10 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from eidp.db.audit import log_manual_action
 from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
-from eidp.db.models import Document, School, SchoolFiscalYearStatus, SchoolSite
+from eidp.db.models import Document, ManualActionLog, School, SchoolFiscalYearStatus, SchoolSite
+from eidp.pipeline.school_fiscal_year_status import SchoolFiscalYearStatusStats
 from eidp.scraper.discovery_evidence_summary import PdfDiscoveryEvidenceSummary
 
 
@@ -1689,6 +1691,7 @@ def _render_rebuild_button(
                     school_type=school_type,
                     discovery_evidence_path=Path("output") / "discovery_rejections.jsonl",
                 )
+                audit_school_year_tasks_rebuilt(session, stats=stats)
                 session.commit()
         except LockBusyError as exc:
             st.warning(f"週次処理中のため再計算できません: {exc}")
@@ -1698,6 +1701,29 @@ def _render_rebuild_button(
         else:
             st.success(f"再計算しました: {stats.rebuilt} 校 / Excel出力可 {stats.excel_ready} 校")
             st.rerun()
+
+
+def audit_school_year_tasks_rebuilt(
+    session: Session,
+    *,
+    stats: SchoolFiscalYearStatusStats,
+    actor: str = "operator",
+) -> ManualActionLog:
+    """Audit a manual rebuild of the target-year school task rows."""
+    return log_manual_action(
+        session,
+        action_type="school_year_tasks_rebuilt",
+        target_table="school_fiscal_year_status",
+        old_value=None,
+        new_value={
+            "fiscal_year": stats.fiscal_year,
+            "school_type": stats.school_type,
+            "rebuilt": stats.rebuilt,
+            "excel_ready": stats.excel_ready,
+        },
+        reason="Operator rebuilt school-year task rows",
+        actor=actor,
+    )
 
 
 def _render_bootstrap_progress(
