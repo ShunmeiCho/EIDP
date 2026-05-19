@@ -42,7 +42,7 @@ evidence or Stage 6 return verification.
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
 | v500 package/non-Windows release gates | `logs/win-v500-stage6-v500-non-windows-release-gates-20260520.json` | `ok=true` |
 | v500 Windows side-by-side evidence | `docs/runbooks/eidp-v500-side-by-side-validation.md` | latest Windows side-by-side proof |
-| v498 final objective audit | `docs/reports/2026-05-19-final-objective-audit-v498.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
+| v500 final objective audit | `docs/reports/2026-05-20-final-objective-audit-v500.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
 ## Return Verification

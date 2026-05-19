@@ -197,12 +197,10 @@ remains v485 until an explicit promotion decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/2026-05-19-final-objective-audit-v498.md` is `NOT COMPLETE` and
-is superseded for package validation by
-`docs/runbooks/eidp-v500-side-by-side-validation.md`. v500 is Mac-side
-package/source verified and Windows side-by-side validated, but current FY2026
-production-scale strict proof and owner real Windows cycle evidence remain
-incomplete. To continue,
+`docs/reports/2026-05-20-final-objective-audit-v500.md` is `NOT COMPLETE`.
+v500 is Mac-side package/source verified and Windows side-by-side validated,
+but current FY2026 production-scale strict proof and owner real Windows cycle
+evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
