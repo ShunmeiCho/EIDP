@@ -52,7 +52,7 @@ The objective is complete only when all of the following are true:
 | Mature FY2025 strict proof for exception path | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: `ok=true`, FY2025 denominator `1000`, strict `60.0%`, Excel-ready `60.0%`, manual workload `20.2%` | PASS for exception input only |
 | PDF extraction stack packaged | v498 package verifier `ok=true`, `has_runtime=true`, `wheel_count=84`, `entry_count=3105` | PASS |
 | Tesseract OCR runtime/add-on | `logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json`: `ok=true`, Tesseract `5.4.0.20240606`, `jpn` and `jpn_vert` present. Core + add-on verifier also `ok=true` in `logs/win-v498-stage6-v498-verify-windows-distribution-with-ocr-addon-20260519.json` | PASS |
-| Confidence `>= 0.70` gating | CI and local gates cover confidence propagation and package verifier contracts; v498 OCR runtime proof confirms add-on availability, not full production OCR yield | PASS for code/runtime, PARTIAL for production OCR corpus |
+| Confidence `>= 0.70` gating | `logs/win-v498-stage6-v498-confidence-gating-tests-1a44abf-20260519.txt`: `148 passed`, covering default thresholds `0.85/0.70/0.50`, env overrides, ingest verdict boundaries, Excel export exclusion for rows below review threshold, low-confidence warning panels, strict-yield confidence buckets, and DB precision. v498 OCR runtime proof confirms add-on availability, not full production OCR yield | PASS for code/runtime, PARTIAL for production OCR corpus |
 | Append-only business writes | Focused audit/manual-write suite passed: `logs/win-v498-stage6-v498-manual-action-audit-tests-a27fe06-20260519.txt` (`197 passed`). Coverage includes `test_fiscal_year_override.py`, `test_manual_entry_contract.py`, review manual-entry tests, URL review tests, and school-site audit tests. Owner real-cycle audit evidence is still missing | PASS for code, PARTIAL for real workflow |
 | Excel template transfer | `logs/win-v498-stage6-v498-excel-summary-20260519.json`: master workbook exists, competition workbook exists, default competition template exists in `sample/`, competition workbook has 16 sheets | PASS |
 | ManualActionLog audit | `logs/win-v498-stage6-v498-manual-action-audit-tests-a27fe06-20260519.txt`: `197 passed`, covering DB-authoritative `manual_action_log`, UUID `action_id`, JSONL outbox dedup/archive behavior, fiscal-year override audit rows, manual-entry audit rows, URL-review audit rows, and audit-page flush/listing behavior. Owner real-cycle audit counts/outbox proof are not returned yet | PARTIAL |
@@ -89,6 +89,9 @@ The objective is complete only when all of the following are true:
   `ManualActionLog` and append-only contracts for manual entry, fiscal-year
   override, URL review, outbox deduplication, and audit UI flows. It does not
   replace owner real-cycle audit counts from the operator PC.
+- The focused confidence-gating suite proves the code-level `>= 0.70` review
+  threshold contract from pure confidence scoring through ingest verdicts and
+  Excel export exclusion sheets. It does not prove production OCR corpus yield.
 - The env0 setup proof confirms that the documented side-by-side validation
   path can run `scripts\first_setup.bat` with `EIDP_REGISTER_WEEKLY_TASK=0`
   without moving the active scheduled task off v485.
