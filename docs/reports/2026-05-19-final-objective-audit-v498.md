@@ -56,7 +56,7 @@ The objective is complete only when all of the following are true:
 | Append-only business writes | Focused audit/manual-write suite passed: `logs/win-v498-stage6-v498-manual-action-audit-tests-a27fe06-20260519.txt` (`197 passed`). Coverage includes `test_fiscal_year_override.py`, `test_manual_entry_contract.py`, review manual-entry tests, URL review tests, and school-site audit tests. Owner real-cycle audit evidence is still missing | PASS for code, PARTIAL for real workflow |
 | Excel template transfer | `logs/win-v498-stage6-v498-excel-summary-20260519.json`: master workbook exists, competition workbook exists, default competition template exists in `sample/`, competition workbook has 16 sheets. Focused Excel suite passed in `logs/win-v498-stage6-v498-excel-transfer-tests-acb0166-20260519.txt` (`68 passed`), covering master exporter, competition exporter, competition gap reasons, Streamlit Excel preview helpers, retroactive matrix runner, and non-Windows retroactive gate command construction | PASS |
 | ManualActionLog audit | `logs/win-v498-stage6-v498-manual-action-audit-tests-a27fe06-20260519.txt`: `197 passed`, covering DB-authoritative `manual_action_log`, UUID `action_id`, JSONL outbox dedup/archive behavior, fiscal-year override audit rows, manual-entry audit rows, URL-review audit rows, and audit-page flush/listing behavior. Owner real-cycle audit counts/outbox proof are not returned yet | PARTIAL |
-| ZIP distribution and offline setup | v498 SHA matches sidecar; non-Windows gate package/source check fresh; Windows setup validator `ok=true` | PASS |
+| ZIP distribution and offline setup | v498 SHA matches sidecar; non-Windows gate package/source check fresh; Windows setup validator `ok=true`. Focused Windows packaging/verifier suite passed in `logs/win-v498-stage6-v498-windows-packaging-tests-11cde50-20260519.txt` (`277 passed`), covering distribution verifier, package builder spike contracts, install validator, and Stage 6 evidence bundle verifier | PASS |
 | Side-by-side setup can preserve active task | Fresh Windows root `%USERPROFILE%\EIDP-v498-555fe01-env0` was set up with `EIDP_REGISTER_WEEKLY_TASK=0`; `logs/win-v498-stage6-v498-first-setup-env0-20260519.log` shows `skipping Task Scheduler registration because EIDP_REGISTER_WEEKLY_TASK=0`; `logs/win-v498-stage6-v498-env0-validate-after-setup-20260519.json` is `ok=true`; `logs/win-v498-stage6-v498-env0-recovery-expected-v485-20260519.json` is `ok=true` with `action_matches_expected=true` | PASS |
 | Browser UI on Windows | `logs/win-v498-stage6-v498-ui-smoke-20260519.json`: `ok=true`, port `8519`, health `200/ok`, root `200`, stopped cleanly | PASS |
 | Active scheduled task safety | Initial v498 recovery check caught the task pointing to v498 after setup smoke; task was restored to v485. `logs/win-v498-stage6-v498-recovery-expected-v485-after-restore-20260519.json`: `ok=true`, `action_matches_expected=true` | PASS after restore |
@@ -89,6 +89,10 @@ The objective is complete only when all of the following are true:
 - The v498 Windows side-by-side proof now covers installation, OCR runtime,
   Streamlit health, bounded weekly execution, Excel output, and Stage 6 bundle
   verification. It is still a bounded validation, not owner approval.
+- The focused Windows packaging/verifier suite proves source-side ZIP,
+  verifier, install validator, launcher/setup package contracts, and Stage 6
+  bundle verification. The Windows side-by-side logs remain the OS-level
+  runtime proof.
 - The focused audit/manual-write test suite proves the code-level
   `ManualActionLog` and append-only contracts for manual entry, fiscal-year
   override, URL review, outbox deduplication, and audit UI flows. It does not
