@@ -18,16 +18,16 @@ Same shape as 8.4.c.1 / 8.4.c.2. Pure helpers under unit test:
     and 学科別 gap counts so the operator sees what's missing before
     downloading.
 
-Lock contract: this page is read-only — Excel is generated from
-already-committed data. No lock needed. The page surfaces a probe
-banner for visibility only.
+Lock contract: Excel generation reads already-committed data, but the
+operator action itself is audited. The page probes the shared lock for
+visibility and acquires it before generating/auditing the preview.
 """
 
 from __future__ import annotations
 
 import io
 from collections.abc import MutableMapping
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
@@ -35,7 +35,9 @@ import openpyxl  # type: ignore[import-untyped]
 from sqlalchemy.orm import Session
 
 from eidp.config import settings
-from eidp.db.locking import probe_lock
+from eidp.db.audit import log_manual_action
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
+from eidp.db.models import ManualActionLog
 from eidp.excel.exporter import (
     _write_gakka,
     _write_sairoku,
@@ -180,6 +182,30 @@ def store_preview_session_state(
         preview.close()
 
 
+def audit_excel_preview_generated(
+    session: Session,
+    *,
+    counts: dict[str, int],
+    quality_warnings: dict[str, int],
+    export_gap: ExportGapReport,
+    actor: str = "operator",
+) -> ManualActionLog:
+    """Audit an operator-generated Excel preview workbook."""
+    return log_manual_action(
+        session,
+        action_type="excel_preview_generated",
+        target_table="excel_export",
+        old_value=None,
+        new_value={
+            "export_gap": asdict(export_gap),
+            "sheet_counts": dict(sorted(counts.items())),
+            "quality_warnings": dict(sorted(quality_warnings.items())),
+        },
+        reason="Operator generated Excel preview workbook",
+        actor=actor,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Coverage / gap counts
 # ---------------------------------------------------------------------------
@@ -301,13 +327,31 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
 
     can_generate = export_gap.has_target_year_data
     if st.button("プレビュー workbook を生成", type="primary", disabled=status.held or not can_generate):
-        with st.spinner("生成中..."):
-            preview = build_preview_workbook(session)
-            store_preview_session_state(
-                cast(MutableMapping[str, Any], st.session_state),
-                preview,
-                export_gap=export_gap,
+        try:
+            with acquire_lock(lock_path, owner="ui_excel_preview"):
+                with st.spinner("生成中..."):
+                    preview = build_preview_workbook(session)
+                    store_preview_session_state(
+                        cast(MutableMapping[str, Any], st.session_state),
+                        preview,
+                        export_gap=export_gap,
+                    )
+                    audit_excel_preview_generated(
+                        session,
+                        counts=preview.counts,
+                        quality_warnings=preview.quality_warnings,
+                        export_gap=export_gap,
+                    )
+                session.commit()
+        except LockBusyError:
+            session.rollback()
+            st.error(
+                "別の処理が実行中です。完了後にもう一度プレビュー workbook を生成してください。"
             )
+            return
+        except Exception:
+            session.rollback()
+            raise
         st.rerun()
 
     if "excel_preview_bytes" in st.session_state:

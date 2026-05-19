@@ -13,14 +13,17 @@ from eidp.db.models import (
     Department,
     DepartmentYearly,
     Document,
+    ManualActionLog,
     School,
     SchoolYearStatus,
     SupportRecipient,
 )
 from eidp.db.sqlite_bootstrap import bootstrap_sqlite
+from eidp.reports.coverage import ExportGapReport
 from eidp.review._pages import excel_preview as excel_preview_mod
 from eidp.review._pages.excel_preview import (
     SHEET_ORDER,
+    audit_excel_preview_generated,
     build_preview_workbook,
     count_unmatched_and_gap,
     format_sheet_preview,
@@ -276,6 +279,48 @@ def test_store_preview_session_state_serializes_bytes_and_drops_workbook_handle(
     assert state["excel_preview_quality_warnings"] == {"department_yearly_low_confidence_current": 0}
     assert "excel_preview_workbook" not in state
     assert calls == ["to_bytes", "close"]
+
+
+def test_audit_excel_preview_generated_writes_manual_action_log(engine) -> None:
+    with Session(engine) as session:
+        report = ExportGapReport(
+            fiscal_year=2026,
+            school_type="専門学校",
+            total_schools=2,
+            schools_with_url=1,
+            no_url_schools=1,
+            target_pdf_schools=1,
+            stale_fallback_schools=0,
+            missing_target_pdf_schools=1,
+            extracted_schools=1,
+            excel_ready_schools=1,
+            target_yearly_rows=3,
+        )
+
+        audit_excel_preview_generated(
+            session,
+            counts={"採録状況": 2, "対象比率": 3},
+            quality_warnings={"department_yearly_low_confidence_current": 1},
+            export_gap=report,
+        )
+        session.commit()
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "excel_preview_generated"
+        assert audit.target_table == "excel_export"
+        assert audit.target_id is None
+        assert '"fiscal_year": 2026' in (audit.new_value or "")
+        assert '"excel_ready_schools": 1' in (audit.new_value or "")
+        assert '"採録状況": 2' in (audit.new_value or "")
+
+
+def test_render_records_excel_preview_generation_in_manual_action_log_contract() -> None:
+    import inspect
+
+    source = inspect.getsource(excel_preview_mod.render)
+
+    assert "audit_excel_preview_generated(" in source
+    assert "ui_excel_preview" in source
 
 
 # ---------------------------------------------------------------------------
