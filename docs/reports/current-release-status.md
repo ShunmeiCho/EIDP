@@ -2,15 +2,15 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v513` for Mac-side package/source verification after
-keeping Sanko per-school `/disclosure/{slug}` probes under shared-origin
-throttling.
+Latest package family: `v514` for Mac-side package/source verification after
+fixing weekly selected-school runs so the PDF discovery batch covers all
+crawlable `SchoolSite` rows for the selected school IDs.
 `v502` remains
 the latest package with partial Windows side-by-side setup, validate, recovery,
 and limit-50 canary evidence. `v501` remains the latest package with complete
 Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
 runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification, until
-v513 full Windows smoke finishes.
+v514 full Windows smoke finishes.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -99,6 +99,12 @@ roots are sparse but whose disclosure pages live at `www.sanko.ac.jp/disclosure/
 The fix remains scoped to Sanko hosts so large unrelated shared origins keep
 the existing throttle behavior. The Windows ZIP is rebuilt as v513 with fresh
 Mac-side package/source verification.
+Post-v513 fixes make weekly school-based limits crawl every selected school's
+matching `SchoolSite` rows instead of capping discovery at the same number of
+site rows as selected schools. This prevents selected schools from remaining in
+the denominator with no crawl evidence when earlier selected schools have
+multiple high-confidence URLs. The Windows ZIP is rebuilt as v514 with fresh
+Mac-side package/source verification.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -158,18 +164,26 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v513.zip`, SHA256
-`92dc137bdb5c7d2ec662102367daec11ebe1ebd3d1e34f6cbd617f82f02e8fca`.
+`dist/eidp-windows-v514.zip`, SHA256
+`0a198f02a242c06bde9c9e3675e6aa597a1e5d3721c3d05bc9278a87042e0096`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=2905397b0d9f0e595b3a0f79d375c360e5eb5e43`,
+`git_commit=928f0e9f4e81bd8874e17d7a09c5b161730c1449`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v513-stage6-v513-non-windows-release-gates-20260520.json`
-(`ok=true`; package/source check is fresh, full unit suite `1890 passed`,
+`logs/win-v514-stage6-v514-non-windows-release-gates-20260520.json`
+(`ok=true`; package/source check is fresh, full unit suite `1891 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
 verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
 `dist/eidp-ocr-addon-windows-v497-smoke.zip`.
+
+v514 includes all v513 package features plus weekly selected-site count
+hardening: school-based weekly limits now expand the downstream PDF-discovery
+site-row batch to cover every crawlable site for the selected school IDs. A
+focused isolated Mac smoke after the fix crawled the previously skipped NEEC
+school IDs 1-3 and kept them as `target_form_without_year_evidence`, not strict
+FY2026/R8 successes. The package evidence is recorded in
+`docs/reports/2026-05-20-v514-weekly-selected-site-count-package.md`.
 
 v513 includes all v512 package features plus Sanko disclosure probe hardening:
 for Sanko exact school roots such as `https://www.sanko.ac.jp/chiba-med/`, the
@@ -180,7 +194,7 @@ page exists, while preserving the strict rule that stale FY2025 forms do not
 count as FY2026/R8 success. The package evidence is recorded in
 `docs/reports/2026-05-20-v513-sanko-disclosure-probe-package.md`.
 
-v513 has not completed Windows side-by-side validation because the Windows
+v514 has not completed Windows side-by-side validation because the Windows
 OpenSSH/IP blocker remains unresolved. v502 remains the latest partial Windows
 side-by-side setup/canary package, and v501 remains the latest complete
 Windows side-by-side smoke package.
@@ -345,11 +359,11 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v513.zip`
-Current v513 SHA256 sidecar:
-`dist/eidp-windows-v513.zip.sha256`
-Current v513 package build evidence:
-`dist/eidp-windows-v513.zip` was built from clean source and validated by the
+`dist/eidp-windows-v514.zip`
+Current v514 SHA256 sidecar:
+`dist/eidp-windows-v514.zip.sha256`
+Current v514 package build evidence:
+`dist/eidp-windows-v514.zip` was built from clean source and validated by the
 full non-Windows release gate. It has not completed Windows side-by-side setup
 because the Windows OpenSSH/IP blocker remains unresolved. v502 remains the
 latest partial automated Windows side-by-side setup, validation, recovery, and
@@ -360,9 +374,9 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v513 is Mac-side package/source verified, v502 is partially Windows side-by-side
+v514 is Mac-side package/source verified, v502 is partially Windows side-by-side
 validated, and v501 is the latest complete Windows-smoke proof. Current FY2026
-production-scale strict proof, v513 Windows smoke, and owner real Windows cycle
+production-scale strict proof, v514 Windows smoke, and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
