@@ -87,6 +87,9 @@ Required files to return after owner real cycle
 - latest logs\stage6-evidence-*.zip
 - latest logs\stage6-evidence-verify-*.json
 - completed eidp-operator-e2e-template.md with KPI rows and sign-off
+- ManualActionLog / JSONL audit proof from section 7: audit page status,
+  manual_action_log count, outbox count before/after flush, and action_id
+  consistency
 - Excel proof from 工程 4: output workbook path or redacted workbook metadata,
   plus the Excel consistency / Excel ready fields filled in the template
 
@@ -99,7 +102,9 @@ Required KPI / sign-off fields
 - Excel 整合性
 - ship_gate_status
 - ship_readiness_rc
+- manual_action_log 件数
 - pending JSONL outbox count after flush
+- JSONL action_id consistency
 - OCR scope decision and OCR add-on/runtime proof, if OCR is in release scope
 - release exception reason, if any
 - release exception approval record, if used

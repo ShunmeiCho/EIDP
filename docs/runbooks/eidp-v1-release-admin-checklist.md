@@ -77,6 +77,8 @@ Before merging or tagging, attach or reference:
 - v497 Windows UI smoke notes;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
+- ManualActionLog / JSONL audit proof: audit page status, `manual_action_log`
+  count, outbox count before/after flush, and action_id consistency;
 - Excel preview/export proof: output workbook path or redacted workbook
   metadata, plus consistency evidence that the Excel-ready coverage in the
   owner template matches the current DB/run metrics;
