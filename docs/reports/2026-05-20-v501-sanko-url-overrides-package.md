@@ -16,9 +16,9 @@ Sanko corporation root (`https://www.sanko.ac.jp/`), which made bounded
 FY2026/R8 discovery crawl non-target corporate disclosure material instead of
 school-specific pages.
 
-This is not v1.0 approval and not Windows side-by-side validation. The latest
-Windows side-by-side package remains v500 until v501 is copied to Windows and
-validated there.
+This is not v1.0 approval. v501 has since completed SSH-driven Windows setup,
+validation, recovery, and limit-50 canary checks, but it has not completed the
+full v500-equivalent Windows UI/Excel/OCR/Stage 6 bundle validation set.
 
 ## Change
 
@@ -41,13 +41,15 @@ validated there.
 | v501 core verifier | `logs/win-v501-stage6-v501-verify-windows-distribution-20260520.json` -> `ok=true` |
 | v501 core + OCR add-on verifier | `logs/win-v501-stage6-v501-verify-windows-distribution-with-ocr-addon-20260520.json` -> core `ok=true`, OCR add-on `ok=true` |
 | v501 full non-Windows release gate | `logs/win-v501-stage6-v501-non-windows-release-gates-20260520.json` -> `ok=true`, package/source fresh, full unit suite `1880 passed` |
+| v501 Windows partial side-by-side | `docs/reports/2026-05-20-v501-windows-partial-side-by-side-limit50.md` -> setup/validate/recovery `ok=true`, limit-50 strict/Excel-ready `10.0%`, operator-reviewable `80.0%`, `ship_gate_status=below_gate` |
 | PR #2 CI after commit | `Python quality gates` and `Ship gate contract` both `SUCCESS`; `mergeStateStatus=CLEAN` |
 
 ## Release Impact
 
-v501 supersedes v500 for Mac-side package/source verification. It should be used
-for the next Windows side-by-side validation if the team wants to measure the
-Sanko URL override effect on a fresh Windows run.
+v501 supersedes v500 for Mac-side package/source verification and now has
+partial Windows setup/validate/recovery plus limit-50 canary evidence. v500
+remains the latest package with the fuller Windows UI/Excel/OCR/Stage 6 bundle
+validation set.
 
 The FY2026/R8 ship gate remains blocked. This change improves school-site
 coverage for a high-volume Sanko failure cluster, but it does not change strict
