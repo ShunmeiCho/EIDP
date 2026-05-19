@@ -58,8 +58,8 @@ The objective is complete only when all of the following are true:
 | Tesseract OCR runtime/add-on | Local focused OCR suite returned `49 passed` for Tesseract wrapper, provider routing, OCR add-on packaging, availability, and provider-specific ingest confidence tests. However no OCR add-on ZIP is present in `dist/`, and the latest Windows OCR-runtime/image-write proof in `docs/reports/current-release-status.md` remains v384, not v497. | PARTIAL; v497 Windows OCR runtime proof pending |
 | Confidence `>= 0.70` gating | v497 non-Windows gate `logs/win-v497-stage6-v497-non-windows-release-gates-20260519.json` returned `ok=true`; validator/distribution subset passed with package/source freshness. OCR confidence propagation is code-tested for `ocr_tesseract` and `ocr_paddleocr`, but v497 has not re-proven OCR on the operator PC. | PASS for tested code path; PARTIAL for v497 Windows OCR |
 | Append-only business writes | PR #2 CI passed; local focused checks passed after the fiscal-year override `FOR UPDATE` hardening. This is code/test evidence, not owner-cycle evidence | PASS for code contract, PARTIAL for real workflow |
-| Excel template transfer | `logs/release-gate-v485-retroactive-matrix.json`: `ok=true`, `case_count=3`; this is retroactive/mature-year evidence, not FY2026 owner-cycle output | PARTIAL |
-| ManualActionLog audit | PR #2 CI passed relevant tests; owner real-cycle audit evidence remains incomplete | PARTIAL |
+| Excel template transfer | `logs/release-gate-v485-retroactive-matrix.json`: `ok=true`, `case_count=3`; this is retroactive/mature-year evidence, not FY2026 owner-cycle output. The v497 release admin checklist and owner request now require Excel preview/export proof and consistency evidence before v1.0 approval. | PARTIAL; v497 owner-cycle Excel proof pending |
+| ManualActionLog audit | PR #2 CI passed relevant tests; owner real-cycle audit evidence remains incomplete. The v497 release admin checklist and owner request now require audit page status, `manual_action_log` count, outbox count before/after flush, and action_id consistency. | PARTIAL; v497 owner-cycle audit proof pending |
 | ZIP distribution and offline setup | `dist/eidp-windows-v497.zip`, SHA256 `11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075`; `BUILD_INFO.git_dirty=false`; Mac package verifier `ok=true` | PASS for Mac-side package, PENDING for Windows side-by-side |
 | Browser UI on Windows | Latest Windows UI smoke remains v489: `logs/win-v489-stage6-v489-ui-smoke-20260519.json` returned `ok=true`, health `200/ok`, root `200`, stopped cleanly | PASS for v489, PENDING for v497 |
 | Active scheduled task safety | v489 recovery check `logs/win-v489-stage6-v489-recovery-expected-v485-20260519.json`: `ok=true`, `action_matches_expected=true`; active task stayed on v485 | PASS |
@@ -140,8 +140,11 @@ verification and source-freshness evidence are recorded in the checklist above.
 3. If OCR is required for v1.0 approval, attach and validate an OCR add-on on
    the v497 Windows root or explicitly document OCR as optional/manual fallback
    for the release scope.
-4. If an exception is approved, promote intentionally, run owner E2E with
+4. Return v497 owner-cycle Excel preview/export proof and ManualActionLog /
+   JSONL audit proof; the release admin checklist now treats both as explicit
+   v1.0 gates.
+5. If an exception is approved, promote intentionally, run owner E2E with
    evidence collection and sign-off, then consider signed `v1.0` tagging.
-5. If no exception is approved, do not promote owner sign-off as release-ready;
+6. If no exception is approved, do not promote owner sign-off as release-ready;
    keep v497 as Mac-side package evidence and v489 as Windows side-by-side
    evidence only.
