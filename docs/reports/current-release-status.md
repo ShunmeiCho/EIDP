@@ -2,8 +2,9 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v497` for Mac-side package/source verification.
-Latest Windows side-by-side smoke evidence remains `v489`.
+Latest package family: `v498` for Mac-side package/source verification and
+Windows side-by-side validation.
+Latest Windows side-by-side smoke evidence is `v498`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -35,6 +36,9 @@ in `scripts/verify_stage6_return.py`, then rebuild the Windows ZIP as v496.
 Post-v496 fixes harden the Streamlit launcher repair helper against symlink
 escape, backup overwrite, concurrent app-lock bypass, and post-write corruption;
 document v494 as superseded; and rebuild the Windows ZIP as v497.
+Post-v497 fixes package the default competition Excel template, complete v498
+Windows side-by-side validation, and keep later runbook/status edits docs-only
+against the v498 package source commit.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -93,65 +97,57 @@ evidence collection, and evidence-folder shortcuts. The active v485 DB still
 had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
-Current Mac package candidate:
-`dist/eidp-windows-v497.zip`, SHA256
-`11807eaff0b87c11c8850e2bb339294c410cb6d78d39a04254c145ebba038075`.
+Current package candidate:
+`dist/eidp-windows-v498.zip`, SHA256
+`05f7dee2b6a487a798ae3121ea55ceb5593794126ef82e18afe2925ba7262930`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=f0cdfa262dd1be0814dab021e766f3b6958eec24`,
+`git_commit=555fe014feba49e13badd66ef6fcbb434f879d26`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v497-stage6-v497-verify-windows-distribution-20260519.json`
-(`ok=true`, `wheel_count=84`, `entry_count=3104`) and
-`logs/win-v497-stage6-v497-non-windows-release-gates-20260519.json`
-(`ok=true`; package/source check is fresh, full unit suite returned `1875 passed`,
-validator/distribution unit, mypy, ruff, discovery gold, package verify, and
-demonstrated-pattern package verify returned `0`). v497 includes
-`EIDP-repair-launcher.bat`, `scripts/repair_streamlit_launcher.bat`,
-`scripts/repair_streamlit_launcher.py`, and `scripts/evaluate_strict_yield_bound.py`;
-keeps the image-pending OCR warning verifier contract; rejects packaged
-launchers that contain `streamlit.main`; and ships `.streamlit/config.toml`
-with `address = "127.0.0.1"`. It also ships the stricter Stage 6 return verifier
-that requires `--release-exception-record` when `--release-exception-reason`
-is used. The v497 repair helper additionally resolves the launcher with
-`resolve(strict=True)`, refuses symlink escapes, uses a unique non-overwriting
-backup path, acquires the EIDP app lock before applying, and re-reads the
-launcher after rewrite with rollback on validation failure. v497 has not been Windows side-by-side
-validated. The prepared side-by-side validation runbook is
-`docs/runbooks/eidp-v497-side-by-side-validation.md`, with owner-facing
-handoff text in `docs/runbooks/eidp-v497-owner-request-20260519.txt`.
-Current Windows side-by-side package candidate:
-`dist/eidp-windows-v489.zip`, SHA256
-`37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
-`BUILD_INFO.json` inside the ZIP records
-`git_commit=870d7712f4ad09307ce78648a3eff2c14eca2486`,
-`git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
-verification is recorded in
-`logs/win-v489-stage6-v489-verify-windows-distribution-20260519.json`
-(`ok=true`, `wheel_count=84`, `entry_count=3100`) and
-`logs/win-v489-stage6-v489-non-windows-release-gates-20260519.json`
-(`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
-returned `0`).
-Current v489 Windows side-by-side preflight:
+`logs/win-v498-stage6-v498-verify-windows-distribution-20260519.json`
+(`ok=true`, `wheel_count=84`, `entry_count=3105`) and
+`logs/win-v498-stage6-v498-non-windows-release-gates-20260519.json`
+(`ok=true`; package/source check is fresh, validator/distribution unit, mypy,
+ruff, discovery gold, package verify, and demonstrated-pattern package verify
+returned `0`). Later docs-only commits use the
+`--allow-docs-only-stale-package` gate with `allowed_stale_reason=docs_only`;
+use the PR body for the latest exact docs-only gate artifact.
+
+v498 includes `EIDP-repair-launcher.bat`,
+`scripts/repair_streamlit_launcher.bat`, `scripts/repair_streamlit_launcher.py`,
+`scripts/evaluate_strict_yield_bound.py`, the image-pending OCR warning
+verifier contract, packaged `.streamlit/config.toml` with
+`address = "127.0.0.1"`, the stricter Stage 6 return verifier requiring
+`--release-exception-record` when `--release-exception-reason` is used, the
+hardened launcher repair helper, and the packaged default competition Excel
+template required by `export-competition-excel`.
+
+Current v498 Windows side-by-side validation:
 the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
 the Mac sidecar, and the package expanded to
-`C:\Users\cyo20\EIDP-v489-870d771`. Setup was run with
-`EIDP_REGISTER_WEEKLY_TASK=0`; `scripts\first_setup.bat` printed that Task
-Scheduler registration was skipped, exited `0`, and
-`logs/win-v489-stage6-v489-validate-after-setup-20260519.json` returned
-`ok=true`, `errors=[]`, `warnings=[]`, `school_count=2418`,
-`school_fiscal_year_status_count=2418`, `sqlite_integrity_check=ok`, and
-`build_dirty=false`. The recovery check
-`logs/win-v489-stage6-v489-recovery-expected-v485-20260519.json` returned
-`ok=true`, `recommendations=[]`, and `action_matches_expected=true` for the
-v485 production action. Therefore v489 is validated side-by-side without
-promoting the active weekly task.
-Current v489 Windows UI smoke:
-`logs/win-v489-stage6-v489-ui-smoke-20260519.json` returned `ok=true` after
-starting Streamlit directly from `C:\Users\cyo20\EIDP-v489-870d771` on
-`127.0.0.1:8516`. The smoke captured health `200/ok`, root page `200`, response
-length `5381`, `stopped=true`, and `listener_after_stop=false`, so the
-side-by-side browser shell is proven without leaving a background listener or
-changing the active Task Scheduler lane.
+`C:\Users\cyo20\EIDP-v498-555fe01`. Setup and validation are recorded in
+`logs/win-v498-stage6-v498-validate-after-setup-20260519.json` (`ok=true`,
+`school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`) and in a fresh env0 setup with
+`EIDP_REGISTER_WEEKLY_TASK=0`:
+`logs/win-v498-stage6-v498-first-setup-env0-20260519.log`,
+`logs/win-v498-stage6-v498-env0-validate-after-setup-20260519.json`, and
+`logs/win-v498-stage6-v498-env0-recovery-expected-v485-20260519.json`.
+OCR runtime proof is
+`logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json` (`ok=true`,
+Tesseract `5.4.0.20240606`, `jpn`, `jpn_vert`). UI smoke is
+`logs/win-v498-stage6-v498-ui-smoke-20260519.json` (`ok=true`, port `8519`,
+health `200/ok`, root `200`). Weekly canary is
+`logs/win-v498-stage6-v498-weekly-canary-limit10-20260519.json` (`ok=true`,
+`ship_gate_status=below_gate`), and Excel smoke is
+`logs/win-v498-stage6-v498-excel-summary-20260519.json` (`ok=true`). Stage 6
+bundle proof is `logs/win-v498-stage6-v498-stage6-evidence-20260519-123728.zip`
+with SHA256 `9d51bfce550dd1d4dc12843b19ecb0a99e5b06cdcbca655cf4aa1088b02d8199`,
+and verifier proof is
+`logs/win-v498-stage6-v498-stage6-evidence-verify-20260519-213747.json`
+(`ok=true`). The active scheduled task was restored to v485 and verified by
+`logs/win-v498-stage6-v498-recovery-expected-v485-after-restore-20260519.json`
+(`ok=true`, `action_matches_expected=true`).
 Post-status Mac-side strict-yield replay:
 `docs/reports/2026-05-18-fy2025-strict-yield-replay.md`. The current local
 strict metric / parser / targeted discovery changes described there were an
@@ -159,21 +155,21 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current Windows side-by-side support package:
-`dist/eidp-windows-v489.zip`
-Current v489 SHA256 sidecar:
-`dist/eidp-windows-v489.zip.sha256`
-Current v489 package build evidence:
-`dist/eidp-windows-v489.zip` was built from clean source and validated on both
+`dist/eidp-windows-v498.zip`
+Current v498 SHA256 sidecar:
+`dist/eidp-windows-v498.zip.sha256`
+Current v498 package build evidence:
+`dist/eidp-windows-v498.zip` was built from clean source and validated on both
 Mac and Windows side-by-side. It has not been promoted to the active weekly
 Task Scheduler lane; the active production action remains v485 until an
 explicit promotion decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/2026-05-19-final-objective-audit-v497.md` is `NOT COMPLETE`:
-v497 is Mac-side package/source verified, v489 remains the latest Windows
-side-by-side smoke evidence, and current FY2026 production-scale strict proof
-plus owner real Windows cycle evidence remain incomplete. To continue,
+`docs/reports/2026-05-19-final-objective-audit-v498.md` is `NOT COMPLETE`:
+v498 is Mac-side package/source verified and Windows side-by-side validated,
+but current FY2026 production-scale strict proof plus owner real Windows cycle
+evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
