@@ -55,6 +55,7 @@ evidence or Stage 6 return verification.
 | v512 bug-report audit package report | `docs/reports/2026-05-20-v512-bug-report-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | v513 Sanko disclosure probe package report | `docs/reports/2026-05-20-v513-sanko-disclosure-probe-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | v514 weekly selected-site count package report | `docs/reports/2026-05-20-v514-weekly-selected-site-count-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
+| v514 Mac continuation canary | `docs/reports/2026-05-20-v514-mac-continuation-canary.md` | FY2026/R8 strict `2/50 (4.0%)`, operator-reviewable `47/50 (94.0%)`, `ship_gate_status=below_gate` |
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 

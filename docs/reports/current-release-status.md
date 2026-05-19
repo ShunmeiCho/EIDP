@@ -105,6 +105,14 @@ site rows as selected schools. This prevents selected schools from remaining in
 the denominator with no crawl evidence when earlier selected schools have
 multiple high-confidence URLs. The Windows ZIP is rebuilt as v514 with fresh
 Mac-side package/source verification.
+The follow-up v514 Mac continuation canary in
+`docs/reports/2026-05-20-v514-mac-continuation-canary.md` copied the structured
+v513 isolated database into `_temp/v514-mac-limit50-from-v513` and ran a bounded
+limit-50 current-FY canary. It crawled 56 site rows for 50 selected schools,
+found 50 candidate PDFs, downloaded 0 new strict PDFs, reported strict
+`2/50 (4.0%)`, operator-reviewable `47/50 (94.0%)`, and kept
+`ship_gate_status=below_gate`. A bounded same-domain `2025 -> 2026` probe over
+the 11 FY2025 mismatch target PDFs found no usable FY2026/R8 PDF URL.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
