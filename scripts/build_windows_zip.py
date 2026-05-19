@@ -371,6 +371,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
       EIDP-stage6-evidence.bat    root-level Stage 6 evidence bundle launcher
       EIDP-stage6-verify-evidence.bat root-level Stage 6 evidence verifier
       EIDP-stage6-recovery.bat    root-level Stage 6 recovery launcher
+      EIDP-repair-launcher.bat    root-level Streamlit launcher repair helper
       wheelhouse/                  every accepted wheel
       src/eidp/...                 importable source layout
       src/sitecustomize.py          Windows startup compatibility hook
@@ -404,6 +405,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
         "EIDP-stage6-evidence.bat",
         "EIDP-stage6-verify-evidence.bat",
         "EIDP-stage6-recovery.bat",
+        "EIDP-repair-launcher.bat",
     ):
         launcher = repo_root / name
         if launcher.is_file():

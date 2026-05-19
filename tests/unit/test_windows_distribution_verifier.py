@@ -170,6 +170,7 @@ def _core_entries() -> dict[str, bytes | str]:
             encoding="utf-8"
         ),
         "EIDP-stage6-recovery.bat": (REPO_ROOT / "EIDP-stage6-recovery.bat").read_text(encoding="utf-8"),
+        "EIDP-repair-launcher.bat": (REPO_ROOT / "EIDP-repair-launcher.bat").read_text(encoding="utf-8"),
         "README.md": "# EIDP\n",
         "requirements-windows.txt": "structlog\njsonschema>=4.0,<5.0\n",
         "pyproject.toml": "[project]\nname='eidp'\n",

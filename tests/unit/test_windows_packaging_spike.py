@@ -362,7 +362,7 @@ def bat_files() -> dict[str, str]:
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
         "collect_stage6_evidence.bat", "collect_bug_report.bat", "verify_stage6_evidence.bat",
-        "stage6_recovery_check.bat", "stage6_residual_cleanup.bat",
+        "stage6_recovery_check.bat", "stage6_residual_cleanup.bat", "repair_streamlit_launcher.bat",
     ):
         path = SCRIPTS_DIR / name
         out[name] = path.read_text(encoding="utf-8")
@@ -374,7 +374,7 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
         "first_setup.bat", "launch.bat", "weekly_run.bat",
         "diagnose.bat", "uninstall.bat", "validate_install.bat", "bootstrap_pdfs.bat",
         "collect_stage6_evidence.bat", "collect_bug_report.bat", "verify_stage6_evidence.bat",
-        "stage6_recovery_check.bat", "stage6_residual_cleanup.bat",
+        "stage6_recovery_check.bat", "stage6_residual_cleanup.bat", "repair_streamlit_launcher.bat",
     }
 
 
@@ -391,6 +391,7 @@ def test_bat_skeletons_all_present(bat_files: dict[str, str]):
         "verify_stage6_evidence.bat",
         "stage6_recovery_check.bat",
         "stage6_residual_cleanup.bat",
+        "repair_streamlit_launcher.bat",
     ],
 )
 def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
@@ -416,6 +417,7 @@ def test_bat_anchors_cwd_to_app_root(bat_files: dict[str, str], name: str):
         "verify_stage6_evidence.bat",
         "stage6_recovery_check.bat",
         "stage6_residual_cleanup.bat",
+        "repair_streamlit_launcher.bat",
     ],
 )
 def test_python_bat_forces_utf8(bat_files: dict[str, str], name: str):
@@ -890,6 +892,16 @@ def test_stage6_residual_cleanup_bat_runs_packaged_helper(bat_files: dict[str, s
     assert "endlocal & exit /b %RC%" in body
 
 
+def test_repair_streamlit_launcher_bat_runs_packaged_helper(bat_files: dict[str, str]):
+    body = bat_files["repair_streamlit_launcher.bat"]
+    assert "repair_streamlit_launcher.py" in body
+    assert "dry-run unless --apply" in body
+    assert ".venv\\Scripts\\python.exe" in body
+    assert "runtime\\python\\python.exe" in body
+    assert 'set "RC=%ERRORLEVEL%"' in body
+    assert "endlocal & exit /b %RC%" in body
+
+
 def test_collect_stage6_evidence_bat_runs_packaged_helper(bat_files: dict[str, str]):
     body = bat_files["collect_stage6_evidence.bat"]
     assert "collect_stage6_evidence.py" in body
@@ -1060,6 +1072,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "EIDP-stage6-evidence.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-stage6-verify-evidence.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "EIDP-stage6-recovery.bat").write_text("@echo off", encoding="utf-8")
+    (fake_repo / "EIDP-repair-launcher.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts").mkdir()
     (fake_repo / "scripts" / "first_setup.bat").write_text("@echo off", encoding="utf-8")
     (fake_repo / "scripts" / "diagnose.bat").write_text("@echo off", encoding="utf-8")
@@ -1213,6 +1226,10 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "EIDP-stage6-recovery.bat" in arcs, (
         "root-level Stage 6 recovery launcher must be in the Windows ZIP so operators "
         "can collect SSH recovery evidence without browsing into scripts/"
+    )
+    assert "EIDP-repair-launcher.bat" in arcs, (
+        "root-level launcher repair helper must be in the Windows ZIP so operators "
+        "can fix a stale Streamlit entrypoint without browsing into scripts/"
     )
     assert ".streamlit/config.toml" in arcs, (
         "Streamlit config must ship at app root to keep the operator UI headless "
