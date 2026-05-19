@@ -98,6 +98,25 @@ ACTION_TYPES: tuple[str, ...] = (
     "fiscal_year_override",
     "r8_override",  # legacy Sprint 8.x rows; new writes use fiscal_year_override.
     "dept_change",
+    "operator_settings_saved",
+    "excel_preview_generated",
+    "excel_export_generated",
+    "school_year_tasks_rebuilt",
+    "operator_url_submitted",
+    "operator_url_bulk_imported",
+    "url_auto_discovery",
+    "url_candidate_proposed",
+    "url_candidate_manual_required",
+    "url_candidate_approved",
+    "url_candidate_rejected",
+    "prefecture_remark_approved",
+    "prefecture_remark_rejected",
+    "school_code_approved",
+    "school_code_corrected",
+    "school_code_rejected",
+    "school_code_skipped",
+    "dept_alias_approved",
+    "dept_change_void",
 )
 
 # Same idea for target_table.
@@ -108,6 +127,12 @@ TARGET_TABLES: tuple[str, ...] = (
     "department_change",
     "support_recipient",
     "school_year_status",
+    "school_fiscal_year_status",
+    "school",
+    "review_item",
+    "school_site",
+    "excel_export",
+    "operator_settings",
 )
 
 
