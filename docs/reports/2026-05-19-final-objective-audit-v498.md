@@ -44,10 +44,10 @@ The objective is complete only when all of the following are true:
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
-| 47 prefecture official-list seeds | `logs/win-v498-stage6-v498-verify-windows-distribution-20260519.json`: verifier `ok=true`; package verifier reports `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47` | PASS |
+| 47 prefecture official-list seeds | `logs/win-v498-stage6-v498-verify-windows-distribution-20260519.json`: verifier `ok=true`; package verifier reports `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`. Focused discovery suite passed in `logs/win-v498-stage6-v498-discovery-strict-tests-55462d6-20260519.txt` (`398 passed`), covering prefecture aggregation/bootstrap, discovery gold set, and target-year discovery contracts | PASS |
 | 1,700+ specialty-school scope | `logs/win-v498-stage6-v498-validate-after-setup-20260519.json`: `school_count=2418`, `school_fiscal_year_status_count=2418`, SQLite integrity `ok` | PASS |
 | Current rolling FY is FY2026/Reiwa 8 | `logs/win-v498-stage6-v498-last-run-after-weekly-canary-limit10-20260519.json`: `current_fy=2026`, `dry_run=false` | PASS |
-| Strict current-FY success excludes old-year fallback | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json` and `logs/win-v490-stage6-v490-fy2026-strict-yield-upper-bound-reeval-20260519.json` keep old-year fallback out of strict FY2026 success | PASS for contract, FAIL for yield |
+| Strict current-FY success excludes old-year fallback | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json` and `logs/win-v490-stage6-v490-fy2026-strict-yield-upper-bound-reeval-20260519.json` keep old-year fallback out of strict FY2026 success. `logs/win-v498-stage6-v498-discovery-strict-tests-55462d6-20260519.txt` (`398 passed`) covers strict PDF discovery, gold-set evaluation, weekly target-year discovery, and strict-yield bound/gap analysis | PASS for contract, FAIL for yield |
 | Current FY2026 strict yield `>= 60%` | Upper-bound proof remains `39.3%`; v498 canary denominator 10 produced strict/Excel-ready `50.0%` and `ship_gate_status=below_gate` | FAIL |
 | Mature FY2025 strict proof for exception path | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: `ok=true`, FY2025 denominator `1000`, strict `60.0%`, Excel-ready `60.0%`, manual workload `20.2%` | PASS for exception input only |
 | PDF extraction stack packaged | v498 package verifier `ok=true`, `has_runtime=true`, `wheel_count=84`, `entry_count=3105`; focused PDF/OCR stack suite passed in `logs/win-v498-stage6-v498-pdf-ocr-stack-tests-58a72c4-20260519.txt` (`130 passed`) | PASS |
@@ -82,6 +82,10 @@ The objective is complete only when all of the following are true:
 - `run_non_windows_release_gates.py` proves Mac-side validator tests, type/lint
   checks, discovery gold-set checks, package verification, and package/source
   freshness. It does not prove active-lane promotion or production KPI success.
+- The focused discovery/strict suite proves code-level contracts for the 47
+  prefecture seed path, strict target-year PDF discovery, gold-set evaluation,
+  weekly target-year discovery, and strict-yield bound/gap analysis. It does
+  not make the current FY2026/R8 yield pass.
 - The v498 Windows side-by-side proof now covers installation, OCR runtime,
   Streamlit health, bounded weekly execution, Excel output, and Stage 6 bundle
   verification. It is still a bounded validation, not owner approval.
