@@ -142,6 +142,7 @@ if ($actual -ne $expected) { throw "SHA256 mismatch: $actual" }
 echo $LASTEXITCODE
 .\scripts\validate_install.bat --after-setup
 echo $LASTEXITCODE
+Select-String -Path .\scripts\launch.bat -Pattern "streamlit.main| -m streamlit run"
 .\EIDP-start.bat
 ```
 
@@ -233,6 +234,7 @@ The process was force-stopped after the health proof; launcher exit -1 is a stop
 | master import | 学校マスタが取り込まれる | pass / fail | |
 | 年度タスク初期生成 | `school_fiscal_year_status` に行がある | pass / fail | |
 | Task Scheduler | `EIDP Weekly Run` が登録される | pass / fail | |
+| launcher entrypoint | `streamlit.main` が無く、`-m streamlit run` がある | pass / fail | |
 | `launch.bat` | Streamlit 起動 | pass / fail | |
 | Mac tunnel health | `http://127.0.0.1:18501/_stcore/health` が `ok` | pass / fail / n/a | |
 | `学校別タスク` 初期表示 | 業務員クイックの最初のページとして表示 | pass / fail | |

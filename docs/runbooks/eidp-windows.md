@@ -644,6 +644,24 @@ Get-ChildItem C:\workspace\EIDP -Recurse | Unblock-File
 |------|------|------|
 | `launch.bat` を二重起動すると 2 つのプロセスが port 8501 を取り合う | Win cmd では `&` での連結が POSIX シェルと挙動が異なる | 既存 streamlit プロセスを停止: `Get-Process -Name python | Stop-Process -Force` してから再起動 |
 | `localhost:8501` に繋がらない、`192.168.0.x:8501` には繋がる | `--server.headless true` で起動した場合 IPv6 / loopback 解決問題 | ブラウザで `http://localhost:8501` を試した後、駄目なら `http://127.0.0.1:8501` |
+| `No module named streamlit.main; 'streamlit' is a package and cannot be directly executed` で `EIDP-start.bat` が停止する | 展開済み root の `scripts\launch.bat` が古い `-m streamlit.main` entrypoint を呼んでいる。v492 以降の ZIP は distribution verifier でこの launcher を reject するが、既存展開済み lane では残ることがある | v492 以降なら root で `.\EIDP-repair-launcher.bat --apply --json` を実行し、`.bak` が作られたことを確認してから `EIDP-start.bat` を再実行する。helper が無い古い lane は下の PowerShell hotfix を使う |
+
+古い lane に repair helper が無い場合の最小 hotfix:
+
+```powershell
+$root = "$env:USERPROFILE\EIDP-v485-70e3db4"
+$launcher = "$root\scripts\launch.bat"
+Select-String -Path $launcher -Pattern "streamlit.main| -m streamlit run"
+Copy-Item $launcher "$launcher.pre-streamlit-main-fix.bak" -Force
+$body = [IO.File]::ReadAllText($launcher, [Text.Encoding]::UTF8)
+$body = $body.Replace("-m streamlit.main run", "-m streamlit run").Replace("-m streamlit.main", "-m streamlit run")
+[IO.File]::WriteAllText($launcher, $body, [Text.UTF8Encoding]::new($false))
+Select-String -Path $launcher -Pattern "streamlit.main| -m streamlit run"
+```
+
+最後の `Select-String` で `streamlit.main` が残らず、`-m streamlit run` だけが
+見えることを確認する。この hotfix は `launch.bat` だけを修正し、DB や
+Task Scheduler action は変更しない。
 
 ### 14.5 SSH 鍵認証で接続できない（管理者アカウント）
 
