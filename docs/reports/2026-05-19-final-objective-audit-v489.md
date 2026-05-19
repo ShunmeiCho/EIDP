@@ -54,7 +54,7 @@ The objective is complete only when all of the following are true:
 | ZIP distribution and offline setup | v489 ZIP SHA256 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`; `BUILD_INFO.git_commit=870d771`, `git_dirty=false`; Windows clean setup `rc=0`; validator `ok=true` | PASS |
 | Browser UI on Windows | v489 side-by-side UI smoke `logs/win-v489-stage6-v489-ui-smoke-20260519.json`: health `200/ok`, root page `200`, body length `5381`, process stopped, and `listener_after_stop=false` | PASS |
 | Active scheduled task safety | v489 setup was run with `EIDP_REGISTER_WEEKLY_TASK=0`; recovery check `logs/win-v489-stage6-v489-recovery-expected-v485-20260519.json` returned `ok=true`, `action_matches_expected=true`; active task stayed on v485 | PASS |
-| PR mergeability | Last fully checked PR #2 head before this audit update was `7ddc595`; GitHub `Python quality gates` and `Ship gate contract` both succeeded with `mergeStateStatus=CLEAN`. Any newer docs-only status commit must let required checks rerun before merge. | PASS |
+| PR mergeability | PR #1 is closed as superseded, and PR #2 is the single active landing surface. Last fully checked PR #2 head before this audit update was `fc22941`; GitHub `Python quality gates` and `Ship gate contract` both succeeded with `mergeStateStatus=CLEAN`. Any newer docs-only status commit must let required checks rerun before merge. | PASS |
 | Owner real Windows cycle | Latest owner evidence remains incomplete; active v485 DB previously had `school_site_count=0` and `document_count=0`; owner must run initial bootstrap before weekly cycle | BLOCKED |
 | v1.0 tag / main merge | Not allowed while FY2026 strict proof and owner cycle are incomplete | BLOCKED |
 

@@ -20,11 +20,17 @@ the FY2026 strict-yield no-go report, the side-by-side setup guard, the owner
 E2E preflight checklist, and the image-pending OCR warning packaging contract
 through the current `sprint8-handoff-finalize` head.
 PR merge-chain status:
-PR #1 (`backup-2026-05-05`) is an ancestor of PR #2 and is superseded by
-PR #2. Last fully checked PR #2 head before this status update was `7ddc595`
-with `mergeStateStatus=CLEAN`; GitHub checks `Python quality gates` and
-`Ship gate contract` both passed for that head. Any newer status-only or
-packaging-contract commit must let those required checks rerun before merge.
+PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
+separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
+`ec2ec94`, PR #1 head at `e3becc4`, and `e3becc4` as an ancestor of PR #2
+head `fc2294155c05b2a03de7f08f19184293e0d461e8`. PR #2 is now the single
+active landing surface; its body has been updated to remove the old
+"Depends on PR #1" statement and to keep the FY2026 release blocker explicit.
+Before this status-file update, PR #2 had `mergeStateStatus=CLEAN`; GitHub
+checks `Python quality gates` and `Ship gate contract` both passed. `main` and
+`sprint8-handoff-finalize` branch protection require both checks and disallow
+force-pushes and branch deletion. Any newer status-only commit must let the
+required checks rerun before merge.
 Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
 rebuild is:
 `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json`.
