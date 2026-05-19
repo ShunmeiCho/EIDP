@@ -2,9 +2,12 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v501` for Mac-side package/source verification and
-Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
-runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification.
+Latest package family: `v502` for Mac-side package/source verification and
+partial Windows side-by-side setup, validate, recovery, and limit-50 canary
+evidence. `v501` remains the latest package with complete Windows side-by-side
+smoke evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
+limit-50 canary, and Stage 6 bundle verification, until v502 full smoke
+finishes.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -47,7 +50,13 @@ school URL overrides from the v500 limit-50 RCA, then rebuild the Windows ZIP as
 v501 with fresh package/source verification. v501 has since completed Windows
 setup, validate, recovery, OCR runtime validation, UI smoke, Excel smoke, Stage
 6 evidence-bundle verification, and a limit-50 canary; it replaces v500 as the
-latest Windows side-by-side smoke package.
+latest complete Windows side-by-side smoke package. Post-v501 fixes add 2
+residual live-verified Sanko exact school URL overrides from the v501 limit-50
+RCA and rebuild the Windows ZIP as v502 with fresh package/source verification
+and partial Windows side-by-side evidence. v502 removes the residual
+`non_target_candidates_only` RCA bucket, but its full Windows smoke is still
+pending because the Windows OpenSSH service began resetting new SSH sessions
+during the follow-up smoke.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -107,22 +116,52 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v501.zip`, SHA256
-`a301e4dbc295f5bfd3dc11bc4778db1887f2b8a55dda65f16708e9d8abff3f83`.
+`dist/eidp-windows-v502.zip`, SHA256
+`6764d4ee67dfd4db42272e87cbebb1b3c63c743d8388004b607b9b8590b41c05`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=d2fa01d4f060e803f173ecae59bfb0867dbe3afd`,
+`git_commit=dd1524c48240890a8260795b54259342d7648867`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v501-stage6-v501-non-windows-release-gates-20260520.json`
+`logs/win-v502-stage6-v502-non-windows-release-gates-20260520.json`
 (`ok=true`; package/source check is fresh, full unit suite `1880 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). Core and OCR add-on package
 verification are recorded in
-`logs/win-v501-stage6-v501-verify-windows-distribution-20260520.json` and
-`logs/win-v501-stage6-v501-verify-windows-distribution-with-ocr-addon-20260520.json`
+`logs/win-v502-stage6-v502-verify-windows-distribution-20260520.json` and
+`logs/win-v502-stage6-v502-verify-windows-distribution-with-ocr-addon-20260520.json`
 (`ok=true`). Later docs-only commits use the
 `--allow-docs-only-stale-package` gate with `allowed_stale_reason=docs_only`;
 use the PR body for the latest exact docs-only gate artifact.
+
+v502 includes all v501 package features plus the v501 RCA follow-up residual
+Sanko exact school URL overrides for the two remaining corporation-root cases.
+The follow-up package and partial Windows evidence is recorded in
+`docs/reports/2026-05-20-v502-residual-sanko-overrides-package.md` and
+`docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md`.
+
+Current v502 Windows partial side-by-side validation:
+the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
+the Mac sidecar, and the package expanded to
+`C:\Users\cyo20\EIDP-v502-dd1524c-env0`. Setup and validation are recorded in
+`logs/win-v502-stage6-v502-first-setup-env0-20260520.log`,
+`logs/win-v502-stage6-v502-env0-validate-after-setup-20260520.json`
+(`ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`, package commit
+`dd1524c48240890a8260795b54259342d7648867`), and
+`logs/win-v502-stage6-v502-env0-recovery-expected-v485-clean-20260520.json`
+(`ok=true`, `action_matches_expected=true`). A fresh FY2026/R8 limit-50
+canary is recorded in
+`logs/win-v502-stage6-v502-last-run-after-weekly-canary-limit50-20260520.json`:
+`status=success`, strict/Excel-ready yield `10.0%`,
+operator-reviewable yield `84.0%`, and `ship_gate_status=below_gate`.
+The post-canary recovery probe is
+`logs/win-v502-stage6-v502-recovery-probe-after-limit50-canary-clean-20260520.json`
+(`ok=true`, active task still v485). The v502 limit-50 RCA no longer has a
+`non_target_candidates_only` bucket; its 20 planned RCA items are
+`8 no_pdf_candidates`, `8 publication_lag_or_old_target_pdf`, and
+`4 target_form_without_year_evidence`. v502 full Windows smoke remains pending
+because the Windows OpenSSH service began resetting new SSH sessions before UI
+smoke and Stage 6 evidence-bundle verification completed.
 
 v501 includes all v500 package features plus the v500 RCA follow-up Sanko exact
 school URL overrides for medical-secretary and resort/sports schools that were
@@ -169,7 +208,7 @@ verifier proof is
 (`ok=true`). The full v501 Windows-smoke report is
 `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md`.
 
-v500/v501 include `EIDP-repair-launcher.bat`,
+v500/v501/v502 include `EIDP-repair-launcher.bat`,
 `scripts/repair_streamlit_launcher.bat`, `scripts/repair_streamlit_launcher.py`,
 `scripts/evaluate_strict_yield_bound.py`, the image-pending OCR warning
 verifier contract, packaged `.streamlit/config.toml` with
