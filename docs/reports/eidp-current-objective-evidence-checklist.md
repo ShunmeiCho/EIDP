@@ -7,7 +7,7 @@ Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
 objective. It intentionally replaces the older historical v464/v460 narrative
-with the current v503/v502/v501 state.
+with the current v504/v502/v501 state.
 
 ## Objective Restated
 
@@ -33,15 +33,15 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Current package candidate: `dist/eidp-windows-v503.zip`
+- Current package candidate: `dist/eidp-windows-v504.zip`
 - Package source commit from ZIP `BUILD_INFO.json`:
-  `990060129da1a118835a4a2ab64ef8c081f4c336`
+  `7ad57cc39b433164bcb8d92facf07184ef7331d6`
 - Package SHA256:
-  `66a118d2ab16d2f314c25e00c7e0acbead288f0755e67a7f8ae24b3e93b8c52c`
+  `9329630e7026c3e568bf78643f4a0e6e0941d4d695030dfdb362e1dc2f20439f`
 - Latest complete Windows side-by-side smoke: v501
 - Latest partial Windows side-by-side setup/canary: v502
-- Latest source/package audit-surface fix: v503 settings-save audit
-- Release verdict: blocked by FY2026/R8 strict yield, missing v503 Windows smoke,
+- Latest source/package audit-surface fix: v504 Excel preview audit
+- Release verdict: blocked by FY2026/R8 strict yield, missing v504 Windows smoke,
   missing owner real Windows cycle, and unapproved `publication_lag` exception.
 
 Passing unit tests, package verification, and a complete Windows smoke are
@@ -52,32 +52,33 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 
 | Requirement | Evidence checked | Status |
 | --- | --- | --- |
-| 47 prefecture official-list seeds are packaged and usable | `logs/win-v503-stage6-v503-non-windows-release-gates-20260520.json`, result `package_verify` stdout: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_school_rows_total=2148` | PASS |
-| 1,700+ vocational-school scope | v502 Windows setup validator `logs/win-v502-stage6-v502-env0-validate-after-setup-20260520.json`: `.details.school_count=2418`, `.details.school_fiscal_year_status_count=2418`, `.details.sqlite_integrity_check="ok"`; v503 Windows setup pending | PASS via v502, v503 pending |
+| 47 prefecture official-list seeds are packaged and usable | `logs/win-v504-stage6-v504-non-windows-release-gates-20260520.json`, result `package_verify` stdout: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_school_rows_total=2148` | PASS |
+| 1,700+ vocational-school scope | v502 Windows setup validator `logs/win-v502-stage6-v502-env0-validate-after-setup-20260520.json`: `.details.school_count=2418`, `.details.school_fiscal_year_status_count=2418`, `.details.sqlite_integrity_check="ok"`; v504 Windows setup pending | PASS via v502, v504 pending |
 | Current rolling FY is FY2026/Reiwa 8 | `logs/win-v502-stage6-v502-last-run-after-weekly-canary-limit50-20260520.json`: `current_fy=2026`, `status=success` | PASS |
 | Strict mode excludes old-year fallback from success | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json` and v502 `ship_gate_status=below_gate` preserve old-year exclusion instead of counting stale target forms as success | PASS for contract, FAIL for release yield |
 | Current FY2026 strict target-PDF/Excel-ready yield is `>= 60%` | v502 limit-50 canary: strict/Excel-ready `10.0%`; production-scale upper-bound proof: max possible `39.3%` after 607/1000 schools | FAIL |
 | Operator manual workload is `<= 30%` for current FY | v502 limit-50 operator-reviewable `84.0%` implies reviewable evidence exists, but strict Excel-ready success is still `10.0%`; owner real-cycle workload proof is missing | FAIL |
 | Mature-year exception input exists | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: FY2025 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`, manual workload `20.2%` | PASS as exception input only |
 | Publication-lag exception is approved if release uses the mature-year lane | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED` | BLOCKED |
-| PDF extraction stack is packaged | v503 package verifier stdout: `has_runtime=True`, `wheel_count=84`; v501 OCR runtime proof `logs/win-v501-stage6-v501-validate-ocr-runtime-20260520.json` is `ok=true` with Tesseract `5.4.0.20240606`, `jpn`, and `jpn_vert` | PASS for package, v503 Windows OCR runtime pending |
-| Confidence `>= 0.70` gate exists | v503 full unit suite in release gate: `1882 passed`; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
-| `DepartmentYearly` and `SupportRecipient` append-only paths exist | v502 install validator confirms required tables including `department_yearly`, `support_recipient`, and `manual_action_log`; v503 unit suite is green | PASS for code/schema, PARTIAL for real operator workflow |
+| PDF extraction stack is packaged | v504 package verifier stdout: `has_runtime=True`, `wheel_count=84`; v501 OCR runtime proof `logs/win-v501-stage6-v501-validate-ocr-runtime-20260520.json` is `ok=true` with Tesseract `5.4.0.20240606`, `jpn`, and `jpn_vert` | PASS for package, v504 Windows OCR runtime pending |
+| Confidence `>= 0.70` gate exists | v504 full unit suite in release gate: `1884 passed`; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
+| `DepartmentYearly` and `SupportRecipient` append-only paths exist | v502 install validator confirms required tables including `department_yearly`, `support_recipient`, and `manual_action_log`; v504 unit suite is green | PASS for code/schema, PARTIAL for real operator workflow |
 | Excel transfer works | v501 full smoke: `logs/win-v501-stage6-v501-excel-summary-20260520.json` is `ok=true`; v502 Excel smoke did not finish because Windows SSH reset new sessions | PASS via v501, v502 pending |
-| Operator actions are auditable in `ManualActionLog` | v502 install validator confirms the table; v503 adds `operator_settings_saved` audit coverage for the settings page with API-key redaction; current owner real-cycle audit counts and sign-off are missing | PARTIAL, improved in v503 |
+| Operator actions are auditable in `ManualActionLog` | v502 install validator confirms the table; v503 adds `operator_settings_saved` audit coverage for the settings page with API-key redaction; v504 adds `excel_preview_generated` audit coverage for Excel preview generation; current owner real-cycle audit counts and sign-off are missing | PARTIAL, improved in v504 |
 | Windows ZIP double-click setup works | v502 setup and validation: `logs/win-v502-stage6-v502-first-setup-env0-20260520.log` and `logs/win-v502-stage6-v502-env0-validate-after-setup-20260520.json` with `ok=true` | PASS |
 | Browser UI runs offline on Windows | v501 UI smoke: `logs/win-v501-stage6-v501-ui-smoke-20260520.json` is `ok=true`; v502 UI smoke is pending after Windows SSH instability | PASS via v501, v502 pending |
 | Active scheduled-task safety is preserved | `logs/win-v502-stage6-v502-recovery-probe-after-limit50-canary-clean-20260520.json`: `ok=true`, active weekly task still points to the expected v485 lane | PASS |
 | Stage 6 evidence bundle and verifier pass | v501 evidence ZIP and verifier: `logs/win-v501-stage6-v501-stage6-evidence-20260519-182045.zip` and `logs/win-v501-stage6-v501-stage6-evidence-verify-20260520-032045.json` with `ok=true`; v502 bundle is pending | PASS via v501, v502 pending |
 | v502 RCA is current | `docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md`: 20 RCA items across 45 candidates, buckets `8 no_pdf_candidates`, `8 publication_lag_or_old_target_pdf`, `4 target_form_without_year_evidence`; no residual `non_target_candidates_only` bucket | PASS for RCA, FAIL for yield |
 | Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present | BLOCKED |
-| PR merge and v1.0 tag are allowed | FY2026 strict proof, v503 Windows smoke, owner real cycle, and exception approval are incomplete | BLOCKED |
+| PR merge and v1.0 tag are allowed | FY2026 strict proof, v504 Windows smoke, owner real cycle, and exception approval are incomplete | BLOCKED |
 
 ## Fresh Local Verification In This Audit Pass
 
 - `uv run python -m eidp.cli eval-discovery-gold --predictions data/discovery-gold-set/expected-predictions.jsonl --json --fail-on-regression` returned 44 exact matches and 0 failures.
 - `uv run pytest tests/unit/test_discovery_gold_set.py tests/unit/test_discovery_gold_set_eval.py tests/unit/test_cli_discovery_gold_set.py tests/unit/test_cli_eval_discovery_gold.py -q` returned `36 passed`.
 - v503 settings-audit focused verification is recorded in `docs/reports/2026-05-20-v503-settings-audit-package.md`.
+- v504 Excel-preview audit focused verification is recorded in `docs/reports/2026-05-20-v504-excel-preview-audit-package.md`.
 
 These checks validate the gold-set contract used by the package verifier. They
 do not remove the FY2026/R8 release blocker.
@@ -85,7 +86,7 @@ do not remove the FY2026/R8 release blocker.
 ## Required Next Actions
 
 1. Restore Windows OpenSSH/exec access or provide the current Windows IPv4.
-2. Complete v503 transfer/setup, OCR runtime, UI smoke, Excel smoke, Stage 6 evidence bundle,
+2. Complete v504 transfer/setup, OCR runtime, UI smoke, Excel smoke, Stage 6 evidence bundle,
    evidence verifier, and final recovery.
 3. Resolve the FY2026/R8 strict-yield blocker by either reaching the `>= 60%`
    current-year strict line or approving the documented `publication_lag`
