@@ -2,8 +2,9 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v499` for Mac-side package/source verification.
-Latest Windows side-by-side smoke evidence is `v498`.
+Latest package family: `v500` for Mac-side package/source verification and
+Windows side-by-side validation.
+Latest Windows side-by-side smoke evidence is `v500`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -38,8 +39,10 @@ document v494 as superseded; and rebuild the Windows ZIP as v497.
 Post-v497 fixes package the default competition Excel template and complete
 v498 Windows side-by-side validation. Post-v498 fixes configure weekly Task
 Scheduler retry-on-failure settings during setup and rebuild the Windows ZIP as
-v499. v499 has fresh package/source verification, but it has not yet replaced
-the v498 Windows side-by-side evidence.
+v499. v499 Windows validation found that `weekly_run.bat --limit 10 --json`
+was not a real bounded canary because the batch wrapper ignored CLI arguments.
+v500 forwards `%*`, accepts `--json`, and has fresh package/source plus Windows
+side-by-side validation.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -99,31 +102,58 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v499.zip`, SHA256
-`8f8b01f4a81496a95f9f9e2c2a9760919243807b7f300e2ad12c188f2ac18f54`.
+`dist/eidp-windows-v500.zip`, SHA256
+`e8d1a736aa725e1a17a4b060daf62f19666ff51ccb0ccb19310d0062de1e42cf`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=55c61898ba505f79c053d0a047977135ba64a347`,
+`git_commit=e79ac128cf7063b564f1b0c7c3bb89b6854e51e4`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v499-stage6-v499-non-windows-release-gates-20260520.json`
+`logs/win-v500-stage6-v500-non-windows-release-gates-20260520.json`
 (`ok=true`; package/source check is fresh, validator/distribution unit, mypy,
 ruff, discovery gold, package verify, and demonstrated-pattern package verify
 returned `0`). Later docs-only commits use the
 `--allow-docs-only-stale-package` gate with `allowed_stale_reason=docs_only`;
 use the PR body for the latest exact docs-only gate artifact.
 
-v499 includes `EIDP-repair-launcher.bat`,
+v500 includes `EIDP-repair-launcher.bat`,
 `scripts/repair_streamlit_launcher.bat`, `scripts/repair_streamlit_launcher.py`,
 `scripts/evaluate_strict_yield_bound.py`, the image-pending OCR warning
 verifier contract, packaged `.streamlit/config.toml` with
 `address = "127.0.0.1"`, the stricter Stage 6 return verifier requiring
 `--release-exception-record` when `--release-exception-reason` is used, the
 hardened launcher repair helper, and the packaged default competition Excel
-template required by `export-competition-excel`. v499 also configures the
+template required by `export-competition-excel`. v500 also configures the
 registered weekly Task Scheduler entry with retry-on-failure settings
-(`RestartCount=3`, `RestartInterval=30 minutes`) during setup.
+(`RestartCount=3`, `RestartInterval=30 minutes`) during setup and forwards
+weekly runner CLI arguments for bounded SSH/operator canaries.
 
-Current v498 Windows side-by-side validation:
+Current v500 Windows side-by-side validation:
+the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
+the Mac sidecar, and the package expanded to
+`C:\Users\cyo20\EIDP-v500-e79ac12-env0`. Setup and validation are recorded in
+`logs/win-v500-stage6-v500-env0-validate-after-setup-20260520.json`
+(`ok=true`, `school_count=2418`, `school_fiscal_year_status_count=2418`,
+`sqlite_integrity_check=ok`) and
+`logs/win-v500-stage6-v500-env0-recovery-expected-v485-clean-20260520.json`
+(`ok=true`, `action_matches_expected=true`, lock not held). OCR runtime proof
+is `logs/win-v500-stage6-v500-validate-ocr-runtime-20260520.json`
+(`ok=true`, Tesseract `5.4.0.20240606`, `jpn`, `jpn_vert`). UI smoke is
+`logs/win-v500-stage6-v500-ui-smoke-20260520.json` (`ok=true`, port `8521`,
+health `200/ok`, root `200`). Weekly canary is
+`logs/win-v500-stage6-v500-last-run-after-weekly-canary-limit10-20260520.json`
+(`status=success`, `current_fy=2026`, `ship_gate_status=below_gate`,
+`target_pdf_auto_yield_pct=50.0`, `operator_reviewable_yield_pct=100.0`);
+`logs/win-v500-stage6-v500-weekly-canary-limit10-run-20260520.log` confirms
+`cli_args --limit 10 --json` and rc `0`. Excel smoke is
+`logs/win-v500-stage6-v500-excel-summary-20260520.json` (`ok=true`). Stage 6
+bundle proof is `logs/win-v500-stage6-v500-stage6-evidence-20260519-161653.zip`
+with SHA256 `674e2fdcaf6f09611c7ffd00ecff3c714a3913b6727478dac3df1917102e2a3e`,
+and verifier proof is
+`logs/win-v500-stage6-v500-stage6-evidence-verify-20260520-011707.json`
+(`ok=true`). The active scheduled task stayed on v485 and was verified by
+`logs/win-v500-stage6-v500-recovery-probe-lock-after-canary-clean-20260520.json`.
+
+Superseded v498 Windows side-by-side validation:
 the ZIP and sidecar were copied to `C:\EIDP-staging`, Windows SHA256 matched
 the Mac sidecar, and the package expanded to
 `C:\Users\cyo20\EIDP-v498-555fe01`. Setup and validation are recorded in
@@ -156,24 +186,23 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v499.zip`
-Current v499 SHA256 sidecar:
-`dist/eidp-windows-v499.zip.sha256`
-Current v499 package build evidence:
-`dist/eidp-windows-v499.zip` was built from clean source and validated by the
-non-Windows release gate. Because v499 changes setup behavior, it still needs
-fresh Windows side-by-side validation before it can replace v498 as the
-Windows-validated candidate. It has not been promoted to the active weekly Task
-Scheduler lane; the active production action remains v485 until an explicit
-promotion decision is made.
+`dist/eidp-windows-v500.zip`
+Current v500 SHA256 sidecar:
+`dist/eidp-windows-v500.zip.sha256`
+Current v500 package build evidence:
+`dist/eidp-windows-v500.zip` was built from clean source and validated by the
+non-Windows release gate plus Windows side-by-side validation. It has not been
+promoted to the active weekly Task Scheduler lane; the active production action
+remains v485 until an explicit promotion decision is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/2026-05-19-final-objective-audit-v498.md` is `NOT COMPLETE` and
-remains the latest full Windows side-by-side audit. v499 adds a setup retry
-contract and is Mac-side package/source verified, but current FY2026
-production-scale strict proof, fresh v499 Windows side-by-side evidence, and
-owner real Windows cycle evidence remain incomplete. To continue,
+is superseded for package validation by
+`docs/runbooks/eidp-v500-side-by-side-validation.md`. v500 is Mac-side
+package/source verified and Windows side-by-side validated, but current FY2026
+production-scale strict proof and owner real Windows cycle evidence remain
+incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
