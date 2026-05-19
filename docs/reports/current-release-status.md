@@ -34,7 +34,8 @@ head `a3fbf4a728917defb5ef9bff7568322deb7f99dd`. PR #2 is now the single
 active landing surface; its body has been updated to remove the old
 "Depends on PR #1" statement and to keep the FY2026 release blocker explicit.
 Before this status-file update, PR #2 had `mergeStateStatus=CLEAN`; GitHub
-checks `Python quality gates` and `Ship gate contract` both passed. `main` and
+checks `Python quality gates` and `Ship gate contract` both passed for
+`a3fbf4a728917defb5ef9bff7568322deb7f99dd`. `main` and
 `sprint8-handoff-finalize` branch protection require both checks and disallow
 force-pushes and branch deletion. Any newer status-only commit must let the
 required checks rerun before merge.
@@ -88,7 +89,11 @@ returned `0`; full unit count `1865 passed`). v493 includes
 `scripts/repair_streamlit_launcher.py`, and `scripts/evaluate_strict_yield_bound.py`;
 keeps the image-pending OCR warning verifier contract; rejects packaged
 launchers that contain `streamlit.main`; and ships `.streamlit/config.toml`
-with `address = "127.0.0.1"`. v493 has not been Windows side-by-side validated.
+with `address = "127.0.0.1"`. After this status-only commit, the
+docs-only-stale package check
+`logs/win-v493-stage6-v493-docs-only-stale-check-20260519.json` returned
+`ok=true`, `docs_only_stale=true`, and `allowed_stale_reason=docs_only`.
+v493 has not been Windows side-by-side validated.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
