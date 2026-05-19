@@ -2,7 +2,7 @@
 
 Updated: 2026-05-19
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v490` for Mac-side package/source verification.
+Latest package family: `v491` for Mac-side package/source verification.
 Latest Windows side-by-side smoke evidence remains `v489`.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -20,8 +20,10 @@ the FY2026 strict-yield no-go report, the side-by-side setup guard, the owner
 E2E preflight checklist, and the image-pending OCR warning packaging contract
 through the current `sprint8-handoff-finalize` head. Post-v489 source fixes
 add a reusable strict-yield upper-bound evaluator, require that evaluator in
-future Windows ZIPs, reject legacy `streamlit.main` launchers, and bind the
-packaged Streamlit config to `127.0.0.1` as defense in depth.
+future Windows ZIPs, reject legacy `streamlit.main` launchers, bind the
+packaged Streamlit config to `127.0.0.1` as defense in depth, and add a
+dry-run-by-default `repair_streamlit_launcher.py` helper for stale extracted
+launchers.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -69,20 +71,21 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current Mac package candidate:
-`dist/eidp-windows-v490.zip`, SHA256
-`f82fb1eedd75d4a6a9b71c75c474c2f0c93045f5153a331662350753925396ee`.
+`dist/eidp-windows-v491.zip`, SHA256
+`e913ee15f71e4bccdf0577c71a2f000ecf431f3c68b749d4e99bd0d37fc4122c`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=41a147f7a9ee7968bc0260ab7d18f02fe3685af7`,
+`git_commit=02fba141b1aecedb512b2421e37eeec17b2ebc03`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v490-stage6-v490-verify-windows-distribution-20260519.json`
-(`ok=true`, `wheel_count=84`, `entry_count=3101`) and
-`logs/win-v490-stage6-v490-non-windows-release-gates-20260519.json`
+`logs/win-v491-stage6-v491-verify-windows-distribution-20260519.json`
+(`ok=true`, `wheel_count=84`, `entry_count=3102`) and
+`logs/win-v491-stage6-v491-non-windows-release-gates-20260519.json`
 (`ok=true`; unit, validator, mypy, ruff, discovery gold, package verify all
-returned `0`). v490 includes `scripts/evaluate_strict_yield_bound.py`, keeps
-the image-pending OCR warning verifier contract, rejects packaged launchers
-that contain `streamlit.main`, and ships `.streamlit/config.toml` with
-`address = "127.0.0.1"`. v490 has not been Windows side-by-side validated.
+returned `0`; full unit count `1859 passed`). v491 includes
+`scripts/evaluate_strict_yield_bound.py` and `scripts/repair_streamlit_launcher.py`,
+keeps the image-pending OCR warning verifier contract, rejects packaged
+launchers that contain `streamlit.main`, and ships `.streamlit/config.toml`
+with `address = "127.0.0.1"`. v491 has not been Windows side-by-side validated.
 Current Windows side-by-side package candidate:
 `dist/eidp-windows-v489.zip`, SHA256
 `37bbb8731e46d3d80bab1afd745a3f665003cb40cde48c76628d8691adae8668`.
