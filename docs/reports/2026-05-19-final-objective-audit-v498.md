@@ -56,6 +56,7 @@ The objective is complete only when all of the following are true:
 | Excel template transfer | `logs/win-v498-stage6-v498-excel-summary-20260519.json`: master workbook exists, competition workbook exists, default competition template exists in `sample/`, competition workbook has 16 sheets | PASS |
 | ManualActionLog audit | Tests and UI contracts exist, but owner real-cycle audit counts/outbox proof are not returned yet | PARTIAL |
 | ZIP distribution and offline setup | v498 SHA matches sidecar; non-Windows gate package/source check fresh; Windows setup validator `ok=true` | PASS |
+| Side-by-side setup can preserve active task | Fresh Windows root `%USERPROFILE%\EIDP-v498-555fe01-env0` was set up with `EIDP_REGISTER_WEEKLY_TASK=0`; `logs/win-v498-stage6-v498-first-setup-env0-20260519.log` shows `skipping Task Scheduler registration because EIDP_REGISTER_WEEKLY_TASK=0`; `logs/win-v498-stage6-v498-env0-validate-after-setup-20260519.json` is `ok=true`; `logs/win-v498-stage6-v498-env0-recovery-expected-v485-20260519.json` is `ok=true` with `action_matches_expected=true` | PASS |
 | Browser UI on Windows | `logs/win-v498-stage6-v498-ui-smoke-20260519.json`: `ok=true`, port `8519`, health `200/ok`, root `200`, stopped cleanly | PASS |
 | Active scheduled task safety | Initial v498 recovery check caught the task pointing to v498 after setup smoke; task was restored to v485. `logs/win-v498-stage6-v498-recovery-expected-v485-after-restore-20260519.json`: `ok=true`, `action_matches_expected=true` | PASS after restore |
 | Stage 6 evidence bundle | `logs/win-v498-stage6-v498-stage6-evidence-20260519-123728.zip`; SHA256 `9d51bfce550dd1d4dc12843b19ecb0a99e5b06cdcbca655cf4aa1088b02d8199` | PASS |
@@ -80,6 +81,9 @@ The objective is complete only when all of the following are true:
 - The v498 Windows side-by-side proof now covers installation, OCR runtime,
   Streamlit health, bounded weekly execution, Excel output, and Stage 6 bundle
   verification. It is still a bounded validation, not owner approval.
+- The env0 setup proof confirms that the documented side-by-side validation
+  path can run `scripts\first_setup.bat` with `EIDP_REGISTER_WEEKLY_TASK=0`
+  without moving the active scheduled task off v485.
 - The FY2025 mature-year proof is valid only as release-exception support. It
   must not be counted as strict FY2026/R8 ship proof.
 - `verify_stage6_return.py` rejects the current `publication_lag` path while

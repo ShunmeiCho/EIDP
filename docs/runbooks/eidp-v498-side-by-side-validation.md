@@ -24,6 +24,9 @@ is restored to v485 after the smoke.
 | Core + OCR add-on verifier | `logs/win-v498-stage6-v498-verify-windows-distribution-with-ocr-addon-20260519.json` | `core ok=true`, `ocr-addon ok=true` |
 | Non-Windows release gate | `logs/win-v498-stage6-v498-non-windows-release-gates-20260519.json` | `ok=true`, package/source fresh |
 | Windows setup validator | `logs/win-v498-stage6-v498-validate-after-setup-20260519.json` | `ok=true` |
+| Fresh env0 setup without active-task registration | `logs/win-v498-stage6-v498-first-setup-env0-20260519.log` | setup rc `0`, log contains `skipping Task Scheduler registration because EIDP_REGISTER_WEEKLY_TASK=0` |
+| Fresh env0 validator | `logs/win-v498-stage6-v498-env0-validate-after-setup-20260519.json` | `ok=true` |
+| Fresh env0 active-task recovery | `logs/win-v498-stage6-v498-env0-recovery-expected-v485-20260519.json` | `ok=true`, `action_matches_expected=true` |
 | OCR runtime validator | `logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json` | `ok=true`, Tesseract `5.4.0.20240606`, `jpn` and `jpn_vert` present |
 | UI smoke | `logs/win-v498-stage6-v498-ui-smoke-20260519.json` | `ok=true`, port `8519`, health `200/ok`, root `200` |
 | Weekly canary | `logs/win-v498-stage6-v498-weekly-canary-limit10-20260519.json` | `ok=true`, `run_id=20260519_123058`, `ship_gate_status=below_gate` |
@@ -36,8 +39,9 @@ is restored to v485 after the smoke.
 
 For non-interactive SSH validation, do not run the root `EIDP-setup.bat`
 wrapper through stdin-fed PowerShell. It ends with `pause`, which can consume
-the remaining script input. Use `scripts\first_setup.bat` directly, or use an
-encoded PowerShell command and ensure the scheduled task is checked afterward.
+the remaining script input. Use `scripts\first_setup.bat` directly with
+`EIDP_REGISTER_WEEKLY_TASK=0`, or use an encoded PowerShell command and ensure
+the scheduled task is checked afterward.
 
 If a side-by-side setup accidentally points `EIDP Weekly Run` to the candidate
 root, restore it to:
