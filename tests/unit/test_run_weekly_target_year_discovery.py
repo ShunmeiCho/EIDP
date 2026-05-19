@@ -23,6 +23,7 @@ spec.loader.exec_module(module)
 select_stale_school_ids = module.select_stale_school_ids
 select_target_missing_school_ids = module.select_target_missing_school_ids
 count_no_crawlable_url_schools = module.count_no_crawlable_url_schools
+count_crawlable_sites_for_school_ids = module.count_crawlable_sites_for_school_ids
 snapshot_reports = module._snapshot_reports
 resolve_weekly_paths = module.resolve_weekly_paths
 write_last_run = module.write_last_run
@@ -316,6 +317,80 @@ def test_run_weekly_applies_url_sources_before_target_missing_selection(
     assert captured["school_ids"] == [1]
     assert summary["target_missing_school_count"] == 1
     assert summary["url_source_stats"]["school_override_inferred"] == 1
+
+
+def test_run_weekly_expands_discovery_batch_to_selected_site_count(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A school-based limit must not silently skip selected schools with
+    lower-priority site rows when earlier selected schools have multiple URLs."""
+
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    for school_id in (1, 2):
+        _school(session, school_id)
+    for index in range(3):
+        session.add(
+            SchoolSite(
+                school_id=1,
+                url=f"https://multi{index}.example.edu/disclosure/",
+                discovery_method="school_domain_override",
+                http_status=200,
+            )
+        )
+    session.add(
+        SchoolSite(
+            school_id=2,
+            url="https://single.example.edu/disclosure/",
+            discovery_method="school_domain_override",
+            http_status=200,
+        )
+    )
+    session.commit()
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(module, "import_seed_urls", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        module,
+        "infer_corporation_urls",
+        lambda *_args, **_kwargs: {
+            "inferred": 0,
+            "skipped_has_url": 0,
+            "school_override_inferred": 0,
+            "school_override_skipped_existing": 0,
+            "school_override_skipped_no_school": 0,
+        },
+    )
+
+    def fake_run_pdf_discovery(session_arg: Session, **kwargs: object) -> dict[str, int]:
+        captured["session"] = session_arg
+        captured["school_ids"] = kwargs["school_ids"]
+        captured["batch_size"] = kwargs["batch_size"]
+        return {"crawled": 4, "found": 0, "downloaded": 0, "failed": 0, "skipped": 0}
+
+    monkeypatch.setattr(module, "run_pdf_discovery", fake_run_pdf_discovery)
+
+    summary = run_weekly(
+        current_fy=2026,
+        methods=["school_domain_override"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=1,
+        rate_limit=1.5,
+        request_timeout=12.0,
+        ingest_batch_size=10,
+        limit=2,
+        dry_run=False,
+        lock_path=None,
+        last_run_path=None,
+    )
+
+    assert captured["session"] is session
+    assert captured["school_ids"] == [1, 2]
+    assert captured["batch_size"] == 4
+    assert summary["target_missing_school_count"] == 2
 
 
 def test_count_no_crawlable_url_schools_ignores_method_filter() -> None:

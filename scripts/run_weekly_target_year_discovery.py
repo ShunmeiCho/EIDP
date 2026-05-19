@@ -423,6 +423,31 @@ def count_no_crawlable_url_schools(
     return int(q.scalar() or 0)
 
 
+def count_crawlable_sites_for_school_ids(
+    session: Session,
+    *,
+    school_ids: list[int],
+    methods: list[str] | None,
+) -> int:
+    """Count crawlable SchoolSite rows for the selected school queue.
+
+    Weekly selection is school-based, while ``run_pdf_discovery`` limits site
+    rows. If several selected schools have multiple high-confidence sites, a
+    site-row limit equal to the school count can leave later selected schools
+    completely uncrawled while they still remain in the denominator.
+    """
+
+    if not school_ids:
+        return 0
+    site_query = session.query(func.count(SchoolSite.id)).filter(
+        SchoolSite.school_id.in_(school_ids),
+        or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None)),
+    )
+    if methods:
+        site_query = site_query.filter(SchoolSite.discovery_method.in_(methods))
+    return int(site_query.scalar() or 0)
+
+
 def _coverage_snapshot(session: Session, current_fy: int, school_type: str | None) -> dict[str, Any]:
     totals = compute_coverage(session, school_type=school_type, fiscal_year=current_fy).totals
     return {
@@ -795,7 +820,12 @@ def _run_weekly_inner(
         if dry_run or not selected_school_ids:
             session.rollback()
         else:
-            effective_batch_size = max(batch_size, len(selected_school_ids))
+            selected_site_count = count_crawlable_sites_for_school_ids(
+                session,
+                school_ids=selected_school_ids,
+                methods=methods,
+            )
+            effective_batch_size = max(batch_size, len(selected_school_ids), selected_site_count)
             write_progress(
                 progress_path,
                 status="running",
