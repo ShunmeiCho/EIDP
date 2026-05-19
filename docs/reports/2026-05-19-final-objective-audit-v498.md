@@ -61,6 +61,7 @@ The objective is complete only when all of the following are true:
 | Active scheduled task safety | Initial v498 recovery check caught the task pointing to v498 after setup smoke; task was restored to v485. `logs/win-v498-stage6-v498-recovery-expected-v485-after-restore-20260519.json`: `ok=true`, `action_matches_expected=true` | PASS after restore |
 | Stage 6 evidence bundle | `logs/win-v498-stage6-v498-stage6-evidence-20260519-123728.zip`; SHA256 `9d51bfce550dd1d4dc12843b19ecb0a99e5b06cdcbca655cf4aa1088b02d8199` | PASS |
 | Stage 6 evidence verifier | `logs/win-v498-stage6-v498-stage6-evidence-verify-20260519-213747.json`: `ok=true`, labels include `build_info`, `diagnostics`, `last_run`, `stage6_recovery`, `weekly_run_logs` | PASS |
+| SQLite backup recoverability smoke | `logs/win-v498-stage6-v498-env0-db-backup-summary-20260519.json`: `ok=true`, backup exists, `size_bytes=9383936`, SQLite `integrity_check=ok`, `school_count=2418` | PASS |
 | High-severity static security scan | `logs/win-v498-stage6-v498-bandit-high-current-head-20260519.rc`: exit `0` for `uv run --with bandit bandit -q --severity-level high -r src/eidp` plus release scripts | PASS |
 | Windows path safety | `logs/win-v498-stage6-v498-windows-path-safety-current-head-20260519.json`: issue count `0`; focused path-safety and CI Bandit contract tests returned `7 passed` | PASS |
 | PR mergeability | Live check after v498 push: PR #2 `MERGEABLE` / `CLEAN`, two `Python quality gates` and two `Ship gate contract` checks `SUCCESS` | PASS at time of audit; re-check before merge |
