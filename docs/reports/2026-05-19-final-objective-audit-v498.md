@@ -50,8 +50,8 @@ The objective is complete only when all of the following are true:
 | Strict current-FY success excludes old-year fallback | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json` and `logs/win-v490-stage6-v490-fy2026-strict-yield-upper-bound-reeval-20260519.json` keep old-year fallback out of strict FY2026 success | PASS for contract, FAIL for yield |
 | Current FY2026 strict yield `>= 60%` | Upper-bound proof remains `39.3%`; v498 canary denominator 10 produced strict/Excel-ready `50.0%` and `ship_gate_status=below_gate` | FAIL |
 | Mature FY2025 strict proof for exception path | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: `ok=true`, FY2025 denominator `1000`, strict `60.0%`, Excel-ready `60.0%`, manual workload `20.2%` | PASS for exception input only |
-| PDF extraction stack packaged | v498 package verifier `ok=true`, `has_runtime=true`, `wheel_count=84`, `entry_count=3105` | PASS |
-| Tesseract OCR runtime/add-on | `logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json`: `ok=true`, Tesseract `5.4.0.20240606`, `jpn` and `jpn_vert` present. Core + add-on verifier also `ok=true` in `logs/win-v498-stage6-v498-verify-windows-distribution-with-ocr-addon-20260519.json` | PASS |
+| PDF extraction stack packaged | v498 package verifier `ok=true`, `has_runtime=true`, `wheel_count=84`, `entry_count=3105`; focused PDF/OCR stack suite passed in `logs/win-v498-stage6-v498-pdf-ocr-stack-tests-58a72c4-20260519.txt` (`130 passed`) | PASS |
+| Tesseract OCR runtime/add-on | `logs/win-v498-stage6-v498-validate-ocr-runtime-20260519.json`: `ok=true`, Tesseract `5.4.0.20240606`, `jpn` and `jpn_vert` present. Core + add-on verifier also `ok=true` in `logs/win-v498-stage6-v498-verify-windows-distribution-with-ocr-addon-20260519.json`. Focused tests cover Tesseract wrapper/provider, OCR availability/runtime policy, OCR add-on packaging, PDF parser regressions, fiscal-year extraction, CLI ingest, and normal ingest append-only behavior | PASS |
 | Confidence `>= 0.70` gating | `logs/win-v498-stage6-v498-confidence-gating-tests-1a44abf-20260519.txt`: `148 passed`, covering default thresholds `0.85/0.70/0.50`, env overrides, ingest verdict boundaries, Excel export exclusion for rows below review threshold, low-confidence warning panels, strict-yield confidence buckets, and DB precision. v498 OCR runtime proof confirms add-on availability, not full production OCR yield | PASS for code/runtime, PARTIAL for production OCR corpus |
 | Append-only business writes | Focused audit/manual-write suite passed: `logs/win-v498-stage6-v498-manual-action-audit-tests-a27fe06-20260519.txt` (`197 passed`). Coverage includes `test_fiscal_year_override.py`, `test_manual_entry_contract.py`, review manual-entry tests, URL review tests, and school-site audit tests. Owner real-cycle audit evidence is still missing | PASS for code, PARTIAL for real workflow |
 | Excel template transfer | `logs/win-v498-stage6-v498-excel-summary-20260519.json`: master workbook exists, competition workbook exists, default competition template exists in `sample/`, competition workbook has 16 sheets | PASS |
@@ -92,6 +92,11 @@ The objective is complete only when all of the following are true:
 - The focused confidence-gating suite proves the code-level `>= 0.70` review
   threshold contract from pure confidence scoring through ingest verdicts and
   Excel export exclusion sheets. It does not prove production OCR corpus yield.
+- The focused PDF/OCR stack suite proves code-level parser/OCR contracts,
+  including Tesseract wrapper/provider behavior, OCR availability/runtime
+  gating, add-on packaging, fiscal-year extraction, CLI ingest, and normal
+  ingest append-only behavior. It does not prove production OCR yield across
+  the full school corpus.
 - The env0 setup proof confirms that the documented side-by-side validation
   path can run `scripts\first_setup.bat` with `EIDP_REGISTER_WEEKLY_TASK=0`
   without moving the active scheduled task off v485.
