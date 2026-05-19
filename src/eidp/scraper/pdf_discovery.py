@@ -387,6 +387,10 @@ HOST_SPECIFIC_DERIVED_DISCLOSURE_PATHS = {
     "o-hara.ac.jp": ("/about/joho/",),
     "www.o-hara.ac.jp": ("/about/joho/",),
 }
+SLUG_DISCLOSURE_PRIORITY_HOSTS = {
+    "sanko.ac.jp",
+    "www.sanko.ac.jp",
+}
 DISCLOSURE_DERIVATION_FILE_SUFFIXES = (".html", ".htm", ".php", ".aspx", ".jsp")
 
 
@@ -2762,10 +2766,30 @@ def _has_host_specific_disclosure_url_probe(site_url: str) -> bool:
     return (parsed.hostname or "").lower() in HOST_SPECIFIC_DERIVED_DISCLOSURE_PATHS
 
 
+def _has_slug_disclosure_url_probe(site_url: str) -> bool:
+    """Return whether /disclosure/{slug} is a known school-specific derived probe."""
+
+    parsed = urlparse(site_url)
+    if (parsed.hostname or "").lower() not in SLUG_DISCLOSURE_PRIORITY_HOSTS:
+        return False
+    raw_segments = [segment for segment in parsed.path.rstrip("/").split("/") if segment]
+    if not raw_segments:
+        return False
+    slug = raw_segments[-1].lower()
+    return (
+        not _is_file_like_disclosure_path(slug)
+        and slug not in {"disclosure", "information", "public", "public_info"}
+    )
+
+
 def _has_priority_derived_disclosure_url_probe(site_url: str) -> bool:
     """Return whether one derived disclosure URL should bypass shared-origin throttling."""
 
-    return _has_inverted_disclosure_url_probe(site_url) or _has_host_specific_disclosure_url_probe(site_url)
+    return (
+        _has_inverted_disclosure_url_probe(site_url)
+        or _has_host_specific_disclosure_url_probe(site_url)
+        or _has_slug_disclosure_url_probe(site_url)
+    )
 
 
 def _sitemap_urls_for_site(
