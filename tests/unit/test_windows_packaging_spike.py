@@ -1111,7 +1111,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "pyproject.toml").write_text("[project]\nname='eidp'\n", encoding="utf-8")
     (fake_repo / ".streamlit").mkdir(parents=True)
     (fake_repo / ".streamlit" / "config.toml").write_text(
-        "[server]\nheadless = true\n[browser]\ngatherUsageStats = false\n",
+        '[server]\naddress = "127.0.0.1"\nheadless = true\n[browser]\ngatherUsageStats = false\n',
         encoding="utf-8",
     )
 
@@ -1181,6 +1181,7 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
         "print('download')", encoding="utf-8",
     )
     (fake_repo / "scripts" / "prune_release_artifacts.py").write_text("print('prune')", encoding="utf-8")
+    (fake_repo / "scripts" / "evaluate_strict_yield_bound.py").write_text("print('bound')", encoding="utf-8")
     (fake_repo / "scripts" / "rotate_audit_outbox.py").write_text("print('audit rotate')", encoding="utf-8")
     (fake_repo / "scripts" / "prune_pdf_storage.py").write_text("print('pdf prune')", encoding="utf-8")
     (fake_repo / "scripts" / "disk_health_check.py").write_text("print('disk')", encoding="utf-8")
