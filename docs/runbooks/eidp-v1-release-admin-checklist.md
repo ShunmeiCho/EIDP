@@ -10,7 +10,7 @@ decision for FY2026/R8 publication lag.
 
 - PR #2 is not clean or either required check is not green.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current v517 is package/source verified
+  after its last code/package change. Current v518 is package/source verified
   but not Windows side-by-side validated; v502 is the latest partial Windows
   evidence and v501 is the latest complete Windows-smoke evidence.
 - The owner real cycle and evidence bundle are missing.
@@ -18,7 +18,7 @@ decision for FY2026/R8 publication lag.
   `publication_lag` release-exception approval.
 - OCR is included in the v1.0 release scope but the Windows OCR runtime proof
   or OCR add-on SHA/runtime verifier is missing for the selected candidate.
-  Current v517 still needs fresh Windows OCR runtime proof if OCR remains in
+  Current v518 still needs fresh Windows OCR runtime proof if OCR remains in
   scope.
 - The signed tag command would use an unsigned or unknown signing identity.
 
@@ -42,13 +42,13 @@ Expected:
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v517.zip
-cat dist/eidp-windows-v517.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v517.zip --json
+shasum -a 256 dist/eidp-windows-v518.zip
+cat dist/eidp-windows-v518.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v518.zip --json
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v517.zip \
+  dist/eidp-windows-v518.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -56,7 +56,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-6fa1311c74954aaf5a8256a937935672d53e89c71d8e8cd0e70a3beddb582666
+d5ea5a6d0aed71fc9d5e581aca336cbd04045de4bc66d1efd8ecb91ccac5723c
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -89,14 +89,14 @@ Do not create `v1.0` until the release gates below are complete.
 
 Before merging or tagging, attach or reference:
 
-- v517 Windows side-by-side validator JSON;
-- v517 active-task recovery / lock proof showing the active task still points
+- v518 Windows side-by-side validator JSON;
+- v518 active-task recovery / lock proof showing the active task still points
   to the expected v485 lane;
-- v517 Windows UI smoke notes;
-- v517 OCR runtime proof, if OCR remains in v1.0 scope;
-- v517 Excel smoke proof;
-- v517 bounded weekly canary proof;
-- v517 Stage 6 evidence ZIP and evidence verifier JSON;
+- v518 Windows UI smoke notes;
+- v518 OCR runtime proof, if OCR remains in v1.0 scope;
+- v518 Excel smoke proof;
+- v518 bounded weekly canary proof;
+- v518 Stage 6 evidence ZIP and evidence verifier JSON;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
 - ManualActionLog / JSONL audit proof: audit page status, `manual_action_log`
