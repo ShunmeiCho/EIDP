@@ -112,6 +112,17 @@ Required files to return after owner real cycle
   consistency evidence that Excel-ready coverage in the owner template matches
   the current DB/run metrics
 
+Manual review companion
+-----------------------
+After `scripts\verify_stage6_return.py` returns `ok=true`, review the returned
+Excel, ManualActionLog / JSONL outbox, append-only row, and OCR-scope evidence
+with:
+
+  docs\runbooks\eidp-v523-owner-return-manual-review-checklist.md
+
+This companion checklist covers evidence that is required for owner-cycle
+acceptance but not yet machine-enforced by the v523 packaged return verifier.
+
 Required KPI / sign-off fields
 ------------------------------
 - target_pdf_auto_yield_pct
