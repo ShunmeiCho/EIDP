@@ -212,6 +212,12 @@ evidence collection, and evidence-folder shortcuts. The active v485 DB still
 had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
+Fresh read-only Mac-side connectivity recheck on 2026-05-20 found the local
+`Host win` still points at stale `192.168.0.9`, while the Mac is on
+`192.168.10.68`. ARP candidates `192.168.10.12`, `.70`, `.71`, `.72`, and
+`.73` did not expose usable TCP/22, 135, 139, 445, 3389, 5985, or 5986. v519
+Windows side-by-side validation therefore remains blocked on a current Windows
+IPv4 or restored OpenSSH service.
 Current package candidate:
 `dist/eidp-windows-v519.zip`, SHA256
 `fbc2ae0016b7b293c0fd534d7b3e7eb881f74205fa6df19acda42a8d21ba195a`.
@@ -232,6 +238,17 @@ basic-information PDF non-target filter. The package evidence is recorded in
 After the tracked docs update,
 `logs/win-v519-stage6-v519-post-docs-only-gates-20260520.json` records
 `ok=true`, `docs_only_stale=true`, and full unit `1893 passed`.
+A follow-up Mac-side v519 limit-50 continuation canary is recorded in
+`docs/reports/2026-05-20-v519-mac-limit50-continuation-canary.md`. The usable
+run copied the checked-in `data/url-discovery/` sources into the sandbox, loaded
+114 school-domain overrides, inferred 5 new school overrides, crawled 58 site
+rows for 50 selected target-missing schools, found 54 candidate PDFs,
+downloaded 0 strict FY2026/R8 PDFs, reported strict `0/50 (0.0%)`,
+operator-reviewable `50/50 (100.0%)`, and kept `ship_gate_status=below_gate`.
+Its RCA batch has `16 publication_lag_or_old_target_pdf` and
+`4 target_form_without_year_evidence` items. This confirms the residual Sanko
+Tokyo child-school case now uses `https://www.sanko.ac.jp/tokyo-child/` and
+moves to publication-lag evidence, not current-year success.
 
 v518 includes all v517 package features plus the Sanko Tokyo child-school
 publication-lag gold-set entry. The package verifier reports 45 discovery

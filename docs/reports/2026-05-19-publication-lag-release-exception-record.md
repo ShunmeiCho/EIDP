@@ -62,6 +62,7 @@ evidence or Stage 6 return verification.
 | v517 remaining Sanko child override package report | `docs/reports/2026-05-20-v517-remaining-sanko-child-overrides-package.md` | `ok=true` Mac-side package/source proof; school ID 55 moves from corporation-only non-target evidence to FY2019-FY2025 publication-lag evidence |
 | v518 gold-set publication-lag package report | `docs/reports/2026-05-20-v518-gold-set-publication-lag-package.md` | `ok=true` Mac-side package/source proof; school ID 55 publication-lag behavior is now a packaged gold-set regression case |
 | v519 vocational-practice basic-info filter package report | `docs/reports/2026-05-20-v519-vocational-practice-basic-info-filter-package.md` | `ok=true` Mac-side package/source proof; current-year-hint vocational-practice basic-info PDFs classify as `non_target` |
+| v519 Mac limit-50 continuation canary | `docs/reports/2026-05-20-v519-mac-limit50-continuation-canary.md` | strict FY2026/R8 `0/50 (0.0%)`, operator-reviewable `50/50 (100.0%)`, URL-source overrides loaded, `ship_gate_status=below_gate` |
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 

@@ -31,6 +31,8 @@ Current Mac-side evidence
   logs\win-v519-stage6-v519-post-docs-only-gates-20260520.json
 - v519 package report:
   docs\reports\2026-05-20-v519-vocational-practice-basic-info-filter-package.md
+- v519 Mac limit-50 continuation canary:
+  docs\reports\2026-05-20-v519-mac-limit50-continuation-canary.md
 - final objective checklist:
   docs\reports\eidp-current-objective-evidence-checklist.md
 
@@ -38,8 +40,9 @@ Current Windows blocker
 -----------------------
 Windows remote execution is not currently available from the Mac side.
 
-Latest read-only Mac probe after v518 PR refresh:
+Latest read-only Mac probe after v519 continuation audit:
 - Mac IPv4: 192.168.10.68
+- local `Host win`: still points to stale 192.168.0.9 and times out
 - ARP candidates:
   192.168.10.12, 192.168.10.70, 192.168.10.71, 192.168.10.72,
   192.168.10.73
