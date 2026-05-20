@@ -10,15 +10,16 @@ decision for FY2026/R8 publication lag.
 
 - PR #2 is not clean or either required check is not green.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current v500 is package/source verified
-  and Windows side-by-side validated, but any newer code/package change requires
-  fresh Windows evidence.
+  after its last code/package change. Current v517 is package/source verified
+  but not Windows side-by-side validated; v502 is the latest partial Windows
+  evidence and v501 is the latest complete Windows-smoke evidence.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
 - OCR is included in the v1.0 release scope but the Windows OCR runtime proof
   or OCR add-on SHA/runtime verifier is missing for the selected candidate.
-  Current v500 has OCR runtime proof.
+  Current v517 still needs fresh Windows OCR runtime proof if OCR remains in
+  scope.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
@@ -41,13 +42,13 @@ Expected:
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v500.zip
-cat dist/eidp-windows-v500.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v500.zip --json
+shasum -a 256 dist/eidp-windows-v517.zip
+cat dist/eidp-windows-v517.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v517.zip --json
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v500.zip \
+  dist/eidp-windows-v517.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -55,7 +56,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-e8d1a736aa725e1a17a4b060daf62f19666ff51ccb0ccb19310d0062de1e42cf
+6fa1311c74954aaf5a8256a937935672d53e89c71d8e8cd0e70a3beddb582666
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -88,18 +89,14 @@ Do not create `v1.0` until the release gates below are complete.
 
 Before merging or tagging, attach or reference:
 
-- v500 Windows side-by-side validator JSON:
-  `logs/win-v500-stage6-v500-env0-validate-after-setup-20260520.json`;
-- v500 active-task recovery / lock proof:
-  `logs/win-v500-stage6-v500-recovery-probe-lock-after-canary-clean-20260520.json`;
-- v500 Windows UI smoke notes:
-  `logs/win-v500-stage6-v500-ui-smoke-20260520.json`;
-- v500 OCR runtime proof:
-  `logs/win-v500-stage6-v500-validate-ocr-runtime-20260520.json`;
-- v500 Excel smoke proof:
-  `logs/win-v500-stage6-v500-excel-summary-20260520.json`;
-- v500 weekly canary proof:
-  `logs/win-v500-stage6-v500-last-run-after-weekly-canary-limit10-20260520.json`;
+- v517 Windows side-by-side validator JSON;
+- v517 active-task recovery / lock proof showing the active task still points
+  to the expected v485 lane;
+- v517 Windows UI smoke notes;
+- v517 OCR runtime proof, if OCR remains in v1.0 scope;
+- v517 Excel smoke proof;
+- v517 bounded weekly canary proof;
+- v517 Stage 6 evidence ZIP and evidence verifier JSON;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
 - ManualActionLog / JSONL audit proof: audit page status, `manual_action_log`
