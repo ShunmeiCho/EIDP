@@ -503,7 +503,7 @@ def _core_entries() -> dict[str, bytes | str]:
         "runtime/uv.exe": b"PE",
         "src/eidp/__init__.py": "",
         "migrations/env.py": "",
-        "wheelhouse/eidp-0.2.0-py3-none-any.whl": b"wheel",
+        "wheelhouse/eidp-1.0.0rc1-py3-none-any.whl": b"wheel",
         "wheelhouse/structlog-25.5.0-py3-none-any.whl": b"wheel",
     }
 
@@ -682,7 +682,7 @@ def test_verify_core_zip_rejects_macos_wheel(tmp_path: Path) -> None:
 
 def test_verify_core_zip_requires_project_wheel(tmp_path: Path) -> None:
     entries = _core_entries()
-    entries.pop("wheelhouse/eidp-0.2.0-py3-none-any.whl")
+    entries.pop("wheelhouse/eidp-1.0.0rc1-py3-none-any.whl")
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)

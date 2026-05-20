@@ -263,7 +263,7 @@ def test_build_windows_zip_allows_dirty_source_when_explicit(
 
     def stub_build_project_wheel(*, repo_root: Path, out_dir: Path) -> Path:
         assert repo_root == REPO_ROOT
-        wheel = out_dir / "eidp-0.2.0-py3-none-any.whl"
+        wheel = out_dir / "eidp-1.0.0rc1-py3-none-any.whl"
         wheel.write_bytes(b"project")
         return wheel
 
@@ -973,13 +973,13 @@ def test_build_project_wheel_removes_stale_project_wheels(
         assert cmd[:3] == ["uv", "build", "--wheel"]
         assert cwd == REPO_ROOT
         assert check is True
-        (tmp_path / "eidp-0.2.0-py3-none-any.whl").write_bytes(b"new")
+        (tmp_path / "eidp-1.0.0rc1-py3-none-any.whl").write_bytes(b"new")
 
     monkeypatch.setattr(bw.subprocess, "run", _stub_run)
 
     wheel = bw.build_project_wheel(repo_root=REPO_ROOT, out_dir=tmp_path)
 
-    assert wheel.name == "eidp-0.2.0-py3-none-any.whl"
+    assert wheel.name == "eidp-1.0.0rc1-py3-none-any.whl"
     assert not stale.exists()
 
 
@@ -1006,7 +1006,7 @@ def test_skip_download_still_refreshes_project_wheel(
         calls.append("build")
         assert repo_root == REPO_ROOT
         assert out_dir == wheelhouse
-        wheel = wheelhouse / "eidp-0.2.0-py3-none-any.whl"
+        wheel = wheelhouse / "eidp-1.0.0rc1-py3-none-any.whl"
         wheel.write_bytes(b"project")
         return wheel
 

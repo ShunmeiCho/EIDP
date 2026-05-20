@@ -1,6 +1,6 @@
 [project]
 name = "eidp"
-version = "0.2.0"
+version = "1.0.0rc1"
 description = "Education Institution Data Pipeline — Automated enrollment data collection for Japanese schools"
 # readme = "README.md"
 requires-python = ">=3.12"

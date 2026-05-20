@@ -52,7 +52,7 @@ def _core_install(root: Path) -> Path:
         _mkdir(root, rel)
     _write(root, "src/eidp/__init__.py", "")
     _write(root, "migrations/env.py", "")
-    _write(root, "wheelhouse/eidp-0.2.0-py3-none-any.whl", b"wheel")
+    _write(root, "wheelhouse/eidp-1.0.0rc1-py3-none-any.whl", b"wheel")
     _write(root, "wheelhouse/structlog-25.5.0-py3-none-any.whl", b"wheel")
     _write(root, "data/master.xlsx", b"xlsx")
     return root
@@ -309,7 +309,7 @@ def test_validate_core_install_rejects_unknown_build_commit(tmp_path: Path) -> N
 
 def test_validate_core_install_requires_project_wheel(tmp_path: Path) -> None:
     root = _core_install(tmp_path / "EIDP")
-    (root / "wheelhouse" / "eidp-0.2.0-py3-none-any.whl").unlink()
+    (root / "wheelhouse" / "eidp-1.0.0rc1-py3-none-any.whl").unlink()
 
     check = module.validate_install(root)
 
