@@ -18,8 +18,9 @@ v521, and v522 source-side discovery/RCA follow-ups. It includes:
 - v522 Windows connectivity and same-domain FY2026 negative-probe status docs.
 
 This package rebuild removes the previous "source-side only" gap for v520-v522.
-It does not create FY2026/R8 strict target-PDF success and does not complete
-Windows side-by-side validation.
+It does not create FY2026/R8 strict target-PDF success. Windows side-by-side
+validation later completed and is recorded separately in
+`docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`.
 
 ## Verification
 
@@ -46,10 +47,11 @@ Windows side-by-side validation.
 
 ## Current Decision
 
-v523 is now the latest Mac-side package/source candidate. It has not completed
-Windows side-by-side setup, OCR runtime proof, UI smoke, Excel smoke, Stage 6
-evidence bundling, or owner real-cycle sign-off because the current Windows
-connectivity/IP blocker remains unresolved.
+v523 is now the latest package/source candidate and latest complete Windows
+side-by-side smoke package. Windows setup, OCR runtime proof, UI smoke, Excel
+smoke, Stage 6 evidence bundling, and recovery are recorded in
+`docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`. Owner
+real-cycle sign-off remains missing.
 
 Do not merge PR #2, tag v1.0, or request owner sign-off from v523 alone. The
 release still requires either strict FY2026/R8 production-scale success or an

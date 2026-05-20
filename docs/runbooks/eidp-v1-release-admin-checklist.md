@@ -11,15 +11,14 @@ decision for FY2026/R8 publication lag.
 - PR #2 is not clean or either required check is not green.
 - The selected release candidate has not been Windows side-by-side validated
   after its last code/package change. Current v523 is package/source verified
-  but not Windows side-by-side validated; v502 is the latest partial Windows
-  evidence and v501 is the latest complete Windows-smoke evidence.
+  and Windows side-by-side smoke validated, but any later code/package change
+  must repeat that validation.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
 - OCR is included in the v1.0 release scope but the Windows OCR runtime proof
   or OCR add-on SHA/runtime verifier is missing for the selected candidate.
-  Current v523 still needs fresh Windows OCR runtime proof if OCR remains in
-  scope.
+  Current v523 has fresh Windows OCR runtime proof.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
@@ -110,6 +109,9 @@ Before merging or tagging, attach or reference:
   SHA256 plus Windows runtime / image-write proof; otherwise a written
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
+
+Current v523 side-by-side evidence is summarized in
+`docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`.
 
 ## Final Commands
 
