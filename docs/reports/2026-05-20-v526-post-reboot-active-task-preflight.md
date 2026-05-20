@@ -20,7 +20,7 @@ not mistaken for v526 release evidence.
 | Windows host | `ssh win hostname` returned `junming` |
 | v526 package hash on Windows | `C:\EIDP-staging\eidp-windows-v526.zip` SHA256 `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`; sidecar matched |
 | OCR add-on hash on Windows | `C:\EIDP-staging\eidp-ocr-addon-windows-v497-smoke.zip` SHA256 `3d0d03d4b49eb1bf5d8acc2030c00189702519d01ac80886bb7507a1d619450f`; sidecar matched |
-| v526 owner docs ZIP hash on Windows | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip` SHA256 `01b88191e5ee6c6e37ef8f9ad6223594a6f26c7d1e7b5a8ae5b49a0750d87af2` |
+| v526 owner docs ZIP hash on Windows | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip` SHA256 `bafab5db3192da5e156974c8585a01b05df7e753c35adc180e253b8c7e5457b3` after refreshing the staged owner docs to include this preflight report |
 | v526 extracted root | `C:\Users\cyo20\EIDP-v526-5b30eb7-env0` present |
 | Active Scheduled Task action | `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat` |
 | Active Scheduled Task state | Ready/enabled, next run `2026-05-25 02:00`, missed runs `0` |
