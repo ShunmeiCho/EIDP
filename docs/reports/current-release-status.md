@@ -2,17 +2,16 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v519` for Mac-side package/source verification after
-filtering vocational-practice basic-information PDFs out of target-form review.
+Latest package family: `v523` for Mac-side package/source verification at the
+current PR head after the v520-v522 discovery/RCA follow-ups.
 Latest source-side follow-up: `v522` stale-yearless RCA bucket classification,
-using the v521 Mac-side limit-50 continuation canary evidence, not yet rebuilt
-into a Windows ZIP.
+now included in the v523 Windows ZIP candidate.
 `v502` remains
 the latest package with partial Windows side-by-side setup, validate, recovery,
 and limit-50 canary evidence. `v501` remains the latest package with complete
 Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
 runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification, until
-v519 full Windows smoke finishes.
+v523 full Windows smoke finishes.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -222,17 +221,17 @@ Fresh read-only Mac-side connectivity recheck on 2026-05-20 is recorded in
 `192.168.10.72`; neither candidate nor stale `192.168.0.9` exposed usable
 TCP/22, 135, 139, 445, 3389, 5985, or 5986. A short Bonjour/mDNS browse for
 SSH, SMB, RDP, and workstation services found no usable advertised service.
-v519/current-source Windows side-by-side validation therefore remains blocked
+v523/current-source Windows side-by-side validation therefore remains blocked
 on a current Windows IPv4 or restored OpenSSH/WinRM/RDP service.
 Current package candidate:
-`dist/eidp-windows-v519.zip`, SHA256
-`fbc2ae0016b7b293c0fd534d7b3e7eb881f74205fa6df19acda42a8d21ba195a`.
+`dist/eidp-windows-v523.zip`, SHA256
+`5d47ca9e016aa6aadf3608b5799c773a769af585d158813eada1f80cebe762ce`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=24fa09a49115196c2a977296eec127f6747e4426`,
+`git_commit=9a5cefc74751ec849daff86d68ff552f79f376e0`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v519-stage6-v519-non-windows-release-gates-20260520.json`
-(`ok=true`; package/source check is fresh, full unit suite `1893 passed`,
+`logs/win-v523-stage6-v523-non-windows-release-gates-20260520.json`
+(`ok=true`; package/source check is fresh, full unit suite `1897 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
 verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
@@ -301,6 +300,19 @@ from the v521 `fiscal_year_mismatch:2025` target-form evidence. HEAD returned
 all 47. This confirms the visible FY2025 publication-lag URLs do not have a
 simple same-domain FY2026/R8 replacement at probe time.
 
+v523 is the current Mac-side package/source rebuild after the v520-v522
+follow-ups, recorded in
+`docs/reports/2026-05-20-v523-current-head-package.md`. It was built from
+clean source at commit `9a5cefc74751ec849daff86d68ff552f79f376e0`, has SHA256
+`5d47ca9e016aa6aadf3608b5799c773a769af585d158813eada1f80cebe762ce`, and
+records `git_dirty=false` in `BUILD_INFO.json`. The full non-Windows release
+gate reports `ok=true`, full unit `1897 passed`, 47 packaged prefecture seeds,
+2148 packaged prefecture school rows, and 45/45 discovery-gold expected
+predictions. A direct core + OCR add-on verifier probe also returned core
+`ok=true` and OCR add-on `ok=true`. After the tracked v523 status-doc update,
+`logs/win-v523-stage6-v523-post-docs-only-gates-20260520.json` records
+`ok=true`, `docs_only_stale=true`, and full unit `1897 passed`.
+
 v518 includes all v517 package features plus the Sanko Tokyo child-school
 publication-lag gold-set entry. The package verifier reports 45 discovery
 gold-set entries and 45 expected predictions. After the tracked docs update,
@@ -346,7 +358,7 @@ page exists, while preserving the strict rule that stale FY2025 forms do not
 count as FY2026/R8 success. The package evidence is recorded in
 `docs/reports/2026-05-20-v513-sanko-disclosure-probe-package.md`.
 
-v519 has not completed Windows side-by-side validation because the Windows
+v523 has not completed Windows side-by-side validation because the Windows
 OpenSSH/IP blocker remains unresolved. v502 remains the latest partial Windows
 side-by-side setup/canary package, and v501 remains the latest complete
 Windows side-by-side smoke package.
@@ -511,11 +523,11 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v519.zip`
-Current v519 SHA256 sidecar:
-`dist/eidp-windows-v519.zip.sha256`
-Current v519 package build evidence:
-`dist/eidp-windows-v519.zip` was built from clean source and validated by the
+`dist/eidp-windows-v523.zip`
+Current v523 SHA256 sidecar:
+`dist/eidp-windows-v523.zip.sha256`
+Current v523 package build evidence:
+`dist/eidp-windows-v523.zip` was built from clean source and validated by the
 full non-Windows release gate. It has not completed Windows side-by-side setup
 because the Windows OpenSSH/IP blocker remains unresolved. v502 remains the
 latest partial automated Windows side-by-side setup, validation, recovery, and
@@ -526,9 +538,10 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v519 is Mac-side package/source verified, v520/v521/v522 are source-side only,
-the v521 Mac continuation canary remains below gate after v522 RCA
-reclassification, v502 is partially Windows side-by-side validated, and v501 is
+v523 is Mac-side package/source verified and includes the v520/v521/v522
+source-side follow-ups. The v521 Mac continuation canary remains below gate
+after v522 RCA reclassification, v502 is partially Windows side-by-side
+validated, and v501 is
 the latest complete Windows-smoke proof. Current FY2026 production-scale strict
 proof, current-source Windows smoke, and owner real Windows cycle evidence
 remain incomplete. To continue,
