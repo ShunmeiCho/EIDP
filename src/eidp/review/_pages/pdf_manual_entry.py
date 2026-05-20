@@ -462,6 +462,74 @@ def list_pending_documents(
     ]
 
 
+def department_form_rows_for_document(
+    session: Session,
+    *,
+    document_id: int,
+    fiscal_year: int,
+) -> list[dict[str, Any]]:
+    """Return current extracted department rows as manual-entry form defaults."""
+    rows = (
+        session.query(DepartmentYearly, Department)
+        .join(Department, Department.id == DepartmentYearly.department_id)
+        .filter(
+            DepartmentYearly.document_id == document_id,
+            DepartmentYearly.fiscal_year == fiscal_year,
+            DepartmentYearly.is_current == True,  # noqa: E712
+        )
+        .order_by(Department.id.asc(), DepartmentYearly.id.asc())
+        .all()
+    )
+    return [
+        {
+            "canonical_name": dept.canonical_name or "",
+            "duration_years": float(dept.duration_years) if dept.duration_years is not None else None,
+            "capacity": yearly.capacity,
+            "enrollment": yearly.enrollment,
+            "intl_students": yearly.intl_students,
+            "graduates": yearly.graduates,
+            "advanced": yearly.advanced,
+            "employed": yearly.employed,
+            "other": yearly.other,
+            "prev_enrollment": yearly.prev_enrollment,
+            "dropouts": yearly.dropouts,
+            "dropout_rate": float(yearly.dropout_rate) if yearly.dropout_rate is not None else None,
+            "dept_change": None,
+        }
+        for yearly, dept in rows
+    ]
+
+
+def support_recipient_form_row_for_document(
+    session: Session,
+    *,
+    document_id: int,
+    fiscal_year: int,
+) -> dict[str, Any]:
+    """Return current support-recipient row as manual-entry form defaults."""
+    row = (
+        session.query(SupportRecipient)
+        .filter(
+            SupportRecipient.document_id == document_id,
+            SupportRecipient.fiscal_year == fiscal_year,
+            SupportRecipient.is_current == True,  # noqa: E712
+        )
+        .order_by(SupportRecipient.id.asc())
+        .first()
+    )
+    if row is None:
+        return {}
+    return {
+        "first_half_total": row.first_half_total,
+        "second_half_total": row.second_half_total,
+        "annual_total": row.annual_total,
+        "grand_total": row.grand_total,
+        "household_change": row.household_change,
+        "school_number": row.school_number,
+        "notes": row.notes,
+    }
+
+
 def coerce_focus_document_id(value: object) -> int | None:
     if not isinstance(value, int | str):
         return None
@@ -1239,6 +1307,7 @@ SAVE_ELIGIBLE_STATUSES: frozenset[str] = frozenset({
     "ocr_pending",
     "parse_failed",
     "review_pending",
+    "ingested",
 })
 
 
@@ -1295,6 +1364,11 @@ def submit_form(
 # ---------------------------------------------------------------------------
 
 
+def _form_text_value(value: object) -> str:
+    """Return a Streamlit text_input-safe value for nullable DB fields."""
+    return "" if value is None else str(value)
+
+
 def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
     session: Session,
     row: QueueRow,
@@ -1312,9 +1386,11 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
     state = cast(MutableMapping[str, Any], st.session_state)
 
     if state_key not in state:
-        state[state_key] = [
-            {"canonical_name": "", "enrollment": "", "graduates": ""},
-        ]
+        state[state_key] = department_form_rows_for_document(
+            session,
+            document_id=row.document_id,
+            fiscal_year=int(fy_default),
+        ) or [{"canonical_name": "", "enrollment": "", "graduates": ""}]
     prune_manual_entry_row_widgets(
         state,
         document_id=row.document_id,
@@ -1351,23 +1427,80 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
 
         form_rows: list[dict[str, Any]] = []
         for i, _ in enumerate(state[state_key]):
+            initial = cast(dict[str, Any], state[state_key][i])
             st.markdown(f"**学科 #{i + 1}**")
             c = st.columns([2, 1, 1, 1, 1, 1, 1])
-            canonical = c[0].text_input("学科名", key=f"name_{row.document_id}_{i}")
-            capacity = c[1].text_input("収定", key=f"cap_{row.document_id}_{i}")
-            enrollment = c[2].text_input("在籍", key=f"enr_{row.document_id}_{i}")
-            intl = c[3].text_input("留学生", key=f"intl_{row.document_id}_{i}")
-            graduates = c[4].text_input("卒業", key=f"grad_{row.document_id}_{i}")
-            advanced = c[5].text_input("進学", key=f"adv_{row.document_id}_{i}")
-            employed = c[6].text_input("就職", key=f"emp_{row.document_id}_{i}")
+            canonical = c[0].text_input(
+                "学科名",
+                value=_form_text_value(initial.get("canonical_name")),
+                key=f"name_{row.document_id}_{i}",
+            )
+            capacity = c[1].text_input(
+                "収定",
+                value=_form_text_value(initial.get("capacity")),
+                key=f"cap_{row.document_id}_{i}",
+            )
+            enrollment = c[2].text_input(
+                "在籍",
+                value=_form_text_value(initial.get("enrollment")),
+                key=f"enr_{row.document_id}_{i}",
+            )
+            intl = c[3].text_input(
+                "留学生",
+                value=_form_text_value(initial.get("intl_students")),
+                key=f"intl_{row.document_id}_{i}",
+            )
+            graduates = c[4].text_input(
+                "卒業",
+                value=_form_text_value(initial.get("graduates")),
+                key=f"grad_{row.document_id}_{i}",
+            )
+            advanced = c[5].text_input(
+                "進学",
+                value=_form_text_value(initial.get("advanced")),
+                key=f"adv_{row.document_id}_{i}",
+            )
+            employed = c[6].text_input(
+                "就職",
+                value=_form_text_value(initial.get("employed")),
+                key=f"emp_{row.document_id}_{i}",
+            )
             d = st.columns([1, 1, 1, 1, 1, 1])
-            other = d[0].text_input("その他", key=f"oth_{row.document_id}_{i}")
-            prev_enrollment = d[1].text_input("前年在籍", key=f"prev_{row.document_id}_{i}")
-            dropouts = d[2].text_input("中退", key=f"drp_{row.document_id}_{i}")
-            dropout_rate = d[3].text_input("中退率(0-1)", key=f"drprate_{row.document_id}_{i}")
-            duration_years = d[4].text_input("年限", key=f"dur_{row.document_id}_{i}")
+            other = d[0].text_input(
+                "その他",
+                value=_form_text_value(initial.get("other")),
+                key=f"oth_{row.document_id}_{i}",
+            )
+            prev_enrollment = d[1].text_input(
+                "前年在籍",
+                value=_form_text_value(initial.get("prev_enrollment")),
+                key=f"prev_{row.document_id}_{i}",
+            )
+            dropouts = d[2].text_input(
+                "中退",
+                value=_form_text_value(initial.get("dropouts")),
+                key=f"drp_{row.document_id}_{i}",
+            )
+            dropout_rate = d[3].text_input(
+                "中退率(0-1)",
+                value=_form_text_value(initial.get("dropout_rate")),
+                key=f"drprate_{row.document_id}_{i}",
+            )
+            duration_years = d[4].text_input(
+                "年限",
+                value=_form_text_value(initial.get("duration_years")),
+                key=f"dur_{row.document_id}_{i}",
+            )
+            dept_change_options = ["", "新設", "廃科", "名称変更", "統合"]
+            dept_change_default = str(initial.get("dept_change") or "")
             dept_change = d[5].selectbox(
-                "学科改編", options=["", "新設", "廃科", "名称変更", "統合"],
+                "学科改編",
+                options=dept_change_options,
+                index=(
+                    dept_change_options.index(dept_change_default)
+                    if dept_change_default in dept_change_options
+                    else 0
+                ),
                 key=f"chg_{row.document_id}_{i}",
             )
             form_rows.append({
@@ -1386,16 +1519,49 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
                 "dept_change": dept_change or None,
             })
 
+        support_defaults = support_recipient_form_row_for_document(
+            session,
+            document_id=row.document_id,
+            fiscal_year=int(fy_default),
+        )
         st.markdown("**対象比率（任意）**")
         sr1 = st.columns([1, 1, 1, 1])
-        first_half_total = sr1[0].text_input("前半期計", key=f"sr_fh_{row.document_id}")
-        second_half_total = sr1[1].text_input("後半期計", key=f"sr_sh_{row.document_id}")
-        annual_total = sr1[2].text_input("年間計", key=f"sr_ann_{row.document_id}")
-        grand_total = sr1[3].text_input("総計", key=f"sr_gt_{row.document_id}")
+        first_half_total = sr1[0].text_input(
+            "前半期計",
+            value=_form_text_value(support_defaults.get("first_half_total")),
+            key=f"sr_fh_{row.document_id}",
+        )
+        second_half_total = sr1[1].text_input(
+            "後半期計",
+            value=_form_text_value(support_defaults.get("second_half_total")),
+            key=f"sr_sh_{row.document_id}",
+        )
+        annual_total = sr1[2].text_input(
+            "年間計",
+            value=_form_text_value(support_defaults.get("annual_total")),
+            key=f"sr_ann_{row.document_id}",
+        )
+        grand_total = sr1[3].text_input(
+            "総計",
+            value=_form_text_value(support_defaults.get("grand_total")),
+            key=f"sr_gt_{row.document_id}",
+        )
         sr2 = st.columns([1, 1, 1])
-        household_change = sr2[0].text_input("家計急変", key=f"sr_hh_{row.document_id}")
-        school_number = sr2[1].text_input("学校番号", key=f"sr_no_{row.document_id}")
-        sr_notes = sr2[2].text_input("対象比率メモ", key=f"sr_note_{row.document_id}")
+        household_change = sr2[0].text_input(
+            "家計急変",
+            value=_form_text_value(support_defaults.get("household_change")),
+            key=f"sr_hh_{row.document_id}",
+        )
+        school_number = sr2[1].text_input(
+            "学校番号",
+            value=_form_text_value(support_defaults.get("school_number")),
+            key=f"sr_no_{row.document_id}",
+        )
+        sr_notes = sr2[2].text_input(
+            "対象比率メモ",
+            value=_form_text_value(support_defaults.get("notes")),
+            key=f"sr_note_{row.document_id}",
+        )
         support_row = {
             "first_half_total": first_half_total,
             "second_half_total": second_half_total,

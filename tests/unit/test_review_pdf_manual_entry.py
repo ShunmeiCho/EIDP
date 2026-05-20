@@ -44,6 +44,7 @@ from eidp.review._pages.pdf_manual_entry import (
     MANUAL_QUEUE_VIEW_TARGET,
     MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
     QUEUE_STATUSES,
+    SAVE_ELIGIBLE_STATUSES,
     DiscoveryEvidenceRow,
     QueueRow,
     SaveOutcome,
@@ -51,6 +52,7 @@ from eidp.review._pages.pdf_manual_entry import (
     build_pdf_preview,
     clear_manual_entry_form_state,
     coerce_focus_document_id,
+    department_form_rows_for_document,
     discovery_evidence_table_rows,
     discovery_reason_label,
     discovery_trace_summary,
@@ -332,6 +334,68 @@ def test_manual_queue_target_with_ingested_still_filters_old_year(engine):
         assert old_doc.id not in {row.document_id for row in rows}
 
 
+def test_ingested_document_is_editable_for_confirmation_supplement_prefill(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="補足学校")
+        doc = _seed_doc(session, school, status="ingested", file_hash_seed="supplement", fiscal_year=2026)
+        dept = Department(
+            school_id=school.id,
+            canonical_name="自動抽出学科",
+            duration_years=2.0,
+        )
+        session.add(dept)
+        session.flush()
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                document_id=doc.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                capacity=40,
+                enrollment=35,
+                intl_students=2,
+                graduates=30,
+                advanced=5,
+                employed=24,
+                other=1,
+                prev_enrollment=36,
+                dropouts=1,
+                dropout_rate=0.0278,
+                extraction_confidence=0.91,
+                extraction_method="pdfplumber",
+                verified=False,
+            )
+        )
+        session.commit()
+        doc_id = int(doc.id)
+
+        queue = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
+            target_fiscal_year=2026,
+        )
+        form_rows = department_form_rows_for_document(session, document_id=doc_id, fiscal_year=2026)
+
+    assert "ingested" in SAVE_ELIGIBLE_STATUSES
+    assert [row.document_id for row in queue] == [doc_id]
+    assert form_rows == [{
+        "canonical_name": "自動抽出学科",
+        "duration_years": 2.0,
+        "capacity": 40,
+        "enrollment": 35,
+        "intl_students": 2,
+        "graduates": 30,
+        "advanced": 5,
+        "employed": 24,
+        "other": 1,
+        "prev_enrollment": 36,
+        "dropouts": 1,
+        "dropout_rate": 0.0278,
+        "dept_change": None,
+    }]
+
+
 def test_manual_queue_all_view_is_explicit_diagnostics(engine):
     with Session(engine) as session:
         school = _seed_school(session, name="All学校")
@@ -403,8 +467,8 @@ def test_manual_queue_summary_and_table_explain_next_actions(engine):
     assert summary.current_year == 2
     assert summary.unknown_year == 1
     assert summary.old_year == 1
-    assert summary.save_eligible == 3
-    assert summary.read_only == 1
+    assert summary.save_eligible == 4
+    assert summary.read_only == 0
     assert actions_by_doc[old_doc_id] == "旧年度診断"
     assert actions_by_doc[target_doc_id] == "OCR/手入力"
     assert actions_by_doc[unknown_doc_id] == "年度確認"
@@ -1230,10 +1294,11 @@ def test_save_eligible_statuses_excludes_school_mismatch():
     """``school_mismatch`` documents are listed in the queue but must
     NOT have a save form rendered — the operator must fix the school
     binding first. This test pins the policy constant so a future
-    page-mod change can't silently flip it."""
+    page-mod change can't silently flip it. Already-ingested documents
+    stay editable for confirmation/supplemental append-only revisions."""
     from eidp.review._pages.pdf_manual_entry import SAVE_ELIGIBLE_STATUSES
 
     assert "school_mismatch" not in SAVE_ELIGIBLE_STATUSES
     assert SAVE_ELIGIBLE_STATUSES == frozenset({
-        "ocr_pending", "parse_failed", "review_pending",
+        "ocr_pending", "parse_failed", "review_pending", "ingested",
     })

@@ -256,6 +256,17 @@ def manual_entry_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
     return payload
 
 
+def manual_entry_cta_label_for_row(row: SchoolTaskRow) -> str | None:
+    """Return the PDF確認 CTA label for a task row, if one should be shown."""
+    if row.latest_document_id is None:
+        return None
+    if row.next_action in MANUAL_ENTRY_ACTIONS:
+        return "このPDFを確認・手入力"
+    if row.pdf_status == "confirmed_target" and row.extract_status in {"parsed", "manual_entered"}:
+        return "抽出済内容を確認・補足"
+    return None
+
+
 def settings_page_prefill() -> dict[str, object]:
     """Return Streamlit session_state values that open the operator settings page."""
     return {"selected_page": SETTINGS_PAGE_ID}
@@ -2237,9 +2248,10 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
                 ):
                     st.session_state.update(url_submission_prefill_for_row(row))
                     st.rerun()
-            if row.next_action in MANUAL_ENTRY_ACTIONS and row.latest_document_id is not None:
+            manual_entry_cta_label = manual_entry_cta_label_for_row(row)
+            if manual_entry_cta_label is not None:
                 if st.button(
-                    "このPDFを確認・手入力",
+                    manual_entry_cta_label,
                     key=f"manual_entry_prefill_{row.school_id}_{row.latest_document_id}",
                 ):
                     st.session_state.update(manual_entry_prefill_for_row(row))

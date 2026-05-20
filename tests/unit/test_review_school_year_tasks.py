@@ -36,6 +36,7 @@ from eidp.review._pages.school_year_tasks import (
     latest_bootstrap_progress,
     latest_url_search_evidence,
     list_school_year_tasks,
+    manual_entry_cta_label_for_row,
     manual_entry_prefill_for_row,
     needs_initial_url_bootstrap,
     next_action_for_row,
@@ -1278,6 +1279,69 @@ def test_manual_entry_prefill_for_row_focuses_latest_document() -> None:
             "selected_page": school_year_tasks.MANUAL_ENTRY_PAGE_ID,
             school_year_tasks.MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY: 40,
         }
+    finally:
+        session.close()
+
+
+def test_manual_entry_cta_for_extracted_row_opens_confirmation_supplement_flow() -> None:
+    session = _session()
+    try:
+        _school(session, 8, name="抽出済学校")
+        _status(
+            session,
+            8,
+            pdf_status="confirmed_target",
+            extract_status="parsed",
+            excel_ready=True,
+            blocking_reason=None,
+            evidence_level="pdf_text",
+        )
+        _doc(session, 80, 8, fy=2026, status="ingested")
+        session.commit()
+
+        row = list_school_year_tasks(session, fiscal_year=2026, school_type="専門学校", scope="excel_ready")[0]
+
+        assert row.next_action == "Excel出力可"
+        assert manual_entry_cta_label_for_row(row) == "抽出済内容を確認・補足"
+        assert manual_entry_prefill_for_row(row) == {
+            "selected_page": school_year_tasks.MANUAL_ENTRY_PAGE_ID,
+            school_year_tasks.MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY: 80,
+        }
+    finally:
+        session.close()
+
+
+def test_task_board_extracted_row_button_prefills_manual_entry(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        _school(session, 8, name="抽出済学校")
+        _status(
+            session,
+            8,
+            pdf_status="confirmed_target",
+            extract_status="parsed",
+            excel_ready=True,
+            blocking_reason=None,
+            evidence_level="pdf_text",
+        )
+        _doc(session, 80, 8, fy=2026, status="ingested")
+        session.commit()
+
+        app = AppTest.from_function(
+            _render_school_tasks_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.session_state[school_year_tasks.TASK_SCOPE_STATE_KEY] = "Excel出力可"
+        app.run(timeout=30)
+
+        assert not app.exception
+        buttons = [button for button in app.button if button.label == "抽出済内容を確認・補足"]
+        assert len(buttons) == 1
+
+        buttons[0].click().run(timeout=30)
+
+        assert app.session_state["selected_page"] == school_year_tasks.MANUAL_ENTRY_PAGE_ID
+        assert app.session_state[school_year_tasks.MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY] == 80
     finally:
         session.close()
 
