@@ -585,6 +585,9 @@ evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
+The version-specific owner/operator request for any future v523 real cycle is
+`docs/runbooks/eidp-v523-owner-request-20260520.txt`; it preserves the same
+release-decision boundary and must not be treated as approval by itself.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs

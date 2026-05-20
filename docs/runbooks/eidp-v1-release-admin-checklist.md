@@ -112,6 +112,9 @@ Before merging or tagging, attach or reference:
 
 Current v523 side-by-side evidence is summarized in
 `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`.
+The v523 owner/operator request is prepared at
+`docs/runbooks/eidp-v523-owner-request-20260520.txt`; it is a handoff aid, not
+release approval.
 
 ## Final Commands
 
