@@ -799,6 +799,43 @@ ssh -o ConnectTimeout=8 -o ControlMaster=no <WindowsUser>@<新IPv4> hostname
 Server が止まっている。`ssh-keyscan` は返るが `hostname` が失敗する場合は、
 14.5 の鍵/ACL、または 14.6 の sshd session 復旧を確認する。
 
+#### 14.7.1 `10.109.*` など大学・学内のプライベート網段にいる場合
+
+`10.109.*` は通常インターネット公開 IP ではなく、学内 LAN / VPN 内だけで到達できる
+プライベート網段として扱う。EIDP の通常運用は業務員 PC 上の
+`http://127.0.0.1:8501` で完結するため、学内網段そのものはリリース blocker ではない。
+ただし、Mac からの remote smoke、SSH tunnel、ZIP 転送、学校サイト PDF 取得では
+次の点を先に切り分ける。
+
+| 確認点 | 影響 | 対処 |
+|--------|------|------|
+| Mac が `10.109.*` へ route を持たない | `ssh win` / `scp` / tunnel が timeout する | Mac を同じ学内 LAN / VPN に入れる。無理な場合は USB / 共有ドライブの手動転送に切り替える |
+| 学内 Wi-Fi の client isolation | 同じ `10.109.*` に見えても端末間通信が遮断される | `Test-NetConnection <Mac側IP> -Port <必要ポート>` と Mac 側 `nc -vz <WindowsIP> 22` で双方向を確認する。遮断される場合は管理者ネットワークか有線 LAN を使う |
+| Windows network profile が `Public` | OpenSSH / Python inbound が Defender Firewall に遮断されやすい | 業務員 PC 側で `Get-NetConnectionProfile` を確認する。必要な remote smoke の時だけ管理者が OpenSSH 22 を許可する |
+| 学内 proxy / SSL inspection | PDF discovery の outbound HTTP(S) が失敗する | ブラウザで学校サイト PDF を手動確認し、proxy / allowlist が必要なら管理者に依頼する。自動取得できないものは `PDF確認・手入力` に回す |
+| Streamlit を LAN に公開したくなる | 個人情報・操作画面を学内網へ露出する | `scripts\launch.bat` の既定 `127.0.0.1` binding を維持する。remote smoke は SSH tunnel で行い、`0.0.0.0` へ変更しない |
+
+Windows 側の確認例:
+
+```powershell
+ipconfig
+Get-NetConnectionProfile
+Get-NetFirewallRule -DisplayGroup "OpenSSH Server" -ErrorAction SilentlyContinue
+Test-NetConnection <Mac側IP> -Port 22
+```
+
+Mac 側の確認例:
+
+```bash
+route get <Windowsの10.109.* IPv4>
+nc -vz -w 3 <Windowsの10.109.* IPv4> 22
+ssh -o ConnectTimeout=8 -o ControlMaster=no <WindowsUser>@<Windowsの10.109.* IPv4> hostname
+```
+
+`10.109.*` の到達性が不安定な場合でも、EIDP の証跡として数えるのは
+Windows 側で SHA 照合、setup、UI health、weekly run、Stage 6 evidence verifier が
+実際に完了した後だけにする。Mac から見えた / 見えないだけでは Windows 運用可否を判定しない。
+
 ### 14.8 「業務員傻瓜式部署」の前提
 
 最新 ZIP を使う限り、業務員側の操作は次の 3 ステップのみで完了します：

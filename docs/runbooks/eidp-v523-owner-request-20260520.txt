@@ -24,6 +24,15 @@ Side-by-side root:
 Current active root to preserve:
   %USERPROFILE%\EIDP-v485-70e3db4
 
+Network note
+------------
+If the owner/operator PC is on a `10.109.*` university subnet, treat that IP as
+private campus/VPN reachability only. Do not expose Streamlit beyond
+`127.0.0.1`; use an SSH tunnel for remote smoke when SSH is reachable, or a
+manual ZIP/evidence transfer when client isolation, VPN routing, or Windows
+Firewall blocks Mac-to-Windows access. A Mac-side network timeout is not proof
+that the Windows offline package is broken.
+
 Current side-by-side evidence
 -----------------------------
 - package/source report:
