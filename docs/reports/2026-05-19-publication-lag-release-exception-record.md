@@ -3,8 +3,8 @@
 Date: 2026-05-19
 Last evidence refresh: 2026-05-20
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v525.zip`
-Package SHA256: `5e0ed056e37c5b105b38de033062c4f7a7a8f0966509adb0251cade8f151efc4`
+Package candidate: `dist/eidp-windows-v526.zip`
+Package SHA256: `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -41,12 +41,12 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
-| v525 package/non-Windows release gates | `logs/win-v525-stage6-v525-non-windows-release-gates-20260520.json` | `ok=true`, package/source fresh, full unit `1898 passed` |
-| v525 owner-docs docs-only release gates | `logs/win-v525-stage6-v525-owner-docs-docs-only-gates-20260520.json` | `ok=true`, `docs_only_stale=true`, package SHA matched |
-| v525 package/source and Windows smoke report | `docs/reports/2026-05-20-v525-rc-metadata-package.md` | current package/source proof; complete Windows side-by-side proof; FY2026/R8 strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` |
-| v525 owner/operator request | `docs/runbooks/eidp-v525-owner-request-20260520.txt` | prepared; not approval |
-| v525 owner-docs Windows staging | `docs/reports/2026-05-20-v525-owner-docs-windows-staging.md` | handoff docs staged on Windows; active task still v485 |
-| v524 owner-return verifier hardening | `docs/reports/2026-05-20-v524-owner-return-verifier-hardening-package.md` | historical verifier-hardening proof packaged into v525 |
+| v526 package/non-Windows release gates | `logs/win-v526-stage6-v526-non-windows-release-gates-20260520.json` | `ok=true`, package/source fresh, full unit `1901 passed` |
+| v526 package/source and Windows smoke report | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md` | current package/source proof; complete Windows side-by-side proof; extracted confirmation/supplement UI proof; FY2026/R8 strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` |
+| v526 owner/operator request | `docs/runbooks/eidp-v526-owner-request-20260520.txt` | prepared; not approval |
+| v526 owner-docs Windows staging | `docs/reports/2026-05-20-v526-owner-docs-windows-staging.md` | handoff docs staged on Windows; active task still v485 |
+| v525 owner-docs Windows staging | `docs/reports/2026-05-20-v525-owner-docs-windows-staging.md` | historical handoff docs staged on Windows; active task still v485 |
+| v524 owner-return verifier hardening | `docs/reports/2026-05-20-v524-owner-return-verifier-hardening-package.md` | historical verifier-hardening proof packaged into v526 |
 | v523 Windows side-by-side evidence | `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md` | historical complete Windows side-by-side proof |
 | v501 Windows side-by-side evidence | `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md` | historical complete Windows side-by-side proof |
 | v502 Windows side-by-side evidence | `docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md` | historical partial proof |
@@ -79,14 +79,14 @@ evidence or Stage 6 return verification.
 
 ## Current Negative Verifier Check
 
-The refreshed v525 exception packet was checked against
+The refreshed v526 exception packet was checked against
 `scripts/verify_stage6_return.py` while this record remained `NOT_APPROVED`.
 The verifier correctly rejected release approval:
 
 - output JSON:
-  `logs/win-v525-stage6-v525-verify-stage6-return-not-approved-exception-20260520.json`
+  `logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.json`
 - return code:
-  `logs/win-v525-stage6-v525-verify-stage6-return-not-approved-exception-20260520.rc`
+  `logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.rc`
 - observed rc: `1`
 - observed `ok`: `false`
 - expected blocking errors included:
@@ -99,7 +99,7 @@ The verifier correctly rejected release approval:
 
 An earlier v523 dry-run used a temporary filled owner E2E template and a
 temporary `APPROVED` copy of this exception record under `_temp/`. This probe
-does not approve release or approve the current v525 candidate; it only verifies
+does not approve release or approve the current v526 candidate; it only verifies
 that the verifier path is internally consistent once the real approval/sign-off
 fields are provided.
 

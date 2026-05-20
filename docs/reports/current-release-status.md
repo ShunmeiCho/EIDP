@@ -2,12 +2,13 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v525` for the `1.0.0rc1` metadata rebuild, package/source
-verification, and complete Windows side-by-side smoke. `v524` is now the
-previous complete Windows side-by-side smoke package.
-Latest source-side follow-up: `v525` rebuilds the hardened v524 owner-return
-verifier package after the project version bump to `1.0.0rc1`.
-`v525` is now the latest package with complete Windows side-by-side smoke
+Latest package family: `v526` for the extracted-PDF confirmation/supplement UI,
+package/source verification, and complete Windows side-by-side smoke. `v525`
+is now the previous complete Windows side-by-side smoke package.
+Latest source-side follow-up: `v526` adds an operator task-board entry point for
+already extracted PDFs and prefilled confirmation/supplement saves through the
+existing PDF確認・手入力 page.
+`v526` is now the latest package with complete Windows side-by-side smoke
 evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
 limit-50 canary, residual-cleanup dry run, and Stage 6 bundle verification.
 `v502` and `v501` are superseded Windows evidence baselines.
@@ -184,7 +185,7 @@ denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
 and estimated manual workload `20.2%`.
 The explicit publication-lag approval record is prepared at
 `docs/reports/2026-05-19-publication-lag-release-exception-record.md`, but its
-status remains `NOT_APPROVED`; it has been refreshed to the v525 package and
+status remains `NOT_APPROVED`; it has been refreshed to the v526 package and
 Windows-smoke evidence packet, but does not unblock release until filled and
 signed.
 Current FY2026/R8 production-scale strict-yield proof:
@@ -226,14 +227,14 @@ After the user restarted Windows SSH, `ssh win` was usable again and v523
 current-source Windows side-by-side validation completed. The earlier
 connectivity report is retained as historical evidence only.
 Current package candidate:
-`dist/eidp-windows-v525.zip`, SHA256
-`5e0ed056e37c5b105b38de033062c4f7a7a8f0966509adb0251cade8f151efc4`.
+`dist/eidp-windows-v526.zip`, SHA256
+`4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=73392f7a246b4dcd7396524b87e2db48b25dec61`,
+`git_commit=5b30eb78edc331f992c1a99fdc7611174791ab87`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v525-stage6-v525-non-windows-release-gates-20260520.json`
-(`ok=true`; package/source check is fresh, full unit suite `1898 passed`,
+`logs/win-v526-stage6-v526-non-windows-release-gates-20260520.json`
+(`ok=true`; package/source check is fresh, full unit suite `1901 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
 verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
@@ -351,7 +352,7 @@ verifier proof is
 `logs/win-v523-stage6/stage6-recovery-20260520-133934.json` (`ok=true`,
 `action_matches_expected=true`, active task still v485). v523 superseded v501
 as a complete Windows side-by-side smoke package, but is itself superseded by
-v524/v525 and remains below the strict FY2026/R8 release line.
+v524/v525/v526 and remains below the strict FY2026/R8 release line.
 
 v518 includes all v517 package features plus the Sanko Tokyo child-school
 publication-lag gold-set entry. The package verifier reports 45 discovery
@@ -420,6 +421,21 @@ Excel smoke, residual-cleanup dry run, active-task recovery, and Stage 6
 evidence verification all returned `ok=true`. The v524 canary remains strict
 `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, and
 `ship_gate_status=below_gate`, so this does not unblock v1.0.
+
+v526 includes all v525 package features plus the extracted-PDF
+confirmation/supplement UI. The school-year task board now exposes
+`抽出済内容を確認・補足` for extracted `confirmed_target` rows that still have a
+latest document, and the existing PDF確認・手入力 page preloads current
+`DepartmentYearly`, `Department`, and `SupportRecipient` values for that
+document. The package evidence is recorded in
+`docs/reports/2026-05-20-v526-extracted-confirmation-package.md`. The v526
+non-Windows release gate reports `ok=true`, package/source fresh, and full unit
+`1901 passed`; complete Windows side-by-side smoke also returned `ok=true` for
+setup, install validation, OCR runtime validation, UI smoke, weekly limit-50
+canary, Excel smoke, residual-cleanup dry run, active-task recovery, and Stage
+6 evidence verification. The v526 canary remains strict `5/50 (10.0%)`,
+operator-reviewable `50/50 (100.0%)`, and `ship_gate_status=below_gate`, so
+this does not unblock v1.0.
 
 v502 includes all v501 package features plus the v501 RCA follow-up residual
 Sanko exact school URL overrides for the two remaining corporation-root cases.
@@ -581,11 +597,11 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v525.zip`
-Current v525 SHA256 sidecar:
-`dist/eidp-windows-v525.zip.sha256`
-Current v525 package build evidence:
-`dist/eidp-windows-v525.zip` was built from clean source and validated by the
+`dist/eidp-windows-v526.zip`
+Current v526 SHA256 sidecar:
+`dist/eidp-windows-v526.zip.sha256`
+Current v526 package build evidence:
+`dist/eidp-windows-v526.zip` was built from clean source and validated by the
 full non-Windows release gate. It has also completed Windows side-by-side
 setup, validation, recovery, OCR runtime proof, UI smoke, Excel smoke,
 limit-50 canary, residual-cleanup dry run, and Stage 6 evidence verification.
@@ -595,23 +611,29 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v525 is package/source verified, Windows side-by-side smoke validated, and
+v526 is package/source verified, Windows side-by-side smoke validated, and
 includes the v520/v521/v522 source-side follow-ups, v524 owner-return verifier
-hardening, and the `1.0.0rc1` metadata bump. The v525 Windows limit-50 canary
+hardening, the `1.0.0rc1` metadata bump, and the extracted-PDF
+confirmation/supplement UI. The v526 Windows limit-50 canary
 remains below gate after v522 RCA reclassification, v502 is partially Windows
-side-by-side validated historically, and v525 is the latest complete
+side-by-side validated historically, and v526 is the latest complete
 Windows-smoke proof.
 Current FY2026 production-scale strict proof and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
-The version-specific owner/operator request for any future v525 real cycle is
-`docs/runbooks/eidp-v525-owner-request-20260520.txt`; it preserves the same
+The version-specific owner/operator request for any future v526 real cycle is
+`docs/runbooks/eidp-v526-owner-request-20260520.txt`; it preserves the same
 release-decision boundary and must not be treated as approval by itself.
+The v526 owner/operator docs were staged on Windows under
+`C:\EIDP-staging\v526-owner-docs-20260520`; the docs ZIP SHA256 is
+`a730947fe77029991463336b4376648f1c1c9900995e8adebac3a189322506f4`, and the
+post-staging recheck confirmed the active weekly task still points to
+`C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`.
 The current negative owner-return verifier probe is
-`logs/win-v525-stage6-v525-verify-stage6-return-not-approved-exception-20260520.json`
-with rc `1`: the v525 exception packet still fails because the exception record
+`logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.json`
+with rc `1`: the v526 exception packet still fails because the exception record
 is `NOT_APPROVED`, owner/operator KPI and sign-off rows are blank, and the Excel
 and audit proof rows required by the hardened verifier are missing.
 Current v480 retroactive Excel matrix:
