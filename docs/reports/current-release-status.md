@@ -215,12 +215,15 @@ evidence collection, and evidence-folder shortcuts. The active v485 DB still
 had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
-Fresh read-only Mac-side connectivity recheck on 2026-05-20 found the local
+Fresh read-only Mac-side connectivity recheck on 2026-05-20 is recorded in
+`docs/reports/2026-05-20-v522-windows-connectivity-recheck.md`. The local
 `Host win` still points at stale `192.168.0.9`, while the Mac is on
-`192.168.10.68`. ARP candidates `192.168.10.12`, `.70`, `.71`, `.72`, and
-`.73` did not expose usable TCP/22, 135, 139, 445, 3389, 5985, or 5986. v519
-Windows side-by-side validation therefore remains blocked on a current Windows
-IPv4 or restored OpenSSH service.
+`192.168.10.68`. Current ARP candidates were only `192.168.10.12` and
+`192.168.10.72`; neither candidate nor stale `192.168.0.9` exposed usable
+TCP/22, 135, 139, 445, 3389, 5985, or 5986. A short Bonjour/mDNS browse for
+SSH, SMB, RDP, and workstation services found no usable advertised service.
+v519/current-source Windows side-by-side validation therefore remains blocked
+on a current Windows IPv4 or restored OpenSSH/WinRM/RDP service.
 Current package candidate:
 `dist/eidp-windows-v519.zip`, SHA256
 `fbc2ae0016b7b293c0fd534d7b3e7eb881f74205fa6df19acda42a8d21ba195a`.
