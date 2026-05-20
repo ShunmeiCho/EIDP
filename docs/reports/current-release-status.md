@@ -17,7 +17,9 @@ Latest owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable after service recovery, the refreshed v526 owner handoff remains
 staged on Windows, and the remote `publication_lag` approval plus owner/operator
-sign-off fields remain blank.
+sign-off fields remain blank. The Windows-staged owner docs ZIP was refreshed
+to include this report and now has SHA256
+`f8bd3933a2a5a690befe172237a1027954e73fa604006dec5784f368460ca8f9`.
 `v526` is now the latest package with complete Windows side-by-side smoke
 evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
 limit-50 canary, residual-cleanup dry run, and Stage 6 bundle verification.

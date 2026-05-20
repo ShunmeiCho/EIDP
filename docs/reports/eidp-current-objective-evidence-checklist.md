@@ -11,7 +11,9 @@ Last recorded live check after the campus `10.x` docs-only update:
 Latest Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable, refreshed v526 owner docs remain staged, and the remote
-`publication_lag` approval / E2E sign-off fields are still blank.
+`publication_lag` approval / E2E sign-off fields are still blank. The refreshed
+Windows-staged owner docs ZIP now includes this report and has SHA256
+`f8bd3933a2a5a690befe172237a1027954e73fa604006dec5784f368460ca8f9`.
 Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -63,7 +65,9 @@ that keeps manual work below the release threshold.
 - Latest Windows owner-return remote check:
   `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms the
   refreshed v526 handoff is present on Windows, but the remote approval and
-  owner/operator sign-off fields remain blank.
+  owner/operator sign-off fields remain blank. The Windows-staged owner docs
+  ZIP was refreshed to include this report and now has SHA256
+  `f8bd3933a2a5a690befe172237a1027954e73fa604006dec5784f368460ca8f9`.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:

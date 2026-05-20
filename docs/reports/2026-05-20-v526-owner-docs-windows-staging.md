@@ -14,12 +14,13 @@ files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip` |
-| ZIP SHA256 | `bee523cbf54bbae86f759d02bbd8d8e51bfa00b5462ecef93b39fcbaf4d03b3a` |
+| ZIP SHA256 | `f8bd3933a2a5a690befe172237a1027954e73fa604006dec5784f368460ca8f9` |
 | ZIP SHA256 sidecar | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip.sha256` present and matches the ZIP hash |
 | Extracted destination | `C:\EIDP-staging\v526-owner-docs-20260520` |
 | First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v526.txt` present |
 | Owner request | `docs\runbooks\eidp-v526-owner-request-20260520.txt` present |
 | Windows runbook | `docs\runbooks\eidp-windows.md` present, including `10.209.*` and standard proxy environment-variable guidance |
+| Owner-return remote check | `docs\reports\2026-05-20-v526-owner-return-remote-check.md` present |
 | Package report | `docs\reports\2026-05-20-v526-extracted-confirmation-package.md` present |
 | Post-reboot active-task preflight | `docs\reports\2026-05-20-v526-post-reboot-active-task-preflight.md` present |
 
@@ -52,3 +53,10 @@ Windows-staged owner docs include `10.x` private campus subnet guidance,
 including `10.209.*`, and the standard `HTTP_PROXY` / `HTTPS_PROXY` /
 `NO_PROXY` path for outbound PDF discovery behind a campus proxy. The refresh
 copied documentation only; the active weekly task still points to v485.
+
+It was refreshed a third time after the owner-return remote check so the
+Windows-staged handoff now includes
+`docs\reports\2026-05-20-v526-owner-return-remote-check.md`. Remote staging
+verification returned `ok=true`, `owner_return_remote_check=true`,
+`has_10209=true`, `has_proxy_guidance=true`, and the active weekly task still
+points to v485.
