@@ -627,8 +627,9 @@ The version-specific owner/operator request for any future v526 real cycle is
 `docs/runbooks/eidp-v526-owner-request-20260520.txt`; it preserves the same
 release-decision boundary and must not be treated as approval by itself.
 The v526 owner/operator docs were staged on Windows under
-`C:\EIDP-staging\v526-owner-docs-20260520`; the docs ZIP SHA256 is
-`bafab5db3192da5e156974c8585a01b05df7e753c35adc180e253b8c7e5457b3`, and the
+`C:\EIDP-staging\v526-owner-docs-20260520`; the final docs ZIP SHA256 is
+recorded in `docs/reports/2026-05-20-v526-owner-docs-windows-staging.md`
+outside the ZIP to avoid embedding a self-referential hash, and the
 post-staging recheck confirmed the active weekly task still points to
 `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`.
 A follow-up runtime boundary recheck is recorded in
