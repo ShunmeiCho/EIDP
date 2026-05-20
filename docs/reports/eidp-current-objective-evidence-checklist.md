@@ -5,8 +5,8 @@ Branch: `sprint8-handoff-finalize`
 PR: `#2`
 PR live state: verify with
 `gh pr view 2 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
-Last recorded live check before this docs-only audit update:
-`614e93a7fcf7fe374ec9d096cb6d26b999f0e964` was `CLEAN` with required checks
+Last recorded live check after the campus `10.x` docs-only update:
+`a8decad658b3d27718351a45eacf3a8ef5d330e6` was `CLEAN` with required checks
 `SUCCESS` for both push and pull_request runs.
 Status: **NOT COMPLETE**
 
@@ -51,6 +51,11 @@ that keeps manual work below the release threshold.
   Excel proof and ManualActionLog / JSONL outbox proof rows.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
+- Latest docs-only campus-network guidance follow-up: `a8decad` generalizes
+  the runbook and owner request from `10.109.*` to `10.x` private campus
+  subnets including `10.209.*`, and documents standard `HTTP_PROXY` /
+  `HTTPS_PROXY` / `NO_PROXY` handling for outbound PDF discovery behind a
+  campus proxy. No package rebuild was made for this docs-only follow-up.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:
@@ -148,6 +153,14 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 - v526 owner/operator docs were staged on Windows under `C:\EIDP-staging\v526-owner-docs-20260520`, recorded in `docs/reports/2026-05-20-v526-owner-docs-windows-staging.md`: the final ZIP SHA256 is recorded in that external staging report rather than embedded inside the ZIP, and the extracted docs include the v526 first-read handoff, owner request, package report, exception record, objective checklist, release status, and post-reboot active-task preflight. A post-staging read-only recheck confirmed `EIDP Weekly Run` still executes `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`, while both v485 and v526 roots remain present. This copies docs only and does not modify active runtime, DB, PDFs, or Task Scheduler.
 - v526 runtime boundary recheck is recorded in `docs/reports/2026-05-20-v526-runtime-boundary-recheck.md`: the active weekly task still points to v485, no Streamlit listeners remained on ports `8523/8524/8525/8526`, and both the v526 side-by-side root and v526 staged docs directory were present.
 - Negative v526 return-verifier probe is recorded in `logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.json` with rc `1`: the refreshed v526 exception packet still fails on `Status must be APPROVED`, `Decision must be APPROVED`, placeholder approval fields, missing owner/operator KPI and sign-off rows, and missing Excel/audit proof rows.
+- Post-`a8decad` docs-only release gate rerun returned `ok=true` for
+  `dist/eidp-windows-v526.zip` with `docs_only_stale=true`, SHA256
+  `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`,
+  validator/distribution unit `188 passed`, mypy/ruff pass, discovery gold
+  45/45 exact, and package verification pass. Live PR #2 state after push was
+  head `a8decad658b3d27718351a45eacf3a8ef5d330e6`,
+  `mergeStateStatus=CLEAN`, with `Python quality gates` and
+  `Ship gate contract` successful for both push and pull_request CI runs.
 
 These checks validate the gold-set contract used by the package verifier. They
 do not remove the FY2026/R8 release blocker.
