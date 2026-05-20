@@ -3600,6 +3600,23 @@ def run_pdf_discovery(
     )
     if discovery_methods:
         site_query = site_query.filter(SchoolSite.discovery_method.in_(discovery_methods))
+    suppress_corporation_pattern = discovery_methods is None or "school_domain_override" in discovery_methods
+    if suppress_corporation_pattern:
+        schools_with_school_domain_override = (
+            session.query(SchoolSite.school_id)
+            .filter(
+                SchoolSite.discovery_method == "school_domain_override",
+                or_(SchoolSite.http_status == 200, SchoolSite.http_status.is_(None)),
+            )
+            .distinct()
+        )
+        site_query = site_query.filter(
+            or_(
+                SchoolSite.discovery_method.is_(None),
+                SchoolSite.discovery_method != "corporation_pattern",
+                ~SchoolSite.school_id.in_(schools_with_school_domain_override),
+            )
+        )
     if school_ids:
         site_query = site_query.filter(SchoolSite.school_id.in_(school_ids))
     sites = (

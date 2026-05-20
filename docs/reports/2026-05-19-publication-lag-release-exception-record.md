@@ -64,6 +64,7 @@ evidence or Stage 6 return verification.
 | v519 vocational-practice basic-info filter package report | `docs/reports/2026-05-20-v519-vocational-practice-basic-info-filter-package.md` | `ok=true` Mac-side package/source proof; current-year-hint vocational-practice basic-info PDFs classify as `non_target` |
 | v519 Mac limit-50 continuation canary | `docs/reports/2026-05-20-v519-mac-limit50-continuation-canary.md` | strict FY2026/R8 `0/50 (0.0%)`, operator-reviewable `50/50 (100.0%)`, URL-source overrides loaded, `ship_gate_status=below_gate` |
 | v520 Katayanagi URL boundary package report | `docs/reports/2026-05-20-v520-katayanagi-url-boundary-package.md` | `ok=true` Mac-side source proof; exact Katayanagi crawl entries added without counting NEEC no-year PDFs as current-FY strict success; full unit `1895 passed` |
+| v521 school-override corporation suppression package report | `docs/reports/2026-05-20-v521-school-override-corporation-suppression-package.md` | `ok=true` Mac-side source proof; exact school-domain overrides now suppress same-school corporation roots in default discovery scope; full unit `1896 passed` |
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
