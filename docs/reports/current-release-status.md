@@ -4,9 +4,9 @@ Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
 Latest package family: `v519` for Mac-side package/source verification after
 filtering vocational-practice basic-information PDFs out of target-form review.
-Latest source-side follow-up: `v521` school-override corporation suppression,
-with a Mac-side limit-50 continuation canary, not yet rebuilt into a Windows
-ZIP.
+Latest source-side follow-up: `v522` stale-yearless RCA bucket classification,
+using the v521 Mac-side limit-50 continuation canary evidence, not yet rebuilt
+into a Windows ZIP.
 `v502` remains
 the latest package with partial Windows side-by-side setup, validate, recovery,
 and limit-50 canary evidence. `v501` remains the latest package with complete
@@ -280,6 +280,17 @@ strict FY2026/R8 PDFs, reported strict `0/50 (0.0%)`, operator-reviewable
 same source slice now has fewer crawled rows, no failed site rows, and no
 same-school corporation-root mismatch noise.
 
+v522 is a source-side RCA hygiene follow-up to v521, recorded in
+`docs/reports/2026-05-20-v522-stale-yearless-rca-bucket-source.md`. It keeps
+genuine no-year target-form rows in `target_form_without_year_evidence`, but no
+longer lets an explicitly stale-labeled no-year/image-only row hide a clearer
+old-year target form. Recomputing the v521 limit-50 RCA batch plan moves
+school ID 44 `東京ビューティ＆ブライダル専門学校` from
+`target_form_without_year_evidence` to `publication_lag_or_old_target_pdf`,
+changing the top 20 RCA split from `17/3` to `18/2`. This does not change
+strict `0/50 (0.0%)`, operator-reviewable `50/50 (100.0%)`, or
+`ship_gate_status=below_gate`; full unit reports `1897 passed`.
+
 v518 includes all v517 package features plus the Sanko Tokyo child-school
 publication-lag gold-set entry. The package verifier reports 45 discovery
 gold-set entries and 45 expected predictions. After the tracked docs update,
@@ -505,11 +516,12 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v519 is Mac-side package/source verified, v520/v521 are source-side only, the
-v521 Mac continuation canary is still below gate, v502 is partially Windows
-side-by-side validated, and v501 is the latest complete Windows-smoke proof.
-Current FY2026 production-scale strict proof, v519/v521 Windows smoke, and
-owner real Windows cycle evidence remain incomplete. To continue,
+v519 is Mac-side package/source verified, v520/v521/v522 are source-side only,
+the v521 Mac continuation canary remains below gate after v522 RCA
+reclassification, v502 is partially Windows side-by-side validated, and v501 is
+the latest complete Windows-smoke proof. Current FY2026 production-scale strict
+proof, current-source Windows smoke, and owner real Windows cycle evidence
+remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
