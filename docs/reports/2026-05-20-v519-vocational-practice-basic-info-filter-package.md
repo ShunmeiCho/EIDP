@@ -40,6 +40,7 @@ PDF success and does not remove the current release blocker.
 | PDF discovery unit suite | `uv run pytest tests/unit/test_pdf_discovery.py -q` -> `225 passed` |
 | Ruff | `uv run ruff check src/eidp/scraper/pdf_discovery.py tests/unit/test_pdf_discovery.py` -> `All checks passed!` |
 | Local RCA sample probe | four `current-hint-target-samples/*.pdf` files now classify as `non_target` |
+| Targeted live discovery smoke | `EIDP_APP_ROOT=_temp/v519-basic-info-filter-smoke ... uv run eidp discover-pdfs --school-id 389 --school-id 391 ...` -> `crawled=2`, `downloaded=0`, `rejection_reason_classified_non_target=18`, `rejection_reason_target_fiscal_year_not_detected=2`; five `/2026/02/` current-hint basic-info PDFs classified as `non_target` |
 | Build | `uv run python scripts/build_windows_zip.py --skip-download --out-zip dist/eidp-windows-v519.zip --latest-alias` -> wrote v519 ZIP and refreshed latest alias |
 | Core + OCR add-on verifier | `uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v519.zip --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip --json` -> core `ok=true`, OCR add-on `ok=true` |
 | Non-Windows release gate | `logs/win-v519-stage6-v519-non-windows-release-gates-20260520.json` -> `ok=true`, package/source fresh, full unit `1893 passed` |
