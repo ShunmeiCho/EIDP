@@ -2,13 +2,12 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v524` for package/source verification after owner-return
-verifier hardening and complete Windows side-by-side smoke. `v523` is now the
+Latest package family: `v525` for the `1.0.0rc1` metadata rebuild, package/source
+verification, and complete Windows side-by-side smoke. `v524` is now the
 previous complete Windows side-by-side smoke package.
-Latest source-side follow-up: `v524` owner-return verifier hardening, requiring
-Excel proof and ManualActionLog / JSONL outbox proof rows in returned
-owner/operator evidence.
-`v523` is now the latest package with complete Windows side-by-side smoke
+Latest source-side follow-up: `v525` rebuilds the hardened v524 owner-return
+verifier package after the project version bump to `1.0.0rc1`.
+`v525` is now the latest package with complete Windows side-by-side smoke
 evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
 limit-50 canary, residual-cleanup dry run, and Stage 6 bundle verification.
 `v502` and `v501` are superseded Windows evidence baselines.
@@ -582,11 +581,11 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v523.zip`
-Current v523 SHA256 sidecar:
-`dist/eidp-windows-v523.zip.sha256`
-Current v524 package build evidence:
-`dist/eidp-windows-v524.zip` was built from clean source and validated by the
+`dist/eidp-windows-v525.zip`
+Current v525 SHA256 sidecar:
+`dist/eidp-windows-v525.zip.sha256`
+Current v525 package build evidence:
+`dist/eidp-windows-v525.zip` was built from clean source and validated by the
 full non-Windows release gate. It has also completed Windows side-by-side
 setup, validation, recovery, OCR runtime proof, UI smoke, Excel smoke,
 limit-50 canary, residual-cleanup dry run, and Stage 6 evidence verification.
@@ -596,18 +595,19 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v524 is package/source verified, Windows side-by-side smoke validated, and
-includes the v520/v521/v522 source-side follow-ups plus v524 owner-return
-verifier hardening. The v524 Windows limit-50 canary remains below gate after
-v522 RCA reclassification, v502 is partially Windows side-by-side validated
-historically, and v524 is the latest complete Windows-smoke proof.
+v525 is package/source verified, Windows side-by-side smoke validated, and
+includes the v520/v521/v522 source-side follow-ups, v524 owner-return verifier
+hardening, and the `1.0.0rc1` metadata bump. The v525 Windows limit-50 canary
+remains below gate after v522 RCA reclassification, v502 is partially Windows
+side-by-side validated historically, and v525 is the latest complete
+Windows-smoke proof.
 Current FY2026 production-scale strict proof and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.
-The version-specific owner/operator request for any future v523 real cycle is
-`docs/runbooks/eidp-v523-owner-request-20260520.txt`; it preserves the same
+The version-specific owner/operator request for any future v525 real cycle is
+`docs/runbooks/eidp-v525-owner-request-20260520.txt`; it preserves the same
 release-decision boundary and must not be treated as approval by itself.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
