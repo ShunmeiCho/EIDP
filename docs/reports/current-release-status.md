@@ -184,7 +184,8 @@ denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
 and estimated manual workload `20.2%`.
 The explicit publication-lag approval record is prepared at
 `docs/reports/2026-05-19-publication-lag-release-exception-record.md`, but its
-status remains `NOT_APPROVED`; it does not unblock release until filled and
+status remains `NOT_APPROVED`; it has been refreshed to the v523 package and
+Windows-smoke evidence packet, but does not unblock release until filled and
 signed.
 Current FY2026/R8 production-scale strict-yield proof:
 `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json`
