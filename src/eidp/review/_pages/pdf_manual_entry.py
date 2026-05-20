@@ -483,6 +483,8 @@ def department_form_rows_for_document(
     return [
         {
             "canonical_name": dept.canonical_name or "",
+            "course_type": dept.course_type or "",
+            "course_name": dept.course_name or "",
             "duration_years": float(dept.duration_years) if dept.duration_years is not None else None,
             "capacity": yearly.capacity,
             "enrollment": yearly.enrollment,
@@ -1505,6 +1507,8 @@ def _render_save_eligible_form(  # pragma: no cover - thin streamlit shell
             )
             form_rows.append({
                 "canonical_name": canonical,
+                "course_type": initial.get("course_type"),
+                "course_name": initial.get("course_name"),
                 "capacity": capacity,
                 "enrollment": enrollment,
                 "intl_students": intl,

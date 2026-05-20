@@ -212,6 +212,69 @@ def _render_pdf_manual_entry_for_test(session, lock_path):  # noqa: ANN001, ANN2
     render(session, lock_path=lock_path)
 
 
+def test_extracted_confirmation_prefill_preserves_department_identity(engine) -> None:
+    """No-edit confirmation must keep the extracted department natural key.
+
+    The manual-entry save path keys Department by course_type/course_name as
+    well as name and duration. If the review form drops those fields, a
+    no-edit "確認・補足" save creates a second same-name Department instead of
+    appending a new DepartmentYearly revision to the extracted row.
+    """
+    from eidp.pipeline.manual_entry import save_manual_entries
+
+    with Session(engine) as session:
+        school = _seed_school(session, name="課程付き学校")
+        doc = _seed_doc(session, school, status="ingested", file_hash_seed="course-prefill", fiscal_year=2026)
+        dept = Department(
+            school_id=school.id,
+            canonical_name="情報技術科",
+            course_type="昼",
+            course_name="工業",
+            duration_years=2.0,
+        )
+        session.add(dept)
+        session.flush()
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                document_id=doc.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                capacity=40,
+                enrollment=30,
+                verified=True,
+                extraction_method="pdf",
+                extraction_confidence=0.82,
+            )
+        )
+        session.commit()
+
+        rows = department_form_rows_for_document(session, document_id=doc.id, fiscal_year=2026)
+        assert rows[0]["course_type"] == "昼"
+        assert rows[0]["course_name"] == "工業"
+
+        form_validation = form_data_to_entries(rows)
+        assert form_validation.ok
+        save_manual_entries(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=form_validation.entries,
+            reason="operator confirmed extracted row without edits",
+        )
+        session.commit()
+
+        assert session.query(Department).count() == 1
+        yearly_rows = (
+            session.query(DepartmentYearly)
+            .order_by(DepartmentYearly.revision.asc())
+            .all()
+        )
+        assert [row.revision for row in yearly_rows] == [1, 2]
+        assert [row.is_current for row in yearly_rows] == [False, True]
+
+
 # ---------------------------------------------------------------------------
 # list_pending_documents
 # ---------------------------------------------------------------------------
@@ -381,6 +444,8 @@ def test_ingested_document_is_editable_for_confirmation_supplement_prefill(engin
     assert [row.document_id for row in queue] == [doc_id]
     assert form_rows == [{
         "canonical_name": "自動抽出学科",
+        "course_type": "",
+        "course_name": "",
         "duration_years": 2.0,
         "capacity": 40,
         "enrollment": 35,
