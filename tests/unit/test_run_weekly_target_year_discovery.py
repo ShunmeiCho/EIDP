@@ -160,6 +160,38 @@ def test_select_target_missing_school_ids_includes_never_ingested_schools() -> N
         session.close()
 
 
+def test_select_target_missing_school_ids_excludes_review_pending_current_target_docs() -> None:
+    """A current-FY target PDF awaiting review is already discovered.
+
+    The weekly acquisition queue should not keep recrawling schools that
+    ``SchoolFiscalYearStatus`` will surface as ``confirmed_target``.
+    """
+    session = _session()
+    try:
+        _school(session, 1)
+        _site(session, 1, "prefecture_aggregator")
+        _doc(session, 10, 1, 2026, ingest_status="review_pending")
+
+        _school(session, 2)
+        _site(session, 2, "prefecture_aggregator")
+        _doc(session, 20, 2, 2026, ingest_status="ocr_pending")
+
+        _school(session, 3)
+        _site(session, 3, "prefecture_aggregator")
+        session.flush()
+
+        ids = select_target_missing_school_ids(
+            session,
+            current_fy=2026,
+            methods=["prefecture_aggregator"],
+            school_type="専門学校",
+        )
+
+        assert ids == [2, 3]
+    finally:
+        session.close()
+
+
 def test_default_methods_include_reusable_bootstrap_and_operator_urls() -> None:
     session = _session()
     try:

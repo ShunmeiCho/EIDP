@@ -27,6 +27,17 @@ REVIEW_STATUSES: tuple[str, ...] = (
     "review_pending",
     "school_mismatch",
 )
+CONFIRMED_TARGET_INGEST_STATUSES: tuple[str, ...] = (
+    "ingested",
+    "parse_failed",
+    "review_pending",
+    "support_only",
+)
+CONFIRMED_IMAGE_ONLY_INGEST_STATUSES: tuple[str, ...] = (
+    "ingested",
+    "review_pending",
+    "support_only",
+)
 OPERATOR_REVIEWABLE_PDF_STATUSES: tuple[str, ...] = (
     "discovered",
     "publication_lag",
@@ -81,9 +92,12 @@ def _pdf_status(docs: list[Document], fiscal_year: int) -> str:
         and (
             (
                 d.pdf_type == "target"
-                and d.ingest_status in {"ingested", "parse_failed", "review_pending", "support_only"}
+                and d.ingest_status in CONFIRMED_TARGET_INGEST_STATUSES
             )
-            or (d.pdf_type == "image_only" and d.ingest_status in {"ingested", "review_pending", "support_only"})
+            or (
+                d.pdf_type == "image_only"
+                and d.ingest_status in CONFIRMED_IMAGE_ONLY_INGEST_STATUSES
+            )
         )
         for d in docs
     ):

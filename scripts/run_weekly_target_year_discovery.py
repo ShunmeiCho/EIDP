@@ -27,7 +27,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -50,6 +50,8 @@ from eidp.db.session import SessionLocal  # noqa: E402
 from eidp.logging_config import configure_logging  # noqa: E402
 from eidp.pipeline.ingest import run_ingestion  # noqa: E402
 from eidp.pipeline.school_fiscal_year_status import (  # noqa: E402
+    CONFIRMED_IMAGE_ONLY_INGEST_STATUSES,
+    CONFIRMED_TARGET_INGEST_STATUSES,
     operator_reviewable_status_count,
     rebuild_school_fiscal_year_status,
     school_fiscal_year_status_counts,
@@ -366,8 +368,16 @@ def select_target_missing_school_ids(
         .filter(
             School.status == "active",
             Document.fiscal_year == current_fy,
-            Document.pdf_type == "target",
-            Document.ingest_status == "ingested",
+            or_(
+                and_(
+                    Document.pdf_type == "target",
+                    Document.ingest_status.in_(CONFIRMED_TARGET_INGEST_STATUSES),
+                ),
+                and_(
+                    Document.pdf_type == "image_only",
+                    Document.ingest_status.in_(CONFIRMED_IMAGE_ONLY_INGEST_STATUSES),
+                ),
+            ),
         )
         .distinct()
     )
