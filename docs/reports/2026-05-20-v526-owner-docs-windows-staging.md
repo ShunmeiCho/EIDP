@@ -14,11 +14,12 @@ files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip` |
-| ZIP SHA256 | `ee7d26f76de17291904f2f27ba899737b7117cd4916010cb512a43ba61910573` |
+| ZIP SHA256 | `bee523cbf54bbae86f759d02bbd8d8e51bfa00b5462ecef93b39fcbaf4d03b3a` |
 | ZIP SHA256 sidecar | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip.sha256` present and matches the ZIP hash |
 | Extracted destination | `C:\EIDP-staging\v526-owner-docs-20260520` |
 | First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v526.txt` present |
 | Owner request | `docs\runbooks\eidp-v526-owner-request-20260520.txt` present |
+| Windows runbook | `docs\runbooks\eidp-windows.md` present, including `10.209.*` and standard proxy environment-variable guidance |
 | Package report | `docs\reports\2026-05-20-v526-extracted-confirmation-package.md` present |
 | Post-reboot active-task preflight | `docs\reports\2026-05-20-v526-post-reboot-active-task-preflight.md` present |
 
@@ -45,3 +46,9 @@ that active v485 is only a no-accidental-promotion boundary and is not healthy
 v1.0 release evidence. The exact ZIP SHA256 is recorded in this external
 staging report rather than inside the owner docs ZIP to avoid a
 self-referential hash.
+
+It was refreshed again after the campus-network guidance update so the
+Windows-staged owner docs include `10.x` private campus subnet guidance,
+including `10.209.*`, and the standard `HTTP_PROXY` / `HTTPS_PROXY` /
+`NO_PROXY` path for outbound PDF discovery behind a campus proxy. The refresh
+copied documentation only; the active weekly task still points to v485.
