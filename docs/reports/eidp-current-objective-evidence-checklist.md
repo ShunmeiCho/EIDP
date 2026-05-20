@@ -13,8 +13,8 @@ Latest Windows owner-return remote check:
 is reachable, refreshed v526 owner docs remain staged, and the remote
 `publication_lag` approval / E2E sign-off fields are still blank. The refreshed
 Windows-staged owner docs ZIP now includes this report and the
-target-yearless RCA spot check, and has SHA256
-`43bf84c7cb6f55f1cfbef67b581175de4d1325b592152b77c9df0e98ea7896b9`.
+target-yearless RCA spot check plus the owner v1.0 A/B decision brief, and has
+SHA256 `ddd61a01ab9a0787e5441963671ba20830d21b79e940a35020eceb3364b911b3`.
 Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -58,10 +58,11 @@ that keeps manual work below the release threshold.
   Excel proof and ManualActionLog / JSONL outbox proof rows.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
-- Latest docs-only owner-docs handoff refresh: `4d1c093` refreshes the
-  Windows-staged v526 owner docs ZIP to include the target-yearless RCA spot
-  check and first-read pointer. This copied documentation only and did not
-  rebuild `dist/eidp-windows-v526.zip`.
+- Latest docs-only owner-decision handoff refresh: the Windows-staged v526
+  owner docs ZIP now includes `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`,
+  and `docs/runbooks/00-READ-ME-FIRST-v526.txt` points to it before the detailed
+  request/template files. This copied documentation only and did not rebuild
+  `dist/eidp-windows-v526.zip`.
 - Latest docs-only campus-network guidance follow-up: `a8decad` generalizes
   the runbook and owner request from `10.109.*` to `10.x` private campus
   subnets including `10.209.*`, and documents standard `HTTP_PROXY` /
@@ -71,9 +72,9 @@ that keeps manual work below the release threshold.
   `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms the
   refreshed v526 handoff is present on Windows, but the remote approval and
   owner/operator sign-off fields remain blank. The Windows-staged owner docs
-  ZIP was refreshed to include this report and the target-yearless RCA spot
-  check, and now has SHA256
-  `43bf84c7cb6f55f1cfbef67b581175de4d1325b592152b77c9df0e98ea7896b9`.
+  ZIP was refreshed to include this report, the target-yearless RCA spot check,
+  and the owner v1.0 A/B decision brief, and now has SHA256
+  `ddd61a01ab9a0787e5441963671ba20830d21b79e940a35020eceb3364b911b3`.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:

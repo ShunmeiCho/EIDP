@@ -8,9 +8,10 @@ is now the previous complete Windows side-by-side smoke package.
 Latest source-side follow-up: `v526` adds an operator task-board entry point for
 already extracted PDFs and prefilled confirmation/supplement saves through the
 existing PDF確認・手入力 page.
-Latest docs-only handoff follow-up: `4d1c093` refreshes the Windows-staged
-v526 owner docs ZIP to include the target-yearless RCA spot check and first-read
-pointer. Latest docs-only campus-network follow-up: `a8decad` generalizes
+Latest docs-only owner-decision handoff follow-up: this status refresh adds the
+owner v1.0 A/B decision brief to the Windows-staged v526 owner docs ZIP and
+points `00-READ-ME-FIRST-v526.txt` to it before the detailed request/template
+files. Latest docs-only campus-network follow-up: `a8decad` generalizes
 campus/private subnet guidance from `10.109.*` to `10.x` including `10.209.*`,
 and records that outbound PDF discovery behind a campus proxy should use
 standard `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` environment variables rather
@@ -20,9 +21,10 @@ Latest owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable after service recovery, the refreshed v526 owner handoff remains
 staged on Windows, and the remote `publication_lag` approval plus owner/operator
-sign-off fields remain blank. The Windows-staged owner docs ZIP was refreshed
-to include this report and the target-yearless RCA spot check, and now has
-SHA256 `43bf84c7cb6f55f1cfbef67b581175de4d1325b592152b77c9df0e98ea7896b9`.
+sign-off fields remain blank. The Windows-staged owner docs ZIP now includes
+this report, the target-yearless RCA spot check, and the owner v1.0 A/B
+decision brief, and now has SHA256
+`ddd61a01ab9a0787e5441963671ba20830d21b79e940a35020eceb3364b911b3`.
 `v526` is now the latest package with complete Windows side-by-side smoke
 evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
 limit-50 canary, residual-cleanup dry run, and Stage 6 bundle verification.

@@ -22,6 +22,7 @@ Package
 
 Read first
 ----------
+- docs\reports\2026-05-20-owner-v1.0-decision-brief.md
 - docs\runbooks\eidp-v526-owner-request-20260520.txt
 - docs\runbooks\eidp-operator-e2e-template.md
 - docs\runbooks\eidp-v1-release-admin-checklist.md
