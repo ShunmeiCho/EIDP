@@ -75,6 +75,24 @@ evidence or Stage 6 return verification.
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
+## Current Negative Verifier Check
+
+The refreshed v523 exception packet was checked against
+`scripts/verify_stage6_return.py` while this record remained `NOT_APPROVED`.
+The verifier correctly rejected release approval:
+
+- output JSON:
+  `logs/win-v523-stage6-v523-verify-stage6-return-not-approved-exception-20260520.json`
+- return code:
+  `logs/win-v523-stage6-v523-verify-stage6-return-not-approved-exception-20260520.rc`
+- observed rc: `1`
+- observed `ok`: `false`
+- expected blocking errors included:
+  `release exception record Status must be APPROVED`,
+  `release exception record Decision must be APPROVED`,
+  placeholder approver/date/acknowledgement rows, and missing owner/operator
+  sign-off fields.
+
 ## Return Verification
 
 After owner real-cycle evidence is returned, release approval still requires:
