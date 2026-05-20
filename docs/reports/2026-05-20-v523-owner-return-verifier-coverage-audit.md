@@ -47,3 +47,10 @@ work should open a new package lane, for example v524, with fresh package/source
 verification before it is treated as the selected owner-return verifier.
 
 Current release status remains **NOT COMPLETE**.
+
+## Follow-Up
+
+v524 implements the source/package follow-up for this audit:
+`docs/reports/2026-05-20-v524-owner-return-verifier-hardening-package.md`.
+That follow-up hardens the return verifier for Excel proof and
+ManualActionLog / JSONL outbox proof rows, but v523 itself remains unchanged.

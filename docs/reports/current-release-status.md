@@ -2,11 +2,13 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v523` for package/source verification and complete
-Windows side-by-side smoke at the current PR head after the v520-v522
-discovery/RCA follow-ups.
-Latest source-side follow-up: `v522` stale-yearless RCA bucket classification,
-now included in the v523 Windows ZIP candidate.
+Latest package family: `v524` for package/source verification after owner-return
+verifier hardening. `v523` remains the latest complete Windows side-by-side
+smoke package until v524 is copied to Windows and validated in its own
+side-by-side lane.
+Latest source-side follow-up: `v524` owner-return verifier hardening, requiring
+Excel proof and ManualActionLog / JSONL outbox proof rows in returned
+owner/operator evidence.
 `v523` is now the latest package with complete Windows side-by-side smoke
 evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
 limit-50 canary, residual-cleanup dry run, and Stage 6 bundle verification.
@@ -401,6 +403,20 @@ count as FY2026/R8 success. The package evidence is recorded in
 v523 has completed Windows side-by-side validation. v502 remains the historical
 partial Windows side-by-side setup/canary package, and v501 remains the
 historical complete Windows side-by-side smoke baseline.
+
+v524 is a source/package follow-up to the v523 owner-return verifier coverage
+audit, recorded in
+`docs/reports/2026-05-20-v524-owner-return-verifier-hardening-package.md`.
+It extends `scripts/verify_stage6_return.py` so a returned owner/operator
+template must include Excel ready proof, always-pass Excel consistency proof,
+a nonblank output-file proof block, audit page proof, `manual_action_log`
+count, after-flush JSONL outbox count `0`, audit-flush status, and
+`JSONL action_id` duplicate status. The red test first proved the old verifier
+accepted missing Excel/audit proof; the green verifier slice reports
+`14 passed`, the packaging contract slice reports `100 passed`, and the v524
+non-Windows release gate reports `ok=true`, package/source fresh, and full
+unit `1898 passed`. v524 has not yet completed Windows side-by-side smoke, so
+v523 remains the latest complete Windows-side runtime evidence.
 
 v502 includes all v501 package features plus the v501 RCA follow-up residual
 Sanko exact school URL overrides for the two remaining corporation-root cases.

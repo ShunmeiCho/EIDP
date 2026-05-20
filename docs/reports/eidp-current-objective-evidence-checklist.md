@@ -33,14 +33,21 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Current package candidate: `dist/eidp-windows-v523.zip`
-- Package source commit from ZIP `BUILD_INFO.json`:
+- Latest package/source candidate: `dist/eidp-windows-v524.zip`
+- Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v523.zip`
+- v524 package/source commit:
+  `7751e948a2f78d9c8126a55d26c78b455a61965b`
+- v524 package SHA256:
+  `6647e32c5785cf147e7fce1e8e3c0091635ce10da80a64fc012ed9d671ad7a8a`
+- v523 package source commit from ZIP `BUILD_INFO.json`:
   `9a5cefc74751ec849daff86d68ff552f79f376e0`
-- Package SHA256:
+- v523 package SHA256:
   `5d47ca9e016aa6aadf3608b5799c773a769af585d158813eada1f80cebe762ce`
 - Latest complete Windows side-by-side smoke: v523
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
+- Latest source/package verifier hardening: v524 owner-return verifier requires
+  Excel proof and ManualActionLog / JSONL outbox proof rows.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:
@@ -70,14 +77,14 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | Confidence `>= 0.70` gate exists | v523 full unit suite in release gate: `1897 passed`; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
 | `DepartmentYearly` and `SupportRecipient` append-only paths exist | v523 install validator confirms required tables including `department_yearly`, `support_recipient`, and `manual_action_log`; v523 unit suite is green | PASS for code/schema, PARTIAL for real operator workflow |
 | Excel transfer works | v523 full smoke: `logs/win-v523-stage6/win-v523-stage6-v523-excel-summary-20260520.json` is `ok=true`; master workbook, competition workbook, and gap report generated | PASS |
-| Operator actions are auditable in `ManualActionLog` | v502 install validator confirms the table; v503 adds `operator_settings_saved` audit coverage for the settings page with API-key redaction; v504 adds `excel_preview_generated` audit coverage for Excel preview generation; v505 adds `school_year_tasks_rebuilt` audit coverage for task-board rebuilds; v506 adds `operator_url_submitted` and `operator_url_bulk_imported` audit coverage for manual URL registration; v507 adds `prefecture_remark_approved` and `prefecture_remark_rejected` audit coverage for official-list remark decisions; v508 adds `excel_export_generated` audit coverage for master and competition Excel exports; v509 exposes the current audit action and target-table vocabulary in the audit-log filters; v510 adds `school_alias_approved` audit coverage for approved school-alias proposals; v511 adds `proposal_decision_recorded` audit coverage for proposal review decisions; v512 adds `bug_report_generated` audit coverage for local support ZIP generation without storing raw operator notes; current owner real-cycle audit counts and sign-off are missing | PARTIAL, improved in v512 |
+| Operator actions are auditable in `ManualActionLog` | v502 install validator confirms the table; v503 adds `operator_settings_saved` audit coverage for the settings page with API-key redaction; v504 adds `excel_preview_generated` audit coverage for Excel preview generation; v505 adds `school_year_tasks_rebuilt` audit coverage for task-board rebuilds; v506 adds `operator_url_submitted` and `operator_url_bulk_imported` audit coverage for manual URL registration; v507 adds `prefecture_remark_approved` and `prefecture_remark_rejected` audit coverage for official-list remark decisions; v508 adds `excel_export_generated` audit coverage for master and competition Excel exports; v509 exposes the current audit action and target-table vocabulary in the audit-log filters; v510 adds `school_alias_approved` audit coverage for approved school-alias proposals; v511 adds `proposal_decision_recorded` audit coverage for proposal review decisions; v512 adds `bug_report_generated` audit coverage for local support ZIP generation without storing raw operator notes; v524 hardens `scripts/verify_stage6_return.py` so returned owner evidence must include audit page proof, numeric `manual_action_log` count, after-flush JSONL outbox count `0`, audit-flush status, and `JSONL action_id` duplicate status; current owner real-cycle audit counts and sign-off are still missing | PASS for code/verifier contract, BLOCKED for real owner evidence |
 | Windows ZIP double-click setup works | v523 setup and validation: `logs/win-v523-stage6/win-v523-stage6-v523-first-setup-env0-20260520.log` and `logs/win-v523-stage6/win-v523-stage6-v523-env0-validate-after-setup-20260520.json` with `ok=true` | PASS |
 | Browser UI runs offline on Windows | v523 UI smoke: `logs/win-v523-stage6/win-v523-stage6-v523-ui-smoke-20260520.json` is `ok=true`, port `8523`, health `200/ok`, root `200`, stopped cleanly | PASS |
 | Active scheduled-task safety is preserved | `logs/win-v523-stage6/stage6-recovery-20260520-133934.json`: `ok=true`, `action_matches_expected=true`, active weekly task still points to the expected v485 lane | PASS |
 | Stage 6 evidence bundle and verifier pass | v523 evidence ZIP and verifier: `logs/win-v523-stage6/stage6-evidence-20260520-043937.zip` and `logs/win-v523-stage6/stage6-evidence-verify-20260520-133938.json` with `ok=true`; SHA256 `f3e5c7df1444c777eed1e710a99a1bede613b315ca130e4102a94e03d1d4c310` | PASS |
 | v523 RCA is current | `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`: 20 RCA items across 45 candidates; discovery rejection counts include `pre_filtered_non_target_hint=631`, `fiscal_year_mismatch=267`, `classified_non_target=88`, `no_candidates_found=9`, `target_fiscal_year_not_detected=5`, and `http_error_httpstatuserror=1`; no `candidate_school_mismatch` remained in the v523 Windows run | PASS for RCA, FAIL for yield |
 | Weekly selected-school denominator actually gets crawled | v514 focused isolated Mac smoke `target-year-discovery-after-sitecount-fix/20260519_231930-summary.json`: selected NEEC school IDs 1-3 were crawled (`crawled=3`) and remained reviewable, not strict FY2026 successes; v516 selection probe excludes already confirmed target schools 4 and 7 from the target-missing queue while preserving a 50-school queue; v517 targeted school ID 55 smoke confirms the new exact override is crawled and yields FY2019-FY2025 target-form evidence instead of corporation-only non-target evidence; v518 packages that case as discovery gold-set regression evidence; v519 filters vocational-practice basic-info PDFs out of target-form review; v519 Mac continuation canary with copied URL sources crawls 58 site rows for 50 selected schools and moves school ID 55 to `publication_lag_or_old_target_pdf`; v520 adds exact Katayanagi crawl entries while preserving NEEC no-year PDFs as reviewable, not strict successes; v521 suppresses same-school `corporation_pattern` rows when exact school-domain overrides exist, reducing the Katayanagi limit-3 crawl from 6 to 3 and candidate-school mismatches from 69 to 0; the v523 Windows limit-50 canary crawls 59 site rows, finds 50 candidate PDFs, downloads 5 strict/current PDFs, keeps `candidate_school_mismatch=0`, and keeps all 50 selected schools reviewable | PASS for code/evidence contract, FAIL for strict yield |
-| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present | BLOCKED |
+| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v524 negative verifier probe now also blocks missing Excel ready/consistency proof and audit/outbox proof rows | BLOCKED |
 | PR merge and v1.0 tag are allowed | FY2026 strict proof, owner real cycle, and exception approval are incomplete | BLOCKED |
 
 ## Fresh Local Verification In This Audit Pass
@@ -126,6 +133,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 - v523 manual owner-return review companion is prepared in `docs/runbooks/eidp-v523-owner-return-manual-review-checklist.md`: it covers Excel proof, ManualActionLog / JSONL outbox proof, append-only `DepartmentYearly` / `SupportRecipient` evidence, and OCR-scope evidence that remain required but not machine-enforced by the v523 packaged return verifier.
 - v523 owner/operator first-read handoff is prepared in `docs/runbooks/00-READ-ME-FIRST-v523.txt`: it lists the selected package, SHA, side-by-side root, current active v485 root to preserve, required evidence, safety red lines, and the release-decision boundary.
 - v523 owner/operator docs were staged on Windows under `C:\EIDP-staging\v523-owner-docs-20260520`, recorded in `docs/reports/2026-05-20-v523-owner-docs-windows-staging.md`: the transferred ZIP SHA256 is `11faa8be238c6ae6ff91652af8de7734f1465e135b53358c65365ca42fba6989`, and the extracted docs include the v523 first-read handoff, owner request, manual review checklist, E2E template, package report, Windows smoke report, exception record, objective checklist, and release status. A post-staging read-only recheck confirmed `EIDP Weekly Run` still executes `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`, while both v485 and v523 roots remain present. This copies docs only and does not modify active runtime, DB, PDFs, or Task Scheduler.
+- v524 owner-return verifier hardening is recorded in `docs/reports/2026-05-20-v524-owner-return-verifier-hardening-package.md`: the new red test first failed because the old verifier accepted missing Excel/audit proof, the focused verifier suite now returns `14 passed`, the packaging contract slice returns `100 passed`, v524 package/source verification returns `ok=true`, full unit returns `1898 passed`, and the real unapproved owner template is rejected with new missing Excel/audit proof errors. v524 has not yet completed Windows side-by-side smoke.
 
 These checks validate the gold-set contract used by the package verifier. They
 do not remove the FY2026/R8 release blocker.
@@ -135,7 +143,9 @@ do not remove the FY2026/R8 release blocker.
 1. Resolve the FY2026/R8 strict-yield blocker by either reaching the `>= 60%`
    current-year strict line or approving the documented `publication_lag`
    exception path.
-2. Run the owner real Windows cycle and return KPI/sign-off evidence.
-3. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
-4. Merge PR #2 and create the signed `v1.0` tag only after the above blockers
+2. If v524 replaces v523 as the owner package, run v524 Windows side-by-side
+   validation before owner handoff.
+3. Run the owner real Windows cycle and return KPI/sign-off evidence.
+4. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
+5. Merge PR #2 and create the signed `v1.0` tag only after the above blockers
    are resolved.
