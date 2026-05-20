@@ -7151,6 +7151,47 @@ def test_download_pdf_rejects_vocational_practice_basic_info_even_with_trusted_y
     assert reason == "classified_non_target"
 
 
+def test_download_pdf_rejects_vocational_practice_basic_info_with_incidental_support_text(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Incidental 修学支援 text does not make 別紙様式4 a confirmation form."""
+
+    content = _make_pdf_bytes(
+        "（別紙様式４）\n"
+        "職業実践専門課程等の基本情報について\n"
+        "学校名 設置認可年月日 校長名 所在地\n"
+        "生徒総定員 生徒実員 学科名\n"
+        "情報公開 高等教育の修学支援新制度に係る確認申請書 学生便覧\n"
+        "令和7年9月30日"
+    )
+    candidate = PdfCandidate(
+        pdf_url="https://example.ac.jp/wp-content/uploads/2026/02/basic-info.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        anchor_text="令和8年度 情報公開",
+    )
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "non_target"
+    assert reason == "classified_non_target"
+
+
 def test_download_pdf_rejects_url_target_hint_when_body_is_not_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:
