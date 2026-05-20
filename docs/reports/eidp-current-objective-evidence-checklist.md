@@ -5,8 +5,8 @@ Branch: `sprint8-handoff-finalize`
 PR: `#2`
 PR live state: verify with
 `gh pr view 2 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
-Last recorded live check after the campus `10.x` docs-only update:
-`a8decad658b3d27718351a45eacf3a8ef5d330e6` was `CLEAN` with required checks
+Last recorded live check before this status refresh:
+`4d1c093700a51d2797a454abc2e6ce3113113dda` was `CLEAN` with required checks
 `SUCCESS` for both push and pull_request runs.
 Latest Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
@@ -58,6 +58,10 @@ that keeps manual work below the release threshold.
   Excel proof and ManualActionLog / JSONL outbox proof rows.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
+- Latest docs-only owner-docs handoff refresh: `4d1c093` refreshes the
+  Windows-staged v526 owner docs ZIP to include the target-yearless RCA spot
+  check and first-read pointer. This copied documentation only and did not
+  rebuild `dist/eidp-windows-v526.zip`.
 - Latest docs-only campus-network guidance follow-up: `a8decad` generalizes
   the runbook and owner request from `10.109.*` to `10.x` private campus
   subnets including `10.209.*`, and documents standard `HTTP_PROXY` /
@@ -168,14 +172,16 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 - v526 runtime boundary recheck is recorded in `docs/reports/2026-05-20-v526-runtime-boundary-recheck.md`: the active weekly task still points to v485, no Streamlit listeners remained on ports `8523/8524/8525/8526`, and both the v526 side-by-side root and v526 staged docs directory were present.
 - Negative v526 return-verifier probe is recorded in `logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.json` with rc `1`: the refreshed v526 exception packet still fails on `Status must be APPROVED`, `Decision must be APPROVED`, placeholder approval fields, missing owner/operator KPI and sign-off rows, and missing Excel/audit proof rows.
 - v526 target-yearless RCA spot check is recorded in `docs/reports/2026-05-20-v526-target-yearless-rca-spot-check.md`: the five `target_fiscal_year_not_detected` rows are NEEC no-year target-form PDFs for school IDs 1/2 and one Sanko image-only/stale-context PDF for school ID 44; the official pages do not provide machine-verifiable FY2026/Reiwa 8 evidence, so none can safely raise the v526 strict yield.
-- Post-`a8decad` docs-only release gate rerun returned `ok=true` for
+- Local docs-only release gate at PR head
+  `4d1c093700a51d2797a454abc2e6ce3113113dda` returned `ok=true` for
   `dist/eidp-windows-v526.zip` with `docs_only_stale=true`, SHA256
   `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`,
   validator/distribution unit `188 passed`, mypy/ruff pass, discovery gold
-  45/45 exact, and package verification pass. Live PR #2 state after push was
-  head `a8decad658b3d27718351a45eacf3a8ef5d330e6`,
+  45/45 exact, and package verification pass. Live PR #2 state for that head was
   `mergeStateStatus=CLEAN`, with `Python quality gates` and
   `Ship gate contract` successful for both push and pull_request CI runs.
+  This supersedes the earlier post-`a8decad` campus-network gate-state note;
+  `a8decad` remains the source commit for the `10.x` / proxy guidance.
 
 These checks validate the gold-set contract used by the package verifier. They
 do not remove the FY2026/R8 release blocker.

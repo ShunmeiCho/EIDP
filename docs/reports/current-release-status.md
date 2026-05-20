@@ -8,11 +8,14 @@ is now the previous complete Windows side-by-side smoke package.
 Latest source-side follow-up: `v526` adds an operator task-board entry point for
 already extracted PDFs and prefilled confirmation/supplement saves through the
 existing PDF確認・手入力 page.
-Latest docs-only follow-up: `a8decad` generalizes campus/private subnet
-guidance from `10.109.*` to `10.x` including `10.209.*`, and records that
-outbound PDF discovery behind a campus proxy should use standard `HTTP_PROXY` /
-`HTTPS_PROXY` / `NO_PROXY` environment variables rather than a new
-`EIDP_HTTP_PROXY` knob. This did not rebuild `dist/eidp-windows-v526.zip`.
+Latest docs-only handoff follow-up: `4d1c093` refreshes the Windows-staged
+v526 owner docs ZIP to include the target-yearless RCA spot check and first-read
+pointer. Latest docs-only campus-network follow-up: `a8decad` generalizes
+campus/private subnet guidance from `10.109.*` to `10.x` including `10.209.*`,
+and records that outbound PDF discovery behind a campus proxy should use
+standard `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` environment variables rather
+than a new `EIDP_HTTP_PROXY` knob. These docs-only follow-ups did not rebuild
+`dist/eidp-windows-v526.zip`.
 Latest owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable after service recovery, the refreshed v526 owner handoff remains
@@ -181,8 +184,8 @@ live `gh pr view 2` or the PR body for the current head/check state. `main` and
 `sprint8-handoff-finalize` branch protection require `Python quality gates` and
 `Ship gate contract`, and disallow force-pushes and branch deletion. Any newer
 commit must let those required checks rerun before merge.
-The latest recorded live PR #2 check after the campus `10.x` docs-only update
-showed head `a8decad658b3d27718351a45eacf3a8ef5d330e6`,
+The latest recorded live PR #2 check before this status refresh showed head
+`4d1c093700a51d2797a454abc2e6ce3113113dda`,
 `mergeStateStatus=CLEAN`, and both required checks successful for the push and
 pull_request CI runs.
 Current FY2025 limit-1000 strict-yield replay after discovery, ingest, and
