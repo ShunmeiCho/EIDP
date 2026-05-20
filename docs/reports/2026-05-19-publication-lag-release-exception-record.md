@@ -93,6 +93,26 @@ The verifier correctly rejected release approval:
   placeholder approver/date/acknowledgement rows, and missing owner/operator
   sign-off fields.
 
+## Temporary Positive Path Probe
+
+A separate dry-run used a temporary filled owner E2E template and a temporary
+`APPROVED` copy of this exception record under `_temp/`. This probe does not
+approve release; it only verifies that the verifier path is internally
+consistent once the real approval/sign-off fields are provided.
+
+- output JSON:
+  `logs/win-v523-stage6-v523-verify-stage6-return-positive-exception-probe-20260520.json`
+- temporary E2E template:
+  `_temp/v523-positive-return-probe/filled-eidp-operator-e2e-template.md`
+- temporary approved exception copy:
+  `_temp/v523-positive-return-probe/approved-publication-lag-exception-record.md`
+- observed `ok`: `true`
+- observed errors: `[]`
+- observed mature-year proof years: `[2025]`
+- expected warnings included FY2026/R8 strict `10.0 < 60.0` accepted only
+  under `publication_lag`, plus `watch` KPI verdicts for `ship_readiness_rc`
+  and `strict target PDF 自動取得率`.
+
 ## Return Verification
 
 After owner real-cycle evidence is returned, release approval still requires:

@@ -119,6 +119,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 - v523 owner/operator request is prepared in `docs/runbooks/eidp-v523-owner-request-20260520.txt`: it points to the v523 package, SHA, side-by-side root, Windows smoke evidence, required return files, KPI/sign-off fields, and the `publication_lag`/strict-FY release-decision boundary.
 - The `publication_lag` release-exception record is refreshed to the v523 evidence packet in `docs/reports/2026-05-19-publication-lag-release-exception-record.md`, but remains `NOT_APPROVED`.
 - Negative v523 return-verifier probe is recorded in `logs/win-v523-stage6-v523-verify-stage6-return-not-approved-exception-20260520.json` with rc `1`: the refreshed exception packet still fails on `Status must be APPROVED`, `Decision must be APPROVED`, placeholder approval fields, and missing owner/operator sign-off.
+- Temporary positive v523 return-verifier probe is recorded in `logs/win-v523-stage6-v523-verify-stage6-return-positive-exception-probe-20260520.json`: with a temporary filled owner E2E template and temporary `APPROVED` exception copy under `_temp/`, the verifier returns `ok=true`, proving the approval/sign-off path is internally consistent but not approved in the real record.
 - v523 post-docs-only release gate is recorded in `logs/win-v523-stage6-v523-post-docs-only-gates-20260520.json`: `ok=true`, `docs_only_stale=true`, full unit `1897 passed`.
 
 These checks validate the gold-set contract used by the package verifier. They
