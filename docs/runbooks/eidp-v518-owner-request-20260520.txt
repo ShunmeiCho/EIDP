@@ -38,9 +38,11 @@ Current Windows blocker
 -----------------------
 Windows remote execution is not currently available from the Mac side.
 
-Latest read-only Mac probe:
+Latest read-only Mac probe after v518 PR refresh:
 - Mac IPv4: 192.168.10.68
-- ARP candidates: 192.168.10.12, 192.168.10.70, 192.168.10.71, 192.168.10.72
+- ARP candidates:
+  192.168.10.12, 192.168.10.70, 192.168.10.71, 192.168.10.72,
+  192.168.10.73
 - TCP/22: no candidate accepted SSH
 - TCP/135, 139, 445, 3389, 5985, 5986: no candidate exposed a usable remote
   execution or file-transfer service in the probe
