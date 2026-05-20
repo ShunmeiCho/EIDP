@@ -2,15 +2,15 @@
 
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
-Latest package family: `v514` for Mac-side package/source verification after
-fixing weekly selected-school runs so the PDF discovery batch covers all
-crawlable `SchoolSite` rows for the selected school IDs.
+Latest package family: `v515` for Mac-side package/source verification after
+adding exact Sanko child-school URL overrides for the residual v514
+corporation-root RCA cases.
 `v502` remains
 the latest package with partial Windows side-by-side setup, validate, recovery,
 and limit-50 canary evidence. `v501` remains the latest package with complete
 Windows side-by-side smoke evidence, including setup, validate, recovery, OCR
 runtime, UI, Excel, limit-50 canary, and Stage 6 bundle verification, until
-v514 full Windows smoke finishes.
+v515 full Windows smoke finishes.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
 The authoritative package SHA256 is the versioned `.sha256` sidecar. This
@@ -113,6 +113,17 @@ found 50 candidate PDFs, downloaded 0 new strict PDFs, reported strict
 `2/50 (4.0%)`, operator-reviewable `47/50 (94.0%)`, and kept
 `ship_gate_status=below_gate`. A bounded same-domain `2025 -> 2026` probe over
 the 11 FY2025 mismatch target PDFs found no usable FY2026/R8 PDF URL.
+Post-v514 fixes add exact Sanko child-school URL overrides for
+札幌こども専門学校, 仙台こども専門学校, and 大宮こども専門学校. The Windows ZIP
+is rebuilt as v515 with fresh Mac-side package/source verification. The
+follow-up v515 Mac continuation canary in
+`docs/reports/2026-05-20-v515-sanko-child-overrides-package.md` copied the
+structured v513 isolated database into `_temp/v515-mac-limit50-sanko-child` and
+ran a bounded limit-50 current-FY canary. It crawled 59 site rows for 50
+selected schools, found 53 candidate PDFs, downloaded 0 new strict PDFs,
+reported strict `2/50 (4.0%)`, operator-reviewable `50/50 (100.0%)`, removed
+the residual `non_target_candidates_only` RCA bucket, and kept
+`ship_gate_status=below_gate`.
 PR merge-chain status:
 PR #1 (`backup-2026-05-05`) is closed as superseded by PR #2, not merged
 separately. Remote evidence checked on 2026-05-19 showed `origin/main` at
@@ -172,18 +183,27 @@ had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
 Current package candidate:
-`dist/eidp-windows-v514.zip`, SHA256
-`0a198f02a242c06bde9c9e3675e6aa597a1e5d3721c3d05bc9278a87042e0096`.
+`dist/eidp-windows-v515.zip`, SHA256
+`cc92db4f905977653b64e8e0bffed7349f1969e1865747b9861d30d2d4081512`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=928f0e9f4e81bd8874e17d7a09c5b161730c1449`,
+`git_commit=8430bb28013eaaacf6e46d86c55f602d558e354d`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v514-stage6-v514-non-windows-release-gates-20260520.json`
+`logs/win-v515-stage6-v515-non-windows-release-gates-20260520.json`
 (`ok=true`; package/source check is fresh, full unit suite `1891 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
 verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
-`dist/eidp-ocr-addon-windows-v497-smoke.zip`.
+`dist/eidp-ocr-addon-windows-v497-smoke.zip`. After the tracked docs update,
+`logs/win-v515-stage6-v515-post-docs-only-gates-20260520.json` records
+`ok=true`, `docs_only_stale=true`, and full unit `1891 passed`.
+
+v515 includes all v514 package features plus exact Sanko child-school URL
+overrides for the three residual v514 RCA cases that only had the shared
+corporation URL. The follow-up canary resolves the three exact school roots and
+their disclosure pages, moves them into FY2025/R7 target-form evidence, and
+keeps strict FY2026/R8 yield at `2/50 (4.0%)`. The package evidence is recorded
+in `docs/reports/2026-05-20-v515-sanko-child-overrides-package.md`.
 
 v514 includes all v513 package features plus weekly selected-site count
 hardening: school-based weekly limits now expand the downstream PDF-discovery
@@ -202,7 +222,7 @@ page exists, while preserving the strict rule that stale FY2025 forms do not
 count as FY2026/R8 success. The package evidence is recorded in
 `docs/reports/2026-05-20-v513-sanko-disclosure-probe-package.md`.
 
-v514 has not completed Windows side-by-side validation because the Windows
+v515 has not completed Windows side-by-side validation because the Windows
 OpenSSH/IP blocker remains unresolved. v502 remains the latest partial Windows
 side-by-side setup/canary package, and v501 remains the latest complete
 Windows side-by-side smoke package.
@@ -367,11 +387,11 @@ intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
 Current package support ZIP:
-`dist/eidp-windows-v514.zip`
-Current v514 SHA256 sidecar:
-`dist/eidp-windows-v514.zip.sha256`
-Current v514 package build evidence:
-`dist/eidp-windows-v514.zip` was built from clean source and validated by the
+`dist/eidp-windows-v515.zip`
+Current v515 SHA256 sidecar:
+`dist/eidp-windows-v515.zip.sha256`
+Current v515 package build evidence:
+`dist/eidp-windows-v515.zip` was built from clean source and validated by the
 full non-Windows release gate. It has not completed Windows side-by-side setup
 because the Windows OpenSSH/IP blocker remains unresolved. v502 remains the
 latest partial automated Windows side-by-side setup, validation, recovery, and
@@ -382,9 +402,9 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v514 is Mac-side package/source verified, v502 is partially Windows side-by-side
+v515 is Mac-side package/source verified, v502 is partially Windows side-by-side
 validated, and v501 is the latest complete Windows-smoke proof. Current FY2026
-production-scale strict proof, v514 Windows smoke, and owner real Windows cycle
+production-scale strict proof, v515 Windows smoke, and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
