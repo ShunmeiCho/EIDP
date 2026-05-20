@@ -25,6 +25,14 @@ Side-by-side root:
 Current active root to preserve:
   %USERPROFILE%\EIDP-v485-70e3db4
 
+Post-reboot note:
+  Preserving the active v485 Scheduled Task only proves that v526 was not
+  accidentally promoted. It is not v1.0 health evidence: the latest observed
+  active v485 weekly log failed before discovery with a SQLAlchemy import
+  error and no v485 last_run.json was present. Owner real-cycle evidence must
+  come from the selected v526 side-by-side lane after the release decision is
+  explicit.
+
 Operator UI note
 ----------------
 Extracted `confirmed_target` rows with a latest document now expose
