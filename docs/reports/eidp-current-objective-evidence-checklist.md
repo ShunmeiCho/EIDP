@@ -13,8 +13,9 @@ Latest Windows owner-return remote check:
 is reachable, refreshed v526 owner docs remain staged, and the remote
 `publication_lag` approval / E2E sign-off fields are still blank. The refreshed
 Windows-staged owner docs ZIP now includes this report and the
-target-yearless RCA spot check plus the owner v1.0 A/B decision brief, and has
-SHA256 `ddd61a01ab9a0787e5441963671ba20830d21b79e940a35020eceb3364b911b3`.
+target-yearless RCA spot check plus the owner v1.0 A/B decision brief and v526
+owner return fill sheet, and has SHA256
+`28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
 Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -59,8 +60,9 @@ that keeps manual work below the release threshold.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
 - Latest docs-only owner-decision handoff refresh: the Windows-staged v526
-  owner docs ZIP now includes `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`,
-  and `docs/runbooks/00-READ-ME-FIRST-v526.txt` points to it before the detailed
+  owner docs ZIP now includes `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`
+  and `docs/runbooks/eidp-v526-owner-return-fill-sheet.md`, and
+  `docs/runbooks/00-READ-ME-FIRST-v526.txt` points to them before the detailed
   request/template files. This copied documentation only and did not rebuild
   `dist/eidp-windows-v526.zip`.
 - Latest docs-only campus-network guidance follow-up: `a8decad` generalizes
@@ -73,8 +75,9 @@ that keeps manual work below the release threshold.
   refreshed v526 handoff is present on Windows, but the remote approval and
   owner/operator sign-off fields remain blank. The Windows-staged owner docs
   ZIP was refreshed to include this report, the target-yearless RCA spot check,
-  and the owner v1.0 A/B decision brief, and now has SHA256
-  `ddd61a01ab9a0787e5441963671ba20830d21b79e940a35020eceb3364b911b3`.
+  the owner v1.0 A/B decision brief, and the v526 owner return fill sheet, and
+  now has SHA256
+  `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:

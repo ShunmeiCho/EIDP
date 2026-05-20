@@ -14,11 +14,12 @@ files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip` |
-| ZIP SHA256 | `ddd61a01ab9a0787e5441963671ba20830d21b79e940a35020eceb3364b911b3` |
+| ZIP SHA256 | `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29` |
 | ZIP SHA256 sidecar | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip.sha256` present and matches the ZIP hash |
 | Extracted destination | `C:\EIDP-staging\v526-owner-docs-20260520` |
 | First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v526.txt` present |
 | Owner decision brief | `docs\reports\2026-05-20-owner-v1.0-decision-brief.md` present and referenced from the first-read handoff |
+| Owner return fill sheet | `docs\runbooks\eidp-v526-owner-return-fill-sheet.md` present and referenced from the first-read handoff |
 | Owner request | `docs\runbooks\eidp-v526-owner-request-20260520.txt` present |
 | Windows runbook | `docs\runbooks\eidp-windows.md` present, including `10.209.*` and standard proxy environment-variable guidance |
 | Owner-return remote check | `docs\reports\2026-05-20-v526-owner-return-remote-check.md` present |
@@ -70,6 +71,17 @@ the Windows-staged handoff now includes
 verification returned `ok=true`, `sidecar_matches=true`,
 `target_yearless_report=true`, `first_read_mentions_target_yearless=true`, and
 the active weekly task still points to v485:
+`C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`.
+
+It was refreshed a sixth time after adding the v526 owner return fill sheet.
+The Windows-staged handoff now includes
+`docs\runbooks\eidp-v526-owner-return-fill-sheet.md`, and
+`docs\runbooks\00-READ-ME-FIRST-v526.txt` points to it immediately after the
+owner decision brief. Remote staging verification returned `ok=true`,
+`sidecar_matches=true`, `decision_brief_present=true`,
+`fill_sheet_present=true`, `first_read_mentions_decision_brief=true`,
+`first_read_mentions_fill_sheet=true`, and the active weekly task still points
+to v485:
 `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`.
 
 It was refreshed a fifth time after adding the owner v1.0 decision brief. The
