@@ -192,7 +192,7 @@ def _classify_school_bucket(rows: list[dict[str, Any]]) -> str:
         return "accepted_target_pdf"
     if any(str(row.get("reason") or "") == "pdf_school_mismatch" for row in rows):
         return "school_identity_mismatch"
-    if any(str(row.get("reason") or "") == "target_fiscal_year_not_detected" for row in rows):
+    if any(_is_unresolved_yearless_target(row) for row in rows):
         return "target_form_without_year_evidence"
     if any(_is_old_year_target(row) for row in rows):
         return "publication_lag_or_old_target_pdf"
@@ -219,6 +219,34 @@ _NON_ACTIONABLE_EVIDENCE_REASONS = {
     "candidate_budget_dropped",
     "candidate_school_mismatch",
 }
+
+
+def _is_unresolved_yearless_target(row: dict[str, Any]) -> bool:
+    if str(row.get("reason") or "") != "target_fiscal_year_not_detected":
+        return False
+    return not _has_explicit_stale_fiscal_year_hint(row)
+
+
+def _has_explicit_stale_fiscal_year_hint(row: dict[str, Any]) -> bool:
+    extra = row.get("extra")
+    target_year = _int_or_none(extra.get("target_fiscal_year")) if isinstance(extra, dict) else None
+    if target_year is None:
+        return False
+
+    for year in _candidate_hint_years(row):
+        if max(1900, target_year - 8) <= year < target_year:
+            return True
+    return False
+
+
+def _candidate_hint_years(row: dict[str, Any]) -> set[int]:
+    text = _candidate_hint_text(row)
+    years: set[int] = set()
+    for match in re.finditer(r"(?<!\d)(20\d{2})\s*年度", text):
+        years.add(int(match.group(1)))
+    for match in re.finditer(r"(?<!\d)(20\d{2})(?=/|[^/\s]*\.pdf\b)", text):
+        years.add(int(match.group(1)))
+    return years
 
 
 def _is_old_year_target(row: dict[str, Any]) -> bool:

@@ -93,6 +93,38 @@ def test_summarize_pdf_discovery_evidence_prioritizes_yearless_target_over_old_y
     assert summary.school_summaries[0].bucket == "target_form_without_year_evidence"
 
 
+def test_summarize_pdf_discovery_evidence_treats_stale_labeled_yearless_target_as_publication_lag(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "evidence.jsonl"
+    _write_jsonl(
+        evidence_path,
+        [
+            {
+                "school_id": 44,
+                "reason": "target_fiscal_year_not_detected",
+                "pdf_type": "image_only",
+                "pdf_url": "https://www.sanko.ac.jp/tachikawa-beauty/pdf/yoshiki.pdf",
+                "anchor_text": "2019年度",
+                "extra": {"target_fiscal_year": "2026"},
+            },
+            {
+                "school_id": 44,
+                "reason": "fiscal_year_mismatch:2025",
+                "pdf_type": "target",
+                "pdf_url": "https://www.sanko.ac.jp/tachikawa-beauty/disclosure/2025/docs/yoshiki2025.pdf",
+                "anchor_text": "2025年度",
+                "extra": {"target_fiscal_year": "2026"},
+            },
+        ],
+    )
+
+    summary = summarize_pdf_discovery_evidence(load_pdf_discovery_evidence(evidence_path))
+
+    assert summary.school_bucket_counts == {"publication_lag_or_old_target_pdf": 1}
+    assert summary.school_summaries[0].bucket == "publication_lag_or_old_target_pdf"
+
+
 def test_summarize_pdf_discovery_evidence_is_stable_for_equal_count_ties(tmp_path: Path) -> None:
     rows = [
         {
