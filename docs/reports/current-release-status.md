@@ -631,6 +631,11 @@ The v526 owner/operator docs were staged on Windows under
 `01b88191e5ee6c6e37ef8f9ad6223594a6f26c7d1e7b5a8ae5b49a0750d87af2`, and the
 post-staging recheck confirmed the active weekly task still points to
 `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`.
+A follow-up runtime boundary recheck is recorded in
+`docs/reports/2026-05-20-v526-runtime-boundary-recheck.md`: the active weekly
+task still points to v485, no Streamlit listeners remained on ports
+`8523/8524/8525/8526`, and both the v526 side-by-side root and v526 staged docs
+directory were present.
 The current negative owner-return verifier probe is
 `logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.json`
 with rc `1`: the v526 exception packet still fails because the exception record
