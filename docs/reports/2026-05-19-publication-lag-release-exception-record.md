@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v515.zip`
-Package SHA256: `cc92db4f905977653b64e8e0bffed7349f1969e1865747b9861d30d2d4081512`
+Package candidate: `dist/eidp-windows-v516.zip`
+Package SHA256: `ddb173208453b4ae6f071752d0b9e0191e18fb8770a68e2789ac5e4308847c22`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -40,8 +40,8 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
-| v515 package/non-Windows release gates | `logs/win-v515-stage6-v515-non-windows-release-gates-20260520.json` | `ok=true` |
-| v515 post-docs-only release gates | `logs/win-v515-stage6-v515-post-docs-only-gates-20260520.json` | `ok=true`, `docs_only_stale=true` |
+| v516 package/non-Windows release gates | `logs/win-v516-stage6-v516-non-windows-release-gates-20260520.json` | `ok=true` |
+| v516 post-docs-only release gates | `logs/win-v516-stage6-v516-post-docs-only-gates-20260520.json` | `ok=true`, `docs_only_stale=true` |
 | v501 Windows side-by-side evidence | `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md` | latest complete Windows side-by-side proof |
 | v502 Windows side-by-side evidence | `docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md` | partial proof; full smoke pending SSH recovery |
 | v503 settings-audit package report | `docs/reports/2026-05-20-v503-settings-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
@@ -58,6 +58,7 @@ evidence or Stage 6 return verification.
 | v514 weekly selected-site count package report | `docs/reports/2026-05-20-v514-weekly-selected-site-count-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
 | v514 Mac continuation canary | `docs/reports/2026-05-20-v514-mac-continuation-canary.md` | FY2026/R8 strict `2/50 (4.0%)`, operator-reviewable `47/50 (94.0%)`, `ship_gate_status=below_gate` |
 | v515 Sanko child override package report | `docs/reports/2026-05-20-v515-sanko-child-overrides-package.md` | `ok=true` Mac-side package/source proof; FY2026/R8 strict `2/50 (4.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` |
+| v516 target-missing selection package report | `docs/reports/2026-05-20-v516-weekly-target-missing-selection-package.md` | `ok=true` Mac-side package/source proof; already confirmed current-FY targets no longer re-enter target-missing queue |
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
