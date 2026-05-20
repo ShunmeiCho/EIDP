@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import Any, TypeGuard
 
 REQUIRED_EVIDENCE_LABELS = ("build_info", "diagnostics", "last_run", "stage6_recovery", "weekly_run_logs")
-REQUIRED_KPI_ROWS = ("ship_readiness_rc", "strict target PDF 自動取得率", "推定手作業率")
+REQUIRED_KPI_ROWS = ("ship_readiness_rc", "strict target PDF 自動取得率", "推定手作業率", "Excel ready 率")
+REQUIRED_ALWAYS_PASS_KPI_ROWS = ("Excel 整合性",)
 REQUIRED_EXCEPTION_ROWS = ("release exception reason", "mature-year proof JSON", "mature-year proof years")
 REQUIRED_EXCEPTION_RECORD_ROWS = (
     "Exception reason",
@@ -21,6 +22,13 @@ REQUIRED_EXCEPTION_RECORD_ROWS = (
     "FY2026/R8 status acknowledged",
 )
 REQUIRED_RELEASE_ROWS = ("業務員 PC 1 サイクル完了", "KPI owner 承認", "残 P0/P1 bug")
+REQUIRED_AUDIT_ROWS = (
+    "監査ログページ表示",
+    "manual_action_log 件数",
+    "JSONL outbox 未送信件数",
+    "audit-flush 実行",
+    "JSONL action_id 重複",
+)
 REQUIRED_RELEASE_VALUES = {
     "業務員 PC 1 サイクル完了": "yes",
     "KPI owner 承認": "yes",
@@ -117,6 +125,18 @@ def _is_placeholder(value: str) -> bool:
 
 def _is_number(value: object) -> TypeGuard[int | float]:
     return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _parse_nonnegative_int(value: str) -> int | None:
+    normalized = value.replace(",", "").strip()
+    if not re.fullmatch(r"\d+", normalized):
+        return None
+    return int(normalized)
+
+
+def _outbox_flushed(value: str) -> bool:
+    normalized = value.lower().replace("`", "").strip()
+    return normalized == "0" or "after flush 0" in normalized
 
 
 def _verify_last_run(
@@ -371,6 +391,24 @@ def _verify_template(text: str, release_exception_reason: str | None, errors: li
         elif verdict.lower() != "pass":
             errors.append(f"E2E template KPI verdict must be pass: {row_label}")
 
+    for row_label in REQUIRED_ALWAYS_PASS_KPI_ROWS:
+        row = _table_row(text, row_label)
+        if row is None or len(row) < 4:
+            errors.append(f"E2E template KPI row missing or malformed: {row_label}")
+            continue
+        actual = row[2]
+        verdict = row[3]
+        if not actual:
+            errors.append(f"E2E template KPI actual is blank: {row_label}")
+        if _is_placeholder(verdict):
+            errors.append(f"E2E template KPI verdict is still placeholder: {row_label}")
+        elif verdict.lower() != "pass":
+            errors.append(f"E2E template KPI verdict must be pass: {row_label}")
+
+    output_file_block = _fenced_block_after(text, "出力ファイル:")
+    if output_file_block is None or not output_file_block.strip():
+        errors.append("E2E template Excel output file proof is missing or blank")
+
     if release_exception_reason:
         for row_label in REQUIRED_EXCEPTION_ROWS:
             row = _table_row(text, row_label)
@@ -400,6 +438,27 @@ def _verify_template(text: str, release_exception_reason: str | None, errors: li
             errors.append(f"E2E template release row is still placeholder: {row_label}")
         elif row[1].lower() != REQUIRED_RELEASE_VALUES[row_label]:
             errors.append(f"E2E template release row must be {REQUIRED_RELEASE_VALUES[row_label]}: {row_label}")
+
+    for row_label in REQUIRED_AUDIT_ROWS:
+        row = _table_row(text, row_label)
+        if row is None or len(row) < 2:
+            errors.append(f"E2E template audit row missing or malformed: {row_label}")
+            continue
+        value = row[1].strip()
+        value_lower = value.lower()
+        if _is_placeholder(value):
+            errors.append(f"E2E template audit row is blank or placeholder: {row_label}")
+            continue
+        if row_label == "監査ログページ表示" and value_lower != "pass":
+            errors.append("E2E template audit row must be pass: 監査ログページ表示")
+        elif row_label == "manual_action_log 件数" and _parse_nonnegative_int(value) is None:
+            errors.append("E2E template audit row must be a non-negative integer: manual_action_log 件数")
+        elif row_label == "JSONL outbox 未送信件数" and not _outbox_flushed(value):
+            errors.append("E2E template audit row must prove after-flush outbox count is 0: JSONL outbox 未送信件数")
+        elif row_label == "audit-flush 実行" and value_lower not in {"pass", "not needed"}:
+            errors.append("E2E template audit row must be pass or not needed: audit-flush 実行")
+        elif row_label == "JSONL action_id 重複" and value_lower != "none":
+            errors.append("E2E template audit row must be none: JSONL action_id 重複")
 
     conclusion = _fenced_block_after(text, "結論:")
     if conclusion is None or _is_placeholder(conclusion.strip()):
@@ -516,7 +575,9 @@ def verify_stage6_return(
         "mature_year_proof_years": mature_year_proof_years,
         "required_evidence_labels": list(REQUIRED_EVIDENCE_LABELS),
         "required_kpi_rows": list(REQUIRED_KPI_ROWS),
+        "required_always_pass_kpi_rows": list(REQUIRED_ALWAYS_PASS_KPI_ROWS),
         "required_exception_rows": list(REQUIRED_EXCEPTION_ROWS),
+        "required_audit_rows": list(REQUIRED_AUDIT_ROWS),
         "required_release_rows": list(REQUIRED_RELEASE_ROWS),
         "release_exception_reasons": sorted(SHIP_GATE_EXCEPTION_REASONS),
     }

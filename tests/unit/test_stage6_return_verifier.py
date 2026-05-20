@@ -28,6 +28,22 @@ def _complete_template() -> str:
 | `ship_readiness_rc` | 0 | 0 | pass |
 | strict target PDF 自動取得率 | >= 60% | 67.5 | pass |
 | 推定手作業率 | <= 30% | 28.0 | pass |
+| Excel ready 率 | >= 60% | 67.5 | pass |
+| Excel 整合性 | 100% | 100 | pass |
+
+出力ファイル:
+
+```text
+data\\output\\eidp-master.xlsx
+```
+
+| 項目 | 結果 |
+| --- | --- |
+| 監査ログページ表示 | pass |
+| manual_action_log 件数 | 12 |
+| JSONL outbox 未送信件数 | after flush 0 |
+| audit-flush 実行 | pass |
+| JSONL action_id 重複 | none |
 
 | 判定項目 | 結果 |
 | --- | --- |
@@ -159,6 +175,53 @@ def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) 
 
     assert result["ok"] is True
     assert result["errors"] == []
+
+
+def test_verify_stage6_return_rejects_missing_excel_and_audit_proof_rows(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template()
+        .replace("| Excel ready 率 | >= 60% | 67.5 | pass |\n", "")
+        .replace("| Excel 整合性 | 100% | 100 | pass |\n", "")
+        .replace(
+            """出力ファイル:
+
+```text
+data\\output\\eidp-master.xlsx
+```
+
+""",
+            "",
+        )
+        .replace(
+            """| 項目 | 結果 |
+| --- | --- |
+| 監査ログページ表示 | pass |
+| manual_action_log 件数 | 12 |
+| JSONL outbox 未送信件数 | after flush 0 |
+| audit-flush 実行 | pass |
+| JSONL action_id 重複 | none |
+
+""",
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template KPI row missing or malformed: Excel ready 率" in result["errors"]
+    assert "E2E template KPI row missing or malformed: Excel 整合性" in result["errors"]
+    assert "E2E template Excel output file proof is missing or blank" in result["errors"]
+    assert "E2E template audit row missing or malformed: manual_action_log 件数" in result["errors"]
+    assert "E2E template audit row missing or malformed: JSONL outbox 未送信件数" in result["errors"]
 
 
 def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys) -> None:
