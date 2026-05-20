@@ -58,8 +58,13 @@ prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
 宮城県,三幸学園,仙台こども専門学校,https://www.sanko.ac.jp/sendai-child/,school,0.95,Sanko exact school site; live root and disclosure page resolved on 2026-05-20.
 埼玉県,三幸学園,大宮こども専門学校,https://www.sanko.ac.jp/omiya-child/,school,0.95,Sanko exact school site; live root and disclosure page resolved on 2026-05-20.
 千葉県,三幸学園,千葉こども専門学校,https://www.sanko.ac.jp/chiba-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+東京都,三幸学園,東京こども専門学校,https://www.sanko.ac.jp/tokyo-child/,school,0.95,Sanko exact school site; v516 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+神奈川県,三幸学園,横浜こども専門学校,https://www.sanko.ac.jp/yokohama-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
+愛知県,三幸学園,名古屋こども専門学校,https://www.sanko.ac.jp/nagoya-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
+大阪府,三幸学園,大阪こども専門学校,https://www.sanko.ac.jp/osaka-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
 兵庫県,三幸学園,神戸元町こども専門学校,https://www.sanko.ac.jp/kobe-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
 福岡県,三幸学園,福岡こども専門学校,https://www.sanko.ac.jp/fukuoka-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+沖縄県,三幸学園,沖縄こども専門学校,https://www.sanko.ac.jp/okinawa-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
 福岡県,三幸学園,福岡ウェディング＆ブライダル専門学校,https://www.sanko.ac.jp/fukuoka-bridal/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
 大阪府,三幸学園,大阪ウェディング＆ブライダル専門学校,https://www.sanko.ac.jp/osaka-bridal/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
 東京都,三幸学園,東京墨田看護専門学校,https://www.sanko.ac.jp/tokyo-nurse/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
