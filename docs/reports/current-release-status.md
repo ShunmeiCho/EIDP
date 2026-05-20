@@ -290,6 +290,13 @@ school ID 44 `東京ビューティ＆ブライダル専門学校` from
 changing the top 20 RCA split from `17/3` to `18/2`. This does not change
 strict `0/50 (0.0%)`, operator-reviewable `50/50 (100.0%)`, or
 `ship_gate_status=below_gate`; full unit reports `1897 passed`.
+A bounded same-domain FY2026 negative probe is recorded in
+`docs/reports/2026-05-20-v522-same-domain-2026-negative-probe.md`. It generated
+38 simple `2025 -> 2026` candidate URLs and 47 expanded short-year/R7 variants
+from the v521 `fiscal_year_mismatch:2025` target-form evidence. HEAD returned
+`404` for all 47 expanded candidates, and ranged GET also returned `404` for
+all 47. This confirms the visible FY2025 publication-lag URLs do not have a
+simple same-domain FY2026/R8 replacement at probe time.
 
 v518 includes all v517 package features plus the Sanko Tokyo child-school
 publication-lag gold-set entry. The package verifier reports 45 discovery
