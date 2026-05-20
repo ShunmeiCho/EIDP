@@ -14,7 +14,7 @@ files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip` |
-| ZIP SHA256 | `a730947fe77029991463336b4376648f1c1c9900995e8adebac3a189322506f4` |
+| ZIP SHA256 | `01b88191e5ee6c6e37ef8f9ad6223594a6f26c7d1e7b5a8ae5b49a0750d87af2` |
 | Extracted destination | `C:\EIDP-staging\v526-owner-docs-20260520` |
 | First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v526.txt` present |
 | Owner request | `docs\runbooks\eidp-v526-owner-request-20260520.txt` present |

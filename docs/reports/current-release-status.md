@@ -628,7 +628,7 @@ The version-specific owner/operator request for any future v526 real cycle is
 release-decision boundary and must not be treated as approval by itself.
 The v526 owner/operator docs were staged on Windows under
 `C:\EIDP-staging\v526-owner-docs-20260520`; the docs ZIP SHA256 is
-`a730947fe77029991463336b4376648f1c1c9900995e8adebac3a189322506f4`, and the
+`01b88191e5ee6c6e37ef8f9ad6223594a6f26c7d1e7b5a8ae5b49a0750d87af2`, and the
 post-staging recheck confirmed the active weekly task still points to
 `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`.
 The current negative owner-return verifier probe is

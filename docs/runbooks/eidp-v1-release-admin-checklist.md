@@ -10,15 +10,16 @@ decision for FY2026/R8 publication lag.
 
 - PR #2 is not clean or either required check is not green.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current v525 is package/source verified
-  and Windows side-by-side smoke validated after the `1.0.0rc1` metadata bump,
-  but any later code/package change must repeat that validation.
+  after its last code/package change. Current v526 is package/source verified
+  and Windows side-by-side smoke validated after the extracted-PDF
+  confirmation/supplement UI change, but any later code/package change must
+  repeat that validation.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
 - OCR is included in the v1.0 release scope but the Windows OCR runtime proof
   or OCR add-on SHA/runtime verifier is missing for the selected candidate.
-  Current v525 has fresh Windows OCR runtime proof.
+  Current v526 has fresh Windows OCR runtime proof.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
@@ -41,13 +42,13 @@ Expected:
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v525.zip
-cat dist/eidp-windows-v525.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v525.zip --json
+shasum -a 256 dist/eidp-windows-v526.zip
+cat dist/eidp-windows-v526.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v526.zip --json
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v525.zip \
+  dist/eidp-windows-v526.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -55,7 +56,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-5e0ed056e37c5b105b38de033062c4f7a7a8f0966509adb0251cade8f151efc4
+4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -88,14 +89,14 @@ Do not create `v1.0` until the release gates below are complete.
 
 Before merging or tagging, attach or reference:
 
-- v525 Windows side-by-side validator JSON;
-- v525 active-task recovery / lock proof showing the active task still points
+- v526 Windows side-by-side validator JSON;
+- v526 active-task recovery / lock proof showing the active task still points
   to the expected v485 lane;
-- v525 Windows UI smoke notes;
-- v525 OCR runtime proof, if OCR remains in v1.0 scope;
-- v525 Excel smoke proof;
-- v525 bounded weekly canary proof;
-- v525 Stage 6 evidence ZIP and evidence verifier JSON;
+- v526 Windows UI smoke notes;
+- v526 OCR runtime proof, if OCR remains in v1.0 scope;
+- v526 Excel smoke proof;
+- v526 bounded weekly canary proof;
+- v526 Stage 6 evidence ZIP and evidence verifier JSON;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
 - ManualActionLog / JSONL audit proof: audit page status, `manual_action_log`
@@ -110,10 +111,10 @@ Before merging or tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v525 side-by-side evidence is summarized in
-`docs/reports/2026-05-20-v525-rc-metadata-package.md`.
-The v525 owner/operator request is prepared at
-`docs/runbooks/eidp-v525-owner-request-20260520.txt`; it is a handoff aid, not
+Current v526 side-by-side evidence is summarized in
+`docs/reports/2026-05-20-v526-extracted-confirmation-package.md`.
+The v526 owner/operator request is prepared at
+`docs/runbooks/eidp-v526-owner-request-20260520.txt`; it is a handoff aid, not
 release approval.
 
 ## Final Commands
