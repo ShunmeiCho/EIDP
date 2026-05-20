@@ -184,7 +184,7 @@ denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
 and estimated manual workload `20.2%`.
 The explicit publication-lag approval record is prepared at
 `docs/reports/2026-05-19-publication-lag-release-exception-record.md`, but its
-status remains `NOT_APPROVED`; it has been refreshed to the v523 package and
+status remains `NOT_APPROVED`; it has been refreshed to the v525 package and
 Windows-smoke evidence packet, but does not unblock release until filled and
 signed.
 Current FY2026/R8 production-scale strict-yield proof:
@@ -226,14 +226,14 @@ After the user restarted Windows SSH, `ssh win` was usable again and v523
 current-source Windows side-by-side validation completed. The earlier
 connectivity report is retained as historical evidence only.
 Current package candidate:
-`dist/eidp-windows-v523.zip`, SHA256
-`5d47ca9e016aa6aadf3608b5799c773a769af585d158813eada1f80cebe762ce`.
+`dist/eidp-windows-v525.zip`, SHA256
+`5e0ed056e37c5b105b38de033062c4f7a7a8f0966509adb0251cade8f151efc4`.
 `BUILD_INFO.json` inside the ZIP records
-`git_commit=9a5cefc74751ec849daff86d68ff552f79f376e0`,
+`git_commit=73392f7a246b4dcd7396524b87e2db48b25dec61`,
 `git_branch=sprint8-handoff-finalize`, and `git_dirty=false`. Mac-side package
 verification is recorded in
-`logs/win-v523-stage6-v523-non-windows-release-gates-20260520.json`
-(`ok=true`; package/source check is fresh, full unit suite `1897 passed`,
+`logs/win-v525-stage6-v525-non-windows-release-gates-20260520.json`
+(`ok=true`; package/source check is fresh, full unit suite `1898 passed`,
 validator/distribution unit, mypy, ruff, discovery gold, package verify, and
 demonstrated-pattern package verify returned `0`). A direct core + OCR add-on
 verifier probe also returned core `ok=true` and OCR add-on `ok=true` against
@@ -302,7 +302,7 @@ from the v521 `fiscal_year_mismatch:2025` target-form evidence. HEAD returned
 all 47. This confirms the visible FY2025 publication-lag URLs do not have a
 simple same-domain FY2026/R8 replacement at probe time.
 
-v523 is the current package/source rebuild after the v520-v522 follow-ups,
+v523 was the package/source rebuild after the v520-v522 follow-ups,
 recorded in
 `docs/reports/2026-05-20-v523-current-head-package.md`. It was built from
 clean source at commit `9a5cefc74751ec849daff86d68ff552f79f376e0`, has SHA256
@@ -349,9 +349,9 @@ verifier proof is
 `logs/win-v523-stage6/stage6-residual-cleanup-20260520-133934.json`
 (`ok=true`, `existing_count=0`, `moved_count=0`), and final recovery proof is
 `logs/win-v523-stage6/stage6-recovery-20260520-133934.json` (`ok=true`,
-`action_matches_expected=true`, active task still v485). v523 supersedes v501
-as the latest complete Windows side-by-side smoke package, but it remains below
-the strict FY2026/R8 release line.
+`action_matches_expected=true`, active task still v485). v523 superseded v501
+as a complete Windows side-by-side smoke package, but is itself superseded by
+v524/v525 and remains below the strict FY2026/R8 release line.
 
 v518 includes all v517 package features plus the Sanko Tokyo child-school
 publication-lag gold-set entry. The package verifier reports 45 discovery
@@ -609,6 +609,11 @@ proof instead of the rolling FY2026 ship line.
 The version-specific owner/operator request for any future v525 real cycle is
 `docs/runbooks/eidp-v525-owner-request-20260520.txt`; it preserves the same
 release-decision boundary and must not be treated as approval by itself.
+The current negative owner-return verifier probe is
+`logs/win-v525-stage6-v525-verify-stage6-return-not-approved-exception-20260520.json`
+with rc `1`: the v525 exception packet still fails because the exception record
+is `NOT_APPROVED`, owner/operator KPI and sign-off rows are blank, and the Excel
+and audit proof rows required by the hardened verifier are missing.
 Current v480 retroactive Excel matrix:
 `logs/release-gate-v480-retroactive-matrix.json`, `ok=true` for FY2025,
 FY2024, and FY2023. The case logs
