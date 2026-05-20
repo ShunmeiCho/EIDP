@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v518.zip`
-Package SHA256: `d5ea5a6d0aed71fc9d5e581aca336cbd04045de4bc66d1efd8ecb91ccac5723c`
+Package candidate: `dist/eidp-windows-v519.zip`
+Package SHA256: `fbc2ae0016b7b293c0fd534d7b3e7eb881f74205fa6df19acda42a8d21ba195a`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
@@ -40,8 +40,8 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
-| v518 package/non-Windows release gates | `logs/win-v518-stage6-v518-non-windows-release-gates-20260520.json` | `ok=true` |
-| v518 post-docs-only release gates | `logs/win-v518-stage6-v518-post-docs-only-gates-20260520.json` | `ok=true`, `docs_only_stale=true` |
+| v519 package/non-Windows release gates | `logs/win-v519-stage6-v519-non-windows-release-gates-20260520.json` | `ok=true` |
+| v519 post-docs-only release gates | `logs/win-v519-stage6-v519-post-docs-only-gates-20260520.json` | `ok=true`, `docs_only_stale=true` |
 | v501 Windows side-by-side evidence | `docs/reports/2026-05-20-v501-full-windows-side-by-side-smoke.md` | latest complete Windows side-by-side proof |
 | v502 Windows side-by-side evidence | `docs/reports/2026-05-20-v502-windows-partial-side-by-side-limit50.md` | partial proof; full smoke pending SSH recovery |
 | v503 settings-audit package report | `docs/reports/2026-05-20-v503-settings-audit-package.md` | `ok=true` Mac-side package/source proof; Windows smoke pending |
@@ -61,6 +61,7 @@ evidence or Stage 6 return verification.
 | v516 target-missing selection package report | `docs/reports/2026-05-20-v516-weekly-target-missing-selection-package.md` | `ok=true` Mac-side package/source proof; already confirmed current-FY targets no longer re-enter target-missing queue |
 | v517 remaining Sanko child override package report | `docs/reports/2026-05-20-v517-remaining-sanko-child-overrides-package.md` | `ok=true` Mac-side package/source proof; school ID 55 moves from corporation-only non-target evidence to FY2019-FY2025 publication-lag evidence |
 | v518 gold-set publication-lag package report | `docs/reports/2026-05-20-v518-gold-set-publication-lag-package.md` | `ok=true` Mac-side package/source proof; school ID 55 publication-lag behavior is now a packaged gold-set regression case |
+| v519 vocational-practice basic-info filter package report | `docs/reports/2026-05-20-v519-vocational-practice-basic-info-filter-package.md` | `ok=true` Mac-side package/source proof; current-year-hint vocational-practice basic-info PDFs classify as `non_target` |
 | current objective checklist | `docs/reports/eidp-current-objective-evidence-checklist.md` | `NOT COMPLETE`; still blocks on FY2026/owner cycle/approval |
 | Owner E2E template | `docs/runbooks/eidp-operator-e2e-template.md` | must be completed after approval |
 
