@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "sanko-tokyo-child-publication-lag-2026",
+  "school": {
+    "school_id": 55,
+    "school_name": "東京こども専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "学校法人三幸学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve the Sanko child-school publication-lag case where an exact school URL exposes only old-year confirmation forms.",
+    "search_queries": [],
+    "steps": [
+      "Start from the exact school URL registered as https://www.sanko.ac.jp/tokyo-child/.",
+      "Follow the same-domain disclosure page https://www.sanko.ac.jp/disclosure/tokyo-child/ before SERP fallback.",
+      "Observe that the latest target-form candidate is yoshiki2025.pdf with anchor text 2025年度 高等教育の修学支援新制度 申請様式.",
+      "Reject the PDF from strict FY2026 success as fiscal_year_mismatch:2025.",
+      "Keep the school in publication-lag/operator-reviewable status instead of treating the corporation root as non-target-only evidence."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.sanko.ac.jp/tokyo-child/",
+    "disclosure_url": "https://www.sanko.ac.jp/disclosure/tokyo-child/",
+    "pdf_url": "https://www.sanko.ac.jp/disclosure/tokyo-child/docs/yoshiki2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "sanko_disclosure",
+    "reusable_rules": [
+      "Treat 2025年度/yoshiki2025.pdf as latest-public target-form evidence, not as FY2026 success.",
+      "Prefer exact school-domain overrides over the Sanko corporation root when both are registered.",
+      "Keep the stale target-form evidence visible for operator publication-lag review instead of downgrading the school to non-target-only."
+    ],
+    "anti_patterns": [
+      "Do not infer FY2026 from the current system target year when the actual link says 2025年度.",
+      "Do not accept stale forms just to improve the strict auto-yield metric.",
+      "Do not treat the Sanko corporation root as sufficient when an exact child-school URL exists."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/v517-school55-override/discovery-rejections.jsonl",
+      "docs/reports/2026-05-20-v517-remaining-sanko-child-overrides-package.md"
+    ],
+    "notes": "v517 targeted school ID 55 smoke crawled the exact Tokyo child-school URL, found the latest public yoshiki2025.pdf target form, and rejected it as fiscal_year_mismatch:2025 for target FY2026."
+  }
+}
