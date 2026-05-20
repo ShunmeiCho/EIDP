@@ -83,4 +83,22 @@ not promote the active weekly task, and does not modify:
 - `%USERPROFILE%\EIDP-v523-9a5cefc-env0`
 - `EIDP Weekly Run`
 
+## Post-Staging Boundary Recheck
+
+Read-only checks after staging confirmed that the active scheduled task still
+points to v485 and both v485/v523 roots remain present:
+
+```text
+Get-ScheduledTask -TaskName 'EIDP Weekly Run' | Select-Object -ExpandProperty Actions
+
+Execute   : C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat
+Arguments :
+```
+
+```text
+Test-Path C:\Users\cyo20\EIDP-v485-70e3db4 -> True
+Test-Path C:\Users\cyo20\EIDP-v523-9a5cefc-env0 -> True
+Test-Path C:\EIDP-staging\v523-owner-docs-20260520\docs\runbooks\00-READ-ME-FIRST-v523.txt -> True
+```
+
 Current status remains **NOT COMPLETE**.
