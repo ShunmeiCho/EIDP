@@ -6,8 +6,9 @@ Scope: read-only Mac-to-Windows network probe
 
 ## Purpose
 
-Check the current Windows remote-management path after adding the `10.109.*`
-campus/private-subnet deployment guidance. This probe does not modify the
+Check the current Windows remote-management path after adding the `10.x`
+campus/private-subnet deployment guidance, including `10.109.*` and `10.209.*`
+examples. This probe does not modify the
 Windows host, the active weekly task, or any EIDP data.
 
 ## Commands
@@ -53,7 +54,7 @@ the active Wi-Fi profile used by `Host win`.
 - The active Windows Wi-Fi profile is `Private` with IPv4 Internet
   connectivity.
 - The current active Wi-Fi IPv4 observed through SSH is `192.168.0.9/24`, not a
-  `10.109.*` address.
+  `10.x` campus address.
 - The OpenSSH inbound firewall rule is enabled and applies to `Any` profile.
 - No evidence in this probe shows that the current v523 Windows side-by-side
   lane is blocked by the campus/private-subnet issue.
@@ -64,6 +65,7 @@ This probe only confirms the current remote-management path. It is not owner
 sign-off, not proof of FY2026/R8 strict-yield readiness, and not a reason to
 promote v523 to the active scheduled-task lane.
 
-If the operator PC later moves to a `10.109.*` university subnet, use
-`docs/runbooks/eidp-windows.md` section `14.7.1` before counting any Mac-side
-timeout as Windows package failure.
+If the operator PC later moves to a `10.x` university subnet such as `10.109.*`
+or `10.209.*`, use `docs/runbooks/eidp-windows.md` section `14.7.1` before
+counting any Mac-side timeout as Windows package failure. This probe has no live
+evidence from an actual `10.209.*` campus network.

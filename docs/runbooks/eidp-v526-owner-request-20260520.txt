@@ -43,12 +43,15 @@ flow with audit coverage; simply opening the page is not a confirmation record.
 
 Network note
 ------------
-If the owner/operator PC is on a `10.109.*` university subnet, treat that IP as
-private campus/VPN reachability only. Do not expose Streamlit beyond
-`127.0.0.1`; use an SSH tunnel for remote smoke when SSH is reachable, or a
-manual ZIP/evidence transfer when client isolation, VPN routing, or Windows
-Firewall blocks Mac-to-Windows access. A Mac-side network timeout is not proof
-that the Windows offline package is broken.
+If the owner/operator PC is on a `10.x` university subnet such as `10.109.*` or
+`10.209.*`, treat that IP as private campus/VPN reachability only. Do not
+expose Streamlit beyond `127.0.0.1`; use an SSH tunnel for remote smoke when SSH
+is reachable, or a manual ZIP/evidence transfer when client isolation, VPN
+routing, or Windows Firewall blocks Mac-to-Windows access. For outbound PDF
+discovery behind a campus proxy, use the standard `HTTP_PROXY` / `HTTPS_PROXY` /
+`NO_PROXY` environment variables; EIDP does not define a separate
+`EIDP_HTTP_PROXY` knob. A Mac-side network timeout is not proof that the Windows
+offline package is broken.
 
 Current side-by-side evidence
 -----------------------------

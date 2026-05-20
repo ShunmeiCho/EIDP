@@ -799,20 +799,20 @@ ssh -o ConnectTimeout=8 -o ControlMaster=no <WindowsUser>@<新IPv4> hostname
 Server が止まっている。`ssh-keyscan` は返るが `hostname` が失敗する場合は、
 14.5 の鍵/ACL、または 14.6 の sshd session 復旧を確認する。
 
-#### 14.7.1 `10.109.*` など大学・学内のプライベート網段にいる場合
+#### 14.7.1 `10.x` など大学・学内のプライベート網段にいる場合
 
-`10.109.*` は通常インターネット公開 IP ではなく、学内 LAN / VPN 内だけで到達できる
-プライベート網段として扱う。EIDP の通常運用は業務員 PC 上の
+`10.109.*` や `10.209.*` などの `10.x` アドレスは、通常インターネット公開 IP ではなく、
+学内 LAN / VPN 内だけで到達できるプライベート網段として扱う。EIDP の通常運用は業務員 PC 上の
 `http://127.0.0.1:8501` で完結するため、学内網段そのものはリリース blocker ではない。
 ただし、Mac からの remote smoke、SSH tunnel、ZIP 転送、学校サイト PDF 取得では
 次の点を先に切り分ける。
 
 | 確認点 | 影響 | 対処 |
 |--------|------|------|
-| Mac が `10.109.*` へ route を持たない | `ssh win` / `scp` / tunnel が timeout する | Mac を同じ学内 LAN / VPN に入れる。無理な場合は USB / 共有ドライブの手動転送に切り替える |
-| 学内 Wi-Fi の client isolation | 同じ `10.109.*` に見えても端末間通信が遮断される | `Test-NetConnection <Mac側IP> -Port <必要ポート>` と Mac 側 `nc -vz <WindowsIP> 22` で双方向を確認する。遮断される場合は管理者ネットワークか有線 LAN を使う |
+| Mac が `10.x` へ route を持たない | `ssh win` / `scp` / tunnel が timeout する | Mac を同じ学内 LAN / VPN に入れる。無理な場合は USB / 共有ドライブの手動転送に切り替える |
+| 学内 Wi-Fi の client isolation | 同じ `10.x` に見えても端末間通信が遮断される | `Test-NetConnection <Mac側IP> -Port <必要ポート>` と Mac 側 `nc -vz <WindowsIP> 22` で双方向を確認する。遮断される場合は管理者ネットワークか有線 LAN を使う |
 | Windows network profile が `Public` | OpenSSH / Python inbound が Defender Firewall に遮断されやすい | 業務員 PC 側で `Get-NetConnectionProfile` を確認する。必要な remote smoke の時だけ管理者が OpenSSH 22 を許可する |
-| 学内 proxy / SSL inspection | PDF discovery の outbound HTTP(S) が失敗する | ブラウザで学校サイト PDF を手動確認し、proxy / allowlist が必要なら管理者に依頼する。自動取得できないものは `PDF確認・手入力` に回す |
+| 学内 proxy / SSL inspection | PDF discovery の outbound HTTP(S) が失敗する | ブラウザで学校サイト PDF を手動確認し、proxy / allowlist が必要なら管理者に依頼する。HTTPX は標準の `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` を既定で読む。自動取得できないものは `PDF確認・手入力` に回す |
 | Streamlit を LAN に公開したくなる | 個人情報・操作画面を学内網へ露出する | `scripts\launch.bat` の既定 `127.0.0.1` binding を維持する。remote smoke は SSH tunnel で行い、`0.0.0.0` へ変更しない |
 
 Windows 側の確認例:
@@ -827,12 +827,29 @@ Test-NetConnection <Mac側IP> -Port 22
 Mac 側の確認例:
 
 ```bash
-route get <Windowsの10.109.* IPv4>
-nc -vz -w 3 <Windowsの10.109.* IPv4> 22
-ssh -o ConnectTimeout=8 -o ControlMaster=no <WindowsUser>@<Windowsの10.109.* IPv4> hostname
+route get <Windowsの10.x IPv4>
+nc -vz -w 3 <Windowsの10.x IPv4> 22
+ssh -o ConnectTimeout=8 -o ControlMaster=no <WindowsUser>@<Windowsの10.x IPv4> hostname
 ```
 
-`10.109.*` の到達性が不安定な場合でも、EIDP の証跡として数えるのは
+学内 proxy が必要な場合の起動例:
+
+```powershell
+$env:HTTP_PROXY="http://<proxy-host>:<port>"
+$env:HTTPS_PROXY="http://<proxy-host>:<port>"
+$env:NO_PROXY="127.0.0.1,localhost"
+.\EIDP-start.bat
+```
+
+proxy のユーザー名・パスワードはログや資料に貼らない。認証付き proxy が必要な場合は、
+管理者の手順に従って安全に設定する。EIDP 専用の `EIDP_HTTP_PROXY` 変数は用意していない。
+通常の HTTP(S) 取得は HTTPX の標準環境変数で扱う。
+
+学校サイトの公開 URL が split-horizon DNS / captive proxy により `10.x` へ解決される場合、
+SSRF 防御により安全側で拒否され、`PDF確認・手入力` に回ることがある。これは公開校 PDF の
+自動取得失敗として扱い、`0.0.0.0` bind や SSRF allowlist 緩和では解決しない。
+
+`10.x` の到達性が不安定な場合でも、EIDP の証跡として数えるのは
 Windows 側で SHA 照合、setup、UI health、weekly run、Stage 6 evidence verifier が
 実際に完了した後だけにする。Mac から見えた / 見えないだけでは Windows 運用可否を判定しない。
 
