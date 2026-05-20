@@ -57,9 +57,9 @@ PDF acquisition yield.
 
 ## Current Decision
 
-v524 is the latest package/source-verified candidate for owner-return verifier
-hardening. v523 remains the latest complete Windows side-by-side smoke package
-until v524 is copied to Windows and validated in its own side-by-side lane.
+v524 is the latest package/source-verified and Windows side-by-side validated
+candidate for owner-return verifier hardening. The complete Windows smoke is
+recorded in `docs/reports/2026-05-20-v524-full-windows-side-by-side-smoke.md`.
 
 Do not treat v524 as v1.0 approval. The release still requires either strict
 FY2026/R8 production-scale success or an approved `publication_lag` exception

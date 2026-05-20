@@ -3,9 +3,8 @@
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
 Latest package family: `v524` for package/source verification after owner-return
-verifier hardening. `v523` remains the latest complete Windows side-by-side
-smoke package until v524 is copied to Windows and validated in its own
-side-by-side lane.
+verifier hardening and complete Windows side-by-side smoke. `v523` is now the
+previous complete Windows side-by-side smoke package.
 Latest source-side follow-up: `v524` owner-return verifier hardening, requiring
 Excel proof and ManualActionLog / JSONL outbox proof rows in returned
 owner/operator evidence.
@@ -404,8 +403,8 @@ v523 has completed Windows side-by-side validation. v502 remains the historical
 partial Windows side-by-side setup/canary package, and v501 remains the
 historical complete Windows side-by-side smoke baseline.
 
-v524 is a source/package follow-up to the v523 owner-return verifier coverage
-audit, recorded in
+v524 is a source/package and Windows side-by-side follow-up to the v523
+owner-return verifier coverage audit, recorded in
 `docs/reports/2026-05-20-v524-owner-return-verifier-hardening-package.md`.
 It extends `scripts/verify_stage6_return.py` so a returned owner/operator
 template must include Excel ready proof, always-pass Excel consistency proof,
@@ -415,8 +414,13 @@ count, after-flush JSONL outbox count `0`, audit-flush status, and
 accepted missing Excel/audit proof; the green verifier slice reports
 `14 passed`, the packaging contract slice reports `100 passed`, and the v524
 non-Windows release gate reports `ok=true`, package/source fresh, and full
-unit `1898 passed`. v524 has not yet completed Windows side-by-side smoke, so
-v523 remains the latest complete Windows-side runtime evidence.
+unit `1898 passed`. The complete v524 Windows side-by-side smoke is recorded in
+`docs/reports/2026-05-20-v524-full-windows-side-by-side-smoke.md`: setup,
+install validation, OCR runtime validation, UI smoke, weekly limit-50 canary,
+Excel smoke, residual-cleanup dry run, active-task recovery, and Stage 6
+evidence verification all returned `ok=true`. The v524 canary remains strict
+`5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, and
+`ship_gate_status=below_gate`, so this does not unblock v1.0.
 
 v502 includes all v501 package features plus the v501 RCA follow-up residual
 Sanko exact school URL overrides for the two remaining corporation-root cases.
@@ -581,8 +585,8 @@ Current package support ZIP:
 `dist/eidp-windows-v523.zip`
 Current v523 SHA256 sidecar:
 `dist/eidp-windows-v523.zip.sha256`
-Current v523 package build evidence:
-`dist/eidp-windows-v523.zip` was built from clean source and validated by the
+Current v524 package build evidence:
+`dist/eidp-windows-v524.zip` was built from clean source and validated by the
 full non-Windows release gate. It has also completed Windows side-by-side
 setup, validation, recovery, OCR runtime proof, UI smoke, Excel smoke,
 limit-50 canary, residual-cleanup dry run, and Stage 6 evidence verification.
@@ -592,11 +596,11 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v523 is package/source verified, Windows side-by-side smoke validated, and
-includes the v520/v521/v522 source-side follow-ups. The v523 Windows limit-50
-canary remains below gate after v522 RCA reclassification, v502 is partially
-Windows side-by-side validated historically, and v523 is the latest complete
-Windows-smoke proof.
+v524 is package/source verified, Windows side-by-side smoke validated, and
+includes the v520/v521/v522 source-side follow-ups plus v524 owner-return
+verifier hardening. The v524 Windows limit-50 canary remains below gate after
+v522 RCA reclassification, v502 is partially Windows side-by-side validated
+historically, and v524 is the latest complete Windows-smoke proof.
 Current FY2026 production-scale strict proof and owner real Windows cycle
 evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
