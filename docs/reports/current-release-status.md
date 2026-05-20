@@ -4,6 +4,8 @@ Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
 Latest package family: `v519` for Mac-side package/source verification after
 filtering vocational-practice basic-information PDFs out of target-form review.
+Latest source-side follow-up: `v520` Katayanagi URL boundary hardening, not yet
+rebuilt into a Windows ZIP.
 `v502` remains
 the latest package with partial Windows side-by-side setup, validate, recovery,
 and limit-50 canary evidence. `v501` remains the latest package with complete
@@ -250,6 +252,14 @@ Its RCA batch has `16 publication_lag_or_old_target_pdf` and
 Tokyo child-school case now uses `https://www.sanko.ac.jp/tokyo-child/` and
 moves to publication-lag evidence, not current-year success.
 
+v520 is a source-side follow-up to the v519 RCA, recorded in
+`docs/reports/2026-05-20-v520-katayanagi-url-boundary-package.md`. It adds exact
+Katayanagi crawl entries for NEEC/NKHS and guards
+`school_domain_override_disclosure` so NEEC yearless `portal/syllabus` PDFs
+cannot be counted as FY2026/R8 success. The final limit-3 smoke stays strict
+`0/3 (0.0%)`, operator-reviewable `3/3 (100.0%)`, and
+`ship_gate_status=below_gate`; full unit reports `1895 passed`.
+
 v518 includes all v517 package features plus the Sanko Tokyo child-school
 publication-lag gold-set entry. The package verifier reports 45 discovery
 gold-set entries and 45 expected predictions. After the tracked docs update,
@@ -475,10 +485,10 @@ Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
 `docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
-v519 is Mac-side package/source verified, v502 is partially Windows side-by-side
-validated, and v501 is the latest complete Windows-smoke proof. Current FY2026
-production-scale strict proof, v519 Windows smoke, and owner real Windows cycle
-evidence remain incomplete. To continue,
+v519 is Mac-side package/source verified, v520 is source-side only, v502 is
+partially Windows side-by-side validated, and v501 is the latest complete
+Windows-smoke proof. Current FY2026 production-scale strict proof, v519/v520
+Windows smoke, and owner real Windows cycle evidence remain incomplete. To continue,
 either keep v1.0 blocked until FY2026/R8 public target PDFs become available,
 or record an explicit release exception that scopes v1.0 to the mature FY2025
 proof instead of the rolling FY2026 ship line.

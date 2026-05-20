@@ -17,6 +17,9 @@ prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
 大阪府,日本教育財団,大阪医専,https://www.nkz.ac.jp/clginfo/oiinfo.html,disclosure,0.98,NKZ disclosure index links to the Osaka Iko target-form subpage.
 愛知県,日本教育財団,名古屋医専,https://www.iko.ac.jp/nagoya,school,0.95,Iko brand uses iko.ac.jp rather than the NKZ corporation portal.
 愛知県,日本教育財団,名古屋医専,https://www.nkz.ac.jp/clginfo/niinfo.html,disclosure,0.98,NKZ disclosure index links to the Nagoya Iko target-form subpage.
+東京都,片柳学園,日本工学院専門学校,https://www.neec.ac.jp/portal/public/mext-scholarship/,school,0.98,NEEC public MEXT support page lists the Kamata target-form PDF but has no FY2026 label; keep as exact crawl entry without trusted-year fill.
+東京都,片柳学園,日本工学院八王子専門学校,https://www.neec.ac.jp/portal/public/mext-scholarship/,school,0.98,NEEC public MEXT support page lists the Hachioji target-form PDF but has no FY2026 label; keep as exact crawl entry without trusted-year fill.
+北海道,片柳学園,日本工学院北海道専門学校,https://www.nkhs.ac.jp/about/publicindex/,disclosure,0.98,NKHS information disclosure page lists target-form application PDFs through FY2025; live page matched school name and application-form anchor on 2026-05-20.
 千葉県,三幸学園,千葉医療秘書&IT専門学校,https://www.sanko.ac.jp/chiba-med/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
 北海道,三幸学園,札幌医療秘書福祉＆IT専門学校,https://www.sanko.ac.jp/sapporo-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
 宮城県,三幸学園,仙台医療秘書福祉＆IT専門学校,https://www.sanko.ac.jp/sendai-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.

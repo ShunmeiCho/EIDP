@@ -6627,6 +6627,39 @@ def test_download_pdf_rejects_school_domain_override_generic_yearless_target_for
     assert reason == "target_fiscal_year_not_detected"
 
 
+def test_download_pdf_rejects_school_domain_override_yearless_syllabus_target_form(
+    monkeypatch, tmp_path: Path
+) -> None:
+    content = _make_pdf_bytes("高等教育の修学支援新制度 様式第2号 機関要件 学科名 生徒総定員")
+    candidate = PdfCandidate(
+        pdf_url="https://www.neec.ac.jp/assets/contents/documents/portal/syllabus/kamata/portal_syllabus_kamata_yoshiki.pdf",
+        page_url="https://www.neec.ac.jp/portal/public/mext-scholarship/",
+        anchor_text="大学等における修学の支援に関する法律第7条第1項の確認に係る申請書（様式第2号）",
+    )
+    candidate.trusted_year_evidence = "school_domain_override_disclosure"
+
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, _url: _PdfResponse(content),
+    )
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+
+    file_path, file_hash, file_size, pdf_type, reason = download_pdf(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        tmp_path,
+        school_id=1,
+        target_fiscal_year=2026,
+        strict_target_fiscal_year=True,
+    )
+
+    assert file_path is None
+    assert file_hash is None
+    assert file_size == 0
+    assert pdf_type == "target"
+    assert reason == "target_fiscal_year_not_detected"
+
+
 def test_download_pdf_accepts_school_domain_override_yearless_shinsei_target_form(
     monkeypatch, tmp_path: Path
 ) -> None:

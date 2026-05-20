@@ -205,6 +205,23 @@ def test_checked_in_school_domain_overrides_cover_nkz_multibrand_schools() -> No
     assert expected <= by_school
 
 
+def test_checked_in_school_domain_overrides_cover_katayanagi_disclosures() -> None:
+    overrides = url_discovery._load_school_domain_overrides(data_dir=REPO_ROOT / "data")
+    by_school = {
+        (override.prefecture, override.school_name, override.domain_url): override.url_type
+        for override in overrides
+    }
+
+    expected = {
+        ("東京都", "日本工学院専門学校", "https://www.neec.ac.jp/portal/public/mext-scholarship/"): "school",
+        ("東京都", "日本工学院八王子専門学校", "https://www.neec.ac.jp/portal/public/mext-scholarship/"): "school",
+        ("北海道", "日本工学院北海道専門学校", "https://www.nkhs.ac.jp/about/publicindex/"): "disclosure",
+    }
+
+    for key, url_type in expected.items():
+        assert by_school[key] == url_type
+
+
 def test_checked_in_school_domain_overrides_cover_sanko_exact_school_sites() -> None:
     overrides = url_discovery._load_school_domain_overrides(data_dir=REPO_ROOT / "data")
     by_school = {

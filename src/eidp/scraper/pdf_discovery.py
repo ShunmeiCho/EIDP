@@ -1080,6 +1080,14 @@ def _has_yearless_school_override_target_filename(candidate: PdfCandidate) -> bo
     return "shinsei" in filename
 
 
+def _has_untrusted_school_override_yearless_storage_path(candidate: PdfCandidate) -> bool:
+    """Return whether storage location is too generic to prove current FY."""
+
+    parsed = urlparse(_candidate_url_hint_text(candidate))
+    path = unquote(parsed.path).lower()
+    return "/documents/portal/syllabus/" in path
+
+
 def _has_formish_candidate_hint(candidate: PdfCandidate) -> bool:
     """Return whether URL/anchor text is worth trying ahead of generic PDFs."""
 
@@ -2138,6 +2146,8 @@ def _trusted_year_evidence_can_fill_missing_pdf_year(
     ):
         return False
     if trusted_year_evidence == "school_domain_override_disclosure":
+        if _has_untrusted_school_override_yearless_storage_path(candidate):
+            return False
         return (
             _has_specific_target_form_hint(candidate)
             or _has_known_embedded_study_support_target_form(candidate)
