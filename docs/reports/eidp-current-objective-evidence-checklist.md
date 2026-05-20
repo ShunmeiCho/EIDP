@@ -3,6 +3,11 @@
 Updated: 2026-05-20
 Branch: `sprint8-handoff-finalize`
 PR: `#2`
+PR live state: verify with
+`gh pr view 2 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
+Last recorded live check before this docs-only audit update:
+`614e93a7fcf7fe374ec9d096cb6d26b999f0e964` was `CLEAN` with required checks
+`SUCCESS` for both push and pull_request runs.
 Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
