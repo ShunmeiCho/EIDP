@@ -38,4 +38,12 @@ is extended, Excel proof and ManualActionLog / JSONL audit proof must still be
 reviewed manually against the returned files listed in
 `docs/runbooks/eidp-v523-owner-request-20260520.txt`.
 
+## Package Impact
+
+`scripts/verify_stage6_return.py` is included in `dist/eidp-windows-v523.zip`.
+Changing it to machine-enforce Excel proof or ManualActionLog / JSONL outbox
+consistency would be a source/package change, not a docs-only follow-up. That
+work should open a new package lane, for example v524, with fresh package/source
+verification before it is treated as the selected owner-return verifier.
+
 Current release status remains **NOT COMPLETE**.
