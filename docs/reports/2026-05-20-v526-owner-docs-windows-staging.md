@@ -14,13 +14,14 @@ files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip` |
-| ZIP SHA256 | `f8bd3933a2a5a690befe172237a1027954e73fa604006dec5784f368460ca8f9` |
+| ZIP SHA256 | `43bf84c7cb6f55f1cfbef67b581175de4d1325b592152b77c9df0e98ea7896b9` |
 | ZIP SHA256 sidecar | `C:\EIDP-staging\eidp-v526-owner-docs-20260520.zip.sha256` present and matches the ZIP hash |
 | Extracted destination | `C:\EIDP-staging\v526-owner-docs-20260520` |
 | First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v526.txt` present |
 | Owner request | `docs\runbooks\eidp-v526-owner-request-20260520.txt` present |
 | Windows runbook | `docs\runbooks\eidp-windows.md` present, including `10.209.*` and standard proxy environment-variable guidance |
 | Owner-return remote check | `docs\reports\2026-05-20-v526-owner-return-remote-check.md` present |
+| Target-yearless RCA spot check | `docs\reports\2026-05-20-v526-target-yearless-rca-spot-check.md` present and referenced from first-read handoff |
 | Package report | `docs\reports\2026-05-20-v526-extracted-confirmation-package.md` present |
 | Post-reboot active-task preflight | `docs\reports\2026-05-20-v526-post-reboot-active-task-preflight.md` present |
 
@@ -60,3 +61,12 @@ Windows-staged handoff now includes
 verification returned `ok=true`, `owner_return_remote_check=true`,
 `has_10209=true`, `has_proxy_guidance=true`, and the active weekly task still
 points to v485.
+
+It was refreshed a fourth time after the v526 target-yearless RCA spot check so
+the Windows-staged handoff now includes
+`docs\reports\2026-05-20-v526-target-yearless-rca-spot-check.md`, and
+`docs\runbooks\00-READ-ME-FIRST-v526.txt` points to that report. Remote staging
+verification returned `ok=true`, `sidecar_matches=true`,
+`target_yearless_report=true`, `first_read_mentions_target_yearless=true`, and
+the active weekly task still points to v485:
+`C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`.

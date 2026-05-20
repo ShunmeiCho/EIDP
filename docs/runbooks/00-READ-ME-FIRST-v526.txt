@@ -26,6 +26,7 @@ Read first
 - docs\runbooks\eidp-operator-e2e-template.md
 - docs\runbooks\eidp-v1-release-admin-checklist.md
 - docs\reports\2026-05-20-v526-extracted-confirmation-package.md
+- docs\reports\2026-05-20-v526-target-yearless-rca-spot-check.md
 - docs\reports\2026-05-19-publication-lag-release-exception-record.md
 - docs\reports\eidp-current-objective-evidence-checklist.md
 - docs\reports\current-release-status.md

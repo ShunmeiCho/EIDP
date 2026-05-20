@@ -12,8 +12,9 @@ Latest Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable, refreshed v526 owner docs remain staged, and the remote
 `publication_lag` approval / E2E sign-off fields are still blank. The refreshed
-Windows-staged owner docs ZIP now includes this report and has SHA256
-`f8bd3933a2a5a690befe172237a1027954e73fa604006dec5784f368460ca8f9`.
+Windows-staged owner docs ZIP now includes this report and the
+target-yearless RCA spot check, and has SHA256
+`43bf84c7cb6f55f1cfbef67b581175de4d1325b592152b77c9df0e98ea7896b9`.
 Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -66,8 +67,9 @@ that keeps manual work below the release threshold.
   `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms the
   refreshed v526 handoff is present on Windows, but the remote approval and
   owner/operator sign-off fields remain blank. The Windows-staged owner docs
-  ZIP was refreshed to include this report and now has SHA256
-  `f8bd3933a2a5a690befe172237a1027954e73fa604006dec5784f368460ca8f9`.
+  ZIP was refreshed to include this report and the target-yearless RCA spot
+  check, and now has SHA256
+  `43bf84c7cb6f55f1cfbef67b581175de4d1325b592152b77c9df0e98ea7896b9`.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:
@@ -162,7 +164,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 - Negative v525 return-verifier probe is recorded in `logs/win-v525-stage6-v525-verify-stage6-return-not-approved-exception-20260520.json` with rc `1`: the refreshed v525 exception packet still fails on `Status must be APPROVED`, `Decision must be APPROVED`, placeholder approval fields, missing owner/operator KPI and sign-off rows, and missing Excel/audit proof rows.
 - v526 extracted confirmation package and Windows smoke evidence is recorded in `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`: package `dist/eidp-windows-v526.zip`, SHA256 `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`, package/source commit `5b30eb78edc331f992c1a99fdc7611174791ab87`, extracted `confirmed_target` rows now expose `抽出済内容を確認・補足`, non-Windows release gate `ok=true`, full unit `1901 passed`, Windows setup/validate/OCR runtime/UI/weekly limit-50/Excel/Stage 6 evidence verifier/residual-cleanup dry run/recovery all returned `ok=true`, and the weekly canary remains strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate`.
 - v526 owner/operator request is prepared in `docs/runbooks/eidp-v526-owner-request-20260520.txt`: it points to the v526 package, SHA, side-by-side root, extracted confirmation/supplement UI behavior, Windows smoke evidence, required return files, KPI/sign-off fields, and the `publication_lag`/strict-FY release-decision boundary.
-- v526 owner/operator docs were staged on Windows under `C:\EIDP-staging\v526-owner-docs-20260520`, recorded in `docs/reports/2026-05-20-v526-owner-docs-windows-staging.md`: the final ZIP SHA256 is recorded in that external staging report rather than embedded inside the ZIP, and the extracted docs include the v526 first-read handoff, owner request, Windows runbook with `10.x` / `10.209.*` campus-network guidance, package report, exception record, objective checklist, release status, and post-reboot active-task preflight. A post-staging read-only recheck confirmed `EIDP Weekly Run` still executes `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`, while both v485 and v526 roots remain present. This copies docs only and does not modify active runtime, DB, PDFs, or Task Scheduler.
+- v526 owner/operator docs were staged on Windows under `C:\EIDP-staging\v526-owner-docs-20260520`, recorded in `docs/reports/2026-05-20-v526-owner-docs-windows-staging.md`: the final ZIP SHA256 is recorded in that external staging report rather than embedded inside the ZIP, and the extracted docs include the v526 first-read handoff, owner request, Windows runbook with `10.x` / `10.209.*` campus-network guidance, package report, target-yearless RCA spot check, exception record, objective checklist, release status, and post-reboot active-task preflight. A post-staging read-only recheck confirmed `EIDP Weekly Run` still executes `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`, while both v485 and v526 roots remain present. This copies docs only and does not modify active runtime, DB, PDFs, or Task Scheduler.
 - v526 runtime boundary recheck is recorded in `docs/reports/2026-05-20-v526-runtime-boundary-recheck.md`: the active weekly task still points to v485, no Streamlit listeners remained on ports `8523/8524/8525/8526`, and both the v526 side-by-side root and v526 staged docs directory were present.
 - Negative v526 return-verifier probe is recorded in `logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.json` with rc `1`: the refreshed v526 exception packet still fails on `Status must be APPROVED`, `Decision must be APPROVED`, placeholder approval fields, missing owner/operator KPI and sign-off rows, and missing Excel/audit proof rows.
 - v526 target-yearless RCA spot check is recorded in `docs/reports/2026-05-20-v526-target-yearless-rca-spot-check.md`: the five `target_fiscal_year_not_detected` rows are NEEC no-year target-form PDFs for school IDs 1/2 and one Sanko image-only/stale-context PDF for school ID 44; the official pages do not provide machine-verifiable FY2026/Reiwa 8 evidence, so none can safely raise the v526 strict yield.
