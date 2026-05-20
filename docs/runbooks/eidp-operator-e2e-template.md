@@ -394,7 +394,7 @@ Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows �
 | 手入力件数 | 記録値 | | pass / watch / fail |
 | review_pending 残件 | 記録値 | | pass / watch / fail |
 | `ship_readiness_rc` | 0 | | pass / watch / fail |
-| strict target PDF 自動取得率（PDF から Excel データ列が抽出できた学校） | >= 60% | | pass / watch / fail |
+| strict target PDF 自動取得率 | >= 60% | | pass / watch / fail |
 | 推定手作業率 | <= 30% | | pass / watch / fail |
 | release exception reason | blank or `publication_lag` | | pass / watch / fail |
 | mature-year proof JSON | required when exception is used | | pass / watch / fail |
