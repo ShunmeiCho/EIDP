@@ -3,9 +3,20 @@
 Education Institution Data Pipeline
 
 EIDP automates collection, review, and Excel export of Japanese vocational
-school disclosure data. Sprint 8 targets a one-operator Windows PC deployment:
-extract a ZIP, double-click root-level `.bat` launchers, and operate through
-the Streamlit UI.
+school disclosure data. The active deployment target is a one-operator Windows
+PC: extract a ZIP, double-click root-level `.bat` launchers, and operate
+through the Streamlit UI.
+
+## Current Scope
+
+- The current operator workflow targets vocational schools (`専門学校`) on a
+  single Windows PC.
+- University (`大学`) matching data and roadmap material exist in the repository,
+  but a production university parser/workflow is not part of the current
+  operator release path.
+- PDF extraction currently uses deterministic parsing, OCR fallback, and manual
+  review. LLM-assisted extraction is a future extension, not a current release
+  dependency.
 
 ## For Operators
 
@@ -35,7 +46,7 @@ Optional OCR:
 
 Optional Playwright/Chromium:
 
-- Not required for normal v1.0 operation.
+- Not required for the normal operator workflow.
 - Distributed separately if JavaScript-heavy school sites require it.
 
 ## For Developers
@@ -114,4 +125,7 @@ Venus cron/systemd operation is archived, not live:
 - legacy assets: `deploy/legacy-venus/`
 - archived runbook: [legacy target-year rediscovery runbook](docs/runbooks/eidp-r8-rediscovery.md)
 
-The active deployment target is Windows PC.
+The active deployment target is Windows PC. `main` is the stable development
+baseline after PR #2; it is not a v1.0 GA release tag. The current release
+candidate checkpoint is `v1.0-rc.1`, and the final v1.0 tag remains gated on
+the owner/operator sign-off and the publication-lag release decision.
