@@ -15,6 +15,8 @@ Updated: 2026-05-19
   （真の対象年度 PDF 60-70% 自動取得、推定手作業 30% 以下）の証明には使いません。
 - v1.0 GA 判定は、このテンプレートの完了に加えて、現在の対象年度で
   `ship_readiness_rc=0` または同等の yield evidence が確認された後に行います。
+  Route A / `publication_lag` 例外を owner が承認する場合は、下記 KPI 判定の
+  below-gate 行を `watch` として明示し、成熟年 proof と例外記録で補完します。
 - Package-specific transfer/setup/UI evidence is recorded outside this reusable
   template in `docs/reports/current-release-status.md` and version-specific
   Stage 6 evidence drafts. Codex-driven smokes and bounded canaries are not a
@@ -333,6 +335,13 @@ override 例:
 | confidence < 0.50 行数 | |
 | 手入力件数 | |
 | DepartmentChange 明示登録件数 | |
+| 抽出済「確認・補足」実押し検証 | pass / fail |
+
+> ① fix（学科二重化）実環境検証（必須・1 回）:
+> 自動抽出済の 1 校で「抽出済内容を確認・補足」を実際に開き、無編集のまま保存する。
+> 保存後に Excel プレビュー（学科別シート）で **その学科が二重化していない**こと（1 行のまま、
+> 課程名が保持される）を目視確認し、上行に `pass`/`fail` を記入する。二重化したら release を止める。
+> 根拠: ユニットテストは緑だが、この UI 経路の実データ発火は本検証で初めて閉じる。
 
 低 confidence / 手入力 例:
 
@@ -382,6 +391,12 @@ Historical Mac retroactive Excel matrix（FY2026 yield ではない。Windows �
 | 2023 | `logs/release-gate-v437-retroactive-fy2023-reference.json` | pass | `missing_rows=0`, `extra_rows=0`, `differing_fields=0` | `採録状況=2418`, `対象比率=10022`, `学科別=9719`, `在籍のみ抜粋=9719` |
 
 ## 6. KPI 判定
+
+> publication_lag 例外を使う場合の verdict 記入指針:
+> FY2026/R8 が未公開で below-gate になる行（`ship_readiness_rc` / `strict target PDF 自動取得率` /
+> `推定手作業率` / `Excel ready 率`）は、目標未達でも **`watch`** と記入する（`fail` ではない）。
+> `verify_stage6_return.py` は publication_lag 下でこれらの `watch` を受理する（各行 `pass` / `watch` のみ可、`fail` は不可）。
+> 例外を使わない通常 GA では従来どおり `pass` 必須。
 
 | KPI | Target | Actual | 判定 |
 | --- | ---: | ---: | --- |

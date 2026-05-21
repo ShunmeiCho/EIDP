@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from eidp.db.models import Base, ManualActionLog, ReviewItem, School
 from eidp.review._pages import prefecture_remarks
 from eidp.review._pages.prefecture_remarks import (
+    _seed_coverage_table_rows,
     count_pending_prefecture_remark_reviews,
     list_prefecture_remark_reviews,
     load_prefecture_seed_coverage,
@@ -114,6 +115,10 @@ def test_prefecture_seed_coverage_summarizes_automation_targets(
     assert [row.supplemental_artifacts for row in rows] == [0, 0, 2]
     assert rows[0].school_link_signal is True
     assert rows[1].school_link_signal is False
+
+    table_rows = _seed_coverage_table_rows(rows)
+    assert [row["学校数"] for row in table_rows] == [314, 46, None]
+    assert all(row["学校数"] != "unknown" for row in table_rows)
 
 
 def test_prefecture_seed_status_label() -> None:

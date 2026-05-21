@@ -367,6 +367,23 @@ def _tag_text(tags: tuple[str, ...]) -> str:
     return " / ".join(prefecture_remark_tag_label(tag) for tag in tags)
 
 
+def _seed_coverage_table_rows(rows: list[PrefectureSeedCoverageRow]) -> list[dict[str, object]]:
+    return [
+        {
+            "都道府県": row.prefecture,
+            "学校数": row.schools_in_db,
+            "状態": row.status,
+            "parser": "あり" if row.parser_supported else "なし",
+            "学校URL信号": "あり" if row.school_link_signal else "なし",
+            "補助公式ファイル": row.supplemental_artifacts,
+            "基準日": row.as_of_date,
+            "公式一覧": row.artifact_url,
+            "メモ": row.notes,
+        }
+        for row in rows
+    ]
+
+
 def _render_seed_coverage(seed_csv: Path) -> None:  # pragma: no cover - Streamlit shell
     import streamlit as st
 
@@ -399,24 +416,7 @@ def _render_seed_coverage(seed_csv: Path) -> None:  # pragma: no cover - Streaml
         "ここは初回URL/PDF取得の入口 coverage です。"
         "自動取込対象は seed URL から公式一覧を取得し、学校名リンクやURL列を解析できます。"
     )
-    st.dataframe(
-        [
-            {
-                "都道府県": row.prefecture,
-                "学校数": row.schools_in_db if row.schools_in_db is not None else "unknown",
-                "状態": row.status,
-                "parser": "あり" if row.parser_supported else "なし",
-                "学校URL信号": "あり" if row.school_link_signal else "なし",
-                "補助公式ファイル": row.supplemental_artifacts,
-                "基準日": row.as_of_date,
-                "公式一覧": row.artifact_url,
-                "メモ": row.notes,
-            }
-            for row in rows
-        ],
-        hide_index=True,
-        width="stretch",
-    )
+    st.dataframe(_seed_coverage_table_rows(rows), hide_index=True, width="stretch")
 
 
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - Streamlit shell
