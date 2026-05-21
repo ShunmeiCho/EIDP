@@ -1,0 +1,49 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ogose-auto-publication-lag-2026",
+  "school": {
+    "school_id": 782,
+    "school_name": "専門学校越生自動車大学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "一川学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Prevent official-index trust from converting an explicitly old-year confirmation-form PDF into strict FY2026 success.",
+    "steps": [
+      "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure page.",
+      "Open the 修学支援 disclosure section and inspect the confirmation-form anchor.",
+      "Follow the PDF link labelled 令和七年度大学等における修学の支援に関する法律第７条第１項の確認に係る申請書.",
+      "Reject it from strict FY2026 success because 令和七年度 is fiscal year 2025.",
+      "Keep the school visible as publication-lag evidence for operator review instead of marking the current target year acquired."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.ogosejidai.ac.jp/",
+    "disclosure_url": "https://www.ogosejidai.ac.jp/%e5%ad%a6%e6%a0%a1%e7%b4%b9%e4%bb%8b/%e6%83%85%e5%a0%b1%e5%85%ac%e9%96%8b/%e5%a4%a7%e5%ad%a6%e7%ad%89%e3%81%ab%e3%81%8a%e3%81%91%e3%82%8b%e4%bf%ae%e5%ad%a6%e3%81%ae%e6%94%af%e6%8f%b4%e3%81%ab%e9%96%a2%e3%81%99%e3%82%8b%e6%b3%95%e5%be%8b%e7%ac%ac%ef%bc%97%e6%9d%a1%e7%ac%ac/",
+    "pdf_url": "https://www.ogosejidai.ac.jp/wordpress/wp-content/uploads/2025/07/458ff382f126d8b0965f66eb3501ba04.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "wordpress_disclosure_page_old_year_target_form",
+    "reusable_rules": [
+      "Use the official-index disclosure page before SERP fallback.",
+      "Parse kanji era numerals such as 令和七年度 as fiscal-year evidence.",
+      "Treat explicit old-year confirmation-form anchors as publication-lag evidence even when the URL came from the current prefecture index."
+    ],
+    "anti_patterns": [
+      "Do not trust a WordPress upload path year or prefecture-index current-year evidence over an explicit old-year anchor.",
+      "Do not count an old-year confirmation form as target-FY success just because it is on the latest public disclosure page."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/v244-windows-evidence/saitama-full/v244-saitama-full-evidence.jsonl"
+    ],
+    "notes": "Windows v244 full Saitama replay accepted this PDF because 令和七年度 was not parsed. The correct strict FY2026 outcome is fiscal_year_mismatch:2025/publication_lag_latest_public."
+  }
+}

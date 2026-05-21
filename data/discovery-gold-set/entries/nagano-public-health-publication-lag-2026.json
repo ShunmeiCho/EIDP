@@ -1,0 +1,58 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "nagano-public-health-publication-lag-2026",
+  "school": {
+    "school_id": 1252,
+    "school_name": "長野県公衆衛生専門学校",
+    "prefecture": "長野県",
+    "corporation_name": "長野県"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a prefecture-hosted public-school support page where the latest target-form PDF is still the previous fiscal year.",
+    "search_queries": [
+      "長野県公衆衛生専門学校 高等教育等修学支援制度 様式第2号",
+      "長野県公衆衛生専門学校 令和8年度 修学支援 確認申請書"
+    ],
+    "steps": [
+      "Start from the Nagano official-index artifact row for 長野県公衆衛生専門学校.",
+      "Follow the official-index link to https://www.pref.nagano.lg.jp/koshueisei/guidance/sinseisyo.html.",
+      "Confirm the public-school support page is updated in 2025 but lists target-form documents only through the 令和７年度 section.",
+      "Open the linked 2025shinseisho2go.pdf and verify that its body contains 長野県公衆衛生専門学校, 様式第２号, and 修学支援.",
+      "Classify the case as publication lag for target FY2026 because no local page, filename, or PDF-body evidence proves a 令和8年度 target-form PDF."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.pref.nagano.lg.jp/koshueisei/",
+    "disclosure_url": "https://www.pref.nagano.lg.jp/koshueisei/guidance/sinseisyo.html",
+    "pdf_url": "https://www.pref.nagano.lg.jp/koshueisei/guidance/documents/2025shinseisho2go.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "prefecture_hosted_public_school_publication_lag",
+    "reusable_rules": [
+      "For prefecture-hosted public-school support pages, treat explicit annual headings such as 令和７年度 as the local scope for the following target-form links.",
+      "Keep a previous-year 様式第２号 PDF visible as operator-reviewable publication-lag evidence when the page has no current-year target-form section.",
+      "Use filename year tokens such as 2025shinseisho2go together with the page heading to avoid upgrading the latest public PDF to the current rolling target year."
+    ],
+    "anti_patterns": [
+      "Do not use the page update date as target-fiscal-year evidence.",
+      "Do not let an adjacent confirmation notice or a generic support-system statement upgrade a previous-year 様式第２号 PDF to strict current-year success.",
+      "Do not count the latest public previous-year PDF as an accepted FY2026 target PDF merely because it is the newest target-form document on the page."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "data/prefecture-aggregators/artifacts/nagano.html",
+      "https://www.pref.nagano.lg.jp/koshueisei/guidance/sinseisyo.html",
+      "https://www.pref.nagano.lg.jp/koshueisei/guidance/documents/2025shinseisho2go.pdf",
+      "_temp/nagano-koshu-gold/2025shinseisho2go.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found a prefecture-hosted support page updated on 2025-07-16. The page lists 令和７年度 and 令和６年度 target-form PDFs, but no 令和８年度 target-form PDF. Source-side PDF text extraction verified 長野県公衆衛生専門学校, 様式第２号, and 修学支援 in 2025shinseisho2go.pdf; the PDF body does not contain 令和8年度, so this case must remain publication_lag_latest_public for FY2026."
+  }
+}

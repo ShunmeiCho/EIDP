@@ -11,7 +11,7 @@ import structlog
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from eidp.db.models import ReviewItem, School, SchoolYearStatus
+from eidp.db.models import ReviewItem, School
 from eidp.matcher.reconciler import ReconcileCandidate, reconcile
 
 log = structlog.get_logger()
@@ -33,30 +33,12 @@ def populate_review_items(session: Session, data_dir: Path) -> dict[str, int]:
     """
     stats = {"created": 0, "skipped_existing": 0, "skipped_excluded": 0, "total_unresolved": 0}
 
-    # Get excluded school IDs — only if the LATEST fiscal year is excluded
-    # (a school excluded in R5 but active in R6 should not be skipped)
-    from sqlalchemy import and_
-    latest_year_subq = (
-        session.query(
-            SchoolYearStatus.school_id,
-            func.max(SchoolYearStatus.fiscal_year).label("max_fy"),
-        )
-        .group_by(SchoolYearStatus.school_id)
-        .subquery()
-    )
-    excluded_ids: set[int] = set()
-    for row in (
-        session.query(SchoolYearStatus.school_id)
-        .join(
-            latest_year_subq,
-            and_(
-                SchoolYearStatus.school_id == latest_year_subq.c.school_id,
-                SchoolYearStatus.fiscal_year == latest_year_subq.c.max_fy,
-            ),
-        )
-        .filter(SchoolYearStatus.excluded_reason.isnot(None))
-    ):
-        excluded_ids.add(row[0])
+    # Excluded schools — Sprint 8.2.1 helper centralises the
+    # current-revision + latest-fiscal-year filter so historical revisions
+    # cannot silently keep a school out of the review queue.
+    from eidp.db.current_helpers import latest_excluded_school_ids
+
+    excluded_ids: set[int] = {row[0] for row in latest_excluded_school_ids(session)}
 
     # Run reconciler to get fuzzy match candidates
     report = reconcile(session, data_dir)

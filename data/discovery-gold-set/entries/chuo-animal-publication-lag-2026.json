@@ -1,0 +1,57 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "chuo-animal-publication-lag-2026",
+  "school": {
+    "school_id": 3205,
+    "school_name": "中央動物専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "学校法人中央工学校"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a disclosure page where multiple current-year non-target documents coexist with only a previous-year 修学支援 target-form PDF.",
+    "search_queries": [
+      "中央動物専門学校 高等教育の修学支援新制度 申請書様式第2号 2025年度",
+      "中央動物専門学校 令和8年度 機関要件確認申請書 様式第2号"
+    ],
+    "steps": [
+      "Open https://www.chuo-a.ac.jp/disclosure/.",
+      "Confirm the page contains current-year non-target signals such as 令和8年度運営計画 and committee dates including 令和8年1月20日.",
+      "Scroll to 高等教育の修学支援新制度 and inspect the 申請書様式第2号 link.",
+      "Confirm the only visible target-form anchor is labeled 2025年度 and resolves to https://www.chuo-a.ac.jp/disclosure/pdf/confirmation_2.pdf.",
+      "Open the PDF and verify the body contains 中央動物専門学校 and 専門学校用の様式第２号 sub-forms.",
+      "Keep it as latest-public publication-lag evidence for FY2026 because no local link or PDF evidence proves 令和8年度 target-form publication."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.chuo-a.ac.jp/",
+    "disclosure_url": "https://www.chuo-a.ac.jp/disclosure/",
+    "pdf_url": "https://www.chuo-a.ac.jp/disclosure/pdf/confirmation_2.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "current_year_disclosure_page_with_previous_year_support_form",
+    "reusable_rules": [
+      "Use the local anchor text 2025年度 as stale fiscal-year evidence for the target-form PDF.",
+      "Keep the latest public 申請書様式第2号 PDF visible to operators as publication-lag evidence when no FY2026 target-form link exists.",
+      "Separate current-year non-target disclosure links such as 運営計画, 委員会議事録, and 職業実践専門課程様式4 from strict target-form year evidence."
+    ],
+    "anti_patterns": [
+      "Do not upgrade confirmation_2.pdf to FY2026 strict success because the same page has 令和8年度運営計画.",
+      "Do not treat 令和8年1月 committee meeting dates as target fiscal-year evidence for the support-system form.",
+      "Do not confuse 職業実践専門課程の様式4 PDFs with 修学支援新制度の申請書様式第2号."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.chuo-a.ac.jp/disclosure/",
+      "https://www.chuo-a.ac.jp/disclosure/pdf/confirmation_2.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found a disclosure page with current-year non-target signals including 令和8年度運営計画, while the 高等教育の修学支援新制度 申請書様式第2号 link is labeled 2025年度. Source-side PDF text extraction verified 中央動物専門学校 and 専門学校用の様式第２号 sub-form text; this must remain publication_lag_latest_public for FY2026, not strict current-FY success."
+  }
+}

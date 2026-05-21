@@ -9,20 +9,25 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+import eidp.reports.coverage as coverage_module
+import eidp.reports.gaps as gaps_module
 from eidp.db.models import (
     Base,
     Department,
     DepartmentYearly,
     Document,
     School,
+    SchoolFiscalYearStatus,
     SchoolSite,
 )
+from eidp.fiscal_year import current_fiscal_year
 from eidp.reports import (
     compute_coverage,
     compute_extraction,
     compute_gaps,
+    compute_ship_readiness,
+    gap_report_for_export,
 )
-from eidp.reports.coverage import current_fiscal_year
 
 
 def _session() -> Session:
@@ -166,7 +171,7 @@ def test_coverage_target_pdf_excludes_non_target_and_failed() -> None:
 
 def test_coverage_target_pdf_distinguishes_any_fy_vs_current_fy() -> None:
     """Reviewer fix: target_pdf_rate must split any-FY (discovery health)
-    vs current-FY (R8 coverage); they were conflated before."""
+    vs current-FY target coverage; they were conflated before."""
     s = _session()
     _school(s, 1, "東京")  # only 2025 target → counts in any_fy, not current_fy
     _school(s, 2, "東京")  # has 2026 target → counts in both
@@ -176,6 +181,19 @@ def test_coverage_target_pdf_distinguishes_any_fy_vs_current_fy() -> None:
 
     rep = compute_coverage(s, school_type="専門学校", fiscal_year=2026)
     assert rep.totals.schools_with_target_pdf_any_fy == 2
+    assert rep.totals.schools_with_target_pdf_current_fy == 1
+
+
+def test_coverage_default_fiscal_year_uses_configured_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    _doc(s, 10, 1, 2099, "ingested", pdf_type="target")
+    s.flush()
+    monkeypatch.setattr(coverage_module.settings, "target_fiscal_year", 2099)
+
+    rep = compute_coverage(s, school_type="専門学校")
+
+    assert rep.fiscal_year == 2099
     assert rep.totals.schools_with_target_pdf_current_fy == 1
 
 
@@ -190,6 +208,254 @@ def test_coverage_extraction_requires_capacity_not_null() -> None:
     rep = compute_coverage(s, school_type="専門学校", fiscal_year=2026)
     assert rep.totals.schools_with_current_fy_doc == 1
     assert rep.totals.schools_with_current_fy_extracted == 0
+
+
+def test_gap_report_for_export_uses_target_fy_not_historical_data() -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    _school(s, 2, "東京")
+    s.add(SchoolSite(school_id=1, url="https://a", verified=True))
+    _doc(s, 10, 1, 2025, "ingested", pdf_type="target")
+    d1 = _dept(s, 100, 1)
+    _yearly(s, 1000, d1.id, 2025, document_id=10, capacity=80)
+    s.add(
+        SchoolFiscalYearStatus(
+            school_id=1,
+            fiscal_year=2026,
+            url_status="pref_url",
+            pdf_status="rejected_stale",
+            extract_status="none",
+            blocking_reason="stale_pdf_only",
+            evidence_level="pdf_text",
+            excel_ready=False,
+        )
+    )
+    s.flush()
+
+    rep = gap_report_for_export(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.total_schools == 2
+    assert rep.schools_with_url == 1
+    assert rep.no_url_schools == 1
+    assert rep.target_pdf_schools == 0
+    assert rep.stale_fallback_schools == 1
+    assert rep.missing_target_pdf_schools == 2
+    assert rep.extracted_schools == 0
+    assert rep.excel_ready_schools == 0
+    assert rep.target_yearly_rows == 0
+    assert rep.has_target_year_data is False
+
+
+def test_gap_report_for_export_counts_ready_target_year_data() -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    s.add(SchoolSite(school_id=1, url="https://a", verified=True))
+    _doc(s, 9, 1, 2025, "ingested", pdf_type="target")
+    _doc(s, 10, 1, 2026, "ingested", pdf_type="target")
+    d1 = _dept(s, 100, 1)
+    _yearly(s, 1000, d1.id, 2026, document_id=10, capacity=80)
+    s.add(
+        SchoolFiscalYearStatus(
+            school_id=1,
+            fiscal_year=2026,
+            url_status="pref_url",
+            pdf_status="confirmed_target",
+            extract_status="parsed",
+            evidence_level="pdf_text",
+            excel_ready=True,
+        )
+    )
+    s.flush()
+
+    rep = gap_report_for_export(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.target_pdf_schools == 1
+    assert rep.stale_fallback_schools == 0
+    assert rep.extracted_schools == 1
+    assert rep.excel_ready_schools == 1
+    assert rep.target_yearly_rows == 1
+    assert rep.target_pdf_rate == pytest.approx(1.0)
+    assert rep.excel_ready_rate == pytest.approx(1.0)
+
+
+# --- ship readiness --------------------------------------------------------
+
+
+def test_ship_readiness_keeps_operator_review_line_separate_from_strict_data_line() -> None:
+    s = _session()
+    for school_id in range(1, 11):
+        _school(s, school_id, "東京")
+        s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
+        pdf_status = "confirmed_target" if school_id <= 5 else "publication_lag" if school_id <= 7 else "none"
+        s.add(
+            SchoolFiscalYearStatus(
+                school_id=school_id,
+                fiscal_year=2026,
+                pdf_status=pdf_status,
+                extract_status="parsed" if pdf_status == "confirmed_target" else "none",
+                excel_ready=school_id <= 4,
+            )
+        )
+    for school_id in range(1, 6):
+        _doc(s, 100 + school_id, school_id, 2026, "ingested", pdf_type="target")
+        dept = _dept(s, 200 + school_id, school_id)
+        _yearly(s, 300 + school_id, dept.id, 2026, document_id=100 + school_id)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.total_schools == 10
+    assert rep.strict_target_pdf_schools == 5
+    assert rep.strict_target_pdf_rate == pytest.approx(0.5)
+    assert rep.operator_reviewable_schools == 7
+    assert rep.operator_reviewable_rate == pytest.approx(0.7)
+    assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
+    assert rep.excel_ready_schools == 4
+    assert rep.ok is True
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is False
+    assert [criterion.name for criterion in rep.criteria] == ["estimated_manual_workload"]
+    assert [criterion.name for criterion in rep.operator_review_criteria] == ["estimated_manual_workload"]
+    assert [criterion.name for criterion in rep.strict_data_criteria] == ["strict_target_pdf", "excel_ready"]
+
+
+def test_ship_readiness_passes_when_final_business_thresholds_are_met() -> None:
+    s = _session()
+    for school_id in range(1, 11):
+        _school(s, school_id, "東京")
+        s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
+        s.add(
+            SchoolFiscalYearStatus(
+                school_id=school_id,
+                fiscal_year=2026,
+                pdf_status="confirmed_target" if school_id <= 7 else "none",
+                extract_status="parsed" if school_id <= 7 else "none",
+                excel_ready=school_id <= 7,
+            )
+        )
+    for school_id in range(1, 8):
+        _doc(s, 100 + school_id, school_id, 2026, "ingested", pdf_type="target")
+        dept = _dept(s, 200 + school_id, school_id)
+        _yearly(s, 300 + school_id, dept.id, 2026, document_id=100 + school_id)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.strict_target_pdf_rate == pytest.approx(0.7)
+    assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
+    assert rep.excel_ready_rate == pytest.approx(0.7)
+    assert rep.ok is True
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is True
+
+
+def test_ship_readiness_can_pass_with_review_candidate_operator_coverage() -> None:
+    s = _session()
+    for school_id in range(1, 11):
+        _school(s, school_id, "東京")
+        s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
+        pdf_status = (
+            "confirmed_target"
+            if school_id <= 4
+            else "publication_lag"
+            if school_id <= 6
+            else "target_year_unverified"
+            if school_id == 7
+            else "none"
+        )
+        s.add(
+            SchoolFiscalYearStatus(
+                school_id=school_id,
+                fiscal_year=2026,
+                pdf_status=pdf_status,
+                extract_status="parsed" if pdf_status == "confirmed_target" else "none",
+                excel_ready=school_id <= 7,
+            )
+        )
+    for school_id in range(1, 5):
+        _doc(s, 100 + school_id, school_id, 2026, "ingested", pdf_type="target")
+        dept = _dept(s, 200 + school_id, school_id)
+        _yearly(s, 300 + school_id, dept.id, 2026, document_id=100 + school_id)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.strict_target_pdf_rate == pytest.approx(0.4)
+    assert rep.operator_reviewable_rate == pytest.approx(0.7)
+    assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
+    assert rep.excel_ready_rate == pytest.approx(0.4)
+    assert rep.ok is True
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is False
+
+
+def test_ship_readiness_counts_discovered_pdf_candidates_as_operator_reviewable() -> None:
+    s = _session()
+    for school_id in range(1, 11):
+        _school(s, school_id, "東京")
+        s.add(SchoolSite(school_id=school_id, url=f"https://school{school_id}.example/"))
+        pdf_status = (
+            "confirmed_target"
+            if school_id <= 4
+            else "publication_lag"
+            if school_id <= 5
+            else "target_year_unverified"
+            if school_id == 6
+            else "discovered"
+            if school_id == 7
+            else "none"
+        )
+        s.add(
+            SchoolFiscalYearStatus(
+                school_id=school_id,
+                fiscal_year=2026,
+                pdf_status=pdf_status,
+                extract_status="parsed" if pdf_status == "confirmed_target" else "none",
+                excel_ready=school_id <= 4,
+                blocking_reason="not_extracted" if pdf_status == "discovered" else None,
+            )
+        )
+    for school_id in range(1, 5):
+        _doc(s, 100 + school_id, school_id, 2026, "ingested", pdf_type="target")
+        dept = _dept(s, 200 + school_id, school_id)
+        _yearly(s, 300 + school_id, dept.id, 2026, document_id=100 + school_id)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.strict_target_pdf_rate == pytest.approx(0.4)
+    assert rep.operator_reviewable_schools == 7
+    assert rep.operator_reviewable_rate == pytest.approx(0.7)
+    assert rep.estimated_manual_workload_rate == pytest.approx(0.3)
+    assert rep.ok_operator_review is True
+    assert rep.ok_strict is False
+
+
+def test_ship_readiness_uses_status_strict_metric_not_legacy_ingested_docs() -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    s.add(SchoolSite(school_id=1, url="https://school1.example/"))
+    s.add(
+        SchoolFiscalYearStatus(
+            school_id=1,
+            fiscal_year=2026,
+            pdf_status="confirmed_target",
+            extract_status="parsed",
+            excel_ready=True,
+        )
+    )
+    _doc(s, 101, 1, 2026, "review_pending", pdf_type="target")
+    dept = _dept(s, 201, 1)
+    _yearly(s, 301, dept.id, 2026, document_id=101)
+    s.flush()
+
+    rep = compute_ship_readiness(s, fiscal_year=2026, school_type="専門学校")
+
+    assert rep.strict_target_pdf_schools == 1
+    assert rep.excel_ready_schools == 1
+    assert rep.strict_target_pdf_rate == pytest.approx(1.0)
+    assert rep.excel_ready_rate == pytest.approx(1.0)
+    assert rep.ok_strict is True
 
 
 # --- extraction ------------------------------------------------------------
@@ -336,6 +602,19 @@ def test_gaps_pdf_default_fy_does_not_crash() -> None:
     rep = compute_gaps(s, "pdf", school_type="専門学校")
     assert rep.total == 1
     assert rep.by_reason == {"no_site_no_pdf": 1}
+
+
+def test_gaps_pdf_default_fiscal_year_uses_configured_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    s = _session()
+    _school(s, 1, "東京")
+    _doc(s, 10, 1, 2099, "ingested", pdf_type="target")
+    s.flush()
+    monkeypatch.setattr(gaps_module.settings, "target_fiscal_year", 2099)
+
+    rep = compute_gaps(s, "pdf", school_type="専門学校")
+
+    assert rep.total == 0
+    assert rep.by_reason == {}
 
 
 def test_gaps_extraction_lists_ingested_docs_without_yearly() -> None:

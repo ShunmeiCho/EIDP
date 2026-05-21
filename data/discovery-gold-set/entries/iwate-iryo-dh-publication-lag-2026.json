@@ -1,0 +1,57 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "iwate-iryo-dh-publication-lag-2026",
+  "school": {
+    "school_id": 968,
+    "school_name": "岩手医科大学医療専門学校",
+    "prefecture": "岩手県",
+    "corporation_name": "岩手医科大学"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a dense Wix information page where the target confirmation-form section is stale but a later non-target section already has 令和8年度 links.",
+    "search_queries": [
+      "岩手医科大学医療専門学校 令和8年度 更新確認申請書",
+      "岩手医科大学医療専門学校 確認申請書 様式第2号"
+    ],
+    "steps": [
+      "Start from the Iwate official-index artifact row for 岩手医科大学医療専門学校.",
+      "Follow the official-index link to https://www.iwate-iryo-dh.com/blank-7.",
+      "Find the section headed 大学等における修学の支援に関する法律施行規則第7条第2項に基づく確認申請書.",
+      "Observe that this target confirmation-form section exposes links from 令和元年度 through 令和７年度 only.",
+      "Open the latest 令和７年度 target-form PDF and verify that its body contains 岩手医科大学医療専門学校 and 様式第２号.",
+      "Classify it as latest-public publication-lag evidence for FY2026 because the later 令和8年度 text on the page belongs to the シラバス section, not the target confirmation-form section."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.iwate-iryo-dh.com/",
+    "disclosure_url": "https://www.iwate-iryo-dh.com/blank-7",
+    "pdf_url": "https://www.iwate-iryo-dh.com/_files/ugd/c773fc_c40d31d7e10e4706937b3da7af27d372.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "wix_dense_information_page_old_year_target_form",
+    "reusable_rules": [
+      "On dense Wix information pages, keep fiscal-year context local to the current disclosure subsection instead of using page-wide future-year text.",
+      "Treat a latest visible 令和７年度 confirmation-form PDF as publication-lag evidence for FY2026 when the target confirmation-form section has no 令和８年度 link.",
+      "Accept the PDF as a target-form candidate because the body contains the school name and 様式第２号, but do not count it as strict FY2026 success."
+    ],
+    "anti_patterns": [
+      "Do not let a later 令和8年度 syllabus or course-list section upgrade a stale confirmation-form link to current-year success.",
+      "Do not classify the stale target-form PDF as non-target merely because it is old; keep it visible as latest-public operator evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "data/prefecture-aggregators/artifacts/iwate.html",
+      "https://www.iwate-iryo-dh.com/blank-7",
+      "https://www.iwate-iryo-dh.com/_files/ugd/c773fc_c40d31d7e10e4706937b3da7af27d372.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found the official-index-linked Wix information page. Project HTML extraction found the latest confirmation-form section PDF as direct pattern_type with anchor 令和７年度; source-side PDF text extraction verified 岩手医科大学医療専門学校 and 様式第２号 in the PDF body. The page's 令和8年度 text belongs to the later シラバス section."
+  }
+}

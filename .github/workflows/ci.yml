@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - sprint8-handoff-finalize
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Python quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: python -m pip install --upgrade uv
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev --extra scraper-basic --extra pdf
+
+      - name: Ruff
+        run: >
+          uv run ruff check
+          src
+          scripts/build_windows_zip.py
+          scripts/validate_windows_install.py
+          scripts/verify_windows_distribution.py
+          scripts/run_non_windows_release_gates.py
+          scripts/run_retroactive_excel_matrix.py
+          scripts/analyze_strict_yield_gaps.py
+          scripts/build_mature_year_acquisition_proof.py
+          scripts/bootstrap_pdf_pipeline.py
+          scripts/collect_stage6_evidence.py
+          scripts/collect_bug_report.py
+          scripts/verify_stage6_evidence.py
+          scripts/verify_stage6_return.py
+          scripts/stage6_recovery_check.py
+          scripts/stage6_residual_cleanup.py
+          scripts/ship_gate_contract.py
+          tests/unit/test_current_read_paths.py
+          tests/unit/test_db_session.py
+          tests/unit/test_fiscal_year_evidence.py
+          tests/unit/test_package_init.py
+          tests/unit/test_retroactive_excel_matrix.py
+          tests/unit/test_strict_yield_gap_analysis.py
+          tests/unit/test_mature_year_acquisition_proof.py
+          tests/unit/test_windows_install_validator.py
+          tests/unit/test_non_windows_release_gates.py
+          tests/unit/test_bootstrap_pdf_pipeline.py
+          tests/unit/test_bug_signals.py
+          tests/unit/test_review_bug_report.py
+          tests/unit/test_stage6_evidence_bundle.py
+          tests/unit/test_stage6_return_verifier.py
+          tests/unit/test_ship_gate_contract.py
+          tests/unit/test_portability_contract.py
+          tests/unit/test_windows_distribution_verifier.py
+          tests/unit/test_stage6_recovery_check.py
+          tests/unit/test_stage6_residual_cleanup.py
+          tests/unit/test_ci_workflow_contract.py
+
+      - name: Bandit high-severity security scan
+        run: >
+          uv run --with bandit bandit
+          -q
+          --severity-level high
+          -r
+          src/eidp
+          scripts/build_windows_zip.py
+          scripts/validate_windows_install.py
+          scripts/verify_windows_distribution.py
+          scripts/run_non_windows_release_gates.py
+          scripts/run_retroactive_excel_matrix.py
+          scripts/build_mature_year_acquisition_proof.py
+          scripts/bootstrap_pdf_pipeline.py
+          scripts/collect_stage6_evidence.py
+          scripts/collect_bug_report.py
+          scripts/verify_stage6_evidence.py
+          scripts/verify_stage6_return.py
+          scripts/stage6_recovery_check.py
+          scripts/stage6_residual_cleanup.py
+          scripts/ship_gate_contract.py
+
+      - name: Mypy
+        run: >
+          uv run mypy
+          src
+          scripts/run_retroactive_excel_matrix.py
+          scripts/build_mature_year_acquisition_proof.py
+          scripts/bootstrap_pdf_pipeline.py
+          scripts/collect_bug_report.py
+          scripts/verify_stage6_return.py
+          scripts/ship_gate_contract.py
+
+      - name: Pytest with coverage
+        run: uv run pytest --cov=src/eidp --cov-report=term --cov-fail-under=80
+
+      - name: Download Windows runtime
+        run: uv run python scripts/download_windows_runtime.py
+
+      - name: Build Windows ZIP
+        run: uv run python scripts/build_windows_zip.py --out-zip dist/eidp-windows-ci.zip
+
+      - name: Non-Windows release gate
+        run: >
+          uv run python scripts/run_non_windows_release_gates.py
+          dist/eidp-windows-ci.zip
+          --skip-full-unit
+          --json
+          --output logs/release-gate-ci.json
+
+  ship-gate:
+    name: Ship gate contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: python -m pip install --upgrade uv
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev --extra scraper-basic --extra pdf
+
+      - name: Strict ship-gate tests
+        run: >
+          uv run pytest
+          tests/unit/test_ship_gate_contract.py
+          tests/unit/test_run_weekly_target_year_discovery.py
+          tests/unit/test_mature_year_acquisition_proof.py
+          tests/unit/test_stage6_return_verifier.py
+          tests/unit/test_windows_install_validator.py
+          -q
+
+      - name: Mature-year strict-threshold smoke
+        run: |
+          mkdir -p _temp/ci-ship-gate logs
+          cat > _temp/ci-ship-gate/fy2025-last-run.json <<'JSON'
+          {
+            "status": "success",
+            "finished_at": "2026-05-18T00:00:00+00:00",
+            "dry_run": false,
+            "current_fy": 2025,
+            "target_pdf_auto_denominator_count": 1200,
+            "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
+            "target_missing_school_count": 1200,
+            "target_pdf_auto_yield_pct": 62.5,
+            "operator_reviewable_yield_pct": 70.0,
+            "ship_gate_status": "pass"
+          }
+          JSON
+          uv run python scripts/build_mature_year_acquisition_proof.py \
+            --case 2025=_temp/ci-ship-gate/fy2025-last-run.json \
+            --json \
+            --output logs/ship-gate-contract-ci.json

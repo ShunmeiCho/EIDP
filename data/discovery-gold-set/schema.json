@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EIDP discovery gold-set entry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "entry_id",
+    "school",
+    "target_fiscal_year",
+    "outcome",
+    "manual_demonstration",
+    "expected_result",
+    "automation_pattern",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "discovery-gold-set/v0.1"
+    },
+    "entry_id": {
+      "type": "string"
+    },
+    "school": {
+      "type": "object",
+      "required": ["school_id", "school_name", "prefecture"],
+      "additionalProperties": false,
+      "properties": {
+        "school_id": {"type": "integer"},
+        "school_name": {"type": "string"},
+        "prefecture": {"type": "string"},
+        "corporation_name": {"type": "string"}
+      }
+    },
+    "target_fiscal_year": {
+      "type": "integer"
+    },
+    "outcome": {
+      "enum": [
+        "accepted_target_pdf",
+        "publication_lag_latest_public",
+        "no_target_candidate_found",
+        "needs_operator_review",
+        "site_fetch_error"
+      ]
+    },
+    "manual_demonstration": {
+      "type": "object",
+      "required": ["operator_goal", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "operator_goal": {"type": "string"},
+        "search_queries": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "steps": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "expected_result": {
+      "type": "object",
+      "required": ["pdf_url", "pdf_type", "fiscal_year"],
+      "additionalProperties": false,
+      "properties": {
+        "school_url": {"type": "string"},
+        "disclosure_url": {"type": "string"},
+        "pdf_url": {"type": "string"},
+        "pdf_type": {"enum": ["target", "non_target", "image_only", "unknown", ""]},
+        "fiscal_year": {"type": ["integer", "null"]},
+        "strict_target_year_success": {"type": "boolean"},
+        "pattern_type": {"type": "string"}
+      }
+    },
+    "automation_pattern": {
+      "type": "object",
+      "required": ["reusable_rules"],
+      "additionalProperties": false,
+      "properties": {
+        "site_family": {"type": "string"},
+        "reusable_rules": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "anti_patterns": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["source_kind", "source_paths"],
+      "additionalProperties": false,
+      "properties": {
+        "source_kind": {
+          "enum": [
+            "windows_v136_jsonl",
+            "windows_v320_jsonl",
+            "manual_web",
+            "operator_review",
+            "saitama_rca_jsonl",
+            "current_code_jsonl"
+          ]
+        },
+        "source_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "notes": {"type": "string"}
+      }
+    }
+  }
+}

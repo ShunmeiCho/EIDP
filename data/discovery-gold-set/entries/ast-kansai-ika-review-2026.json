@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ast-kansai-ika-review-2026",
+  "school": {
+    "school_id": 1533,
+    "school_name": "関西医科専門学校",
+    "prefecture": "大阪府",
+    "corporation_name": "大阪学院大学"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Find whether the AST public disclosure PDF is the target confirmation form without over-trusting a yearless filename.",
+    "search_queries": [
+      "関西医科専門学校 機関要件確認申請書",
+      "関西医科専門学校 様式第2号"
+    ],
+    "steps": [
+      "Open the AST school public disclosure PDF under /jyouhoukokai/pdf/.",
+      "Verify the PDF body starts with 様式第２号 and the school name 関西医科専門学校.",
+      "Observe that the filename kmc_yosiki2.pdf and the direct PDF URL do not carry target-fiscal-year evidence.",
+      "Queue the PDF for operator review instead of accepting it as strict FY2026."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.kmc.ast.ac.jp/",
+    "disclosure_url": "https://www.kmc.ast.ac.jp/jyouhoukokai/",
+    "pdf_url": "https://www.kmc.ast.ac.jp/jyouhoukokai/pdf/kmc_yosiki2.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "ast_jyouhoukokai_direct_pdf",
+    "reusable_rules": [
+      "Treat /jyouhoukokai/pdf/*_yosiki2.pdf as a strong target-form candidate when the body contains 様式第２号 and the school name.",
+      "Route target-looking PDFs without URL, anchor, or body fiscal-year evidence to operator review.",
+      "Keep the school disclosure URL as a useful parent even when the manual trace starts from the direct PDF."
+    ],
+    "anti_patterns": [
+      "Do not mark a yearless yoshiki2 filename as strict target-year success.",
+      "Do not reject the file as non-target only because page one starts with the実務経験 section."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.kmc.ast.ac.jp/jyouhoukokai/pdf/kmc_yosiki2.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-11 verified the direct PDF body contains 関西医科専門学校 and 様式第２号, but no reliable FY2026 evidence was visible in the URL or opening text."
+  }
+}

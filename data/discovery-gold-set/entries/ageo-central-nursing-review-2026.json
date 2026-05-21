@@ -1,0 +1,49 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ageo-central-nursing-review-2026",
+  "school": {
+    "school_id": 757,
+    "school_name": "上尾中央看護専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "愛友会"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Verify the official-index disclosure site finds the yearless confirmation-form PDF without treating the prefecture index itself as PDF fiscal-year evidence.",
+    "steps": [
+      "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure site.",
+      "Open the admission support page and inspect the anchor labeled 確認申請.",
+      "Follow the linked study_support_system.pdf candidate.",
+      "Classify it as a target PDF candidate that needs operator review because the URL, anchor, and PDF body do not prove FY2026."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://ageo.org/",
+    "disclosure_url": "https://ageo.org/admission/support.php",
+    "pdf_url": "https://ageo.org/files/admission/support/study_support_system.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "target_form_without_year_evidence",
+    "reusable_rules": [
+      "Keep anchors labeled 確認申請 as strong target-form candidates even when the link text omits the fiscal year.",
+      "Use prefecture_aggregator disclosure URLs as crawl/source evidence, not as a replacement for PDF/link fiscal-year evidence.",
+      "When a target-form PDF has no FY2026 evidence, emit needs_operator_review with the verified direct PDF URL."
+    ],
+    "anti_patterns": [
+      "Do not auto-accept a yearless confirmation-form candidate from any source without its own FY evidence.",
+      "Do not discard the PDF as non-target only because the surrounding support page also links many news/common PDFs.",
+      "Do not infer FY2026 from the current crawl date or from a current prefecture index."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "C:/EIDP-v150-d303b44/logs/v150_saitama51_evidence.jsonl"
+    ],
+    "notes": "Windows v333 Saitama 50-site replay records this target-form PDF as target_fiscal_year_not_detected. Earlier v332/v150-era behavior accepted it with detected_fiscal_year empty and year_evidence=prefecture_index_current_year, but that was a false-positive strict-year success."
+  }
+}

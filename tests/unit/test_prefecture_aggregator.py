@@ -1,0 +1,1124 @@
+"""Sprint 8.3.a — prefecture aggregator parser regression.
+
+Synthesizes minimal PDFs at test time using PyMuPDF so the test is
+self-contained (no committed binary fixtures, no /tmp dependencies).
+The Saitama-style hyperlink-annotation path is the headline contract:
+without ``extract_pdf_annotation_links`` the URL would be silently
+dropped, costing ~36 schools per prefecture run.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import fitz  # type: ignore[import-not-found]
+import pytest
+from openpyxl import Workbook  # type: ignore[import-untyped]
+
+from eidp.scraper.prefecture_aggregator import (
+    PARSERS,
+    PREF_KEY_TO_DB,
+    classify_prefecture_remarks,
+    classify_url_quality,
+    extract_pdf_annotation_links,
+    extract_url,
+    norm,
+    parse,
+    parse_5col,
+    parse_6col_indexed,
+    parse_13col_niigata,
+    parse_aichi_index,
+    parse_fukushima_8col,
+    parse_html_table,
+    parse_osaka_xlsx,
+    parse_tokyo,
+    parse_xlsx_index,
+    parse_yamagata,
+    recommend_action,
+    resolve_prefecture_artifact,
+    resolve_prefecture_artifacts,
+)
+
+# ---------------------------------------------------------------------------
+# Helpers — generate minimal PDFs at test time
+# ---------------------------------------------------------------------------
+
+
+def _make_5col_pdf_with_annotation(path: Path, schools: list[dict]) -> None:
+    """Build a tiny 5-column PDF mimicking Saitama. Each row holds:
+        [school_name, address, operator_name, operator_address, 備考]
+    Schools whose ``url`` field is set produce a clickable hyperlink
+    annotation rectangle on the school-name cell — the same delivery
+    pattern Saitama uses for the 36 schools that pdfplumber's plain
+    text extraction misses.
+    """
+    doc = fitz.open()
+    page = doc.new_page(width=600, height=800)
+
+    # Header row first.
+    headers = ["学校名", "住所", "設置者の名称", "設置者の住所", "備考"]
+    rows = [headers] + [
+        [s["name"], s["address"], s["operator"], s["op_address"], s.get("notes", "")]
+        for s in schools
+    ]
+
+    col_widths = [180, 110, 110, 110, 90]  # x widths
+    col_xs: list[float] = []
+    x = 20.0
+    for w in col_widths:
+        col_xs.append(x)
+        x += w
+
+    row_height = 30
+    y = 50
+    for row_idx, row in enumerate(rows):
+        for ci, value in enumerate(row):
+            cell_x = col_xs[ci]
+            cell_y = y
+            # Draw cell rectangle so pdfplumber can detect table.
+            rect = fitz.Rect(cell_x, cell_y, cell_x + col_widths[ci], cell_y + row_height)
+            page.draw_rect(rect, color=(0, 0, 0), width=0.5)
+            page.insert_text(
+                (cell_x + 4, cell_y + 18),
+                str(value),
+                fontsize=8,
+                fontname="japan",
+            )
+        # Add hyperlink annotation on data rows where school name carries a URL
+        if row_idx > 0:
+            school = schools[row_idx - 1]
+            url = school.get("url")
+            if url:
+                name_rect = fitz.Rect(
+                    col_xs[0], y, col_xs[0] + col_widths[0], y + row_height,
+                )
+                page.insert_link({
+                    "kind": fitz.LINK_URI,
+                    "from": name_rect,
+                    "uri": url,
+                })
+        y += row_height
+
+    doc.save(str(path))
+    doc.close()
+
+
+def _make_8col_tokyo_pdf(path: Path, schools: list[dict]) -> None:
+    """Build a tiny 8-column Tokyo-style PDF.
+
+    Columns:
+      [#, 種別, 学校名, 住所, 設置者種別, 設置者名称, 設置者住所, 備考]
+    URL goes into the 備考 column (col 7) as plain text — Tokyo's pattern.
+    """
+    doc = fitz.open()
+    page = doc.new_page(width=900, height=900)
+
+    headers = ["#", "種別", "学校名", "住所", "設置者種別", "設置者名称", "設置者住所", "備考"]
+    rows = [headers] + [
+        [
+            str(i + 1),
+            s.get("kind", "専"),
+            s["name"],
+            s["address"],
+            s.get("operator_kind", ""),
+            s["operator"],
+            s["op_address"],
+            s.get("url", ""),
+        ]
+        for i, s in enumerate(schools)
+    ]
+
+    col_widths = [40, 50, 160, 120, 90, 130, 130, 220]
+    col_xs: list[float] = []
+    x = 20.0
+    for w in col_widths:
+        col_xs.append(x)
+        x += w
+
+    row_height = 30
+    y = 50
+    for row in rows:
+        for ci, value in enumerate(row):
+            cell_x = col_xs[ci]
+            cell_y = y
+            rect = fitz.Rect(cell_x, cell_y, cell_x + col_widths[ci], cell_y + row_height)
+            page.draw_rect(rect, color=(0, 0, 0), width=0.5)
+            page.insert_text(
+                (cell_x + 4, cell_y + 18),
+                str(value),
+                fontsize=7,
+                fontname="japan",
+            )
+        y += row_height
+
+    doc.save(str(path))
+    doc.close()
+
+
+def _make_osaka_xlsx(path: Path) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "確認校"
+    ws.append(["大阪府が要件を確認した大学等"])
+    ws.append([None, "確認年度", "学校番号", "確認大学等\nの名称", "確認大学等\nの所在地",
+               "設置者の\n名称", "設置者の主たる\n事務所の所在地", "備考"])
+    ws.append([
+        1,
+        "R1",
+        1104,
+        "大阪電子専門学校",
+        "大阪市天王寺区勝山4-5-6",
+        "学校法人木村学園",
+        "大阪市天王寺区勝山4-5-6",
+        "R8.4より学校所在地変更",
+    ])
+    ws["D3"].hyperlink = "https://www.kimura.ac.jp/disclosure/"
+    wb.save(path)
+    wb.close()
+
+
+def _make_generic_xlsx_index(path: Path) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "確認校"
+    ws.append(["", "", "確認大学等の名称", "所在地", "設置者の名称", "設置者所在地", "確認日", "備考"])
+    ws.append([
+        "",
+        1,
+        "愛媛テスト専門学校",
+        "愛媛県松山市1",
+        "学校法人愛媛",
+        "愛媛県松山市2",
+        "2025-08-31",
+        "情報公開ページ",
+    ])
+    ws["H2"].hyperlink = "https://example.ac.jp/disclosure/"
+    wb.save(path)
+    wb.close()
+
+
+# ---------------------------------------------------------------------------
+# Helper-level unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_norm_collapses_whitespace_and_normalizes_kana():
+    assert norm("テスト  学校") == "テスト学校"
+    assert norm(" 　ＡＢＣ　") == "ABC"
+    assert norm(None) == ""
+
+
+def test_extract_url_pulls_first_https_substring():
+    assert extract_url("see https://example.com/x.pdf for details") == "https://example.com/x.pdf"
+    assert extract_url("no url here") is None
+    assert extract_url(None) is None
+
+
+def test_classify_url_quality():
+    assert classify_url_quality(None) == "none"
+    assert classify_url_quality("https://example.com/disclosure/r8.pdf") == "direct_pdf"
+    # 'kyufu' is in the disclosure keyword list (高等教育の修学支援).
+    assert classify_url_quality("https://example.com/kyufu/index.html") == "disclosure"
+    assert classify_url_quality("https://example.com/shien/info") == "disclosure"
+    assert classify_url_quality("https://example.com/") == "homepage"
+
+
+def test_classify_prefecture_remarks_keeps_school_change_signals():
+    assert classify_prefecture_remarks("令和8年度新規認定校") == ["new_accreditation"]
+    assert classify_prefecture_remarks("新規") == ["new_accreditation"]
+    assert classify_prefecture_remarks("令和8年4月1日開校") == ["new_accreditation"]
+    assert classify_prefecture_remarks("令和7年4月 名称変更（旧校名: A専門学校）") == ["name_change"]
+    assert classify_prefecture_remarks("確認の取消しをした大学等") == ["withdrawal"]
+    assert classify_prefecture_remarks("統合再編予定") == ["merger_reorg"]
+
+
+def test_parse_6col_indexed_skips_category_headings(monkeypatch, tmp_path: Path):
+    """Chiba-style PDFs put category rows like ``（公立専門学校）`` in the
+    school-name column. Those are table labels, not schools.
+    """
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["", "確認大学等の名称", "確認大学等の所在地", "設置者の名称", "設置者所在地", "備考"],
+                    [None, "公立専門学校）", None, None, None, None],
+                    ["1", "千葉県立保健医療大学", "千葉市", "千葉県", "千葉市", ""],
+                    ["55", "専門学校テスト校", "成田市", "学校法人T", "成田市", "新規"],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+    monkeypatch.setattr(pa, "extract_pdf_annotation_links", lambda _p: {})
+
+    parsed = parse_6col_indexed(tmp_path / "fake.pdf", "chiba")
+
+    assert [row.school_name_raw for row in parsed] == ["千葉県立保健医療大学", "専門学校テスト校"]
+    assert parsed[1].remarks == "新規"
+
+
+def test_parse_13col_niigata_reads_sparse_visual_columns(monkeypatch, tmp_path: Path):
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["", "確認大学等", "", "", "確認大学等", "", "", "設置者の", "", "", "設置者の主たる", "", "備考"],
+                    [
+                        None, "の名称", None, None, "の所在地", None, None,
+                        "名称", None, None, "事務所の所在地", None, None,
+                    ],
+                    [
+                        "新潟県立看護大\n学", None, None,
+                        "上越市新南町\n240", None, None,
+                        "公立大学法人新\n潟県立看護大学", None, None,
+                        "上越市新南町240", None, None,
+                        "令和8年度新規認定校 https://example.jp/disclosure/",
+                    ],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+
+    parsed = parse_13col_niigata(tmp_path / "niigata.pdf")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "niigata"
+    assert parsed[0].school_name_raw == "新潟県立看護大学"
+    assert parsed[0].operator_name == "公立大学法人新潟県立看護大学"
+    assert parsed[0].disclosure_url == "https://example.jp/disclosure/"
+
+
+def test_parse_yamagata_attaches_following_url_row(monkeypatch, tmp_path: Path):
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["確 認 大 学 等", None, "設 置 者", None, "備考"],
+                    ["山形テスト専門学校", "山形市1", "学校法人山形", "山形市2", "令和8年4月1日確認"],
+                    [
+                        "確認申請書を公表するホームページアドレス",
+                        None,
+                        "https://example.ac.jp/disclosure/",
+                        None,
+                        None,
+                    ],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+
+    parsed = parse_yamagata(tmp_path / "yamagata.pdf")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "yamagata"
+    assert parsed[0].school_name_raw == "山形テスト専門学校"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+    assert parsed[0].remarks == "令和8年4月1日確認"
+
+
+def test_recommend_action():
+    assert recommend_action("none", []) == "noop"
+    assert recommend_action("direct_pdf", []) == "add"
+    # PDF beats homepage
+    assert recommend_action("direct_pdf", ["homepage"]) == "upgrade"
+    # Same quality → noop
+    assert recommend_action("homepage", ["homepage"]) == "noop"
+    # PDF doesn't beat existing PDF
+    assert recommend_action("direct_pdf", ["direct_pdf"]) == "noop"
+
+
+# ---------------------------------------------------------------------------
+# Annotation extraction (the Saitama-style headline path)
+# ---------------------------------------------------------------------------
+
+
+def test_extract_pdf_annotation_links_recovers_hidden_urls(tmp_path: Path):
+    schools = [
+        {"name": "東京テスト学院", "address": "東京都新宿区1-1",
+         "operator": "学校法人テスト", "op_address": "東京都新宿区1-1",
+         "url": "https://example.com/tokyo-test/"},
+        # Second school has no annotation URL — must NOT show up in output.
+        {"name": "見えない学校", "address": "東京都港区2-2",
+         "operator": "学校法人B", "op_address": "東京都港区2-2"},
+    ]
+    pdf = tmp_path / "saitama_like.pdf"
+    _make_5col_pdf_with_annotation(pdf, schools)
+
+    links = extract_pdf_annotation_links(pdf)
+    assert links.get(norm("東京テスト学院")) == "https://example.com/tokyo-test/"
+    assert norm("見えない学校") not in links
+
+
+def test_extract_pdf_annotation_links_rejects_non_http_uri_schemes(tmp_path: Path):
+    schools = [
+        {"name": "安全な学校", "address": "東京都新宿区1-1",
+         "operator": "学校法人A", "op_address": "東京都新宿区1-1",
+         "url": "https://example.com/safe/"},
+        {"name": "JS注入学校", "address": "東京都港区2-2",
+         "operator": "学校法人B", "op_address": "東京都港区2-2",
+         "url": "javascript:alert(1)"},
+        {"name": "ローカル参照学校", "address": "東京都渋谷区3-3",
+         "operator": "学校法人C", "op_address": "東京都渋谷区3-3",
+         "url": "file:///C:/Users/operator/secret.xlsx"},
+    ]
+    pdf = tmp_path / "unsafe_annotation_links.pdf"
+    _make_5col_pdf_with_annotation(pdf, schools)
+
+    links = extract_pdf_annotation_links(pdf)
+
+    assert links.get(norm("安全な学校")) == "https://example.com/safe/"
+    assert norm("JS注入学校") not in links
+    assert norm("ローカル参照学校") not in links
+
+
+def test_parse_5col_uses_annotation_when_no_text_url(tmp_path: Path):
+    """The owner-pinned Saitama path: 5col PDF whose 備考 column is empty
+    BUT whose school-name cell carries a hyperlink annotation. The parser
+    must surface that URL as ``disclosure_url`` instead of dropping it."""
+    schools = [
+        {"name": "埼玉テスト専門学校", "address": "埼玉県さいたま市1",
+         "operator": "学校法人S", "op_address": "埼玉県さいたま市1",
+         "url": "https://example.com/saitama/r8.pdf"},
+    ]
+    pdf = tmp_path / "saitama.pdf"
+    _make_5col_pdf_with_annotation(pdf, schools)
+
+    parsed = parse_5col(pdf, "saitama")
+    assert len(parsed) == 1
+    assert parsed[0].pref == "saitama"
+    assert parsed[0].disclosure_url == "https://example.com/saitama/r8.pdf"
+    assert parsed[0].school_name_norm == norm("埼玉テスト専門学校")
+
+
+def test_parse_5col_text_url_in_remarks_takes_priority_over_annotation(monkeypatch, tmp_path):
+    """If the 備考 column already carries a plain-text URL, it wins over
+    the annotation. Annotation is the fallback, not the override.
+
+    We can't rely on pdfplumber to reliably read multibyte text out of a
+    synthesized PDF, so we drive parse_5col with a stub pdfplumber and
+    a stub annotation map and just verify the priority logic.
+    """
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["神奈川テスト専門学校", "横浜市", "学校法人K", "横浜市",
+                     "see https://example.com/text-priority.pdf"],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+    monkeypatch.setattr(
+        pa,
+        "extract_pdf_annotation_links",
+        lambda _p: {pa.norm("神奈川テスト専門学校"): "https://example.com/should-not-win.pdf"},
+    )
+
+    parsed = parse_5col(tmp_path / "fake.pdf", "kanagawa")
+    assert len(parsed) == 1
+    assert parsed[0].disclosure_url == "https://example.com/text-priority.pdf"
+
+
+def test_parse_fukushima_8col_reads_url_column(monkeypatch, tmp_path: Path):
+    from contextlib import contextmanager
+
+    from eidp.scraper import prefecture_aggregator as pa
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    [
+                        "No",
+                        "確認大学等の名称",
+                        "確認大学等の所在地",
+                        "設置者の名称",
+                        "設置者所在地",
+                        "公表URL",
+                        "確認日",
+                        "備考",
+                    ],
+                    [
+                        "1",
+                        "福島テスト専門学校",
+                        "福島県福島市1",
+                        "学校法人福島",
+                        "福島県福島市2",
+                        "https://example.ac.jp/disclosure/",
+                        "2025-08-29",
+                        "令和8年度新規認定校",
+                    ],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+
+    parsed = parse_fukushima_8col(tmp_path / "fukushima.pdf")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "fukushima"
+    assert parsed[0].school_name_raw == "福島テスト専門学校"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+    assert parsed[0].remarks == "令和8年度新規認定校"
+
+
+# ---------------------------------------------------------------------------
+# Tokyo (8col, URL as plain text)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_tokyo_extracts_url_from_remarks(tmp_path: Path):
+    schools = [
+        {"name": "東京テスト専門学校", "address": "東京都新宿区1-1",
+         "operator": "学校法人T", "op_address": "東京都新宿区1-1",
+         "url": "https://example.com/tokyo.pdf"},
+    ]
+    pdf = tmp_path / "tokyo.pdf"
+    _make_8col_tokyo_pdf(pdf, schools)
+
+    parsed = parse_tokyo(pdf)
+    assert len(parsed) == 1
+    assert parsed[0].pref == "tokyo"
+    assert parsed[0].disclosure_url == "https://example.com/tokyo.pdf"
+    assert parsed[0].remarks == "https://example.com/tokyo.pdf"
+
+
+# ---------------------------------------------------------------------------
+# Osaka (XLSX, school code + hyperlink on school-name cell)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_osaka_xlsx_extracts_school_code_and_school_name_hyperlink(tmp_path: Path):
+    xlsx = tmp_path / "osaka.xlsx"
+    _make_osaka_xlsx(xlsx)
+
+    parsed = parse_osaka_xlsx(xlsx)
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "osaka"
+    assert parsed[0].school_code == "1104"
+    assert parsed[0].school_name_raw == "大阪電子専門学校"
+    assert parsed[0].disclosure_url == "https://www.kimura.ac.jp/disclosure/"
+    assert parsed[0].remarks == "R8.4より学校所在地変更"
+
+
+def test_parse_xlsx_index_extracts_remarks_hyperlink(tmp_path: Path):
+    xlsx = tmp_path / "ehime.xlsx"
+    _make_generic_xlsx_index(xlsx)
+    xlsx.with_suffix(".xlsx.url").write_text("https://www.pref.ehime.jp/uploaded/attachment/156605.xlsx\n")
+
+    parsed = parse_xlsx_index(xlsx, "ehime")
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "ehime"
+    assert parsed[0].school_name_raw == "愛媛テスト専門学校"
+    assert parsed[0].address == "愛媛県松山市1"
+    assert parsed[0].operator_name == "学校法人愛媛"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+
+
+# ---------------------------------------------------------------------------
+# HTML official index pages
+# ---------------------------------------------------------------------------
+
+
+def test_parse_html_table_uses_school_name_link_and_remarks(tmp_path: Path):
+    html = tmp_path / "gunma.html"
+    html.write_text(
+        """
+        <html><body>
+          <table>
+            <tr><th>学校名</th><th>所在地</th><th>設置者</th><th>設置者所在地</th><th>備考</th></tr>
+            <tr>
+              <td><a href="/school/disclosure/">群馬テスト専門学校</a></td>
+              <td>群馬県前橋市1</td>
+              <td>学校法人群馬</td>
+              <td>群馬県前橋市2</td>
+              <td>令和8年度新規認定校</td>
+            </tr>
+          </table>
+        </body></html>
+        """,
+        encoding="utf-8",
+    )
+    html.with_suffix(".html.url").write_text("https://www.pref.gunma.jp/page/12959.html\n", encoding="utf-8")
+
+    parsed = parse_html_table(html, "gunma")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "群馬テスト専門学校"
+    assert parsed[0].disclosure_url == "https://www.pref.gunma.jp/school/disclosure/"
+    assert parsed[0].remarks == "令和8年度新規認定校"
+
+
+def test_parse_html_table_uses_homepage_cell_link_when_name_is_plain_text(tmp_path: Path):
+    html = tmp_path / "nagano.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>申請書を公表する予定のホームページアドレス</th></tr>
+          <tr>
+            <td>長野テスト大学</td>
+            <td><a href="https://example.ac.jp/disclosure/">情報公開</a></td>
+          </tr>
+        </table>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "nagano")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "長野テスト大学"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+
+
+def test_parse_html_table_cleans_external_link_suffix_and_college_names(tmp_path: Path):
+    html = tmp_path / "iwate.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>所在地</th><th>設置者</th><th>設置者所在地</th><th>備考</th></tr>
+          <tr>
+            <td><a href="https://college.example/disclosure/">北日本テストカレッジ(外部リンク)</a></td>
+            <td>岩手県盛岡市1</td>
+            <td>学校法人北日本</td>
+            <td>岩手県盛岡市2</td>
+            <td></td>
+          </tr>
+        </table>
+        <ul>
+          <li><a href="https://www.pref.example/support/">大学生等への修学支援制度</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "iwate")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "北日本テストカレッジ"
+    assert parsed[0].disclosure_url == "https://college.example/disclosure/"
+
+
+def test_parse_html_table_ignores_support_program_links(tmp_path: Path):
+    html = tmp_path / "yamanashi.html"
+    html.write_text(
+        """
+        <ul>
+          <li><a href="https://pref.example/support/">大学生等への修学支援制度</a></li>
+          <li><a href="https://example.ac.jp/disclosure/">山梨テスト学院（外部サイト）</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "yamanashi")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "山梨テスト学院"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+
+
+def test_parse_html_table_excludes_cancellation_table_anchors(tmp_path: Path):
+    html = tmp_path / "shimane.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>所在地</th><th>設置者</th><th>設置者所在地</th></tr>
+          <tr>
+            <td><a href="https://active.example/disclosure/">島根テスト専門学校</a></td>
+            <td>島根県松江市1</td>
+            <td>学校法人島根</td>
+            <td>島根県松江市2</td>
+          </tr>
+        </table>
+        <table>
+          <tr><th>確認取消日</th><th>根拠規定</th><th>確認大学等の名称</th></tr>
+          <tr>
+            <td>2025-08-01</td>
+            <td>確認の取消</td>
+            <td><a href="https://withdrawn.example/">取消テスト専門学校</a></td>
+          </tr>
+        </table>
+        <ul>
+          <li><a href="https://withdrawn.example/">取消テスト専門学校</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "shimane")
+
+    assert [row.school_name_raw for row in parsed] == ["島根テスト専門学校"]
+    assert parsed[0].disclosure_url == "https://active.example/disclosure/"
+
+
+def test_parse_html_table_merges_anchor_fallback_into_existing_school_row(tmp_path: Path):
+    html = tmp_path / "toyama.html"
+    html.write_text(
+        """
+        <table>
+          <tr><th>確認大学等の名称</th><th>所在地</th><th>設置者</th><th>設置者所在地</th><th>備考</th></tr>
+          <tr>
+            <td>富山テスト専門学校</td>
+            <td>富山県富山市1</td>
+            <td>学校法人富山</td>
+            <td>富山県富山市2</td>
+            <td></td>
+          </tr>
+        </table>
+        <ul>
+          <li><a href="https://toyama.example/disclosure/">富山テスト専門学校</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "toyama")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "富山テスト専門学校"
+    assert parsed[0].address == "富山県富山市1"
+    assert parsed[0].disclosure_url == "https://toyama.example/disclosure/"
+
+
+def test_parse_html_table_falls_back_to_school_name_anchor_list(tmp_path: Path):
+    html = tmp_path / "oita.html"
+    html.write_text(
+        """
+        <ul>
+          <li><a href="https://example.ac.jp/kikanyouken/">大分テスト大学</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_html_table(html, "oita")
+
+    assert len(parsed) == 1
+    assert parsed[0].school_name_raw == "大分テスト大学"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/kikanyouken/"
+
+
+def test_parse_aichi_index_uses_school_anchor_range(tmp_path: Path):
+    html = tmp_path / "aichi.html"
+    html.write_text(
+        """
+        <html><body>
+          <a href="/top/">県トップ</a>
+          <a href="https://www.aichi-pu.ac.jp/disclosure/index.html">愛知県立大学</a>
+          <a href="https://example.ac.jp/r8.pdf">愛知テスト専門学校 [PDFファイル/123KB]</a>
+          <a href="https://get.adobe.com/jp/reader/">Adobe Reader</a>
+          <a href="https://example.invalid/after">後続リンク大学</a>
+        </body></html>
+        """,
+        encoding="utf-8",
+    )
+    html.with_suffix(".html.url").write_text(
+        "https://www.pref.aichi.jp/soshiki/shigaku/kikanyoukenkakunin.html\n",
+        encoding="utf-8",
+    )
+
+    parsed = parse_aichi_index(html)
+
+    assert [row.school_name_raw for row in parsed] == ["愛知県立大学", "愛知テスト専門学校"]
+    assert parsed[1].disclosure_url == "https://example.ac.jp/r8.pdf"
+
+
+# ---------------------------------------------------------------------------
+# Public entry point dispatch
+# ---------------------------------------------------------------------------
+
+
+def test_parse_dispatches_via_registry(tmp_path: Path):
+    schools = [
+        {"name": "宮城テスト学院", "address": "宮城県仙台市1",
+         "operator": "学校法人M", "op_address": "宮城県仙台市1",
+         "url": "https://example.com/miyagi/r8.pdf"},
+    ]
+    pdf = tmp_path / "miyagi.pdf"
+    _make_5col_pdf_with_annotation(pdf, schools)
+
+    parsed = parse("miyagi", pdf)
+    assert len(parsed) == 1
+    assert parsed[0].pref == "miyagi"
+    assert parsed[0].disclosure_url == "https://example.com/miyagi/r8.pdf"
+
+
+def test_parse_dispatches_shizuoka_html_index_via_registry(tmp_path: Path):
+    html = tmp_path / "shizuoka.html"
+    html.write_text(
+        """
+        <ul>
+          <li><a href="https://example.ac.jp/disclosure/">静岡テスト専門学校 （外部リンク）</a></li>
+        </ul>
+        """,
+        encoding="utf-8",
+    )
+    html.with_suffix(".html.url").write_text(
+        "https://www.pref.shizuoka.jp/kodomokyoiku/school/1002740/1018809.html\n",
+        encoding="utf-8",
+    )
+
+    parsed = parse("shizuoka", html)
+
+    assert len(parsed) == 1
+    assert parsed[0].pref == "shizuoka"
+    assert parsed[0].school_name_raw == "静岡テスト専門学校"
+    assert parsed[0].disclosure_url == "https://example.ac.jp/disclosure/"
+
+
+def test_resolve_prefecture_artifact_uses_newest_suffix(tmp_path: Path):
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    old_pdf = artifact_dir / "shizuoka.pdf"
+    new_html = artifact_dir / "shizuoka.html"
+    old_pdf.write_bytes(b"%PDF-old")
+    new_html.write_text("<html></html>", encoding="utf-8")
+
+    assert resolve_prefecture_artifact(artifact_dir, "shizuoka") == new_html
+
+
+def test_resolve_prefecture_artifacts_includes_supplemental_files_first(tmp_path: Path):
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    primary = artifact_dir / "hyogo.pdf"
+    supplemental = artifact_dir / "hyogo__01.pdf"
+    unrelated = artifact_dir / "hyogo_old.pdf"
+    primary.write_bytes(b"%PDF-current")
+    supplemental.write_bytes(b"%PDF-old")
+    unrelated.write_bytes(b"%PDF-unrelated")
+
+    assert resolve_prefecture_artifacts(artifact_dir, "hyogo") == [supplemental, primary]
+
+
+def test_parse_unknown_pref_raises():
+    with pytest.raises(ValueError, match="No parser registered"):
+        parse("nowhere", Path("/dev/null"))
+
+
+def test_pref_key_to_db_covers_all_registered_parsers():
+    for key in PARSERS:
+        assert key in PREF_KEY_TO_DB, f"PREF_KEY_TO_DB missing entry for {key!r}"
+
+
+# ---------------------------------------------------------------------------
+# Match + writer-plan + apply
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def db_session(tmp_path):
+    """SQLite engine bootstrapped via 8.1 path so ORM constraints match prod."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session as SqlSession
+
+    from eidp.db.sqlite_bootstrap import bootstrap_sqlite
+
+    db_path = tmp_path / "agg.sqlite3"
+    engine = create_engine(f"sqlite:///{db_path}", future=True)
+    bootstrap_sqlite(engine)
+    with SqlSession(engine) as session:
+        yield session
+    engine.dispose()
+
+
+def test_match_school_exact_then_nfkc_then_substring(db_session):
+    """Three different schools, three different match strategies."""
+    from eidp.db.models import School
+    from eidp.scraper.prefecture_aggregator import (
+        PrefSchool,
+        build_indices,
+        match_school,
+    )
+
+    s1 = School(prefecture="埼玉県", corporation_name="学校法人A", school_name="埼玉専門学校", status="active")
+    s2 = School(prefecture="埼玉県", corporation_name="学校法人B", school_name="ＮＦＫＣ専門学校", status="active")
+    s3 = School(
+        prefecture="埼玉県",
+        corporation_name="学校法人C",
+        school_name="さいたまテクノロジー専門学校",
+        status="active",
+    )
+    db_session.add_all([s1, s2, s3])
+    db_session.commit()
+
+    school_index, site_index = build_indices(db_session, "saitama")
+
+    exact = PrefSchool(
+        pref="saitama", school_name_raw="埼玉専門学校", school_name_norm=norm("埼玉専門学校"),
+        address="", operator_kind="", operator_name="", operator_address="",
+        disclosure_url="https://example.com/a.pdf",
+    )
+    nfkc = PrefSchool(
+        pref="saitama", school_name_raw="NFKC専門学校", school_name_norm=norm("NFKC専門学校"),
+        address="", operator_kind="", operator_name="", operator_address="",
+        disclosure_url=None,
+    )
+    sub = PrefSchool(
+        pref="saitama", school_name_raw="株式会社XYZ さいたまテクノロジー専門学校",
+        school_name_norm=norm("株式会社XYZ さいたまテクノロジー専門学校"),
+        address="", operator_kind="", operator_name="", operator_address="",
+        disclosure_url="https://example.com/c.html",
+    )
+
+    r_exact = match_school(exact, school_index, site_index)
+    r_nfkc = match_school(nfkc, school_index, site_index)
+    r_sub = match_school(sub, school_index, site_index)
+
+    assert r_exact.match_strategy == "exact"
+    assert r_exact.db_school_id == s1.id
+    assert r_exact.is_new_url_candidate is True
+
+    assert r_nfkc.match_strategy == "nfkc"
+    assert r_nfkc.db_school_id == s2.id
+
+    assert r_sub.match_strategy == "substring_pref"
+    assert r_sub.db_school_id == s3.id
+
+
+def test_apply_writer_plan_inserts_new_school_site(db_session):
+    """An ``add`` action with a matched school produces a SchoolSite row
+    keyed to discovery_method='prefecture_aggregator'."""
+    from eidp.db.models import School, SchoolSite
+    from eidp.scraper.prefecture_aggregator import PrefReport, apply_writer_plan
+
+    s = School(prefecture="埼玉県", corporation_name="学校法人A", school_name="埼玉専門学校", status="active")
+    db_session.add(s)
+    db_session.commit()
+
+    report = PrefReport(pref="saitama", pdf_path="(synthetic)")
+    report.records = [{
+        "db_school_id": s.id,
+        "db_school_name": s.school_name,
+        "pdf_school_name": s.school_name,
+        "pdf_school_code": None,
+        "pdf_address": "",
+        "pdf_operator": "",
+        "pref_url": "https://example.com/saitama-test/r8.pdf",
+        "url_quality": "direct_pdf",
+        "match_strategy": "exact",
+        "existing_urls": [],
+        "existing_url_quality": [],
+        "is_new_url_candidate": True,
+        "quality_upgrade_candidate": False,
+        "recommended_action": "add",
+    }]
+
+    stats = apply_writer_plan(db_session, report)
+    db_session.commit()
+    assert stats == {"added": 1, "upgraded": 0, "skipped": 0}
+
+    sites = db_session.query(SchoolSite).filter(SchoolSite.school_id == s.id).all()
+    assert len(sites) == 1
+    site = sites[0]
+    assert site.url == "https://example.com/saitama-test/r8.pdf"
+    assert site.discovery_method == "prefecture_aggregator"
+    assert float(site.confidence) == 0.95
+    assert site.verified is True
+    assert site.verified_at is not None
+    assert site.last_checked is not None
+
+
+def test_apply_writer_plan_upgrade_replaces_lower_quality_url(db_session):
+    """An ``upgrade`` action repoints the lowest-quality existing site
+    to the prefecture-sourced URL."""
+    from eidp.db.models import School, SchoolSite
+    from eidp.scraper.prefecture_aggregator import PrefReport, apply_writer_plan
+
+    s = School(prefecture="埼玉県", corporation_name="学校法人A", school_name="埼玉専門学校", status="active")
+    db_session.add(s)
+    db_session.commit()
+    db_session.add(SchoolSite(
+        school_id=s.id, url="https://example.com/", url_type="homepage",
+        discovery_method="seed", confidence=0.5,
+    ))
+    db_session.commit()
+
+    report = PrefReport(pref="saitama", pdf_path="(synthetic)")
+    report.records = [{
+        "db_school_id": s.id,
+        "db_school_name": s.school_name,
+        "pdf_school_name": s.school_name,
+        "pdf_school_code": None,
+        "pdf_address": "",
+        "pdf_operator": "",
+        "pref_url": "https://example.com/disclosure/r8.pdf",
+        "url_quality": "direct_pdf",
+        "match_strategy": "exact",
+        "existing_urls": ["https://example.com/"],
+        "existing_url_quality": ["homepage"],
+        "is_new_url_candidate": False,
+        "quality_upgrade_candidate": True,
+        "recommended_action": "upgrade",
+    }]
+
+    stats = apply_writer_plan(db_session, report)
+    db_session.commit()
+    assert stats["upgraded"] == 1
+
+    sites = db_session.query(SchoolSite).filter(SchoolSite.school_id == s.id).all()
+    assert len(sites) == 1
+    assert sites[0].url == "https://example.com/disclosure/r8.pdf"
+    assert sites[0].discovery_method == "prefecture_aggregator"
+    assert sites[0].verified is True
+    assert sites[0].verified_at is not None
+    assert sites[0].last_checked is not None
+
+
+def test_apply_writer_plan_skips_review_and_noop(db_session):
+    """Unmatched (``review``) and equal-or-worse-quality (``noop``)
+    actions must NEVER write."""
+    from eidp.db.models import SchoolSite
+    from eidp.scraper.prefecture_aggregator import PrefReport, apply_writer_plan
+
+    report = PrefReport(pref="saitama", pdf_path="(synthetic)")
+    report.records = [
+        {
+            "db_school_id": None, "db_school_name": None, "pdf_school_name": "未登録校",
+            "pdf_school_code": None, "pdf_address": "", "pdf_operator": "",
+            "pref_url": "https://example.com/lost.pdf", "url_quality": "direct_pdf",
+            "match_strategy": "none", "existing_urls": [], "existing_url_quality": [],
+            "is_new_url_candidate": False, "quality_upgrade_candidate": False,
+            "recommended_action": "review",
+        },
+        {
+            "db_school_id": 99, "db_school_name": "X", "pdf_school_name": "X",
+            "pdf_school_code": None, "pdf_address": "", "pdf_operator": "",
+            "pref_url": "https://example.com/", "url_quality": "homepage",
+            "match_strategy": "exact", "existing_urls": ["https://example.com/x.pdf"],
+            "existing_url_quality": ["direct_pdf"],
+            "is_new_url_candidate": False, "quality_upgrade_candidate": False,
+            "recommended_action": "noop",
+        },
+    ]
+
+    stats = apply_writer_plan(db_session, report)
+    db_session.commit()
+    assert stats == {"added": 0, "upgraded": 0, "skipped": 2}
+    assert db_session.query(SchoolSite).count() == 0
+
+
+def test_apply_writer_plan_creates_review_item_for_prefecture_remarks(db_session):
+    from eidp.db.models import ReviewItem, School
+    from eidp.scraper.prefecture_aggregator import PrefReport, apply_writer_plan
+
+    school = School(
+        prefecture="長野県",
+        corporation_name="学校法人N",
+        school_name="長野テスト専門学校",
+        status="active",
+    )
+    db_session.add(school)
+    db_session.commit()
+
+    report = PrefReport(pref="nagano", pdf_path="(synthetic)")
+    report.records = [{
+        "db_school_id": school.id,
+        "db_school_name": school.school_name,
+        "pdf_school_name": school.school_name,
+        "pdf_school_code": None,
+        "pdf_address": "",
+        "pdf_operator": "",
+        "pref_url": "https://example.ac.jp/disclosure/",
+        "pref_remarks": "令和8年度新規認定校",
+        "pref_remark_tags": ["new_accreditation"],
+        "pref_has_school_change_signal": True,
+        "url_quality": "disclosure",
+        "match_strategy": "exact",
+        "existing_urls": [],
+        "existing_url_quality": [],
+        "is_new_url_candidate": True,
+        "quality_upgrade_candidate": False,
+        "recommended_action": "add",
+    }]
+
+    stats = apply_writer_plan(db_session, report)
+    db_session.commit()
+
+    assert stats["added"] == 1
+    assert stats["review_items"] == 1
+    item = db_session.query(ReviewItem).one()
+    assert item.item_type == "prefecture_remark"
+    assert item.reference_id == school.id
+    assert item.evidence_url == "https://example.ac.jp/disclosure/"
+    assert "新規認定校" in (item.proposal_value or "")
+
+
+def test_aggregate_dispatches_parse_and_match(monkeypatch, db_session, tmp_path):
+    """End-to-end: ``aggregate`` ties parse → build_indices → match →
+    build_report. We stub parse() so we don't depend on a real PDF."""
+    from contextlib import contextmanager
+
+    from eidp.db.models import School
+    from eidp.scraper import prefecture_aggregator as pa
+
+    s = School(prefecture="埼玉県", corporation_name="学校法人A", school_name="埼玉専門学校", status="active")
+    db_session.add(s)
+    db_session.commit()
+
+    @contextmanager
+    def fake_pdf_open(_path):
+        class FakePage:
+            def extract_tables(self):
+                return [[
+                    ["埼玉専門学校", "埼玉県", "学校法人A", "埼玉県", ""],
+                ]]
+
+        class FakePdf:
+            pages = [FakePage()]
+
+        yield FakePdf()
+
+    monkeypatch.setattr(pa.pdfplumber, "open", fake_pdf_open)
+    monkeypatch.setattr(
+        pa, "extract_pdf_annotation_links",
+        lambda _p: {pa.norm("埼玉専門学校"): "https://example.com/agg.pdf"},
+    )
+
+    report = pa.aggregate(db_session, "saitama", tmp_path / "fake.pdf")
+    assert report.extracted_total == 1
+    assert report.db_matched == 1
+    assert report.action_distribution.get("add") == 1
+    assert report.records[0]["recommended_action"] == "add"

@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "sanko-tokyo-med-publication-lag-2026",
+  "school": {
+    "school_id": 18,
+    "school_name": "東京医療秘書歯科衛生＆IT専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "学校法人三幸学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve the Tokyo official-index Sanko disclosure case where the latest visible confirmation form is still FY2025.",
+    "search_queries": [],
+    "steps": [
+      "Start from the Tokyo official-index URL registered as https://www.sanko.ac.jp/tokyo-med/disclosure/.",
+      "Follow the canonical Sanko disclosure page https://www.sanko.ac.jp/disclosure/tokyo-med/.",
+      "Inspect the 修学支援新制度 confirmation-form area before SERP fallback.",
+      "Observe that the latest target-form candidate is yoshiki2025.pdf with anchor text 2025年度.",
+      "Reject the PDF from strict FY2026 success as fiscal_year_mismatch:2025 and keep the school in publication-lag/operator-reviewable status."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.sanko.ac.jp/tokyo-med/",
+    "disclosure_url": "https://www.sanko.ac.jp/disclosure/tokyo-med/",
+    "pdf_url": "https://www.sanko.ac.jp/disclosure/tokyo-med/docs/yoshiki2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false,
+    "pattern_type": "direct"
+  },
+  "automation_pattern": {
+    "site_family": "sanko_disclosure",
+    "reusable_rules": [
+      "Treat 2025年度/yoshiki2025.pdf as latest-public target-form evidence, not as FY2026 success.",
+      "Use official-index SchoolSite URLs first and preserve the rejection evidence for operator publication-lag review.",
+      "Do not count Sanko pages with only yoshiki2025.pdf as crawler failures when the target-form candidate is visible but stale."
+    ],
+    "anti_patterns": [
+      "Do not infer FY2026 from the current system target year when the actual link says 2025年度.",
+      "Do not accept stale forms just to improve the strict auto-yield metric.",
+      "Do not treat non-target disclosure PDFs on the same Sanko page as confirmation-form candidates."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/v348-mac-tokyo20/discovery_rejections.jsonl"
+    ],
+    "notes": "Source-side v348 Tokyo 20-site strict discovery repeat crawled this official-index disclosure page, found yoshiki2025.pdf, and rejected it as fiscal_year_mismatch:2025 for target FY2026."
+  }
+}

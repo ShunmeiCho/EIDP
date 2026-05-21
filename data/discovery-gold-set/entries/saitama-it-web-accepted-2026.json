@@ -1,0 +1,50 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "saitama-it-web-accepted-2026",
+  "school": {
+    "school_id": 95,
+    "school_name": "さいたまIT・WEB専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "東京滋慶学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Verify the official-index disclosure page exposes only a latest-public old-year target PDF, not a strict FY2026 success.",
+    "steps": [
+      "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure site.",
+      "Open the information page and inspect the 修学支援 / 申請書 link.",
+      "Follow shugakushien_shinsei2025-1-2.pdf despite the 2025 filename hint.",
+      "Reject it from strict FY2026 success because the remaining 2026 body text is a program completion-year label, not filing or target-FY evidence.",
+      "Keep it as publication-lag evidence for operator review."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.siw.ac.jp/",
+    "disclosure_url": "https://www.siw.ac.jp/information",
+    "pdf_url": "https://www.siw.ac.jp/wp-content/themes/bsc/dist/images/information/shugakushien_shinsei2025-1-2.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "bsc_theme_information_page",
+    "reusable_rules": [
+      "Use the official-index disclosure page before SERP fallback.",
+      "Treat PDF-body target-year evidence as stronger than stale-looking URL or anchor hints only when the year context is a filing/target-FY label.",
+      "Keep 2025 in the URL/anchor as publication-lag evidence when the body lacks current filing-year evidence."
+    ],
+    "anti_patterns": [
+      "Do not infer the fiscal year solely from the URL filename.",
+      "Do not accept stale-looking PDFs unless body extraction or OCR supplies the configured target fiscal year in a filing/target context.",
+      "Do not count adjacent school-information or admission PDFs as confirmation forms."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/v231-windows-evidence/full-saitama/bootstrap-v231-saitama-real.jsonl"
+    ],
+    "notes": "Windows v231 full Saitama replay rejects this PDF as fiscal_year_mismatch:2025 after the detector stopped treating 完成年度は2026年度 as target-FY evidence."
+  }
+}

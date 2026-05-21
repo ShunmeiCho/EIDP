@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -32,7 +33,9 @@ class School(Base):
     school_type: Mapped[str | None] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
         UniqueConstraint("prefecture", "corporation_name", "school_name", name="uq_school_natural_key"),
@@ -42,6 +45,7 @@ class School(Base):
     sites: Mapped[list["SchoolSite"]] = relationship(back_populates="school")
     departments: Mapped[list["Department"]] = relationship(back_populates="school")
     year_statuses: Mapped[list["SchoolYearStatus"]] = relationship(back_populates="school")
+    fiscal_year_statuses: Mapped[list["SchoolFiscalYearStatus"]] = relationship(back_populates="school")
     aliases: Mapped[list["SchoolAlias"]] = relationship(back_populates="school")
     support_recipients: Mapped[list["SupportRecipient"]] = relationship(back_populates="school")
 
@@ -62,6 +66,7 @@ class SchoolSite(Base):
 
     __table_args__ = (
         UniqueConstraint("school_id", "url"),
+        Index("idx_school_site_school_id_http_status", "school_id", "http_status"),
         {"comment": "School website registry"},
     )
 
@@ -92,16 +97,24 @@ class Document(Base):
     file_hash: Mapped[str | None] = mapped_column(String(64))
     file_size: Mapped[int | None] = mapped_column(Integer)
     fiscal_year: Mapped[int | None] = mapped_column(Integer)
+    fiscal_year_override: Mapped[int | None] = mapped_column(Integer)
     is_current_year: Mapped[bool | None] = mapped_column(Boolean)
     content_type: Mapped[str | None] = mapped_column(String(20))
     pdf_type: Mapped[str | None] = mapped_column(String(30))  # target, non_target, image_only, unknown
-    ingest_status: Mapped[str | None] = mapped_column(String(30))  # pending, ingested, school_mismatch, parse_failed, transient_error
+    ingest_status: Mapped[str | None] = mapped_column(String(30))
     confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
     downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("school_id", "file_hash"),
         UniqueConstraint("school_id", "source_url", name="uq_document_school_url"),
+        # pdf_discovery looks up by file_hash alone and treats cross-school
+        # matches as operator-review duplicates. Keep the database contract
+        # aligned with that probe so concurrent workers cannot attach the same
+        # PDF bytes to multiple schools.
+        Index("uq_document_file_hash", "file_hash", unique=True),
+        Index("idx_document_school_id", "school_id"),
+        Index("idx_document_fiscal_year_pdf_type_ingest_status", "fiscal_year", "pdf_type", "ingest_status"),
         {"comment": "PDF document registry"},
     )
 
@@ -148,6 +161,14 @@ class DepartmentChange(Base):
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     verified_by: Mapped[str | None] = mapped_column(String(50))
     notes: Mapped[str | None] = mapped_column(Text)
+    voided: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    voided_by: Mapped[str | None] = mapped_column(String(50))
+    void_reason: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("idx_department_change_department_id", "department_id"),
+    )
 
     department: Mapped["Department"] = relationship(
         back_populates="changes", foreign_keys=[department_id]
@@ -173,8 +194,9 @@ class DepartmentYearly(Base):
     prev_enrollment: Mapped[int | None] = mapped_column(Integer)
     dropouts: Mapped[int | None] = mapped_column(Integer)
     dropout_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
-    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
+    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(4, 3))
     extraction_method: Mapped[str | None] = mapped_column(String(20))
+    confidence_breakdown: Mapped[str | None] = mapped_column(Text)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -186,8 +208,10 @@ class DepartmentYearly(Base):
             "department_id",
             "fiscal_year",
             unique=True,
-            postgresql_where="is_current = true",
+            postgresql_where=text("is_current = true"),
+            sqlite_where=text("is_current = 1"),
         ),
+        Index("idx_department_yearly_document_id", "document_id"),
         {"comment": "Yearly department snapshot, append-only with revision support"},
     )
 
@@ -208,12 +232,55 @@ class SchoolYearStatus(Base):
     document_id: Mapped[int | None] = mapped_column(ForeignKey("document.id"))
     notes: Mapped[str | None] = mapped_column(Text)
 
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
     __table_args__ = (
-        UniqueConstraint("school_id", "fiscal_year"),
-        {"comment": "School-year collection status tracking"},
+        UniqueConstraint("school_id", "fiscal_year", "revision", name="uq_school_year_status_revision"),
+        Index(
+            "idx_school_year_status_current",
+            "school_id",
+            "fiscal_year",
+            unique=True,
+            postgresql_where=text("is_current = true"),
+            sqlite_where=text("is_current = 1"),
+        ),
+        {"comment": "School-year collection status tracking (append-only with revision support)"},
     )
 
     school: Mapped["School"] = relationship(back_populates="year_statuses")
+
+
+class SchoolFiscalYearStatus(Base):
+    """Operator-facing School x target fiscal year progress row.
+
+    This denormalized table is rebuilt from source-of-truth tables so the UI can
+    show one task row per school instead of making operators reason from a raw
+    document queue.
+    """
+
+    __tablename__ = "school_fiscal_year_status"
+
+    school_id: Mapped[int] = mapped_column(ForeignKey("school.id"), primary_key=True)
+    fiscal_year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    url_status: Mapped[str] = mapped_column(String(30), nullable=False, default="unknown")
+    pdf_status: Mapped[str] = mapped_column(String(30), nullable=False, default="none")
+    extract_status: Mapped[str] = mapped_column(String(30), nullable=False, default="none")
+    yoy_diff_status: Mapped[str] = mapped_column(String(30), nullable=False, default="unchecked")
+    excel_ready: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    blocking_reason: Mapped[str | None] = mapped_column(Text)
+    evidence_level: Mapped[str] = mapped_column(String(30), nullable=False, default="none")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_school_fy_status_fy_pdf", "fiscal_year", "pdf_status"),
+        Index("idx_school_fy_status_fy_ready", "fiscal_year", "excel_ready"),
+        {"comment": "Denormalized School x fiscal-year operator task status"},
+    )
+
+    school: Mapped["School"] = relationship(back_populates="fiscal_year_statuses")
 
 
 class SchoolAlias(Base):
@@ -225,6 +292,10 @@ class SchoolAlias(Base):
     alias_type: Mapped[str | None] = mapped_column(String(30))
     source: Mapped[str | None] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_school_alias_school_id", "school_id"),
+    )
 
     school: Mapped["School"] = relationship(back_populates="aliases")
 
@@ -252,12 +323,23 @@ class SupportRecipient(Base):
     grand_total: Mapped[int | None] = mapped_column(Integer)  # 総計
     prev_enrollment: Mapped[int | None] = mapped_column(Integer)
     recipient_rate: Mapped[float | None] = mapped_column(Numeric(7, 4))
-    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2))
+    extraction_confidence: Mapped[float | None] = mapped_column(Numeric(4, 3))
+    confidence_breakdown: Mapped[str | None] = mapped_column(Text)  # 8.2.c: JSON, mirrors DepartmentYearly
     notes: Mapped[str | None] = mapped_column(Text)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     __table_args__ = (
-        UniqueConstraint("school_id", "fiscal_year"),
-        {"comment": "Support recipient data for 対象比率 sheet"},
+        UniqueConstraint("school_id", "fiscal_year", "revision", name="uq_support_recipient_revision"),
+        Index(
+            "idx_support_recipient_current",
+            "school_id",
+            "fiscal_year",
+            unique=True,
+            postgresql_where=text("is_current = true"),
+            sqlite_where=text("is_current = 1"),
+        ),
+        {"comment": "Support recipient data for 対象比率 sheet (append-only with revision support)"},
     )
 
     school: Mapped["School"] = relationship(back_populates="support_recipients")
@@ -300,3 +382,38 @@ class ReviewItem(Base):
     resolution: Mapped[str | None] = mapped_column(String(20))  # approved, rejected, corrected
     resolved_value: Mapped[str | None] = mapped_column(Text)  # actual applied value (if corrected)
     notes: Mapped[str | None] = mapped_column(Text)
+
+
+class ManualActionLog(Base):
+    """Audit log for business-user actions (Sprint 8.2.c).
+
+    DB is the authoritative source. ``data/audit/manual-actions.jsonl`` is an
+    after-commit outbox that is rebuilt from this table on demand. ``action_id``
+    is a stable UUID assigned at insert so the JSONL outbox can dedup against
+    the DB rows.
+    """
+
+    __tablename__ = "manual_action_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    action_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)  # UUID4
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    actor: Mapped[str] = mapped_column(String(50), nullable=False, default="operator")
+    action_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_table: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[int | None] = mapped_column(Integer)
+    document_id: Mapped[int | None] = mapped_column(ForeignKey("document.id"))
+    old_value: Mapped[str | None] = mapped_column(Text)  # JSON
+    new_value: Mapped[str | None] = mapped_column(Text)  # JSON
+    reason: Mapped[str | None] = mapped_column(Text)
+    jsonl_exported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    jsonl_export_error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        Index(
+            "idx_manual_action_log_jsonl_exported_table_document",
+            "jsonl_exported_at",
+            "target_table",
+            "document_id",
+        ),
+    )

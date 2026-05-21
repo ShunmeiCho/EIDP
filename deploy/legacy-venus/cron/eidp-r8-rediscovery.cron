@@ -1,0 +1,26 @@
+# EIDP weekly R8 rediscovery (crontab fragment for user `junming`)
+#
+# Owner decision (2026-04-28): crontab over user-systemd because Linger=no
+# on venus and we don't have sudo to enable-linger right now. crontab
+# survives reboot via the cron daemon and runs regardless of user session.
+#
+# Install (idempotent — see deploy/legacy-venus/cron/install.sh):
+#   crontab -l 2>/dev/null | grep -v 'EIDP-R8-CRON' > /tmp/ct.bak
+#   cat deploy/legacy-venus/cron/eidp-r8-rediscovery.cron >> /tmp/ct.bak
+#   crontab /tmp/ct.bak
+#
+# Uninstall:
+#   crontab -l | grep -v 'EIDP-R8-CRON' | crontab -
+#
+# View next fire:
+#   systemctl status cron && grep CRON /var/log/syslog | tail
+#
+# Logs:
+#   ~/workspace/EIDP/logs/r8-rediscovery/run-*.log
+#   ~/workspace/EIDP/logs/r8-rediscovery/.last_failure  (only present on failure)
+
+# m h dom mon dow command
+# Every Monday 02:00 JST = Sunday 17:00 UTC.
+# Cron's TZ defaults to system TZ on Ubuntu; venus is JST so 02:00 = 02:00 JST.
+MAILTO=""
+0 2 * * 1 /home/junming/workspace/EIDP/deploy/legacy-venus/run_r8_rediscovery_cron.sh # EIDP-R8-CRON

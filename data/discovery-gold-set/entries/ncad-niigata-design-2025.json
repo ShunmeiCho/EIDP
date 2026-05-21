@@ -1,0 +1,54 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ncad-niigata-design-2025",
+  "school": {
+    "school_id": 349,
+    "school_name": "新潟デザイン専門学校",
+    "prefecture": "新潟県",
+    "corporation_name": "国際総合学園"
+  },
+  "target_fiscal_year": 2025,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find a target confirmation form from an information page with many adjacent PDF disclosures.",
+    "search_queries": [
+      "新潟デザイン専門学校 情報公開",
+      "新潟デザイン専門学校 機関要件確認申請書様式第2号"
+    ],
+    "steps": [
+      "Open the school information disclosure page.",
+      "Locate section 3 修学支援制度.",
+      "Reject adjacent links for 学科設置表, 実務経験のある教員等による授業科目, 役員名簿, and 成績分布.",
+      "Choose the link labeled 機関要件確認申請書様式第2号.",
+      "Use the filename confirm2025.pdf and PDF body school name to confirm the FY2025 target form."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://ncadnet.jp/",
+    "disclosure_url": "https://ncadnet.jp/information/",
+    "pdf_url": "https://ncadnet.jp/information/support/confirm2025.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "structured_information_page",
+    "reusable_rules": [
+      "On structured 情報公開 pages, prefer the 修学支援制度 section before scanning all PDFs.",
+      "Use anchor labels containing 機関要件確認申請書 or 様式第2号 as primary target signals.",
+      "Use filename year hints like confirm2025.pdf only after rejecting adjacent disclosure PDFs in the same section."
+    ],
+    "anti_patterns": [
+      "Do not send board.pdf or practice.pdf as target candidates even though they are in the same support directory.",
+      "Do not treat 学科設置表 as the target form; it is only an adjacent support-system artifact."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://ncadnet.jp/information/",
+      "https://ncadnet.jp/information/support/confirm2025.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-11 found the target link under 修学支援制度 and verified the PDF body contains 新潟デザイン専門学校 and 様式第２号."
+  }
+}

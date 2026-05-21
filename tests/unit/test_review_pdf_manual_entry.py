@@ -1,0 +1,1369 @@
+"""Sprint 8.4.c.1 — PDF確認・手入力 page helper regression.
+
+Most tests here pin the *pure* helper contracts the page depends on,
+with one Streamlit AppTest smoke for the render shell:
+
+  * list_pending_documents — queue projection (statuses, ordering, JOIN).
+  * form_data_to_entries   — UI dict → DepartmentEntry, with validation
+    that mirrors save_manual_entries' guardrails so the user gets
+    inline feedback before we try the DB.
+  * save_with_lock         — non-blocking lock acquisition; lock-busy
+    short-circuits without writing; lock-free passes through to
+    save_manual_entries with a commit; underlying errors roll back.
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
+from streamlit.testing.v1 import AppTest
+
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR
+from eidp.db.locking import acquire_lock
+from eidp.db.models import (
+    Base,
+    Department,
+    DepartmentYearly,
+    Document,
+    School,
+    SchoolSite,
+)
+from eidp.db.sqlite_bootstrap import bootstrap_sqlite
+from eidp.review._pages.pdf_manual_entry import (
+    MANUAL_ACTION_FILTER_ALL,
+    MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY,
+    MANUAL_ENTRY_MAX_FISCAL_YEAR,
+    MANUAL_ENTRY_MIN_FISCAL_YEAR,
+    MANUAL_QUEUE_VIEW_ALL,
+    MANUAL_QUEUE_VIEW_TARGET,
+    MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
+    QUEUE_STATUSES,
+    SAVE_ELIGIBLE_STATUSES,
+    DiscoveryEvidenceRow,
+    QueueRow,
+    SaveOutcome,
+    SchoolSiteEvidenceRow,
+    build_pdf_preview,
+    clear_manual_entry_form_state,
+    coerce_focus_document_id,
+    department_form_rows_for_document,
+    discovery_evidence_table_rows,
+    discovery_reason_label,
+    discovery_trace_summary,
+    filter_manual_queue_by_action,
+    fiscal_year_evidence_summary,
+    form_data_to_entries,
+    latest_discovery_evidence,
+    list_documents_for_manual_queue_view,
+    list_pending_documents,
+    list_school_site_evidence,
+    manual_action_filter_options,
+    manual_entry_row_widget_keys,
+    manual_entry_rows_state_key,
+    manual_entry_static_widget_keys,
+    manual_next_action_for_row,
+    manual_queue_summary,
+    manual_queue_table,
+    manual_queue_view_options,
+    prioritize_queue_document,
+    prune_manual_entry_row_widgets,
+    resolve_pdf_path,
+    save_with_lock,
+    school_site_evidence_table_rows,
+)
+
+
+def test_manual_entry_fiscal_year_bounds_are_long_lived() -> None:
+    assert MANUAL_ENTRY_MIN_FISCAL_YEAR == MIN_SUPPORTED_TARGET_FISCAL_YEAR
+    assert MANUAL_ENTRY_MAX_FISCAL_YEAR == MAX_SUPPORTED_TARGET_FISCAL_YEAR
+
+
+def test_prune_manual_entry_row_widgets_removes_deleted_row_state() -> None:
+    state: dict[str, object] = {
+        manual_entry_rows_state_key(42): [{}, {}],
+        "name_42_0": "kept",
+        "cap_42_0": "10",
+        "name_42_1": "stale",
+        "cap_42_1": "20",
+        "name_43_1": "other-doc",
+        "reason_42": "memo",
+    }
+
+    prune_manual_entry_row_widgets(state, document_id=42, row_count=1)
+
+    assert state["name_42_0"] == "kept"
+    assert state["cap_42_0"] == "10"
+    assert "name_42_1" not in state
+    assert "cap_42_1" not in state
+    assert state["name_43_1"] == "other-doc"
+    assert state["reason_42"] == "memo"
+
+
+def test_prune_manual_entry_row_widgets_removes_every_deleted_row_field() -> None:
+    state: dict[str, object] = {
+        manual_entry_rows_state_key(42): [{}],
+    }
+    for key in manual_entry_row_widget_keys(42, 0):
+        state[key] = "kept"
+    for key in manual_entry_row_widget_keys(42, 1):
+        state[key] = "stale"
+    for key in manual_entry_static_widget_keys(42):
+        state[key] = "static"
+
+    prune_manual_entry_row_widgets(state, document_id=42, row_count=1)
+
+    for key in manual_entry_row_widget_keys(42, 0):
+        assert state[key] == "kept"
+    for key in manual_entry_row_widget_keys(42, 1):
+        assert key not in state
+    for key in manual_entry_static_widget_keys(42):
+        assert state[key] == "static"
+
+
+def test_prune_manual_entry_row_widgets_does_not_confuse_dropout_prefixes() -> None:
+    state: dict[str, object] = {
+        "drp_42_0": "kept-dropouts",
+        "drprate_42_0": "kept-rate",
+        "drp_42_1": "stale-dropouts",
+        "drprate_42_1": "stale-rate",
+    }
+
+    prune_manual_entry_row_widgets(state, document_id=42, row_count=1)
+
+    assert state["drp_42_0"] == "kept-dropouts"
+    assert state["drprate_42_0"] == "kept-rate"
+    assert "drp_42_1" not in state
+    assert "drprate_42_1" not in state
+
+
+def test_clear_manual_entry_form_state_removes_all_form_widgets() -> None:
+    state: dict[str, object] = {
+        manual_entry_rows_state_key(42): [{}, {}],
+        "unrelated": "keep",
+    }
+    for key in manual_entry_row_widget_keys(42, 0) + manual_entry_row_widget_keys(42, 1):
+        state[key] = "stale"
+    for key in manual_entry_static_widget_keys(42):
+        state[key] = "stale"
+
+    clear_manual_entry_form_state(state, document_id=42)
+
+    assert state == {"unrelated": "keep"}
+
+
+def test_manual_entry_row_count_controls_disable_while_lock_is_held() -> None:
+    source = Path("src/eidp/review/_pages/pdf_manual_entry.py").read_text(encoding="utf-8")
+
+    assert 'cols[0].button("行を追加", key=f"add_{row.document_id}", disabled=lock_held)' in source
+    assert '"最終行を削除"' in source
+    assert 'key=f"del_{row.document_id}"' in source
+    assert "disabled=lock_held or len(state[state_key]) <= 1" in source
+
+
+@pytest.fixture()
+def engine(tmp_path: Path):
+    db_path = tmp_path / "page_helpers.sqlite3"
+    engine = create_engine(f"sqlite:///{db_path}", future=True)
+    bootstrap_sqlite(engine)
+    yield engine
+    engine.dispose()
+
+
+def _seed_school(session: Session, *, name: str, pref: str = "東京都") -> School:
+    school = School(
+        prefecture=pref, corporation_name="法人", school_name=name,
+        school_type="専門学校", status="active",
+    )
+    session.add(school)
+    session.flush()
+    return school
+
+
+def _seed_doc(
+    session: Session, school: School, *, status: str, file_hash_seed: str,
+    fiscal_year: int | None = None,
+) -> Document:
+    doc = Document(
+        school_id=school.id,
+        source_url=f"https://example.com/{file_hash_seed}.pdf",
+        discovered_from=f"https://example.com/{file_hash_seed}/page.html",
+        file_hash=(file_hash_seed.ljust(64, "0"))[:64],
+        pdf_type="target",
+        content_type="image",
+        fiscal_year=fiscal_year,
+        ingest_status=status,
+        confidence=0.82,
+        downloaded_at=datetime.now(UTC),
+    )
+    session.add(doc)
+    session.flush()
+    return doc
+
+
+def _render_pdf_manual_entry_for_test(session, lock_path):  # noqa: ANN001, ANN201
+    from eidp.review._pages.pdf_manual_entry import render
+
+    render(session, lock_path=lock_path)
+
+
+def test_extracted_confirmation_prefill_preserves_department_identity(engine) -> None:
+    """No-edit confirmation must keep the extracted department natural key.
+
+    The manual-entry save path keys Department by course_type/course_name as
+    well as name and duration. If the review form drops those fields, a
+    no-edit "確認・補足" save creates a second same-name Department instead of
+    appending a new DepartmentYearly revision to the extracted row.
+    """
+    from eidp.pipeline.manual_entry import save_manual_entries
+
+    with Session(engine) as session:
+        school = _seed_school(session, name="課程付き学校")
+        doc = _seed_doc(session, school, status="ingested", file_hash_seed="course-prefill", fiscal_year=2026)
+        dept = Department(
+            school_id=school.id,
+            canonical_name="情報技術科",
+            course_type="昼",
+            course_name="工業",
+            duration_years=2.0,
+        )
+        session.add(dept)
+        session.flush()
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                document_id=doc.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                capacity=40,
+                enrollment=30,
+                verified=True,
+                extraction_method="pdf",
+                extraction_confidence=0.82,
+            )
+        )
+        session.commit()
+
+        rows = department_form_rows_for_document(session, document_id=doc.id, fiscal_year=2026)
+        assert rows[0]["course_type"] == "昼"
+        assert rows[0]["course_name"] == "工業"
+
+        form_validation = form_data_to_entries(rows)
+        assert form_validation.ok
+        save_manual_entries(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=form_validation.entries,
+            reason="operator confirmed extracted row without edits",
+        )
+        session.commit()
+
+        assert session.query(Department).count() == 1
+        yearly_rows = (
+            session.query(DepartmentYearly)
+            .order_by(DepartmentYearly.revision.asc())
+            .all()
+        )
+        assert [row.revision for row in yearly_rows] == [1, 2]
+        assert [row.is_current for row in yearly_rows] == [False, True]
+
+
+# ---------------------------------------------------------------------------
+# list_pending_documents
+# ---------------------------------------------------------------------------
+
+
+def test_queue_returns_only_queued_statuses(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="A学校")
+        d_ocr = _seed_doc(session, school, status="ocr_pending", file_hash_seed="ocr")
+        d_pf = _seed_doc(session, school, status="parse_failed", file_hash_seed="pf")
+        d_rev = _seed_doc(session, school, status="review_pending", file_hash_seed="rev")
+        d_mis = _seed_doc(session, school, status="school_mismatch", file_hash_seed="mis")
+        # not in queue
+        _seed_doc(session, school, status="ingested", file_hash_seed="ing")
+        _seed_doc(session, school, status="non_target", file_hash_seed="nt")
+        session.commit()
+
+        rows = list_pending_documents(session)
+        ids = [r.document_id for r in rows]
+        assert ids == [d_ocr.id, d_pf.id, d_rev.id, d_mis.id]
+        assert all(r.ingest_status in QUEUE_STATUSES for r in rows)
+
+
+def test_queue_carries_school_join_and_metadata(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="B学校", pref="大阪府")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="b", fiscal_year=2026)
+        session.commit()
+
+        rows = list_pending_documents(session)
+        assert len(rows) == 1
+        r = rows[0]
+        assert r.document_id == doc.id
+        assert r.school_id == school.id
+        assert r.school_name == "B学校"
+        assert r.prefecture == "大阪府"
+        assert r.fiscal_year == 2026
+        assert r.source_url.endswith("b.pdf")
+        assert r.discovered_from and r.discovered_from.endswith("/b/page.html")
+        assert r.pdf_type == "target"
+        assert r.confidence == 0.82
+
+
+def test_queue_respects_limit(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="L学校")
+        for i in range(5):
+            _seed_doc(session, school, status="ocr_pending", file_hash_seed=f"ll{i}")
+        session.commit()
+
+        rows = list_pending_documents(session, limit=3)
+        assert len(rows) == 3
+
+
+def test_queue_can_filter_to_one_document(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Doc学校")
+        first = _seed_doc(session, school, status="ocr_pending", file_hash_seed="doc1")
+        second = _seed_doc(session, school, status="parse_failed", file_hash_seed="doc2")
+        session.commit()
+
+        rows = list_pending_documents(session, document_id=second.id)
+
+        assert [r.document_id for r in rows] == [second.id]
+        assert first.id not in {r.document_id for r in rows}
+
+
+def test_queue_can_include_ingested_and_filter_target_year(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="FY学校")
+        old_doc = _seed_doc(session, school, status="ingested", file_hash_seed="old", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="ingested", file_hash_seed="target", fiscal_year=2026)
+        review_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="review", fiscal_year=2026)
+        _seed_doc(session, school, status="ocr_pending", file_hash_seed="unknown", fiscal_year=None)
+        session.commit()
+
+        rows = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+            fiscal_year=2026,
+        )
+
+        assert [r.document_id for r in rows] == [target_doc.id, review_doc.id]
+        assert old_doc.id not in {r.document_id for r in rows}
+
+
+def test_manual_queue_default_hides_old_year_documents(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Default学校")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="old", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="target", fiscal_year=2026)
+        unknown_doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="unknown", fiscal_year=None)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET,
+            target_fiscal_year=2026,
+        )
+
+        assert [row.document_id for row in rows] == [target_doc.id, unknown_doc.id]
+        assert old_doc.id not in {row.document_id for row in rows}
+
+
+def test_manual_queue_target_with_ingested_still_filters_old_year(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Ingested学校")
+        old_doc = _seed_doc(session, school, status="ingested", file_hash_seed="oldi", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="ingested", file_hash_seed="targeti", fiscal_year=2026)
+        review_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="reviewi", fiscal_year=2026)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
+            target_fiscal_year=2026,
+        )
+
+        assert [row.document_id for row in rows] == [target_doc.id, review_doc.id]
+        assert old_doc.id not in {row.document_id for row in rows}
+
+
+def test_ingested_document_is_editable_for_confirmation_supplement_prefill(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="補足学校")
+        doc = _seed_doc(session, school, status="ingested", file_hash_seed="supplement", fiscal_year=2026)
+        dept = Department(
+            school_id=school.id,
+            canonical_name="自動抽出学科",
+            duration_years=2.0,
+        )
+        session.add(dept)
+        session.flush()
+        session.add(
+            DepartmentYearly(
+                department_id=dept.id,
+                document_id=doc.id,
+                fiscal_year=2026,
+                revision=1,
+                is_current=True,
+                capacity=40,
+                enrollment=35,
+                intl_students=2,
+                graduates=30,
+                advanced=5,
+                employed=24,
+                other=1,
+                prev_enrollment=36,
+                dropouts=1,
+                dropout_rate=0.0278,
+                extraction_confidence=0.91,
+                extraction_method="pdfplumber",
+                verified=False,
+            )
+        )
+        session.commit()
+        doc_id = int(doc.id)
+
+        queue = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
+            target_fiscal_year=2026,
+        )
+        form_rows = department_form_rows_for_document(session, document_id=doc_id, fiscal_year=2026)
+
+    assert "ingested" in SAVE_ELIGIBLE_STATUSES
+    assert [row.document_id for row in queue] == [doc_id]
+    assert form_rows == [{
+        "canonical_name": "自動抽出学科",
+        "course_type": "",
+        "course_name": "",
+        "duration_years": 2.0,
+        "capacity": 40,
+        "enrollment": 35,
+        "intl_students": 2,
+        "graduates": 30,
+        "advanced": 5,
+        "employed": 24,
+        "other": 1,
+        "prev_enrollment": 36,
+        "dropouts": 1,
+        "dropout_rate": 0.0278,
+        "dept_change": None,
+    }]
+
+
+def test_manual_queue_all_view_is_explicit_diagnostics(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="All学校")
+        old_doc = _seed_doc(session, school, status="ingested", file_hash_seed="oldall", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="targetall", fiscal_year=2026)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_ALL,
+            target_fiscal_year=2026,
+        )
+
+        assert [row.document_id for row in rows] == [old_doc.id, target_doc.id]
+
+
+def test_manual_queue_focus_document_can_surface_school_task_selection(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="FocusView学校")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="focusold", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="focustarget", fiscal_year=2026)
+        session.commit()
+
+        rows = list_documents_for_manual_queue_view(
+            session,
+            view=MANUAL_QUEUE_VIEW_TARGET,
+            target_fiscal_year=2026,
+            focus_document_id=old_doc.id,
+        )
+
+        assert [row.document_id for row in rows] == [old_doc.id, target_doc.id]
+
+
+def test_manual_queue_view_options_keep_stable_keys():
+    options = manual_queue_view_options("2026年度（令和8年度）")
+
+    assert set(options) == {
+        MANUAL_QUEUE_VIEW_TARGET,
+        MANUAL_QUEUE_VIEW_TARGET_WITH_INGESTED,
+        MANUAL_QUEUE_VIEW_ALL,
+    }
+    assert options[MANUAL_QUEUE_VIEW_TARGET].startswith("2026年度")
+
+
+def test_manual_queue_summary_and_table_explain_next_actions(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Action学校", pref="神奈川県")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="oldact", fiscal_year=2025)
+        target_doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="targetact", fiscal_year=2026)
+        unknown_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="unknownact", fiscal_year=None)
+        ingested_doc = _seed_doc(session, school, status="ingested", file_hash_seed="ingact", fiscal_year=2026)
+        session.commit()
+
+        rows = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+        )
+
+        summary = manual_queue_summary(rows, target_fiscal_year=2026)
+        table = manual_queue_table(rows, target_fiscal_year=2026)
+        actions_by_doc = {int(row["doc"]): row["次の作業"] for row in table}
+        year_by_doc = {int(row["doc"]): row["年度"] for row in table}
+        old_doc_id = int(old_doc.id)
+        target_doc_id = int(target_doc.id)
+        unknown_doc_id = int(unknown_doc.id)
+        ingested_doc_id = int(ingested_doc.id)
+
+    assert summary.total == 4
+    assert summary.current_year == 2
+    assert summary.unknown_year == 1
+    assert summary.old_year == 1
+    assert summary.save_eligible == 4
+    assert summary.read_only == 0
+    assert actions_by_doc[old_doc_id] == "旧年度診断"
+    assert actions_by_doc[target_doc_id] == "OCR/手入力"
+    assert actions_by_doc[unknown_doc_id] == "年度確認"
+    assert year_by_doc[unknown_doc_id] == "年度未確定"
+    assert actions_by_doc[ingested_doc_id] == "抽出結果確認"
+    assert table[0]["年度"] == "旧年度"
+    assert table[0]["学校"] == "Action学校"
+    assert table[0]["都道府県"] == "神奈川県"
+
+
+def test_manual_action_filter_options_and_filter_queue_by_lane(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Lane学校")
+        old_doc = _seed_doc(session, school, status="parse_failed", file_hash_seed="oldlane", fiscal_year=2025)
+        ocr_doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="ocrlane", fiscal_year=2026)
+        review_doc = _seed_doc(session, school, status="review_pending", file_hash_seed="reviewlane", fiscal_year=2026)
+        ingested_doc = _seed_doc(session, school, status="ingested", file_hash_seed="inglane", fiscal_year=2026)
+        session.commit()
+
+        rows = list_pending_documents(
+            session,
+            statuses=[*QUEUE_STATUSES, "ingested"],
+        )
+        row_ids = {row.document_id for row in rows}
+        old_doc_id = int(old_doc.id)
+        ocr_doc_id = int(ocr_doc.id)
+        review_doc_id = int(review_doc.id)
+        ingested_doc_id = int(ingested_doc.id)
+
+    options = manual_action_filter_options(rows, target_fiscal_year=2026)
+    assert options == [
+        MANUAL_ACTION_FILTER_ALL,
+        "OCR/手入力",
+        "PDF確認",
+        "抽出結果確認",
+        "旧年度診断",
+    ]
+
+    ocr_rows = filter_manual_queue_by_action(
+        rows,
+        target_fiscal_year=2026,
+        action_filter="OCR/手入力",
+    )
+    assert [row.document_id for row in ocr_rows] == [ocr_doc_id]
+
+    old_rows = filter_manual_queue_by_action(
+        rows,
+        target_fiscal_year=2026,
+        action_filter="旧年度診断",
+    )
+    assert [row.document_id for row in old_rows] == [old_doc_id]
+    assert filter_manual_queue_by_action(
+        rows,
+        target_fiscal_year=2026,
+        action_filter=MANUAL_ACTION_FILTER_ALL,
+    ) == rows
+    assert row_ids == {
+        old_doc_id,
+        ocr_doc_id,
+        review_doc_id,
+        ingested_doc_id,
+    }
+
+
+def test_manual_next_action_prioritizes_school_mismatch_and_future_year(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Mismatch学校")
+        mismatch = _seed_doc(session, school, status="school_mismatch", file_hash_seed="misact", fiscal_year=2026)
+        future = _seed_doc(session, school, status="review_pending", file_hash_seed="futureact", fiscal_year=2027)
+        session.commit()
+
+        rows = list_pending_documents(session)
+        rows_by_id = {row.document_id: row for row in rows}
+        mismatch_id = int(mismatch.id)
+        future_id = int(future.id)
+
+    mismatch_action, mismatch_hint = manual_next_action_for_row(rows_by_id[mismatch_id], target_fiscal_year=2026)
+    future_action, future_hint = manual_next_action_for_row(rows_by_id[future_id], target_fiscal_year=2026)
+
+    assert mismatch_action == "学校紐付け確認"
+    assert "学校マッピング" in mismatch_hint
+    assert future_action == "年度修正"
+    assert "未来" in future_hint
+
+
+def test_focus_document_helpers_move_requested_row_to_top(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Focus学校")
+        first = _seed_doc(session, school, status="ocr_pending", file_hash_seed="focus1")
+        second = _seed_doc(session, school, status="parse_failed", file_hash_seed="focus2")
+        session.commit()
+
+        rows = list_pending_documents(session)
+        focused = prioritize_queue_document(rows, document_id=second.id)
+
+        assert coerce_focus_document_id(str(second.id)) == second.id
+        assert coerce_focus_document_id("bad") is None
+        assert [row.document_id for row in focused] == [second.id, first.id]
+        assert prioritize_queue_document(rows, document_id=None) == rows
+
+
+def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Path):
+    out = tmp_path / "output"
+    out.mkdir()
+    log = out / "discovery_rejections.jsonl"
+    log.write_text(
+        "\n".join([
+            "{bad json",
+            (
+                '{"school_id": 1, "pdf_url": "https://example.ac.jp/old.pdf", '
+                '"page_url": "https://example.ac.jp/", "reason": "fiscal_year_mismatch:2025", '
+                '"anchor_text": "2025年度", "pattern_type": "direct", "score": 3.0, '
+                '"pdf_type": "target", "timestamp": "2026-05-06T00:00:00Z"}'
+            ),
+            (
+                '{"school_id": 1, "pdf_url": "https://example.ac.jp/r8.pdf", '
+                '"page_url": "https://example.ac.jp/disclosure/", "reason": "accepted_downloaded", '
+                '"anchor_text": "2026年度", "pattern_type": "direct", "score": 9.0, '
+                '"pdf_type": "target", '
+                '"extra": {"site_url": "https://example.ac.jp/disclosure/", '
+                '"discovery_method": "prefecture_aggregator", "target_fiscal_year": "2026", '
+                '"detected_fiscal_year": "", "year_evidence": "url_hint"}, '
+                '"timestamp": "2026-05-06T00:01:00Z"}'
+            ),
+            (
+                '{"school_id": 2, "pdf_url": "https://other.ac.jp/r8.pdf", '
+                '"page_url": "https://other.ac.jp/", "reason": "accepted_downloaded"}'
+            ),
+        ]),
+        encoding="utf-8",
+    )
+
+    rows = latest_discovery_evidence(
+        app_root=tmp_path,
+        school_id=1,
+        source_url="https://example.ac.jp/r8.pdf",
+    )
+
+    assert len(rows) == 2
+    assert rows[0].reason == "accepted_downloaded"
+    assert rows[0].pdf_url == "https://example.ac.jp/r8.pdf"
+    assert rows[0].site_url == "https://example.ac.jp/disclosure/"
+    assert rows[0].discovery_method == "prefecture_aggregator"
+    assert rows[0].target_fiscal_year == "2026"
+    assert rows[0].year_evidence == "url_hint"
+    assert rows[1].reason == "fiscal_year_mismatch:2025"
+
+
+def test_list_school_site_evidence_exposes_registered_entry_points(engine):
+    with Session(engine) as session:
+        school = _seed_school(session, name="Trace学校")
+        session.add_all([
+            SchoolSite(
+                school_id=school.id,
+                url="https://example.ac.jp/disclosure/",
+                url_type="disclosure",
+                discovery_method="prefecture_aggregator",
+                confidence=0.95,
+                verified=True,
+                http_status=200,
+                last_checked=datetime(2026, 5, 6, 0, 0, tzinfo=UTC),
+            ),
+            SchoolSite(
+                school_id=school.id,
+                url="https://example.ac.jp/",
+                url_type="homepage",
+                discovery_method="web_search",
+                confidence=0.50,
+                verified=False,
+                http_status=200,
+            ),
+        ])
+        session.commit()
+
+        rows = list_school_site_evidence(session, school_id=school.id)
+
+    assert len(rows) == 2
+    assert rows[0].url == "https://example.ac.jp/disclosure/"
+    assert rows[0].discovery_method == "prefecture_aggregator"
+    assert rows[0].url_type == "disclosure"
+    assert rows[0].confidence == 0.95
+    assert rows[0].verified is True
+    assert rows[0].last_checked.startswith("2026-05-06T00:00:00")
+    assert rows[1].discovery_method == "web_search"
+
+
+def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
+    row = QueueRow(
+        document_id=10,
+        school_id=1,
+        school_name="Trace学校",
+        prefecture="東京都",
+        fiscal_year=2026,
+        ingest_status="ocr_pending",
+        file_path="data/pdfs/1/r8.pdf",
+        source_url="https://example.ac.jp/r8.pdf",
+        discovered_from="https://example.ac.jp/disclosure/",
+        pdf_type="image_only",
+        confidence=0.72,
+    )
+    sites = [
+        SchoolSiteEvidenceRow(
+            url="https://example.ac.jp/disclosure/",
+            url_type="disclosure",
+            discovery_method="prefecture_aggregator",
+            confidence=0.95,
+            verified=True,
+            http_status=200,
+            last_checked="2026-05-06T00:00:00",
+        )
+    ]
+    evidence = [
+        DiscoveryEvidenceRow(
+            pdf_url="https://example.ac.jp/r8.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            site_url="https://example.ac.jp/disclosure/",
+            discovery_method="prefecture_aggregator",
+            target_fiscal_year="2026",
+            reason="accepted_downloaded",
+            anchor_text="2026年度 確認申請書",
+            pattern_type="direct",
+            score=9.0,
+            pdf_type="target",
+            detected_fiscal_year="2026",
+            year_evidence="pdf_text",
+            timestamp="2026-05-06T00:01:00Z",
+        )
+    ]
+
+    assert discovery_trace_summary(row, site_rows=sites, evidence_rows=evidence) == (
+        "都道府県公式一覧で入口URLを登録 -> PDF掲載ページを確認 -> PDF候補を採用 -> 2026年度として判定"
+    )
+    assert school_site_evidence_table_rows(sites)[0]["入口の由来"] == "都道府県公式一覧"
+    candidate_row = discovery_evidence_table_rows(evidence)[0]
+    assert candidate_row["採否"] == "採用してPDF保存"
+    assert candidate_row["入口の由来"] == "都道府県公式一覧"
+    assert candidate_row["年度根拠"] == "PDF本文"
+    assert candidate_row["PDF本文年度"] == "2026"
+    assert discovery_reason_label("fiscal_year_mismatch:2025") == "旧年度/別年度のため保留 (2025)"
+
+    yearless_candidate = DiscoveryEvidenceRow(
+        pdf_url="https://example.ac.jp/no-year.pdf",
+        page_url="https://example.ac.jp/disclosure/",
+        site_url="https://example.ac.jp/disclosure/",
+        discovery_method="prefecture_aggregator",
+        target_fiscal_year="2026",
+        reason="accepted_downloaded",
+        anchor_text="修学支援 確認申請書",
+        pattern_type="direct",
+        score=8.0,
+        pdf_type="target",
+        detected_fiscal_year="",
+        year_evidence="target_application_no_year",
+        timestamp="2026-05-06T00:02:00Z",
+    )
+
+    assert discovery_evidence_table_rows([yearless_candidate])[0]["年度根拠"] == "対象申請書候補（年度未確認）"
+
+
+def test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints() -> None:
+    base_row = QueueRow(
+        document_id=10,
+        school_id=1,
+        school_name="Example",
+        prefecture="東京",
+        fiscal_year=None,
+        ingest_status="ocr_pending",
+        file_path="data/pdfs/1/r8.pdf",
+        source_url="https://example.ac.jp/r8.pdf",
+        discovered_from="https://example.ac.jp/disclosure/",
+        pdf_type="target",
+        confidence=0.72,
+    )
+    evidence = [
+        DiscoveryEvidenceRow(
+            pdf_url="https://example.ac.jp/r8.pdf",
+            page_url="https://example.ac.jp/disclosure/",
+            site_url="https://example.ac.jp/disclosure/",
+            discovery_method="prefecture_aggregator",
+            target_fiscal_year="2026",
+            reason="accepted_downloaded",
+            anchor_text="2026年度 確認申請書",
+            pattern_type="direct",
+            score=9.0,
+            pdf_type="target",
+            detected_fiscal_year="",
+            year_evidence="url_hint",
+            timestamp="2026-05-06T00:01:00Z",
+        )
+    ]
+
+    link_hint_summary = fiscal_year_evidence_summary(base_row, evidence, target_fiscal_year=2026)
+    assert "PDF本文に年度は見つかっていません" in link_hint_summary
+    assert "リンク文字またはURL" in link_hint_summary
+
+    body_summary = fiscal_year_evidence_summary(
+        QueueRow(**{**base_row.__dict__, "fiscal_year": 2026}),
+        evidence,
+        target_fiscal_year=2026,
+    )
+    assert "PDF本文で 2026年度" in body_summary
+
+    conflict_summary = fiscal_year_evidence_summary(
+        QueueRow(**{**base_row.__dict__, "fiscal_year": 2025}),
+        evidence,
+        target_fiscal_year=2026,
+    )
+    assert "PDF本文は 2025年度" in conflict_summary
+    assert "対象年度と異なる" in conflict_summary
+
+    yearless_summary = fiscal_year_evidence_summary(
+        QueueRow(**{**base_row.__dict__, "source_url": "https://example.ac.jp/no-year.pdf"}),
+        [
+            DiscoveryEvidenceRow(
+                **{
+                    **evidence[0].__dict__,
+                    "pdf_url": "https://example.ac.jp/no-year.pdf",
+                    "anchor_text": "修学支援 確認申請書",
+                    "year_evidence": "target_application_no_year",
+                }
+            )
+        ],
+        target_fiscal_year=2026,
+    )
+    assert "対象申請書候補ですが年度は未確認" in yearless_summary
+    assert "OCRまたは手入力で確認" in yearless_summary
+
+
+def test_render_page_smoke_with_focused_discovery_evidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the real Streamlit shell for a focused PDF review row.
+
+    Most tests in this module pin pure helpers. This smoke covers the wiring
+    between ``render`` -> queue selection -> PDF panel -> OCR availability ->
+    discovery-evidence JSONL, which is where packaging regressions have shown
+    up in the operator app.
+    """
+    from eidp.config import settings
+    db_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
+    Base.metadata.create_all(db_engine)
+    session = Session(db_engine)
+    try:
+        school = _seed_school(session, name="Render学校")
+        session.add(
+            SchoolSite(
+                school_id=school.id,
+                url="https://example.ac.jp/disclosure/",
+                url_type="disclosure",
+                discovery_method="prefecture_aggregator",
+                confidence=0.95,
+                verified=True,
+                http_status=200,
+            )
+        )
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="render", fiscal_year=None)
+        session.commit()
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        (output_dir / "discovery_rejections.jsonl").write_text(
+            json.dumps(
+                {
+                    "school_id": school.id,
+                    "pdf_url": doc.source_url,
+                    "page_url": "https://example.ac.jp/disclosure/",
+                    "reason": "accepted_downloaded",
+                    "anchor_text": "2026年度 確認申請書",
+                    "pattern_type": "direct",
+                    "score": 9.0,
+                    "pdf_type": "target",
+                    "extra": {
+                        "site_url": "https://example.ac.jp/disclosure/",
+                        "discovery_method": "prefecture_aggregator",
+                        "target_fiscal_year": "2026",
+                        "detected_fiscal_year": "",
+                        "year_evidence": "url_hint",
+                    },
+                    "timestamp": "2026-05-06T00:01:00Z",
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        monkeypatch.setattr(settings, "app_root", tmp_path)
+        monkeypatch.setattr(settings, "target_fiscal_year", 2026)
+
+        app = AppTest.from_function(
+            _render_pdf_manual_entry_for_test,
+            args=(session, tmp_path / "data" / ".lock"),
+        )
+        app.session_state[MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY] = doc.id
+
+        app.run(timeout=30)
+
+        assert not app.exception
+        assert any("PDF確認・手入力" in str(item.value) for item in app.subheader)
+        assert any("PDF候補を採用" in str(item.value) for item in app.info)
+    finally:
+        session.close()
+        db_engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# PDF preview
+# ---------------------------------------------------------------------------
+
+
+def _make_pdf(path: Path, *, text: str = "hello") -> None:
+    import fitz  # type: ignore[import-not-found]
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), text)
+    doc.save(path)
+    doc.close()
+
+
+def test_resolve_pdf_path_handles_missing_absolute_and_relative(tmp_path):
+    assert resolve_pdf_path(None, app_root=tmp_path) is None
+
+    absolute = tmp_path / "a.pdf"
+    assert resolve_pdf_path(str(absolute), app_root=tmp_path) == absolute
+    assert resolve_pdf_path("data/pdfs/a.pdf", app_root=tmp_path) == tmp_path / "data/pdfs/a.pdf"
+
+
+def test_build_pdf_preview_returns_png_and_download_bytes(tmp_path):
+    pdf = tmp_path / "sample.pdf"
+    _make_pdf(pdf, text="preview")
+
+    preview = build_pdf_preview(str(pdf), dpi=72)
+    assert preview.exists is True
+    assert preview.error is None
+    assert preview.page_count == 1
+    assert preview.filename == "sample.pdf"
+    assert preview.pdf_bytes is not None and preview.pdf_bytes.startswith(b"%PDF")
+    assert preview.image_png is not None and preview.image_png.startswith(b"\x89PNG")
+
+
+def test_build_pdf_preview_resolves_relative_path_from_app_root(tmp_path):
+    pdf = tmp_path / "data" / "pdfs" / "sample.pdf"
+    pdf.parent.mkdir(parents=True)
+    _make_pdf(pdf)
+
+    preview = build_pdf_preview("data/pdfs/sample.pdf", app_root=tmp_path, dpi=72)
+    assert preview.error is None
+    assert preview.path == pdf
+    assert preview.image_png is not None
+
+
+def test_build_pdf_preview_missing_file_returns_error(tmp_path):
+    preview = build_pdf_preview("missing.pdf", app_root=tmp_path)
+    assert preview.exists is False
+    assert preview.image_png is None
+    assert "does not exist" in (preview.error or "")
+
+
+def test_build_pdf_preview_out_of_range_returns_error(tmp_path):
+    pdf = tmp_path / "sample.pdf"
+    _make_pdf(pdf)
+
+    preview = build_pdf_preview(str(pdf), page_index=5, dpi=72)
+    assert preview.exists is True
+    assert preview.page_count == 1
+    assert preview.image_png is None
+    assert "out of range" in (preview.error or "")
+
+
+# ---------------------------------------------------------------------------
+# form_data_to_entries
+# ---------------------------------------------------------------------------
+
+
+def test_form_minimal_required_only_canonical_name():
+    fv = form_data_to_entries([{"canonical_name": "A学科"}])
+    assert fv.ok, fv.errors
+    assert len(fv.entries) == 1
+    assert fv.entries[0].canonical_name == "A学科"
+    assert fv.entries[0].enrollment is None
+
+
+def test_form_missing_canonical_name_errors():
+    fv = form_data_to_entries([{"enrollment": 10}])
+    assert not fv.ok
+    assert any(e.field.endswith(".canonical_name") for e in fv.errors)
+
+
+def test_form_negative_enrollment_errors():
+    fv = form_data_to_entries([{"canonical_name": "A学科", "enrollment": -1}])
+    assert not fv.ok
+    assert any("enrollment" in e.field and "non-negative" in e.message for e in fv.errors)
+
+
+def test_form_dropout_rate_out_of_range_errors():
+    fv = form_data_to_entries([{"canonical_name": "A学科", "dropout_rate": 1.5}])
+    assert not fv.ok
+    assert any("dropout_rate" in e.field for e in fv.errors)
+
+
+def test_form_invalid_dept_change_errors():
+    fv = form_data_to_entries([{"canonical_name": "A学科", "dept_change": "bogus"}])
+    assert not fv.ok
+    assert any("dept_change" in e.field for e in fv.errors)
+
+
+def test_form_duration_years_accepts_floats():
+    fv = form_data_to_entries([{"canonical_name": "A学科", "duration_years": "2.5"}])
+    assert fv.ok, fv.errors
+    assert fv.entries[0].duration_years == 2.5
+
+
+def test_form_multiple_rows_partial_failure_isolated():
+    """One bad row must not contaminate the others — the page renders
+    inline errors per row, valid rows still appear in the entries list
+    so the operator can save what's correct (caller's policy)."""
+    fv = form_data_to_entries([
+        {"canonical_name": "A学科", "enrollment": 10},
+        {"canonical_name": "", "enrollment": 5},
+        {"canonical_name": "C学科", "enrollment": -3},
+    ])
+    assert not fv.ok
+    # Row 0 succeeds, rows 1 + 2 fail.
+    assert len(fv.entries) == 1
+    assert fv.entries[0].canonical_name == "A学科"
+
+
+# ---------------------------------------------------------------------------
+# save_with_lock
+# ---------------------------------------------------------------------------
+
+
+def test_save_with_lock_writes_when_lock_free(engine, tmp_path):
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="X学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="x", fiscal_year=2026)
+        session.commit()
+
+        outcome = save_with_lock(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=[__import__("eidp.pipeline.manual_entry", fromlist=["DepartmentEntry"]).DepartmentEntry(
+                canonical_name="A学科", enrollment=10,
+            )],
+            lock_path=lock,
+        )
+        assert outcome.ok is True
+        assert outcome.lock_busy is False
+        assert outcome.result is not None
+        assert outcome.result.rows_written == 1
+
+        # Verify a DepartmentYearly row landed and the document was promoted.
+        dy = session.query(DepartmentYearly).one()
+        assert dy.enrollment == 10
+        session.refresh(doc)
+        assert doc.ingest_status == "ingested"
+
+
+def test_save_with_lock_returns_lock_busy_without_writing(engine, tmp_path):
+    """If the weekly runner holds the lock, the UI helper must NOT
+    write — it should return SaveOutcome(lock_busy=True) so the page
+    can render the banner and refuse the save."""
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="Y学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="y", fiscal_year=2026)
+        session.commit()
+
+        from eidp.pipeline.manual_entry import DepartmentEntry
+
+        # Hold the lock while attempting the UI save.
+        with acquire_lock(lock, owner="weekly_runner"):
+            outcome = save_with_lock(
+                session,
+                document_id=doc.id,
+                fiscal_year=2026,
+                entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+                lock_path=lock,
+            )
+
+        assert outcome.ok is False
+        assert outcome.lock_busy is True
+        assert outcome.lock_owner == "weekly_runner"
+
+        # No rows must have been written.
+        assert session.query(DepartmentYearly).count() == 0
+        session.refresh(doc)
+        assert doc.ingest_status == "ocr_pending"
+
+
+def test_save_with_lock_rolls_back_on_pipeline_error(engine, tmp_path):
+    """If save_manual_entries raises (e.g. negative enrollment),
+    save_with_lock must roll back and return ok=False with the error
+    message — no partial mutation, no audit row."""
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="Z学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="z", fiscal_year=2026)
+        session.commit()
+
+        from eidp.pipeline.manual_entry import DepartmentEntry
+
+        # Bypass the form-validation layer and feed a negative number
+        # directly to save_manual_entries via save_with_lock.
+        outcome = save_with_lock(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=[DepartmentEntry(canonical_name="A学科", enrollment=-1)],
+            lock_path=lock,
+        )
+        assert outcome.ok is False
+        assert outcome.lock_busy is False
+        assert "non-negative" in (outcome.error or "")
+
+        assert session.query(DepartmentYearly).count() == 0
+        assert session.query(Department).count() == 0
+        session.refresh(doc)
+        assert doc.ingest_status == "ocr_pending"
+
+
+def test_save_with_lock_rejects_invalid_method_without_taking_lock(engine, tmp_path):
+    """Methods outside the whitelist must short-circuit before we even
+    try to acquire the lock — a typo in the wiring shouldn't queue
+    behind the weekly runner."""
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="M学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="m", fiscal_year=2026)
+        session.commit()
+
+        from eidp.pipeline.manual_entry import DepartmentEntry
+
+        outcome = save_with_lock(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=[DepartmentEntry(canonical_name="A学科", enrollment=10)],
+            method="bogus",
+            lock_path=lock,
+        )
+        assert outcome.ok is False
+        assert outcome.lock_busy is False
+        assert "method must be one of" in (outcome.error or "")
+
+
+def test_save_outcome_default_shape():
+    """Defensive sanity — ``SaveOutcome`` defaults are explicit so the
+    page can rely on every field being present."""
+    o = SaveOutcome(ok=True)
+    assert o.lock_busy is False
+    assert o.lock_owner is None
+    assert o.error is None
+
+
+# ---------------------------------------------------------------------------
+# submit_form — UI wiring contract (Sprint 8.4.c.1.1)
+# ---------------------------------------------------------------------------
+
+
+def test_submit_form_routes_through_save_with_lock(engine, tmp_path, monkeypatch):
+    """The page MUST go through save_with_lock — that is the single
+    enforcement point for the shared advisory lock + the manual_entry
+    contract. This regression monkeypatches save_with_lock and asserts
+    submit_form calls it with the validated entries."""
+    from eidp.review._pages import pdf_manual_entry as page_mod
+
+    captured: dict = {}
+
+    def fake_save_with_lock(session, **kwargs):
+        captured.update(kwargs)
+        return SaveOutcome(ok=True)
+
+    monkeypatch.setattr(page_mod, "save_with_lock", fake_save_with_lock)
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="W学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="w", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[{"canonical_name": "A学科", "enrollment": 10}],
+            reason="image PDF",
+            actor="山田",
+            lock_path=lock,
+        )
+
+    assert validation.ok, validation.errors
+    assert outcome is not None
+    assert outcome.ok is True
+    assert captured["document_id"] == doc.id
+    assert captured["fiscal_year"] == 2026
+    assert captured["lock_path"] == lock
+    assert captured["reason"] == "image PDF"
+    assert captured["actor"] == "山田"
+    assert len(captured["entries"]) == 1
+    assert captured["entries"][0].canonical_name == "A学科"
+
+
+def test_submit_form_allows_support_recipient_only_save(engine, tmp_path, monkeypatch):
+    from eidp.review._pages import pdf_manual_entry as page_mod
+
+    captured: dict = {}
+
+    def fake_save_with_lock(session, **kwargs):
+        captured.update(kwargs)
+        return SaveOutcome(ok=True)
+
+    monkeypatch.setattr(page_mod, "save_with_lock", fake_save_with_lock)
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="SR学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="sr", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[{"canonical_name": "", "enrollment": ""}],
+            support_row={
+                "annual_total": "100",
+                "grand_total": "100",
+                "first_half_total": "45",
+                "second_half_total": "55",
+            },
+            reason="対象比率のみ",
+            lock_path=lock,
+        )
+
+    assert validation.ok, validation.errors
+    assert outcome is not None
+    assert outcome.ok is True
+    assert captured["entries"] == []
+    assert captured["support_recipient"].annual_total == 100
+    assert captured["support_recipient"].grand_total == 100
+    assert captured["support_recipient"].first_half_total == 45
+    assert captured["support_recipient"].second_half_total == 55
+
+
+def test_submit_form_returns_validation_errors_without_calling_save(engine, tmp_path, monkeypatch):
+    """If form validation fails, save_with_lock must NOT be called.
+    Pins the contract that the lock is never held while the operator
+    is fixing input errors."""
+    from eidp.review._pages import pdf_manual_entry as page_mod
+
+    called = {"count": 0}
+
+    def fake_save_with_lock(session, **kwargs):
+        called["count"] += 1
+        return SaveOutcome(ok=True)
+
+    monkeypatch.setattr(page_mod, "save_with_lock", fake_save_with_lock)
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="V学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="v", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[{"canonical_name": "", "enrollment": 10}],  # missing name
+            reason=None,
+            lock_path=lock,
+        )
+
+    assert not validation.ok
+    assert any("canonical_name" in e.field for e in validation.errors)
+    assert outcome is None
+    assert called["count"] == 0
+
+
+def test_submit_form_rejects_when_no_valid_rows_remain(engine, tmp_path, monkeypatch):
+    """If every row has at least one error, submit_form must NOT call
+    save_with_lock even though the validation list happens to be empty
+    of *successful* entries — that's a degenerate save."""
+    from eidp.review._pages import pdf_manual_entry as page_mod
+
+    called = {"count": 0}
+    monkeypatch.setattr(
+        page_mod, "save_with_lock",
+        lambda *a, **kw: (called.__setitem__("count", called["count"] + 1) or SaveOutcome(ok=True)),
+    )
+
+    lock = tmp_path / ".lock"
+    with Session(engine) as session:
+        school = _seed_school(session, name="U学校")
+        doc = _seed_doc(session, school, status="ocr_pending", file_hash_seed="u", fiscal_year=2026)
+        session.commit()
+
+        validation, outcome = page_mod.submit_form(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            rows=[
+                {"canonical_name": "", "enrollment": 1},
+                {"canonical_name": "A", "enrollment": -5},
+            ],
+            reason=None,
+            lock_path=lock,
+        )
+
+    assert not validation.ok
+    assert outcome is None
+    assert called["count"] == 0
+
+
+def test_save_eligible_statuses_excludes_school_mismatch():
+    """``school_mismatch`` documents are listed in the queue but must
+    NOT have a save form rendered — the operator must fix the school
+    binding first. This test pins the policy constant so a future
+    page-mod change can't silently flip it. Already-ingested documents
+    stay editable for confirmation/supplemental append-only revisions."""
+    from eidp.review._pages.pdf_manual_entry import SAVE_ELIGIBLE_STATUSES
+
+    assert "school_mismatch" not in SAVE_ELIGIBLE_STATUSES
+    assert SAVE_ELIGIBLE_STATUSES == frozenset({
+        "ocr_pending", "parse_failed", "review_pending", "ingested",
+    })

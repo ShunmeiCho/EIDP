@@ -1,0 +1,42 @@
+EIDP v460 operator handoff
+Date: 2026-05-17
+
+Current Windows lane:
+- Package: C:\EIDP-staging\eidp-windows-v460.zip
+- SHA256: ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c
+- Extracted root: C:\Users\cyo20\EIDP-v460-01e4427
+- Scheduled task: EIDP Weekly Run -> C:\Users\cyo20\EIDP-v460-01e4427\scripts\weekly_run.bat
+
+Pre-handoff checks already completed:
+- Mac/non-Windows release gate: ok=true
+- Windows setup validator: ok=true
+- Task Scheduler recovery check: ok=true, action_matches_expected=true
+- Read-only browser navigation smoke: ok=true
+  (no weekly run, no workbook generation, no settings save, no operator write)
+- Diagnostic evidence ZIP guard: ok=false as expected because last_run is missing
+  (do not use the pre-owner diagnostic ZIP as release evidence)
+
+Read first:
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-handoff-manifest-20260517.txt
+- C:\EIDP-staging\eidp-v460-owner-request-20260516.txt
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-real-cycle-card.md
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-operator-e2e-template.md
+- C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-stage6-evidence-draft.md
+- C:\EIDP-staging\v460-operator-docs-20260517\current-release-status.md
+- C:\EIDP-staging\v460-operator-docs-20260517\2026-05-17-active-goal-completion-audit.md
+
+The 20260517 companion docs refresh supersedes the 20260516 companion docs for
+operator reading only. It does not change the v460 core package, extracted app
+root, scheduled task, database, or release approval gate.
+
+Do not approve v1.0 from setup proof alone. v460 still needs the owner/operator
+real-cycle, evidence bundle verification, KPI fill, and sign-off. v459 evidence
+and v464 side-by-side evidence are support only and are not a v460 real-cycle
+substitute.
+
+Do not start an unbounded full weekly collection cycle on v460 unless the owner
+explicitly approves the long-running production probe. The latest URL-rich
+v460 FY2026 probe ran for about 9h41m, was stopped, and did not write a new
+last_run.json. Use v460 for the launcher/UI/evidence/sign-off real-cycle path;
+if a fresh full weekly KPI run is required, reopen the change window and promote
+a newer package lane first.

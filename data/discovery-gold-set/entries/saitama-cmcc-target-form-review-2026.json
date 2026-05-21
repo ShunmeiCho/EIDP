@@ -1,0 +1,51 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "saitama-cmcc-target-form-review-2026",
+  "school": {
+    "school_id": 778,
+    "school_name": "埼玉コンピュータ＆医療事務専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "実学舎"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Verify that the official-index disclosure page exposes a readable target-form PDF, but the URL, anchor, and PDF body do not prove FY2026.",
+    "steps": [
+      "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure site.",
+      "Open the disclosure page and inspect the anchor labeled 確認申請書 (様式第2号).",
+      "Follow the linked 補正➅確認申請書（様式第2号）.pdf candidate.",
+      "Extract the PDF text and confirm it is a 様式第2号 target-form bundle for 埼玉コンピュータ＆医療事務専門学校.",
+      "Classify it as needs_operator_review because the PDF text contains no 令和8/2026年度 evidence; incidental 令和7 committee terms do not prove the target fiscal year."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.saitama-cmcc.ac.jp/",
+    "disclosure_url": "https://www.saitama-cmcc.ac.jp/school/disclosure/",
+    "pdf_url": "https://www.saitama-cmcc.ac.jp/wp-content/uploads/2025/07/補正➅確認申請書（様式第2号）.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "target_form_without_year_evidence",
+    "reusable_rules": [
+      "Keep official-index confirmation-form anchors as high-value candidates even when strict target-year evidence is missing.",
+      "Require PDF body, URL, or anchor fiscal-year evidence before accepting a target-form PDF as current target FY.",
+      "Route readable target-form PDFs with no FY2026 evidence to needs_operator_review with the direct PDF URL preserved."
+    ],
+    "anti_patterns": [
+      "Do not infer FY2026 from an upload month such as /uploads/2025/07/.",
+      "Do not treat unrelated 令和7 committee appointment terms inside the PDF as target fiscal-year evidence.",
+      "Do not discard a readable target-form PDF as non-target only because it lacks strict year evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/win-v333-evidence/discovery_rejections.jsonl",
+      "_temp/manual-rca-v335/saitama-cmcc-youshiki2.pdf"
+    ],
+    "notes": "Windows v333 Saitama 50-site replay records this candidate as reason=target_fiscal_year_not_detected, pdf_type=target. Manual PyMuPDF extraction found 16 pages and readable target-form text but no 令和8, 令和８, 2026, or 2026年度 evidence."
+  }
+}

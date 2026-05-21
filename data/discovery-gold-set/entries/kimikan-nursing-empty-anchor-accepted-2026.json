@@ -1,0 +1,55 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "kimikan-nursing-empty-anchor-accepted-2026",
+  "school": {
+    "school_id": 798,
+    "school_name": "君津中央病院附属看護学校",
+    "prefecture": "千葉県",
+    "corporation_name": "君津中央病院企業団"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find the FY2026 renewal confirmation form when the HTML contains an empty stale PDF anchor immediately before the visible current-year anchor.",
+    "search_queries": [
+      "君津中央病院附属看護学校 令和8年度 更新確認申請書",
+      "君津中央病院附属看護学校 2026sinseisyo.pdf"
+    ],
+    "steps": [
+      "Open the school support-system page https://www.kimikan.hospital.kisarazu.chiba.jp/index.php/school-seido.",
+      "Find the visible link labeled 【令和８年度】更新確認申請書.",
+      "Ignore the immediately preceding empty anchor that still points at /images/stories/contents/Nursing_school/reiwa3kakunin.pdf.",
+      "Resolve the visible link to /images/shinseisyo/2026sinseisyo.pdf.",
+      "Accept it as FY2026 because the visible anchor supplies target-year evidence and the PDF body contains 君津中央病院附属看護学校 plus target-form sections."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.kimikan.hospital.kisarazu.chiba.jp/index.php/school-seido",
+    "disclosure_url": "https://www.kimikan.hospital.kisarazu.chiba.jp/index.php/school-seido",
+    "pdf_url": "https://www.kimikan.hospital.kisarazu.chiba.jp/images/shinseisyo/2026sinseisyo.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "pattern_type": "direct",
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "empty_stale_anchor_before_visible_current_year_anchor",
+    "reusable_rules": [
+      "Do not assign visible sibling anchor text to an empty anchor that points at a different PDF.",
+      "Prefer the visible current-year confirmation-form anchor over a preceding empty stale PDF anchor in the same block.",
+      "Accept a direct PDF when the visible anchor supplies target-year evidence and the PDF body has exact school-name plus target-form sections."
+    ],
+    "anti_patterns": [
+      "Do not download a stale hidden/empty PDF only because its sibling anchor says 令和８年度.",
+      "Do not use block-wide text as evidence for an empty anchor when another visible anchor exists in that block."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.kimikan.hospital.kisarazu.chiba.jp/index.php/school-seido",
+      "https://www.kimikan.hospital.kisarazu.chiba.jp/images/shinseisyo/2026sinseisyo.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found an empty stale PDF anchor followed by the visible 令和８年度 更新確認申請書 anchor. Before the fix, discovery accepted reiwa3kakunin.pdf; after the fix, it downloads 2026sinseisyo.pdf."
+  }
+}

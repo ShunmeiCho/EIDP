@@ -1,0 +1,55 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "seijuji-nursing-support-accepted-2026",
+  "school": {
+    "school_id": 1464,
+    "school_name": "聖十字看護専門学校",
+    "prefecture": "三重県",
+    "corporation_name": "聖十字学院"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find a FY2026 target confirmation form from a school support page where the page text, not the PDF filename, provides the rolling-year evidence.",
+    "search_queries": [
+      "聖十字看護専門学校 令和8年度 修学支援新制度 確認申請書",
+      "聖十字看護専門学校 機関要件確認申請書"
+    ],
+    "steps": [
+      "Open the school disclosure page https://seijuji.jp/disclosure/.",
+      "Read the 修学支援新制度 section stating 本校は、令和8年度より高等教育の修学支援新制度における対象校となります.",
+      "Follow the adjacent anchor labeled 大学等における修学支援に関する法律第7条 第2項に掲げる要件（確認申請書様式 第2号）.",
+      "Resolve the direct PDF URL /wp-content/themes/company/data/img/views/disclosure/kakunin-sinseisyo.pdf.",
+      "Accept it as FY2026 because the adjacent page text provides 令和8年度 target-year evidence and the PDF body contains 様式第２号 plus the school name."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://seijuji.jp/",
+    "disclosure_url": "https://seijuji.jp/disclosure/",
+    "pdf_url": "https://seijuji.jp/wp-content/themes/company/data/img/views/disclosure/kakunin-sinseisyo.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "pattern_type": "wordpress",
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "school_support_page_with_adjacent_target_year_statement",
+    "reusable_rules": [
+      "Treat a 修学支援新制度 section statement such as 令和8年度より対象校 as strong FY2026 evidence when it is adjacent to a 確認申請書様式 第2号 link.",
+      "Accept a stable PDF filename without a year when the adjacent page context supplies target-year evidence and the PDF body has 様式第２号 plus the school name.",
+      "Preserve the direct PDF URL and pattern_type=wordpress for the WordPress-hosted /wp-content/ PDF so future extractor changes cannot silently route this through a weaker pattern."
+    ],
+    "anti_patterns": [
+      "Do not require the PDF filename itself to contain 2026 or R8 when the disclosure page supplies the rolling target-year statement.",
+      "Do not treat later board-member term dates such as 令和8年5月 inside the PDF as fiscal-year evidence by themselves."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://seijuji.jp/disclosure/",
+      "https://seijuji.jp/wp-content/themes/company/data/img/views/disclosure/kakunin-sinseisyo.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found the adjacent 令和8年度 target-school statement and verified the PDF body contains 聖十字看護専門学校 and 様式第２号."
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "saijidai-incidental-year-review-2026",
+  "school": {
+    "school_id": 784,
+    "school_name": "専門学校埼玉自動車大学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "佐藤栄学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Verify that an official disclosure-page target-form PDF remains review-bound when its only 令和8 text is an incidental committee-term date, not target-fiscal-year evidence.",
+    "steps": [
+      "Use the Saitama official-index URL registered as the school's prefecture_aggregator disclosure site.",
+      "Open the school evaluation/disclosure page and inspect the anchor labeled 更新確認申請書.",
+      "Follow the linked koutoumusyou.pdf candidate.",
+      "Extract the PDF text and confirm it is a 様式第2号 target-form bundle for 専門学校埼玉自動車大学校.",
+      "Inspect the 令和8 occurrence and confirm it appears only in a school-evaluation committee term such as 令和8年3月31日.",
+      "Classify it as needs_operator_review because incidental term dates do not prove FY2026 target-year eligibility."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.saijidai.ac.jp/",
+    "disclosure_url": "https://www.saijidai.ac.jp/info/evaluation/",
+    "pdf_url": "https://www.saijidai.ac.jp/sys/wp-content/themes/saijidai/pdf/evaluation/koutoumusyou.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "target_form_with_incidental_year_text",
+    "reusable_rules": [
+      "Keep 更新確認申請書 anchors as high-value target-form candidates.",
+      "Inspect the local context around any target-year token before accepting it as fiscal-year evidence.",
+      "Route target-form PDFs to needs_operator_review when the only target-year token appears in committee terms, appointment periods, or other non-application contexts."
+    ],
+    "anti_patterns": [
+      "Do not treat every 令和8 occurrence inside a target-form PDF as FY2026 application evidence.",
+      "Do not use committee appointment periods such as 令和8年3月31日 as target fiscal-year evidence.",
+      "Do not infer target FY from the generic filename koutoumusyou.pdf."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/win-v333-evidence/discovery_rejections.jsonl",
+      "_temp/manual-rca-v335/saijidai-koutoumusyou.pdf"
+    ],
+    "notes": "Windows v333 Saitama 50-site replay records this candidate as reason=target_fiscal_year_not_detected, pdf_type=target. Manual PyMuPDF extraction found readable target-form text and a 令和8 occurrence only in the context 令和7年4月1日〜令和8年3月31日 for a school-evaluation committee member term."
+  }
+}

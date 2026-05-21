@@ -1,0 +1,49 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "urawa-specialized-school-image-review-2026",
+  "school": {
+    "school_id": 761,
+    "school_name": "浦和専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "浦和済美学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Classify the visible image-only 修学支援 PDF as review-bound because the URL and anchor do not prove the target application form.",
+    "steps": [
+      "Start from the Saitama official-index disclosure URL registered for the school.",
+      "Open the public report page and inspect the 修学支援 links.",
+      "Follow the anchor R7修学支援に関する資料 to 09_shugakushien_r7.pdf.",
+      "Route the PDF to operator review because the URL and anchor identify R7 support material but do not contain a target-form hint such as 様式第2号 or 確認申請."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://urasen.jp/",
+    "disclosure_url": "https://urasen.jp/about/report/",
+    "pdf_url": "https://urasen.jp/wp/wp-content/themes/urawa/assets/pdf/about/report/09_shugakushien_r7.pdf",
+    "pdf_type": "image_only",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "image_only_old_year_support_pdf",
+    "reusable_rules": [
+      "Keep image-only 修学支援 PDFs visible in evidence even when strict target-year extraction cannot accept them.",
+      "Require both system hints such as 修学支援 and form hints such as 様式第2号 before classifying image-only old-year PDFs as publication lag.",
+      "Route support-only image PDFs to operator review instead of non-target noise or publication-lag evidence."
+    ],
+    "anti_patterns": [
+      "Do not count an R7 image-only support PDF as FY2026 success.",
+      "Do not classify support-only 修学支援 old-year hints as publication lag without a target application-form hint.",
+      "Do not treat generic MEXT boilerplate years such as 2020年度対象 as publication-lag evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/v232-targeted-replay-3/windows-v232-targeted-evidence.jsonl"
+    ],
+    "notes": "Windows v232 targeted replay contains school_id 761 reason=target_fiscal_year_not_detected, pdf_type=image_only, anchor_text=R7修学支援に関する資料. The old-year support label stays visible for operator review but is not publication-lag evidence without a target application-form hint."
+  }
+}

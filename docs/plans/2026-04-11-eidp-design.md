@@ -2,6 +2,10 @@
 
 **Education Institution Data Pipeline**
 
+> Superseded for Sprint 8 deployment decisions. The current Windows-PC
+> architecture is maintained in `docs/architecture.md`. This document remains
+> as historical design context for the earlier Venus/PostgreSQL phase.
+
 - Status: IMPLEMENTATION READY
 - Note: TCA PDF verification, URL sample expansion, and 在籍のみ filter logic are deferred to Step 1/5 (by design, not omission)
 - Date: 2026-04-11

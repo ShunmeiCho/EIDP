@@ -12,11 +12,13 @@ import re
 import unicodedata
 import warnings
 from collections import Counter, defaultdict
+from pathlib import Path
 
 warnings.filterwarnings('ignore')
 
-DATA_DIR = '/Users/shunmei/workspace/EIDP/data/mext'
-SAMPLE_DIR = '/Users/shunmei/workspace/EIDP/sample'
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = REPO_ROOT / 'data' / 'mext'
+SAMPLE_DIR = REPO_ROOT / 'sample'
 
 
 def normalize_name(name):
@@ -50,7 +52,7 @@ mext_by_pref_name = defaultdict(list)
 mext_by_normalized = defaultdict(list)
 
 for fname in ['school_code_east.csv', 'school_code_west.csv']:
-    with open(f'{DATA_DIR}/{fname}', 'r', encoding='cp932') as f:
+    with open(DATA_DIR / fname, 'r', encoding='cp932') as f:
         reader = csv.reader(f)
         next(reader)  # skip header
         for row in reader:
@@ -90,7 +92,7 @@ print(f'Active (not abolished): {len(active)}')
 # --- Step 2: Load our school list ---
 print('\n=== Loading our school list ===')
 
-with open(f'{DATA_DIR}/our_schools.json', 'r') as f:
+with open(DATA_DIR / 'our_schools.json', 'r') as f:
     our_schools = json.load(f)
 
 print(f'Total schools in our list: {len(our_schools)}')
@@ -225,11 +227,11 @@ results = {
     'unmatched_rate': len(unmatched)/total*100
 }
 
-with open(f'{DATA_DIR}/matching_results.json', 'w') as f:
+with open(DATA_DIR / 'matching_results.json', 'w') as f:
     json.dump(results, f, indent=2)
 
 # Save unmatched list
-with open(f'{DATA_DIR}/unmatched_schools.json', 'w') as f:
+with open(DATA_DIR / 'unmatched_schools.json', 'w') as f:
     json.dump(unmatched, f, ensure_ascii=False, indent=2)
 
 print('\nResults saved to matching_results.json and unmatched_schools.json')

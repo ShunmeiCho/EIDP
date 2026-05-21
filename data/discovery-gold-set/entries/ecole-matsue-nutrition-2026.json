@@ -1,0 +1,54 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "ecole-matsue-nutrition-2026",
+  "school": {
+    "school_id": 1721,
+    "school_name": "松江栄養調理製菓専門学校",
+    "prefecture": "島根県",
+    "corporation_name": "タブチ学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find a FY2026 target confirmation form from a small school page with plain year anchors.",
+    "search_queries": [
+      "松江栄養調理製菓専門学校 機関要件確認申請書",
+      "松江栄養調理製菓専門学校 令和8年度 機関要件"
+    ],
+    "steps": [
+      "Open the search result titled 高等教育の就学支援に関する機関要件確認申請書.",
+      "Use the dedicated school-support page instead of the generic school profile pages.",
+      "Choose the anchor labeled 令和８年度.",
+      "Resolve the PDF URL /files/school_support_R8.pdf.",
+      "Accept it as FY2026 because the page label is 令和８年度 and the PDF body contains 様式第２号 with the school name."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.ecole-cpb.com/",
+    "disclosure_url": "https://www.ecole-cpb.com/school-support",
+    "pdf_url": "https://www.ecole-cpb.com/files/school_support_R8.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "dedicated_school_support_page",
+    "reusable_rules": [
+      "Search for the school name plus 機関要件確認申請書 when the top page does not expose 情報公開 in navigation.",
+      "Treat anchors labeled 令和８年度 as strong FY2026 evidence when the linked PDF body has 様式第２号 and the school name.",
+      "For small school pages, prefer a dedicated /school-support page over generic 学校案内 or 学校概要 pages."
+    ],
+    "anti_patterns": [
+      "Do not require the PDF filename to contain 2026 when the page anchor supplies a reliable Reiwa-year label.",
+      "Do not reject a target form only because the first PDF page starts directly with 様式第２号 instead of a cover page."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.ecole-cpb.com/school-support",
+      "https://www.ecole-cpb.com/files/school_support_R8.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-11 found the 令和８年度 anchor and verified the PDF body contains 松江栄養調理製菓専門学校 and 様式第２号."
+  }
+}

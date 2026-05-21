@@ -1,0 +1,50 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "tokyo-movie-image-form-review-2026",
+  "school": {
+    "school_id": 111,
+    "school_name": "東京俳優・映画＆放送専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "滋慶学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a Tokyo information-disclosure page where a confirmation-form PDF is image-only and cannot prove the rolling target fiscal year.",
+    "steps": [
+      "Start from the Tokyo official-index disclosure URL registered as the school's prefecture_aggregator site.",
+      "Open https://www.movie.ac.jp/school/public_info/.",
+      "Inspect the anchor labeled 確認申請書様式.",
+      "Follow https://www.movie.ac.jp/wp-content/themes/movie/school/public_info/pdf/conf-apl.pdf.",
+      "Classify it as needs_operator_review because the PDF is image-only and no URL or anchor evidence proves FY2026."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.movie.ac.jp/",
+    "disclosure_url": "https://www.movie.ac.jp/school/public_info/",
+    "pdf_url": "https://www.movie.ac.jp/wp-content/themes/movie/school/public_info/pdf/conf-apl.pdf",
+    "pdf_type": "image_only",
+    "fiscal_year": null,
+    "pattern_type": "wordpress",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "tokyo_image_only_target_form_without_year_evidence",
+    "reusable_rules": [
+      "Keep image-only 確認申請書 PDFs visible for operator review.",
+      "Do not accept image-only target-form candidates without OCR or reliable page/URL fiscal-year evidence.",
+      "Prefer the explicit 確認申請書様式 candidate over adjacent general information-disclosure PDFs."
+    ],
+    "anti_patterns": [
+      "Do not drop an image-only confirmation form as generic non-target noise.",
+      "Do not count an image-only form as strict FY2026 success without target-year evidence."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl"
+    ],
+    "notes": "Windows v342 Tokyo 30-site replay records this candidate as reason=target_fiscal_year_not_detected, pdf_type=image_only, pattern_type=wordpress."
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "o-hara-omiya-medical-publication-lag-2026",
+  "school": {
+    "school_id": 212,
+    "school_name": "大原医療秘書福祉専門学校大宮校",
+    "prefecture": "埼玉県",
+    "corporation_name": "大原学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Preserve the O-Hara group table-header pattern where each link says only PDF but the same table column header identifies the confirmation application form.",
+    "search_queries": [],
+    "steps": [
+      "Start from the Saitama official-index disclosure URL https://www.o-hara.ac.jp/about/joho/.",
+      "Find the 大宮校 section, then the 大原医療秘書福祉専門学校大宮校 subsection.",
+      "Use the table header row: 授業科目一覧 / シラバス / 成績評価方法 / 卒業認定方針 / 確認申請書.",
+      "For 医療事務学科１年制, take the fifth PDF link under 確認申請書: https://www.o-hara.ac.jp/about/joho/pdf/2025-1-37-01-5.pdf.",
+      "Classify it as the latest visible target-form candidate, but reject it from strict FY2026 success because the URL names 2025 and no 2026/令和8 confirmation-form evidence is visible on the official page."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.o-hara.ac.jp/",
+    "disclosure_url": "https://www.o-hara.ac.jp/about/joho/",
+    "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-37-01-5.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "table_header_confirmation_application",
+    "reusable_rules": [
+      "When a disclosure table link label is only PDF, attach the same-column header text to the candidate context.",
+      "If the table header is 確認申請書 and the page title supplies 修学支援新制度 context, treat the PDF as a target-form candidate.",
+      "Old-year table-header target forms should become publication-lag evidence rather than generic non-target PDFs."
+    ],
+    "anti_patterns": [
+      "Do not apply the 確認申請書 header to neighboring columns such as 授業科目一覧, シラバス, 成績評価方法, or 卒業認定方針.",
+      "Do not count 2025 confirmation-form PDFs as strict FY2026 success."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/ohara-rca-evidence.jsonl",
+      "_temp/v242-windows-evidence/saitama-full/v242-saitama-evidence.jsonl"
+    ],
+    "notes": "Codex manual RCA on 2026-05-12 checked the live O-Hara official disclosure page. Current-code focused discovery for school_id=212 produced fiscal_year_mismatch:2025 for the fifth table-column PDF under 確認申請書."
+  }
+}

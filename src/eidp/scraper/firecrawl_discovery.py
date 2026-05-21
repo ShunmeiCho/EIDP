@@ -44,7 +44,7 @@ def _firecrawl_map(
     search: str,
     limit: int = 50,
     api_key: str = "",
-) -> list[dict]:
+) -> list[str]:
     """Call Firecrawl map API to discover URLs on a site."""
     if not api_key:
         from eidp.config import settings
@@ -72,9 +72,15 @@ def _firecrawl_map(
             )
             resp.raise_for_status()
             data = resp.json()
-            # API returns list of URL strings
+            # API returns URL strings; tolerate {"url": "..."} records from older responses.
             links = data.get("links", [])
-            return [url if isinstance(url, str) else url.get("url", "") for url in links]
+            urls: list[str] = []
+            for link in links:
+                if isinstance(link, str):
+                    urls.append(link)
+                elif isinstance(link, dict) and isinstance(link.get("url"), str):
+                    urls.append(link["url"])
+            return urls
     except httpx.HTTPStatusError as e:
         log.warning("firecrawl_map_http_error", url=base_url, status=e.response.status_code, error=str(e))
         return []
@@ -138,7 +144,7 @@ def discover_pdfs_for_corporation(
         # Also try shorter name variants for matching
         # e.g., "大原簿記情報専門学校札幌校" → try "札幌校", "札幌"
         short_names = [school_norm]
-        if len(school.school_name) > 6:
+        if len(school.school_name) > 6 and not school.school_name.endswith("専門学校"):
             # Extract location suffix (last 2-4 chars before 校)
             m = re.search(r"(.{2,6}校)$", school.school_name)
             if m:
@@ -200,7 +206,15 @@ def discover_pdfs_for_corporation(
                 joho_dirs.add(dir_url)
 
             if joho_dirs:
-                best_dir = sorted(joho_dirs, key=len)[0]  # Shortest path = most general
+                def _dir_rank(url: str) -> tuple[int, int, str]:
+                    lowered = url.lower()
+                    disclosure_hint = any(
+                        token in lowered
+                        for token in ("joho", "koukai", "disclosure", "kikan", "shugaku", "情報", "公開")
+                    )
+                    return (0 if disclosure_hint else 1, len(url), url)
+
+                best_dir = sorted(joho_dirs, key=_dir_rank)[0]
                 existing = session.query(SchoolSite).filter(
                     SchoolSite.school_id == school.id,
                     SchoolSite.url_type == "school",

@@ -1,0 +1,44 @@
+# Windows operator core install set — used by build_windows_zip.py to
+# populate wheelhouse/. Sprint 8.5.a.
+#
+# Excludes psycopg2 (Postgres dev only), playwright/scrapy (separate
+# add-on ZIP), paddleocr (separate OCR add-on ZIP).
+#
+# Pin policy: floor lower bound only; pip download will resolve the
+# concrete versions and the resulting wheelhouse is what we ship.
+
+# Core runtime
+sqlalchemy>=2.0,<3.0
+alembic>=1.16,<2.0
+openpyxl>=3.1,<4.0
+pydantic>=2.0,<3.0
+pydantic-settings>=2.0,<3.0
+python-dotenv>=1.0,<2.0
+jsonschema>=4.0,<5.0
+typer>=0.16,<1.0
+structlog>=25.0
+streamlit>=1.45,<2.0
+
+# HTTP-only scraper (scraper-basic extra)
+httpx>=0.28,<1.0
+tenacity>=9.0,<10.0
+ddgs>=8.0
+
+# PDF ingest
+pdfplumber>=0.11,<1.0
+pymupdf>=1.25,<2.0
+
+# Windows-conditional transitive deps that pip's cross-platform
+# resolver drops when running `pip download --platform win_amd64`
+# from a non-Windows build host. Listing them explicitly forces the
+# wheelhouse to include the win_amd64 wheels operators actually need.
+# (Without these, first_setup.bat fails at uv pip install with
+#  "No solution found when resolving dependencies".)
+#
+# Discovered live during the 8.5.b dry run on 2026-05-06; folded
+# back into source so future ZIP builds are correct out-of-the-box.
+greenlet>=3.0      # sqlalchemy[asyncio] companion on Win
+watchdog>=2.1.5,<7 # streamlit reloader on non-darwin
+colorama>=0.4      # click / typer ANSI on Win cmd.exe
+tzdata>=2024.1     # pandas zoneinfo on Win (no system tzdb)
+pywin32>=306       # streamlit / watchdog optional but commonly required

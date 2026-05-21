@@ -1,0 +1,152 @@
+EIDP v526 Owner / Operator Request
+Date: 2026-05-20
+
+Purpose
+-------
+v526 is the current package/source verified and Windows side-by-side smoke
+validated candidate after adding the extracted-PDF confirmation/supplement
+entry point to the operator task board. This file is not v1.0 approval and it
+is not permission to switch the active weekly task.
+
+Do not use this request to start owner sign-off until the release decision is
+explicit. Current status remains NOT COMPLETE.
+
+Use this package
+----------------
+Package:
+  C:\EIDP-staging\eidp-windows-v526.zip
+
+Expected SHA256:
+  4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca
+
+Side-by-side root:
+  %USERPROFILE%\EIDP-v526-5b30eb7-env0
+
+Current active root to preserve:
+  %USERPROFILE%\EIDP-v485-70e3db4
+
+Post-reboot note:
+  Preserving the active v485 Scheduled Task only proves that v526 was not
+  accidentally promoted. It is not v1.0 health evidence: the latest observed
+  active v485 weekly log failed before discovery with a SQLAlchemy import
+  error and no v485 last_run.json was present. Owner real-cycle evidence must
+  come from the selected v526 side-by-side lane after the release decision is
+  explicit.
+
+Operator UI note
+----------------
+Extracted `confirmed_target` rows with a latest document now expose
+`抽出済内容を確認・補足` on the school-year task board. The button opens the
+existing PDF確認・手入力 page for that document, prefilled with current
+extracted rows. Saving changes remains the existing append-only manual-entry
+flow with audit coverage; simply opening the page is not a confirmation record.
+
+Network note
+------------
+If the owner/operator PC is on a `10.x` university subnet such as `10.109.*` or
+`10.209.*`, treat that IP as private campus/VPN reachability only. Do not
+expose Streamlit beyond `127.0.0.1`; use an SSH tunnel for remote smoke when SSH
+is reachable, or a manual ZIP/evidence transfer when client isolation, VPN
+routing, or Windows Firewall blocks Mac-to-Windows access. For outbound PDF
+discovery behind a campus proxy, use the standard `HTTP_PROXY` / `HTTPS_PROXY` /
+`NO_PROXY` environment variables; EIDP does not define a separate
+`EIDP_HTTP_PROXY` knob. A Mac-side network timeout is not proof that the Windows
+offline package is broken.
+
+Current side-by-side evidence
+-----------------------------
+- package/source report:
+  docs\reports\2026-05-20-v526-extracted-confirmation-package.md
+- validate_install:
+  logs\win-v526-stage6-v526-env0-validate-after-setup-20260520.json
+- OCR runtime:
+  logs\win-v526-stage6-v526-env0-validate-ocr-runtime-20260520.json
+- UI smoke:
+  logs\win-v526-stage6-v526-ui-smoke-20260520.json
+- Excel smoke:
+  logs\win-v526-stage6-v526-excel-summary-20260520.json
+- weekly canary:
+  logs\win-v526-stage6-v526-last-run-after-weekly-canary-limit50-20260520.json
+- weekly summary:
+  logs\win-v526-stage6-v526-weekly-canary-limit50-summary-20260520.json
+- evidence bundle:
+  logs\stage6-evidence-20260520-091540.zip
+- evidence verifier:
+  logs\stage6-evidence-verify-local-v526-20260520.json
+- residual cleanup dry run:
+  logs\stage6-residual-cleanup-20260520-v526.json
+- active task recovery:
+  logs\stage6-recovery-20260520-v526.json
+- final objective checklist:
+  docs\reports\eidp-current-objective-evidence-checklist.md
+
+Current v526 measured result
+----------------------------
+The v526 bounded FY2026/R8 canary is below the strict release gate:
+
+- selected target-missing schools: 50
+- strict current-FY target PDFs downloaded: 5
+- strict/Excel-ready yield: 5/50 (10.0%)
+- operator-reviewable yield: 50/50 (100.0%)
+- ship_gate_status: below_gate
+
+The v526 Windows smoke proves the operator package works with the extracted
+confirmation/supplement UI. It does not prove the FY2026/R8 60% strict
+acquisition line.
+
+Release decision required before owner sign-off
+-----------------------------------------------
+If the release decision is strict FY2026/R8:
+  - do not request owner sign-off yet;
+  - wait until public FY2026/R8 target PDFs are available enough for strict
+    yield to reach 60%.
+
+If the release decision is publication-lag exception:
+  - fill and approve:
+    docs\reports\2026-05-19-publication-lag-release-exception-record.md
+  - acknowledge FY2026/R8 strict yield is below gate;
+  - use mature-year proof:
+    logs\mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json
+  - then schedule the owner real cycle on the selected v526 side-by-side lane.
+
+Required files to return after owner real cycle
+----------------------------------------------
+- data\output\last_run.json
+- latest logs\run-*.log
+- latest logs\diagnostics-*.txt
+- latest logs\stage6-evidence-*.zip
+- latest logs\stage6-evidence-verify-*.json
+- completed eidp-operator-e2e-template.md with KPI rows and sign-off
+- ManualActionLog / JSONL audit proof: audit page status,
+  manual_action_log count, outbox count before/after flush, and action_id
+  consistency
+- Excel proof: output workbook path or redacted workbook metadata, plus
+  consistency evidence that Excel-ready coverage in the owner template matches
+  the current DB/run metrics
+
+Required KPI / sign-off fields
+------------------------------
+- target_pdf_auto_yield_pct
+- operator_reviewable_yield_pct
+- target_pdf_excel_ready_yield_pct
+- Excel ready rate
+- Excel consistency
+- ship_gate_status
+- ship_readiness_rc
+- manual_action_log count
+- pending JSONL outbox count after flush
+- JSONL action_id consistency
+- OCR scope decision and OCR add-on/runtime proof, if OCR is in release scope
+- release exception reason, if any
+- release exception approval record, if used
+- mature-year proof JSON, if exception is used
+- owner sign-off
+- operator sign-off
+
+Do not approve v1.0 from these alone
+------------------------------------
+- Mac clean ZIP build
+- GitHub CI success
+- Windows setup validator ok=true
+- Read-only browser/UI health smoke
+- bounded limit-50 canary below the strict FY2026/R8 release gate

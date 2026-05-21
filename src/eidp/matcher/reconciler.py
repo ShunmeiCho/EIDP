@@ -9,7 +9,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import openpyxl
+import openpyxl  # type: ignore[import-untyped]
 import structlog
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -58,17 +58,18 @@ def _norm(name: str) -> str:
     return name.replace(" ", "").replace("\u3000", "")
 
 
-def load_target_institutions(path: Path) -> list[TargetInstitution]:
-    """Load 専門学校 entries from MEXT target institution list."""
+def load_target_institutions(path: Path, *, school_type: str | None = "専門学校") -> list[TargetInstitution]:
+    """Load MEXT target institution entries, scoped to v1 vocational schools by default."""
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
     results: list[TargetInstitution] = []
+    scoped_school_type = school_type
 
     for row in ws.iter_rows(min_row=5, values_only=True):
         code = str(row[0]).strip() if row[0] else ""
-        school_type = str(row[2]).strip() if row[2] else ""
+        row_school_type = str(row[2]).strip() if row[2] else ""
 
-        if school_type != "専門学校":
+        if scoped_school_type is not None and row_school_type != scoped_school_type:
             continue
 
         pref_raw = str(row[6]).strip() if row[6] else ""
@@ -78,7 +79,7 @@ def load_target_institutions(path: Path) -> list[TargetInstitution]:
             TargetInstitution(
                 school_code=code,
                 category=str(row[1]).strip() if row[1] else "",
-                school_type=school_type,
+                school_type=row_school_type,
                 name=str(row[3]).strip() if row[3] else "",
                 prefecture=pref_raw,
                 setter_name=setter_name,
@@ -90,20 +91,24 @@ def load_target_institutions(path: Path) -> list[TargetInstitution]:
     return results
 
 
-def reconcile(session: Session, data_dir: Path) -> ReconcileReport:
+def reconcile(session: Session, data_dir: Path, *, school_type: str | None = "専門学校") -> ReconcileReport:
     """Reconcile unmatched schools against target institution list."""
-    targets = load_target_institutions(data_dir / "target_institutions.xlsx")
+    targets = load_target_institutions(data_dir / "target_institutions.xlsx", school_type=school_type)
     report = ReconcileReport()
 
-    # Build target lookup by code and by normalized name+prefecture
-    target_by_code: dict[str, TargetInstitution] = {t.school_code: t for t in targets}
+    # Build target lookup by normalized name+prefecture.
     target_by_norm_pref: dict[tuple[str, str], list[TargetInstitution]] = defaultdict(list)
     for t in targets:
         target_by_norm_pref[(_norm(t.name), t.prefecture)].append(t)
 
     # Get all schools without school_code
-    unresolved = session.query(School).filter(School.school_code.is_(None)).all()
-    report.already_resolved = session.query(func.count(School.id)).filter(School.school_code.isnot(None)).scalar() or 0
+    unresolved_query = session.query(School).filter(School.school_code.is_(None))
+    resolved_query = session.query(func.count(School.id)).filter(School.school_code.isnot(None))
+    if school_type is not None:
+        unresolved_query = unresolved_query.filter(School.school_type == school_type)
+        resolved_query = resolved_query.filter(School.school_type == school_type)
+    unresolved = unresolved_query.all()
+    report.already_resolved = resolved_query.scalar() or 0
 
     log.info("reconcile_start", unresolved=len(unresolved), targets=len(targets))
 
@@ -178,10 +183,13 @@ def reconcile(session: Session, data_dir: Path) -> ReconcileReport:
             report.needs_manual.append(candidate)
         else:
             # Check if school is excluded (閉校/統合/etc.)
+            # Sprint 8.2.1: filter is_current=True so a demoted historical
+            # revision can't masquerade as the latest state.
             from eidp.db.models import SchoolYearStatus
             latest_status = (
                 session.query(SchoolYearStatus)
                 .filter(SchoolYearStatus.school_id == school.id)
+                .filter(SchoolYearStatus.is_current.is_(True))
                 .order_by(SchoolYearStatus.fiscal_year.desc())
                 .first()
             )
@@ -252,43 +260,65 @@ def apply_reconciliation(session: Session, report: ReconcileReport) -> dict[str,
     return stats
 
 
-def verify_identity(session: Session, data_dir: Path) -> dict[str, object]:
+def verify_identity(
+    session: Session,
+    data_dir: Path,
+    *,
+    school_type: str | None = None,
+) -> dict[str, object]:
     """Verification gate: check identity completeness including target list coverage."""
-    from sqlalchemy import text
 
-    from eidp.db.models import SchoolYearStatus
+    scoped_schools = session.query(School)
+    if school_type is not None:
+        scoped_schools = scoped_schools.filter(School.school_type == school_type)
 
-    total = session.query(func.count(School.id)).scalar() or 0
-    with_code = session.query(func.count(School.id)).filter(School.school_code.isnot(None)).scalar() or 0
+    total = scoped_schools.count()
+    with_code = scoped_schools.filter(School.school_code.isnot(None)).count()
     without_code = total - with_code
 
     # Check for duplicate codes
-    dupes = session.execute(
-        text("SELECT school_code, count(*) FROM school WHERE school_code IS NOT NULL GROUP BY school_code HAVING count(*) > 1")
-    ).fetchall()
+    duplicate_query = (
+        session.query(School.school_code, func.count(School.id))
+        .filter(School.school_code.isnot(None))
+    )
+    if school_type is not None:
+        duplicate_query = duplicate_query.filter(School.school_type == school_type)
+    duplicate_query = duplicate_query.group_by(School.school_code).having(func.count(School.id) > 1)
+    dupes = duplicate_query.all()
 
-    # Count excluded schools (no code needed)
-    excluded_ids = set()
-    for row in session.query(SchoolYearStatus.school_id).filter(SchoolYearStatus.excluded_reason.isnot(None)).distinct():
-        excluded_ids.add(row[0])
+    # Count excluded schools (no code needed). Sprint 8.2.2: use the shared
+    # latest_excluded_school_ids helper so we count ONLY schools whose
+    # CURRENT revision in their LATEST fiscal year carries excluded_reason.
+    # The previous distinct() over all current-revision exclusions counted
+    # historical-year exclusions (e.g. FY2025 current="閉校") even when the
+    # latest year's current revision was active again — which produced
+    # false positives in `pass`.
+    from eidp.db.current_helpers import latest_excluded_school_ids
+    excluded_ids = {row[0] for row in latest_excluded_school_ids(session)}
 
     # Schools without code that are NOT excluded = truly unresolved
-    no_code_schools = session.query(School).filter(School.school_code.is_(None)).all()
+    no_code_query = session.query(School).filter(School.school_code.is_(None))
+    if school_type is not None:
+        no_code_query = no_code_query.filter(School.school_type == school_type)
+    no_code_schools = no_code_query.all()
     truly_unresolved = [s for s in no_code_schools if s.id not in excluded_ids]
 
-    # Target list gap: MEXT target 専門学校 codes not in our DB
+    # Target list gap: scoped MEXT target codes not in our DB.
     target_list_path = data_dir / "target_institutions.xlsx"
     target_gap = 0
     if target_list_path.exists():
-        targets = load_target_institutions(target_list_path)
+        targets = load_target_institutions(target_list_path, school_type=school_type)
+        db_code_query = session.query(School.school_code).filter(School.school_code.isnot(None))
+        if school_type is not None:
+            db_code_query = db_code_query.filter(School.school_type == school_type)
         db_codes = set()
-        for row in session.query(School.school_code).filter(School.school_code.isnot(None)):
+        for row in db_code_query:
             if row[0]:
                 db_codes.add(row[0])
         target_codes = {t.school_code for t in targets}
         target_gap = len(target_codes - db_codes)
 
-    result = {
+    result: dict[str, object] = {
         "total_schools": total,
         "with_code": with_code,
         "without_code": without_code,

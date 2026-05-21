@@ -1,25 +1,30 @@
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from eidp.db.locking import acquire_lock
 from eidp.db.models import (
     Base,
     Department,
     DepartmentChange,
+    ManualActionLog,
     School,
     SchoolAlias,
 )
 from eidp.review.operator_pages import (
     ProposalDecision,
+    _active_dept_alias_changes,
     _load_decision_index,
     _read_proposals,
     _record_decision,
     apply_dept_alias_proposal,
     apply_school_alias_proposal,
+    void_department_change,
 )
 
 
@@ -29,13 +34,31 @@ def _session() -> Session:
     return Session(engine)
 
 
-def test_apply_school_alias_inserts_when_absent() -> None:
+def _lock_path(tmp_path: Path) -> Path:
+    return tmp_path / "data" / ".lock"
+
+
+def test_proposal_write_helpers_require_lock_path() -> None:
+    for helper in (
+        apply_school_alias_proposal,
+        apply_dept_alias_proposal,
+        void_department_change,
+    ):
+        parameter = inspect.signature(helper).parameters["lock_path"]
+        assert parameter.default is inspect.Parameter.empty
+
+
+def test_apply_school_alias_inserts_when_absent(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.flush()
         created, reason = apply_school_alias_proposal(
-            session, school_id=1, alias_name="A-short",
+            session,
+            school_id=1,
+            alias_name="A-short",
+            actor="reviewer-a",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is True
         assert reason == "inserted"
@@ -46,18 +69,29 @@ def test_apply_school_alias_inserts_when_absent() -> None:
         )
         assert got is not None
         assert got.alias_type == "competition_template"
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "school_alias_approved"
+        assert audit.actor == "reviewer-a"
+        assert audit.target_table == "school_alias"
+        assert audit.target_id == got.id
+        assert json.loads(audit.new_value or "{}") == {
+            "school_id": 1,
+            "alias_name": "A-short",
+            "alias_type": "competition_template",
+            "source": "proposal_review_queue",
+        }
     finally:
         session.close()
 
 
-def test_apply_school_alias_is_idempotent() -> None:
+def test_apply_school_alias_is_idempotent(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.add(SchoolAlias(school_id=1, alias_name="A-short", alias_type="x", source="y"))
         session.flush()
         created, reason = apply_school_alias_proposal(
-            session, school_id=1, alias_name="A-short",
+            session, school_id=1, alias_name="A-short", lock_path=_lock_path(tmp_path),
         )
         assert created is False
         assert reason == "already_exists"
@@ -65,14 +99,17 @@ def test_apply_school_alias_is_idempotent() -> None:
         session.close()
 
 
-def test_apply_dept_alias_records_department_change() -> None:
+def test_apply_dept_alias_records_department_change(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
         session.flush()
         created, reason = apply_dept_alias_proposal(
-            session, department_id=9, old_name="プロミュージシャン学科",
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is True
         dc = (
@@ -85,19 +122,52 @@ def test_apply_dept_alias_records_department_change() -> None:
         assert dc.new_name == "プロミュージシャン科"
         assert dc.change_type == "alias"
         assert dc.verified is False
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "dept_alias_approved"
+        assert audit.target_table == "department_change"
+        assert audit.target_id == dc.id
     finally:
         session.close()
 
 
-def test_apply_dept_alias_idempotent() -> None:
+def test_apply_dept_alias_uses_operator_actor_in_audit(tmp_path: Path) -> None:
     session = _session()
     try:
         session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
         session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
         session.flush()
-        apply_dept_alias_proposal(session, department_id=9, old_name="プロミュージシャン学科")
+
         created, reason = apply_dept_alias_proposal(
-            session, department_id=9, old_name="プロミュージシャン学科",
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            actor="reviewer-a",
+            lock_path=_lock_path(tmp_path),
+        )
+
+        assert created is True
+        assert reason == "inserted"
+        audit = session.query(ManualActionLog).one()
+        assert audit.actor == "reviewer-a"
+    finally:
+        session.close()
+
+
+def test_apply_dept_alias_idempotent(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.flush()
+        lock_path = _lock_path(tmp_path)
+        apply_dept_alias_proposal(
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            lock_path=lock_path,
+        )
+        created, reason = apply_dept_alias_proposal(
+            session, department_id=9, old_name="プロミュージシャン学科", lock_path=lock_path,
         )
         assert created is False
         assert reason == "already_exists"
@@ -105,14 +175,223 @@ def test_apply_dept_alias_idempotent() -> None:
         session.close()
 
 
-def test_apply_dept_alias_rejects_nonexistent_dept() -> None:
+def test_apply_dept_alias_allows_recreating_voided_alias(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.add(
+            DepartmentChange(
+                department_id=9,
+                change_type="alias",
+                fiscal_year=2026,
+                old_name="プロミュージシャン学科",
+                new_name="プロミュージシャン科",
+                verified=False,
+                voided=True,
+                voided_by="operator",
+                void_reason="wrong approval",
+            )
+        )
+        session.flush()
+
+        created, reason = apply_dept_alias_proposal(
+            session,
+            department_id=9,
+            old_name="プロミュージシャン学科",
+            lock_path=_lock_path(tmp_path),
+        )
+        assert created is True
+        assert reason == "inserted"
+        rows = (
+            session.query(DepartmentChange)
+            .filter(
+                DepartmentChange.department_id == 9,
+                DepartmentChange.old_name == "プロミュージシャン学科",
+                DepartmentChange.change_type == "alias",
+            )
+            .order_by(DepartmentChange.id.asc())
+            .all()
+        )
+        assert len(rows) == 2
+        assert rows[0].voided is True
+        assert rows[1].voided is False
+    finally:
+        session.close()
+
+
+def test_void_department_change_marks_row_and_writes_audit(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        change = DepartmentChange(
+            department_id=9,
+            change_type="alias",
+            fiscal_year=2026,
+            old_name="プロミュージシャン学科",
+            new_name="プロミュージシャン科",
+            verified=False,
+        )
+        session.add(change)
+        session.flush()
+
+        changed, reason = void_department_change(
+            session,
+            change_id=change.id,
+            actor="tester",
+            reason="wrong department",
+            lock_path=_lock_path(tmp_path),
+        )
+        assert changed is True
+        assert reason == "voided"
+
+        session.refresh(change)
+        assert change.voided is True
+        assert change.voided_by == "tester"
+        assert change.void_reason == "wrong department"
+        assert change.voided_at is not None
+
+        audit = session.query(ManualActionLog).one()
+        assert audit.action_type == "dept_change_void"
+        assert audit.target_table == "department_change"
+        assert audit.target_id == change.id
+    finally:
+        session.close()
+
+
+def test_active_dept_alias_changes_excludes_voided_rows() -> None:
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.add_all([
+            DepartmentChange(
+                id=1,
+                department_id=9,
+                change_type="alias",
+                fiscal_year=2026,
+                old_name="プロミュージシャン学科",
+                new_name="プロミュージシャン科",
+                verified=False,
+            ),
+            DepartmentChange(
+                id=2,
+                department_id=9,
+                change_type="alias",
+                fiscal_year=2026,
+                old_name="誤った別名",
+                new_name="プロミュージシャン科",
+                verified=False,
+                voided=True,
+                voided_by="operator",
+                void_reason="wrong approval",
+            ),
+        ])
+        session.flush()
+
+        rows = _active_dept_alias_changes(session)
+
+        assert len(rows) == 1
+        assert rows[0]["change_id"] == 1
+        assert rows[0]["school_name"] == "学校A"
+        assert rows[0]["canonical_name"] == "プロミュージシャン科"
+        assert rows[0]["old_name"] == "プロミュージシャン学科"
+    finally:
+        session.close()
+
+
+def test_apply_dept_alias_rejects_nonexistent_dept(tmp_path: Path) -> None:
     session = _session()
     try:
         created, reason = apply_dept_alias_proposal(
-            session, department_id=99999, old_name="whatever",
+            session,
+            department_id=99999,
+            old_name="whatever",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is False
         assert reason == "dept_not_found"
+    finally:
+        session.close()
+
+
+def test_apply_dept_alias_returns_lock_busy_without_writing(tmp_path: Path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        session.commit()
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            created, reason = apply_dept_alias_proposal(
+                session,
+                department_id=9,
+                old_name="プロミュージシャン学科",
+                lock_path=lock_path,
+            )
+
+        assert created is False
+        assert reason == "lock_busy"
+        assert session.query(DepartmentChange).count() == 0
+    finally:
+        session.close()
+
+
+def test_apply_school_alias_returns_lock_busy_without_writing(tmp_path: Path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.commit()
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            created, reason = apply_school_alias_proposal(
+                session,
+                school_id=1,
+                alias_name="A-short",
+                lock_path=lock_path,
+            )
+
+        assert created is False
+        assert reason == "lock_busy"
+        assert session.query(SchoolAlias).count() == 0
+    finally:
+        session.close()
+
+
+def test_void_department_change_returns_lock_busy_without_writing(tmp_path: Path) -> None:
+    session = _session()
+    lock_path = tmp_path / "data" / ".lock"
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="学校A"))
+        session.add(Department(id=9, school_id=1, canonical_name="プロミュージシャン科"))
+        change = DepartmentChange(
+            department_id=9,
+            change_type="alias",
+            fiscal_year=2026,
+            old_name="プロミュージシャン学科",
+            new_name="プロミュージシャン科",
+            verified=False,
+        )
+        session.add(change)
+        session.commit()
+
+        with acquire_lock(lock_path, owner="weekly_runner"):
+            changed, reason = void_department_change(
+                session,
+                change_id=change.id,
+                actor="tester",
+                reason="wrong department",
+                lock_path=lock_path,
+            )
+
+        assert changed is False
+        assert reason == "lock_busy"
+        session.refresh(change)
+        assert change.voided is False
+        assert session.query(ManualActionLog).count() == 0
     finally:
         session.close()
 
@@ -137,7 +416,56 @@ def test_record_decision_writes_audit_jsonl(tmp_path: Path) -> None:
     assert row["proposal_kind"] == "school_alias"
 
 
-def test_apply_preserves_school_context_on_picked_candidate() -> None:
+def test_record_decision_can_write_manual_action_log(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        decision = ProposalDecision(
+            decision="deferred",
+            proposal_kind="school_alias_branch_of_existing",
+            template_name="A-branch",
+            target_id=None,
+            operator_name="reviewer-a",
+            note="needs school confirmation",
+            timestamp="2026-05-20T00:00:00+00:00",
+        )
+        audit_path = tmp_path / "proposal-decisions.jsonl"
+
+        row = _record_decision(decision, audit_path, session=session)
+
+        assert row is not None
+        audit = session.query(ManualActionLog).one()
+        assert audit.id == row.id
+        assert audit.action_type == "proposal_decision_recorded"
+        assert audit.target_table == "proposal_decision"
+        assert audit.target_id is None
+        assert audit.actor == "reviewer-a"
+        payload = json.loads(audit.new_value or "{}")
+        assert payload["decision"] == "deferred"
+        assert payload["proposal_kind"] == "school_alias_branch_of_existing"
+        assert payload["template_name"] == "A-branch"
+    finally:
+        session.close()
+
+
+def test_lock_busy_decision_does_not_hide_dept_proposal(tmp_path: Path) -> None:
+    audit = tmp_path / "decisions.jsonl"
+    _record_decision(
+        ProposalDecision(
+            decision="lock_busy",
+            proposal_kind="dept_alias",
+            template_name="プロミュージシャン学科",
+            target_id=9,
+            operator_name="tester",
+            note="lock busy",
+            timestamp="2026-04-24T00:00:00+00:00",
+        ),
+        audit,
+    )
+
+    assert ("dept_alias", "プロミュージシャン学科") not in _load_decision_index(audit)
+
+
+def test_apply_preserves_school_context_on_picked_candidate(tmp_path: Path) -> None:
     """D-scope: when operator picks a candidate from an ambiguous proposal,
     the resulting SchoolAlias is bound to THAT candidate, not any other.
     """
@@ -148,7 +476,10 @@ def test_apply_preserves_school_context_on_picked_candidate() -> None:
         session.flush()
         # Operator picks id=1 as the canonical 蒲田 school
         created, _ = apply_school_alias_proposal(
-            session, school_id=1, alias_name="日本工学院(蒲田)",
+            session,
+            school_id=1,
+            alias_name="日本工学院(蒲田)",
+            lock_path=_lock_path(tmp_path),
         )
         assert created is True
         # Only id=1 gets the alias
@@ -159,7 +490,7 @@ def test_apply_preserves_school_context_on_picked_candidate() -> None:
         session.close()
 
 
-def test_apply_school_alias_refuses_cross_school_conflict() -> None:
+def test_apply_school_alias_refuses_cross_school_conflict(tmp_path: Path) -> None:
     """MEDIUM fix: alias already pointing to a different school must not be
     silently created — matcher's ambiguity guard would otherwise flip the
     row to school_name_ambiguous. Refuse up-front with a specific reason."""
@@ -170,7 +501,7 @@ def test_apply_school_alias_refuses_cross_school_conflict() -> None:
         session.add(SchoolAlias(school_id=1, alias_name="sharedKey", alias_type="x", source="y"))
         session.flush()
         created, reason = apply_school_alias_proposal(
-            session, school_id=2, alias_name="sharedKey",
+            session, school_id=2, alias_name="sharedKey", lock_path=_lock_path(tmp_path),
         )
         assert created is False
         assert reason.startswith("conflict_other_school:")

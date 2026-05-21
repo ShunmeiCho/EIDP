@@ -16,13 +16,14 @@ import shutil
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import cast
 
 import structlog
-from openpyxl import load_workbook
-from openpyxl.worksheet.worksheet import Worksheet
-from sqlalchemy import func as sql_func
+from openpyxl import load_workbook  # type: ignore[import-untyped]
+from openpyxl.worksheet.worksheet import Worksheet  # type: ignore[import-untyped]
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import (
     Department,
     DepartmentChange,
@@ -31,8 +32,13 @@ from eidp.db.models import (
     School,
     SchoolAlias,
 )
+from eidp.reports.coverage import gap_report_for_export
 
 log = structlog.get_logger(__name__)
+
+
+class TargetFiscalYearDataMissingError(RuntimeError):
+    """Raised when a business export would silently produce an empty target year."""
 
 _ENROLLMENT_HEADER_TEXT = "在籍数"
 _INTL_HEADER_TEXT = "留学生"
@@ -345,19 +351,23 @@ class CompetitionMatcher:
 
         # Dept-level alias index from DepartmentChange(change_type='alias').
         # Join to Department to scope alias to its school for safety.
-        dept_alias_rows = (
+        dept_alias_rows = cast(
+            list[tuple[DepartmentChange, Department]],
             self.session.query(DepartmentChange, Department)
             .join(Department, Department.id == DepartmentChange.department_id)
-            .filter(DepartmentChange.change_type == "alias")
-            .all()
+            .filter(
+                DepartmentChange.change_type == "alias",
+                DepartmentChange.voided.is_(False),
+            )
+            .all(),
         )
         for change, dept in dept_alias_rows:
             if not change.old_name:
                 continue
-            key = (dept.school_id, _norm(change.old_name))
+            dept_alias_key = (dept.school_id, _norm(change.old_name))
             # First-wins is safe here: same (school, old_name) shouldn't map
             # to two departments. If it does, operator review should catch it.
-            self._dept_alias_index.setdefault(key, dept.id)
+            self._dept_alias_index.setdefault(dept_alias_key, dept.id)
 
     def _depts_for_school(self, school_id: int) -> list[Department]:
         if school_id not in self._dept_cache:
@@ -527,35 +537,14 @@ def _diagnose_gap(
 
     # School has data for this FY but dept-level aggregation failed
     if result.template_row.dept_name and not result.department_ids:
-        return "dept_unmatched", f"db_dept_count={len(session.query(Department).filter(Department.school_id == result.school_id).all())}"
+        dept_count = len(
+            session.query(Department)
+            .filter(Department.school_id == result.school_id)
+            .all()
+        )
+        return "dept_unmatched", f"db_dept_count={dept_count}"
 
     return "no_fy_data", ""
-
-
-def auto_select_fiscal_year(session: Session) -> int:
-    """Pick the fiscal year with the most DepartmentYearly coverage.
-
-    Preferred signal for 担当者 reports where 最新 really means 'the most
-    populated year in DB', not a calendar projection.
-    """
-    rows = (
-        session.query(
-            DepartmentYearly.fiscal_year,
-            sql_func.count(DepartmentYearly.id),
-        )
-        .filter(
-            DepartmentYearly.document_id.isnot(None),
-            DepartmentYearly.is_current.is_(True),
-        )
-        .group_by(DepartmentYearly.fiscal_year)
-        .order_by(sql_func.count(DepartmentYearly.id).desc())
-        .all()
-    )
-    if rows:
-        return int(rows[0][0])
-    # Fallback to calendar year if DB is empty
-    from datetime import datetime
-    return datetime.now().year
 
 
 def _append_year_columns_to_block(
@@ -632,14 +621,23 @@ def export_competition_workbook(
 ) -> dict[str, int]:
     """Generate the 競合校の在校生数 workbook for the given fiscal year.
 
-    fiscal_year=None → pick the year with the most DB coverage.
+    ``fiscal_year=None`` uses ``settings.target_fiscal_year`` for the business
+    path. Historical exports must pass an explicit year; never silently choose
+    the most-populated old year.
     """
     if not template_path.exists():
         raise FileNotFoundError(f"template not found: {template_path}")
 
+    business_target_export = fiscal_year is None
     if fiscal_year is None:
-        fiscal_year = auto_select_fiscal_year(session)
-        log.info("auto_fiscal_year_selected", fiscal_year=fiscal_year)
+        fiscal_year = settings.target_fiscal_year
+        log.info("target_fiscal_year_selected", fiscal_year=fiscal_year)
+    export_gap = gap_report_for_export(session, fiscal_year=fiscal_year, school_type="専門学校")
+    if business_target_export and not export_gap.has_target_year_data:
+        raise TargetFiscalYearDataMissingError(
+            f"target fiscal year {fiscal_year} has no DepartmentYearly rows; "
+            "run target-year acquisition/review before business export"
+        )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(template_path, output_path)
@@ -766,4 +764,8 @@ def export_competition_workbook(
         "cells_written": cells_written,
         "ratio_cells_written": ratio_cells_written,
         "fiscal_year": fiscal_year,
+        "target_yearly_rows": export_gap.target_yearly_rows,
+        "excel_ready_schools": export_gap.excel_ready_schools,
+        "target_pdf_schools": export_gap.target_pdf_schools,
+        "total_schools": export_gap.total_schools,
     }

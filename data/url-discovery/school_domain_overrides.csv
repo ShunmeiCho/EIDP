@@ -1,0 +1,118 @@
+prefecture,corporation_name,school_name,domain_url,url_type,confidence,notes
+東京都,日本教育財団,東京モード学園,https://www.mode.ac.jp/tokyo,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+東京都,日本教育財団,東京モード学園,https://www.nkz.ac.jp/clginfo/tm/tmZ-studyspt_13.html,disclosure,0.98,NKZ disclosure page embeds the Mode target-form PDF; keep above brand homepage for bounded canaries.
+大阪府,日本教育財団,大阪モード学園,https://www.mode.ac.jp/osaka,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+大阪府,日本教育財団,大阪モード学園,https://www.nkz.ac.jp/clginfo/om/omZ-studyspt_13.html,disclosure,0.98,NKZ disclosure page lists fiscal-year target-form PDFs including 2025.
+愛知県,日本教育財団,名古屋モード学園,https://www.mode.ac.jp/nagoya,school,0.95,Mode brand uses mode.ac.jp rather than the NKZ corporation portal.
+愛知県,日本教育財団,名古屋モード学園,https://www.nkz.ac.jp/clginfo/nm/nmZ-studyspt_13.html,disclosure,0.98,NKZ disclosure page embeds the Mode target-form PDF; keep above brand homepage for bounded canaries.
+東京都,日本教育財団,HAL東京,https://www.hal.ac.jp/tokyo,school,0.95,HAL brand uses hal.ac.jp rather than the NKZ corporation portal.
+東京都,日本教育財団,HAL東京,https://www.nkz.ac.jp/clginfo/thinfo.html,disclosure,0.98,NKZ disclosure index links to the HAL Tokyo target-form subpage.
+大阪府,日本教育財団,HAL大阪,https://www.hal.ac.jp/osaka,school,0.95,HAL brand uses hal.ac.jp rather than the NKZ corporation portal.
+大阪府,日本教育財団,HAL大阪,https://www.nkz.ac.jp/clginfo/ohinfo.html,disclosure,0.98,NKZ disclosure index links to the HAL Osaka target-form subpage.
+愛知県,日本教育財団,HAL名古屋,https://www.hal.ac.jp/nagoya,school,0.95,HAL brand uses hal.ac.jp rather than the NKZ corporation portal.
+愛知県,日本教育財団,HAL名古屋,https://www.nkz.ac.jp/clginfo/nhinfo.html,disclosure,0.98,NKZ disclosure index links to the HAL Nagoya target-form subpage.
+東京都,日本教育財団,首都医校,https://www.iko.ac.jp/tokyo,school,0.95,Iko brand uses iko.ac.jp rather than the NKZ corporation portal.
+東京都,日本教育財団,首都医校,https://www.nkz.ac.jp/clginfo/siinfo.html,disclosure,0.98,NKZ disclosure index links to the Shuto Iko target-form subpage.
+大阪府,日本教育財団,大阪医専,https://www.iko.ac.jp/osaka,school,0.95,Iko brand uses iko.ac.jp rather than the NKZ corporation portal.
+大阪府,日本教育財団,大阪医専,https://www.nkz.ac.jp/clginfo/oiinfo.html,disclosure,0.98,NKZ disclosure index links to the Osaka Iko target-form subpage.
+愛知県,日本教育財団,名古屋医専,https://www.iko.ac.jp/nagoya,school,0.95,Iko brand uses iko.ac.jp rather than the NKZ corporation portal.
+愛知県,日本教育財団,名古屋医専,https://www.nkz.ac.jp/clginfo/niinfo.html,disclosure,0.98,NKZ disclosure index links to the Nagoya Iko target-form subpage.
+東京都,片柳学園,日本工学院専門学校,https://www.neec.ac.jp/portal/public/mext-scholarship/,school,0.98,NEEC public MEXT support page lists the Kamata target-form PDF but has no FY2026 label; keep as exact crawl entry without trusted-year fill.
+東京都,片柳学園,日本工学院八王子専門学校,https://www.neec.ac.jp/portal/public/mext-scholarship/,school,0.98,NEEC public MEXT support page lists the Hachioji target-form PDF but has no FY2026 label; keep as exact crawl entry without trusted-year fill.
+北海道,片柳学園,日本工学院北海道専門学校,https://www.nkhs.ac.jp/about/publicindex/,disclosure,0.98,NKHS information disclosure page lists target-form application PDFs through FY2025; live page matched school name and application-form anchor on 2026-05-20.
+千葉県,三幸学園,千葉医療秘書&IT専門学校,https://www.sanko.ac.jp/chiba-med/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+北海道,三幸学園,札幌医療秘書福祉＆IT専門学校,https://www.sanko.ac.jp/sapporo-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+宮城県,三幸学園,仙台医療秘書福祉＆IT専門学校,https://www.sanko.ac.jp/sendai-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+埼玉県,三幸学園,大宮医療秘書専門学校,https://www.sanko.ac.jp/omiya-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+東京都,三幸学園,東京未来大学福祉保育専門学校,https://www.sanko.ac.jp/tokyo-fukushi/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+東京都,三幸学園,東京医療秘書歯科衛生＆IT専門学校,https://www.sanko.ac.jp/tokyo-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+東京都,三幸学園,東京立川こども専門学校,https://www.sanko.ac.jp/tachikawa-child/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+神奈川県,三幸学園,横浜医療秘書専門学校,https://www.sanko.ac.jp/yokohama-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched renamed site on 2026-05-20.
+愛知県,三幸学園,名古屋医療秘書福祉&IT専門学校,https://www.sanko.ac.jp/nagoya-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+大阪府,三幸学園,大阪医療秘書福祉&IT専門学校,https://www.sanko.ac.jp/osaka-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+広島県,三幸学園,広島医療秘書こども専門学校,https://www.sanko.ac.jp/hiroshima-med/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+兵庫県,三幸学園,神戸元町医療秘書専門学校,https://www.sanko.ac.jp/kobe-med/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡医療秘書福祉専門学校,https://www.sanko.ac.jp/fukuoka-med/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+埼玉県,三幸学園,大宮みらいAIアンドIT専門学校,https://www.sanko.ac.jp/omiya-ai/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+東京都,三幸学園,東京みらいAIアンドIT専門学校,https://www.sanko.ac.jp/tokyo-ai/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+沖縄県,三幸学園,沖縄みらいAIアンドIT専門学校,https://www.sanko.ac.jp/okinawa-ai/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+北海道,三幸学園,札幌スポーツ&メディカル専門学校,https://www.sanko.ac.jp/sapporo-sports/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+宮城県,三幸学園,仙台リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/sendai-sports/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+東京都,三幸学園,東京リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/tokyo-sports/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+神奈川県,三幸学園,横浜リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/yokohama-sports/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+愛知県,三幸学園,名古屋リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/nagoya-sports/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+大阪府,三幸学園,大阪リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/osaka-sports/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+広島県,三幸学園,広島リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/hiroshima-sports/,school,0.95,Sanko exact school site; v500 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+千葉県,三幸学園,千葉リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/chiba-sports/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/fukuoka-sports/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+沖縄県,三幸学園,沖縄リゾート＆スポーツ専門学校,https://www.sanko.ac.jp/okinawa-sports/,school,0.95,Sanko exact school site; v501 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+北海道,三幸学園,札幌ビューティアート専門学校,https://www.sanko.ac.jp/sapporo-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+埼玉県,三幸学園,大宮ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/omiya-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+千葉県,三幸学園,千葉ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/chiba-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+東京都,三幸学園,東京ビューティアート専門学校,https://www.sanko.ac.jp/tokyo-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+東京都,三幸学園,東京ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/tachikawa-beauty/,school,0.95,Sanko exact school site; v501 limit-50 RCA missed this school via corporation root; live title matched renamed Tokyo Beauty & Bridal site on 2026-05-20.
+神奈川県,三幸学園,横浜ビューティアート専門学校,https://www.sanko.ac.jp/yokohama-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+愛知県,三幸学園,名古屋ビューティアート専門学校,https://www.sanko.ac.jp/nagoya-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+大阪府,三幸学園,大阪ビューティアート専門学校,https://www.sanko.ac.jp/osaka-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+広島県,三幸学園,広島ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/hiroshima-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡ビューティアート専門学校,https://www.sanko.ac.jp/fukuoka-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+沖縄県,三幸学園,沖縄ビューティ＆ブライダル専門学校,https://www.sanko.ac.jp/okinawa-beauty/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+北海道,三幸学園,札幌こども専門学校,https://www.sanko.ac.jp/sapporo-child/,school,0.95,Sanko exact school site; live root and disclosure page resolved on 2026-05-20.
+宮城県,三幸学園,仙台こども専門学校,https://www.sanko.ac.jp/sendai-child/,school,0.95,Sanko exact school site; live root and disclosure page resolved on 2026-05-20.
+埼玉県,三幸学園,大宮こども専門学校,https://www.sanko.ac.jp/omiya-child/,school,0.95,Sanko exact school site; live root and disclosure page resolved on 2026-05-20.
+千葉県,三幸学園,千葉こども専門学校,https://www.sanko.ac.jp/chiba-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+東京都,三幸学園,東京こども専門学校,https://www.sanko.ac.jp/tokyo-child/,school,0.95,Sanko exact school site; v516 limit-50 RCA missed this school via corporation root; live title matched on 2026-05-20.
+神奈川県,三幸学園,横浜こども専門学校,https://www.sanko.ac.jp/yokohama-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
+愛知県,三幸学園,名古屋こども専門学校,https://www.sanko.ac.jp/nagoya-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
+大阪府,三幸学園,大阪こども専門学校,https://www.sanko.ac.jp/osaka-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
+兵庫県,三幸学園,神戸元町こども専門学校,https://www.sanko.ac.jp/kobe-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+福岡県,三幸学園,福岡こども専門学校,https://www.sanko.ac.jp/fukuoka-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+沖縄県,三幸学園,沖縄こども専門学校,https://www.sanko.ac.jp/okinawa-child/,school,0.95,Sanko exact school site; live title matched on 2026-05-20.
+福岡県,三幸学園,福岡ウェディング＆ブライダル専門学校,https://www.sanko.ac.jp/fukuoka-bridal/,school,0.95,Sanko exact school site; live title matched on 2026-05-18.
+大阪府,三幸学園,大阪ウェディング＆ブライダル専門学校,https://www.sanko.ac.jp/osaka-bridal/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
+東京都,三幸学園,東京墨田看護専門学校,https://www.sanko.ac.jp/tokyo-nurse/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
+大阪府,三幸学園,辻学園調理製菓専門学校,https://www.sanko.ac.jp/osaka-chori/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded target PDF for operator review on 2026-05-18.
+大阪府,三幸学園,辻学園栄養専門学校,https://www.sanko.ac.jp/osaka-eiyo/,school,0.95,Sanko exact school site; targeted 2025 replay downloaded and ingested target PDF on 2026-05-18.
+福岡県,麻生塾,麻生情報ビジネス専門学校,https://asojuku.ac.jp/about/disclosure/abcc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生外語観光&ブライダル専門学校,https://asojuku.ac.jp/about/disclosure/aftc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生医療福祉&保育専門学校福岡校,https://asojuku.ac.jp/about/disclosure/amfc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay found target PDF on 2026-05-19.
+福岡県,麻生塾,麻生建築&デザイン専門学校,https://asojuku.ac.jp/about/disclosure/aadc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生公務員専門学校福岡校,https://asojuku.ac.jp/about/disclosure/apfc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,ASOポップカルチャー専門学校,https://asojuku.ac.jp/about/disclosure/apc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生美容専門学校,https://asojuku.ac.jp/about/disclosure/abc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生リハビリテーション大学校,https://asojuku.ac.jp/about/disclosure/arc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生工科自動車大学校,https://asojuku.ac.jp/about/disclosure/acet/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,麻生情報ビジネス専門学校北九州校,https://asojuku.ac.jp/about/disclosure/abkc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生医療福祉＆観光カレッジ,https://asojuku.ac.jp/about/disclosure/amtc/,disclosure,0.98,ASO exact disclosure URL; live school portal link resolves to AMTC disclosure on 2026-05-19.
+福岡県,麻生塾,麻生公務員専門学校北九州校,https://asojuku.ac.jp/about/disclosure/apkc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+福岡県,麻生塾,専門学校麻生看護大学校,https://asojuku.ac.jp/about/disclosure/anc/,disclosure,0.98,ASO exact disclosure URL; targeted 2025 replay downloaded and ingested target PDF on 2026-05-19.
+新潟県,国際総合学園,新潟ビジネス専門学校,https://www.nbc.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟会計ビジネス専門学校,https://www.nabi.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟公務員専門学校,https://ncool.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟法律大学校,https://nleed.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟コンピュータ専門学校,https://www.ncc-net.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟デザイン専門学校,https://ncadnet.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,日本アニメ・マンガ専門学校,https://web-jam.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際映像メディア専門学校,https://www.i-media.cc/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際映像メディア専門学校,https://www.i-media.cc/information/,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際音楽・ダンス・エンタテイメント専門学校,http://show-net.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際音楽・ダンス・エンタテイメント専門学校,https://show-net.jp/information/,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際トータルファッション専門学校,https://nitf.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際ホテル・ブライダル専門学校,http://www.wish-web.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際外語・観光・エアライン専門学校,http://www.air.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際外語・観光・エアライン専門学校,https://www.air.ac.jp/koukai,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際メディカル専門学校,https://www.icm-net.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際こども・福祉カレッジ,https://www.wm-c.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟工科専門学校,https://www.nit-web.net/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,専門学校新潟国際自動車大学校,https://www.gia.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,専門学校新潟国際自動車大学校,https://www.gia.ac.jp/about/disclosure/,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,国際調理製菓専門学校,https://food-673.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,新潟農業・バイオ専門学校,https://abio.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際ペットワールド専門学校,https://www.wan-c.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,アップルスポーツカレッジ,https://www.applesports.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,JAPANサッカーカレッジ,https://cupsnet.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,三条看護・医療・歯科衛生専門学校,https://www.hospi.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際自然環境アウトドア専門学校,https://www.i-nac.ac.jp/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際スノーボード＆スケートボード専門学校,https://jwsc-snow.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.
+新潟県,国際総合学園,国際スノーボード＆スケートボード専門学校,https://jwsc-snow.com/disclosure,disclosure,0.98,NSG exact disclosure page; targeted 2025 replay found yearless target form.
+新潟県,国際総合学園,伝統文化と環境福祉の専門学校,http://www.sado-nsg.com/,school,0.95,NSG exact school homepage; mydreams.jp school list resolved on 2026-05-19.

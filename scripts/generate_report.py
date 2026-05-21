@@ -1,14 +1,16 @@
 """Generate the MEXT matching report."""
 
 import json
+from pathlib import Path
 
-DATA_DIR = '/Users/shunmei/workspace/EIDP/data/mext'
-REPORT_PATH = '/Users/shunmei/workspace/EIDP/docs/reports/2026-04-11-mext-matching-report.md'
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = REPO_ROOT / 'data' / 'mext'
+REPORT_PATH = REPO_ROOT / 'docs' / 'reports' / '2026-04-11-mext-matching-report.md'
 
-with open(f'{DATA_DIR}/matching_results.json', 'r') as f:
+with open(DATA_DIR / 'matching_results.json', 'r') as f:
     results = json.load(f)
 
-with open(f'{DATA_DIR}/unmatched_schools.json', 'r') as f:
+with open(DATA_DIR / 'unmatched_schools.json', 'r') as f:
     unmatched = json.load(f)
 
 from collections import Counter

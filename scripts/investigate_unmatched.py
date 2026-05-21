@@ -6,12 +6,14 @@ import re
 import unicodedata
 import warnings
 from collections import defaultdict
+from pathlib import Path
 
 import openpyxl
 
 warnings.filterwarnings('ignore')
 
-DATA_DIR = '/Users/shunmei/workspace/EIDP/data/mext'
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = REPO_ROOT / 'data' / 'mext'
 
 
 def normalize(s):
@@ -20,11 +22,11 @@ def normalize(s):
     return unicodedata.normalize('NFKC', re.sub(r'\s+', '', s or ''))
 
 
-with open(f'{DATA_DIR}/unmatched_schools.json', 'r') as f:
+with open(DATA_DIR / 'unmatched_schools.json', 'r') as f:
     unmatched = json.load(f)
 
 # Load target institution list vocational schools
-wb = openpyxl.load_workbook(f'{DATA_DIR}/target_institutions.xlsx', data_only=True)
+wb = openpyxl.load_workbook(DATA_DIR / 'target_institutions.xlsx', data_only=True)
 ws = wb['20260401']
 
 target_names = {}
@@ -56,7 +58,7 @@ print(f'  Not found in either: {len(target_unmatched_list)}')
 # Load MEXT school code CSV for cross-check
 mext_by_pref = defaultdict(list)
 for fname in ['school_code_east.csv', 'school_code_west.csv']:
-    with open(f'{DATA_DIR}/{fname}', 'r', encoding='cp932') as f:
+    with open(DATA_DIR / fname, 'r', encoding='cp932') as f:
         reader = csv.reader(f)
         next(reader)
         for row in reader:

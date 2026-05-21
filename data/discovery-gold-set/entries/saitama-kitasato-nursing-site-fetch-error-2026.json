@@ -1,0 +1,50 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "saitama-kitasato-nursing-site-fetch-error-2026",
+  "school": {
+    "school_id": 767,
+    "school_name": "北里大学看護専門学校",
+    "prefecture": "埼玉県",
+    "corporation_name": "北里研究所"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "site_fetch_error",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a bounded official-index case where the registered disclosure page cannot be crawled because robots.txt blocks automated access.",
+    "search_queries": [],
+    "steps": [
+      "Start from the Saitama official-index disclosure URL https://www.kitasato-u.ac.jp/kango-gko/about/release.html.",
+      "Run strict FY2026 PDF discovery from the prefecture_aggregator SchoolSite.",
+      "Record the discovery_error evidence row with extra.error=robots.txt disallows all crawling.",
+      "Classify the result as a site/infrastructure failure, not as no target PDF and not as operator guesswork."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.kitasato-u.ac.jp/kango-gko/",
+    "disclosure_url": "https://www.kitasato-u.ac.jp/kango-gko/about/release.html",
+    "pdf_url": "",
+    "pdf_type": "",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "robots_blocked_official_disclosure_page",
+    "reusable_rules": [
+      "Treat robots.txt or repeated fetch-block evidence as site_fetch_error when the official-index URL itself cannot be crawled.",
+      "Keep site infrastructure failures separate from no_target_candidate_found so yield analysis does not blame school publication state.",
+      "Surface the school for site-access follow-up instead of broad SERP crawling from the agent harness."
+    ],
+    "anti_patterns": [
+      "Do not relabel robots-blocked official URLs as no target PDF.",
+      "Do not search the wider web before the official-index handoff failure is classified."
+    ]
+  },
+  "evidence": {
+    "source_kind": "saitama_rca_jsonl",
+    "source_paths": [
+      "_temp/saitama-rca-current/logs/prefecture_pdf_evidence.jsonl",
+      "_temp/saitama-rca-current/logs/saitama_rca_summary.json"
+    ],
+    "notes": "Current-code Saitama RCA on 2026-05-11 recorded discovery_error with extra.error='robots.txt disallows all crawling' for school_id 767."
+  }
+}

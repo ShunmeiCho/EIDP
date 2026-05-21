@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import pytest
+
+from eidp.fiscal_year import (
+    JapaneseEra,
+    active_japanese_eras,
+    configure_japanese_eras,
+    fiscal_year_from_japanese_era_text,
+    fiscal_year_search_tokens,
+)
 from eidp.pdf.extractor import _extract_fiscal_year
-from eidp.pipeline.ingest import _parse_fiscal_year_from_annotation
+from eidp.pipeline.ingest import _has_fiscal_year_candidate, _parse_fiscal_year_from_annotation
 
 
 def test_future_reiwa_year_is_rejected() -> None:
     assert _parse_fiscal_year_from_annotation("令和9年度", max_fiscal_year=2026) is None
+
+
+def test_annotation_cap_must_be_explicit() -> None:
+    with pytest.raises(TypeError):
+        _parse_fiscal_year_from_annotation("令和9年度")
 
 
 def test_past_reiwa_year_is_accepted() -> None:
@@ -14,6 +28,35 @@ def test_past_reiwa_year_is_accepted() -> None:
 
 def test_current_reiwa_year_is_accepted() -> None:
     assert _parse_fiscal_year_from_annotation("令和8年度", max_fiscal_year=2026) == 2026
+
+
+def test_ingest_year_candidate_uses_configured_era_aliases() -> None:
+    original = active_japanese_eras()
+    try:
+        configure_japanese_eras((
+            JapaneseEra(name="BetaEra", romanized="betaera", initial="b", start_fiscal_year=2010),
+        ))
+
+        assert _has_fiscal_year_candidate("BetaEra2年度")
+        assert _has_fiscal_year_candidate("b02-kakunin.pdf")
+        assert not _has_fiscal_year_candidate("令和8年度")
+    finally:
+        configure_japanese_eras(original)
+
+
+def test_kanji_reiwa_year_is_accepted() -> None:
+    assert fiscal_year_from_japanese_era_text("令和七年度") == 2025
+
+
+def test_kanji_reiwa_year_after_nine_is_accepted() -> None:
+    assert fiscal_year_from_japanese_era_text("令和十年度") == 2028
+    assert fiscal_year_from_japanese_era_text("令和十一年度") == 2029
+
+
+def test_fiscal_year_search_tokens_include_kanji_era_years() -> None:
+    assert "令和八" in fiscal_year_search_tokens(2026)
+    assert "令和十" in fiscal_year_search_tokens(2028)
+    assert "令和十一" in fiscal_year_search_tokens(2029)
 
 
 def test_current_fiscal_year_is_accepted_even_when_source_url_has_prior_year() -> None:

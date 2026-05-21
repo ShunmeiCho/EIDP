@@ -1,0 +1,54 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "bit-toyama-information-business-review-2026",
+  "school": {
+    "school_id": 1189,
+    "school_name": "富山情報ビジネス専門学校",
+    "prefecture": "富山県",
+    "corporation_name": "浦山学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Find the target-form candidate from a dense information page with many adjacent disclosure links.",
+    "search_queries": [
+      "富山情報ビジネス専門学校 情報公開 修学支援",
+      "富山情報ビジネス専門学校 機関要件確認申請書"
+    ],
+    "steps": [
+      "Open the Bit BOX information page.",
+      "Use the 情報公開 section instead of general admissions or campus-life navigation.",
+      "Select the anchor labeled 修学支援に関する機関要件確認申請書.",
+      "Verify the PDF body contains 富山情報ビジネス専門学校 and 様式第２号.",
+      "Queue the PDF for operator review because the page label proves target-form shape but not an explicit FY2026 label."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.bit.urayama.ac.jp/",
+    "disclosure_url": "https://www.bit.urayama.ac.jp/bitbox/information",
+    "pdf_url": "https://www.bit.urayama.ac.jp/data/6_information/information/3_shugaku-shien.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "dense_information_page",
+    "reusable_rules": [
+      "Prioritize anchors containing 修学支援 and 機関要件確認申請書 over adjacent 学校関係者評価, 授業担当科目, and シラバス links.",
+      "Treat exact school-name plus 様式第２号 in the PDF as target-form evidence.",
+      "If the link and body do not carry a reliable target-year label, queue review rather than auto-accept."
+    ],
+    "anti_patterns": [
+      "Do not let adjacent disclosure PDFs consume the candidate budget before the 修学支援 anchor.",
+      "Do not infer FY2026 from unrelated dates such as handbook publication years or director terms."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.bit.urayama.ac.jp/bitbox/information",
+      "https://www.bit.urayama.ac.jp/data/6_information/information/3_shugaku-shien.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-11 found the information-page anchor 修学支援に関する機関要件確認申請書 and verified the PDF body contains the school name and 様式第２号."
+  }
+}

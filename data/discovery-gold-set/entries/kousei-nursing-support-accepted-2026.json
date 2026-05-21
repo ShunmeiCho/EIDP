@@ -1,0 +1,56 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "kousei-nursing-support-accepted-2026",
+  "school": {
+    "school_id": 1375,
+    "school_name": "更生看護専門学校",
+    "prefecture": "愛知県",
+    "corporation_name": "愛知県厚生農業協同組合連合会"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "accepted_target_pdf",
+  "manual_demonstration": {
+    "operator_goal": "Find a FY2026 target confirmation form from a news-style definition list where the year evidence is in the preceding dd block.",
+    "search_queries": [
+      "更生看護専門学校 令和8年 修学支援新制度 確認申請書",
+      "更生看護専門学校 様式第２号 修学支援"
+    ],
+    "steps": [
+      "Open the school homepage https://www.jaaikosei.or.jp/kouseikansen/.",
+      "Find the 2025.08.19 news block stating 令和8年4月から修学支援新制度の対象機関として認定されました.",
+      "Use the next item link labeled 確認申請書（様式第２号）.",
+      "Resolve the direct PDF URL /kouseikansen/pdf/application_form2.pdf; the crawler's normalized no-slash page URL redirects to the HTTP canonical page.",
+      "Accept it as FY2026 because the preceding dd block supplies target-year support-system evidence and the PDF body contains 様式第２号 plus the school name."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.jaaikosei.or.jp/kouseikansen/",
+    "disclosure_url": "https://www.jaaikosei.or.jp/kouseikansen/",
+    "pdf_url": "http://www.jaaikosei.or.jp/kouseikansen/pdf/application_form2.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2026,
+    "pattern_type": "direct",
+    "strict_target_year_success": true
+  },
+  "automation_pattern": {
+    "site_family": "news_definition_list_support_year_statement",
+    "reusable_rules": [
+      "Treat a preceding dd block with 令和8年 and 修学支援新制度 as FY2026 evidence for the adjacent 確認申請書（様式第２号） link.",
+      "Keep dd blocks as candidate-local context so unrelated older or newer news items do not pollute the target-form anchor text.",
+      "Accept a stable application_form2.pdf filename when the adjacent news block supplies target-year evidence and the PDF body has 様式第２号 plus the school name."
+    ],
+    "anti_patterns": [
+      "Do not use page-wide news archives as fiscal-year evidence for a single PDF link.",
+      "Do not infer the target year from unrelated entrance-exam or open-campus news items."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "https://www.jaaikosei.or.jp/kouseikansen/",
+      "https://www.jaaikosei.or.jp/kouseikansen/pdf/application_form2.pdf",
+      "http://www.jaaikosei.or.jp/kouseikansen/pdf/application_form2.pdf"
+    ],
+    "notes": "Manual web trace on 2026-05-13 found the 2025.08.19 news block, verified the adjacent confirmation-form link, and verified the PDF body contains 更生看護専門学校 and 様式第２号."
+  }
+}

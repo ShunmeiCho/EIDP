@@ -9,33 +9,48 @@
 """
 from __future__ import annotations
 
+import csv
 import hashlib
 import html
+import io
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from ipaddress import ip_address
 from pathlib import Path
+from typing import Any, TypedDict, cast
+from urllib.parse import urlparse
 
 import httpx
 import streamlit as st
-from sqlalchemy import func
+import structlog
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
+from eidp.db.audit import log_manual_action
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import (
     Department,
     DepartmentChange,
     DepartmentYearly,
     Document,
+    ManualActionLog,
+    ReviewItem,
     School,
     SchoolAlias,
     SchoolSite,
     SchoolYearStatus,
 )
-from eidp.scraper.pdf_discovery import _classify_pdf_content, _safe_get
+from eidp.fiscal_year import format_fiscal_year_label
+from eidp.review.operator_actor import operator_actor_from_state
+from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
+from eidp.review.target_year_status import target_year_overview
+from eidp.scraper.pdf_discovery import HttpGetClient, _classify_pdf_content, _safe_get
 from eidp.scraper.url_discovery import _is_safe_url
 
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _OUTPUT_DIR = Path("output")
 _SAMPLE_DIR = Path("sample")
 _DATA_DIR = Path("data")
@@ -44,6 +59,7 @@ _DEFAULT_MASTER = _OUTPUT_DIR / "専門学校無償化情報公開まとめ.xlsx
 _DEFAULT_COMPETITION = _OUTPUT_DIR / "競合校の在校生数.xlsx"
 _DEFAULT_COMPETITION_GAP = _OUTPUT_DIR / "競合校gap-report.csv"
 _DEFAULT_REJECTIONS = _OUTPUT_DIR / "discovery_rejections.jsonl"
+_DEFAULT_URL_SEARCH_EVIDENCE = _OUTPUT_DIR / "url_search_evidence.jsonl"
 _DEFAULT_INGEST_REJECTIONS = _OUTPUT_DIR / "ingest_rejections.jsonl"
 _DEFAULT_OPERATOR_SUBMISSIONS = _OUTPUT_DIR / "operator_url_submissions.jsonl"
 _DEFAULT_PDF_STORAGE = _DATA_DIR / "pdfs"
@@ -53,16 +69,50 @@ _DEFAULT_PROPOSAL_DECISIONS = _OUTPUT_DIR / "proposal_decisions.jsonl"
 
 _MAX_OPERATOR_PDF_SIZE = 50 * 1024 * 1024
 _ACCEPTED_OPERATOR_CLASSIFIERS = {"target", "image_only"}
+_ACCEPTED_OPERATOR_PAGE_CLASSIFIER = "html_page"
+_OPERATOR_BLOCKED_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "::1",
+    "169.254.169.254",
+    "metadata.google.internal",
+}
+
+log = structlog.get_logger(__name__)
+
+JsonDict = dict[str, Any]
+
+
+class PipelineStats(TypedDict):
+    total_schools: int
+    total_documents: int
+    docs_by_status: dict[str | None, int]
+    docs_by_pdf_type: dict[str | None, int]
+    coverage_by_year: dict[int | None, int]
+    dept_rows: int
+    dept_yearly_rows: int
+    school_year_rows: int
+
+
+@dataclass(frozen=True)
+class SchoolUrlOption:
+    school_id: int
+    label: str
 
 
 class PathPolicyError(ValueError):
     """Raised when an operator-entered path is outside the allowed workspace roots."""
 
 
+def _project_root() -> Path:
+    return Path(settings.app_root).resolve()
+
+
 def _project_path(path: Path) -> Path:
     if path.is_absolute():
         return path.resolve()
-    return (_PROJECT_ROOT / path).resolve()
+    return (_project_root() / path).resolve()
 
 
 def resolve_allowed_path(
@@ -85,7 +135,8 @@ def resolve_allowed_path(
     resolved = _project_path(path)
     roots = tuple(_project_path(root) for root in allowed_roots)
     if not any(resolved == root or resolved.is_relative_to(root) for root in roots):
-        allowed = ", ".join(str(root.relative_to(_PROJECT_ROOT)) for root in roots)
+        project_root = _project_root()
+        allowed = ", ".join(str(root.relative_to(project_root)) for root in roots)
         raise PathPolicyError(f"path must be under: {allowed}")
     if suffixes and resolved.suffix.lower() not in suffixes:
         raise PathPolicyError(f"path suffix must be one of: {', '.join(suffixes)}")
@@ -100,6 +151,29 @@ def output_path(raw_path: str | Path, suffixes: tuple[str, ...]) -> Path:
 
 def sample_path(raw_path: str | Path, suffixes: tuple[str, ...], *, must_exist: bool = True) -> Path:
     return resolve_allowed_path(raw_path, allowed_roots=(_SAMPLE_DIR,), suffixes=suffixes, must_exist=must_exist)
+
+
+@contextmanager
+def _optional_operator_lock(lock_path: Path | None, owner: str) -> Iterator[None]:
+    """Share the Windows app lock for UI actions that mutate the database."""
+    if lock_path is None:
+        yield
+        return
+    with acquire_lock(lock_path, owner=owner):
+        yield
+
+
+def _operator_lock_held(lock_path: Path | None) -> bool:
+    if lock_path is None:
+        return False
+    status = probe_lock(lock_path)
+    if not status.held:
+        return False
+    st.warning(
+        f"週次処理中、編集は一時停止しています "
+        f"(owner={status.owner}, started_at={status.started_at})"
+    )
+    return True
 
 
 @dataclass(frozen=True)
@@ -130,14 +204,32 @@ class OperatorUrlSubmission:
     timestamp: str
 
 
+@dataclass(frozen=True)
+class OperatorBulkUrlImportResult:
+    inserted: int
+    updated: int
+    skipped: int
+    errors: list[str]
+
+    @property
+    def accepted(self) -> int:
+        return self.inserted + self.updated
+
+
+@dataclass(frozen=True)
+class OperatorUrlSafetyDecision:
+    safe: bool
+    reason: str
+
+
 def _fetch_pdf_bytes(url: str) -> tuple[int, bytes]:
     with httpx.Client(timeout=30.0, follow_redirects=False) as client:
-        resp = _safe_get(client, url)
+        resp = _safe_get(cast(HttpGetClient, client), url)
         return resp.status_code, resp.content
 
 
 def validate_operator_pdf_url(url: str) -> OperatorUrlValidation:
-    """Run the same safety/content gates used by discovery before DB insert."""
+    """Validate an operator-supplied long-lived disclosure page or PDF URL."""
     url = url.strip()
     if not _is_safe_url(url):
         return OperatorUrlValidation(False, "unsafe", "unsafe_url")
@@ -154,10 +246,18 @@ def validate_operator_pdf_url(url: str) -> OperatorUrlValidation:
         return OperatorUrlValidation(False, "unknown", "too_small", http_status=status, size_bytes=size)
     if size > _MAX_OPERATOR_PDF_SIZE:
         return OperatorUrlValidation(False, "unknown", "too_large", http_status=status, size_bytes=size)
-    if content[:5] != b"%PDF-":
-        return OperatorUrlValidation(False, "unknown", "not_pdf_magic", http_status=status, size_bytes=size)
 
     file_hash = hashlib.sha256(content).hexdigest()
+    if content[:5] != b"%PDF-":
+        lowered_sample = content[:4096].lower()
+        if b"<html" not in lowered_sample and b"<a " not in lowered_sample:
+            return OperatorUrlValidation(
+                False, "unknown", "not_pdf_or_html", http_status=status, size_bytes=size, sha256=file_hash
+            )
+        return OperatorUrlValidation(
+            True, _ACCEPTED_OPERATOR_PAGE_CLASSIFIER, "accepted_page", status, size, file_hash
+        )
+
     classifier = _classify_pdf_content(content)
     if classifier not in _ACCEPTED_OPERATOR_CLASSIFIERS:
         return OperatorUrlValidation(
@@ -174,9 +274,9 @@ def submit_operator_url(
     operator_name: str = "",
     operator_note: str = "",
 ) -> OperatorUrlSubmission:
-    """Validate a manually supplied PDF URL and insert/update SchoolSite."""
+    """Validate a manually supplied disclosure page/PDF URL and insert/update SchoolSite."""
     clean_url = url.strip()
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     school = session.get(School, school_id)
     if school is None:
         return OperatorUrlSubmission(
@@ -215,18 +315,20 @@ def submit_operator_url(
             timestamp=timestamp,
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
+    url_type = "disclosure_page" if validation.classifier == _ACCEPTED_OPERATOR_PAGE_CLASSIFIER else "pdf"
     existing = (
         session.query(SchoolSite)
         .filter(SchoolSite.school_id == school_id, SchoolSite.url == clean_url)
         .first()
     )
     created = existing is None
+    old_value = _school_site_audit_value(existing) if existing is not None else None
     if existing is None:
         site = SchoolSite(
             school_id=school_id,
             url=clean_url,
-            url_type="pdf",
+            url_type=url_type,
             discovery_method="operator_manual",
             confidence=1.0,
             verified=True,
@@ -237,7 +339,7 @@ def submit_operator_url(
         session.add(site)
     else:
         site = existing
-        site.url_type = site.url_type or "pdf"
+        site.url_type = site.url_type or url_type
         site.discovery_method = site.discovery_method or "operator_manual"
         site.confidence = max(float(site.confidence or 0), 1.0)
         site.verified = True
@@ -246,7 +348,7 @@ def submit_operator_url(
         site.http_status = validation.http_status
 
     session.flush()
-    return OperatorUrlSubmission(
+    result = OperatorUrlSubmission(
         accepted=True,
         school_id=school_id,
         school_name=school.school_name,
@@ -261,6 +363,257 @@ def submit_operator_url(
         operator_name=operator_name.strip(),
         operator_note=operator_note.strip(),
         timestamp=timestamp,
+    )
+    audit_operator_url_submitted(session, result=result, old_value=old_value)
+    return result
+
+
+def _school_site_audit_value(site: SchoolSite) -> dict[str, object | None]:
+    return {
+        "school_id": site.school_id,
+        "url": site.url,
+        "url_type": site.url_type,
+        "discovery_method": site.discovery_method,
+        "confidence": float(site.confidence or 0),
+        "verified": bool(site.verified),
+        "http_status": site.http_status,
+    }
+
+
+def audit_operator_url_submitted(
+    session: Session,
+    *,
+    result: OperatorUrlSubmission,
+    old_value: dict[str, object | None] | None = None,
+    actor: str | None = None,
+) -> ManualActionLog:
+    """Audit an accepted operator URL registration."""
+    return log_manual_action(
+        session,
+        action_type="operator_url_submitted",
+        target_table="school_site",
+        target_id=result.site_id,
+        old_value=old_value,
+        new_value={
+            "school_id": result.school_id,
+            "school_name": result.school_name,
+            "url": result.url,
+            "classifier": result.classifier,
+            "reason": result.reason,
+            "http_status": result.http_status,
+            "size_bytes": result.size_bytes,
+            "sha256": result.sha256,
+            "site_created": result.site_created,
+        },
+        reason=result.operator_note or "Operator registered manual school URL",
+        actor=actor or result.operator_name or "operator",
+    )
+
+
+def operator_url_reuse_notice(classifier: str) -> tuple[str, str]:
+    """Return the operator-facing reuse message for an accepted URL."""
+    if classifier == _ACCEPTED_OPERATOR_PAGE_CLASSIFIER:
+        return (
+            "success",
+            "情報公開ページとして保存しました。来年度以降もこのページを入口にして対象年度PDFを再取得します。",
+        )
+    if classifier in _ACCEPTED_OPERATOR_CLASSIFIERS:
+        return (
+            "warning",
+            "PDF直リンクとして保存しました。今年度の救急取込みには使えますが、来年度以降の入口には弱いです。"
+            "同じ学校の情報公開ページURLも追加してください。",
+        )
+    return (
+        "info",
+        "URLを保存しました。来年度以降も使える入口かどうかは、学校別タスクのURL種別で確認してください。",
+    )
+
+
+def operator_url_kind_label(classifier: str) -> str:
+    """Return a short Japanese label for an accepted operator URL."""
+    if classifier == _ACCEPTED_OPERATOR_PAGE_CLASSIFIER:
+        return "情報公開ページ"
+    if classifier == "image_only":
+        return "画像PDF"
+    if classifier in _ACCEPTED_OPERATOR_CLASSIFIERS:
+        return "申請書PDF"
+    return "URL"
+
+
+def operator_bulk_url_type(url: str, raw_url_type: str = "") -> str:
+    """Classify a bulk-imported operator URL without network access."""
+    normalized = raw_url_type.strip()
+    if normalized:
+        return normalized
+    path = url.lower().split("?", 1)[0].split("#", 1)[0]
+    return "pdf" if path.endswith(".pdf") else "disclosure_page"
+
+
+def _csv_value(row: dict[str, str], *names: str) -> str:
+    for name in names:
+        if name in row and row[name] is not None:
+            return str(row[name]).strip()
+    return ""
+
+
+def operator_url_safety_decision(url: str) -> OperatorUrlSafetyDecision:
+    """Return whether a URL is safe to store for later discovery.
+
+    Bulk CSV import must not do DNS/HTTP work in the Streamlit request. This
+    structural check blocks obvious SSRF targets; the weekly discovery runner
+    still applies the stricter network-aware ``_is_safe_url`` before fetching.
+    """
+    if not url or any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
+        return OperatorUrlSafetyDecision(False, "invalid_characters")
+    try:
+        parsed = urlparse(url)
+        hostname = (parsed.hostname or "").lower()
+    except Exception as exc:
+        log.exception("operator_url_safety_parse_failed", error_type=type(exc).__name__)
+        return OperatorUrlSafetyDecision(False, "parse_error")
+    if parsed.scheme not in ("http", "https"):
+        return OperatorUrlSafetyDecision(False, "unsupported_scheme")
+    if not hostname:
+        return OperatorUrlSafetyDecision(False, "missing_hostname")
+    if hostname in _OPERATOR_BLOCKED_HOSTS:
+        return OperatorUrlSafetyDecision(False, "blocked_host")
+    try:
+        ip = ip_address(hostname)
+    except ValueError:
+        return OperatorUrlSafetyDecision("." in hostname, "safe" if "." in hostname else "invalid_hostname")
+    if ip.is_private or ip.is_loopback or ip.is_link_local:
+        return OperatorUrlSafetyDecision(False, "blocked_host")
+    return OperatorUrlSafetyDecision(True, "safe")
+
+
+def is_storable_operator_url(url: str) -> bool:
+    return operator_url_safety_decision(url).safe
+
+
+def _operator_url_import_error(reason: str) -> str:
+    if reason == "parse_error":
+        return "malformed URL"
+    return "unsafe URL"
+
+
+def _find_school_for_bulk_url_row(session: Session, row: dict[str, str]) -> tuple[School | None, str | None]:
+    school_id = _csv_value(row, "school_id", "id", "学校ID")
+    if school_id:
+        try:
+            school = session.get(School, int(school_id))
+        except ValueError:
+            return None, f"invalid school_id: {school_id}"
+        if school is None:
+            return None, f"school_id not found: {school_id}"
+        return school, None
+
+    school_name = _csv_value(row, "school_name", "学校名", "name")
+    if not school_name:
+        return None, "school_id or school_name is required"
+    matches = session.query(School).filter(School.school_name == school_name).all()
+    if not matches:
+        return None, f"school_name not found: {school_name}"
+    if len(matches) > 1:
+        return None, f"school_name is ambiguous: {school_name}"
+    return matches[0], None
+
+
+def import_operator_url_csv(session: Session, csv_text: str) -> OperatorBulkUrlImportResult:
+    """Bulk-register operator-known school URLs from a CSV upload.
+
+    Supported columns:
+    - ``school_id`` or ``学校ID`` (preferred), or exact ``school_name`` / ``学校名``
+    - ``url`` / ``URL``
+    - optional ``url_type`` / ``URL種別``
+
+    The import intentionally does not fetch every URL; a 700-school university
+    list would make the Streamlit request slow and fragile. Weekly discovery
+    later verifies and crawls rows with ``http_status`` still unknown.
+    """
+    reader = csv.DictReader(io.StringIO(csv_text))
+    if not reader.fieldnames:
+        return OperatorBulkUrlImportResult(inserted=0, updated=0, skipped=0, errors=["CSV header is missing"])
+
+    inserted = 0
+    updated = 0
+    skipped = 0
+    errors: list[str] = []
+    now = datetime.now(UTC)
+    for line_no, row in enumerate(reader, start=2):
+        clean_row = {str(k).strip(): (v or "").strip() for k, v in row.items() if k is not None}
+        url = _csv_value(clean_row, "url", "URL")
+        if not url:
+            skipped += 1
+            errors.append(f"line {line_no}: url is required")
+            continue
+        url_decision = operator_url_safety_decision(url)
+        if not url_decision.safe:
+            skipped += 1
+            errors.append(f"line {line_no}: {_operator_url_import_error(url_decision.reason)}")
+            continue
+
+        school, error = _find_school_for_bulk_url_row(session, clean_row)
+        if error is not None or school is None:
+            skipped += 1
+            errors.append(f"line {line_no}: {error}")
+            continue
+
+        url_type = operator_bulk_url_type(url, _csv_value(clean_row, "url_type", "URL種別"))
+        existing = (
+            session.query(SchoolSite)
+            .filter(SchoolSite.school_id == school.id, SchoolSite.url == url)
+            .first()
+        )
+        if existing is None:
+            session.add(
+                SchoolSite(
+                    school_id=school.id,
+                    url=url,
+                    url_type=url_type,
+                    discovery_method="operator_manual",
+                    confidence=0.8,
+                    verified=False,
+                    last_checked=now,
+                    http_status=None,
+                )
+            )
+            inserted += 1
+            continue
+
+        existing.url_type = existing.url_type or url_type
+        existing.discovery_method = existing.discovery_method or "operator_manual"
+        existing.confidence = max(float(existing.confidence or 0), 0.8)
+        existing.last_checked = now
+        updated += 1
+
+    result = OperatorBulkUrlImportResult(inserted=inserted, updated=updated, skipped=skipped, errors=errors)
+    if result.accepted:
+        audit_operator_url_bulk_imported(session, result=result)
+    return result
+
+
+def audit_operator_url_bulk_imported(
+    session: Session,
+    *,
+    result: OperatorBulkUrlImportResult,
+    actor: str = "operator",
+) -> ManualActionLog:
+    """Audit a CSV bulk import of operator-known school URLs."""
+    return log_manual_action(
+        session,
+        action_type="operator_url_bulk_imported",
+        target_table="school_site",
+        old_value=None,
+        new_value={
+            "inserted": result.inserted,
+            "updated": result.updated,
+            "skipped": result.skipped,
+            "error_count": len(result.errors),
+            "errors_sample": result.errors[:20],
+            "errors_truncated": max(0, len(result.errors) - 20),
+        },
+        reason="Operator bulk-imported school URLs from CSV",
+        actor=actor,
     )
 
 
@@ -288,10 +641,11 @@ def run_operator_discovery_ingest(
     from eidp.pipeline.ingest import run_ingestion
     from eidp.scraper.pdf_discovery import run_pdf_discovery
 
+    doc_matches_source_or_page = (Document.source_url == source_url) | (Document.discovered_from == source_url)
     before_ids = {
         row[0]
         for row in session.query(Document.id)
-        .filter(Document.school_id == school_id, Document.source_url == source_url)
+        .filter(Document.school_id == school_id, doc_matches_source_or_page)
         .all()
     }
 
@@ -303,12 +657,14 @@ def run_operator_discovery_ingest(
         discovery_methods=["operator_manual"],
         school_ids=[school_id],
         evidence_path=discovery_evidence_path,
+        target_fiscal_year=settings.target_fiscal_year,
+        strict_target_fiscal_year=True,
     )
     session.flush()
 
     docs = (
         session.query(Document)
-        .filter(Document.school_id == school_id, Document.source_url == source_url)
+        .filter(Document.school_id == school_id, doc_matches_source_or_page)
         .order_by(Document.id)
         .all()
     )
@@ -320,6 +676,7 @@ def run_operator_discovery_ingest(
             batch_size=len(document_ids),
             document_ids=document_ids,
             evidence_path=ingest_evidence_path,
+            target_fiscal_year=settings.target_fiscal_year,
         )
 
     return {
@@ -333,32 +690,35 @@ def run_operator_discovery_ingest(
 # Pipeline Status
 # ---------------------------------------------------------------------------
 
-def _pipeline_stats(session: Session) -> dict[str, object]:
-    total_schools = session.query(func.count(School.id)).scalar() or 0
-    total_docs = session.query(func.count(Document.id)).scalar() or 0
+def _pipeline_stats(session: Session) -> PipelineStats:
+    total_schools = int(session.query(func.count(School.id)).scalar() or 0)
+    total_docs = int(session.query(func.count(Document.id)).scalar() or 0)
 
-    docs_by_status = dict(
-        session.query(Document.ingest_status, func.count(Document.id))
+    docs_by_status: dict[str | None, int] = {
+        status: int(count)
+        for status, count in session.query(Document.ingest_status, func.count(Document.id))
         .group_by(Document.ingest_status)
         .all()
-    )
-    docs_by_pdf_type = dict(
-        session.query(Document.pdf_type, func.count(Document.id))
+    }
+    docs_by_pdf_type: dict[str | None, int] = {
+        pdf_type: int(count)
+        for pdf_type, count in session.query(Document.pdf_type, func.count(Document.id))
         .group_by(Document.pdf_type)
         .all()
-    )
+    }
 
-    coverage_by_year = dict(
-        session.query(Document.fiscal_year, func.count(Document.id))
+    coverage_by_year: dict[int | None, int] = {
+        fiscal_year: int(count)
+        for fiscal_year, count in session.query(Document.fiscal_year, func.count(Document.id))
         .filter(Document.ingest_status == "ingested")
         .group_by(Document.fiscal_year)
         .all()
-    )
+    }
 
-    dept_yearly_rows = session.query(func.count(DepartmentYearly.id)).scalar() or 0
-    dept_rows = session.query(func.count(Department.id)).scalar() or 0
+    dept_yearly_rows = int(session.query(func.count(DepartmentYearly.id)).scalar() or 0)
+    dept_rows = int(session.query(func.count(Department.id)).scalar() or 0)
 
-    school_year_rows = session.query(func.count(SchoolYearStatus.id)).scalar() or 0
+    school_year_rows = int(session.query(func.count(SchoolYearStatus.id)).scalar() or 0)
 
     return {
         "total_schools": total_schools,
@@ -426,6 +786,35 @@ def page_pipeline_status(session: Session) -> None:
     col4.metric("年度別データ数", stats["dept_yearly_rows"])
 
     st.divider()
+    target_label = format_fiscal_year_label(settings.target_fiscal_year)
+    target = target_year_overview(
+        session,
+        target_fiscal_year=settings.target_fiscal_year,
+        school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
+    )
+    st.subheader(f"{target_label} 採録状況")
+    st.caption(
+        f"ここは {OPERATOR_SCHOOL_SCOPE_LABEL} の現在年度到達度です。"
+        "旧年度PDFは成果ではなく、再取得待ちとして扱います。"
+    )
+    ycols = st.columns(5)
+    ycols[0].metric("対象校", target.active_schools)
+    ycols[1].metric("現在年度PDFあり", target.current_target_schools)
+    ycols[2].metric("旧年度fallback", target.stale_target_documents)
+    ycols[3].metric("来年度以降PDF", target.future_target_documents)
+    ycols[4].metric("要確認キュー", target.review_queue_documents)
+    if target.current_target_documents == 0 and target.stale_target_documents > 0:
+        st.error(
+            f"{target_label} の採録済PDFが 0 件です。旧年度fallbackをExcel成果として扱わず、"
+            "URL追加または週次再取得で現在年度PDFを集めてください。"
+        )
+    elif target.missing_current_target_schools > 0:
+        st.warning(
+            f"{target.missing_current_target_schools} 校は {target_label} のPDFが未採録です。"
+            "URL追加または週次再取得の対象です。"
+        )
+
+    st.divider()
     st.subheader("PDF 取込状態の内訳")
     st.caption(
         "ingested = DBに反映済み / school_mismatch = 校名が合わず未反映 / "
@@ -478,7 +867,7 @@ def _run_competition_export(
     output: Path,
     gap_report: Path,
     fiscal_year: int | None,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     from eidp.excel.competition_exporter import export_competition_workbook
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -491,40 +880,91 @@ def _run_competition_export(
     )
 
 
-def page_exports(session: Session) -> None:
-    st.header("④ Excel出力")
-    st.caption(
-        "担当者向けに配布する2種類のExcelを生成します。"
-        "② や ③ で承認・登録した内容が反映されます。"
+def audit_excel_export_generated(
+    session: Session,
+    *,
+    export_kind: str,
+    output_path: Path,
+    result: dict[str, Any],
+    target_fiscal_year: int | None = None,
+    actor: str = "operator",
+) -> ManualActionLog:
+    """Audit an operator-triggered Excel file export."""
+    return log_manual_action(
+        session,
+        action_type="excel_export_generated",
+        target_table="excel_export",
+        old_value=None,
+        new_value={
+            "export_kind": export_kind,
+            "output_path": str(output_path),
+            "target_fiscal_year": target_fiscal_year,
+            "result": result,
+        },
+        reason=f"Operator generated {export_kind} Excel export",
+        actor=actor,
     )
 
+
+_EXCEL_FILE_LOCK_MESSAGE = "Excelを閉じてから再実行してください"
+
+
+def _format_export_exception(exc: Exception) -> str:
+    """Return an operator-readable export error message."""
+
+    text = str(exc)
+    if isinstance(exc, PermissionError) or "WinError 32" in text or "Permission denied" in text:
+        return f"{_EXCEL_FILE_LOCK_MESSAGE}（出力先ファイルが開かれている可能性があります）"
+    return f"Export failed: {exc}"
+
+
+def page_exports(session: Session, *, lock_path: Path | None = None) -> None:
+    st.header("Excel出力（管理者向け）")
+    st.caption(
+        "通常の週次業務では「Excel プレビュー」から確認・ダウンロードします。"
+        "この詳細ページは、保存先やテンプレートを管理者が明示して出力するための画面です。"
+    )
+    lock_held = _operator_lock_held(lock_path)
+
     st.subheader("マスターExcel（全体一覧）")
-    st.caption("学校・学科・年度別データをまとめた全体ワークブック。")
+    st.caption("テンプレート不要。DB の現在データから新しい全体ワークブックを生成します。")
     master_out = st.text_input(
         "マスターExcelの保存先（output/配下のみ可）",
         value=str(_DEFAULT_MASTER),
         key="master_out",
     )
-    if st.button("マスターExcelを生成", type="primary", key="btn_master"):
+    if st.button("マスターExcelを生成", type="primary", key="btn_master", disabled=lock_held):
         try:
             master_path = output_path(master_out, (".xlsx",))
             stats = _run_master_export(session, master_path)
+            audit_excel_export_generated(
+                session,
+                export_kind="master",
+                output_path=master_path,
+                result=stats,
+                target_fiscal_year=settings.target_fiscal_year,
+            )
+            session.commit()
             st.success(f"出力完了: {master_out}")
             st.json(stats)
         except PathPolicyError as exc:
             st.error(f"パス不正（許可された出力先外）: {exc}")
         except Exception as exc:
-            st.error(f"Export failed: {exc}")
+            st.error(_format_export_exception(exc))
 
     _offer_download_safe(master_out, (".xlsx",))
 
     st.divider()
 
     st.subheader("競合校Excel（16シート・テンプレ形式）")
-    st.caption("「競合校の在校生数」テンプレートに当年度データを埋め込んで出力します。")
+    st.caption(
+        "既存の「競合校の在校生数」テンプレートを読み込み、対象年度の数値だけを埋めて"
+        "新しい Excel として保存します。テンプレート内に対象年度列があればその列を更新し、"
+        "なければ対象年度列を追加します。通常の業務員は変更しません。"
+    )
     comp_cols = st.columns(2)
     template_in = comp_cols[0].text_input(
-        "テンプレートExcelのパス（sample/配下）",
+        "前年配布されたテンプレートExcel（sample/配下の管理用ファイル）",
         value=str(_DEFAULT_TEMPLATE),
         key="comp_template",
     )
@@ -539,15 +979,22 @@ def page_exports(session: Session) -> None:
         key="comp_gap",
     )
     fy_pick = st.number_input(
-        "対象年度（0 = データ量が最大の年を自動選択）",
-        min_value=0,
-        value=0,
+        f"対象年度（通常は {format_fiscal_year_label(settings.target_fiscal_year)}）",
+        min_value=MIN_SUPPORTED_TARGET_FISCAL_YEAR,
+        max_value=MAX_SUPPORTED_TARGET_FISCAL_YEAR,
+        value=settings.target_fiscal_year,
         step=1,
         key="comp_fy",
     )
-    if st.button("競合校Excelを生成", type="primary", key="btn_comp"):
+    selected_fy = int(fy_pick)
+    if selected_fy != settings.target_fiscal_year:
+        st.warning(
+            "対象年度以外の出力は管理者向けの履歴/検証用途です。"
+            "通常業務の成果物は対象年度で出力してください。"
+        )
+    if st.button("競合校Excelを生成", type="primary", key="btn_comp", disabled=lock_held):
         try:
-            fy = None if int(fy_pick) == 0 else int(fy_pick)
+            fy = None if selected_fy == settings.target_fiscal_year else selected_fy
             template_path = sample_path(template_in, (".xlsx",))
             comp_path = output_path(comp_out, (".xlsx",))
             gap_path = output_path(gap_out, (".csv",))
@@ -558,12 +1005,20 @@ def page_exports(session: Session) -> None:
                 gap_path,
                 fy,
             )
+            audit_excel_export_generated(
+                session,
+                export_kind="competition",
+                output_path=comp_path,
+                result=result,
+                target_fiscal_year=selected_fy,
+            )
+            session.commit()
             st.success(f"出力完了: {comp_out}")
             st.json(result)
         except PathPolicyError as exc:
             st.error(f"パス不正（許可された出力先外）: {exc}")
         except Exception as exc:
-            st.error(f"Export failed: {exc}")
+            st.error(_format_export_exception(exc))
 
     _offer_download_safe(comp_out, (".xlsx",))
 
@@ -620,13 +1075,12 @@ def _render_url_needed_worklist() -> None:
         return
 
     import csv
-    from collections import defaultdict
 
     # Aggregate by school_id: a single school may appear in many template rows.
     # Some rows have no school_id (school_missing / no_fy_data) — we skip those
     # here since the URL form requires school_id; they're visible in ⑤ instead.
-    agg: dict[str, dict[str, object]] = {}
-    by_name_only: list[dict[str, object]] = []
+    agg: dict[str, JsonDict] = {}
+    by_name_only: list[JsonDict] = []
 
     with _DEFAULT_COMPETITION_GAP.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
@@ -645,7 +1099,7 @@ def _render_url_needed_worklist() -> None:
             if sid:
                 key = sid
                 if key in agg:
-                    agg[key]["rows"] = int(agg[key]["rows"]) + 1  # type: ignore[operator]
+                    agg[key]["rows"] = int(cast(int, agg[key]["rows"])) + 1
                 else:
                     agg[key] = entry
             else:
@@ -665,8 +1119,9 @@ def _render_url_needed_worklist() -> None:
         expanded=True,
     ):
         st.caption(
-            "下の表から school_id を確認し、フォームに入力して「登録 + 検証」してください。"
-            "原因が「古い年度のみ」なら最新年度のPDF URL、「PDFがない」なら任意の申請書URL を探します。"
+            "下の学校名を検索欄に入れて候補を選び、「登録 + 検証」してください。"
+            "原因が「古い年度のみ」なら最新年度の情報公開ページまたはPDF URL、"
+            "「PDFがない」なら学校・法人の情報公開ページを探します。"
         )
         # Compact table — column labels in Japanese
         display_rows = [
@@ -682,17 +1137,66 @@ def _render_url_needed_worklist() -> None:
         st.dataframe(
             display_rows,
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
             height=min(40 + 35 * total, 420),
         )
 
 
-def page_url_submission(session: Session) -> None:
+def _format_school_url_option(school: School) -> SchoolUrlOption:
+    details = [school.prefecture]
+    if school.corporation_name:
+        details.append(school.corporation_name)
+    if school.school_type:
+        details.append(school.school_type)
+    return SchoolUrlOption(
+        school_id=school.id,
+        label=f"{school.school_name}（{' / '.join(details)} / ID {school.id}）",
+    )
+
+
+def search_school_url_options(session: Session, query: str, *, limit: int = 20) -> list[SchoolUrlOption]:
+    """Return school choices for the URL submission UI."""
+    term = query.strip()
+    if not term:
+        return []
+    pattern = f"%{term}%"
+    schools = (
+        session.query(School)
+        .filter(
+            or_(
+                School.school_name.like(pattern),
+                School.corporation_name.like(pattern),
+                School.prefecture.like(pattern),
+            )
+        )
+        .order_by(School.prefecture.asc(), School.school_name.asc(), School.id.asc())
+        .limit(limit)
+        .all()
+    )
+    return [_format_school_url_option(school) for school in schools]
+
+
+def school_option_index(options: list[SchoolUrlOption], preferred_school_id: object) -> int:
+    """Select the prefilled school when URL追加 is opened from task board."""
+    if not isinstance(preferred_school_id, int | str):
+        return 0
+    try:
+        preferred = int(preferred_school_id)
+    except ValueError:
+        return 0
+    for index, option in enumerate(options):
+        if option.school_id == preferred:
+            return index
+    return 0
+
+
+def page_url_submission(session: Session, *, lock_path: Path | None = None) -> None:
     st.header("③ URL追加")
     st.caption(
-        "担当者が自分で見つけた申請書PDFを登録する画面です。"
-        "自動収集で取得できなかった学校のPDFを手動で追加する時に使います。"
+        "担当者が自分で見つけた情報公開ページまたは申請書PDFを登録する画面です。"
+        "ページURLは来年度以降も再取得の入口として使います。"
     )
+    lock_held = _operator_lock_held(lock_path)
 
     _render_url_needed_worklist()
 
@@ -701,29 +1205,100 @@ def page_url_submission(session: Session) -> None:
             """
 **こういう時に使う**：
 - ⑤「マッチング漏れ一覧」で `学校はあるが対象PDFがまだない` の行を見つけた時
-- 学校の公式サイトで申請書PDFを見つけた時
+- 学校または法人の公式サイトで情報公開ページ、または対象年度の申請書PDFを見つけた時
 
 **操作手順**：
-1. 学校ID（`school.id`）を入力 — データ状況ページで確認できます
-2. 申請書PDFのURLを貼り付け
-3. 担当者名を入力（監査用）
-4. 「登録 + 検証」を押す
+1. 学校名・法人名・都道府県で検索
+2. 候補から学校を選択
+3. 情報公開ページURL、または申請書PDFのURLを貼り付け
+4. 担当者名を入力（監査用）
+5. 「登録 + 検証」を押す
 
 **自動チェック**：
 URLは登録前に以下のチェックを通します。
 - 社内ネットワーク等の不正URL除外（SSRF対策）
 - HTTP 200 で取得可能
-- PDFの署名（%PDF-）が正しい
 - サイズが妥当（1KB〜50MB）
-- PDFの内容が申請書（機関要件・様式第2号など）であることを検証
+- PDF直リンクの場合は、PDFの署名（%PDF-）と申請書内容（機関要件・様式第2号など）を検証
+- ページURLの場合は、長期利用する情報公開ページとして登録し、取込み時に対象年度PDFを探索
 
 検証に失敗した場合はDB登録されません。
             """
         )
 
+    with st.expander("CSV一括登録（学校URLリストがある場合）", expanded=False):
+        st.caption(
+            "大学や専門学校のURLリストを持っている場合は、1件ずつ入力せずCSVで登録できます。"
+            "列は `school_id,url` が最も確実です。`school_name,url` も使えますが、同名校があるとスキップします。"
+            "登録したページURLは来年度以降も週次再取得の入口になります。"
+        )
+        uploaded_csv = st.file_uploader(
+            "URLリストCSV",
+            type=["csv"],
+            key="operator_url_bulk_csv",
+            help="例: school_id,url",
+        )
+        if st.button("CSVを一括登録", disabled=uploaded_csv is None or lock_held, key="operator_url_bulk_submit"):
+            if uploaded_csv is None:
+                st.error("CSVファイルを選択してください。")
+            else:
+                try:
+                    csv_text = uploaded_csv.getvalue().decode("utf-8-sig")
+                    with _optional_operator_lock(lock_path, "ui_operator_url_bulk"):
+                        bulk_result = import_operator_url_csv(session, csv_text)
+                        session.commit()
+                    if bulk_result.accepted:
+                        st.success(
+                            f"URLを{bulk_result.accepted}件登録しました"
+                            f"（新規{bulk_result.inserted} / 更新{bulk_result.updated}）。"
+                        )
+                        st.info("次回の週次再取得から、このURLリストを入口に対象年度PDFを探します。")
+                    else:
+                        st.warning("登録できたURLはありません。CSVの学校ID・学校名・URLを確認してください。")
+                    if bulk_result.errors:
+                        st.warning(f"スキップ: {bulk_result.skipped}件")
+                        with st.expander("スキップ理由", expanded=False):
+                            st.write(bulk_result.errors)
+                except LockBusyError as exc:
+                    session.rollback()
+                    st.error(f"他の処理が実行中のため、CSV登録を実行できませんでした: {exc}")
+                except Exception as exc:
+                    session.rollback()
+                    st.error(f"CSV登録に失敗しました: {exc}")
+
+    school_query = st.text_input(
+        "学校名で検索",
+        placeholder="例: 東京アニメ / 電子学園 / 東京都",
+        help="学校名・法人名・都道府県で候補を探します。内部IDを覚える必要はありません。",
+        key="url_submission_school_query",
+    )
+    school_options = search_school_url_options(session, school_query)
+    preferred_school_id = st.session_state.get("url_submission_school_id")
+    selected_school_id: int | None = None
+    if school_query.strip() and not school_options:
+        st.warning("一致する学校がありません。学校名、法人名、都道府県の一部で検索し直してください。")
+    elif school_options:
+        labels_by_id = {option.school_id: option.label for option in school_options}
+        selected_school_id = st.selectbox(
+            "学校を選択",
+            options=[option.school_id for option in school_options],
+            index=school_option_index(school_options, preferred_school_id),
+            format_func=lambda school_id: labels_by_id[int(school_id)],
+            key="url_submission_selected_school_id",
+        )
+        st.caption(f"選択中: {labels_by_id[int(selected_school_id)]}")
+    else:
+        st.info("まず学校名・法人名・都道府県の一部を入力して、登録先の学校を選択してください。")
+
     with st.form("operator_url_submission"):
-        school_id = st.number_input("学校ID（school.id）", min_value=1, step=1, value=1)
-        url = st.text_input("申請書PDFのURL", placeholder="https://example.ac.jp/.../confirmation_application.pdf")
+        st.info(
+            "できるだけ PDF 直リンクではなく、学校または法人の情報公開ページURLを登録してください。"
+            "ページURLは来年度以降も再取得の入口として使えます。"
+        )
+        url = st.text_input(
+            "情報公開ページまたは申請書PDFのURL",
+            placeholder="https://example.ac.jp/school/public_info/",
+        )
         operator_name = st.text_input("担当者名（監査用）", placeholder="例: 山田")
         operator_note = st.text_area(
             "メモ（任意）",
@@ -735,59 +1310,79 @@ URLは登録前に以下のチェックを通します。
             value=False,
             help="オンにするとURL登録 → PDFダウンロード → DB反映まで一気に実行します。",
         )
-        submitted = st.form_submit_button("登録 + 検証", type="primary")
+        submitted = st.form_submit_button(
+            "登録 + 検証",
+            type="primary",
+            disabled=selected_school_id is None or lock_held,
+        )
 
     if not submitted:
         st.info(
-            "URL は登録前に SSRF 対策・HTTP検証・PDF内容分類 を通過する必要があります。"
+            "URL は登録前に SSRF 対策・HTTP検証・PDF内容分類またはHTML確認を通過する必要があります。"
             "検証に失敗した場合はDBに書き込まれません。"
         )
         return
 
     audit_path = output_path(_DEFAULT_OPERATOR_SUBMISSIONS, (".jsonl",))
     try:
-        result = submit_operator_url(
-            session,
-            school_id=int(school_id),
-            url=url,
-            operator_name=operator_name,
-            operator_note=operator_note,
-        )
-        if not result.accepted:
-            session.rollback()
-            record_operator_submission(result, audit_path)
-            st.error(f"Rejected: {result.reason} ({result.classifier})")
-            st.json(asdict(result))
-            return
-
-        pipeline_result: dict[str, object] | None = None
-        if run_now:
-            pipeline_result = run_operator_discovery_ingest(
+        with _optional_operator_lock(lock_path, "ui_operator_url_submission"):
+            if selected_school_id is None:
+                st.error("登録先の学校を選択してください。")
+                return
+            result = submit_operator_url(
                 session,
-                school_id=int(school_id),
-                source_url=url.strip(),
-                storage_dir=resolve_allowed_path(
-                    _DEFAULT_PDF_STORAGE,
-                    allowed_roots=(_DATA_DIR,),
-                ),
-                discovery_evidence_path=output_path(_DEFAULT_REJECTIONS, (".jsonl",)),
-                ingest_evidence_path=output_path(_DEFAULT_INGEST_REJECTIONS, (".jsonl",)),
+                school_id=int(selected_school_id),
+                url=url,
+                operator_name=operator_name,
+                operator_note=operator_note,
             )
+            if not result.accepted:
+                session.rollback()
+                record_operator_submission(result, audit_path)
+                st.error(f"Rejected: {result.reason} ({result.classifier})")
+                st.json(asdict(result))
+                return
 
-        session.commit()
-        try:
-            record_operator_submission(result, audit_path)
-        except OSError as exc:
-            st.warning(f"Accepted, but audit log write failed: {exc}")
-        label = "created" if result.site_created else "verified existing"
+            pipeline_result: dict[str, object] | None = None
+            if run_now:
+                pipeline_result = run_operator_discovery_ingest(
+                    session,
+                    school_id=int(selected_school_id),
+                    source_url=url.strip(),
+                    storage_dir=resolve_allowed_path(
+                        _DEFAULT_PDF_STORAGE,
+                        allowed_roots=(_DATA_DIR,),
+                    ),
+                    discovery_evidence_path=output_path(_DEFAULT_REJECTIONS, (".jsonl",)),
+                    ingest_evidence_path=output_path(_DEFAULT_INGEST_REJECTIONS, (".jsonl",)),
+                )
+
+            session.commit()
+            try:
+                record_operator_submission(result, audit_path)
+            except OSError as exc:
+                st.warning(f"Accepted, but audit log write failed: {exc}")
+        label = "新規登録" if result.site_created else "登録済みURLを再確認"
+        url_kind = operator_url_kind_label(result.classifier)
         st.success(
-            f"Accepted {result.classifier}: SchoolSite {label}"
-            f" (site_id={result.site_id}, size={result.size_bytes / 1024:.1f} KB)"
+            f"{url_kind}を{label}しました。"
         )
-        st.json(asdict(result))
+        st.caption(f"URL ID: {result.site_id} / サイズ: {result.size_bytes / 1024:.1f} KB")
+        notice_level, notice = operator_url_reuse_notice(result.classifier)
+        if notice_level == "success":
+            st.success(notice)
+        elif notice_level == "warning":
+            st.warning(notice)
+        else:
+            st.info(notice)
+        with st.expander("登録詳細（診断用）", expanded=False):
+            st.json(asdict(result))
         if pipeline_result is not None:
             st.subheader("Pipeline result")
             st.json(pipeline_result)
+    except LockBusyError as exc:
+        session.rollback()
+        st.error(f"他の処理が実行中のため、URL登録を実行できませんでした: {exc}")
     except PathPolicyError as exc:
         session.rollback()
         st.error(f"Path rejected: {exc}")
@@ -879,6 +1474,8 @@ def page_rejections() -> None:
         st.markdown(
             """
 - **classified_non_target** → 内容分類で申請書でないと判定
+- **target_application_not_detected** → 対象年度らしいが確認申請書ではない募集要項・案内等
+- **target_fiscal_year_not_detected / fiscal_year_mismatch** → 対象年度の確認が取れない、または旧年度
 - **no_candidates_found** → そもそもPDFリンクが見つからなかった
 - **all_negative_score** → 候補はあったが全て除外キーワード該当
 - **http_error / too_small / not_pdf_magic** → HTTPまたはファイル形式の問題
@@ -950,35 +1547,108 @@ def page_rejections() -> None:
     st.write(f"表示件数: {len(shown)} 件")
     st.dataframe(shown, hide_index=True)
 
+    st.divider()
+    st.subheader("URL検索履歴")
+    st.caption(
+        "都道府県公式一覧や既知URLで入口が埋まらなかった学校について、"
+        "Web検索 fallback が試した query と採否理由を確認します。"
+    )
+    url_log_path = st.text_input(
+        "URL検索履歴ファイルのパス",
+        value=str(_DEFAULT_URL_SEARCH_EVIDENCE),
+        key="url_search_evidence_path",
+    )
+    try:
+        url_path = output_path(url_log_path, (".jsonl",))
+    except PathPolicyError as exc:
+        st.error(f"パス不正: {exc}")
+        return
+    if not url_path.exists():
+        st.info(f"URL検索履歴ファイルがありません: `{url_path}`")
+        return
+
+    url_limit = st.slider(
+        "URL検索の最新N件を表示", 10, 2000, 300, 10, key="url_search_evidence_limit",
+    )
+    url_records = _tail_jsonl(url_path, url_limit)
+    if not url_records:
+        st.info("URL検索履歴が空です。")
+        return
+
+    decisions = sorted({str(r.get("decision") or "?") for r in url_records})
+    selected_decisions = st.multiselect(
+        "URL検索の採否で絞り込み",
+        decisions,
+        default=decisions,
+        key="url_search_decision_filter",
+    )
+    school_text = st.text_input(
+        "URL検索履歴を学校名/学校ID/queryで絞り込み",
+        key="url_search_text_filter",
+    ).strip()
+    url_shown = [
+        {
+            "採否": r.get("decision", ""),
+            "理由": r.get("reason", ""),
+            "score": r.get("score", 0),
+            "学校ID": r.get("school_id", ""),
+            "学校": r.get("school_name", ""),
+            "種別": r.get("school_type", ""),
+            "query": r.get("query", ""),
+            "候補URL": r.get("result_url", ""),
+            "候補タイトル": r.get("result_title", ""),
+            "provider": r.get("provider", ""),
+            "時刻": r.get("timestamp", ""),
+        }
+        for r in url_records
+        if str(r.get("decision") or "?") in selected_decisions
+        and (
+            not school_text
+            or school_text in str(r.get("school_name") or "")
+            or school_text == str(r.get("school_id") or "")
+            or school_text in str(r.get("query") or "")
+        )
+    ]
+    st.write(f"URL検索表示件数: {len(url_shown)} 件")
+    st.dataframe(url_shown, hide_index=True)
+
 
 # ---------------------------------------------------------------------------
 # V1 theme injection — pull Streamlit close to the Linear-style mockup
 # ---------------------------------------------------------------------------
 
-def inject_v1_theme() -> None:
-    """Inject the V1 Linear-shell design tokens into Streamlit.
+def v1_theme_css() -> str:
+    """Return theme-aware CSS for the operator console.
 
-    Streamlit's default theme is generic SaaS. This override pulls it
-    toward the mockup担当者 reviewed: #FAFAFA bg, Inter sans, Source Serif
-    display, dense metrics, dark primary buttons, pill-style horizontal
-    radio, sidebar with proper border. Call once from app.py main().
+    The first V1 pass hard-coded a light palette and broke Streamlit's native
+    Light/Dark switch. Keep the layout polish, but bind colors to Streamlit's
+    own theme variables with system-color fallbacks. Some Streamlit releases do
+    not expose the theme variables as public CSS custom properties, so every
+    variable use must stay valid even when ``--text-color`` etc. are absent.
     """
-    st.markdown(
-        """
-        <style>
+    return """
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
         :root {
-          --eidp-bg: #FAFAFA;
-          --eidp-surface: #FFFFFF;
-          --eidp-surface-alt: #F3F3F3;
-          --eidp-ink: #0C0C0D;
-          --eidp-ink-mid: #4E4E52;
-          --eidp-ink-low: #8C8C92;
-          --eidp-border: #E5E7EB;
-          --eidp-border-strong: #D1D1D6;
-          --eidp-accent: #5E6AD2;
-          --eidp-accent-soft: #EEF0FB;
+          color-scheme: light dark;
+          --eidp-bg: var(--background-color, Canvas);
+          --eidp-surface: var(--secondary-background-color, color-mix(in srgb, Canvas 94%, CanvasText 6%));
+          --eidp-surface-alt: color-mix(
+            in srgb,
+            var(--secondary-background-color, Canvas) 86%,
+            var(--text-color, CanvasText) 14%
+          );
+          --eidp-ink: var(--text-color, CanvasText);
+          --eidp-ink-mid: color-mix(in srgb, var(--text-color, CanvasText) 72%, var(--background-color, Canvas) 28%);
+          --eidp-ink-low: color-mix(in srgb, var(--text-color, CanvasText) 50%, var(--background-color, Canvas) 50%);
+          --eidp-border: color-mix(in srgb, var(--text-color, CanvasText) 18%, transparent);
+          --eidp-border-strong: color-mix(in srgb, var(--text-color, CanvasText) 28%, transparent);
+          --eidp-accent: var(--primary-color, AccentColor);
+          --eidp-accent-soft: color-mix(
+            in srgb,
+            var(--primary-color, AccentColor) 18%,
+            var(--background-color, Canvas) 82%
+          );
           --eidp-ok: #1F8B4C;
           --eidp-warn: #A65A00;
           --eidp-danger: #B42318;
@@ -1021,7 +1691,12 @@ def inject_v1_theme() -> None:
 
         /* Title brand */
         .eidp-title { margin-bottom: 24px; display: flex; align-items: baseline; gap: 10px; }
-        .eidp-brand { font-weight: 600 !important; font-size: 20px !important; color: var(--eidp-ink) !important; letter-spacing: -0.01em; }
+        .eidp-brand {
+          font-weight: 600 !important;
+          font-size: 20px !important;
+          color: var(--eidp-ink) !important;
+          letter-spacing: -0.01em;
+        }
         .eidp-brand-sub { font-size: 13px !important; color: var(--eidp-ink-low) !important; }
 
         /* Serif on headings for Muji-flavored touch */
@@ -1101,32 +1776,60 @@ def inject_v1_theme() -> None:
         }
         [data-testid="stMetricDelta"] svg { display: none; }
 
-        /* Primary button = dark, secondary = outline */
-        .stButton > button {
-          border-radius: 5px;
-          font-size: 13px;
-          font-weight: 500;
-          padding: 6px 14px;
-          transition: background 120ms ease, border 120ms ease;
+        /* Buttons.
+           Streamlit 1.57 identifies button variants with stBaseButton-* data
+           test ids instead of the older kind="primary" attribute. Style both
+           forms so navigation never degrades into plain-text-looking controls. */
+        .stButton > button,
+        button[data-testid^="stBaseButton-"] {
+          border-radius: 6px !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          min-height: 36px !important;
+          padding: 7px 14px !important;
+          border: 1px solid var(--eidp-border-strong) !important;
+          box-shadow: 0 1px 0 color-mix(in srgb, var(--eidp-ink) 8%, transparent) !important;
+          transition: background 120ms ease, border 120ms ease, box-shadow 120ms ease;
+        }
+        section[data-testid="stSidebar"] .stButton > button,
+        section[data-testid="stSidebar"] button[data-testid^="stBaseButton-"] {
+          justify-content: flex-start !important;
+          width: 100% !important;
         }
         .stButton > button[kind="primary"],
-        .stButton > button[kind="primary"] * {
+        .stButton > button[kind="primary"] *,
+        button[data-testid="stBaseButton-primary"],
+        button[data-testid="stBaseButton-primary"] * {
           background: var(--eidp-ink) !important;
-          color: #FFFFFF !important;
+          color: var(--eidp-bg) !important;
           border: 1px solid var(--eidp-ink) !important;
         }
-        .stButton > button[kind="primary"]:hover { background: #000000 !important; border-color: #000 !important; }
-        .stButton > button:not([kind="primary"]) {
-          background: var(--eidp-surface) !important;
+        .stButton > button[kind="primary"]:hover,
+        button[data-testid="stBaseButton-primary"]:hover {
+          background: var(--eidp-ink-mid) !important;
+          border-color: var(--eidp-ink-mid) !important;
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--eidp-ink) 16%, transparent) !important;
+        }
+        .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]),
+        button[data-testid="stBaseButton-secondary"],
+        button[data-testid="stBaseButton-tertiary"] {
+          background: color-mix(in srgb, var(--eidp-surface) 92%, var(--eidp-ink) 8%) !important;
           color: var(--eidp-ink) !important;
           border: 1px solid var(--eidp-border) !important;
         }
-        .stButton > button:not([kind="primary"]) * { color: var(--eidp-ink) !important; }
-        .stButton > button:not([kind="primary"]):hover {
+        .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]) *,
+        button[data-testid="stBaseButton-secondary"] *,
+        button[data-testid="stBaseButton-tertiary"] * {
+          color: var(--eidp-ink) !important;
+        }
+        .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]):hover,
+        button[data-testid="stBaseButton-secondary"]:hover,
+        button[data-testid="stBaseButton-tertiary"]:hover {
           background: var(--eidp-surface-alt) !important;
           border-color: var(--eidp-border-strong) !important;
         }
-        .stButton > button:disabled {
+        .stButton > button:disabled,
+        button[data-testid^="stBaseButton-"]:disabled {
           opacity: 0.4;
           cursor: not-allowed;
         }
@@ -1164,9 +1867,11 @@ def inject_v1_theme() -> None:
           font-size: 13px;
           color: var(--eidp-ink-mid);
         }
-        .stRadio > div:not([role="radiogroup"]) > div[role="radiogroup"][aria-orientation="horizontal"] > label:has(input:checked) {
+        .stRadio > div:not([role="radiogroup"])
+          > div[role="radiogroup"][aria-orientation="horizontal"]
+          > label:has(input:checked) {
           background: var(--eidp-ink);
-          color: #FFFFFF;
+          color: var(--eidp-bg);
         }
 
         /* Progress bar */
@@ -1227,10 +1932,12 @@ def inject_v1_theme() -> None:
 
         /* Checkbox */
         .stCheckbox label { font-size: 13px; color: var(--eidp-ink-mid); }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """
+
+
+def inject_v1_theme() -> None:
+    """Inject the V1 Streamlit theme override once from app.py main()."""
+    st.html(f"<style>{v1_theme_css()}</style>")
 
 
 # ---------------------------------------------------------------------------
@@ -1242,6 +1949,7 @@ class TodoCounts:
     pending_ambiguous: int  # ② で人間の判断待ち（候補複数）
     pending_branch: int     # ② 分校要注意で未処理
     pending_dept: int       # ② 学科タブで未処理
+    pending_prefecture_remarks: int  # 都道府県公式一覧の備考確認
     url_needed: int         # ③ URL追加が必要（school_no_document / old_year）
     auto_approved: int      # 自動承認済（先週処理）
     excel_stale: bool       # Excel再出力推奨（最新承認がExcelより新しい）
@@ -1277,6 +1985,13 @@ def compute_todo_counts(session: Session) -> TodoCounts:
         if ptype == "dept_alias_existing":
             pending_dept += 1
 
+    pending_prefecture_remarks = (
+        session.query(func.count(ReviewItem.id))
+        .filter(ReviewItem.item_type == "prefecture_remark", ReviewItem.status == "pending")
+        .scalar()
+        or 0
+    )
+
     # URL needed: count from gap report
     url_needed = 0
     if _DEFAULT_COMPETITION_GAP.exists():
@@ -1305,7 +2020,7 @@ def compute_todo_counts(session: Session) -> TodoCounts:
     excel_path = _DEFAULT_COMPETITION
     if excel_path.exists():
         excel_mtime = datetime.fromtimestamp(
-            excel_path.stat().st_mtime, tz=timezone.utc
+            excel_path.stat().st_mtime, tz=UTC
         )
         latest_alias_created = (
             session.query(func.max(SchoolAlias.created_at))
@@ -1320,7 +2035,7 @@ def compute_todo_counts(session: Session) -> TodoCounts:
             excel_stale = False
         else:
             latest_alias_created = _as_utc(latest_alias_created)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             excel_stale = (
                 latest_alias_created > excel_mtime
                 and now - latest_alias_created >= timedelta(minutes=30)
@@ -1332,6 +2047,7 @@ def compute_todo_counts(session: Session) -> TodoCounts:
         pending_ambiguous=pending_ambiguous,
         pending_branch=pending_branch,
         pending_dept=pending_dept,
+        pending_prefecture_remarks=int(pending_prefecture_remarks),
         url_needed=url_needed,
         auto_approved=auto_approved,
         excel_stale=excel_stale,
@@ -1340,8 +2056,8 @@ def compute_todo_counts(session: Session) -> TodoCounts:
 
 def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def render_sidebar_todo(session: Session) -> None:
@@ -1349,6 +2065,18 @@ def render_sidebar_todo(session: Session) -> None:
 
     Called from app.py AFTER the page radio so it always stays visible.
     """
+    target_needs_action = 0
+    try:
+        from eidp.review._pages.school_year_tasks import school_task_summary
+
+        target = school_task_summary(
+            session,
+            fiscal_year=settings.target_fiscal_year,
+            school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
+        )
+    except Exception:
+        target = None
+
     try:
         counts = compute_todo_counts(session)
     except Exception as exc:  # pragma: no cover — UI must never crash
@@ -1357,27 +2085,57 @@ def render_sidebar_todo(session: Session) -> None:
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("**今週のやること**")
+    if target is not None and target.total > 0:
+        target_needs_action = target.needs_action
+        _todo_line(
+            "対象年度 要対応",
+            target.needs_action,
+            hint="① 学校別タスク",
+            urgent=target.needs_action > 0,
+        )
+        _todo_line(
+            "Excel出力可",
+            target.excel_ready,
+            hint="④ Excel",
+            urgent=False,
+            done=True,
+        )
+        _todo_line(
+            "旧年度fallback",
+            target.stale_fallback,
+            hint="① 再取得",
+            urgent=target.stale_fallback > 0,
+        )
 
     total_pending = (
-        counts.pending_ambiguous + counts.pending_branch + counts.pending_dept
+        counts.pending_ambiguous
+        + counts.pending_branch
+        + counts.pending_dept
+        + counts.pending_prefecture_remarks
     )
     _todo_line(
         "候補が複数で要承認",
         counts.pending_ambiguous,
-        hint="② 学校タブ",
+        hint="詳細: 提案",
         urgent=counts.pending_ambiguous > 0,
     )
     _todo_line(
         "分校扱い（要確認）",
         counts.pending_branch,
-        hint="② 学校タブ",
+        hint="詳細: 提案",
         urgent=False,
     )
     _todo_line(
         "学科の別名承認",
         counts.pending_dept,
-        hint="② 学科タブ",
+        hint="詳細: 提案",
         urgent=counts.pending_dept > 0,
+    )
+    _todo_line(
+        "公式備考レビュー",
+        counts.pending_prefecture_remarks,
+        hint="詳細: 公式インデックス",
+        urgent=counts.pending_prefecture_remarks > 0,
     )
     _todo_line(
         "URL追加が必要",
@@ -1395,7 +2153,7 @@ def render_sidebar_todo(session: Session) -> None:
 
     if counts.excel_stale:
         st.sidebar.warning("新しい承認あり · ④ で再出力推奨", icon="⚠️")
-    elif total_pending == 0 and counts.url_needed == 0:
+    elif total_pending == 0 and counts.url_needed == 0 and target_needs_action == 0:
         st.sidebar.success("今週のTODOは完了", icon="✅")
 
 
@@ -1408,25 +2166,26 @@ def _todo_line(
     done: bool = False,
 ) -> None:
     """One line in sidebar TODO. Uses Streamlit columns for alignment."""
+    safe_label = html.escape(label)
     c1, c2 = st.sidebar.columns([3, 1])
     if urgent:
-        c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
+        c1.markdown(f"<small>{safe_label}</small>", unsafe_allow_html=True)
         c2.markdown(
-            f"<div style='text-align:right;color:#5E6AD2;font-weight:600;'>{count}</div>",
+            f"<div style='text-align:right;color:var(--eidp-accent);font-weight:600;'>{count}</div>",
             unsafe_allow_html=True,
         )
     elif done:
         c1.markdown(
-            f"<small style='color:#888'>{label}</small>", unsafe_allow_html=True
+            f"<small style='color:var(--eidp-ink-low)'>{safe_label}</small>", unsafe_allow_html=True
         )
         c2.markdown(
-            f"<div style='text-align:right;color:#1F8B4C;'>{count}</div>",
+            f"<div style='text-align:right;color:var(--eidp-ok);'>{count}</div>",
             unsafe_allow_html=True,
         )
     else:
-        c1.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
+        c1.markdown(f"<small>{safe_label}</small>", unsafe_allow_html=True)
         c2.markdown(
-            f"<div style='text-align:right;color:#4E4E52;'>{count}</div>",
+            f"<div style='text-align:right;color:var(--eidp-ink-mid);'>{count}</div>",
             unsafe_allow_html=True,
         )
     if hint:
@@ -1448,10 +2207,10 @@ class ProposalDecision:
     timestamp: str
 
 
-def _read_proposals(path: Path) -> list[dict]:
+def _read_proposals(path: Path) -> list[JsonDict]:
     if not path.exists():
         return []
-    out: list[dict] = []
+    out: list[JsonDict] = []
     with path.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -1464,10 +2223,29 @@ def _read_proposals(path: Path) -> list[dict]:
     return out
 
 
-def _record_decision(decision: ProposalDecision, audit_path: Path) -> None:
+def _record_decision(
+    decision: ProposalDecision,
+    audit_path: Path,
+    *,
+    session: Session | None = None,
+) -> ManualActionLog | None:
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     with audit_path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(asdict(decision), ensure_ascii=False) + "\n")
+    if session is None:
+        return None
+    row = log_manual_action(
+        session,
+        action_type="proposal_decision_recorded",
+        target_table="proposal_decision",
+        target_id=decision.target_id,
+        old_value=None,
+        new_value=asdict(decision),
+        reason=f"Operator recorded {decision.proposal_kind} proposal decision: {decision.decision}",
+        actor=decision.operator_name or "operator",
+    )
+    session.commit()
+    return row
 
 
 def _load_decision_index(audit_path: Path) -> dict[tuple[str, str], str]:
@@ -1496,6 +2274,8 @@ def _load_decision_index(audit_path: Path) -> dict[tuple[str, str], str]:
                     if kind_full.startswith("dept_alias")
                     else "school_alias"
                 )
+                if row.get("decision") in {"failed", "lock_busy"}:
+                    continue
                 key = (kind_prefix, row.get("template_name", ""))
                 out[key] = row.get("decision", "")
     except OSError:
@@ -1503,24 +2283,14 @@ def _load_decision_index(audit_path: Path) -> dict[tuple[str, str], str]:
     return out
 
 
-def apply_school_alias_proposal(
+def _apply_school_alias_proposal_unlocked(
     session: Session,
     *,
     school_id: int,
     alias_name: str,
     source: str = "proposal_review_queue",
+    actor: str = "operator",
 ) -> tuple[bool, str]:
-    """Idempotent SchoolAlias insert with cross-school conflict check.
-
-    Returns (created, reason). 'reason' values:
-      - inserted                       : new row added
-      - already_exists                 : same (school_id, alias_name) present
-      - conflict_other_school:<id>     : alias is registered to a different
-                                         school; refuse to insert. Matcher's
-                                         ambiguity guard would otherwise flip
-                                         the row to school_name_ambiguous.
-      - empty_alias                    : alias_name is blank after strip
-    """
     alias_name = alias_name.strip()
     if not alias_name:
         return False, "empty_alias"
@@ -1544,26 +2314,76 @@ def apply_school_alias_proposal(
     )
     if conflict is not None:
         return False, f"conflict_other_school:{conflict.school_id}"
-    session.add(
-        SchoolAlias(
-            school_id=school_id,
-            alias_name=alias_name,
-            alias_type="competition_template",
-            source=source,
-        )
+    alias = SchoolAlias(
+        school_id=school_id,
+        alias_name=alias_name,
+        alias_type="competition_template",
+        source=source,
+    )
+    session.add(alias)
+    session.flush()
+    log_manual_action(
+        session,
+        action_type="school_alias_approved",
+        target_table="school_alias",
+        target_id=alias.id,
+        old_value=None,
+        new_value={
+            "school_id": school_id,
+            "alias_name": alias_name,
+            "alias_type": "competition_template",
+            "source": source,
+        },
+        reason="Operator approved school alias proposal",
+        actor=actor,
     )
     session.commit()
     return True, "inserted"
 
 
-def apply_dept_alias_proposal(
+def apply_school_alias_proposal(
+    session: Session,
+    *,
+    school_id: int,
+    alias_name: str,
+    source: str = "proposal_review_queue",
+    actor: str = "operator",
+    lock_path: Path,
+) -> tuple[bool, str]:
+    """Idempotent SchoolAlias insert with cross-school conflict check.
+
+    Returns (created, reason). 'reason' values:
+      - inserted                       : new row added
+      - already_exists                 : same (school_id, alias_name) present
+      - conflict_other_school:<id>     : alias is registered to a different
+                                         school; refuse to insert. Matcher's
+                                         ambiguity guard would otherwise flip
+                                         the row to school_name_ambiguous.
+      - empty_alias                    : alias_name is blank after strip
+      - lock_busy                      : weekly runner or another UI writer holds the app lock
+    """
+    try:
+        with acquire_lock(lock_path, owner="ui_school_alias_proposal"):
+            return _apply_school_alias_proposal_unlocked(
+                session,
+                school_id=school_id,
+                alias_name=alias_name,
+                source=source,
+                actor=actor,
+            )
+    except LockBusyError:
+        session.rollback()
+        return False, "lock_busy"
+
+
+def _apply_dept_alias_proposal_unlocked(
     session: Session,
     *,
     department_id: int,
     old_name: str,
     source: str = "proposal_review_queue",
+    actor: str = "operator",
 ) -> tuple[bool, str]:
-    """Record a dept alias as DepartmentChange(change_type='alias')."""
     old_name = old_name.strip()
     if not old_name:
         return False, "empty_old_name"
@@ -1576,25 +2396,157 @@ def apply_dept_alias_proposal(
             DepartmentChange.department_id == department_id,
             DepartmentChange.old_name == old_name,
             DepartmentChange.change_type == "alias",
+            DepartmentChange.voided.is_(False),
         )
         .first()
     )
     if exists is not None:
         return False, "already_exists"
-    session.add(
-        DepartmentChange(
-            department_id=department_id,
-            change_type="alias",
-            fiscal_year=datetime.now(timezone.utc).year,
-            old_name=old_name,
-            new_name=dept.canonical_name,
-            verified=False,
-            verified_by=source,
-            notes="competition_template dept alias proposed by resolver",
-        )
+    change = DepartmentChange(
+        department_id=department_id,
+        change_type="alias",
+        fiscal_year=datetime.now(UTC).year,
+        old_name=old_name,
+        new_name=dept.canonical_name,
+        verified=False,
+        verified_by=source,
+        notes="competition_template dept alias proposed by resolver",
+    )
+    session.add(change)
+    session.flush()
+    log_manual_action(
+        session,
+        action_type="dept_alias_approved",
+        target_table="department_change",
+        target_id=change.id,
+        old_value=None,
+        new_value={
+            "department_id": department_id,
+            "change_type": "alias",
+            "old_name": old_name,
+            "new_name": dept.canonical_name,
+            "source": source,
+        },
+        reason="Operator approved department alias proposal",
+        actor=actor,
     )
     session.commit()
     return True, "inserted"
+
+
+def apply_dept_alias_proposal(
+    session: Session,
+    *,
+    department_id: int,
+    old_name: str,
+    source: str = "proposal_review_queue",
+    actor: str = "operator",
+    lock_path: Path,
+) -> tuple[bool, str]:
+    """Record a dept alias as DepartmentChange(change_type='alias')."""
+    try:
+        with acquire_lock(lock_path, owner="ui_dept_alias_proposal"):
+            return _apply_dept_alias_proposal_unlocked(
+                session,
+                department_id=department_id,
+                old_name=old_name,
+                source=source,
+                actor=actor,
+            )
+    except LockBusyError:
+        session.rollback()
+        return False, "lock_busy"
+
+
+def _void_department_change_unlocked(
+    session: Session,
+    *,
+    change_id: int,
+    actor: str = "operator",
+    reason: str | None = None,
+) -> tuple[bool, str]:
+    change = session.get(DepartmentChange, change_id)
+    if change is None:
+        return False, "not_found"
+    if change.voided:
+        return False, "already_voided"
+
+    old_value = {
+        "voided": False,
+        "change_type": change.change_type,
+        "department_id": change.department_id,
+        "old_name": change.old_name,
+        "new_name": change.new_name,
+    }
+    change.voided = True
+    change.voided_at = datetime.now(UTC)
+    change.voided_by = actor
+    change.void_reason = reason
+    log_manual_action(
+        session,
+        action_type="dept_change_void",
+        target_table="department_change",
+        target_id=change.id,
+        old_value=old_value,
+        new_value={
+            "voided": True,
+            "voided_by": actor,
+            "void_reason": reason,
+        },
+        reason=reason,
+        actor=actor,
+    )
+    session.commit()
+    return True, "voided"
+
+
+def void_department_change(
+    session: Session,
+    *,
+    change_id: int,
+    actor: str = "operator",
+    reason: str | None = None,
+    lock_path: Path,
+) -> tuple[bool, str]:
+    """Mark an operator-approved DepartmentChange as void without deleting history."""
+    try:
+        with acquire_lock(lock_path, owner="ui_dept_change_void"):
+            return _void_department_change_unlocked(
+                session,
+                change_id=change_id,
+                actor=actor,
+                reason=reason,
+            )
+    except LockBusyError:
+        session.rollback()
+        return False, "lock_busy"
+
+
+def _active_dept_alias_changes(session: Session, *, limit: int = 20) -> list[JsonDict]:
+    """Return recent active department aliases that the operator can void."""
+    rows = (
+        session.query(DepartmentChange, Department, School)
+        .join(Department, Department.id == DepartmentChange.department_id)
+        .join(School, School.id == Department.school_id)
+        .filter(
+            DepartmentChange.change_type == "alias",
+            DepartmentChange.voided.is_(False),
+        )
+        .order_by(DepartmentChange.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "change_id": int(change.id),
+            "school_name": school.school_name,
+            "canonical_name": dept.canonical_name,
+            "old_name": change.old_name or "",
+            "new_name": change.new_name or "",
+            "verified_by": change.verified_by or "",
+        }
+        for change, dept, school in rows
+    ]
 
 
 _SCHOOL_PROPOSAL_LABEL = {
@@ -1605,7 +2557,7 @@ _SCHOOL_PROPOSAL_LABEL = {
 }
 
 
-def _render_school_proposals_tab(session: Session) -> None:
+def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
     proposals = _read_proposals(_DEFAULT_SCHOOL_PROPOSALS)
     if not proposals:
         st.info(
@@ -1617,10 +2569,10 @@ def _render_school_proposals_tab(session: Session) -> None:
     decisions = _load_decision_index(_DEFAULT_PROPOSAL_DECISIONS)
     hide_processed = st.session_state.get("hide_processed", True)
 
-    by_type: dict[str, list[dict]] = {}
+    by_type: dict[str, list[JsonDict]] = {}
     for p in proposals:
-        key = ("school_alias", p.get("template_name", ""))
-        if hide_processed and key in decisions:
+        decision_key = ("school_alias", p.get("template_name", ""))
+        if hide_processed and decision_key in decisions:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
@@ -1656,7 +2608,7 @@ def _render_school_proposals_tab(session: Session) -> None:
         ),
     )
     if mode.startswith("集中"):
-        _render_school_focus_mode(session, focus_items)
+        _render_school_focus_mode(session, focus_items, lock_path=lock_path)
         return
 
     st.divider()
@@ -1685,10 +2637,13 @@ def _render_school_proposals_tab(session: Session) -> None:
                 key=f"approve_sch_{p['matched_school_id']}_{p['template_name']}",
                 type="primary",
             ):
+                operator_name = operator_actor_from_state(st.session_state)
                 created, reason = apply_school_alias_proposal(
                     session,
                     school_id=p["matched_school_id"],
                     alias_name=p["template_name"],
+                    actor=operator_name,
+                    lock_path=lock_path,
                 )
                 _record_decision(
                     ProposalDecision(
@@ -1696,11 +2651,12 @@ def _render_school_proposals_tab(session: Session) -> None:
                         proposal_kind="school_alias",
                         template_name=p["template_name"],
                         target_id=p["matched_school_id"],
-                        operator_name=st.session_state.get("operator_name", ""),
+                        operator_name=operator_name,
                         note=reason,
-                        timestamp=datetime.now(timezone.utc).isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                     ),
                     _DEFAULT_PROPOSAL_DECISIONS,
+                    session=session,
                 )
                 if created:
                     st.success(
@@ -1738,7 +2694,7 @@ def _render_school_proposals_tab(session: Session) -> None:
                 "扱われているか確信が持てなければ「保留」にしてください。"
             )
         for p in items:
-            _render_school_candidate_picker(session, p, ptype)
+            _render_school_candidate_picker(session, p, ptype, lock_path=lock_path)
 
     truly = by_type.get("truly_missing", [])
     if truly:
@@ -1756,7 +2712,7 @@ def _render_school_proposals_tab(session: Session) -> None:
 
 
 def _render_school_focus_mode(
-    session: Session, focus_items: list[dict]
+    session: Session, focus_items: list[JsonDict], *, lock_path: Path
 ) -> None:
     """V2-inspired single-proposal focus card.
 
@@ -1800,7 +2756,9 @@ def _render_school_focus_mode(
           </div>
           <div class="eidp-focus-name">{safe_template_name}</div>
           <div class="eidp-focus-rows">テンプレート内で {safe_template_rows} 行に登場</div>
-          <div class="eidp-focus-divider"><span class="line"></span><span>正しい DB 学校を選択</span><span class="line"></span></div>
+          <div class="eidp-focus-divider">
+            <span class="line"></span><span>正しい DB 学校を選択</span><span class="line"></span>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1853,13 +2811,15 @@ def _render_school_focus_mode(
             type="primary",
             disabled=(picked is None),
             key=f"focus_approve_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             if picked is not None:
                 created, reason = apply_school_alias_proposal(
                     session,
                     school_id=int(picked["school_id"]),
                     alias_name=item["template_name"],
+                    actor=operator_actor_from_state(st.session_state),
+                    lock_path=lock_path,
                 )
                 _record_decision(
                     ProposalDecision(
@@ -1869,9 +2829,10 @@ def _render_school_focus_mode(
                         target_id=int(picked["school_id"]),
                         operator_name=st.session_state.get("operator_name", ""),
                         note=reason,
-                        timestamp=datetime.now(timezone.utc).isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                     ),
                     _DEFAULT_PROPOSAL_DECISIONS,
+                    session=session,
                 )
                 if reason.startswith("conflict_other_school:"):
                     other = reason.split(":")[1]
@@ -1888,7 +2849,7 @@ def _render_school_focus_mode(
         if action_cols[1].button(
             "保留",
             key=f"focus_defer_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             _record_decision(
                 ProposalDecision(
@@ -1898,9 +2859,10 @@ def _render_school_focus_mode(
                     target_id=None,
                     operator_name=st.session_state.get("operator_name", ""),
                     note="operator deferred (focus mode)",
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
+                session=session,
             )
             st.session_state.school_focus_idx = _next_focus_idx_after_decision(ptr, total)
             st.rerun()
@@ -1909,7 +2871,7 @@ def _render_school_focus_mode(
             "← 前へ",
             disabled=(ptr == 0),
             key=f"focus_prev_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state.school_focus_idx = max(0, ptr - 1)
             st.rerun()
@@ -1918,7 +2880,7 @@ def _render_school_focus_mode(
             "スキップ →",
             disabled=(ptr >= total - 1),
             key=f"focus_skip_{ptr}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state.school_focus_idx = min(ptr + 1, total - 1)
             st.rerun()
@@ -1932,7 +2894,7 @@ def _next_focus_idx_after_decision(ptr: int, total: int) -> int:
 
 
 def _render_school_candidate_picker(
-    session: Session, proposal: dict, ptype: str
+    session: Session, proposal: JsonDict, ptype: str, *, lock_path: Path
 ) -> None:
     """Render one picker card with Approve / Defer buttons."""
     candidates = proposal.get("candidates") or []
@@ -1971,6 +2933,8 @@ def _render_school_candidate_picker(
                 session,
                 school_id=int(picked["school_id"]),
                 alias_name=template,
+                actor=operator_actor_from_state(st.session_state),
+                lock_path=lock_path,
             )
             _record_decision(
                 ProposalDecision(
@@ -1980,9 +2944,10 @@ def _render_school_candidate_picker(
                     target_id=int(picked["school_id"]),
                     operator_name=st.session_state.get("operator_name", ""),
                     note=reason,
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
+                session=session,
             )
             if created:
                 st.success(
@@ -2009,14 +2974,15 @@ def _render_school_candidate_picker(
                     target_id=None,
                     operator_name=st.session_state.get("operator_name", ""),
                     note="operator deferred — needs more research",
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                 ),
                 _DEFAULT_PROPOSAL_DECISIONS,
+                session=session,
             )
             st.caption(f"保留しました: {template}")
 
 
-def _render_dept_proposals_tab(session: Session) -> None:
+def _render_dept_proposals_tab(session: Session, *, lock_path: Path) -> None:
     proposals = _read_proposals(_DEFAULT_DEPT_PROPOSALS)
     if not proposals:
         st.info(
@@ -2028,14 +2994,14 @@ def _render_dept_proposals_tab(session: Session) -> None:
     decisions = _load_decision_index(_DEFAULT_PROPOSAL_DECISIONS)
     hide_processed = st.session_state.get("hide_processed", True)
 
-    by_type: dict[str, list[dict]] = {}
+    by_type: dict[str, list[JsonDict]] = {}
     for p in proposals:
-        key = ("dept_alias", p.get("template_dept", ""))
-        if hide_processed and key in decisions:
+        decision_key = ("dept_alias", p.get("template_dept", ""))
+        if hide_processed and decision_key in decisions:
             continue
         by_type.setdefault(p.get("proposal_type", "?"), []).append(p)
 
-    _DEPT_PROPOSAL_LABEL = {
+    _dept_proposal_label = {
         "dept_alias_existing": "別名追加で即マッチ（候補1つ）",
         "dept_group_candidate": "複数学科の合算行（今期は対応外）",
         "dept_ambiguous": "候補が複数（選択が必要）",
@@ -2050,7 +3016,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
         "dept_truly_missing",
     ]):
         items = by_type.get(ptype, [])
-        cols[idx].metric(_DEPT_PROPOSAL_LABEL.get(ptype, ptype), len(items))
+        cols[idx].metric(_dept_proposal_label.get(ptype, ptype), len(items))
 
     st.divider()
     st.subheader("自動承認OK：一致候補が1つだけの学科")
@@ -2069,23 +3035,28 @@ def _render_dept_proposals_tab(session: Session) -> None:
             )
             key = f"approve_dept_{p['db_dept_ids'][0]}_{p['template_dept']}"
             if cols[1].button("承認", key=key, type="primary"):
+                operator_name = operator_actor_from_state(st.session_state)
                 created, reason = apply_dept_alias_proposal(
                     session,
                     department_id=p["db_dept_ids"][0],
                     old_name=p["template_dept"],
+                    actor=operator_name,
+                    lock_path=lock_path,
                 )
-                _record_decision(
-                    ProposalDecision(
-                        decision="approved" if created else "already",
-                        proposal_kind="dept_alias",
-                        template_name=p["template_dept"],
-                        target_id=p["db_dept_ids"][0],
-                        operator_name=st.session_state.get("operator_name", ""),
-                        note=reason,
-                        timestamp=datetime.now(timezone.utc).isoformat(),
-                    ),
-                    _DEFAULT_PROPOSAL_DECISIONS,
-                )
+                if created or reason == "already_exists":
+                    _record_decision(
+                        ProposalDecision(
+                            decision="approved" if created else "already",
+                            proposal_kind="dept_alias",
+                            template_name=p["template_dept"],
+                            target_id=p["db_dept_ids"][0],
+                            operator_name=operator_name,
+                            note=reason,
+                            timestamp=datetime.now(UTC).isoformat(),
+                        ),
+                        _DEFAULT_PROPOSAL_DECISIONS,
+                        session=session,
+                    )
                 if created:
                     st.success(
                         f"学科別名を登録しました: 「{p['template_dept']}」 → "
@@ -2105,7 +3076,7 @@ def _render_dept_proposals_tab(session: Session) -> None:
     for ptype, items in by_type.items():
         if ptype == "dept_alias_existing":
             continue
-        st.write(f"**{_DEPT_PROPOSAL_LABEL.get(ptype, ptype)}** — {len(items)}件")
+        st.write(f"**{_dept_proposal_label.get(ptype, ptype)}** — {len(items)}件")
         for p in items[:10]:
             names = " ／ ".join(p.get("db_dept_names", [])[:3])
             st.caption(
@@ -2113,14 +3084,42 @@ def _render_dept_proposals_tab(session: Session) -> None:
                 f"候補: {names if names else '（なし）'}"
             )
 
+    st.divider()
+    with st.expander("登録済み学科別名の取消", expanded=False):
+        active_aliases = _active_dept_alias_changes(session)
+        if not active_aliases:
+            st.caption("取消できる学科別名はありません。")
+        for alias in active_aliases:
+            row = st.columns([4, 1])
+            row[0].write(
+                f"**{alias['school_name']} / {alias['canonical_name']}**"
+            )
+            row[0].caption(
+                f"別名: {alias['old_name']} / 登録元: {alias['verified_by'] or 'unknown'}"
+            )
+            if row[1].button("取消", key=f"void_dept_alias_{alias['change_id']}"):
+                changed, reason = void_department_change(
+                    session,
+                    change_id=alias["change_id"],
+                    actor=operator_actor_from_state(st.session_state),
+                    reason="operator voided dept alias from proposal review page",
+                    lock_path=lock_path,
+                )
+                if changed:
+                    st.success("学科別名を取消しました。")
+                else:
+                    st.info(f"未実行: {reason}")
 
-def page_proposals_review(session: Session) -> None:
+
+def page_proposals_review(session: Session, *, lock_path: Path) -> None:
     st.header("② マッチング提案の確認")
     st.caption(
         "競合校テンプレートと DB の学校名・学科名を自動照合した結果です。"
         "「承認」するとその行は以降のExcel出力に反映されます。"
         "「保留」はDBに何も書かず、記録だけ残します。"
     )
+    if _operator_lock_held(lock_path):
+        return
     with st.expander("このページの使い方（初回は必読）", expanded=False):
         st.markdown(
             """
@@ -2141,12 +3140,11 @@ def page_proposals_review(session: Session) -> None:
 - `DBに該当校なし` の行は法人情報が必要なため、現時点では対応外です（上長に報告）。
             """
         )
-    st.text_input(
-        "担当者名（監査ログに記録）",
-        key="operator_name",
-        value=st.session_state.get("operator_name", ""),
-        placeholder="例: 山田",
-    )
+    actor = operator_actor_from_state(st.session_state)
+    if actor == "operator":
+        st.caption("担当者名は左サイドバーの「担当者名（監査用）」に入力してください。")
+    else:
+        st.caption(f"監査ログ担当者: {actor}")
     st.checkbox(
         "処理済み（承認/保留）の行を隠す",
         key="hide_processed",
@@ -2156,9 +3154,9 @@ def page_proposals_review(session: Session) -> None:
         ["学校タブ（学校名のマッチング）", "学科タブ（学科名のマッチング）"]
     )
     with tab_school:
-        _render_school_proposals_tab(session)
+        _render_school_proposals_tab(session, lock_path=lock_path)
     with tab_dept:
-        _render_dept_proposals_tab(session)
+        _render_dept_proposals_tab(session, lock_path=lock_path)
 
 
 def _decision_badge(decision: str) -> str:
@@ -2175,8 +3173,8 @@ def _decision_badge(decision: str) -> str:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _tail_jsonl(path: Path, limit: int) -> list[dict]:
-    out: list[dict] = []
+def _tail_jsonl(path: Path, limit: int) -> list[JsonDict]:
+    out: list[JsonDict] = []
     try:
         with path.open(encoding="utf-8") as fh:
             for line in fh:

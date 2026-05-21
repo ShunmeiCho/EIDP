@@ -1,0 +1,50 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "tokyo-medical-support2024-review-2026",
+  "school": {
+    "school_id": 115,
+    "school_name": "東京メディカル・スポーツ専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "滋慶学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a Tokyo support page where the direct support PDF is target-shaped but has no reliable FY2026 evidence.",
+    "steps": [
+      "Start from the Tokyo official-index disclosure URL registered as the school's prefecture_aggregator site.",
+      "Open https://www.tokyo-medical.ac.jp/about/schooling_support/.",
+      "Inspect the anchor labeled 申請書.",
+      "Follow https://www.tokyo-medical.ac.jp/assets/doc/about/schooling_support/support2024.pdf.",
+      "Classify it as needs_operator_review because the PDF is target-shaped but the URL, anchor, and PDF evidence do not prove FY2026."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.tokyo-medical.ac.jp/",
+    "disclosure_url": "https://www.tokyo-medical.ac.jp/about/schooling_support/",
+    "pdf_url": "https://www.tokyo-medical.ac.jp/assets/doc/about/schooling_support/support2024.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "pattern_type": "direct",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "tokyo_support_page_target_form_without_year_evidence",
+    "reusable_rules": [
+      "Treat support-page anchors labeled 申請書 as target-form candidates.",
+      "Require fiscal-year evidence from the PDF body, URL, or anchor before strict FY acceptance.",
+      "Preserve yearless target-form candidates for operator review rather than counting them as downloaded current-FY PDFs."
+    ],
+    "anti_patterns": [
+      "Do not accept a PDF as FY2026 only because the page is reached from a current Tokyo official index.",
+      "Do not infer the target fiscal year from filename fragments such as support2024 when the strict target is FY2026."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl"
+    ],
+    "notes": "Windows v342 Tokyo 30-site replay records this candidate as reason=target_fiscal_year_not_detected, pdf_type=target, pattern_type=direct."
+  }
+}

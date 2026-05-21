@@ -238,6 +238,41 @@ def test_matcher_consumes_department_change_alias() -> None:
         session.close()
 
 
+def test_matcher_ignores_voided_department_change_alias() -> None:
+    from eidp.db.models import DepartmentChange
+
+    session = _session()
+    try:
+        session.add(School(id=1, prefecture="東京", corporation_name="C", school_name="TSM"))
+        session.add(Department(id=521, school_id=1, canonical_name="プロミュージシャン科"))
+        session.add(DepartmentChange(
+            department_id=521,
+            change_type="alias",
+            fiscal_year=2026,
+            old_name="プロミュージシャン学科",
+            new_name="プロミュージシャン科",
+            verified=False,
+            voided=True,
+            voided_by="operator",
+            void_reason="wrong proposal",
+        ))
+        session.flush()
+
+        matcher = CompetitionMatcher(session)
+        row = TemplateRow(
+            row_index=6,
+            school_name="TSM",
+            dept_name="プロミュージシャン学科",
+            duration_label=None,
+        )
+        result = matcher.match("滋慶", row)
+        assert result.school_id == 1
+        assert result.department_ids == []
+        assert "dept_alias" not in result.matched_via
+    finally:
+        session.close()
+
+
 def test_matcher_dept_kana_matches_across_transliteration_variants() -> None:
     """Kana fold alone should bridge the ー↔イ drift when the rest of the
     dept name is identical. Structural differences like '昼間部一' vs '昼一'

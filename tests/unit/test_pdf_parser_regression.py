@@ -4,6 +4,7 @@ from pathlib import Path
 
 from eidp.pdf.extractor import (
     _extract_dept_identity_from_table,
+    _extract_school_name,
     _find_dept_table,
     _is_template_header_text,
     _parse_department_section,
@@ -34,6 +35,38 @@ def test_jec_enrollment_row_keeps_capacity_without_person_suffix() -> None:
     assert dept.capacity == 160
     assert dept.enrollment == 153
     assert dept.intl_students == 54
+
+
+def test_school_name_noise_strip_preserves_legitimate_leading_name_character() -> None:
+    assert _extract_school_name("学校名 名古屋医専\n設置者名 学校法人") == "名古屋医専"
+    assert _extract_school_name("学校名 称】名古屋医専\n設置者名 学校法人") == "名古屋医専"
+
+
+def test_graduation_row_with_blank_advanced_and_other_keeps_graduate_count() -> None:
+    section_text = """
+生徒総定員数 生徒実員 うち留学生数 専任教員数 兼任教員数 総教員数
+300 人 263 人 0人 26 人 22 人 48 人
+
+卒業者数、進学者数、就職者数（直近の年度の状況を記載）
+
+就職者数
+卒業者数 進学者数 その他
+（自営業を含む。）
+86 人 人 86 人 人
+（100％） （ ％） （ ％） （ ％）
+"""
+
+    dept = _parse_department_section(
+        section_text,
+        table_dept_name="第一学科",
+        table_course_name="看護専門課程",
+    )
+
+    assert dept is not None
+    assert dept.capacity == 300
+    assert dept.enrollment == 263
+    assert dept.graduates == 86
+    assert dept.employed == 86
 
 
 def test_text_fallback_does_not_use_template_header_as_department_name() -> None:

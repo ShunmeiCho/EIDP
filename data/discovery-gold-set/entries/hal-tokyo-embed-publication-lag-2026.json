@@ -1,0 +1,59 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "hal-tokyo-embed-publication-lag-2026",
+  "school": {
+    "school_id": 7,
+    "school_name": "HAL東京",
+    "prefecture": "東京都",
+    "corporation_name": "日本教育財団"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "publication_lag_latest_public",
+  "manual_demonstration": {
+    "operator_goal": "Find the latest public HAL東京 support confirmation PDF when the disclosure index links to an HTML subpage that embeds the PDF instead of linking directly to it.",
+    "search_queries": [
+      "HAL東京 情報公開 修学支援 確認申請書",
+      "HAL東京 高等教育 修学支援 新制度 確認申請書"
+    ],
+    "steps": [
+      "Open the NKZ disclosure index page https://www.nkz.ac.jp/clginfo/thinfo.html.",
+      "Follow the HAL東京 subpage link th/thZ-studyspt_13.html for 高等教育の修学支援新制度確認申請書.",
+      "Inspect the subpage HTML and read the embedded PDF source ./pdf/thZ-studyspt_13.pdf.",
+      "Resolve the embedded source to https://www.nkz.ac.jp/clginfo/th/pdf/thZ-studyspt_13.pdf.",
+      "Classify it as latest-public publication lag for FY2026 because the PDF body is 令和7年度, not the current FY2026 target form."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.nkz.ac.jp/",
+    "disclosure_url": "https://www.nkz.ac.jp/clginfo/thinfo.html",
+    "pdf_url": "https://www.nkz.ac.jp/clginfo/th/pdf/thZ-studyspt_13.pdf",
+    "pdf_type": "target",
+    "fiscal_year": 2025,
+    "strict_target_year_success": false,
+    "pattern_type": "embed"
+  },
+  "automation_pattern": {
+    "site_family": "embedded_pdf_subpage",
+    "reusable_rules": [
+      "Treat disclosure index pages that link to HTML subpages as bounded same-site navigation, not as no-candidate failures.",
+      "On the subpage, parse embed/object/iframe PDF sources and resolve them relative to the subpage URL.",
+      "Keep embedded latest-public target forms as publication-lag evidence when the body proves the previous fiscal year."
+    ],
+    "anti_patterns": [
+      "Do not require a direct a[href$='.pdf'] link on the disclosure index page.",
+      "Do not accept the embedded PDF as FY2026 success when the body fiscal year is 令和7年度.",
+      "Do not infer current-year success from the stable thZ-studyspt_13 filename; the PDF body remains the fiscal-year authority."
+    ]
+  },
+  "evidence": {
+    "source_kind": "manual_web",
+    "source_paths": [
+      "docs/reports/2026-04-11-reference-url-analysis.md",
+      "docs/reports/2026-04-11-pdf-extraction-report.md",
+      "https://www.nkz.ac.jp/clginfo/thinfo.html",
+      "https://www.nkz.ac.jp/clginfo/th/thZ-studyspt_13.html",
+      "https://www.nkz.ac.jp/clginfo/th/pdf/thZ-studyspt_13.pdf"
+    ],
+    "notes": "Manual/code verification on 2026-05-13 confirmed the index and subpage return HTTP 200, the subpage contains <embed src=\"./pdf/thZ-studyspt_13.pdf\">, the PDF returns application/pdf, and the local parser reads fiscal_year=令和7年度."
+  }
+}

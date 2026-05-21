@@ -1,0 +1,115 @@
+EIDP v495 Owner / Operator Request
+Date: 2026-05-19
+
+SUPERSEDED
+----------
+Superseded by v497. Do not transfer or validate v495 unless a release engineer
+explicitly requests a historical reproduction. Use
+docs/runbooks/eidp-v497-owner-request-20260519.txt for the current candidate.
+
+Historical purpose
+------------------
+v495 was prepared for Windows side-by-side validation before v497 superseded
+it. It is not v1.0 approval and it is not permission to switch the active
+weekly task.
+
+Historical package (do not use for current validation)
+------------------------------------------------------
+Package:
+  C:\EIDP-staging\eidp-windows-v495.zip
+
+Expected SHA256:
+  e55c1b2de2b74181f9d29120ba9b074c5d14c82bf4d74ef41c07ff8e84e623c8
+
+Side-by-side root:
+  %USERPROFILE%\EIDP-v495-37b5118
+
+Current active root to preserve:
+  %USERPROFILE%\EIDP-v485-70e3db4
+
+Fallback root to preserve:
+  %USERPROFILE%\EIDP-v460-01e4427
+
+Known active-lane UI issue
+--------------------------
+If the current v485 Start EIDP UI shortcut fails with:
+
+  No module named streamlit.main; 'streamlit' is a package and cannot be directly executed
+
+do not treat that as a v495 package failure. It means the already-extracted
+v485 root still has a stale scripts\launch.bat entrypoint. The non-SSH repair
+steps are documented in docs\runbooks\eidp-windows.md under the
+"No module named streamlit.main" troubleshooting row. The v495 path below is
+historical only; use v497 for current side-by-side validation.
+
+Historical checklist (do not execute)
+-------------------------------------
+1. Historical reference:
+   docs\runbooks\eidp-v495-side-by-side-validation.md
+
+2. The historical flow ran only the side-by-side setup and UI smoke first:
+   - SHA256 matches
+   - validate_install.bat returns ok=true
+   - stage6_recovery_check.bat confirms the active task still points to v485
+   - temporary Streamlit health check returns 200/ok on port 8517
+
+3. The historical flow stopped after side-by-side validation. Do not promote
+   v495 to active.
+
+4. If the release decision is strict FY2026/R8:
+   - do not request owner sign-off yet;
+   - wait until public FY2026/R8 target PDFs are available enough for strict
+     yield to reach 60%.
+
+5. If the historical release decision had been publication-lag exception:
+   - fill and approve:
+     docs\reports\2026-05-19-publication-lag-release-exception-record.md
+   - acknowledge FY2026/R8 strict yield is below gate;
+   - use mature-year proof:
+     logs\mature-year-acquisition-proof-fy2025-release-exception-v495-20260519.json
+   - then schedule the owner real cycle.
+
+Required files to return after side-by-side validation
+-----------------------------------------------------
+- logs\win-v495-stage6-v495-validate-after-setup-20260519.json
+- logs\win-v495-stage6-v495-recovery-expected-v485-20260519.json
+- UI smoke notes: port, health status, root status, and whether Streamlit was
+  stopped cleanly
+- Any console error text if setup or UI launch fails
+
+Required files to return after owner real cycle
+----------------------------------------------
+- data\output\last_run.json
+- latest logs\run-*.log
+- latest logs\diagnostics-*.txt
+- latest logs\stage6-evidence-*.zip
+- latest logs\stage6-evidence-verify-*.json
+- completed eidp-operator-e2e-template.md with KPI rows and sign-off
+
+Required KPI / sign-off fields
+------------------------------
+- target_pdf_auto_yield_pct
+- operator_reviewable_yield_pct
+- ship_gate_status
+- ship_readiness_rc
+- pending JSONL outbox count after flush
+- release exception reason, if any
+- release exception approval record, if used
+- mature-year proof JSON, if exception is used
+- owner sign-off
+- operator sign-off
+
+Do not approve v1.0 from these alone
+------------------------------------
+- Mac clean ZIP build
+- GitHub CI success
+- Windows setup validator ok=true
+- Read-only browser navigation smoke
+- Mature-year proof JSON by itself
+- Diagnostic evidence ZIP without a real owner cycle
+
+Release approval still requires either:
+
+- strict FY2026/R8 gate passing at production scale; or
+- explicit publication_lag exception approval plus measured owner-cycle
+  evidence verified by scripts\verify_stage6_return.py.

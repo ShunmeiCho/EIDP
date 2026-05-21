@@ -1,0 +1,331 @@
+"""Tests for src/eidp/scraper/url_scoring.py."""
+
+from __future__ import annotations
+
+import pytest
+
+from eidp.scraper.url_scoring import (
+    UrlScore,
+    UrlScoreThresholds,
+    best_candidate,
+    score_school_url_candidate,
+    thresholds_from_env,
+)
+
+
+def _score(
+    url: str,
+    *,
+    school: str = "東京デザイン専門学校",
+    pref: str = "東京都",
+    title: str | None = None,
+    excerpt: str | None = None,
+) -> UrlScore:
+    return score_school_url_candidate(
+        candidate_url=url,
+        school_name=school,
+        prefecture=pref,
+        page_title=title,
+        page_excerpt=excerpt,
+    )
+
+
+def test_invalid_scheme_is_rejected():
+    s = _score("ftp://example.ac.jp/")
+    assert s.decision == "reject"
+    assert "invalid_url" in s.notes
+
+
+def test_third_party_directory_is_rejected_with_negative_score():
+    s = _score("https://www.shingakunet.com/school/SC123456/")
+    assert s.decision == "reject"
+    assert s.score < 0
+    assert "blacklisted_third_party_directory" in s.notes
+
+
+def test_sns_domain_is_rejected():
+    s = _score("https://www.facebook.com/tokyo-design-school/")
+    assert s.decision == "reject"
+    assert "blacklisted_sns_or_jobboard" in s.notes
+
+
+def test_academic_tld_with_name_token_is_auto():
+    # School name carries an ASCII token that appears in the hostname; this
+    # is the realistic case for vocational schools that publish a romaji
+    # brand inside their official Japanese name.
+    s = _score(
+        "https://www.tdg.ac.jp/",
+        school="東京デザイナー学院TDG",
+        pref="東京都",
+        title="東京デザイナー学院TDG 公式サイト",
+        excerpt="本校の公式ホームページです。情報公開ページはこちら。",
+    )
+    assert s.decision == "auto"
+    assert s.score >= 6.0
+    assert "domain_tld" in s.breakdown
+    assert "domain_name_match" in s.breakdown
+    assert "page_title_match" in s.breakdown
+    assert "disclosure_keyword" in s.breakdown
+
+
+def test_kanji_area_name_matches_romanized_host():
+    s = _score(
+        "https://www.tokyo-design.ac.jp/",
+        school="東京デザイン専門学校",
+        pref="東京都",
+    )
+    assert s.breakdown.get("domain_name_match") == pytest.approx(2.0)
+    assert "name_token=tokyo-design" in s.notes
+
+
+def test_katakana_alias_matches_english_host_token():
+    s = _score(
+        "https://saitama-it-tech.ac.jp/",
+        school="埼玉ITテック専門学校",
+        pref="埼玉県",
+    )
+    assert s.breakdown.get("domain_name_match") == pytest.approx(2.0)
+
+
+def test_neutral_jp_with_disclosure_excerpt_falls_to_review():
+    s = _score(
+        "https://design-school-tokyo.jp/info",
+        school="東京デザイナー学院TDG",
+        pref="東京都",
+        title=None,
+        excerpt="本校の情報公開ページです",
+    )
+    # +1 jp + +1 prefecture + +1 disclosure = 3.0 (<4.0 review threshold)
+    assert s.score == pytest.approx(3.0)
+    assert s.decision == "reject"
+
+
+def test_pure_negative_tld_with_no_signals_is_reject():
+    s = _score("https://random-design-blog.com/")
+    assert s.decision == "reject"
+    assert s.score <= 0
+
+
+def test_prefecture_romaji_matches_in_path():
+    s = _score(
+        "https://example.ac.jp/saitama/info",
+        school="埼玉ITテック専門学校",
+        pref="埼玉県",
+    )
+    assert "prefecture_in_url" in s.breakdown
+
+
+def test_prefecture_kanji_matches_in_host():
+    s = _score(
+        "https://saitama-design.example.ac.jp/",
+        school="埼玉ITテック専門学校",
+        pref="埼玉県",
+    )
+    assert "prefecture_in_url" in s.breakdown
+
+
+def test_thresholds_validate_ordering():
+    with pytest.raises(ValueError):
+        UrlScoreThresholds(auto=4.0, review=6.0)
+
+
+def test_thresholds_from_env_uses_defaults_when_missing():
+    th = thresholds_from_env(env={})
+    assert th.auto == pytest.approx(6.0)
+    assert th.review == pytest.approx(4.0)
+
+
+def test_thresholds_from_env_clamps_review_above_auto():
+    th = thresholds_from_env(env={"EIDP_URL_SCORE_AUTO": "5.0", "EIDP_URL_SCORE_REVIEW": "8.0"})
+    assert th.review == pytest.approx(5.0)
+
+
+def test_thresholds_from_env_falls_back_on_garbage():
+    th = thresholds_from_env(env={"EIDP_URL_SCORE_AUTO": "not-a-number"})
+    assert th.auto == pytest.approx(6.0)
+
+
+def test_best_candidate_picks_highest_eligible():
+    a = _score(
+        "https://www.tokyo-design.ac.jp/",
+        title="東京デザイン専門学校 公式",
+        excerpt="情報公開",
+    )
+    b = _score("https://random.com/")
+    c = _score(
+        "https://design-tokyo.jp/",
+        school="東京デザイン専門学校",
+        pref="東京都",
+    )
+    best = best_candidate([a, b, c])
+    assert best is not None
+    assert best.candidate_url == a.candidate_url
+
+
+def test_best_candidate_prefers_auto_over_higher_scoring_review():
+    review = UrlScore(
+        candidate_url="https://www.city.saitama.lg.jp/001/915/index.html",
+        score=8.0,
+        decision="review",
+    )
+    auto = UrlScore(
+        candidate_url="https://www.siw.ac.jp/school",
+        score=6.0,
+        decision="auto",
+    )
+
+    best = best_candidate([review, auto])
+
+    assert best is not None
+    assert best.candidate_url == auto.candidate_url
+
+
+def test_best_candidate_returns_none_when_all_rejected():
+    a = _score("https://www.shingakunet.com/")
+    b = _score("https://www.facebook.com/x")
+    assert best_candidate([a, b]) is None
+
+
+def test_best_candidate_returns_none_for_empty_input():
+    assert best_candidate([]) is None
+
+
+def test_romaji_school_name_matches_lowercase_host():
+    s = _score(
+        "https://www.abkcollege.ac.jp/",
+        school="ABK COLLEGE",
+        pref="東京都",
+    )
+    assert "domain_name_match" in s.breakdown
+
+
+def test_official_word_in_excerpt_adds_signal():
+    s = _score(
+        "https://example.ac.jp/",
+        excerpt="このサイトは公式の情報公開ページです",
+    )
+    assert s.breakdown.get("official_word") == pytest.approx(0.5)
+    assert s.breakdown.get("disclosure_keyword") == pytest.approx(1.0)
+
+
+def test_disclosure_keyword_only_present_when_excerpt_supplied():
+    s = _score("https://example.ac.jp/", excerpt=None)
+    assert "disclosure_keyword" not in s.breakdown
+
+
+def test_stable_official_homepage_path_can_auto_without_disclosure_keyword():
+    s = _score(
+        "https://www.scw.ac.jp/",
+        school="埼玉コンピュータ＆医療事務専門学校",
+        pref="埼玉県",
+        title="埼玉コンピュータ＆医療事務専門学校 公式サイト",
+        excerpt="学校紹介、学科紹介、入試情報を掲載しています。",
+    )
+
+    assert s.decision == "auto"
+    assert s.breakdown.get("stable_homepage_path") == pytest.approx(1.0)
+
+
+def test_deep_official_subpage_without_disclosure_stays_review():
+    s = _score(
+        "https://www.sanko.ac.jp/omiya-med/other/graduate/",
+        school="大宮医療秘書専門学校",
+        pref="埼玉県",
+        title="大宮医療秘書専門学校 卒業生の方へ",
+        excerpt="卒業生向けの各種証明書手続きです。",
+    )
+
+    assert s.decision == "review"
+    assert "stable_homepage_path" not in s.breakdown
+
+
+def test_negative_tld_subtracts_one():
+    s = _score(
+        "https://example.com/",
+        school="東京デザイン専門学校",
+        pref="東京都",
+    )
+    assert s.breakdown.get("domain_tld") == pytest.approx(-1.0)
+
+
+def test_news_path_with_disclosure_signal_requires_review():
+    s = _score(
+        "https://www.siw.ac.jp/archives/news/2657",
+        school="さいたまIT・WEB専門学校",
+        pref="埼玉県",
+        title="さいたまIT・WEB専門学校 高等教育修学支援新制度のお知らせ",
+        excerpt="本校の情報公開と修学支援制度に関する公式のお知らせです。",
+    )
+    assert s.score >= 4.0
+    assert s.decision == "review"
+    assert s.breakdown.get("low_value_path") < 0
+
+
+def test_admission_download_path_with_strong_school_signal_requires_review():
+    s = _score(
+        "https://www.omiya-kaikeihoritsu.ac.jp/admission_information/form_download/",
+        school="東京IT会計公務員専門学校大宮校",
+        pref="埼玉県",
+        title="東京IT会計公務員専門学校大宮校 公式サイト",
+        excerpt="公式サイトの情報公開、修学支援、入学願書ダウンロードはこちら。",
+    )
+    assert s.score >= 4.0
+    assert s.decision == "review"
+    assert s.breakdown.get("low_value_path") < 0
+
+
+def test_enter_path_with_strong_school_signal_requires_review():
+    s = _score(
+        "https://www.siw.ac.jp/enter",
+        school="さいたまIT・WEB専門学校",
+        pref="埼玉県",
+        title="さいたまIT・WEB専門学校 入学案内",
+        excerpt="公式サイトの情報公開、修学支援、入学案内はこちら。",
+    )
+    assert s.score >= 4.0
+    assert s.decision == "review"
+    assert s.breakdown.get("low_value_path") < 0
+
+
+def test_disclosure_path_keeps_auto_when_school_identity_is_strong():
+    s = _score(
+        "https://www.sanko.ac.jp/disclosure/omiya-sweets/",
+        school="大宮スイーツ＆カフェ専門学校",
+        pref="埼玉県",
+        title="大宮スイーツ＆カフェ専門学校 情報公開",
+        excerpt="高等教育修学支援新制度の機関要件確認申請書を公表しています。",
+    )
+    assert s.decision == "auto"
+    assert "low_value_path" not in s.breakdown
+
+
+def test_local_government_domain_for_private_school_requires_review():
+    s = _score(
+        "https://www.city.saitama.lg.jp/001/915/index.html",
+        school="さいたまIT・WEB専門学校",
+        pref="埼玉県",
+        title="さいたまIT・WEB専門学校 高等教育修学支援新制度",
+        excerpt="公式の情報公開ページです。修学支援制度の対象機関を掲載しています。",
+    )
+    assert s.score >= 6.0
+    assert s.decision == "review"
+    assert "local_government_requires_review" in s.notes
+
+
+def test_local_government_domain_for_public_school_can_stay_auto():
+    s = _score(
+        "https://www.city.saitama.lg.jp/kango/001/index.html",
+        school="さいたま市立高等看護学院",
+        pref="埼玉県",
+        title="さいたま市立高等看護学院",
+        excerpt="公式の情報公開ページです。修学支援制度の対象機関を掲載しています。",
+    )
+    assert s.score >= 6.0
+    assert s.decision == "auto"
+    assert "local_government_requires_review" not in s.notes
+
+
+def test_url_score_is_frozen_dataclass():
+    s = _score("https://example.ac.jp/")
+    with pytest.raises((AttributeError, Exception)):
+        s.score = 99.0  # type: ignore[misc]

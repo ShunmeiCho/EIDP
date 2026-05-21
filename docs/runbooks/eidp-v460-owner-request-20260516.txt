@@ -1,0 +1,117 @@
+EIDP v460 Owner / Operator Real-Cycle Request
+Date: 2026-05-17
+
+Purpose
+-------
+v460 is ready for one real Stage 6 owner/operator cycle.
+This is not another setup smoke test. v1.0 approval still requires real
+operator evidence, KPI values, and owner/operator sign-off.
+
+Use this Windows install
+------------------------
+App root:
+  C:\Users\cyo20\EIDP-v460-01e4427
+
+Package:
+  C:\EIDP-staging\eidp-windows-v460.zip
+
+Expected package SHA256:
+  ce5fa49b8c30900a33b31fd317c6846ffe5839053f2bdd1ffdeb8cca2113129c
+
+Short checklist for the operator
+--------------------------------
+1. Open:
+   C:\Users\cyo20\EIDP-v460-01e4427\EIDP-start.bat
+
+2. Confirm the browser opens:
+   http://127.0.0.1:8501
+
+3. Confirm the UI shows:
+   target fiscal year 2026 / Reiwa 8
+
+4. Do not start an unbounded full weekly collection cycle on v460 unless the
+   owner explicitly approves the long-running production probe. The latest
+   URL-rich v460 FY2026 probe ran for about 9h41m, was stopped, and did not
+   write a new last_run.json. For the current owner/operator cycle, prioritize
+   the double-click launcher, browser UI workflow, audit flush, evidence
+   bundle, KPI/sign-off fields, and any weekly result that has already been
+   produced or is explicitly started by the owner.
+
+5. Complete the real workflow in the browser UI:
+   - Page 1: school task board
+   - Page 2: PDF review and manual entry
+   - Page 3: fiscal-year judgment and correction
+   - Page 4: Excel preview
+   - Detail operator: URL candidate review
+   - Detail operator: audit log
+
+6. After write actions, open the audit log page and run the outbox flush.
+
+7. Fill the real-cycle fields in:
+   C:\EIDP-staging\v460-operator-docs-20260517\eidp-operator-e2e-template.md
+
+Required files to return
+------------------------
+- Latest logs\diagnostics-*.txt
+- Latest logs\stage6-evidence-*.zip
+- Latest logs\stage6-evidence-verify-*.json
+- data\output\last_run.json
+- Latest logs\run-*.log if present
+- Completed KPI/sign-off fields from eidp-operator-e2e-template.md
+
+Required KPI / sign-off fields
+------------------------------
+- target_pdf_auto_yield_pct
+- operator_reviewable_yield_pct
+- ship_gate_status
+- ship_readiness_rc
+- pending JSONL outbox count after flush
+- owner sign-off
+- operator sign-off
+
+Do not approve v1.0 from these alone
+------------------------------------
+- v460 setup validator ok=true
+- read-only browser navigation smoke
+- diagnostic evidence ZIP rejected because last_run is missing
+- v464 side-by-side R7 Excel support evidence
+- v459 bounded weekly / UI write support evidence
+
+These are support evidence only. The release decision needs the v460 real-cycle
+record and verifier-accepted v460 evidence bundle.
+
+Known v460 full-weekly risk
+---------------------------
+v460 remains the active owner/operator UI and evidence lane, but it is not the
+best candidate for a new unbounded full-production weekly run. The URL-rich
+FY2026 probe exposed repeated shared-domain crawling and was stopped after
+about 9h41m without writing a new last_run.json. If the owner wants a fresh
+full weekly KPI run, reopen the change window and promote a newer package lane
+instead of silently using v460 as a long-running full-weekly probe.
+
+Safety notes
+------------
+- Do not delete data\eidp.sqlite3
+- Do not delete data\audit\manual-actions.jsonl
+- Do not delete data\master.xlsx
+- Do not run uninstall.bat
+- Do not persist EIDP_TARGET_FISCAL_YEAR into .env
+- Do not overwrite the operator data directory without a backup
+
+Reference documents
+-------------------
+Use the 20260517 companion docs refresh below. It supersedes the 20260516
+companion docs for operator reading only and does not change the v460 app root,
+scheduled task, database, or release gate.
+
+Detailed run card:
+  C:\EIDP-staging\v460-operator-docs-20260517\eidp-v460-real-cycle-card.md
+
+Full evidence template:
+  C:\EIDP-staging\v460-operator-docs-20260517\eidp-operator-e2e-template.md
+
+Current release boundary:
+  C:\EIDP-staging\v460-operator-docs-20260517\current-release-status.md
+
+Current completion audit:
+  C:\EIDP-staging\v460-operator-docs-20260517\2026-05-17-active-goal-completion-audit.md

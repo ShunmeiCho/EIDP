@@ -9,10 +9,16 @@ Stores results in school_site table.
 """
 
 import csv
-import re
-from collections import defaultdict
+import ipaddress
+import socket
+import threading
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
@@ -20,56 +26,111 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from eidp.db.models import School, SchoolSite
+from eidp.scraper.discovery_evidence import EvidenceRecorder, UrlSearchEvidence
+from eidp.scraper.search_provider import SearchResult
 
 log = structlog.get_logger()
+
+SEARCH_RESULT_MIN_CONFIDENCE = 0.65
+DNS_SAFETY_TIMEOUT_SECONDS = 3.0
+DNS_SAFETY_CACHE_SIZE = 4096
+DNS_SAFETY_CACHE_TTL_SECONDS = 300.0
+_DNS_RESOLUTION_LOCK = threading.Lock()
+
+THIRD_PARTY_DIRECTORY_HOST_SUFFIXES = (
+    "best-shingaku.net",
+    "korekarashinro.jp",
+    "manabi.benesse.ne.jp",
+    "minkou.jp",
+    "nicjp.niad.ac.jp",
+    "shingakunet.com",
+    "shinronavi.com",
+    "studyplus.jp",
+)
 
 # SSRF prevention: only allow http(s) to public hosts
 _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"}
 
 
-def _is_safe_url(url: str) -> bool:
+@dataclass(frozen=True)
+class UrlSafetyDecision:
+    safe: bool
+    reason: str
+
+
+def _dns_safety_cache_bucket() -> int:
+    return int(time.monotonic() // DNS_SAFETY_CACHE_TTL_SECONDS)
+
+
+@lru_cache(maxsize=DNS_SAFETY_CACHE_SIZE)
+def _resolve_host_addresses_for_safety(hostname: str, cache_bucket: int) -> tuple[str, ...]:
+    """Resolve ``hostname`` for SSRF checks with a short timeout and run cache."""
+
+    with _DNS_RESOLUTION_LOCK:
+        previous_timeout = socket.getdefaulttimeout()
+        try:
+            socket.setdefaulttimeout(DNS_SAFETY_TIMEOUT_SECONDS)
+            resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        except (socket.gaierror, OSError, TimeoutError):
+            return ()
+        finally:
+            socket.setdefaulttimeout(previous_timeout)
+
+    addresses: list[str] = []
+    seen: set[str] = set()
+    for _, _, _, _, sockaddr in resolved:
+        addr = str(sockaddr[0])
+        if addr in seen:
+            continue
+        seen.add(addr)
+        addresses.append(addr)
+    return tuple(addresses)
+
+
+def _url_safety_decision(url: str) -> UrlSafetyDecision:
     """Validate URL is http(s) and not targeting internal/cloud metadata endpoints.
 
     Performs DNS resolution to block rebinding-style hostnames (e.g.
     169.254.169.254.nip.io) that resolve to private/metadata IPs.
     """
-    from urllib.parse import urlparse
-    import ipaddress
-    import socket
-
+    if not url or any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
+        return UrlSafetyDecision(False, "invalid_characters")
     try:
         parsed = urlparse(url)
-    except Exception:
-        return False
+        hostname = (parsed.hostname or "").lower()
+    except Exception as exc:
+        log.exception("url_safety_parse_failed", error_type=type(exc).__name__)
+        return UrlSafetyDecision(False, "parse_error")
     if parsed.scheme not in ("http", "https"):
-        return False
-    hostname = (parsed.hostname or "").lower()
+        return UrlSafetyDecision(False, "unsupported_scheme")
     if not hostname:
-        return False
+        return UrlSafetyDecision(False, "missing_hostname")
     if hostname in _BLOCKED_HOSTS:
-        return False
+        return UrlSafetyDecision(False, "blocked_host")
 
     # Check if hostname is a literal IP
     try:
         ip = ipaddress.ip_address(hostname)
         if ip.is_private or ip.is_loopback or ip.is_link_local:
-            return False
+            return UrlSafetyDecision(False, "blocked_ip")
     except ValueError:
         # hostname is not an IP, resolve DNS to check actual IP
-        try:
-            resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-            for _, _, _, _, sockaddr in resolved:
-                addr = sockaddr[0]
-                ip = ipaddress.ip_address(addr)
-                if ip.is_private or ip.is_loopback or ip.is_link_local:
-                    return False
-        except (socket.gaierror, OSError):
-            # DNS resolution failed, reject the URL
-            return False
+        addresses = _resolve_host_addresses_for_safety(hostname, _dns_safety_cache_bucket())
+        if not addresses:
+            return UrlSafetyDecision(False, "dns_unresolved")
+        for addr in addresses:
+            ip = ipaddress.ip_address(addr)
+            if ip.is_private or ip.is_loopback or ip.is_link_local:
+                return UrlSafetyDecision(False, "blocked_dns_ip")
 
-    return True
+    return UrlSafetyDecision(True, "safe")
 
-def _load_corporation_domains() -> dict[str, str]:
+
+def _is_safe_url(url: str) -> bool:
+    return _url_safety_decision(url).safe
+
+
+def _load_corporation_domains(data_dir: Path | None = None) -> dict[str, str]:
     """Load corporation -> domain mapping from external CSV.
 
     CSV path: data/url-discovery/corporation_domains.csv
@@ -77,14 +138,15 @@ def _load_corporation_domains() -> dict[str, str]:
     """
     from eidp.config import settings
 
-    csv_path = settings.data_dir / "url-discovery" / "corporation_domains.csv"
+    base_dir = data_dir if data_dir is not None else settings.data_dir
+    csv_path = base_dir / "url-discovery" / "corporation_domains.csv"
     domains: dict[str, str] = {}
 
     if not csv_path.exists():
         log.warning("corporation_domains_csv_not_found", path=str(csv_path))
         return domains
 
-    with open(csv_path) as f:
+    with csv_path.open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             corp = row.get("corporation_name", "").strip()
@@ -94,6 +156,28 @@ def _load_corporation_domains() -> dict[str, str]:
 
     log.info("corporation_domains_loaded", count=len(domains), path=str(csv_path))
     return domains
+
+
+def _host_matches_suffix(host: str, suffix: str) -> bool:
+    return host == suffix or host.endswith(f".{suffix}")
+
+
+def _untrusted_search_host_reason(url: str) -> str | None:
+    """Reject search hits that are not reusable school/corporation entrances.
+
+    Government and third-party directory pages can be useful evidence for
+    humans, but registering them as ``school_site`` poisons the PDF crawler:
+    it crawls catalog pages instead of each institution's own disclosure page.
+    Prefecture/government sources belong in ``prefecture_aggregator``.
+    """
+    host = (urlparse(url).hostname or "").lower().lstrip("www.")
+    if not host:
+        return "missing_host"
+    if any(_host_matches_suffix(host, suffix) for suffix in THIRD_PARTY_DIRECTORY_HOST_SUFFIXES):
+        return "third_party_directory_domain"
+    if host.endswith(".go.jp") or host.endswith(".lg.jp"):
+        return "government_index_domain"
+    return None
 
 # Common disclosure page path patterns
 DISCLOSURE_PATHS = [
@@ -119,6 +203,70 @@ class DiscoveredUrl:
     http_status: int | None = None
 
 
+@dataclass(frozen=True)
+class SchoolDomainOverride:
+    prefecture: str
+    corporation_name: str
+    school_name: str
+    domain_url: str
+    url_type: str
+    confidence: float
+
+
+def _is_absolute_http_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _load_school_domain_overrides(data_dir: Path | None = None) -> list[SchoolDomainOverride]:
+    """Load exact school -> official URL overrides.
+
+    Some corporations operate multiple branded domains. These exact overrides
+    prevent a corporation-root fallback from poisoning PDF discovery for schools
+    whose public pages live on a separate brand site.
+    """
+    from eidp.config import settings
+
+    base_dir = data_dir if data_dir is not None else settings.data_dir
+    csv_path = base_dir / "url-discovery" / "school_domain_overrides.csv"
+    overrides: list[SchoolDomainOverride] = []
+
+    if not csv_path.exists():
+        log.info("school_domain_overrides_csv_not_found", path=str(csv_path))
+        return overrides
+
+    with csv_path.open(encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            prefecture = row.get("prefecture", "").strip()
+            corp = row.get("corporation_name", "").strip()
+            school = row.get("school_name", "").strip()
+            url = row.get("domain_url", "").strip()
+            if not (prefecture and corp and school and _is_absolute_http_url(url)):
+                continue
+            confidence_text = row.get("confidence", "").strip()
+            try:
+                confidence = float(confidence_text) if confidence_text else 0.95
+            except ValueError:
+                confidence = 0.95
+            overrides.append(
+                SchoolDomainOverride(
+                    prefecture=prefecture,
+                    corporation_name=corp,
+                    school_name=school,
+                    domain_url=url,
+                    url_type=row.get("url_type", "").strip() or "school",
+                    confidence=max(0.0, min(confidence, 1.0)),
+                )
+            )
+
+    log.info("school_domain_overrides_loaded", count=len(overrides), path=str(csv_path))
+    return overrides
+
+
 def import_seed_urls(
     session: Session,
     csv_path: Path,
@@ -126,7 +274,7 @@ def import_seed_urls(
     """Import pre-discovered URLs from the 50-school CSV into school_site."""
     stats = {"imported": 0, "skipped_no_school": 0, "skipped_existing": 0}
 
-    with open(csv_path) as f:
+    with csv_path.open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             prefecture = row.get("prefecture", "").strip()
@@ -182,16 +330,58 @@ def import_seed_urls(
     return stats
 
 
-def infer_corporation_urls(session: Session) -> dict[str, int]:
+def _school_site_url_exists(session: Session, school_id: int, url: str) -> bool:
+    return (
+        session.query(SchoolSite)
+        .filter(SchoolSite.school_id == school_id, SchoolSite.url == url)
+        .first()
+        is not None
+    )
+
+
+def infer_corporation_urls(session: Session, data_dir: Path | None = None) -> dict[str, int]:
     """Register corporation domain roots for schools in known groups.
 
     Reads corporation->domain mapping from data/url-discovery/corporation_domains.csv.
     These are NOT exact page URLs. They are corporation-level entry points
     that Step 8 (PDF discovery) will crawl to find disclosure pages.
     """
-    stats = {"inferred": 0, "skipped_has_url": 0}
+    stats = {
+        "inferred": 0,
+        "skipped_has_url": 0,
+        "school_override_inferred": 0,
+        "school_override_skipped_existing": 0,
+        "school_override_skipped_no_school": 0,
+    }
 
-    corporation_domains = _load_corporation_domains()
+    for override in _load_school_domain_overrides(data_dir=data_dir):
+        school = (
+            session.query(School)
+            .filter(
+                School.prefecture == override.prefecture,
+                School.corporation_name == override.corporation_name,
+                School.school_name == override.school_name,
+            )
+            .first()
+        )
+        if school is None:
+            stats["school_override_skipped_no_school"] += 1
+            continue
+        if _school_site_url_exists(session, int(school.id), override.domain_url):
+            stats["school_override_skipped_existing"] += 1
+            continue
+        site = SchoolSite(
+            school_id=school.id,
+            url=override.domain_url,
+            url_type=override.url_type,
+            discovery_method="school_domain_override",
+            confidence=override.confidence,
+        )
+        session.add(site)
+        stats["inferred"] += 1
+        stats["school_override_inferred"] += 1
+
+    corporation_domains = _load_corporation_domains(data_dir=data_dir)
     for corp_name, domain in corporation_domains.items():
         schools = (
             session.query(School)
@@ -224,13 +414,17 @@ def search_and_discover(
     session: Session,
     batch_size: int = 100,
     rate_limit_delay: float = 1.0,
+    progress_callback: Callable[[dict[str, int], int], None] | None = None,
+    evidence_path: Path | None = None,
 ) -> dict[str, int]:
     """Use search API to discover URLs for schools without any URL.
 
-    Uses cascading query strategy:
-    1. "{school_name} 情報公開 高等教育無償化" (most specific)
-    2. "{school_name} 情報公開" (broader)
-    3. "{school_name} 専門学校" (find school homepage)
+    Uses a cascading query strategy tuned by school type:
+    1. target disclosure terms
+    2. target application-form terms
+    3. generic disclosure page terms
+    4. corporation + school terms
+    5. school homepage terms using 大学 / 専門学校 / 短期大学 / etc.
     """
     import time
 
@@ -257,69 +451,234 @@ def search_and_discover(
         session.query(School)
         .filter(~School.id.in_(schools_with_url))
         .filter(School.status == "active")
+        .order_by(School.prefecture.asc(), School.id.asc())
         .limit(batch_size)
         .all()
     )
 
-    log.info("search_discovery_start", provider=provider.name(), schools=len(schools_without))
+    provider_name = provider.name()
+    log.info("search_discovery_start", provider=provider_name, schools=len(schools_without))
 
-    for school in schools_without:
-        # Cascading query strategy — try specific first, broaden on failure
-        queries = [
-            f"{school.school_name} 情報公開 高等教育無償化",
-            f"{school.school_name} 情報公開",
-            f"{school.school_name} 専門学校",
-        ]
+    with EvidenceRecorder(evidence_path) as evidence:
+        for school in schools_without:
+            # Cascading query strategy — try specific first, broaden on failure
+            queries = search_queries_for_school(school)
 
-        found = False
-        had_error = False
-        for query in queries:
-            try:
-                results = provider.search(query, count=3)
-            except Exception as e:
-                log.warning("search_error", school=school.school_name, error=str(e))
-                stats["errors"] += 1
-                had_error = True
-                time.sleep(rate_limit_delay)
-                break
-
-            if results:
-                # Find the best result (prefer .ac.jp domains and title matches)
-                best = _pick_best_result(results, school)
-                if best and _is_safe_url(best.url):
-                    confidence = _score_search_result(best, school)
-                    site = SchoolSite(
-                        school_id=school.id,
-                        url=best.url,
-                        url_type="school" if school.school_name in best.url else "corporation_subpage",
-                        discovery_method="web_search",
-                        confidence=confidence,
-                    )
-                    session.add(site)
-                    stats["found"] += 1
-                    found = True
+            found = False
+            had_error = False
+            for query in queries:
+                try:
+                    results = provider.search(query, count=3)
+                except Exception as e:
+                    log.warning("search_error", school=school.school_name, error=str(e))
+                    evidence.record(_url_search_evidence(
+                        school=school,
+                        provider=provider_name,
+                        query=query,
+                        decision="error",
+                        reason=str(e),
+                    ))
+                    stats["errors"] += 1
+                    had_error = True
+                    time.sleep(rate_limit_delay)
                     break
 
+                if results:
+                    trusted_results: list[SearchResult] = []
+                    for result in results:
+                        confidence = _score_search_result(result, school)
+                        if not _is_safe_url(result.url):
+                            evidence.record(_url_search_evidence(
+                                school=school,
+                                provider=provider_name,
+                                query=query,
+                                decision="rejected",
+                                reason="unsafe_url",
+                                result=result,
+                                score=confidence,
+                            ))
+                            continue
+                        if untrusted_reason := _untrusted_search_host_reason(result.url):
+                            evidence.record(_url_search_evidence(
+                                school=school,
+                                provider=provider_name,
+                                query=query,
+                                decision="rejected",
+                                reason=untrusted_reason,
+                                result=result,
+                                score=confidence,
+                            ))
+                            continue
+                        trusted_results.append(result)
+
+                    if not trusted_results:
+                        time.sleep(rate_limit_delay)
+                        continue
+
+                    # Find the best trusted result (prefer .ac.jp domains and title matches)
+                    best = _pick_best_result(trusted_results, school)
+                    if best is not None:
+                        confidence = _score_search_result(best, school)
+                        if confidence < SEARCH_RESULT_MIN_CONFIDENCE:
+                            log.info(
+                                "search_result_rejected_low_confidence",
+                                school=school.school_name,
+                                url=best.url,
+                                confidence=confidence,
+                            )
+                            evidence.record(_url_search_evidence(
+                                school=school,
+                                provider=provider_name,
+                                query=query,
+                                decision="rejected",
+                                reason="low_confidence",
+                                result=best,
+                                score=confidence,
+                            ))
+                            time.sleep(rate_limit_delay)
+                            continue
+                        site = SchoolSite(
+                            school_id=school.id,
+                            url=best.url,
+                            url_type="school" if school.school_name in best.url else "corporation_subpage",
+                            discovery_method="web_search",
+                            confidence=confidence,
+                        )
+                        session.add(site)
+                        evidence.record(_url_search_evidence(
+                            school=school,
+                            provider=provider_name,
+                            query=query,
+                            decision="accepted",
+                            reason="registered_school_site",
+                            result=best,
+                            score=confidence,
+                        ))
+                        stats["found"] += 1
+                        found = True
+                        break
+                else:
+                    evidence.record(_url_search_evidence(
+                        school=school,
+                        provider=provider_name,
+                        query=query,
+                        decision="no_result",
+                        reason="provider_returned_no_results",
+                    ))
+                time.sleep(rate_limit_delay)
+
+            if not found and not had_error:
+                stats["no_result"] += 1
+
+            stats["searched"] += 1
+            if progress_callback is not None:
+                progress_callback(dict(stats), len(schools_without))
             time.sleep(rate_limit_delay)
-
-        if not found and not had_error:
-            stats["no_result"] += 1
-
-        stats["searched"] += 1
-        time.sleep(rate_limit_delay)
 
     session.flush()
     log.info("search_discovery_complete", **stats)
     return stats
 
 
-def _pick_best_result(
-    results: list,
+def _url_search_evidence(
+    *,
     school: "School",
-) -> object | None:
-    """Pick the best search result for a school, preferring .ac.jp domains."""
-    from eidp.scraper.search_provider import SearchResult
+    provider: str,
+    query: str,
+    decision: str,
+    reason: str,
+    result: SearchResult | None = None,
+    score: float = 0.0,
+) -> UrlSearchEvidence:
+    return UrlSearchEvidence(
+        school_id=int(school.id),
+        school_name=school.school_name or "",
+        school_type=school.school_type or "",
+        corporation_name=school.corporation_name or "",
+        provider=provider,
+        query=query,
+        result_url=result.url if result is not None else "",
+        result_title=result.title if result is not None else "",
+        result_description=result.description if result is not None else "",
+        score=score,
+        decision=decision,
+        reason=reason,
+    )
 
+
+def search_queries_for_school(school: "School") -> list[str]:
+    """Build school-type aware search queries for reusable disclosure URLs."""
+    school_name = school.school_name.strip()
+    corporation_name = (school.corporation_name or "").strip()
+    kind = _institution_kind_token(school)
+    name_variants = _school_name_query_variants(school_name)
+    queries = [
+        f"{school_name} 情報公開 高等教育 修学支援",
+        f"{school_name} 確認申請書 様式第2号",
+        f"{school_name} 情報公開",
+    ]
+    if corporation_name:
+        queries.append(f"{corporation_name} {school_name} 情報公開")
+    if kind and kind not in school_name:
+        queries.append(f"{school_name} {kind}")
+    else:
+        queries.append(f"{school_name} 公式")
+    for variant in name_variants[1:]:
+        queries.append(f"{variant} 情報公開")
+        if corporation_name:
+            queries.append(f"{corporation_name} {variant} 情報公開")
+        queries.append(f"{variant} 公式")
+    return _dedupe_preserve_order(queries)
+
+
+def _school_name_query_variants(school_name: str) -> list[str]:
+    variants = [school_name]
+    replacements = (
+        ("アンド", "&"),
+        ("アンド", "＆"),
+        ("＆", "&"),
+        ("＆", "アンド"),
+        ("&", "＆"),
+        ("&", "アンド"),
+    )
+    for old, new in replacements:
+        if old in school_name:
+            variants.append(school_name.replace(old, new))
+    return _dedupe_preserve_order(variants)
+
+
+def _institution_kind_token(school: "School") -> str:
+    """Return a homepage-search institution token without assuming every school is vocational."""
+    text = f"{school.school_type or ''} {school.school_name}"
+    if "高等専門学校" in text:
+        return "高等専門学校"
+    if "短期大学" in text:
+        return "短期大学"
+    if "専門学校" in text or "専修学校" in text:
+        return "専門学校"
+    if "大学校" in text:
+        return "大学校"
+    if "大学" in text:
+        return "大学"
+    return "学校"
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        normalized = " ".join(value.split())
+        if normalized and normalized not in seen:
+            out.append(normalized)
+            seen.add(normalized)
+    return out
+
+
+def _pick_best_result(
+    results: list[SearchResult],
+    school: "School",
+) -> SearchResult | None:
+    """Pick the best search result for a school, preferring .ac.jp domains."""
     scored: list[tuple[float, SearchResult]] = []
     for r in results:
         score = _score_search_result(r, school)
@@ -329,20 +688,25 @@ def _pick_best_result(
     return scored[0][1] if scored else None
 
 
-def _score_search_result(result: object, school: "School") -> float:
+def _score_search_result(result: SearchResult, school: "School") -> float:
     """Score a search result for relevance to the target school."""
     score = 0.5
-    title = getattr(result, "title", "")
-    url = getattr(result, "url", "")
+    title = result.title
+    url = result.url
+    description = result.description
 
     # Name match in title
     if school.school_name in title:
         score = 0.9
+    elif school.school_name in description:
+        score = 0.8
     elif school.corporation_name and school.corporation_name in title:
         score = 0.7
+    elif school.corporation_name and school.corporation_name in description:
+        score = 0.65
 
     # Keyword match
-    if any(kw in title for kw in ["情報公開", "公開情報", "学校情報", "機関要件"]):
+    if any(kw in f"{title} {description}" for kw in ["情報公開", "公開情報", "学校情報", "機関要件"]):
         score = min(score + 0.1, 0.99)
 
     # Domain preference
@@ -365,6 +729,7 @@ async def verify_urls_async(
     unverified = (
         session.query(SchoolSite)
         .filter(SchoolSite.http_status.is_(None))
+        .order_by(SchoolSite.school_id.asc(), SchoolSite.id.asc())
         .limit(batch_size)
         .all()
     )
@@ -394,7 +759,6 @@ async def verify_urls_async(
                     if not location:
                         final_status = resp.status_code
                         break
-                    from urllib.parse import urljoin
                     location = urljoin(str(resp.url), location)
                     if location in visited or not _is_safe_url(location):
                         log.warning("ssrf_or_loop_blocked", url=location, origin=site.url)
@@ -433,6 +797,7 @@ def verify_urls_sync(
     unverified = (
         session.query(SchoolSite)
         .filter(SchoolSite.http_status.is_(None))
+        .order_by(SchoolSite.school_id.asc(), SchoolSite.id.asc())
         .limit(batch_size)
         .all()
     )
@@ -443,11 +808,9 @@ def verify_urls_sync(
         headers={"User-Agent": "EIDP-DataCollector/1.0 (institutional research)"},
     ) as client:
         for site in unverified:
-            from datetime import datetime, timezone
-
             if not _is_safe_url(site.url):
                 site.http_status = -2
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = datetime.now(UTC)
                 stats["failed"] += 1
                 stats["checked"] += 1
                 log.warning("ssrf_blocked_verify", url=site.url, school_id=site.school_id)
@@ -466,7 +829,6 @@ def verify_urls_sync(
                     if not location:
                         final_status = resp.status_code
                         break
-                    from urllib.parse import urljoin
                     location = urljoin(str(resp.url), location)
                     if location in visited or not _is_safe_url(location):
                         log.warning("ssrf_or_loop_blocked", url=location, origin=site.url)
@@ -480,21 +842,23 @@ def verify_urls_sync(
                 if final_status in (405, 403) and not ssrf_blocked:
                     resp = client.get(site.url)
                     final_status = resp.status_code
+                checked_at = datetime.now(UTC)
                 site.http_status = final_status
                 site.verified = final_status == 200
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = checked_at
                 if final_status == 200:
-                    site.verified_at = datetime.now(timezone.utc)
+                    if site.discovery_method != "prefecture_aggregator":
+                        site.verified_at = checked_at
                     stats["ok"] += 1
                 else:
                     stats["failed"] += 1
             except httpx.TimeoutException:
                 site.http_status = 0
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = datetime.now(UTC)
                 stats["timeout"] += 1
             except httpx.HTTPError:
                 site.http_status = -1
-                site.last_checked = datetime.now(timezone.utc)
+                site.last_checked = datetime.now(UTC)
                 stats["failed"] += 1
             stats["checked"] += 1
 
@@ -511,41 +875,54 @@ def get_discovery_stats(session: Session) -> dict[str, int | str]:
     - unverified_root: corporation root or unchecked URL
     - total coverage: any URL (inflated, includes roots)
     """
-    total_schools = session.query(func.count(School.id)).scalar() or 0
+    total_schools = int(session.query(func.count(School.id)).scalar() or 0)
     schools_with_url = (
-        session.query(func.count(func.distinct(SchoolSite.school_id))).scalar() or 0
+        int(session.query(func.count(func.distinct(SchoolSite.school_id))).scalar() or 0)
     )
 
     # Verified school-specific disclosure pages (the real coverage number)
     verified_disclosure = (
-        session.query(func.count(func.distinct(SchoolSite.school_id)))
-        .filter(
-            SchoolSite.http_status == 200,
-            SchoolSite.url_type != "corporation",
+        int(
+            session.query(func.count(func.distinct(SchoolSite.school_id)))
+            .filter(
+                SchoolSite.http_status == 200,
+                SchoolSite.url_type != "corporation",
+            )
+            .scalar()
+            or 0
         )
-        .scalar() or 0
     )
 
     # Unverified or corporation-root-only schools
     verified_any = (
-        session.query(func.count(func.distinct(SchoolSite.school_id)))
-        .filter(SchoolSite.http_status == 200)
-        .scalar() or 0
+        int(
+            session.query(func.count(func.distinct(SchoolSite.school_id)))
+            .filter(SchoolSite.http_status == 200)
+            .scalar()
+            or 0
+        )
     )
 
     corp_only = (
-        session.query(func.count(func.distinct(SchoolSite.school_id)))
-        .filter(SchoolSite.url_type == "corporation")
-        .scalar() or 0
+        int(
+            session.query(func.count(func.distinct(SchoolSite.school_id)))
+            .filter(SchoolSite.url_type == "corporation")
+            .scalar()
+            or 0
+        )
     )
 
     unverified = (
-        session.query(func.count(SchoolSite.id))
-        .filter(SchoolSite.http_status.is_(None))
-        .scalar() or 0
+        int(
+            session.query(func.count(SchoolSite.id))
+            .filter(SchoolSite.http_status.is_(None))
+            .scalar()
+            or 0
+        )
     )
 
-    pct = lambda n: f"{n / total_schools * 100:.1f}%" if total_schools > 0 else "0%"
+    def pct(n: int) -> str:
+        return f"{n / total_schools * 100:.1f}%" if total_schools > 0 else "0%"
 
     return {
         "total_schools": total_schools,

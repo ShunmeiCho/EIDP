@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from eidp.pdf.eval_harness import (
     EvalResult,
     FieldScore,
@@ -21,7 +19,7 @@ from eidp.pdf.eval_harness import (
     load_gold_annotation,
     run_full_evaluation,
 )
-from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation
+from eidp.pdf.schema import SchoolAnnotation
 
 GOLD_DIR = Path(__file__).resolve().parents[2] / "data" / "gold-set"
 PDF_DIR = Path(__file__).resolve().parents[2] / "data" / "sample-pdfs"

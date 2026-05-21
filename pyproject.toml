@@ -1,29 +1,52 @@
 [project]
 name = "eidp"
-version = "0.2.0"
+version = "1.0.0rc1"
 description = "Education Institution Data Pipeline — Automated enrollment data collection for Japanese schools"
 # readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "sqlalchemy>=2.0,<3.0",
     "alembic>=1.16,<2.0",
-    "psycopg2-binary>=2.9,<3.0",
     "openpyxl>=3.1,<4.0",
     "pydantic>=2.0,<3.0",
     "pydantic-settings>=2.0,<3.0",
     "python-dotenv>=1.0,<2.0",
+    "jsonschema>=4.0,<5.0",
     "typer>=0.16,<1.0",
     "structlog>=25.0",
     "streamlit>=1.45,<2.0",
 ]
 
 [project.optional-dependencies]
-scraper = [
-    "scrapy>=2.14,<3.0",
+# Postgres backing — only needed on developer Mac / Linux. Windows
+# operator deployment uses SQLite via eidp.db.sqlite_bootstrap.
+postgres = [
+    "psycopg2-binary>=2.9,<3.0",
+]
+# HTTP-only scraper extra — what the Windows core ZIP installs by
+# default. Pure-Python wheels, no Chromium required.
+scraper-basic = [
     "httpx>=0.28,<1.0",
-    "playwright>=1.58",
     "tenacity>=9.0,<10.0",
     "ddgs>=8.0",
+]
+# Playwright + Chromium — distributed as an optional add-on ZIP for
+# Windows. Mac / Linux dev installs both extras together.
+scraper-playwright = [
+    "scrapy>=2.14,<3.0",
+    "playwright>=1.58",
+]
+# Scrapling fetchers — optional add-on used by the v104 school URL
+# auto-crawl fallback. Kept outside the Windows core ZIP so operators can
+# still run the official-index path without Chromium/browser dependencies.
+scraper-scrapling = [
+    "scrapling[fetchers]>=0.4.7,<1.0",
+]
+# Combined scraper kept as compatibility alias for existing callers
+# still installing ``eidp[scraper]``.
+scraper = [
+    "eidp[scraper-basic]",
+    "eidp[scraper-playwright]",
 ]
 pdf = [
     "pdfplumber>=0.11,<1.0",
@@ -35,6 +58,7 @@ ocr = [
     "paddlepaddle>=3.0",
 ]
 dev = [
+    "pip>=24.0",
     "pytest>=8.0",
     "pytest-cov>=6.0",
     "ruff>=0.11",
@@ -42,7 +66,7 @@ dev = [
 ]
 
 [project.scripts]
-eidp = "eidp.cli:app"
+eidp = "eidp.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -62,6 +86,9 @@ select = ["E", "F", "I", "N", "W", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.report]
+fail_under = 80
 
 [tool.mypy]
 python_version = "3.12"

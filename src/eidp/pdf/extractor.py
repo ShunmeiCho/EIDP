@@ -13,16 +13,19 @@ Each department section in Form 2-4-2 contains:
 
 import re
 import unicodedata
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import structlog
 
+from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
+from eidp.fiscal_year import fiscal_year_from_japanese_era_text, format_fiscal_year_as_japanese_era
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
 
 log = structlog.get_logger()
 
-JST = timezone(timedelta(hours=9))
+MIN_SUPPORTED_FISCAL_YEAR = MIN_SUPPORTED_TARGET_FISCAL_YEAR
+MAX_SUPPORTED_FISCAL_YEAR = MAX_SUPPORTED_TARGET_FISCAL_YEAR
 
 
 def _norm(text: str | None) -> str:
@@ -54,7 +57,7 @@ def _extract_school_name(full_text: str) -> str:
         # Remove trailing labels that might be on the same line
         name = re.sub(r"\s*(?:設置者名|設置者|学校法人).*$", "", name)
         # Remove leading noise like "称】" from broken table extraction
-        name = re.sub(r"^[称名】\]]+\s*", "", name)
+        name = re.sub(r"^(?:名称】|称】|名】|】|\])+\s*", "", name)
         # Remove trailing "校長 XXX" pattern
         name = re.sub(r"\s*校長\s*.*$", "", name)
         if name:
@@ -70,23 +73,23 @@ def _extract_school_name(full_text: str) -> str:
     return ""
 
 
-def _current_jst_fiscal_year() -> int:
-    now = datetime.now(JST)
-    return now.year if now.month >= 4 else now.year - 1
-
-
-def _format_reiwa_if_allowed(reiwa_year: int, max_fiscal_year: int | None = None) -> str | None:
-    fiscal_year = 2018 + reiwa_year
-    cap = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
-    return f"令和{reiwa_year}年度" if fiscal_year <= cap else None
+def _format_fiscal_year_if_allowed(fiscal_year: int | None, max_fiscal_year: int | None = None) -> str | None:
+    if fiscal_year is None:
+        return None
+    if fiscal_year < MIN_SUPPORTED_FISCAL_YEAR or fiscal_year > MAX_SUPPORTED_FISCAL_YEAR:
+        return None
+    cap = min(settings.target_fiscal_year if max_fiscal_year is None else max_fiscal_year, MAX_SUPPORTED_FISCAL_YEAR)
+    if fiscal_year > cap:
+        return None
+    return format_fiscal_year_as_japanese_era(fiscal_year) or f"{fiscal_year}年度"
 
 
 def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) -> str:
     """Extract fiscal year from PDF text.
 
-    PDFs use date format like "令和７年６月２７日" (full-width digits).
-    After NFKC normalization this becomes "令和7年6月27日".
-    We extract the year number and produce "令和7年度".
+    PDFs often use date format like "令和７年６月２７日" (full-width digits).
+    After NFKC normalization this becomes "令和7年6月27日". The western
+    fiscal year remains the canonical value; era labels are output aliases.
 
     Priority order:
     1. 令和N年度 — direct, highest confidence
@@ -97,44 +100,49 @@ def _extract_fiscal_year(full_text: str, *, max_fiscal_year: int | None = None) 
     normed = _norm(full_text)
 
     # Pattern 1: 令和N年度 (direct match, highest confidence)
-    m = re.search(r"令和(\d+)年度", normed)
-    if m:
-        fiscal_year = _format_reiwa_if_allowed(int(m.group(1)), max_fiscal_year)
-        if fiscal_year:
-            return fiscal_year
+    fiscal_year = fiscal_year_from_japanese_era_text(
+        normed,
+        include_fiscal_year_labels=True,
+        include_filing_dates=False,
+    )
+    formatted = _format_fiscal_year_if_allowed(fiscal_year, max_fiscal_year)
+    if formatted:
+        return formatted
 
     # Pattern 2: 令和N年M月D日 (filing date, extract year)
-    m = re.search(r"令和(\d+)年\d+月\d+日", normed)
-    if m:
-        fiscal_year = _format_reiwa_if_allowed(int(m.group(1)), max_fiscal_year)
-        if fiscal_year:
-            return fiscal_year
+    fiscal_year = fiscal_year_from_japanese_era_text(
+        normed,
+        include_fiscal_year_labels=False,
+        include_filing_dates=True,
+    )
+    formatted = _format_fiscal_year_if_allowed(fiscal_year, max_fiscal_year)
+    if formatted:
+        return formatted
 
     # Pattern 3: Western filing date "YYYY.M.D" or "YYYY/M/D" pattern
     # These are actual filing dates, not stray year references in policy text
-    filing_dates = re.findall(r"(202[0-9])[./]\d{1,2}[./]\d{1,2}", normed)
+    filing_dates = re.findall(r"(20\d{2})[./]\d{1,2}[./]\d{1,2}", normed)
     if filing_dates:
         # Use the first filing date found (typically on the cover page)
         western_year = int(filing_dates[0])
-        reiwa_year = western_year - 2018
-        if reiwa_year > 0:
-            fiscal_year = _format_reiwa_if_allowed(reiwa_year, max_fiscal_year)
-            if fiscal_year:
-                return fiscal_year
+        formatted = _format_fiscal_year_if_allowed(western_year, max_fiscal_year)
+        if formatted:
+            return formatted
 
     # Pattern 4: Most frequent western year (fallback)
-    # Exclude future fiscal years to avoid policy references like "2027年度決算"
+    # Exclude unsupported/future fiscal years to avoid unrelated policy/history references.
     from collections import Counter
-    max_valid_year = _current_jst_fiscal_year() if max_fiscal_year is None else max_fiscal_year
-    all_years = re.findall(r"(202[0-9])[\.\s年/]", normed)
-    valid_years = [int(y) for y in all_years if int(y) <= max_valid_year]
+    max_valid_year = min(
+        settings.target_fiscal_year if max_fiscal_year is None else max_fiscal_year,
+        MAX_SUPPORTED_FISCAL_YEAR,
+    )
+    all_years = re.findall(r"(20\d{2})[\.\s年/]", normed)
+    valid_years = [int(y) for y in all_years if MIN_SUPPORTED_FISCAL_YEAR <= int(y) <= max_valid_year]
     if valid_years:
         most_common = Counter(valid_years).most_common(1)[0][0]
-        reiwa_year = most_common - 2018
-        if reiwa_year > 0:
-            fiscal_year = _format_reiwa_if_allowed(reiwa_year, max_fiscal_year)
-            if fiscal_year:
-                return fiscal_year
+        formatted = _format_fiscal_year_if_allowed(most_common, max_fiscal_year)
+        if formatted:
+            return formatted
 
     return ""
 
@@ -384,7 +392,13 @@ def _parse_department_section(
                 if re.match(r"^\(?\s*\d+(?:\.\d+)?\s*%", stripped):
                     break
                 person_nums = re.findall(r"(\d+)\s*人", data_line)
+                person_unit_count = data_line.count("人")
                 if person_nums:
+                    if len(person_nums) < 3 and person_unit_count >= 4:
+                        graduates = int(person_nums[0])
+                        if len(person_nums) >= 2:
+                            employed = int(person_nums[1])
+                        break
                     grad_nums.extend(int(n) for n in person_nums)
                 # Accumulate until we have 4 values, then break
                 if len(grad_nums) >= 4:
@@ -408,6 +422,12 @@ def _parse_department_section(
                 if any(skip in data_line for skip in ["直近", "自営業", "状況を記載"]):
                     continue
                 person_nums = re.findall(r"(\d+)\s*人", data_line)
+                person_unit_count = data_line.count("人")
+                if 0 < len(person_nums) < 3 and person_unit_count >= 4:
+                    graduates = int(person_nums[0])
+                    if len(person_nums) >= 2:
+                        employed = int(person_nums[1])
+                    break
                 if len(person_nums) >= 3:
                     graduates = int(person_nums[0])
                     advanced = int(person_nums[1])
@@ -740,7 +760,10 @@ def _strip_leading_field_prefix(name: str) -> str:
     return name
 
 
-def _find_dept_table(tables: list[list[list]]) -> tuple[list[list] | None, int]:
+PdfTable = list[list[Any]]
+
+
+def _find_dept_table(tables: list[PdfTable]) -> tuple[PdfTable | None, int]:
     """Find the table containing the dept identity header row (学科名 + 課程名).
 
     Some PDFs put 学校名/設置者名 or 財務諸表 tables before the dept table,
@@ -760,7 +783,7 @@ def _find_dept_table(tables: list[list[list]]) -> tuple[list[list] | None, int]:
     return None, -1
 
 
-def _extract_dept_identity_from_table(page) -> tuple[str, str, int | None, str]:
+def _extract_dept_identity_from_table(page: Any) -> tuple[str, str, int | None, str]:
     """Extract dept name, course name, duration, and day/night from table.
 
     Scans all tables for the dept identity header (学科名 + 課程名) instead
@@ -861,7 +884,7 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
     with pdfplumber.open(str(pdf_path)) as pdf:
         full_text = ""
         page_texts: list[str] = []
-        page_objects: list = []
+        page_objects: list[Any] = []
         for page in pdf.pages:
             page_text = page.extract_text() or ""
             page_texts.append(page_text)

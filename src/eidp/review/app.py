@@ -5,26 +5,162 @@ Or directly: streamlit run src/eidp/review/app.py
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, Protocol
 
 import streamlit as st
-from sqlalchemy import and_, func
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from eidp.db.models import ReviewItem, School, SchoolAlias, SchoolYearStatus
+from eidp.config import settings
+from eidp.db.audit import log_manual_action
+from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
+from eidp.db.models import ReviewItem, School, SchoolAlias
 from eidp.db.session import SessionLocal
+from eidp.fiscal_year import format_fiscal_year_label
+from eidp.logging_config import configure_logging
 from eidp.review import operator_pages
-
+from eidp.review.operator_actor import operator_actor_from_state
 
 # ---------------------------------------------------------------------------
 # Session helpers
 # ---------------------------------------------------------------------------
 
+PAGE_TASKS = "school_tasks"
+PAGE_STATUS = "status"
+PAGE_PROPOSALS = "proposals"
+PAGE_URL = "url"
+PAGE_EXPORTS = "exports"
+PAGE_GAPS = "gaps"
+PAGE_REJECTIONS = "rejections"
+PAGE_SCHOOL_CODE = "school_code"
+PAGE_HISTORY = "history"
+PAGE_MANUAL_ENTRY = "manual_entry"
+PAGE_FISCAL_YEAR_OVERRIDE = "fiscal_year_override"
+PAGE_EXCEL_PREVIEW = "excel_preview"
+PAGE_AUDIT_LOG = "audit_log"
+PAGE_PREFECTURE_REMARKS = "prefecture_remarks"
+PAGE_URL_CANDIDATE_REVIEW = "url_candidate_review"
+PAGE_SETTINGS = "settings"
+PAGE_BUG_REPORT = "bug_report"
+
+QUICK_PAGES = [
+    (PAGE_TASKS, "① 学校別タスク"),
+    (PAGE_MANUAL_ENTRY, "② PDF確認・手入力"),
+    (PAGE_FISCAL_YEAR_OVERRIDE, "③ 年度判定・修正"),
+    (PAGE_EXCEL_PREVIEW, "④ Excel プレビュー"),
+    (PAGE_SETTINGS, "⑤ 設定（年度・OCR・API）"),
+]
+
+DETAIL_PAGES = [
+    (PAGE_STATUS, "データ状況（詳細）"),
+    (PAGE_PROPOSALS, "マッチング提案の確認"),
+    (PAGE_URL, "URL追加"),
+    (PAGE_EXPORTS, "Excel出力（管理者向け）"),
+    (PAGE_GAPS, "マッチング漏れ一覧"),
+    (PAGE_REJECTIONS, "除外PDF履歴"),
+    (PAGE_PREFECTURE_REMARKS, "都道府県公式インデックス"),
+    (PAGE_URL_CANDIDATE_REVIEW, "URL候補レビュー"),
+    (PAGE_AUDIT_LOG, "監査ログ"),
+    (PAGE_BUG_REPORT, "不具合レポート"),
+    (PAGE_SCHOOL_CODE, "学校コード確認"),
+    (PAGE_HISTORY, "処理履歴"),
+]
+
+
+class ButtonContainer(Protocol):
+    def button(self, *args: Any, **kwargs: Any) -> bool:
+        ...
+
+
 def _get_session() -> Session:
-    """Get or reuse a SQLAlchemy session stored in Streamlit session_state."""
-    if "db_session" not in st.session_state:
-        st.session_state.db_session = SessionLocal()
-    return st.session_state.db_session
+    """Create a short-lived SQLAlchemy session for one Streamlit rerun."""
+    return SessionLocal()
+
+
+def _select_page(page_id: str) -> None:
+    st.session_state.selected_page = page_id
+
+
+def _render_nav_button(container: ButtonContainer, page_id: str, label: str) -> None:
+    """Render a navigation button into ``container`` (the sidebar root or
+    a sidebar expander).
+
+    Streamlit gotcha: ``st.sidebar.button`` ignores any ``with expander:``
+    context and always renders into the sidebar root. We must call
+    ``container.button`` explicitly so detail-page buttons land inside
+    the "詳細 operator" expander instead of leaking out alongside the
+    quick-access buttons.
+    """
+    selected = st.session_state.get("selected_page") == page_id
+    if container.button(
+        label,
+        key=f"nav_{page_id}",
+        type="primary" if selected else "secondary",
+        width="stretch",
+    ):
+        _select_page(page_id)
+        st.rerun()
+
+
+def _render_sidebar_navigation() -> str:
+    page_ids = {page_id for page_id, _label in QUICK_PAGES + DETAIL_PAGES}
+    if "selected_page" not in st.session_state or st.session_state.selected_page not in page_ids:
+        st.session_state.selected_page = PAGE_TASKS
+
+    st.sidebar.divider()
+    st.sidebar.markdown("**業務員クイック**")
+    st.sidebar.caption(f"対象年度: {format_fiscal_year_label(settings.target_fiscal_year)}")
+    for page_id, label in QUICK_PAGES:
+        _render_nav_button(st.sidebar, page_id, label)
+
+    detail_page_ids = {page_id for page_id, _label in DETAIL_PAGES}
+    detail_expander = st.sidebar.expander(
+        "詳細 operator",
+        expanded=st.session_state.selected_page in detail_page_ids,
+    )
+    for page_id, label in DETAIL_PAGES:
+        _render_nav_button(detail_expander, page_id, label)
+
+    return str(st.session_state.selected_page)
+
+
+def _build_info_caption(app_root: Path) -> str:
+    build_info_path = app_root / "BUILD_INFO.json"
+    try:
+        payload = json.loads(build_info_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "build: source checkout"
+    if not isinstance(payload, dict):
+        return "build: unknown"
+    commit = str(payload.get("git_commit") or "unknown")
+    short_commit = commit[:7] if commit != "unknown" else "unknown"
+    branch = str(payload.get("git_branch") or "unknown")
+    dirty = " dirty" if str(payload.get("git_dirty") or "").lower() == "true" else ""
+    built_at = str(payload.get("built_at_utc") or "")
+    parts = [f"build: {short_commit}{dirty}", f"branch: {branch}"]
+    if built_at:
+        parts.append(f"built: {built_at}")
+    return " / ".join(parts)
+
+
+def _render_bug_signal_banner(app_root: Path) -> None:
+    """Show a lightweight bug-signal banner without running SQLite integrity checks."""
+
+    try:
+        from eidp.bug_signals.detector import scan_bug_signals
+
+        signals = scan_bug_signals(app_root, check_sqlite=False)
+    except Exception:
+        return
+    if not signals:
+        return
+    cols = st.columns([4, 1])
+    cols[0].error(f"異常を {len(signals)} 件検出しました。不具合レポートを作成してください。")
+    if cols[1].button("レポート作成", key="bug_report_banner_button"):
+        st.session_state.selected_page = PAGE_BUG_REPORT
+        st.rerun()
 
 
 def _commit(session: Session) -> None:
@@ -49,28 +185,9 @@ def _load_dashboard_stats(session: Session) -> dict[str, int]:
         or 0
     )
 
-    # Only exclude if the LATEST fiscal year has excluded_reason
-    latest_year_subq = (
-        session.query(
-            SchoolYearStatus.school_id,
-            func.max(SchoolYearStatus.fiscal_year).label("max_fy"),
-        )
-        .group_by(SchoolYearStatus.school_id)
-        .subquery()
-    )
-    excluded_ids: set[int] = set()
-    for row in (
-        session.query(SchoolYearStatus.school_id)
-        .join(
-            latest_year_subq,
-            and_(
-                SchoolYearStatus.school_id == latest_year_subq.c.school_id,
-                SchoolYearStatus.fiscal_year == latest_year_subq.c.max_fy,
-            ),
-        )
-        .filter(SchoolYearStatus.excluded_reason.isnot(None))
-    ):
-        excluded_ids.add(row[0])
+    # Sprint 8.2.1: centralised current-revision + latest-fy excluded filter.
+    from eidp.db.current_helpers import latest_excluded_school_ids
+    excluded_ids: set[int] = {row[0] for row in latest_excluded_school_ids(session)}
     no_code = session.query(School).filter(School.school_code.is_(None)).all()
     excluded_count = sum(1 for s in no_code if s.id in excluded_ids)
     unresolved_count = sum(1 for s in no_code if s.id not in excluded_ids)
@@ -123,11 +240,32 @@ def _load_school(session: Session, school_id: int) -> School | None:
 # Actions
 # ---------------------------------------------------------------------------
 
-def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
+def _show_lock_busy(lock_path: Path) -> None:
+    status = probe_lock(lock_path)
+    owner = status.owner or "weekly_runner"
+    st.warning(f"週次処理中です。編集は一時停止されています。({owner})")
+
+
+def _approve_item(
+    session: Session,
+    item: ReviewItem,
+    school: School,
+    *,
+    actor: str = "operator",
+    lock_path: Path | None = None,
+) -> bool:
     """Approve: apply the proposed MEXT code to the school."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _approve_item(session, item, school, actor=actor, lock_path=None)
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
     if item.proposal_value is None:
         st.error("No proposal to approve.")
-        return
+        return False
 
     proposal = json.loads(item.proposal_value)
     code = proposal.get("candidate_code")
@@ -135,7 +273,7 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
 
     if not code:
         st.error("Proposal has no candidate_code.")
-        return
+        return False
 
     # Check for code conflict
     existing = session.query(School).filter(School.school_code == code).first()
@@ -144,8 +282,9 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
             f"Code {code} already assigned to school id={existing.id} "
             f"({existing.school_name}). Cannot assign."
         )
-        return
+        return False
 
+    old_code = school.school_code
     school.school_code = code
 
     # Create alias if the candidate name differs
@@ -167,24 +306,61 @@ def _approve_item(session: Session, item: ReviewItem, school: School) -> None:
     item.status = "resolved"
     item.resolution = "approved"
     item.resolved_value = code
-    item.resolved_at = datetime.now(timezone.utc)
+    item.resolved_at = datetime.now(UTC)
+    log_manual_action(
+        session,
+        action_type="school_code_approved",
+        target_table="school",
+        target_id=school.id,
+        old_value={"school_code": old_code, "review_item_id": item.id},
+        new_value={
+            "school_code": code,
+            "candidate_name": candidate_name,
+            "review_item_id": item.id,
+            "resolution": "approved",
+        },
+        reason=item.proposal_reason or "Operator approved MEXT school code",
+        actor=actor,
+    )
     _commit(session)
+    return True
 
 
 def _approve_with_correction(
-    session: Session, item: ReviewItem, school: School, corrected_code: str
-) -> None:
+    session: Session,
+    item: ReviewItem,
+    school: School,
+    corrected_code: str,
+    *,
+    actor: str = "operator",
+    lock_path: Path | None = None,
+) -> bool:
     """Approve with a manually corrected MEXT code."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _approve_with_correction(
+                    session,
+                    item,
+                    school,
+                    corrected_code,
+                    actor=actor,
+                    lock_path=None,
+                )
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
     corrected_code = corrected_code.strip()
     if not corrected_code:
         st.error("Please enter a valid MEXT code.")
-        return
+        return False
 
     # Validate MEXT code format: 13-character alphanumeric starting with H (vocational)
     import re
     if not re.match(r"^[A-Z]\d{12}$", corrected_code):
         st.error(f"Invalid MEXT code format: '{corrected_code}'. Expected 13 chars like 'H101310100147'.")
-        return
+        return False
 
     # Check for code conflict
     existing = session.query(School).filter(School.school_code == corrected_code).first()
@@ -193,30 +369,102 @@ def _approve_with_correction(
             f"Code {corrected_code} already assigned to school id={existing.id} "
             f"({existing.school_name}). Cannot assign."
         )
-        return
+        return False
 
+    old_code = school.school_code
     school.school_code = corrected_code
     item.status = "resolved"
     item.resolution = "corrected"
     item.resolved_value = corrected_code
-    item.resolved_at = datetime.now(timezone.utc)
+    item.resolved_at = datetime.now(UTC)
+    log_manual_action(
+        session,
+        action_type="school_code_corrected",
+        target_table="school",
+        target_id=school.id,
+        old_value={"school_code": old_code, "review_item_id": item.id},
+        new_value={
+            "school_code": corrected_code,
+            "review_item_id": item.id,
+            "resolution": "corrected",
+        },
+        reason="Operator corrected MEXT school code",
+        actor=actor,
+    )
     _commit(session)
+    return True
 
 
-def _reject_item(session: Session, item: ReviewItem, notes: str = "") -> None:
+def _reject_item(
+    session: Session,
+    item: ReviewItem,
+    notes: str = "",
+    *,
+    actor: str = "operator",
+    lock_path: Path | None = None,
+) -> bool:
     """Reject: mark the proposal as wrong, leave school_code NULL."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _reject_item(session, item, notes, actor=actor, lock_path=None)
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
     item.status = "resolved"
     item.resolution = "rejected"
-    item.resolved_at = datetime.now(timezone.utc)
+    item.resolved_at = datetime.now(UTC)
     if notes:
         item.notes = notes
+    log_manual_action(
+        session,
+        action_type="school_code_rejected",
+        target_table="review_item",
+        target_id=item.id,
+        old_value={"status": "pending", "proposal_value": item.proposal_value},
+        new_value={
+            "status": "resolved",
+            "resolution": "rejected",
+            "school_id": item.reference_id,
+        },
+        reason=notes or "Operator rejected MEXT school code proposal",
+        actor=actor,
+    )
     _commit(session)
+    return True
 
 
-def _skip_item(session: Session, item: ReviewItem) -> None:
+def _skip_item(
+    session: Session,
+    item: ReviewItem,
+    *,
+    actor: str = "operator",
+    lock_path: Path | None = None,
+) -> bool:
     """Skip: lower priority so it appears later."""
+    if lock_path is not None:
+        try:
+            with acquire_lock(lock_path, owner="ui_school_code_review"):
+                return _skip_item(session, item, actor=actor, lock_path=None)
+        except LockBusyError:
+            _show_lock_busy(lock_path)
+            return False
+
+    old_priority = item.priority
     item.priority = min(item.priority + 2, 10)
+    log_manual_action(
+        session,
+        action_type="school_code_skipped",
+        target_table="review_item",
+        target_id=item.id,
+        old_value={"priority": old_priority, "status": item.status},
+        new_value={"priority": item.priority, "status": item.status},
+        reason="Operator skipped MEXT school code proposal",
+        actor=actor,
+    )
     _commit(session)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +493,7 @@ def _render_dashboard(stats: dict[str, int]) -> None:
         st.write(f"- Review rejected: **{stats['rejected']}**")
 
 
-def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
+def _render_review_item(session: Session, item: ReviewItem, idx: int, *, lock_path: Path | None = None) -> bool:
     """Render a single review item card. Returns True if an action was taken."""
     school = _load_school(session, item.reference_id) if item.reference_id else None
     if school is None:
@@ -303,6 +551,7 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
         # Action buttons
         st.divider()
         action_cols = st.columns([1, 1, 1, 1, 2])
+        actor = operator_actor_from_state(st.session_state)
 
         # Approve (only if there's a candidate)
         if candidate_code:
@@ -311,27 +560,30 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
                 key=f"approve_{item.id}_{idx}",
                 type="primary",
             ):
-                _approve_item(session, item, school)
-                st.success(f"Approved: {school.school_name} -> {candidate_code}")
-                return True
+                if _approve_item(session, item, school, actor=actor, lock_path=lock_path):
+                    st.success(f"Approved: {school.school_name} -> {candidate_code}")
+                    return True
+                return False
 
         # Reject
         if action_cols[1].button(
             "Reject",
             key=f"reject_{item.id}_{idx}",
         ):
-            _reject_item(session, item)
-            st.warning(f"Rejected proposal for {school.school_name}")
-            return True
+            if _reject_item(session, item, actor=actor, lock_path=lock_path):
+                st.warning(f"Rejected proposal for {school.school_name}")
+                return True
+            return False
 
         # Skip
         if action_cols[2].button(
             "Skip",
             key=f"skip_{item.id}_{idx}",
         ):
-            _skip_item(session, item)
-            st.info(f"Skipped {school.school_name} (lowered priority)")
-            return True
+            if _skip_item(session, item, actor=actor, lock_path=lock_path):
+                st.info(f"Skipped {school.school_name} (lowered priority)")
+                return True
+            return False
 
         # Manual correction
         corrected = action_cols[4].text_input(
@@ -345,9 +597,10 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
             key=f"apply_manual_{item.id}_{idx}",
         ):
             if corrected:
-                _approve_with_correction(session, item, school, corrected)
-                st.success(f"Applied manual code: {school.school_name} -> {corrected}")
-                return True
+                if _approve_with_correction(session, item, school, corrected, actor=actor, lock_path=lock_path):
+                    st.success(f"Applied manual code: {school.school_name} -> {corrected}")
+                    return True
+                return False
             else:
                 st.error("Enter a MEXT code first.")
 
@@ -358,9 +611,12 @@ def _render_review_item(session: Session, item: ReviewItem, idx: int) -> bool:
 # Page: Review Queue
 # ---------------------------------------------------------------------------
 
-def _page_review_queue(session: Session) -> None:
+def _page_review_queue(session: Session, *, lock_path: Path | None = None) -> None:
     """Main review queue page."""
     st.header("School Code Review Queue")
+    if lock_path is not None and probe_lock(lock_path).held:
+        st.warning("週次処理中です。編集は一時停止されています。完了後に確認してください。")
+        return
 
     stats = _load_dashboard_stats(session)
     _render_dashboard(stats)
@@ -419,7 +675,7 @@ def _page_review_queue(session: Session) -> None:
     page_items = items[start:end]
 
     for idx, item in enumerate(page_items):
-        acted = _render_review_item(session, item, start + idx)
+        acted = _render_review_item(session, item, start + idx, lock_path=lock_path)
         if acted:
             st.rerun()
 
@@ -479,6 +735,7 @@ def _page_history(session: Session) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    configure_logging()
     st.set_page_config(
         page_title="EIDP Operator Console",
         page_icon=":material/school:",
@@ -490,50 +747,85 @@ def main() -> None:
         '<span class="eidp-brand-sub">運用コンソール</span></div>',
         unsafe_allow_html=True,
     )
+    _render_bug_signal_banner(settings.app_root)
 
-    session = _get_session()
+    with _get_session() as session:
+        # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
+        operator_pages.render_sidebar_todo(session)
+        st.sidebar.text_input(
+            "担当者名（監査用）",
+            key="operator_name",
+            value=st.session_state.get("operator_name", ""),
+            placeholder="例: 山田",
+        )
 
-    # Live TODO counts at top of sidebar — 担当者 sees what to do at a glance.
-    operator_pages.render_sidebar_todo(session)
+        page = _render_sidebar_navigation()
 
-    page = st.sidebar.radio(
-        "メニュー",
-        [
-            "① データ状況",
-            "② マッチング提案の確認",
-            "③ URL追加",
-            "④ Excel出力",
-            "⑤ マッチング漏れ一覧",
-            "⑥ 除外PDF履歴",
-            "⑦ 学校コード確認",
-            "⑧ 処理履歴",
-        ],
-        index=0,
-    )
-
-    if page == "① データ状況":
-        operator_pages.page_pipeline_status(session)
-    elif page == "② マッチング提案の確認":
-        operator_pages.page_proposals_review(session)
-    elif page == "③ URL追加":
-        operator_pages.page_url_submission(session)
-    elif page == "④ Excel出力":
-        operator_pages.page_exports(session)
-    elif page == "⑤ マッチング漏れ一覧":
-        operator_pages.page_gap_report()
-    elif page == "⑥ 除外PDF履歴":
-        operator_pages.page_rejections()
-    elif page == "⑦ 学校コード確認":
-        _page_review_queue(session)
-    elif page == "⑧ 処理履歴":
-        _page_history(session)
+        if page == PAGE_TASKS:
+            from eidp.review._pages.school_year_tasks import render as render_school_year_tasks
+            render_school_year_tasks(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_STATUS:
+            operator_pages.page_pipeline_status(session)
+        elif page == PAGE_PROPOSALS:
+            operator_pages.page_proposals_review(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_URL:
+            operator_pages.page_url_submission(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_EXPORTS:
+            operator_pages.page_exports(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_GAPS:
+            operator_pages.page_gap_report()
+        elif page == PAGE_REJECTIONS:
+            operator_pages.page_rejections()
+        elif page == PAGE_PREFECTURE_REMARKS:
+            from eidp.review._pages.prefecture_remarks import render as render_prefecture_remarks
+            render_prefecture_remarks(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_URL_CANDIDATE_REVIEW:
+            from eidp.review._pages.url_candidate_review import render as render_url_candidate_review
+            render_url_candidate_review(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_SETTINGS:
+            from eidp.review._pages.settings_page import render as render_settings
+            render_settings(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_SCHOOL_CODE:
+            _page_review_queue(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_HISTORY:
+            _page_history(session)
+        elif page == PAGE_MANUAL_ENTRY:
+            # Sprint 8.4.c.1 — business-user main battlefield. Lock path is
+            # ``data/.lock`` per v6 architecture, resolved against the
+            # configured data_dir so the same file is shared with the
+            # weekly runner.
+            from eidp.review._pages.pdf_manual_entry import render as render_manual_entry
+            render_manual_entry(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_FISCAL_YEAR_OVERRIDE:
+            # Sprint 8.4.c.2 — operator confirms a document's fiscal_year
+            # via the 4-table atomic rewrite path
+            # (pipeline.fiscal_year_override.override_fiscal_year).
+            from eidp.review._pages.fiscal_year_override import render as render_fiscal_year_override
+            render_fiscal_year_override(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_EXCEL_PREVIEW:
+            # Sprint 8.4.c.3 — read-only dry-run before download.
+            from eidp.review._pages.excel_preview import render as render_excel_preview
+            render_excel_preview(session, lock_path=Path(settings.data_dir) / ".lock")
+        elif page == PAGE_AUDIT_LOG:
+            # Sprint 8.4.c.4 — manual_action_log browser + outbox flush.
+            from eidp.review._pages.audit_log import render as render_audit_log
+            data_dir = Path(settings.data_dir)
+            render_audit_log(
+                session,
+                lock_path=data_dir / ".lock",
+                jsonl_path=data_dir / "audit" / "manual-actions.jsonl",
+            )
+        elif page == PAGE_BUG_REPORT:
+            from eidp.review._pages.bug_report import render as render_bug_report
+            render_bug_report(session, app_root=settings.app_root)
 
     # Sidebar info
     st.sidebar.divider()
     st.sidebar.caption("週次運用フロー")
     st.sidebar.caption(
-        "① 状況確認 → ② 提案承認 → ③ URL追加 → ④ Excel出力 → ⑤ 漏れ確認"
+        "① 学校別タスク → URL追加/PDF確認 → 年度修正 → Excel確認"
     )
+    st.sidebar.caption(_build_info_caption(settings.app_root))
 
 
 if __name__ == "__main__":

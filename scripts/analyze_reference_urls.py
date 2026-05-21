@@ -10,8 +10,10 @@ import json
 import re
 import sys
 import time
-from bs4 import BeautifulSoup
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
+
+from bs4 import BeautifulSoup
 
 REFERENCE_URLS = [
     {
@@ -386,7 +388,7 @@ def main():
             time.sleep(2)  # Polite delay between sites
 
     # Output JSON results
-    output_path = "/Users/shunmei/workspace/EIDP/scripts/reference_url_analysis_results.json"
+    output_path = Path(__file__).resolve().with_name("reference_url_analysis_results.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 

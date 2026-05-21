@@ -6,13 +6,17 @@ Sheets: 採録状況, 対象比率, 学科別, 在籍のみ抜粋 (snapshot, imp
 import unicodedata
 from pathlib import Path
 
-import openpyxl
+import openpyxl  # type: ignore[import-untyped]
 import structlog
 from sqlalchemy.orm import Session
 
 from eidp.db.models import Department, DepartmentYearly, School, SchoolAlias, SchoolYearStatus, SupportRecipient
+from eidp.department_normalization import normalize_course_name
+from eidp.fiscal_year import current_fiscal_year, fiscal_year_from_japanese_era_text
 
 log = structlog.get_logger()
+
+ImportStats = dict[str, int | str]
 
 
 def _norm(s: str) -> str:
@@ -50,6 +54,9 @@ class SchoolResolver:
     def build(self) -> None:
         """Build all lookup indices from current School table."""
         schools = self._session.query(School).all()
+        self._exact.clear()
+        self._norm.clear()
+        self._pref_name.clear()
         self._name_only.clear()
         for s in schools:
             key = (s.prefecture, s.corporation_name, s.school_name)
@@ -68,7 +75,14 @@ class SchoolResolver:
         log.info("school_resolver_built", exact=len(self._exact),
                  norm=len(self._norm), pref_name=len(self._pref_name))
 
-    def resolve(self, prefecture: str, corporation_name: str, school_name: str) -> int | None:
+    def resolve(
+        self,
+        prefecture: str,
+        corporation_name: str,
+        school_name: str,
+        *,
+        reconcile_prefecture: bool = False,
+    ) -> int | None:
         """Resolve a school to its DB id using cascading lookup.
 
         Cascade: exact -> NFKC normalized -> (pref+name) -> name-only (unique) -> auto-create.
@@ -104,7 +118,11 @@ class SchoolResolver:
         candidates = self._name_only.get(norm_name, [])
         if len(candidates) == 1:
             sid = candidates[0]
+            if reconcile_prefecture:
+                self._reconcile_prefecture_for_unique_name_match(sid, prefecture, school_name)
             self._exact[key] = sid
+            self._norm[norm_key] = sid
+            self._pref_name[pn_key] = sid
             self._record_alias(sid, school_name, "name_only_match")
             return sid
 
@@ -146,6 +164,31 @@ class SchoolResolver:
                 source=source,
             )
             self._session.add(alias)
+
+    def _reconcile_prefecture_for_unique_name_match(
+        self,
+        school_id: int,
+        prefecture: str,
+        school_name: str,
+    ) -> None:
+        """Repair master.xlsx cross-sheet prefecture drift for a unique school name."""
+        if not prefecture:
+            return
+
+        school = self._session.get(School, school_id)
+        if school is None or school.prefecture == prefecture:
+            return
+
+        old_prefecture = school.prefecture
+        school.prefecture = prefecture
+        log.info(
+            "school_prefecture_reconciled",
+            school_id=school_id,
+            school_name=school_name,
+            old_prefecture=old_prefecture,
+            new_prefecture=prefecture,
+            source="name_only_match",
+        )
 
     @property
     def auto_created_count(self) -> int:
@@ -206,6 +249,7 @@ YEAR_BLOCK_FIELDS_NO_BIKO = [
 YEAR_BLOCK_FIELDS_WITH_BIKO = YEAR_BLOCK_FIELDS_NO_BIKO + ["notes"]
 
 GAKKA_KEY_COLS = 7  # 都道府県, 法人名, 学校名, 課程名, 学科名, 昼夜, 年限
+DEPARTMENT_YEARLY_IMPORT_FIELDS = tuple(YEAR_BLOCK_FIELDS_WITH_BIKO)
 
 
 def _safe_int(val: object) -> int | None:
@@ -230,6 +274,51 @@ def _safe_str(val: object) -> str:
     if val is None:
         return ""
     return str(val).strip()
+
+
+def _same_department_yearly_import_values(
+    row: DepartmentYearly,
+    block_data: dict[str, int | float | str | None],
+) -> bool:
+    for field_name in DEPARTMENT_YEARLY_IMPORT_FIELDS:
+        current = getattr(row, field_name)
+        incoming = block_data.get(field_name)
+        if current is None and incoming is None:
+            continue
+        if isinstance(current, float) or isinstance(incoming, float):
+            if current is None or incoming is None or float(current) != float(incoming):
+                return False
+            continue
+        if current != incoming:
+            return False
+    return True
+
+
+def _department_yearly_from_block(
+    *,
+    department_id: int,
+    fiscal_year: int,
+    revision: int,
+    block_data: dict[str, int | float | str | None],
+) -> DepartmentYearly:
+    return DepartmentYearly(
+        department_id=department_id,
+        fiscal_year=fiscal_year,
+        revision=revision,
+        is_current=True,
+        capacity=block_data.get("capacity"),
+        enrollment=block_data.get("enrollment"),
+        intl_students=block_data.get("intl_students"),
+        graduates=block_data.get("graduates"),
+        advanced=block_data.get("advanced"),
+        employed=block_data.get("employed"),
+        other=block_data.get("other"),
+        prev_enrollment=block_data.get("prev_enrollment"),
+        dropouts=block_data.get("dropouts"),
+        dropout_rate=block_data.get("dropout_rate"),
+        notes=block_data.get("notes"),
+        extraction_method="excel_import",
+    )
 
 
 def import_sairoku(ws: openpyxl.worksheet.worksheet.Worksheet, session: Session) -> dict[str, int]:
@@ -287,25 +376,49 @@ def import_sairoku(ws: openpyxl.worksheet.worksheet.Worksheet, session: Session)
 
             excluded_reason = raw_val if raw_val in EXCLUDED_REASONS else None
 
-            # Upsert: update existing or create new
-            existing_sys = (
+            # Append-only upsert (Sprint 8.2.1). Earlier this branch did
+            # in-place .first()-and-update which silently mutated old
+            # revisions — incompatible with the new
+            # UNIQUE(school_id, fiscal_year, revision) + partial unique on
+            # is_current=true contract. Now: demote prior current row,
+            # insert revision = max + 1 with is_current=True.
+            existing_rows = (
                 session.query(SchoolYearStatus)
-                .filter(SchoolYearStatus.school_id == school_id, SchoolYearStatus.fiscal_year == year)
-                .first()
+                .filter(
+                    SchoolYearStatus.school_id == school_id,
+                    SchoolYearStatus.fiscal_year == year,
+                )
+                .all()
             )
-            if existing_sys:
-                existing_sys.status = status
-                existing_sys.legacy_status = legacy
-                existing_sys.excluded_reason = excluded_reason
-            else:
-                sys = SchoolYearStatus(
+            current_row = next((r for r in existing_rows if r.is_current), None)
+            max_rev = max((r.revision for r in existing_rows), default=0)
+
+            if current_row is not None:
+                # Skip the write entirely if the current revision is already
+                # equal to the values we'd insert — keeps idempotent re-runs
+                # of the master Excel import from churning revisions.
+                if (current_row.status == status
+                        and current_row.legacy_status == legacy
+                        and current_row.excluded_reason == excluded_reason):
+                    stats["statuses"] += 1
+                    continue
+                session.query(SchoolYearStatus).filter(
+                    SchoolYearStatus.school_id == school_id,
+                    SchoolYearStatus.fiscal_year == year,
+                    SchoolYearStatus.is_current == True,  # noqa: E712
+                ).update({"is_current": False}, synchronize_session="fetch")
+
+            session.add(
+                SchoolYearStatus(
                     school_id=school_id,
                     fiscal_year=year,
                     status=status,
                     legacy_status=legacy,
                     excluded_reason=excluded_reason,
+                    revision=max_rev + 1,
+                    is_current=True,
                 )
-                session.add(sys)
+            )
             stats["statuses"] += 1
 
     session.flush()
@@ -322,15 +435,22 @@ def import_gakka(
 
     Multi-row header: row 1 = year groups, row 2 = field names. Data starts row 3.
     """
-    stats = {"departments": 0, "yearly_rows": 0, "school_misses": 0, "yearly_dupes": 0, "auto_created": 0}
-    dept_cache: dict[tuple[int, str, str, str | None, int | None], int] = {}
+    stats = {
+        "departments": 0,
+        "yearly_rows": 0,
+        "school_misses": 0,
+        "yearly_dupes": 0,
+        "yearly_skipped_non_excel_current": 0,
+        "auto_created": 0,
+    }
+    dept_cache: dict[tuple[int, str, str, str, float | None], int] = {}
     yearly_seen: set[tuple[int, int]] = set()  # (department_id, fiscal_year)
 
     for row_idx, row in enumerate(ws.iter_rows(min_row=3, values_only=True), start=3):
         prefecture = _safe_str(row[0])
         corp_name = _safe_str(row[1])
         school_name = _safe_str(row[2])
-        course_name = _safe_str(row[3])  # 課程名
+        course_name = normalize_course_name(_safe_str(row[3])) or ""  # 課程名
         dept_name = _safe_str(row[4])    # 学科名
         day_night = _safe_str(row[5])    # 昼夜
         duration_raw = _safe_float(row[6])   # 年限 (supports 1.5, 2.4 etc.)
@@ -340,7 +460,7 @@ def import_gakka(
         if not dept_name:
             continue
 
-        school_id = resolver.resolve(prefecture, corp_name, school_name)
+        school_id = resolver.resolve(prefecture, corp_name, school_name, reconcile_prefecture=True)
         if school_id is None:
             stats["school_misses"] += 1
             continue
@@ -416,50 +536,37 @@ def import_gakka(
                 continue
             yearly_seen.add(yearly_key)
 
-            # Upsert: update the CURRENT revision (not hardcoded revision=1)
-            # This respects the append-only model — PDF ingest may have created later revisions
-            existing_dy = (
+            existing_rows = (
                 session.query(DepartmentYearly)
                 .filter(
                     DepartmentYearly.department_id == dept_id,
                     DepartmentYearly.fiscal_year == year,
-                    DepartmentYearly.is_current == True,  # noqa: E712
                 )
-                .first()
+                .all()
             )
+            existing_dy = next((r for r in existing_rows if r.is_current), None)
+            max_rev = max((r.revision for r in existing_rows), default=0)
             if existing_dy:
-                existing_dy.capacity = block_data.get("capacity")
-                existing_dy.enrollment = block_data.get("enrollment")
-                existing_dy.intl_students = block_data.get("intl_students")
-                existing_dy.graduates = block_data.get("graduates")
-                existing_dy.advanced = block_data.get("advanced")
-                existing_dy.employed = block_data.get("employed")
-                existing_dy.other = block_data.get("other")
-                existing_dy.prev_enrollment = block_data.get("prev_enrollment")
-                existing_dy.dropouts = block_data.get("dropouts")
-                existing_dy.dropout_rate = block_data.get("dropout_rate")
-                existing_dy.extraction_method = "excel_import"
-                existing_dy.notes = block_data.get("notes")
-            else:
-                dy = DepartmentYearly(
+                if _same_department_yearly_import_values(existing_dy, block_data):
+                    stats["yearly_rows"] += 1
+                    continue
+                if existing_dy.extraction_method not in (None, "excel_import"):
+                    stats["yearly_skipped_non_excel_current"] += 1
+                    continue
+                session.query(DepartmentYearly).filter(
+                    DepartmentYearly.department_id == dept_id,
+                    DepartmentYearly.fiscal_year == year,
+                    DepartmentYearly.is_current == True,  # noqa: E712
+                ).update({"is_current": False}, synchronize_session="fetch")
+
+            session.add(
+                _department_yearly_from_block(
                     department_id=dept_id,
                     fiscal_year=year,
-                    revision=1,
-                    is_current=True,
-                    capacity=block_data.get("capacity"),
-                    enrollment=block_data.get("enrollment"),
-                    intl_students=block_data.get("intl_students"),
-                    graduates=block_data.get("graduates"),
-                    advanced=block_data.get("advanced"),
-                    employed=block_data.get("employed"),
-                    other=block_data.get("other"),
-                    prev_enrollment=block_data.get("prev_enrollment"),
-                    dropouts=block_data.get("dropouts"),
-                    dropout_rate=block_data.get("dropout_rate"),
-                    notes=block_data.get("notes"),
-                    extraction_method="excel_import",
+                    revision=max_rev + 1,
+                    block_data=block_data,
                 )
-                session.add(dy)
+            )
             stats["yearly_rows"] += 1
 
     session.flush()
@@ -479,7 +586,7 @@ def import_taisho_hiritu(
     前年在籍, 前半期, 第Ⅰ区分x4, 後半期, 第Ⅰ区分x4,
     年間, 家計急変多子世帯, 総計, 備考, 受給比率
     """
-    stats = {"rows": 0, "school_misses": 0, "duplicates": 0, "auto_created": 0}
+    stats = {"rows": 0, "school_misses": 0, "duplicates": 0, "auto_created": 0, "invalid_year": 0}
     seen: set[tuple[int, int]] = set()  # (school_id, fiscal_year)
 
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -494,6 +601,7 @@ def import_taisho_hiritu(
 
         fiscal_year = _parse_fiscal_year(year_str)
         if fiscal_year is None:
+            stats["invalid_year"] += 1
             continue
 
         school_id = resolver.resolve(prefecture, corp_name, school_name)
@@ -507,54 +615,60 @@ def import_taisho_hiritu(
             continue
         seen.add(dedup_key)
 
-        # Upsert: update existing or create
-        existing_sr = (
+        # Append-only upsert (Sprint 8.2.1). Same rationale as
+        # SchoolYearStatus above — must not silently overwrite an old
+        # revision now that revision/is_current are part of the schema.
+        existing_rows = (
             session.query(SupportRecipient)
             .filter(SupportRecipient.school_id == school_id, SupportRecipient.fiscal_year == fiscal_year)
-            .first()
+            .all()
         )
-        if existing_sr:
-            # Update in place
-            existing_sr.school_number = school_number if school_number else None
-            existing_sr.prev_enrollment = _safe_int(row[6])
-            existing_sr.first_half_total = _safe_int(row[7])
-            existing_sr.first_half_cat1 = _safe_int(row[8])
-            existing_sr.first_half_cat2 = _safe_int(row[9])
-            existing_sr.first_half_cat3 = _safe_int(row[10])
-            existing_sr.first_half_cat4 = _safe_int(row[11])
-            existing_sr.second_half_total = _safe_int(row[12])
-            existing_sr.second_half_cat1 = _safe_int(row[13]) if len(row) > 13 else None
-            existing_sr.second_half_cat2 = _safe_int(row[14]) if len(row) > 14 else None
-            existing_sr.second_half_cat3 = _safe_int(row[15]) if len(row) > 15 else None
-            existing_sr.second_half_cat4 = _safe_int(row[16]) if len(row) > 16 else None
-            existing_sr.annual_total = _safe_int(row[17]) if len(row) > 17 else None
-            existing_sr.household_change = _safe_int(row[18]) if len(row) > 18 else None
-            existing_sr.grand_total = _safe_int(row[19]) if len(row) > 19 else None
-            existing_sr.recipient_rate = _safe_float(row[21]) if len(row) > 21 else None
-            existing_sr.notes = _safe_str(row[20]) if len(row) > 20 and row[20] else None
-            stats["rows"] += 1
-            continue
+        current_row = next((r for r in existing_rows if r.is_current), None)
+        max_rev = max((r.revision for r in existing_rows), default=0)
+
+        # Build the new revision's field set up front so we can short-circuit
+        # the equality check (Sprint 8.2.2). Mirrors import_sairoku's no-op
+        # path: a re-import of identical 対象比率 must NOT churn revisions.
+        new_fields = {
+            "school_number": school_number if school_number else None,
+            "prev_enrollment": _safe_int(row[6]),
+            "first_half_total": _safe_int(row[7]),
+            "first_half_cat1": _safe_int(row[8]),
+            "first_half_cat2": _safe_int(row[9]),
+            "first_half_cat3": _safe_int(row[10]),
+            "first_half_cat4": _safe_int(row[11]),
+            "second_half_total": _safe_int(row[12]),
+            "second_half_cat1": _safe_int(row[13]) if len(row) > 13 else None,
+            "second_half_cat2": _safe_int(row[14]) if len(row) > 14 else None,
+            "second_half_cat3": _safe_int(row[15]) if len(row) > 15 else None,
+            "second_half_cat4": _safe_int(row[16]) if len(row) > 16 else None,
+            "annual_total": _safe_int(row[17]) if len(row) > 17 else None,
+            "household_change": _safe_int(row[18]) if len(row) > 18 else None,
+            "grand_total": _safe_int(row[19]) if len(row) > 19 else None,
+            "recipient_rate": _safe_float(row[21]) if len(row) > 21 else None,
+            "notes": _safe_str(row[20]) if len(row) > 20 and row[20] else None,
+        }
+
+        if current_row is not None:
+            # Equality short-circuit: identical content → no new revision.
+            if all(
+                getattr(current_row, field) == value
+                for field, value in new_fields.items()
+            ):
+                stats["rows"] += 1
+                continue
+            session.query(SupportRecipient).filter(
+                SupportRecipient.school_id == school_id,
+                SupportRecipient.fiscal_year == fiscal_year,
+                SupportRecipient.is_current == True,  # noqa: E712
+            ).update({"is_current": False}, synchronize_session="fetch")
 
         sr = SupportRecipient(
             school_id=school_id,
-            school_number=school_number if school_number else None,
             fiscal_year=fiscal_year,
-            prev_enrollment=_safe_int(row[6]),
-            first_half_total=_safe_int(row[7]),
-            first_half_cat1=_safe_int(row[8]),
-            first_half_cat2=_safe_int(row[9]),
-            first_half_cat3=_safe_int(row[10]),
-            first_half_cat4=_safe_int(row[11]),
-            second_half_total=_safe_int(row[12]),
-            second_half_cat1=_safe_int(row[13]) if len(row) > 13 else None,
-            second_half_cat2=_safe_int(row[14]) if len(row) > 14 else None,
-            second_half_cat3=_safe_int(row[15]) if len(row) > 15 else None,
-            second_half_cat4=_safe_int(row[16]) if len(row) > 16 else None,
-            annual_total=_safe_int(row[17]) if len(row) > 17 else None,
-            household_change=_safe_int(row[18]) if len(row) > 18 else None,
-            grand_total=_safe_int(row[19]) if len(row) > 19 else None,
-            recipient_rate=_safe_float(row[21]) if len(row) > 21 else None,
-            notes=_safe_str(row[20]) if len(row) > 20 and row[20] else None,
+            revision=max_rev + 1,
+            is_current=True,
+            **new_fields,
         )
         session.add(sr)
         stats["rows"] += 1
@@ -564,7 +678,19 @@ def import_taisho_hiritu(
     return stats
 
 
-def _parse_fiscal_year(val: str) -> int | None:
+def _import_fiscal_year_upper_bound(max_fiscal_year: int | None) -> int:
+    return max_fiscal_year if max_fiscal_year is not None else current_fiscal_year() + 1
+
+
+def _bounded_import_fiscal_year(year: int | None, *, max_fiscal_year: int | None = None) -> int | None:
+    if year is None:
+        return None
+    if year > _import_fiscal_year_upper_bound(max_fiscal_year):
+        return None
+    return year
+
+
+def _parse_fiscal_year(val: str, *, max_fiscal_year: int | None = None) -> int | None:
     """Parse fiscal year from various formats."""
     import re
 
@@ -573,28 +699,27 @@ def _parse_fiscal_year(val: str) -> int | None:
     # "2024年度" or just "2024"
     m = re.search(r"(20\d{2})", val)
     if m:
-        return int(m.group(1))
+        return _bounded_import_fiscal_year(int(m.group(1)), max_fiscal_year=max_fiscal_year)
 
-    # "令和6年度" -> 2024
-    m = re.match(r"令和(\d+)", val)
-    if m:
-        return 2018 + int(m.group(1))
+    fiscal_year = fiscal_year_from_japanese_era_text(val)
+    if fiscal_year is not None:
+        return _bounded_import_fiscal_year(fiscal_year, max_fiscal_year=max_fiscal_year)
 
     return None
 
 
-def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
+def import_all(excel_path: Path, session: Session) -> dict[str, ImportStats]:
     """Import all 4 sheets from master Excel. Returns stats per sheet."""
     log.info("import_start", path=str(excel_path))
 
     wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
 
     try:
-        results: dict[str, dict[str, int]] = {}
+        results: dict[str, ImportStats] = {}
 
         # Sheet 1: 採録状況 -> school + school_year_status
         ws_sairoku = wb["採録状況"]
-        results["採録状況"] = import_sairoku(ws_sairoku, session)
+        results["採録状況"] = dict(import_sairoku(ws_sairoku, session))
 
         # Build multi-level school resolver for cross-sheet matching
         resolver = SchoolResolver(session)
@@ -602,8 +727,9 @@ def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
 
         # Sheet 2: 対象比率 -> support_recipient
         ws_taisho = wb["対象比率"]
-        results["対象比率"] = import_taisho_hiritu(ws_taisho, session, resolver)
-        results["対象比率"]["auto_created"] = resolver.auto_created_count
+        taisho_stats: ImportStats = dict(import_taisho_hiritu(ws_taisho, session, resolver))
+        taisho_stats["auto_created"] = resolver.auto_created_count
+        results["対象比率"] = taisho_stats
 
         # Rebuild resolver indices after sheet 2 auto-creates
         if resolver.auto_created_count > 0:
@@ -613,8 +739,9 @@ def import_all(excel_path: Path, session: Session) -> dict[str, dict[str, int]]:
 
         # Sheet 3: 学科別 -> department + department_yearly
         ws_gakka = wb["学科別"]
-        results["学科別"] = import_gakka(ws_gakka, session, resolver)
-        results["学科別"]["auto_created"] = resolver.auto_created_count - pre_gakka_auto
+        gakka_stats: ImportStats = dict(import_gakka(ws_gakka, session, resolver))
+        gakka_stats["auto_created"] = resolver.auto_created_count - pre_gakka_auto
+        results["学科別"] = gakka_stats
 
         # Sheet 4: 在籍のみ抜粋 — snapshot, skip import (re-derivable from department_yearly)
         results["在籍のみ抜粋"] = {"skipped": 1, "reason": "re-derivable from department_yearly"}

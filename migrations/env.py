@@ -20,7 +20,12 @@ from eidp.config import settings
 target_metadata = Base.metadata
 
 # Override alembic.ini sqlalchemy.url with the app's config so they always agree
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# UNLESS the caller has already provided an explicit URL via the alembic Config
+# (e.g. ``eidp.db.sqlite_bootstrap.stamp_alembic_head`` does this when stamping a
+# fresh SQLite database that must NOT be redirected to the production Postgres
+# URL embedded in the developer's environment).
+if not config.attributes.get("preserve_url_override"):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline() -> None:

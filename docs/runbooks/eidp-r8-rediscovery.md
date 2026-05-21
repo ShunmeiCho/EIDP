@@ -1,16 +1,23 @@
-# EIDP R8 Rediscovery Weekly Runbook
+# EIDP Legacy Target-Year Rediscovery Weekly Runbook
+
+> Archived 2026-05-05 — Venus crontab/systemd operation is no longer the
+> target deployment path. Use `docs/runbooks/eidp-windows.md` for Sprint 8
+> Windows-PC operation. The legacy cron/systemd assets are kept under
+> `deploy/legacy-venus/` for historical reference only.
 
 ## Purpose
 
-Sprint 4 proved that one-time stale rediscovery has zero R8 yield before the
+Sprint 4 proved that one-time stale rediscovery has zero target-year yield before the
 5-6月 publication peak. Sprint 7 converts that waiting period into a weekly
 scheduled job:
 
 1. Select 専門学校 with an older ingested target PDF and no FY2026 target PDF.
-2. Revisit trusted `prefecture_aggregator` URLs.
+2. Revisit the current rediscovery method set:
+   `prefecture_aggregator`, `seed_csv`, `corporation_pattern`,
+   `operator_manual`, and `scrapling_stealth`.
 3. Ingest only documents downloaded during the same run.
 4. Write a JSON summary and rejection evidence under
-   `output/r8-rediscovery-weekly/`.
+   `output/target-year-discovery/` in the renamed Windows runner.
 
 ## Scheduling Choice
 
@@ -20,7 +27,7 @@ systemd was rejected because `loginctl show-user junming -p Linger` returns
 a user timer silently misses runs whenever junming is logged out — that
 yields a "looks-installed-but-not-running" false sense of automation.
 
-The systemd unit files under `deploy/systemd/` are kept for the future
+The systemd unit files under `deploy/legacy-venus/systemd/` are kept for the future
 migration: once `sudo loginctl enable-linger junming` is run, the same
 Python entrypoint can be moved over without rewriting the runner.
 
@@ -31,7 +38,7 @@ cd ~/workspace/EIDP
 git status --short
 git pull --ff-only
 .venv/bin/python -c "import sys, eidp; assert sys.prefix.endswith('/.venv'), sys.prefix; print('venv ok:', sys.prefix)"
-.venv/bin/python scripts/run_r8_rediscovery_weekly.py --dry-run --limit 5
+.venv/bin/python scripts/run_weekly_target_year_discovery.py --dry-run --limit 5
 ```
 
 The dry run is read-only against the database and should print a summary path,
@@ -44,7 +51,7 @@ entry.
 
 ```bash
 cd ~/workspace/EIDP
-bash deploy/cron/install.sh
+bash deploy/legacy-venus/cron/install.sh
 crontab -l
 ```
 
@@ -60,15 +67,23 @@ Cron daemon survives reboot — `systemctl status cron` should show `active`.
 ### Manual smoke (real DB writes; owner authorization required)
 
 ```bash
-.venv/bin/python scripts/run_r8_rediscovery_weekly.py --limit 10
+.venv/bin/python scripts/run_weekly_target_year_discovery.py --limit 10
 ```
 
 Or invoke the cron wrapper directly with the same flock/log/marker semantics:
 
 ```bash
-bash scripts/run_r8_rediscovery_cron.sh --limit 10
+bash deploy/legacy-venus/run_r8_rediscovery_cron.sh --limit 10
 ls -lt logs/r8-rediscovery/run-*.log | head -3
 cat logs/r8-rediscovery/.last_failure 2>/dev/null || echo "no failure marker"
+```
+
+To narrow a legacy run deliberately, pass a space-separated method list through
+`EIDP_REDISCOVERY_METHODS`:
+
+```bash
+EIDP_REDISCOVERY_METHODS="prefecture_aggregator seed_csv" \
+  bash deploy/legacy-venus/run_r8_rediscovery_cron.sh --limit 10
 ```
 
 ### Uninstall
@@ -83,8 +98,8 @@ Only relevant after `sudo loginctl enable-linger junming` is allowed.
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp deploy/systemd/eidp-r8-rediscovery.service ~/.config/systemd/user/
-cp deploy/systemd/eidp-r8-rediscovery.timer   ~/.config/systemd/user/
+cp deploy/legacy-venus/systemd/eidp-r8-rediscovery.service ~/.config/systemd/user/
+cp deploy/legacy-venus/systemd/eidp-r8-rediscovery.timer   ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now eidp-r8-rediscovery.timer
 systemctl --user list-timers eidp-r8-rediscovery.timer
@@ -93,7 +108,7 @@ systemctl --user list-timers eidp-r8-rediscovery.timer
 For system-wide install (heaviest, requires sudo):
 
 ```bash
-sudo cp deploy/systemd/eidp-r8-rediscovery.{service,timer} /etc/systemd/system/
+sudo cp deploy/legacy-venus/systemd/eidp-r8-rediscovery.{service,timer} /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemd-analyze verify eidp-r8-rediscovery.{service,timer}
 sudo systemctl enable --now eidp-r8-rediscovery.timer
@@ -108,12 +123,20 @@ Each run writes:
 
 - `logs/r8-rediscovery/run-{utc-ts}.log`           — wrapper stdout/stderr (12-week ring buffer)
 - `logs/r8-rediscovery/.last_failure`              — only present on non-zero exit
-- `output/r8-rediscovery-weekly/{run_id}-summary.json`
-- `output/r8-rediscovery-weekly/{run_id}-discovery-rejections.jsonl`
-- `output/r8-rediscovery-weekly/{run_id}-ingest-rejections.jsonl`
+- `output/target-year-discovery/{run_id}-summary.json`
+- `output/target-year-discovery/{run_id}-discovery-rejections.jsonl`
+- `output/target-year-discovery/{run_id}-ingest-rejections.jsonl`
+- `output/target-year-discovery/{run_id}-discovery-rca-batch-plan.json`
 
 The summary contains before/after snapshots for coverage, PDF gaps, extraction,
-new document IDs, discovery stats, ingest stats, and deltas.
+new document IDs, discovery stats, ingest stats, deltas, and a `discovery_rca`
+section pointing to the Codex RCA batch plan when discovery evidence was
+recorded. It also records `target_pdf_auto_acquired_count`,
+`target_pdf_auto_yield_pct`, `operator_reviewable_count`,
+`operator_reviewable_yield_pct`, `ship_gate_operator_coverage_pct`, and
+`ship_gate_status`; use the operator-reviewable fields as the direct weekly
+evidence for the ship gate. The automatic target-PDF yield remains a diagnostic
+field.
 
 ## Verification (after a run)
 
@@ -123,8 +146,8 @@ new document IDs, discovery stats, ingest stats, and deltas.
 .venv/bin/python -m eidp report extraction --fy 2026
 ```
 
-Expect `target_FY2026` to rise only when schools have actually published R8
-PDFs. A zero-delta weekly run is valid during the pre-peak period.
+Expect `target_FY2026` to rise only when schools have actually published
+FY2026（令和8年度） PDFs. A zero-delta weekly run is valid during the pre-peak period.
 
 ## Recovery
 

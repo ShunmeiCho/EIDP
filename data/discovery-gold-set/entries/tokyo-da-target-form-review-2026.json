@@ -1,0 +1,50 @@
+{
+  "schema_version": "discovery-gold-set/v0.1",
+  "entry_id": "tokyo-da-target-form-review-2026",
+  "school": {
+    "school_id": 107,
+    "school_name": "東京ダンス・俳優＆舞台芸術専門学校",
+    "prefecture": "東京都",
+    "corporation_name": "滋慶学園"
+  },
+  "target_fiscal_year": 2026,
+  "outcome": "needs_operator_review",
+  "manual_demonstration": {
+    "operator_goal": "Preserve a Tokyo official-index disclosure page where a visible confirmation-form PDF is target-shaped but has no FY2026 evidence.",
+    "steps": [
+      "Start from the Tokyo official-index disclosure URL registered as the school's prefecture_aggregator site.",
+      "Open https://www.da-tokyo.ac.jp/school/public_info.html.",
+      "Inspect the anchor labeled 確認申請書様式.",
+      "Follow https://www.da-tokyo.ac.jp/wp-content/themes/da-tokyo/static/assets/images/school/pdf/check-da.pdf.",
+      "Classify it as needs_operator_review because the crawler identifies it as a target PDF but cannot prove the rolling target fiscal year from URL, anchor, or PDF evidence."
+    ]
+  },
+  "expected_result": {
+    "school_url": "https://www.da-tokyo.ac.jp/",
+    "disclosure_url": "https://www.da-tokyo.ac.jp/school/public_info.html",
+    "pdf_url": "https://www.da-tokyo.ac.jp/wp-content/themes/da-tokyo/static/assets/images/school/pdf/check-da.pdf",
+    "pdf_type": "target",
+    "fiscal_year": null,
+    "pattern_type": "wordpress",
+    "strict_target_year_success": false
+  },
+  "automation_pattern": {
+    "site_family": "tokyo_information_page_target_form_without_year_evidence",
+    "reusable_rules": [
+      "Keep visible 確認申請書様式 anchors as high-value target-form candidates.",
+      "Require explicit target-fiscal-year evidence before counting a target-shaped PDF as strict auto-acquired.",
+      "Route target-shaped PDFs with no FY2026 evidence to needs_operator_review with the direct PDF URL preserved."
+    ],
+    "anti_patterns": [
+      "Do not infer FY2026 from a current information-disclosure page alone.",
+      "Do not drop the target-form PDF as non-target because neighboring information-disclosure PDFs are school information or syllabus documents."
+    ]
+  },
+  "evidence": {
+    "source_kind": "current_code_jsonl",
+    "source_paths": [
+      "_temp/win-v342-tokyo-probe/discovery_rejections_tokyo_v342_30.jsonl"
+    ],
+    "notes": "Windows v342 Tokyo 30-site replay records this candidate as reason=target_fiscal_year_not_detected, pdf_type=target, pattern_type=wordpress."
+  }
+}

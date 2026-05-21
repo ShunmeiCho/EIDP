@@ -28,8 +28,8 @@ from typing import Literal
 
 from sqlalchemy.orm import Session
 
+from eidp.config import settings
 from eidp.db.models import DepartmentYearly, Document, School, SchoolSite
-from eidp.reports.coverage import current_fiscal_year
 
 GapKind = Literal["url", "pdf", "extraction", "competition"]
 
@@ -159,7 +159,7 @@ def _classify_pdf_state(
 def _gaps_pdf(
     session: Session, school_type: str | None, fiscal_year: int | None
 ) -> GapsReport:
-    fy = fiscal_year if fiscal_year is not None else current_fiscal_year()
+    fy = fiscal_year if fiscal_year is not None else settings.target_fiscal_year
     q = session.query(School).filter(School.status == "active")
     if school_type:
         q = q.filter(School.school_type == school_type)
