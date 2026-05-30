@@ -45,6 +45,7 @@ from eidp.db.models import (
     SchoolYearStatus,
 )
 from eidp.fiscal_year import format_fiscal_year_label
+from eidp.review.confirm_gate import EXECUTE, PENDING, resolve_confirm_gate
 from eidp.review.operator_actor import operator_actor_from_state
 from eidp.review.school_scope import OPERATOR_SCHOOL_SCOPE_LABEL, OPERATOR_SCHOOL_TYPE_SCOPE
 from eidp.review.target_year_status import target_year_overview
@@ -740,10 +741,11 @@ def page_pipeline_status(session: Session) -> None:
     )
 
     # 今週のTODO tiles — the V1 entry point担当者 sees first
-    try:
-        todo = compute_todo_counts(session)
-    except Exception:
-        todo = None
+    todo, todo_error = safe_compute_todo_counts(session)
+    if todo_error is not None:
+        st.error(
+            "今週のやること の計算に失敗しました。サポートに連絡してください。"
+        )
 
     if todo is not None:
         st.subheader("今週のやること")
@@ -1316,12 +1318,55 @@ URLは登録前に以下のチェックを通します。
             disabled=selected_school_id is None or lock_held,
         )
 
-    if not submitted:
+    if not submitted and not st.session_state.get("url_submission_run_now_pending"):
         st.info(
             "URL は登録前に SSRF 対策・HTTP検証・PDF内容分類またはHTML確認を通過する必要があります。"
             "検証に失敗した場合はDBに書き込まれません。"
         )
         return
+
+    # Two-stage confirm gate (G11): run_now triggers a full network-bound
+    # download + discovery + ingest while holding the shared lock, so it
+    # must require an explicit second click. Plain URL registration (no
+    # run_now) is reversible and keeps firing on one click as before.
+    run_now_confirm_key = "url_submission_run_now_pending"
+    run_now_confirmed = False
+    run_now_cancelled = False
+    run_now_requested = bool(submitted and run_now)
+    if st.session_state.get(run_now_confirm_key):
+        st.warning(
+            "登録後にPDF取得とDB反映まで実行します。完了まで他の操作はできません。"
+        )
+        run_now_cols = st.columns(2)
+        run_now_confirmed = run_now_cols[0].button(
+            "実行する", key="url_submission_run_now_yes", type="primary",
+        )
+        run_now_cancelled = run_now_cols[1].button(
+            "URL登録だけにする", key="url_submission_run_now_no",
+        )
+
+    run_now_gate = resolve_confirm_gate(
+        st.session_state,
+        key=run_now_confirm_key,
+        requested=run_now_requested,
+        confirmed=run_now_confirmed,
+        cancelled=run_now_cancelled,
+    )
+    if run_now_gate == PENDING:
+        return
+    if run_now_gate == EXECUTE:
+        run_now = True
+    elif run_now_cancelled:
+        # Operator picked "URL登録だけにする": register the URL without the
+        # auto-pipeline. Form widget values persist across the confirm
+        # rerun, so the submission below still has url / school_id.
+        run_now = False
+    elif not submitted:
+        # Idle rerun with no pending submission — nothing to do.
+        return
+    else:
+        # Plain submit with run_now unchecked: reversible, fire as before.
+        run_now = False
 
     audit_path = output_path(_DEFAULT_OPERATOR_SUBMISSIONS, (".jsonl",))
     try:
@@ -2054,6 +2099,51 @@ def compute_todo_counts(session: Session) -> TodoCounts:
     )
 
 
+def safe_compute_todo_counts(
+    session: Session,
+) -> tuple[TodoCounts | None, str | None]:
+    """Wrap compute_todo_counts so a calculation failure no longer hides
+    silently (P0-2). Returns ``(counts, None)`` on success; on failure
+    returns ``(None, error_type_name)`` and emits ``log.exception`` so
+    the silent-failure hunter / G5 nightly scan can catch it. The page
+    render shell turns the error label into ``st.error``."""
+    try:
+        return compute_todo_counts(session), None
+    except Exception as exc:
+        log.exception(
+            "todo_counts_failed",
+            error_type=type(exc).__name__,
+        )
+        return None, type(exc).__name__
+
+
+def safe_school_task_summary(
+    session: Session,
+    *,
+    fiscal_year: int,
+    school_type: str | None,
+) -> tuple[Any, str | None]:
+    """Wrap sidebar school_task_summary lookup so failures surface to the
+    operator instead of silently hiding the TODO tile (P0-3). Mirrors the
+    sibling handler immediately below in ``render_sidebar_todo`` but
+    routes through ``log.exception`` for G5 observability."""
+    try:
+        from eidp.review._pages.school_year_tasks import school_task_summary
+        target = school_task_summary(
+            session,
+            fiscal_year=fiscal_year,
+            school_type=school_type,
+        )
+        return target, None
+    except Exception as exc:
+        log.exception(
+            "sidebar_school_task_summary_failed",
+            error_type=type(exc).__name__,
+            fiscal_year=fiscal_year,
+        )
+        return None, type(exc).__name__
+
+
 def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
@@ -2066,16 +2156,13 @@ def render_sidebar_todo(session: Session) -> None:
     Called from app.py AFTER the page radio so it always stays visible.
     """
     target_needs_action = 0
-    try:
-        from eidp.review._pages.school_year_tasks import school_task_summary
-
-        target = school_task_summary(
-            session,
-            fiscal_year=settings.target_fiscal_year,
-            school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
-        )
-    except Exception:
-        target = None
+    target, target_error = safe_school_task_summary(
+        session,
+        fiscal_year=settings.target_fiscal_year,
+        school_type=OPERATOR_SCHOOL_TYPE_SCOPE,
+    )
+    if target_error is not None:
+        st.sidebar.caption(f"対象年度サマリ取得失敗: {target_error}")
 
     try:
         counts = compute_todo_counts(session)
@@ -3097,18 +3184,46 @@ def _render_dept_proposals_tab(session: Session, *, lock_path: Path) -> None:
             row[0].caption(
                 f"別名: {alias['old_name']} / 登録元: {alias['verified_by'] or 'unknown'}"
             )
-            if row[1].button("取消", key=f"void_dept_alias_{alias['change_id']}"):
-                changed, reason = void_department_change(
-                    session,
-                    change_id=alias["change_id"],
-                    actor=operator_actor_from_state(st.session_state),
-                    reason="operator voided dept alias from proposal review page",
-                    lock_path=lock_path,
+            requested = row[1].button(
+                "取消", key=f"void_dept_alias_{alias['change_id']}",
+            )
+            confirm_key = f"confirm_void_{alias['change_id']}"
+            confirmed = False
+            cancelled = False
+            if st.session_state.get(confirm_key):
+                st.warning(
+                    f"{alias['school_name']} / {alias['canonical_name']} の学科別名を取消します。"
                 )
-                if changed:
-                    st.success("学科別名を取消しました。")
-                else:
-                    st.info(f"未実行: {reason}")
+                confirm_cols = st.columns(2)
+                confirmed = confirm_cols[0].button(
+                    "取消を実行",
+                    key=f"void_dept_alias_exec_{alias['change_id']}",
+                    type="primary",
+                )
+                cancelled = confirm_cols[1].button(
+                    "やめる",
+                    key=f"void_dept_alias_cancel_{alias['change_id']}",
+                )
+            gate = resolve_confirm_gate(
+                st.session_state,
+                key=confirm_key,
+                requested=requested,
+                confirmed=confirmed,
+                cancelled=cancelled,
+            )
+            if gate != EXECUTE:
+                continue
+            changed, reason = void_department_change(
+                session,
+                change_id=alias["change_id"],
+                actor=operator_actor_from_state(st.session_state),
+                reason="operator voided dept alias from proposal review page",
+                lock_path=lock_path,
+            )
+            if changed:
+                st.success("学科別名を取消しました。")
+            else:
+                st.info(f"未実行: {reason}")
 
 
 def page_proposals_review(session: Session, *, lock_path: Path) -> None:
