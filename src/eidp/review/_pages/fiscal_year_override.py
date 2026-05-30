@@ -36,6 +36,7 @@ from eidp.db.locking import LockBusyError, acquire_lock, probe_lock
 from eidp.db.models import Document, School
 from eidp.fiscal_year import format_fiscal_year_label
 from eidp.pipeline.fiscal_year_override import override_fiscal_year
+from eidp.review.confirm_gate import EXECUTE, PENDING, resolve_confirm_gate
 from eidp.review.operator_actor import operator_actor_from_state
 
 # Documents in any of these statuses are eligible for fiscal-year correction:
@@ -248,35 +249,67 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         reason = st.text_input("操作メモ (reason)")
         submitted = st.form_submit_button("年度を確定", type="primary", disabled=status.held)
 
-    if submitted:
+    # Two-stage confirm gate (G11): the first submit only stashes pending;
+    # the second explicit "確定する" click actually fires the write helper.
+    confirm_key = "fiscal_year_override_confirm_pending"
+    confirmed = False
+    cancelled = False
+    if st.session_state.get(confirm_key):
         candidate = label_to_doc[selected_label]
-        outcome = submit_override_form(
-            session,
-            document_id=candidate.document_id,
-            target_fy=int(target_fy),
-            reason=reason or None,
-            actor=operator_actor_from_state(st.session_state),
-            lock_path=lock_path,
+        st.warning(
+            f"doc#{candidate.document_id} {candidate.school_name} "
+            f"を {format_fiscal_year_label(candidate.current_fiscal_year)} → "
+            f"{format_fiscal_year_label(int(target_fy))} に修正します。"
         )
-        if outcome.lock_busy:
-            st.warning(
-                f"週次処理中、編集は一時停止しています。"
-                f"少し待ってから再度確定してください "
-                f"(owner={outcome.lock_owner}, started_at={outcome.lock_started_at})"
-            )
-            return
-        if not outcome.ok:
-            st.error(f"年度修正に失敗しました: {outcome.error}")
-            return
-        if outcome.stats is None:
-            st.error("年度修正に失敗しました: 結果件数を取得できませんでした。")
-            return
-        stats = outcome.stats
-        st.success(
-            f"年度修正が完了しました。"
-            f"DepartmentYearly={stats['department_yearly']} "
-            f"SupportRecipient={stats['support_recipient']} "
-            f"SchoolYearStatus={stats['school_year_status']} "
-            f"Document={stats['document']}"
+        st.caption("別の文書の対象年度行を置き換える可能性があります。")
+        confirm_cols = st.columns(2)
+        confirmed = confirm_cols[0].button(
+            "確定する", key="fy_override_confirm_yes", type="primary",
         )
-        st.rerun()
+        cancelled = confirm_cols[1].button(
+            "キャンセル", key="fy_override_confirm_no",
+        )
+
+    gate = resolve_confirm_gate(
+        st.session_state,
+        key=confirm_key,
+        requested=bool(submitted),
+        confirmed=confirmed,
+        cancelled=cancelled,
+    )
+    if gate == PENDING:
+        return
+    if gate != EXECUTE:
+        return
+
+    candidate = label_to_doc[selected_label]
+    outcome = submit_override_form(
+        session,
+        document_id=candidate.document_id,
+        target_fy=int(target_fy),
+        reason=reason or None,
+        actor=operator_actor_from_state(st.session_state),
+        lock_path=lock_path,
+    )
+    if outcome.lock_busy:
+        st.warning(
+            f"週次処理中、編集は一時停止しています。"
+            f"少し待ってから再度確定してください "
+            f"(owner={outcome.lock_owner}, started_at={outcome.lock_started_at})"
+        )
+        return
+    if not outcome.ok:
+        st.error(f"年度修正に失敗しました: {outcome.error}")
+        return
+    if outcome.stats is None:
+        st.error("年度修正に失敗しました: 結果件数を取得できませんでした。")
+        return
+    stats = outcome.stats
+    st.success(
+        f"年度修正が完了しました。"
+        f"DepartmentYearly={stats['department_yearly']} "
+        f"SupportRecipient={stats['support_recipient']} "
+        f"SchoolYearStatus={stats['school_year_status']} "
+        f"Document={stats['document']}"
+    )
+    st.rerun()

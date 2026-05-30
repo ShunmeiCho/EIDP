@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 import streamlit as st
+import structlog
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,8 @@ from eidp.fiscal_year import format_fiscal_year_label
 from eidp.logging_config import configure_logging
 from eidp.review import operator_pages
 from eidp.review.operator_actor import operator_actor_from_state
+
+log = structlog.get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Session helpers
@@ -152,7 +155,12 @@ def _render_bug_signal_banner(app_root: Path) -> None:
         from eidp.bug_signals.detector import scan_bug_signals
 
         signals = scan_bug_signals(app_root, check_sqlite=False)
-    except Exception:
+    except Exception as exc:
+        log.exception(
+            "bug_signal_scan_failed",
+            error_type=type(exc).__name__,
+        )
+        st.warning("異常検出スキャンに失敗しました。サポートに連絡してください。")
         return
     if not signals:
         return
