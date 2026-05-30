@@ -1248,23 +1248,71 @@ def _candidate_download_year_rank(candidate: PdfCandidate, *, target_year: int) 
     return (2, -hinted_year)
 
 
+def _candidate_body_matches_target(candidate: PdfCandidate, school_names: list[str]) -> bool:
+    """True when the PDF body names one of the target school's names/aliases.
+
+    The positive twin of ``_candidate_pdf_mentions_different_school``: it uses
+    the same normalized label comparison so confirming the target and rejecting
+    a sibling are symmetric.
+    """
+    body = candidate.detected_school_name
+    if not body or not school_names:
+        return False
+    body_label = _school_link_label(body)
+    if len(body_label) < 4:
+        return False
+    return any(_school_link_label(name) == body_label for name in school_names if name)
+
+
+def _candidate_school_match_rank(
+    candidate: PdfCandidate,
+    *,
+    school_name: str,
+    school_names: list[str],
+) -> int:
+    """Rank a candidate by how strongly it belongs to the target school.
+
+    Lower is better. The PDF body (``detected_school_name``), once classified,
+    is the PRIMARY attribution signal on dense multi-brand disclosure pages
+    where anchor/link text routinely points at the wrong sibling school:
+
+    * 0 -- body confirms the target school (strongest)
+    * 1 -- link/anchor text matches the target (legacy signal, body unknown)
+    * 2 -- neutral: no usable signal either way
+    * 3 -- body names a *different* identifiable school (weakest)
+
+    When no candidate is classified yet (``detected_school_name`` empty), this
+    collapses to the legacy link-text ordering (1 vs 2), so behavior is
+    unchanged until body classification becomes available.
+    """
+    if candidate.detected_school_name and len(_school_link_label(candidate.detected_school_name)) >= 4:
+        if _candidate_body_matches_target(candidate, school_names):
+            return 0
+        return 3
+    if school_name and _school_name_matches_link(f"{candidate.anchor_text} {candidate.pdf_url}", school_name):
+        return 1
+    return 2
+
+
 def _prioritize_viable_candidates(
     candidates: list[PdfCandidate],
     *,
     target_year: int,
     school_name: str = "",
+    school_names: list[str] | None = None,
 ) -> tuple[list[PdfCandidate], list[PdfCandidate]]:
     """Prioritize target-like candidates and cap generic PDF scanning."""
 
+    target_school_names = school_names if school_names else ([school_name] if school_name else [])
     priority: list[tuple[int, int, tuple[int, int], int, PdfCandidate]] = []
     general: list[tuple[int, int, PdfCandidate]] = []
     for index, candidate in enumerate(candidates):
         tier = _candidate_download_tier(candidate, target_year=target_year)
         year_rank = _candidate_download_year_rank(candidate, target_year=target_year)
-        school_rank = (
-            0
-            if school_name and _school_name_matches_link(f"{candidate.anchor_text} {candidate.pdf_url}", school_name)
-            else 1
+        school_rank = _candidate_school_match_rank(
+            candidate,
+            school_name=school_name,
+            school_names=target_school_names,
         )
         if tier < 2:
             priority.append((tier, school_rank, year_rank, index, candidate))
@@ -3766,6 +3814,7 @@ def run_pdf_discovery(
                 viable,
                 target_year=target_year,
                 school_name=school_name,
+                school_names=school_names,
             )
             if candidate_budget_dropped_candidates:
                 stats["candidate_budget_limited"] += 1
