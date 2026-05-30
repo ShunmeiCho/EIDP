@@ -93,6 +93,13 @@ _SUPPORT_RECIPIENT_INT_FIELDS: tuple[str, ...] = (
     "grand_total",
 )
 
+_SUPPORT_RECIPIENT_CARRY_FIELDS: tuple[str, ...] = (
+    "school_number",
+    *_SUPPORT_RECIPIENT_INT_FIELDS,
+    "prev_enrollment",
+    "recipient_rate",
+)
+
 
 def _norm(value: str | None) -> str:
     if not value:
@@ -485,10 +492,10 @@ def save_manual_entries(
         )
         current_sr = next((row for row in existing_sr_rows if row.is_current), None)
         max_sr_rev = max((row.revision for row in existing_sr_rows), default=0)
-        sr_field_names = _SUPPORT_RECIPIENT_INT_FIELDS
+        sr_field_names = _SUPPORT_RECIPIENT_CARRY_FIELDS
         merged_sr_fields = {name: getattr(current_sr, name, None) for name in sr_field_names}
         for name in sr_field_names:
-            manual_value = getattr(support_recipient, name)
+            manual_value = getattr(support_recipient, name, None)
             if manual_value is not None:
                 merged_sr_fields[name] = manual_value
 
@@ -501,9 +508,6 @@ def save_manual_entries(
 
         sr_row = SupportRecipient(
             school_id=doc.school_id,
-            school_number=support_recipient.school_number or (
-                current_sr.school_number if current_sr is not None else None
-            ),
             document_id=document_id,
             fiscal_year=fiscal_year,
             revision=max_sr_rev + 1,

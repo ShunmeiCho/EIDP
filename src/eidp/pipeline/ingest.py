@@ -566,6 +566,7 @@ def ingest_document(
         max_sr_rev = max((r.revision for r in existing_sr_rows), default=0)
 
         sr_field_names = (
+            "school_number",
             "first_half_total",
             "first_half_cat1",
             "first_half_cat2",
@@ -579,6 +580,8 @@ def ingest_document(
             "annual_total",
             "household_change",
             "grand_total",
+            "prev_enrollment",
+            "recipient_rate",
         )
         # Start from current row's values (preserve Excel fallback) then
         # overlay any non-None PDF values.
