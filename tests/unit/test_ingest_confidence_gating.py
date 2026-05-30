@@ -545,6 +545,63 @@ def test_sr_full_totals_lands_current(engine, tmp_path):
         assert float(sr.extraction_confidence) >= 0.85
 
 
+def test_sr_reingest_preserves_excel_only_context_fields(engine, tmp_path):
+    """PDF re-ingest must not erase SR fields that the parser cannot extract."""
+
+    with Session(engine) as session:
+        school = _seed_school(session)
+        prior_doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/prior-sr.pdf",
+            tmp_path=tmp_path,
+            file_hash="sr-prior",
+            name="prior-sr.pdf",
+        )
+        doc = _seed_doc(
+            session,
+            school.id,
+            url="https://x/new-sr.pdf",
+            tmp_path=tmp_path,
+            file_hash="sr-new",
+            name="new-sr.pdf",
+        )
+        session.add(SupportRecipient(
+            school_id=school.id,
+            school_number="1234567890",
+            document_id=prior_doc.id,
+            fiscal_year=2026,
+            annual_total=100,
+            grand_total=100,
+            prev_enrollment=250,
+            recipient_rate=0.4,
+            revision=1,
+            is_current=True,
+        ))
+        session.flush()
+
+        ann = _annotation(
+            dept_record=DepartmentRecord(
+                name="A学科", capacity=40, enrollment=35, graduates=30,
+            ),
+            sr=SupportRecipientRecord(annual_total=120, grand_total=120),
+        )
+        with patch("eidp.pipeline.ingest.parse_pdf", return_value=ann):
+            ingest_document(session, doc, recorder=None)
+        session.commit()
+
+        sr = (
+            session.query(SupportRecipient)
+            .filter(SupportRecipient.is_current == True)  # noqa: E712
+            .one()
+        )
+        assert sr.revision == 2
+        assert sr.school_number == "1234567890"
+        assert sr.prev_enrollment == 250
+        assert sr.recipient_rate is not None
+        assert float(sr.recipient_rate) == pytest.approx(0.4)
+
+
 def test_image_ocr_ingest_marks_dept_and_sr_breakdowns_as_ocr(engine, tmp_path):
     with Session(engine) as session:
         school = _seed_school(session)

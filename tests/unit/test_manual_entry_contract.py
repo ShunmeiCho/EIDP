@@ -207,6 +207,49 @@ def test_manual_support_recipient_entry_appends_current_revision(engine):
         assert sys_row.document_id == doc.id
 
 
+def test_manual_support_recipient_entry_preserves_excel_only_context_fields(engine):
+    """Manual SR edits must not erase fields absent from the form/parser."""
+
+    with Session(engine) as session:
+        school, doc = _seed(session)
+        session.add(SupportRecipient(
+            school_id=school.id,
+            school_number="9876543210",
+            document_id=doc.id,
+            fiscal_year=2026,
+            annual_total=100,
+            grand_total=100,
+            prev_enrollment=250,
+            recipient_rate=0.4,
+            revision=1,
+            is_current=True,
+        ))
+        session.commit()
+
+        save_manual_entries(
+            session,
+            document_id=doc.id,
+            fiscal_year=2026,
+            entries=[],
+            support_recipient=SupportRecipientEntry(
+                annual_total=120,
+                grand_total=120,
+            ),
+        )
+        session.commit()
+
+        sr = (
+            session.query(SupportRecipient)
+            .filter(SupportRecipient.is_current == True)  # noqa: E712
+            .one()
+        )
+        assert sr.revision == 2
+        assert sr.school_number == "9876543210"
+        assert sr.prev_enrollment == 250
+        assert sr.recipient_rate is not None
+        assert float(sr.recipient_rate) == pytest.approx(0.4)
+
+
 def test_append_only_demotes_prior_current_revision(engine):
     with Session(engine) as session:
         _, doc = _seed(session)
