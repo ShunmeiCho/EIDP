@@ -3764,40 +3764,50 @@ def run_pdf_discovery(
 
             # Handle direct PDF URLs (e.g., from Firecrawl) — download directly
             site_path = urlparse(site.url).path.lower()
-            if site_path.endswith(".pdf"):
-                candidate = PdfCandidate(
-                    pdf_url=site.url,
-                    anchor_text="direct_pdf_url",
-                    page_url=site.url,
-                )
-                candidate.score = 1.0
-                result = DiscoveryResult(school_id=site.school_id)
-                result.candidates = [candidate]
-                result.best = candidate
-            else:
-                derived_disclosure_limit: int | None = None
-                origin = _origin_key(site.url)
-                if (
-                    origin is not None
-                    and origin_site_counts.get(origin, 0) >= SHARED_ORIGIN_DERIVED_FALLBACK_THRESHOLD
-                ):
-                    probe_count = origin_derived_probe_counts.get(origin, 0)
-                    if probe_count >= SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES:
-                        if _has_priority_derived_disclosure_url_probe(site.url):
-                            derived_disclosure_limit = 1
+            # Per-site fault isolation (G6/G10): an UNEXPECTED error while
+            # acquiring discovery results for one school must not abort the whole
+            # batch. Route it through the existing ``result.error`` path so the
+            # job is finalized to "failed" with discovery_error evidence and the
+            # next school is still processed.
+            try:
+                if site_path.endswith(".pdf"):
+                    candidate = PdfCandidate(
+                        pdf_url=site.url,
+                        anchor_text="direct_pdf_url",
+                        page_url=site.url,
+                    )
+                    candidate.score = 1.0
+                    result = DiscoveryResult(school_id=site.school_id)
+                    result.candidates = [candidate]
+                    result.best = candidate
+                else:
+                    derived_disclosure_limit: int | None = None
+                    origin = _origin_key(site.url)
+                    if (
+                        origin is not None
+                        and origin_site_counts.get(origin, 0) >= SHARED_ORIGIN_DERIVED_FALLBACK_THRESHOLD
+                    ):
+                        probe_count = origin_derived_probe_counts.get(origin, 0)
+                        if probe_count >= SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES:
+                            if _has_priority_derived_disclosure_url_probe(site.url):
+                                derived_disclosure_limit = 1
+                            else:
+                                derived_disclosure_limit = 0
+                                stats["shared_origin_derived_fallback_skipped"] += 1
                         else:
-                            derived_disclosure_limit = 0
-                            stats["shared_origin_derived_fallback_skipped"] += 1
-                    else:
-                        origin_derived_probe_counts[origin] = probe_count + 1
-                result = discover_pdfs_for_site(
-                    client,
-                    site.school_id,
-                    site.url,
-                    school_name=site.school.school_name if site.school is not None else "",
-                    target_fiscal_year=target_year,
-                    derived_disclosure_limit=derived_disclosure_limit,
-                )
+                            origin_derived_probe_counts[origin] = probe_count + 1
+                    result = discover_pdfs_for_site(
+                        client,
+                        site.school_id,
+                        site.url,
+                        school_name=site.school.school_name if site.school is not None else "",
+                        target_fiscal_year=target_year,
+                        derived_disclosure_limit=derived_disclosure_limit,
+                    )
+            except Exception as exc:  # noqa: BLE001 - one bad school must not abort the batch
+                log.exception("pdf_discovery_site_error", school_id=site.school_id, url=site.url)
+                result = DiscoveryResult(school_id=site.school_id)
+                result.error = f"{type(exc).__name__}: {exc}"
             stats["crawled"] += 1
 
             if result.error:
