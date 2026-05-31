@@ -338,6 +338,7 @@ HEADERS = {
 
 MAX_CANDIDATE_DOWNLOAD_ATTEMPTS = 10
 MAX_GENERAL_CANDIDATE_SCAN = 80
+MAX_PRERANK_CLASSIFY = 3
 PREFECTURE_INDEX_TRUST_MAX_AGE_DAYS = 370
 MAX_DISCOVERY_EXTRA_PAGES = 6
 SITEMAP_DISCOVERY_RESERVED_PAGES = 2
@@ -1352,6 +1353,53 @@ def _extract_pdf_sample_school_name(sample_text: str) -> str:
     school_name = re.sub(r"^(?:名称】|称】|名】|】|\])+\s*", "", school_name)
     school_name = re.sub(r"\s*校長\s*.*$", "", school_name)
     return school_name.strip()
+
+
+def _classify_candidate_body_for_rank(
+    client: HttpGetClient, candidate: PdfCandidate, *, sleep_seconds: float
+) -> str:
+    """Pre-rank ONLY. Sets candidate.detected_school_name (and nothing else).
+
+    Returns one of:
+      "classified"        body classified, response cacheable (<=5MB)
+      "classified_large"  body classified, but >5MB => NOT cached => download_pdf may GET again
+      "skipped"           not a usable PDF / already classified / unsafe URL / no school-name parsed
+      "failed"            fetch or parse error (graceful: leaves body empty)
+
+    Read-only w.r.t. DB. Does NOT set detected_fiscal_year / pdf_type /
+    year_evidence / candidate.pdf_url.
+    """
+    if candidate.detected_school_name:
+        return "skipped"  # idempotent
+    if not _is_safe_url(candidate.pdf_url):
+        return "skipped"
+    attempt_urls = _download_attempt_urls(candidate.pdf_url)  # SAME canonical sequence as download_pdf
+    if not attempt_urls:
+        return "skipped"
+    download_url = attempt_urls[0]  # the URL download_pdf tries first
+    if not _is_safe_url(download_url):
+        return "skipped"
+    _sleep_before_uncached_get(client, download_url, seconds=sleep_seconds)  # no-op on cache hit
+    try:
+        resp = _safe_get(client, download_url)  # no kwargs -> cacheable, key == download_pdf's
+        resp.raise_for_status()
+    except (httpx.HTTPError, httpx.InvalidURL):
+        return "failed"
+    content = resp.content  # plain GET: body already fully downloaded here
+    if len(content) < 1000 or content[:5] != b"%PDF-":
+        return "skipped"
+    try:
+        sample_text = _extract_pdf_sample_text(content)
+    except Exception as e:  # noqa: BLE001 - graceful: leave body empty, let download_pdf retry
+        log.exception("prerank_classify_failed", error=str(e), error_type=type(e).__name__)
+        return "failed"
+    detected = _extract_pdf_sample_school_name(sample_text)
+    if not detected:
+        # parsed a valid PDF but found no school-name signal -> no ranking value;
+        # return "skipped" so prerank_classified counts only signal-producing probes.
+        return "skipped"
+    candidate.detected_school_name = detected  # ONLY this field
+    return "classified_large" if len(content) > RUN_SCOPED_PDF_CACHE_MAX_BYTES else "classified"
 
 
 def _candidate_pdf_mentions_different_school(candidate: PdfCandidate, school_names: list[str]) -> bool:
@@ -3601,6 +3649,10 @@ def run_pdf_discovery(
         "http_cache_hits": 0,
         "http_cache_misses": 0,
         "shared_origin_derived_fallback_skipped": 0,
+        "prerank_classified": 0,
+        "prerank_skipped": 0,
+        "prerank_failed": 0,
+        "prerank_uncached_large": 0,
     }
     recorder = EvidenceRecorder(evidence_path)
 
@@ -3810,6 +3862,35 @@ def run_pdf_discovery(
                         reason="candidate_school_mismatch",
                         pdf_type="non_target",
                     ), persist=evidence_index < MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL)
+            # B1: bounded pre-rank body classification — only on dense/ambiguous pages.
+            # Writes candidate.detected_school_name so _prioritize_viable_candidates
+            # reads a live body signal (it is "" until download_pdf runs otherwise).
+            if school_names:
+                priority = [
+                    c for c in viable if _candidate_download_tier(c, target_year=target_year) < 2
+                ]
+                if len(priority) >= 2:  # real target-like competition, NOT any multi-candidate
+                    probed = 0
+                    for candidate in priority:
+                        if candidate.detected_school_name:
+                            continue  # already classified: no GET, does NOT consume a probe
+                        if probed >= MAX_PRERANK_CLASSIFY:  # cap candidate PROBES, not successes
+                            break
+                        # count the per-candidate probe BEFORE the call, regardless of outcome.
+                        # one probe may issue >1 raw GET (_safe_get follows redirects), all
+                        # cache-shared with download_pdf; the cap bounds candidate fetch attempts.
+                        probed += 1
+                        status = _classify_candidate_body_for_rank(
+                            client, candidate, sleep_seconds=rate_limit
+                        )
+                        if status in ("classified", "classified_large"):
+                            stats["prerank_classified"] += 1
+                            if status == "classified_large":
+                                stats["prerank_uncached_large"] += 1
+                        elif status == "skipped":
+                            stats["prerank_skipped"] += 1
+                        else:  # "failed"
+                            stats["prerank_failed"] += 1
             viable, candidate_budget_dropped_candidates = _prioritize_viable_candidates(
                 viable,
                 target_year=target_year,
