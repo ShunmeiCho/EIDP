@@ -1,6 +1,6 @@
 # B1 — 有界 pre-rank 分类 pass（v2.2 计划）
 
-Status: 计划就绪（决策已锁定），待 TDD 实现
+Status: 已实现并合并到 main（PR #5 / merge `1aaf552`, 2026-05-31）。下方 §5 表中标注"当前 main 红"等措辞描述的是实现前状态；实测修正见各行注记。
 Goals: G1, G3（次要影响 G5 观测 / G12 成本）
 Target file: `src/eidp/scraper/pdf_discovery.py`（+ `tests/unit/test_pdf_discovery.py`）
 Base: main @ 2c6c4fb
@@ -145,7 +145,7 @@ if school_names:
 
 | 测试 | 守护 | 断言 |
 |---|---|---|
-| `test_prerank_promotes_target_before_download` | 核心 bug | 2 个同 tier、等分、平局/通用锚、sibling-first 输入；fake body(sibling/target)；`download_calls[0] == target`（当前 main 红） |
+| `test_prerank_promotes_target_before_download` | 核心 bug | 2 个同 tier、等分、平局/通用锚、sibling-first 输入；fake body(sibling/target)；`download_calls[0] == target`（实现前 main 红 → 实现后 GREEN） |
 | `test_prerank_cache_parity_small_wrapper_pdf` | **C2** | candidate.pdf_url 为 query-wrapper、解析后 ≤5MB；assert 该 resolved URL 全程**仅 1 次**网络 GET（pre-rank 写、download 命中） |
 | `test_prerank_large_pdf_may_double_fetch_and_is_counted` | **G12** | monkeypatch `_extract_pdf_sample_text` + 把 `RUN_SCOPED_PDF_CACHE_MAX_BYTES` 调到极小值，令小 fake PDF 走 large 分支（**勿**造真 >5MB 喂 pdfplumber，慢且脆）；assert 仍分类、`stats["prerank_uncached_large"] >= 1`；**不**断言单次 GET |
 | `test_prerank_does_not_set_fiscal_year` | **H4** | pre-rank 后 `candidate.detected_fiscal_year is None`（FY 仍由 download_pdf 的 strict 路径独占） |
@@ -155,7 +155,7 @@ if school_names:
 | `test_prerank_no_sleep_on_cache_hit` | 决策 3 | 用**第二个 candidate、同 resolved URL、body 为空**（**勿**复用同一 candidate——helper 会因 `detected_school_name` 已存在直接返回 skipped，不发 GET）；assert 该 GET 命中 cache 且不触发 sleep |
 | 夹具前置断言 | NFKC | `_candidate_body_matches_target(target, school_names) is True`（归一化 sanity，避免测试因 NFKC 失配而红/绿错因） |
 | 夹具前置断言 | tier 天花板 | 两候选 `_candidate_download_tier(...) < 2` 且同值 |
-| 更新既有断言 | 回归 | `test_pdf_discovery.py` 现有顺序/计数/证据断言（1033 顺序 + 1035 计数 + 1031/1039/1040 mismatch 证据）按重排后**逐条**修正或迁移；PR body 显式说明这是 B1 有意翻转 |
+| 更新既有断言 | 回归 | **实测修正**：`..._sibling_school` 测试候选为 tier≥2 通用锚 → B1 不触发，既有顺序/计数/证据断言**无需翻转、保持有效**（plan risk #2 tier 天花板）；post-download mismatch safety-net 覆盖由该测试 + `test_pdf_school_mismatch_safety_net_preserved` 保留。另新增 `test_prerank_empty_name_returns_skipped`（空校名→skipped） |
 
 **验证序列**（Mac-side）：
 ```bash
@@ -165,7 +165,7 @@ uv run pytest tests/unit/test_cli_write_lock_contract.py -q   # AST 门禁仍绿
 uv run mypy src
 uv run ruff check src scripts/build_windows_zip.py scripts/run_non_windows_release_gates.py
 EIDP_DATABASE_URL='sqlite:///./data/test_prerank.sqlite3' uv run pytest -q
-uv run bandit -r src -ll
+uv run bandit -r src --severity-level high   # CI 门禁为 high-only；-ll（含 Medium）会被既有 Medium findings 打红
 ```
 
 ---
