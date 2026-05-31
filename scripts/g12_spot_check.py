@@ -17,9 +17,10 @@ Design notes
   runtime. No production code is changed. Cache hits return inside
   ``_RunScopedHttpCache.get`` before the base client is touched, so they are not
   counted as network bytes (correct: a cache hit costs no bandwidth).
-* SIDE-EFFECT-FREE by default: PDFs download to a TEMP dir and the DB session is
-  rolled back, so a spot-check leaves no Documents/files behind. Pass
-  ``--persist`` to keep results (then it behaves like a partial weekly run).
+* SIDE-EFFECT-FREE: PDFs download to a TEMP dir that is always removed, and the
+  DB session is ALWAYS rolled back, so a spot-check never persists Documents or
+  files. To actually acquire PDFs, use the weekly runner
+  ``run_weekly_target_year_discovery.py --limit N`` instead.
 * LIVE NETWORK: this hits real school servers and is run by the maintainer /
   operator. It is NOT part of CI. Point ``EIDP_DATABASE_URL`` at a real
   (ideally copied) DB that already has crawlable SchoolSite rows.
@@ -30,7 +31,7 @@ Design notes
 Usage
 -----
     uv run python scripts/g12_spot_check.py --limit 40 --json
-    uv run python scripts/g12_spot_check.py --limit 60 --persist --out report.json
+    uv run python scripts/g12_spot_check.py --limit 60 --out report.json
 """
 
 from __future__ import annotations
@@ -58,6 +59,7 @@ from run_weekly_target_year_discovery import (  # noqa: E402
     count_crawlable_sites_for_school_ids,
     select_target_missing_school_ids,
 )
+from sqlalchemy.exc import OperationalError  # noqa: E402
 
 from eidp.config import settings  # noqa: E402
 from eidp.db.locking import LockBusyError, acquire_lock  # noqa: E402
@@ -132,29 +134,45 @@ def run_spot_check(
     limit: int,
     rate_limit: float,
     request_timeout: float,
-    persist: bool,
     total_schools_override: int | None,
 ) -> dict[str, Any]:
-    """Run discovery on a sample, measure cost, extrapolate vs G12 SLOs."""
+    """Run discovery on a sample, measure cost, extrapolate vs G12 SLOs.
+
+    Always side-effect-free: the DB session is rolled back and the temp storage
+    dir is removed, regardless of outcome.
+    """
     session = SessionLocal()
     temp_storage = Path(tempfile.mkdtemp(prefix="eidp-g12-spotcheck-"))
     try:
-        sample_ids = select_target_missing_school_ids(
-            session,
-            current_fy=current_fy,
-            methods=methods,
-            school_type=school_type,
-            limit=limit,
-        )
-        total_target_missing = len(
-            select_target_missing_school_ids(
+        try:
+            sample_ids = select_target_missing_school_ids(
                 session,
                 current_fy=current_fy,
                 methods=methods,
                 school_type=school_type,
-                limit=None,
+                limit=limit,
             )
-        )
+            total_target_missing = len(
+                select_target_missing_school_ids(
+                    session,
+                    current_fy=current_fy,
+                    methods=methods,
+                    school_type=school_type,
+                    limit=None,
+                )
+            )
+        except OperationalError as exc:
+            session.rollback()
+            return {
+                "status": "db_not_ready",
+                "error": f"{type(exc).__name__}: {exc}",
+                "hint": (
+                    "The database has no schema or is unreachable. Run "
+                    "`eidp db-bootstrap` or point EIDP_DATABASE_URL at a ready DB "
+                    "that already has crawlable SchoolSite rows."
+                ),
+            }
+
         denominator = total_schools_override or total_target_missing or FALLBACK_TOTAL_SCHOOLS
 
         if not sample_ids:
@@ -189,11 +207,8 @@ def run_spot_check(
                 strict_target_fiscal_year=True,
             )
         elapsed = time.monotonic() - started
-
-        if persist:
-            session.commit()
-        else:
-            session.rollback()
+        # Always discard: this is a measurement, never an acquisition.
+        session.rollback()
 
         sample_size = len(sample_ids)
         per_school_seconds = elapsed / sample_size
@@ -224,7 +239,7 @@ def run_spot_check(
 
         return {
             "status": "ok",
-            "persisted": persist,
+            "side_effect_free": True,
             "current_fy": current_fy,
             "methods": methods,
             "school_type": school_type,
@@ -309,11 +324,6 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override the extrapolation denominator (default: live target-missing count).",
     )
-    parser.add_argument(
-        "--persist",
-        action="store_true",
-        help="Commit discovered Documents (default: rollback for a side-effect-free measurement).",
-    )
     parser.add_argument("--no-lock", action="store_true", help="Skip the shared app lock.")
     parser.add_argument("--lock-path", type=Path, default=settings.app_root / "data" / ".lock")
     parser.add_argument("--out", type=Path, default=None, help="Also write the JSON report to this path.")
@@ -334,7 +344,6 @@ def main() -> int:
             limit=args.limit,
             rate_limit=args.rate_limit,
             request_timeout=args.request_timeout,
-            persist=args.persist,
             total_schools_override=args.total_schools,
         )
 

@@ -54,6 +54,7 @@ jobs:
           scripts/stage6_recovery_check.py
           scripts/stage6_residual_cleanup.py
           scripts/ship_gate_contract.py
+          scripts/g12_spot_check.py
           tests/unit/test_current_read_paths.py
           tests/unit/test_db_session.py
           tests/unit/test_fiscal_year_evidence.py
@@ -96,6 +97,7 @@ jobs:
           scripts/stage6_recovery_check.py
           scripts/stage6_residual_cleanup.py
           scripts/ship_gate_contract.py
+          scripts/g12_spot_check.py
 
       - name: Mypy
         run: >
@@ -107,6 +109,7 @@ jobs:
           scripts/collect_bug_report.py
           scripts/verify_stage6_return.py
           scripts/ship_gate_contract.py
+          scripts/g12_spot_check.py
 
       - name: Pytest with coverage
         run: uv run pytest --cov=src/eidp --cov-report=term --cov-fail-under=80
