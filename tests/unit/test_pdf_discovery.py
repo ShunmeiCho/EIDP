@@ -1042,6 +1042,717 @@ def test_run_pdf_discovery_continues_after_downloaded_pdf_names_sibling_school(
         session.close()
 
 
+# ---------------------------------------------------------------------------
+# B1 bounded pre-rank body-classification pass
+# (docs/plans/2026-05-31-b1-prerank-classification.md §5 test matrix).
+#
+# Regression coverage for the pre-rank pass and its public surface:
+#   - eidp.scraper.pdf_discovery.MAX_PRERANK_CLASSIFY (constant)
+#   - eidp.scraper.pdf_discovery._classify_candidate_body_for_rank (helper)
+#   - stats keys: prerank_classified / prerank_skipped / prerank_failed /
+#     prerank_uncached_large
+# test_prerank_promotes_target_before_download is the core guard: a target PDF
+# must out-rank a same-tier sibling via its body signal and download first.
+# ---------------------------------------------------------------------------
+
+
+def _b1_min_pdf_bytes(filler: bytes = b"x") -> bytes:
+    """Smallest accepted PDF body: %PDF- magic + >=1000 bytes total."""
+
+    return b"%PDF-" + (filler * 2000)
+
+
+class _B1PdfResponse:
+    """Full response stub (carries status_code) usable by both the real
+    ``_RunScopedHttpCache._should_cache_response`` path and ``download_pdf``."""
+
+    def __init__(self, url: str, content: bytes, *, status_code: int = 200) -> None:
+        self.content = content
+        self.status_code = status_code
+        self.headers: dict[str, str] = {
+            "content-type": "application/pdf",
+            "content-length": str(len(content)),
+        }
+        self.url = url
+        self.text = ""
+        self.request = httpx.Request("GET", url)
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"HTTP {self.status_code}",
+                request=self.request,
+                response=httpx.Response(self.status_code, request=self.request),
+            )
+
+
+class _B1RecordingHttpxClient:
+    """Underlying httpx.Client stand-in that records every network GET.
+
+    Wired in via ``monkeypatch.setattr(httpx.Client, ...)`` so the real
+    ``_RunScopedHttpCache`` + real ``_safe_get`` + real ``download_pdf`` flow
+    runs on top of it. Cache hits never reach ``get`` here, so ``self.calls``
+    counts only genuine network fetches.
+    """
+
+    def __init__(self, *_args: object, responses: dict[str, _B1PdfResponse] | None = None, **_kwargs: object) -> None:
+        self._responses = responses if responses is not None else {}
+        self.calls: list[str] = []
+
+    def __enter__(self) -> _B1RecordingHttpxClient:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+    def get(self, url: str, **_kwargs: object) -> _B1PdfResponse:
+        self.calls.append(str(url))
+        response = self._responses.get(str(url))
+        if response is None:
+            return _B1PdfResponse(str(url), b"", status_code=404)
+        return response
+
+
+def _b1_pdf_response(url: str, content: bytes) -> _B1PdfResponse:
+    return _B1PdfResponse(url, content)
+
+
+def test_prerank_promotes_target_before_download(monkeypatch, tmp_path: Path) -> None:
+    """Core RED: two same-tier, equal-score, sibling-first candidates; pre-rank
+    classifies the bodies and the existing ranker must promote the target so it
+    downloads FIRST. On main (no pre-rank pass) the sibling downloads first."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    target_name = "専門学校日本鉄道＆スポーツビジネスカレッジ21"
+    sibling_name = "東京IT会計公務員専門学校千葉校"
+    sibling_url = "https://www.all-japan.ac.jp/disclosure/sibling-kakunin.pdf"
+    target_url = "https://www.all-japan.ac.jp/disclosure/target-kakunin.pdf"
+    try:
+        session.add(
+            School(
+                id=293,
+                school_name=target_name,
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=293, url="https://www.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        # Sibling FIRST in input order, both tier<2 (target-application hint) and equal score.
+        sibling = PdfCandidate(
+            pdf_url=sibling_url,
+            page_url="https://www.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+        target = PdfCandidate(
+            pdf_url=target_url,
+            page_url="https://www.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+
+        # Fixture pre-assertions: tier ceiling (both tier<2 and equal).
+        sibling_tier = pdf_discovery_module._candidate_download_tier(sibling, target_year=2025)
+        target_tier = pdf_discovery_module._candidate_download_tier(target, target_year=2025)
+        assert sibling_tier < 2
+        assert target_tier < 2
+        assert sibling_tier == target_tier
+
+        body_by_url = {sibling_url: sibling_name, target_url: target_name}
+
+        def fake_extract(content: bytes) -> str:
+            # URL is embedded AFTER the %PDF- magic so the helper's content[:5]
+            # magic-byte check (a real PDF) still passes; recover it from the tail.
+            # Return realistic 学校名-prefixed body text so the real
+            # _extract_pdf_sample_school_name (same pipeline as download_pdf) parses it.
+            name = body_by_url[content.decode("ascii", "ignore").rsplit("|", 1)[-1]]
+            return f"学校名: {name}"
+
+        def fake_safe_get(_client, url: str, **_kwargs: object) -> _B1PdfResponse:
+            return _b1_pdf_response(url, _b1_min_pdf_bytes() + b"|" + url.encode("ascii"))
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[sibling, target], best=sibling)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = 2025
+            candidate.year_evidence = "pdf_text"
+            (tmp_path / "1").mkdir(exist_ok=True)
+            out = tmp_path / "1" / f"{len(download_calls)}.pdf"
+            out.write_bytes(b"%PDF target")
+            return str(out), f"hash{len(download_calls)}", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._safe_get", fake_safe_get)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._extract_pdf_sample_text", fake_extract)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        # NFKC sanity: once classified, the target body matches the target school.
+        target.detected_school_name = target_name
+        assert pdf_discovery_module._candidate_body_matches_target(target, [target_name]) is True
+
+        assert download_calls, "expected at least one download attempt"
+        assert download_calls[0] == target_url
+    finally:
+        session.close()
+
+
+def test_prerank_cache_parity_small_wrapper_pdf(monkeypatch, tmp_path: Path) -> None:
+    """C2: a query-wrapper URL resolving (via _pdf_url_from_query_value) to a
+    <=5MB direct PDF must be network-fetched EXACTLY ONCE across the whole run —
+    pre-rank writes the cache, download_pdf hits it."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    target_name = "立志舎テスト専門学校"
+    resolved_url = "https://wrap.all-japan.ac.jp/files/target-kakunin.pdf"
+    wrapper_url = "https://wrap.all-japan.ac.jp/download.html?dd=files%2Ftarget-kakunin.pdf"
+    sibling_url = "https://wrap.all-japan.ac.jp/files/sibling-kakunin.pdf"
+    pdf_body = _b1_min_pdf_bytes()
+    try:
+        session.add(
+            School(
+                id=401,
+                school_name=target_name,
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=401, url="https://wrap.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        wrapper_candidate = PdfCandidate(
+            pdf_url=wrapper_url,
+            page_url="https://wrap.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+        sibling_candidate = PdfCandidate(
+            pdf_url=sibling_url,
+            page_url="https://wrap.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+
+        responses = {
+            resolved_url: _b1_pdf_response(resolved_url, pdf_body),
+            sibling_url: _b1_pdf_response(sibling_url, pdf_body),
+        }
+        recording_client = _B1RecordingHttpxClient(responses=responses)
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(
+                school_id=school_id,
+                candidates=[wrapper_candidate, sibling_candidate],
+                best=wrapper_candidate,
+            )
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        # Sanity: with SSRF resolution allowed, the wrapper resolves to the direct
+        # PDF download_pdf tries first.
+        assert pdf_discovery_module._download_attempt_urls(wrapper_url)[0] == resolved_url
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+            lambda _content: f"学校名: {target_name}",
+        )
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.httpx.Client",
+            lambda *a, **k: recording_client,
+        )
+
+        run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        resolved_gets = [url for url in recording_client.calls if url == resolved_url]
+        assert resolved_gets == [resolved_url], (
+            f"resolved URL must be fetched exactly once; got {recording_client.calls}"
+        )
+    finally:
+        session.close()
+
+
+def test_prerank_large_pdf_may_double_fetch_and_is_counted(monkeypatch, tmp_path: Path) -> None:
+    """G12: a body above RUN_SCOPED_PDF_CACHE_MAX_BYTES is still classified but
+    not cached; the run counts it via stats['prerank_uncached_large']. We shrink
+    the cache ceiling so a small fake PDF takes the 'large' branch (no real >5MB
+    body fed to pdfplumber). We do NOT assert a single GET."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    target_name = "立志舎テスト専門学校"
+    target_url = "https://big.all-japan.ac.jp/files/target-kakunin.pdf"
+    sibling_url = "https://big.all-japan.ac.jp/files/sibling-kakunin.pdf"
+    pdf_body = _b1_min_pdf_bytes()
+    try:
+        session.add(
+            School(
+                id=402,
+                school_name=target_name,
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=402, url="https://big.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        target = PdfCandidate(
+            pdf_url=target_url,
+            page_url="https://big.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+        sibling = PdfCandidate(
+            pdf_url=sibling_url,
+            page_url="https://big.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+
+        def fake_safe_get(_client, url: str, **_kwargs: object) -> _B1PdfResponse:
+            return _b1_pdf_response(url, pdf_body)
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[target, sibling], best=target)
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        # Shrink the cache ceiling below the fake body length so it routes to the large branch.
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.RUN_SCOPED_PDF_CACHE_MAX_BYTES",
+            len(pdf_body) - 1,
+        )
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._safe_get", fake_safe_get)
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+            lambda _content: f"学校名: {target_name}",
+        )
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.download_pdf",
+            lambda *a, **k: (None, None, 0, "unknown", "stubbed"),
+        )
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        assert stats["prerank_classified"] >= 1
+        assert stats["prerank_uncached_large"] >= 1
+    finally:
+        session.close()
+
+
+def test_prerank_does_not_set_fiscal_year(monkeypatch, tmp_path: Path) -> None:
+    """H4: pre-rank only writes detected_school_name. detected_fiscal_year stays
+    None (FY ownership remains with download_pdf's strict path)."""
+
+    target_name = "立志舎テスト専門学校"
+    target_url = "https://fy.all-japan.ac.jp/files/target-kakunin.pdf"
+    candidate = PdfCandidate(
+        pdf_url=target_url,
+        page_url="https://fy.all-japan.ac.jp/disclosure/",
+        anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+        score=5.0,
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, url, **_kwargs: _b1_pdf_response(url, _b1_min_pdf_bytes()),
+    )
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+        lambda _content: f"学校名: {target_name}",
+    )
+
+    status = pdf_discovery_module._classify_candidate_body_for_rank(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        sleep_seconds=0,
+    )
+
+    assert status in ("classified", "classified_large")
+    assert candidate.detected_school_name == target_name
+    assert candidate.detected_fiscal_year is None
+
+
+def test_prerank_empty_name_returns_skipped(monkeypatch, tmp_path: Path) -> None:
+    """A valid PDF whose body yields no parseable school name has no ranking
+    value: the helper returns "skipped" (NOT "classified") and leaves
+    detected_school_name empty, so prerank_classified counts only
+    signal-producing probes."""
+
+    candidate = PdfCandidate(
+        pdf_url="https://noname.all-japan.ac.jp/files/target-kakunin.pdf",
+        page_url="https://noname.all-japan.ac.jp/disclosure/",
+        anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+        score=5.0,
+    )
+
+    monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._safe_get",
+        lambda _client, url, **_kwargs: _b1_pdf_response(url, _b1_min_pdf_bytes()),
+    )
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+        lambda _content: "様式第2号 機関要件 修学支援 確認申請書",
+    )
+    # name extractor finds no 学校名 signal -> empty string
+    monkeypatch.setattr(
+        "eidp.scraper.pdf_discovery._extract_pdf_sample_school_name",
+        lambda _text: "",
+    )
+
+    status = pdf_discovery_module._classify_candidate_body_for_rank(
+        object(),  # type: ignore[arg-type]
+        candidate,
+        sleep_seconds=0,
+    )
+
+    assert status == "skipped"
+    assert candidate.detected_school_name == ""
+
+
+def test_prerank_skipped_for_single_priority_candidate(monkeypatch, tmp_path: Path) -> None:
+    """H3/G12: a single tier<2 priority candidate must NOT trigger pre-rank —
+    stats['prerank_classified'] == 0 and zero pre-rank network GET."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    target_name = "立志舎テスト専門学校"
+    target_url = "https://solo.all-japan.ac.jp/files/target-kakunin.pdf"
+    try:
+        session.add(
+            School(
+                id=403,
+                school_name=target_name,
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=403, url="https://solo.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        sole = PdfCandidate(
+            pdf_url=target_url,
+            page_url="https://solo.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+        recording_client = _B1RecordingHttpxClient(
+            responses={target_url: _b1_pdf_response(target_url, _b1_min_pdf_bytes())}
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[sole], best=sole)
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+            lambda _content: f"学校名: {target_name}",
+        )
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.download_pdf",
+            lambda *a, **k: (None, None, 0, "unknown", "stubbed"),
+        )
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.httpx.Client",
+            lambda *a, **k: recording_client,
+        )
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        assert stats["prerank_classified"] == 0
+        assert recording_client.calls == []
+    finally:
+        session.close()
+
+
+def test_prerank_caps_attempts_when_candidates_skip_or_fail(monkeypatch, tmp_path: Path) -> None:
+    """G12 attempt-cap: a dense page with >=4 tier<2 candidates whose bodies
+    404 / are non-PDF / fail to parse must not exceed MAX_PRERANK_CLASSIFY
+    network probes (the cap counts attempts, not successes)."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    base = "https://dense.all-japan.ac.jp/files"
+    urls = [f"{base}/k{i}-kakunin.pdf" for i in range(5)]
+    try:
+        session.add(
+            School(
+                id=404,
+                school_name="立志舎テスト専門学校",
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=404, url="https://dense.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        candidates = [
+            PdfCandidate(
+                pdf_url=url,
+                page_url="https://dense.all-japan.ac.jp/disclosure/",
+                anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+                score=5.0,
+            )
+            for url in urls
+        ]
+
+        # Every probe returns a non-PDF (no %PDF- magic) body => helper "skipped",
+        # which still consumes a probe. The cap must stop further GETs.
+        non_pdf = b"<html>not a pdf</html>" + (b"x" * 2000)
+        recording_client = _B1RecordingHttpxClient(
+            responses={url: _b1_pdf_response(url, non_pdf) for url in urls}
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=list(candidates), best=candidates[0])
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.download_pdf",
+            lambda *a, **k: (None, None, 0, "unknown", "stubbed"),
+        )
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.httpx.Client",
+            lambda *a, **k: recording_client,
+        )
+
+        run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        prerank_gets = [url for url in recording_client.calls if url in set(urls)]
+        assert len(prerank_gets) <= pdf_discovery_module.MAX_PRERANK_CLASSIFY, (
+            f"pre-rank probes must be capped at MAX_PRERANK_CLASSIFY; got {prerank_gets}"
+        )
+    finally:
+        session.close()
+
+
+def test_pdf_school_mismatch_safety_net_preserved(monkeypatch, tmp_path: Path) -> None:
+    """H3-net: a single candidate whose body names a different school is still
+    rejected by the post-download pdf_school_mismatch path. Guard test — passes
+    on main (pre-rank does not fire for a single priority candidate)."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    download_calls: list[str] = []
+    target_name = "専門学校日本鉄道＆スポーツビジネスカレッジ21"
+    sole_url = "https://net.all-japan.ac.jp/files/academic_support.pdf"
+    sole_pdf = tmp_path / "sole.pdf"
+    try:
+        session.add(
+            School(
+                id=293,
+                school_name=target_name,
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=293, url="https://net.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        sole = PdfCandidate(
+            pdf_url=sole_url,
+            page_url="https://net.all-japan.ac.jp/disclosure/",
+            anchor_text="academic_support.pdf",
+            score=5.0,
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[sole], best=sole)
+
+        def fake_download(
+            _client,
+            candidate: PdfCandidate,
+            _storage_dir: Path,
+            _school_id: int,
+            **_kwargs: object,
+        ):
+            download_calls.append(candidate.pdf_url)
+            candidate.detected_fiscal_year = 2025
+            candidate.year_evidence = "pdf_text"
+            sole_pdf.write_bytes(b"%PDF other")
+            candidate.detected_school_name = "東京IT会計公務員専門学校千葉校"
+            return str(sole_pdf), "otherhash", 3000, "target", None
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=0,
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        payloads = [json.loads(line) for line in evidence.read_text(encoding="utf-8").splitlines()]
+        mismatch = [payload for payload in payloads if payload["reason"] == "pdf_school_mismatch"]
+        assert download_calls == [sole_url]
+        assert stats["rejection_reason_pdf_school_mismatch"] == 1
+        assert stats["downloaded"] == 0
+        assert not sole_pdf.exists()
+        assert mismatch
+        assert mismatch[0]["extra"]["parsed_school_name"] == "東京IT会計公務員専門学校千葉校"
+    finally:
+        session.close()
+
+
+def test_prerank_no_sleep_on_cache_hit(monkeypatch, tmp_path: Path) -> None:
+    """Decision 3: a second candidate resolving to a URL already cached by an
+    earlier pre-rank GET must hit the cache and NOT sleep. The second candidate
+    has an empty body (so it is not short-circuited as already-classified)."""
+
+    session = _session()
+    evidence = tmp_path / "rejections.jsonl"
+    target_name = "立志舎テスト専門学校"
+    shared_url = "https://nosleep.all-japan.ac.jp/files/shared-kakunin.pdf"
+    wrapper_url = "https://nosleep.all-japan.ac.jp/download.html?dd=files%2Fshared-kakunin.pdf"
+    sleeps: list[float] = []
+    try:
+        session.add(
+            School(
+                id=405,
+                school_name=target_name,
+                prefecture="東京都",
+                corporation_name="立志舎",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.add(SchoolSite(school_id=405, url="https://nosleep.all-japan.ac.jp/disclosure/", http_status=200))
+        session.flush()
+
+        # Both resolve to the SAME direct PDF; second candidate's body is empty so
+        # the helper does not short-circuit as already-classified.
+        first = PdfCandidate(
+            pdf_url=shared_url,
+            page_url="https://nosleep.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+        second = PdfCandidate(
+            pdf_url=wrapper_url,
+            page_url="https://nosleep.all-japan.ac.jp/disclosure/",
+            anchor_text="確認申請書 様式第2号 機関要件 修学支援",
+            score=5.0,
+        )
+        recording_client = _B1RecordingHttpxClient(
+            responses={shared_url: _b1_pdf_response(shared_url, _b1_min_pdf_bytes())}
+        )
+
+        def fake_discover(_client, school_id: int, _url: str, **_kwargs: object) -> DiscoveryResult:
+            return DiscoveryResult(school_id=school_id, candidates=[first, second], best=first)
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        # Sanity: the wrapper candidate resolves to the same direct PDF as `first`.
+        assert pdf_discovery_module._download_attempt_urls(wrapper_url)[0] == shared_url
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery._extract_pdf_sample_text",
+            lambda _content: f"学校名: {target_name}",
+        )
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.discover_pdfs_for_site", fake_discover)
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.download_pdf",
+            lambda *a, **k: (None, None, 0, "unknown", "stubbed"),
+        )
+        monkeypatch.setattr(
+            "eidp.scraper.pdf_discovery.httpx.Client",
+            lambda *a, **k: recording_client,
+        )
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda seconds: sleeps.append(seconds))
+
+        run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=10,
+            rate_limit=1.0,  # non-zero so a non-cache-hit GET would sleep
+            evidence_path=evidence,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        # The shared URL is fetched once (first probe); the second probe is a cache hit.
+        assert recording_client.calls.count(shared_url) == 1
+        # The cache-hit probe must not add a per-GET sleep. Two rate_limit(=1.0)
+        # sleeps are structural and unrelated to the cache-hit probe: one for the
+        # first (uncached) pre-rank GET via _sleep_before_uncached_get, and one for
+        # the per-site trailing time.sleep(rate_limit). If the cache-hit probe had
+        # slept, there would be THREE — so == 2 proves the cache hit suppressed it.
+        assert sleeps.count(1.0) == 2
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_limits_bulk_school_mismatch_evidence(
     monkeypatch,
     tmp_path: Path,
