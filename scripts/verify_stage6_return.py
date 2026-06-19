@@ -219,6 +219,12 @@ def _is_iso_datetime(value: str) -> bool:
     return _iso_datetime_value(value) is not None
 
 
+def _is_future_datetime_value(value: datetime) -> bool:
+    if value.tzinfo is not None and value.tzinfo.utcoffset(value) is not None:
+        return value > datetime.now(value.tzinfo)
+    return value > datetime.now()
+
+
 def _last_run_finished_date(last_run: dict[str, Any] | None) -> date | None:
     if last_run is None:
         return None
@@ -300,8 +306,10 @@ def _verify_last_run(
     finished_at = last_run.get("finished_at")
     if not isinstance(finished_at, str) or not finished_at:
         errors.append("last_run finished_at is required")
-    elif not _is_iso_datetime(finished_at):
+    elif (parsed_finished_at := _iso_datetime_value(finished_at)) is None:
         errors.append("last_run finished_at must be ISO datetime")
+    elif _is_future_datetime_value(parsed_finished_at):
+        errors.append("last_run finished_at must not be in the future")
     if last_run.get("dry_run") is not False:
         errors.append("last_run dry_run must be false")
     if target_fy is not None and last_run.get("current_fy") != target_fy:
