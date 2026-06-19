@@ -1,13 +1,14 @@
 # EIDP Current Objective Evidence Checklist
 
-Updated: 2026-05-20
-Branch: `sprint8-handoff-finalize`
-PR: `#2`
+Updated: 2026-06-19
+Branch: `test/fault-injection-pdf-discovery`
+PR: `#8`
 PR live state: verify with
-`gh pr view 2 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
-Last recorded live check before this status refresh:
-`4d1c093700a51d2797a454abc2e6ce3113113dda` was `CLEAN` with required checks
-`SUCCESS` for both push and pull_request runs.
+`gh pr view 8 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
+Last recorded live PR check before this status refresh:
+remote head `8f552448e8f42c1dcb7a1d47629917079cbf639d` was `CLEAN` with required
+checks `SUCCESS`, but local source is currently ahead by one commit
+`9331216022e1904361ed8d11d0e24da81637d46a` and has not been pushed.
 Latest Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable, refreshed v526 owner docs remain staged, and the remote
@@ -20,7 +21,8 @@ Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
 objective. It intentionally replaces the older historical v464/v460 narrative
-with the current v526 state.
+with the current v530 local package state and the still-current v526 Windows
+side-by-side / owner-return state.
 
 ## Objective Restated
 
@@ -46,12 +48,12 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Latest package/source candidate: `dist/eidp-windows-v526.zip`
+- Latest local package/source candidate: `dist/eidp-windows-v530.zip`
 - Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v526.zip`
-- v526 package/source commit:
-  `5b30eb78edc331f992c1a99fdc7611174791ab87`
-- v526 package SHA256:
-  `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`
+- v530 local package/source commit:
+  `9331216022e1904361ed8d11d0e24da81637d46a`
+- v530 local package SHA256:
+  `6344e6b9c2fea850cb50425410f2e0a5ad9c6626ff31fca9fee5f9f8014604a6`
 - Latest complete Windows side-by-side smoke: v526
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
@@ -59,6 +61,10 @@ that keeps manual work below the release threshold.
   Excel proof and ManualActionLog / JSONL outbox proof rows.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
+- Latest source/package URL-discovery guardrail: v530 adds an optional
+  `external` JSON-command search provider for official URL candidate discovery
+  only, removes target-form/PDF search terms from URL completion, and rejects
+  direct document/PDF SERP hits before they can become `SchoolSite` rows.
 - Latest docs-only owner-decision handoff refresh: the Windows-staged v526
   owner docs ZIP now includes `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`
   and `docs/runbooks/eidp-v526-owner-return-fill-sheet.md`, and
@@ -95,7 +101,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 
 | Requirement | Evidence checked | Status |
 | --- | --- | --- |
-| 47 prefecture official-list seeds are packaged and usable | `logs/win-v526-stage6-v526-non-windows-release-gates-20260520.json`, result `package_verify` stdout: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_school_rows_total=2148` | PASS |
+| 47 prefecture official-list seeds are packaged and usable | `logs/win-v530-stage6-v530-non-windows-release-gates-20260619.json`, result `package_verify` stdout: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_school_rows_total=2148` | PASS |
 | 1,700+ vocational-school scope | v526 Windows setup validator `logs/win-v526-stage6-v526-env0-validate-after-setup-20260520.json`: `.details.school_count=2418`, `.details.school_fiscal_year_status_count=2418`, `.details.sqlite_integrity_check="ok"` | PASS |
 | Current rolling FY is FY2026/Reiwa 8 | `logs/win-v526-stage6-v526-last-run-after-weekly-canary-limit50-20260520.json`: `current_fy=2026`, `status=success` | PASS |
 | Strict mode excludes old-year fallback from success | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json` and v526 `ship_gate_status=below_gate` preserve old-year exclusion instead of counting stale target forms as success | PASS for contract, FAIL for release yield |
@@ -104,7 +110,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | Mature-year exception input exists | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: FY2025 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`, manual workload `20.2%` | PASS as exception input only |
 | Publication-lag exception is approved if release uses the mature-year lane | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED` | BLOCKED |
 | PDF extraction stack is packaged | v526 package verifier stdout: `has_runtime=True`, `wheel_count=84`; v526 Windows OCR runtime proof `logs/win-v526-stage6-v526-env0-validate-ocr-runtime-20260520.json` is `ok=true` with Tesseract runtime and `jpn` / `jpn_vert` tessdata present | PASS |
-| Confidence `>= 0.70` gate exists | v526 full unit suite in release gate: `1901 passed`; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
+| Confidence `>= 0.70` gate exists | v530 full unit suite in release gate: `1936 passed`; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
 | `DepartmentYearly` and `SupportRecipient` append-only paths exist | v526 install validator confirms required tables including `department_yearly`, `support_recipient`, and `manual_action_log`; v526 unit suite is green | PASS for code/schema, PARTIAL for real operator workflow |
 | Extracted rows can be confirmed/supplemented | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`: extracted `confirmed_target` rows get `抽出済内容を確認・補足`; the PDF確認・手入力 form preloads current extracted data and saves through existing append-only manual-entry/audit paths | PASS for code/UI contract, PARTIAL for real operator workflow |
 | Excel transfer works | v526 full smoke: `logs/win-v526-stage6-v526-excel-summary-20260520.json` is `ok=true`; master workbook, competition workbook, and gap report generated | PASS |
@@ -176,6 +182,15 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 - v526 runtime boundary recheck is recorded in `docs/reports/2026-05-20-v526-runtime-boundary-recheck.md`: the active weekly task still points to v485, no Streamlit listeners remained on ports `8523/8524/8525/8526`, and both the v526 side-by-side root and v526 staged docs directory were present.
 - Negative v526 return-verifier probe is recorded in `logs/win-v526-stage6-v526-verify-stage6-return-not-approved-exception-20260520.json` with rc `1`: the refreshed v526 exception packet still fails on `Status must be APPROVED`, `Decision must be APPROVED`, placeholder approval fields, missing owner/operator KPI and sign-off rows, and missing Excel/audit proof rows.
 - v526 target-yearless RCA spot check is recorded in `docs/reports/2026-05-20-v526-target-yearless-rca-spot-check.md`: the five `target_fiscal_year_not_detected` rows are NEEC no-year target-form PDFs for school IDs 1/2 and one Sanko image-only/stale-context PDF for school ID 44; the official pages do not provide machine-verifiable FY2026/Reiwa 8 evidence, so none can safely raise the v526 strict yield.
+- Local v530 package gate is recorded in
+  `logs/win-v530-stage6-v530-non-windows-release-gates-20260619.json`:
+  package `dist/eidp-windows-v530.zip`, SHA256
+  `6344e6b9c2fea850cb50425410f2e0a5ad9c6626ff31fca9fee5f9f8014604a6`,
+  package/source commit `9331216022e1904361ed8d11d0e24da81637d46a`,
+  `package_source_check.ok=true`, `source_dirty=false`, full unit
+  `1936 passed`, validator/distribution unit `188 passed`, mypy/ruff pass,
+  discovery gold 45/45 exact, package verification pass, and package
+  `BUILD_INFO.json` reports `git_dirty=false`.
 - Local docs-only release gate at PR head
   `4d1c093700a51d2797a454abc2e6ce3113113dda` returned `ok=true` for
   `dist/eidp-windows-v526.zip` with `docs_only_stale=true`, SHA256
