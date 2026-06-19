@@ -1438,6 +1438,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "release exception requires --mature-year-proof-json",
             "release exception requires --release-exception-record",
             "mature-year proof JSON ok must be true",
+            "mature-year proof years must match passing proof JSON years",
             "release exception cannot be combined with allow-unmeasured KPI mode",
             "RELEASE_CONCLUSIONS",
             "READY",

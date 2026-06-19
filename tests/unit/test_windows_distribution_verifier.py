@@ -1097,6 +1097,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("Runbook 修正反映済み", "Runbook optional")
         .replace("release exception requires --mature-year-proof-json", "release exception requires proof")
         .replace("release exception requires --release-exception-record", "release exception requires approval")
+        .replace("mature-year proof years must match passing proof JSON years", "mature-year proof years optional")
         .replace("min_target_pdf_auto_denominator_count", "min_target_pdf_auto_sample_count")
         .replace("target_pdf_auto_denominator_count", "target_pdf_auto_sample_count")
         .replace("target_pdf_auto_denominator_scope", "target_pdf_auto_sample_scope")
@@ -1157,6 +1158,11 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: release exception requires --release-exception-record"
         in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "mature-year proof years must match passing proof JSON years" in error
         for error in check.errors
     )
     assert any(

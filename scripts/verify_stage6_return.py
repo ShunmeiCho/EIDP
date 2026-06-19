@@ -178,6 +178,10 @@ def _has_generated_excel_output_path(value: str) -> bool:
     return ".xlsx" in normalized and "data/output/" in normalized
 
 
+def _years_from_text(value: str) -> set[int]:
+    return {int(match) for match in re.findall(r"\b(?:19|20)\d{2}\b", value)}
+
+
 def _verify_last_run(
     last_run: dict[str, Any],
     *,
@@ -419,7 +423,13 @@ def _verify_mature_year_proof(
     return sorted(set(passing_years), reverse=True)
 
 
-def _verify_template(text: str, release_exception_reason: str | None, errors: list[str], warnings: list[str]) -> None:
+def _verify_template(
+    text: str,
+    release_exception_reason: str | None,
+    mature_year_proof_years: list[int],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
     for row_label in REQUIRED_KPI_ROWS:
         row = _table_row(text, row_label)
         if row is None or len(row) < 4:
@@ -476,6 +486,14 @@ def _verify_template(text: str, release_exception_reason: str | None, errors: li
                     "E2E template release exception reason must match verifier argument: "
                     f"{actual} != {release_exception_reason}"
                 )
+            elif row_label == "mature-year proof years" and mature_year_proof_years:
+                actual_years = _years_from_text(actual)
+                expected_years = set(mature_year_proof_years)
+                if actual_years != expected_years:
+                    errors.append(
+                        "E2E template mature-year proof years must match passing proof JSON years: "
+                        f"{sorted(actual_years, reverse=True)} != {sorted(expected_years, reverse=True)}"
+                    )
 
     for row_label in REQUIRED_RELEASE_ROWS:
         row = _table_row(text, row_label)
@@ -612,6 +630,7 @@ def verify_stage6_return(
         _verify_template(
             e2e_template.read_text(encoding="utf-8"),
             active_release_exception_reason,
+            mature_year_proof_years,
             errors,
             warnings,
         )

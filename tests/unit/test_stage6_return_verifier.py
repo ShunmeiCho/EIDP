@@ -83,7 +83,7 @@ def _complete_exception_template() -> str:
         "| 推定手作業率 | <= 30% | 100.0 | watch |\n"
         "| release exception reason | `publication_lag` | publication_lag | pass |\n"
         "| mature-year proof JSON | ok=true | logs/mature-year-proof.json | pass |\n"
-        "| mature-year proof years | at least one FY before target_fy | 2025, 2024, 2023 | pass |",
+        "| mature-year proof years | at least one FY before target_fy | 2025 | pass |",
     )
 
 
@@ -411,6 +411,36 @@ def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: P
     assert "last_run target_pdf_auto_yield_pct must be numeric for final return evidence" in result["errors"]
     assert "last_run operator_reviewable_yield_pct must be numeric for final return evidence" in result["errors"]
     assert "last_run ship_gate_status must be measured" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_mature_year_template_year_mismatch(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(
+        _complete_exception_template().replace(
+            "| mature-year proof years | at least one FY before target_fy | 2025 | pass |",
+            "| mature-year proof years | at least one FY before target_fy | 2024 | pass |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "E2E template mature-year proof years must match passing proof JSON years: [2024] != [2025]"
+        in result["errors"]
+    )
 
 
 def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operator_coverage(
