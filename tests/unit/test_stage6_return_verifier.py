@@ -80,7 +80,7 @@ Decision: READY
 def _complete_exception_template() -> str:
     return _complete_template().replace(
         "| 推定手作業率 | <= 30% | 28.0 | pass |",
-        "| 推定手作業率 | <= 30% | 100.0 | watch |\n"
+        "| 推定手作業率 | <= 30% | 28.0 | pass |\n"
         "| release exception reason | `publication_lag` | publication_lag | pass |\n"
         "| mature-year proof JSON | ok=true | logs/mature-year-proof.json | pass |\n"
         "| mature-year proof years | at least one FY before target_fy | 2025 | pass |",
@@ -100,6 +100,7 @@ def _write_complete_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": 67.5,
             "operator_reviewable_yield_pct": 72.0,
+            "target_pdf_excel_ready_yield_pct": 67.5,
             "ship_gate_status": "pass",
         },
     )
@@ -238,6 +239,7 @@ def test_verify_stage6_return_rejects_invalid_last_run_finished_at(tmp_path: Pat
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": 67.5,
             "operator_reviewable_yield_pct": 72.0,
+            "target_pdf_excel_ready_yield_pct": 67.5,
             "ship_gate_status": "pass",
         },
     )
@@ -340,6 +342,14 @@ def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_th
         .replace(
             "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
             "| strict target PDF 自動取得率 | >= 60% | 22.0 | watch |",
+        )
+        .replace(
+            "| 推定手作業率 | <= 30% | 28.0 | pass |",
+            "| 推定手作業率 | <= 30% | 100.0 | watch |",
+        )
+        .replace(
+            "| Excel ready 率 | >= 60% | 67.5 | pass |",
+            "| Excel ready 率 | >= 60% | 22.0 | watch |",
         ),
         encoding="utf-8",
     )
@@ -352,6 +362,7 @@ def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_th
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": 22.0,
             "operator_reviewable_yield_pct": 0.0,
+            "target_pdf_excel_ready_yield_pct": 22.0,
             "ship_gate_status": "below_gate",
         },
     )
@@ -375,7 +386,47 @@ def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_th
     assert "publication_lag" in result["release_exception_reasons"]
     assert any("target_pdf_auto_yield_pct below release threshold" in warning for warning in result["warnings"])
     assert any("estimated manual workload above release threshold" in warning for warning in result["warnings"])
+    assert any("target_pdf_excel_ready_yield_pct below release threshold" in warning for warning in result["warnings"])
     assert any("accepted KPI verdict watch: strict target PDF 自動取得率" in warning for warning in result["warnings"])
+
+
+def test_verify_stage6_return_rejects_template_kpi_actual_mismatch_with_last_run_under_exception(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": 22.0,
+            "operator_reviewable_yield_pct": 72.0,
+            "target_pdf_excel_ready_yield_pct": 67.5,
+            "ship_gate_status": "below_gate",
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "E2E template KPI actual must match last_run target_pdf_auto_yield_pct: "
+        "strict target PDF 自動取得率 67.5 != 22.0"
+    ) in result["errors"]
 
 
 def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: Path) -> None:
@@ -393,6 +444,7 @@ def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: P
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": None,
             "operator_reviewable_yield_pct": None,
+            "target_pdf_excel_ready_yield_pct": None,
             "ship_gate_status": "not_measured",
         },
     )
@@ -486,6 +538,14 @@ def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operato
         .replace(
             "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
             "| strict target PDF 自動取得率 | >= 60% | 22.0 | watch |",
+        )
+        .replace(
+            "| 推定手作業率 | <= 30% | 28.0 | pass |",
+            "| 推定手作業率 | <= 30% | 100.0 | watch |",
+        )
+        .replace(
+            "| Excel ready 率 | >= 60% | 67.5 | pass |",
+            "| Excel ready 率 | >= 60% | 22.0 | watch |",
         ),
         encoding="utf-8",
     )
@@ -498,6 +558,7 @@ def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operato
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": 22.0,
             "operator_reviewable_yield_pct": 0.0,
+            "target_pdf_excel_ready_yield_pct": 22.0,
             "ship_gate_status": "pass",
         },
     )
@@ -726,6 +787,14 @@ def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_
         .replace(
             "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
             "| strict target PDF 自動取得率 | >= 60% | 22.0 | watch |",
+        )
+        .replace(
+            "| 推定手作業率 | <= 30% | 28.0 | pass |",
+            "| 推定手作業率 | <= 30% | 100.0 | watch |",
+        )
+        .replace(
+            "| Excel ready 率 | >= 60% | 67.5 | pass |",
+            "| Excel ready 率 | >= 60% | 22.0 | watch |",
         ),
         encoding="utf-8",
     )
@@ -738,6 +807,7 @@ def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": 22.0,
             "operator_reviewable_yield_pct": 0.0,
+            "target_pdf_excel_ready_yield_pct": 22.0,
             "ship_gate_status": "below_gate",
         },
     )
@@ -837,6 +907,7 @@ Decision:
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": None,
             "operator_reviewable_yield_pct": None,
+            "target_pdf_excel_ready_yield_pct": None,
             "ship_gate_status": "not_measured",
         },
     )
@@ -889,6 +960,7 @@ def test_verify_stage6_return_rejects_below_threshold_and_non_ready_decision(tmp
             "current_fy": 2026,
             "target_pdf_auto_yield_pct": 55.0,
             "operator_reviewable_yield_pct": 65.0,
+            "target_pdf_excel_ready_yield_pct": 55.0,
             "ship_gate_status": "pass",
         },
     )

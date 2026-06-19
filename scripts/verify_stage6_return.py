@@ -152,6 +152,13 @@ def _parse_nonnegative_int(value: str) -> int | None:
     return int(normalized)
 
 
+def _parse_numeric_cell(value: str) -> float | None:
+    match = re.search(r"-?\d+(?:\.\d+)?", value.replace(",", ""))
+    if match is None:
+        return None
+    return float(match.group(0))
+
+
 def _is_iso_date(value: str) -> bool:
     try:
         date.fromisoformat(value.strip())
@@ -182,6 +189,47 @@ def _years_from_text(value: str) -> set[int]:
     return {int(match) for match in re.findall(r"\b(?:19|20)\d{2}\b", value)}
 
 
+def _template_kpi_actual_expectations(last_run: dict[str, Any] | None) -> dict[str, tuple[str, float]]:
+    if last_run is None:
+        return {}
+    expectations: dict[str, tuple[str, float]] = {}
+    target_yield = last_run.get("target_pdf_auto_yield_pct")
+    if _is_number(target_yield):
+        expectations["strict target PDF 自動取得率"] = ("last_run target_pdf_auto_yield_pct", float(target_yield))
+    operator_reviewable_yield = last_run.get("operator_reviewable_yield_pct")
+    if _is_number(operator_reviewable_yield):
+        expectations["推定手作業率"] = (
+            "last_run estimated manual workload",
+            100.0 - float(operator_reviewable_yield),
+        )
+    excel_ready_yield = last_run.get("target_pdf_excel_ready_yield_pct")
+    if _is_number(excel_ready_yield):
+        expectations["Excel ready 率"] = ("last_run target_pdf_excel_ready_yield_pct", float(excel_ready_yield))
+    return expectations
+
+
+def _verify_template_kpi_actual(
+    *,
+    row_label: str,
+    actual: str,
+    expectations: dict[str, tuple[str, float]],
+    errors: list[str],
+) -> None:
+    expected = expectations.get(row_label)
+    if expected is None:
+        return
+    source, expected_value = expected
+    actual_value = _parse_numeric_cell(actual)
+    if actual_value is None:
+        errors.append(f"E2E template KPI actual must include numeric value for {row_label}")
+        return
+    if abs(actual_value - expected_value) > 0.05:
+        errors.append(
+            "E2E template KPI actual must match "
+            f"{source}: {row_label} {actual_value:.1f} != {expected_value:.1f}"
+        )
+
+
 def _verify_last_run(
     last_run: dict[str, Any],
     *,
@@ -208,6 +256,7 @@ def _verify_last_run(
     if require_kpi:
         target_yield = last_run.get("target_pdf_auto_yield_pct")
         operator_reviewable_yield = last_run.get("operator_reviewable_yield_pct")
+        excel_ready_yield = last_run.get("target_pdf_excel_ready_yield_pct")
         if not _is_number(target_yield):
             errors.append("last_run target_pdf_auto_yield_pct must be numeric for final return evidence")
         else:
@@ -230,6 +279,19 @@ def _verify_last_run(
                 message = (
                     "last_run estimated manual workload above release threshold: "
                     f"{manual_workload:.1f} > {max_manual_workload:.1f}"
+                )
+                if release_exception_reason:
+                    warnings.append(f"release exception {release_exception_reason} accepted {message}")
+                else:
+                    errors.append(message)
+        if not _is_number(excel_ready_yield):
+            errors.append("last_run target_pdf_excel_ready_yield_pct must be numeric for final return evidence")
+        else:
+            excel_ready_yield_value = float(excel_ready_yield)
+            if excel_ready_yield_value < min_target_pdf_auto_yield:
+                message = (
+                    "last_run target_pdf_excel_ready_yield_pct below release threshold: "
+                    f"{excel_ready_yield_value:.1f} < {min_target_pdf_auto_yield:.1f}"
                 )
                 if release_exception_reason:
                     warnings.append(f"release exception {release_exception_reason} accepted {message}")
@@ -425,12 +487,14 @@ def _verify_mature_year_proof(
 
 def _verify_template(
     text: str,
+    last_run: dict[str, Any] | None,
     release_exception_reason: str | None,
     mature_year_proof_json: Path | None,
     mature_year_proof_years: list[int],
     errors: list[str],
     warnings: list[str],
 ) -> None:
+    kpi_actual_expectations = _template_kpi_actual_expectations(last_run)
     for row_label in REQUIRED_KPI_ROWS:
         row = _table_row(text, row_label)
         if row is None or len(row) < 4:
@@ -440,6 +504,13 @@ def _verify_template(
         verdict = row[3]
         if not actual:
             errors.append(f"E2E template KPI actual is blank: {row_label}")
+        else:
+            _verify_template_kpi_actual(
+                row_label=row_label,
+                actual=actual,
+                expectations=kpi_actual_expectations,
+                errors=errors,
+            )
         if _is_placeholder(verdict):
             errors.append(f"E2E template KPI verdict is still placeholder: {row_label}")
         elif release_exception_reason and verdict.lower() in EXCEPTION_KPI_VERDICTS:
@@ -637,6 +708,7 @@ def verify_stage6_return(
     else:
         _verify_template(
             e2e_template.read_text(encoding="utf-8"),
+            last_run_json,
             active_release_exception_reason,
             mature_year_proof_json,
             mature_year_proof_years,

@@ -1091,6 +1091,8 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         entries["scripts/verify_stage6_return.py"]
         .replace("release_exception_reason", "release_override_reason")
         .replace("last_run finished_at must be ISO datetime", "last_run finished_at may be free text")
+        .replace("target_pdf_excel_ready_yield_pct", "target_pdf_excel_ready_optional")
+        .replace("KPI actual must match", "KPI actual may differ")
         .replace("mature_year_proof_json", "historical_year_proof_json")
         .replace("release_exception_record", "release_override_record")
         .replace("Stage 2-5c Windows VM gate 済み", "Mac local gate 済み")
@@ -1141,6 +1143,14 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: last_run finished_at must be ISO datetime" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: target_pdf_excel_ready_yield_pct" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: KPI actual must match" in error
         for error in check.errors
     )
     assert any(

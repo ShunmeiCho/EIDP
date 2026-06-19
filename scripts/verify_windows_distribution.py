@@ -1424,8 +1424,10 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
         "scripts/verify_stage6_return.py": (
             "verify_stage6_return",
             "target_pdf_auto_yield_pct",
+            "target_pdf_excel_ready_yield_pct",
             "operator_reviewable_yield_pct",
             "ship_gate_status",
+            "KPI actual must match",
             "last_run finished_at must be ISO datetime",
             "SHIP_GATE_EXCEPTION_REASONS",
             "release_exception_reason",
