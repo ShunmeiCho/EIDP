@@ -323,6 +323,10 @@ def _is_stable_homepage_path(path: str) -> bool:
     return not any("." in segment for segment in segments)
 
 
+def _looks_like_document_url(path: str, query: str) -> bool:
+    return path.endswith(".pdf") or ".pdf" in query
+
+
 def score_school_url_candidate(
     *,
     candidate_url: str,
@@ -348,6 +352,14 @@ def score_school_url_candidate(
         return UrlScore(
             candidate_url=candidate_url, score=0.0, decision="reject",
             breakdown={"invalid_url": 0.0}, notes=("invalid_url",),
+        )
+    if _looks_like_document_url(path, parsed.query.lower()):
+        return UrlScore(
+            candidate_url=candidate_url,
+            score=-5.0,
+            decision="reject",
+            breakdown={"document_url": -5.0},
+            notes=("document_url_not_school_site",),
         )
 
     # Hard penalties first — short circuit.

@@ -215,6 +215,8 @@ def _default_serp_fetcher() -> SearchProviderSerpFetcher:
         provider_name=settings.search_provider,
         api_key=api_key_map.get(settings.search_provider, ""),
         google_cx=settings.google_cx,
+        external_command=settings.external_search_command,
+        external_timeout_seconds=settings.external_search_timeout_seconds,
     )
     return SearchProviderSerpFetcher(provider)
 
@@ -223,8 +225,8 @@ def _school_website_queries_for_school(school: School) -> list[str]:
     """Build official-site-first queries for SchoolSite auto-completion.
 
     This step wants a stable homepage or disclosure section, not a one-off
-    PDF/form URL. Keep homepage-intent queries ahead of target-form queries
-    so noisy SERPs are less likely to auto-register admissions/news/PDF paths.
+    PDF/form URL. Target-form PDF discovery starts only after a trusted
+    SchoolSite entrance exists.
     """
     school_name = school.school_name.strip()
     corporation_name = (school.corporation_name or "").strip()
@@ -242,7 +244,6 @@ def _school_website_queries_for_school(school: School) -> list[str]:
     queries.extend([
         f"{school_name} 情報公開",
         f"{school_name} 高等教育 修学支援",
-        f"{school_name} 確認申請書 様式第2号",
     ])
     return _dedupe_preserve_order(queries)
 

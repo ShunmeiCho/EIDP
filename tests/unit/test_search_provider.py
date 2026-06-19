@@ -10,6 +10,7 @@ from eidp.scraper import search_provider as module
 from eidp.scraper.search_provider import (
     BraveSearchProvider,
     DuckDuckGoProvider,
+    ExternalCommandSearchProvider,
     GoogleSearchProvider,
     SerperProvider,
     create_provider,
@@ -178,6 +179,7 @@ def test_create_provider_validates_required_credentials() -> None:
     assert create_provider("brave", api_key="key").name() == "brave"
     assert create_provider("google", api_key="key", google_cx="cx").name() == "google"
     assert create_provider("serper", api_key="key").name() == "serper"
+    assert create_provider("external", external_command="search-wrapper").name() == "external"
 
     with pytest.raises(ValueError, match="BRAVE_API_KEY required"):
         create_provider("brave")
@@ -185,5 +187,74 @@ def test_create_provider_validates_required_credentials() -> None:
         create_provider("google", api_key="key")
     with pytest.raises(ValueError, match="SERPER_API_KEY required"):
         create_provider("serper")
+    with pytest.raises(ValueError, match="EIDP_EXTERNAL_SEARCH_COMMAND required"):
+        create_provider("external")
     with pytest.raises(ValueError, match="Unknown provider"):
         create_provider("unknown")
+
+
+def test_external_command_provider_maps_json_results(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_run(args: list[str], **kwargs: object) -> module.subprocess.CompletedProcess[str]:
+        calls.append({"args": args, **kwargs})
+        return module.subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout=(
+                '{"results": ['
+                '{"title": "公式", "url": "https://school.example.ac.jp/", "text": "情報公開"},'
+                '{"name": "公開", "link": "https://school.example.ac.jp/disclosure/", "snippet": "公開情報"},'
+                '{"title": "ignored", "url": "https://extra.example.ac.jp/"}'
+                "]}"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    provider = ExternalCommandSearchProvider(
+        "search-wrapper --query {query_json} --count {count}",
+        timeout_seconds=4.0,
+    )
+    results = provider.search('東京 "情報"', count=2)
+
+    assert [(r.title, r.url, r.description) for r in results] == [
+        ("公式", "https://school.example.ac.jp/", "情報公開"),
+        ("公開", "https://school.example.ac.jp/disclosure/", "公開情報"),
+    ]
+    assert calls[0]["args"] == ["search-wrapper", "--query", '"東京 \\"情報\\""', "--count", "2"]
+    env = calls[0]["env"]
+    assert isinstance(env, dict)
+    assert env["EIDP_EXTERNAL_SEARCH_QUERY"] == '東京 "情報"'
+    assert env["EIDP_EXTERNAL_SEARCH_COUNT"] == "2"
+    assert calls[0]["timeout"] == 4.0
+    assert calls[0]["text"] is True
+
+
+def test_external_command_args_preserve_windows_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(module.os, "name", "nt")
+
+    args = module._external_command_args(  # noqa: SLF001 - command parsing is the behavior under test.
+        r'"C:\Program Files\EIDP\search.exe" --query {query_json} --count {count}',
+        query="東京 情報公開",
+        count=3,
+    )
+
+    assert args == [
+        r"C:\Program Files\EIDP\search.exe",
+        "--query",
+        '"東京 情報公開"',
+        "--count",
+        "3",
+    ]
+
+
+def test_external_command_provider_rejects_invalid_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(args: list[str], **_kwargs: object) -> module.subprocess.CompletedProcess[str]:
+        return module.subprocess.CompletedProcess(args=args, returncode=0, stdout="not json", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="invalid JSON"):
+        ExternalCommandSearchProvider("search-wrapper").search("query")

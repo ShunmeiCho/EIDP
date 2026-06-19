@@ -108,13 +108,15 @@ class Settings(BaseSettings):
     fiscal_era_start_year: int = 2019
 
     # Search API (switch provider by changing search_provider)
-    search_provider: str = "duckduckgo"  # duckduckgo | brave | google | serper
+    search_provider: str = "duckduckgo"  # duckduckgo | brave | google | serper | external
     url_search_auto_enable: str = "auto"  # auto | on | off
     url_search_batch_size: int = 200
     brave_api_key: str = ""
     google_api_key: str = ""
     google_cx: str = ""
     serper_api_key: str = ""
+    external_search_command: str = ""
+    external_search_timeout_seconds: float = 30.0
 
     # Optional Scrapling-backed school website URL completion. This is a
     # bounded fallback for schools still missing SchoolSite rows after the
@@ -215,6 +217,8 @@ def apply_runtime_env_settings(config: Settings = settings) -> None:
         "EIDP_BRAVE_API_KEY": config.brave_api_key,
         "EIDP_GOOGLE_API_KEY": config.google_api_key,
         "EIDP_GOOGLE_CX": config.google_cx,
+        "EIDP_EXTERNAL_SEARCH_COMMAND": config.external_search_command,
+        "EIDP_EXTERNAL_SEARCH_TIMEOUT_SECONDS": str(config.external_search_timeout_seconds),
         "EIDP_SCHOOL_URL_CRAWL_AUTO_ENABLE": config.school_url_crawl_auto_enable,
         "EIDP_SCHOOL_URL_CRAWL_BATCH_SIZE": str(config.school_url_crawl_batch_size),
         "EIDP_SCHOOL_URL_CRAWL_FETCH_MODE": config.school_url_crawl_fetch_mode,

@@ -73,12 +73,16 @@ def test_runtime_url_search_settings_can_be_pinned_by_env(monkeypatch) -> None:
     monkeypatch.setenv("EIDP_SEARCH_PROVIDER", "serper")
     monkeypatch.setenv("EIDP_URL_SEARCH_AUTO_ENABLE", "on")
     monkeypatch.setenv("EIDP_URL_SEARCH_BATCH_SIZE", "300")
+    monkeypatch.setenv("EIDP_EXTERNAL_SEARCH_COMMAND", "search-wrapper")
+    monkeypatch.setenv("EIDP_EXTERNAL_SEARCH_TIMEOUT_SECONDS", "7.5")
 
     settings = Settings(_env_file=None)
 
     assert settings.search_provider == "serper"
     assert settings.url_search_auto_enable == "on"
     assert settings.url_search_batch_size == 300
+    assert settings.external_search_command == "search-wrapper"
+    assert settings.external_search_timeout_seconds == 7.5
 
 
 def test_default_database_url_follows_data_dir_env(monkeypatch, tmp_path: Path) -> None:
@@ -106,6 +110,7 @@ def test_env_example_lets_database_url_follow_data_dir() -> None:
     assert "EIDP_OCR_AUTO_ENABLE=auto" in body
     assert "EIDP_URL_SEARCH_AUTO_ENABLE=auto" in body
     assert "EIDP_URL_SEARCH_BATCH_SIZE=200" in body
+    assert "# EIDP_EXTERNAL_SEARCH_COMMAND=python scripts/external_search_wrapper.py" in body
     assert "${APP_ROOT}" not in body
     assert not any(line.startswith("EIDP_DATABASE_URL=postgresql") for line in active_lines), (
         "operator .env example must not default to the old Venus/Postgres URL"

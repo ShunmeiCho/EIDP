@@ -201,7 +201,6 @@ def test_run_school_url_auto_crawl_evidence_records_rejected_candidates(tmp_path
             "学校法人東京デザイン 東京デザイン専門学校 公式",
             "東京デザイン専門学校 情報公開",
             "東京デザイン専門学校 高等教育 修学支援",
-            "東京デザイン専門学校 確認申請書 様式第2号",
         ]
         assert evidence["candidates"] == [
             {

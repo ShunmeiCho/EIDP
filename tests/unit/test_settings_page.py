@@ -93,6 +93,10 @@ def test_target_fiscal_year_is_not_a_persistent_setting_key() -> None:
     assert "EIDP_TARGET_FISCAL_YEAR" not in settings_page.SETTING_ENV_KEYS
 
 
+def test_external_search_command_is_env_only_not_operator_setting_key() -> None:
+    assert "EIDP_EXTERNAL_SEARCH_COMMAND" not in settings_page.SETTING_ENV_KEYS
+
+
 def test_save_operator_settings_writes_runtime_variables(tmp_path: Path, monkeypatch) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text("EIDP_TARGET_FISCAL_YEAR=2026\n", encoding="utf-8")
