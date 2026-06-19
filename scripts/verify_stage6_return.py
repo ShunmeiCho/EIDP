@@ -264,6 +264,8 @@ def _verify_release_exception_record(text: str, reason: str, errors: list[str]) 
             errors.append("release exception record Decision must be APPROVED")
         elif row_label == "Approval date" and not _is_placeholder(value) and not _is_iso_date(value):
             errors.append("release exception record Approval date must be YYYY-MM-DD")
+        elif row_label == "FY2026/R8 status acknowledged" and value.lower() != "yes":
+            errors.append("release exception record FY2026/R8 status acknowledged must be yes")
 
 
 def _case_fiscal_year(case: dict[str, Any]) -> int | None:

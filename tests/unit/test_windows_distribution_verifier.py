@@ -1105,6 +1105,11 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("Decision must be READY for release approval", "Decision must be go")
         .replace("Excel output file proof must include an .xlsx workbook path", "Excel output can be free text")
         .replace("must be YYYY-MM-DD", "date may be free text")
+        .replace("FY2026/R8 status acknowledged", "R8 status optional")
+        .replace(
+            "release exception record R8 status optional must be yes",
+            "release exception record R8 status optional",
+        )
         .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
         .replace("publication_lag", "publication_delay")
     )
@@ -1184,6 +1189,15 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: must be YYYY-MM-DD" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: FY2026/R8 status acknowledged" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "release exception record FY2026/R8 status acknowledged must be yes" in error
         for error in check.errors
     )
     assert any(

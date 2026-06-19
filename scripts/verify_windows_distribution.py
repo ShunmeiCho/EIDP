@@ -1445,6 +1445,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "release conclusion must be READY for release approval",
             "Decision must be READY for release approval",
             "must be YYYY-MM-DD",
+            "FY2026/R8 status acknowledged",
+            "release exception record FY2026/R8 status acknowledged must be yes",
             "Owner sign-off:",
             "業務員 sign-off:",
             "Excel ready 率",
