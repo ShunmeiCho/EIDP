@@ -11,9 +11,9 @@ checks `SUCCESS` on 2026-06-19. The local branch still contains unpublished
 v530 package/source and docs-only release-evidence commits, including
 `9331216022e1904361ed8d11d0e24da81637d46a`, so GitHub checks do not yet cover
 the current local candidate.
-Latest Windows owner-return remote check:
-`docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
-is reachable, refreshed v526 owner docs remain staged, and the remote
+Previous Windows owner-return remote check:
+`docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirmed `ssh win`
+was reachable, refreshed v526 owner docs remained staged, and the remote
 `publication_lag` approval / E2E sign-off fields are still blank. The refreshed
 Windows-staged owner docs ZIP now includes this report and the
 target-yearless RCA spot check plus the owner v1.0 A/B decision brief and v526
@@ -179,7 +179,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 - Negative v523 return-verifier probe is recorded in `logs/win-v523-stage6-v523-verify-stage6-return-not-approved-exception-20260520.json` with rc `1`: the refreshed exception packet still fails on `Status must be APPROVED`, `Decision must be APPROVED`, placeholder approval fields, and missing owner/operator sign-off.
 - Temporary positive v523 return-verifier probe is recorded in `logs/win-v523-stage6-v523-verify-stage6-return-positive-exception-probe-20260520.json`: with a temporary filled owner E2E template and temporary `APPROVED` exception copy under `_temp/`, the verifier returns `ok=true`, proving the approval/sign-off path is internally consistent but not approved in the real record.
 - v523 post-docs-only release gate is recorded in `logs/win-v523-stage6-v523-post-docs-only-gates-20260520.json`: `ok=true`, `docs_only_stale=true`, full unit `1897 passed`.
-- v523 campus network probe is recorded in `docs/reports/2026-05-20-v523-campus-network-probe.md`: `ssh win hostname` returned `junming`; the active Windows Wi-Fi profile was `Private`, current Wi-Fi IPv4 was `192.168.0.9/24`, and the OpenSSH inbound firewall rule was enabled. This confirms the current remote-management path but does not remove the FY2026/R8 yield or owner sign-off blockers.
+- v523 campus network probe is recorded in `docs/reports/2026-05-20-v523-campus-network-probe.md`: `ssh win hostname` returned `junming`; the active Windows Wi-Fi profile was `Private`, Wi-Fi IPv4 was `192.168.0.9/24`, and the OpenSSH inbound firewall rule was enabled. This confirmed the then-current remote-management path but does not remove the FY2026/R8 yield or owner sign-off blockers.
 - v523 owner-return verifier coverage audit is recorded in `docs/reports/2026-05-20-v523-owner-return-verifier-coverage-audit.md`: `verify_stage6_return.py` enforces last_run KPI consistency, Stage 6 evidence labels, selected E2E KPI rows, sign-off blocks, approved `publication_lag` records, and mature-year proof, but does not machine-enforce Excel proof or ManualActionLog / JSONL outbox consistency. A green return verifier is therefore necessary but not sufficient for owner-cycle acceptance. The script is packaged in `dist/eidp-windows-v523.zip`, so hardening those checks would require a new source/package lane rather than another v523 docs-only update.
 - v523 manual owner-return review companion is prepared in `docs/runbooks/eidp-v523-owner-return-manual-review-checklist.md`: it covers Excel proof, ManualActionLog / JSONL outbox proof, append-only `DepartmentYearly` / `SupportRecipient` evidence, and OCR-scope evidence that remain required but not machine-enforced by the v523 packaged return verifier.
 - v523 owner/operator first-read handoff is prepared in `docs/runbooks/00-READ-ME-FIRST-v523.txt`: it lists the selected package, SHA, side-by-side root, current active v485 root to preserve, required evidence, safety red lines, and the release-decision boundary.
