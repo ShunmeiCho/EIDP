@@ -98,7 +98,7 @@ def reset_wheelhouse(wheelhouse: Path) -> None:
         if child.is_dir():
             shutil.rmtree(child)
         else:
-            child.unlink()
+            child.unlink(missing_ok=True)
 
 
 def download_windows_wheels(

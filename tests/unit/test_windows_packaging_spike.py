@@ -1457,6 +1457,21 @@ def test_assert_master_xlsx_present_raises_when_absent(tmp_path: Path):
         bw.assert_master_xlsx_present(fake_repo)
 
 
+def test_reset_wheelhouse_removes_appledouble_files(tmp_path: Path):
+    bw = _load_build_script()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+    (wheelhouse / ".gitignore").write_text("*\n", encoding="utf-8")
+    (wheelhouse / "._eidp-1.0.0rc1-py3-none-any.whl").write_bytes(b"appledouble")
+    (wheelhouse / "eidp-1.0.0rc1-py3-none-any.whl").write_bytes(b"wheel")
+
+    bw.reset_wheelhouse(wheelhouse)
+
+    assert (wheelhouse / ".gitignore").is_file()
+    assert not (wheelhouse / "._eidp-1.0.0rc1-py3-none-any.whl").exists()
+    assert not (wheelhouse / "eidp-1.0.0rc1-py3-none-any.whl").exists()
+
+
 def test_collect_zip_members_skips_pycache(tmp_path: Path):
     bw = _load_build_script()
     fake_repo = tmp_path / "repo"
