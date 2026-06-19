@@ -15,6 +15,7 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+dist
 dist/
 build/
 
@@ -30,6 +31,7 @@ htmlcov/
 .omc/
 .playwright-mcp/
 _temp/
+logs
 logs/
 
 # Secrets / environment

@@ -8,14 +8,16 @@ decision for FY2026/R8 publication lag.
 
 ## Do Not Proceed If
 
-- PR #8 is not clean or either required check is not green.
+- Local `main` is not synced to PR #8 merge commit
+  `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified `main`
+  commit.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current local v531 is package/source
+  after its last code/package change. Current local v532 is package/source
   verified on macOS, but the latest complete Windows side-by-side smoke remains
-  v526. v531 must not be promoted until Windows side-by-side validation is
+  v526. v532 must not be promoted until Windows side-by-side validation is
   repeated or the release scope explicitly stays on v526.
 - The Windows validation host is unreachable. The 2026-06-19 v530 recheck
-  timed out on `ssh win hostname`, so v531 side-by-side validation and
+  timed out on `ssh win hostname`, so v532 side-by-side validation and
   owner-return readback cannot proceed from this Mac until connectivity is
   restored or an approved operator-side validation path is used.
 - The owner real cycle and evidence bundle are missing.
@@ -30,7 +32,7 @@ decision for FY2026/R8 publication lag.
   must not be used as a direct PDF finder.
 - OCR is included in the v1.0 release scope but the Windows OCR runtime proof
   or OCR add-on SHA/runtime verifier is missing for the selected candidate.
-  Current v526 has fresh Windows OCR runtime proof; the local v531 preflight
+  Current v526 has fresh Windows OCR runtime proof; the local v532 preflight
   did not include an OCR add-on ZIP because `dist/eidp-ocr-addon-windows-v497-smoke.zip`
   is not present in this checkout.
 - The signed tag command would use an unsigned or unknown signing identity.
@@ -40,29 +42,29 @@ decision for FY2026/R8 publication lag.
 Run from the repository root:
 
 ```bash
-git status --short
+git status --short --untracked-files=all
 git rev-parse HEAD
-gh pr view 8 --json state,mergeStateStatus,headRefOid,statusCheckRollup,url
+gh pr view 8 --json state,mergedAt,mergeCommit,headRefOid,baseRefName,url
 ```
 
 Expected:
 
-- working tree is clean;
-- PR #8 is `OPEN` until the final merge step;
-- `mergeStateStatus` is `CLEAN`;
-- `Python quality gates` and `Ship gate contract` are `SUCCESS`.
-- remote PR head matches the source commit selected for release. If the local
-  branch contains unpublished commits, PR checks do not cover that candidate
-  until the branch is pushed and CI is green on the new head.
+- there are no tracked modifications;
+- untracked local reference files such as `UI-example/` are not included in the
+  release package;
+- `HEAD` is `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified
+  `main` commit;
+- PR #8 is `MERGED` with merge commit
+  `723a5072f63e8a874bef85cc52d869f5e6daff15`.
 
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v531.zip
-cat dist/eidp-windows-v531.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v531.zip --json
+shasum -a 256 dist/eidp-windows-v532.zip
+cat dist/eidp-windows-v532.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v532.zip --json
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v531.zip \
+  dist/eidp-windows-v532.zip \
   --allow-docs-only-stale-package \
   --keep-going \
   --json
@@ -72,7 +74,7 @@ test -f dist/eidp-ocr-addon-windows-v497-smoke.zip
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v531.zip \
+  dist/eidp-windows-v532.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -80,7 +82,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-dd9211a465a31d66d2bde865860d2cee6d6f79b61f416b495e2ce40c31f66c16
+9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c7
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -109,22 +111,44 @@ Expected:
 
 Do not create `v1.0` until the release gates below are complete.
 
+## Local Storage Hygiene
+
+Generated Windows ZIPs are large. Keep only the selected release candidate, its
+`.sha256` sidecar, the `dist/eidp-windows.zip` latest alias, and `wheelhouse/`
+unless an older package is actively needed for side-by-side evidence transfer.
+
+After the v532 `main` rebuild, superseded generated ZIPs
+`dist/eidp-windows-v527.zip` through `dist/eidp-windows-v531.zip` and their
+`.sha256` sidecars were deleted. `dist/` was reduced from about 1.5 GB to about
+546 MB.
+
+On the current Mac workstation, generated artifacts are stored on the external
+SSD mounted at `/Volumes/M1nG-ssd`:
+
+```text
+dist -> /Volumes/M1nG-ssd/EIDP-artifacts/dist
+logs -> /Volumes/M1nG-ssd/EIDP-artifacts/logs
+```
+
+Keep those symlinks in place for local builds and release gates so future ZIPs
+and gate logs do not consume the internal SSD. If the external SSD is not
+mounted, do not rebuild Windows ZIPs or long-running gate logs until it is
+reattached.
+
 ## Release Gates
 
-Before merging or tagging, attach or reference:
+Before tagging, attach or reference:
 
-- v531 package/non-Windows gate JSON:
-  `logs/win-v531-domain-taxonomy-release-gates-20260619.json`
-  plus the docs-only stale replay
-  `logs/win-v531-domain-taxonomy-post-docs-gates-20260619.json`;
-- v531 Windows side-by-side validator JSON if v531 is selected for release;
-- v531 active-task recovery / lock proof showing the active task still points
+- v532 package/non-Windows gate JSON:
+  `logs/win-v532-main-post-merge-release-gates-20260619.json`;
+- v532 Windows side-by-side validator JSON if v532 is selected for release;
+- v532 active-task recovery / lock proof showing the active task still points
   to the expected v485 lane;
-- v531 Windows UI smoke notes if v531 is selected for release;
-- v531 OCR runtime proof, if OCR remains in v1.0 scope;
-- v531 Excel smoke proof if v531 is selected for release;
-- v531 bounded weekly canary proof if v531 is selected for release;
-- v531 Stage 6 evidence ZIP and evidence verifier JSON if v531 is selected
+- v532 Windows UI smoke notes if v532 is selected for release;
+- v532 OCR runtime proof, if OCR remains in v1.0 scope;
+- v532 Excel smoke proof if v532 is selected for release;
+- v532 bounded weekly canary proof if v532 is selected for release;
+- v532 Stage 6 evidence ZIP and evidence verifier JSON if v532 is selected
   for release;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
@@ -140,8 +164,8 @@ Before merging or tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v531 local package evidence is recorded in
-`logs/win-v531-domain-taxonomy-release-gates-20260619.json`; it is not
+Current v532 local package evidence is recorded in
+`logs/win-v532-main-post-merge-release-gates-20260619.json`; it is not
 a Windows side-by-side smoke. Current v526 side-by-side evidence is summarized in
 `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`.
 The v526 owner/operator request is prepared at
@@ -153,7 +177,6 @@ release approval.
 Only after all release gates pass:
 
 ```bash
-gh pr merge 8 --rebase
 git fetch origin main --tags
 git checkout main
 git pull --ff-only origin main
