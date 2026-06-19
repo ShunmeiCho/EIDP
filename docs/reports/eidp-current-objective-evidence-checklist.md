@@ -5,11 +5,11 @@ Branch: `test/fault-injection-pdf-discovery`
 PR: `#8`
 PR live state: verify with
 `gh pr view 8 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
-Last recorded live PR check after the v530 push:
-remote head `0c439610bd65488551ab3f35959e7b1e7c099303` was `CLEAN` with
+Last recorded live PR check before the v531 push:
+remote head `10ad700728042eee342a87db2dbacf12cbfd432b` was `CLEAN` with
 required checks `SUCCESS` on 2026-06-19 (`Python quality gates` and
-`Ship gate contract`). Re-run the `gh pr view` command above after any later
-commit, because new docs-only commits still need fresh PR checks before merge.
+`Ship gate contract`). Re-run the `gh pr view` command above after the v531
+push, because new commits still need fresh PR checks before merge.
 Previous Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirmed `ssh win`
 was reachable, refreshed v526 owner docs remained staged, and the remote
@@ -26,7 +26,7 @@ Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
 objective. It intentionally replaces the older historical v464/v460 narrative
-with the current v530 local package state and the still-current v526 Windows
+with the current v531 local package state and the still-current v526 Windows
 side-by-side / owner-return state.
 
 ## Objective Restated
@@ -53,12 +53,12 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Latest local package/source candidate: `dist/eidp-windows-v530.zip`
+- Latest local package/source candidate: `dist/eidp-windows-v531.zip`
 - Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v526.zip`
-- v530 local package/source commit:
-  `9331216022e1904361ed8d11d0e24da81637d46a`
-- v530 local package SHA256:
-  `6344e6b9c2fea850cb50425410f2e0a5ad9c6626ff31fca9fee5f9f8014604a6`
+- v531 local package/source commit:
+  `c0dda09a21c4fe34ae6b28d453bb7783df8abea3`
+- v531 local package SHA256:
+  `dd9211a465a31d66d2bde865860d2cee6d6f79b61f416b495e2ce40c31f66c16`
 - Latest complete Windows side-by-side smoke: v526
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
@@ -97,6 +97,12 @@ that keeps manual work below the release threshold.
   `docs/reports/2026-06-19-v530-windows-connectivity-recheck.md` shows the
   current `ssh win` path timed out, so v530 Windows side-by-side validation and
   owner-return readback remain unavailable from this Mac.
+- Latest source/package domain taxonomy and operator terminology fix: v531 adds
+  controlled `DocumentKind`, `ReviewTaskKind`, source-trust, and workflow-status
+  enums; adds domain/status/UI/Agent-Reach boundary docs; verifies the local
+  `UI-example/` as design reference only; and renames operator-facing UI labels
+  to `学校キュー`, `申請書PDF確認`, `対象年度確認`, `Excel出力`,
+  `公式索引管理`, and `情報公開ページ候補`.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:
@@ -114,7 +120,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 
 | Requirement | Evidence checked | Status |
 | --- | --- | --- |
-| 47 prefecture official-list seeds are packaged and usable | `logs/win-v530-stage6-v530-non-windows-release-gates-20260619.json`, result `package_verify` stdout: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_school_rows_total=2148` | PASS |
+| 47 prefecture official-list seeds are packaged and usable | `logs/win-v531-domain-taxonomy-release-gates-20260619.json`, result `package_verify` stdout: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_school_rows_total=2148` | PASS |
 | 1,700+ vocational-school scope | v526 Windows setup validator `logs/win-v526-stage6-v526-env0-validate-after-setup-20260520.json`: `.details.school_count=2418`, `.details.school_fiscal_year_status_count=2418`, `.details.sqlite_integrity_check="ok"` | PASS |
 | Current rolling FY is FY2026/Reiwa 8 | `logs/win-v526-stage6-v526-last-run-after-weekly-canary-limit50-20260520.json`: `current_fy=2026`, `status=success` | PASS |
 | Strict mode excludes old-year fallback from success | `logs/win-v485-stage6/fy2026-strict-yield-upper-bound-fail-20260519.json` and v526 `ship_gate_status=below_gate` preserve old-year exclusion instead of counting stale target forms as success | PASS for contract, FAIL for release yield |
@@ -202,6 +208,15 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   package/source commit `9331216022e1904361ed8d11d0e24da81637d46a`,
   `package_source_check.ok=true`, `source_dirty=false`, full unit
   `1936 passed`, validator/distribution unit `188 passed`, mypy/ruff pass,
+  discovery gold 45/45 exact, package verification pass, and package
+  `BUILD_INFO.json` reports `git_dirty=false`.
+- Local v531 package gate is recorded in
+  `logs/win-v531-domain-taxonomy-release-gates-20260619.json`: package
+  `dist/eidp-windows-v531.zip`, SHA256
+  `dd9211a465a31d66d2bde865860d2cee6d6f79b61f416b495e2ce40c31f66c16`,
+  package/source commit `c0dda09a21c4fe34ae6b28d453bb7783df8abea3`,
+  `package_source_check.ok=true`, `source_dirty=false`, full unit
+  `1946 passed`, validator/distribution unit `188 passed`, mypy/ruff pass,
   discovery gold 45/45 exact, package verification pass, and package
   `BUILD_INFO.json` reports `git_dirty=false`.
 - Local docs-only release gate at PR head
