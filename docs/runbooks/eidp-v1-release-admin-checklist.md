@@ -47,9 +47,9 @@ Expected:
 - PR #8 is `OPEN` until the final merge step;
 - `mergeStateStatus` is `CLEAN`;
 - `Python quality gates` and `Ship gate contract` are `SUCCESS`.
-- remote PR head matches the source commit selected for release. As of the
-  2026-06-19 local v530 gate, local branch `test/fault-injection-pdf-discovery`
-  is ahead of remote PR #8 by two commits, so PR checks do not yet cover v530.
+- remote PR head matches the source commit selected for release. If the local
+  branch contains unpublished commits, PR checks do not cover that candidate
+  until the branch is pushed and CI is green on the new head.
 
 Confirm the current package evidence:
 
