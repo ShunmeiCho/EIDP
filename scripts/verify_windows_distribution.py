@@ -1450,6 +1450,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "release conclusion must be READY for release approval",
             "Decision must be READY for release approval",
             "must be YYYY-MM-DD",
+            "Date must not be in the future",
             "Release scope",
             "Release scope must limit approval to v1.0 mature-year proof only",
             "FY2026/R8 status acknowledged",

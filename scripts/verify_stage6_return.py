@@ -159,12 +159,22 @@ def _parse_numeric_cell(value: str) -> float | None:
     return float(match.group(0))
 
 
-def _is_iso_date(value: str) -> bool:
+def _iso_date_value(value: str) -> date | None:
     try:
-        date.fromisoformat(value.strip())
+        return date.fromisoformat(value.strip())
     except ValueError:
+        return None
+
+
+def _is_iso_date(value: str) -> bool:
+    return _iso_date_value(value) is not None
+
+
+def _is_future_iso_date(value: str) -> bool:
+    parsed = _iso_date_value(value)
+    if parsed is None:
         return False
-    return True
+    return parsed > date.today()
 
 
 def _is_iso_datetime(value: str) -> bool:
@@ -348,6 +358,8 @@ def _verify_release_exception_record(text: str, reason: str, errors: list[str]) 
             errors.append("release exception record Decision must be APPROVED")
         elif row_label == "Approval date" and not _is_placeholder(value) and not _is_iso_date(value):
             errors.append("release exception record Approval date must be YYYY-MM-DD")
+        elif row_label == "Approval date" and _is_future_iso_date(value):
+            errors.append("release exception record Approval date must not be in the future")
         elif row_label == "Release scope":
             normalized = value.lower()
             if not all(token in normalized for token in ("v1.0", "mature", "proof", "only")):
@@ -638,6 +650,8 @@ def _verify_template(
                 errors.append(f"E2E template {marker} {field} is blank")
             elif field == "Date" and not _is_iso_date(value):
                 errors.append(f"E2E template {marker} Date must be YYYY-MM-DD")
+            elif field == "Date" and _is_future_iso_date(value):
+                errors.append(f"E2E template {marker} Date must not be in the future")
             elif field == "Decision":
                 normalized_decision = _release_conclusion_value(value)
                 if normalized_decision not in RELEASE_CONCLUSIONS:
