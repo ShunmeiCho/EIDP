@@ -171,6 +171,11 @@ def _outbox_flushed(value: str) -> bool:
     return normalized == "0" or "after flush 0" in normalized
 
 
+def _has_generated_excel_output_path(value: str) -> bool:
+    normalized = value.replace("\\", "/").lower()
+    return ".xlsx" in normalized and "data/output/" in normalized
+
+
 def _verify_last_run(
     last_run: dict[str, Any],
     *,
@@ -447,8 +452,8 @@ def _verify_template(text: str, release_exception_reason: str | None, errors: li
     output_file_block = _fenced_block_after(text, "出力ファイル:")
     if output_file_block is None or not output_file_block.strip():
         errors.append("E2E template Excel output file proof is missing or blank")
-    elif ".xlsx" not in output_file_block.lower():
-        errors.append("E2E template Excel output file proof must include an .xlsx workbook path")
+    elif not _has_generated_excel_output_path(output_file_block):
+        errors.append("E2E template Excel output file proof must include a generated data/output/*.xlsx workbook path")
 
     if release_exception_reason:
         for row_label in REQUIRED_EXCEPTION_ROWS:

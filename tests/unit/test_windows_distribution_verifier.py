@@ -1104,7 +1104,10 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("RC_ONLY", "BETA_ONLY")
         .replace("release conclusion must be READY for release approval", "release conclusion must be go")
         .replace("Decision must be READY for release approval", "Decision must be go")
-        .replace("Excel output file proof must include an .xlsx workbook path", "Excel output can be free text")
+        .replace(
+            "Excel output file proof must include a generated data/output/*.xlsx workbook path",
+            "Excel output can be free text",
+        )
         .replace("must be YYYY-MM-DD", "date may be free text")
         .replace("FY2026/R8 status acknowledged", "R8 status optional")
         .replace(
@@ -1189,7 +1192,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
-        "Excel output file proof must include an .xlsx workbook path" in error
+        "Excel output file proof must include a generated data/output/*.xlsx workbook path" in error
         for error in check.errors
     )
     assert any(

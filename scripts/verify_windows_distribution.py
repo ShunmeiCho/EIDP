@@ -1453,7 +1453,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "Excel ready 率",
             "Excel 整合性",
             "出力ファイル:",
-            "Excel output file proof must include an .xlsx workbook path",
+            "Excel output file proof must include a generated data/output/*.xlsx workbook path",
             "manual_action_log 件数",
             "JSONL outbox 未送信件数",
             "JSONL action_id 重複",
