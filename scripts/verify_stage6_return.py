@@ -177,12 +177,25 @@ def _is_future_iso_date(value: str) -> bool:
     return parsed > date.today()
 
 
-def _is_iso_datetime(value: str) -> bool:
+def _iso_datetime_value(value: str) -> datetime | None:
     try:
-        datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        return datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
     except ValueError:
-        return False
-    return True
+        return None
+
+
+def _is_iso_datetime(value: str) -> bool:
+    return _iso_datetime_value(value) is not None
+
+
+def _last_run_finished_date(last_run: dict[str, Any] | None) -> date | None:
+    if last_run is None:
+        return None
+    finished_at = last_run.get("finished_at")
+    if not isinstance(finished_at, str) or not finished_at:
+        return None
+    parsed = _iso_datetime_value(finished_at)
+    return parsed.date() if parsed is not None else None
 
 
 def _outbox_flushed(value: str) -> bool:
@@ -519,6 +532,7 @@ def _verify_template(
     warnings: list[str],
 ) -> None:
     kpi_actual_expectations = _template_kpi_actual_expectations(last_run)
+    last_run_finished_date = _last_run_finished_date(last_run)
     for row_label in REQUIRED_KPI_ROWS:
         row = _table_row(text, row_label)
         if row is None or len(row) < 4:
@@ -648,10 +662,16 @@ def _verify_template(
             value = _block_field_value(block, field)
             if not value:
                 errors.append(f"E2E template {marker} {field} is blank")
-            elif field == "Date" and not _is_iso_date(value):
-                errors.append(f"E2E template {marker} Date must be YYYY-MM-DD")
-            elif field == "Date" and _is_future_iso_date(value):
-                errors.append(f"E2E template {marker} Date must not be in the future")
+            elif field == "Date":
+                signoff_date = _iso_date_value(value)
+                if signoff_date is None:
+                    errors.append(f"E2E template {marker} Date must be YYYY-MM-DD")
+                elif signoff_date > date.today():
+                    errors.append(f"E2E template {marker} Date must not be in the future")
+                elif last_run_finished_date is not None and signoff_date < last_run_finished_date:
+                    errors.append(
+                        f"E2E template {marker} Date must be on or after last_run finished_at date"
+                    )
             elif field == "Decision":
                 normalized_decision = _release_conclusion_value(value)
                 if normalized_decision not in RELEASE_CONCLUSIONS:

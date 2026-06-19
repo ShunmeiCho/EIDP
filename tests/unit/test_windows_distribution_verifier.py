@@ -1128,6 +1128,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
         .replace("publication_lag", "publication_delay")
         .replace("Date must not be in the future", "future date accepted")
+        .replace("Date must be on or after last_run finished_at date", "sign-off may predate last_run")
     )
     entries["scripts/ship_gate_contract.py"] = (
         entries["scripts/ship_gate_contract.py"]
@@ -1231,6 +1232,11 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: Date must not be in the future" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "Date must be on or after last_run finished_at date" in error
         for error in check.errors
     )
     assert any(
