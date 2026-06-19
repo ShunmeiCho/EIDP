@@ -1,0 +1,467 @@
+# Instincts generated from https://github.com/ShunmeiCho/EIDP
+# Generated: 2026-06-19T14:52:10.695Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: EIDP-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: docs, test, feat
+
+## Evidence
+
+- 8 commits analyzed
+- Detected conventional commit pattern
+- Examples: test(integration): add fault-injection harness for pdf_discovery; isolate per-site discovery errors, feat: add external official URL candidate provider
+
+---
+id: EIDP-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Commit Length
+
+## Action
+
+Write moderate-length commit messages (~55 characters)
+
+## Evidence
+
+- Average commit message length: 55 chars
+- Based on 8 commits
+
+---
+id: EIDP-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: EIDP-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: EIDP-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: EIDP-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: EIDP-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: EIDP-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Test Types
+
+## Action
+
+Write unit, integration tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, integration
+- Coverage config: no
+
+---
+id: EIDP-workflow-update-release-documentation
+trigger: "when doing update release documentation"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Workflow Update Release Documentation
+
+## Action
+
+Follow the update-release-documentation workflow:
+1. Update or create release exception record in docs/reports/
+2. Update the current objective evidence checklist in docs/reports/eidp-current-objective-evidence-checklist.md
+3. Update or refresh the admin checklist in docs/runbooks/eidp-v1-release-admin-checklist.md (if needed)
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: docs/reports/eidp-current-objective-evidence-checklist.md, docs/reports/2026-05-19-publication-lag-release-exception-record.md, docs/reports/2026-06-19-v530-windows-connectivity-recheck.md
+
+---
+id: EIDP-workflow-add-or-update-integration-tests-for-pdf-discovery
+trigger: "when doing add or update integration tests for pdf discovery"
+confidence: 0.55
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ShunmeiCho/EIDP
+---
+
+# EIDP Workflow Add Or Update Integration Tests For Pdf Discovery
+
+## Action
+
+Follow the add-or-update-integration-tests-for-pdf-discovery workflow:
+1. Modify or add integration test files in tests/integration/ (especially test_fault_injection_pdf_discovery.py)
+2. If needed, update src/eidp/scraper/pdf_discovery.py to support new testable behaviors
+3. Document or assert new batch isolation/fault contracts in tests
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~1x per month
+- Files: tests/integration/test_fault_injection_pdf_discovery.py, src/eidp/scraper/pdf_discovery.py
+
+---
+id: eidp-instinct-file-naming-snake-case
+trigger: "When creating a new Python file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct File Naming Snake Case
+
+## Action
+
+Name the file using snake_case
+
+## Evidence
+
+- Pattern in namingConventions.files: snake_case
+
+---
+id: eidp-instinct-function-naming-camelCase
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Function Naming CamelCase
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: eidp-instinct-class-naming-pascal-case
+trigger: "When defining a new class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Class Naming Pascal Case
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: eidp-instinct-constant-naming-screaming-snake-case
+trigger: "When defining a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Constant Naming Screaming Snake Case
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: eidp-instinct-import-style-relative
+trigger: "When importing modules within the package"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Import Style Relative
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- Pattern in importStyle: relative
+
+---
+id: eidp-instinct-export-style-named
+trigger: "When exporting functions or classes"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Export Style Named
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle: named
+
+---
+id: eidp-instinct-test-file-location-separate
+trigger: "When adding new tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Test File Location Separate
+
+## Action
+
+Place test files in the separate 'tests' directory
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation: separate
+- Examples: tests/integration/test_fault_injection_pdf_discovery.py
+
+---
+id: eidp-instinct-test-types-unit-integration
+trigger: "When deciding test types to write"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Test Types Unit Integration
+
+## Action
+
+Write both unit and integration tests as appropriate
+
+## Evidence
+
+- Pattern in testing.testTypes: unit, integration
+
+---
+id: eidp-instinct-integration-test-pattern
+trigger: "When testing complex behaviors like batch isolation or fault handling"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Integration Test Pattern
+
+## Action
+
+Add or update integration tests in tests/integration/, especially for pdf_discovery
+
+## Evidence
+
+- Workflow: add-or-update-integration-tests-for-pdf-discovery
+- Examples: test(integration): add fault-injection harness for pdf_discovery
+
+---
+id: eidp-instinct-git-commit-conventional-prefix
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Git Commit Conventional Prefix
+
+## Action
+
+Start the commit message with a conventional prefix (docs, test, feat)
+
+## Evidence
+
+- Pattern in commits.prefixes: docs, test, feat
+- Examples: docs: record v530 release gate evidence
+
+---
+id: eidp-instinct-git-commit-length-brief
+trigger: "When composing a commit message"
+confidence: 0.8
+domain: git
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Git Commit Length Brief
+
+## Action
+
+Keep the commit message concise (around 55 characters on average)
+
+## Evidence
+
+- Pattern in commits.averageLength: 55
+
+---
+id: eidp-instinct-update-release-documentation
+trigger: "When preparing for or documenting a new release or status update"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Update Release Documentation
+
+## Action
+
+Update or create release exception record in docs/reports/, update the current objective evidence checklist, and refresh the admin checklist if needed
+
+## Evidence
+
+- Workflow: update-release-documentation
+- Examples: docs: refresh v1 release admin checklist for v530
+
+---
+id: eidp-instinct-add-update-integration-tests-pdf-discovery
+trigger: "When new fault scenarios are identified or when improving test coverage for pdf_discovery batch behavior"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: ShunmeiCho/EIDP
+---
+
+# Eidp Instinct Add Update Integration Tests Pdf Discovery
+
+## Action
+
+Modify or add integration test files in tests/integration/ (especially test_fault_injection_pdf_discovery.py), update src/eidp/scraper/pdf_discovery.py if needed, and document/assert new contracts
+
+## Evidence
+
+- Workflow: add-or-update-integration-tests-for-pdf-discovery
+- Examples: test(integration): cover 7 Phase A fault cases for pdf_discovery batch isolation
+
