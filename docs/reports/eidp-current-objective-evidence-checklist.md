@@ -7,8 +7,9 @@ PR live state: verify with
 `gh pr view 8 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
 Last recorded live PR check before this status refresh:
 remote head `8f552448e8f42c1dcb7a1d47629917079cbf639d` was `CLEAN` with required
-checks `SUCCESS`, but local source is currently ahead by one commit
-`9331216022e1904361ed8d11d0e24da81637d46a` and has not been pushed.
+checks `SUCCESS`, but local source includes the unpublished v530 package/source
+commit `9331216022e1904361ed8d11d0e24da81637d46a` plus local docs-only release
+evidence refreshes and has not been pushed.
 Latest Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable, refreshed v526 owner docs remain staged, and the remote
@@ -63,7 +64,11 @@ that keeps manual work below the release threshold.
   confirmation/supplement entry points and prefilled manual-entry saves.
 - Latest source/package URL-discovery guardrail: v530 adds an optional
   `external` JSON-command search provider for official URL candidate discovery
-  only, removes target-form/PDF search terms from URL completion, and rejects
+  only. This is a Layer-3 fallback for official entrance/index candidates, not
+  a PDF acquisition source. The release path must continue to start from the 47
+  prefectural official confirmed-institution indexes, registered `SchoolSite`
+  rows / exact official overrides, and bounded same-site disclosure expansion;
+  v530 removes target-form/PDF search terms from URL completion and rejects
   direct document/PDF SERP hits before they can become `SchoolSite` rows.
 - Latest docs-only owner-decision handoff refresh: the Windows-staged v526
   owner docs ZIP now includes `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`
@@ -196,8 +201,8 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   `dist/eidp-windows-v526.zip` with `docs_only_stale=true`, SHA256
   `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`,
   validator/distribution unit `188 passed`, mypy/ruff pass, discovery gold
-  45/45 exact, and package verification pass. Live PR #2 state for that head was
-  `mergeStateStatus=CLEAN`, with `Python quality gates` and
+  45/45 exact, and package verification pass. The then-live historical PR state
+  for that head was `mergeStateStatus=CLEAN`, with `Python quality gates` and
   `Ship gate contract` successful for both push and pull_request CI runs.
   This supersedes the earlier post-`a8decad` campus-network gate-state note;
   `a8decad` remains the source commit for the `10.x` / proxy guidance.
@@ -212,5 +217,5 @@ do not remove the FY2026/R8 release blocker.
    exception path.
 2. Run the owner real Windows cycle and return KPI/sign-off evidence.
 3. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
-4. Merge PR #2 and create the signed `v1.0` tag only after the above blockers
+4. Merge PR #8 and create the signed `v1.0` tag only after the above blockers
    are resolved.
