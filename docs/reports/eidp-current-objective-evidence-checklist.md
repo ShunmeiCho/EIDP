@@ -5,11 +5,12 @@ Branch: `test/fault-injection-pdf-discovery`
 PR: `#8`
 PR live state: verify with
 `gh pr view 8 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
-Last recorded live PR check before this status refresh:
+Last recorded live PR check after this status refresh:
 remote head `8f552448e8f42c1dcb7a1d47629917079cbf639d` was `CLEAN` with required
-checks `SUCCESS`, but local source includes the unpublished v530 package/source
-commit `9331216022e1904361ed8d11d0e24da81637d46a` plus local docs-only release
-evidence refreshes and has not been pushed.
+checks `SUCCESS` on 2026-06-19. The local branch still contains unpublished
+v530 package/source and docs-only release-evidence commits, including
+`9331216022e1904361ed8d11d0e24da81637d46a`, so GitHub checks do not yet cover
+the current local candidate.
 Latest Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win`
 is reachable, refreshed v526 owner docs remain staged, and the remote
