@@ -21,11 +21,18 @@ after the initial same-day `ssh win hostname` timeout, Windows SSH was restored
 and v532 side-by-side validation completed. Evidence is recorded in
 `docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md` and
 `logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-20260620.zip`.
+Current v533 local source/package check:
+`docs/reports/2026-06-20-v533-mext-authority-index-package.md` records the
+new MEXT T0 target-institution index package gate. The v533 ZIP packages the
+official MEXT page snapshot, source catalog, and target-institution workbook,
+and the verifier counts `mext_target_university_rows=769`,
+`mext_target_specialty_rows=2067`, and `mext_target_total_rows=3132`.
 Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
 objective. It intentionally replaces the older historical v464/v460 narrative
-with the current v532 main package and Windows side-by-side state.
+with the current v533 local package/source state and the current v532 Windows
+side-by-side state.
 
 ## Objective Restated
 
@@ -55,12 +62,12 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Latest local package/source candidate: `dist/eidp-windows-v532.zip`
+- Latest local package/source candidate: `dist/eidp-windows-v533.zip`
 - Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v532.zip`
-- v532 local package/source commit:
-  `723a5072f63e8a874bef85cc52d869f5e6daff15`
-- v532 local package SHA256:
-  `9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c7`
+- v533 local package/source commit:
+  `f83f1dc5439156bb9909ea1df5132bed3a7e9b85`
+- v533 local package SHA256:
+  `0d4ca81a9032db1d8b98bf69ba76a4181d99d6bb8cd0091de22df211dc5d5f57`
 - Latest complete Windows side-by-side smoke: v532
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
@@ -109,6 +116,12 @@ that keeps manual work below the release threshold.
   external-SSD, or Windows locations. v532 remains blocked for OCR runtime
   scope unless an approved add-on is restored/rebuilt or OCR is explicitly
   removed from the selected v1.0 release scope.
+- Latest source/package MEXT official-index gate: v533 packages
+  `data/authority-index/sources.csv`, the MEXT target-institution page
+  snapshot, and `data/mext/target_institutions.xlsx`. The verifier rejects
+  non-MEXT/search-like sources and requires official MEXT T0 catalog metadata,
+  `auto_accept_allowed=yes`, and workbook thresholds for universities,
+  specialty schools, short colleges, and kosen.
 - Latest source/package domain taxonomy and operator terminology fix: v532 is
   the post-merge `main` rebuild carrying the v531 domain work. It adds
   controlled `DocumentKind`, `ReviewTaskKind`, source-trust, and workflow-status
@@ -135,7 +148,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | --- | --- | --- |
 | 47 prefecture official-list seeds are packaged and usable | `logs/win-v532-main-post-merge-release-gates-20260619.json`, result `package_verify` stdout: `prefecture_seed_rows=47`, `prefecture_seed_downloadable=47`, `prefecture_seed_parser_supported=47`, `prefecture_seed_school_rows_total=2148` | PASS |
 | 1,700+ vocational-school scope | v532 Windows setup validator `win-v532-stage6-v532-env0-validate-after-setup-20260620.json`: `.details.school_count=2418`, `.details.school_fiscal_year_status_count=2418`, `.details.sqlite_integrity_check="ok"` | PASS |
-| 700-ish university scope | The current v532 side-by-side evidence and packaged official-index registry prove the vocational/specialty-school lane. No equivalent university `AuthorityIndex` source catalog, parser coverage, target-document discovery lane, or Excel mapping evidence is present yet. | NOT IMPLEMENTED |
+| 700-ish university scope | v533 package verifier now requires the MEXT T0 target-institution catalog and workbook in the ZIP. `verify_windows_distribution.py dist/eidp-windows-v533.zip --json` reported `mext_target_university_rows=769`, `mext_target_specialty_rows=2067`, `mext_target_short_college_rows=239`, `mext_target_kosen_rows=57`, and `mext_target_total_rows=3132`. This proves the official source-catalog/package gate only; university target-document discovery, extraction, and Excel mapping are still not proven. | PASS for T0 index/package gate, PARTIAL for full university lane |
 | Current rolling FY is FY2026/Reiwa 8 | v532 Windows `last_run.json`: `current_fy=2026`, `status=success`, `selection_mode=target_missing` | PASS |
 | Strict mode excludes old-year fallback from success | v532 `last_run.json` keeps `ship_gate_status=below_gate` at strict/Excel-ready `12/50 (24.0%)`; old/stale target forms are not counted as release success | PASS for contract, FAIL for release yield |
 | Current FY2026 strict target-PDF/Excel-ready yield is `>= 60%` | v532 Windows limit-50 canary: strict/Excel-ready `12/50 (24.0%)`; v526/v525/v524/v523 Windows limit-50 canaries: strict/Excel-ready `5/50 (10.0%)`; v515 Mac continuation canary from the v513 isolated DB: strict `2/50 (4.0%)`; v516/v519/v521 target-missing/continuation canaries remained `0/50 (0.0%)`; v522 same-domain `2025 -> 2026` and short-year/R7 replacement probe found `404` for all 47 expanded candidates; production-scale upper-bound proof: max possible `39.3%` after 607/1000 schools | FAIL |
@@ -251,6 +264,16 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   `/Volumes/M1nG-ssd/EIDP-artifacts/dist` and
   `/Volumes/M1nG-ssd/EIDP-artifacts/logs`. The v532 ZIP verifier and SHA checks
   still pass through the symlinked `dist/...` paths.
+- Local v533 MEXT T0 authority-index package gate is recorded in
+  `docs/reports/2026-06-20-v533-mext-authority-index-package.md` and
+  `logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`:
+  package `dist/eidp-windows-v533.zip`, SHA256
+  `0d4ca81a9032db1d8b98bf69ba76a4181d99d6bb8cd0091de22df211dc5d5f57`,
+  package/source commit `f83f1dc5439156bb9909ea1df5132bed3a7e9b85`,
+  `package_source_check.ok=true`, `source_dirty=false`, package verification
+  pass, validator/distribution unit `191 passed`, mypy/ruff pass, discovery
+  gold 45/45 exact, and MEXT workbook counts `3132` total, `769` universities,
+  `2067` specialty schools, `239` short colleges, and `57` kosen.
 - v532 Windows connectivity recheck and follow-up are recorded in
   `docs/reports/2026-06-20-v532-windows-connectivity-recheck.md`: the initial
   approved `ssh -o BatchMode=yes -o ConnectTimeout=5 win hostname` timed out

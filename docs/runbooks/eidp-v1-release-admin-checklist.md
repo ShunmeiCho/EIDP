@@ -13,7 +13,8 @@ decision for FY2026/R8 publication lag.
   commit.
 - The selected release candidate has not been Windows side-by-side validated
   after its last code/package change. Current v532 has completed Windows
-  side-by-side smoke, but any later code/package rebuild must repeat it.
+  side-by-side smoke. Current v533 is package/source verified only, so it must
+  repeat Windows side-by-side validation before it can be selected.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
   release scope. Current v532 side-by-side OCR validation failed because the
   OCR add-on is missing; v526 remains the latest package with complete OCR
@@ -29,9 +30,9 @@ decision for FY2026/R8 publication lag.
   `agent-reach` wrappers, may only propose official URL/index candidates and
   must not be used as a direct PDF finder.
 - The roughly 700-university scope is being claimed as complete. The current
-  v532 evidence proves the vocational/specialty-school lane; it does not prove
-  an equivalent university official-index catalog, parser layer, target-document
-  discovery lane, or Excel mapping.
+  v533 evidence proves the MEXT T0 official source-catalog/package gate with
+  769 university rows; it does not prove the university target-document
+  discovery lane, extraction lane, or Excel mapping.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
@@ -54,16 +55,15 @@ Expected:
 - PR #8 is `MERGED` with merge commit
   `723a5072f63e8a874bef85cc52d869f5e6daff15`.
 
-Confirm the current package evidence:
+Confirm the current local package/source evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v532.zip
-cat dist/eidp-windows-v532.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v532.zip --json
+shasum -a 256 dist/eidp-windows-v533.zip
+cat dist/eidp-windows-v533.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v533.zip --json
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v532.zip \
-  --allow-docs-only-stale-package \
-  --keep-going \
+  dist/eidp-windows-v533.zip \
+  --skip-full-unit \
   --json
 
 # Only if OCR is in the selected release scope and the add-on ZIP is present:
@@ -71,7 +71,7 @@ test -f dist/eidp-ocr-addon-windows-v497-smoke.zip
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v532.zip \
+  dist/eidp-windows-v533.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -79,7 +79,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c7
+0d4ca81a9032db1d8b98bf69ba76a4181d99d6bb8cd0091de22df211dc5d5f57
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -116,8 +116,10 @@ unless an older package is actively needed for side-by-side evidence transfer.
 
 After the v532 `main` rebuild, superseded generated ZIPs
 `dist/eidp-windows-v527.zip` through `dist/eidp-windows-v531.zip` and their
-`.sha256` sidecars were deleted. `dist/` was reduced from about 1.5 GB to about
-546 MB.
+`.sha256` sidecars were deleted. The v533 rebuild refreshed
+`dist/eidp-windows-v533.zip` and the `dist/eidp-windows.zip` latest alias on
+the external SSD. AppleDouble `._*` files created by macOS on the external
+volume were removed from `dist/` after the rebuild.
 
 On the current Mac workstation, generated artifacts are stored on the external
 SSD mounted at `/Volumes/M1nG-ssd`:
@@ -136,6 +138,10 @@ reattached.
 
 Before tagging, attach or reference:
 
+- v533 package/non-Windows gate JSON:
+  `logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`;
+- v533 MEXT authority-index package report:
+  `docs/reports/2026-06-20-v533-mext-authority-index-package.md`;
 - v532 package/non-Windows gate JSON:
   `logs/win-v532-main-post-merge-release-gates-20260619.json`;
 - v532 Windows connectivity recheck:
@@ -172,9 +178,10 @@ Before tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v532 local package evidence is recorded in
-`logs/win-v532-main-post-merge-release-gates-20260619.json`. Current v532
-Windows side-by-side smoke evidence is summarized in
+Current v533 local package evidence is recorded in
+`docs/reports/2026-06-20-v533-mext-authority-index-package.md` and
+`logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`. Current
+v532 Windows side-by-side smoke evidence is summarized in
 `docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md`. The v532
 owner/operator request is prepared at
 `docs/runbooks/eidp-v532-owner-request-20260620.txt`; it is a handoff aid, not
