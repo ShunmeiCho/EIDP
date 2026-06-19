@@ -409,6 +409,32 @@ def _check_no_historical_runbooks(check: ZipCheck, names: set[str]) -> None:
         )
 
 
+def _check_no_demo_prototype_runtime(check: ZipCheck, names: set[str]) -> None:
+    """Reject design/demo prototype assets from the operator runtime ZIP.
+
+    The operations-console HTML prototype is useful as a design contract, but
+    it is not the Streamlit production UI. If generated runtime files or
+    standalone demo HTML enter the Windows ZIP, operators can mistake a mock UI
+    for the audited application.
+    """
+    forbidden_prefixes = (
+        "UI-example/",
+        "docs/design/operations-console-demo/",
+    )
+    forbidden_names = sorted(
+        name
+        for name in names
+        if any(name.startswith(prefix) for prefix in forbidden_prefixes)
+        or Path(name).name.lower() == "support.js"
+        or Path(name).name.lower().endswith(".standalone.html")
+    )
+    if forbidden_names:
+        check.fail(
+            "zip contains demo/prototype UI assets; keep HTML prototypes under docs/design "
+            f"and out of the Windows operator runtime: {forbidden_names[:8]}"
+        )
+
+
 def _check_wheelhouse(check: ZipCheck, names: set[str], *, require_project: bool) -> None:
     wheels = sorted(name for name in names if name.startswith("wheelhouse/") and name.endswith(".whl"))
     check.details["wheel_count"] = len(wheels)
@@ -2193,6 +2219,7 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_no_runtime_data(check, names)
     _check_no_secret_files(check, names)
     _check_no_historical_runbooks(check, names)
+    _check_no_demo_prototype_runtime(check, names)
     _check_wheelhouse(check, names, require_project=True)
     _check_bat_contracts(check, names)
     _check_python_entrypoint_contracts(check, names)

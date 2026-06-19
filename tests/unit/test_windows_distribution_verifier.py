@@ -644,6 +644,19 @@ def test_verify_core_zip_requires_competition_excel_template(tmp_path: Path) -> 
     assert any("sample/20250826更新版_競合校の在校生数.xlsx" in error for error in check.errors)
 
 
+def test_verify_core_zip_rejects_demo_prototype_runtime_assets(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/design/operations-console-demo/eidp-operations-console.demo.standalone.html"] = "<html></html>"
+    entries["docs/design/operations-console-demo/support.js"] = "// generated runtime"
+    entries["UI-example/old-prototype.html"] = "<html></html>"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("demo/prototype UI assets" in error for error in check.errors)
+
+
 def test_verify_core_zip_rejects_dirty_build_info(tmp_path: Path) -> None:
     entries = _core_entries()
     build_info = json.loads(entries["BUILD_INFO.json"])
