@@ -62,7 +62,7 @@ READY
 Owner sign-off:
 
 ```text
-Name: Owner Name
+Name: Example Owner
 Date: 2026-05-17
 Decision: READY
 ```
@@ -70,7 +70,7 @@ Decision: READY
 業務員 sign-off:
 
 ```text
-Name: Operator Name
+Name: Example Operator
 Date: 2026-05-17
 Decision: READY
 ```
@@ -155,7 +155,7 @@ Status: `{decision}`
 | --- | --- |
 | Exception reason | `publication_lag` |
 | Decision | `{decision}` |
-| Approver | Owner Name |
+| Approver | Example Owner |
 | Approval date | 2026-05-19 |
 | Release scope | v1.0 may ship on mature FY2025 production-scale proof only |
 | FY2026/R8 status acknowledged | yes |
@@ -808,6 +808,34 @@ def test_verify_stage6_return_exception_rejects_record_date_mismatch(tmp_path: P
     assert "release exception record Date must match Approval date" in result["errors"]
 
 
+def test_verify_stage6_return_exception_rejects_placeholder_approver(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    exception_record.write_text(
+        exception_record.read_text(encoding="utf-8").replace(
+            "| Approver | Example Owner |",
+            "| Approver | Owner Name |",
+        ),
+        encoding="utf-8",
+    )
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "release exception record Approver must not be a placeholder" in result["errors"]
+
+
 def test_verify_stage6_return_exception_rejects_approval_date_before_mature_year_proof(
     tmp_path: Path,
 ) -> None:
@@ -1303,6 +1331,28 @@ def test_verify_stage6_return_rejects_invalid_signoff_dates(tmp_path: Path) -> N
     assert result["ok"] is False
     assert "E2E template Owner sign-off: Date must be YYYY-MM-DD" in result["errors"]
     assert "E2E template 業務員 sign-off: Date must be YYYY-MM-DD" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_placeholder_signoff_names(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template()
+        .replace("Name: Example Owner", "Name: Owner Name")
+        .replace("Name: Example Operator", "Name: Operator Name"),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template Owner sign-off: Name must not be a placeholder" in result["errors"]
+    assert "E2E template 業務員 sign-off: Name must not be a placeholder" in result["errors"]
 
 
 def test_verify_stage6_return_rejects_future_signoff_dates(tmp_path: Path) -> None:

@@ -1456,6 +1456,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "release exception record Date must be YYYY-MM-DD",
             "release exception record Date must not be in the future",
             "release exception record Date must match Approval date",
+            "Approver must not be a placeholder",
+            "Name must not be a placeholder",
             "Approval date must be on or after mature-year proof finished_at date",
             "Release scope",
             "Release scope must limit approval to v1.0 mature-year proof only",

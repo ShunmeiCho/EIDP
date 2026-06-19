@@ -51,6 +51,18 @@ APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR = (
     "release exception record Approval date must be on or after mature-year proof finished_at date"
 )
 RELEASE_EXCEPTION_DATE_MATCH_ERROR = "release exception record Date must match Approval date"
+SIGNOFF_PLACEHOLDER_NAMES = {
+    "approver",
+    "approver name",
+    "operator",
+    "operator name",
+    "owner",
+    "owner name",
+    "your name",
+    "担当者",
+    "承認者",
+    "業務員",
+}
 PLACEHOLDER_RESULTS = {
     "",
     "pass / fail",
@@ -146,6 +158,11 @@ def _header_field_value(text: str, field: str) -> str:
 
 def _is_placeholder(value: str) -> bool:
     return value.strip().lower() in PLACEHOLDER_RESULTS
+
+
+def _is_signoff_placeholder(value: str) -> bool:
+    normalized = value.strip().strip("`").strip().lower()
+    return normalized in SIGNOFF_PLACEHOLDER_NAMES
 
 
 def _is_number(value: object) -> TypeGuard[int | float]:
@@ -398,6 +415,8 @@ def _verify_release_exception_record(
             errors.append(f"release exception record Exception reason mismatch: {value} != {reason}")
         elif row_label == "Decision" and value != "APPROVED":
             errors.append("release exception record Decision must be APPROVED")
+        elif row_label == "Approver" and _is_signoff_placeholder(value):
+            errors.append("release exception record Approver must not be a placeholder")
         elif row_label == "Approval date":
             approval_date = _iso_date_value(value)
             if not _is_placeholder(value) and approval_date is None:
@@ -718,6 +737,8 @@ def _verify_template(
             value = _block_field_value(block, field)
             if not value:
                 errors.append(f"E2E template {marker} {field} is blank")
+            elif field == "Name" and _is_signoff_placeholder(value):
+                errors.append(f"E2E template {marker} Name must not be a placeholder")
             elif field == "Date":
                 signoff_date = _iso_date_value(value)
                 if signoff_date is None:
