@@ -1160,6 +1160,22 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     (fake_repo / "data" / "prefecture-aggregators" / "seed.csv").write_text(
         "pref_key,pref_jp\nfukuoka,福岡県\n", encoding="utf-8",
     )
+    # T0 MEXT target-institution index must ship as the national authority
+    # catalog surface for university and all-institution scope coverage.
+    (fake_repo / "data" / "authority-index").mkdir(parents=True, exist_ok=True)
+    (fake_repo / "data" / "authority-index" / "sources.csv").write_text(
+        "source_id,source_url,artifact_path,trust_tier\n"
+        "mext_target_institutions_20260401,"
+        "https://www.mext.go.jp/a_menu/koutou/hutankeigen/1421838.htm,"
+        "data/mext/target_institutions.xlsx,t0_mext\n",
+        encoding="utf-8",
+    )
+    (fake_repo / "data" / "mext").mkdir(parents=True, exist_ok=True)
+    (fake_repo / "data" / "mext" / "target_institutions.xlsx").write_bytes(b"PK\x03\x04 mext xlsx")
+    (fake_repo / "data" / "mext" / "target_institutions_page.html").write_text(
+        "https://www.mext.go.jp/a_menu/koutou/hutankeigen/1421838.htm 20260401 xlsx",
+        encoding="utf-8",
+    )
     # Artifacts directory must NOT be in the ZIP (downloaded at runtime).
     (fake_repo / "data" / "prefecture-aggregators" / "artifacts").mkdir(parents=True, exist_ok=True)
     (fake_repo / "data" / "prefecture-aggregators" / "artifacts" / "fukuoka.pdf").write_bytes(b"%PDF-fake")
@@ -1328,6 +1344,18 @@ def test_collect_zip_members_includes_alembic_and_weekly_runner(tmp_path: Path):
     assert "data/prefecture-aggregators/seed.csv" in arcs, (
         "Sprint 8.7.e: prefecture seed.csv carries artifact URLs and "
         "must be in the ZIP for bootstrap_pdfs.bat to use"
+    )
+    assert "data/authority-index/sources.csv" in arcs, (
+        "MEXT T0 authority-index source catalog must ship so university scope "
+        "does not depend on broad search or developer-only files"
+    )
+    assert "data/mext/target_institutions.xlsx" in arcs, (
+        "MEXT target-institution workbook must ship as the national official "
+        "index for university and all-institution scope verification"
+    )
+    assert "data/mext/target_institutions_page.html" in arcs, (
+        "MEXT target-institution source page snapshot must ship so the workbook "
+        "has an auditable official index page"
     )
     assert "data/url-discovery/discovered-urls-50.csv" in arcs, (
         "Sprint 8.7.f: known school URL seeds must be in the ZIP so "

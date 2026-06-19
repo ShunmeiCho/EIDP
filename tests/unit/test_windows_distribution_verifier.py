@@ -7,8 +7,10 @@ import importlib.util
 import json
 import sys
 import zipfile
+from io import BytesIO
 from pathlib import Path
 
+import openpyxl
 import pytest
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
@@ -140,6 +142,70 @@ def _discovery_gold_expected_predictions() -> str:
             )
         )
     return "\n".join(lines) + "\n"
+
+
+def _authority_index_sources_csv() -> str:
+    return (
+        "source_id,scope,institution_types,authority_code,authority_name,authority_type,trust_tier,"
+        "source_url,artifact_path,artifact_format,as_of_date,min_total_rows,min_university_rows,"
+        "min_specialty_rows,auto_accept_allowed,notes\n"
+        "mext_target_institutions_20260401,national,大学|短期大学|高等専門学校|専門学校,"
+        "mext,文部科学省,mext,t0_mext,"
+        "https://www.mext.go.jp/a_menu/koutou/hutankeigen/1421838.htm,"
+        "data/mext/target_institutions.xlsx,xlsx,2026-04-01,3000,700,1700,yes,"
+        "T0 MEXT confirmation-institution list\n"
+    )
+
+
+def _mext_target_institutions_page_html() -> str:
+    return (
+        '<html><head><meta property="og:site_name" content="文部科学省ホームページ" /></head>'
+        '<body>https://www.mext.go.jp/a_menu/koutou/hutankeigen/1421838.htm'
+        '<body><a href="/content/20260401-mxt_gakushi01_000001167_1.xlsx">'
+        "高等教育の修学支援新制度の対象機関リスト</a></body></html>"
+    )
+
+
+def _mext_target_institutions_xlsx(
+    *,
+    university_rows: int = 769,
+    specialty_rows: int = 2067,
+    short_college_rows: int = 239,
+    kosen_rows: int = 57,
+) -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "20260401"
+    ws.append(["高等教育の修学支援新制度の対象機関リスト"])
+    ws.append([None, None, university_rows + specialty_rows + short_college_rows + kosen_rows])
+    ws.append(["学校コード", "区分", "学校種", "確認大学等", None, None, None, None, "設置者"])
+    ws.append([None, None, None, "名称", "所在地", "所在県", None, "開設年度", "名称"])
+    row_no = 1
+    for school_type, count in (
+        ("大学", university_rows),
+        ("専門学校", specialty_rows),
+        ("短期大学", short_college_rows),
+        ("高等専門学校", kosen_rows),
+    ):
+        for _ in range(count):
+            ws.append(
+                [
+                    f"F{row_no:011d}",
+                    "私立",
+                    school_type,
+                    f"テスト{school_type}{row_no}",
+                    "東京都千代田区1-1",
+                    13,
+                    "東京都",
+                    "令和元年度以前",
+                    "学校法人テスト",
+                ]
+            )
+            row_no += 1
+    out = BytesIO()
+    wb.save(out)
+    wb.close()
+    return out.getvalue()
 
 
 def _core_entries() -> dict[str, bytes | str]:
@@ -330,6 +396,9 @@ def _core_entries() -> dict[str, bytes | str]:
             encoding="utf-8"
         ),
         "src/sitecustomize.py": (REPO_ROOT / "src" / "sitecustomize.py").read_text(encoding="utf-8"),
+        "data/authority-index/sources.csv": _authority_index_sources_csv(),
+        "data/mext/target_institutions.xlsx": _mext_target_institutions_xlsx(),
+        "data/mext/target_institutions_page.html": _mext_target_institutions_page_html(),
         "data/prefecture-aggregators/seed.csv": _prefecture_seed_csv(),
         "data/url-discovery/discovered-urls-50.csv": (
             "school_name,url\n東京都立大学,https://www.tmu.ac.jp/\n"
@@ -519,6 +588,49 @@ def test_verify_core_zip_accepts_complete_distribution(tmp_path: Path) -> None:
     assert check.details["size_bytes"] == zip_path.stat().st_size
     assert check.details["sha256"] == hashlib.sha256(zip_path.read_bytes()).hexdigest()
     assert check.details["build_info"]["git_commit"] == "a" * 40
+    assert check.details["mext_target_university_rows"] == 769
+    assert check.details["mext_target_specialty_rows"] == 2067
+
+
+def test_verify_core_zip_requires_mext_authority_index_surface(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries.pop("data/authority-index/sources.csv")
+    entries.pop("data/mext/target_institutions.xlsx")
+    entries.pop("data/mext/target_institutions_page.html")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("data/authority-index/sources.csv" in error for error in check.errors)
+    assert any("data/mext/target_institutions.xlsx" in error for error in check.errors)
+    assert any("data/mext/target_institutions_page.html" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_mext_catalog_search_or_nonofficial_source(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["data/authority-index/sources.csv"] = _authority_index_sources_csv().replace(
+        "https://www.mext.go.jp/a_menu/koutou/hutankeigen/1421838.htm",
+        "https://www.google.com/search?q=school+pdf",
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("official mext.go.jp URL" in error for error in check.errors)
+
+
+def test_verify_core_zip_rejects_mext_target_list_without_university_scope(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["data/mext/target_institutions.xlsx"] = _mext_target_institutions_xlsx(university_rows=699)
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert check.details["mext_target_university_rows"] == 699
+    assert any("university rows below 700-scope floor" in error for error in check.errors)
 
 
 def test_verify_core_zip_requires_competition_excel_template(tmp_path: Path) -> None:

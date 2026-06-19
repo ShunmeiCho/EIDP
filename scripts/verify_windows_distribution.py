@@ -21,8 +21,11 @@ import re
 import sys
 import zipfile
 from dataclasses import dataclass, field
+from io import BytesIO
 from pathlib import Path
 from typing import Any
+
+import openpyxl  # type: ignore[import-untyped]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -128,6 +131,9 @@ CORE_REQUIRED_EXACT = (
     "scripts/rotate_audit_outbox.py",
     "scripts/prune_pdf_storage.py",
     "scripts/disk_health_check.py",
+    "data/authority-index/sources.csv",
+    "data/mext/target_institutions.xlsx",
+    "data/mext/target_institutions_page.html",
     "data/prefecture-aggregators/seed.csv",
     "data/url-discovery/discovered-urls-50.csv",
     "data/url-discovery/corporation_domains.csv",
@@ -456,6 +462,16 @@ def _read_zip_text(check: ZipCheck, member: str) -> str | None:
         return None
 
 
+def _read_zip_bytes(check: ZipCheck, member: str) -> bytes | None:
+    if not zipfile.is_zipfile(check.path):
+        return None
+    with zipfile.ZipFile(check.path) as zf:
+        try:
+            return zf.read(member)
+        except KeyError:
+            return None
+
+
 def _parser_keys_from_source(check: ZipCheck, source: str, member: str) -> set[str]:
     """Extract parser registry keys from the packaged source file.
 
@@ -592,6 +608,104 @@ def _check_prefecture_seed_contract(check: ZipCheck, names: set[str]) -> None:
     check.details["prefecture_seed_school_rows_total"] = school_total
     check.details["prefecture_seed_with_school_link_signal"] = with_school_link_signal
     check.details["prefecture_seed_supplemental_rows"] = supplemental_rows
+
+
+def _check_mext_authority_index_contract(check: ZipCheck, names: set[str]) -> None:
+    """Validate the T0 MEXT authority-index surface shipped in the ZIP.
+
+    The product objective covers both vocational/specialty schools and roughly
+    700 universities. The prefecture seed proves the vocational official-index
+    lane; this gate keeps the national MEXT confirmed-institution list from
+    being dropped from release packages or replaced by broad search inputs.
+    """
+
+    catalog_member = "data/authority-index/sources.csv"
+    page_member = "data/mext/target_institutions_page.html"
+    workbook_member = "data/mext/target_institutions.xlsx"
+    if catalog_member not in names or page_member not in names or workbook_member not in names:
+        return
+
+    catalog_body = _read_zip_text(check, catalog_member)
+    page_body = _read_zip_text(check, page_member)
+    workbook_body = _read_zip_bytes(check, workbook_member)
+    if catalog_body is None or page_body is None or workbook_body is None:
+        return
+
+    records = list(csv.DictReader(catalog_body.splitlines()))
+    mext_records = [
+        row
+        for row in records
+        if (row.get("source_id") or "").strip() == "mext_target_institutions_20260401"
+    ]
+    if len(mext_records) != 1:
+        check.fail(
+            f"{catalog_member} must contain exactly one mext_target_institutions_20260401 row"
+        )
+        return
+    mext_record = mext_records[0]
+
+    source_url = (mext_record.get("source_url") or "").strip()
+    artifact_path = (mext_record.get("artifact_path") or "").strip()
+    trust_tier = (mext_record.get("trust_tier") or "").strip()
+    authority_type = (mext_record.get("authority_type") or "").strip()
+    institution_types = (mext_record.get("institution_types") or "").strip()
+    auto_accept = (mext_record.get("auto_accept_allowed") or "").strip().lower()
+    if not source_url.startswith("https://www.mext.go.jp/"):
+        check.fail(f"{catalog_member} MEXT source_url must be an official mext.go.jp URL")
+    if artifact_path != workbook_member:
+        check.fail(f"{catalog_member} MEXT artifact_path must point to {workbook_member}")
+    if trust_tier != "t0_mext":
+        check.fail(f"{catalog_member} MEXT trust_tier must be t0_mext")
+    if authority_type != "mext":
+        check.fail(f"{catalog_member} MEXT authority_type must be mext")
+    if auto_accept != "yes":
+        check.fail(f"{catalog_member} MEXT auto_accept_allowed must be yes")
+    for required_type in ("大学", "専門学校"):
+        if required_type not in institution_types:
+            check.fail(f"{catalog_member} MEXT institution_types missing {required_type}")
+
+    if "mext.go.jp" not in page_body or "20260401" not in page_body or ".xlsx" not in page_body:
+        check.fail(f"{page_member} does not look like the MEXT target-institutions index page")
+
+    try:
+        workbook = openpyxl.load_workbook(BytesIO(workbook_body), read_only=True, data_only=True)
+    except Exception as exc:  # pragma: no cover - openpyxl exception taxonomy is broad.
+        check.fail(f"{workbook_member} cannot be read as XLSX: {exc}")
+        return
+    try:
+        worksheet = workbook[workbook.sheetnames[0]]
+        counts: dict[str, int] = {}
+        for row in worksheet.iter_rows(min_row=5, values_only=True):
+            school_code = str(row[0]).strip() if row and row[0] else ""
+            school_type = str(row[2]).strip() if len(row) > 2 and row[2] else ""
+            if not school_code or not school_type:
+                continue
+            counts[school_type] = counts.get(school_type, 0) + 1
+    finally:
+        workbook.close()
+
+    total_rows = sum(counts.values())
+    university_rows = counts.get("大学", 0)
+    specialty_rows = counts.get("専門学校", 0)
+    short_college_rows = counts.get("短期大学", 0)
+    kosen_rows = counts.get("高等専門学校", 0)
+
+    check.details["mext_target_total_rows"] = total_rows
+    check.details["mext_target_university_rows"] = university_rows
+    check.details["mext_target_specialty_rows"] = specialty_rows
+    check.details["mext_target_short_college_rows"] = short_college_rows
+    check.details["mext_target_kosen_rows"] = kosen_rows
+
+    if total_rows < 3000:
+        check.fail(f"{workbook_member} target-institution row count too low: {total_rows}")
+    if university_rows < 700:
+        check.fail(f"{workbook_member} university rows below 700-scope floor: {university_rows}")
+    if specialty_rows < 1700:
+        check.fail(f"{workbook_member} specialty-school rows below 1700-scope floor: {specialty_rows}")
+    if short_college_rows < 200:
+        check.fail(f"{workbook_member} short-college rows below expected floor: {short_college_rows}")
+    if kosen_rows < 50:
+        check.fail(f"{workbook_member} kosen rows below expected floor: {kosen_rows}")
 
 
 def _read_zip_json(check: ZipCheck, member: str, *, label: str) -> dict[str, Any] | None:
@@ -2084,6 +2198,7 @@ def verify_core_zip(path: Path) -> ZipCheck:
     _check_python_entrypoint_contracts(check, names)
     _check_operator_runbook_contract(check, names)
     _check_prefecture_seed_contract(check, names)
+    _check_mext_authority_index_contract(check, names)
     _check_discovery_gold_set_contract(check, names)
     _check_build_info(check, names)
 

@@ -538,6 +538,18 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
     if pref_seed.is_file():
         members.append((pref_seed, "data/prefecture-aggregators/seed.csv"))
 
+    # data/authority-index/sources.csv + data/mext target institution index —
+    # MEXT is the T0 source for the national confirmed-institution universe.
+    # This is the source-catalog entry point for the university lane; it is not
+    # a broad search/PDF discovery source.
+    authority_sources = repo_root / "data" / "authority-index" / "sources.csv"
+    if authority_sources.is_file():
+        members.append((authority_sources, "data/authority-index/sources.csv"))
+    for name in ("target_institutions.xlsx", "target_institutions_page.html"):
+        mext_index = repo_root / "data" / "mext" / name
+        if mext_index.is_file():
+            members.append((mext_index, f"data/mext/{name}"))
+
     # data/url-discovery/*.csv — bootstrap_pdf_pipeline.py Step 2b imports
     # known school URL seeds and corporation-domain fallbacks before PDF
     # discovery. These are deterministic seed inputs, unlike downloaded

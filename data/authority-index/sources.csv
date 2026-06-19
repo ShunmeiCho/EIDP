@@ -1,0 +1,2 @@
+source_id,scope,institution_types,authority_code,authority_name,authority_type,trust_tier,source_url,artifact_path,artifact_format,as_of_date,min_total_rows,min_university_rows,min_specialty_rows,auto_accept_allowed,notes
+mext_target_institutions_20260401,national,大学|短期大学|高等専門学校|専門学校,mext,文部科学省,mext,t0_mext,https://www.mext.go.jp/a_menu/koutou/hutankeigen/1421838.htm,data/mext/target_institutions.xlsx,xlsx,2026-04-01,3000,700,1700,yes,"T0 MEXT confirmation-institution list; seed authority index for university and national institution-scope coverage, not a PDF search source."
