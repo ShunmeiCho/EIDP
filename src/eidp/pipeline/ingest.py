@@ -873,7 +873,7 @@ def run_ingestion(
                 # PDF carries one high-conf dept and one low-conf dept, the
                 # low-conf row was rejected from business tables but the document was being marked
                 # ``ingested`` because yearly_current > 0. The operator
-                # would never see this PDF in PDF確認・手入力 even though
+                # would never see this PDF in 申請書PDF確認 even though
                 # part of the data needs verification. Reverse the priority:
                 # any review-pending row routes the document to review_pending,
                 # regardless of how many rows landed at is_current=True.

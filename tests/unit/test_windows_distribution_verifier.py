@@ -178,11 +178,11 @@ def _core_entries() -> dict[str, bytes | str]:
         "docs/runbooks/eidp-windows.md": (
             "# runbook\n"
             "業務員クイック\n"
-            "学校別タスク\n"
+            "学校キュー\n"
             "実行中のパッケージ\n"
             "詳細 operator\n"
             "週次URL/PDF再取得\n"
-            "対象年度を変更して保存すると、学校別タスクも同時に再計算されます\n"
+            "対象年度を変更して保存すると、学校キューも同時に再計算されます\n"
             "scripts\\weekly_run.bat` は管理者向けの復旧入口\n"
             "logs\\stage6-recovery-*.json\n"
             "EIDP-stage6-recovery.bat\n"
@@ -2028,7 +2028,7 @@ def test_verify_core_zip_rejects_stale_operator_runbook(tmp_path: Path) -> None:
     check = module.verify_core_zip(zip_path)
 
     assert not check.ok
-    assert any("学校別タスク" in error for error in check.errors)
+    assert any("学校キュー" in error for error in check.errors)
     assert any("12 ページ" in error for error in check.errors)
 
 
@@ -2037,7 +2037,7 @@ def test_verify_core_zip_requires_current_operator_runbook_guidance(tmp_path: Pa
     entries["docs/runbooks/eidp-windows.md"] = (
         "# runbook\n"
         "業務員クイック\n"
-        "学校別タスク\n"
+        "学校キュー\n"
         "詳細 operator\n"
     )
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
@@ -2046,7 +2046,7 @@ def test_verify_core_zip_requires_current_operator_runbook_guidance(tmp_path: Pa
 
     assert not check.ok
     assert any("週次URL/PDF再取得" in error for error in check.errors)
-    assert any("学校別タスクも同時に再計算" in error for error in check.errors)
+    assert any("学校キューも同時に再計算" in error for error in check.errors)
     assert any("アンチウイルスにより隔離" in error for error in check.errors)
     assert any("weekly_run.bat" in error for error in check.errors)
     assert any("data\\.lock" in error for error in check.errors)

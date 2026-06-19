@@ -303,7 +303,7 @@ def action_warning_message(outcome: UrlCandidateActionOutcome) -> str | None:
 
 
 def render(session: Session, *, lock_path: Path | None = None) -> None:
-    st.title("URL候補レビュー")
+    st.title("情報公開ページ候補")
     if lock_path is not None and probe_lock(lock_path).held:
         st.warning("初回取得または週次処理中です。完了後に確認してください。")
         return

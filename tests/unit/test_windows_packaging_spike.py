@@ -578,7 +578,7 @@ def test_first_setup_uses_existing_cli_command_for_master(bat_files: dict[str, s
 
 
 def test_first_setup_rebuilds_school_year_tasks(bat_files: dict[str, str]):
-    """The first UI screen is 学校別タスク, so setup must prebuild it.
+    """The first UI screen is 学校キュー, so setup must prebuild it.
 
     Otherwise a clean Windows install passes schema validation but the
     operator lands on "初回は再計算してください", which breaks the

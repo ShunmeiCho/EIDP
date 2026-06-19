@@ -426,7 +426,7 @@ def operator_url_reuse_notice(classifier: str) -> tuple[str, str]:
         )
     return (
         "info",
-        "URLを保存しました。来年度以降も使える入口かどうかは、学校別タスクのURL種別で確認してください。",
+        "URLを保存しました。来年度以降も使える入口かどうかは、学校キューのURL種別で確認してください。",
     )
 
 
@@ -923,7 +923,7 @@ def _format_export_exception(exc: Exception) -> str:
 def page_exports(session: Session, *, lock_path: Path | None = None) -> None:
     st.header("Excel出力（管理者向け）")
     st.caption(
-        "通常の週次業務では「Excel プレビュー」から確認・ダウンロードします。"
+        "通常の週次業務では「Excel出力」から確認・ダウンロードします。"
         "この詳細ページは、保存先やテンプレートを管理者が明示して出力するための画面です。"
     )
     lock_held = _operator_lock_held(lock_path)
@@ -2177,7 +2177,7 @@ def render_sidebar_todo(session: Session) -> None:
         _todo_line(
             "対象年度 要対応",
             target.needs_action,
-            hint="① 学校別タスク",
+            hint="① 学校キュー",
             urgent=target.needs_action > 0,
         )
         _todo_line(

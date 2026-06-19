@@ -112,7 +112,7 @@ The weekly runner does:
 - shared lock acquisition
 
 The weekly runner does not generate Excel. Operators generate Excel from the
-Streamlit `Excel プレビュー` page after reviewing queued items.
+Streamlit `Excel出力` page after reviewing queued items.
 
 ## 4. Database Backend
 

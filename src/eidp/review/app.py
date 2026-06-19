@@ -49,10 +49,10 @@ PAGE_SETTINGS = "settings"
 PAGE_BUG_REPORT = "bug_report"
 
 QUICK_PAGES = [
-    (PAGE_TASKS, "① 学校別タスク"),
-    (PAGE_MANUAL_ENTRY, "② PDF確認・手入力"),
-    (PAGE_FISCAL_YEAR_OVERRIDE, "③ 年度判定・修正"),
-    (PAGE_EXCEL_PREVIEW, "④ Excel プレビュー"),
+    (PAGE_TASKS, "① 学校キュー"),
+    (PAGE_MANUAL_ENTRY, "② 申請書PDF確認"),
+    (PAGE_FISCAL_YEAR_OVERRIDE, "③ 対象年度確認"),
+    (PAGE_EXCEL_PREVIEW, "④ Excel出力"),
     (PAGE_SETTINGS, "⑤ 設定（年度・OCR・API）"),
 ]
 
@@ -63,8 +63,8 @@ DETAIL_PAGES = [
     (PAGE_EXPORTS, "Excel出力（管理者向け）"),
     (PAGE_GAPS, "マッチング漏れ一覧"),
     (PAGE_REJECTIONS, "除外PDF履歴"),
-    (PAGE_PREFECTURE_REMARKS, "都道府県公式インデックス"),
-    (PAGE_URL_CANDIDATE_REVIEW, "URL候補レビュー"),
+    (PAGE_PREFECTURE_REMARKS, "公式索引管理"),
+    (PAGE_URL_CANDIDATE_REVIEW, "情報公開ページ候補"),
     (PAGE_AUDIT_LOG, "監査ログ"),
     (PAGE_BUG_REPORT, "不具合レポート"),
     (PAGE_SCHOOL_CODE, "学校コード確認"),
@@ -831,7 +831,7 @@ def main() -> None:
     st.sidebar.divider()
     st.sidebar.caption("週次運用フロー")
     st.sidebar.caption(
-        "① 学校別タスク → URL追加/PDF確認 → 年度修正 → Excel確認"
+        "① 学校キュー → 情報公開ページ追加/申請書PDF確認 → 対象年度確認 → Excel出力"
     )
     st.sidebar.caption(_build_info_caption(settings.app_root))
 

@@ -1843,11 +1843,11 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
     _reject_local_user_path_tokens(check, body, member)
     for token in (
         "業務員クイック",
-        "学校別タスク",
+        "学校キュー",
         "実行中のパッケージ",
         "詳細 operator",
         "週次URL/PDF再取得",
-        "対象年度を変更して保存すると、学校別タスクも同時に再計算されます",
+        "対象年度を変更して保存すると、学校キューも同時に再計算されます",
         "scripts\\weekly_run.bat` は管理者向けの復旧入口",
         "logs\\stage6-recovery-*.json",
         "stage6_residual_cleanup.bat",

@@ -1,4 +1,4 @@
-"""Streamlit page: PDF確認・手入力 (Sprint 8.4.c.1).
+"""Streamlit page: 申請書PDF確認 (Sprint 8.4.c.1).
 
 Business-user main battlefield. Image PDFs / parse_failed / review_pending /
 school_mismatch documents land in this page; the operator views the PDF
@@ -584,7 +584,7 @@ def manual_next_action_for_row(row: QueueRow, *, target_fiscal_year: int) -> tup
     if row.fiscal_year < target_fiscal_year:
         return "旧年度診断", "成果には含めず、対象年度PDFの再取得入口を確認します。"
     if row.fiscal_year > target_fiscal_year:
-        return "年度修正", "対象年度より未来の判定です。年度判定・修正で確認します。"
+        return "年度修正", "対象年度より未来の判定です。対象年度確認で確認します。"
     if row.ingest_status == "ocr_pending":
         return "OCR/手入力", "画像PDFです。OCR可否を確認し、必要なら手入力します。"
     if row.ingest_status == "parse_failed":
@@ -1724,7 +1724,7 @@ def _render_pdf_panel(session: Session, row: QueueRow) -> None:  # pragma: no co
 
 
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin streamlit shell
-    """Top-level Streamlit render for the PDF確認・手入力 page."""
+    """Top-level Streamlit render for the 申請書PDF確認 page."""
     import streamlit as st
 
     from eidp.config import settings
@@ -1736,7 +1736,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     )
     from eidp.review.target_year_status import target_year_overview
 
-    st.subheader("PDF確認・手入力")
+    st.subheader("申請書PDF確認")
     target_label = format_fiscal_year_label(settings.target_fiscal_year)
     target = target_year_overview(
         session,
@@ -1793,7 +1793,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     )
     if focus_document_id is not None:
         if queue and queue[0].document_id == focus_document_id:
-            st.info(f"学校別タスクから doc#{focus_document_id} を先頭表示しています。")
+            st.info(f"学校キューから doc#{focus_document_id} を先頭表示しています。")
             if st.button("通常順に戻す"):
                 st.session_state.pop(MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY, None)
                 st.rerun()
@@ -1801,7 +1801,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
             st.warning(f"doc#{focus_document_id} は現在のPDF確認キューにありません。")
 
     if not queue:
-        st.success("この表示範囲の文書はありません。PDF確認は学校別タスクから必要な学校を選んで開いてください。")
+        st.success("この表示範囲の文書はありません。申請書PDF確認は学校キューから必要な学校を選んで開いてください。")
         return
 
     action_options = manual_action_filter_options(queue, target_fiscal_year=settings.target_fiscal_year)
@@ -1836,7 +1836,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         width="stretch",
     )
     if len(visible_queue) > 50:
-        st.caption("一覧は先頭50件まで表示しています。絞り込みは学校別タスクから行ってください。")
+        st.caption("一覧は先頭50件まで表示しています。絞り込みは学校キューから行ってください。")
 
     for row in visible_queue[:20]:
         # Sprint 8.6.d.2 — confidence summary surfaces in the queue
