@@ -55,8 +55,11 @@ Architecture and planning:
 
 - [Architecture](docs/architecture.md)
 - [Project rules](docs/governance/project-rules.md)
+- [Goal execution discipline](docs/governance/goal-execution.md)
 - [Technical direction](docs/governance/technical-direction.md)
 - [Release gates](docs/governance/release-gates.md)
+- [Post-v1 roadmap](docs/roadmap/post-v1-roadmap.md)
+- [Post-v1 decision board](docs/roadmap/post-v1-decision-board.md)
 - [Sprint 8 release gate audit](docs/plans/2026-05-05-sprint8-release-gate-audit.md)
 - [Sprint 8 handoff](docs/plans/2026-05-05-sprint8-handoff.md)
 - [Future v2 roadmap](docs/plans/future-v2-roadmap.md)
