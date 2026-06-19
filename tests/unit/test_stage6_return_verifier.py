@@ -78,12 +78,16 @@ Decision: READY
 
 
 def _complete_exception_template() -> str:
-    return _complete_template().replace(
-        "| 推定手作業率 | <= 30% | 28.0 | pass |",
-        "| 推定手作業率 | <= 30% | 28.0 | pass |\n"
-        "| release exception reason | `publication_lag` | publication_lag | pass |\n"
-        "| mature-year proof JSON | ok=true | logs/mature-year-proof.json | pass |\n"
-        "| mature-year proof years | at least one FY before target_fy | 2025 | pass |",
+    return (
+        _complete_template()
+        .replace(
+            "| 推定手作業率 | <= 30% | 28.0 | pass |",
+            "| 推定手作業率 | <= 30% | 28.0 | pass |\n"
+            "| release exception reason | `publication_lag` | publication_lag | pass |\n"
+            "| mature-year proof JSON | ok=true | logs/mature-year-proof.json | pass |\n"
+            "| mature-year proof years | at least one FY before target_fy | 2025 | pass |",
+        )
+        .replace("Date: 2026-05-17", "Date: 2026-05-19")
     )
 
 
@@ -834,6 +838,39 @@ def test_verify_stage6_return_exception_rejects_placeholder_approver(tmp_path: P
 
     assert result["ok"] is False
     assert "release exception record Approver must not be a placeholder" in result["errors"]
+
+
+def test_verify_stage6_return_exception_rejects_signoff_dates_before_approval(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(
+        _complete_exception_template().replace("Date: 2026-05-19", "Date: 2026-05-18"),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "E2E template Owner sign-off: Date must be on or after release exception Approval date"
+        in result["errors"]
+    )
+    assert (
+        "E2E template 業務員 sign-off: Date must be on or after release exception Approval date"
+        in result["errors"]
+    )
 
 
 def test_verify_stage6_return_exception_rejects_approval_date_before_mature_year_proof(

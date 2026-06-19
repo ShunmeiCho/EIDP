@@ -1452,6 +1452,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "must be YYYY-MM-DD",
             "Date must not be in the future",
             "Date must be on or after last_run finished_at date",
+            "Date must be on or after release exception Approval date",
             "release exception record Date is required",
             "release exception record Date must be YYYY-MM-DD",
             "release exception record Date must not be in the future",

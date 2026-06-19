@@ -1129,6 +1129,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("publication_lag", "publication_delay")
         .replace("Date must not be in the future", "future date accepted")
         .replace("Date must be on or after last_run finished_at date", "sign-off may predate last_run")
+        .replace("Date must be on or after release exception Approval date", "sign-off may predate approval")
         .replace(
             "Approval date must be on or after mature-year proof finished_at date",
             "approval may predate proof",
@@ -1245,6 +1246,11 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
         "Date must be on or after last_run finished_at date" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "Date must be on or after release exception Approval date" in error
         for error in check.errors
     )
     assert any(

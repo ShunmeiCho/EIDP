@@ -386,9 +386,10 @@ def _verify_release_exception_record(
     *,
     mature_year_proof_finished_date: date | None,
     errors: list[str],
-) -> None:
+) -> date | None:
     record_date_value = _header_field_value(text, "Date")
     record_date: date | None = None
+    accepted_approval_date: date | None = None
     if not record_date_value:
         errors.append("release exception record Date is required")
     else:
@@ -431,6 +432,8 @@ def _verify_release_exception_record(
                 errors.append(APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR)
             elif approval_date is not None and record_date is not None and approval_date != record_date:
                 errors.append(RELEASE_EXCEPTION_DATE_MATCH_ERROR)
+            else:
+                accepted_approval_date = approval_date
         elif row_label == "Release scope":
             normalized = value.lower()
             if not all(token in normalized for token in ("v1.0", "mature", "proof", "only")):
@@ -445,6 +448,7 @@ def _verify_release_exception_record(
                 errors.append(
                     "release exception record Required follow-up must require FY2026/R8 strict-yield rerun"
                 )
+    return accepted_approval_date
 
 
 def _case_fiscal_year(case: dict[str, Any]) -> int | None:
@@ -601,6 +605,7 @@ def _verify_template(
     text: str,
     last_run: dict[str, Any] | None,
     release_exception_reason: str | None,
+    release_exception_approval_date: date | None,
     mature_year_proof_json: Path | None,
     mature_year_proof_years: list[int],
     errors: list[str],
@@ -749,6 +754,10 @@ def _verify_template(
                     errors.append(
                         f"E2E template {marker} Date must be on or after last_run finished_at date"
                     )
+                elif release_exception_approval_date is not None and signoff_date < release_exception_approval_date:
+                    errors.append(
+                        f"E2E template {marker} Date must be on or after release exception Approval date"
+                    )
             elif field == "Decision":
                 normalized_decision = _release_conclusion_value(value)
                 if normalized_decision not in RELEASE_CONCLUSIONS:
@@ -776,6 +785,7 @@ def verify_stage6_return(
     active_release_exception_reason: str | None = None
     mature_year_proof_years: list[int] = []
     mature_year_proof_finished_date: date | None = None
+    release_exception_approval_date: date | None = None
 
     if release_exception_reason:
         if is_ship_gate_exception_reason(release_exception_reason):
@@ -804,7 +814,7 @@ def verify_stage6_return(
         elif not release_exception_record.is_file():
             errors.append(f"release exception record does not exist: {release_exception_record}")
         else:
-            _verify_release_exception_record(
+            release_exception_approval_date = _verify_release_exception_record(
                 release_exception_record.read_text(encoding="utf-8"),
                 active_release_exception_reason,
                 mature_year_proof_finished_date=mature_year_proof_finished_date,
@@ -835,6 +845,7 @@ def verify_stage6_return(
             e2e_template.read_text(encoding="utf-8"),
             last_run_json,
             active_release_exception_reason,
+            release_exception_approval_date,
             mature_year_proof_json,
             mature_year_proof_years,
             errors,
