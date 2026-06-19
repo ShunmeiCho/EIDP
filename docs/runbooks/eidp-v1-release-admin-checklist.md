@@ -1,6 +1,6 @@
 # EIDP v1.0 Release Admin Checklist
 
-Updated: 2026-06-19
+Updated: 2026-06-20
 
 This checklist is for local release administration only. It does not replace
 Windows side-by-side validation, the owner real cycle, or the release-scope
@@ -12,14 +12,12 @@ decision for FY2026/R8 publication lag.
   `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified `main`
   commit.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current local v532 is package/source
-  verified on macOS, but the latest complete Windows side-by-side smoke remains
-  v526. v532 must not be promoted until Windows side-by-side validation is
-  repeated or the release scope explicitly stays on v526.
-- The Windows validation host is unreachable. The 2026-06-20 v532 recheck
-  timed out on `ssh win hostname`, so v532 side-by-side validation and
-  owner-return readback cannot proceed from this Mac until connectivity is
-  restored or an approved operator-side validation path is used.
+  after its last code/package change. Current v532 has completed Windows
+  side-by-side smoke, but any later code/package rebuild must repeat it.
+- The selected release candidate has no valid OCR runtime proof while OCR is in
+  release scope. Current v532 side-by-side OCR validation failed because the
+  OCR add-on is missing; v526 remains the latest package with complete OCR
+  runtime proof.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
@@ -30,11 +28,10 @@ decision for FY2026/R8 publication lag.
   then PDF body/OCR verification. External search providers, including
   `agent-reach` wrappers, may only propose official URL/index candidates and
   must not be used as a direct PDF finder.
-- OCR is included in the v1.0 release scope but the Windows OCR runtime proof
-  or OCR add-on SHA/runtime verifier is missing for the selected candidate.
-  Current v526 has fresh Windows OCR runtime proof; the local v532 preflight
-  did not include an OCR add-on ZIP because `dist/eidp-ocr-addon-windows-v497-smoke.zip`
-  is not present in this checkout.
+- The roughly 700-university scope is being claimed as complete. The current
+  v532 evidence proves the vocational/specialty-school lane; it does not prove
+  an equivalent university official-index catalog, parser layer, target-document
+  discovery lane, or Excel mapping.
 - The signed tag command would use an unsigned or unknown signing identity.
 
 ## Local Preflight
@@ -143,13 +140,18 @@ Before tagging, attach or reference:
   `logs/win-v532-main-post-merge-release-gates-20260619.json`;
 - v532 Windows connectivity recheck:
   `docs/reports/2026-06-20-v532-windows-connectivity-recheck.md`;
+- v532 Windows side-by-side smoke:
+  `docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md`;
+- v532 side-by-side evidence ZIP and manifest:
+  `logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-20260620.zip`,
+  `logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-manifest-20260620.json`;
 - v532 operator-side handoff docs:
   `docs/runbooks/00-READ-ME-FIRST-v532.txt`,
   `docs/runbooks/eidp-v532-owner-request-20260620.txt`, and
   `docs/runbooks/eidp-v532-owner-return-fill-sheet.md`;
 - v532 Windows side-by-side validator JSON if v532 is selected for release;
 - v532 active-task recovery / lock proof showing the active task still points
-  to the expected v485 lane;
+  to the expected active v527 lane;
 - v532 Windows UI smoke notes if v532 is selected for release;
 - v532 OCR runtime proof, if OCR remains in v1.0 scope;
 - v532 Excel smoke proof if v532 is selected for release;
@@ -171,11 +173,11 @@ Before tagging, attach or reference:
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
 Current v532 local package evidence is recorded in
-`logs/win-v532-main-post-merge-release-gates-20260619.json`; it is not
-a Windows side-by-side smoke. Current v526 side-by-side evidence is summarized in
-`docs/reports/2026-05-20-v526-extracted-confirmation-package.md`.
-The v526 owner/operator request is prepared at
-`docs/runbooks/eidp-v526-owner-request-20260520.txt`; it is a handoff aid, not
+`logs/win-v532-main-post-merge-release-gates-20260619.json`. Current v532
+Windows side-by-side smoke evidence is summarized in
+`docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md`. The v532
+owner/operator request is prepared at
+`docs/runbooks/eidp-v532-owner-request-20260620.txt`; it is a handoff aid, not
 release approval.
 
 ## Final Commands

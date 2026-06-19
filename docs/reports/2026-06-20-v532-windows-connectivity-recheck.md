@@ -1,4 +1,4 @@
-# v532 Windows Connectivity Recheck
+# v532 Windows Connectivity Recheck And Follow-Up
 
 Date: 2026-06-20
 Branch: `main`
@@ -8,17 +8,29 @@ Package SHA256: `9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c
 
 ## Result
 
-`ssh win` is still not reachable from this Mac. v532 Windows side-by-side
-validation and owner-return readback could not be run from the Mac in this
-session.
+The first `ssh win` recheck timed out from this Mac. After Windows SSH was
+restored, v532 side-by-side validation completed from the Mac against a fresh
+Windows root:
 
-## Command
+```text
+C:\Users\cyo20\EIDP-v532-723a507-env0
+```
+
+The detailed runtime evidence is now recorded in:
+
+```text
+docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md
+logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-20260620.zip
+logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-manifest-20260620.json
+```
+
+## Initial Failed Command
 
 ```bash
 ssh -o BatchMode=yes -o ConnectTimeout=5 win hostname
 ```
 
-## Evidence
+## Initial Evidence
 
 Approved non-sandbox retry:
 
@@ -26,18 +38,25 @@ Approved non-sandbox retry:
 ssh: connect to host 192.168.0.9 port 22: Operation timed out
 ```
 
+## Follow-Up Evidence
+
+After SSH was restored, v532 completed setup validation, active-task recovery
+proof, UI smoke, bounded weekly canary, Excel smoke, Stage 6 evidence bundle
+creation, and Stage 6 evidence verification.
+
+Key result:
+
+```text
+v532 strict/Excel-ready FY2026 canary yield: 12/50 (24.0%)
+v532 operator-reviewable canary rate:       47/50 (94.0%)
+v532 ship gate status:                      below_gate
+v532 Stage 6 evidence verifier:             ok=true
+v532 OCR runtime proof:                     failed, OCR add-on missing
+```
+
 ## Release Impact
 
-This does not invalidate the previously recorded v526 Windows side-by-side
-evidence from 2026-05-20, but it means there is still no Windows-side proof for
-v532. Before promoting v532, either restore Windows SSH or use the prepared
-operator-side validation path:
-
-- `docs/runbooks/00-READ-ME-FIRST-v532.txt`
-- `docs/runbooks/eidp-v532-owner-request-20260620.txt`
-- `docs/runbooks/eidp-v532-owner-return-fill-sheet.md`
-
-The selected path must still produce v532 setup validation, active-task safety
-proof, UI smoke, Excel proof, bounded weekly canary proof, Stage 6 evidence
-verification, owner/operator sign-off, and either strict FY2026/R8 success or
-an approved `publication_lag` exception.
+The connectivity blocker was cleared for side-by-side smoke. Release is still
+blocked by the business gates: current FY2026/R8 strict yield below `>= 60%`,
+missing owner/operator sign-off, unapproved `publication_lag` exception, and
+the unresolved OCR-scope decision for v532.

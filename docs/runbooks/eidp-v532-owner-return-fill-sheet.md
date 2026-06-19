@@ -28,21 +28,21 @@ v1.0 on hold until enough FY2026/R8 target-form PDFs are public.
 | core ZIP sha256 | `9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c7` |
 | transferred ZIP | `C:\EIDP-staging\eidp-windows-v532.zip` |
 | Windows extract path | `%USERPROFILE%\EIDP-v532-723a507-env0` |
-| current active root to preserve | `%USERPROFILE%\EIDP-v485-70e3db4` |
+| current active root to preserve | `%USERPROFILE%\EIDP-v527-69fe81f-env0` |
 | non-Windows release gate | `logs/win-v532-main-post-merge-release-gates-20260619.json` -> `ok=true` |
-| GitHub main CI | run `27834912983` for `92ad3ef` -> `success` |
-| Windows validation evidence | to be returned from v532 side-by-side run |
-| OCR runtime evidence | required if OCR remains in v1.0 scope |
-| UI smoke evidence | to be returned from v532 side-by-side run |
-| Excel smoke evidence | to be returned from v532 side-by-side run |
-| bounded canary evidence | to be returned from v532 side-by-side run |
-| Stage 6 evidence verify | to be returned from v532 side-by-side run |
+| GitHub main CI | run `27836983748` for `c3a6285` -> `success` |
+| Windows validation evidence | `docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md` |
+| OCR runtime evidence | v532 failed because OCR add-on is missing; required if OCR remains in v1.0 scope |
+| UI smoke evidence | `win-v532-stage6-v532-ui-smoke-20260620.json` in the v532 side-by-side evidence ZIP |
+| Excel smoke evidence | `win-v532-stage6-v532-excel-summary-20260620.json` in the v532 side-by-side evidence ZIP |
+| bounded canary evidence | strict/Excel-ready `12/50 (24.0%)`, operator-reviewable `47/50 (94.0%)`, `ship_gate_status=below_gate` |
+| Stage 6 evidence verify | `stage6-evidence-verify-20260620-013724.json` -> `ok=true` |
 | release exception reason | `publication_lag` if Route A is chosen |
 | mature-year proof JSON | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` |
 | mature-year proof years | `2025` |
 
-The existing v526 bounded canary is reference evidence only. It is not v532
-owner sign-off evidence.
+The v532 bounded canary is side-by-side smoke evidence only. It is not owner
+real-cycle sign-off evidence.
 
 ## Fields The Owner/Operator Must Fill From The Real Cycle
 

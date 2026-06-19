@@ -25,7 +25,7 @@ Side-by-side root:
   %USERPROFILE%\EIDP-v532-723a507-env0
 
 Current active root to preserve:
-  %USERPROFILE%\EIDP-v485-70e3db4
+  %USERPROFILE%\EIDP-v527-69fe81f-env0
 
 Package BUILD_INFO:
   git_commit=723a5072f63e8a874bef85cc52d869f5e6daff15
@@ -34,10 +34,11 @@ Package BUILD_INFO:
 
 Network note
 ------------
-The 2026-06-20 Mac-side `ssh win hostname` recheck timed out at
-192.168.0.9:22. Use manual transfer through USB or a trusted internal file
-share until SSH is restored. A Mac-side timeout is not proof that the Windows
-offline package is broken.
+The first 2026-06-20 Mac-side `ssh win hostname` recheck timed out at
+192.168.0.9:22. SSH was later restored and v532 side-by-side validation
+completed from the Mac. If SSH is unavailable again, use manual transfer
+through USB or a trusted internal file share. A Mac-side timeout is not proof
+that the Windows offline package is broken.
 
 Do not expose Streamlit beyond `127.0.0.1`. Use an SSH tunnel for remote smoke
 only when SSH is reachable.
@@ -76,7 +77,8 @@ if ($Actual -ne $Expected) {
 
 Extract
 -------
-Use a fresh side-by-side directory. Do not overwrite v526 or v485.
+Use a fresh side-by-side directory. Do not overwrite v526 or the active v527
+root.
 
 ```powershell
 $Zip = "C:\EIDP-staging\eidp-windows-v532.zip"
@@ -91,7 +93,7 @@ Get-ChildItem | Select-Object Name
 
 Setup without promotion
 -----------------------
-Preserve the active v485 scheduled task unless promotion has been explicitly
+Preserve the active v527 scheduled task unless promotion has been explicitly
 approved.
 
 ```powershell
@@ -108,7 +110,7 @@ Run from the v532 root:
 ```powershell
 Set-Location (Join-Path $env:USERPROFILE "EIDP-v532-723a507-env0")
 .\scripts\validate_install.bat --after-setup --json > logs\win-v532-stage6-v532-env0-validate-after-setup-20260620.json
-$ExpectedWeekly = Join-Path $env:USERPROFILE "EIDP-v485-70e3db4\scripts\weekly_run.bat"
+$ExpectedWeekly = Join-Path $env:USERPROFILE "EIDP-v527-69fe81f-env0\scripts\weekly_run.bat"
 .\scripts\stage6_recovery_check.bat $ExpectedWeekly
 ```
 

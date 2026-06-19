@@ -5,17 +5,19 @@ Branch: `main`
 
 Current package candidate: `v532` (`dist/eidp-windows-v532.zip`, SHA256
 `9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c7`).
-`v532` is package/source verified on macOS and GitHub main CI is green. It is
-not Windows side-by-side validated yet: the 2026-06-20 `ssh win hostname`
-recheck timed out, so Windows validation must wait for restored SSH or use the
-prepared operator-side handoff at `docs/runbooks/00-READ-ME-FIRST-v532.txt`,
-`docs/runbooks/eidp-v532-owner-request-20260620.txt`, and
-`docs/runbooks/eidp-v532-owner-return-fill-sheet.md`.
+`v532` is package/source verified on macOS, GitHub main CI is green, and the
+same-day Windows SSH follow-up completed a fresh Windows side-by-side smoke at
+`C:\Users\cyo20\EIDP-v532-723a507-env0`. Evidence is recorded in
+`docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md` and
+`logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-20260620.zip`.
 
-Latest complete Windows side-by-side smoke remains `v526`. Release is still
-blocked by FY2026/R8 strict yield below gate, missing owner real Windows cycle,
-and unapproved `publication_lag` exception. The historical status below is kept
-for traceability and is superseded by this 2026-06-20 summary.
+Latest complete Windows side-by-side smoke is now `v532` for setup, active-task
+safety, UI, bounded weekly canary, Excel export, Stage 6 bundle creation, and
+Stage 6 evidence verification. Release is still blocked by FY2026/R8 strict
+yield below gate (`12/50`, `24.0%`), missing owner real Windows cycle/sign-off,
+unapproved `publication_lag` exception, and unresolved v532 OCR scope because
+the OCR runtime proof failed without the OCR add-on. The historical status below
+is kept for traceability and is superseded by this 2026-06-20 summary.
 
 Historical package family: `v526` for the extracted-PDF
 confirmation/supplement UI, package/source verification, and complete Windows
@@ -42,9 +44,10 @@ sign-off fields remain blank. The Windows-staged owner docs ZIP now includes
 this report, the target-yearless RCA spot check, the owner v1.0 A/B decision
 brief, and the v526 owner return fill sheet, and now has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
-`v526` is now the latest package with complete Windows side-by-side smoke
-evidence, including setup, validate, recovery, OCR runtime, UI, Excel,
-limit-50 canary, residual-cleanup dry run, and Stage 6 bundle verification.
+`v526` remains the latest package with complete OCR runtime proof. `v532` is
+the latest package with complete non-OCR Windows side-by-side smoke evidence,
+including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
+bundle verification.
 `v502` and `v501` are superseded Windows evidence baselines.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -244,7 +247,7 @@ source-side upper-bound evaluator re-computed the same no-go condition in
 with `status=no_go_upper_bound_below_required` and
 `max_possible=393/1000 (39.3%)`; its rc is intentionally `1` for no-go
 evidence.
-Current Windows active lane:
+Historical Windows active lane before the v532 recheck:
 read-only SSH probes on 2026-05-19 and restored SSH probes on 2026-05-20 showed
 `EIDP Weekly Run` points to
 `C:\Users\cyo20\EIDP-v485-70e3db4\scripts\weekly_run.bat`, with
@@ -254,6 +257,10 @@ evidence collection, and evidence-folder shortcuts. The active v485 DB still
 had `school_site_count=0` and `document_count=0` in the latest readiness
 probe, so the owner must run initial PDF bootstrap before any normal weekly
 cycle.
+The 2026-06-20 v532 side-by-side recovery check supersedes this as the latest
+active-task safety fact: `EIDP Weekly Run` points to
+`C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`, and v532 setup
+was run with `EIDP_REGISTER_WEEKLY_TASK=0`.
 Fresh read-only Mac-side connectivity recheck on 2026-05-20 is recorded in
 `docs/reports/2026-05-20-v522-windows-connectivity-recheck.md`. The local
 `Host win` still points at stale `192.168.0.9`, while the Mac is on
@@ -264,7 +271,7 @@ SSH, SMB, RDP, and workstation services found no usable advertised service.
 After the user restarted Windows SSH, `ssh win` was usable again and v523
 current-source Windows side-by-side validation completed. The earlier
 connectivity report is retained as historical evidence only.
-Current package candidate:
+Historical v526 package candidate:
 `dist/eidp-windows-v526.zip`, SHA256
 `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`.
 `BUILD_INFO.json` inside the ZIP records
@@ -634,7 +641,7 @@ strict metric / parser / targeted discovery changes described there were an
 intermediate below-gate snapshot. They are superseded by the FY2025 limit-1000
 NSG/ASO replay above, which reaches `strict=600/1000 (60.0%)` on current source.
 These are local replay results, not a Windows active-lane proof.
-Current package support ZIP:
+Historical v526 package support ZIP:
 `dist/eidp-windows-v526.zip`
 Current v526 SHA256 sidecar:
 `dist/eidp-windows-v526.zip.sha256`

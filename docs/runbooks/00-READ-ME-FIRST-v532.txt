@@ -19,7 +19,7 @@ Package
 - Side-by-side root:
   %USERPROFILE%\EIDP-v532-723a507-env0
 - Current active root to preserve:
-  %USERPROFILE%\EIDP-v485-70e3db4
+  %USERPROFILE%\EIDP-v527-69fe81f-env0
 
 Read first
 ----------
@@ -29,6 +29,7 @@ Read first
 - docs\runbooks\eidp-operator-e2e-template.md
 - docs\runbooks\eidp-v1-release-admin-checklist.md
 - docs\reports\2026-06-20-v532-windows-connectivity-recheck.md
+- docs\reports\2026-06-20-v532-full-windows-side-by-side-smoke.md
 - docs\reports\2026-06-19-domain-naming-deep-review.md
 - docs\reports\2026-06-19-ui-example-review.md
 - docs\reports\2026-05-19-publication-lag-release-exception-record.md
@@ -45,9 +46,12 @@ Current evidence
 - Core ZIP verifier: ok=true
 - Non-Windows release gate: ok=true
 - Full unit suite: 1946 passed
-- GitHub main CI for 92ad3ef: success
-- Windows side-by-side validation for v532: not yet run
-- Latest complete Windows side-by-side smoke: v526
+- GitHub main CI for c3a6285: success
+- Windows side-by-side validation for v532: setup/UI/weekly/Excel/Stage 6 ok
+- v532 OCR runtime validation: failed, OCR add-on missing
+- Latest complete OCR runtime proof remains: v526
+- v532 strict/Excel-ready FY2026 canary yield: 12/50 (24.0%)
+- v532 operator-reviewable canary rate: 47/50 (94.0%)
 
 Release decision boundary
 -------------------------
@@ -71,7 +75,7 @@ Safety
 - Do not run uninstall.bat
 - Do not persist EIDP_TARGET_FISCAL_YEAR into .env
 - Do not expose Streamlit beyond 127.0.0.1 for remote access; use SSH tunnel
-- Keep the v485 active root until an explicit promotion decision is made
+- Keep the v527 active root until an explicit promotion decision is made
 - Run v532 setup with EIDP_REGISTER_WEEKLY_TASK=0 unless promotion is approved
 
 Return after v532 validation / owner real cycle
