@@ -54,6 +54,9 @@ Optional Playwright/Chromium:
 Architecture and planning:
 
 - [Architecture](docs/architecture.md)
+- [Project rules](docs/governance/project-rules.md)
+- [Technical direction](docs/governance/technical-direction.md)
+- [Release gates](docs/governance/release-gates.md)
 - [Sprint 8 release gate audit](docs/plans/2026-05-05-sprint8-release-gate-audit.md)
 - [Sprint 8 handoff](docs/plans/2026-05-05-sprint8-handoff.md)
 - [Future v2 roadmap](docs/plans/future-v2-roadmap.md)
