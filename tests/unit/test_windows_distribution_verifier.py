@@ -1133,6 +1133,8 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
             "Approval date must be on or after mature-year proof finished_at date",
             "approval may predate proof",
         )
+        .replace("release exception record Date is required", "release exception record Date optional")
+        .replace("release exception record Date must match Approval date", "record date may drift")
     )
     entries["scripts/ship_gate_contract.py"] = (
         entries["scripts/ship_gate_contract.py"]
@@ -1241,6 +1243,26 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
         "Date must be on or after last_run finished_at date" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: release exception record Date is required"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "release exception record Date must be YYYY-MM-DD" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "release exception record Date must not be in the future" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "release exception record Date must match Approval date" in error
         for error in check.errors
     )
     assert any(

@@ -50,6 +50,7 @@ RELEASE_APPROVAL_CONCLUSION = "READY"
 APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR = (
     "release exception record Approval date must be on or after mature-year proof finished_at date"
 )
+RELEASE_EXCEPTION_DATE_MATCH_ERROR = "release exception record Date must match Approval date"
 PLACEHOLDER_RESULTS = {
     "",
     "pass / fail",
@@ -132,6 +133,13 @@ def _block_field_value(block: str, field: str) -> str:
 def _status_value(text: str) -> str:
     for line in text.splitlines():
         if line.strip().lower().startswith("status:"):
+            return _clean_cell(line.split(":", 1)[1])
+    return ""
+
+
+def _header_field_value(text: str, field: str) -> str:
+    for line in text.splitlines():
+        if line.strip().lower().startswith(f"{field.lower()}:"):
             return _clean_cell(line.split(":", 1)[1])
     return ""
 
@@ -362,6 +370,18 @@ def _verify_release_exception_record(
     mature_year_proof_finished_date: date | None,
     errors: list[str],
 ) -> None:
+    record_date_value = _header_field_value(text, "Date")
+    record_date: date | None = None
+    if not record_date_value:
+        errors.append("release exception record Date is required")
+    else:
+        record_date = _iso_date_value(record_date_value)
+        if record_date is None:
+            errors.append("release exception record Date must be YYYY-MM-DD")
+        elif record_date > date.today():
+            errors.append("release exception record Date must not be in the future")
+            record_date = None
+
     status = _status_value(text)
     if status != "APPROVED":
         errors.append("release exception record Status must be APPROVED")
@@ -390,6 +410,8 @@ def _verify_release_exception_record(
                 and approval_date < mature_year_proof_finished_date
             ):
                 errors.append(APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR)
+            elif approval_date is not None and record_date is not None and approval_date != record_date:
+                errors.append(RELEASE_EXCEPTION_DATE_MATCH_ERROR)
         elif row_label == "Release scope":
             normalized = value.lower()
             if not all(token in normalized for token in ("v1.0", "mature", "proof", "only")):
