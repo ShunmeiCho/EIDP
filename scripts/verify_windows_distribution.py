@@ -1432,6 +1432,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "release_exception_record",
             "release-exception actual is blank",
             "release-exception row missing or malformed",
+            "Stage 2-5c Windows VM gate 済み",
             "release exception requires --mature-year-proof-json",
             "release exception requires --release-exception-record",
             "mature-year proof JSON ok must be true",

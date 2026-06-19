@@ -21,7 +21,12 @@ REQUIRED_EXCEPTION_RECORD_ROWS = (
     "Approval date",
     "FY2026/R8 status acknowledged",
 )
-REQUIRED_RELEASE_ROWS = ("業務員 PC 1 サイクル完了", "KPI owner 承認", "残 P0/P1 bug")
+REQUIRED_RELEASE_ROWS = (
+    "Stage 2-5c Windows VM gate 済み",
+    "業務員 PC 1 サイクル完了",
+    "KPI owner 承認",
+    "残 P0/P1 bug",
+)
 REQUIRED_AUDIT_ROWS = (
     "監査ログページ表示",
     "manual_action_log 件数",
@@ -30,6 +35,7 @@ REQUIRED_AUDIT_ROWS = (
     "JSONL action_id 重複",
 )
 REQUIRED_RELEASE_VALUES = {
+    "Stage 2-5c Windows VM gate 済み": "yes",
     "業務員 PC 1 サイクル完了": "yes",
     "KPI owner 承認": "yes",
     "残 P0/P1 bug": "none",

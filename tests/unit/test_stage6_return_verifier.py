@@ -47,6 +47,7 @@ data\\output\\eidp-master.xlsx
 
 | 判定項目 | 結果 |
 | --- | --- |
+| Stage 2-5c Windows VM gate 済み | yes |
 | 業務員 PC 1 サイクル完了 | yes |
 | KPI owner 承認 | yes |
 | 残 P0/P1 bug | none |
@@ -572,6 +573,7 @@ def test_verify_stage6_return_rejects_unmeasured_kpi_and_blank_signoff(tmp_path:
 
 | 判定項目 | 結果 |
 | --- | --- |
+| Stage 2-5c Windows VM gate 済み | yes / no |
 | 業務員 PC 1 サイクル完了 | yes / no |
 | KPI owner 承認 | yes / no |
 | 残 P0/P1 bug | none / exists |
@@ -689,6 +691,25 @@ def test_verify_stage6_return_rejects_below_threshold_and_non_ready_decision(tmp
     assert "E2E template release row must be yes: KPI owner 承認" in result["errors"]
     assert "E2E template release conclusion must be READY for release approval" in result["errors"]
     assert "E2E template Owner sign-off: Decision must be READY for release approval" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_missing_windows_vm_gate_row(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template().replace("| Stage 2-5c Windows VM gate 済み | yes |\n", ""),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template release row missing or malformed: Stage 2-5c Windows VM gate 済み" in result["errors"]
 
 
 def test_verify_stage6_return_rejects_legacy_go_release_conclusion(tmp_path: Path) -> None:

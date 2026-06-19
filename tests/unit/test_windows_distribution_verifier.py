@@ -1090,6 +1090,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("release_exception_reason", "release_override_reason")
         .replace("mature_year_proof_json", "historical_year_proof_json")
         .replace("release_exception_record", "release_override_record")
+        .replace("Stage 2-5c Windows VM gate 済み", "Mac local gate 済み")
         .replace("release exception requires --mature-year-proof-json", "release exception requires proof")
         .replace("release exception requires --release-exception-record", "release exception requires approval")
         .replace("min_target_pdf_auto_denominator_count", "min_target_pdf_auto_sample_count")
@@ -1144,6 +1145,10 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: target_pdf_auto_denominator_scope" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: Stage 2-5c Windows VM gate 済み" in error
         for error in check.errors
     )
     assert any(
