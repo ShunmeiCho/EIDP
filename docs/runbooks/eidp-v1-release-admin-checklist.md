@@ -12,11 +12,10 @@ decision for FY2026/R8 publication lag.
   `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified `main`
   commit.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current v532 has completed Windows
-  side-by-side smoke. Current v533 is package/source verified only, so it must
-  repeat Windows side-by-side validation before it can be selected.
+  after its last code/package change. Current v533 has completed Windows
+  side-by-side smoke, but any later code/package rebuild must repeat it.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
-  release scope. Current v532 side-by-side OCR validation failed because the
+  release scope. Current v533 side-by-side OCR validation failed because the
   OCR add-on is missing; v526 remains the latest package with complete OCR
   runtime proof.
 - The owner real cycle and evidence bundle are missing.
@@ -142,6 +141,13 @@ Before tagging, attach or reference:
   `logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`;
 - v533 MEXT authority-index package report:
   `docs/reports/2026-06-20-v533-mext-authority-index-package.md`;
+- v533 Windows side-by-side smoke:
+  `docs/reports/2026-06-20-v533-full-windows-side-by-side-smoke.md`;
+- v533 side-by-side evidence ZIP and verifier:
+  `logs/win-v533-stage6/stage6-evidence-20260619-180429.zip`,
+  `logs/win-v533-stage6/stage6-evidence-verify-20260620-030444.json`;
+- v533 operator-side handoff docs:
+  `docs/runbooks/eidp-v533-owner-request-20260620.txt`;
 - v532 package/non-Windows gate JSON:
   `logs/win-v532-main-post-merge-release-gates-20260619.json`;
 - v532 Windows connectivity recheck:
@@ -181,10 +187,10 @@ Before tagging, attach or reference:
 Current v533 local package evidence is recorded in
 `docs/reports/2026-06-20-v533-mext-authority-index-package.md` and
 `logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`. Current
-v532 Windows side-by-side smoke evidence is summarized in
-`docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md`. The v532
+v533 Windows side-by-side smoke evidence is summarized in
+`docs/reports/2026-06-20-v533-full-windows-side-by-side-smoke.md`. The v533
 owner/operator request is prepared at
-`docs/runbooks/eidp-v532-owner-request-20260620.txt`; it is a handoff aid, not
+`docs/runbooks/eidp-v533-owner-request-20260620.txt`; it is a handoff aid, not
 release approval.
 
 ## Final Commands

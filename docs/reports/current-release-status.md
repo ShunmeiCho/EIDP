@@ -6,31 +6,33 @@ Branch: `main`
 Current local package/source candidate: `v533`
 (`dist/eidp-windows-v533.zip`, SHA256
 `0d4ca81a9032db1d8b98bf69ba76a4181d99d6bb8cd0091de22df211dc5d5f57`).
-`v533` is package/source verified on macOS and adds a package-enforced MEXT T0
-target-institution official-index gate. The verifier reports
+`v533` is package/source verified on macOS, adds a package-enforced MEXT T0
+target-institution official-index gate, and has completed Windows side-by-side
+smoke at `C:\Users\cyo20\EIDP-v533-f83f1dc-env0`. The verifier reports
 `mext_target_total_rows=3132`, `mext_target_university_rows=769`,
 `mext_target_specialty_rows=2067`, `mext_target_short_college_rows=239`, and
 `mext_target_kosen_rows=57`. Evidence is recorded in
-`docs/reports/2026-06-20-v533-mext-authority-index-package.md` and
-`logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`.
+`docs/reports/2026-06-20-v533-mext-authority-index-package.md`,
+`docs/reports/2026-06-20-v533-full-windows-side-by-side-smoke.md`,
+`logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`, and
+`logs/win-v533-stage6/stage6-evidence-20260619-180429.zip`.
 
-Latest complete Windows side-by-side smoke remains `v532`
+Previous complete Windows side-by-side smoke was `v532`
 (`dist/eidp-windows-v532.zip`, SHA256
 `9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c7`).
-The same-day Windows SSH follow-up completed a fresh Windows side-by-side smoke
-at `C:\Users\cyo20\EIDP-v532-723a507-env0`. Evidence is recorded in
+That same-day Windows SSH follow-up completed a fresh Windows side-by-side
+smoke at `C:\Users\cyo20\EIDP-v532-723a507-env0`. Evidence is recorded in
 `docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md` and
 `logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-20260620.zip`.
 
-Latest complete Windows side-by-side smoke is `v532` for setup, active-task
+Latest complete Windows side-by-side smoke is `v533` for setup, active-task
 safety, UI, bounded weekly canary, Excel export, Stage 6 bundle creation, and
-Stage 6 evidence verification. v533 has not yet had Windows side-by-side
-validation. Release is still blocked by FY2026/R8 strict yield below gate
-(`12/50`, `24.0%` in the latest v532 Windows canary), missing owner real
-Windows cycle/sign-off, unapproved `publication_lag` exception, and unresolved
-v532 OCR scope because the OCR runtime proof failed without the OCR add-on. A
-same-day OCR recovery check found no reusable OCR add-on ZIP or Windows
-Tesseract payload in the checked Mac/external-SSD/Windows locations:
+Stage 6 evidence verification. Release is still blocked by FY2026/R8 strict
+yield below gate (`12/50`, `24.0%` in the latest v533 Windows canary), missing
+owner real Windows cycle/sign-off, unapproved `publication_lag` exception, and
+unresolved v533 OCR scope because the OCR runtime proof failed without the OCR
+add-on. A same-day OCR recovery check found no reusable OCR add-on ZIP or
+Windows Tesseract payload in the checked Mac/external-SSD/Windows locations:
 `docs/reports/2026-06-20-v532-ocr-addon-recovery-check.md`. The historical
 status below is kept for traceability and is superseded by this 2026-06-20
 summary.
@@ -60,7 +62,7 @@ sign-off fields remain blank. The Windows-staged owner docs ZIP now includes
 this report, the target-yearless RCA spot check, the owner v1.0 A/B decision
 brief, and the v526 owner return fill sheet, and now has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
-`v526` remains the latest package with complete OCR runtime proof. `v532` is
+`v526` remains the latest package with complete OCR runtime proof. `v533` is
 the latest package with complete non-OCR Windows side-by-side smoke evidence,
 including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
 bundle verification.
