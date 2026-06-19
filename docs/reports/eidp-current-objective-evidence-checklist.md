@@ -19,6 +19,10 @@ Windows-staged owner docs ZIP now includes this report and the
 target-yearless RCA spot check plus the owner v1.0 A/B decision brief and v526
 owner return fill sheet, and has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
+Current v530 Windows connectivity recheck:
+`docs/reports/2026-06-19-v530-windows-connectivity-recheck.md` records that
+`ssh win hostname` timed out on the approved non-sandbox retry, so no current
+v530 Windows side-by-side or owner-return readback was possible.
 Status: **NOT COMPLETE**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -90,6 +94,10 @@ that keeps manual work below the release threshold.
   the owner v1.0 A/B decision brief, and the v526 owner return fill sheet, and
   now has SHA256
   `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
+- Latest Windows connectivity recheck for v530:
+  `docs/reports/2026-06-19-v530-windows-connectivity-recheck.md` shows the
+  current `ssh win` path timed out, so v530 Windows side-by-side validation and
+  owner-return readback remain unavailable from this Mac.
 - Latest FY2026/R8 Mac-side continuation canary:
   `docs/reports/2026-05-20-v521-mac-limit50-continuation-canary.md`
 - Latest RCA reclassification report:
@@ -127,7 +135,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | Stage 6 evidence bundle and verifier pass | v526 evidence ZIP and verifier: `logs/stage6-evidence-20260520-091540.zip` and `logs/stage6-evidence-verify-local-v526-20260520.json` with `ok=true`; SHA256 `1e7efcb1bdbac6c88d3b38f2b209655fc022518ddaeefa07c2b15fc57c2f2283` | PASS |
 | v526/v525/v524/v523 RCA is current | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`, `docs/reports/2026-05-20-v525-rc-metadata-package.md`, `docs/reports/2026-05-20-v524-full-windows-side-by-side-smoke.md`, and `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`: v526/v525/v524/v523 repeat the same strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` blocker; v526 discovery stats record `pre_filtered_non_target_hint=631`, `fiscal_year_mismatch=267`, `classified_non_target=88`, `no_candidates_found=8`, `target_fiscal_year_not_detected=5`, and `http_error_httpstatuserror=1`, with no `candidate_school_mismatch` in the v526 Windows run | PASS for RCA, FAIL for yield |
 | Weekly selected-school denominator actually gets crawled | v514 focused isolated Mac smoke `target-year-discovery-after-sitecount-fix/20260519_231930-summary.json`: selected NEEC school IDs 1-3 were crawled (`crawled=3`) and remained reviewable, not strict FY2026 successes; v516 selection probe excludes already confirmed target schools 4 and 7 from the target-missing queue while preserving a 50-school queue; v517 targeted school ID 55 smoke confirms the new exact override is crawled and yields FY2019-FY2025 target-form evidence instead of corporation-only non-target evidence; v518 packages that case as discovery gold-set regression evidence; v519 filters vocational-practice basic-info PDFs out of target-form review; v519 Mac continuation canary with copied URL sources crawls 58 site rows for 50 selected schools and moves school ID 55 to `publication_lag_or_old_target_pdf`; v520 adds exact Katayanagi crawl entries while preserving NEEC no-year PDFs as reviewable, not strict successes; v521 suppresses same-school `corporation_pattern` rows when exact school-domain overrides exist, reducing the Katayanagi limit-3 crawl from 6 to 3 and candidate-school mismatches from 69 to 0; the v526/v525/v524/v523 Windows limit-50 canaries each download 5 strict/current PDFs and keep all 50 selected schools reviewable | PASS for code/evidence contract, FAIL for strict yield |
-| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe now blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. The 2026-05-20 remote check `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms `ssh win` is reachable and v526 owner docs remain staged, but the remote approval and sign-off fields are still blank. | BLOCKED |
+| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe now blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. The 2026-05-20 remote check `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirmed `ssh win` was reachable and v526 owner docs remained staged, but the remote approval and sign-off fields were still blank. The 2026-06-19 v530 connectivity recheck timed out, so there is no current Windows readback. | BLOCKED |
 | PR merge and v1.0 tag are allowed | FY2026 strict proof, owner real cycle, and exception approval are incomplete | BLOCKED |
 
 ## Fresh Local Verification In This Audit Pass
