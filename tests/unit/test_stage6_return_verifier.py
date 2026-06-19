@@ -50,6 +50,7 @@ data\\output\\eidp-master.xlsx
 | Stage 2-5c Windows VM gate 済み | yes |
 | 業務員 PC 1 サイクル完了 | yes |
 | KPI owner 承認 | yes |
+| Runbook 修正反映済み | yes |
 | 残 P0/P1 bug | none |
 
 結論:
@@ -576,6 +577,7 @@ def test_verify_stage6_return_rejects_unmeasured_kpi_and_blank_signoff(tmp_path:
 | Stage 2-5c Windows VM gate 済み | yes / no |
 | 業務員 PC 1 サイクル完了 | yes / no |
 | KPI owner 承認 | yes / no |
+| Runbook 修正反映済み | yes / no |
 | 残 P0/P1 bug | none / exists |
 
 結論:
@@ -710,6 +712,25 @@ def test_verify_stage6_return_rejects_missing_windows_vm_gate_row(tmp_path: Path
 
     assert result["ok"] is False
     assert "E2E template release row missing or malformed: Stage 2-5c Windows VM gate 済み" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_missing_runbook_correction_row(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template().replace("| Runbook 修正反映済み | yes |\n", ""),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template release row missing or malformed: Runbook 修正反映済み" in result["errors"]
 
 
 def test_verify_stage6_return_rejects_legacy_go_release_conclusion(tmp_path: Path) -> None:
