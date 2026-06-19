@@ -47,6 +47,9 @@ REQUIRED_RELEASE_VALUES = {
 }
 RELEASE_CONCLUSIONS = ("READY", "RC_ONLY", "NOT_READY")
 RELEASE_APPROVAL_CONCLUSION = "READY"
+APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR = (
+    "release exception record Approval date must be on or after mature-year proof finished_at date"
+)
 PLACEHOLDER_RESULTS = {
     "",
     "pass / fail",
@@ -352,7 +355,13 @@ def _verify_evidence_verify_json(verify_json: dict[str, Any], errors: list[str])
         errors.append(f"evidence verifier JSON missing labels: {', '.join(missing_labels)}")
 
 
-def _verify_release_exception_record(text: str, reason: str, errors: list[str]) -> None:
+def _verify_release_exception_record(
+    text: str,
+    reason: str,
+    *,
+    mature_year_proof_finished_date: date | None,
+    errors: list[str],
+) -> None:
     status = _status_value(text)
     if status != "APPROVED":
         errors.append("release exception record Status must be APPROVED")
@@ -369,10 +378,18 @@ def _verify_release_exception_record(text: str, reason: str, errors: list[str]) 
             errors.append(f"release exception record Exception reason mismatch: {value} != {reason}")
         elif row_label == "Decision" and value != "APPROVED":
             errors.append("release exception record Decision must be APPROVED")
-        elif row_label == "Approval date" and not _is_placeholder(value) and not _is_iso_date(value):
-            errors.append("release exception record Approval date must be YYYY-MM-DD")
-        elif row_label == "Approval date" and _is_future_iso_date(value):
-            errors.append("release exception record Approval date must not be in the future")
+        elif row_label == "Approval date":
+            approval_date = _iso_date_value(value)
+            if not _is_placeholder(value) and approval_date is None:
+                errors.append("release exception record Approval date must be YYYY-MM-DD")
+            elif approval_date is not None and approval_date > date.today():
+                errors.append("release exception record Approval date must not be in the future")
+            elif (
+                approval_date is not None
+                and mature_year_proof_finished_date is not None
+                and approval_date < mature_year_proof_finished_date
+            ):
+                errors.append(APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR)
         elif row_label == "Release scope":
             normalized = value.lower()
             if not all(token in normalized for token in ("v1.0", "mature", "proof", "only")):
@@ -435,7 +452,7 @@ def _verify_mature_year_proof(
     min_target_pdf_auto_denominator_count: int,
     max_manual_workload: float,
     errors: list[str],
-) -> list[int]:
+) -> tuple[list[int], date | None]:
     if proof_json.get("ok") is not True:
         errors.append("mature-year proof JSON ok must be true")
     basis = proof_json.get("basis") or proof_json.get("metric_basis")
@@ -447,8 +464,9 @@ def _verify_mature_year_proof(
     cases = _mature_year_cases(proof_json)
     if not cases:
         errors.append("mature-year proof JSON must contain cases or results")
-        return []
+        return [], None
     passing_years: list[int] = []
+    passing_finished_dates: list[date] = []
     for case in cases:
         fiscal_year = _case_fiscal_year(case)
         if fiscal_year is None or not _case_ok(case):
@@ -461,7 +479,20 @@ def _verify_mature_year_proof(
         denominator_scope = _case_metric(case, "target_pdf_auto_denominator_scope")
         operator_reviewable_yield = _case_metric(case, "operator_reviewable_yield_pct")
         ship_gate_status = _case_metric(case, "ship_gate_status")
+        finished_at = case.get("finished_at")
+        finished_date: date | None = None
         case_ok = True
+        if finished_at not in (None, ""):
+            if not isinstance(finished_at, str):
+                errors.append(f"mature-year proof case FY{fiscal_year} finished_at must be ISO datetime")
+                case_ok = False
+            else:
+                parsed_finished_at = _iso_datetime_value(finished_at)
+                if parsed_finished_at is None:
+                    errors.append(f"mature-year proof case FY{fiscal_year} finished_at must be ISO datetime")
+                    case_ok = False
+                else:
+                    finished_date = parsed_finished_at.date()
         if not _is_number(target_yield):
             errors.append(
                 f"mature-year proof case FY{fiscal_year} target_pdf_auto_yield_pct must be numeric"
@@ -517,9 +548,12 @@ def _verify_mature_year_proof(
                 case_ok = False
         if case_ok:
             passing_years.append(fiscal_year)
+            if finished_date is not None:
+                passing_finished_dates.append(finished_date)
     if not passing_years:
         errors.append("mature-year proof JSON must include at least one passing fiscal year before target_fy")
-    return sorted(set(passing_years), reverse=True)
+    mature_year_proof_finished_date = max(passing_finished_dates) if passing_finished_dates else None
+    return sorted(set(passing_years), reverse=True), mature_year_proof_finished_date
 
 
 def _verify_template(
@@ -698,6 +732,7 @@ def verify_stage6_return(
     warnings: list[str] = []
     active_release_exception_reason: str | None = None
     mature_year_proof_years: list[int] = []
+    mature_year_proof_finished_date: date | None = None
 
     if release_exception_reason:
         if is_ship_gate_exception_reason(release_exception_reason):
@@ -713,7 +748,7 @@ def verify_stage6_return(
         else:
             proof_json = _load_json(mature_year_proof_json, errors, "mature-year proof JSON")
             if proof_json is not None:
-                mature_year_proof_years = _verify_mature_year_proof(
+                mature_year_proof_years, mature_year_proof_finished_date = _verify_mature_year_proof(
                     proof_json,
                     target_fy=target_fy,
                     min_target_pdf_auto_yield=min_target_pdf_auto_yield,
@@ -729,7 +764,8 @@ def verify_stage6_return(
             _verify_release_exception_record(
                 release_exception_record.read_text(encoding="utf-8"),
                 active_release_exception_reason,
-                errors,
+                mature_year_proof_finished_date=mature_year_proof_finished_date,
+                errors=errors,
             )
 
     last_run_json = _load_json(last_run, errors, "last_run")

@@ -1452,6 +1452,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "must be YYYY-MM-DD",
             "Date must not be in the future",
             "Date must be on or after last_run finished_at date",
+            "Approval date must be on or after mature-year proof finished_at date",
             "Release scope",
             "Release scope must limit approval to v1.0 mature-year proof only",
             "FY2026/R8 status acknowledged",

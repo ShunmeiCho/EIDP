@@ -121,6 +121,7 @@ def _write_mature_year_proof(tmp_path: Path, *, ok: bool = True, **case_override
     case = {
         "fiscal_year": 2025,
         "ok": ok,
+        "finished_at": "2026-05-17T01:02:03+00:00",
         "target_pdf_auto_denominator_count": 1625,
         "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
         "target_pdf_auto_yield_pct": 67.5,
@@ -695,6 +696,59 @@ def test_verify_stage6_return_exception_rejects_future_approval_date(tmp_path: P
 
     assert result["ok"] is False
     assert "release exception record Approval date must not be in the future" in result["errors"]
+
+
+def test_verify_stage6_return_exception_rejects_approval_date_before_mature_year_proof(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(
+        tmp_path,
+        finished_at="2026-05-20T01:02:03+00:00",
+    )
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "release exception record Approval date must be on or after mature-year proof finished_at date"
+        in result["errors"]
+    )
+
+
+def test_verify_stage6_return_rejects_invalid_mature_year_proof_finished_at(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path, finished_at="after retroactive proof")
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "mature-year proof case FY2025 finished_at must be ISO datetime" in result["errors"]
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
+        "errors"
+    ]
 
 
 def test_verify_stage6_return_exception_requires_r8_status_acknowledgement(tmp_path: Path) -> None:
