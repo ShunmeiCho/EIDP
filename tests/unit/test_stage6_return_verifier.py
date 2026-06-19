@@ -226,6 +226,33 @@ data\\output\\eidp-master.xlsx
     assert "E2E template audit row missing or malformed: JSONL outbox 未送信件数" in result["errors"]
 
 
+def test_verify_stage6_return_rejects_invalid_last_run_finished_at(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "after weekly run",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": 67.5,
+            "operator_reviewable_yield_pct": 72.0,
+            "ship_gate_status": "pass",
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "last_run finished_at must be ISO datetime" in result["errors"]
+
+
 def test_verify_stage6_return_rejects_excel_output_proof_without_workbook_path(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)

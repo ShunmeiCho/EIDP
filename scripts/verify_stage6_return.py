@@ -7,7 +7,7 @@ import importlib.util
 import json
 import re
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -158,6 +158,14 @@ def _is_iso_date(value: str) -> bool:
     return True
 
 
+def _is_iso_datetime(value: str) -> bool:
+    try:
+        datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return True
+
+
 def _outbox_flushed(value: str) -> bool:
     normalized = value.lower().replace("`", "").strip()
     return normalized == "0" or "after flush 0" in normalized
@@ -176,8 +184,11 @@ def _verify_last_run(
 ) -> None:
     if last_run.get("status") != "success":
         errors.append("last_run status must be success")
-    if not last_run.get("finished_at"):
+    finished_at = last_run.get("finished_at")
+    if not isinstance(finished_at, str) or not finished_at:
         errors.append("last_run finished_at is required")
+    elif not _is_iso_datetime(finished_at):
+        errors.append("last_run finished_at must be ISO datetime")
     if last_run.get("dry_run") is not False:
         errors.append("last_run dry_run must be false")
     if target_fy is not None and last_run.get("current_fy") != target_fy:
