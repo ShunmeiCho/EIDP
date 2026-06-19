@@ -16,7 +16,7 @@ decision for FY2026/R8 publication lag.
   verified on macOS, but the latest complete Windows side-by-side smoke remains
   v526. v532 must not be promoted until Windows side-by-side validation is
   repeated or the release scope explicitly stays on v526.
-- The Windows validation host is unreachable. The 2026-06-19 v530 recheck
+- The Windows validation host is unreachable. The 2026-06-20 v532 recheck
   timed out on `ssh win hostname`, so v532 side-by-side validation and
   owner-return readback cannot proceed from this Mac until connectivity is
   restored or an approved operator-side validation path is used.
@@ -141,6 +141,12 @@ Before tagging, attach or reference:
 
 - v532 package/non-Windows gate JSON:
   `logs/win-v532-main-post-merge-release-gates-20260619.json`;
+- v532 Windows connectivity recheck:
+  `docs/reports/2026-06-20-v532-windows-connectivity-recheck.md`;
+- v532 operator-side handoff docs:
+  `docs/runbooks/00-READ-ME-FIRST-v532.txt`,
+  `docs/runbooks/eidp-v532-owner-request-20260620.txt`, and
+  `docs/runbooks/eidp-v532-owner-return-fill-sheet.md`;
 - v532 Windows side-by-side validator JSON if v532 is selected for release;
 - v532 active-task recovery / lock proof showing the active task still points
   to the expected v485 lane;

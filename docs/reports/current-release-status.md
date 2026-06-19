@@ -1,10 +1,26 @@
 # EIDP Current Release Status
 
-Updated: 2026-05-20
-Branch: `sprint8-handoff-finalize`
-Latest package family: `v526` for the extracted-PDF confirmation/supplement UI,
-package/source verification, and complete Windows side-by-side smoke. `v525`
-is now the previous complete Windows side-by-side smoke package.
+Updated: 2026-06-20
+Branch: `main`
+
+Current package candidate: `v532` (`dist/eidp-windows-v532.zip`, SHA256
+`9743cc65c21ada06b6a1d6c8b50ba67cdaffa4f3942256ccd072d4469fa0d6c7`).
+`v532` is package/source verified on macOS and GitHub main CI is green. It is
+not Windows side-by-side validated yet: the 2026-06-20 `ssh win hostname`
+recheck timed out, so Windows validation must wait for restored SSH or use the
+prepared operator-side handoff at `docs/runbooks/00-READ-ME-FIRST-v532.txt`,
+`docs/runbooks/eidp-v532-owner-request-20260620.txt`, and
+`docs/runbooks/eidp-v532-owner-return-fill-sheet.md`.
+
+Latest complete Windows side-by-side smoke remains `v526`. Release is still
+blocked by FY2026/R8 strict yield below gate, missing owner real Windows cycle,
+and unapproved `publication_lag` exception. The historical status below is kept
+for traceability and is superseded by this 2026-06-20 summary.
+
+Historical package family: `v526` for the extracted-PDF
+confirmation/supplement UI, package/source verification, and complete Windows
+side-by-side smoke. `v525` is now the previous complete Windows side-by-side
+smoke package.
 Latest source-side follow-up: `v526` adds an operator task-board entry point for
 already extracted PDFs and prefilled confirmation/supplement saves through the
 existing PDF確認・手入力 page.
