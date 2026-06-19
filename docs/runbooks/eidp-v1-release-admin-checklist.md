@@ -10,12 +10,12 @@ decision for FY2026/R8 publication lag.
 
 - PR #8 is not clean or either required check is not green.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current local v530 is package/source
+  after its last code/package change. Current local v531 is package/source
   verified on macOS, but the latest complete Windows side-by-side smoke remains
-  v526. v530 must not be promoted until Windows side-by-side validation is
+  v526. v531 must not be promoted until Windows side-by-side validation is
   repeated or the release scope explicitly stays on v526.
 - The Windows validation host is unreachable. The 2026-06-19 v530 recheck
-  timed out on `ssh win hostname`, so v530 side-by-side validation and
+  timed out on `ssh win hostname`, so v531 side-by-side validation and
   owner-return readback cannot proceed from this Mac until connectivity is
   restored or an approved operator-side validation path is used.
 - The owner real cycle and evidence bundle are missing.
@@ -30,7 +30,7 @@ decision for FY2026/R8 publication lag.
   must not be used as a direct PDF finder.
 - OCR is included in the v1.0 release scope but the Windows OCR runtime proof
   or OCR add-on SHA/runtime verifier is missing for the selected candidate.
-  Current v526 has fresh Windows OCR runtime proof; the local v530 preflight
+  Current v526 has fresh Windows OCR runtime proof; the local v531 preflight
   did not include an OCR add-on ZIP because `dist/eidp-ocr-addon-windows-v497-smoke.zip`
   is not present in this checkout.
 - The signed tag command would use an unsigned or unknown signing identity.
@@ -58,11 +58,11 @@ Expected:
 Confirm the current package evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v530.zip
-cat dist/eidp-windows-v530.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v530.zip --json
+shasum -a 256 dist/eidp-windows-v531.zip
+cat dist/eidp-windows-v531.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v531.zip --json
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v530.zip \
+  dist/eidp-windows-v531.zip \
   --allow-docs-only-stale-package \
   --keep-going \
   --json
@@ -72,7 +72,7 @@ test -f dist/eidp-ocr-addon-windows-v497-smoke.zip
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v530.zip \
+  dist/eidp-windows-v531.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -80,7 +80,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-6344e6b9c2fea850cb50425410f2e0a5ad9c6626ff31fca9fee5f9f8014604a6
+dd9211a465a31d66d2bde865860d2cee6d6f79b61f416b495e2ce40c31f66c16
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -113,18 +113,18 @@ Do not create `v1.0` until the release gates below are complete.
 
 Before merging or tagging, attach or reference:
 
-- v530 package/non-Windows gate JSON:
-  `logs/win-v530-stage6-v530-non-windows-release-gates-20260619.json`
+- v531 package/non-Windows gate JSON:
+  `logs/win-v531-domain-taxonomy-release-gates-20260619.json`
   plus the docs-only stale replay
-  `logs/win-v530-stage6-v530-post-docs-only-gates-20260619.json`;
-- v530 Windows side-by-side validator JSON if v530 is selected for release;
-- v530 active-task recovery / lock proof showing the active task still points
+  `logs/win-v531-domain-taxonomy-post-docs-gates-20260619.json`;
+- v531 Windows side-by-side validator JSON if v531 is selected for release;
+- v531 active-task recovery / lock proof showing the active task still points
   to the expected v485 lane;
-- v530 Windows UI smoke notes if v530 is selected for release;
-- v530 OCR runtime proof, if OCR remains in v1.0 scope;
-- v530 Excel smoke proof if v530 is selected for release;
-- v530 bounded weekly canary proof if v530 is selected for release;
-- v530 Stage 6 evidence ZIP and evidence verifier JSON if v530 is selected
+- v531 Windows UI smoke notes if v531 is selected for release;
+- v531 OCR runtime proof, if OCR remains in v1.0 scope;
+- v531 Excel smoke proof if v531 is selected for release;
+- v531 bounded weekly canary proof if v531 is selected for release;
+- v531 Stage 6 evidence ZIP and evidence verifier JSON if v531 is selected
   for release;
 - completed owner real-cycle template;
 - evidence ZIP and evidence verification JSON;
@@ -140,8 +140,8 @@ Before merging or tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v530 local package evidence is recorded in
-`logs/win-v530-stage6-v530-non-windows-release-gates-20260619.json`; it is not
+Current v531 local package evidence is recorded in
+`logs/win-v531-domain-taxonomy-release-gates-20260619.json`; it is not
 a Windows side-by-side smoke. Current v526 side-by-side evidence is summarized in
 `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`.
 The v526 owner/operator request is prepared at
