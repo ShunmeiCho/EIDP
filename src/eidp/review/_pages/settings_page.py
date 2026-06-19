@@ -289,7 +289,7 @@ def build_info_summary(build_info: dict[str, str]) -> str:
 
 
 def _provider_index(provider: str) -> int:
-    providers = ["duckduckgo", "serper", "brave", "google"]
+    providers = ["duckduckgo", "serper", "brave", "google", "external"]
     return providers.index(provider) if provider in providers else 0
 
 
@@ -418,15 +418,21 @@ def render(_session: object, *, lock_path: Path) -> None:
     st.subheader("外部 API")
     search_provider = st.selectbox(
         "学校URL検索 provider",
-        ["duckduckgo", "serper", "brave", "google"],
+        ["duckduckgo", "serper", "brave", "google", "external"],
         index=_provider_index(str(settings.search_provider)),
         format_func=lambda value: {
             "duckduckgo": "DuckDuckGo（API key なし）",
             "serper": "Serper",
             "brave": "Brave Search",
             "google": "Google Custom Search",
+            "external": "External command（環境変数のみ）",
         }[value],
     )
+    if search_provider == "external":
+        st.info(
+            "External command provider は EIDP_EXTERNAL_SEARCH_COMMAND で管理します。"
+            "ここでは任意コマンドを保存しません。"
+        )
     url_search_auto_enable = st.selectbox(
         "不足URLのWeb検索補完",
         ["auto", "on", "off"],

@@ -649,6 +649,17 @@ def test_resolve_url_search_mode_is_key_aware() -> None:
         batch_size=200,
     ) == (False, 200, "auto_not_ready")
     assert module.resolve_url_search_mode(
+        configured_mode="auto",
+        provider="external",
+        batch_size=200,
+        external_search_command="search-wrapper",
+    ) == (True, 200, "auto_ready")
+    assert module.resolve_url_search_mode(
+        configured_mode="auto",
+        provider="external",
+        batch_size=200,
+    ) == (False, 200, "auto_not_ready")
+    assert module.resolve_url_search_mode(
         configured_mode="on",
         provider="serper",
         batch_size=200,
@@ -679,6 +690,13 @@ def test_resolve_school_url_crawl_mode_requires_scrapling_and_provider() -> None
         batch_size=25,
         scrapling_installed=True,
     ) == (False, 25, "on_search_provider_not_ready")
+    assert module.resolve_school_url_crawl_mode(
+        configured_mode="auto",
+        provider="external",
+        batch_size=25,
+        scrapling_installed=True,
+        external_search_command="search-wrapper",
+    ) == (True, 25, "auto_ready")
     assert module.resolve_school_url_crawl_mode(
         configured_mode="off",
         provider="duckduckgo",

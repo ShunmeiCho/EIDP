@@ -419,12 +419,10 @@ def search_and_discover(
 ) -> dict[str, int]:
     """Use search API to discover URLs for schools without any URL.
 
-    Uses a cascading query strategy tuned by school type:
-    1. target disclosure terms
-    2. target application-form terms
-    3. generic disclosure page terms
-    4. corporation + school terms
-    5. school homepage terms using 大学 / 専門学校 / 短期大学 / etc.
+    Uses a cascading query strategy tuned for stable official entrances:
+    1. disclosure / support-system page terms
+    2. corporation + school terms
+    3. school homepage terms using 大学 / 専門学校 / 短期大学 / etc.
     """
     import time
 
@@ -441,6 +439,8 @@ def search_and_discover(
         provider_name=settings.search_provider,
         api_key=api_key_map.get(settings.search_provider, ""),
         google_cx=settings.google_cx,
+        external_command=settings.external_search_command,
+        external_timeout_seconds=settings.external_search_timeout_seconds,
     )
 
     stats = {"searched": 0, "found": 0, "no_result": 0, "errors": 0}
@@ -494,6 +494,17 @@ def search_and_discover(
                                 query=query,
                                 decision="rejected",
                                 reason="unsafe_url",
+                                result=result,
+                                score=confidence,
+                            ))
+                            continue
+                        if _looks_like_direct_document_url(result.url):
+                            evidence.record(_url_search_evidence(
+                                school=school,
+                                provider=provider_name,
+                                query=query,
+                                decision="rejected",
+                                reason="direct_document_search_result",
                                 result=result,
                                 score=confidence,
                             ))
@@ -606,6 +617,16 @@ def _url_search_evidence(
     )
 
 
+def _looks_like_direct_document_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    path = parsed.path.lower()
+    query = parsed.query.lower()
+    return path.endswith(".pdf") or ".pdf" in query
+
+
 def search_queries_for_school(school: "School") -> list[str]:
     """Build school-type aware search queries for reusable disclosure URLs."""
     school_name = school.school_name.strip()
@@ -614,7 +635,6 @@ def search_queries_for_school(school: "School") -> list[str]:
     name_variants = _school_name_query_variants(school_name)
     queries = [
         f"{school_name} 情報公開 高等教育 修学支援",
-        f"{school_name} 確認申請書 様式第2号",
         f"{school_name} 情報公開",
     ]
     if corporation_name:

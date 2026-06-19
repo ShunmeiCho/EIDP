@@ -274,6 +274,19 @@ def test_admission_download_path_with_strong_school_signal_requires_review():
     assert s.breakdown.get("low_value_path") < 0
 
 
+def test_direct_pdf_url_is_not_a_school_site_candidate():
+    s = _score(
+        "https://www.example.ac.jp/disclosure/r8-target.pdf",
+        school="東京デザイン専門学校",
+        pref="東京都",
+        title="東京デザイン専門学校 確認申請書",
+        excerpt="公式サイトの情報公開、修学支援、確認申請書です。",
+    )
+    assert s.decision == "reject"
+    assert s.breakdown == {"document_url": -5.0}
+    assert s.notes == ("document_url_not_school_site",)
+
+
 def test_enter_path_with_strong_school_signal_requires_review():
     s = _score(
         "https://www.siw.ac.jp/enter",

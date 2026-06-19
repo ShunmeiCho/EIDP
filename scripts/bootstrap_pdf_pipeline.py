@@ -457,6 +457,7 @@ def provider_ready_for_url_search(
     brave_api_key: str = "",
     google_api_key: str = "",
     google_cx: str = "",
+    external_search_command: str = "",
 ) -> bool:
     """Return whether the configured search provider can run without prompting."""
     normalized = provider.strip().lower()
@@ -468,6 +469,8 @@ def provider_ready_for_url_search(
         return bool(brave_api_key.strip())
     if normalized == "google":
         return bool(google_api_key.strip() and google_cx.strip())
+    if normalized == "external":
+        return bool(external_search_command.strip())
     return False
 
 
@@ -480,6 +483,7 @@ def resolve_url_search_mode(
     brave_api_key: str = "",
     google_api_key: str = "",
     google_cx: str = "",
+    external_search_command: str = "",
 ) -> tuple[bool, int, str]:
     """Resolve operator settings into a safe URL-search execution decision."""
     mode = configured_mode.strip().lower()
@@ -494,6 +498,7 @@ def resolve_url_search_mode(
         brave_api_key=brave_api_key,
         google_api_key=google_api_key,
         google_cx=google_cx,
+        external_search_command=external_search_command,
     )
     if mode == "on":
         return True, bounded_batch_size, "on"
@@ -510,6 +515,7 @@ def resolve_school_url_crawl_mode(
     brave_api_key: str = "",
     google_api_key: str = "",
     google_cx: str = "",
+    external_search_command: str = "",
 ) -> tuple[bool, int, str]:
     """Resolve whether the optional Scrapling-backed URL crawl should run."""
     mode = configured_mode.strip().lower()
@@ -524,6 +530,7 @@ def resolve_school_url_crawl_mode(
         brave_api_key=brave_api_key,
         google_api_key=google_api_key,
         google_cx=google_cx,
+        external_search_command=external_search_command,
     )
     ready = scrapling_installed and provider_ready
     if mode == "on":
@@ -1197,6 +1204,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         brave_api_key=str(settings.brave_api_key),
         google_api_key=str(settings.google_api_key),
         google_cx=str(settings.google_cx),
+        external_search_command=str(settings.external_search_command),
     )
     school_url_crawl_arg = getattr(args, "school_url_crawl", "settings")
     school_url_crawl_mode = str(settings.school_url_crawl_auto_enable)
@@ -1219,6 +1227,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
         brave_api_key=str(settings.brave_api_key),
         google_api_key=str(settings.google_api_key),
         google_cx=str(settings.google_cx),
+        external_search_command=str(settings.external_search_command),
     )
     school_url_crawl_fetch_mode_arg = getattr(args, "school_url_crawl_fetch_mode", "settings")
     school_url_crawl_fetch_mode = (

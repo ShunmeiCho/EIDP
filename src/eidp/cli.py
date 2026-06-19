@@ -216,6 +216,7 @@ def discover_urls(
                 "brave": bool(settings.brave_api_key),
                 "google": bool(settings.google_api_key and settings.google_cx),
                 "serper": bool(settings.serper_api_key),
+                "external": bool(settings.external_search_command),
                 "duckduckgo": True,  # no key needed
             }
             if settings.search_provider not in provider_key_map:

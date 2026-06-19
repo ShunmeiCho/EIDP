@@ -631,8 +631,8 @@ def test_search_and_discover_uses_stable_school_order(monkeypatch) -> None:
 
         assert stats == {"searched": 3, "found": 0, "no_result": 3, "errors": 0}
         assert provider.queries[0] == "A専門学校 情報公開 高等教育 修学支援"
-        assert provider.queries[5] == "B専門学校 情報公開 高等教育 修学支援"
-        assert provider.queries[10] == "C専門学校 情報公開 高等教育 修学支援"
+        assert provider.queries[4] == "B専門学校 情報公開 高等教育 修学支援"
+        assert provider.queries[8] == "C専門学校 情報公開 高等教育 修学支援"
     finally:
         session.close()
 
@@ -808,6 +808,59 @@ def test_search_and_discover_rejects_government_index_as_school_site(
         session.close()
 
 
+def test_search_and_discover_rejects_direct_pdf_as_school_site(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import time as time_module
+
+    class FakeProvider:
+        def name(self) -> str:
+            return "fake"
+
+        def search(self, query: str, count: int = 5) -> list[SearchResult]:
+            return [
+                SearchResult(
+                    title="日本語専門学校 確認申請書 PDF",
+                    url="https://example.ac.jp/disclosure/r8-target.pdf",
+                    description="日本語専門学校 高等教育の修学支援新制度",
+                )
+            ]
+
+    import eidp.scraper.search_provider as search_provider
+
+    monkeypatch.setattr(search_provider, "create_provider", lambda **_kwargs: FakeProvider())
+    monkeypatch.setattr(url_discovery, "_is_safe_url", lambda url: True)
+    monkeypatch.setattr(time_module, "sleep", lambda _seconds: None)
+
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=1,
+                prefecture="東京都",
+                corporation_name="学校法人テスト",
+                school_name="日本語専門学校",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.commit()
+
+        evidence_path = tmp_path / "url_search_evidence.jsonl"
+        stats = url_discovery.search_and_discover(session, batch_size=1, evidence_path=evidence_path)
+        evidence_rows = [
+            json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines()
+        ]
+
+        assert stats == {"searched": 1, "found": 0, "no_result": 1, "errors": 0}
+        assert session.query(SchoolSite).count() == 0
+        assert {row["reason"] for row in evidence_rows} == {"direct_document_search_result"}
+        assert {row["decision"] for row in evidence_rows} == {"rejected"}
+    finally:
+        session.close()
+
+
 def test_search_and_discover_accepts_corporation_description_match(monkeypatch) -> None:
     import time as time_module
 
@@ -867,7 +920,7 @@ def test_search_queries_use_university_terms_for_universities() -> None:
     queries = url_discovery.search_queries_for_school(school)
 
     assert "東京都立大学 情報公開 高等教育 修学支援" in queries
-    assert "東京都立大学 確認申請書 様式第2号" in queries
+    assert "東京都立大学 確認申請書 様式第2号" not in queries
     assert "公立大学法人テスト 東京都立大学 情報公開" in queries
     assert all("専門学校" not in query for query in queries)
     assert queries[-1] == "東京都立大学 公式"
