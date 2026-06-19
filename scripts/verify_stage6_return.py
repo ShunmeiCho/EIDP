@@ -34,6 +34,8 @@ REQUIRED_RELEASE_VALUES = {
     "KPI owner 承認": "yes",
     "残 P0/P1 bug": "none",
 }
+RELEASE_CONCLUSIONS = ("READY", "RC_ONLY", "NOT_READY")
+RELEASE_APPROVAL_CONCLUSION = "READY"
 PLACEHOLDER_RESULTS = {
     "",
     "pass / fail",
@@ -42,6 +44,7 @@ PLACEHOLDER_RESULTS = {
     "yes / no",
     "none / exists",
     "go / no-go / beta continue",
+    "ready / rc_only / not_ready",
 }
 EXCEPTION_KPI_VERDICTS = frozenset({"pass", "watch"})
 
@@ -125,6 +128,10 @@ def _is_placeholder(value: str) -> bool:
 
 def _is_number(value: object) -> TypeGuard[int | float]:
     return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _release_conclusion_value(value: str) -> str:
+    return value.strip().upper()
 
 
 def _parse_nonnegative_int(value: str) -> int | None:
@@ -463,8 +470,12 @@ def _verify_template(text: str, release_exception_reason: str | None, errors: li
     conclusion = _fenced_block_after(text, "結論:")
     if conclusion is None or _is_placeholder(conclusion.strip()):
         errors.append("E2E template release conclusion is missing or still placeholder")
-    elif conclusion.strip().lower() != "go":
-        errors.append("E2E template release conclusion must be go")
+    else:
+        normalized_conclusion = _release_conclusion_value(conclusion)
+        if normalized_conclusion not in RELEASE_CONCLUSIONS:
+            errors.append("E2E template release conclusion must be one of READY, RC_ONLY, NOT_READY")
+        elif normalized_conclusion != RELEASE_APPROVAL_CONCLUSION:
+            errors.append("E2E template release conclusion must be READY for release approval")
 
     for marker in ("Owner sign-off:", "業務員 sign-off:"):
         block = _fenced_block_after(text, marker)
@@ -472,8 +483,15 @@ def _verify_template(text: str, release_exception_reason: str | None, errors: li
             errors.append(f"E2E template missing sign-off block: {marker}")
             continue
         for field in ("Name", "Date", "Decision"):
-            if not _block_field_value(block, field):
+            value = _block_field_value(block, field)
+            if not value:
                 errors.append(f"E2E template {marker} {field} is blank")
+            elif field == "Decision":
+                normalized_decision = _release_conclusion_value(value)
+                if normalized_decision not in RELEASE_CONCLUSIONS:
+                    errors.append(f"E2E template {marker} Decision must be one of READY, RC_ONLY, NOT_READY")
+                elif normalized_decision != RELEASE_APPROVAL_CONCLUSION:
+                    errors.append(f"E2E template {marker} Decision must be READY for release approval")
 
 
 def verify_stage6_return(
@@ -579,6 +597,7 @@ def verify_stage6_return(
         "required_exception_rows": list(REQUIRED_EXCEPTION_ROWS),
         "required_audit_rows": list(REQUIRED_AUDIT_ROWS),
         "required_release_rows": list(REQUIRED_RELEASE_ROWS),
+        "release_conclusions": list(RELEASE_CONCLUSIONS),
         "release_exception_reasons": sorted(SHIP_GATE_EXCEPTION_REASONS),
     }
 

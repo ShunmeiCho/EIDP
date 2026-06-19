@@ -54,7 +54,7 @@ data\\output\\eidp-master.xlsx
 結論:
 
 ```text
-go
+READY
 ```
 
 Owner sign-off:
@@ -62,7 +62,7 @@ Owner sign-off:
 ```text
 Name: Owner Name
 Date: 2026-05-17
-Decision: go
+Decision: READY
 ```
 
 業務員 sign-off:
@@ -70,7 +70,7 @@ Decision: go
 ```text
 Name: Operator Name
 Date: 2026-05-17
-Decision: go
+Decision: READY
 ```
 """
 
@@ -247,6 +247,7 @@ def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys)
     assert payload["ok"] is True
     assert payload["inputs"]["min_target_pdf_auto_yield"] == 60.0
     assert payload["inputs"]["max_manual_workload"] == 30.0
+    assert payload["release_conclusions"] == ["READY", "RC_ONLY", "NOT_READY"]
 
 
 def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_threshold_miss(
@@ -578,7 +579,7 @@ def test_verify_stage6_return_rejects_unmeasured_kpi_and_blank_signoff(tmp_path:
 結論:
 
 ```text
-go / no-go / beta continue
+READY / RC_ONLY / NOT_READY
 ```
 
 Owner sign-off:
@@ -637,7 +638,7 @@ Decision:
     assert "E2E template 業務員 sign-off: Decision is blank" in result["errors"]
 
 
-def test_verify_stage6_return_rejects_below_threshold_and_non_go_decision(tmp_path: Path) -> None:
+def test_verify_stage6_return_rejects_below_threshold_and_non_ready_decision(tmp_path: Path) -> None:
     module = _load_module()
     template = tmp_path / "eidp-operator-e2e-template.md"
     template.write_text(
@@ -646,7 +647,8 @@ def test_verify_stage6_return_rejects_below_threshold_and_non_go_decision(tmp_pa
             "| strict target PDF 自動取得率 | >= 60% | 67.5 | pass |",
             "| strict target PDF 自動取得率 | >= 60% | 55.0 | watch |",
         )
-        .replace("go\n```", "no-go\n```")
+        .replace("```text\nREADY\n```", "```text\nRC_ONLY\n```")
+        .replace("Decision: READY", "Decision: RC_ONLY", 1)
         .replace("| KPI owner 承認 | yes |", "| KPI owner 承認 | no |"),
         encoding="utf-8",
     )
@@ -685,4 +687,27 @@ def test_verify_stage6_return_rejects_below_threshold_and_non_go_decision(tmp_pa
     assert "last_run estimated manual workload above release threshold: 35.0 > 30.0" in result["errors"]
     assert "E2E template KPI verdict must be pass: strict target PDF 自動取得率" in result["errors"]
     assert "E2E template release row must be yes: KPI owner 承認" in result["errors"]
-    assert "E2E template release conclusion must be go" in result["errors"]
+    assert "E2E template release conclusion must be READY for release approval" in result["errors"]
+    assert "E2E template Owner sign-off: Decision must be READY for release approval" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_legacy_go_release_conclusion(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template()
+        .replace("```text\nREADY\n```", "```text\ngo\n```")
+        .replace("Decision: READY", "Decision: go", 1),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template release conclusion must be one of READY, RC_ONLY, NOT_READY" in result["errors"]
+    assert "E2E template Owner sign-off: Decision must be one of READY, RC_ONLY, NOT_READY" in result["errors"]

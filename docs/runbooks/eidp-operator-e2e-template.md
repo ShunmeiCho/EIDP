@@ -513,6 +513,9 @@ Version-specific setup/UI/recovery/launcher 証跡（operator real-cycle では�
 
 ## 9. Release 判定
 
+結論と sign-off の `Decision` は `READY` / `RC_ONLY` / `NOT_READY` のいずれかで記入する。
+`verify_stage6_return.py` は release approval 用なので、`READY` 以外は通過させない。
+
 | 判定項目 | 結果 |
 | --- | --- |
 | Stage 2-5c Windows VM gate 済み | yes / no |
@@ -524,7 +527,7 @@ Version-specific setup/UI/recovery/launcher 証跡（operator real-cycle では�
 結論:
 
 ```text
-go / no-go / beta continue
+READY / RC_ONLY / NOT_READY
 ```
 
 Owner sign-off:
