@@ -16,8 +16,12 @@ safety, UI, bounded weekly canary, Excel export, Stage 6 bundle creation, and
 Stage 6 evidence verification. Release is still blocked by FY2026/R8 strict
 yield below gate (`12/50`, `24.0%`), missing owner real Windows cycle/sign-off,
 unapproved `publication_lag` exception, and unresolved v532 OCR scope because
-the OCR runtime proof failed without the OCR add-on. The historical status below
-is kept for traceability and is superseded by this 2026-06-20 summary.
+the OCR runtime proof failed without the OCR add-on. A same-day OCR recovery
+check found no reusable OCR add-on ZIP or Windows Tesseract payload in the
+checked Mac/external-SSD/Windows locations:
+`docs/reports/2026-06-20-v532-ocr-addon-recovery-check.md`. The historical
+status below is kept for traceability and is superseded by this 2026-06-20
+summary.
 
 Historical package family: `v526` for the extracted-PDF
 confirmation/supplement UI, package/source verification, and complete Windows

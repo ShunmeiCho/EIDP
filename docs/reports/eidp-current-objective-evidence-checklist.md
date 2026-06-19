@@ -103,6 +103,12 @@ that keeps manual work below the release threshold.
   strict FY2026 yield `12/50 (24.0%)`, missing owner sign-off, unapproved
   `publication_lag` exception, and failed v532 OCR runtime proof because the
   OCR add-on is missing.
+- Latest OCR add-on recovery check:
+  `docs/reports/2026-06-20-v532-ocr-addon-recovery-check.md` found no reusable
+  OCR add-on ZIP or Windows Tesseract payload in the checked Mac,
+  external-SSD, or Windows locations. v532 remains blocked for OCR runtime
+  scope unless an approved add-on is restored/rebuilt or OCR is explicitly
+  removed from the selected v1.0 release scope.
 - Latest source/package domain taxonomy and operator terminology fix: v532 is
   the post-merge `main` rebuild carrying the v531 domain work. It adds
   controlled `DocumentKind`, `ReviewTaskKind`, source-trust, and workflow-status
