@@ -1081,6 +1081,21 @@ def _has_yearless_school_override_target_filename(candidate: PdfCandidate) -> bo
     return "shinsei" in filename
 
 
+def _has_known_target_year_target_filename(candidate: PdfCandidate, *, target_year: int) -> bool:
+    """Return whether a host-scoped filename convention proves the target form shape."""
+
+    parsed = urlparse(_candidate_url_hint_text(candidate))
+    host = parsed.netloc.lower()
+    path = unquote(parsed.path).lower()
+    filename = Path(path).name
+
+    return (
+        host == "www.sanko.ac.jp"
+        and "/disclosure/" in path
+        and re.fullmatch(rf"yoshiki{target_year}\.pdf", filename) is not None
+    )
+
+
 def _has_untrusted_school_override_yearless_storage_path(candidate: PdfCandidate) -> bool:
     """Return whether storage location is too generic to prove current FY."""
 
@@ -3469,7 +3484,10 @@ def download_pdf(
             image_only_target_year_form_hint = (
                 pdf_type == "image_only"
                 and target_year_hint
-                and _has_specific_target_form_hint(candidate)
+                and (
+                    _has_specific_target_form_hint(candidate)
+                    or _has_known_target_year_target_filename(candidate, target_year=target_year)
+                )
             )
             if pdf_type == "non_target":
                 return None, None, 0, "non_target", "classified_non_target"
