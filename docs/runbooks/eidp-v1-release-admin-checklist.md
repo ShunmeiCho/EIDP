@@ -14,6 +14,10 @@ decision for FY2026/R8 publication lag.
   verified on macOS, but the latest complete Windows side-by-side smoke remains
   v526. v530 must not be promoted until Windows side-by-side validation is
   repeated or the release scope explicitly stays on v526.
+- The Windows validation host is unreachable. The 2026-06-19 v530 recheck
+  timed out on `ssh win hostname`, so v530 side-by-side validation and
+  owner-return readback cannot proceed from this Mac until connectivity is
+  restored or an approved operator-side validation path is used.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.
