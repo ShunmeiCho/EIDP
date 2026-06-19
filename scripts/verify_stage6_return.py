@@ -50,6 +50,9 @@ RELEASE_APPROVAL_CONCLUSION = "READY"
 APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR = (
     "release exception record Approval date must be on or after mature-year proof finished_at date"
 )
+APPROVAL_AFTER_LAST_RUN_ERROR = (
+    "release exception record Approval date must be on or after last_run finished_at date"
+)
 RELEASE_EXCEPTION_DATE_MATCH_ERROR = "release exception record Date must match Approval date"
 SIGNOFF_PLACEHOLDER_NAMES = {
     "approver",
@@ -385,6 +388,7 @@ def _verify_release_exception_record(
     reason: str,
     *,
     mature_year_proof_finished_date: date | None,
+    last_run_finished_date: date | None,
     errors: list[str],
 ) -> date | None:
     record_date_value = _header_field_value(text, "Date")
@@ -430,6 +434,12 @@ def _verify_release_exception_record(
                 and approval_date < mature_year_proof_finished_date
             ):
                 errors.append(APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR)
+            elif (
+                approval_date is not None
+                and last_run_finished_date is not None
+                and approval_date < last_run_finished_date
+            ):
+                errors.append(APPROVAL_AFTER_LAST_RUN_ERROR)
             elif approval_date is not None and record_date is not None and approval_date != record_date:
                 errors.append(RELEASE_EXCEPTION_DATE_MATCH_ERROR)
             else:
@@ -786,6 +796,8 @@ def verify_stage6_return(
     mature_year_proof_years: list[int] = []
     mature_year_proof_finished_date: date | None = None
     release_exception_approval_date: date | None = None
+    last_run_json = _load_json(last_run, errors, "last_run")
+    last_run_finished_date = _last_run_finished_date(last_run_json)
 
     if release_exception_reason:
         if is_ship_gate_exception_reason(release_exception_reason):
@@ -818,10 +830,10 @@ def verify_stage6_return(
                 release_exception_record.read_text(encoding="utf-8"),
                 active_release_exception_reason,
                 mature_year_proof_finished_date=mature_year_proof_finished_date,
+                last_run_finished_date=last_run_finished_date,
                 errors=errors,
             )
 
-    last_run_json = _load_json(last_run, errors, "last_run")
     if last_run_json is not None:
         _verify_last_run(
             last_run_json,

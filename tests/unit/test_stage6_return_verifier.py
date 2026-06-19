@@ -873,6 +873,48 @@ def test_verify_stage6_return_exception_rejects_signoff_dates_before_approval(
     )
 
 
+def test_verify_stage6_return_exception_rejects_approval_date_before_last_run(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(
+        _complete_exception_template().replace("Date: 2026-05-19", "Date: 2026-05-20"),
+        encoding="utf-8",
+    )
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-20T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "target_pdf_auto_yield_pct": 67.5,
+            "operator_reviewable_yield_pct": 72.0,
+            "target_pdf_excel_ready_yield_pct": 67.5,
+            "ship_gate_status": "pass",
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "release exception record Approval date must be on or after last_run finished_at date" in result[
+        "errors"
+    ]
+    assert not any("Date must be on or after last_run finished_at date" in error for error in result["errors"])
+
+
 def test_verify_stage6_return_exception_rejects_approval_date_before_mature_year_proof(
     tmp_path: Path,
 ) -> None:

@@ -1136,6 +1136,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         )
         .replace("release exception record Date is required", "release exception record Date optional")
         .replace("release exception record Date must match Approval date", "record date may drift")
+        .replace("Approval date must be on or after last_run finished_at date", "approval may predate last_run")
         .replace("Approver must not be a placeholder", "Approver placeholder accepted")
         .replace("Name must not be a placeholder", "Name placeholder accepted")
     )
@@ -1271,6 +1272,11 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
         "release exception record Date must match Approval date" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "Approval date must be on or after last_run finished_at date" in error
         for error in check.errors
     )
     assert any(
