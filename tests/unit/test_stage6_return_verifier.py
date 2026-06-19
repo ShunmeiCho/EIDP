@@ -576,6 +576,38 @@ def test_verify_stage6_return_exception_requires_r8_status_acknowledgement(tmp_p
     assert "release exception record FY2026/R8 status acknowledged must be yes" in result["errors"]
 
 
+def test_verify_stage6_return_exception_requires_scope_and_follow_up(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    exception_record.write_text(
+        exception_record.read_text(encoding="utf-8")
+        .replace("| Release scope | v1.0 may ship on mature FY2025 production-scale proof only |\n", "")
+        .replace(
+            "| Required follow-up | Re-run FY2026/R8 strict-yield upper-bound proof "
+            "when R8 target-form publication baseline exists |\n",
+            "",
+        ),
+        encoding="utf-8",
+    )
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "release exception record row missing or malformed: Release scope" in result["errors"]
+    assert "release exception record row missing or malformed: Required follow-up" in result["errors"]
+
+
 def test_verify_stage6_return_rejects_failed_mature_year_proof(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)

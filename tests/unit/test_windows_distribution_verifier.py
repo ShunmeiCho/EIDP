@@ -1109,7 +1109,9 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
             "Excel output can be free text",
         )
         .replace("must be YYYY-MM-DD", "date may be free text")
+        .replace("Release scope", "Release note")
         .replace("FY2026/R8 status acknowledged", "R8 status optional")
+        .replace("Required follow-up", "Optional follow-up")
         .replace(
             "release exception record R8 status optional must be yes",
             "release exception record R8 status optional",
@@ -1201,6 +1203,14 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: FY2026/R8 status acknowledged" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: Release scope" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: Required follow-up" in error
         for error in check.errors
     )
     assert any(

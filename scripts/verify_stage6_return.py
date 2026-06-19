@@ -20,7 +20,9 @@ REQUIRED_EXCEPTION_RECORD_ROWS = (
     "Decision",
     "Approver",
     "Approval date",
+    "Release scope",
     "FY2026/R8 status acknowledged",
+    "Required follow-up",
 )
 REQUIRED_RELEASE_ROWS = (
     "Stage 2-5c Windows VM gate 済み",
