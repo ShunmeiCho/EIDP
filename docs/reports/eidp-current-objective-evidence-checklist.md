@@ -5,12 +5,11 @@ Branch: `test/fault-injection-pdf-discovery`
 PR: `#8`
 PR live state: verify with
 `gh pr view 8 --json headRefOid,mergeStateStatus,statusCheckRollup,url`.
-Last recorded live PR check after this status refresh:
-remote head `8f552448e8f42c1dcb7a1d47629917079cbf639d` was `CLEAN` with required
-checks `SUCCESS` on 2026-06-19. The local branch still contains unpublished
-v530 package/source and docs-only release-evidence commits, including
-`9331216022e1904361ed8d11d0e24da81637d46a`, so GitHub checks do not yet cover
-the current local candidate.
+Last recorded live PR check after the v530 push:
+remote head `0c439610bd65488551ab3f35959e7b1e7c099303` was `CLEAN` with
+required checks `SUCCESS` on 2026-06-19 (`Python quality gates` and
+`Ship gate contract`). Re-run the `gh pr view` command above after any later
+commit, because new docs-only commits still need fresh PR checks before merge.
 Previous Windows owner-return remote check:
 `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirmed `ssh win`
 was reachable, refreshed v526 owner docs remained staged, and the remote
@@ -86,9 +85,9 @@ that keeps manual work below the release threshold.
   subnets including `10.209.*`, and documents standard `HTTP_PROXY` /
   `HTTPS_PROXY` / `NO_PROXY` handling for outbound PDF discovery behind a
   campus proxy. No package rebuild was made for this docs-only follow-up.
-- Latest Windows owner-return remote check:
-  `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirms the
-  refreshed v526 handoff is present on Windows, but the remote approval and
+- Previous Windows owner-return remote check:
+  `docs/reports/2026-05-20-v526-owner-return-remote-check.md` confirmed the
+  refreshed v526 handoff was present on Windows, but the remote approval and
   owner/operator sign-off fields remain blank. The Windows-staged owner docs
   ZIP was refreshed to include this report, the target-yearless RCA spot check,
   the owner v1.0 A/B decision brief, and the v526 owner return fill sheet, and
