@@ -551,7 +551,7 @@ def task_lanes_for_summary(summary: SchoolTaskSummary) -> list[TaskLane]:
             label="Excel確認へ",
             count=summary.excel_ready,
             description="対象年度PDFと抽出が揃った学校だけを Excel出力で確認します。",
-            button_label="Excelプレビュー",
+            button_label="Excel出力",
             scope="excel_ready",
             page_id=EXCEL_PREVIEW_PAGE_ID,
         ),

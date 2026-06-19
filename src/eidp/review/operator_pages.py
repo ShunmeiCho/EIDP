@@ -804,7 +804,7 @@ def page_pipeline_status(session: Session) -> None:
     ycols[1].metric("現在年度PDFあり", target.current_target_schools)
     ycols[2].metric("旧年度fallback", target.stale_target_documents)
     ycols[3].metric("来年度以降PDF", target.future_target_documents)
-    ycols[4].metric("要確認キュー", target.review_queue_documents)
+    ycols[4].metric("人の確認が必要", target.review_queue_documents)
     if target.current_target_documents == 0 and target.stale_target_documents > 0:
         st.error(
             f"{target_label} の採録済PDFが 0 件です。旧年度fallbackをExcel成果として扱わず、"

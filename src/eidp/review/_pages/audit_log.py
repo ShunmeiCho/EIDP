@@ -311,7 +311,7 @@ def render(  # pragma: no cover - thin streamlit shell
     # actionable buckets (review_pending / ocr_pending / parse_failed /
     # school_mismatch) before scrolling into the audit log itself.
     depth = queue_depth(session)
-    st.markdown("**待機キュー**")
+    st.markdown("**確認待ちの内訳**")
     qcols = st.columns(4)
     qcols[0].metric("要レビュー", depth.review_pending)
     qcols[1].metric("OCR 待ち", depth.ocr_pending)

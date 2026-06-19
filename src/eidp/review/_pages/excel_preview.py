@@ -277,7 +277,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     target_cols[1].metric("旧年度fallback", target.stale_target_documents)
     target_cols[2].metric("未採録校", target.missing_current_target_schools)
     target_cols[3].metric("来年度以降PDF", target.future_target_documents)
-    target_cols[4].metric("要確認キュー", target.review_queue_documents)
+    target_cols[4].metric("人の確認が必要", target.review_queue_documents)
     if target.current_target_documents == 0 and target.stale_target_documents > 0:
         st.warning(
             f"{target_label} のPDFが未採録です。旧年度fallbackはExcel成果として扱わず、"
