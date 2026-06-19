@@ -7,6 +7,7 @@ import importlib.util
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -149,6 +150,14 @@ def _parse_nonnegative_int(value: str) -> int | None:
     return int(normalized)
 
 
+def _is_iso_date(value: str) -> bool:
+    try:
+        date.fromisoformat(value.strip())
+    except ValueError:
+        return False
+    return True
+
+
 def _outbox_flushed(value: str) -> bool:
     normalized = value.lower().replace("`", "").strip()
     return normalized == "0" or "after flush 0" in normalized
@@ -253,6 +262,8 @@ def _verify_release_exception_record(text: str, reason: str, errors: list[str]) 
             errors.append(f"release exception record Exception reason mismatch: {value} != {reason}")
         elif row_label == "Decision" and value != "APPROVED":
             errors.append("release exception record Decision must be APPROVED")
+        elif row_label == "Approval date" and not _is_placeholder(value) and not _is_iso_date(value):
+            errors.append("release exception record Approval date must be YYYY-MM-DD")
 
 
 def _case_fiscal_year(case: dict[str, Any]) -> int | None:
@@ -494,6 +505,8 @@ def _verify_template(text: str, release_exception_reason: str | None, errors: li
             value = _block_field_value(block, field)
             if not value:
                 errors.append(f"E2E template {marker} {field} is blank")
+            elif field == "Date" and not _is_iso_date(value):
+                errors.append(f"E2E template {marker} Date must be YYYY-MM-DD")
             elif field == "Decision":
                 normalized_decision = _release_conclusion_value(value)
                 if normalized_decision not in RELEASE_CONCLUSIONS:

@@ -322,6 +322,7 @@ def _core_entries() -> dict[str, bytes | str]:
             "Get-FileHash $zip -Algorithm SHA256\n"
             "v1.0-rc\n"
             "FY2026/R8 の current-year yield gate\n"
+            "Date: YYYY-MM-DD\n"
         ),
         "scripts/first_setup.bat": (SCRIPTS_DIR / "first_setup.bat").read_text(encoding="utf-8"),
         "scripts/launch.bat": (SCRIPTS_DIR / "launch.bat").read_text(encoding="utf-8"),
@@ -1101,6 +1102,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("RC_ONLY", "BETA_ONLY")
         .replace("release conclusion must be READY for release approval", "release conclusion must be go")
         .replace("Decision must be READY for release approval", "Decision must be go")
+        .replace("must be YYYY-MM-DD", "date may be free text")
         .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
         .replace("publication_lag", "publication_delay")
     )
@@ -1171,6 +1173,10 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: Decision must be READY for release approval" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: must be YYYY-MM-DD" in error
         for error in check.errors
     )
     assert any(
@@ -2282,6 +2288,22 @@ def test_verify_core_zip_requires_operator_e2e_preflight_fields(tmp_path: Path) 
 
     assert not check.ok
     assert any("Get-Volume C" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_iso_date_guidance_in_operator_e2e_template(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-operator-e2e-template.md"] = entries[
+        "docs/runbooks/eidp-operator-e2e-template.md"
+    ].replace("Date: YYYY-MM-DD", "Date:")
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        "docs/runbooks/eidp-operator-e2e-template.md missing required token: Date: YYYY-MM-DD" in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_requires_default_stage6_tunnel_guidance(tmp_path: Path) -> None:

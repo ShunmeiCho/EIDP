@@ -1444,6 +1444,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "NOT_READY",
             "release conclusion must be READY for release approval",
             "Decision must be READY for release approval",
+            "must be YYYY-MM-DD",
             "Owner sign-off:",
             "業務員 sign-off:",
             "Excel ready 率",
@@ -2079,6 +2080,7 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         '$expected = "<copy SHA256 from .sha256 sidecar or current-release-status>"',
         "v1.0-rc",
         "FY2026/R8 の current-year yield gate",
+        "Date: YYYY-MM-DD",
     ):
         _require_text(check, e2e_body, e2e_member, token)
     _check_operator_e2e_template_version_neutral_fields(check, e2e_body, e2e_member)

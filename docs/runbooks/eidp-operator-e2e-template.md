@@ -514,6 +514,7 @@ Version-specific setup/UI/recovery/launcher 証跡（operator real-cycle では�
 ## 9. Release 判定
 
 結論と sign-off の `Decision` は `READY` / `RC_ONLY` / `NOT_READY` のいずれかで記入する。
+sign-off の `Date` は `YYYY-MM-DD` 形式で記入する。
 `verify_stage6_return.py` は release approval 用なので、`READY` 以外は通過させない。
 
 | 判定項目 | 結果 |
@@ -534,7 +535,7 @@ Owner sign-off:
 
 ```text
 Name:
-Date:
+Date: YYYY-MM-DD
 Decision:
 ```
 
@@ -542,6 +543,6 @@ Decision:
 
 ```text
 Name:
-Date:
+Date: YYYY-MM-DD
 Decision:
 ```

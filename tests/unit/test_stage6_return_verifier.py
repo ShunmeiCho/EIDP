@@ -445,6 +445,34 @@ def test_verify_stage6_return_exception_rejects_not_approved_exception_record(tm
     assert "release exception record Decision must be APPROVED" in result["errors"]
 
 
+def test_verify_stage6_return_exception_rejects_invalid_approval_date(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    exception_record.write_text(
+        exception_record.read_text(encoding="utf-8").replace(
+            "| Approval date | 2026-05-19 |",
+            "| Approval date | 2026/05/19 |",
+        ),
+        encoding="utf-8",
+    )
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "release exception record Approval date must be YYYY-MM-DD" in result["errors"]
+
+
 def test_verify_stage6_return_rejects_failed_mature_year_proof(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
@@ -753,3 +781,25 @@ def test_verify_stage6_return_rejects_legacy_go_release_conclusion(tmp_path: Pat
     assert result["ok"] is False
     assert "E2E template release conclusion must be one of READY, RC_ONLY, NOT_READY" in result["errors"]
     assert "E2E template Owner sign-off: Decision must be one of READY, RC_ONLY, NOT_READY" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_invalid_signoff_dates(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template()
+        .replace("Date: 2026-05-17", "Date: 2026/05/17", 1)
+        .replace("Date: 2026-05-17", "Date: 2026-02-30", 1),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template Owner sign-off: Date must be YYYY-MM-DD" in result["errors"]
+    assert "E2E template 業務員 sign-off: Date must be YYYY-MM-DD" in result["errors"]
