@@ -1,10 +1,11 @@
 # Publication-Lag Release Exception Record
 
 Date: 2026-05-19
-Last evidence refresh: 2026-05-20
+Last evidence refresh: 2026-06-19
 Status: `NOT_APPROVED`
-Package candidate: `dist/eidp-windows-v526.zip`
-Package SHA256: `4a03e975243d1327e79470de82fe468814c42a66e2749ec32c3251176da9ebca`
+Local package candidate: `dist/eidp-windows-v530.zip`
+Local package SHA256: `6344e6b9c2fea850cb50425410f2e0a5ad9c6626ff31fca9fee5f9f8014604a6`
+Latest complete Windows side-by-side candidate: `dist/eidp-windows-v526.zip`
 
 This record is the explicit approval artifact required before EIDP v1.0 can
 ship under the `publication_lag` exception path. Until the approval fields are
