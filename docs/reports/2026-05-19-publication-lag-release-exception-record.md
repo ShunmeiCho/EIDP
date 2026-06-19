@@ -41,6 +41,7 @@ evidence or Stage 6 return verification.
 | 2026-hint sample probe | `logs/win-v485-stage6/fy2026-current-hint-target-samples-20260519.json` | required |
 | Mature FY2025 strict replay | `_temp/targeted-replay-e6c003f-nsg/strict-gap-analysis.limit1000.combined-plus-shinsei.json` | required |
 | Verifier-accepted mature-year proof | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json` | `ok=true` |
+| v530 local package/non-Windows release gates | `logs/win-v530-stage6-v530-non-windows-release-gates-20260619.json` | `ok=true`, package/source fresh, full unit `1936 passed`, discovery gold 45/45 exact |
 | v526 package/non-Windows release gates | `logs/win-v526-stage6-v526-non-windows-release-gates-20260520.json` | `ok=true`, package/source fresh, full unit `1901 passed` |
 | v526 package/source and Windows smoke report | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md` | current package/source proof; complete Windows side-by-side proof; extracted confirmation/supplement UI proof; FY2026/R8 strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` |
 | v526 owner/operator request | `docs/runbooks/eidp-v526-owner-request-20260520.txt` | prepared; not approval |
