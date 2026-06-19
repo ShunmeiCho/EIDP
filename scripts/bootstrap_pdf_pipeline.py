@@ -1355,7 +1355,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             status="running",
             current_step=5,
             percent=0.9,
-            message="学校別タスクを再計算しています。",
+            message="学校キューを再計算しています。",
             details=ingest_progress_details(ingest_stats),
         )
     print("\n=== Step 5: rebuild school fiscal-year status ===")
@@ -1374,7 +1374,7 @@ def run_bootstrap(args: argparse.Namespace, *, progress: BootstrapProgressWriter
             status="running",
             current_step=5,
             percent=0.98,
-            message="学校別タスクと対象年度PDFの自動取得率を集計しました。",
+            message="学校キューと対象年度PDFの自動取得率を集計しました。",
             details=final_status_details,
         )
 

@@ -1,4 +1,4 @@
-"""Streamlit page: Excel プレビュー (Sprint 8.4.c.3).
+"""Streamlit page: Excel出力 (Sprint 8.4.c.3).
 
 Operator-facing dry-run before the master workbook is downloaded /
 distributed. Generates the same 4-sheet workbook ``export_master_workbook``
@@ -254,10 +254,10 @@ def _auto_flag_confidence_message(row_count: int) -> str:
 
 
 def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - thin streamlit shell
-    """Top-level Streamlit render for the Excel プレビュー page."""
+    """Top-level Streamlit render for the Excel出力 page."""
     import streamlit as st
 
-    st.subheader("Excel プレビュー")
+    st.subheader("Excel出力")
     status = probe_lock(lock_path)
     if status.held:
         st.info(
@@ -304,7 +304,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         st.error(
             f"{target_label} の在籍者数など転記対象データが 0 件です。"
             "旧年度データを成果としてダウンロードしないでください。"
-            "先に学校別タスクでURL取得、PDF確認、年度修正を進めてください。"
+            "先に学校キューでURL取得、申請書PDF確認、対象年度確認を進めてください。"
         )
     elif export_gap.excel_ready_schools < export_gap.total_schools:
         st.warning(

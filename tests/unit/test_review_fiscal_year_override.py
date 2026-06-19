@@ -1,6 +1,6 @@
 """Sprint 8.4.c.2 — 年度修正 page helper regression.
 
-Same shape as 8.4.c.1's PDF確認・手入力 tests: render shell is
+Same shape as 8.4.c.1's 申請書PDF確認 tests: render shell is
 exercised by the running app; helpers are unit-tested here.
 
 Helpers under test:

@@ -410,7 +410,7 @@ def _render_seed_coverage(seed_csv: Path) -> None:  # pragma: no cover - Streaml
     if summary.no_school_link_signal:
         st.info(
             "URL信号なしの都道府県は、公式一覧から学校URLを直接登録できない可能性があります。"
-            "学校別タスクのURLなし行と補助検索の証跡を確認してください。"
+            "学校キューのURLなし行と補助検索の証跡を確認してください。"
         )
     st.caption(
         "ここは初回URL/PDF取得の入口 coverage です。"
@@ -424,7 +424,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
 
     from eidp.config import settings
 
-    st.header("都道府県公式インデックス")
+    st.header("公式索引管理")
     st.caption(
         "確認大学等一覧から、学校URLの自動取得 coverage と、新規認定・名称変更・辞退/取消・統合再編の"
         "備考信号を確認します。"

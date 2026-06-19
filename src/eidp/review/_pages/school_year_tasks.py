@@ -249,7 +249,7 @@ def url_submission_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
 
 
 def manual_entry_prefill_for_row(row: SchoolTaskRow) -> dict[str, object]:
-    """Return Streamlit session_state values that focus PDF確認・手入力."""
+    """Return Streamlit session_state values that focus 申請書PDF確認."""
     payload: dict[str, object] = {"selected_page": MANUAL_ENTRY_PAGE_ID}
     if row.latest_document_id is not None:
         payload[MANUAL_ENTRY_DOCUMENT_ID_STATE_KEY] = row.latest_document_id
@@ -530,7 +530,7 @@ def task_lanes_for_summary(summary: SchoolTaskSummary) -> list[TaskLane]:
         ),
         TaskLane(
             key="review_or_parse",
-            label="PDF確認・手入力",
+            label="申請書PDF確認",
             count=summary.review_or_parse,
             description="PDF原本、OCR待ち、抽出失敗、前年差分確認をまとめて確認します。",
             button_label="PDF確認を開く",
@@ -550,7 +550,7 @@ def task_lanes_for_summary(summary: SchoolTaskSummary) -> list[TaskLane]:
             key="excel_ready",
             label="Excel確認へ",
             count=summary.excel_ready,
-            description="対象年度PDFと抽出が揃った学校だけを Excel プレビューで確認します。",
+            description="対象年度PDFと抽出が揃った学校だけを Excel出力で確認します。",
             button_label="Excelプレビュー",
             scope="excel_ready",
             page_id=EXCEL_PREVIEW_PAGE_ID,
@@ -584,7 +584,7 @@ def is_pdf_site_url(url_type: str | None, url: str | None) -> bool:
 def next_action_for_status(status: SchoolFiscalYearStatus) -> tuple[str, str]:
     """Map denormalized status into operator language."""
     if status.excel_ready:
-        return "Excel出力可", "Excel プレビューで出力前確認"
+        return "Excel出力可", "Excel出力で出力前確認"
 
     if status.yoy_diff_status == "identical_to_prev_fy":
         return "前年差分確認", "前年と同じ数値です。PDF年度と更新有無を確認"
@@ -818,7 +818,7 @@ def initial_bootstrap_warning_text(summary: SchoolTaskSummary) -> str:
         "対象年度PDFの探索を開始します。"
         "一覧PDF内の学校名リンクに埋め込まれたURLも自動で読み取ります。"
         "一覧にURLが無い学校は、設定された検索 provider で学校の情報公開ページを補完します。"
-        "未対応の都道府県や未掲載校だけ、学校別タスクのURL追加から公式の情報公開ページを補足してください。"
+        "未対応の都道府県や未掲載校だけ、学校キューの情報公開ページ追加から公式の入口を補足してください。"
     )
 
 
@@ -1758,7 +1758,7 @@ def _render_bootstrap_progress(
     if progress.status == "succeeded":
         st.success(
             success_message
-            or "初回URL/PDF取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。"
+            or "初回URL/PDF取得が完了しました。この画面を更新すると最新の学校キューを確認できます。"
         )
     elif progress.status == "failed":
         st.error(progress.message)
@@ -1952,7 +1952,7 @@ def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path
             latest_progress,
             lock_held=lock_status.held,
             process_label="週次URL/PDF再取得",
-            success_message="週次URL/PDF再取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。",
+            success_message="週次URL/PDF再取得が完了しました。この画面を更新すると最新の学校キューを確認できます。",
         )
     progress_blocks_start = bootstrap_progress_blocks_start(latest_progress, lock_held=lock_status.held)
 
@@ -1979,7 +1979,7 @@ def _render_weekly_rediscovery_controls(summary: SchoolTaskSummary, *, lock_path
                         lock_held=probe_lock(lock_path).held,
                         process_label="週次URL/PDF再取得",
                         success_message=(
-                            "週次URL/PDF再取得が完了しました。この画面を更新すると最新の学校別タスクを確認できます。"
+                            "週次URL/PDF再取得が完了しました。この画面を更新すると最新の学校キューを確認できます。"
                         ),
                     )
             if result.last_run_path is not None:
@@ -2024,7 +2024,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
     fiscal_year = settings.target_fiscal_year
     target_label = format_fiscal_year_label(fiscal_year)
 
-    st.header("① 学校別タスク")
+    st.header("① 学校キュー")
     build_label = operator_build_label(Path(settings.app_root))
     if build_label:
         st.caption(build_label)
@@ -2103,7 +2103,7 @@ def render(session: Session, *, lock_path: Path) -> None:  # pragma: no cover - 
         if not ocr_detection.can_run:
             st.warning(
                 f"画像PDF/OCR待ちが {summary.image_pending} 校あります。"
-                "OCR add-on 未導入の環境では自動抽出されないため、PDF確認・手入力で確認してください。"
+                "OCR add-on 未導入の環境では自動抽出されないため、申請書PDF確認で確認してください。"
             )
     evidence_summary = school_year_discovery_evidence_summary(
         session,

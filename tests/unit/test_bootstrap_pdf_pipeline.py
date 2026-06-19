@@ -169,7 +169,7 @@ def test_progress_preserves_discovery_skipped_after_ingest(tmp_path: Path) -> No
         status="running",
         current_step=5,
         percent=0.9,
-        message="学校別タスクを再計算しています。",
+        message="学校キューを再計算しています。",
         details=module.ingest_progress_details(
             {
                 "processed": 0,

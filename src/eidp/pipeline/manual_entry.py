@@ -1,6 +1,6 @@
 """Business-user manual entry contract (Sprint 8.4.a).
 
-When the operator types numbers into the Streamlit "PDF確認・手入力" page
+When the operator types numbers into the Streamlit "申請書PDF確認" page
 (image PDFs, parse_failed docs, low-confidence rows), the data MUST land
 in the same DB tables as the auto-parser path AND must satisfy a stricter
 contract:

@@ -71,7 +71,7 @@ class QueueDepth:
     """Sprint 8.6.d.4 — operator dashboard counts.
 
     Surfaces the queue depth across the buckets that drive the
-    PDF確認・手入力 workflow so the audit page can show "how much work
+    申請書PDF確認 workflow so the audit page can show "how much work
     is waiting" without the operator having to switch tabs.
 
     ``review_pending`` and ``ocr_pending`` are the high-priority

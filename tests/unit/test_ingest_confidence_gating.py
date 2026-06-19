@@ -915,7 +915,7 @@ def test_low_conf_doc_lands_review_pending_status(engine, tmp_path):
 
         assert doc.ingest_status == "review_pending", (
             f"low-confidence doc must land at review_pending so it appears "
-            f"in PDF確認・手入力 queue; got {doc.ingest_status!r}"
+            f"in 申請書PDF確認 queue; got {doc.ingest_status!r}"
         )
 
 
@@ -980,7 +980,7 @@ def test_all_low_conf_does_not_mark_school_year_status_collected(engine, tmp_pat
 def test_mixed_high_and_low_dept_routes_doc_to_review_pending(engine, tmp_path):
     """Owner P1: 1 high-conf dept + 1 low-conf dept → the low row is
     rejected from DepartmentYearly, the high row reaches Excel, but the Document MUST surface
-    in PDF確認・手入力 because part of the data needs review. Previously
+    in 申請書PDF確認 because part of the data needs review. Previously
     such a doc was marked 'ingested' and disappeared from the queue."""
     from eidp.pipeline.ingest import run_ingestion
 

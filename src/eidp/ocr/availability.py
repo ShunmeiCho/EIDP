@@ -1,6 +1,6 @@
 """Sprint 8.6.d.3 — OCR availability detection for the operator UI.
 
-The PDF確認・手入力 page asks one question on every render: ``can the
+The 申請書PDF確認 page asks one question on every render: ``can the
 operator hit an OCR button right now?``. The answer depends on three
 independent things:
 

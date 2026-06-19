@@ -1,4 +1,4 @@
-"""Sprint 8.6.d.2 — PDF確認・手入力 confidence summary."""
+"""Sprint 8.6.d.2 — 申請書PDF確認 confidence summary."""
 
 from __future__ import annotations
 

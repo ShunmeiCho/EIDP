@@ -1,4 +1,4 @@
-"""Sprint 8.4.c.1 — PDF確認・手入力 page helper regression.
+"""Sprint 8.4.c.1 — 申請書PDF確認 page helper regression.
 
 Most tests here pin the *pure* helper contracts the page depends on,
 with one Streamlit AppTest smoke for the render shell:
@@ -935,7 +935,7 @@ def test_render_page_smoke_with_focused_discovery_evidence(tmp_path: Path, monke
         app.run(timeout=30)
 
         assert not app.exception
-        assert any("PDF確認・手入力" in str(item.value) for item in app.subheader)
+        assert any("申請書PDF確認" in str(item.value) for item in app.subheader)
         assert any("PDF候補を採用" in str(item.value) for item in app.info)
     finally:
         session.close()
