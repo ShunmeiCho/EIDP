@@ -443,6 +443,36 @@ def test_verify_stage6_return_rejects_mature_year_template_year_mismatch(tmp_pat
     )
 
 
+def test_verify_stage6_return_rejects_mature_year_proof_json_filename_mismatch(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(
+        _complete_exception_template().replace(
+            "| mature-year proof JSON | ok=true | logs/mature-year-proof.json | pass |",
+            "| mature-year proof JSON | ok=true | logs/old-proof.json | pass |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "E2E template mature-year proof JSON must reference verifier proof JSON file: "
+        "logs/old-proof.json does not include mature-year-proof.json"
+    ) in result["errors"]
+
+
 def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operator_coverage(
     tmp_path: Path,
 ) -> None:

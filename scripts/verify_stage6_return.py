@@ -426,6 +426,7 @@ def _verify_mature_year_proof(
 def _verify_template(
     text: str,
     release_exception_reason: str | None,
+    mature_year_proof_json: Path | None,
     mature_year_proof_years: list[int],
     errors: list[str],
     warnings: list[str],
@@ -486,6 +487,13 @@ def _verify_template(
                     "E2E template release exception reason must match verifier argument: "
                     f"{actual} != {release_exception_reason}"
                 )
+            elif row_label == "mature-year proof JSON" and mature_year_proof_json is not None:
+                expected_file = mature_year_proof_json.name
+                if expected_file not in actual:
+                    errors.append(
+                        "E2E template mature-year proof JSON must reference verifier proof JSON file: "
+                        f"{actual} does not include {expected_file}"
+                    )
             elif row_label == "mature-year proof years" and mature_year_proof_years:
                 actual_years = _years_from_text(actual)
                 expected_years = set(mature_year_proof_years)
@@ -630,6 +638,7 @@ def verify_stage6_return(
         _verify_template(
             e2e_template.read_text(encoding="utf-8"),
             active_release_exception_reason,
+            mature_year_proof_json,
             mature_year_proof_years,
             errors,
             warnings,
