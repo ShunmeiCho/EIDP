@@ -1450,6 +1450,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "Excel ready 率",
             "Excel 整合性",
             "出力ファイル:",
+            "Excel output file proof must include an .xlsx workbook path",
             "manual_action_log 件数",
             "JSONL outbox 未送信件数",
             "JSONL action_id 重複",
@@ -2081,6 +2082,7 @@ def _check_operator_runbook_contract(check: ZipCheck, names: set[str]) -> None:
         "v1.0-rc",
         "FY2026/R8 の current-year yield gate",
         "Date: YYYY-MM-DD",
+        "実際に生成・確認した `.xlsx` のパスを記入する。",
     ):
         _require_text(check, e2e_body, e2e_member, token)
     _check_operator_e2e_template_version_neutral_fields(check, e2e_body, e2e_member)

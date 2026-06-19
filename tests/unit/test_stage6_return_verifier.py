@@ -226,6 +226,28 @@ data\\output\\eidp-master.xlsx
     assert "E2E template audit row missing or malformed: JSONL outbox 未送信件数" in result["errors"]
 
 
+def test_verify_stage6_return_rejects_excel_output_proof_without_workbook_path(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template().replace(
+            "data\\output\\eidp-master.xlsx",
+            "shared drive upload complete",
+        ),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template Excel output file proof must include an .xlsx workbook path" in result["errors"]
+
+
 def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
