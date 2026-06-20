@@ -1430,6 +1430,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "KPI actual must match",
             "last_run finished_at must be ISO datetime",
             "last_run finished_at must not be in the future",
+            "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
             "SHIP_GATE_EXCEPTION_REASONS",
             "release_exception_reason",
             "mature_year_proof_json",

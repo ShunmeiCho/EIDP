@@ -1092,6 +1092,10 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("release_exception_reason", "release_override_reason")
         .replace("last_run finished_at must be ISO datetime", "last_run finished_at may be free text")
         .replace("last_run finished_at must not be in the future", "last_run finished_at may be future")
+        .replace(
+            "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
+            "mature-year proof finished_at may be future",
+        )
         .replace("target_pdf_excel_ready_yield_pct", "target_pdf_excel_ready_optional")
         .replace("KPI actual must match", "KPI actual may differ")
         .replace("mature_year_proof_json", "historical_year_proof_json")
@@ -1166,6 +1170,11 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: last_run finished_at must not be in the future"
         in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "mature-year proof case FY{fiscal_year} finished_at must not be in the future" in error
         for error in check.errors
     )
     assert any(

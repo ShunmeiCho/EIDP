@@ -554,6 +554,9 @@ def _verify_mature_year_proof(
                 if parsed_finished_at is None:
                     errors.append(f"mature-year proof case FY{fiscal_year} finished_at must be ISO datetime")
                     case_ok = False
+                elif _is_future_datetime_value(parsed_finished_at):
+                    errors.append(f"mature-year proof case FY{fiscal_year} finished_at must not be in the future")
+                    case_ok = False
                 else:
                     finished_date = parsed_finished_at.date()
         if not _is_number(target_yield):
