@@ -19,7 +19,8 @@ LEGACY_WEEKLY_SHIP_GATE_METRIC_BASES = frozenset({"weekly_operator_reviewable_ac
 WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = "target_missing_schools_before_run"
 MATURE_YEAR_SHIP_GATE_METRIC_BASIS = "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition"
 MATURE_YEAR_PROOF_MIN_DENOMINATOR = 1000
-MATURE_YEAR_PROOF_SCHOOL_TYPE = "専門学校"
+V1_RELEASE_SCHOOL_TYPE = "専門学校"
+MATURE_YEAR_PROOF_SCHOOL_TYPE = V1_RELEASE_SCHOOL_TYPE
 SHIP_GATE_EXCEPTION_REASONS = frozenset({"publication_lag"})
 SHIP_GATE_THRESHOLD_GAPS = frozenset({"strict_auto_yield", "manual_workload"})
 

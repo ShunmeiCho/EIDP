@@ -126,6 +126,7 @@ SHIP_GATE_STATUSES = _SHIP_GATE_CONTRACT.SHIP_GATE_STATUSES
 MATURE_YEAR_SHIP_GATE_METRIC_BASIS = _SHIP_GATE_CONTRACT.MATURE_YEAR_SHIP_GATE_METRIC_BASIS
 MATURE_YEAR_PROOF_MIN_DENOMINATOR = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_MIN_DENOMINATOR
 MATURE_YEAR_PROOF_SCHOOL_TYPE = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_SCHOOL_TYPE
+V1_RELEASE_SCHOOL_TYPE = _SHIP_GATE_CONTRACT.V1_RELEASE_SCHOOL_TYPE
 WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = _SHIP_GATE_CONTRACT.WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE
 is_ship_gate_exception_reason = _SHIP_GATE_CONTRACT.is_ship_gate_exception_reason
 ship_gate_status_from_weekly_metrics = _SHIP_GATE_CONTRACT.ship_gate_status_from_weekly_metrics
@@ -389,6 +390,8 @@ def _verify_last_run(
         errors.append("last_run dry_run must be false")
     if target_fy is not None and last_run.get("current_fy") != target_fy:
         errors.append(f"last_run current_fy must be {target_fy}")
+    if last_run.get("school_type") != V1_RELEASE_SCHOOL_TYPE:
+        errors.append(f"last_run school_type must be {V1_RELEASE_SCHOOL_TYPE}")
 
     if require_kpi:
         target_yield = last_run.get("target_pdf_auto_yield_pct")
@@ -625,6 +628,7 @@ def _verify_last_run_mature_year_evidence(
     denominator_scope: object,
     operator_reviewable_yield: object,
     ship_gate_status: object,
+    school_type: object,
     finished_at: object,
     errors: list[str],
 ) -> bool:
@@ -643,6 +647,12 @@ def _verify_last_run_mature_year_evidence(
     if payload.get("current_fy") != fiscal_year:
         errors.append(f"{evidence_label} current_fy must be {fiscal_year}")
         ok = False
+    if payload.get("school_type") != V1_RELEASE_SCHOOL_TYPE:
+        errors.append(
+            f"mature-year proof case FY{fiscal_year} last_run evidence school_type must be "
+            f"{V1_RELEASE_SCHOOL_TYPE}"
+        )
+        ok = False
 
     evidence_denominator = payload.get("target_pdf_auto_denominator_count")
     if evidence_denominator is None:
@@ -650,6 +660,7 @@ def _verify_last_run_mature_year_evidence(
 
     checks = (
         ("finished_at", finished_at, payload.get("finished_at"), None),
+        ("school_type", school_type, payload.get("school_type"), None),
         ("target_pdf_auto_denominator_count", denominator, evidence_denominator, None),
         (
             "target_pdf_auto_denominator_scope",
@@ -938,6 +949,7 @@ def _verify_mature_year_proof(
                     denominator_scope=denominator_scope,
                     operator_reviewable_yield=operator_reviewable_yield,
                     ship_gate_status=ship_gate_status,
+                    school_type=school_type,
                     finished_at=finished_at,
                     errors=errors,
                 ):
@@ -997,6 +1009,12 @@ def _verify_mature_year_proof(
             errors.append(
                 f"mature-year proof case FY{fiscal_year} target_pdf_auto_yield_pct below release threshold: "
                 f"{float(target_yield):.1f} < {min_target_pdf_auto_yield:.1f}"
+            )
+            case_ok = False
+        if evidence_source == "last_run" and school_type != V1_RELEASE_SCHOOL_TYPE:
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} school_type must be "
+                f"{V1_RELEASE_SCHOOL_TYPE}: {school_type!r}"
             )
             case_ok = False
         if evidence_source == "strict_gap_analysis":

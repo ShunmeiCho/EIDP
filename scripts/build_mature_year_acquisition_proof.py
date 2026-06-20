@@ -26,6 +26,7 @@ STRICT_GAP_ANALYSIS_BASIS = "strict_yield_gap_analysis"
 MATURE_YEAR_SHIP_GATE_METRIC_BASIS = _SHIP_GATE_CONTRACT.MATURE_YEAR_SHIP_GATE_METRIC_BASIS
 MATURE_YEAR_PROOF_MIN_DENOMINATOR = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_MIN_DENOMINATOR
 MATURE_YEAR_PROOF_SCHOOL_TYPE = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_SCHOOL_TYPE
+V1_RELEASE_SCHOOL_TYPE = _SHIP_GATE_CONTRACT.V1_RELEASE_SCHOOL_TYPE
 WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = _SHIP_GATE_CONTRACT.WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE
 SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT = _SHIP_GATE_CONTRACT.SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT
 SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT = _SHIP_GATE_CONTRACT.SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT
@@ -124,6 +125,7 @@ def build_case(
             "finished_at": payload.get("finished_at"),
             "dry_run": payload.get("dry_run"),
             "current_fy": payload.get("current_fy"),
+            "school_type": payload.get("school_type"),
             "target_pdf_auto_denominator_count": denominator,
             "target_pdf_auto_denominator_scope": payload.get("target_pdf_auto_denominator_scope"),
             "target_missing_school_count": payload.get("target_missing_school_count"),
@@ -141,6 +143,8 @@ def build_case(
         errors.append("last_run dry_run must be false")
     if payload.get("current_fy") != fiscal_year:
         errors.append(f"last_run current_fy must be {fiscal_year}")
+    if payload.get("school_type") != V1_RELEASE_SCHOOL_TYPE:
+        errors.append(f"last_run school_type must be {V1_RELEASE_SCHOOL_TYPE}")
 
     if not _is_number(target_yield):
         errors.append("target_pdf_auto_yield_pct must be numeric")

@@ -29,6 +29,8 @@ def test_ship_gate_contract_names_distinct_bootstrap_and_weekly_metrics() -> Non
         == "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition"
     )
     assert module.MATURE_YEAR_PROOF_SCHOOL_TYPE == "専門学校"
+    assert module.V1_RELEASE_SCHOOL_TYPE == "専門学校"
+    assert module.MATURE_YEAR_PROOF_SCHOOL_TYPE == module.V1_RELEASE_SCHOOL_TYPE
     assert module.SHIP_GATE_EXCEPTION_REASONS == frozenset({"publication_lag"})
     assert module.BOOTSTRAP_SHIP_GATE_METRIC_BASIS != module.WEEKLY_SHIP_GATE_METRIC_BASIS
     assert module.MATURE_YEAR_SHIP_GATE_METRIC_BASIS != module.WEEKLY_SHIP_GATE_METRIC_BASIS

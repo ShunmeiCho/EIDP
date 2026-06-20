@@ -23,6 +23,7 @@ def _write_last_run(path: Path, **overrides: object) -> None:
         "finished_at": "2026-05-17T01:02:03+00:00",
         "dry_run": False,
         "current_fy": 2025,
+        "school_type": "専門学校",
         "target_pdf_auto_denominator_count": 1625,
         "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
         "target_missing_school_count": 1625,
@@ -66,6 +67,7 @@ def test_build_proof_accepts_mature_year_acquisition_case(tmp_path: Path) -> Non
     assert proof["min_target_pdf_auto_denominator_count"] == 1000
     assert proof["cases"][0]["ok"] is True
     assert proof["cases"][0]["target_pdf_auto_denominator_count"] == 1625
+    assert proof["cases"][0]["school_type"] == "専門学校"
     assert proof["cases"][0]["target_pdf_auto_yield_pct"] == 67.5
     assert proof["cases"][0]["operator_reviewable_yield_pct"] == 72.0
     assert proof["cases"][0]["estimated_manual_workload_pct"] == 28.0
@@ -109,6 +111,18 @@ def test_build_proof_rejects_low_target_yield_and_manual_workload(tmp_path: Path
     assert "target_pdf_auto_yield_pct below release threshold: 40.0 < 60.0" in proof["cases"][0]["errors"]
     assert "estimated manual workload above release threshold: 40.0 > 30.0" in proof["cases"][0]["errors"]
     assert proof["cases"][0]["threshold_gaps"] == ["strict_auto_yield", "manual_workload"]
+
+
+def test_build_proof_rejects_non_specialty_school_last_run_scope(tmp_path: Path) -> None:
+    module = _load_module()
+    last_run = tmp_path / "last_run.json"
+    _write_last_run(last_run, school_type="大学")
+
+    proof = module.build_proof([(2025, last_run)])
+
+    assert proof["ok"] is False
+    assert proof["cases"][0]["ok"] is False
+    assert "last_run school_type must be 専門学校" in proof["cases"][0]["errors"]
 
 
 def test_build_proof_rejects_strict_gap_analysis_with_low_excel_ready(tmp_path: Path) -> None:

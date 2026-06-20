@@ -1097,6 +1097,9 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("release_exception_reason", "release_override_reason")
         .replace("last_run finished_at must be ISO datetime", "last_run finished_at may be free text")
         .replace("last_run finished_at must not be in the future", "last_run finished_at may be future")
+        .replace("last_run school_type must be", "last_run school_type optional")
+        .replace("last_run evidence school_type must be", "last_run evidence school_type optional")
+        .replace("V1_RELEASE_SCHOOL_TYPE", "V1_RELEASE_SCOPE")
         .replace(
             "mature-year proof case fiscal_year must be an integer",
             "mature-year proof fiscal_year may be numeric",
@@ -1215,6 +1218,7 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("MATURE_YEAR_SHIP_GATE_METRIC_BASIS", "MATURE_YEAR_METRIC_BASIS")
         .replace("MATURE_YEAR_PROOF_MIN_DENOMINATOR", "MATURE_YEAR_PROOF_MIN_SAMPLE")
         .replace("MATURE_YEAR_PROOF_SCHOOL_TYPE", "MATURE_YEAR_PROOF_SCOPE")
+        .replace("V1_RELEASE_SCHOOL_TYPE", "V1_RELEASE_SCOPE")
         .replace("WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE", "WEEKLY_SHIP_GATE_SAMPLE_SCOPE")
         .replace("target_missing_schools_before_run", "target_missing_small_sample")
         .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
@@ -1224,6 +1228,8 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     entries["scripts/build_mature_year_acquisition_proof.py"] = (
         entries["scripts/build_mature_year_acquisition_proof.py"]
         .replace("MATURE_YEAR_PROOF_SCHOOL_TYPE", "MATURE_YEAR_PROOF_SCOPE")
+        .replace("V1_RELEASE_SCHOOL_TYPE", "V1_RELEASE_SCOPE")
+        .replace("last_run school_type must be", "last_run school_type optional")
         .replace("strict_gap_analysis finished_at is required", "strict_gap_analysis finished_at optional")
         .replace("strict_gap_analysis school_type must be", "strict_gap_analysis school_type optional")
         .replace("target_pdf_auto_denominator_count must be an integer", "denominator can be fractional")
@@ -1246,6 +1252,14 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: last_run finished_at must not be in the future"
         in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: last_run school_type must be" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: V1_RELEASE_SCHOOL_TYPE" in error
         for error in check.errors
     )
     assert any(
@@ -1272,6 +1286,10 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
         "mature-year proof case FY{fiscal_year} last_run evidence path does not exist" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: last_run evidence school_type must be" in error
         for error in check.errors
     )
     assert any(
@@ -1376,6 +1394,15 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/build_mature_year_acquisition_proof.py missing required token: MATURE_YEAR_PROOF_SCHOOL_TYPE"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: V1_RELEASE_SCHOOL_TYPE" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: last_run school_type must be"
         in error
         for error in check.errors
     )
@@ -1582,6 +1609,10 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/ship_gate_contract.py missing required token: MATURE_YEAR_PROOF_SCHOOL_TYPE" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: V1_RELEASE_SCHOOL_TYPE" in error
         for error in check.errors
     )
     assert any(

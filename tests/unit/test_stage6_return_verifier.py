@@ -103,6 +103,7 @@ def _write_complete_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 67.5,
             "operator_reviewable_yield_pct": 72.0,
             "target_pdf_excel_ready_yield_pct": 67.5,
@@ -138,6 +139,7 @@ def _write_mature_year_proof(
         "finished_at": "2026-05-17T01:02:03+00:00",
         "target_pdf_auto_denominator_count": 1625,
         "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
+        "school_type": "専門学校",
         "target_pdf_auto_yield_pct": 67.5,
         "operator_reviewable_yield_pct": 72.0,
         "ship_gate_status": "pass",
@@ -154,6 +156,7 @@ def _write_mature_year_proof(
             "finished_at": case.get("finished_at"),
             "dry_run": False,
             "current_fy": case.get("fiscal_year"),
+            "school_type": case.get("school_type"),
             "target_pdf_auto_denominator_count": case.get("target_pdf_auto_denominator_count"),
             "target_pdf_auto_denominator_scope": case.get("target_pdf_auto_denominator_scope"),
             "target_missing_school_count": case.get("target_pdf_auto_denominator_count"),
@@ -270,6 +273,7 @@ def test_verify_stage6_return_rejects_invalid_last_run_finished_at(tmp_path: Pat
             "finished_at": "after weekly run",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 67.5,
             "operator_reviewable_yield_pct": 72.0,
             "target_pdf_excel_ready_yield_pct": 67.5,
@@ -298,6 +302,7 @@ def test_verify_stage6_return_rejects_future_last_run_finished_at(tmp_path: Path
             "finished_at": "2999-01-01T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 67.5,
             "operator_reviewable_yield_pct": 72.0,
             "target_pdf_excel_ready_yield_pct": 67.5,
@@ -421,6 +426,7 @@ def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_th
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 22.0,
             "operator_reviewable_yield_pct": 0.0,
             "target_pdf_excel_ready_yield_pct": 22.0,
@@ -466,6 +472,7 @@ def test_verify_stage6_return_rejects_template_kpi_actual_mismatch_with_last_run
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 22.0,
             "operator_reviewable_yield_pct": 72.0,
             "target_pdf_excel_ready_yield_pct": 67.5,
@@ -503,6 +510,7 @@ def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: P
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": None,
             "operator_reviewable_yield_pct": None,
             "target_pdf_excel_ready_yield_pct": None,
@@ -524,6 +532,35 @@ def test_verify_stage6_return_exception_still_rejects_unmeasured_kpi(tmp_path: P
     assert "last_run target_pdf_auto_yield_pct must be numeric for final return evidence" in result["errors"]
     assert "last_run operator_reviewable_yield_pct must be numeric for final return evidence" in result["errors"]
     assert "last_run ship_gate_status must be measured" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_non_specialty_current_last_run_scope(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    _write_json(
+        last_run,
+        {
+            "status": "success",
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "dry_run": False,
+            "current_fy": 2026,
+            "school_type": "大学",
+            "target_pdf_auto_yield_pct": 67.5,
+            "operator_reviewable_yield_pct": 72.0,
+            "target_pdf_excel_ready_yield_pct": 67.5,
+            "ship_gate_status": "pass",
+        },
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "last_run school_type must be 専門学校" in result["errors"]
 
 
 def test_verify_stage6_return_rejects_mature_year_template_year_mismatch(tmp_path: Path) -> None:
@@ -617,6 +654,7 @@ def test_verify_stage6_return_rejects_ship_gate_status_inconsistent_with_operato
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 22.0,
             "operator_reviewable_yield_pct": 0.0,
             "target_pdf_excel_ready_yield_pct": 22.0,
@@ -1003,6 +1041,7 @@ def test_verify_stage6_return_exception_rejects_approval_date_before_last_run(
             "finished_at": "2026-05-20T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 67.5,
             "operator_reviewable_yield_pct": 72.0,
             "target_pdf_excel_ready_yield_pct": 67.5,
@@ -1237,6 +1276,37 @@ def test_verify_stage6_return_rejects_mature_year_proof_metric_mismatch_with_las
         "mature-year proof case FY2025 target_pdf_auto_yield_pct must match last_run evidence: 67.5 != 12.0"
         in result["errors"]
     )
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
+        "errors"
+    ]
+
+
+def test_verify_stage6_return_rejects_non_specialty_mature_year_last_run_proof_scope(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(
+        tmp_path,
+        school_type="大学",
+        evidence_overrides={"school_type": "大学"},
+    )
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "mature-year proof case FY2025 last_run evidence school_type must be 専門学校" in result["errors"]
+    assert "mature-year proof case FY2025 school_type must be 専門学校: '大学'" in result["errors"]
     assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
         "errors"
     ]
@@ -1860,6 +1930,7 @@ def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 22.0,
             "operator_reviewable_yield_pct": 0.0,
             "target_pdf_excel_ready_yield_pct": 22.0,
@@ -1960,6 +2031,7 @@ Decision:
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": None,
             "operator_reviewable_yield_pct": None,
             "target_pdf_excel_ready_yield_pct": None,
@@ -2013,6 +2085,7 @@ def test_verify_stage6_return_rejects_below_threshold_and_non_ready_decision(tmp
             "finished_at": "2026-05-17T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 55.0,
             "operator_reviewable_yield_pct": 65.0,
             "target_pdf_excel_ready_yield_pct": 55.0,
@@ -2292,6 +2365,7 @@ def test_verify_stage6_return_rejects_signoff_dates_before_last_run_finished_dat
             "finished_at": "2026-05-18T01:02:03+00:00",
             "dry_run": False,
             "current_fy": 2026,
+            "school_type": "専門学校",
             "target_pdf_auto_yield_pct": 67.5,
             "operator_reviewable_yield_pct": 72.0,
             "target_pdf_excel_ready_yield_pct": 67.5,
