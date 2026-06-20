@@ -24,6 +24,16 @@ data/output/target-year-discovery/20260620_051853-discovery-rejections.jsonl
 data/output/target-year-discovery/20260620_051853-discovery-rca-batch-plan.json
 ```
 
+The same summary is now machine-reproducible with:
+
+```bash
+uv run python scripts/summarize_stage6_rca.py logs/win-v535-stage6/stage6-evidence-20260620-053032.zip --json
+```
+
+The verifier returns `ok=true`, confirms required evidence labels
+`build_info`, `diagnostics`, `last_run`, `discovery_evidence`, and
+`discovery_rca`, and keeps the strict-yield conclusion at `BELOW_GATE`.
+
 ## Current-State Audit
 
 | Classification | Finding | Evidence |
@@ -66,7 +76,9 @@ is not safe to count as current FY2026/R8 Excel-ready data.
 
 ## RCA Batch Buckets
 
-The Stage 6 RCA batch contains `20` school packets and `524` candidate rows:
+The Stage 6 RCA batch contains `20` school packets and `524` candidate rows.
+The RCA file header also has `total_candidates=35`; this is not the release
+denominator and should not be used as the school-level candidate-row total.
 
 | Bucket | Schools | Candidate rows | Release interpretation |
 | --- | ---: | ---: | --- |
@@ -146,9 +158,9 @@ P0 actions:
 
 P1 actions:
 
-1. Add a small verifier/report step that summarizes RCA batch buckets from the
-   Stage 6 evidence ZIP so future owner handoffs show the same action lanes
-   automatically.
+1. Done in source: `scripts/summarize_stage6_rca.py` summarizes RCA batch
+   buckets from a Stage 6 evidence ZIP so future owner handoffs show the same
+   action lanes automatically.
 2. Consider a bounded same-domain disclosure expansion improvement for the one
    `non_target_candidates_only` site after confirming the official site has a
    stable disclosure section.

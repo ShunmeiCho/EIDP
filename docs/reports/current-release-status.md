@@ -32,7 +32,11 @@ The v535 strict-yield RCA action plan is recorded in
 `12/50 (24.0%)` blocker into `publication_lag_or_old_target_pdf`,
 `target_form_without_year_evidence`, `school_identity_mismatch`, and
 `non_target_candidates_only` action lanes without relaxing the FY2026/R8 strict
-evidence rules.
+evidence rules. The RCA summary is now reproducible from the Stage 6 evidence
+ZIP with `uv run python scripts/summarize_stage6_rca.py
+logs/win-v535-stage6/stage6-evidence-20260620-053032.zip --json`; the script
+confirms `20` school packets, `524` candidate rows, and strict-yield conclusion
+`BELOW_GATE`.
 
 Rejected v534 (`dist/eidp-windows-v534.zip`, SHA256
 `734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`) is
