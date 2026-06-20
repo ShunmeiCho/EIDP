@@ -170,6 +170,7 @@ jobs:
             "finished_at": "2026-05-18T00:00:00+00:00",
             "dry_run": false,
             "current_fy": 2025,
+            "school_type": "専門学校",
             "target_pdf_auto_denominator_count": 1200,
             "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
             "target_missing_school_count": 1200,
