@@ -218,7 +218,7 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
         in current_status
     )
     assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist
-    assert "from current `main` or from a v542+ package" in current_status
+    assert "from current `main` or from a v543+ package carrying the helper" in current_status
     assert "v542-owner-docs-20260621" in current_status
     assert "docs/reports/2026-06-21-v542-owner-docs-windows-staging.md" in current_status
     assert "bucket_decision_counts" in objective_checklist

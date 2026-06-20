@@ -3,7 +3,22 @@
 Updated: 2026-06-21
 Branch: `main`
 
-Latest packaged bounded Windows canary is `v542`
+Latest Mac-side package/source candidate is `v543`
+(`dist/eidp-windows-v543.zip`, SHA256
+`c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`).
+`v543` packages commit `6aa5735d164101cbe6ec85648bcb8b6f46168c63` with
+`git_dirty=false`. It includes both `scripts/verify_stage6_return.py` and the
+same-directory helper `scripts/build_false_reject_audit.py`, which is required
+when owner-return validation uses `--false-reject-evidence-zip` and
+`--false-reject-review-csv`. Local v543 evidence is recorded in
+`docs/reports/2026-06-21-v543-package-gates.md`,
+`logs/eidp-windows-v543-distribution-verify-20260621.json`, and
+`logs/eidp-windows-v543-release-gates-20260621.json`; the non-Windows release
+gates returned `ok=true`, including full unit tests, validator/distribution
+tests, mypy, Ruff, discovery gold-set checks, package verification, and
+demonstrated-pattern verification. v543 is not yet Windows-canary validated.
+
+Latest packaged bounded Windows canary remains `v542`
 (`dist/eidp-windows-v542.zip`, SHA256
 `89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc`).
 `v542` packages commit `d98ecd7196631a00c27aff1c240ebc7969579ce7` with
@@ -223,15 +238,17 @@ v542 at `C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
 owner docs now include the v542 false-reject worksheet return rules, worksheet
 CSV, and the return-verifier false-reject arguments. The v541 r3 handoff remains
 historical evidence only. This still does not change the release conclusion.
-This false-reject owner-return verifier integration is now packaged and
-Windows-canary verified in `dist/eidp-windows-v542.zip` at current `main` commit
+This false-reject owner-return verifier integration was first packaged and
+Windows-canary verified in `dist/eidp-windows-v542.zip` at package commit
 `d98ecd7196631a00c27aff1c240ebc7969579ce7`. CI run `27880148454` passed both
 `Python quality gates` and `Ship gate contract` for that commit, and
 `docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md` records
 the package/source freshness, Windows setup, bounded canary, and Stage 6
-evidence verification. Returned false-reject worksheets can now be validated
-from current `main` or from a v542+ package carrying the same verifier
-integration.
+evidence verification. Current `main` has since rebuilt the package as v543
+with `scripts/build_false_reject_audit.py` explicitly included beside
+`scripts/verify_stage6_return.py`; v543 has Mac-side release-gate evidence but
+still needs Windows setup/canary evidence. Returned false-reject worksheets can
+be validated from current `main` or from a v543+ package carrying the helper.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;
@@ -286,21 +303,22 @@ superseded v538 was pruned with
 were v535, v536, and v539. After v540 was built and Windows-validated,
 superseded v539 was pruned from the external-SSD-backed `dist` directory.
 After v542 was built and Windows-validated, cleanup pruned superseded v540 and
-v541 core ZIPs and sidecars from the external-SSD-backed `dist` directory. The
-current retained core packages are v535, v536, v542, and the latest alias;
-reports and Stage 6 evidence for v540/v541 remain preserved under `docs/` and
-`logs/`.
+v541 core ZIPs and sidecars from the external-SSD-backed `dist` directory. v543
+has now been built on the same external-SSD-backed `dist` path and refreshed
+the latest alias. The current retained core packages are v535, v536, v542,
+v543, and the latest alias; reports and Stage 6 evidence for v540/v541 remain
+preserved under `docs/` and `logs/`.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
-creation, and Stage 6 evidence verification. Latest bounded Windows canary and
-package/source candidate is `v542`. The Windows canary still reports
-FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
-still blocked by missing owner real Windows cycle/sign-off, unapproved
-`publication_lag` exception, and unresolved OCR scope because the latest
-Windows OCR runtime proof failed without the OCR add-on. A same-day OCR
-recovery check found no reusable OCR add-on ZIP or Windows Tesseract payload
-in the checked Mac/external-SSD/Windows locations:
+creation, and Stage 6 evidence verification. Latest bounded Windows canary is
+still `v542`. Latest Mac-side package/source candidate is `v543`, pending
+Windows setup/canary. The Windows canary still reports FY2026/R8 strict yield
+below gate (`12/50`, `24.0%`). Release is still blocked by missing owner real
+Windows cycle/sign-off, unapproved `publication_lag` exception, and unresolved
+OCR scope because the latest Windows OCR runtime proof failed without the OCR
+add-on. A same-day OCR recovery check found no reusable OCR add-on ZIP or
+Windows Tesseract payload in the checked Mac/external-SSD/Windows locations:
 `docs/reports/2026-06-20-v532-ocr-addon-recovery-check.md`. The historical
 status below is kept for traceability and is superseded by this 2026-06-21
 summary.

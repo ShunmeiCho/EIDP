@@ -16,7 +16,14 @@ Windows-staged owner docs ZIP now includes this report and the
 target-yearless RCA spot check plus the owner v1.0 A/B decision brief and v526
 owner return fill sheet, and has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
-Current v542 package/source and bounded Windows canary check:
+Current v543 package/source candidate check:
+`docs/reports/2026-06-21-v543-package-gates.md` records the v543 package at
+commit `6aa5735d164101cbe6ec85648bcb8b6f46168c63`, package SHA256
+`c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`,
+`git_dirty=false`, `scripts/build_false_reject_audit.py` packaged beside
+`scripts/verify_stage6_return.py`, and Mac-side non-Windows release gates
+`ok=true`. v543 is not yet Windows-canary validated.
+Latest v542 bounded Windows canary check:
 `docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md`
 records the v542 package at commit
 `d98ecd7196631a00c27aff1c240ebc7969579ce7`, package SHA256
@@ -163,6 +170,19 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
+- Latest Mac-side package/source candidate: `dist/eidp-windows-v543.zip`
+- v543 package/source commit:
+  `6aa5735d164101cbe6ec85648bcb8b6f46168c63`
+- v543 package SHA256:
+  `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`
+- v543 package gate evidence:
+  `docs/reports/2026-06-21-v543-package-gates.md`,
+  `logs/eidp-windows-v543-distribution-verify-20260621.json`, and
+  `logs/eidp-windows-v543-release-gates-20260621.json`. These record
+  `ok=true`, full unit tests, distribution verifier tests, mypy, Ruff,
+  discovery gold-set checks, package verification, demonstrated-pattern
+  verification, and `scripts/build_false_reject_audit.py` packaged beside
+  `scripts/verify_stage6_return.py`.
 - Latest packaged bounded Windows canary: `dist/eidp-windows-v542.zip`
 - Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v535.zip`
 - v542 package/source commit:
@@ -180,12 +200,17 @@ that keeps manual work below the release threshold.
   Excel proof and ManualActionLog / JSONL outbox proof rows.
 - Latest source/package verifier hardening: v542 packages and Windows-canary
   verifies the false-reject review worksheet integration in
-  `scripts/verify_stage6_return.py`; current `main` commit
+  `scripts/verify_stage6_return.py`; v542 package commit
   `d98ecd7196631a00c27aff1c240ebc7969579ce7` has CI run `27880148454`
   green, and `docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md`
   records the package/source and Windows evidence. v541 remains the previous
   package that verified short owner sign-off, expected package SHA/source
   commit checks, and `RC_ONLY` publication-lag exception semantics.
+- Latest source/package helper hardening: v543 includes
+  `scripts/build_false_reject_audit.py` in the Windows ZIP so the packaged
+  `scripts/verify_stage6_return.py` can validate returned false-reject review
+  CSVs. v543 has Mac-side release-gate evidence only; it still needs Windows
+  setup/canary evidence before becoming the latest Windows-canary package.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
 - Latest source/package URL-discovery guardrail: v530 adds an optional
@@ -331,15 +356,15 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | --- | --- | --- |
 | 47 prefecture official-list seeds are packaged and usable | v542 package verifier in `logs/win-v542-false-reject-verifier-release-gates-20260621.json`: `prefecture_seed_rows=47`, `prefecture_seed_school_rows_total=2148` | PASS |
 | 1,700+ vocational-school scope | v542 Windows setup validator in `docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md`: `school_count=2418`, `school_fiscal_year_status_count=2418`, SQLite integrity `ok` | PASS |
-| 700-ish university scope | v542 package verifier requires the MEXT T0 target-institution catalog and workbook in the ZIP. `verify_windows_distribution.py dist/eidp-windows-v542.zip --json` reported `mext_target_university_rows=769`, `mext_target_specialty_rows=2067`, `mext_target_short_college_rows=239`, `mext_target_kosen_rows=57`, and `mext_target_total_rows=3132`. This proves the official source-catalog/package gate only; university target-document discovery, extraction, and Excel mapping are still not proven. | PASS for T0 index/package gate, PARTIAL for full university lane |
+| 700-ish university scope | v543 package verifier requires the MEXT T0 target-institution catalog and workbook in the ZIP. `logs/eidp-windows-v543-release-gates-20260621.json` reports `mext_target_university_rows=769`, `mext_target_specialty_rows=2067`, `mext_target_short_college_rows=239`, `mext_target_kosen_rows=57`, and `mext_target_total_rows=3132`. This proves the official source-catalog/package gate only; university target-document discovery, extraction, and Excel mapping are still not proven. | PASS for T0 index/package gate, PARTIAL for full university lane |
 | Current rolling FY is FY2026/Reiwa 8 | v542 Windows canary summary `logs/win-v542-d98ecd7-canary/20260620_185933-summary.json`: `current_fy=2026`, `school_type=専門学校`, `selection_mode=target_missing` | PASS |
 | Strict mode excludes old-year fallback from success | v542 Windows canary summary keeps `ship_gate_status=below_gate` at strict/Excel-ready `12/50 (24.0%)`; old/stale target forms are not counted as release success | PASS for contract, FAIL for release yield |
 | Current FY2026 strict target-PDF/Excel-ready yield is `>= 60%` | v542/v541/v540 Windows limit-50 canaries: strict/Excel-ready `12/50 (24.0%)`; v535/v533/v532 Windows limit-50 canaries: strict/Excel-ready `12/50 (24.0%)`; v526/v525/v524/v523 Windows limit-50 canaries: strict/Excel-ready `5/50 (10.0%)`; v515 Mac continuation canary from the v513 isolated DB: strict `2/50 (4.0%)`; v516/v519/v521 target-missing/continuation canaries remained `0/50 (0.0%)`; v522 same-domain `2025 -> 2026` and short-year/R7 replacement probe found `404` for all 47 expanded candidates; production-scale upper-bound proof: max possible `39.3%` after 607/1000 schools | FAIL |
 | Operator manual workload is `<= 30%` for current FY | v542/v541/v540 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v535/v533/v532 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v526/v525/v524/v523 Windows limit-50 operator-reviewable `50/50 (100.0%)`; v516 target-missing canary operator-reviewable `49/50 (98.0%)`; strict Excel-ready success is still below gate and owner real-cycle workload proof is missing | FAIL |
 | Mature-year exception input exists | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: FY2025 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`, manual workload `20.2%` | PASS as exception input only |
 | Publication-lag exception is approved if release uses the mature-year lane | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED` | BLOCKED |
-| PDF extraction stack is packaged | v542 setup validator has `wheel_count=84`; v526 Windows OCR runtime proof is `ok=true` with Tesseract runtime and `jpn` / `jpn_vert` tessdata present. v542 does not have a complete OCR runtime proof, so OCR remains unresolved if kept in v1.0 scope. | PASS for core, BLOCKED for v542 OCR scope |
-| Confidence `>= 0.70` gate exists | v542 current `main` CI run `27880148454` passed Python quality gates and Ship gate contract; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
+| PDF extraction stack is packaged | v543 package verifier has `wheel_count=84`; v526 Windows OCR runtime proof is `ok=true` with Tesseract runtime and `jpn` / `jpn_vert` tessdata present. v543 does not have a complete OCR runtime proof, so OCR remains unresolved if kept in v1.0 scope. | PASS for core, BLOCKED for v543 OCR scope |
+| Confidence `>= 0.70` gate exists | v543 non-Windows release gates in `logs/eidp-windows-v543-release-gates-20260621.json` passed full unit tests, distribution tests, mypy, Ruff, discovery gold-set checks, and package verification; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
 | `DepartmentYearly` and `SupportRecipient` append-only paths exist | v542 install validator confirms required tables including `department_yearly`, `support_recipient`, and `manual_action_log`; v542 canary processed `15` documents into `122` new departments and `129` yearly upserts | PASS for code/schema, PARTIAL for real operator workflow |
 | Extracted rows can be confirmed/supplemented | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`: extracted `confirmed_target` rows get `抽出済内容を確認・補足`; the PDF確認・手入力 form preloads current extracted data and saves through existing append-only manual-entry/audit paths | PASS for code/UI contract, PARTIAL for real operator workflow |
 | Excel transfer works | v535 Excel smoke: `win-v535-stage6-v535-excel-summary-clean-20260620.json` is `ok=true`; master workbook length `3,746,064`, competition workbook length `121,897`, gap CSV length `48,116`, and competition export recorded `excel_ready_schools=12` | PASS |
@@ -442,8 +467,10 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   `dist/eidp-windows-v527.zip` through `dist/eidp-windows-v531.zip` and their
   `.sha256` sidecars. Later cleanup after v535 removed the invalid v534 core
   ZIP and sidecar. Later cleanup after v540 pruned superseded v539. After v542,
-  cleanup pruned superseded v540/v541 core ZIPs and sidecars. `dist/` currently
-  keeps v535, v536, v542, the latest alias, and current handoff artifacts.
+  cleanup pruned superseded v540/v541 core ZIPs and sidecars. v543 has now been
+  built on the external-SSD-backed `dist` path and refreshed the latest alias.
+  `dist/` currently keeps v535, v536, v542, v543, the latest alias, and current
+  handoff artifacts.
 - Windows staging cleanup after v542 removed superseded core ZIPs and sidecars
   for v527, v532, v533, v537, v538, v540, and v541, plus temporary v542
   setup/canary/logtail scripts. `C:\EIDP-staging` now retains only v535, v536,
