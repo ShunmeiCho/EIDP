@@ -635,6 +635,7 @@ def _verify_strict_gap_mature_year_evidence(
     evidence_path: Path,
     fiscal_year: int,
     target_yield: object,
+    excel_ready_yield: object,
     denominator: object,
     operator_reviewable_yield: object,
     finished_at: object,
@@ -662,6 +663,12 @@ def _verify_strict_gap_mature_year_evidence(
             target_yield,
             payload.get("strict_target_parsed_rate_pct"),
             "strict_target_parsed_rate_pct",
+        ),
+        (
+            "excel_ready_yield_pct",
+            excel_ready_yield,
+            payload.get("excel_ready_rate_pct"),
+            "excel_ready_rate_pct",
         ),
         (
             "operator_reviewable_yield_pct",
@@ -735,6 +742,7 @@ def _verify_mature_year_proof(
             continue
 
         target_yield = _case_metric(case, "target_pdf_auto_yield_pct")
+        excel_ready_yield = _case_metric(case, "excel_ready_yield_pct")
         denominator = _case_denominator(case)
         denominator_scope = _case_metric(case, "target_pdf_auto_denominator_scope")
         operator_reviewable_yield = _case_metric(case, "operator_reviewable_yield_pct")
@@ -788,6 +796,7 @@ def _verify_mature_year_proof(
                     evidence_path=resolved_strict_gap_analysis_path,
                     fiscal_year=fiscal_year,
                     target_yield=target_yield,
+                    excel_ready_yield=excel_ready_yield,
                     denominator=denominator,
                     operator_reviewable_yield=operator_reviewable_yield,
                     finished_at=finished_at,
@@ -826,6 +835,18 @@ def _verify_mature_year_proof(
                 f"{float(target_yield):.1f} < {min_target_pdf_auto_yield:.1f}"
             )
             case_ok = False
+        if evidence_source == "strict_gap_analysis":
+            if not _is_number(excel_ready_yield):
+                errors.append(
+                    f"mature-year proof case FY{fiscal_year} excel_ready_yield_pct must be numeric"
+                )
+                case_ok = False
+            elif float(excel_ready_yield) < min_target_pdf_auto_yield:
+                errors.append(
+                    f"mature-year proof case FY{fiscal_year} excel_ready_yield_pct below release threshold: "
+                    f"{float(excel_ready_yield):.1f} < {min_target_pdf_auto_yield:.1f}"
+                )
+                case_ok = False
         if not _is_number(denominator):
             errors.append(
                 f"mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_count must be numeric"

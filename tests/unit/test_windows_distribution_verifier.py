@@ -1119,6 +1119,9 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
             "strict_gap_analysis evidence basis must be strict_yield_gap_analysis",
             "strict_gap evidence basis optional",
         )
+        .replace("excel_ready_yield_pct must be numeric", "excel_ready_yield_pct optional")
+        .replace("excel_ready_yield_pct below release threshold", "excel_ready_yield_pct may be below gate")
+        .replace("excel_ready_rate_pct", "excel_ready_sample_rate_pct")
         .replace(
             "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
             "mature-year proof finished_at may be future",
@@ -1263,6 +1266,19 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
         "strict_gap_analysis evidence basis must be strict_yield_gap_analysis" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: excel_ready_yield_pct must be numeric" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: excel_ready_yield_pct below release threshold"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: excel_ready_rate_pct" in error
         for error in check.errors
     )
     assert any(
