@@ -70,6 +70,27 @@ Required return files for owner real cycle
 - ManualActionLog / JSONL audit proof: audit page status, manual_action_log
   count, outbox count before/after flush, and action_id consistency
 - completed eidp-operator-e2e-template.md with KPI rows and sign-off
+- completed false-reject review worksheet, only if the release discussion claims
+  material discovery/classifier/year-evidence false rejects:
+  docs\reports\2026-06-21-v541-false-reject-review-sheet.csv
+
+False-reject worksheet rules
+----------------------------
+The worksheet is an RCA input, not release approval and not Excel proof.
+Fill only decision/reviewer/reviewed_at/notes. Do not edit row context such as
+audit_row_id, bucket, school fields, URLs, anchor text, or review questions.
+
+Allowed decisions:
+  false_reject
+  correct_reject
+  needs_operator_review
+
+Every completed row must include reviewer and an ISO reviewed_at timestamp.
+false_reject and needs_operator_review rows must include notes citing the
+official evidence or the unresolved human-review reason.
+
+Developer validation is run from current main after return. The v541 Windows
+package alone is not sufficient proof for this post-v541 worksheet check.
 
 Release decision required before owner sign-off
 -----------------------------------------------

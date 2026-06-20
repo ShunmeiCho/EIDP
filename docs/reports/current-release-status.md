@@ -186,6 +186,17 @@ sample review. The return validator also rejects changed row context and emits
 `context_mismatch_count=0`. Completed rows require `reviewer` and an ISO
 `reviewed_at` timestamp, and `false_reject` / `needs_operator_review` rows
 require `notes`.
+The owner/operator return runbooks now include the false-reject worksheet return
+rules: only `decision`, `reviewer`, `reviewed_at`, and `notes` may be filled;
+row context must remain unchanged; and completed worksheets must be validated
+from current `main` with `--require-decisions` before they can support an RCA
+claim. The Windows docs-only handoff has been refreshed to r2 at
+`C:\EIDP-staging\v541-owner-docs-20260621-r2`, recorded in
+`docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md`, so the staged
+owner docs now include the false-reject worksheet return rules and worksheet
+CSV. The r2 docs ZIP SHA256 is
+`6575a28c74be7d977db8fd640a622f070f7027915e07dd04698a38d4bc12dd31`. This still
+does not change the release conclusion.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;

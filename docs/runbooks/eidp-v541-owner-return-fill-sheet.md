@@ -95,6 +95,48 @@ real cycle and returned diagnostics.
 - v541 active-task recovery JSON
 - Excel output proof or redacted workbook metadata
 - ManualActionLog / JSONL outbox proof
+- completed false-reject review worksheet if claiming a discovery/classifier/year
+  evidence false reject:
+  `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv`
+
+## False-Reject RCA Worksheet
+
+Use this only to support or reject the claim that the below-gate FY2026/R8
+yield is caused by material discovery/classifier/year-evidence false rejects.
+It does not relax the Excel-ready gate and does not allow rejected rows into the
+final Excel output.
+
+Worksheet to fill:
+
+```text
+docs/reports/2026-06-21-v541-false-reject-review-sheet.csv
+```
+
+Fill only these columns:
+
+| Column | Required value |
+| --- | --- |
+| `decision` | `false_reject`, `correct_reject`, or `needs_operator_review` |
+| `reviewer` | owner/operator reviewer name or stable reviewer ID |
+| `reviewed_at` | ISO timestamp, for example `2026-06-21T09:30:00+09:00` |
+| `notes` | required for `false_reject` and `needs_operator_review`; recommended for any difficult row |
+
+Do not edit `audit_row_id`, `bucket`, school/document fields, URLs, anchor
+text, review questions, or false-reject signals. Those columns are immutable
+row context; if they change, developer validation must reject the worksheet.
+
+Decision meanings:
+
+- `false_reject`: official FY2026/R8 evidence proves the row should have been
+  accepted or routed differently.
+- `correct_reject`: the row is old-year, non-target, unknown-year, mismatched,
+  unsupported, or otherwise correctly blocked.
+- `needs_operator_review`: there is plausible official evidence, but it needs a
+  human decision before it can affect any workflow or Excel output.
+
+Developer validation is run from current `main` after the returned CSV is copied
+back to the repo. The v541 Windows package itself is not enough evidence for
+this post-v541 worksheet validation.
 
 ## Developer Verification After Return
 
@@ -118,3 +160,16 @@ uv run python scripts/verify_stage6_return.py \
 
 Release remains blocked unless this command returns `ok=true` and the approval
 record, OCR scope, E2E sign-off fields, and short owner sign-off are complete.
+
+If a completed false-reject review worksheet is returned, also run:
+
+```bash
+uv run python scripts/build_false_reject_audit.py \
+  logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip \
+  --sample-size 12 \
+  --validate-review-csv docs/reports/2026-06-21-v541-false-reject-review-sheet.csv \
+  --require-decisions
+```
+
+This command must return `ok=true`, `review_status=complete`, and
+`context_mismatch_count=0` before the worksheet can be used as RCA evidence.

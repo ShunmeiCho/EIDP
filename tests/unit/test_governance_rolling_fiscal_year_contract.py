@@ -126,9 +126,11 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
     staging = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-windows-staging.md")
+    staging_r2 = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md")
 
     expected_package_sha = "2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f"
     expected_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
+    expected_docs_r2_sha = "6575a28c74be7d977db8fd640a622f070f7027915e07dd04698a38d4bc12dd31"
 
     assert expected_package_sha in first_read
     assert expected_package_sha in request
@@ -148,6 +150,17 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "It does not make v541 `READY`" in owner_signoff
     assert "Do not treat the v541 bounded canary as owner real-cycle sign-off" in first_read
     assert "unconfirmed rows into final Excel output" in return_sheet
+    assert "False-Reject RCA Worksheet" in return_sheet
+    assert "Fill only these columns" in return_sheet
+    assert "`decision`" in return_sheet
+    assert "`reviewer`" in return_sheet
+    assert "`reviewed_at`" in return_sheet
+    assert "`notes`" in return_sheet
+    assert "Developer validation is run from current `main`" in return_sheet
+    assert "review_status=complete" in return_sheet
+    assert "False-reject worksheet rules" in request
+    assert "Fill only decision/reviewer/reviewed_at/notes" in request
+    assert "The v541 Windows package alone is not sufficient proof" in request
     assert "Unknown-year, old-year, school-mismatch, non-target, low-confidence" in owner_signoff
     assert "docs/runbooks/00-READ-ME-FIRST-v541.txt" in current_status
     assert "docs/runbooks/eidp-v541-release-summary.md" in current_status
@@ -173,10 +186,19 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "context_mismatch_count=0" in current_status
     assert "Completed rows require `reviewer` and an ISO `reviewed_at` timestamp" in current_status
     assert "`false_reject` / `needs_operator_review` rows require `notes`" in current_status
+    assert "row context must remain unchanged" in current_status
+    assert "v541-owner-docs-20260621-r2" in current_status
+    assert "docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md" in current_status
     assert "bucket_decision_counts" in objective_checklist
     assert "immutable row context" in objective_checklist
     assert "required reviewer/timestamp fields" in objective_checklist
     assert "notes for `false_reject` and `needs_operator_review`" in objective_checklist
+    assert "fill only `decision`, `reviewer`, `reviewed_at`, and `notes`" in objective_checklist
+    assert "v541-owner-docs-20260621-r2" in objective_checklist
+    assert "False-Reject RCA Worksheet" in staging_r2
+    assert "False-reject worksheet rules" in staging_r2
+    assert "current-release-status NOT_READY: True" in staging_r2
+    assert "The clean ZIP was created without macOS AppleDouble `._*` sidecars." in staging_r2
     assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`" in objective_checklist
     assert "Owner handoff docs have been refreshed to v541" in objective_checklist
     assert "C:\\EIDP-staging\\v541-owner-docs-20260621" in objective_checklist
@@ -186,8 +208,13 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert expected_docs_sha in current_status
     assert expected_docs_sha in objective_checklist
     assert expected_docs_sha in staging
+    assert expected_docs_r2_sha in current_status
+    assert expected_docs_r2_sha in objective_checklist
+    assert expected_docs_r2_sha in staging_r2
     assert "ZIP SHA256" in staging
+    assert "ZIP SHA256" in staging_r2
     assert "owner-signoff short-form marker: True" in staging
+    assert "scheduled task execute: \"C:\\Users\\cyo20\\EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat\"" in staging_r2
     assert "old v540 zip exists: False" in staging
     assert "old v540 dir exists: False" in staging
     assert "scheduled task execute:" in staging

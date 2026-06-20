@@ -82,6 +82,15 @@ the current blank worksheet reports `completed_decisions=0` and
 `context_mismatch_count=0`. Completed rows require `reviewer` and an ISO
 `reviewed_at` timestamp; `false_reject` and `needs_operator_review` rows
 require `notes`.
+The current source runbooks now tell the owner/operator how to return that
+worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
+immutable row context untouched, and have the developer validate the returned
+CSV from current `main` with `--require-decisions`. The Windows docs-only
+handoff has been refreshed to r2 at
+`C:\EIDP-staging\v541-owner-docs-20260621-r2`, recorded in
+`docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md`, so the staged
+owner docs now include the false-reject worksheet return rules and worksheet
+CSV. This remains handoff evidence only.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -169,6 +178,15 @@ that keeps manual work below the release threshold.
   `4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
   or Task Scheduler.
+- Latest docs-only false-reject handoff refresh: r2 is staged at
+  `C:\EIDP-staging\v541-owner-docs-20260621-r2`, recorded in
+  `docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md`, and includes
+  the false-reject RCA packet plus review worksheet. The remote verification
+  confirmed SHA256
+  `6575a28c74be7d977db8fd640a622f070f7027915e07dd04698a38d4bc12dd31`,
+  `False-Reject RCA Worksheet`, `False-reject worksheet rules`, `NOT_READY`,
+  and the scheduled task still executing
+  `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`.
 - Latest strict-yield RCA summary: v541 Stage 6 evidence is summarized in
   `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`. The top RCA lanes
   are `publication_lag_or_old_target_pdf` (`15` schools / `454` candidate
@@ -192,7 +210,9 @@ that keeps manual work below the release threshold.
   stable `audit_row_id`, a machine-validated `decision` field, immutable row
   context checks, required reviewer/timestamp fields for completed decisions,
   notes for `false_reject` and `needs_operator_review`, and bucket-level
-  decision counts for the RCA lanes.
+  decision counts for the RCA lanes. The v541 owner request and owner return
+  fill sheet now describe the required worksheet return rules and developer
+  validation command.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe
   fix keeps both `/disclosure/{slug}` and `/{slug}/disclosure` under the
   shared-origin throttle for school roots such as
