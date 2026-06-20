@@ -3,33 +3,43 @@
 Updated: 2026-06-20
 Branch: `main`
 
-Current local package/source candidate: `v537`
-(`dist/eidp-windows-v537.zip`, SHA256
-`1ceeb84ae6804c4d95574ac5c11a583eb4967d0e285c5de3fe5b1fd0f1254356`).
-`v537` is package/source verified on macOS and carries the post-v536 PDF
-school-name mismatch alias proposal work: rejected `pdf_school_mismatch`
-evidence can now be converted into operator-review `SchoolAlias` proposals,
-and the weekly runner surfaces that proposal queue without automatically
-writing aliases. Its full non-Windows release gate passed with `2026` unit
-tests, `196` Windows distribution validator tests, package/source freshness,
-package verifier, and demonstrated-pattern verifier. Evidence is recorded in
-`docs/reports/2026-06-20-v537-current-main-package.md` and
-`logs/win-v537-stage6-v537-non-windows-release-gates-20260620.json`.
-`v537` has not yet completed Windows side-by-side validation.
+Current local package/source candidate and latest bounded Windows canary:
+`v538` (`dist/eidp-windows-v538.zip`, SHA256
+`5d32c3c21fef227a8da13a6dab2c7b6d29e6d304363d90340af757ed0a7b7e1a`).
+`v538` packages current `main` commit
+`27e1bcd067212f4f362a31309122ee2492373b72` with `git_dirty=false`. It fixes
+the v537 Windows canary failure by moving PDF school-name mismatch alias
+proposal logic into the packaged module
+`eidp.review.pdf_school_mismatch_alias_proposals`; the script remains a CLI
+wrapper. CI run `#803` passed both `Python quality gates` and
+`Ship gate contract`.
 
-The latest bounded Windows canary remains `v536`
+`v538` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v538-27e1bcd-env0`. The canary confirmed
+setup `rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`,
+weekly canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence
+verification `ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
+operator-reviewable yield `47/50 (94.0%)`, and `ship_gate_status=below_gate`.
+The new alias proposal path is verified in Windows evidence:
+`school_alias_proposals.error=null`, `proposal_stats.proposals=2`, and
+`write_stats.appended=2`. Evidence is recorded in
+`docs/reports/2026-06-20-v538-pdf-mismatch-alias-windows-canary.md` and
+`logs/win-v538-stage6/stage6-evidence-20260620-094934.zip`.
+
+Superseded `v537` (`dist/eidp-windows-v537.zip`, SHA256
+`1ceeb84ae6804c4d95574ac5c11a583eb4967d0e285c5de3fe5b1fd0f1254356`) is
+package/source verified, but its Windows weekly canary failed with
+`ModuleNotFoundError: No module named 'pdf_school_mismatch_alias_proposals'`.
+That P1 is fixed by v538. The v537 core ZIP and sidecar have been pruned from
+the external-SSD-backed `dist` directory after v538 verification; its Mac-side
+evidence remains recorded in `docs/reports/2026-06-20-v537-current-main-package.md`.
+
+Previous bounded Windows canary: `v536`
 (`dist/eidp-windows-v536.zip`, SHA256
 `381ec169b8380cfe666a89e02a8b786d3a8cdc79dca4b420276517bbbdb0349a`).
-`v536` is package/source verified on macOS and carries the post-v535 Sanko
-shared-origin disclosure probe fix. Its full non-Windows release gate passed
-with `2019` unit tests, `196` Windows distribution validator tests,
-package/source freshness, package verifier, and demonstrated-pattern verifier.
-It also completed a bounded Windows limit-50 canary at
-`C:\Users\cyo20\EIDP-v536-f81a9cf-env0`. The canary confirmed the package
-commit `f81a9cf8f785457e844cb77857426a02c91f60c7`, setup `rc=0`, after-setup
-validator `ok=true`, active-task safety `ok=true`, weekly canary `rc=0`, Stage
-6 evidence verification `ok=true`, and strict/Excel-ready FY2026 yield
-`12/50 (24.0%)` with `ship_gate_status=below_gate`. Evidence is recorded in
+`v536` completed a bounded Windows limit-50 canary at
+`C:\Users\cyo20\EIDP-v536-f81a9cf-env0` with strict/Excel-ready FY2026 yield
+`12/50 (24.0%)` and `ship_gate_status=below_gate`. Evidence is recorded in
 `docs/reports/2026-06-20-v536-sanko-fresh-windows-canary.md`,
 `logs/win-v536-stage6-v536-non-windows-release-gates-20260620.json`, and
 `logs/win-v536-stage6/stage6-evidence-20260620-074649.zip`.
@@ -112,13 +122,16 @@ the invalid v534 core ZIP and sidecar were pruned after v535 was built using
 --keep-version 533 --apply`. The kept local core packages are v533, v535, and
 v536. After v537 was built and verified, v533 was pruned with
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 3 --apply`;
-the kept local core packages are now v535, v536, and v537.
+after v538 was built and Windows-validated, superseded v537 was pruned with
+`scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
+--keep-version 535 --keep-version 536 --apply`. The kept local core packages
+are now v535, v536, and v538.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
-creation, and Stage 6 evidence verification. Latest bounded Windows canary is
-`v536`, while latest package/source candidate is `v537`. The Windows canary
-still reports FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
+creation, and Stage 6 evidence verification. Latest bounded Windows canary and
+package/source candidate is `v538`. The Windows canary still reports
+FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
 still blocked by missing owner real Windows cycle/sign-off, unapproved
 `publication_lag` exception, and unresolved OCR scope because the latest
 Windows OCR runtime proof failed without the OCR add-on. A same-day OCR
