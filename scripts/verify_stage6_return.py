@@ -488,8 +488,8 @@ def _verify_release_exception_record(
 
 def _case_fiscal_year(case: dict[str, Any]) -> int | None:
     fiscal_year = case.get("fiscal_year")
-    if _is_number(fiscal_year):
-        return int(fiscal_year)
+    if isinstance(fiscal_year, int) and not isinstance(fiscal_year, bool):
+        return fiscal_year
     return None
 
 
@@ -569,7 +569,14 @@ def _verify_mature_year_proof(
     passing_finished_dates: list[date] = []
     for case in cases:
         fiscal_year = _case_fiscal_year(case)
-        if fiscal_year is None or not _case_ok(case):
+        if fiscal_year is None:
+            if _case_ok(case):
+                errors.append(
+                    "mature-year proof case fiscal_year must be an integer: "
+                    f"{case.get('fiscal_year')!r}"
+                )
+            continue
+        if not _case_ok(case):
             continue
         if target_fy is not None and fiscal_year >= target_fy:
             continue
