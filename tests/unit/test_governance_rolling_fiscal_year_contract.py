@@ -163,6 +163,9 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "not framed as a generic algorithm/model failure" in objective_checklist
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
+    assert "docs/reports/2026-06-21-v541-false-reject-audit-packet.md" in current_status
+    assert "docs/reports/2026-06-21-v541-false-reject-audit-packet.md" in objective_checklist
+    assert "scripts/build_false_reject_audit.py" in objective_checklist
     assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`" in objective_checklist
     assert "Owner handoff docs have been refreshed to v541" in objective_checklist
     assert "C:\\EIDP-staging\\v541-owner-docs-20260621" in objective_checklist

@@ -62,6 +62,11 @@ The v541 RCA bucket summary is reproducible with
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
 `ok=true`, `20` RCA packets, and `524` candidate rows. The below-gate release
 status is recorded in the v541 weekly summary as `ship_gate_status=below_gate`.
+The first false-reject audit packet is generated and recorded at
+`docs/reports/2026-06-21-v541-false-reject-audit-packet.md` using
+`uv run python scripts/build_false_reject_audit.py
+logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --sample-size
+12 --output docs/reports/2026-06-21-v541-false-reject-audit-packet.md`.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -163,6 +168,10 @@ that keeps manual work below the release threshold.
   Before labeling the blocker as an algorithm/model defect, run a
   rejection-bucket false-reject audit over fiscal-year mismatch, non-target
   filtering, target-year-unverified, and site-entry/fetch/identity candidates.
+  The first audit packet is
+  `docs/reports/2026-06-21-v541-false-reject-audit-packet.md`; it samples
+  `12` rows from each large bucket and all rows from the smaller
+  target-year-unverified and site-entry/fetch/identity buckets.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe
   fix keeps both `/disclosure/{slug}` and `/{slug}/disclosure` under the
   shared-origin throttle for school roots such as
@@ -475,8 +484,10 @@ do not remove the FY2026/R8 release blocker.
 2. Continue strict-yield RCA in the documented bucket order: fiscal-year
    mismatch / publication lag first, non-target candidate noise second,
    target-year-unverified third, and site-entry/fetch/identity lanes fourth.
-3. Run the rejection-bucket false-reject audit before labeling the blocker as
-   an algorithm/model defect.
+3. Review `docs/reports/2026-06-21-v541-false-reject-audit-packet.md` and mark
+   sampled rows as `false_reject`, `correct_reject`, or
+   `needs_operator_review` before labeling the blocker as an algorithm/model
+   defect.
 4. Run the prepared owner/operator v541 return path from Windows and collect
    signed KPI, audit/outbox, workbook, and `publication_lag` decision evidence.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.

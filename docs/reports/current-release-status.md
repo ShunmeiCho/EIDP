@@ -170,6 +170,11 @@ order, without counting old-year PDFs, unknown-year documents, non-target files,
 or identity mismatches as FY2026/R8 success. This also must not be simplified
 to "the algorithm/model is broken" until a rejection-bucket false-reject audit
 shows material over-rejection or fiscal-year extraction mistakes.
+The first v541 false-reject audit packet is now recorded in
+`docs/reports/2026-06-21-v541-false-reject-audit-packet.md`; it was generated
+from the v541 Stage 6 evidence ZIP and samples fiscal-year mismatch,
+pre-filtered non-target, classified non-target, target-year-unverified, and
+site-entry/fetch/identity rows without changing release status.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;
