@@ -200,6 +200,14 @@ Owner decisions include:
 - changing Excel output scope
 - expanding v1 scope beyond vocational schools
 
+Owner sign-off should be short, but it must point to a complete release summary
+and evidence bundle. The owner is not expected to hand-check CI logs, ZIP
+inventories, parser fixtures, or Windows canary stdout. The owner signs only
+the business decision: `READY`, `RC_ONLY`, or `NOT_READY`, with scope, known
+limitations, and release exceptions understood.
+
+See `docs/governance/owner-release-signoff.md`.
+
 ## Red-Line Checks To Automate
 
 Prefer tests or scripts over documentation-only rules where practical:

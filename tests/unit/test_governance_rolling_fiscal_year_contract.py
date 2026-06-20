@@ -54,3 +54,23 @@ def test_goal_execution_requires_lightweight_forecast_and_formal_release_checkli
     assert "P0: open release blockers" in text
     assert "full release gate checklist and evidence bundle" in text
     assert "A release forecast is not a substitute for the checklist" in text
+
+
+def test_owner_signoff_is_simple_but_evidence_based() -> None:
+    signoff = _normalized_doc("docs/governance/owner-release-signoff.md")
+    goal_execution = _normalized_doc("docs/governance/goal-execution.md")
+    release_gates = _normalized_doc("docs/governance/release-gates.md")
+
+    assert "The sign-off form may be simple; the sign-off basis may not be simple." in signoff
+    assert "release summary" in signoff
+    assert "release evidence bundle" in signoff
+    assert "READY`, `RC_ONLY`, or `NOT_READY`" in signoff
+    assert "Operator smoke sign-off is separate from owner release approval" in signoff
+    assert "it can support `RC_ONLY`" in signoff
+    assert "it does not make the release `READY`" in signoff
+    assert "unconfirmed rows must not enter final Excel output" in signoff
+    assert "v1 may release the text-PDF workflow without requiring full automatic OCR success" in signoff
+    assert "unconfirmed data entering final Excel output" in signoff
+
+    assert "Owner sign-off should be short" in goal_execution
+    assert "Owner sign-off may be a short form" in release_gates

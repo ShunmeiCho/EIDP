@@ -41,6 +41,12 @@ A v1 release candidate must include evidence for:
 Mac-side tests prove business logic and package shape only. They do not prove
 Windows deployability.
 
+Owner sign-off may be a short form, but the sign-off basis must be complete:
+release summary, evidence bundle, known limitations, current blockers, package
+SHA256, source commit, packaged commit, latest CI, and Windows evidence. Owner
+sign-off is a release-risk decision, not a manual re-run of the technical
+checklist. See `docs/governance/owner-release-signoff.md`.
+
 ## Rolling Target-Year Yield
 
 Release status must distinguish:
