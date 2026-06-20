@@ -96,6 +96,12 @@ LAST_RUN_EVIDENCE_MATCH_ERROR = "must match last_run evidence"
 STRICT_GAP_EVIDENCE_MATCH_ERROR = "must match strict_gap_analysis evidence"
 LAST_RUN_EVIDENCE_STATUS_ERROR = "last_run evidence status must be success"
 STRICT_GAP_EVIDENCE_BASIS_ERROR = "strict_gap_analysis evidence basis must be strict_yield_gap_analysis"
+STRICT_TARGET_RATE_COUNT_SCOPE = "strict_target_parsed_schools/schools_total"
+EXCEL_READY_RATE_COUNT_SCOPE = "excel_ready_schools/schools_total"
+OPERATOR_REVIEWABLE_RATE_COUNT_SCOPE = "operator_reviewable_schools/schools_total"
+MANUAL_WORKLOAD_RATE_COUNT_ERROR = (
+    "estimated_manual_workload_rate_pct must match operator_reviewable_schools/schools_total"
+)
 
 
 def _load_ship_gate_contract() -> Any:
@@ -193,6 +199,16 @@ def _is_number(value: object) -> TypeGuard[int | float]:
 
 def _is_integer_count(value: object) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_nonnegative_integer_count(value: object) -> TypeGuard[int]:
+    return _is_integer_count(value) and value >= 0
+
+
+def _rate_from_counts(count: int, total: int) -> float | None:
+    if total <= 0:
+        return None
+    return round(count / total * 100.0, 1)
 
 
 def _release_conclusion_value(value: str) -> str:
@@ -630,6 +646,50 @@ def _verify_last_run_mature_year_evidence(
     return ok
 
 
+def _verify_strict_gap_count_rate(
+    *,
+    payload: dict[str, Any],
+    fiscal_year: int,
+    total: int,
+    count_field: str,
+    rate_field: str,
+    errors: list[str],
+) -> bool:
+    count_value = payload.get(count_field)
+    rate_value = payload.get(rate_field)
+    if not _is_nonnegative_integer_count(count_value):
+        errors.append(
+            f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence "
+            f"{count_field} must be a nonnegative integer"
+        )
+        return False
+    if count_value > total:
+        errors.append(
+            f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence "
+            f"{count_field} must be <= schools_total"
+        )
+        return False
+    if not _is_number(rate_value):
+        errors.append(
+            f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence "
+            f"{rate_field} must be numeric"
+        )
+        return False
+    expected_rate = _rate_from_counts(count_value, total)
+    count_scope = {
+        "strict_target_parsed_schools": STRICT_TARGET_RATE_COUNT_SCOPE,
+        "excel_ready_schools": EXCEL_READY_RATE_COUNT_SCOPE,
+        "operator_reviewable_schools": OPERATOR_REVIEWABLE_RATE_COUNT_SCOPE,
+    }.get(count_field, f"{count_field}/schools_total")
+    if expected_rate is None or abs(float(rate_value) - expected_rate) > 1e-9:
+        errors.append(
+            f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence {rate_field} "
+            f"must match {count_scope}: {float(rate_value):.1f} != {expected_rate:.1f}"
+        )
+        return False
+    return True
+
+
 def _verify_strict_gap_mature_year_evidence(
     *,
     evidence_path: Path,
@@ -653,6 +713,67 @@ def _verify_strict_gap_mature_year_evidence(
     if payload.get("fiscal_year") != fiscal_year:
         errors.append(f"{evidence_label} fiscal_year must be {fiscal_year}")
         ok = False
+    total = payload.get("schools_total")
+    if not _is_nonnegative_integer_count(total):
+        errors.append(
+            f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence "
+            "schools_total must be a nonnegative integer"
+        )
+        ok = False
+        total_for_rate = 0
+    elif total <= 0:
+        errors.append(f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence schools_total must be > 0")
+        ok = False
+        total_for_rate = 0
+    else:
+        total_for_rate = total
+
+    if total_for_rate > 0:
+        strict_rate_ok = _verify_strict_gap_count_rate(
+            payload=payload,
+            fiscal_year=fiscal_year,
+            total=total_for_rate,
+            count_field="strict_target_parsed_schools",
+            rate_field="strict_target_parsed_rate_pct",
+            errors=errors,
+        )
+        excel_ready_rate_ok = _verify_strict_gap_count_rate(
+            payload=payload,
+            fiscal_year=fiscal_year,
+            total=total_for_rate,
+            count_field="excel_ready_schools",
+            rate_field="excel_ready_rate_pct",
+            errors=errors,
+        )
+        operator_reviewable_rate_ok = _verify_strict_gap_count_rate(
+            payload=payload,
+            fiscal_year=fiscal_year,
+            total=total_for_rate,
+            count_field="operator_reviewable_schools",
+            rate_field="operator_reviewable_rate_pct",
+            errors=errors,
+        )
+        ok = strict_rate_ok and excel_ready_rate_ok and operator_reviewable_rate_ok and ok
+        manual_workload_rate = payload.get("estimated_manual_workload_rate_pct")
+        if not _is_number(manual_workload_rate):
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence "
+                "estimated_manual_workload_rate_pct must be numeric"
+            )
+            ok = False
+        else:
+            operator_reviewable_count = payload.get("operator_reviewable_schools")
+            if _is_nonnegative_integer_count(operator_reviewable_count):
+                expected_manual_workload = round(100.0 - (operator_reviewable_count / total_for_rate * 100.0), 1)
+                if abs(float(manual_workload_rate) - expected_manual_workload) > 1e-9:
+                    errors.append(
+                        f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence "
+                        f"{MANUAL_WORKLOAD_RATE_COUNT_ERROR}: "
+                        f"{float(manual_workload_rate):.1f} != {expected_manual_workload:.1f}"
+                    )
+                    ok = False
+            else:
+                ok = False
 
     evidence_finished_at = payload.get("finished_at") or payload.get("generated_at")
     checks = (

@@ -1122,6 +1122,13 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("excel_ready_yield_pct must be numeric", "excel_ready_yield_pct optional")
         .replace("excel_ready_yield_pct below release threshold", "excel_ready_yield_pct may be below gate")
         .replace("excel_ready_rate_pct", "excel_ready_sample_rate_pct")
+        .replace("strict_target_parsed_schools/schools_total", "strict_target_rate_free_text")
+        .replace("excel_ready_schools/schools_total", "excel_ready_rate_free_text")
+        .replace("operator_reviewable_schools/schools_total", "operator_reviewable_rate_free_text")
+        .replace(
+            "estimated_manual_workload_rate_pct must match operator_reviewable_schools/schools_total",
+            "estimated_manual_workload_rate_pct may drift",
+        )
         .replace(
             "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
             "mature-year proof finished_at may be future",
@@ -1279,6 +1286,25 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: excel_ready_rate_pct" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: strict_target_parsed_schools/schools_total"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: excel_ready_schools/schools_total" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: operator_reviewable_schools/schools_total"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "estimated_manual_workload_rate_pct must match operator_reviewable_schools/schools_total" in error
         for error in check.errors
     )
     assert any(

@@ -1254,10 +1254,14 @@ def test_verify_stage6_return_rejects_mature_year_proof_metric_mismatch_with_str
             "basis": "strict_yield_gap_analysis",
             "fiscal_year": 2025,
             "finished_at": "2026-05-17T01:02:03+00:00",
-            "schools_total": 1625,
+            "schools_total": 1000,
+            "strict_target_parsed_schools": 120,
             "strict_target_parsed_rate_pct": 12.0,
+            "excel_ready_schools": 675,
             "excel_ready_rate_pct": 67.5,
+            "operator_reviewable_schools": 720,
             "operator_reviewable_rate_pct": 72.0,
+            "estimated_manual_workload_rate_pct": 28.0,
         },
     )
     proof = tmp_path / "mature-year-proof.json"
@@ -1273,7 +1277,7 @@ def test_verify_stage6_return_rejects_mature_year_proof_metric_mismatch_with_str
                     "evidence_source": "strict_gap_analysis",
                     "strict_gap_analysis": "logs/strict-gap-analysis.json",
                     "finished_at": "2026-05-17T01:02:03+00:00",
-                    "target_pdf_auto_denominator_count": 1625,
+                    "target_pdf_auto_denominator_count": 1000,
                     "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
                     "target_pdf_auto_yield_pct": 67.5,
                     "excel_ready_yield_pct": 67.5,
@@ -1306,7 +1310,7 @@ def test_verify_stage6_return_rejects_mature_year_proof_metric_mismatch_with_str
     ]
 
 
-def test_verify_stage6_return_rejects_strict_gap_mature_year_proof_without_excel_ready_yield(
+def test_verify_stage6_return_rejects_strict_gap_evidence_rate_mismatch_with_counts(
     tmp_path: Path,
 ) -> None:
     module = _load_module()
@@ -1319,10 +1323,14 @@ def test_verify_stage6_return_rejects_strict_gap_mature_year_proof_without_excel
             "basis": "strict_yield_gap_analysis",
             "fiscal_year": 2025,
             "finished_at": "2026-05-17T01:02:03+00:00",
-            "schools_total": 1625,
+            "schools_total": 1000,
+            "strict_target_parsed_schools": 600,
             "strict_target_parsed_rate_pct": 67.5,
+            "excel_ready_schools": 675,
             "excel_ready_rate_pct": 67.5,
+            "operator_reviewable_schools": 720,
             "operator_reviewable_rate_pct": 72.0,
+            "estimated_manual_workload_rate_pct": 28.0,
         },
     )
     proof = tmp_path / "mature-year-proof.json"
@@ -1338,7 +1346,76 @@ def test_verify_stage6_return_rejects_strict_gap_mature_year_proof_without_excel
                     "evidence_source": "strict_gap_analysis",
                     "strict_gap_analysis": "logs/strict-gap-analysis.json",
                     "finished_at": "2026-05-17T01:02:03+00:00",
-                    "target_pdf_auto_denominator_count": 1625,
+                    "target_pdf_auto_denominator_count": 1000,
+                    "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
+                    "target_pdf_auto_yield_pct": 67.5,
+                    "excel_ready_yield_pct": 67.5,
+                    "operator_reviewable_yield_pct": 72.0,
+                    "ship_gate_status": "pass",
+                }
+            ],
+        },
+    )
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "mature-year proof case FY2025 strict_gap_analysis evidence strict_target_parsed_rate_pct "
+        "must match strict_target_parsed_schools/schools_total: 67.5 != 60.0"
+    ) in result["errors"]
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
+        "errors"
+    ]
+
+
+def test_verify_stage6_return_rejects_strict_gap_mature_year_proof_without_excel_ready_yield(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    strict_gap_path = tmp_path / "logs" / "strict-gap-analysis.json"
+    strict_gap_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        strict_gap_path,
+        {
+            "basis": "strict_yield_gap_analysis",
+            "fiscal_year": 2025,
+            "finished_at": "2026-05-17T01:02:03+00:00",
+            "schools_total": 1000,
+            "strict_target_parsed_schools": 675,
+            "strict_target_parsed_rate_pct": 67.5,
+            "excel_ready_schools": 675,
+            "excel_ready_rate_pct": 67.5,
+            "operator_reviewable_schools": 720,
+            "operator_reviewable_rate_pct": 72.0,
+            "estimated_manual_workload_rate_pct": 28.0,
+        },
+    )
+    proof = tmp_path / "mature-year-proof.json"
+    _write_json(
+        proof,
+        {
+            "ok": True,
+            "basis": "mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition",
+            "cases": [
+                {
+                    "fiscal_year": 2025,
+                    "ok": True,
+                    "evidence_source": "strict_gap_analysis",
+                    "strict_gap_analysis": "logs/strict-gap-analysis.json",
+                    "finished_at": "2026-05-17T01:02:03+00:00",
+                    "target_pdf_auto_denominator_count": 1000,
                     "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
                     "target_pdf_auto_yield_pct": 67.5,
                     "operator_reviewable_yield_pct": 72.0,
@@ -1384,10 +1461,14 @@ def test_verify_stage6_return_rejects_low_strict_gap_mature_year_excel_ready_yie
             "basis": "strict_yield_gap_analysis",
             "fiscal_year": 2025,
             "finished_at": "2026-05-17T01:02:03+00:00",
-            "schools_total": 1625,
+            "schools_total": 1000,
+            "strict_target_parsed_schools": 675,
             "strict_target_parsed_rate_pct": 67.5,
+            "excel_ready_schools": 599,
             "excel_ready_rate_pct": 59.9,
+            "operator_reviewable_schools": 720,
             "operator_reviewable_rate_pct": 72.0,
+            "estimated_manual_workload_rate_pct": 28.0,
         },
     )
     proof = tmp_path / "mature-year-proof.json"
@@ -1403,7 +1484,7 @@ def test_verify_stage6_return_rejects_low_strict_gap_mature_year_excel_ready_yie
                     "evidence_source": "strict_gap_analysis",
                     "strict_gap_analysis": "logs/strict-gap-analysis.json",
                     "finished_at": "2026-05-17T01:02:03+00:00",
-                    "target_pdf_auto_denominator_count": 1625,
+                    "target_pdf_auto_denominator_count": 1000,
                     "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
                     "target_pdf_auto_yield_pct": 67.5,
                     "excel_ready_yield_pct": 59.9,
