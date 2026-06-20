@@ -13,11 +13,11 @@ decision for FY2026/R8 publication lag.
   commit.
 - The selected release candidate has not been Windows side-by-side validated
   after its last code/package change. Current packaged bounded Windows canary
-  is v543 at commit `6aa5735d164101cbe6ec85648bcb8b6f46168c63`. Any
-  source/package change after v543 requires a new Windows package/canary before
+  is v544 at commit `74325bc278c3e96052ef27e67cd554e426c87c60`. Any
+  source/package change after v544 requires a new Windows package/canary before
   it counts as Windows release evidence.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
-  release scope. Current v543 did not restore or validate an OCR add-on/runtime
+  release scope. Current v544 did not restore or validate an OCR add-on/runtime
   proof; if OCR is in scope, attach a valid OCR add-on proof before approval.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
@@ -60,11 +60,11 @@ Expected:
 Confirm the current local package/source evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v543.zip
-cat dist/eidp-windows-v543.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v543.zip --json
+shasum -a 256 dist/eidp-windows-v544.zip
+cat dist/eidp-windows-v544.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v544.zip --json
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v543.zip \
+  dist/eidp-windows-v544.zip \
   --skip-full-unit \
   --json
 
@@ -73,7 +73,7 @@ test -f dist/eidp-ocr-addon-windows-v497-smoke.zip
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v543.zip \
+  dist/eidp-windows-v544.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -156,20 +156,20 @@ Excel output.
 
 Before tagging, attach or reference:
 
-- v543 package/non-Windows gate and CI evidence:
-  `docs/reports/2026-06-21-v543-package-gates.md`,
-  `logs/eidp-windows-v543-release-gates-20260621.json`, and CI run
-  `27883880647`;
-- v543 Windows bounded canary evidence:
-  `logs/win-v543-6aa5735-canary/20260620_212327-summary.json`,
-  `logs/win-v543-6aa5735-canary/stage6-evidence-20260620-213335.zip`,
-  `logs/win-v543-6aa5735-canary/stage6-evidence-verify-20260621-063335.json`,
-  `logs/win-v543-6aa5735-canary/stage6-evidence-verify-mac-20260621.json`,
-  and `docs/reports/2026-06-21-v543-helper-windows-canary.md`;
-- v543 false-reject RCA evidence:
-  `docs/reports/2026-06-21-v543-false-reject-audit-packet.md`,
-  `docs/reports/2026-06-21-v543-false-reject-review-sheet.csv`, and
-  `docs/reports/2026-06-21-v543-false-reject-review-validation.json`;
+- v544 package/non-Windows gate and CI evidence:
+  `docs/reports/2026-06-21-v544-package-gates.md`,
+  `logs/eidp-windows-v544-release-gates-20260621.json`, and CI run
+  `27886783058`;
+- v544 Windows bounded canary evidence:
+  `logs/win-v544-74325bc-canary/20260620_224853-summary.json`,
+  `logs/win-v544-74325bc-canary/stage6-evidence-20260620-230327.zip`,
+  `logs/win-v544-74325bc-canary/stage6-evidence-verify-20260621-080339.json`,
+  `logs/win-v544-74325bc-canary/stage6-evidence-verify-mac-20260621.json`,
+  and `docs/reports/2026-06-21-v544-triage-helper-windows-canary.md`;
+- v544 false-reject RCA evidence:
+  `docs/reports/2026-06-21-v544-false-reject-audit-packet.md`,
+  `docs/reports/2026-06-21-v544-false-reject-review-sheet.csv`, and
+  `docs/reports/2026-06-21-v544-false-reject-review-validation.json`;
 - previous v540 package/non-Windows gate and CI evidence:
   `docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md`,
   `logs/win-v540-stage6-v540-verify-windows-distribution-20260620.json`, and
@@ -236,11 +236,11 @@ Before tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v543 package evidence is recorded in
-`docs/reports/2026-06-21-v543-package-gates.md`,
-`docs/reports/2026-06-21-v543-helper-windows-canary.md`,
-`logs/eidp-windows-v543-release-gates-20260621.json`, and
-`logs/win-v543-6aa5735-canary/stage6-evidence-verify-mac-20260621.json`.
+Current v544 package evidence is recorded in
+`docs/reports/2026-06-21-v544-package-gates.md`,
+`docs/reports/2026-06-21-v544-triage-helper-windows-canary.md`,
+`logs/eidp-windows-v544-release-gates-20260621.json`, and
+`logs/win-v544-74325bc-canary/stage6-evidence-verify-mac-20260621.json`.
 It is bounded canary evidence with `ship_gate_status=below_gate`; it is not
 owner/operator real-cycle sign-off and not v1.0 approval.
 

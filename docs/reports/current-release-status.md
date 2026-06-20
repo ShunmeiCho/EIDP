@@ -254,7 +254,7 @@ confirms `20` school packets, `524` candidate rows, and strict-yield conclusion
 `BELOW_GATE`.
 The current P0 is therefore not a generic "PDF not found" or crawler-runtime
 failure. It is specifically the FY2026/R8 strict target-document to Excel-ready
-yield staying below the release gate. v543 found many PDF candidates, but the
+yield staying below the release gate. v544 found many PDF candidates, but the
 dominant rejection evidence is old-year/current-FY mismatch, non-target PDF
 noise, target-form-like files without trusted year evidence, and small
 site-entry/fetch/identity lanes. The next RCA pass must work those buckets in
@@ -262,13 +262,13 @@ order, without counting old-year PDFs, unknown-year documents, non-target files,
 or identity mismatches as FY2026/R8 success. This also must not be simplified
 to "the algorithm/model is broken" until a rejection-bucket false-reject audit
 shows material over-rejection or fiscal-year extraction mistakes.
-The current v543 false-reject audit packet is now recorded in
-`docs/reports/2026-06-21-v543-false-reject-audit-packet.md`; it was generated
-from the v543 Stage 6 evidence ZIP and samples fiscal-year mismatch,
+The current v544 false-reject audit packet is now recorded in
+`docs/reports/2026-06-21-v544-false-reject-audit-packet.md`; it was generated
+from the v544 Stage 6 evidence ZIP and samples fiscal-year mismatch,
 pre-filtered non-target, classified non-target, target-year-unverified, and
 site-entry/fetch/identity rows without changing release status.
 The same packet now has a companion decision worksheet at
-`docs/reports/2026-06-21-v543-false-reject-review-sheet.csv`. It contains stable
+`docs/reports/2026-06-21-v544-false-reject-review-sheet.csv`. It contains stable
 `audit_row_id` values and blank `decision` cells restricted to
 `false_reject`, `correct_reject`, or `needs_operator_review`. It also includes
 read-only `suggested_decision` / `suggested_decision_basis` guidance for obvious
@@ -280,7 +280,7 @@ sample review. The return validator also rejects changed row context and emits
 `bucket_decision_counts`; the current blank worksheet validates as
 `review_status=incomplete`, `completed_decisions=0`, and
 `context_mismatch_count=0` in
-`docs/reports/2026-06-21-v543-false-reject-review-validation.json`. Completed
+`docs/reports/2026-06-21-v544-false-reject-review-validation.json`. Completed
 rows require `reviewer` and an ISO `reviewed_at` timestamp, and `false_reject`
 / `needs_operator_review` rows require `notes`.
 The owner/operator return runbooks now include the false-reject worksheet return
@@ -302,13 +302,11 @@ Windows-canary verified in `dist/eidp-windows-v542.zip` at package commit
 `Python quality gates` and `Ship gate contract` for that commit, and
 `docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md` records
 the package/source freshness, Windows setup, bounded canary, and Stage 6
-evidence verification. Current `main` has since rebuilt the package as v543
-with `scripts/build_false_reject_audit.py` explicitly included beside
-`scripts/verify_stage6_return.py`, and
-`docs/reports/2026-06-21-v543-helper-windows-canary.md` records the v543
-Windows setup/canary evidence for that helper package. Returned false-reject
-worksheets can be validated from current `main` or from a v543+ package carrying
-the helper.
+evidence verification. Current `main` has since rebuilt the package as v544,
+and `docs/reports/2026-06-21-v544-triage-helper-windows-canary.md` records the
+v544 Windows setup/canary evidence for that helper package. Returned
+false-reject worksheets can be validated from current `main` or from a v544+
+package carrying the helper.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;

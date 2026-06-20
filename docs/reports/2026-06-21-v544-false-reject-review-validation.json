@@ -1,0 +1,46 @@
+{
+  "basis": "false_reject_review_decision_validation",
+  "blank_decisions": 53,
+  "bucket_decision_counts": {
+    "classified_non_target": {
+      "blank": 12
+    },
+    "fiscal_year_mismatch": {
+      "blank": 12
+    },
+    "pre_filtered_non_target_hint": {
+      "blank": 12
+    },
+    "site_entry_fetch_identity": {
+      "blank": 11
+    },
+    "target_fiscal_year_not_detected": {
+      "blank": 6
+    }
+  },
+  "completed_decisions": 0,
+  "context_mismatch_count": 0,
+  "decision_counts": {
+    "blank": 53
+  },
+  "defect_framing": {
+    "correct_reject_rows": 0,
+    "false_reject_rows": 0,
+    "generic_model_failure_supported": false,
+    "needs_operator_review_rows": 0,
+    "reason": "Review decisions are incomplete; below-gate yield must not be labeled as an algorithm/model defect yet.",
+    "specific_algorithm_or_rule_defect_supported": false,
+    "status": "pending_review"
+  },
+  "errors": [],
+  "expected_rows": 53,
+  "ok": true,
+  "release_forecast": "NOT_READY",
+  "required_decisions": [
+    "false_reject",
+    "correct_reject",
+    "needs_operator_review"
+  ],
+  "review_status": "incomplete",
+  "submitted_rows": 53
+}

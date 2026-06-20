@@ -113,8 +113,8 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
-    assert "Any source/package change after v543 requires a new Windows package/canary" in checklist
-    assert "Current v543 package evidence" in checklist
+    assert "Any source/package change after v544 requires a new Windows package/canary" in checklist
+    assert "Current v544 package evidence is recorded" in checklist
 
 
 def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
@@ -197,15 +197,15 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "not framed as a generic algorithm/model failure" in objective_checklist
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
-    assert "docs/reports/2026-06-21-v543-false-reject-audit-packet.md" in current_status
-    assert "docs/reports/2026-06-21-v543-false-reject-audit-packet.md" in objective_checklist
-    assert "docs/reports/2026-06-21-v543-false-reject-review-sheet.csv" in current_status
-    assert "docs/reports/2026-06-21-v543-false-reject-review-sheet.csv" in objective_checklist
-    assert "docs/reports/2026-06-21-v543-false-reject-review-validation.json" in current_status
-    assert "docs/reports/2026-06-21-v543-false-reject-review-validation.json" in objective_checklist
-    assert "docs/reports/2026-06-21-v543-false-reject-audit-packet.md" in admin_checklist
-    assert "docs/reports/2026-06-21-v543-false-reject-review-sheet.csv" in admin_checklist
-    assert "docs/reports/2026-06-21-v543-false-reject-review-validation.json" in admin_checklist
+    assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" in current_status
+    assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v544-false-reject-review-sheet.csv" in current_status
+    assert "docs/reports/2026-06-21-v544-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v544-false-reject-review-validation.json" in current_status
+    assert "docs/reports/2026-06-21-v544-false-reject-review-validation.json" in objective_checklist
+    assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" in admin_checklist
+    assert "docs/reports/2026-06-21-v544-false-reject-review-sheet.csv" in admin_checklist
+    assert "docs/reports/2026-06-21-v544-false-reject-review-validation.json" in admin_checklist
     assert "scripts/build_false_reject_audit.py" in objective_checklist
     assert "--validate-review-csv" in objective_checklist
     assert "--require-decisions" in objective_checklist
@@ -229,12 +229,12 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
         "This false-reject owner-return verifier integration was first packaged and Windows-canary verified"
         in current_status
     )
-    assert "docs/reports/2026-06-21-v543-helper-windows-canary.md" in current_status
-    assert "docs/reports/2026-06-21-v543-helper-windows-canary.md" in objective_checklist
-    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v543.zip`" in objective_checklist
-    assert "Current v543 package/canary contains the post-v542 false-reject audit helper" in objective_checklist
+    assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in current_status
+    assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in objective_checklist
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v544.zip`" in objective_checklist
+    assert "Current v544 package/canary contains the latest false-reject audit helper" in objective_checklist
     assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist
-    assert "from current `main` or from a v543+ package carrying the helper" in current_status
+    assert "from current `main` or from a v544+ package carrying the helper" in current_status
     assert "v542-owner-docs-20260621" in current_status
     assert "docs/reports/2026-06-21-v542-owner-docs-windows-staging.md" in current_status
     assert "bucket_decision_counts" in objective_checklist
