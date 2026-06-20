@@ -441,7 +441,9 @@ def _verify_release_exception_record(
             errors.append("release exception record Approver must not be a placeholder")
         elif row_label == "Approval date":
             approval_date = _iso_date_value(value)
-            if not _is_placeholder(value) and approval_date is None:
+            if _is_placeholder(value):
+                errors.append("release exception record Approval date is required")
+            elif approval_date is None:
                 errors.append("release exception record Approval date must be YYYY-MM-DD")
             elif approval_date is not None and approval_date > date.today():
                 errors.append("release exception record Approval date must not be in the future")

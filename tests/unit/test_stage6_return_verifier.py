@@ -702,6 +702,34 @@ def test_verify_stage6_return_exception_rejects_invalid_approval_date(tmp_path: 
     assert "release exception record Approval date must be YYYY-MM-DD" in result["errors"]
 
 
+def test_verify_stage6_return_exception_rejects_blank_approval_date(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    exception_record.write_text(
+        exception_record.read_text(encoding="utf-8").replace(
+            "| Approval date | 2026-05-19 |",
+            "| Approval date |  |",
+        ),
+        encoding="utf-8",
+    )
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "release exception record Approval date is required" in result["errors"]
+
+
 def test_verify_stage6_return_exception_rejects_future_approval_date(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
