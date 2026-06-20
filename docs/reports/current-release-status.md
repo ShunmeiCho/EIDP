@@ -3,7 +3,40 @@
 Updated: 2026-06-21
 Branch: `main`
 
-Latest packaged bounded Windows canary is `v543`
+Latest packaged bounded Windows canary is `v544`
+(`dist/eidp-windows-v544.zip`, SHA256
+`781da0a3c1a3f4ae80536c68de2971a1ae431a01c7eb2d58001de061f62df0c1`).
+`v544` packages commit `74325bc278c3e96052ef27e67cd554e426c87c60` with
+`git_dirty=false`. It refreshes the package from current `main` after adding
+false-reject worksheet triage guidance. Local v544 package-gate evidence is
+recorded in `docs/reports/2026-06-21-v544-package-gates.md`,
+`logs/eidp-windows-v544-distribution-verify-20260621.json`, and
+`logs/eidp-windows-v544-release-gates-20260621.json`; the non-Windows release
+gates returned `ok=true`, including full unit tests, validator/distribution
+tests, mypy, Ruff, discovery gold-set checks, package verification, and
+demonstrated-pattern verification.
+
+`v544` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v544-74325bc-env0`. The canary confirmed
+setup `rc=0`, after-setup validator `ok=true`, weekly canary `rc=0`,
+after-weekly validator `ok=true`, Stage 6 evidence verification `ok=true`,
+strict/Excel-ready FY2026 yield `12/50 (24.0%)`, operator-reviewable yield
+`47/50 (94.0%)`, and `ship_gate_status=below_gate`. That `24.0%` is
+bounded-cohort evidence for the selected 50 target-missing schools, not
+whole-database readiness. The after-weekly validator's global SQLite target-FY
+view still reports `sqlite_target_fy_target_pdf_school_count=8` and
+`sqlite_target_fy_yield_pct=0.3` across `2418` specialty schools, with
+`sqlite_target_fy_operator_reviewable_school_count=40` and
+`sqlite_target_fy_operator_reviewable_yield_pct=1.7`. Therefore v544 proves the
+latest packaged triage-helper source is Windows-canary safe; it does not prove
+release readiness. Evidence is recorded in
+`docs/reports/2026-06-21-v544-triage-helper-windows-canary.md`,
+`logs/win-v544-74325bc-canary/stage6-evidence-20260620-230327.zip`,
+`logs/win-v544-74325bc-canary/stage6-evidence-verify-20260621-080339.json`,
+`logs/win-v544-74325bc-canary/stage6-evidence-verify-mac-20260621.json`, and
+`logs/win-v544-74325bc-canary/20260620_224853-summary.json`.
+
+Previous packaged bounded Windows canary was `v543`
 (`dist/eidp-windows-v543.zip`, SHA256
 `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`).
 `v543` packages commit `6aa5735d164101cbe6ec85648bcb8b6f46168c63` with
@@ -38,7 +71,7 @@ release readiness. Evidence is recorded in
 `logs/win-v543-6aa5735-canary/stage6-evidence-verify-mac-20260621.json`, and
 `logs/win-v543-6aa5735-canary/20260620_212327-summary.json`.
 
-Previous packaged bounded Windows canary was `v542`
+Previous packaged bounded Windows canary before v543 was `v542`
 (`dist/eidp-windows-v542.zip`, SHA256
 `89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc`).
 `v542` packages commit `d98ecd7196631a00c27aff1c240ebc7969579ce7` with
