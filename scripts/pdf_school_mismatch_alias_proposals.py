@@ -116,8 +116,8 @@ def build_proposals(
             continue
 
         school_id = int(school_id_raw)
-        school = schools_by_id.get(school_id)
-        if school is None:
+        matched_school = schools_by_id.get(school_id)
+        if matched_school is None:
             stats["missing_school"] += 1
             continue
 
@@ -145,7 +145,7 @@ def build_proposals(
         bucket = grouped.setdefault(
             key,
             {
-                "school": school,
+                "school": matched_school,
                 "parsed_name": parsed_name,
                 "target_name": target_name,
                 "count": 0,
