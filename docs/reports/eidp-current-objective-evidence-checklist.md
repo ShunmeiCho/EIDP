@@ -32,6 +32,11 @@ Current v535 owner/operator docs staging:
 docs-only handoff ZIP staged at `C:\EIDP-staging\v535-owner-docs-20260620`
 with SHA256
 `75d4d4f12ca5a10abc6d1ac1d6c7287f6cc51e47a210c73ee68b7f252f79f5ca`.
+Current v535 strict-yield RCA plan:
+`docs/reports/2026-06-20-v535-strict-yield-rca-plan.md` decomposes the
+`12/50 (24.0%)` blocker into release-safe action lanes without counting
+old-year PDFs, missing-year candidates, or identity mismatches as FY2026/R8
+successes.
 Release verdict: **NOT_READY**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -96,6 +101,12 @@ that keeps manual work below the release threshold.
   `75d4d4f12ca5a10abc6d1ac1d6c7287f6cc51e47a210c73ee68b7f252f79f5ca`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
   or Task Scheduler.
+- Latest strict-yield RCA plan: v535 Stage 6 evidence is summarized in
+  `docs/reports/2026-06-20-v535-strict-yield-rca-plan.md`. The top RCA lanes
+  are `publication_lag_or_old_target_pdf` (`15` schools / `454` candidate
+  rows), `target_form_without_year_evidence` (`2` / `10`),
+  `school_identity_mismatch` (`2` / `48`), and
+  `non_target_candidates_only` (`1` / `12`).
 - Latest docs-only owner-decision handoff refresh: the Windows-staged v526
   owner docs ZIP now includes `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`
   and `docs/runbooks/eidp-v526-owner-return-fill-sheet.md`, and

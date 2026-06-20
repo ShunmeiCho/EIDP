@@ -30,6 +30,8 @@ htmlcov/
 .claude/
 .omc/
 .playwright-mcp/
+.codegraph/
+.understand-anything/
 _temp/
 logs
 logs/

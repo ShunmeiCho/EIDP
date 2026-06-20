@@ -27,6 +27,12 @@ The current v535 owner/operator handoff docs are also staged on Windows under
 `75d4d4f12ca5a10abc6d1ac1d6c7287f6cc51e47a210c73ee68b7f252f79f5ca`, and the
 remote staging check is recorded in
 `docs/reports/2026-06-20-v535-owner-docs-windows-staging.md`.
+The v535 strict-yield RCA action plan is recorded in
+`docs/reports/2026-06-20-v535-strict-yield-rca-plan.md`; it decomposes the
+`12/50 (24.0%)` blocker into `publication_lag_or_old_target_pdf`,
+`target_form_without_year_evidence`, `school_identity_mismatch`, and
+`non_target_candidates_only` action lanes without relaxing the FY2026/R8 strict
+evidence rules.
 
 Rejected v534 (`dist/eidp-windows-v534.zip`, SHA256
 `734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`) is
