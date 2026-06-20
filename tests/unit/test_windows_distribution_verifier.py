@@ -300,6 +300,11 @@ def _core_entries() -> dict[str, bytes | str]:
             "mature-year proof JSON\n"
             "mature-year proof years\n"
             "Excel ready 率\n"
+            "OCR scope 決定\n"
+            "core_non_ocr_only\n"
+            "ocr_addon_verified\n"
+            "OCR add-on ZIP sha256\n"
+            "OCR 未決定のままでは v1.0 release approval は通過しない\n"
             "logs\\diagnostics-*.txt\n"
             "127.0.0.1:18501:127.0.0.1:8501\n"
             "127.0.0.1:18501/_stcore/health\n"
@@ -1153,6 +1158,13 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("release_exception_record", "release_override_record")
         .replace("Stage 2-5c Windows VM gate 済み", "Mac local gate 済み")
         .replace("Runbook 修正反映済み", "Runbook optional")
+        .replace("OCR scope 決定", "OCR scope optional")
+        .replace("OCR_SCOPE_VALUES", "OCR_SCOPE_HINTS")
+        .replace("must be core_non_ocr_only or ocr_addon_verified", "may remain unresolved")
+        .replace("core_non_ocr_only", "core_ocr_pending")
+        .replace("ocr_addon_verified", "ocr_addon_optional")
+        .replace("OCR add-on ZIP sha256", "OCR add-on checksum optional")
+        .replace("must be a 64-character SHA256", "may be free text")
         .replace("release exception requires --mature-year-proof-json", "release exception requires proof")
         .replace("release exception requires --release-exception-record", "release exception requires approval")
         .replace("mature-year proof JSON must reference verifier proof JSON file", "mature-year proof JSON optional")
@@ -1420,6 +1432,30 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: Runbook 修正反映済み" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: OCR scope 決定" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: core_non_ocr_only" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: ocr_addon_verified" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: OCR add-on ZIP sha256" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: OCR_SCOPE_VALUES" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: must be a 64-character SHA256" in error
         for error in check.errors
     )
     assert any(
@@ -2640,6 +2676,39 @@ def test_verify_core_zip_requires_stage6_recovery_e2e_template_fields(tmp_path: 
 
     assert not check.ok
     assert any("stage6_recovery_rc" in error for error in check.errors)
+
+
+def test_verify_core_zip_requires_ocr_scope_e2e_template_fields(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["docs/runbooks/eidp-operator-e2e-template.md"] = (
+        entries["docs/runbooks/eidp-operator-e2e-template.md"]
+        .replace("OCR scope 決定", "OCR scope optional")
+        .replace("core_non_ocr_only", "core_ocr_pending")
+        .replace("ocr_addon_verified", "ocr_addon_optional")
+        .replace("OCR add-on ZIP sha256", "OCR add-on checksum optional")
+        .replace("OCR 未決定のままでは v1.0 release approval は通過しない", "OCR decision can be deferred")
+    )
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any(
+        "docs/runbooks/eidp-operator-e2e-template.md missing required token: OCR scope 決定" in error
+        for error in check.errors
+    )
+    assert any(
+        "docs/runbooks/eidp-operator-e2e-template.md missing required token: core_non_ocr_only" in error
+        for error in check.errors
+    )
+    assert any(
+        "docs/runbooks/eidp-operator-e2e-template.md missing required token: ocr_addon_verified" in error
+        for error in check.errors
+    )
+    assert any(
+        "docs/runbooks/eidp-operator-e2e-template.md missing required token: OCR add-on ZIP sha256" in error
+        for error in check.errors
+    )
 
 
 def test_verify_core_zip_requires_operator_e2e_preflight_fields(tmp_path: Path) -> None:

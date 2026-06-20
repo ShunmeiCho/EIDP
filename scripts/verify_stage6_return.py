@@ -31,6 +31,11 @@ REQUIRED_RELEASE_ROWS = (
     "Runbook 修正反映済み",
     "残 P0/P1 bug",
 )
+REQUIRED_OCR_SCOPE_ROW = "OCR scope 決定"
+OCR_ADDON_SHA_ROW = "OCR add-on ZIP sha256"
+OCR_SCOPE_CORE_NON_OCR_ONLY = "core_non_ocr_only"
+OCR_SCOPE_ADDON_VERIFIED = "ocr_addon_verified"
+OCR_SCOPE_VALUES = frozenset({OCR_SCOPE_CORE_NON_OCR_ONLY, OCR_SCOPE_ADDON_VERIFIED})
 REQUIRED_AUDIT_ROWS = (
     "監査ログページ表示",
     "manual_action_log 件数",
@@ -231,6 +236,10 @@ def _parse_numeric_cell(value: str) -> float | None:
     return float(match.group(0))
 
 
+def _is_sha256(value: str) -> bool:
+    return re.fullmatch(r"[0-9a-fA-F]{64}", _clean_cell(value)) is not None
+
+
 def _iso_date_value(value: str) -> date | None:
     try:
         return date.fromisoformat(value.strip())
@@ -329,6 +338,31 @@ def _verify_template_kpi_actual(
             "E2E template KPI actual must match "
             f"{source}: {row_label} {actual_value:.1f} != {expected_value:.1f}"
         )
+
+
+def _verify_template_ocr_scope(text: str, errors: list[str]) -> None:
+    row = _table_row(text, REQUIRED_OCR_SCOPE_ROW)
+    if row is None or len(row) < 2:
+        errors.append(f"E2E template release row missing or malformed: {REQUIRED_OCR_SCOPE_ROW}")
+        return
+
+    value = row[1]
+    if _is_placeholder(value):
+        errors.append(f"E2E template release row is still placeholder: {REQUIRED_OCR_SCOPE_ROW}")
+        return
+    if value not in OCR_SCOPE_VALUES:
+        errors.append(
+            f"E2E template {REQUIRED_OCR_SCOPE_ROW} must be "
+            f"{OCR_SCOPE_CORE_NON_OCR_ONLY} or {OCR_SCOPE_ADDON_VERIFIED}: {value}"
+        )
+        return
+
+    if value == OCR_SCOPE_ADDON_VERIFIED:
+        sha_row = _table_row(text, OCR_ADDON_SHA_ROW)
+        if sha_row is None or len(sha_row) < 2:
+            errors.append(f"E2E template row missing or malformed: {OCR_ADDON_SHA_ROW}")
+        elif not _is_sha256(sha_row[1]):
+            errors.append(f"E2E template {OCR_ADDON_SHA_ROW} must be a 64-character SHA256")
 
 
 def _verify_last_run(
@@ -1140,6 +1174,8 @@ def _verify_template(
             errors.append(f"E2E template release row is still placeholder: {row_label}")
         elif row[1].lower() != REQUIRED_RELEASE_VALUES[row_label]:
             errors.append(f"E2E template release row must be {REQUIRED_RELEASE_VALUES[row_label]}: {row_label}")
+
+    _verify_template_ocr_scope(text, errors)
 
     for row_label in REQUIRED_AUDIT_ROWS:
         row = _table_row(text, row_label)

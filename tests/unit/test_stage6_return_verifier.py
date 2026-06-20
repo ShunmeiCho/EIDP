@@ -52,6 +52,7 @@ data\\output\\eidp-master.xlsx
 | KPI owner 承認 | yes |
 | Runbook 修正反映済み | yes |
 | 残 P0/P1 bug | none |
+| OCR scope 決定 | core_non_ocr_only |
 
 結論:
 
@@ -2061,6 +2062,97 @@ def test_verify_stage6_return_rejects_missing_windows_vm_gate_row(tmp_path: Path
 
     assert result["ok"] is False
     assert "E2E template release row missing or malformed: Stage 2-5c Windows VM gate 済み" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_missing_ocr_scope_decision(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template().replace("| OCR scope 決定 | core_non_ocr_only |\n", ""),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template release row missing or malformed: OCR scope 決定" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_unresolved_ocr_scope_decision(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template().replace("| OCR scope 決定 | core_non_ocr_only |", "| OCR scope 決定 | pending |"),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "E2E template OCR scope 決定 must be core_non_ocr_only or ocr_addon_verified: pending"
+        in result["errors"]
+    )
+
+
+def test_verify_stage6_return_rejects_ocr_addon_scope_without_sha256(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template().replace(
+            "| OCR scope 決定 | core_non_ocr_only |",
+            "| OCR scope 決定 | ocr_addon_verified |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template row missing or malformed: OCR add-on ZIP sha256" in result["errors"]
+
+
+def test_verify_stage6_return_accepts_ocr_addon_scope_with_sha256(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    template.write_text(
+        _complete_template()
+        .replace(
+            "| OCR scope 決定 | core_non_ocr_only |",
+            "| OCR scope 決定 | ocr_addon_verified |",
+        )
+        .replace(
+            "| KPI owner 承認 | yes |",
+            "| OCR add-on ZIP sha256 | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
+            "| KPI owner 承認 | yes |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+    )
+
+    assert result["ok"] is True
+    assert result["errors"] == []
 
 
 def test_verify_stage6_return_rejects_missing_runbook_correction_row(tmp_path: Path) -> None:

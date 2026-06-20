@@ -518,6 +518,9 @@ Version-specific setup/UI/recovery/launcher 証跡（operator real-cycle では�
 結論と sign-off の `Decision` は `READY` / `RC_ONLY` / `NOT_READY` のいずれかで記入する。
 sign-off の `Date` は `YYYY-MM-DD` 形式で記入する。
 `verify_stage6_return.py` は release approval 用なので、`READY` 以外は通過させない。
+`OCR scope 決定` は `core_non_ocr_only` または `ocr_addon_verified` のどちらかを記入する。
+`ocr_addon_verified` を選ぶ場合は、上記 `OCR add-on ZIP sha256` に 64 桁 SHA256 を記入する。
+OCR 未決定のままでは v1.0 release approval は通過しない。
 
 | 判定項目 | 結果 |
 | --- | --- |
@@ -526,6 +529,7 @@ sign-off の `Date` は `YYYY-MM-DD` 形式で記入する。
 | KPI owner 承認 | yes / no |
 | Runbook 修正反映済み | yes / no |
 | 残 P0/P1 bug | none / exists |
+| OCR scope 決定 | core_non_ocr_only / ocr_addon_verified |
 
 結論:
 
