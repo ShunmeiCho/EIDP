@@ -204,6 +204,14 @@ and the return-verifier false-reject arguments. The r3 docs ZIP SHA256 is
 superseded r2 ZIP and extracted directory were removed from Windows staging and
 the external SSD; the r2 report remains historical evidence only. This still
 does not change the release conclusion.
+This false-reject owner-return verifier integration is source-side hardening on
+current `main` at commit `b044d02175dfc701291d219bf437e8717a49818d`; CI run
+`27879818860` passed both `Python quality gates` and `Ship gate contract` for
+that commit. It is not packaged into `dist/eidp-windows-v541.zip`, whose source
+commit remains `e62d074081e60428957a2f405c3a917bbceb31a0`. Therefore the
+returned worksheet must be validated from current `main`, and any future
+release package claiming this false-reject verifier integration must be rebuilt
+and Windows-verified as v542 or later.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;

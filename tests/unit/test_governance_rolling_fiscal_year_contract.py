@@ -129,6 +129,8 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     staging_r3 = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md")
 
     expected_package_sha = "2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f"
+    expected_v541_source_sha = "e62d074081e60428957a2f405c3a917bbceb31a0"
+    expected_false_reject_source_sha = "b044d02175dfc701291d219bf437e8717a49818d"
     expected_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
     expected_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
 
@@ -193,6 +195,18 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "row context must remain unchanged" in current_status
     assert "The owner-return verifier now accepts `--false-reject-evidence-zip`" in current_status
     assert "`context_mismatch_count=0`" in current_status
+    assert expected_false_reject_source_sha in current_status
+    assert expected_false_reject_source_sha in objective_checklist
+    assert expected_v541_source_sha in current_status
+    assert expected_v541_source_sha in objective_checklist
+    assert "CI run `27879818860` passed both `Python quality gates` and `Ship gate contract`" in current_status
+    assert "CI run `27879818860` passed both required jobs" in objective_checklist
+    assert "It is not packaged into `dist/eidp-windows-v541.zip`" in current_status
+    assert "This is not packaged into `dist/eidp-windows-v541.zip`" in objective_checklist
+    assert "must be validated from current `main`" in current_status
+    assert "must run from current `main`" in objective_checklist
+    assert "rebuilt and Windows-verified as v542 or later" in current_status
+    assert "rebuilt and Windows-verified as v542 or later" in objective_checklist
     assert "v541-owner-docs-20260621-r3" in current_status
     assert "docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md" in current_status
     assert "bucket_decision_counts" in objective_checklist

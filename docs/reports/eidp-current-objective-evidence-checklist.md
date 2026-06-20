@@ -164,6 +164,15 @@ that keeps manual work below the release threshold.
   verifies short owner sign-off verification, expected package SHA/source
   commit checks, and `RC_ONLY` publication-lag exception semantics in
   `scripts/verify_stage6_return.py`.
+- Latest source-side verifier hardening: current `main` commit
+  `b044d02175dfc701291d219bf437e8717a49818d` wires the false-reject review
+  worksheet into `scripts/verify_stage6_return.py`; CI run `27879818860`
+  passed both required jobs. This is not packaged into
+  `dist/eidp-windows-v541.zip`, whose source commit remains
+  `e62d074081e60428957a2f405c3a917bbceb31a0`. Returned worksheet validation
+  must run from current `main`, and any future release package claiming this
+  false-reject verifier integration must be rebuilt and Windows-verified as
+  v542 or later.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
 - Latest source/package URL-discovery guardrail: v530 adds an optional
