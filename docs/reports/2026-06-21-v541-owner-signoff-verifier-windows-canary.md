@@ -226,6 +226,10 @@ non-target noise, or release-scope decisions, not a generic algorithm failure.
 The first reproducible packet for this review is
 `docs/reports/2026-06-21-v541-false-reject-audit-packet.md`, generated from the
 same Stage 6 evidence ZIP with `scripts/build_false_reject_audit.py`.
+The companion review worksheet is
+`docs/reports/2026-06-21-v541-false-reject-review-sheet.csv`; the same script
+can validate the returned worksheet with `--validate-review-csv` and can require
+completed decisions with `--require-decisions`.
 
 None of these buckets permits relaxing the FY2026/R8 evidence rules. A
 `publication_lag` decision can support at most the documented `RC_ONLY` route
@@ -301,9 +305,9 @@ Next required actions:
 2. Continue strict-yield RCA in bucket order: fiscal-year mismatch /
    publication lag, non-target candidate noise, target-year-unverified, then
    site-entry/fetch/identity lanes.
-3. Use `docs/reports/2026-06-21-v541-false-reject-audit-packet.md` to mark the
+3. Use `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` to mark the
    first rejection-bucket sample as `false_reject`, `correct_reject`, or
-   `needs_operator_review` before labeling the blocker as an algorithm/model
-   defect.
+   `needs_operator_review`, then validate it with `scripts/build_false_reject_audit.py`
+   before labeling the blocker as an algorithm/model defect.
 4. Keep final release status `NOT_READY` until the strict Excel-ready gate and
    owner evidence are both satisfied.

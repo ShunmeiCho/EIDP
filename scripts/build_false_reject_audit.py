@@ -8,6 +8,9 @@ non-target, unknown-year, and identity-risk candidates.
 from __future__ import annotations
 
 import argparse
+import csv
+import hashlib
+import io
 import json
 import sys
 import zipfile
@@ -20,6 +23,8 @@ if __package__ in {None, ""}:
     sys.path.append(str(Path(__file__).resolve().parent))
 
 from verify_stage6_evidence import verify_stage6_evidence_bundle
+
+VALID_REVIEW_DECISIONS = ("", "false_reject", "correct_reject", "needs_operator_review")
 
 REQUIRED_LABELS = (
     "build_info",
@@ -186,8 +191,23 @@ def _extra_value(row: dict[str, Any], key: str) -> str:
     return "" if value is None else str(value)
 
 
-def _project_row(row: dict[str, Any]) -> dict[str, Any]:
+def _audit_row_id(bucket: str, row: dict[str, Any]) -> str:
+    payload = "\n".join(
+        (
+            bucket,
+            str(row.get("school_id") or ""),
+            _row_reason(row),
+            str(row.get("page_url") or ""),
+            str(row.get("pdf_url") or ""),
+            str(row.get("anchor_text") or ""),
+        )
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
+def _project_row(bucket: str, row: dict[str, Any]) -> dict[str, Any]:
     return {
+        "audit_row_id": _audit_row_id(bucket, row),
         "school_id": row.get("school_id"),
         "reason": _row_reason(row),
         "pdf_type": row.get("pdf_type") or "",
@@ -268,7 +288,7 @@ def build_false_reject_audit_packet(
                 "sampled_rows": len(sampled),
                 "review_question": bucket_def["review_question"],
                 "false_reject_signal": bucket_def["false_reject_signal"],
-                "rows": [_project_row(row) for row in sampled],
+                "rows": [_project_row(str(bucket_def["bucket"]), row) for row in sampled],
             }
         )
 
@@ -368,13 +388,14 @@ def render_markdown(packet: dict[str, Any]) -> str:
                 "",
                 f"False-reject signal: {bucket.get('false_reject_signal', '')}",
                 "",
-                "| School ID | Reason | PDF type | Year evidence | Anchor | Page URL | PDF URL |",
-                "| ---: | --- | --- | --- | --- | --- | --- |",
+                "| Audit row ID | School ID | Reason | PDF type | Year evidence | Anchor | Page URL | PDF URL |",
+                "| --- | ---: | --- | --- | --- | --- | --- | --- |",
             ]
         )
         for row in bucket.get("rows", []):
             lines.append(
                 "| "
+                f"`{_md_cell(row.get('audit_row_id', ''))}` | "
                 f"{_md_cell(row.get('school_id', ''))} | "
                 f"`{_md_cell(row.get('reason', ''))}` | "
                 f"`{_md_cell(row.get('pdf_type', ''))}` | "
@@ -390,13 +411,152 @@ def render_markdown(packet: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+REVIEW_CSV_COLUMNS = (
+    "audit_row_id",
+    "bucket",
+    "decision",
+    "reviewer",
+    "reviewed_at",
+    "school_id",
+    "reason",
+    "pdf_type",
+    "detected_fiscal_year",
+    "year_evidence",
+    "trusted_year_evidence",
+    "discovery_method",
+    "anchor_text",
+    "page_url",
+    "pdf_url",
+    "review_question",
+    "false_reject_signal",
+    "notes",
+)
+
+
+def _iter_review_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for bucket in packet.get("audit_buckets", []):
+        bucket_name = str(bucket.get("bucket") or "")
+        review_question = str(bucket.get("review_question") or "")
+        false_reject_signal = str(bucket.get("false_reject_signal") or "")
+        for row in bucket.get("rows", []):
+            rows.append(
+                {
+                    "audit_row_id": row.get("audit_row_id") or "",
+                    "bucket": bucket_name,
+                    "decision": "",
+                    "reviewer": "",
+                    "reviewed_at": "",
+                    "school_id": row.get("school_id") or "",
+                    "reason": row.get("reason") or "",
+                    "pdf_type": row.get("pdf_type") or "",
+                    "detected_fiscal_year": row.get("detected_fiscal_year") or "",
+                    "year_evidence": row.get("year_evidence") or "",
+                    "trusted_year_evidence": row.get("trusted_year_evidence") or "",
+                    "discovery_method": row.get("discovery_method") or "",
+                    "anchor_text": row.get("anchor_text") or "",
+                    "page_url": row.get("page_url") or "",
+                    "pdf_url": row.get("pdf_url") or "",
+                    "review_question": review_question,
+                    "false_reject_signal": false_reject_signal,
+                    "notes": "",
+                }
+            )
+    return rows
+
+
+def render_review_csv(packet: dict[str, Any]) -> str:
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=REVIEW_CSV_COLUMNS, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(_iter_review_rows(packet))
+    return output.getvalue()
+
+
+def validate_review_csv(
+    packet: dict[str, Any],
+    csv_text: str,
+    *,
+    require_decisions: bool = False,
+) -> dict[str, Any]:
+    expected_rows = _iter_review_rows(packet)
+    expected_ids = {str(row["audit_row_id"]) for row in expected_rows}
+    errors: list[str] = []
+    decision_counts: Counter[str] = Counter()
+    seen_ids: set[str] = set()
+
+    reader = csv.DictReader(io.StringIO(csv_text))
+    fieldnames = set(reader.fieldnames or [])
+    required_columns = {"audit_row_id", "decision"}
+    missing_columns = sorted(required_columns - fieldnames)
+    if missing_columns:
+        errors.append(f"review CSV is missing required columns: {', '.join(missing_columns)}")
+        return {
+            "ok": False,
+            "basis": "false_reject_review_decision_validation",
+            "release_forecast": packet.get("strict_yield", {}).get("release_forecast", "NOT_READY"),
+            "review_status": "invalid",
+            "required_decisions": list(VALID_REVIEW_DECISIONS[1:]),
+            "expected_rows": len(expected_rows),
+            "submitted_rows": 0,
+            "completed_decisions": 0,
+            "blank_decisions": len(expected_rows),
+            "decision_counts": {},
+            "errors": errors,
+        }
+
+    for line_number, row in enumerate(reader, start=2):
+        audit_row_id = str(row.get("audit_row_id") or "").strip()
+        decision = str(row.get("decision") or "").strip()
+        if not audit_row_id:
+            errors.append(f"line {line_number}: audit_row_id is blank")
+            continue
+        if audit_row_id in seen_ids:
+            errors.append(f"line {line_number}: duplicate audit_row_id {audit_row_id}")
+        seen_ids.add(audit_row_id)
+        if audit_row_id not in expected_ids:
+            errors.append(f"line {line_number}: unknown audit_row_id {audit_row_id}")
+        if decision not in VALID_REVIEW_DECISIONS:
+            errors.append(
+                f"line {line_number}: invalid decision {decision!r}; "
+                f"expected one of {', '.join(repr(item) for item in VALID_REVIEW_DECISIONS[1:])}"
+            )
+        if require_decisions and decision == "":
+            errors.append(f"line {line_number}: decision is required")
+        decision_counts[decision] += 1
+
+    missing_ids = sorted(expected_ids - seen_ids)
+    if missing_ids:
+        preview = ", ".join(missing_ids[:5])
+        suffix = "" if len(missing_ids) <= 5 else f", ... ({len(missing_ids)} total)"
+        errors.append(f"review CSV is missing expected audit_row_id values: {preview}{suffix}")
+
+    blank_decisions = decision_counts.get("", 0)
+    review_status = "invalid" if errors else ("complete" if blank_decisions == 0 else "incomplete")
+    return {
+        "ok": not errors,
+        "basis": "false_reject_review_decision_validation",
+        "release_forecast": packet.get("strict_yield", {}).get("release_forecast", "NOT_READY"),
+        "review_status": review_status,
+        "required_decisions": list(VALID_REVIEW_DECISIONS[1:]),
+        "expected_rows": len(expected_rows),
+        "submitted_rows": len(seen_ids),
+        "completed_decisions": sum(count for decision, count in decision_counts.items() if decision),
+        "blank_decisions": blank_decisions,
+        "decision_counts": {key or "blank": count for key, count in sorted(decision_counts.items())},
+        "errors": errors,
+    }
+
+
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path, help="Path to logs/stage6-evidence-*.zip.")
     parser.add_argument("--required-yield-pct", type=float, default=60.0)
     parser.add_argument("--sample-size", type=int, default=50)
-    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    parser.add_argument("--format", choices=("markdown", "json", "csv"), default="markdown")
     parser.add_argument("--json", action="store_true", help="Alias for --format json.")
+    parser.add_argument("--validate-review-csv", type=Path, help="Validate a completed review CSV for this packet.")
+    parser.add_argument("--require-decisions", action="store_true", help="Fail validation when any decision is blank.")
     parser.add_argument("--output", type=Path, help="Write the audit packet to this path.")
     return parser.parse_args(argv)
 
@@ -409,17 +569,31 @@ def main(argv: list[str] | None = None) -> int:
         sample_size=args.sample_size,
         required_yield_pct=args.required_yield_pct,
     )
-    if output_format == "json":
+
+    if args.validate_review_csv is not None:
+        validation = validate_review_csv(
+            packet,
+            args.validate_review_csv.read_text(encoding="utf-8-sig"),
+            require_decisions=args.require_decisions,
+        )
+        rendered = json.dumps(validation, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        ok = packet.get("ok") is True and validation.get("ok") is True
+    elif output_format == "json":
         rendered = json.dumps(packet, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        ok = packet.get("ok") is True
+    elif output_format == "csv":
+        rendered = render_review_csv(packet)
+        ok = packet.get("ok") is True
     else:
         rendered = render_markdown(packet)
+        ok = packet.get("ok") is True
 
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
     else:
         print(rendered, end="")
-    return 0 if packet.get("ok") is True else 1
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

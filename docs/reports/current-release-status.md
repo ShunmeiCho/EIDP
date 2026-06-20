@@ -175,6 +175,12 @@ The first v541 false-reject audit packet is now recorded in
 from the v541 Stage 6 evidence ZIP and samples fiscal-year mismatch,
 pre-filtered non-target, classified non-target, target-year-unverified, and
 site-entry/fetch/identity rows without changing release status.
+The same packet now has a companion decision worksheet at
+`docs/reports/2026-06-21-v541-false-reject-review-sheet.csv`. It contains stable
+`audit_row_id` values and blank `decision` cells restricted to
+`false_reject`, `correct_reject`, or `needs_operator_review`; validating it with
+`--require-decisions` correctly fails until the owner/operator completes the
+sample review.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;

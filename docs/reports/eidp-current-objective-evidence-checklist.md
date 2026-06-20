@@ -67,6 +67,16 @@ The first false-reject audit packet is generated and recorded at
 `uv run python scripts/build_false_reject_audit.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --sample-size
 12 --output docs/reports/2026-06-21-v541-false-reject-audit-packet.md`.
+Its review worksheet is generated at
+`docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` using
+`uv run python scripts/build_false_reject_audit.py
+logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --sample-size
+12 --format csv --output
+docs/reports/2026-06-21-v541-false-reject-review-sheet.csv`. The blank
+worksheet validates as `review_status=incomplete`, while the same command with
+`--validate-review-csv
+docs/reports/2026-06-21-v541-false-reject-review-sheet.csv --require-decisions`
+fails until every sampled row has one of the allowed decisions.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -172,6 +182,9 @@ that keeps manual work below the release threshold.
   `docs/reports/2026-06-21-v541-false-reject-audit-packet.md`; it samples
   `12` rows from each large bucket and all rows from the smaller
   target-year-unverified and site-entry/fetch/identity buckets.
+  The companion CSV worksheet
+  `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` gives each row a
+  stable `audit_row_id` and a machine-validated `decision` field.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe
   fix keeps both `/disclosure/{slug}` and `/{slug}/disclosure` under the
   shared-origin throttle for school roots such as
@@ -484,10 +497,11 @@ do not remove the FY2026/R8 release blocker.
 2. Continue strict-yield RCA in the documented bucket order: fiscal-year
    mismatch / publication lag first, non-target candidate noise second,
    target-year-unverified third, and site-entry/fetch/identity lanes fourth.
-3. Review `docs/reports/2026-06-21-v541-false-reject-audit-packet.md` and mark
+3. Review `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` and mark
    sampled rows as `false_reject`, `correct_reject`, or
-   `needs_operator_review` before labeling the blocker as an algorithm/model
-   defect.
+   `needs_operator_review`, then validate the returned CSV with
+   `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
+   before labeling the blocker as an algorithm/model defect.
 4. Run the prepared owner/operator v541 return path from Windows and collect
    signed KPI, audit/outbox, workbook, and `publication_lag` decision evidence.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.

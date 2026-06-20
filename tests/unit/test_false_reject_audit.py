@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import csv
 import importlib.util
+import io
 import json
 import sys
 import zipfile
@@ -157,6 +159,7 @@ def test_false_reject_audit_packet_groups_rejection_buckets(tmp_path: Path) -> N
     assert packet["audit_buckets"][1]["sampled_rows"] == 1
     assert packet["audit_buckets"][4]["total_rows"] == 3
     assert packet["audit_buckets"][4]["rows"][0]["reason"] == "no_candidates_found"
+    assert len(packet["audit_buckets"][0]["rows"][0]["audit_row_id"]) == 16
 
 
 def test_false_reject_audit_cli_renders_markdown_and_json(tmp_path: Path, capsys) -> None:
@@ -173,3 +176,62 @@ def test_false_reject_audit_cli_renders_markdown_and_json(tmp_path: Path, capsys
     payload = json.loads(capsys.readouterr().out)
     assert payload["basis"] == "stage6_false_reject_audit_packet"
     assert payload["audit_buckets"][3]["bucket"] == "target_fiscal_year_not_detected"
+
+
+def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) -> None:
+    module = _load_module()
+    archive = _write_stage6_archive(tmp_path / "stage6-evidence.zip")
+    packet = module.build_false_reject_audit_packet(archive, sample_size=2)
+
+    review_csv = module.render_review_csv(packet)
+    assert "audit_row_id,bucket,decision,reviewer,reviewed_at" in review_csv
+
+    validation = module.validate_review_csv(packet, review_csv)
+    assert validation["ok"] is True
+    assert validation["review_status"] == "incomplete"
+    assert validation["submitted_rows"] == validation["expected_rows"]
+    assert validation["completed_decisions"] == 0
+    assert validation["blank_decisions"] == validation["expected_rows"]
+
+    rows = list(csv.DictReader(io.StringIO(review_csv)))
+    for row in rows:
+        row["decision"] = "correct_reject"
+        row["reviewer"] = "owner"
+        row["reviewed_at"] = "2026-06-21T00:00:00+09:00"
+    completed = io.StringIO()
+    writer = csv.DictWriter(completed, fieldnames=module.REVIEW_CSV_COLUMNS, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+
+    completed_validation = module.validate_review_csv(packet, completed.getvalue(), require_decisions=True)
+    assert completed_validation["ok"] is True
+    assert completed_validation["review_status"] == "complete"
+    assert completed_validation["completed_decisions"] == len(rows)
+    assert completed_validation["decision_counts"] == {"correct_reject": len(rows)}
+
+    review_path = tmp_path / "review.csv"
+    review_path.write_text(review_csv, encoding="utf-8")
+    assert module.main([str(archive), "--sample-size", "2", "--format", "csv"]) == 0
+    csv_output = capsys.readouterr().out
+    assert "false_reject_signal,notes" in csv_output.splitlines()[0]
+
+    assert module.main([str(archive), "--sample-size", "2", "--validate-review-csv", str(review_path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["basis"] == "false_reject_review_decision_validation"
+    assert payload["review_status"] == "incomplete"
+
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(review_path),
+                "--require-decisions",
+            ]
+        )
+        == 1
+    )
+    required_payload = json.loads(capsys.readouterr().out)
+    assert required_payload["review_status"] == "invalid"
