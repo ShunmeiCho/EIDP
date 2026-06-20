@@ -117,25 +117,26 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Current v541 package evidence" in checklist
 
 
-def test_v541_package_is_current_while_v540_owner_handoff_needs_refresh() -> None:
-    first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v540.txt")
-    request = _normalized_doc("docs/runbooks/eidp-v540-owner-request-20260620.txt")
-    return_sheet = _normalized_doc("docs/runbooks/eidp-v540-owner-return-fill-sheet.md")
-    release_summary = _normalized_doc("docs/runbooks/eidp-v540-release-summary.md")
-    owner_signoff = _normalized_doc("docs/runbooks/eidp-v540-owner-signoff.md")
+def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
+    first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v541.txt")
+    request = _normalized_doc("docs/runbooks/eidp-v541-owner-request-20260621.txt")
+    return_sheet = _normalized_doc("docs/runbooks/eidp-v541-owner-return-fill-sheet.md")
+    release_summary = _normalized_doc("docs/runbooks/eidp-v541-release-summary.md")
+    owner_signoff = _normalized_doc("docs/runbooks/eidp-v541-owner-signoff.md")
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
-    r2_staging = _normalized_doc("docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md")
+    staging = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-windows-staging.md")
 
-    expected_sha = "6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6"
+    expected_package_sha = "2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f"
+    expected_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
 
-    assert expected_sha in first_read
-    assert expected_sha in request
-    assert expected_sha in return_sheet
-    assert expected_sha in release_summary
-    assert expected_sha in owner_signoff
-    assert "docs\\runbooks\\eidp-v540-release-summary.md" in first_read
-    assert "docs\\runbooks\\eidp-v540-owner-signoff.md" in first_read
+    assert expected_package_sha in first_read
+    assert expected_package_sha in request
+    assert expected_package_sha in return_sheet
+    assert expected_package_sha in release_summary
+    assert expected_package_sha in owner_signoff
+    assert "docs\\runbooks\\eidp-v541-release-summary.md" in first_read
+    assert "docs\\runbooks\\eidp-v541-owner-signoff.md" in first_read
     assert "release conclusion remains NOT_READY" in request
     assert "The owner may record a NOT_READY acknowledgement" in request
     assert "This file is not v1.0 approval" in first_read
@@ -144,23 +145,28 @@ def test_v541_package_is_current_while_v540_owner_handoff_needs_refresh() -> Non
     assert "Current release conclusion: `NOT_READY`" in release_summary
     assert "The owner signs this short form, not the engineering checklist" in owner_signoff
     assert "the supported decision is `NOT_READY`" in owner_signoff
-    assert "It does not make v540 `READY`" in owner_signoff
-    assert "Do not treat the v540 bounded canary as owner real-cycle sign-off" in first_read
+    assert "It does not make v541 `READY`" in owner_signoff
+    assert "Do not treat the v541 bounded canary as owner real-cycle sign-off" in first_read
     assert "unconfirmed rows into final Excel output" in return_sheet
     assert "Unknown-year, old-year, school-mismatch, non-target, low-confidence" in owner_signoff
-    assert "docs/runbooks/00-READ-ME-FIRST-v540.txt" in current_status
-    assert "docs/runbooks/eidp-v540-release-summary.md" in current_status
-    assert "docs/runbooks/eidp-v540-owner-signoff.md" in current_status
-    assert "docs/runbooks/eidp-v540-owner-request-20260620.txt" in current_status
-    assert "docs/runbooks/eidp-v540-owner-return-fill-sheet.md" in current_status
-    assert "docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md" in current_status
+    assert "docs/runbooks/00-READ-ME-FIRST-v541.txt" in current_status
+    assert "docs/runbooks/eidp-v541-release-summary.md" in current_status
+    assert "docs/runbooks/eidp-v541-owner-signoff.md" in current_status
+    assert "docs/runbooks/eidp-v541-owner-request-20260621.txt" in current_status
+    assert "docs/runbooks/eidp-v541-owner-return-fill-sheet.md" in current_status
+    assert "docs/reports/2026-06-21-v541-owner-docs-windows-staging.md" in current_status
     assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`" in objective_checklist
-    assert "Owner handoff docs remain v540 r2 and must be refreshed" in objective_checklist
-    assert "C:\\EIDP-staging\\v540-owner-docs-20260620-r2" in objective_checklist
-    assert "eidp-v540-release-summary.md" in objective_checklist
-    assert "eidp-v540-owner-signoff.md" in objective_checklist
-    assert "Refresh/stage v541 owner docs" in objective_checklist
-    assert "ZIP SHA256" in r2_staging
-    assert "owner-signoff short-form marker: True" in r2_staging
-    assert "old r1 zip exists: False" in r2_staging
-    assert "scheduled task execute:" in r2_staging
+    assert "Owner handoff docs have been refreshed to v541" in objective_checklist
+    assert "C:\\EIDP-staging\\v541-owner-docs-20260621" in objective_checklist
+    assert "eidp-v541-release-summary.md" in objective_checklist
+    assert "eidp-v541-owner-signoff.md" in objective_checklist
+    assert "Run the prepared owner/operator v541 return path" in objective_checklist
+    assert expected_docs_sha in current_status
+    assert expected_docs_sha in objective_checklist
+    assert expected_docs_sha in staging
+    assert "ZIP SHA256" in staging
+    assert "owner-signoff short-form marker: True" in staging
+    assert "old v540 zip exists: False" in staging
+    assert "old v540 dir exists: False" in staging
+    assert "scheduled task execute:" in staging
+    assert "v540 r2 handoff" in current_status

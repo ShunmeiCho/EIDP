@@ -39,11 +39,13 @@ Latest complete UI/Excel side-by-side smoke remains v535:
 validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
 `C:\Users\cyo20\EIDP-v535-d742327-env0`.
-Current owner/operator docs staging (still v540 r2; refresh required before v541 owner cycle):
-`docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md` records the
-docs-only handoff ZIP staged at `C:\EIDP-staging\v540-owner-docs-20260620-r2`
-with SHA256
-`e5ee3df87e962321ff8a4f37dd3ec9becc776078bcb93cdeed8bcd907751be8f`.
+Current owner/operator docs staging:
+`docs/reports/2026-06-21-v541-owner-docs-windows-staging.md` records the
+docs-only handoff ZIP staged at `C:\EIDP-staging\v541-owner-docs-20260621`.
+The v541 handoff carries the latest package identity, owner-facing release
+summary, short owner sign-off form, owner request, and return fill sheet. The
+docs ZIP SHA256 is
+`4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`.
 Current v541 strict-yield RCA summary:
 `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md` records the
 `12/50 (24.0%)` blocker and the same release-safe RCA lanes without counting
@@ -110,8 +112,8 @@ that keeps manual work below the release threshold.
 - v541 package SHA256:
   `2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f`
 - Current v541 package/canary contains the post-v540 owner-return verifier
-  hardening. Owner handoff docs remain v540 r2 and must be refreshed before any
-  owner real-cycle return is accepted against v541.
+  hardening. Owner handoff docs have been refreshed to v541 and staged for
+  Windows owner/operator return; they remain handoff evidence only.
 - Latest complete Windows side-by-side smoke: v535
 - Latest bounded Windows canary: v541
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540/v541
@@ -132,13 +134,13 @@ that keeps manual work below the release threshold.
   rows / exact official overrides, and bounded same-site disclosure expansion;
   v530 removes target-form/PDF search terms from URL completion and rejects
   direct document/PDF SERP hits before they can become `SchoolSite` rows.
-- Latest docs-only owner/operator handoff staging: the Windows-staged v540
-  owner docs ZIP now includes the v540 first-read handoff, owner request,
-  owner return fill sheet, release summary, short owner sign-off form, v540
-  Windows canary report, current release status, publication-lag exception
-  record, and v1 known limitations. It was staged at
-  `C:\EIDP-staging\v540-owner-docs-20260620-r2` with SHA256
-  `e5ee3df87e962321ff8a4f37dd3ec9becc776078bcb93cdeed8bcd907751be8f`.
+- Latest docs-only owner/operator handoff staging: the Windows-staged v541
+  owner docs ZIP includes the v541 first-read handoff, owner request, owner
+  return fill sheet, release summary, short owner sign-off form, v541 Windows
+  canary report, current release status, publication-lag exception record, OCR
+  scope brief, and v1 known limitations. It was staged at
+  `C:\EIDP-staging\v541-owner-docs-20260621` with SHA256
+  `4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
   or Task Scheduler.
 - Latest strict-yield RCA summary: v541 Stage 6 evidence is summarized in
@@ -399,7 +401,16 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   operator-reviewable is `47/50 (94.0%)`, `ship_gate_status=below_gate`, and
   OCR scope remains unresolved because the latest complete OCR proof is not
   from v535.
-- v540 owner/operator docs r2 were staged on Windows under
+- v541 owner/operator docs were staged on Windows under
+  `C:\EIDP-staging\v541-owner-docs-20260621`, recorded in
+  `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`. A post-staging
+  check confirmed the required v541 docs are present, including
+  `eidp-v541-release-summary.md` and `eidp-v541-owner-signoff.md`,
+  `current-release-status.md` contains `NOT_READY`, the publication-lag
+  exception record contains `NOT_APPROVED`, the active weekly task still points
+  to `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`, and the
+  superseded v540 docs ZIP/directory were removed from Windows staging.
+- v540 owner/operator docs r2 were previously staged on Windows under
   `C:\EIDP-staging\v540-owner-docs-20260620-r2`, recorded in
   `docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md`. The r2 ZIP
   SHA256 is
@@ -422,12 +433,12 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   completed; strict/Excel-ready FY2026 yield is `12/50 (24.0%)`,
   operator-reviewable is `47/50 (94.0%)`, `ship_gate_status=below_gate`, and
   OCR runtime proof failed because the OCR add-on is missing.
-- v540 operator-side handoff docs are prepared and staged:
-  `docs/runbooks/00-READ-ME-FIRST-v540.txt`,
-  `docs/runbooks/eidp-v540-release-summary.md`,
-  `docs/runbooks/eidp-v540-owner-signoff.md`,
-  `docs/runbooks/eidp-v540-owner-request-20260620.txt`, and
-  `docs/runbooks/eidp-v540-owner-return-fill-sheet.md`. These enable
+- v541 operator-side handoff docs are prepared and staged:
+  `docs/runbooks/00-READ-ME-FIRST-v541.txt`,
+  `docs/runbooks/eidp-v541-release-summary.md`,
+  `docs/runbooks/eidp-v541-owner-signoff.md`,
+  `docs/runbooks/eidp-v541-owner-request-20260621.txt`, and
+  `docs/runbooks/eidp-v541-owner-return-fill-sheet.md`. These enable
   Windows-local owner return validation, but they are not release approval and
   do not replace returned evidence.
 - Local docs-only release gate at PR head
@@ -449,9 +460,8 @@ do not remove the FY2026/R8 release blocker.
 1. Resolve the FY2026/R8 strict-yield blocker by either reaching the `>= 60%`
    current-year strict line or approving the documented `publication_lag`
    exception path.
-2. Refresh/stage v541 owner docs, then run the owner/operator v541 return path
-   from Windows and collect signed KPI, audit/outbox, workbook, and
-   `publication_lag` decision evidence.
+2. Run the prepared owner/operator v541 return path from Windows and collect
+   signed KPI, audit/outbox, workbook, and `publication_lag` decision evidence.
 3. Run the owner real Windows cycle and return KPI/sign-off evidence.
 4. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
 5. Create the signed `v1.0` tag only after the above blockers are resolved.

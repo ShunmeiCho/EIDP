@@ -1,0 +1,104 @@
+EIDP v541 Owner / Operator Request
+Date: 2026-06-21
+
+Purpose
+-------
+v541 is the current packaged bounded Windows canary. It packages the
+owner-return verifier hardening and has completed Windows side-by-side setup,
+bounded weekly canary, after-weekly validation, and Stage 6 evidence
+verification from the Mac through SSH.
+
+This file is not v1.0 approval and it is not permission to switch the active
+weekly task.
+
+Do not start owner sign-off until the release decision is explicit. Current
+release conclusion remains NOT_READY. The owner may record a NOT_READY
+acknowledgement with `eidp-v541-owner-signoff.md`, but that does not start the
+owner real-cycle approval lane.
+
+Use this package
+----------------
+Package:
+  C:\EIDP-staging\eidp-windows-v541.zip
+
+Expected SHA256:
+  2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f
+
+Side-by-side root:
+  %USERPROFILE%\EIDP-v541-e62d074-env0
+
+Current active root to preserve:
+  %USERPROFILE%\EIDP-v527-69fe81f-env0
+
+Package BUILD_INFO:
+  git_commit=e62d074081e60428957a2f405c3a917bbceb31a0
+  git_branch=main
+  git_dirty=false
+
+Current side-by-side evidence
+-----------------------------
+- Setup and after-setup validation:
+  docs\reports\2026-06-21-v541-owner-signoff-verifier-windows-canary.md
+- Active-task safety:
+  logs\win-v541-e62d074-canary\stage6-recovery-20260621-002217.json
+  Result: active task still points to v527.
+- Weekly canary:
+  logs\win-v541-e62d074-canary\20260620_152248-summary.json
+  Result: strict/Excel-ready 12/50 (24.0%), operator-reviewable 47/50 (94.0%).
+- Stage 6 evidence:
+  logs\win-v541-e62d074-canary\stage6-evidence-20260620-153655.zip
+  logs\win-v541-e62d074-canary\stage6-evidence-verify-20260621-003707.json
+- Consolidated report:
+  docs\reports\2026-06-21-v541-owner-signoff-verifier-windows-canary.md
+- Owner-facing one-page summary:
+  docs\runbooks\eidp-v541-release-summary.md
+- Short owner decision form:
+  docs\runbooks\eidp-v541-owner-signoff.md
+
+Required return files for owner real cycle
+------------------------------------------
+- completed docs\runbooks\eidp-v541-owner-signoff.md, if the owner is signing
+  a release decision rather than only acknowledging NOT_READY
+- data\output\last_run.json from the owner-run cycle
+- latest logs\run-*.log
+- latest logs\diagnostics-*.txt
+- latest logs\stage6-evidence-*.zip
+- latest logs\stage6-evidence-verify-*.json
+- Excel proof: output workbook path or redacted workbook metadata, plus
+  consistency evidence that Excel-ready coverage in the owner template matches
+  current DB/run metrics
+- ManualActionLog / JSONL audit proof: audit page status, manual_action_log
+  count, outbox count before/after flush, and action_id consistency
+- completed eidp-operator-e2e-template.md with KPI rows and sign-off
+
+Release decision required before owner sign-off
+-----------------------------------------------
+If the release decision is strict FY2026/R8:
+  - do not request owner sign-off yet;
+  - wait until public FY2026/R8 target PDFs are available enough for strict
+    yield to reach 60%.
+
+If the release decision is publication-lag exception:
+  - fill and approve:
+    docs\reports\2026-05-19-publication-lag-release-exception-record.md
+  - acknowledge FY2026/R8 strict yield is below gate;
+  - use mature-year proof:
+    logs\mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json
+  - then schedule the owner real cycle on the selected v541 side-by-side lane.
+
+If the release decision is OCR scope:
+  - select `CORE_TEXT_PDF_ONLY` or `OCR_ADDON_REQUIRED` in the canonical OCR
+    scope decision brief;
+  - if OCR add-on is required, attach current Windows OCR add-on/runtime proof;
+  - if core text-PDF only is selected, image PDFs remain OCR/manual review and
+    unconfirmed OCR rows must not enter final Excel output.
+
+Do not approve v1.0 from these alone
+------------------------------------
+- Mac clean ZIP build
+- GitHub CI success
+- Windows setup validator ok=true
+- bounded limit-50 canary below the strict FY2026/R8 release gate
+- Stage 6 evidence verification without owner/operator real-cycle sign-off
+- MEXT T0 source-catalog packaging without a complete university discovery and
+  extraction lane
