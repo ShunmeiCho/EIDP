@@ -452,6 +452,7 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
             "collect_stage6_evidence.py",
             "verify_stage6_evidence.py",
             "verify_stage6_return.py",
+            "build_false_reject_audit.py",
             "build_mature_year_acquisition_proof.py",
             "evaluate_strict_yield_bound.py",
             "repair_streamlit_launcher.py",

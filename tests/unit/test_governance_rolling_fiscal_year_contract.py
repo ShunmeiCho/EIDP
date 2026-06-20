@@ -213,7 +213,10 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
     assert expected_v542_source_sha in objective_checklist
     assert "CI run `27880148454` passed both `Python quality gates` and `Ship gate contract`" in current_status
     assert "CI run `27880148454` green" in objective_checklist
-    assert "now packaged and Windows-canary verified in `dist/eidp-windows-v542.zip`" in current_status
+    assert (
+        "post-v541 false-reject owner-return verifier integration is now packaged and Windows-canary verified by v542"
+        in current_status
+    )
     assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist
     assert "from current `main` or from a v542+ package" in current_status
     assert "v542-owner-docs-20260621" in current_status

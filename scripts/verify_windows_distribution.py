@@ -119,6 +119,7 @@ CORE_REQUIRED_EXACT = (
     "scripts/collect_bug_report.py",
     "scripts/verify_stage6_evidence.py",
     "scripts/verify_stage6_return.py",
+    "scripts/build_false_reject_audit.py",
     "scripts/build_mature_year_acquisition_proof.py",
     "scripts/evaluate_strict_yield_bound.py",
     "scripts/repair_streamlit_launcher.py",

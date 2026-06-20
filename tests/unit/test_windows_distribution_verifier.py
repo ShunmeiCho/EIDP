@@ -369,6 +369,9 @@ def _core_entries() -> dict[str, bytes | str]:
             encoding="utf-8"
         ),
         "scripts/verify_stage6_return.py": (SCRIPTS_DIR / "verify_stage6_return.py").read_text(encoding="utf-8"),
+        "scripts/build_false_reject_audit.py": (SCRIPTS_DIR / "build_false_reject_audit.py").read_text(
+            encoding="utf-8"
+        ),
         "scripts/build_mature_year_acquisition_proof.py": (
             SCRIPTS_DIR / "build_mature_year_acquisition_proof.py"
         ).read_text(encoding="utf-8"),
