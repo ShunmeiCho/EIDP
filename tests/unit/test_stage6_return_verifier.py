@@ -301,6 +301,141 @@ def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) 
     assert result["inputs"]["ocr_scope_decision_brief"].endswith("docs/release/owner-decisions/ocr-scope.md")
 
 
+def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    evidence_zip = tmp_path / "stage6-evidence.zip"
+    evidence_zip.write_text("fake", encoding="utf-8")
+    review_csv = tmp_path / "false-reject-review.csv"
+    review_csv.write_text("audit_row_id,decision\nrow-1,correct_reject\n", encoding="utf-8")
+    calls: dict[str, object] = {}
+
+    class FakeFalseRejectAudit:
+        @staticmethod
+        def build_false_reject_audit_packet(
+            archive: Path,
+            *,
+            sample_size: int,
+            required_yield_pct: float,
+        ) -> dict[str, object]:
+            calls["archive"] = archive
+            calls["sample_size"] = sample_size
+            calls["required_yield_pct"] = required_yield_pct
+            return {"ok": True, "errors": [], "strict_yield": {"release_forecast": "NOT_READY"}}
+
+        @staticmethod
+        def validate_review_csv(
+            packet: dict[str, object],
+            csv_text: str,
+            *,
+            require_decisions: bool,
+        ) -> dict[str, object]:
+            calls["packet"] = packet
+            calls["csv_text"] = csv_text
+            calls["require_decisions"] = require_decisions
+            return {
+                "ok": True,
+                "basis": "false_reject_review_decision_validation",
+                "review_status": "complete",
+                "completed_decisions": 1,
+                "context_mismatch_count": 0,
+                "errors": [],
+            }
+
+    monkeypatch.setattr(module, "_load_false_reject_audit_module", lambda: FakeFalseRejectAudit)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        false_reject_evidence_zip=evidence_zip,
+        false_reject_review_csv=review_csv,
+        false_reject_sample_size=12,
+    )
+
+    assert result["ok"] is True
+    assert result["errors"] == []
+    assert result["false_reject_review"]["review_status"] == "complete"
+    assert result["inputs"]["false_reject_evidence_zip"] == str(evidence_zip)
+    assert result["inputs"]["false_reject_review_csv"] == str(review_csv)
+    assert calls["archive"] == evidence_zip
+    assert calls["sample_size"] == 12
+    assert calls["required_yield_pct"] == 60.0
+    assert calls["require_decisions"] is True
+
+
+def test_verify_stage6_return_rejects_incomplete_false_reject_review(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    evidence_zip = tmp_path / "stage6-evidence.zip"
+    evidence_zip.write_text("fake", encoding="utf-8")
+    review_csv = tmp_path / "false-reject-review.csv"
+    review_csv.write_text("audit_row_id,decision\nrow-1,\n", encoding="utf-8")
+
+    class FakeFalseRejectAudit:
+        @staticmethod
+        def build_false_reject_audit_packet(
+            archive: Path,
+            *,
+            sample_size: int,
+            required_yield_pct: float,
+        ) -> dict[str, object]:
+            return {"ok": True, "errors": [], "strict_yield": {"release_forecast": "NOT_READY"}}
+
+        @staticmethod
+        def validate_review_csv(
+            packet: dict[str, object],
+            csv_text: str,
+            *,
+            require_decisions: bool,
+        ) -> dict[str, object]:
+            return {
+                "ok": False,
+                "basis": "false_reject_review_decision_validation",
+                "review_status": "incomplete",
+                "completed_decisions": 0,
+                "context_mismatch_count": 0,
+                "errors": ["line 2: decision is required"],
+            }
+
+    monkeypatch.setattr(module, "_load_false_reject_audit_module", lambda: FakeFalseRejectAudit)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        false_reject_evidence_zip=evidence_zip,
+        false_reject_review_csv=review_csv,
+    )
+
+    assert result["ok"] is False
+    assert result["false_reject_review"]["review_status"] == "incomplete"
+    assert "false-reject review CSV is invalid" in result["errors"]
+    assert "false-reject review CSV error: line 2: decision is required" in result["errors"]
+    incomplete_error = "false-reject review CSV must be complete before it can support owner-return RCA evidence"
+    assert incomplete_error in result["errors"]
+
+
+def test_verify_stage6_return_requires_false_reject_zip_with_review_csv(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    review_csv = tmp_path / "false-reject-review.csv"
+    review_csv.write_text("audit_row_id,decision\nrow-1,correct_reject\n", encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        false_reject_review_csv=review_csv,
+    )
+
+    assert result["ok"] is False
+    assert "--false-reject-review-csv requires --false-reject-evidence-zip" in result["errors"]
+
+
 def test_verify_stage6_return_accepts_short_owner_signoff_for_ready_path(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)

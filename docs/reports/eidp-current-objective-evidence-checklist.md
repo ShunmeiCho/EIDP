@@ -39,13 +39,14 @@ Latest complete UI/Excel side-by-side smoke remains v535:
 validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
 `C:\Users\cyo20\EIDP-v535-d742327-env0`.
-Current owner/operator docs staging:
+Initial v541 owner/operator docs staging:
 `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md` records the
 docs-only handoff ZIP staged at `C:\EIDP-staging\v541-owner-docs-20260621`.
 The v541 handoff carries the latest package identity, owner-facing release
 summary, short owner sign-off form, owner request, and return fill sheet. The
 docs ZIP SHA256 is
 `4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`.
+This base handoff is superseded by the r3 false-reject refresh below.
 Current v541 strict-yield RCA summary:
 `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md` records the
 `12/50 (24.0%)` blocker and the same release-safe RCA lanes without counting
@@ -85,12 +86,16 @@ require `notes`.
 The current source runbooks now tell the owner/operator how to return that
 worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
 immutable row context untouched, and have the developer validate the returned
-CSV from current `main` with `--require-decisions`. The Windows docs-only
-handoff has been refreshed to r2 at
-`C:\EIDP-staging\v541-owner-docs-20260621-r2`, recorded in
-`docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md`, so the staged
-owner docs now include the false-reject worksheet return rules and worksheet
-CSV. This remains handoff evidence only.
+CSV from current `main`. The owner-return verifier now accepts
+`--false-reject-evidence-zip`, `--false-reject-review-csv`, and
+`--false-reject-sample-size`; when supplied, it requires `review_status=complete`
+and `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to r3 at
+`C:\EIDP-staging\v541-owner-docs-20260621-r3`, recorded in
+`docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`, so the staged
+owner docs now include the false-reject worksheet return rules, worksheet CSV,
+and the return-verifier false-reject arguments. The superseded r2 ZIP and
+extracted directory were removed from Windows staging and the external SSD.
+This remains handoff evidence only.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -169,7 +174,7 @@ that keeps manual work below the release threshold.
   rows / exact official overrides, and bounded same-site disclosure expansion;
   v530 removes target-form/PDF search terms from URL completion and rejects
   direct document/PDF SERP hits before they can become `SchoolSite` rows.
-- Latest docs-only owner/operator handoff staging: the Windows-staged v541
+- Initial docs-only owner/operator handoff staging: the Windows-staged v541
   owner docs ZIP includes the v541 first-read handoff, owner request, owner
   return fill sheet, release summary, short owner sign-off form, v541 Windows
   canary report, current release status, publication-lag exception record, OCR
@@ -177,16 +182,19 @@ that keeps manual work below the release threshold.
   `C:\EIDP-staging\v541-owner-docs-20260621` with SHA256
   `4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
-  or Task Scheduler.
-- Latest docs-only false-reject handoff refresh: r2 is staged at
-  `C:\EIDP-staging\v541-owner-docs-20260621-r2`, recorded in
-  `docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md`, and includes
+  or Task Scheduler. The current owner handoff lane is the r3 docs-only
+  false-reject refresh below.
+- Latest docs-only false-reject handoff refresh: r3 is staged at
+  `C:\EIDP-staging\v541-owner-docs-20260621-r3`, recorded in
+  `docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`, and includes
   the false-reject RCA packet plus review worksheet. The remote verification
   confirmed SHA256
-  `6575a28c74be7d977db8fd640a622f070f7027915e07dd04698a38d4bc12dd31`,
-  `False-Reject RCA Worksheet`, `False-reject worksheet rules`, `NOT_READY`,
-  and the scheduled task still executing
-  `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`.
+  `8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49`,
+  `False-Reject RCA Worksheet`, `False-reject worksheet rules`, the
+  return-verifier false-reject arguments, `NOT_READY`, and the scheduled task
+  still executing `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`.
+  The superseded r2 ZIP and extracted directory were verified absent from
+  Windows staging after cleanup.
 - Latest strict-yield RCA summary: v541 Stage 6 evidence is summarized in
   `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`. The top RCA lanes
   are `publication_lag_or_old_target_pdf` (`15` schools / `454` candidate
@@ -211,8 +219,9 @@ that keeps manual work below the release threshold.
   context checks, required reviewer/timestamp fields for completed decisions,
   notes for `false_reject` and `needs_operator_review`, and bucket-level
   decision counts for the RCA lanes. The v541 owner request and owner return
-  fill sheet now describe the required worksheet return rules and developer
-  validation command.
+  fill sheet now describe the required worksheet return rules, and
+  `scripts/verify_stage6_return.py` can validate the returned worksheet through
+  its false-reject arguments.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe
   fix keeps both `/disclosure/{slug}` and `/{slug}/disclosure` under the
   shared-origin throttle for school roots such as

@@ -90,7 +90,10 @@ false_reject and needs_operator_review rows must include notes citing the
 official evidence or the unresolved human-review reason.
 
 Developer validation is run from current main after return. The v541 Windows
-package alone is not sufficient proof for this post-v541 worksheet check.
+package alone is not sufficient proof for this post-v541 worksheet check. The
+returned CSV is checked through scripts\verify_stage6_return.py with
+--false-reject-evidence-zip, --false-reject-review-csv, and
+--false-reject-sample-size 12.
 
 Release decision required before owner sign-off
 -----------------------------------------------

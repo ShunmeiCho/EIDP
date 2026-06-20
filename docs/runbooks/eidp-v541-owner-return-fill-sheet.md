@@ -155,13 +155,17 @@ uv run python scripts/verify_stage6_return.py \
   --owner-signoff docs/runbooks/eidp-v541-owner-signoff.md \
   --expected-package-sha256 2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f \
   --expected-source-commit e62d074081e60428957a2f405c3a917bbceb31a0 \
+  --false-reject-evidence-zip logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip \
+  --false-reject-review-csv docs/reports/2026-06-21-v541-false-reject-review-sheet.csv \
+  --false-reject-sample-size 12 \
   --json
 ```
 
 Release remains blocked unless this command returns `ok=true` and the approval
 record, OCR scope, E2E sign-off fields, and short owner sign-off are complete.
 
-If a completed false-reject review worksheet is returned, also run:
+If a completed false-reject review worksheet is returned outside the owner
+return verifier, the same check can be run directly for debugging:
 
 ```bash
 uv run python scripts/build_false_reject_audit.py \

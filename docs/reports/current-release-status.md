@@ -35,8 +35,8 @@ prove release readiness. Evidence is recorded in
 `logs/win-v541-e62d074-canary/stage6-evidence-verify-20260621-003707.json`,
 and `logs/win-v541-e62d074-canary/20260620_152248-summary.json`.
 
-The current owner/operator handoff docs are v541 and are staged on Windows
-under `C:\EIDP-staging\v541-owner-docs-20260621`. The handoff includes
+The initial v541 owner/operator handoff docs were staged on Windows under
+`C:\EIDP-staging\v541-owner-docs-20260621`. That base handoff includes
 `docs/runbooks/00-READ-ME-FIRST-v541.txt`,
 `docs/runbooks/eidp-v541-release-summary.md`,
 `docs/runbooks/eidp-v541-owner-signoff.md`,
@@ -44,8 +44,9 @@ under `C:\EIDP-staging\v541-owner-docs-20260621`. The handoff includes
 `docs/runbooks/eidp-v541-owner-return-fill-sheet.md`. Transfer verification is
 recorded in `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`; the
 docs ZIP SHA256 is
-`4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`. These docs
-do not approve v1.0 and do not replace the missing owner real-cycle evidence.
+`4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`. It is now
+superseded by the r3 docs-only false-reject handoff below. Neither handoff
+approves v1.0 or replaces the missing owner real-cycle evidence.
 
 Previous packaged bounded Windows canary was `v540`
 (`dist/eidp-windows-v540.zip`, SHA256
@@ -142,14 +143,15 @@ evidence verification. Evidence is recorded in
 `docs/reports/2026-06-20-v535-full-windows-side-by-side-smoke.md`,
 `logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`, and
 `logs/win-v535-stage6/stage6-evidence-20260620-053032.zip`.
-The latest owner/operator handoff docs are staged for v541 on Windows under
-`C:\EIDP-staging\v541-owner-docs-20260621`. The handoff adds the v541
+The initial owner/operator handoff docs were staged for v541 on Windows under
+`C:\EIDP-staging\v541-owner-docs-20260621`. That handoff adds the v541
 first-read file, owner request, owner return fill sheet, release summary, and
 short owner sign-off form. Transfer evidence is recorded in
 `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`, with ZIP SHA256
 `4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`. The v540
-r2 handoff and v535 owner-docs staging remain historical evidence only; they
-are not the current owner handoff lane.
+r2 handoff, v535 owner-docs staging, and this initial v541 base handoff remain
+historical evidence only; the current owner handoff lane is the r3 docs-only
+false-reject refresh recorded above.
 The v535 strict-yield RCA action plan is recorded in
 `docs/reports/2026-06-20-v535-strict-yield-rca-plan.md`; it decomposes the
 `12/50 (24.0%)` blocker into `publication_lag_or_old_target_pdf`,
@@ -189,13 +191,18 @@ require `notes`.
 The owner/operator return runbooks now include the false-reject worksheet return
 rules: only `decision`, `reviewer`, `reviewed_at`, and `notes` may be filled;
 row context must remain unchanged; and completed worksheets must be validated
-from current `main` with `--require-decisions` before they can support an RCA
-claim. The Windows docs-only handoff has been refreshed to r2 at
-`C:\EIDP-staging\v541-owner-docs-20260621-r2`, recorded in
-`docs/reports/2026-06-21-v541-owner-docs-r2-windows-staging.md`, so the staged
-owner docs now include the false-reject worksheet return rules and worksheet
-CSV. The r2 docs ZIP SHA256 is
-`6575a28c74be7d977db8fd640a622f070f7027915e07dd04698a38d4bc12dd31`. This still
+from current `main` before they can support an RCA claim. The owner-return
+verifier now accepts `--false-reject-evidence-zip`,
+`--false-reject-review-csv`, and `--false-reject-sample-size`; when supplied, it
+requires the worksheet to validate with `review_status=complete` and
+`context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to r3 at
+`C:\EIDP-staging\v541-owner-docs-20260621-r3`, recorded in
+`docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`, so the staged
+owner docs now include the false-reject worksheet return rules, worksheet CSV,
+and the return-verifier false-reject arguments. The r3 docs ZIP SHA256 is
+`8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49`. The
+superseded r2 ZIP and extracted directory were removed from Windows staging and
+the external SSD; the r2 report remains historical evidence only. This still
 does not change the release conclusion.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both

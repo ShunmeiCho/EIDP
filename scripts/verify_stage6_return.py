@@ -9,7 +9,7 @@ import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, TypeGuard
+from typing import Any, TypeGuard, cast
 
 REQUIRED_EVIDENCE_LABELS = ("build_info", "diagnostics", "last_run", "stage6_recovery", "weekly_run_logs")
 REQUIRED_KPI_ROWS = ("ship_readiness_rc", "strict target PDF 自動取得率", "推定手作業率", "Excel ready 率")
@@ -145,6 +145,28 @@ def _load_ship_gate_contract() -> Any:
     return module
 
 
+def _load_false_reject_audit_module() -> Any:
+    script = Path(__file__).resolve().parent / "build_false_reject_audit.py"
+    script_dir = str(script.parent)
+    added_script_dir = False
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
+        added_script_dir = True
+    try:
+        spec = importlib.util.spec_from_file_location("build_false_reject_audit", script)
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"failed to load false-reject audit builder: {script}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        if added_script_dir:
+            try:
+                sys.path.remove(script_dir)
+            except ValueError:
+                pass
+
+
 _SHIP_GATE_CONTRACT = _load_ship_gate_contract()
 SHIP_GATE_EXCEPTION_REASONS = _SHIP_GATE_CONTRACT.SHIP_GATE_EXCEPTION_REASONS
 SHIP_GATE_STATUSES = _SHIP_GATE_CONTRACT.SHIP_GATE_STATUSES
@@ -170,6 +192,63 @@ def _load_json(path: Path, errors: list[str], label: str) -> dict[str, Any] | No
         errors.append(f"{label} must contain a JSON object")
         return None
     return value
+
+
+def _verify_false_reject_review(
+    *,
+    evidence_zip: Path | None,
+    review_csv: Path | None,
+    sample_size: int,
+    required_yield_pct: float,
+    errors: list[str],
+) -> dict[str, Any] | None:
+    if evidence_zip is None and review_csv is None:
+        return None
+    if evidence_zip is None:
+        errors.append("--false-reject-review-csv requires --false-reject-evidence-zip")
+        return None
+    if review_csv is None:
+        errors.append("--false-reject-evidence-zip requires --false-reject-review-csv")
+        return None
+    if sample_size <= 0:
+        errors.append("--false-reject-sample-size must be positive")
+        return None
+    if not evidence_zip.is_file():
+        errors.append(f"false-reject evidence ZIP does not exist: {evidence_zip}")
+        return None
+    if not review_csv.is_file():
+        errors.append(f"false-reject review CSV does not exist: {review_csv}")
+        return None
+
+    try:
+        audit_module = _load_false_reject_audit_module()
+        packet = audit_module.build_false_reject_audit_packet(
+            evidence_zip,
+            sample_size=sample_size,
+            required_yield_pct=required_yield_pct,
+        )
+        validation = audit_module.validate_review_csv(
+            packet,
+            review_csv.read_text(encoding="utf-8-sig"),
+            require_decisions=True,
+        )
+    except (OSError, RuntimeError, ValueError, AttributeError) as exc:
+        errors.append(f"false-reject review validation failed to run: {exc}")
+        return None
+
+    if packet.get("ok") is not True:
+        errors.append("false-reject audit packet is not valid")
+        for packet_error in packet.get("errors", []):
+            errors.append(f"false-reject audit packet error: {packet_error}")
+    if validation.get("ok") is not True:
+        errors.append("false-reject review CSV is invalid")
+        for validation_error in validation.get("errors", []):
+            errors.append(f"false-reject review CSV error: {validation_error}")
+    if validation.get("review_status") != "complete":
+        errors.append("false-reject review CSV must be complete before it can support owner-return RCA evidence")
+    if validation.get("context_mismatch_count") != 0:
+        errors.append("false-reject review CSV changed immutable row context")
+    return cast(dict[str, Any], validation)
 
 
 def _default_repo_path(relative_path: Path) -> Path:
@@ -1445,6 +1524,9 @@ def verify_stage6_return(
     owner_signoff: Path | None = None,
     expected_package_sha256: str | None = None,
     expected_source_commit: str | None = None,
+    false_reject_evidence_zip: Path | None = None,
+    false_reject_review_csv: Path | None = None,
+    false_reject_sample_size: int = 12,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -1453,6 +1535,7 @@ def verify_stage6_return(
     mature_year_proof_finished_date: date | None = None
     release_exception_approval_date: date | None = None
     selected_ocr_scope: str | None = None
+    false_reject_review: dict[str, Any] | None = None
     active_publication_lag_decision_brief = publication_lag_decision_brief
     active_ocr_scope_decision_brief = ocr_scope_decision_brief
     last_run_json = _load_json(last_run, errors, "last_run")
@@ -1559,6 +1642,14 @@ def verify_stage6_return(
                 errors=errors,
             )
 
+    false_reject_review = _verify_false_reject_review(
+        evidence_zip=false_reject_evidence_zip,
+        review_csv=false_reject_review_csv,
+        sample_size=false_reject_sample_size,
+        required_yield_pct=min_target_pdf_auto_yield,
+        errors=errors,
+    )
+
     return {
         "ok": not errors,
         "errors": errors,
@@ -1584,7 +1675,11 @@ def verify_stage6_return(
             "owner_signoff": str(owner_signoff) if owner_signoff else None,
             "expected_package_sha256": expected_package_sha256,
             "expected_source_commit": expected_source_commit,
+            "false_reject_evidence_zip": str(false_reject_evidence_zip) if false_reject_evidence_zip else None,
+            "false_reject_review_csv": str(false_reject_review_csv) if false_reject_review_csv else None,
+            "false_reject_sample_size": false_reject_sample_size,
         },
+        "false_reject_review": false_reject_review,
         "selected_ocr_scope": selected_ocr_scope,
         "mature_year_proof_years": mature_year_proof_years,
         "required_evidence_labels": list(REQUIRED_EVIDENCE_LABELS),
@@ -1666,6 +1761,20 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--expected-source-commit",
         help="Expected source git commit to match in --owner-signoff.",
     )
+    parser.add_argument(
+        "--false-reject-evidence-zip",
+        help="Stage 6 evidence ZIP used to regenerate the false-reject audit packet for returned worksheet validation.",
+    )
+    parser.add_argument(
+        "--false-reject-review-csv",
+        help="Returned false-reject review worksheet CSV. Requires --false-reject-evidence-zip.",
+    )
+    parser.add_argument(
+        "--false-reject-sample-size",
+        type=int,
+        default=12,
+        help="Sample size used when regenerating the false-reject audit packet for worksheet validation.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
 
@@ -1691,6 +1800,11 @@ def main(argv: list[str] | None = None) -> int:
         owner_signoff=Path(args.owner_signoff) if args.owner_signoff else None,
         expected_package_sha256=args.expected_package_sha256,
         expected_source_commit=args.expected_source_commit,
+        false_reject_evidence_zip=(
+            Path(args.false_reject_evidence_zip) if args.false_reject_evidence_zip else None
+        ),
+        false_reject_review_csv=Path(args.false_reject_review_csv) if args.false_reject_review_csv else None,
+        false_reject_sample_size=args.false_reject_sample_size,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
