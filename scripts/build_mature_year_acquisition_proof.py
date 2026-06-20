@@ -25,6 +25,7 @@ PROOF_TOOL_NAME = "build_mature_year_acquisition_proof"
 STRICT_GAP_ANALYSIS_BASIS = "strict_yield_gap_analysis"
 MATURE_YEAR_SHIP_GATE_METRIC_BASIS = _SHIP_GATE_CONTRACT.MATURE_YEAR_SHIP_GATE_METRIC_BASIS
 MATURE_YEAR_PROOF_MIN_DENOMINATOR = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_MIN_DENOMINATOR
+MATURE_YEAR_PROOF_SCHOOL_TYPE = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_SCHOOL_TYPE
 WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = _SHIP_GATE_CONTRACT.WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE
 SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT = _SHIP_GATE_CONTRACT.SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT
 SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT = _SHIP_GATE_CONTRACT.SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT
@@ -250,6 +251,8 @@ def build_strict_gap_analysis_case(
         errors.append("strict_gap_analysis finished_at is required")
     if source_fiscal_year != fiscal_year:
         errors.append(f"strict_gap_analysis fiscal_year must be {fiscal_year}")
+    if payload.get("school_type") != MATURE_YEAR_PROOF_SCHOOL_TYPE:
+        errors.append(f"strict_gap_analysis school_type must be {MATURE_YEAR_PROOF_SCHOOL_TYPE}")
 
     if not _is_number(denominator):
         errors.append("schools_total must be numeric")

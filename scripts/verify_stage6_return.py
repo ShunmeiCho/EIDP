@@ -96,6 +96,7 @@ LAST_RUN_EVIDENCE_MATCH_ERROR = "must match last_run evidence"
 STRICT_GAP_EVIDENCE_MATCH_ERROR = "must match strict_gap_analysis evidence"
 LAST_RUN_EVIDENCE_STATUS_ERROR = "last_run evidence status must be success"
 STRICT_GAP_EVIDENCE_BASIS_ERROR = "strict_gap_analysis evidence basis must be strict_yield_gap_analysis"
+STRICT_GAP_EVIDENCE_SCHOOL_TYPE_ERROR = "strict_gap_analysis evidence school_type must be 専門学校"
 STRICT_TARGET_RATE_COUNT_SCOPE = "strict_target_parsed_schools/schools_total"
 EXCEL_READY_RATE_COUNT_SCOPE = "excel_ready_schools/schools_total"
 OPERATOR_REVIEWABLE_RATE_COUNT_SCOPE = "operator_reviewable_schools/schools_total"
@@ -119,6 +120,7 @@ SHIP_GATE_EXCEPTION_REASONS = _SHIP_GATE_CONTRACT.SHIP_GATE_EXCEPTION_REASONS
 SHIP_GATE_STATUSES = _SHIP_GATE_CONTRACT.SHIP_GATE_STATUSES
 MATURE_YEAR_SHIP_GATE_METRIC_BASIS = _SHIP_GATE_CONTRACT.MATURE_YEAR_SHIP_GATE_METRIC_BASIS
 MATURE_YEAR_PROOF_MIN_DENOMINATOR = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_MIN_DENOMINATOR
+MATURE_YEAR_PROOF_SCHOOL_TYPE = _SHIP_GATE_CONTRACT.MATURE_YEAR_PROOF_SCHOOL_TYPE
 WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE = _SHIP_GATE_CONTRACT.WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE
 is_ship_gate_exception_reason = _SHIP_GATE_CONTRACT.is_ship_gate_exception_reason
 ship_gate_status_from_weekly_metrics = _SHIP_GATE_CONTRACT.ship_gate_status_from_weekly_metrics
@@ -698,6 +700,7 @@ def _verify_strict_gap_mature_year_evidence(
     excel_ready_yield: object,
     denominator: object,
     operator_reviewable_yield: object,
+    school_type: object,
     finished_at: object,
     errors: list[str],
 ) -> bool:
@@ -709,6 +712,9 @@ def _verify_strict_gap_mature_year_evidence(
     ok = True
     if payload.get("basis") != "strict_yield_gap_analysis":
         errors.append(f"mature-year proof case FY{fiscal_year} {STRICT_GAP_EVIDENCE_BASIS_ERROR}")
+        ok = False
+    if payload.get("school_type") != MATURE_YEAR_PROOF_SCHOOL_TYPE:
+        errors.append(f"mature-year proof case FY{fiscal_year} {STRICT_GAP_EVIDENCE_SCHOOL_TYPE_ERROR}")
         ok = False
     if payload.get("fiscal_year") != fiscal_year:
         errors.append(f"{evidence_label} fiscal_year must be {fiscal_year}")
@@ -778,6 +784,7 @@ def _verify_strict_gap_mature_year_evidence(
     evidence_finished_at = payload.get("finished_at") or payload.get("generated_at")
     checks = (
         ("finished_at", finished_at, evidence_finished_at, None),
+        ("school_type", school_type, payload.get("school_type"), None),
         ("target_pdf_auto_denominator_count", denominator, payload.get("schools_total"), "schools_total"),
         (
             "target_pdf_auto_yield_pct",
@@ -867,6 +874,7 @@ def _verify_mature_year_proof(
         denominator = _case_denominator(case)
         denominator_scope = _case_metric(case, "target_pdf_auto_denominator_scope")
         operator_reviewable_yield = _case_metric(case, "operator_reviewable_yield_pct")
+        school_type = _case_metric(case, "school_type")
         ship_gate_status = _case_metric(case, "ship_gate_status")
         evidence_source = _case_evidence_source(case)
         finished_at = case.get("finished_at")
@@ -920,6 +928,7 @@ def _verify_mature_year_proof(
                     excel_ready_yield=excel_ready_yield,
                     denominator=denominator,
                     operator_reviewable_yield=operator_reviewable_yield,
+                    school_type=school_type,
                     finished_at=finished_at,
                     errors=errors,
                 ):
@@ -957,6 +966,12 @@ def _verify_mature_year_proof(
             )
             case_ok = False
         if evidence_source == "strict_gap_analysis":
+            if school_type != MATURE_YEAR_PROOF_SCHOOL_TYPE:
+                errors.append(
+                    f"mature-year proof case FY{fiscal_year} school_type must be "
+                    f"{MATURE_YEAR_PROOF_SCHOOL_TYPE}: {school_type!r}"
+                )
+                case_ok = False
             if not _is_number(excel_ready_yield):
                 errors.append(
                     f"mature-year proof case FY{fiscal_year} excel_ready_yield_pct must be numeric"

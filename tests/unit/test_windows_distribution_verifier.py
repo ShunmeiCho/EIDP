@@ -1119,6 +1119,12 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
             "strict_gap_analysis evidence basis must be strict_yield_gap_analysis",
             "strict_gap evidence basis optional",
         )
+        .replace(
+            "strict_gap_analysis evidence school_type must be 専門学校",
+            "strict_gap evidence school_type optional",
+        )
+        .replace("MATURE_YEAR_PROOF_SCHOOL_TYPE", "MATURE_YEAR_PROOF_SCOPE")
+        .replace("school_type must be ", "school_type may be ")
         .replace("excel_ready_yield_pct must be numeric", "excel_ready_yield_pct optional")
         .replace("excel_ready_yield_pct below release threshold", "excel_ready_yield_pct may be below gate")
         .replace("excel_ready_rate_pct", "excel_ready_sample_rate_pct")
@@ -1196,14 +1202,18 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         entries["scripts/ship_gate_contract.py"]
         .replace("MATURE_YEAR_SHIP_GATE_METRIC_BASIS", "MATURE_YEAR_METRIC_BASIS")
         .replace("MATURE_YEAR_PROOF_MIN_DENOMINATOR", "MATURE_YEAR_PROOF_MIN_SAMPLE")
+        .replace("MATURE_YEAR_PROOF_SCHOOL_TYPE", "MATURE_YEAR_PROOF_SCOPE")
         .replace("WEEKLY_SHIP_GATE_DENOMINATOR_SCOPE", "WEEKLY_SHIP_GATE_SAMPLE_SCOPE")
         .replace("target_missing_schools_before_run", "target_missing_small_sample")
         .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
         .replace("publication_lag", "publication_delay")
+        .replace("専門学校", "all_school_types")
     )
     entries["scripts/build_mature_year_acquisition_proof.py"] = (
         entries["scripts/build_mature_year_acquisition_proof.py"]
+        .replace("MATURE_YEAR_PROOF_SCHOOL_TYPE", "MATURE_YEAR_PROOF_SCOPE")
         .replace("strict_gap_analysis finished_at is required", "strict_gap_analysis finished_at optional")
+        .replace("strict_gap_analysis school_type must be", "strict_gap_analysis school_type optional")
         .replace("target_pdf_auto_denominator_count must be an integer", "denominator can be fractional")
         .replace("schools_total must be an integer", "schools_total can be fractional")
         .replace("finished_at", "completed_at")
@@ -1276,6 +1286,19 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         for error in check.errors
     )
     assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "strict_gap_analysis evidence school_type must be 専門学校" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: MATURE_YEAR_PROOF_SCHOOL_TYPE" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: school_type must be" in error
+        for error in check.errors
+    )
+    assert any(
         "scripts/verify_stage6_return.py missing required token: excel_ready_yield_pct must be numeric" in error
         for error in check.errors
     )
@@ -1337,6 +1360,16 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/build_mature_year_acquisition_proof.py missing required token: "
         "strict_gap_analysis finished_at is required" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: MATURE_YEAR_PROOF_SCHOOL_TYPE"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: "
+        "strict_gap_analysis school_type must be" in error
         for error in check.errors
     )
     assert any(
@@ -1509,6 +1542,14 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/ship_gate_contract.py missing required token: MATURE_YEAR_PROOF_MIN_DENOMINATOR" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: MATURE_YEAR_PROOF_SCHOOL_TYPE" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/ship_gate_contract.py missing required token: 専門学校" in error
         for error in check.errors
     )
     assert any(
