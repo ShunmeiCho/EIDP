@@ -160,6 +160,14 @@ ZIP with `uv run python scripts/summarize_stage6_rca.py
 logs/win-v535-stage6/stage6-evidence-20260620-053032.zip --json`; the script
 confirms `20` school packets, `524` candidate rows, and strict-yield conclusion
 `BELOW_GATE`.
+The current P0 is therefore not a generic "PDF not found" or crawler-runtime
+failure. It is specifically the FY2026/R8 strict target-document to Excel-ready
+yield staying below the release gate. v541 found many PDF candidates, but the
+dominant rejection evidence is old-year/current-FY mismatch, non-target PDF
+noise, target-form-like files without trusted year evidence, and small
+site-entry/fetch/identity lanes. The next RCA pass must work those buckets in
+order, without counting old-year PDFs, unknown-year documents, non-target files,
+or identity mismatches as FY2026/R8 success.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;

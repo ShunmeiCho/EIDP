@@ -170,6 +170,46 @@ rejection_reason_discovery_error=4
 rejection_reason_pdf_school_mismatch=2
 ```
 
+## Strict-Yield Blocker RCA Framing
+
+The primary v1 blocker is:
+
+```text
+FY2026/R8 strict target-document to Excel-ready yield below gate
+```
+
+It is not simply "the crawler cannot run", "PDFs are missing", or "any PDF was
+not found". v541 found many candidates, but most were correctly rejected before
+they could become FY2026/R8 Excel-ready evidence. The mixed failure profile is:
+
+- `publication_lag_or_old_target_pdf` / `fiscal_year_mismatch`: old-year or
+  latest-public target forms that cannot count as current FY2026/R8 success.
+- `pre_filtered_non_target_hint` and `classified_non_target`: public PDFs that
+  are not target application forms and must stay out of final Excel.
+- `target_fiscal_year_not_detected`: target-form-like PDFs without trusted
+  FY2026/R8 evidence.
+- `no_candidates_found`, `discovery_error`, and `pdf_school_mismatch`: smaller
+  but correctness-critical site-entry, fetch, or identity lanes.
+
+The next RCA pass should follow the largest release-impact buckets in this
+order:
+
+1. inspect `rejection_reason_fiscal_year_mismatch=206` to separate true
+   publication lag / old target forms from any current-year false rejects;
+2. inspect `rejection_reason_pre_filtered_non_target_hint=432` and
+   `rejection_reason_classified_non_target=103` for over-rejection risk;
+3. inspect `rejection_reason_target_fiscal_year_not_detected=6` for official
+   page, index, anchor, filename, or PDF evidence that can support review;
+4. inspect `rejection_reason_no_candidates_found=5`,
+   `rejection_reason_discovery_error=4`, and
+   `rejection_reason_pdf_school_mismatch=2` for site-entry, fetch, and identity
+   gaps.
+
+None of these buckets permits relaxing the FY2026/R8 evidence rules. A
+`publication_lag` decision can support at most the documented `RC_ONLY` route
+after owner return evidence and `scripts/verify_stage6_return.py` pass; it does
+not make v541 `READY`.
+
 Stage 6 evidence:
 
 ```text
@@ -234,8 +274,10 @@ cycle/sign-off is still missing.
 
 Next required actions:
 
-1. Refresh and stage v541 owner handoff docs before any owner real cycle.
-2. Continue strict-yield RCA against the `publication_lag_or_old_target_pdf`,
-   target-year-unverified, OCR/image-pending, and mismatch lanes.
+1. Run the prepared v541 owner/operator return path from Windows and verify the
+   returned evidence with `scripts/verify_stage6_return.py`.
+2. Continue strict-yield RCA in bucket order: fiscal-year mismatch /
+   publication lag, non-target candidate noise, target-year-unverified, then
+   site-entry/fetch/identity lanes.
 3. Keep final release status `NOT_READY` until the strict Excel-ready gate and
    owner evidence are both satisfied.

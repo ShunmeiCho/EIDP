@@ -62,6 +62,12 @@ The `12/50` result is a bounded target-missing cohort canary. It is not
 whole-database release readiness and does not satisfy the v1 `>= 60%` strict
 Excel-ready gate.
 
+This blocker is not just "PDFs are missing." v541 found many candidates, but
+current evidence points to a mixed profile: publication lag / old target PDFs,
+non-target PDF noise, target-form-like PDFs without trusted FY2026/R8 evidence,
+and smaller discovery or identity lanes. Do not improve the metric by accepting
+old-year, unknown-year, non-target, or mismatched documents.
+
 ## P0 Blockers
 
 - Strict FY2026/R8 Excel-ready yield is below the v1 gate.
