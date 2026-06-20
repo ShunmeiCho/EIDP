@@ -3,21 +3,23 @@
 Updated: 2026-06-21
 Branch: `main`
 
-Latest packaged bounded Windows canary is `v541`
-(`dist/eidp-windows-v541.zip`, SHA256
-`2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f`).
-`v541` packages commit `e62d074081e60428957a2f405c3a917bbceb31a0` with
-`git_dirty=false`. It packages the post-v540 owner-return verifier hardening:
-short owner sign-off validation, expected package SHA/source commit checks, and
-`RC_ONLY` semantics for the publication-lag exception path. CI run
-`27874800210` passed both `Python quality gates` and `Ship gate contract` for
-that source commit. Local non-Windows package gates also passed:
-`logs/win-v541-owner-signoff-release-path-gates-20260621.json` records
-`ok=true`, package/source freshness, `2043` unit tests, `196` distribution
-validator tests, package verification, and demonstrated-pattern verification.
+Latest packaged bounded Windows canary is `v542`
+(`dist/eidp-windows-v542.zip`, SHA256
+`89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc`).
+`v542` packages commit `d98ecd7196631a00c27aff1c240ebc7969579ce7` with
+`git_dirty=false`. It packages the post-v541 false-reject owner-return verifier
+integration, including `--false-reject-evidence-zip`,
+`--false-reject-review-csv`, and `--false-reject-sample-size` validation in
+`scripts/verify_stage6_return.py`. CI run `27880148454` passed both
+`Python quality gates` and `Ship gate contract` for that source commit. Local
+non-Windows package gates also passed:
+`logs/win-v542-false-reject-verifier-release-gates-20260621.json` records
+`ok=true`, package/source freshness, `2049` unit tests, `196` distribution
+validator tests, mypy, Ruff, package verification, and demonstrated-pattern
+verification.
 
-`v541` completed side-by-side Windows setup and a bounded limit-50 weekly
-canary at `C:\Users\cyo20\EIDP-v541-e62d074-env0`. The canary confirmed
+`v542` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v542-d98ecd7-env0`. The canary confirmed
 setup `rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`,
 weekly canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence
 verification `ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
@@ -27,13 +29,13 @@ schools, not whole-database readiness. The after-weekly validator's global
 SQLite target-FY view still reports `sqlite_target_fy_target_pdf_school_count=8`
 and `sqlite_target_fy_yield_pct=0.3` across `2418` specialty schools, with
 `sqlite_target_fy_operator_reviewable_school_count=40` and
-`sqlite_target_fy_operator_reviewable_yield_pct=1.7`. Therefore v541 proves the
-post-v540 verifier hardening is packaged and Windows-canary safe; it does not
+`sqlite_target_fy_operator_reviewable_yield_pct=1.7`. Therefore v542 proves the
+false-reject verifier integration is packaged and Windows-canary safe; it does not
 prove release readiness. Evidence is recorded in
-`docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`,
-`logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip`,
-`logs/win-v541-e62d074-canary/stage6-evidence-verify-20260621-003707.json`,
-and `logs/win-v541-e62d074-canary/20260620_152248-summary.json`.
+`docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md`,
+`logs/win-v542-d98ecd7-canary/stage6-evidence-20260620-190958.zip`,
+`logs/win-v542-d98ecd7-canary/stage6-evidence-verify-20260621-040959.json`,
+and `logs/win-v542-d98ecd7-canary/20260620_185933-summary.json`.
 
 The initial v541 owner/operator handoff docs were staged on Windows under
 `C:\EIDP-staging\v541-owner-docs-20260621`. That base handoff includes
@@ -48,8 +50,25 @@ docs ZIP SHA256 is
 superseded by the r3 docs-only false-reject handoff below. Neither handoff
 approves v1.0 or replaces the missing owner real-cycle evidence.
 
-Previous packaged bounded Windows canary was `v540`
-(`dist/eidp-windows-v540.zip`, SHA256
+Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
+`dist/` after v542 verification; SHA256 was
+`2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f`).
+`v541` packages commit `e62d074081e60428957a2f405c3a917bbceb31a0` with
+`git_dirty=false`. It packages the post-v540 owner-return verifier hardening:
+short owner sign-off validation, expected package SHA/source commit checks, and
+`RC_ONLY` semantics for the publication-lag exception path. CI run
+`27874800210` passed both `Python quality gates` and `Ship gate contract` for
+that source commit. It completed side-by-side Windows setup and a bounded
+limit-50 canary at `C:\Users\cyo20\EIDP-v541-e62d074-env0` with
+strict/Excel-ready `12/50 (24.0%)`, operator-reviewable `47/50 (94.0%)`, and
+`ship_gate_status=below_gate`. Evidence is recorded in
+`docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`,
+`logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip`,
+`logs/win-v541-e62d074-canary/stage6-evidence-verify-20260621-003707.json`,
+and `logs/win-v541-e62d074-canary/20260620_152248-summary.json`.
+
+Previous packaged bounded Windows canary before that was `v540` (core ZIP
+pruned from `dist/` after v542 verification; SHA256 was
 `6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6`).
 `v540` packages commit `fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a` with
 `git_dirty=false`. It carries the post-v539 release-gate hardening for the
@@ -77,9 +96,9 @@ Evidence is recorded in
 `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-20260620-223357.json`,
 and `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-mac-20260620.json`.
 
-The post-v540 source-side owner-return verifier hardening is now packaged and
-Windows-canary verified by v541. v540 remains evidence and handoff material,
-not the current package/canary head.
+The post-v541 false-reject owner-return verifier integration is now packaged
+and Windows-canary verified by v542. v541 and v540 remain evidence and handoff
+material, not the current package/canary head.
 
 Superseded `v539` (`dist/eidp-windows-v539.zip`, SHA256
 `2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3`)
@@ -164,7 +183,7 @@ confirms `20` school packets, `524` candidate rows, and strict-yield conclusion
 `BELOW_GATE`.
 The current P0 is therefore not a generic "PDF not found" or crawler-runtime
 failure. It is specifically the FY2026/R8 strict target-document to Excel-ready
-yield staying below the release gate. v541 found many PDF candidates, but the
+yield staying below the release gate. v542 found many PDF candidates, but the
 dominant rejection evidence is old-year/current-FY mismatch, non-target PDF
 noise, target-form-like files without trusted year evidence, and small
 site-entry/fetch/identity lanes. The next RCA pass must work those buckets in
@@ -204,14 +223,15 @@ and the return-verifier false-reject arguments. The r3 docs ZIP SHA256 is
 superseded r2 ZIP and extracted directory were removed from Windows staging and
 the external SSD; the r2 report remains historical evidence only. This still
 does not change the release conclusion.
-This false-reject owner-return verifier integration is source-side hardening on
-current `main` at commit `b044d02175dfc701291d219bf437e8717a49818d`; CI run
-`27879818860` passed both `Python quality gates` and `Ship gate contract` for
-that commit. It is not packaged into `dist/eidp-windows-v541.zip`, whose source
-commit remains `e62d074081e60428957a2f405c3a917bbceb31a0`. Therefore the
-returned worksheet must be validated from current `main`, and any future
-release package claiming this false-reject verifier integration must be rebuilt
-and Windows-verified as v542 or later.
+This false-reject owner-return verifier integration is now packaged and
+Windows-canary verified in `dist/eidp-windows-v542.zip` at current `main` commit
+`d98ecd7196631a00c27aff1c240ebc7969579ce7`. CI run `27880148454` passed both
+`Python quality gates` and `Ship gate contract` for that commit, and
+`docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md` records
+the package/source freshness, Windows setup, bounded canary, and Stage 6
+evidence verification. Returned false-reject worksheets can now be validated
+from current `main` or from a v542+ package carrying the same verifier
+integration.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;
@@ -265,14 +285,16 @@ superseded v538 was pruned with
 --keep-version 535 --keep-version 536 --apply`. The kept local core packages
 were v535, v536, and v539. After v540 was built and Windows-validated,
 superseded v539 was pruned from the external-SSD-backed `dist` directory.
-After v541 was built and Windows-validated, the superseded v532 owner-docs ZIP
-and macOS AppleDouble sidecars created during v541 packaging were removed. The
-kept local core packages are now v535, v536, v540, and v541.
+After v542 was built and Windows-validated, cleanup pruned superseded v540 and
+v541 core ZIPs and sidecars from the external-SSD-backed `dist` directory. The
+current retained core packages are v535, v536, v542, and the latest alias;
+reports and Stage 6 evidence for v540/v541 remain preserved under `docs/` and
+`logs/`.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
 creation, and Stage 6 evidence verification. Latest bounded Windows canary and
-package/source candidate is `v541`. The Windows canary still reports
+package/source candidate is `v542`. The Windows canary still reports
 FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
 still blocked by missing owner real Windows cycle/sign-off, unapproved
 `publication_lag` exception, and unresolved OCR scope because the latest

@@ -113,8 +113,8 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
-    assert "Any source/package change after v541 requires a new Windows package/canary" in checklist
-    assert "Current v541 package evidence" in checklist
+    assert "Any source/package change after v542 requires a new Windows package/canary" in checklist
+    assert "Current v542 package evidence" in checklist
 
 
 def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
@@ -129,8 +129,9 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     staging_r3 = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md")
 
     expected_package_sha = "2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f"
+    expected_v542_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
     expected_v541_source_sha = "e62d074081e60428957a2f405c3a917bbceb31a0"
-    expected_false_reject_source_sha = "b044d02175dfc701291d219bf437e8717a49818d"
+    expected_v542_source_sha = "d98ecd7196631a00c27aff1c240ebc7969579ce7"
     expected_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
     expected_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
 
@@ -195,18 +196,17 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "row context must remain unchanged" in current_status
     assert "The owner-return verifier now accepts `--false-reject-evidence-zip`" in current_status
     assert "`context_mismatch_count=0`" in current_status
-    assert expected_false_reject_source_sha in current_status
-    assert expected_false_reject_source_sha in objective_checklist
+    assert expected_v542_package_sha in current_status
+    assert expected_v542_package_sha in objective_checklist
+    assert expected_v542_source_sha in current_status
+    assert expected_v542_source_sha in objective_checklist
     assert expected_v541_source_sha in current_status
     assert expected_v541_source_sha in objective_checklist
-    assert "CI run `27879818860` passed both `Python quality gates` and `Ship gate contract`" in current_status
-    assert "CI run `27879818860` passed both required jobs" in objective_checklist
-    assert "It is not packaged into `dist/eidp-windows-v541.zip`" in current_status
-    assert "This is not packaged into `dist/eidp-windows-v541.zip`" in objective_checklist
-    assert "must be validated from current `main`" in current_status
-    assert "must run from current `main`" in objective_checklist
-    assert "rebuilt and Windows-verified as v542 or later" in current_status
-    assert "rebuilt and Windows-verified as v542 or later" in objective_checklist
+    assert "CI run `27880148454` passed both `Python quality gates` and `Ship gate contract`" in current_status
+    assert "CI run `27880148454` green" in objective_checklist
+    assert "now packaged and Windows-canary verified in `dist/eidp-windows-v542.zip`" in current_status
+    assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist
+    assert "from current `main` or from a v542+ package" in current_status
     assert "v541-owner-docs-20260621-r3" in current_status
     assert "docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md" in current_status
     assert "bucket_decision_counts" in objective_checklist
@@ -225,12 +225,12 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "old r2 zip exists: False" in staging_r3
     assert "old r2 dir exists: False" in staging_r3
     assert "The clean ZIP was created without macOS AppleDouble `._*` sidecars." in staging_r3
-    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`" in objective_checklist
-    assert "Owner handoff docs have been refreshed to v541" in objective_checklist
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v542.zip`" in objective_checklist
+    assert "Owner handoff docs remain v541 r3 handoff evidence" in objective_checklist
     assert "C:\\EIDP-staging\\v541-owner-docs-20260621" in objective_checklist
     assert "eidp-v541-release-summary.md" in objective_checklist
     assert "eidp-v541-owner-signoff.md" in objective_checklist
-    assert "Run the prepared owner/operator v541 return path" in objective_checklist
+    assert "Refresh owner/operator handoff docs to v542 if the next owner run uses the" in objective_checklist
     assert expected_docs_sha in current_status
     assert expected_docs_sha in objective_checklist
     assert expected_docs_sha in staging
