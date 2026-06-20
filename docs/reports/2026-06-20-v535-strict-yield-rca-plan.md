@@ -164,8 +164,12 @@ P1 actions:
 2. Source hardening added after this v535 evidence:
    `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` keeps both
    Sanko school-slug disclosure shapes under shared-origin throttling for the
-   one `non_target_candidates_only` site. It needs a rebuilt Windows canary
-   before it can be counted as release evidence.
+   one `non_target_candidates_only` site. The rebuilt v536 Windows canary is
+   recorded in
+   `docs/reports/2026-06-20-v536-sanko-fresh-windows-canary.md`; it confirms the
+   official disclosure page is reached, but the school remains
+   `non_target_candidates_only` because only non-target school/program
+   information PDFs are available.
 
 P2 actions:
 

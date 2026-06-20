@@ -45,8 +45,12 @@ candidate rows.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
-`non_target_candidates_only` packet. This is source-level evidence only until a
-rebuilt Windows package reruns the canary.
+`non_target_candidates_only` packet. The rebuilt v536 package has now rerun the
+Windows limit-50 canary:
+`docs/reports/2026-06-20-v536-sanko-fresh-windows-canary.md`. The run verifies
+package/source commit `f81a9cf8f785457e844cb77857426a02c91f60c7`, Windows setup
+`rc=0`, Stage 6 evidence `ok=true`, `shared_origin_derived_fallback_skipped=0`,
+and strict/Excel-ready yield still `12/50 (24.0%)`.
 Release verdict: **NOT_READY**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -82,13 +86,14 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Latest local package/source candidate: `dist/eidp-windows-v535.zip`
+- Latest local package/source candidate: `dist/eidp-windows-v536.zip`
 - Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v535.zip`
-- v535 local package/source commit:
-  `d742327570a08a8f9d6ade7adfc81da8940294b4`
-- v535 local package SHA256:
-  `72ef94f35a2cd482eb9650d1a466cb8441f7d96a660a8901710d96603e7d8e9f`
+- v536 local package/source commit:
+  `f81a9cf8f785457e844cb77857426a02c91f60c7`
+- v536 local package SHA256:
+  `381ec169b8380cfe666a89e02a8b786d3a8cdc79dca4b420276517bbbdb0349a`
 - Latest complete Windows side-by-side smoke: v535
+- Latest bounded Windows canary: v536
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
 - Latest source/package verifier hardening: v524/v525/v526 owner-return verifier requires
@@ -123,8 +128,11 @@ that keeps manual work below the release threshold.
   fix keeps both `/disclosure/{slug}` and `/{slug}/disclosure` under the
   shared-origin throttle for school roots such as
   `https://www.sanko.ac.jp/omiya-beauty/`. It targets the remaining
-  `non_target_candidates_only` RCA packet but is not Windows release evidence
-  until a rebuilt package and fresh Windows canary complete.
+  `non_target_candidates_only` RCA packet. The v536 Windows canary confirms the
+  official disclosure page is reached, but school `41` remains
+  `non_target_candidates_only` because the page only exposes school/program
+  information PDFs such as `schoolinfo.pdf`, not an acceptable FY2026/R8 target
+  document.
 - Latest docs-only owner-decision handoff refresh: the Windows-staged v526
   owner docs ZIP now includes `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`
   and `docs/runbooks/eidp-v526-owner-return-fill-sheet.md`, and

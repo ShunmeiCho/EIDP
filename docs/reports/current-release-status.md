@@ -3,7 +3,24 @@
 Updated: 2026-06-20
 Branch: `main`
 
-Current local package/source candidate: `v535`
+Current local package/source candidate: `v536`
+(`dist/eidp-windows-v536.zip`, SHA256
+`381ec169b8380cfe666a89e02a8b786d3a8cdc79dca4b420276517bbbdb0349a`).
+`v536` is package/source verified on macOS and carries the post-v535 Sanko
+shared-origin disclosure probe fix. Its full non-Windows release gate passed
+with `2019` unit tests, `196` Windows distribution validator tests,
+package/source freshness, package verifier, and demonstrated-pattern verifier.
+It also completed a bounded Windows limit-50 canary at
+`C:\Users\cyo20\EIDP-v536-f81a9cf-env0`. The canary confirmed the package
+commit `f81a9cf8f785457e844cb77857426a02c91f60c7`, setup `rc=0`, after-setup
+validator `ok=true`, active-task safety `ok=true`, weekly canary `rc=0`, Stage
+6 evidence verification `ok=true`, and strict/Excel-ready FY2026 yield
+`12/50 (24.0%)` with `ship_gate_status=below_gate`. Evidence is recorded in
+`docs/reports/2026-06-20-v536-sanko-fresh-windows-canary.md`,
+`logs/win-v536-stage6-v536-non-windows-release-gates-20260620.json`, and
+`logs/win-v536-stage6/stage6-evidence-20260620-074649.zip`.
+
+The latest complete Windows side-by-side smoke remains `v535`
 (`dist/eidp-windows-v535.zip`, SHA256
 `72ef94f35a2cd482eb9650d1a466cb8441f7d96a660a8901710d96603e7d8e9f`).
 `v535` is package/source verified on macOS, carries the post-v533
@@ -41,8 +58,12 @@ Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;
 this is recorded in
-`docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md`. It is not
-release evidence until a rebuilt package completes a fresh Windows canary.
+`docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md`. The rebuilt
+v536 Windows canary now exercises this fix: `shared_origin_derived_fallback_skipped=0`,
+and school `41` reaches `https://www.sanko.ac.jp/omiya-beauty/disclosure/`.
+The packet remains `non_target_candidates_only` because the reached official
+page exposes `schoolinfo.pdf` and school/program information PDFs rather than
+an acceptable FY2026/R8 target document.
 
 Rejected v534 (`dist/eidp-windows-v534.zip`, SHA256
 `734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`) is
@@ -74,13 +95,15 @@ The local v532 core ZIP and sidecar were pruned after v534 was built using
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 2 --apply`;
 the invalid v534 core ZIP and sidecar were pruned after v535 was built using
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
---keep-version 533 --apply`. The kept local core packages are v533 and v535.
+--keep-version 533 --apply`. The kept local core packages are v533, v535, and
+v536.
 
-Latest complete Windows side-by-side smoke is now `v535` for setup,
+Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
-creation, and Stage 6 evidence verification. Release is still blocked by
-FY2026/R8 strict yield below gate (`12/50`, `24.0%` in the latest v535 Windows
-canary), missing owner real Windows cycle/sign-off, unapproved
+creation, and Stage 6 evidence verification. Latest bounded Windows canary is
+`v536`, and it still reports FY2026/R8 strict yield below gate (`12/50`,
+`24.0%`). Release is still blocked by missing owner real Windows cycle/sign-off,
+unapproved
 `publication_lag` exception, and unresolved OCR scope because the latest
 Windows OCR runtime proof failed without the OCR add-on. A same-day OCR
 recovery check found no reusable OCR add-on ZIP or Windows Tesseract payload

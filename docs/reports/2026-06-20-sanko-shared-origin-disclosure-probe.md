@@ -76,7 +76,18 @@ school 41 registered_source=https://www.sanko.ac.jp/omiya-beauty/
 
 ## Remaining Risk
 
-This is source-level P1 hardening only. It does not prove a release yield
-increase until a fresh Windows side-by-side canary runs from a rebuilt package.
+The fresh v536 Windows canary has now exercised this source hardening:
+
+```text
+docs/reports/2026-06-20-v536-sanko-fresh-windows-canary.md
+logs/win-v536-stage6/stage6-evidence-20260620-074649.zip
+```
+
+It confirms `shared_origin_derived_fallback_skipped=0` and reaches
+`https://www.sanko.ac.jp/omiya-beauty/disclosure/` for school `41`. The packet
+still remains `non_target_candidates_only` because the official page currently
+offers `schoolinfo.pdf` and school/program information PDFs rather than an
+acceptable FY2026/R8 target document.
+
 Old-year PDFs, missing-year candidates, school mismatch candidates, and
-non-target PDFs must still remain out of Excel.
+non-target PDFs must still remain out of Excel. Release remains `NOT_READY`.
