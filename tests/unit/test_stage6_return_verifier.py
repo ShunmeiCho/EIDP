@@ -62,7 +62,7 @@ READY
 Owner sign-off:
 
 ```text
-Name: Example Owner
+Name: Aiko Tanaka
 Date: 2026-05-17
 Decision: READY
 ```
@@ -70,7 +70,7 @@ Decision: READY
 業務員 sign-off:
 
 ```text
-Name: Example Operator
+Name: Kenji Sato
 Date: 2026-05-17
 Decision: READY
 ```
@@ -159,7 +159,7 @@ Status: `{decision}`
 | --- | --- |
 | Exception reason | `publication_lag` |
 | Decision | `{decision}` |
-| Approver | Example Owner |
+| Approver | Aiko Tanaka |
 | Approval date | 2026-05-19 |
 | Release scope | v1.0 may ship on mature FY2025 production-scale proof only |
 | FY2026/R8 status acknowledged | yes |
@@ -875,8 +875,8 @@ def test_verify_stage6_return_exception_rejects_placeholder_approver(tmp_path: P
     exception_record = _write_approved_exception_record(tmp_path)
     exception_record.write_text(
         exception_record.read_text(encoding="utf-8").replace(
+            "| Approver | Aiko Tanaka |",
             "| Approver | Example Owner |",
-            "| Approver | Owner Name |",
         ),
         encoding="utf-8",
     )
@@ -903,7 +903,7 @@ def test_verify_stage6_return_exception_rejects_shorthand_placeholder_approver(t
     exception_record = _write_approved_exception_record(tmp_path)
     exception_record.write_text(
         exception_record.read_text(encoding="utf-8").replace(
-            "| Approver | Example Owner |",
+            "| Approver | Aiko Tanaka |",
             "| Approver | N/A |",
         ),
         encoding="utf-8",
@@ -1525,8 +1525,8 @@ def test_verify_stage6_return_rejects_placeholder_signoff_names(tmp_path: Path) 
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
     template.write_text(
         _complete_template()
-        .replace("Name: Example Owner", "Name: Owner Name")
-        .replace("Name: Example Operator", "Name: Operator Name"),
+        .replace("Name: Aiko Tanaka", "Name: Example Owner")
+        .replace("Name: Kenji Sato", "Name: Example Operator"),
         encoding="utf-8",
     )
 
@@ -1547,8 +1547,8 @@ def test_verify_stage6_return_rejects_shorthand_placeholder_signoff_names(tmp_pa
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
     template.write_text(
         _complete_template()
-        .replace("Name: Example Owner", "Name: TBD")
-        .replace("Name: Example Operator", "Name: N/A"),
+        .replace("Name: Aiko Tanaka", "Name: TBD")
+        .replace("Name: Kenji Sato", "Name: N/A"),
         encoding="utf-8",
     )
 

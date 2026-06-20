@@ -1463,6 +1463,7 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "Approval date must be on or after last_run finished_at date",
             "Approver must not be a placeholder",
             "Name must not be a placeholder",
+            "example owner",
             "Approval date must be on or after mature-year proof finished_at date",
             "Release scope",
             "Release scope must limit approval to v1.0 mature-year proof only",
