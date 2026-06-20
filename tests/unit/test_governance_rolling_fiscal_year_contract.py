@@ -113,8 +113,8 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
-    assert "Any source/package change after v542 requires a new Windows package/canary" in checklist
-    assert "Current v542 package evidence" in checklist
+    assert "Any source/package change after v543 requires a new Windows package/canary" in checklist
+    assert "Current v543 package evidence" in checklist
 
 
 def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
@@ -131,6 +131,8 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
 
     expected_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
     expected_v542_source_sha = "d98ecd7196631a00c27aff1c240ebc7969579ce7"
+    expected_v543_package_sha = "c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094"
+    expected_v543_source_sha = "6aa5735d164101cbe6ec85648bcb8b6f46168c63"
     expected_docs_sha = "553a40a18a43d4a9c5a32f5fb1a5c9abc75a5e0304a6cf25fd4f560be7740e64"
     expected_v541_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
     expected_v541_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
@@ -211,12 +213,20 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
     assert expected_package_sha in objective_checklist
     assert expected_v542_source_sha in current_status
     assert expected_v542_source_sha in objective_checklist
+    assert expected_v543_package_sha in current_status
+    assert expected_v543_package_sha in objective_checklist
+    assert expected_v543_source_sha in current_status
+    assert expected_v543_source_sha in objective_checklist
     assert "CI run `27880148454` passed both `Python quality gates` and `Ship gate contract`" in current_status
     assert "CI run `27880148454` green" in objective_checklist
     assert (
-        "post-v541 false-reject owner-return verifier integration is now packaged and Windows-canary verified by v542"
+        "This false-reject owner-return verifier integration was first packaged and Windows-canary verified"
         in current_status
     )
+    assert "docs/reports/2026-06-21-v543-helper-windows-canary.md" in current_status
+    assert "docs/reports/2026-06-21-v543-helper-windows-canary.md" in objective_checklist
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v543.zip`" in objective_checklist
+    assert "Current v543 package/canary contains the post-v542 false-reject audit helper" in objective_checklist
     assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist
     assert "from current `main` or from a v543+ package carrying the helper" in current_status
     assert "v542-owner-docs-20260621" in current_status
@@ -238,7 +248,7 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "C:\\EIDP-staging\\eidp-v541-owner-docs-20260621.zip present: False" in staging
     assert "C:\\EIDP-staging\\v541-owner-docs-20260621-r3 present: False" in staging
     assert "macOS AppleDouble `._*` sidecars were also removed" in staging
-    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v542.zip`" in objective_checklist
+    assert "Previous packaged bounded Windows canary: `dist/eidp-windows-v542.zip`" in objective_checklist
     assert "Owner handoff docs have been refreshed to v542" in objective_checklist
     assert "C:\\EIDP-staging\\v542-owner-docs-20260621" in objective_checklist
     assert "eidp-v542-release-summary.md" in objective_checklist
