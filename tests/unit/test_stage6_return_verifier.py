@@ -201,6 +201,45 @@ Status: `{decision}`
     return record
 
 
+def _write_publication_lag_decision_brief(tmp_path: Path, *, body: str | None = None) -> Path:
+    brief = tmp_path / "publication-lag.md"
+    brief.write_text(
+        body
+        or """# Publication-lag Owner Decision Brief
+
+It is not approval by itself.
+
+- `APPROVE_RC_ONLY`
+- at most `RC_ONLY`
+- unconfirmed rows must not enter final Excel output
+- successful `scripts/verify_stage6_return.py` result
+""",
+        encoding="utf-8",
+    )
+    return brief
+
+
+def _write_ocr_scope_decision_brief(tmp_path: Path, *, body: str | None = None) -> Path:
+    brief = tmp_path / "ocr-scope.md"
+    brief.write_text(
+        body
+        or """# OCR Scope Owner Decision Brief
+
+It is not approval by itself.
+
+- `CORE_TEXT_PDF_ONLY`
+- image-only PDFs must be visible as OCR/manual-review work
+- `OCR_ADDON_REQUIRED`
+- current Windows OCR proof is present
+- missing OCR runtime proof remains a release blocker
+- unreviewed OCR rows must not enter final Excel output
+- With no OCR scope decision: `NOT_READY`
+""",
+        encoding="utf-8",
+    )
+    return brief
+
+
 def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
@@ -214,6 +253,8 @@ def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) 
 
     assert result["ok"] is True
     assert result["errors"] == []
+    assert result["selected_ocr_scope"] == "core_non_ocr_only"
+    assert result["inputs"]["ocr_scope_decision_brief"].endswith("docs/release/owner-decisions/ocr-scope.md")
 
 
 def test_verify_stage6_return_rejects_missing_excel_and_audit_proof_rows(tmp_path: Path) -> None:
@@ -716,6 +757,94 @@ def test_verify_stage6_return_exception_requires_approved_exception_record(tmp_p
 
     assert result["ok"] is False
     assert "release exception requires --release-exception-record" in result["errors"]
+
+
+def test_verify_stage6_return_exception_requires_publication_lag_decision_brief(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+        publication_lag_decision_brief=tmp_path / "missing-publication-lag.md",
+    )
+
+    assert result["ok"] is False
+    assert any("publication-lag owner decision brief does not exist" in error for error in result["errors"])
+
+
+def test_verify_stage6_return_exception_rejects_publication_lag_brief_that_relaxes_gate(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    decision_brief = _write_publication_lag_decision_brief(
+        tmp_path,
+        body="""# Publication-lag Owner Decision Brief
+
+It is not approval by itself.
+
+- `APPROVE_RC_ONLY`
+- unconfirmed rows must not enter final Excel output
+- successful `scripts/verify_stage6_return.py` result
+""",
+    )
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+        publication_lag_decision_brief=decision_brief,
+    )
+
+    assert result["ok"] is False
+    assert "publication-lag owner decision brief missing required marker: at most `RC_ONLY`" in result["errors"]
+
+
+def test_verify_stage6_return_rejects_ocr_scope_brief_without_selected_scope(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    ocr_brief = _write_ocr_scope_decision_brief(
+        tmp_path,
+        body="""# OCR Scope Owner Decision Brief
+
+It is not approval by itself.
+
+- `OCR_ADDON_REQUIRED`
+- current Windows OCR proof is present
+- unreviewed OCR rows must not enter final Excel output
+- With no OCR scope decision: `NOT_READY`
+""",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        ocr_scope_decision_brief=ocr_brief,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "OCR scope owner decision brief missing marker for core_non_ocr_only: `CORE_TEXT_PDF_ONLY`"
+        in result["errors"]
+    )
 
 
 def test_verify_stage6_return_exception_rejects_not_approved_exception_record(tmp_path: Path) -> None:

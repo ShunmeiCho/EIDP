@@ -36,6 +36,30 @@ OCR_ADDON_SHA_ROW = "OCR add-on ZIP sha256"
 OCR_SCOPE_CORE_NON_OCR_ONLY = "core_non_ocr_only"
 OCR_SCOPE_ADDON_VERIFIED = "ocr_addon_verified"
 OCR_SCOPE_VALUES = frozenset({OCR_SCOPE_CORE_NON_OCR_ONLY, OCR_SCOPE_ADDON_VERIFIED})
+PUBLICATION_LAG_DECISION_BRIEF_DEFAULT = Path("docs/release/owner-decisions/publication-lag.md")
+OCR_SCOPE_DECISION_BRIEF_DEFAULT = Path("docs/release/owner-decisions/ocr-scope.md")
+PUBLICATION_LAG_DECISION_BRIEF_MARKERS = (
+    "It is not approval by itself",
+    "`APPROVE_RC_ONLY`",
+    "at most `RC_ONLY`",
+    "unconfirmed rows must not enter final Excel output",
+    "successful `scripts/verify_stage6_return.py` result",
+)
+OCR_SCOPE_DECISION_BRIEF_COMMON_MARKERS = (
+    "It is not approval by itself",
+    "unreviewed OCR rows must not enter final Excel output",
+    "With no OCR scope decision: `NOT_READY`",
+)
+OCR_SCOPE_DECISION_BRIEF_MARKERS = {
+    OCR_SCOPE_CORE_NON_OCR_ONLY: (
+        "`CORE_TEXT_PDF_ONLY`",
+        "image-only PDFs must be visible as OCR/manual-review work",
+    ),
+    OCR_SCOPE_ADDON_VERIFIED: (
+        "`OCR_ADDON_REQUIRED`",
+        "missing OCR runtime proof remains a release blocker",
+    ),
+}
 REQUIRED_AUDIT_ROWS = (
     "監査ログページ表示",
     "manual_action_log 件数",
@@ -145,6 +169,21 @@ def _load_json(path: Path, errors: list[str], label: str) -> dict[str, Any] | No
         errors.append(f"{label} must contain a JSON object")
         return None
     return value
+
+
+def _default_repo_path(relative_path: Path) -> Path:
+    return Path(__file__).resolve().parents[1] / relative_path
+
+
+def _load_text(path: Path, errors: list[str], label: str) -> str | None:
+    if not path.is_file():
+        errors.append(f"{label} does not exist: {path}")
+        return None
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        errors.append(f"{label} is not valid UTF-8: {exc}")
+        return None
 
 
 def _clean_cell(value: str) -> str:
@@ -341,22 +380,22 @@ def _verify_template_kpi_actual(
         )
 
 
-def _verify_template_ocr_scope(text: str, errors: list[str]) -> None:
+def _verify_template_ocr_scope(text: str, errors: list[str]) -> str | None:
     row = _table_row(text, REQUIRED_OCR_SCOPE_ROW)
     if row is None or len(row) < 2:
         errors.append(f"E2E template release row missing or malformed: {REQUIRED_OCR_SCOPE_ROW}")
-        return
+        return None
 
     value = row[1]
     if _is_placeholder(value):
         errors.append(f"E2E template release row is still placeholder: {REQUIRED_OCR_SCOPE_ROW}")
-        return
+        return None
     if value not in OCR_SCOPE_VALUES:
         errors.append(
             f"E2E template {REQUIRED_OCR_SCOPE_ROW} must be "
             f"{OCR_SCOPE_CORE_NON_OCR_ONLY} or {OCR_SCOPE_ADDON_VERIFIED}: {value}"
         )
-        return
+        return None
 
     if value == OCR_SCOPE_ADDON_VERIFIED:
         sha_row = _table_row(text, OCR_ADDON_SHA_ROW)
@@ -364,6 +403,22 @@ def _verify_template_ocr_scope(text: str, errors: list[str]) -> None:
             errors.append(f"E2E template row missing or malformed: {OCR_ADDON_SHA_ROW}")
         elif not _is_sha256(sha_row[1]):
             errors.append(f"E2E template {OCR_ADDON_SHA_ROW} must be a 64-character SHA256")
+    return value
+
+
+def _verify_publication_lag_decision_brief(text: str, errors: list[str]) -> None:
+    for marker in PUBLICATION_LAG_DECISION_BRIEF_MARKERS:
+        if marker not in text:
+            errors.append(f"publication-lag owner decision brief missing required marker: {marker}")
+
+
+def _verify_ocr_scope_decision_brief(text: str, selected_scope: str, errors: list[str]) -> None:
+    for marker in OCR_SCOPE_DECISION_BRIEF_COMMON_MARKERS:
+        if marker not in text:
+            errors.append(f"OCR scope owner decision brief missing required marker: {marker}")
+    for marker in OCR_SCOPE_DECISION_BRIEF_MARKERS.get(selected_scope, ()):
+        if marker not in text:
+            errors.append(f"OCR scope owner decision brief missing marker for {selected_scope}: {marker}")
 
 
 def _verify_last_run(
@@ -1101,7 +1156,7 @@ def _verify_template(
     mature_year_proof_years: list[int],
     errors: list[str],
     warnings: list[str],
-) -> None:
+) -> str | None:
     kpi_actual_expectations = _template_kpi_actual_expectations(last_run)
     last_run_finished_date = _last_run_finished_date(last_run)
     for row_label in REQUIRED_KPI_ROWS:
@@ -1193,7 +1248,7 @@ def _verify_template(
         elif row[1].lower() != REQUIRED_RELEASE_VALUES[row_label]:
             errors.append(f"E2E template release row must be {REQUIRED_RELEASE_VALUES[row_label]}: {row_label}")
 
-    _verify_template_ocr_scope(text, errors)
+    selected_ocr_scope = _verify_template_ocr_scope(text, errors)
 
     for row_label in REQUIRED_AUDIT_ROWS:
         row = _table_row(text, row_label)
@@ -1257,6 +1312,7 @@ def _verify_template(
                     errors.append(f"E2E template {marker} Decision must be one of READY, RC_ONLY, NOT_READY")
                 elif normalized_decision != RELEASE_APPROVAL_CONCLUSION:
                     errors.append(f"E2E template {marker} Decision must be READY for release approval")
+    return selected_ocr_scope
 
 
 def verify_stage6_return(
@@ -1272,6 +1328,8 @@ def verify_stage6_return(
     release_exception_reason: str | None = None,
     mature_year_proof_json: Path | None = None,
     release_exception_record: Path | None = None,
+    publication_lag_decision_brief: Path | None = None,
+    ocr_scope_decision_brief: Path | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -1279,6 +1337,9 @@ def verify_stage6_return(
     mature_year_proof_years: list[int] = []
     mature_year_proof_finished_date: date | None = None
     release_exception_approval_date: date | None = None
+    selected_ocr_scope: str | None = None
+    active_publication_lag_decision_brief = publication_lag_decision_brief
+    active_ocr_scope_decision_brief = ocr_scope_decision_brief
     last_run_json = _load_json(last_run, errors, "last_run")
     last_run_finished_date = _last_run_finished_date(last_run_json)
 
@@ -1317,6 +1378,16 @@ def verify_stage6_return(
                 last_run_finished_date=last_run_finished_date,
                 errors=errors,
             )
+        if active_release_exception_reason == "publication_lag":
+            if active_publication_lag_decision_brief is None:
+                active_publication_lag_decision_brief = _default_repo_path(PUBLICATION_LAG_DECISION_BRIEF_DEFAULT)
+            brief_text = _load_text(
+                active_publication_lag_decision_brief,
+                errors,
+                "publication-lag owner decision brief",
+            )
+            if brief_text is not None:
+                _verify_publication_lag_decision_brief(brief_text, errors)
 
     if last_run_json is not None:
         _verify_last_run(
@@ -1337,7 +1408,7 @@ def verify_stage6_return(
     if not e2e_template.is_file():
         errors.append(f"E2E template does not exist: {e2e_template}")
     else:
-        _verify_template(
+        selected_ocr_scope = _verify_template(
             e2e_template.read_text(encoding="utf-8"),
             last_run_json,
             active_release_exception_reason,
@@ -1347,6 +1418,13 @@ def verify_stage6_return(
             errors,
             warnings,
         )
+
+    if selected_ocr_scope is not None:
+        if active_ocr_scope_decision_brief is None:
+            active_ocr_scope_decision_brief = _default_repo_path(OCR_SCOPE_DECISION_BRIEF_DEFAULT)
+        brief_text = _load_text(active_ocr_scope_decision_brief, errors, "OCR scope owner decision brief")
+        if brief_text is not None:
+            _verify_ocr_scope_decision_brief(brief_text, selected_ocr_scope, errors)
 
     return {
         "ok": not errors,
@@ -1364,7 +1442,14 @@ def verify_stage6_return(
             "release_exception_reason": active_release_exception_reason,
             "mature_year_proof_json": str(mature_year_proof_json) if mature_year_proof_json else None,
             "release_exception_record": str(release_exception_record) if release_exception_record else None,
+            "publication_lag_decision_brief": (
+                str(active_publication_lag_decision_brief) if active_publication_lag_decision_brief else None
+            ),
+            "ocr_scope_decision_brief": (
+                str(active_ocr_scope_decision_brief) if active_ocr_scope_decision_brief else None
+            ),
         },
+        "selected_ocr_scope": selected_ocr_scope,
         "mature_year_proof_years": mature_year_proof_years,
         "required_evidence_labels": list(REQUIRED_EVIDENCE_LABELS),
         "required_kpi_rows": list(REQUIRED_KPI_ROWS),
@@ -1419,6 +1504,17 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--release-exception-record",
         help="Required with --release-exception-reason: approved release exception Markdown record.",
     )
+    parser.add_argument(
+        "--publication-lag-decision-brief",
+        help=(
+            "Owner decision brief for publication_lag. Defaults to "
+            "docs/release/owner-decisions/publication-lag.md when publication_lag is used."
+        ),
+    )
+    parser.add_argument(
+        "--ocr-scope-decision-brief",
+        help="Owner decision brief for the OCR scope selected in the E2E template.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
 
@@ -1437,6 +1533,10 @@ def main(argv: list[str] | None = None) -> int:
         release_exception_reason=args.release_exception_reason,
         mature_year_proof_json=Path(args.mature_year_proof_json) if args.mature_year_proof_json else None,
         release_exception_record=Path(args.release_exception_record) if args.release_exception_record else None,
+        publication_lag_decision_brief=(
+            Path(args.publication_lag_decision_brief) if args.publication_lag_decision_brief else None
+        ),
+        ocr_scope_decision_brief=Path(args.ocr_scope_decision_brief) if args.ocr_scope_decision_brief else None,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))

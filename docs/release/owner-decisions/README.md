@@ -19,3 +19,12 @@ Rules:
 - The agent may prepare these briefs, but must not approve them.
 - No owner decision may allow unconfirmed rows into final Excel output.
 - `READY`, `RC_ONLY`, and `NOT_READY` are the only release conclusions.
+
+Verifier contract:
+
+- `scripts/verify_stage6_return.py` loads the canonical publication-lag brief
+  when the `publication_lag` exception path is used.
+- `scripts/verify_stage6_return.py` loads the canonical OCR scope brief for the
+  OCR scope selected in the owner/operator return template.
+- Missing or weakened brief language is a verification failure, but the briefs
+  still do not approve release by themselves.
