@@ -3,26 +3,17 @@
 Updated: 2026-06-20
 Branch: `main`
 
-Latest packaged Windows canary remains `v539`
-(`dist/eidp-windows-v539.zip`, SHA256
-`2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3`).
-`v539` packages commit `142dfc71513413412432e4f76d8b7a72f03048cc` with
-`git_dirty=false`. It keeps FY2026/Reiwa 8 document acceptance strict while
-improving rejection evidence for target-form-like PDF candidates that do not
-expose a target fiscal year. CI run `27868273926` passed both `Python quality
+Latest packaged bounded Windows canary is `v540`
+(`dist/eidp-windows-v540.zip`, SHA256
+`6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6`).
+`v540` packages commit `fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a` with
+`git_dirty=false`. It carries the post-v539 release-gate hardening for the
+rolling fiscal-year owner-decision brief contract and packages that source head
+into fresh Windows evidence. CI run `27871865340` passed both `Python quality
 gates` and `Ship gate contract` for that packaged source commit.
 
-Important evidence boundary: post-v539 source commits are source-hardening
-evidence only until a new Windows ZIP/canary is built. Post-v539 source
-hardening commit `216922c1335ac30507d6bd1546c5399f123ae61d` has CI run
-`27870287377` green (`Python quality gates` and `Ship gate contract`), and it
-locks the rolling fiscal-year release contract plus the strict per-fiscal-year
-target-PDF/Excel-ready `60%` line. That CI does not upgrade `v539` Windows
-canary evidence; a future `v540` package/canary is required before claiming
-Windows evidence for post-v539 source changes.
-
-`v539` completed side-by-side Windows setup and a bounded limit-50 weekly
-canary at `C:\Users\cyo20\EIDP-v539-142dfc7-env0`. The canary confirmed
+`v540` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v540-fbdd0bd-env0`. The canary confirmed
 setup `rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`,
 weekly canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence
 verification `ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
@@ -32,15 +23,26 @@ schools, not whole-database readiness. The after-weekly validator's global
 SQLite target-FY view still reports `sqlite_target_fy_target_pdf_school_count=8`
 and `sqlite_target_fy_yield_pct=0.3` across `2418` specialty schools, with
 `sqlite_target_fy_operator_reviewable_school_count=40` and
-`sqlite_target_fy_operator_reviewable_yield_pct=1.7`. Therefore v539 proves
-operational viability for a bounded cohort; it does not prove release
-readiness.
-The new yearless-target evidence path is verified in Windows evidence:
-`target_fiscal_year_not_detected` rows for target-form-like NEEC PDFs now carry
-`extra.year_evidence=target_application_no_year`, while image-only control rows
-remain `extra.year_evidence=none`. Evidence is recorded in
+`sqlite_target_fy_operator_reviewable_yield_pct=1.7`. Therefore v540 proves
+operational viability for a bounded cohort and closes the post-v539
+source-to-Windows evidence gap; it does not prove release readiness.
+Evidence is recorded in
+`docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md`,
+`logs/win-v540-fbdd0bd-canary/stage6-evidence-20260620-133325.zip`,
+`logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-20260620-223357.json`,
+and `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-mac-20260620.json`.
+
+Superseded `v539` (`dist/eidp-windows-v539.zip`, SHA256
+`2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3`)
+kept FY2026/Reiwa 8 document acceptance strict while improving rejection
+evidence for target-form-like PDF candidates that do not expose a target
+fiscal year. It completed a bounded Windows canary with strict/Excel-ready
+FY2026 yield `12/50 (24.0%)`, operator-reviewable yield `47/50 (94.0%)`, and
+`ship_gate_status=below_gate`. Evidence is recorded in
 `docs/reports/2026-06-20-v539-yearless-target-evidence-windows-canary.md` and
-`logs/win-v539-142dfc7-canary/stage6-evidence-20260620-110538.zip`.
+`logs/win-v539-142dfc7-canary/stage6-evidence-20260620-110538.zip`. The v539
+core ZIP and sidecar have been pruned from the external-SSD-backed `dist`
+directory after v540 verification.
 
 Superseded `v538` (`dist/eidp-windows-v538.zip`, SHA256
 `5d32c3c21fef227a8da13a6dab2c7b6d29e6d304363d90340af757ed0a7b7e1a`) fixed
@@ -158,12 +160,14 @@ were v535, v536, and v538. After v539 was built and Windows-validated,
 superseded v538 was pruned with
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
 --keep-version 535 --keep-version 536 --apply`. The kept local core packages
-are now v535, v536, and v539.
+were v535, v536, and v539. After v540 was built and Windows-validated,
+superseded v539 was pruned from the external-SSD-backed `dist` directory. The
+kept local core packages are now v535, v536, and v540.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
 creation, and Stage 6 evidence verification. Latest bounded Windows canary and
-package/source candidate is `v539`. The Windows canary still reports
+package/source candidate is `v540`. The Windows canary still reports
 FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
 still blocked by missing owner real Windows cycle/sign-off, unapproved
 `publication_lag` exception, and unresolved OCR scope because the latest

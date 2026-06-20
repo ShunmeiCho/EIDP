@@ -113,5 +113,5 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
-    assert "post-v539 source commits require a new v540-or-later package/canary" in checklist
-    assert "Current v539 package evidence" in checklist
+    assert "Any source/package change after v540 requires a new Windows package/canary" in checklist
+    assert "Current v540 package evidence" in checklist

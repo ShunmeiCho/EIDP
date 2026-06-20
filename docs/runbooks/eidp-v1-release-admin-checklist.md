@@ -12,12 +12,12 @@ decision for FY2026/R8 publication lag.
   `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified `main`
   commit.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current packaged Windows canary is v539
-  at commit `142dfc71513413412432e4f76d8b7a72f03048cc`; post-v539 source
-  commits require a new v540-or-later package/canary before they count as
-  Windows release evidence.
+  after its last code/package change. Current packaged bounded Windows canary
+  is v540 at commit `fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a`. Any
+  source/package change after v540 requires a new Windows package/canary before
+  it counts as Windows release evidence.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
-  release scope. Current v539 did not restore or validate an OCR add-on/runtime
+  release scope. Current v540 did not restore or validate an OCR add-on/runtime
   proof; if OCR is in scope, attach a valid OCR add-on proof before approval.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
@@ -60,11 +60,11 @@ Expected:
 Confirm the current local package/source evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v539.zip
-cat dist/eidp-windows-v539.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v539.zip --json
+shasum -a 256 dist/eidp-windows-v540.zip
+cat dist/eidp-windows-v540.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v540.zip --json
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v539.zip \
+  dist/eidp-windows-v540.zip \
   --skip-full-unit \
   --json
 
@@ -73,7 +73,7 @@ test -f dist/eidp-ocr-addon-windows-v497-smoke.zip
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v539.zip \
+  dist/eidp-windows-v540.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -81,7 +81,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3
+6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -116,9 +116,9 @@ Generated Windows ZIPs are large. Keep only the selected release candidate, its
 `.sha256` sidecar, the `dist/eidp-windows.zip` latest alias, and `wheelhouse/`
 unless an older package is actively needed for side-by-side evidence transfer.
 
-After the v539 rebuild and Windows canary, superseded core ZIPs no longer
+After the v540 rebuild and Windows canary, superseded core ZIPs no longer
 needed for the current evidence lane were pruned. Retained core package
-artifacts are v535, v536, and v539, plus the latest alias
+artifacts are v535, v536, and v540, plus the latest alias
 `dist/eidp-windows.zip`. AppleDouble `._*` files created by macOS on the
 external volume must be removed from `dist/` before package verification or
 transfer.
@@ -136,21 +136,36 @@ and gate logs do not consume the internal SSD. If the external SSD is not
 mounted, do not rebuild Windows ZIPs or long-running gate logs until it is
 reattached.
 
+## Owner Sign-off Boundary
+
+Owner/operator sign-off can be short. It should confirm the selected release
+ID, ZIP, SHA256, source commit, release decision (`READY`, `RC_ONLY`, or
+`NOT_READY`), v1 scope, known limitations, and any approved exception.
+
+Do not ask the owner to manually reproduce CI logs, wheelhouse counts, ZIP entry
+counts, parser fixture details, or JSONL evidence checks. Those remain release
+engineering evidence and must be referenced by the Release Summary, Stage 6
+evidence bundle, Windows canary/real-cycle evidence, and this checklist.
+
+`publication_lag` approval may support at most `RC_ONLY` after all required
+evidence is complete. It must not allow old-year, year-unknown,
+school-mismatch, low-confidence, or unresolved program-change rows into final
+Excel output.
+
 ## Release Gates
 
 Before tagging, attach or reference:
 
-- v539 package/non-Windows gate and CI evidence:
-  `docs/reports/2026-06-20-v539-yearless-target-evidence-windows-canary.md`,
-  `logs/win-v539-142dfc7-canary/v539-verify-windows-distribution.json`, and
-  CI run `27868273926`;
-- v539 Windows bounded canary evidence:
-  `logs/win-v539-142dfc7-canary/last_run.json`,
-  `logs/win-v539-142dfc7-canary/20260620_104823-summary.json`,
-  `logs/win-v539-142dfc7-canary/stage6-evidence-20260620-110538.zip`, and
-  `logs/win-v539-142dfc7-canary/stage6-evidence-verify-20260620-200538.json`;
-- if post-v539 source commits are selected, a v540-or-later Windows package,
-  side-by-side canary, and updated evidence bundle for that source head;
+- v540 package/non-Windows gate and CI evidence:
+  `docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md`,
+  `logs/win-v540-stage6-v540-verify-windows-distribution-20260620.json`, and
+  CI run `27871865340`;
+- v540 Windows bounded canary evidence:
+  `logs/win-v540-fbdd0bd-canary/last_run.json`,
+  `logs/win-v540-fbdd0bd-canary/20260620_131759-summary.json`,
+  `logs/win-v540-fbdd0bd-canary/stage6-evidence-20260620-133325.zip`,
+  `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-20260620-223357.json`,
+  and `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-mac-20260620.json`;
 - canonical owner decision briefs:
   `docs/release/owner-decisions/publication-lag.md` when the release path uses
   `publication_lag`, and `docs/release/owner-decisions/ocr-scope.md` for the
@@ -205,10 +220,10 @@ Before tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v539 package evidence is recorded in
-`docs/reports/2026-06-20-v539-yearless-target-evidence-windows-canary.md`,
-`logs/win-v539-142dfc7-canary/v539-verify-windows-distribution.json`, and
-`logs/win-v539-142dfc7-canary/stage6-evidence-verify-20260620-200538.json`.
+Current v540 package evidence is recorded in
+`docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md`,
+`logs/win-v540-stage6-v540-verify-windows-distribution-20260620.json`, and
+`logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-20260620-223357.json`.
 It is bounded canary evidence with `ship_gate_status=below_gate`; it is not
 owner/operator real-cycle sign-off and not v1.0 approval.
 
