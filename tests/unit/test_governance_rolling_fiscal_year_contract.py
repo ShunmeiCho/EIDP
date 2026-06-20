@@ -97,3 +97,21 @@ def test_owner_decision_briefs_do_not_relax_release_gates() -> None:
 
     assert "docs/release/owner-decisions/" in known_limits
     assert "The v1 OCR release scope must be explicitly selected before approval" in known_limits
+
+
+def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification() -> None:
+    template = _normalized_doc("docs/runbooks/eidp-operator-e2e-template.md")
+    checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
+
+    assert "docs/release/owner-decisions/publication-lag.md" in template
+    assert "docs/release/owner-decisions/ocr-scope.md" in template
+    assert "--publication-lag-decision-brief" in template
+    assert "--ocr-scope-decision-brief" in template
+    assert "canonical publication-lag brief" in template
+    assert "canonical owner decision brief" in template
+
+    assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
+    assert "publication_lag_decision_brief" in checklist
+    assert "ocr_scope_decision_brief" in checklist
+    assert "post-v539 source commits require a new v540-or-later package/canary" in checklist
+    assert "Current v539 package evidence" in checklist

@@ -17,6 +17,11 @@ Updated: 2026-05-19
   `ship_readiness_rc=0` または同等の yield evidence が確認された後に行います。
   Route A / `publication_lag` 例外を owner が承認する場合は、下記 KPI 判定の
   below-gate 行を `watch` として明示し、成熟年 proof と例外記録で補完します。
+- Owner decision は短くてよいが、release evidence は短縮しません。
+  `publication_lag` 例外を使う場合は
+  `docs/release/owner-decisions/publication-lag.md`、OCR scope を選ぶ場合は
+  `docs/release/owner-decisions/ocr-scope.md` を
+  `scripts/verify_stage6_return.py` の検証対象として扱います。
 - Package-specific transfer/setup/UI evidence is recorded outside this reusable
   template in `docs/reports/current-release-status.md` and version-specific
   Stage 6 evidence drafts. Codex-driven smokes and bounded canaries are not a
@@ -521,6 +526,9 @@ sign-off の `Date` は `YYYY-MM-DD` 形式で記入する。
 `OCR scope 決定` は `core_non_ocr_only` または `ocr_addon_verified` のどちらかを記入する。
 `ocr_addon_verified` を選ぶ場合は、上記 `OCR add-on ZIP sha256` に 64 桁 SHA256 を記入する。
 OCR 未決定のままでは v1.0 release approval は通過しない。
+`verify_stage6_return.py` は、選択された OCR scope が canonical owner decision brief に
+含まれていることも確認する。`publication_lag` 例外を使う場合は、canonical
+publication-lag brief が gate を緩めていないことも確認する。
 
 | 判定項目 | 結果 |
 | --- | --- |
@@ -530,6 +538,8 @@ OCR 未決定のままでは v1.0 release approval は通過しない。
 | Runbook 修正反映済み | yes / no |
 | 残 P0/P1 bug | none / exists |
 | OCR scope 決定 | core_non_ocr_only / ocr_addon_verified |
+| publication-lag owner decision brief | docs/release/owner-decisions/publication-lag.md / n/a |
+| OCR scope owner decision brief | docs/release/owner-decisions/ocr-scope.md |
 
 結論:
 
@@ -551,4 +561,21 @@ Decision:
 Name:
 Date: YYYY-MM-DD
 Decision:
+```
+
+管理者側で返却物を repo に戻した後、release approval として扱う前に
+`scripts/verify_stage6_return.py` を実行する。canonical brief を使う通常運用では
+brief 引数は省略できるが、返却 bundle 内の copy を検証する場合は明示する。
+
+```bash
+uv run python scripts/verify_stage6_return.py \
+  --e2e-template <returned-eidp-operator-e2e-template.md> \
+  --last-run <returned-last_run.json> \
+  --evidence-verify-json <returned-stage6-evidence-verify.json> \
+  --release-exception-reason publication_lag \
+  --mature-year-proof-json <mature-year-proof.json> \
+  --release-exception-record <approved-publication-lag-exception.md> \
+  --publication-lag-decision-brief docs/release/owner-decisions/publication-lag.md \
+  --ocr-scope-decision-brief docs/release/owner-decisions/ocr-scope.md \
+  --json
 ```
