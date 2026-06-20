@@ -3,15 +3,23 @@
 Updated: 2026-06-20
 Branch: `main`
 
-Current local package/source candidate and latest bounded Windows canary:
-`v539` (`dist/eidp-windows-v539.zip`, SHA256
+Latest packaged Windows canary remains `v539`
+(`dist/eidp-windows-v539.zip`, SHA256
 `2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3`).
-`v539` packages current `main` commit
-`142dfc71513413412432e4f76d8b7a72f03048cc` with `git_dirty=false`. It keeps
-FY2026/Reiwa 8 document acceptance strict while improving rejection evidence
-for target-form-like PDF candidates that do not expose a target fiscal year.
-Current source CI run `27868273926` passed both `Python quality gates` and
-`Ship gate contract`.
+`v539` packages commit `142dfc71513413412432e4f76d8b7a72f03048cc` with
+`git_dirty=false`. It keeps FY2026/Reiwa 8 document acceptance strict while
+improving rejection evidence for target-form-like PDF candidates that do not
+expose a target fiscal year. CI run `27868273926` passed both `Python quality
+gates` and `Ship gate contract` for that packaged source commit.
+
+Important evidence boundary: post-v539 source commits are source-hardening
+evidence only until a new Windows ZIP/canary is built. Post-v539 source
+hardening commit `216922c1335ac30507d6bd1546c5399f123ae61d` has CI run
+`27870287377` green (`Python quality gates` and `Ship gate contract`), and it
+locks the rolling fiscal-year release contract plus the strict per-fiscal-year
+target-PDF/Excel-ready `60%` line. That CI does not upgrade `v539` Windows
+canary evidence; a future `v540` package/canary is required before claiming
+Windows evidence for post-v539 source changes.
 
 `v539` completed side-by-side Windows setup and a bounded limit-50 weekly
 canary at `C:\Users\cyo20\EIDP-v539-142dfc7-env0`. The canary confirmed
@@ -19,6 +27,14 @@ setup `rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`,
 weekly canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence
 verification `ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
 operator-reviewable yield `47/50 (94.0%)`, and `ship_gate_status=below_gate`.
+That `24.0%` is bounded-cohort evidence for the selected 50 target-missing
+schools, not whole-database readiness. The after-weekly validator's global
+SQLite target-FY view still reports `sqlite_target_fy_target_pdf_school_count=8`
+and `sqlite_target_fy_yield_pct=0.3` across `2418` specialty schools, with
+`sqlite_target_fy_operator_reviewable_school_count=40` and
+`sqlite_target_fy_operator_reviewable_yield_pct=1.7`. Therefore v539 proves
+operational viability for a bounded cohort; it does not prove release
+readiness.
 The new yearless-target evidence path is verified in Windows evidence:
 `target_fiscal_year_not_detected` rows for target-form-like NEEC PDFs now carry
 `extra.year_evidence=target_application_no_year`, while image-only control rows
