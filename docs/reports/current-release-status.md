@@ -22,6 +22,11 @@ evidence verification. Evidence is recorded in
 `docs/reports/2026-06-20-v535-full-windows-side-by-side-smoke.md`,
 `logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`, and
 `logs/win-v535-stage6/stage6-evidence-20260620-053032.zip`.
+The current v535 owner/operator handoff docs are also staged on Windows under
+`C:\EIDP-staging\v535-owner-docs-20260620`; the docs-only ZIP SHA256 is
+`75d4d4f12ca5a10abc6d1ac1d6c7287f6cc51e47a210c73ee68b7f252f79f5ca`, and the
+remote staging check is recorded in
+`docs/reports/2026-06-20-v535-owner-docs-windows-staging.md`.
 
 Rejected v534 (`dist/eidp-windows-v534.zip`, SHA256
 `734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`) is
