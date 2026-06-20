@@ -4,27 +4,40 @@ Updated: 2026-06-20
 Branch: `main`
 
 Current local package/source candidate and latest bounded Windows canary:
-`v538` (`dist/eidp-windows-v538.zip`, SHA256
-`5d32c3c21fef227a8da13a6dab2c7b6d29e6d304363d90340af757ed0a7b7e1a`).
-`v538` packages current `main` commit
-`27e1bcd067212f4f362a31309122ee2492373b72` with `git_dirty=false`. It fixes
-the v537 Windows canary failure by moving PDF school-name mismatch alias
-proposal logic into the packaged module
-`eidp.review.pdf_school_mismatch_alias_proposals`; the script remains a CLI
-wrapper. CI run `#803` passed both `Python quality gates` and
+`v539` (`dist/eidp-windows-v539.zip`, SHA256
+`2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3`).
+`v539` packages current `main` commit
+`142dfc71513413412432e4f76d8b7a72f03048cc` with `git_dirty=false`. It keeps
+FY2026/Reiwa 8 document acceptance strict while improving rejection evidence
+for target-form-like PDF candidates that do not expose a target fiscal year.
+Current source CI run `27868273926` passed both `Python quality gates` and
 `Ship gate contract`.
 
-`v538` completed side-by-side Windows setup and a bounded limit-50 weekly
-canary at `C:\Users\cyo20\EIDP-v538-27e1bcd-env0`. The canary confirmed
+`v539` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v539-142dfc7-env0`. The canary confirmed
 setup `rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`,
 weekly canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence
 verification `ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
 operator-reviewable yield `47/50 (94.0%)`, and `ship_gate_status=below_gate`.
-The new alias proposal path is verified in Windows evidence:
-`school_alias_proposals.error=null`, `proposal_stats.proposals=2`, and
-`write_stats.appended=2`. Evidence is recorded in
+The new yearless-target evidence path is verified in Windows evidence:
+`target_fiscal_year_not_detected` rows for target-form-like NEEC PDFs now carry
+`extra.year_evidence=target_application_no_year`, while image-only control rows
+remain `extra.year_evidence=none`. Evidence is recorded in
+`docs/reports/2026-06-20-v539-yearless-target-evidence-windows-canary.md` and
+`logs/win-v539-142dfc7-canary/stage6-evidence-20260620-110538.zip`.
+
+Superseded `v538` (`dist/eidp-windows-v538.zip`, SHA256
+`5d32c3c21fef227a8da13a6dab2c7b6d29e6d304363d90340af757ed0a7b7e1a`) fixed
+the v537 Windows canary failure by moving PDF school-name mismatch alias
+proposal logic into the packaged module
+`eidp.review.pdf_school_mismatch_alias_proposals`. It completed a bounded
+Windows canary with strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
+operator-reviewable yield `47/50 (94.0%)`, and `ship_gate_status=below_gate`.
+Evidence is recorded in
 `docs/reports/2026-06-20-v538-pdf-mismatch-alias-windows-canary.md` and
-`logs/win-v538-stage6/stage6-evidence-20260620-094934.zip`.
+`logs/win-v538-stage6/stage6-evidence-20260620-094934.zip`. The v538 core ZIP
+and sidecar have been pruned from the external-SSD-backed `dist` directory
+after v539 verification.
 
 Superseded `v537` (`dist/eidp-windows-v537.zip`, SHA256
 `1ceeb84ae6804c4d95574ac5c11a583eb4967d0e285c5de3fe5b1fd0f1254356`) is
@@ -125,12 +138,16 @@ v536. After v537 was built and verified, v533 was pruned with
 after v538 was built and Windows-validated, superseded v537 was pruned with
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
 --keep-version 535 --keep-version 536 --apply`. The kept local core packages
-are now v535, v536, and v538.
+were v535, v536, and v538. After v539 was built and Windows-validated,
+superseded v538 was pruned with
+`scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
+--keep-version 535 --keep-version 536 --apply`. The kept local core packages
+are now v535, v536, and v539.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
 creation, and Stage 6 evidence verification. Latest bounded Windows canary and
-package/source candidate is `v538`. The Windows canary still reports
+package/source candidate is `v539`. The Windows canary still reports
 FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
 still blocked by missing owner real Windows cycle/sign-off, unapproved
 `publication_lag` exception, and unresolved OCR scope because the latest
