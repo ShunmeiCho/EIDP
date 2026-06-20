@@ -11,7 +11,8 @@ anchor, not a backlog. Detailed operational gates remain in
 ## v1 Scope
 
 v1 is complete only for the vocational-school-first, one-operator Windows
-workflow:
+rolling fiscal-year workflow. It is not complete merely because one fiscal
+year's PDFs were scraped once:
 
 - official index and official disclosure entry based PDF discovery;
 - target-year judgment for the configured fiscal year;
@@ -31,6 +32,7 @@ All criteria below must be true before v1 can be called complete:
 | Gate | Required result |
 | --- | --- |
 | Source scope | v1 remains scoped to `専門学校` unless an owner-approved scope change exists |
+| Rolling operation | official disclosure entries and institution/program evidence are reusable across future fiscal years; documents, metrics, tasks, exports, and gate evidence stay `fiscal_year`-scoped |
 | Official evidence | PDF discovery starts from MEXT/prefecture/authority indexes and official disclosure entries |
 | Target year | current target-year evidence is explicit, or a formal `publication_lag` exception is approved |
 | PDF identity | target-document kind and institution identity are confirmed before business ingestion |
@@ -49,6 +51,6 @@ As of 2026-06-20, v1 is not complete. The current release status remains
 decisions are returned.
 
 Current blocking areas are tracked in `docs/reports/current-release-status.md`
-and include FY2026/R8 strict-yield gating, owner/operator real-cycle sign-off,
-the unapproved `publication_lag` path, and the selected OCR release scope.
-
+and include FY2026/R8 as the current rolling fiscal-year strict-yield gate,
+owner/operator real-cycle sign-off, the unapproved `publication_lag` path, and
+the selected OCR release scope.

@@ -14,6 +14,7 @@ spec.loader.exec_module(module)
 
 
 def test_ship_gate_contract_names_distinct_bootstrap_and_weekly_metrics() -> None:
+    assert module.SHIP_GATE_STRICT_TARGET_AUTO_YIELD_BASIS == "per_fiscal_year_strict_target_pdf_excel_ready"
     assert module.SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT == 60.0
     assert module.SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT == 30.0
     assert module.SHIP_GATE_MANUAL_WORKLOAD_OPERATOR_REVIEWABLE_PCT == 70.0
@@ -34,6 +35,15 @@ def test_ship_gate_contract_names_distinct_bootstrap_and_weekly_metrics() -> Non
     assert module.SHIP_GATE_EXCEPTION_REASONS == frozenset({"publication_lag"})
     assert module.BOOTSTRAP_SHIP_GATE_METRIC_BASIS != module.WEEKLY_SHIP_GATE_METRIC_BASIS
     assert module.MATURE_YEAR_SHIP_GATE_METRIC_BASIS != module.WEEKLY_SHIP_GATE_METRIC_BASIS
+
+
+def test_strict_target_yield_basis_is_not_broad_pdf_discovery() -> None:
+    basis = module.SHIP_GATE_STRICT_TARGET_AUTO_YIELD_BASIS
+    assert "per_fiscal_year" in basis
+    assert "strict_target_pdf" in basis
+    assert "excel_ready" in basis
+    assert "broad" not in basis
+    assert "discovery" not in basis
 
 
 def test_ship_gate_status_from_operator_coverage_keeps_not_measured_separate_from_below_gate() -> None:

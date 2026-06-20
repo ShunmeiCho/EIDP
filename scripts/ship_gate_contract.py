@@ -7,6 +7,8 @@ validator before the project wheel is installed.
 from __future__ import annotations
 
 BOOTSTRAP_SHIP_GATE_METRIC_BASIS = "post_bootstrap_operator_reviewable_coverage"
+# This is a strict per-fiscal-year data gate, not a broad "PDF found" rate.
+SHIP_GATE_STRICT_TARGET_AUTO_YIELD_BASIS = "per_fiscal_year_strict_target_pdf_excel_ready"
 SHIP_GATE_STRICT_TARGET_AUTO_YIELD_PCT = 60.0
 SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT = 30.0
 SHIP_GATE_MANUAL_WORKLOAD_OPERATOR_REVIEWABLE_PCT = 100.0 - SHIP_GATE_MAX_MANUAL_WORKLOAD_PCT
@@ -46,7 +48,7 @@ def ship_gate_status_from_weekly_metrics(
     target_pdf_auto_yield_pct: float | None,
     operator_reviewable_yield_pct: float | None,
 ) -> str:
-    """Return the weekly release gate status from strict auto-yield and workload."""
+    """Return weekly status from strict target-document/Excel-ready yield and workload."""
 
     if target_pdf_auto_yield_pct is None or operator_reviewable_yield_pct is None:
         return "not_measured"

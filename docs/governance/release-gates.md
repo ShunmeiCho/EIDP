@@ -12,6 +12,7 @@ v1 release validation is scoped to:
 - one Windows operator
 - local SQLite
 - Streamlit UI
+- rolling fiscal-year operation, not a one-year scraping run
 - official index and official disclosure entry discovery
 - target application PDF verification
 - deterministic extraction, OCR fallback, and manual review
@@ -40,18 +41,24 @@ A v1 release candidate must include evidence for:
 Mac-side tests prove business logic and package shape only. They do not prove
 Windows deployability.
 
-## Target-Year Yield
+## Rolling Target-Year Yield
 
 Release status must distinguish:
 
-- strict target-year Excel-ready count
+- strict target-year Excel-ready count for the evaluated fiscal year
 - operator-reviewable count
 - publication-lag cases
 - OCR/manual-entry cases
 - non-target and old-year exclusions
 
-Do not claim GA if target-year strict yield is below the active release gate or
-if publication-lag exceptions are unresolved.
+The `60%` v1 minimum is strict. It means target application PDF identity,
+institution identity, target fiscal-year evidence, extraction, and Excel-ready
+gating all passed for the evaluated fiscal year. It is not a broad PDF discovery
+rate, not a "PDF contains the year string" rate, and not an old-year or
+sibling-school fallback rate.
+
+Do not claim GA if the evaluated fiscal year's strict yield is below the active
+release gate or if publication-lag exceptions are unresolved.
 
 Acceptable labels while gates are open:
 

@@ -1,7 +1,7 @@
 # EIDP Project Rules
 
 EIDP changes must serve an official-evidence-driven, fiscal-year-explicit,
-operator-reviewed, Excel-traceable disclosure pipeline.
+rolling fiscal-year, operator-reviewed, Excel-traceable disclosure pipeline.
 
 This document is a governance baseline, not a style guide. It prevents the
 project from drifting from a production data workflow into a crawler, manual
@@ -19,7 +19,13 @@ claim.
 
 ## Product Boundary
 
-EIDP is not a generic crawler, search tool, bulk downloader, or AI-agent demo.
+EIDP is not a one-year PDF scraper, generic crawler, search tool, bulk
+downloader, or AI-agent demo. It is a rolling fiscal-year operation system:
+official disclosure entries, institution identity, aliases, and program
+reconciliation evidence are reused across future years, while target documents,
+annual metrics, review tasks, workbook exports, and ship-gate evidence remain
+scoped to an explicit `fiscal_year`.
+
 Every production feature must fit this workflow:
 
 1. Resolve an official disclosure entry.
