@@ -237,7 +237,11 @@ site-entry/fetch/identity rows without changing release status.
 The same packet now has a companion decision worksheet at
 `docs/reports/2026-06-21-v543-false-reject-review-sheet.csv`. It contains stable
 `audit_row_id` values and blank `decision` cells restricted to
-`false_reject`, `correct_reject`, or `needs_operator_review`; validating it with
+`false_reject`, `correct_reject`, or `needs_operator_review`. It also includes
+read-only `suggested_decision` / `suggested_decision_basis` guidance for obvious
+old-year, non-target, yearless, and identity-risk rows; these suggestions do not
+fill the actual `decision` field and cannot complete review by themselves.
+Validating it with
 `--require-decisions` correctly fails until the owner/operator completes the
 sample review. The return validator also rejects changed row context and emits
 `bucket_decision_counts`; the current blank worksheet validates as

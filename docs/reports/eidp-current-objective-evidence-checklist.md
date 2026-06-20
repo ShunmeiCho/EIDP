@@ -98,7 +98,10 @@ Its review worksheet is generated at
 logs/win-v543-6aa5735-canary/stage6-evidence-20260620-213335.zip --sample-size
 12 --format csv --output
 docs/reports/2026-06-21-v543-false-reject-review-sheet.csv`. The blank
-worksheet validates as `review_status=incomplete`, while the same command with
+worksheet includes read-only `suggested_decision` / `suggested_decision_basis`
+triage guidance for obvious old-year, non-target, yearless, and identity-risk
+rows, but the actual `decision` cells remain blank and must be completed by the
+owner/operator. It validates as `review_status=incomplete`, while the same command with
 `--validate-review-csv
 docs/reports/2026-06-21-v543-false-reject-review-sheet.csv --require-decisions`
 fails until every sampled row has one of the allowed decisions. The validator
@@ -276,10 +279,11 @@ that keeps manual work below the release threshold.
   The companion CSV worksheet
   `docs/reports/2026-06-21-v543-false-reject-review-sheet.csv` gives each row a
   stable `audit_row_id`, a machine-validated `decision` field, immutable row
-  context checks, required reviewer/timestamp fields for completed decisions,
-  notes for `false_reject` and `needs_operator_review`, and bucket-level
-  decision counts for the RCA lanes. The v542 owner request and owner return
-  fill sheet now describe the required worksheet return rules, and
+  context checks, read-only suggested triage guidance, required
+  reviewer/timestamp fields for completed decisions, notes for `false_reject`
+  and `needs_operator_review`, and bucket-level decision counts for the RCA
+  lanes. The v542 owner request and owner return fill sheet now describe the
+  required worksheet return rules, and
   `scripts/verify_stage6_return.py` can validate the returned worksheet through
   its false-reject arguments.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe

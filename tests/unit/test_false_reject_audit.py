@@ -185,6 +185,7 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
 
     review_csv = module.render_review_csv(packet)
     assert "audit_row_id,bucket,decision,reviewer,reviewed_at" in review_csv
+    assert "suggested_decision,suggested_decision_basis" in review_csv
 
     validation = module.validate_review_csv(packet, review_csv)
     assert validation["ok"] is True
@@ -196,6 +197,30 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert validation["blank_decisions"] == validation["expected_rows"]
 
     rows = list(csv.DictReader(io.StringIO(review_csv)))
+    fiscal_row = next(row for row in rows if row["bucket"] == "fiscal_year_mismatch")
+    assert fiscal_row["decision"] == ""
+    assert fiscal_row["suggested_decision"] == "correct_reject"
+    assert "Detected fiscal year 2025 is not FY2026" in fiscal_row["suggested_decision_basis"]
+    yearless_row = next(row for row in rows if row["bucket"] == "target_fiscal_year_not_detected")
+    assert yearless_row["decision"] == ""
+    assert yearless_row["suggested_decision"] == "needs_operator_review"
+    legacy_csv = io.StringIO()
+    legacy_columns = [
+        column
+        for column in module.REVIEW_CSV_COLUMNS
+        if column not in {"suggested_decision", "suggested_decision_basis"}
+    ]
+    legacy_writer = csv.DictWriter(
+        legacy_csv,
+        fieldnames=legacy_columns,
+        extrasaction="ignore",
+        lineterminator="\n",
+    )
+    legacy_writer.writeheader()
+    legacy_writer.writerows(rows)
+    legacy_validation = module.validate_review_csv(packet, legacy_csv.getvalue())
+    assert legacy_validation["ok"] is True
+    assert legacy_validation["review_status"] == "incomplete"
     for row in rows:
         row["decision"] = "correct_reject"
         row["reviewer"] = "owner"
@@ -266,6 +291,15 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert tampered_validation["ok"] is False
     assert tampered_validation["context_mismatch_count"] == 1
     assert "reason changed" in tampered_validation["errors"][0]
+
+    tampered_suggestion_rows = [dict(row) for row in rows]
+    tampered_suggestion_rows[0]["suggested_decision"] = "false_reject"
+    tampered_suggestion_validation = module.validate_review_csv(
+        packet, render_rows(tampered_suggestion_rows), require_decisions=True
+    )
+    assert tampered_suggestion_validation["ok"] is False
+    assert tampered_suggestion_validation["context_mismatch_count"] == 1
+    assert "suggested_decision changed" in tampered_suggestion_validation["errors"][0]
 
     unsigned_rows = [dict(row) for row in rows]
     unsigned_rows[0]["reviewer"] = ""

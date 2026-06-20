@@ -28,6 +28,21 @@ VALID_REVIEW_DECISIONS = ("", "false_reject", "correct_reject", "needs_operator_
 REVIEW_MUTABLE_COLUMNS = {"decision", "reviewer", "reviewed_at", "notes"}
 DECISIONS_REQUIRING_NOTES = {"false_reject", "needs_operator_review"}
 
+OBVIOUS_NON_TARGET_HINTS = (
+    "gpa",
+    "ＧＰＡ",
+    "学校評価",
+    "学校関係者評価",
+    "学校沿革",
+    "実務経験",
+    "授業科目",
+    "シラバス",
+    "syllabus",
+    "admission",
+    "募集",
+    "入学",
+)
+
 REQUIRED_LABELS = (
     "build_info",
     "diagnostics",
@@ -222,6 +237,72 @@ def _project_row(bucket: str, row: dict[str, Any]) -> dict[str, Any]:
         "pdf_url": row.get("pdf_url") or "",
         "score": row.get("score"),
     }
+
+
+def _reason_year(reason: str) -> int | None:
+    _, _, suffix = reason.partition(":")
+    if suffix.isdigit():
+        return int(suffix)
+    return None
+
+
+def _suggested_triage_decision(
+    *,
+    bucket_name: str,
+    row: dict[str, Any],
+    target_fiscal_year: int | None,
+) -> tuple[str, str]:
+    """Return non-binding review guidance for the owner/operator worksheet."""
+
+    reason = str(row.get("reason") or "")
+    detected_fiscal_year = row.get("detected_fiscal_year")
+    if not isinstance(detected_fiscal_year, int):
+        detected_fiscal_year = _reason_year(reason)
+    target_label = f"FY{target_fiscal_year}" if target_fiscal_year is not None else "target FY"
+
+    if bucket_name == "fiscal_year_mismatch":
+        if detected_fiscal_year is not None and detected_fiscal_year != target_fiscal_year:
+            return (
+                "correct_reject",
+                (
+                    f"Detected fiscal year {detected_fiscal_year} is not {target_label}; "
+                    "confirm no trusted target-year evidence exists."
+                ),
+            )
+        return ("", "Review whether trusted target-year evidence was missed.")
+
+    if bucket_name in {"pre_filtered_non_target_hint", "classified_non_target"}:
+        evidence_text = " ".join(
+            str(row.get(key) or "") for key in ("anchor_text", "page_url", "pdf_url", "reason", "pdf_type")
+        )
+        evidence_text_lower = evidence_text.lower()
+        if any(hint.lower() in evidence_text_lower or hint in evidence_text for hint in OBVIOUS_NON_TARGET_HINTS):
+            return (
+                "correct_reject",
+                "Anchor or URL contains an obvious non-target hint; confirm it is not a target application form.",
+            )
+        return ("", "Review whether this non-target classification rejected a real target application form.")
+
+    if bucket_name == "target_fiscal_year_not_detected":
+        return (
+            "needs_operator_review",
+            "Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence.",
+        )
+
+    if bucket_name == "site_entry_fetch_identity":
+        if reason.startswith(("no_candidates_found", "discovery_error")):
+            return (
+                "needs_operator_review",
+                "No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.",
+            )
+        if reason.startswith("pdf_school_mismatch"):
+            return (
+                "needs_operator_review",
+                "Target-like document has school-identity risk; confirm it belongs to the same institution.",
+            )
+        return ("needs_operator_review", "Inspect SiteEntry, fetch, and school-identity evidence before deciding.")
+
+    return ("", "No safe suggestion; review official evidence.")
 
 
 def build_false_reject_audit_packet(
@@ -429,20 +510,31 @@ REVIEW_CSV_COLUMNS = (
     "anchor_text",
     "page_url",
     "pdf_url",
+    "suggested_decision",
+    "suggested_decision_basis",
     "review_question",
     "false_reject_signal",
     "notes",
 )
 REVIEW_CONTEXT_COLUMNS = tuple(column for column in REVIEW_CSV_COLUMNS if column not in REVIEW_MUTABLE_COLUMNS)
+OPTIONAL_REVIEW_CONTEXT_COLUMNS = {"suggested_decision", "suggested_decision_basis"}
 
 
 def _iter_review_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    target_fiscal_year = packet.get("strict_yield", {}).get("target_fiscal_year")
+    if not isinstance(target_fiscal_year, int):
+        target_fiscal_year = None
     for bucket in packet.get("audit_buckets", []):
         bucket_name = str(bucket.get("bucket") or "")
         review_question = str(bucket.get("review_question") or "")
         false_reject_signal = str(bucket.get("false_reject_signal") or "")
         for row in bucket.get("rows", []):
+            suggested_decision, suggested_decision_basis = _suggested_triage_decision(
+                bucket_name=bucket_name,
+                row=row,
+                target_fiscal_year=target_fiscal_year,
+            )
             rows.append(
                 {
                     "audit_row_id": row.get("audit_row_id") or "",
@@ -460,6 +552,8 @@ def _iter_review_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
                     "anchor_text": row.get("anchor_text") or "",
                     "page_url": row.get("page_url") or "",
                     "pdf_url": row.get("pdf_url") or "",
+                    "suggested_decision": suggested_decision,
+                    "suggested_decision_basis": suggested_decision_basis,
                     "review_question": review_question,
                     "false_reject_signal": false_reject_signal,
                     "notes": "",
@@ -596,6 +690,8 @@ def validate_review_csv(
         else:
             expected_row = expected_by_id[audit_row_id]
             for column in REVIEW_CONTEXT_COLUMNS:
+                if column in OPTIONAL_REVIEW_CONTEXT_COLUMNS and column not in fieldnames:
+                    continue
                 expected_value = str(expected_row.get(column) or "")
                 actual_value = str(row.get(column) or "")
                 if actual_value != expected_value:
