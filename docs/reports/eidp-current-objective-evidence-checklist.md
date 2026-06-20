@@ -60,13 +60,13 @@ Latest complete UI/Excel side-by-side smoke remains v535:
 validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
 `C:\Users\cyo20\EIDP-v535-d742327-env0`.
-Latest v542 owner/operator docs staging:
-`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md` records the
-docs-only handoff ZIP staged at `C:\EIDP-staging\v542-owner-docs-20260621`.
-The v542 handoff carries the current package identity, owner-facing release
-summary, short owner sign-off form, owner request, return fill sheet, v542
-strict-yield canary report, and v542 false-reject audit packet plus worksheet.
-The earlier v541 base and r3 handoffs remain historical evidence only.
+Latest v544 owner/operator docs staging:
+`docs/reports/2026-06-21-v544-owner-docs-windows-staging.md` records the
+docs-only handoff ZIP staged at `C:\EIDP-staging\v544-owner-docs-20260621`.
+The v544 handoff carries the current package identity, owner-facing release
+summary, short owner sign-off form, owner request, return fill sheet, v544
+strict-yield canary report, and v544 false-reject audit packet plus worksheet.
+The earlier v542 and v541 handoffs remain historical evidence only.
 Current v544 strict-yield RCA summary:
 `docs/reports/2026-06-21-v544-triage-helper-windows-canary.md` records the
 `12/50 (24.0%)` blocker and the same release-safe RCA lanes without counting
@@ -79,8 +79,7 @@ rejection-bucket false-reject evidence proves material over-rejection or
 fiscal-year extraction mistakes.
 The earlier v535 RCA plan and v541/v542/v543 false-reject packets remain
 historical decomposition. The current false-reject review lane uses the v544
-Windows canary evidence; the staged owner handoff docs still target v542 until
-they are refreshed again.
+Windows canary evidence, and the staged owner handoff docs now target v544.
 The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
@@ -121,9 +120,9 @@ verifier. The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`, and
 `--false-reject-sample-size`; when supplied, it requires `review_status=complete`
 and `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed
-to v542 at `C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`, so the staged
-owner docs now include the v542 false-reject worksheet return rules, worksheet
+to v544 at `C:\EIDP-staging\v544-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v544-owner-docs-windows-staging.md`, so the staged
+owner docs now include the v544 false-reject worksheet return rules, worksheet
 CSV, and the return-verifier false-reject arguments. This remains handoff
 evidence only.
 Post-v535 source hardening:
@@ -185,39 +184,40 @@ that keeps manual work below the release threshold.
 ## Current Candidate Boundary
 
 - Latest packaged bounded Windows canary: `dist/eidp-windows-v544.zip`
-- v543 package/source commit:
-  `6aa5735d164101cbe6ec85648bcb8b6f46168c63`
-- v543 package SHA256:
-  `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`
-- v543 package gate evidence:
-  `docs/reports/2026-06-21-v543-package-gates.md`,
-  `logs/eidp-windows-v543-distribution-verify-20260621.json`, and
-  `logs/eidp-windows-v543-release-gates-20260621.json`. These record
+- v544 package/source commit:
+  `74325bc278c3e96052ef27e67cd554e426c87c60`
+- v544 package SHA256:
+  `781da0a3c1a3f4ae80536c68de2971a1ae431a01c7eb2d58001de061f62df0c1`
+- v544 package gate evidence:
+  `docs/reports/2026-06-21-v544-package-gates.md`,
+  `logs/eidp-windows-v544-distribution-verify-20260621.json`, and
+  `logs/eidp-windows-v544-release-gates-20260621.json`. These record
   `ok=true`, full unit tests, distribution verifier tests, mypy, Ruff,
   discovery gold-set checks, package verification, demonstrated-pattern
   verification, and `scripts/build_false_reject_audit.py` packaged beside
   `scripts/verify_stage6_return.py`.
-- v543 Windows canary evidence:
-  `docs/reports/2026-06-21-v543-helper-windows-canary.md`,
-  `logs/win-v543-6aa5735-canary/stage6-evidence-20260620-213335.zip`,
-  `logs/win-v543-6aa5735-canary/stage6-evidence-verify-20260621-063335.json`,
-  `logs/win-v543-6aa5735-canary/stage6-evidence-verify-mac-20260621.json`,
-  and `logs/win-v543-6aa5735-canary/20260620_212327-summary.json`.
-- Previous packaged bounded Windows canary: `dist/eidp-windows-v542.zip`
+- v544 Windows canary evidence:
+  `docs/reports/2026-06-21-v544-triage-helper-windows-canary.md`,
+  `logs/win-v544-74325bc-canary/stage6-evidence-20260620-230327.zip`,
+  `logs/win-v544-74325bc-canary/stage6-evidence-verify-20260621-080339.json`,
+  `logs/win-v544-74325bc-canary/stage6-evidence-verify-mac-20260621.json`,
+  and `logs/win-v544-74325bc-canary/20260620_224853-summary.json`.
+- Previous packaged bounded Windows canary: `dist/eidp-windows-v543.zip`
 - Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v535.zip`
-- v542 package/source commit:
-  `d98ecd7196631a00c27aff1c240ebc7969579ce7`
-- v542 package SHA256:
-  `89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc`
+- v543 package/source commit:
+  `6aa5735d164101cbe6ec85648bcb8b6f46168c63`
+- v543 package SHA256:
+  `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`
 - Current v544 package/canary contains the latest false-reject audit helper
-  packaging fix. The current owner handoff docs still target v542; v541 r3
-  remains historical handoff evidence only.
+  packaging fix and false-reject worksheet triage guidance. Owner handoff docs
+  have been refreshed to v544; v542 and v541 r3 remain historical handoff
+  evidence only.
 - Current v542 package/canary contains the post-v541 false-reject owner-return
   verifier integration. Owner handoff docs have been refreshed to v542; v541 r3
   remains historical handoff evidence only.
 - Latest complete Windows side-by-side smoke: v535
-- Latest bounded Windows canary: v543
-- Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540/v541/v542/v543
+- Latest bounded Windows canary: v544
+- Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540/v541/v542/v543/v544
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
 - Latest source/package verifier hardening: v524/v525/v526 owner-return verifier requires
   Excel proof and ManualActionLog / JSONL outbox proof rows.
@@ -229,10 +229,11 @@ that keeps manual work below the release threshold.
   records the package/source and Windows evidence. v541 remains the previous
   package that verified short owner sign-off, expected package SHA/source
   commit checks, and `RC_ONLY` publication-lag exception semantics.
-- Latest source/package helper hardening: v543 includes
+- Latest source/package helper hardening: v544 includes
   `scripts/build_false_reject_audit.py` in the Windows ZIP so the packaged
   `scripts/verify_stage6_return.py` can validate returned false-reject review
-  CSVs. `docs/reports/2026-06-21-v543-helper-windows-canary.md` records the
+  CSVs, and it packages the latest worksheet triage guidance.
+  `docs/reports/2026-06-21-v544-triage-helper-windows-canary.md` records the
   Windows setup/canary evidence for that helper package.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
@@ -244,17 +245,18 @@ that keeps manual work below the release threshold.
   rows / exact official overrides, and bounded same-site disclosure expansion;
   v530 removes target-form/PDF search terms from URL completion and rejects
   direct document/PDF SERP hits before they can become `SchoolSite` rows.
-- Latest docs-only owner/operator handoff staging: the Windows-staged v542
-  owner docs ZIP includes the v542 first-read handoff, owner request, owner
-  return fill sheet, release summary, short owner sign-off form, v542 Windows
+- Latest docs-only owner/operator handoff staging: the Windows-staged v544
+  owner docs ZIP includes the v544 first-read handoff, owner request, owner
+  return fill sheet, release summary, short owner sign-off form, v544 Windows
   canary report, current release status, publication-lag exception record, OCR
-  scope brief, v1 known limitations, and the v542 false-reject RCA packet plus
-  review worksheet. It was staged at `C:\EIDP-staging\v542-owner-docs-20260621`
-  and recorded in `docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`.
+  scope brief, v1 known limitations, and the v544 false-reject RCA packet plus
+  review worksheet. It was staged at `C:\EIDP-staging\v544-owner-docs-20260621`
+  and recorded in `docs/reports/2026-06-21-v544-owner-docs-windows-staging.md`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
   or Task Scheduler.
-- Historical docs-only handoff evidence: v541 base and v541 r3 are recorded in
-  `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md` and
+- Historical docs-only handoff evidence: v542, v541 base, and v541 r3 are
+  recorded in `docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`,
+  `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`, and
   `docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`; they are no
   longer the current owner handoff lane.
 - Latest strict-yield RCA summary: v541 Stage 6 evidence is summarized in
@@ -281,7 +283,7 @@ that keeps manual work below the release threshold.
   context checks, read-only suggested triage guidance, required
   reviewer/timestamp fields for completed decisions, notes for `false_reject`
   and `needs_operator_review`, and bucket-level decision counts for the RCA
-  lanes. The v542 owner request and owner return fill sheet now describe the
+  lanes. The v544 owner request and owner return fill sheet now describe the
   required worksheet return rules, and
   `scripts/verify_stage6_return.py` can validate the returned worksheet through
   its false-reject arguments.
@@ -384,7 +386,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | Current rolling FY is FY2026/Reiwa 8 | v543 Windows canary summary `logs/win-v543-6aa5735-canary/20260620_212327-summary.json`: `current_fy=2026`, `school_type=専門学校`, `selection_mode=target_missing` | PASS |
 | Strict mode excludes old-year fallback from success | v543 Windows canary summary keeps `ship_gate_status=below_gate` at strict/Excel-ready `12/50 (24.0%)`; old/stale target forms are not counted as release success | PASS for contract, FAIL for release yield |
 | Current FY2026 strict target-PDF/Excel-ready yield is `>= 60%` | v543/v542/v541/v540 Windows limit-50 canaries: strict/Excel-ready `12/50 (24.0%)`; v535/v533/v532 Windows limit-50 canaries: strict/Excel-ready `12/50 (24.0%)`; v526/v525/v524/v523 Windows limit-50 canaries: strict/Excel-ready `5/50 (10.0%)`; v515 Mac continuation canary from the v513 isolated DB: strict `2/50 (4.0%)`; v516/v519/v521 target-missing/continuation canaries remained `0/50 (0.0%)`; v522 same-domain `2025 -> 2026` and short-year/R7 replacement probe found `404` for all 47 expanded candidates; production-scale upper-bound proof: max possible `39.3%` after 607/1000 schools | FAIL |
-| Operator manual workload is `<= 30%` for current FY | v543/v542/v541/v540 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v535/v533/v532 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v526/v525/v524/v523 Windows limit-50 operator-reviewable `50/50 (100.0%)`; v516 target-missing canary operator-reviewable `49/50 (98.0%)`; strict Excel-ready success is still below gate and owner real-cycle workload proof is missing | FAIL |
+| Operator manual workload is `<= 30%` for current FY | v544/v543/v542/v541/v540 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v535/v533/v532 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v526/v525/v524/v523 Windows limit-50 operator-reviewable `50/50 (100.0%)`; v516 target-missing canary operator-reviewable `49/50 (98.0%)`; strict Excel-ready success is still below gate and owner real-cycle workload proof is missing | FAIL |
 | Mature-year exception input exists | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: FY2025 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`, manual workload `20.2%` | PASS as exception input only |
 | Publication-lag exception is approved if release uses the mature-year lane | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED` | BLOCKED |
 | PDF extraction stack is packaged | v543 package verifier has `wheel_count=84`; v526 Windows OCR runtime proof is `ok=true` with Tesseract runtime and `jpn` / `jpn_vert` tessdata present. v543 does not have a complete OCR runtime proof, so OCR remains unresolved if kept in v1.0 scope. | PASS for core, BLOCKED for v543 OCR scope |
@@ -399,7 +401,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | Stage 6 evidence bundle and verifier pass | v543 evidence ZIP and verifier: `logs/win-v543-6aa5735-canary/stage6-evidence-20260620-213335.zip`, `logs/win-v543-6aa5735-canary/stage6-evidence-verify-20260621-063335.json`, and Mac-side `logs/win-v543-6aa5735-canary/stage6-evidence-verify-mac-20260621.json` with `ok=true`; required labels present and no unsafe/forbidden entries | PASS |
 | v526/v525/v524/v523 RCA is current | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`, `docs/reports/2026-05-20-v525-rc-metadata-package.md`, `docs/reports/2026-05-20-v524-full-windows-side-by-side-smoke.md`, and `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`: v526/v525/v524/v523 repeat the same strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` blocker; v526 discovery stats record `pre_filtered_non_target_hint=631`, `fiscal_year_mismatch=267`, `classified_non_target=88`, `no_candidates_found=8`, `target_fiscal_year_not_detected=5`, and `http_error_httpstatuserror=1`, with no `candidate_school_mismatch` in the v526 Windows run | PASS for RCA, FAIL for yield |
 | Weekly selected-school denominator actually gets crawled | v514 focused isolated Mac smoke `target-year-discovery-after-sitecount-fix/20260519_231930-summary.json`: selected NEEC school IDs 1-3 were crawled (`crawled=3`) and remained reviewable, not strict FY2026 successes; v516 selection probe excludes already confirmed target schools 4 and 7 from the target-missing queue while preserving a 50-school queue; v517 targeted school ID 55 smoke confirms the new exact override is crawled and yields FY2019-FY2025 target-form evidence instead of corporation-only non-target evidence; v518 packages that case as discovery gold-set regression evidence; v519 filters vocational-practice basic-info PDFs out of target-form review; v519 Mac continuation canary with copied URL sources crawls 58 site rows for 50 selected schools and moves school ID 55 to `publication_lag_or_old_target_pdf`; v520 adds exact Katayanagi crawl entries while preserving NEEC no-year PDFs as reviewable, not strict successes; v521 suppresses same-school `corporation_pattern` rows when exact school-domain overrides exist, reducing the Katayanagi limit-3 crawl from 6 to 3 and candidate-school mismatches from 69 to 0; the v526/v525/v524/v523 Windows limit-50 canaries each download 5 strict/current PDFs and keep all 50 selected schools reviewable | PASS for code/evidence contract, FAIL for strict yield |
-| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v543/v542/v541/v540 bounded Windows canaries and the v542 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
+| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v544/v543/v542/v541/v540 bounded Windows canaries and the v544 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
 | v1.0 tag is allowed | PR #8 is merged into `main`, but FY2026 strict proof, owner real cycle, and exception approval are incomplete | BLOCKED |
 
 ## Fresh Local Verification In This Audit Pass
@@ -491,14 +493,18 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   `dist/eidp-windows-v527.zip` through `dist/eidp-windows-v531.zip` and their
   `.sha256` sidecars. Later cleanup after v535 removed the invalid v534 core
   ZIP and sidecar. Later cleanup after v540 pruned superseded v539. After v542,
-  cleanup pruned superseded v540/v541 core ZIPs and sidecars. v543 has now been
-  built on the external-SSD-backed `dist` path and refreshed the latest alias.
-  `dist/` currently keeps v535, v536, v542, v543, the latest alias, and current
-  handoff artifacts.
+  cleanup pruned superseded v540/v541 core ZIPs and sidecars. v543 and v544
+  have now been built on the external-SSD-backed `dist` path, and v544
+  refreshed the latest alias. After v544 owner-docs staging, cleanup removed
+  the superseded v542 owner-doc transfer ZIP/sidecar from `dist`. `dist/`
+  currently keeps v535, v536, v542, v543, v544, the latest alias, and current
+  v544 handoff artifacts.
 - Windows staging cleanup after v542 removed superseded core ZIPs and sidecars
   for v527, v532, v533, v537, v538, v540, and v541, plus temporary v542
-  setup/canary/logtail scripts. `C:\EIDP-staging` now retains only v535, v536,
-  and v542 core ZIPs/sidecars among `eidp-windows-v*.zip*` files.
+  setup/canary/logtail scripts. After v544 owner-docs staging, cleanup removed
+  superseded v542 owner-doc ZIP/sidecar/extracted docs while retaining the v544
+  owner-doc handoff. `C:\EIDP-staging` now retains current v544 owner-docs
+  staging plus the selected retained core ZIPs/sidecars.
 - Local artifact storage now uses the external SSD mounted at
   `/Volumes/M1nG-ssd`: repository paths `dist` and `logs` are symlinks to
   `/Volumes/M1nG-ssd/EIDP-artifacts/dist` and
@@ -539,6 +545,16 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   operator-reviewable is `47/50 (94.0%)`, `ship_gate_status=below_gate`, and
   OCR scope remains unresolved because the latest complete OCR proof is not
   from v535.
+- v544 owner/operator docs were staged on Windows under
+  `C:\EIDP-staging\v544-owner-docs-20260621`, recorded in
+  `docs/reports/2026-06-21-v544-owner-docs-windows-staging.md`. A post-staging
+  check confirmed the required v544 docs are present, including
+  `eidp-v544-release-summary.md` and `eidp-v544-owner-signoff.md`,
+  `current-release-status.md` contains `NOT_READY`, the v544 false-reject
+  worksheet return rules are present, the active weekly task still points to
+  `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`, and the
+  superseded v542 owner-doc staging artifacts were removed after v544
+  verification.
 - v542 owner/operator docs were staged on Windows under
   `C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
   `docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`. A post-staging
@@ -580,12 +596,12 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   completed; strict/Excel-ready FY2026 yield is `12/50 (24.0%)`,
   operator-reviewable is `47/50 (94.0%)`, `ship_gate_status=below_gate`, and
   OCR runtime proof failed because the OCR add-on is missing.
-- v542 operator-side handoff docs are prepared and staged:
-  `docs/runbooks/00-READ-ME-FIRST-v542.txt`,
-  `docs/runbooks/eidp-v542-release-summary.md`,
-  `docs/runbooks/eidp-v542-owner-signoff.md`,
-  `docs/runbooks/eidp-v542-owner-request-20260621.txt`, and
-  `docs/runbooks/eidp-v542-owner-return-fill-sheet.md`. These enable
+- v544 operator-side handoff docs are prepared and staged:
+  `docs/runbooks/00-READ-ME-FIRST-v544.txt`,
+  `docs/runbooks/eidp-v544-release-summary.md`,
+  `docs/runbooks/eidp-v544-owner-signoff.md`,
+  `docs/runbooks/eidp-v544-owner-request-20260621.txt`, and
+  `docs/runbooks/eidp-v544-owner-return-fill-sheet.md`. These enable
   Windows-local owner return validation, but they are not release approval and
   do not replace returned evidence.
 - Local docs-only release gate at PR head

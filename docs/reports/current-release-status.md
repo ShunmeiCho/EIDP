@@ -105,24 +105,24 @@ prove release readiness. Evidence is recorded in
 `logs/win-v542-d98ecd7-canary/stage6-evidence-verify-20260621-040959.json`,
 and `logs/win-v542-d98ecd7-canary/20260620_185933-summary.json`.
 
-The latest owner/operator handoff docs have been refreshed to v542 package
-identity and the v542 false-reject RCA packet. The current handoff lane is
-`C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`, and includes
-`docs/runbooks/00-READ-ME-FIRST-v542.txt`,
-`docs/runbooks/eidp-v542-release-summary.md`,
-`docs/runbooks/eidp-v542-owner-signoff.md`,
-`docs/runbooks/eidp-v542-owner-request-20260621.txt`,
-`docs/runbooks/eidp-v542-owner-return-fill-sheet.md`,
-`docs/reports/2026-06-21-v542-false-reject-audit-packet.md`, and
-`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. The staged v542
+The latest owner/operator handoff docs have been refreshed to v544 package
+identity and the v544 false-reject RCA packet. The current handoff lane is
+`C:\EIDP-staging\v544-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v544-owner-docs-windows-staging.md`, and includes
+`docs/runbooks/00-READ-ME-FIRST-v544.txt`,
+`docs/runbooks/eidp-v544-release-summary.md`,
+`docs/runbooks/eidp-v544-owner-signoff.md`,
+`docs/runbooks/eidp-v544-owner-request-20260621.txt`,
+`docs/runbooks/eidp-v544-owner-return-fill-sheet.md`,
+`docs/reports/2026-06-21-v544-false-reject-audit-packet.md`, and
+`docs/reports/2026-06-21-v544-false-reject-review-sheet.csv`. The staged v544
 blank worksheet validation is recorded at
-`docs/reports/2026-06-21-v542-false-reject-review-validation.json`: it reports
+`docs/reports/2026-06-21-v544-false-reject-review-validation.json`: it reports
 `ok=true`, `review_status=incomplete`, `completed_decisions=0`,
 `context_mismatch_count=0`, and `defect_framing.status=pending_review`. This is
 a docs-only handoff and does not approve v1.0, prove an algorithm/model defect,
-or replace the missing owner real-cycle evidence. The earlier v541 owner-docs
-base and r3 refresh remain historical handoff evidence only.
+or replace the missing owner real-cycle evidence. The earlier v542 and v541
+owner-docs refreshes remain historical handoff evidence only.
 
 Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
 `dist/` after v542 verification; SHA256 was
@@ -241,7 +241,7 @@ The initial owner/operator handoff docs were staged for v541 on Windows under
 `C:\EIDP-staging\v541-owner-docs-20260621-r3` after false-reject worksheet
 return rules were added. Those v541 handoffs, the v540 r2 handoff, and the v535
 owner-docs staging remain historical evidence only; the current owner handoff
-lane is the v542 docs-only refresh recorded above.
+lane is the v544 docs-only refresh recorded above.
 The v535 strict-yield RCA action plan is recorded in
 `docs/reports/2026-06-20-v535-strict-yield-rca-plan.md`; it decomposes the
 `12/50 (24.0%)` blocker into `publication_lag_or_old_target_pdf`,
@@ -291,11 +291,12 @@ verifier now accepts `--false-reject-evidence-zip`,
 `--false-reject-review-csv`, and `--false-reject-sample-size`; when supplied, it
 requires the worksheet to validate with `review_status=complete` and
 `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to
-v542 at `C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`, so the staged
-owner docs now include the v542 false-reject worksheet return rules, worksheet
-CSV, and the return-verifier false-reject arguments. The v541 r3 handoff remains
-historical evidence only. This still does not change the release conclusion.
+v544 at `C:\EIDP-staging\v544-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v544-owner-docs-windows-staging.md`, so the staged
+owner docs now include the v544 false-reject worksheet return rules, worksheet
+CSV, and the return-verifier false-reject arguments. The v542 and v541 handoffs
+remain historical evidence only. This still does not change the release
+conclusion.
 This false-reject owner-return verifier integration was first packaged and
 Windows-canary verified in `dist/eidp-windows-v542.zip` at package commit
 `d98ecd7196631a00c27aff1c240ebc7969579ce7`. CI run `27880148454` passed both
@@ -361,16 +362,20 @@ superseded v538 was pruned with
 were v535, v536, and v539. After v540 was built and Windows-validated,
 superseded v539 was pruned from the external-SSD-backed `dist` directory.
 After v542 was built and Windows-validated, cleanup pruned superseded v540 and
-v541 core ZIPs and sidecars from the external-SSD-backed `dist` directory. v543
-has now been built on the same external-SSD-backed `dist` path and refreshed
-the latest alias. The current retained core packages are v535, v536, v542,
-v543, and the latest alias; reports and Stage 6 evidence for v540/v541 remain
-preserved under `docs/` and `logs/`.
+v541 core ZIPs and sidecars from the external-SSD-backed `dist` directory.
+v543 and v544 have now been built on the same external-SSD-backed `dist` path,
+and v544 refreshed the latest alias. After v544 owner-docs staging, cleanup
+removed the superseded v542 owner-doc transfer ZIP/sidecar from `dist` and
+removed the v542 owner-doc ZIP/sidecar/extracted docs from `C:\EIDP-staging`.
+The current retained core packages are v535, v536, v542, v543, v544, and the
+latest alias; the current retained owner-doc transfer artifact is
+`dist/eidp-v544-owner-docs-20260621.zip`. Reports and Stage 6 evidence for
+v540/v541 remain preserved under `docs/` and `logs/`.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
 creation, and Stage 6 evidence verification. Latest packaged bounded Windows
-canary is `v543`; latest owner handoff docs remain v542. The Windows canary
+canary is `v544`; latest owner handoff docs are v544. The Windows canary
 still reports FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
 still blocked by missing owner real
 Windows cycle/sign-off, unapproved `publication_lag` exception, and unresolved
@@ -410,11 +415,11 @@ brief, and the v526 owner return fill sheet, and now has SHA256
 the latest package with complete non-OCR Windows side-by-side smoke evidence,
 including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
 bundle verification. The current owner/operator handoff docs are now
-`docs/runbooks/00-READ-ME-FIRST-v542.txt`,
-`docs/runbooks/eidp-v542-release-summary.md`,
-`docs/runbooks/eidp-v542-owner-signoff.md`,
-`docs/runbooks/eidp-v542-owner-request-20260621.txt`, and
-`docs/runbooks/eidp-v542-owner-return-fill-sheet.md`; they do not approve
+`docs/runbooks/00-READ-ME-FIRST-v544.txt`,
+`docs/runbooks/eidp-v544-release-summary.md`,
+`docs/runbooks/eidp-v544-owner-signoff.md`,
+`docs/runbooks/eidp-v544-owner-request-20260621.txt`, and
+`docs/runbooks/eidp-v544-owner-return-fill-sheet.md`; they do not approve
 v1.0 and do not replace the missing owner real-cycle evidence.
 `v502` and `v501` are superseded Windows evidence baselines.
 
