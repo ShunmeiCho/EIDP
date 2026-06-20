@@ -183,7 +183,9 @@ The same packet now has a companion decision worksheet at
 sample review. The return validator also rejects changed row context and emits
 `bucket_decision_counts`; the current blank worksheet validates as
 `review_status=incomplete`, `completed_decisions=0`, and
-`context_mismatch_count=0`.
+`context_mismatch_count=0`. Completed rows require `reviewer` and an ISO
+`reviewed_at` timestamp, and `false_reject` / `needs_operator_review` rows
+require `notes`.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;

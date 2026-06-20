@@ -26,6 +26,7 @@ from verify_stage6_evidence import verify_stage6_evidence_bundle
 
 VALID_REVIEW_DECISIONS = ("", "false_reject", "correct_reject", "needs_operator_review")
 REVIEW_MUTABLE_COLUMNS = {"decision", "reviewer", "reviewed_at", "notes"}
+DECISIONS_REQUIRING_NOTES = {"false_reject", "needs_operator_review"}
 
 REQUIRED_LABELS = (
     "build_info",
@@ -501,6 +502,17 @@ def _empty_review_validation(
     }
 
 
+def _is_review_timestamp(value: str) -> bool:
+    if not value or "T" not in value:
+        return False
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        datetime.fromisoformat(normalized)
+    except ValueError:
+        return False
+    return True
+
+
 def validate_review_csv(
     packet: dict[str, Any],
     csv_text: str,
@@ -527,6 +539,9 @@ def validate_review_csv(
     for line_number, row in enumerate(reader, start=2):
         audit_row_id = str(row.get("audit_row_id") or "").strip()
         decision = str(row.get("decision") or "").strip()
+        reviewer = str(row.get("reviewer") or "").strip()
+        reviewed_at = str(row.get("reviewed_at") or "").strip()
+        notes = str(row.get("notes") or "").strip()
         if not audit_row_id:
             errors.append(f"line {line_number}: audit_row_id is blank")
             continue
@@ -554,6 +569,13 @@ def validate_review_csv(
             )
         if require_decisions and decision == "":
             errors.append(f"line {line_number}: decision is required")
+        if decision:
+            if not reviewer:
+                errors.append(f"line {line_number}: reviewer is required when decision is set")
+            if not _is_review_timestamp(reviewed_at):
+                errors.append(f"line {line_number}: reviewed_at must be an ISO timestamp when decision is set")
+            if decision in DECISIONS_REQUIRING_NOTES and not notes:
+                errors.append(f"line {line_number}: notes are required for decision {decision!r}")
         decision_counts[decision] += 1
         bucket_name = str(expected_row.get("bucket") if expected_row is not None else row.get("bucket") or "")
         bucket_decision_counts.setdefault(bucket_name, Counter())[decision] += 1

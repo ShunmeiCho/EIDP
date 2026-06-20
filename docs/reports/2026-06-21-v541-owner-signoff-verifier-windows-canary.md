@@ -232,7 +232,10 @@ can validate the returned worksheet with `--validate-review-csv` and can require
 completed decisions with `--require-decisions`. Validation now also rejects
 changed immutable row context, such as bucket, school ID, rejection reason, page
 URL, PDF URL, and anchor text, and reports `bucket_decision_counts` so the
-false-reject review can be summarized by RCA lane.
+false-reject review can be summarized by RCA lane. A completed decision must
+also include `reviewer` and an ISO `reviewed_at` timestamp; `false_reject` and
+`needs_operator_review` rows require `notes` so the returned worksheet is
+auditable.
 
 None of these buckets permits relaxing the FY2026/R8 evidence rules. A
 `publication_lag` decision can support at most the documented `RC_ONLY` route

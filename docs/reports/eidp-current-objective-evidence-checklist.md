@@ -79,7 +79,9 @@ docs/reports/2026-06-21-v541-false-reject-review-sheet.csv --require-decisions`
 fails until every sampled row has one of the allowed decisions. The validator
 also rejects changed immutable row context and reports `bucket_decision_counts`;
 the current blank worksheet reports `completed_decisions=0` and
-`context_mismatch_count=0`.
+`context_mismatch_count=0`. Completed rows require `reviewer` and an ISO
+`reviewed_at` timestamp; `false_reject` and `needs_operator_review` rows
+require `notes`.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -188,7 +190,9 @@ that keeps manual work below the release threshold.
   The companion CSV worksheet
   `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` gives each row a
   stable `audit_row_id`, a machine-validated `decision` field, immutable row
-  context checks, and bucket-level decision counts for the RCA lanes.
+  context checks, required reviewer/timestamp fields for completed decisions,
+  notes for `false_reject` and `needs_operator_review`, and bucket-level
+  decision counts for the RCA lanes.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe
   fix keeps both `/disclosure/{slug}` and `/{slug}/disclosure` under the
   shared-origin throttle for school roots such as

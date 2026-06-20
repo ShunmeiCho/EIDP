@@ -198,6 +198,14 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
         row["decision"] = "correct_reject"
         row["reviewer"] = "owner"
         row["reviewed_at"] = "2026-06-21T00:00:00+09:00"
+
+    def render_rows(rows_to_render: list[dict[str, str]]) -> str:
+        rendered = io.StringIO()
+        writer = csv.DictWriter(rendered, fieldnames=module.REVIEW_CSV_COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows_to_render)
+        return rendered.getvalue()
+
     completed = io.StringIO()
     writer = csv.DictWriter(completed, fieldnames=module.REVIEW_CSV_COLUMNS, lineterminator="\n")
     writer.writeheader()
@@ -222,6 +230,27 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert tampered_validation["ok"] is False
     assert tampered_validation["context_mismatch_count"] == 1
     assert "reason changed" in tampered_validation["errors"][0]
+
+    unsigned_rows = [dict(row) for row in rows]
+    unsigned_rows[0]["reviewer"] = ""
+    unsigned_validation = module.validate_review_csv(packet, render_rows(unsigned_rows), require_decisions=True)
+    assert unsigned_validation["ok"] is False
+    assert "reviewer is required" in unsigned_validation["errors"][0]
+
+    bad_timestamp_rows = [dict(row) for row in rows]
+    bad_timestamp_rows[0]["reviewed_at"] = "2026-06-21"
+    bad_timestamp_validation = module.validate_review_csv(
+        packet, render_rows(bad_timestamp_rows), require_decisions=True
+    )
+    assert bad_timestamp_validation["ok"] is False
+    assert "reviewed_at must be an ISO timestamp" in bad_timestamp_validation["errors"][0]
+
+    unsupported_rows = [dict(row) for row in rows]
+    unsupported_rows[0]["decision"] = "false_reject"
+    unsupported_rows[0]["notes"] = ""
+    unsupported_validation = module.validate_review_csv(packet, render_rows(unsupported_rows), require_decisions=True)
+    assert unsupported_validation["ok"] is False
+    assert "notes are required" in unsupported_validation["errors"][0]
 
     review_path = tmp_path / "review.csv"
     review_path.write_text(review_csv, encoding="utf-8")
