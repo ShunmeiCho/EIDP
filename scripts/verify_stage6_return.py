@@ -514,6 +514,17 @@ def _case_denominator(case: dict[str, Any]) -> Any:
     return denominator
 
 
+def _case_evidence_source(case: dict[str, Any]) -> str | None:
+    evidence_source = case.get("evidence_source")
+    if isinstance(evidence_source, str) and evidence_source:
+        return evidence_source
+    if isinstance(case.get("last_run"), str) and case["last_run"]:
+        return "last_run"
+    if isinstance(case.get("strict_gap_analysis"), str) and case["strict_gap_analysis"]:
+        return "strict_gap_analysis"
+    return None
+
+
 def _mature_year_cases(proof_json: dict[str, Any]) -> list[dict[str, Any]]:
     cases = proof_json.get("cases")
     if isinstance(cases, list):
@@ -559,9 +570,26 @@ def _verify_mature_year_proof(
         denominator_scope = _case_metric(case, "target_pdf_auto_denominator_scope")
         operator_reviewable_yield = _case_metric(case, "operator_reviewable_yield_pct")
         ship_gate_status = _case_metric(case, "ship_gate_status")
+        evidence_source = _case_evidence_source(case)
         finished_at = case.get("finished_at")
         finished_date: date | None = None
         case_ok = True
+        if evidence_source is None:
+            errors.append(f"mature-year proof case FY{fiscal_year} evidence source is required")
+            case_ok = False
+        elif evidence_source == "last_run":
+            if not isinstance(case.get("last_run"), str) or not case["last_run"]:
+                errors.append(f"mature-year proof case FY{fiscal_year} last_run evidence path is required")
+                case_ok = False
+        elif evidence_source == "strict_gap_analysis":
+            if not isinstance(case.get("strict_gap_analysis"), str) or not case["strict_gap_analysis"]:
+                errors.append(f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path is required")
+                case_ok = False
+        else:
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} evidence source must be last_run or strict_gap_analysis"
+            )
+            case_ok = False
         if finished_at in (None, ""):
             errors.append(f"mature-year proof case FY{fiscal_year} finished_at is required")
             case_ok = False

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 
@@ -36,6 +37,7 @@ def _write_last_run(path: Path, **overrides: object) -> None:
 def _write_strict_gap_analysis(path: Path, **overrides: object) -> None:
     payload = {
         "basis": "strict_yield_gap_analysis",
+        "finished_at": "2026-05-17T01:02:03+00:00",
         "database": "_temp/fy2025/data/eidp.sqlite3",
         "fiscal_year": 2025,
         "school_type": "専門学校",
@@ -82,6 +84,7 @@ def test_build_proof_accepts_strict_gap_analysis_case(tmp_path: Path) -> None:
     assert proof["cases"][0]["ok"] is True
     assert proof["cases"][0]["evidence_source"] == "strict_gap_analysis"
     assert proof["cases"][0]["strict_gap_analysis"] == str(strict_gap)
+    assert proof["cases"][0]["finished_at"] == "2026-05-17T01:02:03+00:00"
     assert proof["cases"][0]["target_pdf_auto_denominator_count"] == 1000
     assert proof["cases"][0]["target_pdf_auto_yield_pct"] == 60.0
     assert proof["cases"][0]["excel_ready_yield_pct"] == 60.0
@@ -131,6 +134,18 @@ def test_build_proof_rejects_wrong_strict_gap_analysis_basis_and_fiscal_year(tmp
     assert proof["cases"][0]["ok"] is False
     assert "strict_gap_analysis basis must be strict_yield_gap_analysis: 'weekly'" in proof["cases"][0]["errors"]
     assert "strict_gap_analysis fiscal_year must be 2025" in proof["cases"][0]["errors"]
+
+
+def test_build_proof_rejects_strict_gap_analysis_without_finished_at(tmp_path: Path) -> None:
+    module = _load_module()
+    strict_gap = tmp_path / "strict-gap-analysis.json"
+    _write_strict_gap_analysis(strict_gap, finished_at="")
+
+    proof = module.build_proof([], strict_gap_analysis_cases=[(2025, strict_gap)])
+
+    assert proof["ok"] is False
+    assert proof["cases"][0]["ok"] is False
+    assert "strict_gap_analysis finished_at is required" in proof["cases"][0]["errors"]
 
 
 def test_build_proof_rejects_small_mature_year_denominator(tmp_path: Path) -> None:
@@ -213,3 +228,4 @@ def test_cli_accepts_strict_gap_analysis_case(tmp_path: Path, capsys) -> None:
     assert stdout_payload == output_payload
     assert output_payload["ok"] is True
     assert output_payload["cases"][0]["evidence_source"] == "strict_gap_analysis"
+    datetime.fromisoformat(output_payload["cases"][0]["finished_at"])

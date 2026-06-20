@@ -1093,6 +1093,14 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("last_run finished_at must be ISO datetime", "last_run finished_at may be free text")
         .replace("last_run finished_at must not be in the future", "last_run finished_at may be future")
         .replace(
+            "mature-year proof case FY{fiscal_year} evidence source is required",
+            "mature-year proof evidence source optional",
+        )
+        .replace(
+            "mature-year proof case FY{fiscal_year} evidence source must be last_run or strict_gap_analysis",
+            "mature-year proof evidence source may be arbitrary",
+        )
+        .replace(
             "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
             "mature-year proof finished_at may be future",
         )
@@ -1160,6 +1168,11 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("SHIP_GATE_EXCEPTION_REASONS", "SHIP_GATE_RELEASE_EXCEPTIONS")
         .replace("publication_lag", "publication_delay")
     )
+    entries["scripts/build_mature_year_acquisition_proof.py"] = (
+        entries["scripts/build_mature_year_acquisition_proof.py"]
+        .replace("strict_gap_analysis finished_at is required", "strict_gap_analysis finished_at optional")
+        .replace("finished_at", "completed_at")
+    )
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
 
     check = module.verify_core_zip(zip_path)
@@ -1185,6 +1198,17 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
+        "mature-year proof case FY{fiscal_year} evidence source is required" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "mature-year proof case FY{fiscal_year} evidence source must be last_run or strict_gap_analysis"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
         "mature-year proof case FY{fiscal_year} finished_at is required" in error
         for error in check.errors
     )
@@ -1202,6 +1226,15 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/verify_stage6_return.py missing required token: release_exception_record" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: "
+        "strict_gap_analysis finished_at is required" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: finished_at" in error
         for error in check.errors
     )
     assert any(

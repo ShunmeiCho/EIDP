@@ -235,13 +235,17 @@ It reports denominator `1000`, strict/excel-ready `600/1000 (60.0%)`, broad
 confirmed `601/1000 (60.1%)`, operator-reviewable `798/1000 (79.8%)`, and
 estimated manual workload `20.2%`. This satisfies the mature-year strict
 Excel-importable ship line for the selected FY2025 production-scale replay.
-v497 converted that `strict_yield_gap_analysis` artifact into the
+v497 converted that `strict_yield_gap_analysis` artifact into a then
 verifier-accepted mature-year proof JSON at
 `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`.
 That proof has `ok=true`, basis
 `mature_year_retroactive_strict_target_pdf_and_operator_reviewable_acquisition`,
 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`,
-and estimated manual workload `20.2%`.
+and estimated manual workload `20.2%`. Current source-side release hardening now
+requires mature-year proof cases to include a `finished_at` timestamp and a
+traceable evidence source/path (`last_run` or `strict_gap_analysis`), so any
+future `publication_lag` approval packet must regenerate or refresh this proof
+with the current toolchain before Stage 6 return verification can pass.
 The explicit publication-lag approval record is prepared at
 `docs/reports/2026-05-19-publication-lag-release-exception-record.md`, but its
 status remains `NOT_APPROVED`; it has been refreshed to the v526 package and

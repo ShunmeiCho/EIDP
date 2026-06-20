@@ -7,6 +7,7 @@ import json
 import sqlite3
 import sys
 from collections import defaultdict
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -576,6 +577,7 @@ def analyze_database(
 
     return {
         "basis": "strict_yield_gap_analysis",
+        "finished_at": datetime.now(UTC).isoformat(),
         "database": str(database),
         "fiscal_year": fiscal_year,
         "school_type": school_type,

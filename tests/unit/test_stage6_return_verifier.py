@@ -125,6 +125,7 @@ def _write_mature_year_proof(tmp_path: Path, *, ok: bool = True, **case_override
     case = {
         "fiscal_year": 2025,
         "ok": ok,
+        "last_run": "logs/fy2025-last_run.json",
         "finished_at": "2026-05-17T01:02:03+00:00",
         "target_pdf_auto_denominator_count": 1625,
         "target_pdf_auto_denominator_scope": "target_missing_schools_before_run",
@@ -1071,6 +1072,57 @@ def test_verify_stage6_return_rejects_missing_mature_year_proof_finished_at(tmp_
 
     assert result["ok"] is False
     assert "mature-year proof case FY2025 finished_at is required" in result["errors"]
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
+        "errors"
+    ]
+
+
+def test_verify_stage6_return_rejects_missing_mature_year_proof_evidence_source(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path, last_run="")
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert "mature-year proof case FY2025 evidence source is required" in result["errors"]
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
+        "errors"
+    ]
+
+
+def test_verify_stage6_return_rejects_unknown_mature_year_proof_evidence_source(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path, evidence_source="manual_note")
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "mature-year proof case FY2025 evidence source must be last_run or strict_gap_analysis"
+        in result["errors"]
+    )
     assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
         "errors"
     ]

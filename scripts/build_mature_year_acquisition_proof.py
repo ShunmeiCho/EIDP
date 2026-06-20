@@ -214,6 +214,7 @@ def build_strict_gap_analysis_case(
 
     basis = payload.get("basis")
     source_fiscal_year = payload.get("fiscal_year")
+    finished_at = payload.get("finished_at") or payload.get("generated_at")
     denominator = payload.get("schools_total")
     target_yield = payload.get("strict_target_parsed_rate_pct")
     excel_ready_yield = payload.get("excel_ready_rate_pct")
@@ -224,6 +225,7 @@ def build_strict_gap_analysis_case(
         {
             "source_basis": basis,
             "database": payload.get("database"),
+            "finished_at": finished_at,
             "school_type": payload.get("school_type"),
             "source_fiscal_year": source_fiscal_year,
             "target_pdf_auto_denominator_count": denominator,
@@ -238,6 +240,8 @@ def build_strict_gap_analysis_case(
 
     if basis != STRICT_GAP_ANALYSIS_BASIS:
         errors.append(f"strict_gap_analysis basis must be {STRICT_GAP_ANALYSIS_BASIS}: {basis!r}")
+    if not finished_at:
+        errors.append("strict_gap_analysis finished_at is required")
     if source_fiscal_year != fiscal_year:
         errors.append(f"strict_gap_analysis fiscal_year must be {fiscal_year}")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "analyze_strict_yield_gaps.py"
@@ -163,6 +164,7 @@ def _add_no_url_schools(conn: sqlite3.Connection) -> None:
 def test_analyze_database_reports_strict_broad_excel_and_reviewable_rates(tmp_path: Path) -> None:
     result = module.analyze_database(_db(tmp_path / "eidp.sqlite3"), fiscal_year=2025, school_type="専門学校")
 
+    datetime.fromisoformat(result["finished_at"])
     assert result["schools_total"] == 3
     assert result["strict_target_parsed_schools"] == 1
     assert result["strict_target_parsed_rate_pct"] == 33.3
