@@ -92,6 +92,10 @@ PLACEHOLDER_RESULTS = {
     "ready / rc_only / not_ready",
 }
 EXCEPTION_KPI_VERDICTS = frozenset({"pass", "watch"})
+LAST_RUN_EVIDENCE_MATCH_ERROR = "must match last_run evidence"
+STRICT_GAP_EVIDENCE_MATCH_ERROR = "must match strict_gap_analysis evidence"
+LAST_RUN_EVIDENCE_STATUS_ERROR = "last_run evidence status must be success"
+STRICT_GAP_EVIDENCE_BASIS_ERROR = "strict_gap_analysis evidence basis must be strict_yield_gap_analysis"
 
 
 def _load_ship_gate_contract() -> Any:
@@ -529,12 +533,157 @@ def _case_evidence_source(case: dict[str, Any]) -> str | None:
     return None
 
 
-def _case_evidence_path_exists(path_value: str, proof_json_path: Path | None) -> bool:
+def _case_evidence_path(path_value: str, proof_json_path: Path | None) -> Path | None:
     path = Path(path_value)
     candidates = [path]
     if proof_json_path is not None and not path.is_absolute():
         candidates.insert(0, proof_json_path.parent / path)
-    return any(candidate.is_file() for candidate in candidates)
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _append_evidence_mismatch(
+    *,
+    errors: list[str],
+    fiscal_year: int,
+    match_error: str,
+    field: str,
+    proof_value: object,
+    evidence_value: object,
+    evidence_field: str | None = None,
+) -> bool:
+    if proof_value == evidence_value:
+        return True
+    field_label = field if evidence_field is None else f"{field}/{evidence_field}"
+    errors.append(
+        f"mature-year proof case FY{fiscal_year} {field_label} {match_error}: "
+        f"{proof_value!r} != {evidence_value!r}"
+    )
+    return False
+
+
+def _verify_last_run_mature_year_evidence(
+    *,
+    evidence_path: Path,
+    fiscal_year: int,
+    target_yield: object,
+    denominator: object,
+    denominator_scope: object,
+    operator_reviewable_yield: object,
+    ship_gate_status: object,
+    finished_at: object,
+    errors: list[str],
+) -> bool:
+    evidence_label = f"mature-year proof case FY{fiscal_year} last_run evidence"
+    payload = _load_json(evidence_path, errors, evidence_label)
+    if payload is None:
+        return False
+
+    ok = True
+    if payload.get("status") != "success":
+        errors.append(f"mature-year proof case FY{fiscal_year} {LAST_RUN_EVIDENCE_STATUS_ERROR}")
+        ok = False
+    if payload.get("dry_run") is not False:
+        errors.append(f"{evidence_label} dry_run must be false")
+        ok = False
+    if payload.get("current_fy") != fiscal_year:
+        errors.append(f"{evidence_label} current_fy must be {fiscal_year}")
+        ok = False
+
+    evidence_denominator = payload.get("target_pdf_auto_denominator_count")
+    if evidence_denominator is None:
+        evidence_denominator = payload.get("target_missing_school_count")
+
+    checks = (
+        ("finished_at", finished_at, payload.get("finished_at"), None),
+        ("target_pdf_auto_denominator_count", denominator, evidence_denominator, None),
+        (
+            "target_pdf_auto_denominator_scope",
+            denominator_scope,
+            payload.get("target_pdf_auto_denominator_scope"),
+            None,
+        ),
+        ("target_pdf_auto_yield_pct", target_yield, payload.get("target_pdf_auto_yield_pct"), None),
+        (
+            "operator_reviewable_yield_pct",
+            operator_reviewable_yield,
+            payload.get("operator_reviewable_yield_pct"),
+            None,
+        ),
+        ("ship_gate_status", ship_gate_status, payload.get("ship_gate_status"), None),
+    )
+    for field, proof_value, evidence_value, evidence_field in checks:
+        ok = (
+            _append_evidence_mismatch(
+                errors=errors,
+                fiscal_year=fiscal_year,
+                match_error=LAST_RUN_EVIDENCE_MATCH_ERROR,
+                field=field,
+                proof_value=proof_value,
+                evidence_value=evidence_value,
+                evidence_field=evidence_field,
+            )
+            and ok
+        )
+    return ok
+
+
+def _verify_strict_gap_mature_year_evidence(
+    *,
+    evidence_path: Path,
+    fiscal_year: int,
+    target_yield: object,
+    denominator: object,
+    operator_reviewable_yield: object,
+    finished_at: object,
+    errors: list[str],
+) -> bool:
+    evidence_label = f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence"
+    payload = _load_json(evidence_path, errors, evidence_label)
+    if payload is None:
+        return False
+
+    ok = True
+    if payload.get("basis") != "strict_yield_gap_analysis":
+        errors.append(f"mature-year proof case FY{fiscal_year} {STRICT_GAP_EVIDENCE_BASIS_ERROR}")
+        ok = False
+    if payload.get("fiscal_year") != fiscal_year:
+        errors.append(f"{evidence_label} fiscal_year must be {fiscal_year}")
+        ok = False
+
+    evidence_finished_at = payload.get("finished_at") or payload.get("generated_at")
+    checks = (
+        ("finished_at", finished_at, evidence_finished_at, None),
+        ("target_pdf_auto_denominator_count", denominator, payload.get("schools_total"), "schools_total"),
+        (
+            "target_pdf_auto_yield_pct",
+            target_yield,
+            payload.get("strict_target_parsed_rate_pct"),
+            "strict_target_parsed_rate_pct",
+        ),
+        (
+            "operator_reviewable_yield_pct",
+            operator_reviewable_yield,
+            payload.get("operator_reviewable_rate_pct"),
+            "operator_reviewable_rate_pct",
+        ),
+    )
+    for field, proof_value, evidence_value, evidence_field in checks:
+        ok = (
+            _append_evidence_mismatch(
+                errors=errors,
+                fiscal_year=fiscal_year,
+                match_error=STRICT_GAP_EVIDENCE_MATCH_ERROR,
+                field=field,
+                proof_value=proof_value,
+                evidence_value=evidence_value,
+                evidence_field=evidence_field,
+            )
+            and ok
+        )
+    return ok
 
 
 def _mature_year_cases(proof_json: dict[str, Any]) -> list[dict[str, Any]]:
@@ -602,23 +751,49 @@ def _verify_mature_year_proof(
             if not isinstance(last_run_path, str) or not last_run_path:
                 errors.append(f"mature-year proof case FY{fiscal_year} last_run evidence path is required")
                 case_ok = False
-            elif not _case_evidence_path_exists(last_run_path, proof_json_path):
-                errors.append(
-                    f"mature-year proof case FY{fiscal_year} last_run evidence path does not exist: "
-                    f"{last_run_path}"
-                )
-                case_ok = False
+            else:
+                resolved_last_run_path = _case_evidence_path(last_run_path, proof_json_path)
+                if resolved_last_run_path is None:
+                    errors.append(
+                        f"mature-year proof case FY{fiscal_year} last_run evidence path does not exist: "
+                        f"{last_run_path}"
+                    )
+                    case_ok = False
+                elif not _verify_last_run_mature_year_evidence(
+                    evidence_path=resolved_last_run_path,
+                    fiscal_year=fiscal_year,
+                    target_yield=target_yield,
+                    denominator=denominator,
+                    denominator_scope=denominator_scope,
+                    operator_reviewable_yield=operator_reviewable_yield,
+                    ship_gate_status=ship_gate_status,
+                    finished_at=finished_at,
+                    errors=errors,
+                ):
+                    case_ok = False
         elif evidence_source == "strict_gap_analysis":
             strict_gap_analysis_path = case.get("strict_gap_analysis")
             if not isinstance(strict_gap_analysis_path, str) or not strict_gap_analysis_path:
                 errors.append(f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path is required")
                 case_ok = False
-            elif not _case_evidence_path_exists(strict_gap_analysis_path, proof_json_path):
-                errors.append(
-                    f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist: "
-                    f"{strict_gap_analysis_path}"
-                )
-                case_ok = False
+            else:
+                resolved_strict_gap_analysis_path = _case_evidence_path(strict_gap_analysis_path, proof_json_path)
+                if resolved_strict_gap_analysis_path is None:
+                    errors.append(
+                        f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist: "
+                        f"{strict_gap_analysis_path}"
+                    )
+                    case_ok = False
+                elif not _verify_strict_gap_mature_year_evidence(
+                    evidence_path=resolved_strict_gap_analysis_path,
+                    fiscal_year=fiscal_year,
+                    target_yield=target_yield,
+                    denominator=denominator,
+                    operator_reviewable_yield=operator_reviewable_yield,
+                    finished_at=finished_at,
+                    errors=errors,
+                ):
+                    case_ok = False
         else:
             errors.append(
                 f"mature-year proof case FY{fiscal_year} evidence source must be last_run or strict_gap_analysis"

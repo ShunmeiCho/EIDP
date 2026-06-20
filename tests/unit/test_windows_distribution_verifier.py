@@ -1112,6 +1112,13 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
             "mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist",
             "mature-year proof strict_gap evidence may be missing",
         )
+        .replace("must match last_run evidence", "last_run evidence may drift")
+        .replace("must match strict_gap_analysis evidence", "strict_gap evidence may drift")
+        .replace("last_run evidence status must be success", "last_run evidence status optional")
+        .replace(
+            "strict_gap_analysis evidence basis must be strict_yield_gap_analysis",
+            "strict_gap evidence basis optional",
+        )
         .replace(
             "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
             "mature-year proof finished_at may be future",
@@ -1239,6 +1246,23 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         "scripts/verify_stage6_return.py missing required token: "
         "mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist"
         in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: must match last_run evidence" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: must match strict_gap_analysis evidence" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: last_run evidence status must be success" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "strict_gap_analysis evidence basis must be strict_yield_gap_analysis" in error
         for error in check.errors
     )
     assert any(
