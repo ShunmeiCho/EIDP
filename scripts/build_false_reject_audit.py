@@ -480,6 +480,47 @@ def _review_decision_counts_json(counter: Counter[str]) -> dict[str, int]:
     return {key or "blank": count for key, count in sorted(counter.items())}
 
 
+def _defect_framing(review_status: str, decision_counts: Counter[str]) -> dict[str, Any]:
+    false_reject_rows = decision_counts.get("false_reject", 0)
+    needs_operator_review_rows = decision_counts.get("needs_operator_review", 0)
+    correct_reject_rows = decision_counts.get("correct_reject", 0)
+
+    if review_status != "complete":
+        status = "pending_review"
+        reason = (
+            "Review decisions are incomplete; below-gate yield must not be labeled as an "
+            "algorithm/model defect yet."
+        )
+    elif false_reject_rows:
+        status = "specific_false_rejects_found"
+        reason = (
+            "Completed review found false-reject rows, supporting a specific algorithm or "
+            "rule defect for those rows. This still does not prove a generic model failure."
+        )
+    elif needs_operator_review_rows:
+        status = "inconclusive_operator_review"
+        reason = (
+            "Completed review still has rows requiring operator judgment; treat the defect "
+            "claim as unresolved until those rows are adjudicated."
+        )
+    else:
+        status = "not_supported"
+        reason = (
+            "Completed review found no false-reject rows; below-gate yield remains better "
+            "explained by correct strict rejects unless new evidence appears."
+        )
+
+    return {
+        "generic_model_failure_supported": False,
+        "specific_algorithm_or_rule_defect_supported": bool(false_reject_rows),
+        "status": status,
+        "false_reject_rows": false_reject_rows,
+        "needs_operator_review_rows": needs_operator_review_rows,
+        "correct_reject_rows": correct_reject_rows,
+        "reason": reason,
+    }
+
+
 def _empty_review_validation(
     packet: dict[str, Any],
     expected_rows: list[dict[str, Any]],
@@ -497,6 +538,7 @@ def _empty_review_validation(
         "blank_decisions": len(expected_rows),
         "decision_counts": {},
         "bucket_decision_counts": {},
+        "defect_framing": _defect_framing("invalid", Counter()),
         "context_mismatch_count": 0,
         "errors": errors,
     }
@@ -602,6 +644,7 @@ def validate_review_csv(
         "bucket_decision_counts": {
             bucket: _review_decision_counts_json(counter) for bucket, counter in sorted(bucket_decision_counts.items())
         },
+        "defect_framing": _defect_framing(review_status, decision_counts),
         "context_mismatch_count": context_mismatch_count,
         "errors": errors,
     }

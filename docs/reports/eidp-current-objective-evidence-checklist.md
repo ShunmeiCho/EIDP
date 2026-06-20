@@ -88,10 +88,14 @@ worksheet validates as `review_status=incomplete`, while the same command with
 `--validate-review-csv
 docs/reports/2026-06-21-v542-false-reject-review-sheet.csv --require-decisions`
 fails until every sampled row has one of the allowed decisions. The validator
-also rejects changed immutable row context and reports `bucket_decision_counts`;
-the current blank worksheet reports `completed_decisions=0` and
-`context_mismatch_count=0`. Completed rows require `reviewer` and an ISO
-`reviewed_at` timestamp; `false_reject` and `needs_operator_review` rows
+also rejects changed immutable row context, reports `bucket_decision_counts`,
+and emits machine-readable `defect_framing`. The current blank worksheet
+validation is recorded at
+`docs/reports/2026-06-21-v542-false-reject-review-validation.json`; it reports
+`completed_decisions=0`, `context_mismatch_count=0`, and
+`defect_framing.status=pending_review`, so below-gate yield must not yet be
+labeled as an algorithm/model defect. Completed rows require `reviewer` and an
+ISO `reviewed_at` timestamp; `false_reject` and `needs_operator_review` rows
 require `notes`.
 The current source runbooks now tell the owner/operator how to return that
 worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
@@ -559,7 +563,8 @@ do not remove the FY2026/R8 release blocker.
    sampled rows as `false_reject`, `correct_reject`, or
    `needs_operator_review`, then validate the returned CSV with
    `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
-   before labeling the blocker as an algorithm/model defect.
+   before labeling the blocker as an algorithm/model defect. Use the returned
+   `defect_framing.status`, not the below-gate rate alone, for that claim.
 4. Run the owner/operator return path from Windows and collect signed KPI,
    audit/outbox, workbook, and `publication_lag` decision evidence.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.

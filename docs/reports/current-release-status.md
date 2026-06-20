@@ -47,10 +47,14 @@ identity and the v542 false-reject RCA packet. The current handoff lane is
 `docs/runbooks/eidp-v542-owner-request-20260621.txt`,
 `docs/runbooks/eidp-v542-owner-return-fill-sheet.md`,
 `docs/reports/2026-06-21-v542-false-reject-audit-packet.md`, and
-`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. This is a
-docs-only handoff and does not approve v1.0 or replace the missing owner
-real-cycle evidence. The earlier v541 owner-docs base and r3 refresh remain
-historical handoff evidence only.
+`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. The current blank
+worksheet validation is recorded at
+`docs/reports/2026-06-21-v542-false-reject-review-validation.json`: it reports
+`ok=true`, `review_status=incomplete`, `completed_decisions=0`,
+`context_mismatch_count=0`, and `defect_framing.status=pending_review`. This is
+a docs-only handoff and does not approve v1.0, prove an algorithm/model defect,
+or replace the missing owner real-cycle evidence. The earlier v541 owner-docs
+base and r3 refresh remain historical handoff evidence only.
 
 Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
 `dist/` after v542 verification; SHA256 was

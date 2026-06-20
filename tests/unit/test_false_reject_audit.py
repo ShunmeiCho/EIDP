@@ -189,6 +189,8 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     validation = module.validate_review_csv(packet, review_csv)
     assert validation["ok"] is True
     assert validation["review_status"] == "incomplete"
+    assert validation["defect_framing"]["status"] == "pending_review"
+    assert validation["defect_framing"]["specific_algorithm_or_rule_defect_supported"] is False
     assert validation["submitted_rows"] == validation["expected_rows"]
     assert validation["completed_decisions"] == 0
     assert validation["blank_decisions"] == validation["expected_rows"]
@@ -219,6 +221,40 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert completed_validation["context_mismatch_count"] == 0
     assert completed_validation["bucket_decision_counts"]["fiscal_year_mismatch"] == {"correct_reject": 1}
     assert completed_validation["bucket_decision_counts"]["site_entry_fetch_identity"] == {"correct_reject": 2}
+    assert completed_validation["defect_framing"] == {
+        "generic_model_failure_supported": False,
+        "specific_algorithm_or_rule_defect_supported": False,
+        "status": "not_supported",
+        "false_reject_rows": 0,
+        "needs_operator_review_rows": 0,
+        "correct_reject_rows": len(rows),
+        "reason": (
+            "Completed review found no false-reject rows; below-gate yield remains better "
+            "explained by correct strict rejects unless new evidence appears."
+        ),
+    }
+
+    false_reject_rows = [dict(row) for row in rows]
+    false_reject_rows[0]["decision"] = "false_reject"
+    false_reject_rows[0]["notes"] = "Official page carries trusted FY2026/R8 target-form evidence."
+    false_reject_validation = module.validate_review_csv(
+        packet, render_rows(false_reject_rows), require_decisions=True
+    )
+    assert false_reject_validation["ok"] is True
+    assert false_reject_validation["defect_framing"]["status"] == "specific_false_rejects_found"
+    assert false_reject_validation["defect_framing"]["specific_algorithm_or_rule_defect_supported"] is True
+    assert false_reject_validation["defect_framing"]["generic_model_failure_supported"] is False
+    assert false_reject_validation["defect_framing"]["false_reject_rows"] == 1
+
+    operator_review_rows = [dict(row) for row in rows]
+    operator_review_rows[0]["decision"] = "needs_operator_review"
+    operator_review_rows[0]["notes"] = "Evidence exists but needs owner confirmation."
+    operator_review_validation = module.validate_review_csv(
+        packet, render_rows(operator_review_rows), require_decisions=True
+    )
+    assert operator_review_validation["ok"] is True
+    assert operator_review_validation["defect_framing"]["status"] == "inconclusive_operator_review"
+    assert operator_review_validation["defect_framing"]["specific_algorithm_or_rule_defect_supported"] is False
 
     tampered_rows = [dict(row) for row in rows]
     tampered_rows[0]["reason"] = "accepted_downloaded"
