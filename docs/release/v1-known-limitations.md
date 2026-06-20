@@ -15,6 +15,9 @@ as completed scope. It does not weaken the release gates.
   sign-off.
 - A `publication_lag` release path requires explicit owner approval, mature-year
   proof, and a verified owner return. The agent must not approve it.
+- Owner decisions are tracked as short briefs under
+  `docs/release/owner-decisions/`, but those briefs do not approve release by
+  themselves.
 
 ## Product-Scope Limitations
 
@@ -33,6 +36,9 @@ as completed scope. It does not weaken the release gates.
   publication-lag evidence unless the target year is explicitly proven.
 - OCR output is not an automatic trust signal; it requires confidence and review
   handling.
+- The v1 OCR release scope must be explicitly selected before approval:
+  text-PDF-only with image PDFs routed to OCR/manual review, or OCR add-on
+  required with current Windows runtime proof.
 - Low-confidence, mismatched-school, non-target, old-year, and unresolved
   program-change rows must not silently enter final Excel output.
 
@@ -47,4 +53,3 @@ as completed scope. It does not weaken the release gates.
 - Future post-v1 tasks must be assigned to a release train in
   `docs/roadmap/post-v1-roadmap.md` and
   `docs/roadmap/post-v1-decision-board.md` before implementation.
-

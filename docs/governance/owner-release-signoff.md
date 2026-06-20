@@ -27,6 +27,8 @@ Before owner sign-off is requested, the release packet must already contain:
 - current P0 blockers
 
 The owner reads the release summary and signs only the business decision.
+Short owner decision briefs live under `docs/release/owner-decisions/`; they
+help choose a path, but they are not approval artifacts by themselves.
 
 ## Owner Sign-off Scope
 
@@ -92,6 +94,9 @@ OCR scope may be approved separately:
 
 This turns OCR into an explicit known limitation instead of a vague release
 blocker.
+
+The short decision brief is
+`docs/release/owner-decisions/ocr-scope.md`.
 
 ## Red Lines
 

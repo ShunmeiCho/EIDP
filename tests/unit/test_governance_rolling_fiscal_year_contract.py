@@ -74,3 +74,26 @@ def test_owner_signoff_is_simple_but_evidence_based() -> None:
 
     assert "Owner sign-off should be short" in goal_execution
     assert "Owner sign-off may be a short form" in release_gates
+
+
+def test_owner_decision_briefs_do_not_relax_release_gates() -> None:
+    publication_lag = _normalized_doc("docs/release/owner-decisions/publication-lag.md")
+    ocr_scope = _normalized_doc("docs/release/owner-decisions/ocr-scope.md")
+    known_limits = _normalized_doc("docs/release/v1-known-limitations.md")
+
+    assert "It is not approval by itself" in publication_lag
+    assert "`APPROVE_RC_ONLY`" in publication_lag
+    assert "at most `RC_ONLY`" in publication_lag
+    assert "unconfirmed rows must not enter final Excel output" in publication_lag
+    assert "old-year PDFs may be counted as current-year success" in publication_lag
+    assert "successful `scripts/verify_stage6_return.py` result" in publication_lag
+
+    assert "It is not approval by itself" in ocr_scope
+    assert "`CORE_TEXT_PDF_ONLY`" in ocr_scope
+    assert "`OCR_ADDON_REQUIRED`" in ocr_scope
+    assert "unreviewed OCR rows must not enter final Excel output" in ocr_scope
+    assert "With no OCR scope decision: `NOT_READY`" in ocr_scope
+    assert "current Windows OCR proof is present" in ocr_scope
+
+    assert "docs/release/owner-decisions/" in known_limits
+    assert "The v1 OCR release scope must be explicitly selected before approval" in known_limits
