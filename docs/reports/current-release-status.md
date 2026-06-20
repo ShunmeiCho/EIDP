@@ -3,7 +3,20 @@
 Updated: 2026-06-20
 Branch: `main`
 
-Current local package/source candidate: `v533`
+Current local package/source candidate is pending rebuild after v534 was
+rejected by the post-v534 AppleDouble wheelhouse gate. The rejected v534 ZIP was
+(`dist/eidp-windows-v534.zip`, SHA256
+`734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`).
+It was initially package/source verified on macOS and carried the post-v533
+release-proof hardening that requires v1 evidence to stay scoped to
+`専門学校`, but the hardened verifier now rejects it because the ZIP contains
+`wheelhouse/._*.whl` AppleDouble sidecar files. Evidence is recorded in
+`docs/reports/2026-06-20-v534-specialty-scope-gate-package.md`. Do not transfer
+or validate v534 on Windows; rebuild a successor package from the hardened
+source instead.
+
+Latest complete Windows side-by-side smoke and latest usable package candidate
+remain `v533`
 (`dist/eidp-windows-v533.zip`, SHA256
 `0d4ca81a9032db1d8b98bf69ba76a4181d99d6bb8cd0091de22df211dc5d5f57`).
 `v533` is package/source verified on macOS, adds a package-enforced MEXT T0
@@ -24,13 +37,18 @@ That same-day Windows SSH follow-up completed a fresh Windows side-by-side
 smoke at `C:\Users\cyo20\EIDP-v532-723a507-env0`. Evidence is recorded in
 `docs/reports/2026-06-20-v532-full-windows-side-by-side-smoke.md` and
 `logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-20260620.zip`.
+The local v532 core ZIP and sidecar were pruned after v534 was built using
+`scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 2 --apply`;
+the kept local core packages are v533 and v534.
 
-Latest complete Windows side-by-side smoke is `v533` for setup, active-task
+Latest complete Windows side-by-side smoke is still `v533` for setup, active-task
 safety, UI, bounded weekly canary, Excel export, Stage 6 bundle creation, and
-Stage 6 evidence verification. Release is still blocked by FY2026/R8 strict
-yield below gate (`12/50`, `24.0%` in the latest v533 Windows canary), missing
-owner real Windows cycle/sign-off, unapproved `publication_lag` exception, and
-unresolved v533 OCR scope because the OCR runtime proof failed without the OCR
+Stage 6 evidence verification. Rejected `v534` has not completed Windows
+side-by-side validation and must not be used as Windows release evidence.
+Release is still blocked by FY2026/R8 strict yield below gate (`12/50`,
+`24.0%` in the latest v533 Windows canary), missing owner real Windows
+cycle/sign-off, unapproved `publication_lag` exception, and unresolved OCR
+scope because the latest Windows OCR runtime proof failed without the OCR
 add-on. A same-day OCR recovery check found no reusable OCR add-on ZIP or
 Windows Tesseract payload in the checked Mac/external-SSD/Windows locations:
 `docs/reports/2026-06-20-v532-ocr-addon-recovery-check.md`. The historical

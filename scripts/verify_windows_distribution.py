@@ -436,7 +436,21 @@ def _check_no_demo_prototype_runtime(check: ZipCheck, names: set[str]) -> None:
 
 
 def _check_wheelhouse(check: ZipCheck, names: set[str], *, require_project: bool) -> None:
-    wheels = sorted(name for name in names if name.startswith("wheelhouse/") and name.endswith(".whl"))
+    appledouble = sorted(
+        name
+        for name in names
+        if name.startswith("wheelhouse/._")
+    )
+    if appledouble:
+        check.fail(f"wheelhouse contains AppleDouble sidecar files: {appledouble[:5]}")
+
+    wheels = sorted(
+        name
+        for name in names
+        if name.startswith("wheelhouse/")
+        and name.endswith(".whl")
+        and not Path(name).name.startswith("._")
+    )
     check.details["wheel_count"] = len(wheels)
     if not wheels:
         check.fail("wheelhouse contains no wheels")

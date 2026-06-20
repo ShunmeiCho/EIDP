@@ -147,6 +147,8 @@ def verify_wheelhouse(wheelhouse: Path) -> list[Path]:
     accepted: list[Path] = []
     rejected: list[Path] = []
     for wheel in sorted(wheelhouse.glob("*.whl")):
+        if wheel.name.startswith("._"):
+            continue
         if any(wheel.name.endswith(suffix) for suffix in ACCEPTED_WHEEL_SUFFIXES):
             accepted.append(wheel)
         else:
@@ -156,7 +158,7 @@ def verify_wheelhouse(wheelhouse: Path) -> list[Path]:
     # ignore that and only flag genuinely unexpected files.
     other = [
         p for p in wheelhouse.iterdir()
-        if p.suffix != ".whl" and p.name != ".gitignore"
+        if p.suffix != ".whl" and p.name != ".gitignore" and not p.name.startswith("._")
     ]
     if rejected or other:
         rejected_str = "\n".join(f"  rejected: {p.name}" for p in rejected)
@@ -419,6 +421,8 @@ def collect_zip_members(*, repo_root: Path, wheelhouse: Path) -> list[tuple[Path
 
     # wheelhouse/
     for wheel in sorted(wheelhouse.glob("*.whl")):
+        if wheel.name.startswith("._"):
+            continue
         members.append((wheel, f"wheelhouse/{wheel.name}"))
 
     # src/eidp/ — packaged so Streamlit can run from src layout if the

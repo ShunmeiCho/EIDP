@@ -599,6 +599,18 @@ def test_verify_core_zip_accepts_complete_distribution(tmp_path: Path) -> None:
     assert check.details["mext_target_specialty_rows"] == 2067
 
 
+def test_verify_core_zip_rejects_appledouble_wheelhouse_sidecars(tmp_path: Path) -> None:
+    entries = _core_entries()
+    entries["wheelhouse/._structlog-25.5.0-py3-none-any.whl"] = b"appledouble"
+    zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
+
+    check = module.verify_core_zip(zip_path)
+
+    assert not check.ok
+    assert any("wheelhouse contains AppleDouble sidecar files" in error for error in check.errors)
+    assert check.details["wheel_count"] == 2
+
+
 def test_verify_core_zip_requires_mext_authority_index_surface(tmp_path: Path) -> None:
     entries = _core_entries()
     entries.pop("data/authority-index/sources.csv")

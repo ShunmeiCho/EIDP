@@ -1472,6 +1472,35 @@ def test_reset_wheelhouse_removes_appledouble_files(tmp_path: Path):
     assert not (wheelhouse / "eidp-1.0.0rc1-py3-none-any.whl").exists()
 
 
+def test_verify_wheelhouse_ignores_appledouble_sidecars(tmp_path: Path):
+    bw = _load_build_script()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+    real_wheel = wheelhouse / "eidp-1.0.0rc1-py3-none-any.whl"
+    real_wheel.write_bytes(b"wheel")
+    (wheelhouse / "._eidp-1.0.0rc1-py3-none-any.whl").write_bytes(b"appledouble")
+
+    accepted = bw.verify_wheelhouse(wheelhouse)
+
+    assert accepted == [real_wheel]
+
+
+def test_collect_zip_members_skips_appledouble_wheelhouse_files(tmp_path: Path):
+    bw = _load_build_script()
+    fake_repo = tmp_path / "repo"
+    fake_repo.mkdir()
+    wheelhouse = tmp_path / "wheelhouse"
+    wheelhouse.mkdir()
+    (wheelhouse / "structlog-25.0.0-py3-none-any.whl").write_bytes(b"wheel")
+    (wheelhouse / "._structlog-25.0.0-py3-none-any.whl").write_bytes(b"appledouble")
+
+    members = bw.collect_zip_members(repo_root=fake_repo, wheelhouse=wheelhouse)
+    arcs = {arc for _, arc in members}
+
+    assert "wheelhouse/structlog-25.0.0-py3-none-any.whl" in arcs
+    assert "wheelhouse/._structlog-25.0.0-py3-none-any.whl" not in arcs
+
+
 def test_collect_zip_members_skips_pycache(tmp_path: Path):
     bw = _load_build_script()
     fake_repo = tmp_path / "repo"
