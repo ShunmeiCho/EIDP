@@ -166,6 +166,10 @@ Before tagging, attach or reference:
   `logs/win-v543-6aa5735-canary/stage6-evidence-verify-20260621-063335.json`,
   `logs/win-v543-6aa5735-canary/stage6-evidence-verify-mac-20260621.json`,
   and `docs/reports/2026-06-21-v543-helper-windows-canary.md`;
+- v543 false-reject RCA evidence:
+  `docs/reports/2026-06-21-v543-false-reject-audit-packet.md`,
+  `docs/reports/2026-06-21-v543-false-reject-review-sheet.csv`, and
+  `docs/reports/2026-06-21-v543-false-reject-review-validation.json`;
 - previous v540 package/non-Windows gate and CI evidence:
   `docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md`,
   `logs/win-v540-stage6-v540-verify-windows-distribution-20260620.json`, and

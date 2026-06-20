@@ -82,8 +82,8 @@ identity and the v542 false-reject RCA packet. The current handoff lane is
 `docs/runbooks/eidp-v542-owner-request-20260621.txt`,
 `docs/runbooks/eidp-v542-owner-return-fill-sheet.md`,
 `docs/reports/2026-06-21-v542-false-reject-audit-packet.md`, and
-`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. The current blank
-worksheet validation is recorded at
+`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. The staged v542
+blank worksheet validation is recorded at
 `docs/reports/2026-06-21-v542-false-reject-review-validation.json`: it reports
 `ok=true`, `review_status=incomplete`, `completed_decisions=0`,
 `context_mismatch_count=0`, and `defect_framing.status=pending_review`. This is
@@ -221,7 +221,7 @@ confirms `20` school packets, `524` candidate rows, and strict-yield conclusion
 `BELOW_GATE`.
 The current P0 is therefore not a generic "PDF not found" or crawler-runtime
 failure. It is specifically the FY2026/R8 strict target-document to Excel-ready
-yield staying below the release gate. v542 found many PDF candidates, but the
+yield staying below the release gate. v543 found many PDF candidates, but the
 dominant rejection evidence is old-year/current-FY mismatch, non-target PDF
 noise, target-form-like files without trusted year evidence, and small
 site-entry/fetch/identity lanes. The next RCA pass must work those buckets in
@@ -229,22 +229,23 @@ order, without counting old-year PDFs, unknown-year documents, non-target files,
 or identity mismatches as FY2026/R8 success. This also must not be simplified
 to "the algorithm/model is broken" until a rejection-bucket false-reject audit
 shows material over-rejection or fiscal-year extraction mistakes.
-The current v542 false-reject audit packet is now recorded in
-`docs/reports/2026-06-21-v542-false-reject-audit-packet.md`; it was generated
-from the v542 Stage 6 evidence ZIP and samples fiscal-year mismatch,
+The current v543 false-reject audit packet is now recorded in
+`docs/reports/2026-06-21-v543-false-reject-audit-packet.md`; it was generated
+from the v543 Stage 6 evidence ZIP and samples fiscal-year mismatch,
 pre-filtered non-target, classified non-target, target-year-unverified, and
 site-entry/fetch/identity rows without changing release status.
 The same packet now has a companion decision worksheet at
-`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. It contains stable
+`docs/reports/2026-06-21-v543-false-reject-review-sheet.csv`. It contains stable
 `audit_row_id` values and blank `decision` cells restricted to
 `false_reject`, `correct_reject`, or `needs_operator_review`; validating it with
 `--require-decisions` correctly fails until the owner/operator completes the
 sample review. The return validator also rejects changed row context and emits
 `bucket_decision_counts`; the current blank worksheet validates as
 `review_status=incomplete`, `completed_decisions=0`, and
-`context_mismatch_count=0`. Completed rows require `reviewer` and an ISO
-`reviewed_at` timestamp, and `false_reject` / `needs_operator_review` rows
-require `notes`.
+`context_mismatch_count=0` in
+`docs/reports/2026-06-21-v543-false-reject-review-validation.json`. Completed
+rows require `reviewer` and an ISO `reviewed_at` timestamp, and `false_reject`
+/ `needs_operator_review` rows require `notes`.
 The owner/operator return runbooks now include the false-reject worksheet return
 rules: only `decision`, `reviewer`, `reviewed_at`, and `notes` may be filled;
 row context must remain unchanged; and completed worksheets must be validated

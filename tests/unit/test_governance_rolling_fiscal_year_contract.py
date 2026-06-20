@@ -123,6 +123,7 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
     return_sheet = _normalized_doc("docs/runbooks/eidp-v542-owner-return-fill-sheet.md")
     release_summary = _normalized_doc("docs/runbooks/eidp-v542-release-summary.md")
     owner_signoff = _normalized_doc("docs/runbooks/eidp-v542-owner-signoff.md")
+    admin_checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
     staging = _normalized_doc("docs/reports/2026-06-21-v542-owner-docs-windows-staging.md")
@@ -196,10 +197,15 @@ def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "not framed as a generic algorithm/model failure" in objective_checklist
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
-    assert "docs/reports/2026-06-21-v542-false-reject-audit-packet.md" in current_status
-    assert "docs/reports/2026-06-21-v542-false-reject-audit-packet.md" in objective_checklist
-    assert "docs/reports/2026-06-21-v542-false-reject-review-sheet.csv" in current_status
-    assert "docs/reports/2026-06-21-v542-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v543-false-reject-audit-packet.md" in current_status
+    assert "docs/reports/2026-06-21-v543-false-reject-audit-packet.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v543-false-reject-review-sheet.csv" in current_status
+    assert "docs/reports/2026-06-21-v543-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v543-false-reject-review-validation.json" in current_status
+    assert "docs/reports/2026-06-21-v543-false-reject-review-validation.json" in objective_checklist
+    assert "docs/reports/2026-06-21-v543-false-reject-audit-packet.md" in admin_checklist
+    assert "docs/reports/2026-06-21-v543-false-reject-review-sheet.csv" in admin_checklist
+    assert "docs/reports/2026-06-21-v543-false-reject-review-validation.json" in admin_checklist
     assert "scripts/build_false_reject_audit.py" in objective_checklist
     assert "--validate-review-csv" in objective_checklist
     assert "--require-decisions" in objective_checklist
