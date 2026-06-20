@@ -1,0 +1,94 @@
+EIDP v535 owner/operator handoff
+Date: 2026-06-20
+
+Purpose
+-------
+v535 is the latest main package with complete non-OCR Windows side-by-side
+smoke evidence. This file is the first-read checklist for owner/operator
+handoff.
+
+This file is not v1.0 approval and is not permission to switch the active
+weekly Scheduled Task lane.
+
+Package
+-------
+- ZIP: C:\EIDP-staging\eidp-windows-v535.zip
+- Expected SHA256:
+  72ef94f35a2cd482eb9650d1a466cb8441f7d96a660a8901710d96603e7d8e9f
+- Side-by-side root:
+  %USERPROFILE%\EIDP-v535-d742327-env0
+- Current active root to preserve:
+  %USERPROFILE%\EIDP-v527-69fe81f-env0
+
+Read first
+----------
+- docs\reports\2026-05-20-owner-v1.0-decision-brief.md
+- docs\runbooks\eidp-v535-owner-return-fill-sheet.md
+- docs\runbooks\eidp-v535-owner-request-20260620.txt
+- docs\runbooks\eidp-operator-e2e-template.md
+- docs\runbooks\eidp-v1-release-admin-checklist.md
+- docs\reports\2026-06-20-v535-full-windows-side-by-side-smoke.md
+- docs\reports\2026-06-20-v535-appledouble-clean-package.md
+- docs\reports\2026-05-19-publication-lag-release-exception-record.md
+- docs\reports\eidp-current-objective-evidence-checklist.md
+- docs\reports\current-release-status.md
+
+Current evidence
+----------------
+- Package version: 1.0.0rc1
+- Package BUILD_INFO.git_commit: d742327570a08a8f9d6ade7adfc81da8940294b4
+- Package BUILD_INFO.git_branch: main
+- Package BUILD_INFO.git_dirty: false
+- Package/source verification: ok=true
+- Core ZIP verifier: ok=true
+- Non-Windows release gate: ok=true
+- GitHub main CI: re-check current `main` before release approval; the
+  v535 side-by-side report commit had a successful CI run.
+- Windows side-by-side validation for v535: setup/UI/weekly/Excel/Stage 6 ok
+- v535 strict/Excel-ready FY2026 canary yield: 12/50 (24.0%)
+- v535 operator-reviewable canary rate: 47/50 (94.0%)
+- v535 OCR runtime validation: not complete
+- Latest complete OCR runtime proof remains: v526
+
+Release decision boundary
+-------------------------
+Do not approve v1.0 from v535 package/CI evidence alone.
+
+Release approval still requires either:
+
+1. strict FY2026/R8 target-PDF acquisition reaches the 60% release line; or
+2. an explicit APPROVED `publication_lag` exception, mature-year proof, owner
+   real Windows cycle, `scripts\verify_stage6_return.py ok=true`, Excel/audit
+   append-only evidence, and owner/operator sign-off.
+
+The current `publication_lag` exception record remains NOT_APPROVED.
+
+Safety
+------
+- Do not delete data\eidp.sqlite3
+- Do not delete data\audit\manual-actions.jsonl
+- Do not delete data\master.xlsx
+- Do not delete data\pdfs
+- Do not run uninstall.bat
+- Do not persist EIDP_TARGET_FISCAL_YEAR into .env
+- Do not expose Streamlit beyond 127.0.0.1 for remote access; use SSH tunnel
+- Keep the v527 active root until an explicit promotion decision is made
+- Do not treat the v535 bounded canary as owner real-cycle sign-off
+
+Return after v535 validation / owner real cycle
+-----------------------------------------------
+- completed eidp-operator-e2e-template.md
+- data\output\last_run.json from the owner real cycle
+- latest logs\run-*.log
+- latest logs\diagnostics-*.txt
+- latest logs\stage6-evidence-*.zip
+- latest logs\stage6-evidence-verify-*.json
+- v535 validate-after-setup JSON
+- v535 active-task recovery JSON
+- v535 UI smoke evidence
+- Excel proof
+- ManualActionLog / JSONL outbox proof
+- owner/operator sign-off
+
+The returned files must pass `scripts\verify_stage6_return.py` before release
+acceptance.

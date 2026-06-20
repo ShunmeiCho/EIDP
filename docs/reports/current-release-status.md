@@ -93,10 +93,14 @@ sign-off fields remain blank. The Windows-staged owner docs ZIP now includes
 this report, the target-yearless RCA spot check, the owner v1.0 A/B decision
 brief, and the v526 owner return fill sheet, and now has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
-`v526` remains the latest package with complete OCR runtime proof. `v533` is
+`v526` remains the latest package with complete OCR runtime proof. `v535` is
 the latest package with complete non-OCR Windows side-by-side smoke evidence,
 including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
-bundle verification.
+bundle verification. The current v535 owner/operator handoff docs are
+`docs/runbooks/00-READ-ME-FIRST-v535.txt`,
+`docs/runbooks/eidp-v535-owner-request-20260620.txt`, and
+`docs/runbooks/eidp-v535-owner-return-fill-sheet.md`; they do not approve
+v1.0 and do not replace the missing owner real-cycle evidence.
 `v502` and `v501` are superseded Windows evidence baselines.
 
 The authoritative package source commit is `BUILD_INFO.json` inside the ZIP.
@@ -708,7 +712,8 @@ is made.
 Current release decision:
 do not merge/tag v1.0 or request owner sign-off under the strict current-FY
 FY2026 contract. The tracked final-objective audit at
-`docs/reports/eidp-current-objective-evidence-checklist.md` is `NOT COMPLETE`.
+`docs/reports/eidp-current-objective-evidence-checklist.md` does not yet prove
+completion.
 v526 is package/source verified, Windows side-by-side smoke validated, and
 includes the v520/v521/v522 source-side follow-ups, v524 owner-return verifier
 hardening, the `1.0.0rc1` metadata bump, and the extracted-PDF
@@ -1032,7 +1037,7 @@ Current active-goal completion audit:
 
 ## Verdict
 
-Status: **NOT COMPLETE**
+Release conclusion: **NOT_READY**
 
 Current local package source head `34ded9fecf7ddf27f37e9c8e3eee89e624e69260` is
 Mac-validated with `1803 passed`, `mypy src` clean, CI-scope Ruff clean,
