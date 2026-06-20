@@ -13,21 +13,26 @@ v534. The v535 ZIP contains `0` AppleDouble sidecars, `84` real wheelhouse
 wheels, and `BUILD_INFO.git_commit=d742327570a08a8f9d6ade7adfc81da8940294b4`
 with `git_dirty=false`. Its full non-Windows release gate passed with `2016`
 unit tests, `196` Windows distribution validator tests, package/source
-freshness, package verifier, and demonstrated-pattern verifier. Evidence is
-recorded in `docs/reports/2026-06-20-v535-appledouble-clean-package.md` and
-`logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`.
+freshness, package verifier, and demonstrated-pattern verifier. It has now
+completed Windows side-by-side smoke at
+`C:\Users\cyo20\EIDP-v535-d742327-env0` for setup, active-task safety, UI,
+bounded weekly canary, Excel export, Stage 6 bundle creation, and Stage 6
+evidence verification. Evidence is recorded in
+`docs/reports/2026-06-20-v535-appledouble-clean-package.md`,
+`docs/reports/2026-06-20-v535-full-windows-side-by-side-smoke.md`,
+`logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`, and
+`logs/win-v535-stage6/stage6-evidence-20260620-053032.zip`.
 
 Rejected v534 (`dist/eidp-windows-v534.zip`, SHA256
 `734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`) is
 documented in `docs/reports/2026-06-20-v534-specialty-scope-gate-package.md`.
 It must not be transferred or validated on Windows.
 
-Latest complete Windows side-by-side smoke and latest usable package candidate
-remain `v533`
+Previous complete Windows side-by-side smoke was `v533`
 (`dist/eidp-windows-v533.zip`, SHA256
 `0d4ca81a9032db1d8b98bf69ba76a4181d99d6bb8cd0091de22df211dc5d5f57`).
 `v533` is package/source verified on macOS, adds a package-enforced MEXT T0
-target-institution official-index gate, and has completed Windows side-by-side
+target-institution official-index gate, and completed Windows side-by-side
 smoke at `C:\Users\cyo20\EIDP-v533-f83f1dc-env0`. The verifier reports
 `mext_target_total_rows=3132`, `mext_target_university_rows=769`,
 `mext_target_specialty_rows=2067`, `mext_target_short_college_rows=239`, and
@@ -50,16 +55,15 @@ the invalid v534 core ZIP and sidecar were pruned after v535 was built using
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
 --keep-version 533 --apply`. The kept local core packages are v533 and v535.
 
-Latest complete Windows side-by-side smoke is still `v533` for setup, active-task
-safety, UI, bounded weekly canary, Excel export, Stage 6 bundle creation, and
-Stage 6 evidence verification. `v535` has not yet completed Windows
-side-by-side validation, so it must not be used as Windows release evidence.
-Release is still blocked by FY2026/R8 strict yield below gate (`12/50`,
-`24.0%` in the latest v533 Windows canary), missing owner real Windows
-cycle/sign-off, unapproved `publication_lag` exception, and unresolved OCR
-scope because the latest Windows OCR runtime proof failed without the OCR
-add-on. A same-day OCR recovery check found no reusable OCR add-on ZIP or
-Windows Tesseract payload in the checked Mac/external-SSD/Windows locations:
+Latest complete Windows side-by-side smoke is now `v535` for setup,
+active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
+creation, and Stage 6 evidence verification. Release is still blocked by
+FY2026/R8 strict yield below gate (`12/50`, `24.0%` in the latest v535 Windows
+canary), missing owner real Windows cycle/sign-off, unapproved
+`publication_lag` exception, and unresolved OCR scope because the latest
+Windows OCR runtime proof failed without the OCR add-on. A same-day OCR
+recovery check found no reusable OCR add-on ZIP or Windows Tesseract payload
+in the checked Mac/external-SSD/Windows locations:
 `docs/reports/2026-06-20-v532-ocr-addon-recovery-check.md`. The historical
 status below is kept for traceability and is superseded by this 2026-06-20
 summary.

@@ -5,7 +5,7 @@ Branch: `main`
 Package: `dist/eidp-windows-v535.zip`
 SHA256: `72ef94f35a2cd482eb9650d1a466cb8441f7d96a660a8901710d96603e7d8e9f`
 Package/source commit: `d742327570a08a8f9d6ade7adfc81da8940294b4`
-Status: package/source verified on macOS; not Windows side-by-side validated
+Status: package/source verified on macOS; Windows side-by-side validation completed later in `docs/reports/2026-06-20-v535-full-windows-side-by-side-smoke.md`
 Classification: P1 release hardening
 
 ## Purpose
@@ -15,8 +15,9 @@ macOS AppleDouble sidecar files under `wheelhouse/._*.whl`. v534 carried the
 right specialty-school release-proof scope gate, but was rejected after the
 hardened verifier found AppleDouble wheelhouse sidecars in the ZIP.
 
-v535 is the current Mac/package-source candidate. It is not Windows release
-evidence until transferred and validated on Windows.
+v535 was the current Mac/package-source candidate when this report was written.
+It later completed Windows side-by-side validation; see
+`docs/reports/2026-06-20-v535-full-windows-side-by-side-smoke.md`.
 
 ## Verification
 
@@ -130,10 +131,9 @@ dist/eidp-windows.zip
 
 ## Release Boundary
 
-v535 is not v1.0 release approval. Before using v535 for owner/operator
-validation, it still needs Windows transfer, setup validation, UI smoke,
-bounded weekly canary, Excel smoke, Stage 6 bundle creation, and Stage 6
-evidence verification.
+v535 is not v1.0 release approval. The later Windows side-by-side smoke covers
+transfer, setup validation, UI smoke, bounded weekly canary, Excel smoke, Stage
+6 bundle creation, and Stage 6 evidence verification.
 
 The release decision remains `NOT_READY` because:
 
