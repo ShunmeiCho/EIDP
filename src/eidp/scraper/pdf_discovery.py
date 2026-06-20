@@ -3545,6 +3545,13 @@ def download_pdf(
             ) and not (
                 trusted_year_can_fill_missing_pdf_year
             ):
+                _mark_missing_target_year_evidence(
+                    candidate,
+                    pdf_type=pdf_type,
+                    target_year_hint=target_year_hint,
+                    trusted_year_can_fill_missing_pdf_year=trusted_year_can_fill_missing_pdf_year,
+                    trusted_year_evidence=trusted_year_evidence,
+                )
                 return None, None, 0, pdf_type, "target_fiscal_year_not_detected"
             if detected_fiscal_year == target_year:
                 candidate.year_evidence = "pdf_text"
@@ -3627,6 +3634,48 @@ def _restore_same_school_no_file_duplicate(
     existing.downloaded_at = datetime.now(UTC)
     existing.ingest_status = "pending"
     return True
+
+
+def _candidate_discovery_evidence_extra(
+    candidate: PdfCandidate,
+    site: SchoolSite,
+    *,
+    target_year: int,
+    **extra: str,
+) -> dict[str, str]:
+    """Return operator-facing provenance for one PDF candidate decision."""
+
+    return {
+        "site_url": site.url,
+        "discovery_method": site.discovery_method or "",
+        "target_fiscal_year": str(target_year),
+        "detected_fiscal_year": str(candidate.detected_fiscal_year or ""),
+        "year_evidence": candidate.year_evidence,
+        "trusted_year_evidence": candidate.trusted_year_evidence,
+        **extra,
+    }
+
+
+def _mark_missing_target_year_evidence(
+    candidate: PdfCandidate,
+    *,
+    pdf_type: str,
+    target_year_hint: bool,
+    trusted_year_can_fill_missing_pdf_year: bool,
+    trusted_year_evidence: str,
+) -> None:
+    """Keep yearless target-form rejections explainable without accepting them."""
+
+    if candidate.year_evidence:
+        return
+    if target_year_hint:
+        candidate.year_evidence = "url_hint"
+    elif trusted_year_can_fill_missing_pdf_year:
+        candidate.year_evidence = trusted_year_evidence
+    elif pdf_type == "target" or _has_target_application_hint(candidate):
+        candidate.year_evidence = "target_application_no_year"
+    else:
+        candidate.year_evidence = "none"
 
 
 def run_pdf_discovery(
@@ -3902,6 +3951,7 @@ def run_pdf_discovery(
                         score=c.score,
                         reason="candidate_school_mismatch",
                         pdf_type="non_target",
+                        extra=_candidate_discovery_evidence_extra(c, site, target_year=target_year),
                     ), persist=evidence_index < MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL)
             # B1: bounded pre-rank body classification — only on dense/ambiguous pages.
             # Writes candidate.detected_school_name so _prioritize_viable_candidates
@@ -3951,6 +4001,7 @@ def run_pdf_discovery(
                         score=c.score,
                         reason="candidate_budget_dropped",
                         extra={
+                            **_candidate_discovery_evidence_extra(c, site, target_year=target_year),
                             "candidate_budget": f"max_general_candidate_scan={MAX_GENERAL_CANDIDATE_SCAN}",
                         },
                     ), persist=evidence_index < MAX_BULK_REJECTION_EVIDENCE_PER_SCHOOL)
@@ -3978,6 +4029,7 @@ def run_pdf_discovery(
                         pattern_type=c.pattern_type,
                         score=c.score,
                         reason="all_negative_score",
+                        extra=_candidate_discovery_evidence_extra(c, site, target_year=target_year),
                     ))
                 if progress_callback is not None:
                     progress_callback(dict(stats), len(sites))
@@ -4007,6 +4059,14 @@ def run_pdf_discovery(
                         stats["skipped"] += 1
                     if _is_target_year_rejection(cached_rejection.reason):
                         target_year_rejection_seen = True
+                        if cached_rejection.reason == "target_fiscal_year_not_detected":
+                            _mark_missing_target_year_evidence(
+                                candidate,
+                                pdf_type=cached_rejection.pdf_type,
+                                target_year_hint=_has_target_year_hint(candidate, target_year=target_year),
+                                trusted_year_can_fill_missing_pdf_year=False,
+                                trusted_year_evidence=candidate.trusted_year_evidence,
+                            )
                     if cached_rejection.pdf_type == "non_target":
                         stats["cached_rejection_evidence_suppressed"] += 1
                         _increment_rejection_reason(stats, cached_rejection.reason)
@@ -4020,7 +4080,12 @@ def run_pdf_discovery(
                             score=candidate.score,
                             reason=cached_rejection.reason,
                             pdf_type=cached_rejection.pdf_type,
-                            extra={"cached_rejection": "true"},
+                            extra=_candidate_discovery_evidence_extra(
+                                candidate,
+                                site,
+                                target_year=target_year,
+                                cached_rejection="true",
+                            ),
                         ))
                     continue
 
@@ -4043,7 +4108,12 @@ def run_pdf_discovery(
                         score=candidate.score,
                         reason=pre_download_rejection.reason,
                         pdf_type=pre_download_rejection.pdf_type,
-                        extra={"pre_download": "true"},
+                        extra=_candidate_discovery_evidence_extra(
+                            candidate,
+                            site,
+                            target_year=target_year,
+                            pre_download="true",
+                        ),
                     ))
                     continue
 
@@ -4082,6 +4152,11 @@ def run_pdf_discovery(
                         score=candidate.score,
                         reason=reject_reason or "classified_non_target",
                         pdf_type=pdf_type,
+                        extra=_candidate_discovery_evidence_extra(
+                            candidate,
+                            site,
+                            target_year=target_year,
+                        ),
                     ))
                     continue
 
@@ -4090,6 +4165,14 @@ def run_pdf_discovery(
                         _is_target_year_rejection(reject_reason)
                     ):
                         target_year_rejection_seen = True
+                        if reject_reason == "target_fiscal_year_not_detected":
+                            _mark_missing_target_year_evidence(
+                                candidate,
+                                pdf_type=pdf_type,
+                                target_year_hint=_has_target_year_hint(candidate, target_year=target_year),
+                                trusted_year_can_fill_missing_pdf_year=False,
+                                trusted_year_evidence=candidate.trusted_year_evidence,
+                            )
                     if _is_cacheable_pdf_rejection(pdf_type, reject_reason):
                         rejected_candidate_cache[cache_key] = CachedPdfRejection(
                             pdf_type=pdf_type,
@@ -4104,6 +4187,11 @@ def run_pdf_discovery(
                         score=candidate.score,
                         reason=reject_reason,
                         pdf_type=pdf_type,
+                        extra=_candidate_discovery_evidence_extra(
+                            candidate,
+                            site,
+                            target_year=target_year,
+                        ),
                     ))
 
                 if file_path:
@@ -4120,6 +4208,11 @@ def run_pdf_discovery(
                             reason="pdf_school_mismatch",
                             pdf_type=pdf_type,
                             extra={
+                                **_candidate_discovery_evidence_extra(
+                                    candidate,
+                                    site,
+                                    target_year=target_year,
+                                ),
                                 "parsed_school_name": candidate.detected_school_name,
                                 "target_school_name": school_name,
                             },
@@ -4155,9 +4248,13 @@ def run_pdf_discovery(
                                 reason="duplicate_hash_same_school_file_restored",
                                 pdf_type=pdf_type,
                                 extra={
+                                    **_candidate_discovery_evidence_extra(
+                                        candidate,
+                                        site,
+                                        target_year=target_year,
+                                    ),
                                     "existing_doc_id": str(existing.id),
                                     "existing_school_id": str(existing.school_id),
-                                    "target_fiscal_year": str(target_year),
                                 },
                             ))
                             job.status = "success"
@@ -4182,6 +4279,11 @@ def run_pdf_discovery(
                             reason=reason,
                             pdf_type=pdf_type,
                             extra={
+                                **_candidate_discovery_evidence_extra(
+                                    candidate,
+                                    site,
+                                    target_year=target_year,
+                                ),
                                 "existing_doc_id": str(existing.id),
                                 "existing_school_id": str(existing.school_id),
                             },
@@ -4238,6 +4340,11 @@ def run_pdf_discovery(
                                 else:
                                     reason = "duplicate_hash"
                                 extra = {
+                                    **_candidate_discovery_evidence_extra(
+                                        candidate,
+                                        site,
+                                        target_year=target_year,
+                                    ),
                                     "existing_doc_id": str(existing.id),
                                     "existing_school_id": str(existing.school_id),
                                     "integrity_error": "true",
@@ -4246,6 +4353,11 @@ def run_pdf_discovery(
                                 cross_school_dup_seen = True
                                 reason = "duplicate_hash_integrity_error"
                                 extra = {
+                                    **_candidate_discovery_evidence_extra(
+                                        candidate,
+                                        site,
+                                        target_year=target_year,
+                                    ),
                                     "integrity_error": "true",
                                     "error": str(exc.orig or exc),
                                 }
@@ -4273,13 +4385,11 @@ def run_pdf_discovery(
                             score=candidate.score,
                             reason="accepted_downloaded",
                             pdf_type=pdf_type,
-                            extra={
-                                "site_url": site.url,
-                                "discovery_method": site.discovery_method or "",
-                                "target_fiscal_year": str(target_year),
-                                "detected_fiscal_year": str(candidate.detected_fiscal_year or ""),
-                                "year_evidence": candidate.year_evidence,
-                            },
+                            extra=_candidate_discovery_evidence_extra(
+                                candidate,
+                                site,
+                                target_year=target_year,
+                            ),
                         ))
 
                     job.status = "success"

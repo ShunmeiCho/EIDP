@@ -219,6 +219,7 @@ class DiscoveryEvidenceRow:
     pdf_type: str | None
     detected_fiscal_year: str
     year_evidence: str
+    trusted_year_evidence: str
     timestamp: str
 
 
@@ -760,6 +761,7 @@ def latest_discovery_evidence(
                 pdf_type=payload.get("pdf_type"),
                 detected_fiscal_year=str(extra.get("detected_fiscal_year") or ""),
                 year_evidence=str(extra.get("year_evidence") or ""),
+                trusted_year_evidence=str(extra.get("trusted_year_evidence") or ""),
                 timestamp=str(payload.get("timestamp") or ""),
             ))
 
@@ -846,6 +848,7 @@ def discovery_evidence_table_rows(evidence_rows: list[DiscoveryEvidenceRow]) -> 
             "入口の由来": discovery_method_label(row.discovery_method),
             "対象年度": row.target_fiscal_year,
             "年度根拠": year_evidence_label(row.year_evidence),
+            "入口年度補助根拠": trusted_year_evidence_label(row.trusted_year_evidence),
             "PDF本文年度": row.detected_fiscal_year,
             "リンク文字": row.anchor_text,
             "入口URL": row.site_url,
@@ -864,6 +867,16 @@ def year_evidence_label(value: str | None) -> str:
         "url_hint": "リンク文字/URL",
         "target_application_no_year": "対象申請書候補（年度未確認）",
         "none": "年度根拠なし",
+    }
+    return labels.get((value or "").strip(), value or "")
+
+
+def trusted_year_evidence_label(value: str | None) -> str:
+    """Human-readable trusted entry-point evidence that did not replace PDF year proof."""
+
+    labels = {
+        "prefecture_index_current_year": "公式索引の現年度入口",
+        "school_domain_override_disclosure": "学校公式公開ページ",
     }
     return labels.get((value or "").strip(), value or "")
 

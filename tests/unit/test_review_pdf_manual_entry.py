@@ -655,7 +655,8 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
                 '"pdf_type": "target", '
                 '"extra": {"site_url": "https://example.ac.jp/disclosure/", '
                 '"discovery_method": "prefecture_aggregator", "target_fiscal_year": "2026", '
-                '"detected_fiscal_year": "", "year_evidence": "url_hint"}, '
+                '"detected_fiscal_year": "", "year_evidence": "url_hint", '
+                '"trusted_year_evidence": "prefecture_index_current_year"}, '
                 '"timestamp": "2026-05-06T00:01:00Z"}'
             ),
             (
@@ -679,6 +680,7 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
     assert rows[0].discovery_method == "prefecture_aggregator"
     assert rows[0].target_fiscal_year == "2026"
     assert rows[0].year_evidence == "url_hint"
+    assert rows[0].trusted_year_evidence == "prefecture_index_current_year"
     assert rows[1].reason == "fiscal_year_mismatch:2025"
 
 
@@ -759,6 +761,7 @@ def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
             pdf_type="target",
             detected_fiscal_year="2026",
             year_evidence="pdf_text",
+            trusted_year_evidence="prefecture_index_current_year",
             timestamp="2026-05-06T00:01:00Z",
         )
     ]
@@ -771,6 +774,7 @@ def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
     assert candidate_row["採否"] == "採用してPDF保存"
     assert candidate_row["入口の由来"] == "都道府県公式一覧"
     assert candidate_row["年度根拠"] == "PDF本文"
+    assert candidate_row["入口年度補助根拠"] == "公式索引の現年度入口"
     assert candidate_row["PDF本文年度"] == "2026"
     assert discovery_reason_label("fiscal_year_mismatch:2025") == "旧年度/別年度のため保留 (2025)"
 
@@ -787,6 +791,7 @@ def test_discovery_trace_summary_explains_pdf_route_to_operator() -> None:
         pdf_type="target",
         detected_fiscal_year="",
         year_evidence="target_application_no_year",
+        trusted_year_evidence="",
         timestamp="2026-05-06T00:02:00Z",
     )
 
@@ -821,6 +826,7 @@ def test_fiscal_year_evidence_summary_distinguishes_pdf_text_and_link_hints() ->
             pdf_type="target",
             detected_fiscal_year="",
             year_evidence="url_hint",
+            trusted_year_evidence="",
             timestamp="2026-05-06T00:01:00Z",
         )
     ]

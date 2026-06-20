@@ -2975,6 +2975,7 @@ def test_download_pdf_rejects_image_target_hint_without_year_evidence(monkeypatc
     assert file_size == 0
     assert pdf_type == "image_only"
     assert reason == "target_fiscal_year_not_detected"
+    assert candidate.year_evidence == "target_application_no_year"
     assert not list((tmp_path / "123").glob("*.pdf"))
 
 
@@ -3045,6 +3046,7 @@ def test_download_pdf_rejects_image_without_target_hint_in_strict_mode(monkeypat
     assert file_size == 0
     assert pdf_type == "image_only"
     assert reason == "target_fiscal_year_not_detected"
+    assert candidate.year_evidence == "none"
 
 
 def test_download_pdf_rejects_image_with_target_year_but_no_target_form_hint(
@@ -5664,6 +5666,8 @@ def test_run_pdf_discovery_keeps_negative_score_target_application_for_review(
             for line in evidence.read_text(encoding="utf-8").splitlines()
         ]
         assert [payload["reason"] for payload in payloads] == ["target_fiscal_year_not_detected"]
+        assert payloads[0]["extra"]["year_evidence"] == "target_application_no_year"
+        assert payloads[0]["extra"]["trusted_year_evidence"] == ""
     finally:
         session.close()
 
@@ -7453,7 +7457,7 @@ def test_download_pdf_rejects_trusted_prefecture_year_evidence_without_pdf_or_ur
     assert pdf_type == "target"
     assert reason == "target_fiscal_year_not_detected"
     assert candidate.detected_fiscal_year is None
-    assert candidate.year_evidence == ""
+    assert candidate.year_evidence == "target_application_no_year"
 
 
 def test_download_pdf_rejects_ambiguous_wordpress_download_manager_without_year_context(
@@ -7903,7 +7907,7 @@ def test_download_pdf_rejects_yearless_upload_path_even_with_trusted_prefecture(
     assert file_size == 0
     assert pdf_type == "target"
     assert reason == "target_fiscal_year_not_detected"
-    assert candidate.year_evidence == ""
+    assert candidate.year_evidence == "target_application_no_year"
 
 
 def test_download_pdf_trusted_prefecture_still_rejects_explicit_stale_year_label(
