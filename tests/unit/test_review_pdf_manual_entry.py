@@ -652,7 +652,9 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
                 '{"school_id": 1, "pdf_url": "https://example.ac.jp/r8.pdf", '
                 '"page_url": "https://example.ac.jp/disclosure/", "reason": "accepted_downloaded", '
                 '"anchor_text": "2026年度", "pattern_type": "direct", "score": 9.0, '
-                '"pdf_type": "target", '
+                '"pdf_type": "target", "detected_fiscal_year": 2026, '
+                '"year_evidence": "pdf_text", '
+                '"trusted_year_evidence": "school_domain_override_disclosure", '
                 '"extra": {"site_url": "https://example.ac.jp/disclosure/", '
                 '"discovery_method": "prefecture_aggregator", "target_fiscal_year": "2026", '
                 '"detected_fiscal_year": "", "year_evidence": "url_hint", '
@@ -679,8 +681,9 @@ def test_latest_discovery_evidence_reads_recent_candidate_decisions(tmp_path: Pa
     assert rows[0].site_url == "https://example.ac.jp/disclosure/"
     assert rows[0].discovery_method == "prefecture_aggregator"
     assert rows[0].target_fiscal_year == "2026"
-    assert rows[0].year_evidence == "url_hint"
-    assert rows[0].trusted_year_evidence == "prefecture_index_current_year"
+    assert rows[0].detected_fiscal_year == "2026"
+    assert rows[0].year_evidence == "pdf_text"
+    assert rows[0].trusted_year_evidence == "school_domain_override_disclosure"
     assert rows[1].reason == "fiscal_year_mismatch:2025"
 
 

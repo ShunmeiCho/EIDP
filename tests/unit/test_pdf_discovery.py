@@ -5666,6 +5666,8 @@ def test_run_pdf_discovery_keeps_negative_score_target_application_for_review(
             for line in evidence.read_text(encoding="utf-8").splitlines()
         ]
         assert [payload["reason"] for payload in payloads] == ["target_fiscal_year_not_detected"]
+        assert payloads[0]["year_evidence"] == "target_application_no_year"
+        assert payloads[0]["trusted_year_evidence"] == ""
         assert payloads[0]["extra"]["year_evidence"] == "target_application_no_year"
         assert payloads[0]["extra"]["trusted_year_evidence"] == ""
     finally:

@@ -3739,6 +3739,19 @@ def run_pdf_discovery(
     def record_discovery_evidence(evidence: RejectionEvidence, *, persist: bool = True) -> None:
         if "target_fiscal_year" not in evidence.extra:
             evidence = replace(evidence, extra={**evidence.extra, "target_fiscal_year": str(target_year)})
+        detected_fiscal_year = evidence.detected_fiscal_year
+        if detected_fiscal_year is None:
+            try:
+                detected_fiscal_year = int(evidence.extra.get("detected_fiscal_year", ""))
+            except ValueError:
+                detected_fiscal_year = None
+        evidence = replace(
+            evidence,
+            detected_fiscal_year=detected_fiscal_year,
+            year_evidence=evidence.year_evidence or evidence.extra.get("year_evidence", ""),
+            trusted_year_evidence=evidence.trusted_year_evidence
+            or evidence.extra.get("trusted_year_evidence", ""),
+        )
         _increment_rejection_reason(stats, evidence.reason)
         if persist:
             recorder.record(evidence)

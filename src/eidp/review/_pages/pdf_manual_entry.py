@@ -759,9 +759,13 @@ def latest_discovery_evidence(
                 pattern_type=str(payload.get("pattern_type") or ""),
                 score=float(payload.get("score") or 0.0),
                 pdf_type=payload.get("pdf_type"),
-                detected_fiscal_year=str(extra.get("detected_fiscal_year") or ""),
-                year_evidence=str(extra.get("year_evidence") or ""),
-                trusted_year_evidence=str(extra.get("trusted_year_evidence") or ""),
+                detected_fiscal_year=str(
+                    payload.get("detected_fiscal_year") or extra.get("detected_fiscal_year") or ""
+                ),
+                year_evidence=str(payload.get("year_evidence") or extra.get("year_evidence") or ""),
+                trusted_year_evidence=str(
+                    payload.get("trusted_year_evidence") or extra.get("trusted_year_evidence") or ""
+                ),
                 timestamp=str(payload.get("timestamp") or ""),
             ))
 

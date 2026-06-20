@@ -25,6 +25,9 @@ def test_recorder_writes_one_jsonl_line_per_record(tmp_path: Path) -> None:
             pdf_url="https://x.example/bar.pdf",
             reason="classified_non_target",
             pdf_type="non_target",
+            detected_fiscal_year=2026,
+            year_evidence="pdf_text",
+            trusted_year_evidence="prefecture_index_current_year",
         ))
 
     lines = log_path.read_text(encoding="utf-8").strip().splitlines()
@@ -36,6 +39,9 @@ def test_recorder_writes_one_jsonl_line_per_record(tmp_path: Path) -> None:
     assert "timestamp" in first
     second = json.loads(lines[1])
     assert second["pdf_type"] == "non_target"
+    assert second["detected_fiscal_year"] == 2026
+    assert second["year_evidence"] == "pdf_text"
+    assert second["trusted_year_evidence"] == "prefecture_index_current_year"
 
 
 def test_recorder_appends_to_existing_file(tmp_path: Path) -> None:

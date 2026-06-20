@@ -35,6 +35,9 @@ class RejectionEvidence:
     score: float = 0.0
     reason: str = ""
     pdf_type: str | None = None
+    detected_fiscal_year: int | None = None
+    year_evidence: str = ""
+    trusted_year_evidence: str = ""
     extra: dict[str, str] = field(default_factory=dict)
     timestamp: str = field(
         default_factory=lambda: datetime.now(UTC).isoformat()
