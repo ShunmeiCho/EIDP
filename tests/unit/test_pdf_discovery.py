@@ -5251,6 +5251,99 @@ def test_run_pdf_discovery_keeps_slug_disclosure_probe_for_shared_origin(
         session.close()
 
 
+def test_run_pdf_discovery_keeps_school_path_disclosure_probe_for_sanko_shared_origin(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Sanko shared-origin slug probes must try both stable disclosure shapes."""
+
+    session = _session()
+    calls: list[str] = []
+    school_count = 3
+    root_html = "<html><body>" + ("学校法人トップ " * 120) + "</body></html>"
+
+    class SankoDisclosureClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def __enter__(self) -> SankoDisclosureClient:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def get(self, url: str, **_kwargs: object) -> _HtmlResponse:
+            calls.append(url)
+            if url == "https://www.sanko.ac.jp/robots.txt":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.sanko.ac.jp/sitemap.xml":
+                return _HtmlResponse("", status_code=404, url=url)
+            if url == "https://www.sanko.ac.jp/":
+                return _HtmlResponse(root_html, url=url)
+            for index in range(1, school_count + 1):
+                if url == f"https://www.sanko.ac.jp/school-{index:03d}/":
+                    return _HtmlResponse("<html><body>学校トップ</body></html>", url=url)
+                if url == f"https://www.sanko.ac.jp/disclosure/school-{index:03d}":
+                    return _HtmlResponse("", status_code=404, url=url)
+                if url == f"https://www.sanko.ac.jp/school-{index:03d}/disclosure":
+                    return _HtmlResponse(
+                        f"""
+                        <section>
+                          <h3>高等教育の修学支援新制度 申請様式</h3>
+                          <a href="/school-{index:03d}/disclosure/docs/yoshiki2025.pdf">2025年度</a>
+                        </section>
+                        """,
+                        url=url,
+                    )
+            return _HtmlResponse("", status_code=404, url=url)
+
+    def fake_download(
+        _client,
+        candidate: PdfCandidate,
+        _storage_dir: Path,
+        school_id: int,
+        **_kwargs: object,
+    ):
+        candidate.detected_fiscal_year = 2025
+        candidate.year_evidence = "url_hint"
+        return str(tmp_path / f"{school_id}.pdf"), f"hash-{school_id}", 3000, "target", None
+
+    try:
+        for index in range(1, school_count + 1):
+            session.add(
+                SchoolSite(
+                    school_id=index,
+                    url=f"https://www.sanko.ac.jp/school-{index:03d}/",
+                    http_status=200,
+                )
+            )
+        session.flush()
+
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.httpx.Client", SankoDisclosureClient)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.time.sleep", lambda _seconds: None)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery._is_safe_url", lambda _url: True)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.download_pdf", fake_download)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.SHARED_ORIGIN_DERIVED_FALLBACK_THRESHOLD", 2)
+        monkeypatch.setattr("eidp.scraper.pdf_discovery.SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES", 1)
+
+        stats = run_pdf_discovery(
+            session,
+            tmp_path,
+            batch_size=school_count,
+            rate_limit=0,
+            target_fiscal_year=2025,
+            strict_target_fiscal_year=True,
+        )
+
+        assert stats["downloaded"] == school_count
+        assert stats["shared_origin_derived_fallback_skipped"] == 0
+        for index in range(1, school_count + 1):
+            assert f"https://www.sanko.ac.jp/disclosure/school-{index:03d}" in calls
+            assert f"https://www.sanko.ac.jp/school-{index:03d}/disclosure" in calls
+    finally:
+        session.close()
+
+
 def test_run_pdf_discovery_keeps_host_specific_disclosure_probe_for_shared_origin(
     monkeypatch,
     tmp_path: Path,

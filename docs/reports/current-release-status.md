@@ -37,6 +37,12 @@ ZIP with `uv run python scripts/summarize_stage6_rca.py
 logs/win-v535-stage6/stage6-evidence-20260620-053032.zip --json`; the script
 confirms `20` school packets, `524` candidate rows, and strict-yield conclusion
 `BELOW_GATE`.
+Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
+the remaining `non_target_candidates_only` RCA packet by keeping both
+`/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;
+this is recorded in
+`docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md`. It is not
+release evidence until a rebuilt package completes a fresh Windows canary.
 
 Rejected v534 (`dist/eidp-windows-v534.zip`, SHA256
 `734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`) is

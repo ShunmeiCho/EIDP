@@ -371,10 +371,10 @@ SITEMAP_PAGE_KEYWORDS = (
 )
 DERIVED_DISCLOSURE_PATHS = (
     "/disclosure/{slug}",
+    "{path}/disclosure",
     "{path}/information",
     "{path}/school-support",
     "{path}/guidelines",
-    "{path}/disclosure",
     "{path}/public",
     "{path}/public_info",
     "/information/",
@@ -2912,6 +2912,19 @@ def _has_priority_derived_disclosure_url_probe(site_url: str) -> bool:
     )
 
 
+def _priority_derived_disclosure_url_probe_limit(site_url: str) -> int:
+    """Return the minimal per-school derived URL budget for shared origins."""
+
+    if _has_slug_disclosure_url_probe(site_url):
+        # Sanko-style school roots use both stable shapes in the wild:
+        # /disclosure/{slug} and /{slug}/disclosure. Keep both under the
+        # shared-origin throttle; broader generic probes still stay capped.
+        return 2
+    if _has_inverted_disclosure_url_probe(site_url) or _has_host_specific_disclosure_url_probe(site_url):
+        return 1
+    return 0
+
+
 def _sitemap_urls_for_site(
     client: HttpGetClient,
     site_url: str,
@@ -3808,7 +3821,7 @@ def run_pdf_discovery(
                         probe_count = origin_derived_probe_counts.get(origin, 0)
                         if probe_count >= SHARED_ORIGIN_DERIVED_FALLBACK_PROBE_SITES:
                             if _has_priority_derived_disclosure_url_probe(site.url):
-                                derived_disclosure_limit = 1
+                                derived_disclosure_limit = _priority_derived_disclosure_url_probe_limit(site.url)
                             else:
                                 derived_disclosure_limit = 0
                                 stats["shared_origin_derived_fallback_skipped"] += 1

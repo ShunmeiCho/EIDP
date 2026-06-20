@@ -161,9 +161,11 @@ P1 actions:
 1. Done in source: `scripts/summarize_stage6_rca.py` summarizes RCA batch
    buckets from a Stage 6 evidence ZIP so future owner handoffs show the same
    action lanes automatically.
-2. Consider a bounded same-domain disclosure expansion improvement for the one
-   `non_target_candidates_only` site after confirming the official site has a
-   stable disclosure section.
+2. Source hardening added after this v535 evidence:
+   `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` keeps both
+   Sanko school-slug disclosure shapes under shared-origin throttling for the
+   one `non_target_candidates_only` site. It needs a rebuilt Windows canary
+   before it can be counted as release evidence.
 
 P2 actions:
 
