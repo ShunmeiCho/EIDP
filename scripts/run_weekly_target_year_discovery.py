@@ -679,7 +679,7 @@ def _write_pdf_school_mismatch_alias_proposals(
     if proposal_path is None or not evidence_log.is_file() or evidence_log.stat().st_size == 0:
         return base
 
-    from pdf_school_mismatch_alias_proposals import (
+    from eidp.review.pdf_school_mismatch_alias_proposals import (
         build_proposals,
         load_rejection_rows,
         write_merged_proposals,

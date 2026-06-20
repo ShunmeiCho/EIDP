@@ -1237,3 +1237,54 @@ def test_write_pdf_school_mismatch_alias_proposals_handles_missing_file(tmp_path
         assert stats["error"] is None
     finally:
         session.close()
+
+
+def test_weekly_alias_proposals_do_not_depend_on_script_module_name(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Windows ZIP execution must not depend on importing a sibling script by module name."""
+
+    session = _session()
+    try:
+        session.add(
+            School(
+                id=20,
+                prefecture="神奈川県",
+                corporation_name="学校法人三幸学園",
+                school_name="横浜医療秘書専門学校",
+                school_type="専門学校",
+                status="active",
+            )
+        )
+        session.flush()
+        evidence_log = tmp_path / "discovery-rejections.jsonl"
+        evidence_log.write_text(
+            json.dumps(
+                {
+                    "school_id": 20,
+                    "reason": "pdf_school_mismatch",
+                    "extra": {
+                        "target_school_name": "横浜医療秘書専門学校",
+                        "parsed_school_name": "横浜医療秘書&IT専門学校",
+                    },
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        proposal_path = tmp_path / "output" / "school_missing_proposals.jsonl"
+        monkeypatch.setitem(sys.modules, "pdf_school_mismatch_alias_proposals", None)
+
+        stats = write_pdf_school_mismatch_alias_proposals(
+            session,
+            evidence_log=evidence_log,
+            proposal_path=proposal_path,
+        )
+
+        assert stats["error"] is None
+        assert stats["proposal_stats"]["proposals"] == 1
+        assert stats["write_stats"]["appended"] == 1
+    finally:
+        session.close()
