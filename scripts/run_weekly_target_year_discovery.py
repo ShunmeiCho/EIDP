@@ -45,7 +45,7 @@ from ship_gate_contract import (  # noqa: E402
 
 from eidp.config import settings  # noqa: E402
 from eidp.db.locking import LockBusyError, acquire_lock  # noqa: E402
-from eidp.db.models import Document, School, SchoolSite  # noqa: E402
+from eidp.db.models import Document, School, SchoolAlias, SchoolSite  # noqa: E402
 from eidp.db.session import SessionLocal  # noqa: E402
 from eidp.logging_config import configure_logging  # noqa: E402
 from eidp.pipeline.ingest import run_ingestion  # noqa: E402
@@ -88,6 +88,7 @@ class WeeklyPaths:
     storage_dir: Path
     output_dir: Path
     last_run_path: Path
+    school_alias_proposals_path: Path
     lock_path: Path
     logs_dir: Path
 
@@ -107,6 +108,7 @@ def resolve_weekly_paths(app_root: Path | None = None) -> WeeklyPaths:
         storage_dir=data_dir / "pdfs",
         output_dir=output_dir,
         last_run_path=data_dir / "output" / "last_run.json",
+        school_alias_proposals_path=root / "output" / "school_missing_proposals.jsonl",
         lock_path=data_dir / ".lock",
         logs_dir=root / "logs",
     )
@@ -152,6 +154,7 @@ def write_last_run(
         "discovery_stats": summary.get("discovery_stats") or {},
         "ingest_stats": summary.get("ingest_stats") or {},
         "discovery_rca": summary.get("discovery_rca") or {},
+        "school_alias_proposals": summary.get("school_alias_proposals") or {},
         "summary_path": summary.get("summary_path"),
         "error": error,
     }
@@ -650,6 +653,52 @@ def _write_discovery_rca_batch_plan(
         }
 
 
+def _write_pdf_school_mismatch_alias_proposals(
+    session: Session,
+    *,
+    evidence_log: Path,
+    proposal_path: Path | None,
+) -> dict[str, Any]:
+    """Convert low-risk PDF school-name mismatches into operator proposals."""
+    base = {
+        "proposal_path": str(proposal_path) if proposal_path is not None else None,
+        "proposal_stats": {
+            "input_rows": 0,
+            "pdf_school_mismatch_rows": 0,
+            "missing_detail": 0,
+            "missing_school": 0,
+            "unsafe_expansion": 0,
+            "conflict_existing_school": 0,
+            "conflict_existing_alias": 0,
+            "already_has_alias": 0,
+            "proposals": 0,
+        },
+        "write_stats": {"preserved": 0, "appended": 0, "written": 0},
+        "error": None,
+    }
+    if proposal_path is None or not evidence_log.is_file() or evidence_log.stat().st_size == 0:
+        return base
+
+    from pdf_school_mismatch_alias_proposals import (
+        build_proposals,
+        load_rejection_rows,
+        write_merged_proposals,
+    )
+
+    try:
+        rows = load_rejection_rows(evidence_log)
+        schools = list(session.query(School).all())
+        aliases = list(session.query(SchoolAlias).all())
+        proposals, proposal_stats = build_proposals(rows, schools, aliases)
+        base["proposal_stats"] = proposal_stats
+        if proposals:
+            base["write_stats"] = write_merged_proposals(proposal_path, proposals)
+        return base
+    except Exception as exc:  # pragma: no cover - defensive operator artifact path
+        base["error"] = f"{type(exc).__name__}: {exc}"
+        return base
+
+
 def run_weekly(
     *,
     current_fy: int,
@@ -667,6 +716,7 @@ def run_weekly(
     last_run_path: Path | None = None,
     progress_path: Path | None = None,
     progress_log_path: Path | None = None,
+    school_alias_proposals_path: Path | None = None,
     stale_only: bool = False,
 ) -> dict[str, Any]:
     """Public entry. Acquires the shared UI lock when ``lock_path`` is
@@ -688,6 +738,7 @@ def run_weekly(
         last_run_path=last_run_path,
         progress_path=progress_path,
         progress_log_path=progress_log_path,
+        school_alias_proposals_path=school_alias_proposals_path,
         stale_only=stale_only,
     )
     if lock_path is None:
@@ -716,6 +767,7 @@ def run_weekly(
                     "discovery_stats": {},
                     "ingest_stats": {},
                     "discovery_rca": {},
+                    "school_alias_proposals": {},
                     "summary_path": None,
                 },
                 last_run_path,
@@ -741,6 +793,7 @@ def _run_weekly_inner(
     last_run_path: Path | None,
     progress_path: Path | None = None,
     progress_log_path: Path | None = None,
+    school_alias_proposals_path: Path | None = None,
     stale_only: bool = False,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -929,6 +982,11 @@ def _run_weekly_inner(
             output_path=discovery_rca_plan,
             target_fiscal_year=current_fy,
         )
+        school_alias_proposals = _write_pdf_school_mismatch_alias_proposals(
+            session,
+            evidence_log=discovery_evidence,
+            proposal_path=school_alias_proposals_path,
+        )
         delta = _delta(before, after)
         summary = {
             "run_id": run_id,
@@ -957,6 +1015,7 @@ def _run_weekly_inner(
                 "ingest_rejections": str(ingest_evidence),
             },
             "discovery_rca": discovery_rca,
+            "school_alias_proposals": school_alias_proposals,
             "summary_path": str(summary_path),
         }
         summary.update(_weekly_target_pdf_yield_metrics(summary))
@@ -991,6 +1050,14 @@ def _run_weekly_inner(
                 "discovery_rca_batch_plan_item_count": discovery_rca.get("batch_plan_item_count"),
                 "discovery_rca_batch_plan_total_candidates": discovery_rca.get("batch_plan_total_candidates"),
                 "discovery_rca_error": discovery_rca.get("error"),
+                "school_alias_proposal_path": school_alias_proposals.get("proposal_path"),
+                "school_alias_proposal_count": (
+                    school_alias_proposals.get("proposal_stats") or {}
+                ).get("proposals"),
+                "school_alias_proposal_appended": (
+                    school_alias_proposals.get("write_stats") or {}
+                ).get("appended"),
+                "school_alias_proposal_error": school_alias_proposals.get("error"),
             },
         )
         return summary
@@ -1013,6 +1080,7 @@ def _run_weekly_inner(
                 "discovery_stats": {},
                 "ingest_stats": {},
                 "discovery_rca": {},
+                "school_alias_proposals": {},
                 "summary_path": str(summary_path),
             }
             write_last_run(
@@ -1046,6 +1114,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--storage-dir", type=Path, default=paths.storage_dir)
     parser.add_argument("--output-dir", type=Path, default=paths.output_dir)
     parser.add_argument("--last-run-path", type=Path, default=paths.last_run_path)
+    parser.add_argument(
+        "--school-alias-proposals-path",
+        type=Path,
+        default=paths.school_alias_proposals_path,
+        help="Operator UI proposal JSONL for low-risk PDF school-name mismatch alias candidates.",
+    )
     parser.add_argument("--progress-file", type=Path, default=None)
     parser.add_argument("--progress-log-path", type=Path, default=None)
     parser.add_argument("--lock-path", type=Path, default=paths.lock_path)
@@ -1090,6 +1164,7 @@ def main() -> None:
         last_run_path=args.last_run_path,
         progress_path=args.progress_file,
         progress_log_path=args.progress_log_path,
+        school_alias_proposals_path=args.school_alias_proposals_path,
         stale_only=args.stale_only,
     )
     # Sprint 8.7: prune BEFORE the final print so a closed-pipe error on
@@ -1109,6 +1184,7 @@ def main() -> None:
         "discovery_stats": summary["discovery_stats"],
         "ingest_stats": summary["ingest_stats"],
         "discovery_rca": summary.get("discovery_rca") or {},
+        "school_alias_proposals": summary.get("school_alias_proposals") or {},
         "target_pdf_auto_acquired_count": summary.get("target_pdf_auto_acquired_count"),
         "target_pdf_auto_yield_pct": summary.get("target_pdf_auto_yield_pct"),
         "operator_reviewable_count": summary.get("operator_reviewable_count"),

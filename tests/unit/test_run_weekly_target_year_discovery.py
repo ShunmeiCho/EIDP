@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from eidp.db.locking import LockBusyError, acquire_lock
-from eidp.db.models import Base, Department, DepartmentYearly, Document, School, SchoolSite
+from eidp.db.models import Base, Department, DepartmentYearly, Document, School, SchoolAlias, SchoolSite
 
 script = Path(__file__).resolve().parents[2] / "scripts" / "run_weekly_target_year_discovery.py"
 spec = importlib.util.spec_from_file_location("run_weekly_target_year_discovery", script)
@@ -30,6 +30,7 @@ write_last_run = module.write_last_run
 prune_run_logs = module.prune_run_logs
 prune_run_artifacts = module.prune_run_artifacts
 run_weekly = module.run_weekly
+write_pdf_school_mismatch_alias_proposals = module._write_pdf_school_mismatch_alias_proposals
 
 
 def _session() -> Session:
@@ -1145,3 +1146,94 @@ def test_run_weekly_writes_discovery_rca_batch_plan_artifact(
     last_run_payload = json.loads(last_run.read_text(encoding="utf-8"))
     assert last_run_payload["discovery_rca"]["batch_plan_path"] == str(plan_path)
     assert last_run_payload["discovery_rca"]["batch_plan_item_count"] == 1
+
+
+def test_weekly_writes_pdf_school_mismatch_alias_proposals_without_db_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session()
+    monkeypatch.setattr(module, "SessionLocal", lambda: session)
+    session.add(
+        School(
+            id=20,
+            prefecture="神奈川県",
+            corporation_name="学校法人三幸学園",
+            school_name="横浜医療秘書専門学校",
+            school_type="専門学校",
+            status="active",
+        )
+    )
+    _site(session, 20, "prefecture_aggregator")
+    session.commit()
+
+    def fake_run_pdf_discovery(*args, **kwargs):  # noqa: ANN002, ANN003
+        evidence_path = kwargs["evidence_path"]
+        evidence_path.write_text(
+            json.dumps(
+                {
+                    "school_id": 20,
+                    "reason": "pdf_school_mismatch",
+                    "pdf_url": "https://www.sanko.ac.jp/disclosure/yokohama-med/yoshiki2026.pdf",
+                    "page_url": "https://www.sanko.ac.jp/yokohama-med/disclosure/",
+                    "anchor_text": "2026年度 高等教育の修学支援新制度 申請様式",
+                    "extra": {
+                        "target_school_name": "横浜医療秘書専門学校",
+                        "parsed_school_name": "横浜医療秘書&IT専門学校",
+                    },
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return {"processed": 1, "downloaded": 0}
+
+    monkeypatch.setattr(module, "run_pdf_discovery", fake_run_pdf_discovery)
+    proposal_path = tmp_path / "output" / "school_missing_proposals.jsonl"
+    last_run = tmp_path / "data" / "output" / "last_run.json"
+
+    summary = run_weekly(
+        current_fy=2026,
+        methods=["prefecture_aggregator"],
+        school_type="専門学校",
+        storage_dir=tmp_path / "data" / "pdfs",
+        output_dir=tmp_path / "data" / "output" / "target-year-discovery",
+        batch_size=10,
+        rate_limit=1.5,
+        request_timeout=12.0,
+        ingest_batch_size=10,
+        limit=None,
+        dry_run=False,
+        lock_path=None,
+        last_run_path=last_run,
+        school_alias_proposals_path=proposal_path,
+    )
+
+    alias_proposals = summary["school_alias_proposals"]
+    assert alias_proposals["proposal_stats"]["proposals"] == 1
+    assert alias_proposals["write_stats"]["appended"] == 1
+    rows = [json.loads(line) for line in proposal_path.read_text(encoding="utf-8").splitlines()]
+    assert rows[0]["template_name"] == "横浜医療秘書&IT専門学校"
+    assert rows[0]["proposal_type"] == "alias_existing_school"
+    assert rows[0]["matched_school_id"] == 20
+    assert session.query(SchoolAlias).count() == 0
+
+    last_run_payload = json.loads(last_run.read_text(encoding="utf-8"))
+    assert last_run_payload["school_alias_proposals"]["write_stats"]["appended"] == 1
+
+
+def test_write_pdf_school_mismatch_alias_proposals_handles_missing_file(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        stats = write_pdf_school_mismatch_alias_proposals(
+            session,
+            evidence_log=tmp_path / "missing.jsonl",
+            proposal_path=tmp_path / "output" / "school_missing_proposals.jsonl",
+        )
+
+        assert stats["proposal_stats"]["input_rows"] == 0
+        assert stats["write_stats"]["appended"] == 0
+        assert stats["error"] is None
+    finally:
+        session.close()
