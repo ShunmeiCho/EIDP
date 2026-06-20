@@ -3,7 +3,21 @@
 Updated: 2026-06-20
 Branch: `main`
 
-Current local package/source candidate: `v536`
+Current local package/source candidate: `v537`
+(`dist/eidp-windows-v537.zip`, SHA256
+`1ceeb84ae6804c4d95574ac5c11a583eb4967d0e285c5de3fe5b1fd0f1254356`).
+`v537` is package/source verified on macOS and carries the post-v536 PDF
+school-name mismatch alias proposal work: rejected `pdf_school_mismatch`
+evidence can now be converted into operator-review `SchoolAlias` proposals,
+and the weekly runner surfaces that proposal queue without automatically
+writing aliases. Its full non-Windows release gate passed with `2026` unit
+tests, `196` Windows distribution validator tests, package/source freshness,
+package verifier, and demonstrated-pattern verifier. Evidence is recorded in
+`docs/reports/2026-06-20-v537-current-main-package.md` and
+`logs/win-v537-stage6-v537-non-windows-release-gates-20260620.json`.
+`v537` has not yet completed Windows side-by-side validation.
+
+The latest bounded Windows canary remains `v536`
 (`dist/eidp-windows-v536.zip`, SHA256
 `381ec169b8380cfe666a89e02a8b786d3a8cdc79dca4b420276517bbbdb0349a`).
 `v536` is package/source verified on macOS and carries the post-v535 Sanko
@@ -96,14 +110,16 @@ The local v532 core ZIP and sidecar were pruned after v534 was built using
 the invalid v534 core ZIP and sidecar were pruned after v535 was built using
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
 --keep-version 533 --apply`. The kept local core packages are v533, v535, and
-v536.
+v536. After v537 was built and verified, v533 was pruned with
+`scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 3 --apply`;
+the kept local core packages are now v535, v536, and v537.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
 creation, and Stage 6 evidence verification. Latest bounded Windows canary is
-`v536`, and it still reports FY2026/R8 strict yield below gate (`12/50`,
-`24.0%`). Release is still blocked by missing owner real Windows cycle/sign-off,
-unapproved
+`v536`, while latest package/source candidate is `v537`. The Windows canary
+still reports FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
+still blocked by missing owner real Windows cycle/sign-off, unapproved
 `publication_lag` exception, and unresolved OCR scope because the latest
 Windows OCR runtime proof failed without the OCR add-on. A same-day OCR
 recovery check found no reusable OCR add-on ZIP or Windows Tesseract payload
