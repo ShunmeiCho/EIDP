@@ -163,6 +163,30 @@ def test_build_proof_rejects_small_mature_year_denominator(tmp_path: Path) -> No
     )
 
 
+def test_build_proof_rejects_fractional_mature_year_denominator(tmp_path: Path) -> None:
+    module = _load_module()
+    last_run = tmp_path / "last_run.json"
+    _write_last_run(last_run, target_pdf_auto_denominator_count=1000.5)
+
+    proof = module.build_proof([(2025, last_run)])
+
+    assert proof["ok"] is False
+    assert proof["cases"][0]["ok"] is False
+    assert "target_pdf_auto_denominator_count must be an integer" in proof["cases"][0]["errors"]
+
+
+def test_build_proof_rejects_fractional_strict_gap_denominator(tmp_path: Path) -> None:
+    module = _load_module()
+    strict_gap = tmp_path / "strict-gap-analysis.json"
+    _write_strict_gap_analysis(strict_gap, schools_total=1000.5)
+
+    proof = module.build_proof([], strict_gap_analysis_cases=[(2025, strict_gap)])
+
+    assert proof["ok"] is False
+    assert proof["cases"][0]["ok"] is False
+    assert "schools_total must be an integer" in proof["cases"][0]["errors"]
+
+
 def test_build_proof_rejects_missing_denominator_scope(tmp_path: Path) -> None:
     module = _load_module()
     last_run = tmp_path / "last_run.json"

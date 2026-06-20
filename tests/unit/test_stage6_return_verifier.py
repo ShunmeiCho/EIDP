@@ -1389,6 +1389,33 @@ def test_verify_stage6_return_rejects_small_mature_year_proof_denominator(tmp_pa
     assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result["errors"]
 
 
+def test_verify_stage6_return_rejects_fractional_mature_year_proof_denominator(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(
+        tmp_path,
+        target_pdf_auto_denominator_count=1000.5,
+    )
+    exception_record = _write_approved_exception_record(tmp_path)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "mature-year proof case FY2025 target_pdf_auto_denominator_count must be an integer"
+        in result["errors"]
+    )
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result["errors"]
+
+
 def test_verify_stage6_return_rejects_excel_diff_as_publication_lag_mature_year_proof(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)

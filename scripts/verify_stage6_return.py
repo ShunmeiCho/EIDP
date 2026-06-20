@@ -187,6 +187,10 @@ def _is_number(value: object) -> TypeGuard[int | float]:
     return isinstance(value, int | float) and not isinstance(value, bool)
 
 
+def _is_integer_count(value: object) -> TypeGuard[int]:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def _release_conclusion_value(value: str) -> str:
     return value.strip().upper()
 
@@ -650,6 +654,11 @@ def _verify_mature_year_proof(
         if not _is_number(denominator):
             errors.append(
                 f"mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_count must be numeric"
+            )
+            case_ok = False
+        elif not _is_integer_count(denominator):
+            errors.append(
+                f"mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_count must be an integer"
             )
             case_ok = False
         elif float(denominator) < min_target_pdf_auto_denominator_count:

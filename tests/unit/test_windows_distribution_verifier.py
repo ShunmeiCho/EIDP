@@ -1120,6 +1120,10 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
             "mature-year proof case FY{fiscal_year} finished_at is required",
             "mature-year proof finished_at optional",
         )
+        .replace(
+            "mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_count must be an integer",
+            "mature-year proof denominator may be fractional",
+        )
         .replace("target_pdf_excel_ready_yield_pct", "target_pdf_excel_ready_optional")
         .replace("KPI actual must match", "KPI actual may differ")
         .replace("mature_year_proof_json", "historical_year_proof_json")
@@ -1183,6 +1187,8 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     entries["scripts/build_mature_year_acquisition_proof.py"] = (
         entries["scripts/build_mature_year_acquisition_proof.py"]
         .replace("strict_gap_analysis finished_at is required", "strict_gap_analysis finished_at optional")
+        .replace("target_pdf_auto_denominator_count must be an integer", "denominator can be fractional")
+        .replace("schools_total must be an integer", "schools_total can be fractional")
         .replace("finished_at", "completed_at")
     )
     zip_path = _write_zip(tmp_path / "eidp-windows.zip", entries)
@@ -1241,6 +1247,12 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         for error in check.errors
     )
     assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "mature-year proof case FY{fiscal_year} target_pdf_auto_denominator_count must be an integer"
+        in error
+        for error in check.errors
+    )
+    assert any(
         "scripts/verify_stage6_return.py missing required token: target_pdf_excel_ready_yield_pct" in error
         for error in check.errors
     )
@@ -1263,6 +1275,16 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     )
     assert any(
         "scripts/build_mature_year_acquisition_proof.py missing required token: finished_at" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: "
+        "target_pdf_auto_denominator_count must be an integer" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/build_mature_year_acquisition_proof.py missing required token: schools_total must be an integer"
+        in error
         for error in check.errors
     )
     assert any(

@@ -36,6 +36,10 @@ def _is_number(value: object) -> TypeGuard[int | float]:
     return isinstance(value, int | float) and not isinstance(value, bool)
 
 
+def _is_integer_count(value: object) -> TypeGuard[int]:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def _load_json(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
     if not path.is_file():
         return None, [f"last_run does not exist: {path}"]
@@ -147,6 +151,8 @@ def build_case(
 
     if not _is_number(denominator):
         errors.append("target_pdf_auto_denominator_count must be numeric")
+    elif not _is_integer_count(denominator):
+        errors.append("target_pdf_auto_denominator_count must be an integer")
     elif float(denominator) < min_target_pdf_auto_denominator_count:
         errors.append(
             "target_pdf_auto_denominator_count below production-scale threshold: "
@@ -247,6 +253,8 @@ def build_strict_gap_analysis_case(
 
     if not _is_number(denominator):
         errors.append("schools_total must be numeric")
+    elif not _is_integer_count(denominator):
+        errors.append("schools_total must be an integer")
     elif float(denominator) < min_target_pdf_auto_denominator_count:
         errors.append(
             "schools_total below production-scale threshold: "
