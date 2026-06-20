@@ -2676,7 +2676,7 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
         cols[idx].metric(
             _SCHOOL_PROPOSAL_LABEL.get(ptype, ptype),
             f"{n} 校",
-            f"テンプレ {rows} 行",
+            f"根拠 {rows} 件",
         )
 
     # --- Mode toggle ---
@@ -2701,7 +2701,7 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
     st.divider()
     st.subheader("自動承認OK：一致候補が1つだけの行")
     st.caption(
-        "DB内に同じ学校が1つだけ見つかっている行です。"
+        "DB内に同じ学校が1つだけ見つかっている別名候補です。"
         "「承認」を押すと別名として登録され、次のExcel出力で一致します。"
     )
     items_single = by_type.get("alias_existing_school", [])
@@ -2711,8 +2711,8 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
         with st.container(border=True):
             cols = st.columns([4, 1])
             cols[0].write(
-                f"**テンプレ名**: {p['template_name']}　"
-                f"（テンプレ内 {p['template_rows']} 行）"
+                f"**別名候補**: {p['template_name']}　"
+                f"（根拠 {p['template_rows']} 件）"
             )
             cols[0].caption(
                 f"→ DBの一致校: id={p['matched_school_id']}　"
@@ -2794,7 +2794,7 @@ def _render_school_proposals_tab(session: Session, *, lock_path: Path) -> None:
         )
         for p in truly:
             st.caption(
-                f"　・ {p['template_name']}（テンプレ内 {p['template_rows']} 行）"
+                f"　・ {p['template_name']}（根拠 {p['template_rows']} 件）"
             )
 
 
@@ -2838,11 +2838,11 @@ def _render_school_focus_mode(
         <div class="eidp-focus-hero">
           <div class="eidp-focus-meta">
             <span>種別 · <b>{safe_type_label}</b></span>
-            <span>影響 · <b>{safe_template_rows} 行</b></span>
+            <span>根拠 · <b>{safe_template_rows} 件</b></span>
             <span>候補 · <b>{len(candidates)} 件</b></span>
           </div>
           <div class="eidp-focus-name">{safe_template_name}</div>
-          <div class="eidp-focus-rows">テンプレート内で {safe_template_rows} 行に登場</div>
+          <div class="eidp-focus-rows">提案根拠として {safe_template_rows} 件に登場</div>
           <div class="eidp-focus-divider">
             <span class="line"></span><span>正しい DB 学校を選択</span><span class="line"></span>
           </div>
@@ -2887,7 +2887,7 @@ def _render_school_focus_mode(
             st.info(
                 f"**推奨候補**　id={rec['school_id']}　{rec['school_name']}"
                 f"　（{rec['corporation']} / {rec['prefecture']}）\n\n"
-                "テンプレ名に最も近い法人系列・地名・学校種別から推定。"
+                "別名候補に最も近い法人系列・地名・学校種別から推定。"
                 "確信がなければ他候補を選んでください。"
             )
 
@@ -2990,7 +2990,7 @@ def _render_school_candidate_picker(
     key_root = f"pick_{ptype}_{template}"
 
     with st.container(border=True):
-        st.write(f"**テンプレ名**: {template}　（テンプレ内 {rows} 行）")
+        st.write(f"**別名候補**: {template}　（根拠 {rows} 件）")
         if not candidates:
             st.caption("（DB候補なし — 保留推奨）")
             return
