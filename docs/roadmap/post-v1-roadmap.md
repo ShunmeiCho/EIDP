@@ -182,3 +182,21 @@ be assigned to one of:
 
 If a task cannot be assigned, put it in `research` and do not implement it until
 its release train is explicit.
+
+## Priority Order
+
+Post-v1 work should advance in this order unless an owner-approved incident or
+release decision changes priority:
+
+1. `v1.0.x patch`: keep the just-released operator build usable.
+2. `v1.1 hardening`: strengthen status machines, audit, Excel gates, and release
+   gates.
+3. `v1.2 source reliability`: turn official indexes into tracked data assets.
+4. `v1.3 extraction quality`: expand gold sets, parser coverage, OCR handling,
+   and program-change reconciliation.
+5. `v1.5 operator console`: rebuild production Streamlit UI from ViewModels and
+   the demo-derived UI contract.
+6. `v2.0 university expansion`: add university support only after the
+   vocational-school pipeline has completed a stable cycle.
+7. `v2.x multi-user/cloud`: add platform infrastructure only when a real
+   multi-operator or remote-operation requirement exists.

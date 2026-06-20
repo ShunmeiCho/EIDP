@@ -58,6 +58,8 @@ Architecture and planning:
 - [Goal execution discipline](docs/governance/goal-execution.md)
 - [Technical direction](docs/governance/technical-direction.md)
 - [Release gates](docs/governance/release-gates.md)
+- [v1 exit criteria](docs/release/v1-exit-criteria.md)
+- [v1 known limitations](docs/release/v1-known-limitations.md)
 - [Post-v1 roadmap](docs/roadmap/post-v1-roadmap.md)
 - [Post-v1 decision board](docs/roadmap/post-v1-decision-board.md)
 - [Sprint 8 release gate audit](docs/plans/2026-05-05-sprint8-release-gate-audit.md)
