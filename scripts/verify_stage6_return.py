@@ -57,14 +57,23 @@ RELEASE_EXCEPTION_DATE_MATCH_ERROR = "release exception record Date must match A
 SIGNOFF_PLACEHOLDER_NAMES = {
     "approver",
     "approver name",
+    "n/a",
+    "na",
+    "n.a.",
     "operator",
     "operator name",
     "owner",
     "owner name",
+    "pending",
+    "tbd",
+    "to be determined",
     "your name",
+    "-",
     "担当者",
     "承認者",
     "業務員",
+    "未入力",
+    "未定",
 }
 PLACEHOLDER_RESULTS = {
     "",
