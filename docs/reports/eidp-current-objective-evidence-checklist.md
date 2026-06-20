@@ -53,6 +53,9 @@ old-year PDFs, missing-year candidates, or identity mismatches as FY2026/R8
 successes. This blocker is not framed as "the crawler cannot run" or "PDFs are
 missing"; it is the stricter failure that not enough official candidates can be
 accepted as FY2026/R8 target application documents and then become Excel-ready.
+It also is not framed as a generic algorithm/model failure unless
+rejection-bucket false-reject evidence proves material over-rejection or
+fiscal-year extraction mistakes.
 The earlier v535 RCA plan remains historical decomposition.
 The v541 RCA bucket summary is reproducible with
 `uv run python scripts/summarize_stage6_rca.py
@@ -157,6 +160,9 @@ that keeps manual work below the release threshold.
   The next RCA order is fiscal-year mismatch / publication-lag or old target
   forms, non-target candidate noise, target-year-unverified candidates, and
   only then site-entry/fetch/identity gaps.
+  Before labeling the blocker as an algorithm/model defect, run a
+  rejection-bucket false-reject audit over fiscal-year mismatch, non-target
+  filtering, target-year-unverified, and site-entry/fetch/identity candidates.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe
   fix keeps both `/disclosure/{slug}` and `/{slug}/disclosure` under the
   shared-origin throttle for school roots such as
@@ -469,8 +475,10 @@ do not remove the FY2026/R8 release blocker.
 2. Continue strict-yield RCA in the documented bucket order: fiscal-year
    mismatch / publication lag first, non-target candidate noise second,
    target-year-unverified third, and site-entry/fetch/identity lanes fourth.
-3. Run the prepared owner/operator v541 return path from Windows and collect
+3. Run the rejection-bucket false-reject audit before labeling the blocker as
+   an algorithm/model defect.
+4. Run the prepared owner/operator v541 return path from Windows and collect
    signed KPI, audit/outbox, workbook, and `publication_lag` decision evidence.
-4. Run the owner real Windows cycle and return KPI/sign-off evidence.
-5. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
-6. Create the signed `v1.0` tag only after the above blockers are resolved.
+5. Run the owner real Windows cycle and return KPI/sign-off evidence.
+6. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
+7. Create the signed `v1.0` tag only after the above blockers are resolved.

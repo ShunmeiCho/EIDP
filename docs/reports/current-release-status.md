@@ -167,7 +167,9 @@ dominant rejection evidence is old-year/current-FY mismatch, non-target PDF
 noise, target-form-like files without trusted year evidence, and small
 site-entry/fetch/identity lanes. The next RCA pass must work those buckets in
 order, without counting old-year PDFs, unknown-year documents, non-target files,
-or identity mismatches as FY2026/R8 success.
+or identity mismatches as FY2026/R8 success. This also must not be simplified
+to "the algorithm/model is broken" until a rejection-bucket false-reject audit
+shows material over-rejection or fiscal-year extraction mistakes.
 Post-v535 source hardening adds a bounded Sanko same-host disclosure probe for
 the remaining `non_target_candidates_only` RCA packet by keeping both
 `/disclosure/{slug}` and `/{slug}/disclosure` under shared-origin throttling;

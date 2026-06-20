@@ -157,8 +157,11 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v541-owner-docs-windows-staging.md" in current_status
     assert 'not a generic "PDF not found" or crawler-runtime failure' in current_status
     assert "FY2026/R8 strict target-document to Excel-ready yield" in current_status
+    assert 'simplified to "the algorithm/model is broken"' in current_status
     assert "without counting old-year PDFs" in objective_checklist
     assert "not framed as \"the crawler cannot run\" or \"PDFs are missing\"" in objective_checklist
+    assert "not framed as a generic algorithm/model failure" in objective_checklist
+    assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
     assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`" in objective_checklist
     assert "Owner handoff docs have been refreshed to v541" in objective_checklist

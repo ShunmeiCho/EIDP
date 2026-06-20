@@ -180,7 +180,10 @@ FY2026/R8 strict target-document to Excel-ready yield below gate
 
 It is not simply "the crawler cannot run", "PDFs are missing", or "any PDF was
 not found". v541 found many candidates, but most were correctly rejected before
-they could become FY2026/R8 Excel-ready evidence. The mixed failure profile is:
+they could become FY2026/R8 Excel-ready evidence. It is also not evidence that
+the algorithm/model is broadly broken. Some discovery, classification, and
+fiscal-year rules may need improvement, but the current evidence supports a
+mixed strict-gate failure profile rather than a single model-failure diagnosis:
 
 - `publication_lag_or_old_target_pdf` / `fiscal_year_mismatch`: old-year or
   latest-public target forms that cannot count as current FY2026/R8 success.
@@ -204,6 +207,22 @@ order:
    `rejection_reason_discovery_error=4`, and
    `rejection_reason_pdf_school_mismatch=2` for site-entry, fetch, and identity
    gaps.
+
+Use a false-reject audit to decide whether the next improvement is algorithmic
+or operational:
+
+- sample `fiscal_year_mismatch` candidates and separate true old-year target
+  forms from fiscal-year extraction mistakes;
+- sample `pre_filtered_non_target_hint` and `classified_non_target` candidates
+  to detect target-form over-rejection;
+- inspect all `target_fiscal_year_not_detected` candidates for trusted official
+  page, anchor, filename, or body evidence;
+- inspect all `no_candidates_found`, `discovery_error`, and
+  `pdf_school_mismatch` candidates for SiteEntry, fetch, or identity gaps.
+
+If false rejects are high, fix the specific rule or classifier. If false
+rejects are low, the blocker is dominated by publication lag, old-year files,
+non-target noise, or release-scope decisions, not a generic algorithm failure.
 
 None of these buckets permits relaxing the FY2026/R8 evidence rules. A
 `publication_lag` decision can support at most the documented `RC_ONLY` route
@@ -279,5 +298,7 @@ Next required actions:
 2. Continue strict-yield RCA in bucket order: fiscal-year mismatch /
    publication lag, non-target candidate noise, target-year-unverified, then
    site-entry/fetch/identity lanes.
-3. Keep final release status `NOT_READY` until the strict Excel-ready gate and
+3. Run a rejection-bucket false-reject audit before labeling the blocker as an
+   algorithm/model defect.
+4. Keep final release status `NOT_READY` until the strict Excel-ready gate and
    owner evidence are both satisfied.

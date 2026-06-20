@@ -67,6 +67,9 @@ current evidence points to a mixed profile: publication lag / old target PDFs,
 non-target PDF noise, target-form-like PDFs without trusted FY2026/R8 evidence,
 and smaller discovery or identity lanes. Do not improve the metric by accepting
 old-year, unknown-year, non-target, or mismatched documents.
+It also is not proof that the algorithm/model is broadly broken. Use a
+rejection-bucket false-reject audit to decide whether specific discovery,
+classification, or fiscal-year rules need correction.
 
 ## P0 Blockers
 
