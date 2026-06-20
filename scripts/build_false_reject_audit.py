@@ -25,6 +25,7 @@ if __package__ in {None, ""}:
 from verify_stage6_evidence import verify_stage6_evidence_bundle
 
 VALID_REVIEW_DECISIONS = ("", "false_reject", "correct_reject", "needs_operator_review")
+REVIEW_MUTABLE_COLUMNS = {"decision", "reviewer", "reviewed_at", "notes"}
 
 REQUIRED_LABELS = (
     "build_info",
@@ -431,6 +432,7 @@ REVIEW_CSV_COLUMNS = (
     "false_reject_signal",
     "notes",
 )
+REVIEW_CONTEXT_COLUMNS = tuple(column for column in REVIEW_CSV_COLUMNS if column not in REVIEW_MUTABLE_COLUMNS)
 
 
 def _iter_review_rows(packet: dict[str, Any]) -> list[dict[str, Any]]:
@@ -473,6 +475,32 @@ def render_review_csv(packet: dict[str, Any]) -> str:
     return output.getvalue()
 
 
+def _review_decision_counts_json(counter: Counter[str]) -> dict[str, int]:
+    return {key or "blank": count for key, count in sorted(counter.items())}
+
+
+def _empty_review_validation(
+    packet: dict[str, Any],
+    expected_rows: list[dict[str, Any]],
+    errors: list[str],
+) -> dict[str, Any]:
+    return {
+        "ok": False,
+        "basis": "false_reject_review_decision_validation",
+        "release_forecast": packet.get("strict_yield", {}).get("release_forecast", "NOT_READY"),
+        "review_status": "invalid",
+        "required_decisions": list(VALID_REVIEW_DECISIONS[1:]),
+        "expected_rows": len(expected_rows),
+        "submitted_rows": 0,
+        "completed_decisions": 0,
+        "blank_decisions": len(expected_rows),
+        "decision_counts": {},
+        "bucket_decision_counts": {},
+        "context_mismatch_count": 0,
+        "errors": errors,
+    }
+
+
 def validate_review_csv(
     packet: dict[str, Any],
     csv_text: str,
@@ -480,10 +508,13 @@ def validate_review_csv(
     require_decisions: bool = False,
 ) -> dict[str, Any]:
     expected_rows = _iter_review_rows(packet)
+    expected_by_id = {str(row["audit_row_id"]): row for row in expected_rows}
     expected_ids = {str(row["audit_row_id"]) for row in expected_rows}
     errors: list[str] = []
     decision_counts: Counter[str] = Counter()
+    bucket_decision_counts: dict[str, Counter[str]] = {}
     seen_ids: set[str] = set()
+    context_mismatch_count = 0
 
     reader = csv.DictReader(io.StringIO(csv_text))
     fieldnames = set(reader.fieldnames or [])
@@ -491,19 +522,7 @@ def validate_review_csv(
     missing_columns = sorted(required_columns - fieldnames)
     if missing_columns:
         errors.append(f"review CSV is missing required columns: {', '.join(missing_columns)}")
-        return {
-            "ok": False,
-            "basis": "false_reject_review_decision_validation",
-            "release_forecast": packet.get("strict_yield", {}).get("release_forecast", "NOT_READY"),
-            "review_status": "invalid",
-            "required_decisions": list(VALID_REVIEW_DECISIONS[1:]),
-            "expected_rows": len(expected_rows),
-            "submitted_rows": 0,
-            "completed_decisions": 0,
-            "blank_decisions": len(expected_rows),
-            "decision_counts": {},
-            "errors": errors,
-        }
+        return _empty_review_validation(packet, expected_rows, errors)
 
     for line_number, row in enumerate(reader, start=2):
         audit_row_id = str(row.get("audit_row_id") or "").strip()
@@ -516,6 +535,18 @@ def validate_review_csv(
         seen_ids.add(audit_row_id)
         if audit_row_id not in expected_ids:
             errors.append(f"line {line_number}: unknown audit_row_id {audit_row_id}")
+            expected_row = None
+        else:
+            expected_row = expected_by_id[audit_row_id]
+            for column in REVIEW_CONTEXT_COLUMNS:
+                expected_value = str(expected_row.get(column) or "")
+                actual_value = str(row.get(column) or "")
+                if actual_value != expected_value:
+                    context_mismatch_count += 1
+                    errors.append(
+                        f"line {line_number}: {column} changed for audit_row_id {audit_row_id}; "
+                        f"expected {expected_value!r}, got {actual_value!r}"
+                    )
         if decision not in VALID_REVIEW_DECISIONS:
             errors.append(
                 f"line {line_number}: invalid decision {decision!r}; "
@@ -524,6 +555,8 @@ def validate_review_csv(
         if require_decisions and decision == "":
             errors.append(f"line {line_number}: decision is required")
         decision_counts[decision] += 1
+        bucket_name = str(expected_row.get("bucket") if expected_row is not None else row.get("bucket") or "")
+        bucket_decision_counts.setdefault(bucket_name, Counter())[decision] += 1
 
     missing_ids = sorted(expected_ids - seen_ids)
     if missing_ids:
@@ -543,7 +576,11 @@ def validate_review_csv(
         "submitted_rows": len(seen_ids),
         "completed_decisions": sum(count for decision, count in decision_counts.items() if decision),
         "blank_decisions": blank_decisions,
-        "decision_counts": {key or "blank": count for key, count in sorted(decision_counts.items())},
+        "decision_counts": _review_decision_counts_json(decision_counts),
+        "bucket_decision_counts": {
+            bucket: _review_decision_counts_json(counter) for bucket, counter in sorted(bucket_decision_counts.items())
+        },
+        "context_mismatch_count": context_mismatch_count,
         "errors": errors,
     }
 

@@ -208,6 +208,20 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert completed_validation["review_status"] == "complete"
     assert completed_validation["completed_decisions"] == len(rows)
     assert completed_validation["decision_counts"] == {"correct_reject": len(rows)}
+    assert completed_validation["context_mismatch_count"] == 0
+    assert completed_validation["bucket_decision_counts"]["fiscal_year_mismatch"] == {"correct_reject": 1}
+    assert completed_validation["bucket_decision_counts"]["site_entry_fetch_identity"] == {"correct_reject": 2}
+
+    tampered_rows = [dict(row) for row in rows]
+    tampered_rows[0]["reason"] = "accepted_downloaded"
+    tampered = io.StringIO()
+    tampered_writer = csv.DictWriter(tampered, fieldnames=module.REVIEW_CSV_COLUMNS, lineterminator="\n")
+    tampered_writer.writeheader()
+    tampered_writer.writerows(tampered_rows)
+    tampered_validation = module.validate_review_csv(packet, tampered.getvalue(), require_decisions=True)
+    assert tampered_validation["ok"] is False
+    assert tampered_validation["context_mismatch_count"] == 1
+    assert "reason changed" in tampered_validation["errors"][0]
 
     review_path = tmp_path / "review.csv"
     review_path.write_text(review_csv, encoding="utf-8")

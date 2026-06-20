@@ -229,7 +229,10 @@ same Stage 6 evidence ZIP with `scripts/build_false_reject_audit.py`.
 The companion review worksheet is
 `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv`; the same script
 can validate the returned worksheet with `--validate-review-csv` and can require
-completed decisions with `--require-decisions`.
+completed decisions with `--require-decisions`. Validation now also rejects
+changed immutable row context, such as bucket, school ID, rejection reason, page
+URL, PDF URL, and anchor text, and reports `bucket_decision_counts` so the
+false-reject review can be summarized by RCA lane.
 
 None of these buckets permits relaxing the FY2026/R8 evidence rules. A
 `publication_lag` decision can support at most the documented `RC_ONLY` route

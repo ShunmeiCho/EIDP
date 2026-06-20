@@ -170,6 +170,9 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "scripts/build_false_reject_audit.py" in objective_checklist
     assert "--validate-review-csv" in objective_checklist
     assert "--require-decisions" in objective_checklist
+    assert "context_mismatch_count=0" in current_status
+    assert "bucket_decision_counts" in objective_checklist
+    assert "immutable row context" in objective_checklist
     assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`" in objective_checklist
     assert "Owner handoff docs have been refreshed to v541" in objective_checklist
     assert "C:\\EIDP-staging\\v541-owner-docs-20260621" in objective_checklist
