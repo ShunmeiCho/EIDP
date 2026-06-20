@@ -562,20 +562,22 @@ def _verify_mature_year_proof(
         finished_at = case.get("finished_at")
         finished_date: date | None = None
         case_ok = True
-        if finished_at not in (None, ""):
-            if not isinstance(finished_at, str):
+        if finished_at in (None, ""):
+            errors.append(f"mature-year proof case FY{fiscal_year} finished_at is required")
+            case_ok = False
+        elif not isinstance(finished_at, str):
+            errors.append(f"mature-year proof case FY{fiscal_year} finished_at must be ISO datetime")
+            case_ok = False
+        else:
+            parsed_finished_at = _iso_datetime_value(finished_at)
+            if parsed_finished_at is None:
                 errors.append(f"mature-year proof case FY{fiscal_year} finished_at must be ISO datetime")
                 case_ok = False
+            elif _is_future_datetime_value(parsed_finished_at):
+                errors.append(f"mature-year proof case FY{fiscal_year} finished_at must not be in the future")
+                case_ok = False
             else:
-                parsed_finished_at = _iso_datetime_value(finished_at)
-                if parsed_finished_at is None:
-                    errors.append(f"mature-year proof case FY{fiscal_year} finished_at must be ISO datetime")
-                    case_ok = False
-                elif _is_future_datetime_value(parsed_finished_at):
-                    errors.append(f"mature-year proof case FY{fiscal_year} finished_at must not be in the future")
-                    case_ok = False
-                else:
-                    finished_date = parsed_finished_at.date()
+                finished_date = parsed_finished_at.date()
         if not _is_number(target_yield):
             errors.append(
                 f"mature-year proof case FY{fiscal_year} target_pdf_auto_yield_pct must be numeric"
