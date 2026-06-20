@@ -162,7 +162,7 @@ The generated `dist/` directory is a symlink to
 external SSD rather than the Mac internal SSD.
 
 After v534 verification, the release-artifact pruner was run with
-`--keep-latest 2 --apply`. It deleted the local v532 core ZIP and sidecar only:
+`--keep-latest 2 --apply`. It deleted the local v532 core ZIP and sidecar:
 
 ```text
 dist/eidp-windows-v532.zip
@@ -173,6 +173,8 @@ The kept local core packages are:
 
 ```text
 dist/eidp-windows-v533.zip
-dist/eidp-windows-v534.zip
-dist/eidp-windows.zip
 ```
+
+After the AppleDouble fix landed and v535 was built, the pruner was run again
+with `--keep-latest 1 --keep-version 533 --apply`. It deleted the invalid local
+v534 core ZIP and sidecar, leaving v533 and v535 as the kept core packages.

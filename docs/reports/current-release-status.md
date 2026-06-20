@@ -3,17 +3,24 @@
 Updated: 2026-06-20
 Branch: `main`
 
-Current local package/source candidate is pending rebuild after v534 was
-rejected by the post-v534 AppleDouble wheelhouse gate. The rejected v534 ZIP was
-(`dist/eidp-windows-v534.zip`, SHA256
-`734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`).
-It was initially package/source verified on macOS and carried the post-v533
+Current local package/source candidate: `v535`
+(`dist/eidp-windows-v535.zip`, SHA256
+`72ef94f35a2cd482eb9650d1a466cb8441f7d96a660a8901710d96603e7d8e9f`).
+`v535` is package/source verified on macOS, carries the post-v533
 release-proof hardening that requires v1 evidence to stay scoped to
-`専門学校`, but the hardened verifier now rejects it because the ZIP contains
-`wheelhouse/._*.whl` AppleDouble sidecar files. Evidence is recorded in
-`docs/reports/2026-06-20-v534-specialty-scope-gate-package.md`. Do not transfer
-or validate v534 on Windows; rebuild a successor package from the hardened
-source instead.
+`専門学校`, and rebuilds after the AppleDouble wheelhouse-sidecar gate rejected
+v534. The v535 ZIP contains `0` AppleDouble sidecars, `84` real wheelhouse
+wheels, and `BUILD_INFO.git_commit=d742327570a08a8f9d6ade7adfc81da8940294b4`
+with `git_dirty=false`. Its full non-Windows release gate passed with `2016`
+unit tests, `196` Windows distribution validator tests, package/source
+freshness, package verifier, and demonstrated-pattern verifier. Evidence is
+recorded in `docs/reports/2026-06-20-v535-appledouble-clean-package.md` and
+`logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`.
+
+Rejected v534 (`dist/eidp-windows-v534.zip`, SHA256
+`734918dbe2213723936aa9148f4260256845f7cfd5044ca0c486bdd237335c05`) is
+documented in `docs/reports/2026-06-20-v534-specialty-scope-gate-package.md`.
+It must not be transferred or validated on Windows.
 
 Latest complete Windows side-by-side smoke and latest usable package candidate
 remain `v533`
@@ -39,12 +46,14 @@ smoke at `C:\Users\cyo20\EIDP-v532-723a507-env0`. Evidence is recorded in
 `logs/win-v532-stage6/win-v532-stage6-side-by-side-evidence-20260620.zip`.
 The local v532 core ZIP and sidecar were pruned after v534 was built using
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 2 --apply`;
-the kept local core packages are v533 and v534.
+the invalid v534 core ZIP and sidecar were pruned after v535 was built using
+`scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
+--keep-version 533 --apply`. The kept local core packages are v533 and v535.
 
 Latest complete Windows side-by-side smoke is still `v533` for setup, active-task
 safety, UI, bounded weekly canary, Excel export, Stage 6 bundle creation, and
-Stage 6 evidence verification. Rejected `v534` has not completed Windows
-side-by-side validation and must not be used as Windows release evidence.
+Stage 6 evidence verification. `v535` has not yet completed Windows
+side-by-side validation, so it must not be used as Windows release evidence.
 Release is still blocked by FY2026/R8 strict yield below gate (`12/50`,
 `24.0%` in the latest v533 Windows canary), missing owner real Windows
 cycle/sign-off, unapproved `publication_lag` exception, and unresolved OCR
