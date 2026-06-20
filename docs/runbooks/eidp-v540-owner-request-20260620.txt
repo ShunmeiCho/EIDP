@@ -12,7 +12,9 @@ This file is not v1.0 approval and it is not permission to switch the active
 weekly task.
 
 Do not start owner sign-off until the release decision is explicit. Current
-release conclusion remains NOT_READY.
+release conclusion remains NOT_READY. The owner may record a NOT_READY
+acknowledgement with `eidp-v540-owner-signoff.md`, but that does not start the
+owner real-cycle approval lane.
 
 Use this package
 ----------------
@@ -51,9 +53,15 @@ Current side-by-side evidence
   logs\win-v540-fbdd0bd-canary\stage6-evidence-verify-mac-20260620.json
 - Consolidated report:
   docs\reports\2026-06-20-v540-owner-briefs-windows-canary.md
+- Owner-facing one-page summary:
+  docs\runbooks\eidp-v540-release-summary.md
+- Short owner decision form:
+  docs\runbooks\eidp-v540-owner-signoff.md
 
 Required return files for owner real cycle
 ------------------------------------------
+- completed docs\runbooks\eidp-v540-owner-signoff.md, if the owner is signing
+  a release decision rather than only acknowledging NOT_READY
 - data\output\last_run.json from the owner-run cycle
 - latest logs\run-*.log
 - latest logs\diagnostics-*.txt

@@ -121,22 +121,45 @@ def test_v540_owner_handoff_is_current_but_not_release_approval() -> None:
     first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v540.txt")
     request = _normalized_doc("docs/runbooks/eidp-v540-owner-request-20260620.txt")
     return_sheet = _normalized_doc("docs/runbooks/eidp-v540-owner-return-fill-sheet.md")
+    release_summary = _normalized_doc("docs/runbooks/eidp-v540-release-summary.md")
+    owner_signoff = _normalized_doc("docs/runbooks/eidp-v540-owner-signoff.md")
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
+    r2_staging = _normalized_doc("docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md")
 
     expected_sha = "6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6"
 
     assert expected_sha in first_read
     assert expected_sha in request
     assert expected_sha in return_sheet
+    assert expected_sha in release_summary
+    assert expected_sha in owner_signoff
+    assert "docs\\runbooks\\eidp-v540-release-summary.md" in first_read
+    assert "docs\\runbooks\\eidp-v540-owner-signoff.md" in first_read
     assert "release conclusion remains NOT_READY" in request
+    assert "The owner may record a NOT_READY acknowledgement" in request
     assert "This file is not v1.0 approval" in first_read
     assert "This file is not v1.0 approval" in request
     assert "It is not release approval" in return_sheet
+    assert "Current release conclusion: `NOT_READY`" in release_summary
+    assert "The owner signs this short form, not the engineering checklist" in owner_signoff
+    assert "the supported decision is `NOT_READY`" in owner_signoff
+    assert "It does not make v540 `READY`" in owner_signoff
     assert "Do not treat the v540 bounded canary as owner real-cycle sign-off" in first_read
     assert "unconfirmed rows into final Excel output" in return_sheet
+    assert "Unknown-year, old-year, school-mismatch, non-target, low-confidence" in owner_signoff
     assert "docs/runbooks/00-READ-ME-FIRST-v540.txt" in current_status
+    assert "docs/runbooks/eidp-v540-release-summary.md" in current_status
+    assert "docs/runbooks/eidp-v540-owner-signoff.md" in current_status
     assert "docs/runbooks/eidp-v540-owner-request-20260620.txt" in current_status
     assert "docs/runbooks/eidp-v540-owner-return-fill-sheet.md" in current_status
+    assert "docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md" in current_status
     assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v540.zip`" in objective_checklist
+    assert "C:\\EIDP-staging\\v540-owner-docs-20260620-r2" in objective_checklist
+    assert "eidp-v540-release-summary.md" in objective_checklist
+    assert "eidp-v540-owner-signoff.md" in objective_checklist
     assert "Run the prepared owner/operator v540 return path" in objective_checklist
+    assert "ZIP SHA256" in r2_staging
+    assert "owner-signoff short-form marker: True" in r2_staging
+    assert "old r1 zip exists: False" in r2_staging
+    assert "scheduled task execute:" in r2_staging

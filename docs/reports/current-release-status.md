@@ -95,12 +95,15 @@ evidence verification. Evidence is recorded in
 `logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`, and
 `logs/win-v535-stage6/stage6-evidence-20260620-053032.zip`.
 The latest owner/operator handoff docs are staged for v540 on Windows under
-`C:\EIDP-staging\v540-owner-docs-20260620`; the docs-only ZIP SHA256 is
-`219f0c4fe0e26073236e74a83fb92126898f885324666bea96a69fcb167afa5a`, and the
-remote staging check is recorded in
-`docs/reports/2026-06-20-v540-owner-docs-windows-staging.md`. The superseded
-v535 owner-docs staging remains historical evidence only; it is not the current
-owner handoff lane.
+`C:\EIDP-staging\v540-owner-docs-20260620-r2`. The r2 handoff adds the
+owner-facing one-page release summary and short owner sign-off form:
+`docs/runbooks/eidp-v540-release-summary.md` and
+`docs/runbooks/eidp-v540-owner-signoff.md`. The final docs-only ZIP SHA256 is
+recorded in
+`docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md`; the earlier
+`docs/reports/2026-06-20-v540-owner-docs-windows-staging.md` is historical r1
+staging evidence. The superseded v535 owner-docs staging remains historical
+evidence only; it is not the current owner handoff lane.
 The v535 strict-yield RCA action plan is recorded in
 `docs/reports/2026-06-20-v535-strict-yield-rca-plan.md`; it decomposes the
 `12/50 (24.0%)` blocker into `publication_lag_or_old_target_pdf`,
@@ -210,6 +213,8 @@ the latest package with complete non-OCR Windows side-by-side smoke evidence,
 including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
 bundle verification. The current owner/operator handoff docs are now
 `docs/runbooks/00-READ-ME-FIRST-v540.txt`,
+`docs/runbooks/eidp-v540-release-summary.md`,
+`docs/runbooks/eidp-v540-owner-signoff.md`,
 `docs/runbooks/eidp-v540-owner-request-20260620.txt`, and
 `docs/runbooks/eidp-v540-owner-return-fill-sheet.md`; they do not approve
 v1.0 and do not replace the missing owner real-cycle evidence.

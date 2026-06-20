@@ -374,14 +374,17 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   operator-reviewable is `47/50 (94.0%)`, `ship_gate_status=below_gate`, and
   OCR scope remains unresolved because the latest complete OCR proof is not
   from v535.
-- v540 owner/operator docs were staged on Windows under
-  `C:\EIDP-staging\v540-owner-docs-20260620`, recorded in
-  `docs/reports/2026-06-20-v540-owner-docs-windows-staging.md`. The ZIP SHA256
-  is `219f0c4fe0e26073236e74a83fb92126898f885324666bea96a69fcb167afa5a`.
-  A post-staging check confirmed the required v540 docs are present,
+- v540 owner/operator docs r2 were staged on Windows under
+  `C:\EIDP-staging\v540-owner-docs-20260620-r2`, recorded in
+  `docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md`. The r2 ZIP
+  SHA256 is
+  `e5ee3df87e962321ff8a4f37dd3ec9becc776078bcb93cdeed8bcd907751be8f`.
+  A post-staging check confirmed the required v540 docs are present, including
+  `eidp-v540-release-summary.md` and `eidp-v540-owner-signoff.md`,
   `current-release-status.md` still contains `NOT_READY`, the publication-lag
-  exception record still contains `NOT_APPROVED`, and the active weekly task
-  still points to `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`.
+  exception record still contains `NOT_APPROVED`, the active weekly task still
+  points to `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`, and
+  the superseded r1 docs ZIP/directory were removed from Windows staging.
 - v532 Windows connectivity recheck and follow-up are recorded in
   `docs/reports/2026-06-20-v532-windows-connectivity-recheck.md`: the initial
   approved `ssh -o BatchMode=yes -o ConnectTimeout=5 win hostname` timed out
@@ -396,6 +399,8 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   OCR runtime proof failed because the OCR add-on is missing.
 - v540 operator-side handoff docs are prepared and staged:
   `docs/runbooks/00-READ-ME-FIRST-v540.txt`,
+  `docs/runbooks/eidp-v540-release-summary.md`,
+  `docs/runbooks/eidp-v540-owner-signoff.md`,
   `docs/runbooks/eidp-v540-owner-request-20260620.txt`, and
   `docs/runbooks/eidp-v540-owner-return-fill-sheet.md`. These enable
   Windows-local owner return validation, but they are not release approval and

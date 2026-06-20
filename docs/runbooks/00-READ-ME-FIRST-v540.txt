@@ -22,6 +22,8 @@ Package
 
 Read first
 ----------
+- docs\runbooks\eidp-v540-release-summary.md
+- docs\runbooks\eidp-v540-owner-signoff.md
 - docs\reports\2026-05-20-owner-v1.0-decision-brief.md
 - docs\runbooks\eidp-v540-owner-return-fill-sheet.md
 - docs\runbooks\eidp-v540-owner-request-20260620.txt
@@ -67,6 +69,9 @@ The current `publication_lag` exception record remains NOT_APPROVED.
 Owner sign-off may be short, but the release evidence cannot be shortened.
 The owner signs a release decision and accepted limitations, not a claim that
 the owner manually reproduced CI or package-verifier details.
+Use `eidp-v540-release-summary.md` as the owner-facing summary and
+`eidp-v540-owner-signoff.md` as the short owner form. The detailed checklist
+and Stage 6 verifier remain the evidence basis.
 
 Safety
 ------

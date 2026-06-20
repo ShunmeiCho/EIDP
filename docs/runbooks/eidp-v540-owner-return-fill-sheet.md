@@ -48,24 +48,10 @@ real-cycle sign-off evidence.
 
 ## Short Owner Decision Form
 
-The owner may fill this short decision section after reading the release
-summary and known limitations. The detailed engineering evidence remains in
-the release packet and Stage 6 evidence bundle.
-
-```text
-Release ID: v540
-Package SHA256: 6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6
-Decision: READY / RC_ONLY / NOT_READY
-
-- [ ] I have read the Release Summary and understand v1 scope is the
-      vocational-school Windows single-operator workflow.
-- [ ] I understand the known limitations and release exceptions.
-- [ ] I accept the selected release decision.
-
-Owner:
-Date:
-Signature:
-```
+Use `docs/runbooks/eidp-v540-release-summary.md` as the owner-facing one-page
+summary and `docs/runbooks/eidp-v540-owner-signoff.md` as the short owner
+decision form. Do not ask the owner to manually fill or reproduce the
+engineering checklist.
 
 For v540, current evidence supports `NOT_READY` only. `publication_lag`
 approval can support at most `RC_ONLY` after all required return evidence is
