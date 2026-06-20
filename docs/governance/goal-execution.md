@@ -85,6 +85,26 @@ Every work round must report:
 
 Avoid unsupported claims such as "basically complete" or "ready enough".
 
+## Release Forecast Cadence
+
+Daily or per-slice progress does not require filling the full release checklist.
+It does require a short, fixed Release Forecast so "can run" is not mistaken
+for "can ship":
+
+```text
+Release Forecast: READY / RC_ONLY / NOT_READY
+Why: one-line reason
+Evidence: source head, packaged commit, latest CI, latest Windows canary
+P0: open release blockers
+Next: one smallest verifiable slice
+```
+
+Formal `READY`, `RC_ONLY`, package handoff, or owner-facing release decisions
+must use the full release gate checklist and evidence bundle. A release forecast
+is not a substitute for the checklist; it is the lightweight daily signal that
+keeps source/package, bounded/global, Windows, owner-decision, and Excel-ready
+evidence boundaries visible.
+
 ## Release Conclusion Vocabulary
 
 Use only these release conclusions:

@@ -43,3 +43,14 @@ def test_v1_exit_criteria_preserve_future_year_scope_without_expanding_v1() -> N
     assert "reusable across future fiscal years" in text
     assert "documents, metrics, tasks, exports, and gate evidence stay `fiscal_year`-scoped" in text
     assert "university production support" in text
+
+
+def test_goal_execution_requires_lightweight_forecast_and_formal_release_checklist() -> None:
+    text = _normalized_doc("docs/governance/goal-execution.md")
+
+    assert "## Release Forecast Cadence" in text
+    assert "Release Forecast: READY / RC_ONLY / NOT_READY" in text
+    assert "Evidence: source head, packaged commit, latest CI, latest Windows canary" in text
+    assert "P0: open release blockers" in text
+    assert "full release gate checklist and evidence bundle" in text
+    assert "A release forecast is not a substitute for the checklist" in text
