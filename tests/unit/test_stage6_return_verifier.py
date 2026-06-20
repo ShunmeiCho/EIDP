@@ -122,6 +122,9 @@ def _write_complete_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:
 
 def _write_mature_year_proof(tmp_path: Path, *, ok: bool = True, **case_overrides: object) -> Path:
     proof = tmp_path / "mature-year-proof.json"
+    evidence_path = tmp_path / "logs" / "fy2025-last_run.json"
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text("{}", encoding="utf-8")
     case = {
         "fiscal_year": 2025,
         "ok": ok,
@@ -1123,6 +1126,67 @@ def test_verify_stage6_return_rejects_unknown_mature_year_proof_evidence_source(
         "mature-year proof case FY2025 evidence source must be last_run or strict_gap_analysis"
         in result["errors"]
     )
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
+        "errors"
+    ]
+
+
+def test_verify_stage6_return_rejects_missing_last_run_mature_year_proof_evidence_file(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path, last_run="logs/missing-last_run.json")
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "mature-year proof case FY2025 last_run evidence path does not exist: logs/missing-last_run.json"
+        in result["errors"]
+    )
+    assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
+        "errors"
+    ]
+
+
+def test_verify_stage6_return_rejects_missing_strict_gap_mature_year_proof_evidence_file(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(
+        tmp_path,
+        evidence_source="strict_gap_analysis",
+        last_run="",
+        strict_gap_analysis="logs/missing-strict-gap.json",
+    )
+    exception_record = _write_approved_exception_record(tmp_path)
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+    )
+
+    assert result["ok"] is False
+    assert (
+        "mature-year proof case FY2025 strict_gap_analysis evidence path does not exist: "
+        "logs/missing-strict-gap.json"
+    ) in result["errors"]
     assert "mature-year proof JSON must include at least one passing fiscal year before target_fy" in result[
         "errors"
     ]

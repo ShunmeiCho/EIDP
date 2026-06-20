@@ -1432,6 +1432,8 @@ def _check_python_entrypoint_contracts(check: ZipCheck, names: set[str]) -> None
             "last_run finished_at must not be in the future",
             "mature-year proof case FY{fiscal_year} evidence source is required",
             "mature-year proof case FY{fiscal_year} evidence source must be last_run or strict_gap_analysis",
+            "mature-year proof case FY{fiscal_year} last_run evidence path does not exist",
+            "mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist",
             "mature-year proof case FY{fiscal_year} finished_at is required",
             "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
             "SHIP_GATE_EXCEPTION_REASONS",

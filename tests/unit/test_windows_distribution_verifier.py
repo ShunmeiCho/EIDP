@@ -1101,6 +1101,14 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
             "mature-year proof evidence source may be arbitrary",
         )
         .replace(
+            "mature-year proof case FY{fiscal_year} last_run evidence path does not exist",
+            "mature-year proof last_run evidence may be missing",
+        )
+        .replace(
+            "mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist",
+            "mature-year proof strict_gap evidence may be missing",
+        )
+        .replace(
             "mature-year proof case FY{fiscal_year} finished_at must not be in the future",
             "mature-year proof finished_at may be future",
         )
@@ -1204,6 +1212,17 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
     assert any(
         "scripts/verify_stage6_return.py missing required token: "
         "mature-year proof case FY{fiscal_year} evidence source must be last_run or strict_gap_analysis"
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "mature-year proof case FY{fiscal_year} last_run evidence path does not exist" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist"
         in error
         for error in check.errors
     )

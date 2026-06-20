@@ -525,6 +525,14 @@ def _case_evidence_source(case: dict[str, Any]) -> str | None:
     return None
 
 
+def _case_evidence_path_exists(path_value: str, proof_json_path: Path | None) -> bool:
+    path = Path(path_value)
+    candidates = [path]
+    if proof_json_path is not None and not path.is_absolute():
+        candidates.insert(0, proof_json_path.parent / path)
+    return any(candidate.is_file() for candidate in candidates)
+
+
 def _mature_year_cases(proof_json: dict[str, Any]) -> list[dict[str, Any]]:
     cases = proof_json.get("cases")
     if isinstance(cases, list):
@@ -538,6 +546,7 @@ def _mature_year_cases(proof_json: dict[str, Any]) -> list[dict[str, Any]]:
 def _verify_mature_year_proof(
     proof_json: dict[str, Any],
     *,
+    proof_json_path: Path | None,
     target_fy: int | None,
     min_target_pdf_auto_yield: float,
     min_target_pdf_auto_denominator_count: int,
@@ -578,12 +587,26 @@ def _verify_mature_year_proof(
             errors.append(f"mature-year proof case FY{fiscal_year} evidence source is required")
             case_ok = False
         elif evidence_source == "last_run":
-            if not isinstance(case.get("last_run"), str) or not case["last_run"]:
+            last_run_path = case.get("last_run")
+            if not isinstance(last_run_path, str) or not last_run_path:
                 errors.append(f"mature-year proof case FY{fiscal_year} last_run evidence path is required")
                 case_ok = False
+            elif not _case_evidence_path_exists(last_run_path, proof_json_path):
+                errors.append(
+                    f"mature-year proof case FY{fiscal_year} last_run evidence path does not exist: "
+                    f"{last_run_path}"
+                )
+                case_ok = False
         elif evidence_source == "strict_gap_analysis":
-            if not isinstance(case.get("strict_gap_analysis"), str) or not case["strict_gap_analysis"]:
+            strict_gap_analysis_path = case.get("strict_gap_analysis")
+            if not isinstance(strict_gap_analysis_path, str) or not strict_gap_analysis_path:
                 errors.append(f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path is required")
+                case_ok = False
+            elif not _case_evidence_path_exists(strict_gap_analysis_path, proof_json_path):
+                errors.append(
+                    f"mature-year proof case FY{fiscal_year} strict_gap_analysis evidence path does not exist: "
+                    f"{strict_gap_analysis_path}"
+                )
                 case_ok = False
         else:
             errors.append(
@@ -873,6 +896,7 @@ def verify_stage6_return(
             if proof_json is not None:
                 mature_year_proof_years, mature_year_proof_finished_date = _verify_mature_year_proof(
                     proof_json,
+                    proof_json_path=mature_year_proof_json,
                     target_fy=target_fy,
                     min_target_pdf_auto_yield=min_target_pdf_auto_yield,
                     min_target_pdf_auto_denominator_count=min_target_pdf_auto_denominator_count,
