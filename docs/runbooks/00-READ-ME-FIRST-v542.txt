@@ -1,0 +1,106 @@
+EIDP v542 owner/operator handoff
+Date: 2026-06-21
+
+Purpose
+-------
+v542 is the latest packaged bounded Windows canary. It packages the post-v541
+false-reject owner-return verifier integration, while retaining the short owner
+sign-off, expected package SHA/source commit, and RC_ONLY publication-lag
+semantics verified by v541.
+
+This file is not v1.0 approval and is not permission to switch the active
+weekly Scheduled Task lane.
+
+Package
+-------
+- ZIP: C:\EIDP-staging\eidp-windows-v542.zip
+- Expected SHA256:
+  89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc
+- Side-by-side root:
+  %USERPROFILE%\EIDP-v542-d98ecd7-env0
+- Current active root to preserve:
+  %USERPROFILE%\EIDP-v527-69fe81f-env0
+
+Read first
+----------
+- docs\runbooks\eidp-v542-release-summary.md
+- docs\runbooks\eidp-v542-owner-signoff.md
+- docs\reports\2026-05-20-owner-v1.0-decision-brief.md
+- docs\runbooks\eidp-v542-owner-return-fill-sheet.md
+- docs\runbooks\eidp-v542-owner-request-20260621.txt
+- docs\runbooks\eidp-operator-e2e-template.md
+- docs\runbooks\eidp-v1-release-admin-checklist.md
+- docs\reports\2026-06-21-v542-false-reject-verifier-windows-canary.md
+- docs\reports\2026-05-19-publication-lag-release-exception-record.md
+- docs\release\owner-decisions\publication-lag.md
+- docs\release\owner-decisions\ocr-scope.md
+- docs\reports\current-release-status.md
+
+Current evidence
+----------------
+- Package version: 1.0.0rc1
+- Package BUILD_INFO.git_commit: d98ecd7196631a00c27aff1c240ebc7969579ce7
+- Package BUILD_INFO.git_branch: main
+- Package BUILD_INFO.git_dirty: false
+- Package/source verification: ok=true
+- Core ZIP verifier: ok=true
+- GitHub main CI for packaged source commit d98ecd7: success
+- GitHub main CI for the v542 evidence-docs commit ba161f4: success
+- Re-check current `main` before release approval if additional handoff docs
+  are committed after this file.
+- Windows side-by-side validation for v542: setup/weekly/Stage 6 ok
+- Active-task safety: ok=true; active task still points to v527
+- v542 strict/Excel-ready FY2026 canary yield: 12/50 (24.0%)
+- v542 operator-reviewable canary rate: 47/50 (94.0%)
+- v542 OCR runtime validation: not complete
+- Latest complete OCR runtime proof remains: v526
+
+Release decision boundary
+-------------------------
+Do not approve v1.0 from v542 package/CI evidence alone.
+
+Release approval still requires either:
+
+1. strict FY2026/R8 target-PDF acquisition reaches the 60% release line; or
+2. an explicit APPROVED `publication_lag` exception, mature-year proof, owner
+   real Windows cycle, `scripts\verify_stage6_return.py ok=true`, Excel/audit
+   append-only evidence, and owner/operator sign-off.
+
+The current `publication_lag` exception record remains NOT_APPROVED.
+
+Owner sign-off may be short, but the release evidence cannot be shortened.
+The owner signs a release decision and accepted limitations, not a claim that
+the owner manually reproduced CI or package-verifier details.
+Use `eidp-v542-release-summary.md` as the owner-facing summary and
+`eidp-v542-owner-signoff.md` as the short owner form. The detailed checklist
+and Stage 6 verifier remain the evidence basis.
+
+Safety
+------
+- Do not delete data\eidp.sqlite3
+- Do not delete data\audit\manual-actions.jsonl
+- Do not delete data\master.xlsx
+- Do not delete data\pdfs
+- Do not run uninstall.bat
+- Do not persist EIDP_TARGET_FISCAL_YEAR into .env
+- Do not expose Streamlit beyond 127.0.0.1 for remote access; use SSH tunnel
+- Keep the v527 active root until an explicit promotion decision is made
+- Run v542 setup with EIDP_REGISTER_WEEKLY_TASK=0 unless promotion is approved
+- Do not treat the v542 bounded canary as owner real-cycle sign-off
+
+Return after v542 validation / owner real cycle
+-----------------------------------------------
+- completed eidp-operator-e2e-template.md
+- data\output\last_run.json from the owner real cycle
+- latest logs\run-*.log
+- latest logs\diagnostics-*.txt
+- latest logs\stage6-evidence-*.zip
+- latest logs\stage6-evidence-verify-*.json
+- v542 validate-after-setup evidence
+- v542 active-task recovery JSON
+- Excel proof
+- ManualActionLog / JSONL outbox proof
+- owner/operator sign-off
+
+The returned files must pass `scripts\verify_stage6_return.py` before release
+acceptance.

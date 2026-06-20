@@ -37,18 +37,20 @@ prove release readiness. Evidence is recorded in
 `logs/win-v542-d98ecd7-canary/stage6-evidence-verify-20260621-040959.json`,
 and `logs/win-v542-d98ecd7-canary/20260620_185933-summary.json`.
 
-The initial v541 owner/operator handoff docs were staged on Windows under
-`C:\EIDP-staging\v541-owner-docs-20260621`. That base handoff includes
-`docs/runbooks/00-READ-ME-FIRST-v541.txt`,
-`docs/runbooks/eidp-v541-release-summary.md`,
-`docs/runbooks/eidp-v541-owner-signoff.md`,
-`docs/runbooks/eidp-v541-owner-request-20260621.txt`, and
-`docs/runbooks/eidp-v541-owner-return-fill-sheet.md`. Transfer verification is
-recorded in `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`; the
-docs ZIP SHA256 is
-`4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`. It is now
-superseded by the r3 docs-only false-reject handoff below. Neither handoff
-approves v1.0 or replaces the missing owner real-cycle evidence.
+The latest owner/operator handoff docs have been refreshed to v542 package
+identity and the v542 false-reject RCA packet. The current handoff lane is
+`C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`, and includes
+`docs/runbooks/00-READ-ME-FIRST-v542.txt`,
+`docs/runbooks/eidp-v542-release-summary.md`,
+`docs/runbooks/eidp-v542-owner-signoff.md`,
+`docs/runbooks/eidp-v542-owner-request-20260621.txt`,
+`docs/runbooks/eidp-v542-owner-return-fill-sheet.md`,
+`docs/reports/2026-06-21-v542-false-reject-audit-packet.md`, and
+`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. This is a
+docs-only handoff and does not approve v1.0 or replace the missing owner
+real-cycle evidence. The earlier v541 owner-docs base and r3 refresh remain
+historical handoff evidence only.
 
 Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
 `dist/` after v542 verification; SHA256 was
@@ -163,14 +165,11 @@ evidence verification. Evidence is recorded in
 `logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`, and
 `logs/win-v535-stage6/stage6-evidence-20260620-053032.zip`.
 The initial owner/operator handoff docs were staged for v541 on Windows under
-`C:\EIDP-staging\v541-owner-docs-20260621`. That handoff adds the v541
-first-read file, owner request, owner return fill sheet, release summary, and
-short owner sign-off form. Transfer evidence is recorded in
-`docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`, with ZIP SHA256
-`4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`. The v540
-r2 handoff, v535 owner-docs staging, and this initial v541 base handoff remain
-historical evidence only; the current owner handoff lane is the r3 docs-only
-false-reject refresh recorded above.
+`C:\EIDP-staging\v541-owner-docs-20260621`, then refreshed to r3 under
+`C:\EIDP-staging\v541-owner-docs-20260621-r3` after false-reject worksheet
+return rules were added. Those v541 handoffs, the v540 r2 handoff, and the v535
+owner-docs staging remain historical evidence only; the current owner handoff
+lane is the v542 docs-only refresh recorded above.
 The v535 strict-yield RCA action plan is recorded in
 `docs/reports/2026-06-20-v535-strict-yield-rca-plan.md`; it decomposes the
 `12/50 (24.0%)` blocker into `publication_lag_or_old_target_pdf`,
@@ -191,13 +190,13 @@ order, without counting old-year PDFs, unknown-year documents, non-target files,
 or identity mismatches as FY2026/R8 success. This also must not be simplified
 to "the algorithm/model is broken" until a rejection-bucket false-reject audit
 shows material over-rejection or fiscal-year extraction mistakes.
-The first v541 false-reject audit packet is now recorded in
-`docs/reports/2026-06-21-v541-false-reject-audit-packet.md`; it was generated
-from the v541 Stage 6 evidence ZIP and samples fiscal-year mismatch,
+The current v542 false-reject audit packet is now recorded in
+`docs/reports/2026-06-21-v542-false-reject-audit-packet.md`; it was generated
+from the v542 Stage 6 evidence ZIP and samples fiscal-year mismatch,
 pre-filtered non-target, classified non-target, target-year-unverified, and
 site-entry/fetch/identity rows without changing release status.
 The same packet now has a companion decision worksheet at
-`docs/reports/2026-06-21-v541-false-reject-review-sheet.csv`. It contains stable
+`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. It contains stable
 `audit_row_id` values and blank `decision` cells restricted to
 `false_reject`, `correct_reject`, or `needs_operator_review`; validating it with
 `--require-decisions` correctly fails until the owner/operator completes the
@@ -214,15 +213,12 @@ from current `main` before they can support an RCA claim. The owner-return
 verifier now accepts `--false-reject-evidence-zip`,
 `--false-reject-review-csv`, and `--false-reject-sample-size`; when supplied, it
 requires the worksheet to validate with `review_status=complete` and
-`context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to r3 at
-`C:\EIDP-staging\v541-owner-docs-20260621-r3`, recorded in
-`docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`, so the staged
-owner docs now include the false-reject worksheet return rules, worksheet CSV,
-and the return-verifier false-reject arguments. The r3 docs ZIP SHA256 is
-`8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49`. The
-superseded r2 ZIP and extracted directory were removed from Windows staging and
-the external SSD; the r2 report remains historical evidence only. This still
-does not change the release conclusion.
+`context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to
+v542 at `C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`, so the staged
+owner docs now include the v542 false-reject worksheet return rules, worksheet
+CSV, and the return-verifier false-reject arguments. The v541 r3 handoff remains
+historical evidence only. This still does not change the release conclusion.
 This false-reject owner-return verifier integration is now packaged and
 Windows-canary verified in `dist/eidp-windows-v542.zip` at current `main` commit
 `d98ecd7196631a00c27aff1c240ebc7969579ce7`. CI run `27880148454` passed both
@@ -334,11 +330,11 @@ brief, and the v526 owner return fill sheet, and now has SHA256
 the latest package with complete non-OCR Windows side-by-side smoke evidence,
 including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
 bundle verification. The current owner/operator handoff docs are now
-`docs/runbooks/00-READ-ME-FIRST-v541.txt`,
-`docs/runbooks/eidp-v541-release-summary.md`,
-`docs/runbooks/eidp-v541-owner-signoff.md`,
-`docs/runbooks/eidp-v541-owner-request-20260621.txt`, and
-`docs/runbooks/eidp-v541-owner-return-fill-sheet.md`; they do not approve
+`docs/runbooks/00-READ-ME-FIRST-v542.txt`,
+`docs/runbooks/eidp-v542-release-summary.md`,
+`docs/runbooks/eidp-v542-owner-signoff.md`,
+`docs/runbooks/eidp-v542-owner-request-20260621.txt`, and
+`docs/runbooks/eidp-v542-owner-return-fill-sheet.md`; they do not approve
 v1.0 and do not replace the missing owner real-cycle evidence.
 `v502` and `v501` are superseded Windows evidence baselines.
 

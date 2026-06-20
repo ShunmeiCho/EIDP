@@ -117,31 +117,37 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Current v542 package evidence" in checklist
 
 
-def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
-    first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v541.txt")
-    request = _normalized_doc("docs/runbooks/eidp-v541-owner-request-20260621.txt")
-    return_sheet = _normalized_doc("docs/runbooks/eidp-v541-owner-return-fill-sheet.md")
-    release_summary = _normalized_doc("docs/runbooks/eidp-v541-release-summary.md")
-    owner_signoff = _normalized_doc("docs/runbooks/eidp-v541-owner-signoff.md")
+def test_v542_owner_handoff_is_current_but_not_release_approval() -> None:
+    first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v542.txt")
+    request = _normalized_doc("docs/runbooks/eidp-v542-owner-request-20260621.txt")
+    return_sheet = _normalized_doc("docs/runbooks/eidp-v542-owner-return-fill-sheet.md")
+    release_summary = _normalized_doc("docs/runbooks/eidp-v542-release-summary.md")
+    owner_signoff = _normalized_doc("docs/runbooks/eidp-v542-owner-signoff.md")
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
-    staging = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-windows-staging.md")
-    staging_r3 = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md")
+    staging = _normalized_doc("docs/reports/2026-06-21-v542-owner-docs-windows-staging.md")
+    historical_staging = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-windows-staging.md")
+    historical_staging_r3 = _normalized_doc("docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md")
 
-    expected_package_sha = "2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f"
-    expected_v542_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
-    expected_v541_source_sha = "e62d074081e60428957a2f405c3a917bbceb31a0"
+    expected_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
     expected_v542_source_sha = "d98ecd7196631a00c27aff1c240ebc7969579ce7"
-    expected_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
-    expected_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
+    expected_docs_sha = "553a40a18a43d4a9c5a32f5fb1a5c9abc75a5e0304a6cf25fd4f560be7740e64"
+    expected_v541_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
+    expected_v541_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
 
     assert expected_package_sha in first_read
     assert expected_package_sha in request
     assert expected_package_sha in return_sheet
     assert expected_package_sha in release_summary
     assert expected_package_sha in owner_signoff
-    assert "docs\\runbooks\\eidp-v541-release-summary.md" in first_read
-    assert "docs\\runbooks\\eidp-v541-owner-signoff.md" in first_read
+    assert expected_v542_source_sha in first_read
+    assert expected_v542_source_sha in request
+    assert expected_v542_source_sha in return_sheet
+    assert expected_v542_source_sha in release_summary
+    assert expected_v542_source_sha in owner_signoff
+    assert "docs\\runbooks\\eidp-v542-release-summary.md" in first_read
+    assert "docs\\runbooks\\eidp-v542-owner-signoff.md" in first_read
+    assert "post-v541 false-reject owner-return verifier integration" in first_read
     assert "release conclusion remains NOT_READY" in request
     assert "The owner may record a NOT_READY acknowledgement" in request
     assert "This file is not v1.0 approval" in first_read
@@ -150,8 +156,8 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "Current release conclusion: `NOT_READY`" in release_summary
     assert "The owner signs this short form, not the engineering checklist" in owner_signoff
     assert "the supported decision is `NOT_READY`" in owner_signoff
-    assert "It does not make v541 `READY`" in owner_signoff
-    assert "Do not treat the v541 bounded canary as owner real-cycle sign-off" in first_read
+    assert "It does not make v542 `READY`" in owner_signoff
+    assert "Do not treat the v542 bounded canary as owner real-cycle sign-off" in first_read
     assert "unconfirmed rows into final Excel output" in return_sheet
     assert "False-Reject RCA Worksheet" in return_sheet
     assert "Fill only these columns" in return_sheet
@@ -166,15 +172,20 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "--false-reject-sample-size 12" in return_sheet
     assert "False-reject worksheet rules" in request
     assert "Fill only decision/reviewer/reviewed_at/notes" in request
-    assert "The v541 Windows package alone is not sufficient proof" in request
+    assert "from current main, or from a v542+ package" in request
+    assert "The v542 package proves the verifier is available" in request
+    assert "from current `main`, or from a v542+ package" in return_sheet
+    assert "The v542 package proves the verifier is available" in return_sheet
     assert "scripts\\verify_stage6_return.py" in request
     assert "Unknown-year, old-year, school-mismatch, non-target, low-confidence" in owner_signoff
-    assert "docs/runbooks/00-READ-ME-FIRST-v541.txt" in current_status
-    assert "docs/runbooks/eidp-v541-release-summary.md" in current_status
-    assert "docs/runbooks/eidp-v541-owner-signoff.md" in current_status
-    assert "docs/runbooks/eidp-v541-owner-request-20260621.txt" in current_status
-    assert "docs/runbooks/eidp-v541-owner-return-fill-sheet.md" in current_status
-    assert "docs/reports/2026-06-21-v541-owner-docs-windows-staging.md" in current_status
+
+    assert "docs/runbooks/00-READ-ME-FIRST-v542.txt" in current_status
+    assert "docs/runbooks/eidp-v542-release-summary.md" in current_status
+    assert "docs/runbooks/eidp-v542-owner-signoff.md" in current_status
+    assert "docs/runbooks/eidp-v542-owner-request-20260621.txt" in current_status
+    assert "docs/runbooks/eidp-v542-owner-return-fill-sheet.md" in current_status
+    assert "docs/reports/2026-06-21-v542-owner-docs-windows-staging.md" in current_status
+    assert "earlier v541 owner-docs base and r3 refresh remain historical" in current_status
     assert 'not a generic "PDF not found" or crawler-runtime failure' in current_status
     assert "FY2026/R8 strict target-document to Excel-ready yield" in current_status
     assert 'simplified to "the algorithm/model is broken"' in current_status
@@ -183,10 +194,10 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "not framed as a generic algorithm/model failure" in objective_checklist
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
-    assert "docs/reports/2026-06-21-v541-false-reject-audit-packet.md" in current_status
-    assert "docs/reports/2026-06-21-v541-false-reject-audit-packet.md" in objective_checklist
-    assert "docs/reports/2026-06-21-v541-false-reject-review-sheet.csv" in current_status
-    assert "docs/reports/2026-06-21-v541-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v542-false-reject-audit-packet.md" in current_status
+    assert "docs/reports/2026-06-21-v542-false-reject-audit-packet.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v542-false-reject-review-sheet.csv" in current_status
+    assert "docs/reports/2026-06-21-v542-false-reject-review-sheet.csv" in objective_checklist
     assert "scripts/build_false_reject_audit.py" in objective_checklist
     assert "--validate-review-csv" in objective_checklist
     assert "--require-decisions" in objective_checklist
@@ -196,52 +207,43 @@ def test_v541_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "row context must remain unchanged" in current_status
     assert "The owner-return verifier now accepts `--false-reject-evidence-zip`" in current_status
     assert "`context_mismatch_count=0`" in current_status
-    assert expected_v542_package_sha in current_status
-    assert expected_v542_package_sha in objective_checklist
+    assert expected_package_sha in current_status
+    assert expected_package_sha in objective_checklist
     assert expected_v542_source_sha in current_status
     assert expected_v542_source_sha in objective_checklist
-    assert expected_v541_source_sha in current_status
-    assert expected_v541_source_sha in objective_checklist
     assert "CI run `27880148454` passed both `Python quality gates` and `Ship gate contract`" in current_status
     assert "CI run `27880148454` green" in objective_checklist
     assert "now packaged and Windows-canary verified in `dist/eidp-windows-v542.zip`" in current_status
     assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist
     assert "from current `main` or from a v542+ package" in current_status
-    assert "v541-owner-docs-20260621-r3" in current_status
-    assert "docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md" in current_status
+    assert "v542-owner-docs-20260621" in current_status
+    assert "docs/reports/2026-06-21-v542-owner-docs-windows-staging.md" in current_status
     assert "bucket_decision_counts" in objective_checklist
     assert "immutable row context" in objective_checklist
     assert "required reviewer/timestamp fields" in objective_checklist
     assert "notes for `false_reject` and `needs_operator_review`" in objective_checklist
     assert "fill only `decision`, `reviewer`, `reviewed_at`, and `notes`" in objective_checklist
     assert "`scripts/verify_stage6_return.py` can validate the returned worksheet" in objective_checklist
-    assert "v541-owner-docs-20260621-r3" in objective_checklist
-    assert "False-Reject RCA Worksheet" in staging_r3
-    assert "False-reject worksheet rules" in staging_r3
-    assert "return sheet verifier false-reject args: True" in staging_r3
-    assert "request verifier false-reject args: True" in staging_r3
-    assert "current-release-status NOT_READY: True" in staging_r3
-    assert "current-release-status verifier false-reject args: True" in staging_r3
-    assert "old r2 zip exists: False" in staging_r3
-    assert "old r2 dir exists: False" in staging_r3
-    assert "The clean ZIP was created without macOS AppleDouble `._*` sidecars." in staging_r3
+    assert "v542-owner-docs-20260621" in objective_checklist
+    assert "False-Reject RCA Worksheet" in staging
+    assert "False-reject worksheet rules" in staging
+    assert "return sheet verifier false-reject args: True" in staging
+    assert "request verifier false-reject args: True" in staging
+    assert "current-release-status NOT_READY: True" in staging
+    assert "current-release-status v542 handoff: True" in staging
+    assert "objective checklist v542 handoff: True" in staging
+    assert "C:\\EIDP-staging\\eidp-v541-owner-docs-20260621.zip present: False" in staging
+    assert "C:\\EIDP-staging\\v541-owner-docs-20260621-r3 present: False" in staging
+    assert "macOS AppleDouble `._*` sidecars were also removed" in staging
     assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v542.zip`" in objective_checklist
-    assert "Owner handoff docs remain v541 r3 handoff evidence" in objective_checklist
-    assert "C:\\EIDP-staging\\v541-owner-docs-20260621" in objective_checklist
-    assert "eidp-v541-release-summary.md" in objective_checklist
-    assert "eidp-v541-owner-signoff.md" in objective_checklist
-    assert "Refresh owner/operator handoff docs to v542 if the next owner run uses the" in objective_checklist
-    assert expected_docs_sha in current_status
-    assert expected_docs_sha in objective_checklist
+    assert "Owner handoff docs have been refreshed to v542" in objective_checklist
+    assert "C:\\EIDP-staging\\v542-owner-docs-20260621" in objective_checklist
+    assert "eidp-v542-release-summary.md" in objective_checklist
+    assert "eidp-v542-owner-signoff.md" in objective_checklist
+    assert "Refresh owner/operator handoff docs to v542" not in objective_checklist
     assert expected_docs_sha in staging
-    assert expected_docs_r3_sha in current_status
-    assert expected_docs_r3_sha in objective_checklist
-    assert expected_docs_r3_sha in staging_r3
     assert "ZIP SHA256" in staging
-    assert "ZIP SHA256" in staging_r3
-    assert "owner-signoff short-form marker: True" in staging
-    assert "scheduled task execute: \"C:\\Users\\cyo20\\EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat\"" in staging_r3
-    assert "old v540 zip exists: False" in staging
-    assert "old v540 dir exists: False" in staging
-    assert "scheduled task execute:" in staging
-    assert "v540 r2 handoff" in current_status
+    assert "scheduled task execute: \"C:\\Users\\cyo20\\EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat\"" in staging
+    assert expected_v541_docs_sha in historical_staging
+    assert expected_v541_docs_r3_sha in historical_staging_r3
+    assert "Historical docs-only handoff evidence" in objective_checklist

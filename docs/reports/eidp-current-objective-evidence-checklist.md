@@ -49,14 +49,13 @@ Latest complete UI/Excel side-by-side smoke remains v535:
 validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
 `C:\Users\cyo20\EIDP-v535-d742327-env0`.
-Initial v541 owner/operator docs staging:
-`docs/reports/2026-06-21-v541-owner-docs-windows-staging.md` records the
-docs-only handoff ZIP staged at `C:\EIDP-staging\v541-owner-docs-20260621`.
-The v541 handoff carries the latest package identity, owner-facing release
-summary, short owner sign-off form, owner request, and return fill sheet. The
-docs ZIP SHA256 is
-`4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`.
-This base handoff is superseded by the r3 false-reject refresh below.
+Latest v542 owner/operator docs staging:
+`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md` records the
+docs-only handoff ZIP staged at `C:\EIDP-staging\v542-owner-docs-20260621`.
+The v542 handoff carries the current package identity, owner-facing release
+summary, short owner sign-off form, owner request, return fill sheet, v542
+strict-yield canary report, and v542 false-reject audit packet plus worksheet.
+The earlier v541 base and r3 handoffs remain historical evidence only.
 Current v542 strict-yield RCA summary:
 `docs/reports/2026-06-21-v542-false-reject-verifier-windows-canary.md` records the
 `12/50 (24.0%)` blocker and the same release-safe RCA lanes without counting
@@ -67,28 +66,27 @@ accepted as FY2026/R8 target application documents and then become Excel-ready.
 It also is not framed as a generic algorithm/model failure unless
 rejection-bucket false-reject evidence proves material over-rejection or
 fiscal-year extraction mistakes.
-The earlier v535 RCA plan remains historical decomposition. The first
-false-reject audit packet remains based on v541 evidence and is still valid for
-the same rejection-bucket decision workflow.
-The v541 RCA bucket summary is reproducible with
+The earlier v535 RCA plan and v541 false-reject packet remain historical
+decomposition. The current false-reject review lane uses v542 evidence.
+The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
 `ok=true`, `20` RCA packets, and `524` candidate rows. The below-gate release
 status is recorded in the v541 weekly summary as `ship_gate_status=below_gate`.
-The first false-reject audit packet is generated and recorded at
-`docs/reports/2026-06-21-v541-false-reject-audit-packet.md` using
+The current false-reject audit packet is generated and recorded at
+`docs/reports/2026-06-21-v542-false-reject-audit-packet.md` using
 `uv run python scripts/build_false_reject_audit.py
-logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --sample-size
-12 --output docs/reports/2026-06-21-v541-false-reject-audit-packet.md`.
+logs/win-v542-d98ecd7-canary/stage6-evidence-20260620-190958.zip --sample-size
+12 --output docs/reports/2026-06-21-v542-false-reject-audit-packet.md`.
 Its review worksheet is generated at
-`docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` using
+`docs/reports/2026-06-21-v542-false-reject-review-sheet.csv` using
 `uv run python scripts/build_false_reject_audit.py
-logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --sample-size
+logs/win-v542-d98ecd7-canary/stage6-evidence-20260620-190958.zip --sample-size
 12 --format csv --output
-docs/reports/2026-06-21-v541-false-reject-review-sheet.csv`. The blank
+docs/reports/2026-06-21-v542-false-reject-review-sheet.csv`. The blank
 worksheet validates as `review_status=incomplete`, while the same command with
 `--validate-review-csv
-docs/reports/2026-06-21-v541-false-reject-review-sheet.csv --require-decisions`
+docs/reports/2026-06-21-v542-false-reject-review-sheet.csv --require-decisions`
 fails until every sampled row has one of the allowed decisions. The validator
 also rejects changed immutable row context and reports `bucket_decision_counts`;
 the current blank worksheet reports `completed_decisions=0` and
@@ -98,16 +96,16 @@ require `notes`.
 The current source runbooks now tell the owner/operator how to return that
 worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
 immutable row context untouched, and have the developer validate the returned
-CSV from current `main`. The owner-return verifier now accepts
+CSV from current `main` or from a v542+ package carrying the same verifier
+integration. The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`, and
 `--false-reject-sample-size`; when supplied, it requires `review_status=complete`
-and `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to r3 at
-`C:\EIDP-staging\v541-owner-docs-20260621-r3`, recorded in
-`docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`, so the staged
-owner docs now include the false-reject worksheet return rules, worksheet CSV,
-and the return-verifier false-reject arguments. The superseded r2 ZIP and
-extracted directory were removed from Windows staging and the external SSD.
-This remains handoff evidence only.
+and `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed
+to v542 at `C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`, so the staged
+owner docs now include the v542 false-reject worksheet return rules, worksheet
+CSV, and the return-verifier false-reject arguments. This remains handoff
+evidence only.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -168,8 +166,8 @@ that keeps manual work below the release threshold.
 - v542 package SHA256:
   `89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc`
 - Current v542 package/canary contains the post-v541 false-reject owner-return
-  verifier integration. Owner handoff docs remain v541 r3 handoff evidence
-  until a v542 owner handoff refresh is explicitly prepared.
+  verifier integration. Owner handoff docs have been refreshed to v542; v541 r3
+  remains historical handoff evidence only.
 - Latest complete Windows side-by-side smoke: v535
 - Latest bounded Windows canary: v542
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540/v541/v542
@@ -194,27 +192,19 @@ that keeps manual work below the release threshold.
   rows / exact official overrides, and bounded same-site disclosure expansion;
   v530 removes target-form/PDF search terms from URL completion and rejects
   direct document/PDF SERP hits before they can become `SchoolSite` rows.
-- Initial docs-only owner/operator handoff staging: the Windows-staged v541
-  owner docs ZIP includes the v541 first-read handoff, owner request, owner
-  return fill sheet, release summary, short owner sign-off form, v541 Windows
+- Latest docs-only owner/operator handoff staging: the Windows-staged v542
+  owner docs ZIP includes the v542 first-read handoff, owner request, owner
+  return fill sheet, release summary, short owner sign-off form, v542 Windows
   canary report, current release status, publication-lag exception record, OCR
-  scope brief, and v1 known limitations. It was staged at
-  `C:\EIDP-staging\v541-owner-docs-20260621` with SHA256
-  `4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731`.
+  scope brief, v1 known limitations, and the v542 false-reject RCA packet plus
+  review worksheet. It was staged at `C:\EIDP-staging\v542-owner-docs-20260621`
+  and recorded in `docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
-  or Task Scheduler. The current owner handoff lane is the r3 docs-only
-  false-reject refresh below.
-- Latest docs-only false-reject handoff refresh: r3 is staged at
-  `C:\EIDP-staging\v541-owner-docs-20260621-r3`, recorded in
-  `docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`, and includes
-  the false-reject RCA packet plus review worksheet. The remote verification
-  confirmed SHA256
-  `8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49`,
-  `False-Reject RCA Worksheet`, `False-reject worksheet rules`, the
-  return-verifier false-reject arguments, `NOT_READY`, and the scheduled task
-  still executing `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`.
-  The superseded r2 ZIP and extracted directory were verified absent from
-  Windows staging after cleanup.
+  or Task Scheduler.
+- Historical docs-only handoff evidence: v541 base and v541 r3 are recorded in
+  `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md` and
+  `docs/reports/2026-06-21-v541-owner-docs-r3-windows-staging.md`; they are no
+  longer the current owner handoff lane.
 - Latest strict-yield RCA summary: v541 Stage 6 evidence is summarized in
   `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`. The top RCA lanes
   are `publication_lag_or_old_target_pdf` (`15` schools / `454` candidate
@@ -229,16 +219,16 @@ that keeps manual work below the release threshold.
   Before labeling the blocker as an algorithm/model defect, run a
   rejection-bucket false-reject audit over fiscal-year mismatch, non-target
   filtering, target-year-unverified, and site-entry/fetch/identity candidates.
-  The first audit packet is
-  `docs/reports/2026-06-21-v541-false-reject-audit-packet.md`; it samples
+  The current audit packet is
+  `docs/reports/2026-06-21-v542-false-reject-audit-packet.md`; it samples
   `12` rows from each large bucket and all rows from the smaller
   target-year-unverified and site-entry/fetch/identity buckets.
   The companion CSV worksheet
-  `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` gives each row a
+  `docs/reports/2026-06-21-v542-false-reject-review-sheet.csv` gives each row a
   stable `audit_row_id`, a machine-validated `decision` field, immutable row
   context checks, required reviewer/timestamp fields for completed decisions,
   notes for `false_reject` and `needs_operator_review`, and bucket-level
-  decision counts for the RCA lanes. The v541 owner request and owner return
+  decision counts for the RCA lanes. The v542 owner request and owner return
   fill sheet now describe the required worksheet return rules, and
   `scripts/verify_stage6_return.py` can validate the returned worksheet through
   its false-reject arguments.
@@ -356,7 +346,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | Stage 6 evidence bundle and verifier pass | v542 evidence ZIP and verifier: `logs/win-v542-d98ecd7-canary/stage6-evidence-20260620-190958.zip`, `logs/win-v542-d98ecd7-canary/stage6-evidence-verify-20260621-040959.json`, and Mac-side `verify_stage6_evidence.py` with `ok=true`; required labels present and no unsafe/forbidden entries | PASS |
 | v526/v525/v524/v523 RCA is current | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`, `docs/reports/2026-05-20-v525-rc-metadata-package.md`, `docs/reports/2026-05-20-v524-full-windows-side-by-side-smoke.md`, and `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`: v526/v525/v524/v523 repeat the same strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` blocker; v526 discovery stats record `pre_filtered_non_target_hint=631`, `fiscal_year_mismatch=267`, `classified_non_target=88`, `no_candidates_found=8`, `target_fiscal_year_not_detected=5`, and `http_error_httpstatuserror=1`, with no `candidate_school_mismatch` in the v526 Windows run | PASS for RCA, FAIL for yield |
 | Weekly selected-school denominator actually gets crawled | v514 focused isolated Mac smoke `target-year-discovery-after-sitecount-fix/20260519_231930-summary.json`: selected NEEC school IDs 1-3 were crawled (`crawled=3`) and remained reviewable, not strict FY2026 successes; v516 selection probe excludes already confirmed target schools 4 and 7 from the target-missing queue while preserving a 50-school queue; v517 targeted school ID 55 smoke confirms the new exact override is crawled and yields FY2019-FY2025 target-form evidence instead of corporation-only non-target evidence; v518 packages that case as discovery gold-set regression evidence; v519 filters vocational-practice basic-info PDFs out of target-form review; v519 Mac continuation canary with copied URL sources crawls 58 site rows for 50 selected schools and moves school ID 55 to `publication_lag_or_old_target_pdf`; v520 adds exact Katayanagi crawl entries while preserving NEEC no-year PDFs as reviewable, not strict successes; v521 suppresses same-school `corporation_pattern` rows when exact school-domain overrides exist, reducing the Katayanagi limit-3 crawl from 6 to 3 and candidate-school mismatches from 69 to 0; the v526/v525/v524/v523 Windows limit-50 canaries each download 5 strict/current PDFs and keep all 50 selected schools reviewable | PASS for code/evidence contract, FAIL for strict yield |
-| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v542/v541/v540 bounded Windows canaries and v541 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
+| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v542/v541/v540 bounded Windows canaries and the v542 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
 | v1.0 tag is allowed | PR #8 is merged into `main`, but FY2026 strict proof, owner real cycle, and exception approval are incomplete | BLOCKED |
 
 ## Fresh Local Verification In This Audit Pass
@@ -494,7 +484,16 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   operator-reviewable is `47/50 (94.0%)`, `ship_gate_status=below_gate`, and
   OCR scope remains unresolved because the latest complete OCR proof is not
   from v535.
-- v541 owner/operator docs were staged on Windows under
+- v542 owner/operator docs were staged on Windows under
+  `C:\EIDP-staging\v542-owner-docs-20260621`, recorded in
+  `docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`. A post-staging
+  check confirmed the required v542 docs are present, including
+  `eidp-v542-release-summary.md` and `eidp-v542-owner-signoff.md`,
+  `current-release-status.md` contains `NOT_READY`, the false-reject worksheet
+  return rules are present, the active weekly task still points to
+  `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`, and the
+  v541 base/r3 docs remain historical evidence only.
+- v541 owner/operator docs were previously staged on Windows under
   `C:\EIDP-staging\v541-owner-docs-20260621`, recorded in
   `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`. A post-staging
   check confirmed the required v541 docs are present, including
@@ -526,12 +525,12 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   completed; strict/Excel-ready FY2026 yield is `12/50 (24.0%)`,
   operator-reviewable is `47/50 (94.0%)`, `ship_gate_status=below_gate`, and
   OCR runtime proof failed because the OCR add-on is missing.
-- v541 operator-side handoff docs are prepared and staged:
-  `docs/runbooks/00-READ-ME-FIRST-v541.txt`,
-  `docs/runbooks/eidp-v541-release-summary.md`,
-  `docs/runbooks/eidp-v541-owner-signoff.md`,
-  `docs/runbooks/eidp-v541-owner-request-20260621.txt`, and
-  `docs/runbooks/eidp-v541-owner-return-fill-sheet.md`. These enable
+- v542 operator-side handoff docs are prepared and staged:
+  `docs/runbooks/00-READ-ME-FIRST-v542.txt`,
+  `docs/runbooks/eidp-v542-release-summary.md`,
+  `docs/runbooks/eidp-v542-owner-signoff.md`,
+  `docs/runbooks/eidp-v542-owner-request-20260621.txt`, and
+  `docs/runbooks/eidp-v542-owner-return-fill-sheet.md`. These enable
   Windows-local owner return validation, but they are not release approval and
   do not replace returned evidence.
 - Local docs-only release gate at PR head
@@ -556,16 +555,13 @@ do not remove the FY2026/R8 release blocker.
 2. Continue strict-yield RCA in the documented bucket order: fiscal-year
    mismatch / publication lag first, non-target candidate noise second,
    target-year-unverified third, and site-entry/fetch/identity lanes fourth.
-3. Review `docs/reports/2026-06-21-v541-false-reject-review-sheet.csv` and mark
+3. Review `docs/reports/2026-06-21-v542-false-reject-review-sheet.csv` and mark
    sampled rows as `false_reject`, `correct_reject`, or
    `needs_operator_review`, then validate the returned CSV with
    `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
    before labeling the blocker as an algorithm/model defect.
-4. Refresh owner/operator handoff docs to v542 if the next owner run uses the
-   v542 package; otherwise keep v541 r3 explicitly as historical handoff
-   evidence only.
-5. Run the owner/operator return path from Windows and collect signed KPI,
+4. Run the owner/operator return path from Windows and collect signed KPI,
    audit/outbox, workbook, and `publication_lag` decision evidence.
-6. Run the owner real Windows cycle and return KPI/sign-off evidence.
-7. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
-8. Create the signed `v1.0` tag only after the above blockers are resolved.
+5. Run the owner real Windows cycle and return KPI/sign-off evidence.
+6. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
+7. Create the signed `v1.0` tag only after the above blockers are resolved.
