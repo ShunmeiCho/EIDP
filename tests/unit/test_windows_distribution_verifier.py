@@ -1189,8 +1189,33 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         .replace("target_pdf_auto_denominator_scope", "target_pdf_auto_sample_scope")
         .replace("RELEASE_CONCLUSIONS", "RELEASE_DECISIONS")
         .replace("RC_ONLY", "BETA_ONLY")
-        .replace("release conclusion must be READY for release approval", "release conclusion must be go")
-        .replace("Decision must be READY for release approval", "Decision must be go")
+        .replace("owner_signoff", "owner_acknowledgement")
+        .replace("expected_package_sha256", "expected_package_checksum")
+        .replace("expected_source_commit", "expected_source_revision")
+        .replace(
+            "release conclusion must be {required_release_conclusion} for the selected release path",
+            "release conclusion must be go",
+        )
+        .replace(
+            "E2E template {marker} Decision must be ",
+            "Decision must be go",
+        )
+        .replace(
+            "owner sign-off Decision must be {required_conclusion} for the selected release path",
+            "owner sign-off Decision may be free form",
+        )
+        .replace(
+            "owner sign-off SHA256 must match expected package SHA256",
+            "owner sign-off SHA256 is informational",
+        )
+        .replace(
+            "owner sign-off Source commit must match expected source commit",
+            "owner sign-off Source commit is informational",
+        )
+        .replace(
+            "owner sign-off Current release conclusion must match signed Decision",
+            "owner sign-off Current release conclusion may drift",
+        )
         .replace(
             "Excel output file proof must include a generated data/output/*.xlsx workbook path",
             "Excel output can be free text",
@@ -1506,12 +1531,46 @@ def test_verify_core_zip_requires_publication_lag_release_exception_contract(tmp
         for error in check.errors
     )
     assert any(
-        "scripts/verify_stage6_return.py missing required token: release conclusion must be READY for release approval"
+        "scripts/verify_stage6_return.py missing required token: "
+        "release conclusion must be {required_release_conclusion} for the selected release path"
         in error
         for error in check.errors
     )
     assert any(
-        "scripts/verify_stage6_return.py missing required token: Decision must be READY for release approval" in error
+        "scripts/verify_stage6_return.py missing required token: E2E template {marker} Decision must be "
+        in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: owner_signoff" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: expected_package_sha256" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: expected_source_commit" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "owner sign-off Decision must be {required_conclusion} for the selected release path" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "owner sign-off SHA256 must match expected package SHA256" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "owner sign-off Source commit must match expected source commit" in error
+        for error in check.errors
+    )
+    assert any(
+        "scripts/verify_stage6_return.py missing required token: "
+        "owner sign-off Current release conclusion must match signed Decision" in error
         for error in check.errors
     )
     assert any(

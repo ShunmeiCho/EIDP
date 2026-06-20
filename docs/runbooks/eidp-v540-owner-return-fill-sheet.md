@@ -110,8 +110,11 @@ uv run python scripts/verify_stage6_return.py \
   --release-exception-record docs/reports/2026-05-19-publication-lag-release-exception-record.md \
   --publication-lag-decision-brief docs/release/owner-decisions/publication-lag.md \
   --ocr-scope-decision-brief docs/release/owner-decisions/ocr-scope.md \
+  --owner-signoff docs/runbooks/eidp-v540-owner-signoff.md \
+  --expected-package-sha256 6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6 \
+  --expected-source-commit fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a \
   --json
 ```
 
 Release remains blocked unless this command returns `ok=true` and the approval
-record, OCR scope, and sign-off fields are complete.
+record, OCR scope, E2E sign-off fields, and short owner sign-off are complete.

@@ -172,7 +172,9 @@ Before tagging, attach or reference:
   selected OCR scope;
 - `scripts/verify_stage6_return.py --json` output whose `inputs` include
   `publication_lag_decision_brief` for the `publication_lag` path and
-  `ocr_scope_decision_brief` for the selected OCR scope;
+  `ocr_scope_decision_brief` for the selected OCR scope, plus `owner_signoff`,
+  `expected_package_sha256`, and `expected_source_commit` when the short owner
+  sign-off form is used;
 - v533 package/non-Windows gate JSON:
   `logs/win-v533-stage6-v533-non-windows-release-gates-20260620.json`;
 - v533 MEXT authority-index package report:

@@ -5,6 +5,9 @@ import json
 import sys
 from pathlib import Path
 
+PACKAGE_SHA = "a" * 64
+SOURCE_COMMIT = "b" * 40
+
 
 def _load_module():
     script = Path(__file__).resolve().parents[2] / "scripts" / "verify_stage6_return.py"
@@ -81,6 +84,8 @@ Decision: READY
 def _complete_exception_template() -> str:
     return (
         _complete_template()
+        .replace("```text\nREADY\n```", "```text\nRC_ONLY\n```")
+        .replace("Decision: READY", "Decision: RC_ONLY")
         .replace(
             "| 推定手作業率 | <= 30% | 28.0 | pass |",
             "| 推定手作業率 | <= 30% | 28.0 | pass |\n"
@@ -90,6 +95,45 @@ def _complete_exception_template() -> str:
         )
         .replace("Date: 2026-05-17", "Date: 2026-05-19")
     )
+
+
+def _write_owner_signoff(
+    tmp_path: Path,
+    *,
+    package_sha: str = PACKAGE_SHA,
+    source_commit: str = SOURCE_COMMIT,
+    current_release_conclusion: str = "READY",
+    decision: str = "READY",
+    owner_name: str = "Aiko Tanaka",
+    signoff_date: str = "2026-05-17",
+    signature: str = "Aiko Tanaka",
+) -> Path:
+    signoff = tmp_path / "owner-signoff.md"
+    signoff.write_text(
+        f"""# EIDP Owner Sign-off
+
+| Field | Value |
+| --- | --- |
+| Package | `dist/eidp-windows-test.zip` |
+| SHA256 | `{package_sha}` |
+| Source commit | `{source_commit}` |
+| Current release conclusion | `{current_release_conclusion}` |
+
+## Sign-off
+
+Owner name: {owner_name}
+
+Date: {signoff_date}
+
+Decision: {decision}
+
+Notes:
+
+Signature: {signature}
+""",
+        encoding="utf-8",
+    )
+    return signoff
 
 
 def _write_complete_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -257,6 +301,54 @@ def test_verify_stage6_return_accepts_completed_owner_artifacts(tmp_path: Path) 
     assert result["inputs"]["ocr_scope_decision_brief"].endswith("docs/release/owner-decisions/ocr-scope.md")
 
 
+def test_verify_stage6_return_accepts_short_owner_signoff_for_ready_path(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    owner_signoff = _write_owner_signoff(tmp_path)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        owner_signoff=owner_signoff,
+        expected_package_sha256=PACKAGE_SHA,
+        expected_source_commit=SOURCE_COMMIT,
+    )
+
+    assert result["ok"] is True
+    assert result["errors"] == []
+    assert result["inputs"]["owner_signoff"] == str(owner_signoff)
+    assert result["inputs"]["expected_package_sha256"] == PACKAGE_SHA
+    assert result["inputs"]["expected_source_commit"] == SOURCE_COMMIT
+
+
+def test_verify_stage6_return_rejects_owner_signoff_package_identity_mismatch(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    owner_signoff = _write_owner_signoff(tmp_path, package_sha="c" * 64, source_commit="d" * 40)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        owner_signoff=owner_signoff,
+        expected_package_sha256=PACKAGE_SHA,
+        expected_source_commit=SOURCE_COMMIT,
+    )
+
+    assert result["ok"] is False
+    assert (
+        f"owner sign-off SHA256 must match expected package SHA256: {'c' * 64} != {PACKAGE_SHA}"
+        in result["errors"]
+    )
+    assert (
+        f"owner sign-off Source commit must match expected source commit: {'d' * 40} != {SOURCE_COMMIT}"
+        in result["errors"]
+    )
+
+
 def test_verify_stage6_return_rejects_missing_excel_and_audit_proof_rows(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
@@ -413,6 +505,7 @@ def test_verify_stage6_return_rejects_sample_workbook_as_excel_output_proof(tmp_
 def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    owner_signoff = _write_owner_signoff(tmp_path)
 
     rc = module.main(
         [
@@ -424,6 +517,12 @@ def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys)
             str(verify_json),
             "--target-fy",
             "2026",
+            "--owner-signoff",
+            str(owner_signoff),
+            "--expected-package-sha256",
+            PACKAGE_SHA,
+            "--expected-source-commit",
+            SOURCE_COMMIT,
             "--json",
         ]
     )
@@ -433,6 +532,7 @@ def test_verify_stage6_return_cli_emits_json_and_success(tmp_path: Path, capsys)
     assert payload["ok"] is True
     assert payload["inputs"]["min_target_pdf_auto_yield"] == 60.0
     assert payload["inputs"]["max_manual_workload"] == 30.0
+    assert payload["inputs"]["owner_signoff"] == str(owner_signoff)
     assert payload["release_conclusions"] == ["READY", "RC_ONLY", "NOT_READY"]
 
 
@@ -496,6 +596,74 @@ def test_verify_stage6_return_accepts_publication_lag_exception_with_measured_th
     assert any("estimated manual workload above release threshold" in warning for warning in result["warnings"])
     assert any("target_pdf_excel_ready_yield_pct below release threshold" in warning for warning in result["warnings"])
     assert any("accepted KPI verdict watch: strict target PDF 自動取得率" in warning for warning in result["warnings"])
+
+
+def test_verify_stage6_return_rejects_ready_decision_for_publication_lag_exception(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    owner_signoff = _write_owner_signoff(
+        tmp_path,
+        current_release_conclusion="READY",
+        decision="READY",
+        signoff_date="2026-05-19",
+    )
+    template.write_text(
+        _complete_exception_template()
+        .replace("```text\nRC_ONLY\n```", "```text\nREADY\n```")
+        .replace("Decision: RC_ONLY", "Decision: READY"),
+        encoding="utf-8",
+    )
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+        owner_signoff=owner_signoff,
+        expected_package_sha256=PACKAGE_SHA,
+        expected_source_commit=SOURCE_COMMIT,
+    )
+
+    assert result["ok"] is False
+    assert "E2E template release conclusion must be RC_ONLY for the selected release path" in result["errors"]
+    assert "E2E template Owner sign-off: Decision must be RC_ONLY for the selected release path" in result["errors"]
+    assert "owner sign-off Decision must be RC_ONLY for the selected release path" in result["errors"]
+
+
+def test_verify_stage6_return_accepts_owner_signoff_for_publication_lag_rc_only_path(tmp_path: Path) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    mature_year_proof = _write_mature_year_proof(tmp_path)
+    exception_record = _write_approved_exception_record(tmp_path)
+    owner_signoff = _write_owner_signoff(
+        tmp_path,
+        current_release_conclusion="RC_ONLY",
+        decision="RC_ONLY",
+        signoff_date="2026-05-19",
+    )
+    template.write_text(_complete_exception_template(), encoding="utf-8")
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        release_exception_reason="publication_lag",
+        mature_year_proof_json=mature_year_proof,
+        release_exception_record=exception_record,
+        owner_signoff=owner_signoff,
+        expected_package_sha256=PACKAGE_SHA,
+        expected_source_commit=SOURCE_COMMIT,
+    )
+
+    assert result["ok"] is True
+    assert result["errors"] == []
+    assert result["inputs"]["owner_signoff"] == str(owner_signoff)
 
 
 def test_verify_stage6_return_rejects_template_kpi_actual_mismatch_with_last_run_under_exception(
@@ -2243,8 +2411,8 @@ def test_verify_stage6_return_rejects_below_threshold_and_non_ready_decision(tmp
     assert "last_run estimated manual workload above release threshold: 35.0 > 30.0" in result["errors"]
     assert "E2E template KPI verdict must be pass: strict target PDF 自動取得率" in result["errors"]
     assert "E2E template release row must be yes: KPI owner 承認" in result["errors"]
-    assert "E2E template release conclusion must be READY for release approval" in result["errors"]
-    assert "E2E template Owner sign-off: Decision must be READY for release approval" in result["errors"]
+    assert "E2E template release conclusion must be READY for the selected release path" in result["errors"]
+    assert "E2E template Owner sign-off: Decision must be READY for the selected release path" in result["errors"]
 
 
 def test_verify_stage6_return_rejects_missing_windows_vm_gate_row(tmp_path: Path) -> None:

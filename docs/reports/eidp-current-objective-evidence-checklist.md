@@ -30,10 +30,10 @@ validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
 `C:\Users\cyo20\EIDP-v535-d742327-env0`.
 Current v540 owner/operator docs staging:
-`docs/reports/2026-06-20-v540-owner-docs-windows-staging.md` records the
-docs-only handoff ZIP staged at `C:\EIDP-staging\v540-owner-docs-20260620`
+`docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md` records the
+docs-only handoff ZIP staged at `C:\EIDP-staging\v540-owner-docs-20260620-r2`
 with SHA256
-`219f0c4fe0e26073236e74a83fb92126898f885324666bea96a69fcb167afa5a`.
+`e5ee3df87e962321ff8a4f37dd3ec9becc776078bcb93cdeed8bcd907751be8f`.
 Current v540 strict-yield RCA summary:
 `docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md` records the
 `12/50 (24.0%)` blocker and the same release-safe RCA lanes without counting
@@ -53,6 +53,13 @@ Windows limit-50 canary:
 package/source commit `f81a9cf8f785457e844cb77857426a02c91f60c7`, Windows setup
 `rc=0`, Stage 6 evidence `ok=true`, `shared_origin_derived_fallback_skipped=0`,
 and strict/Excel-ready yield still `12/50 (24.0%)`.
+Post-v540 source hardening:
+current `main` now extends `scripts/verify_stage6_return.py` so the short owner
+sign-off form can be machine-checked against the selected release path, expected
+package SHA256, and expected source commit. It also makes publication-lag
+exception approval an `RC_ONLY` path rather than a `READY` path. This hardening
+is not inside `dist/eidp-windows-v540.zip`, so formal promotion requires a new
+Windows package/canary (`v541` or later) before relying on these checks.
 Release verdict: **NOT_READY**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -94,12 +101,19 @@ that keeps manual work below the release threshold.
   `fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a`
 - v540 package SHA256:
   `6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6`
+- Current `main` after v540 contains unpackaged owner-return verifier hardening;
+  any formal release candidate must be rebuilt and Windows-canary verified as
+  `v541` or later.
 - Latest complete Windows side-by-side smoke: v535
 - Latest bounded Windows canary: v540
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
 - Latest source/package verifier hardening: v524/v525/v526 owner-return verifier requires
   Excel proof and ManualActionLog / JSONL outbox proof rows.
+- Latest unpackaged verifier hardening: current `main` adds short owner
+  sign-off verification, expected package SHA/source commit checks, and
+  `RC_ONLY` publication-lag exception semantics to
+  `scripts/verify_stage6_return.py`.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
 - Latest source/package URL-discovery guardrail: v530 adds an optional
@@ -112,10 +126,11 @@ that keeps manual work below the release threshold.
   direct document/PDF SERP hits before they can become `SchoolSite` rows.
 - Latest docs-only owner/operator handoff staging: the Windows-staged v540
   owner docs ZIP now includes the v540 first-read handoff, owner request,
-  owner return fill sheet, v540 Windows canary report, current release status,
-  publication-lag exception record, and v1 known limitations. It was staged at
-  `C:\EIDP-staging\v540-owner-docs-20260620` with SHA256
-  `219f0c4fe0e26073236e74a83fb92126898f885324666bea96a69fcb167afa5a`.
+  owner return fill sheet, release summary, short owner sign-off form, v540
+  Windows canary report, current release status, publication-lag exception
+  record, and v1 known limitations. It was staged at
+  `C:\EIDP-staging\v540-owner-docs-20260620-r2` with SHA256
+  `e5ee3df87e962321ff8a4f37dd3ec9becc776078bcb93cdeed8bcd907751be8f`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
   or Task Scheduler.
 - Latest strict-yield RCA summary: v540 Stage 6 evidence is summarized in

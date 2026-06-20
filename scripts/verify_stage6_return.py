@@ -76,6 +76,7 @@ REQUIRED_RELEASE_VALUES = {
 }
 RELEASE_CONCLUSIONS = ("READY", "RC_ONLY", "NOT_READY")
 RELEASE_APPROVAL_CONCLUSION = "READY"
+RELEASE_EXCEPTION_APPROVAL_CONCLUSION = "RC_ONLY"
 APPROVAL_AFTER_MATURE_YEAR_PROOF_ERROR = (
     "release exception record Approval date must be on or after mature-year proof finished_at date"
 )
@@ -210,6 +211,17 @@ def _fenced_block_after(text: str, marker: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _section_after_heading(text: str, heading: str) -> str | None:
+    heading_index = text.find(heading)
+    if heading_index < 0:
+        return None
+    section = text[heading_index + len(heading) :]
+    next_heading = re.search(r"\n##\s+", section)
+    if next_heading is not None:
+        return section[: next_heading.start()]
+    return section
+
+
 def _block_field_value(block: str, field: str) -> str:
     for line in block.splitlines():
         if line.strip().lower().startswith(f"{field.lower()}:"):
@@ -260,6 +272,12 @@ def _rate_from_counts(count: int, total: int) -> float | None:
 
 def _release_conclusion_value(value: str) -> str:
     return value.strip().upper()
+
+
+def _required_release_conclusion(release_exception_reason: str | None) -> str:
+    if release_exception_reason:
+        return RELEASE_EXCEPTION_APPROVAL_CONCLUSION
+    return RELEASE_APPROVAL_CONCLUSION
 
 
 def _parse_nonnegative_int(value: str) -> int | None:
@@ -419,6 +437,94 @@ def _verify_ocr_scope_decision_brief(text: str, selected_scope: str, errors: lis
     for marker in OCR_SCOPE_DECISION_BRIEF_MARKERS.get(selected_scope, ()):
         if marker not in text:
             errors.append(f"OCR scope owner decision brief missing marker for {selected_scope}: {marker}")
+
+
+def _verify_owner_signoff(
+    text: str,
+    *,
+    expected_package_sha256: str | None,
+    expected_source_commit: str | None,
+    release_exception_reason: str | None,
+    last_run_finished_date: date | None,
+    release_exception_approval_date: date | None,
+    errors: list[str],
+) -> None:
+    row_values: dict[str, str] = {}
+    for row_label in ("Package", "SHA256", "Source commit", "Current release conclusion"):
+        row = _table_row(text, row_label)
+        if row is None or len(row) < 2:
+            errors.append(f"owner sign-off package row missing or malformed: {row_label}")
+            continue
+        row_values[row_label] = row[1]
+
+    package = row_values.get("Package", "")
+    if package and not package.endswith(".zip"):
+        errors.append("owner sign-off Package must reference a ZIP file")
+
+    package_sha = row_values.get("SHA256", "")
+    if package_sha and not _is_sha256(package_sha):
+        errors.append("owner sign-off SHA256 must be a 64-character SHA256")
+    if expected_package_sha256 and package_sha and package_sha.lower() != expected_package_sha256.lower():
+        errors.append(
+            "owner sign-off SHA256 must match expected package SHA256: "
+            f"{package_sha} != {expected_package_sha256}"
+        )
+
+    source_commit = row_values.get("Source commit", "")
+    if source_commit and re.fullmatch(r"[0-9a-fA-F]{40}", source_commit) is None:
+        errors.append("owner sign-off Source commit must be a 40-character git SHA")
+    if expected_source_commit and source_commit and source_commit.lower() != expected_source_commit.lower():
+        errors.append(
+            "owner sign-off Source commit must match expected source commit: "
+            f"{source_commit} != {expected_source_commit}"
+        )
+
+    current_conclusion = _release_conclusion_value(row_values.get("Current release conclusion", ""))
+    if current_conclusion and current_conclusion not in RELEASE_CONCLUSIONS:
+        errors.append("owner sign-off Current release conclusion must be one of READY, RC_ONLY, NOT_READY")
+
+    signoff_section = _section_after_heading(text, "## Sign-off")
+    if signoff_section is None:
+        errors.append("owner sign-off missing Sign-off section")
+        return
+
+    owner_name = _block_field_value(signoff_section, "Owner name")
+    if not owner_name:
+        errors.append("owner sign-off Owner name is blank")
+    elif _is_signoff_placeholder(owner_name):
+        errors.append("owner sign-off Owner name must not be a placeholder")
+
+    date_value = _block_field_value(signoff_section, "Date")
+    if not date_value:
+        errors.append("owner sign-off Date is blank")
+    else:
+        signoff_date = _iso_date_value(date_value)
+        if signoff_date is None:
+            errors.append("owner sign-off Date must be YYYY-MM-DD")
+        elif signoff_date > date.today():
+            errors.append("owner sign-off Date must not be in the future")
+        elif last_run_finished_date is not None and signoff_date < last_run_finished_date:
+            errors.append("owner sign-off Date must be on or after last_run finished_at date")
+        elif release_exception_approval_date is not None and signoff_date < release_exception_approval_date:
+            errors.append("owner sign-off Date must be on or after release exception Approval date")
+
+    decision = _release_conclusion_value(_block_field_value(signoff_section, "Decision"))
+    if not decision:
+        errors.append("owner sign-off Decision is blank")
+    elif decision not in RELEASE_CONCLUSIONS:
+        errors.append("owner sign-off Decision must be one of READY, RC_ONLY, NOT_READY")
+    else:
+        required_conclusion = _required_release_conclusion(release_exception_reason)
+        if decision != required_conclusion:
+            errors.append(f"owner sign-off Decision must be {required_conclusion} for the selected release path")
+        if current_conclusion and current_conclusion != decision:
+            errors.append("owner sign-off Current release conclusion must match signed Decision")
+
+    signature = _block_field_value(signoff_section, "Signature")
+    if not signature:
+        errors.append("owner sign-off Signature is blank")
+    elif _is_signoff_placeholder(signature):
+        errors.append("owner sign-off Signature must not be a placeholder")
 
 
 def _verify_last_run(
@@ -1272,14 +1378,17 @@ def _verify_template(
             errors.append("E2E template audit row must be none: JSONL action_id 重複")
 
     conclusion = _fenced_block_after(text, "結論:")
+    required_release_conclusion = _required_release_conclusion(release_exception_reason)
     if conclusion is None or _is_placeholder(conclusion.strip()):
         errors.append("E2E template release conclusion is missing or still placeholder")
     else:
         normalized_conclusion = _release_conclusion_value(conclusion)
         if normalized_conclusion not in RELEASE_CONCLUSIONS:
             errors.append("E2E template release conclusion must be one of READY, RC_ONLY, NOT_READY")
-        elif normalized_conclusion != RELEASE_APPROVAL_CONCLUSION:
-            errors.append("E2E template release conclusion must be READY for release approval")
+        elif normalized_conclusion != required_release_conclusion:
+            errors.append(
+                f"E2E template release conclusion must be {required_release_conclusion} for the selected release path"
+            )
 
     for marker in ("Owner sign-off:", "業務員 sign-off:"):
         block = _fenced_block_after(text, marker)
@@ -1310,8 +1419,11 @@ def _verify_template(
                 normalized_decision = _release_conclusion_value(value)
                 if normalized_decision not in RELEASE_CONCLUSIONS:
                     errors.append(f"E2E template {marker} Decision must be one of READY, RC_ONLY, NOT_READY")
-                elif normalized_decision != RELEASE_APPROVAL_CONCLUSION:
-                    errors.append(f"E2E template {marker} Decision must be READY for release approval")
+                elif normalized_decision != required_release_conclusion:
+                    errors.append(
+                        f"E2E template {marker} Decision must be "
+                        f"{required_release_conclusion} for the selected release path"
+                    )
     return selected_ocr_scope
 
 
@@ -1330,6 +1442,9 @@ def verify_stage6_return(
     release_exception_record: Path | None = None,
     publication_lag_decision_brief: Path | None = None,
     ocr_scope_decision_brief: Path | None = None,
+    owner_signoff: Path | None = None,
+    expected_package_sha256: str | None = None,
+    expected_source_commit: str | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -1342,6 +1457,11 @@ def verify_stage6_return(
     active_ocr_scope_decision_brief = ocr_scope_decision_brief
     last_run_json = _load_json(last_run, errors, "last_run")
     last_run_finished_date = _last_run_finished_date(last_run_json)
+
+    if expected_package_sha256 and not _is_sha256(expected_package_sha256):
+        errors.append("--expected-package-sha256 must be a 64-character SHA256")
+    if expected_source_commit and re.fullmatch(r"[0-9a-fA-F]{40}", expected_source_commit) is None:
+        errors.append("--expected-source-commit must be a 40-character git SHA")
 
     if release_exception_reason:
         if is_ship_gate_exception_reason(release_exception_reason):
@@ -1426,6 +1546,19 @@ def verify_stage6_return(
         if brief_text is not None:
             _verify_ocr_scope_decision_brief(brief_text, selected_ocr_scope, errors)
 
+    if owner_signoff is not None:
+        owner_signoff_text = _load_text(owner_signoff, errors, "owner sign-off")
+        if owner_signoff_text is not None:
+            _verify_owner_signoff(
+                owner_signoff_text,
+                expected_package_sha256=expected_package_sha256,
+                expected_source_commit=expected_source_commit,
+                release_exception_reason=active_release_exception_reason,
+                last_run_finished_date=last_run_finished_date,
+                release_exception_approval_date=release_exception_approval_date,
+                errors=errors,
+            )
+
     return {
         "ok": not errors,
         "errors": errors,
@@ -1448,6 +1581,9 @@ def verify_stage6_return(
             "ocr_scope_decision_brief": (
                 str(active_ocr_scope_decision_brief) if active_ocr_scope_decision_brief else None
             ),
+            "owner_signoff": str(owner_signoff) if owner_signoff else None,
+            "expected_package_sha256": expected_package_sha256,
+            "expected_source_commit": expected_source_commit,
         },
         "selected_ocr_scope": selected_ocr_scope,
         "mature_year_proof_years": mature_year_proof_years,
@@ -1515,6 +1651,21 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--ocr-scope-decision-brief",
         help="Owner decision brief for the OCR scope selected in the E2E template.",
     )
+    parser.add_argument(
+        "--owner-signoff",
+        help=(
+            "Optional short owner sign-off Markdown form. "
+            "If supplied, it is checked against the selected release path."
+        ),
+    )
+    parser.add_argument(
+        "--expected-package-sha256",
+        help="Expected package SHA256 to match in --owner-signoff.",
+    )
+    parser.add_argument(
+        "--expected-source-commit",
+        help="Expected source git commit to match in --owner-signoff.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit compact JSON.")
     return parser.parse_args(argv)
 
@@ -1537,6 +1688,9 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.publication_lag_decision_brief) if args.publication_lag_decision_brief else None
         ),
         ocr_scope_decision_brief=Path(args.ocr_scope_decision_brief) if args.ocr_scope_decision_brief else None,
+        owner_signoff=Path(args.owner_signoff) if args.owner_signoff else None,
+        expected_package_sha256=args.expected_package_sha256,
+        expected_source_commit=args.expected_source_commit,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))

@@ -522,7 +522,9 @@ Version-specific setup/UI/recovery/launcher 証跡（operator real-cycle では�
 
 結論と sign-off の `Decision` は `READY` / `RC_ONLY` / `NOT_READY` のいずれかで記入する。
 sign-off の `Date` は `YYYY-MM-DD` 形式で記入する。
-`verify_stage6_return.py` は release approval 用なので、`READY` 以外は通過させない。
+`verify_stage6_return.py` は選択された release path を検証する。通常の GA path
+では `READY` が必要。`publication_lag` 例外 path では `READY` ではなく
+`RC_ONLY` が必要で、GA 完了とは扱わない。
 `OCR scope 決定` は `core_non_ocr_only` または `ocr_addon_verified` のどちらかを記入する。
 `ocr_addon_verified` を選ぶ場合は、上記 `OCR add-on ZIP sha256` に 64 桁 SHA256 を記入する。
 OCR 未決定のままでは v1.0 release approval は通過しない。
@@ -577,5 +579,8 @@ uv run python scripts/verify_stage6_return.py \
   --release-exception-record <approved-publication-lag-exception.md> \
   --publication-lag-decision-brief docs/release/owner-decisions/publication-lag.md \
   --ocr-scope-decision-brief docs/release/owner-decisions/ocr-scope.md \
+  --owner-signoff <filled-owner-signoff.md> \
+  --expected-package-sha256 <expected-package-sha256> \
+  --expected-source-commit <expected-source-commit> \
   --json
 ```

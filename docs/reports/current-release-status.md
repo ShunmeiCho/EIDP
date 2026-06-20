@@ -32,6 +32,16 @@ Evidence is recorded in
 `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-20260620-223357.json`,
 and `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-mac-20260620.json`.
 
+Post-v540 current `main` adds source-side owner-return verifier hardening that
+is not packaged in `dist/eidp-windows-v540.zip`: `scripts/verify_stage6_return.py`
+can now validate the short owner sign-off form, check the signed package SHA256
+and source commit against expected values, and require `RC_ONLY` rather than
+`READY` for the publication-lag exception path. Because `v540` packages commit
+`fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a`, any formal promotion that relies
+on this hardening requires a new package/source lane and Windows canary
+(`v541` or later). Until then, `v540` remains evidence and handoff material,
+not a final release candidate.
+
 Superseded `v539` (`dist/eidp-windows-v539.zip`, SHA256
 `2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3`)
 kept FY2026/Reiwa 8 document acceptance strict while improving rejection
