@@ -94,11 +94,13 @@ evidence verification. Evidence is recorded in
 `docs/reports/2026-06-20-v535-full-windows-side-by-side-smoke.md`,
 `logs/win-v535-stage6-v535-non-windows-release-gates-20260620.json`, and
 `logs/win-v535-stage6/stage6-evidence-20260620-053032.zip`.
-The current v535 owner/operator handoff docs are also staged on Windows under
-`C:\EIDP-staging\v535-owner-docs-20260620`; the docs-only ZIP SHA256 is
-`75d4d4f12ca5a10abc6d1ac1d6c7287f6cc51e47a210c73ee68b7f252f79f5ca`, and the
+The latest owner/operator handoff docs are staged for v540 on Windows under
+`C:\EIDP-staging\v540-owner-docs-20260620`; the docs-only ZIP SHA256 is
+`219f0c4fe0e26073236e74a83fb92126898f885324666bea96a69fcb167afa5a`, and the
 remote staging check is recorded in
-`docs/reports/2026-06-20-v535-owner-docs-windows-staging.md`.
+`docs/reports/2026-06-20-v540-owner-docs-windows-staging.md`. The superseded
+v535 owner-docs staging remains historical evidence only; it is not the current
+owner handoff lane.
 The v535 strict-yield RCA action plan is recorded in
 `docs/reports/2026-06-20-v535-strict-yield-rca-plan.md`; it decomposes the
 `12/50 (24.0%)` blocker into `publication_lag_or_old_target_pdf`,
@@ -206,10 +208,10 @@ brief, and the v526 owner return fill sheet, and now has SHA256
 `v526` remains the latest package with complete OCR runtime proof. `v535` is
 the latest package with complete non-OCR Windows side-by-side smoke evidence,
 including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
-bundle verification. The current v535 owner/operator handoff docs are
-`docs/runbooks/00-READ-ME-FIRST-v535.txt`,
-`docs/runbooks/eidp-v535-owner-request-20260620.txt`, and
-`docs/runbooks/eidp-v535-owner-return-fill-sheet.md`; they do not approve
+bundle verification. The current owner/operator handoff docs are now
+`docs/runbooks/00-READ-ME-FIRST-v540.txt`,
+`docs/runbooks/eidp-v540-owner-request-20260620.txt`, and
+`docs/runbooks/eidp-v540-owner-return-fill-sheet.md`; they do not approve
 v1.0 and do not replace the missing owner real-cycle evidence.
 `v502` and `v501` are superseded Windows evidence baselines.
 

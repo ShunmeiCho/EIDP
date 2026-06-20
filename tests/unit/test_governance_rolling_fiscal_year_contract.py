@@ -115,3 +115,28 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "ocr_scope_decision_brief" in checklist
     assert "Any source/package change after v540 requires a new Windows package/canary" in checklist
     assert "Current v540 package evidence" in checklist
+
+
+def test_v540_owner_handoff_is_current_but_not_release_approval() -> None:
+    first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v540.txt")
+    request = _normalized_doc("docs/runbooks/eidp-v540-owner-request-20260620.txt")
+    return_sheet = _normalized_doc("docs/runbooks/eidp-v540-owner-return-fill-sheet.md")
+    current_status = _normalized_doc("docs/reports/current-release-status.md")
+    objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
+
+    expected_sha = "6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6"
+
+    assert expected_sha in first_read
+    assert expected_sha in request
+    assert expected_sha in return_sheet
+    assert "release conclusion remains NOT_READY" in request
+    assert "This file is not v1.0 approval" in first_read
+    assert "This file is not v1.0 approval" in request
+    assert "It is not release approval" in return_sheet
+    assert "Do not treat the v540 bounded canary as owner real-cycle sign-off" in first_read
+    assert "unconfirmed rows into final Excel output" in return_sheet
+    assert "docs/runbooks/00-READ-ME-FIRST-v540.txt" in current_status
+    assert "docs/runbooks/eidp-v540-owner-request-20260620.txt" in current_status
+    assert "docs/runbooks/eidp-v540-owner-return-fill-sheet.md" in current_status
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v540.zip`" in objective_checklist
+    assert "Run the prepared owner/operator v540 return path" in objective_checklist

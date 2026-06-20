@@ -1,0 +1,99 @@
+EIDP v540 Owner / Operator Request
+Date: 2026-06-20
+
+Purpose
+-------
+v540 is the current packaged bounded Windows canary. It packages the
+owner-decision brief release-gate hardening and has completed Windows
+side-by-side setup, bounded weekly canary, after-weekly validation, and Stage 6
+evidence verification from the Mac through SSH.
+
+This file is not v1.0 approval and it is not permission to switch the active
+weekly task.
+
+Do not start owner sign-off until the release decision is explicit. Current
+release conclusion remains NOT_READY.
+
+Use this package
+----------------
+Package:
+  C:\EIDP-staging\eidp-windows-v540.zip
+
+Expected SHA256:
+  6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6
+
+Side-by-side root:
+  %USERPROFILE%\EIDP-v540-fbdd0bd-env0
+
+Current active root to preserve:
+  %USERPROFILE%\EIDP-v527-69fe81f-env0
+
+Package BUILD_INFO:
+  git_commit=fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a
+  git_branch=main
+  git_dirty=false
+
+Current side-by-side evidence
+-----------------------------
+- Setup validator:
+  logs\win-v540-fbdd0bd-canary\win-20260620-v540-validate-after-setup.json
+- Active-task safety:
+  logs\win-v540-fbdd0bd-canary\stage6-recovery-20260620-221715.json
+  Result: active task still points to v527.
+- Weekly canary:
+  logs\win-v540-fbdd0bd-canary\last_run.json
+  Result: strict/Excel-ready 12/50 (24.0%), operator-reviewable 47/50 (94.0%).
+- After-weekly validator:
+  logs\win-v540-fbdd0bd-canary\win-20260620-v540-validate-after-weekly.json
+- Stage 6 evidence:
+  logs\win-v540-fbdd0bd-canary\stage6-evidence-20260620-133325.zip
+  logs\win-v540-fbdd0bd-canary\stage6-evidence-verify-20260620-223357.json
+  logs\win-v540-fbdd0bd-canary\stage6-evidence-verify-mac-20260620.json
+- Consolidated report:
+  docs\reports\2026-06-20-v540-owner-briefs-windows-canary.md
+
+Required return files for owner real cycle
+------------------------------------------
+- data\output\last_run.json from the owner-run cycle
+- latest logs\run-*.log
+- latest logs\diagnostics-*.txt
+- latest logs\stage6-evidence-*.zip
+- latest logs\stage6-evidence-verify-*.json
+- Excel proof: output workbook path or redacted workbook metadata, plus
+  consistency evidence that Excel-ready coverage in the owner template matches
+  current DB/run metrics
+- ManualActionLog / JSONL audit proof: audit page status, manual_action_log
+  count, outbox count before/after flush, and action_id consistency
+- completed eidp-operator-e2e-template.md with KPI rows and sign-off
+
+Release decision required before owner sign-off
+-----------------------------------------------
+If the release decision is strict FY2026/R8:
+  - do not request owner sign-off yet;
+  - wait until public FY2026/R8 target PDFs are available enough for strict
+    yield to reach 60%.
+
+If the release decision is publication-lag exception:
+  - fill and approve:
+    docs\reports\2026-05-19-publication-lag-release-exception-record.md
+  - acknowledge FY2026/R8 strict yield is below gate;
+  - use mature-year proof:
+    logs\mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json
+  - then schedule the owner real cycle on the selected v540 side-by-side lane.
+
+If the release decision is OCR scope:
+  - select `CORE_TEXT_PDF_ONLY` or `OCR_ADDON_REQUIRED` in the canonical OCR
+    scope decision brief;
+  - if OCR add-on is required, attach current Windows OCR add-on/runtime proof;
+  - if core text-PDF only is selected, image PDFs remain OCR/manual review and
+    unconfirmed OCR rows must not enter final Excel output.
+
+Do not approve v1.0 from these alone
+------------------------------------
+- Mac clean ZIP build
+- GitHub CI success
+- Windows setup validator ok=true
+- bounded limit-50 canary below the strict FY2026/R8 release gate
+- Stage 6 evidence verification without owner/operator real-cycle sign-off
+- MEXT T0 source-catalog packaging without a complete university discovery and
+  extraction lane
