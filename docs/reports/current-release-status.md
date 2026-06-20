@@ -1,9 +1,46 @@
 # EIDP Current Release Status
 
-Updated: 2026-06-20
+Updated: 2026-06-21
 Branch: `main`
 
-Latest packaged bounded Windows canary is `v540`
+Latest packaged bounded Windows canary is `v541`
+(`dist/eidp-windows-v541.zip`, SHA256
+`2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f`).
+`v541` packages commit `e62d074081e60428957a2f405c3a917bbceb31a0` with
+`git_dirty=false`. It packages the post-v540 owner-return verifier hardening:
+short owner sign-off validation, expected package SHA/source commit checks, and
+`RC_ONLY` semantics for the publication-lag exception path. CI run
+`27874800210` passed both `Python quality gates` and `Ship gate contract` for
+that source commit. Local non-Windows package gates also passed:
+`logs/win-v541-owner-signoff-release-path-gates-20260621.json` records
+`ok=true`, package/source freshness, `2043` unit tests, `196` distribution
+validator tests, package verification, and demonstrated-pattern verification.
+
+`v541` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v541-e62d074-env0`. The canary confirmed
+setup `rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`,
+weekly canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence
+verification `ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
+operator-reviewable yield `47/50 (94.0%)`, and `ship_gate_status=below_gate`.
+That `24.0%` is bounded-cohort evidence for the selected 50 target-missing
+schools, not whole-database readiness. The after-weekly validator's global
+SQLite target-FY view still reports `sqlite_target_fy_target_pdf_school_count=8`
+and `sqlite_target_fy_yield_pct=0.3` across `2418` specialty schools, with
+`sqlite_target_fy_operator_reviewable_school_count=40` and
+`sqlite_target_fy_operator_reviewable_yield_pct=1.7`. Therefore v541 proves the
+post-v540 verifier hardening is packaged and Windows-canary safe; it does not
+prove release readiness. Evidence is recorded in
+`docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`,
+`logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip`,
+`logs/win-v541-e62d074-canary/stage6-evidence-verify-20260621-003707.json`,
+and `logs/win-v541-e62d074-canary/20260620_152248-summary.json`.
+
+The current owner/operator handoff docs are still the v540 r2 docs staged on
+Windows under `C:\EIDP-staging\v540-owner-docs-20260620-r2`. They remain valid
+as historical handoff evidence but must be refreshed to v541 package identity
+before any owner real-cycle return is accepted.
+
+Previous packaged bounded Windows canary was `v540`
 (`dist/eidp-windows-v540.zip`, SHA256
 `6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6`).
 `v540` packages commit `fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a` with
@@ -32,15 +69,9 @@ Evidence is recorded in
 `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-20260620-223357.json`,
 and `logs/win-v540-fbdd0bd-canary/stage6-evidence-verify-mac-20260620.json`.
 
-Post-v540 current `main` adds source-side owner-return verifier hardening that
-is not packaged in `dist/eidp-windows-v540.zip`: `scripts/verify_stage6_return.py`
-can now validate the short owner sign-off form, check the signed package SHA256
-and source commit against expected values, and require `RC_ONLY` rather than
-`READY` for the publication-lag exception path. Because `v540` packages commit
-`fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a`, any formal promotion that relies
-on this hardening requires a new package/source lane and Windows canary
-(`v541` or later). Until then, `v540` remains evidence and handoff material,
-not a final release candidate.
+The post-v540 source-side owner-return verifier hardening is now packaged and
+Windows-canary verified by v541. v540 remains evidence and handoff material,
+not the current package/canary head.
 
 Superseded `v539` (`dist/eidp-windows-v539.zip`, SHA256
 `2c18d2808d0e6910f056a98b181a057dab95fc229faad93289dde3ed7773a7a3`)
@@ -176,13 +207,15 @@ superseded v538 was pruned with
 `scripts/prune_release_artifacts.py --dist-dir dist --keep-latest 1
 --keep-version 535 --keep-version 536 --apply`. The kept local core packages
 were v535, v536, and v539. After v540 was built and Windows-validated,
-superseded v539 was pruned from the external-SSD-backed `dist` directory. The
-kept local core packages are now v535, v536, and v540.
+superseded v539 was pruned from the external-SSD-backed `dist` directory.
+After v541 was built and Windows-validated, the superseded v532 owner-docs ZIP
+and macOS AppleDouble sidecars created during v541 packaging were removed. The
+kept local core packages are now v535, v536, v540, and v541.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
 creation, and Stage 6 evidence verification. Latest bounded Windows canary and
-package/source candidate is `v540`. The Windows canary still reports
+package/source candidate is `v541`. The Windows canary still reports
 FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
 still blocked by missing owner real Windows cycle/sign-off, unapproved
 `publication_lag` exception, and unresolved OCR scope because the latest
@@ -190,7 +223,7 @@ Windows OCR runtime proof failed without the OCR add-on. A same-day OCR
 recovery check found no reusable OCR add-on ZIP or Windows Tesseract payload
 in the checked Mac/external-SSD/Windows locations:
 `docs/reports/2026-06-20-v532-ocr-addon-recovery-check.md`. The historical
-status below is kept for traceability and is superseded by this 2026-06-20
+status below is kept for traceability and is superseded by this 2026-06-21
 summary.
 
 Historical package family: `v526` for the extracted-PDF

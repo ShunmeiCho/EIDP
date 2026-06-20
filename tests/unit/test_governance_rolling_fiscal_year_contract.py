@@ -113,11 +113,11 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
-    assert "Any source/package change after v540 requires a new Windows package/canary" in checklist
-    assert "Current v540 package evidence" in checklist
+    assert "Any source/package change after v541 requires a new Windows package/canary" in checklist
+    assert "Current v541 package evidence" in checklist
 
 
-def test_v540_owner_handoff_is_current_but_not_release_approval() -> None:
+def test_v541_package_is_current_while_v540_owner_handoff_needs_refresh() -> None:
     first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v540.txt")
     request = _normalized_doc("docs/runbooks/eidp-v540-owner-request-20260620.txt")
     return_sheet = _normalized_doc("docs/runbooks/eidp-v540-owner-return-fill-sheet.md")
@@ -154,11 +154,12 @@ def test_v540_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/runbooks/eidp-v540-owner-request-20260620.txt" in current_status
     assert "docs/runbooks/eidp-v540-owner-return-fill-sheet.md" in current_status
     assert "docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md" in current_status
-    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v540.zip`" in objective_checklist
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`" in objective_checklist
+    assert "Owner handoff docs remain v540 r2 and must be refreshed" in objective_checklist
     assert "C:\\EIDP-staging\\v540-owner-docs-20260620-r2" in objective_checklist
     assert "eidp-v540-release-summary.md" in objective_checklist
     assert "eidp-v540-owner-signoff.md" in objective_checklist
-    assert "Run the prepared owner/operator v540 return path" in objective_checklist
+    assert "Refresh/stage v541 owner docs" in objective_checklist
     assert "ZIP SHA256" in r2_staging
     assert "owner-signoff short-form marker: True" in r2_staging
     assert "old r1 zip exists: False" in r2_staging

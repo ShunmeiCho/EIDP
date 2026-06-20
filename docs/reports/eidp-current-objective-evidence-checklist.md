@@ -1,6 +1,6 @@
 # EIDP Current Objective Evidence Checklist
 
-Updated: 2026-06-20
+Updated: 2026-06-21
 Branch: `main`
 PR: `#8`, merged on 2026-06-19T15:26:20Z
 PR merge check:
@@ -16,7 +16,17 @@ Windows-staged owner docs ZIP now includes this report and the
 target-yearless RCA spot check plus the owner v1.0 A/B decision brief and v526
 owner return fill sheet, and has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
-Current v540 package/source and bounded Windows canary check:
+Current v541 package/source and bounded Windows canary check:
+`docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`
+records the v541 package at commit
+`e62d074081e60428957a2f405c3a917bbceb31a0`, package SHA256
+`2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f`,
+non-Windows release gates, Windows setup validation, active-task safety,
+weekly limit-50 canary, after-weekly validation, and Stage 6 evidence
+verification for `C:\Users\cyo20\EIDP-v541-e62d074-env0`. The v541 canary
+remains below gate with strict/Excel-ready `12/50 (24.0%)` and
+`ship_gate_status=below_gate`.
+Previous v540 package/source and bounded Windows canary check:
 `docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md` records the
 v540 package at commit `fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a`, package
 SHA256 `6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6`,
@@ -29,21 +39,21 @@ Latest complete UI/Excel side-by-side smoke remains v535:
 validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
 `C:\Users\cyo20\EIDP-v535-d742327-env0`.
-Current v540 owner/operator docs staging:
+Current owner/operator docs staging (still v540 r2; refresh required before v541 owner cycle):
 `docs/reports/2026-06-20-v540-owner-docs-r2-windows-staging.md` records the
 docs-only handoff ZIP staged at `C:\EIDP-staging\v540-owner-docs-20260620-r2`
 with SHA256
 `e5ee3df87e962321ff8a4f37dd3ec9becc776078bcb93cdeed8bcd907751be8f`.
-Current v540 strict-yield RCA summary:
-`docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md` records the
+Current v541 strict-yield RCA summary:
+`docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md` records the
 `12/50 (24.0%)` blocker and the same release-safe RCA lanes without counting
 old-year PDFs, missing-year candidates, or identity mismatches as FY2026/R8
 successes. The earlier v535 RCA plan remains historical decomposition.
-The v540 RCA bucket summary is reproducible with
+The v541 RCA bucket summary is reproducible with
 `uv run python scripts/summarize_stage6_rca.py
-logs/win-v540-fbdd0bd-canary/stage6-evidence-20260620-133325.zip --json`, which returns
+logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
 `ok=true`, `20` RCA packets, and `524` candidate rows. The below-gate release
-status is recorded in v540 `last_run.json` as `ship_gate_status=below_gate`.
+status is recorded in the v541 weekly summary as `ship_gate_status=below_gate`.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -54,17 +64,15 @@ package/source commit `f81a9cf8f785457e844cb77857426a02c91f60c7`, Windows setup
 `rc=0`, Stage 6 evidence `ok=true`, `shared_origin_derived_fallback_skipped=0`,
 and strict/Excel-ready yield still `12/50 (24.0%)`.
 Post-v540 source hardening:
-current `main` now extends `scripts/verify_stage6_return.py` so the short owner
-sign-off form can be machine-checked against the selected release path, expected
-package SHA256, and expected source commit. It also makes publication-lag
-exception approval an `RC_ONLY` path rather than a `READY` path. This hardening
-is not inside `dist/eidp-windows-v540.zip`, so formal promotion requires a new
-Windows package/canary (`v541` or later) before relying on these checks.
+v541 now packages and Windows-canary verifies the `scripts/verify_stage6_return.py`
+hardening that machine-checks the short owner sign-off form against the selected
+release path, expected package SHA256, and expected source commit. It also makes
+publication-lag exception approval an `RC_ONLY` path rather than a `READY` path.
 Release verdict: **NOT_READY**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
 objective. It intentionally replaces the older historical v464/v460 narrative
-with the current v540 package/source state and v540 bounded Windows canary
+with the current v541 package/source state and v541 bounded Windows canary
 state.
 
 ## Objective Restated
@@ -95,24 +103,24 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Latest packaged bounded Windows canary: `dist/eidp-windows-v540.zip`
+- Latest packaged bounded Windows canary: `dist/eidp-windows-v541.zip`
 - Latest complete Windows side-by-side smoke package: `dist/eidp-windows-v535.zip`
-- v540 package/source commit:
-  `fbdd0bddbeca3e6ceaa7b9e576bc9c5b0b88025a`
-- v540 package SHA256:
-  `6f246e47c41869dce401810731df48e99268756622719a0e59461c33fd645fd6`
-- Current `main` after v540 contains unpackaged owner-return verifier hardening;
-  any formal release candidate must be rebuilt and Windows-canary verified as
-  `v541` or later.
+- v541 package/source commit:
+  `e62d074081e60428957a2f405c3a917bbceb31a0`
+- v541 package SHA256:
+  `2ffb25884e15b9e2937f43bab7a8f5866d9434bc9f29f8067dbc1760397fa46f`
+- Current v541 package/canary contains the post-v540 owner-return verifier
+  hardening. Owner handoff docs remain v540 r2 and must be refreshed before any
+  owner real-cycle return is accepted against v541.
 - Latest complete Windows side-by-side smoke: v535
-- Latest bounded Windows canary: v540
-- Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540
+- Latest bounded Windows canary: v541
+- Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540/v541
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
 - Latest source/package verifier hardening: v524/v525/v526 owner-return verifier requires
   Excel proof and ManualActionLog / JSONL outbox proof rows.
-- Latest unpackaged verifier hardening: current `main` adds short owner
-  sign-off verification, expected package SHA/source commit checks, and
-  `RC_ONLY` publication-lag exception semantics to
+- Latest source/package verifier hardening: v541 packages and Windows-canary
+  verifies short owner sign-off verification, expected package SHA/source
+  commit checks, and `RC_ONLY` publication-lag exception semantics in
   `scripts/verify_stage6_return.py`.
 - Latest operator UI supplement fix: v526 exposes extracted-PDF
   confirmation/supplement entry points and prefilled manual-entry saves.
@@ -133,8 +141,8 @@ that keeps manual work below the release threshold.
   `e5ee3df87e962321ff8a4f37dd3ec9becc776078bcb93cdeed8bcd907751be8f`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
   or Task Scheduler.
-- Latest strict-yield RCA summary: v540 Stage 6 evidence is summarized in
-  `docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md`. The top RCA lanes
+- Latest strict-yield RCA summary: v541 Stage 6 evidence is summarized in
+  `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`. The top RCA lanes
   are `publication_lag_or_old_target_pdf` (`15` schools / `454` candidate
   rows), `target_form_without_year_evidence` (`2` / `10`),
   `school_identity_mismatch` (`2` / `48`), and
@@ -234,28 +242,28 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 
 | Requirement | Evidence checked | Status |
 | --- | --- | --- |
-| 47 prefecture official-list seeds are packaged and usable | v540 package verifier `logs/win-v540-stage6-v540-verify-windows-distribution-20260620.json`: `prefecture_seed_rows=47`, `prefecture_seed_school_rows_total=2148` | PASS |
-| 1,700+ vocational-school scope | v540 Windows setup validator `win-20260620-v540-validate-after-setup.json`: `school_count=2418`, `school_fiscal_year_status_count=2418`, SQLite integrity `ok` | PASS |
-| 700-ish university scope | v540 package verifier requires the MEXT T0 target-institution catalog and workbook in the ZIP. `verify_windows_distribution.py dist/eidp-windows-v540.zip --json` reported `mext_target_university_rows=769`, `mext_target_specialty_rows=2067`, `mext_target_short_college_rows=239`, `mext_target_kosen_rows=57`, and `mext_target_total_rows=3132`. This proves the official source-catalog/package gate only; university target-document discovery, extraction, and Excel mapping are still not proven. | PASS for T0 index/package gate, PARTIAL for full university lane |
-| Current rolling FY is FY2026/Reiwa 8 | v540 Windows `last_run.json`: `current_fy=2026`, `status=success`, `selection_mode=target_missing` | PASS |
-| Strict mode excludes old-year fallback from success | v540 `last_run.json` keeps `ship_gate_status=below_gate` at strict/Excel-ready `12/50 (24.0%)`; old/stale target forms are not counted as release success | PASS for contract, FAIL for release yield |
-| Current FY2026 strict target-PDF/Excel-ready yield is `>= 60%` | v540 Windows limit-50 canary: strict/Excel-ready `12/50 (24.0%)`; v535/v533/v532 Windows limit-50 canaries: strict/Excel-ready `12/50 (24.0%)`; v526/v525/v524/v523 Windows limit-50 canaries: strict/Excel-ready `5/50 (10.0%)`; v515 Mac continuation canary from the v513 isolated DB: strict `2/50 (4.0%)`; v516/v519/v521 target-missing/continuation canaries remained `0/50 (0.0%)`; v522 same-domain `2025 -> 2026` and short-year/R7 replacement probe found `404` for all 47 expanded candidates; production-scale upper-bound proof: max possible `39.3%` after 607/1000 schools | FAIL |
-| Operator manual workload is `<= 30%` for current FY | v540 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v535/v533/v532 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v526/v525/v524/v523 Windows limit-50 operator-reviewable `50/50 (100.0%)`; v516 target-missing canary operator-reviewable `49/50 (98.0%)`; strict Excel-ready success is still below gate and owner real-cycle workload proof is missing | FAIL |
+| 47 prefecture official-list seeds are packaged and usable | v541 package verifier in `logs/win-v541-owner-signoff-release-path-gates-20260621.json`: `prefecture_seed_rows=47`, `prefecture_seed_school_rows_total=2148` | PASS |
+| 1,700+ vocational-school scope | v541 Windows setup validator in `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`: `school_count=2418`, `school_fiscal_year_status_count=2418`, SQLite integrity `ok` | PASS |
+| 700-ish university scope | v541 package verifier requires the MEXT T0 target-institution catalog and workbook in the ZIP. `verify_windows_distribution.py dist/eidp-windows-v541.zip --json` reported `mext_target_university_rows=769`, `mext_target_specialty_rows=2067`, `mext_target_short_college_rows=239`, `mext_target_kosen_rows=57`, and `mext_target_total_rows=3132`. This proves the official source-catalog/package gate only; university target-document discovery, extraction, and Excel mapping are still not proven. | PASS for T0 index/package gate, PARTIAL for full university lane |
+| Current rolling FY is FY2026/Reiwa 8 | v541 Windows canary summary `logs/win-v541-e62d074-canary/20260620_152248-summary.json`: `current_fy=2026`, `school_type=専門学校`, `selection_mode=target_missing` | PASS |
+| Strict mode excludes old-year fallback from success | v541 Windows canary summary keeps `ship_gate_status=below_gate` at strict/Excel-ready `12/50 (24.0%)`; old/stale target forms are not counted as release success | PASS for contract, FAIL for release yield |
+| Current FY2026 strict target-PDF/Excel-ready yield is `>= 60%` | v541 and v540 Windows limit-50 canaries: strict/Excel-ready `12/50 (24.0%)`; v535/v533/v532 Windows limit-50 canaries: strict/Excel-ready `12/50 (24.0%)`; v526/v525/v524/v523 Windows limit-50 canaries: strict/Excel-ready `5/50 (10.0%)`; v515 Mac continuation canary from the v513 isolated DB: strict `2/50 (4.0%)`; v516/v519/v521 target-missing/continuation canaries remained `0/50 (0.0%)`; v522 same-domain `2025 -> 2026` and short-year/R7 replacement probe found `404` for all 47 expanded candidates; production-scale upper-bound proof: max possible `39.3%` after 607/1000 schools | FAIL |
+| Operator manual workload is `<= 30%` for current FY | v541/v540 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v535/v533/v532 Windows limit-50 operator-reviewable `47/50 (94.0%)`; v526/v525/v524/v523 Windows limit-50 operator-reviewable `50/50 (100.0%)`; v516 target-missing canary operator-reviewable `49/50 (98.0%)`; strict Excel-ready success is still below gate and owner real-cycle workload proof is missing | FAIL |
 | Mature-year exception input exists | `logs/mature-year-acquisition-proof-fy2025-release-exception-v497-20260519.json`: FY2025 denominator `1000`, strict/Excel-ready `60.0%`, operator-reviewable `79.8%`, manual workload `20.2%` | PASS as exception input only |
 | Publication-lag exception is approved if release uses the mature-year lane | `docs/reports/2026-05-19-publication-lag-release-exception-record.md`: `Status: NOT_APPROVED`, `Decision: NOT_APPROVED` | BLOCKED |
-| PDF extraction stack is packaged | v540 setup validator has `wheel_count=84`; v526 Windows OCR runtime proof is `ok=true` with Tesseract runtime and `jpn` / `jpn_vert` tessdata present. v540 does not have a complete OCR runtime proof, so OCR remains unresolved if kept in v1.0 scope. | PASS for core, BLOCKED for v540 OCR scope |
-| Confidence `>= 0.70` gate exists | v540 current `main` CI run `27873133354` passed Python quality gates; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
-| `DepartmentYearly` and `SupportRecipient` append-only paths exist | v540 install validator confirms required tables including `department_yearly`, `support_recipient`, and `manual_action_log`; v540 canary processed `15` documents into `122` new departments and `129` yearly upserts | PASS for code/schema, PARTIAL for real operator workflow |
+| PDF extraction stack is packaged | v541 setup validator has `wheel_count=84`; v526 Windows OCR runtime proof is `ok=true` with Tesseract runtime and `jpn` / `jpn_vert` tessdata present. v541 does not have a complete OCR runtime proof, so OCR remains unresolved if kept in v1.0 scope. | PASS for core, BLOCKED for v541 OCR scope |
+| Confidence `>= 0.70` gate exists | v541 current `main` CI run `27874800210` passed Python quality gates and Ship gate contract; confidence/export/review tests are covered by the unit suite | PASS for code contract, PARTIAL for production OCR corpus |
+| `DepartmentYearly` and `SupportRecipient` append-only paths exist | v541 install validator confirms required tables including `department_yearly`, `support_recipient`, and `manual_action_log`; v541 canary processed `15` documents into `122` new departments and `129` yearly upserts | PASS for code/schema, PARTIAL for real operator workflow |
 | Extracted rows can be confirmed/supplemented | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`: extracted `confirmed_target` rows get `抽出済内容を確認・補足`; the PDF確認・手入力 form preloads current extracted data and saves through existing append-only manual-entry/audit paths | PASS for code/UI contract, PARTIAL for real operator workflow |
 | Excel transfer works | v535 Excel smoke: `win-v535-stage6-v535-excel-summary-clean-20260620.json` is `ok=true`; master workbook length `3,746,064`, competition workbook length `121,897`, gap CSV length `48,116`, and competition export recorded `excel_ready_schools=12` | PASS |
 | Operator actions are auditable in `ManualActionLog` | v502 install validator confirms the table; v503 adds `operator_settings_saved` audit coverage for the settings page with API-key redaction; v504 adds `excel_preview_generated` audit coverage for Excel preview generation; v505 adds `school_year_tasks_rebuilt` audit coverage for task-board rebuilds; v506 adds `operator_url_submitted` and `operator_url_bulk_imported` audit coverage for manual URL registration; v507 adds `prefecture_remark_approved` and `prefecture_remark_rejected` audit coverage for official-list remark decisions; v508 adds `excel_export_generated` audit coverage for master and competition Excel exports; v509 exposes the current audit action and target-table vocabulary in the audit-log filters; v510 adds `school_alias_approved` audit coverage for approved school-alias proposals; v511 adds `proposal_decision_recorded` audit coverage for proposal review decisions; v512 adds `bug_report_generated` audit coverage for local support ZIP generation without storing raw operator notes; v524 hardens `scripts/verify_stage6_return.py` so returned owner evidence must include audit page proof, numeric `manual_action_log` count, after-flush JSONL outbox count `0`, audit-flush status, and `JSONL action_id` duplicate status; current owner real-cycle audit counts and sign-off are still missing | PASS for code/verifier contract, BLOCKED for real owner evidence |
-| Windows ZIP double-click setup works | v540 setup and validation: `win-20260620-v540-validate-after-setup.json` with `ok=true`, `school_count=2418`, SQLite integrity `ok` | PASS |
+| Windows ZIP double-click setup works | v541 setup and validation recorded in `docs/reports/2026-06-21-v541-owner-signoff-verifier-windows-canary.md`: after-setup validator `ok=true`, `school_count=2418`, SQLite integrity `ok` | PASS |
 | Browser UI runs offline on Windows | v535 UI smoke: `win-v535-stage6-v535-ui-smoke-20260620.json` is `ok=true`, port `8535`, health `200/ok`, root `200`, stopped cleanly, no listener remained after stop | PASS |
-| Active scheduled-task safety is preserved | v540 recovery check `stage6-recovery-20260620-221715.json`: `ok=true`, active weekly task still points to `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`; v540 setup was run with `EIDP_REGISTER_WEEKLY_TASK=0` | PASS for no accidental promotion, NOT release evidence |
-| Stage 6 evidence bundle and verifier pass | v540 evidence ZIP and verifier: `stage6-evidence-20260620-133325.zip`, `stage6-evidence-verify-20260620-223357.json`, and Mac-side `stage6-evidence-verify-mac-20260620.json` with `ok=true`; required labels present and no unsafe/forbidden entries | PASS |
+| Active scheduled-task safety is preserved | v541 recovery check `logs/win-v541-e62d074-canary/stage6-recovery-20260621-002217.json`: `ok=true`, active weekly task still points to `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`; v541 setup was run with `EIDP_REGISTER_WEEKLY_TASK=0` | PASS for no accidental promotion, NOT release evidence |
+| Stage 6 evidence bundle and verifier pass | v541 evidence ZIP and verifier: `logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip`, `logs/win-v541-e62d074-canary/stage6-evidence-verify-20260621-003707.json`, and Mac-side `verify_stage6_evidence.py` with `ok=true`; required labels present and no unsafe/forbidden entries | PASS |
 | v526/v525/v524/v523 RCA is current | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`, `docs/reports/2026-05-20-v525-rc-metadata-package.md`, `docs/reports/2026-05-20-v524-full-windows-side-by-side-smoke.md`, and `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`: v526/v525/v524/v523 repeat the same strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` blocker; v526 discovery stats record `pre_filtered_non_target_hint=631`, `fiscal_year_mismatch=267`, `classified_non_target=88`, `no_candidates_found=8`, `target_fiscal_year_not_detected=5`, and `http_error_httpstatuserror=1`, with no `candidate_school_mismatch` in the v526 Windows run | PASS for RCA, FAIL for yield |
 | Weekly selected-school denominator actually gets crawled | v514 focused isolated Mac smoke `target-year-discovery-after-sitecount-fix/20260519_231930-summary.json`: selected NEEC school IDs 1-3 were crawled (`crawled=3`) and remained reviewable, not strict FY2026 successes; v516 selection probe excludes already confirmed target schools 4 and 7 from the target-missing queue while preserving a 50-school queue; v517 targeted school ID 55 smoke confirms the new exact override is crawled and yields FY2019-FY2025 target-form evidence instead of corporation-only non-target evidence; v518 packages that case as discovery gold-set regression evidence; v519 filters vocational-practice basic-info PDFs out of target-form review; v519 Mac continuation canary with copied URL sources crawls 58 site rows for 50 selected schools and moves school ID 55 to `publication_lag_or_old_target_pdf`; v520 adds exact Katayanagi crawl entries while preserving NEEC no-year PDFs as reviewable, not strict successes; v521 suppresses same-school `corporation_pattern` rows when exact school-domain overrides exist, reducing the Katayanagi limit-3 crawl from 6 to 3 and candidate-school mismatches from 69 to 0; the v526/v525/v524/v523 Windows limit-50 canaries each download 5 strict/current PDFs and keep all 50 selected schools reviewable | PASS for code/evidence contract, FAIL for strict yield |
-| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v540 bounded Windows canary and v540 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
+| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v541/v540 bounded Windows canaries and v540 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
 | v1.0 tag is allowed | PR #8 is merged into `main`, but FY2026 strict proof, owner real cycle, and exception approval are incomplete | BLOCKED |
 
 ## Fresh Local Verification In This Audit Pass
@@ -347,8 +355,10 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   `dist/eidp-windows-v527.zip` through `dist/eidp-windows-v531.zip` and their
   `.sha256` sidecars. Later cleanup after v535 removed the invalid v534 core
   ZIP and sidecar. Later cleanup after v540 pruned superseded v539. `dist/`
-  now keeps v535, v536, v540, the latest alias, the current v540 owner-docs
-  handoff ZIP, and `wheelhouse/` for rebuild support.
+  now keeps v535, v536, v540, v541, the latest alias, the current v540
+  owner-docs handoff ZIP, and `wheelhouse/` for rebuild support. The
+  superseded v532 owner-docs ZIP and macOS AppleDouble `._*` sidecars created
+  during v541 packaging were removed.
 - Local artifact storage now uses the external SSD mounted at
   `/Volumes/M1nG-ssd`: repository paths `dist` and `logs` are symlinks to
   `/Volumes/M1nG-ssd/EIDP-artifacts/dist` and
@@ -439,8 +449,9 @@ do not remove the FY2026/R8 release blocker.
 1. Resolve the FY2026/R8 strict-yield blocker by either reaching the `>= 60%`
    current-year strict line or approving the documented `publication_lag`
    exception path.
-2. Run the prepared owner/operator v540 return path from Windows and collect
-   signed KPI, audit/outbox, workbook, and `publication_lag` decision evidence.
+2. Refresh/stage v541 owner docs, then run the owner/operator v541 return path
+   from Windows and collect signed KPI, audit/outbox, workbook, and
+   `publication_lag` decision evidence.
 3. Run the owner real Windows cycle and return KPI/sign-off evidence.
 4. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
 5. Create the signed `v1.0` tag only after the above blockers are resolved.
