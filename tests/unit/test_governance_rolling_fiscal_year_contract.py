@@ -127,6 +127,8 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     admin_checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
+    objective_checklist_raw = _doc("docs/reports/eidp-current-objective-evidence-checklist.md")
+    required_next_actions = objective_checklist_raw.split("## Required Next Actions", maxsplit=1)[1]
     v547_windows_canary = _normalized_doc("docs/reports/2026-06-21-v547-windows-canary.md")
     staging = _normalized_doc("docs/reports/2026-06-21-v545-owner-docs-windows-staging.md")
     historical_staging_v544 = _normalized_doc("docs/reports/2026-06-21-v544-owner-docs-windows-staging.md")
@@ -260,6 +262,8 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v547-false-reject-review-summary.md" in objective_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in objective_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md" in objective_checklist
+    assert "Review `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`" in required_next_actions
+    assert "Review `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`" not in required_next_actions
     assert "current v547 blank worksheet validation is recorded" in objective_checklist
     assert "false_reject_review_summary" in current_status
     assert "false_reject_review_summary" in objective_checklist
