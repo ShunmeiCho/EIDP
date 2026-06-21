@@ -375,6 +375,8 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "matching regenerated audit JSONL" in current_status
     assert "audit event count matching completed worksheet decisions" in objective_checklist
     assert "requires the regenerated audit event count to match completed worksheet decisions" in current_status
+    assert "blocking CSV or audit-log gate errors" in current_status
+    assert "blocking CSV/audit-log error previews" in objective_checklist
     assert "`context_mismatch_count=0`" in current_status
     assert expected_v547_package_sha in current_status
     assert expected_v547_package_sha in objective_checklist

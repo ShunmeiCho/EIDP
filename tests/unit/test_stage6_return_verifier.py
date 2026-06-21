@@ -580,6 +580,13 @@ def test_verify_stage6_return_rejects_false_reject_review_audit_log_mismatch(
     assert result["ok"] is False
     assert "false-reject review audit log does not match regenerated audit events" in result["errors"]
     assert result["false_reject_review"]["audit_log_event_count"] == 1
+    assert result["false_reject_review_summary"]["blocking_error_count"] == 1
+    assert result["false_reject_review_summary"]["blocking_error_preview"] == [
+        "false-reject review audit log does not match regenerated audit events"
+    ]
+    assert result["false_reject_review_summary"]["next_action"] == (
+        "Regenerate the false-reject review audit log from the completed worksheet."
+    )
 
 
 def test_verify_stage6_return_rejects_false_reject_review_audit_log_event_count_mismatch(
@@ -644,6 +651,13 @@ def test_verify_stage6_return_rejects_false_reject_review_audit_log_event_count_
     assert result["ok"] is False
     assert "false-reject review audit log event count must match completed decisions" in result["errors"]
     assert result["false_reject_review"]["audit_log_event_count"] == 0
+    assert result["false_reject_review_summary"]["blocking_error_count"] == 1
+    assert result["false_reject_review_summary"]["blocking_error_preview"] == [
+        "false-reject review audit log event count must match completed decisions"
+    ]
+    assert result["false_reject_review_summary"]["next_action"] == (
+        "Regenerate the false-reject review audit log from the completed worksheet."
+    )
 
 
 def test_verify_stage6_return_accepts_short_owner_signoff_for_ready_path(tmp_path: Path) -> None:

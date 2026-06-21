@@ -260,16 +260,19 @@ def _verify_false_reject_review(
         errors.append("false-reject review CSV is invalid")
         for validation_error in validation.get("errors", []):
             errors.append(f"false-reject review CSV error: {validation_error}")
+    audit_log_errors: list[str] = []
     if validation.get("review_status") != "complete":
         errors.append("false-reject review CSV must be complete before it can support owner-return RCA evidence")
     if validation.get("context_mismatch_count") != 0:
         errors.append("false-reject review CSV changed immutable row context")
     if actual_audit_log != expected_audit_log:
-        errors.append("false-reject review audit log does not match regenerated audit events")
+        audit_log_errors.append("false-reject review audit log does not match regenerated audit events")
     audit_log_event_count = len([line for line in expected_audit_log.splitlines() if line.strip()])
     if validation.get("review_status") == "complete" and validation.get("completed_decisions") != audit_log_event_count:
-        errors.append("false-reject review audit log event count must match completed decisions")
+        audit_log_errors.append("false-reject review audit log event count must match completed decisions")
+    errors.extend(audit_log_errors)
     validation["audit_log_event_count"] = audit_log_event_count
+    validation["audit_log_errors"] = audit_log_errors
     return cast(dict[str, Any], validation)
 
 
@@ -282,7 +285,11 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     validation_errors = validation.get("errors")
     if not isinstance(validation_errors, list):
         validation_errors = []
-    error_preview = [str(error) for error in validation_errors[:10]]
+    audit_log_errors = validation.get("audit_log_errors")
+    if not isinstance(audit_log_errors, list):
+        audit_log_errors = []
+    blocking_errors = [*validation_errors, *audit_log_errors]
+    error_preview = [str(error) for error in blocking_errors[:10]]
     expected_rows = validation.get("expected_rows")
     completed_decisions = validation.get("completed_decisions")
     blank_decisions = validation.get("blank_decisions")
@@ -295,6 +302,8 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         next_action = "Fix the listed false-reject review CSV errors before using it as release evidence."
     elif review_status != "complete":
         next_action = "Complete every false-reject review decision before using the worksheet as RCA evidence."
+    elif audit_log_errors:
+        next_action = "Regenerate the false-reject review audit log from the completed worksheet."
     else:
         next_action = "Use this worksheet only with the full owner-return verifier result."
 
@@ -311,7 +320,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         "specific_algorithm_or_rule_defect_supported": defect_framing.get(
             "specific_algorithm_or_rule_defect_supported"
         ),
-        "blocking_error_count": len(validation_errors),
+        "blocking_error_count": len(blocking_errors),
         "blocking_error_preview": error_preview,
         "next_action": next_action,
         "excel_gate_warning": (
