@@ -82,28 +82,29 @@ v547 while removing v545 transfer ZIPs and the v545 side-by-side directory
 `logs/win-v547-86c848f-canary/win-v547-cleanup-20260621.json` and
 `logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`.
 
-Current `main` false-reject review guidance was rerun against the v547
-Windows-canary Stage 6 evidence. It keeps the v547 evidence bundle fixed while
-making explicit non-target-year hints owner-triage only. Running the current
-script produced
-`docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
-`docs/reports/2026-06-21-v547-false-reject-review-worklist.md`,
-`docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
-`docs/reports/2026-06-21-v547-false-reject-review-validation.json`, and
-`docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`: the
+Current `main` false-reject review guidance has now been rerun against the v548
+Windows-canary Stage 6 evidence so owner review matches the latest bounded
+canary packet. Running the current script produced
+`docs/reports/2026-06-21-v548-false-reject-audit-packet.md`,
+`docs/reports/2026-06-21-v548-false-reject-review-summary.md`,
+`docs/reports/2026-06-21-v548-false-reject-review-worklist.md`,
+`docs/reports/2026-06-21-v548-false-reject-review-sheet.csv`,
+`docs/reports/2026-06-21-v548-false-reject-review-validation.json`,
+`docs/reports/2026-06-21-v548-false-reject-review-validation-summary.md`, and
+`docs/reports/2026-06-21-v548-false-reject-review-rca-summary.md`: the
 worklist is generated with the same `--sample-size 12` as the worksheet and
 lists the `53` owner rows with page/PDF URLs. The worksheet still has
 `decision=blank` for all `53` rows pending owner/operator review, but
-`suggested_decision` now has `0` blanks (`24` `correct_reject`, `29`
-`needs_operator_review`). `--require-decisions` fails as expected, so blank
+`suggested_decision` has `0` blanks (`24` `correct_reject`, `29`
+`needs_operator_review`). `--require-decisions` fails as expected, with
+`context_mismatch_count=0` and `defect_framing.status=pending_review`, so blank
 owner decisions remain blocked and cannot support Excel output or a generic
 model-failure claim.
 
-The regenerated false-reject worksheet remains tied to the v547 Stage 6
-evidence bundle. v548 is now the latest Windows-canary package for
-owner-return helper behavior, but the v547 worksheet itself has not been
-completed or approved. Use current `main` / v548 helper behavior for validating
-this regenerated worksheet unless a later package supersedes v548.
+The previous v547 worksheet remains the staged owner handoff artifact at
+`C:\EIDP-staging\v547-owner-docs-20260621`, but it has been superseded for
+current false-reject review by the v548 worksheet above. Neither worksheet has
+been completed or approved.
 Current `main` also adds a `review-audit-log` output for returned false-reject
 worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,

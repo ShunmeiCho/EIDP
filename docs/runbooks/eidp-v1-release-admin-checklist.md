@@ -220,7 +220,16 @@ Before tagging, attach or reference:
   `docs/reports/2026-06-21-v545-false-reject-audit-packet.md`,
   `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`, and
   `docs/reports/2026-06-21-v545-false-reject-review-validation.json`;
-- v547 false-reject review guidance evidence:
+- v548 false-reject review guidance evidence:
+  `docs/reports/2026-06-21-v548-false-reject-audit-packet.md`,
+  `docs/reports/2026-06-21-v548-false-reject-review-sheet.csv`,
+  `docs/reports/2026-06-21-v548-false-reject-review-summary.md`,
+  `docs/reports/2026-06-21-v548-false-reject-review-worklist.md`,
+  `docs/reports/2026-06-21-v548-false-reject-review-validation.json`,
+  `docs/reports/2026-06-21-v548-false-reject-review-validation-summary.md`,
+  and `docs/reports/2026-06-21-v548-false-reject-review-rca-summary.md`;
+- v547 false-reject review guidance evidence, retained as the previous staged
+  owner-handoff worksheet:
   `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
   `docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
   `docs/reports/2026-06-21-v547-false-reject-review-worklist.md`,

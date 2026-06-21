@@ -155,9 +155,10 @@ rejection-bucket false-reject evidence proves material over-rejection or
 fiscal-year extraction mistakes.
 The earlier v535 RCA plan and v541/v542/v543/v544/v545 false-reject packets
 remain historical decomposition. The current false-reject review lane uses the
-v547 Windows canary evidence and v547 worksheet. The staged owner handoff docs
-now target v547, but they still do not prove the v547 worksheet has been
-completed or approved.
+v548 Windows canary evidence and v548 worksheet. The staged owner handoff docs
+still target v547 until a new docs-only handoff is refreshed, but they no
+longer represent the latest false-reject worksheet. Neither the v547 nor v548
+worksheet has been completed or approved.
 The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
@@ -168,13 +169,15 @@ The historical v545 false-reject audit packet is recorded at
 `uv run python scripts/build_false_reject_audit.py
 logs/win-v545-f3eb166-canary/stage6-evidence-20260621-004156.zip --sample-size
 12 --output docs/reports/2026-06-21-v545-false-reject-audit-packet.md`.
-The current v547 review worksheet is generated at
-`docs/reports/2026-06-21-v547-false-reject-review-sheet.csv` using the v547
+The current v548 review worksheet is generated at
+`docs/reports/2026-06-21-v548-false-reject-review-sheet.csv` using the v548
 Stage 6 evidence bundle
-`logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`. The
+`logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip`. The
 row-by-row owner worklist is generated from the same bundle and sample size at
-`docs/reports/2026-06-21-v547-false-reject-review-worklist.md`; it is read-only
+`docs/reports/2026-06-21-v548-false-reject-review-worklist.md`; it is read-only
 review guidance and the CSV remains the only returned decision artifact. The older
+v547 review worksheet remains the staged handoff artifact at
+`docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`, and the older
 v545 review worksheet remains historical at
 `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv` using
 `uv run python scripts/build_false_reject_audit.py
@@ -184,23 +187,23 @@ docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`; its historical
 validation remains recorded at
 `docs/reports/2026-06-21-v545-false-reject-review-validation.json` and
 `docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md`. The
-v547 blank worksheet includes read-only `suggested_decision` /
+v548 blank worksheet includes read-only `suggested_decision` /
 `suggested_decision_basis` triage guidance for obvious old-year, non-target,
 yearless, and identity-risk rows, but the actual `decision` cells remain blank
 and must be completed by the owner/operator. It reports `53` sampled rows and
 validates with
 `defect_framing.status=pending_review`, while the same command with
 `--validate-review-csv
-docs/reports/2026-06-21-v547-false-reject-review-sheet.csv --require-decisions`
+docs/reports/2026-06-21-v548-false-reject-review-sheet.csv --require-decisions`
 fails until every sampled row has one of the allowed decisions. The validator
 also rejects changed immutable row context, reports `bucket_decision_counts`,
-and emits machine-readable `defect_framing`. The current v547 blank worksheet
+and emits machine-readable `defect_framing`. The current v548 blank worksheet
 validation is recorded at
-`docs/reports/2026-06-21-v547-false-reject-review-validation.json`; it reports
+`docs/reports/2026-06-21-v548-false-reject-review-validation.json`; it reports
 `completed_decisions=0`, `blank_decisions=53`, `context_mismatch_count=0`, and
 `defect_framing.status=pending_review`. The owner-readable require-decisions
 failure summary is recorded at
-`docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`; it
+`docs/reports/2026-06-21-v548-false-reject-review-validation-summary.md`; it
 reports `Validation OK=False`, `completed_decisions=0/53`, `blank_decisions=53`,
 and `context_mismatches=0`, so below-gate yield must not yet be labeled as an
 algorithm/model defect. Completed rows require `reviewer` and an ISO
@@ -210,8 +213,8 @@ The current source runbooks now tell the owner/operator how to return that
 worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
 immutable row context untouched, and have the developer validate the returned
 CSV from current `main`. The staged v547 owner handoff still carries the v547
-worksheet, but the v548 package is now the latest Windows-canary proof for the
-owner-return helper behavior. The owner-return verifier now accepts
+worksheet and must be refreshed before it is used as the latest owner packet.
+The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`,
 `--false-reject-review-audit-log`, and `--false-reject-sample-size`; when
 supplied, it requires `review_status=complete`, `context_mismatch_count=0`, a
@@ -292,6 +295,21 @@ v548 now packages, setup-verifies, and Windows-canary verifies the
 `scripts/verify_stage6_return.py`. v548 aligns the latest package/setup proof
 and latest bounded Windows canary, but strict/Excel-ready remains
 `12/50 (24.0%)`, so the release verdict is unchanged.
+Post-v548 false-reject current-lane refresh:
+Running the current helper against v548 Stage 6 evidence produced
+`docs/reports/2026-06-21-v548-false-reject-audit-packet.md`,
+`docs/reports/2026-06-21-v548-false-reject-review-summary.md`,
+`docs/reports/2026-06-21-v548-false-reject-review-worklist.md`,
+`docs/reports/2026-06-21-v548-false-reject-review-sheet.csv`,
+`docs/reports/2026-06-21-v548-false-reject-review-validation.json`,
+`docs/reports/2026-06-21-v548-false-reject-review-validation-summary.md`, and
+`docs/reports/2026-06-21-v548-false-reject-review-rca-summary.md`. The v548
+blank worksheet reports `53` sampled rows, `completed_decisions=0`,
+`blank_decisions=53`, `context_mismatch_count=0`,
+`defect_framing.status=pending_review`, and `0` blank suggested decisions
+(`24` `correct_reject`, `29` `needs_operator_review`). This supersedes v547 as
+the current false-reject review lane, but it does not complete owner review and
+does not relax strict FY gates.
 Release verdict: **NOT_READY**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
@@ -843,7 +861,7 @@ do not remove the FY2026/R8 release blocker.
 2. Continue strict-yield RCA in the documented bucket order: fiscal-year
    mismatch / publication lag first, non-target candidate noise second,
    target-year-unverified third, and site-entry/fetch/identity lanes fourth.
-3. Review `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv` and mark
+3. Review `docs/reports/2026-06-21-v548-false-reject-review-sheet.csv` and mark
    sampled rows as `false_reject`, `correct_reject`, or
    `needs_operator_review`, then validate the returned CSV with
    `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`

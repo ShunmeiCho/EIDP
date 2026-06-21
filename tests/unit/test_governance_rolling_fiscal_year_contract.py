@@ -165,7 +165,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "earlier v545, v544, v542, and v541 owner-docs refreshes remain historical" in current_status
     assert "audit-packet validity" in current_status
     assert "Latest v547 owner/operator docs staging" in objective_checklist
-    assert "current staged owner handoff lane remains v547" in objective_checklist
+    assert "staged owner handoff docs still target v547" in objective_checklist
     assert "still target v545 until owner docs are refreshed again" not in objective_checklist
     assert "blocking packet/CSV/audit-log error previews" in objective_checklist
 
@@ -308,9 +308,9 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "not framed as a generic algorithm/model failure" in objective_checklist
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
-    assert "The current false-reject review lane uses the v547 Windows canary evidence" in objective_checklist
-    assert "staged owner handoff docs now target v547" in objective_checklist
-    assert "do not prove the v547 worksheet has been completed or approved" in objective_checklist
+    assert "The current false-reject review lane uses the v548 Windows canary evidence" in objective_checklist
+    assert "staged owner handoff docs still target v547" in objective_checklist
+    assert "Neither the v547 nor v548 worksheet has been completed or approved" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in current_status
@@ -324,13 +324,22 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v547-false-reject-review-summary.md" in current_status
     assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in current_status
     assert "docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md" in current_status
-    assert "docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in objective_checklist
-    assert "docs/reports/2026-06-21-v547-false-reject-review-summary.md" in objective_checklist
-    assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in objective_checklist
-    assert "docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md" in objective_checklist
-    assert "Review `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`" in required_next_actions
+    assert "docs/reports/2026-06-21-v548-false-reject-audit-packet.md" in current_status
+    assert "docs/reports/2026-06-21-v548-false-reject-review-sheet.csv" in current_status
+    assert "docs/reports/2026-06-21-v548-false-reject-review-summary.md" in current_status
+    assert "docs/reports/2026-06-21-v548-false-reject-review-validation.json" in current_status
+    assert "docs/reports/2026-06-21-v548-false-reject-review-validation-summary.md" in current_status
+    assert "docs/reports/2026-06-21-v548-false-reject-review-rca-summary.md" in current_status
+    assert "docs/reports/2026-06-21-v548-false-reject-audit-packet.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-false-reject-review-summary.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-false-reject-review-validation.json" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-false-reject-review-validation-summary.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-false-reject-review-rca-summary.md" in objective_checklist
+    assert "Review `docs/reports/2026-06-21-v548-false-reject-review-sheet.csv`" in required_next_actions
+    assert "Review `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`" not in required_next_actions
     assert "Review `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`" not in required_next_actions
-    assert "current v547 blank worksheet validation is recorded" in objective_checklist
+    assert "current v548 blank worksheet validation is recorded" in objective_checklist
     assert "false_reject_review_summary" in current_status
     assert "false_reject_review_summary" in objective_checklist
     assert "review-rca-summary" in current_status
@@ -375,6 +384,10 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "v547 fallback package/source and bounded canary evidence" in admin_checklist
     assert "logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip" in admin_checklist
     assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json" in admin_checklist
+    assert "v548 false-reject review guidance evidence" in admin_checklist
+    assert "docs/reports/2026-06-21-v548-false-reject-review-sheet.csv" in admin_checklist
+    assert "docs/reports/2026-06-21-v548-false-reject-review-validation.json" in admin_checklist
+    assert "v547 false-reject review guidance evidence, retained as the previous staged" in admin_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in admin_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in admin_checklist
     assert "v546 Windows bounded canary evidence" in admin_checklist

@@ -1,0 +1,100 @@
+{
+  "basis": "false_reject_review_decision_validation",
+  "blank_decisions": 53,
+  "bucket_decision_counts": {
+    "classified_non_target": {
+      "blank": 12
+    },
+    "fiscal_year_mismatch": {
+      "blank": 12
+    },
+    "pre_filtered_non_target_hint": {
+      "blank": 12
+    },
+    "site_entry_fetch_identity": {
+      "blank": 11
+    },
+    "target_fiscal_year_not_detected": {
+      "blank": 6
+    }
+  },
+  "completed_decisions": 0,
+  "context_mismatch_count": 0,
+  "decision_counts": {
+    "blank": 53
+  },
+  "defect_framing": {
+    "correct_reject_rows": 0,
+    "false_reject_rows": 0,
+    "generic_model_failure_supported": false,
+    "needs_operator_review_rows": 0,
+    "reason": "Review decisions are incomplete; below-gate yield must not be labeled as an algorithm/model defect yet.",
+    "specific_algorithm_or_rule_defect_supported": false,
+    "status": "pending_review"
+  },
+  "errors": [
+    "line 2: decision is required",
+    "line 3: decision is required",
+    "line 4: decision is required",
+    "line 5: decision is required",
+    "line 6: decision is required",
+    "line 7: decision is required",
+    "line 8: decision is required",
+    "line 9: decision is required",
+    "line 10: decision is required",
+    "line 11: decision is required",
+    "line 12: decision is required",
+    "line 13: decision is required",
+    "line 14: decision is required",
+    "line 15: decision is required",
+    "line 16: decision is required",
+    "line 17: decision is required",
+    "line 18: decision is required",
+    "line 19: decision is required",
+    "line 20: decision is required",
+    "line 21: decision is required",
+    "line 22: decision is required",
+    "line 23: decision is required",
+    "line 24: decision is required",
+    "line 25: decision is required",
+    "line 26: decision is required",
+    "line 27: decision is required",
+    "line 28: decision is required",
+    "line 29: decision is required",
+    "line 30: decision is required",
+    "line 31: decision is required",
+    "line 32: decision is required",
+    "line 33: decision is required",
+    "line 34: decision is required",
+    "line 35: decision is required",
+    "line 36: decision is required",
+    "line 37: decision is required",
+    "line 38: decision is required",
+    "line 39: decision is required",
+    "line 40: decision is required",
+    "line 41: decision is required",
+    "line 42: decision is required",
+    "line 43: decision is required",
+    "line 44: decision is required",
+    "line 45: decision is required",
+    "line 46: decision is required",
+    "line 47: decision is required",
+    "line 48: decision is required",
+    "line 49: decision is required",
+    "line 50: decision is required",
+    "line 51: decision is required",
+    "line 52: decision is required",
+    "line 53: decision is required",
+    "line 54: decision is required"
+  ],
+  "expected_rows": 53,
+  "ok": false,
+  "release_forecast": "NOT_READY",
+  "required_decisions": [
+    "false_reject",
+    "correct_reject",
+    "needs_operator_review"
+  ],
+  "review_status": "invalid",
+  "submitted_rows": 53
+}
