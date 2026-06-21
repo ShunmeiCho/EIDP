@@ -113,9 +113,9 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
-    assert "v546 still remains below the strict/Excel-ready release gate" in checklist
-    assert "Current v547 package evidence is recorded" in checklist
-    assert "Current v546 Windows bounded canary evidence is recorded" in checklist
+    assert "v547 still remains below the strict/Excel-ready release gate" in checklist
+    assert "Current v547 package and Windows bounded canary evidence is recorded" in checklist
+    assert "Previous v546 Windows bounded canary evidence is recorded" in checklist
 
 
 def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
@@ -127,6 +127,7 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     admin_checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
+    v547_windows_canary = _normalized_doc("docs/reports/2026-06-21-v547-windows-canary.md")
     staging = _normalized_doc("docs/reports/2026-06-21-v545-owner-docs-windows-staging.md")
     historical_staging_v544 = _normalized_doc("docs/reports/2026-06-21-v544-owner-docs-windows-staging.md")
     historical_staging_v542 = _normalized_doc("docs/reports/2026-06-21-v542-owner-docs-windows-staging.md")
@@ -207,18 +208,28 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/runbooks/eidp-v545-owner-request-20260621.txt" in current_status
     assert "docs/runbooks/eidp-v545-owner-return-fill-sheet.md" in current_status
     assert "docs/reports/2026-06-21-v545-owner-docs-windows-staging.md" in current_status
-    assert "Current source package candidate is `v547`" in current_status
+    assert "Current packaged bounded Windows canary is `v547`" in current_status
     assert "docs/reports/2026-06-21-v547-package-gates.md" in current_status
     assert "logs/eidp-windows-v547-distribution-verify-20260621.json" in current_status
     assert "logs/eidp-windows-v547-release-gates-20260621.json" in current_status
     assert "logs/eidp-v547-local-prune-20260621.json" in current_status
-    assert "Current packaged bounded Windows canary is `v546`" in current_status
+    assert "docs/reports/2026-06-21-v547-windows-canary.md" in current_status
+    assert "logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip" in current_status
+    assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-20260621-144556.json" in current_status
+    assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json" in current_status
+    assert "logs/win-v547-86c848f-canary/20260621_053425-summary.json" in current_status
+    assert "Previous packaged bounded Windows canary is `v546`" in current_status
     assert "docs/reports/2026-06-21-v546-rca-summary-package-gates.md" in current_status
     assert "logs/eidp-windows-v546-distribution-verify-20260621.json" in current_status
     assert "logs/eidp-windows-v546-release-gates-20260621.json" in current_status
     assert "logs/eidp-v546-local-prune-20260621.json" in current_status
+    assert "v547` completed side-by-side Windows setup" in current_status
     assert "v546` completed side-by-side Windows setup" in current_status
     assert "strict/Excel-ready FY2026 yield `12/50 (24.0%)`" in current_status
+    assert "not a PDF acquisition success rate" in current_status
+    assert "not a PDF acquisition success rate or an overall project completion rate" in current_status
+    assert "candidate sets were found for `50/50` selected schools" in current_status
+    assert "only `12` schools reached strict target PDF plus Excel-ready" in current_status
     assert "earlier v544, v542, and v541" in current_status
     assert 'not a generic "PDF not found" or crawler-runtime failure' in current_status
     assert "FY2026/R8 strict target-document to Excel-ready yield" in current_status
@@ -239,6 +250,14 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in current_status
+    assert "docs/reports/2026-06-21-v547-false-reject-review-summary.md" in current_status
+    assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in current_status
+    assert "docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md" in current_status
+    assert "docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v547-false-reject-review-summary.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in objective_checklist
+    assert "docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md" in objective_checklist
     assert "false_reject_review_summary" in current_status
     assert "false_reject_review_summary" in objective_checklist
     assert "review-rca-summary" in current_status
@@ -251,16 +270,27 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "SPECIFIC_RULE_DEFECTS_FOUND" in return_sheet
     assert "GENERIC_MODEL_FAILURE_NOT_SUPPORTED" in return_sheet
     assert "source-side handoff hardening" in objective_checklist
-    assert "v547 package and non-Windows gate evidence" in objective_checklist
+    assert "v547 package, non-Windows gate, and Windows canary evidence" in objective_checklist
     assert "v546 package, non-Windows gate, and Windows canary evidence" in objective_checklist
     assert "docs/reports/2026-06-21-v547-package-gates.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v547-windows-canary.md" in objective_checklist
     assert "logs/eidp-windows-v547-release-gates-20260621.json" in objective_checklist
+    assert "logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip" in objective_checklist
+    assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json" in objective_checklist
     assert "docs/reports/2026-06-21-v546-rca-summary-package-gates.md" in objective_checklist
     assert "logs/eidp-windows-v546-release-gates-20260621.json" in objective_checklist
     assert "strict/Excel-ready `12/50 (24.0%)`" in objective_checklist
+    assert "not a PDF acquisition success rate and not overall" in objective_checklist
+    assert "`12/50` selected target-missing schools" in objective_checklist
+    assert "`15` documents were downloaded and processed" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" not in admin_checklist
     assert "dist/eidp-windows-v547.zip" in admin_checklist
     assert "dist/eidp-windows-v546.zip" in admin_checklist
+    assert "v547 Windows bounded canary evidence" in admin_checklist
+    assert "logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip" in admin_checklist
+    assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json" in admin_checklist
+    assert "docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in admin_checklist
+    assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in admin_checklist
     assert "v546 Windows bounded canary evidence" in admin_checklist
     assert "logs/win-v546-6301605-canary/stage6-evidence-20260621-043811.zip" in admin_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in admin_checklist
@@ -308,9 +338,17 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     )
     assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in current_status
     assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in objective_checklist
-    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v546.zip`" in objective_checklist
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v547.zip`" in objective_checklist
     assert "Current v547 package contains the latest false-reject worksheet guidance" in objective_checklist
-    assert "The latest Windows bounded canary remains v546" in objective_checklist
+    assert "Latest bounded Windows canary: v547" in objective_checklist
+    assert "The `24.0%` value is not a PDF download/acquisition success rate" in v547_windows_canary
+    assert "not the overall project completion rate" in v547_windows_canary
+    assert "candidate sets for `50/50` selected schools" in v547_windows_canary
+    assert "downloaded `15` documents" in v547_windows_canary
+    assert "only `12` schools had evidence strong enough to enter Excel-ready safely" in v547_windows_canary
+    assert "If owner/operator review finds many `false_reject` rows" in v547_windows_canary
+    assert "If most rows are `correct_reject`" in v547_windows_canary
+    assert "If many rows remain `needs_operator_review`" in v547_windows_canary
     assert "current staged owner handoff lane" in objective_checklist
     assert "Previous v544 package/canary contains the false-reject audit helper" in objective_checklist
     assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist

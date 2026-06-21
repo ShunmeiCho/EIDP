@@ -12,8 +12,8 @@ Release Forecast: `NOT_READY`
 
 | Priority | Finding | Evidence | Action |
 | --- | --- | --- | --- |
-| P0 release blocker | v547 has no Windows side-by-side setup/canary evidence yet. | This report covers Mac/non-Windows package gates only. Latest Windows bounded canary remains v546. | Do not use v547 as Windows release evidence until transferred, installed, and canaried on Windows. |
-| P0 release blocker | FY2026/R8 strict Excel-ready yield is still below the v1 line. | Latest Windows canary evidence remains v546 strict/Excel-ready `12/50 (24.0%)`; current v546 owner worksheet still has `53` blank decisions. | Keep release blocked; complete owner review and rerun Windows evidence before any release claim. |
+| P0 release blocker | This package-gate report alone is not Windows release proof. | Follow-up Windows canary evidence is now recorded in `docs/reports/2026-06-21-v547-windows-canary.md`. | Use the Windows canary report for Windows proof; keep this report as package-gate evidence. |
+| P0 release blocker | FY2026/R8 strict Excel-ready yield is still below the v1 line. | Follow-up v547 Windows canary strict/Excel-ready is `12/50 (24.0%)`; current v547 owner worksheet still has `53` blank decisions. | Keep release blocked; complete owner review and rerun Windows evidence before any release claim. |
 | P1 release hardening | Current `main` false-reject worksheet guidance is now packaged and non-Windows-gated. | v547 packages commit `86c848f`; non-Windows release gates returned `ok=true`. | Use v547 as the next Windows transfer/canary candidate. |
 | P2 storage hygiene | Superseded local v545 ZIP artifacts were pruned after v547 build. | `logs/eidp-v547-local-prune-20260621.json` reports `deleted_count=2`, `deleted_bytes=210931692`. | Continue retaining only current plus one fallback package unless an older artifact is actively needed. |
 | P3 roadmap/research | University production workflow, cloud, multi-user, and complex frontend remain outside v1. | No v547 evidence changes v1 scope. | Keep in roadmap. |
@@ -90,9 +90,10 @@ Result:
 
 ## Release Boundary
 
-This report is not Windows release proof. Mac/non-Windows tests and package
-verification do not replace Windows setup, Task Scheduler behavior, operator UI
-flows, Stage 6 Windows evidence, or owner sign-off.
+This package-gate report is not Windows release proof by itself. Follow-up
+Windows setup, bounded canary, and Stage 6 evidence are recorded in
+`docs/reports/2026-06-21-v547-windows-canary.md`. Owner sign-off is still
+missing, and the v547 strict/Excel-ready yield remains below gate.
 
 v547 remains `NOT_READY` until at least:
 

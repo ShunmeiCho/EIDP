@@ -12,10 +12,10 @@ decision for FY2026/R8 publication lag.
   `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified `main`
   commit.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current source package candidate is v547
-  at commit `86c848f68e1dbde85c9b6422cfc827149940e02a`, with non-Windows
-  gates passed but no Windows side-by-side canary yet. Latest Windows canary
-  remains v546, and it is still below the strict/Excel-ready release gate.
+  after its last code/package change. Current package/canary candidate is v547
+  at commit `86c848f68e1dbde85c9b6422cfc827149940e02a`; non-Windows gates and
+  Windows side-by-side canary passed, but v547 is still below the
+  strict/Excel-ready release gate.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
   release scope. Current v546 did not restore or validate an OCR add-on/runtime
   proof; if OCR is in scope, attach a valid OCR add-on proof before approval.
@@ -116,10 +116,13 @@ Generated Windows ZIPs are large. Keep only the selected release candidate, its
 `.sha256` sidecar, the `dist/eidp-windows.zip` latest alias, and `wheelhouse/`
 unless an older package is actively needed for side-by-side evidence transfer.
 
-After the v547 rebuild and local package gates, superseded generated artifacts
-no longer needed for the current evidence lane were pruned. Retained core
-package artifacts on the external SSD are v546 fallback, v547 current, the
-latest alias `dist/eidp-windows.zip`, and the current owner-docs ZIP.
+After the v547 rebuild, local package gates, and Windows side-by-side canary,
+superseded generated artifacts no longer needed for the current evidence lane
+were pruned. Retained core package artifacts on the external SSD are v546
+fallback, v547 current, the latest alias `dist/eidp-windows.zip`, and the
+current owner-docs ZIP. Windows retained active v527, fallback v546, and
+current v547 while v545 transfer ZIPs and the v545 side-by-side directory were
+removed.
 AppleDouble `._*` files created by macOS on the external volume must be removed
 from `dist/` before package verification or transfer.
 
@@ -156,12 +159,20 @@ Excel output.
 
 Before tagging, attach or reference:
 
-- v547 package/source evidence:
+- v547 package/source and CI evidence:
   `docs/reports/2026-06-21-v547-package-gates.md`,
   `logs/eidp-windows-v547-distribution-verify-20260621.json`,
   `logs/eidp-windows-v547-release-gates-20260621.json`, and
-  `dist/eidp-windows-v547.zip`. v547 is the current source package candidate
-  but does not yet have Windows side-by-side canary evidence;
+  `dist/eidp-windows-v547.zip`. v547 package SHA256:
+  `f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`;
+- v547 Windows bounded canary evidence:
+  `docs/reports/2026-06-21-v547-windows-canary.md`,
+  `logs/win-v547-86c848f-canary/20260621_053425-summary.json`,
+  `logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`,
+  `logs/win-v547-86c848f-canary/stage6-evidence-verify-20260621-144556.json`,
+  `logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`,
+  `logs/win-v547-86c848f-canary/win-v547-cleanup-20260621.json`, and
+  `logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`;
 - v546 package/source and CI evidence:
   `docs/reports/2026-06-21-v546-rca-summary-package-gates.md`,
   `logs/eidp-windows-v546-distribution-verify-20260621.json`,
@@ -190,6 +201,11 @@ Before tagging, attach or reference:
   `docs/reports/2026-06-21-v545-false-reject-audit-packet.md`,
   `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`, and
   `docs/reports/2026-06-21-v545-false-reject-review-validation.json`;
+- v547 false-reject review guidance evidence:
+  `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
+  `docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
+  `docs/reports/2026-06-21-v547-false-reject-review-validation.json`, and
+  `docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`;
 - previous v540 package/non-Windows gate and CI evidence:
   `docs/reports/2026-06-20-v540-owner-briefs-windows-canary.md`,
   `logs/win-v540-stage6-v540-verify-windows-distribution-20260620.json`, and
@@ -256,20 +272,27 @@ Before tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v547 package evidence is recorded in
+Current v547 package and Windows bounded canary evidence is recorded in
 `docs/reports/2026-06-21-v547-package-gates.md`,
-`logs/eidp-windows-v547-distribution-verify-20260621.json`, and
-`logs/eidp-windows-v547-release-gates-20260621.json`.
-It is package/non-Windows gate evidence only; it is not Windows release proof.
+`docs/reports/2026-06-21-v547-windows-canary.md`,
+`logs/eidp-windows-v547-distribution-verify-20260621.json`,
+`logs/eidp-windows-v547-release-gates-20260621.json`, and
+`logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`.
+The v547 package/source commit is
+`86c848f68e1dbde85c9b6422cfc827149940e02a`, and the v547 package SHA256 is
+`f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`.
+v547 still remains below the strict/Excel-ready release gate with
+`ship_gate_status=below_gate`; it is not owner/operator real-cycle sign-off and
+not v1.0 approval.
 
-Current v546 Windows bounded canary evidence is recorded in
+Previous v546 Windows bounded canary evidence is recorded in
 `docs/reports/2026-06-21-v546-rca-summary-windows-canary.md`,
 `logs/eidp-windows-v546-distribution-verify-20260621.json`, and
 `logs/win-v546-6301605-canary/stage6-evidence-verify-mac-20260621.json`.
 The v546 package/source commit is
 `63016054f948b1f4f285c3c822197f76c25b4b7d`, and the v546 package SHA256 is
 `ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`.
-v546 still remains below the strict/Excel-ready release gate with
+v546 also remains below the strict/Excel-ready release gate with
 `ship_gate_status=below_gate`; it is not owner/operator real-cycle sign-off and
 not v1.0 approval.
 

@@ -3,7 +3,7 @@
 Updated: 2026-06-21
 Branch: `main`
 
-Current source package candidate is `v547`
+Current packaged bounded Windows canary is `v547`
 (`dist/eidp-windows-v547.zip`, SHA256
 `f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`).
 `v547` packages commit `86c848f68e1dbde85c9b6422cfc827149940e02a` with
@@ -20,10 +20,57 @@ is recorded in `docs/reports/2026-06-21-v547-package-gates.md`,
 evidence is recorded in `logs/eidp-v547-local-prune-20260621.json`; it removed
 superseded v545 ZIP artifacts (`deleted_bytes=210931692`) and retained v546
 fallback, v547 current package, and the latest alias on the external-SSD-backed
-`dist/`. v547 has not completed Windows side-by-side setup/canary evidence, so
-the latest bounded Windows canary remains v546.
+`dist/`.
 
-Current packaged bounded Windows canary is `v546`
+`v547` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v547-86c848f-env0`. The canary confirmed setup
+`rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`, weekly
+canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence verification
+`ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
+operator-reviewable yield `47/50 (94.0%)`, and `ship_gate_status=below_gate`.
+That `24.0%` is bounded-cohort evidence for the selected 50 target-missing
+schools, not whole-database readiness. It is also not a PDF acquisition success
+rate or an overall project completion rate: candidate sets were found for
+`50/50` selected schools, `15` documents were downloaded and processed, and
+only `12` schools reached strict target PDF plus Excel-ready. Therefore v547
+proves the false-reject worksheet guidance hardening is packaged and
+Windows-canary safe; it does not prove release readiness and does not support
+claiming a generic algorithm/model defect. Evidence is recorded in
+`docs/reports/2026-06-21-v547-windows-canary.md`,
+`logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`,
+`logs/win-v547-86c848f-canary/stage6-evidence-verify-20260621-144556.json`,
+`logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`, and
+`logs/win-v547-86c848f-canary/20260621_053425-summary.json`.
+
+Windows cleanup after v547 retained active v527, fallback v546, and current
+v547 while removing v545 transfer ZIPs and the v545 side-by-side directory
+(`1,109,396,361` bytes total). Cleanup evidence is recorded in
+`logs/win-v547-86c848f-canary/win-v547-cleanup-20260621.json` and
+`logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`.
+
+`v547` still has not completed OCR scope approval, owner real-cycle sign-off,
+or publication-lag decision. Release Forecast remains `NOT_READY`.
+
+Current v547 false-reject review guidance is Windows-canary verified. Running
+the updated script against the v547 Stage 6 evidence produced
+`docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
+`docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
+`docs/reports/2026-06-21-v547-false-reject-review-validation.json`, and
+`docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`: the
+worksheet still has `decision=blank` for all `53` rows pending owner/operator
+review, but `suggested_decision` now has `0` blanks (`20` `correct_reject`,
+`33` `needs_operator_review`). `--require-decisions` fails as expected, so
+blank owner decisions remain blocked and cannot support Excel output or a
+generic model-failure claim.
+
+The next strict-yield action is worksheet-driven, not generic crawler work: a
+high `false_reject` count means fix the specific discovery/filter rule and add
+regression tests; mostly `correct_reject` rows point to publication-lag /
+old-year / non-target noise and at most an explicit `RC_ONLY` exception; many
+`needs_operator_review` rows mean the operator queue and evidence display need
+to be improved while keeping Excel-ready gates strict.
+
+Previous packaged bounded Windows canary is `v546`
 (`dist/eidp-windows-v546.zip`, SHA256
 `ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`).
 `v546` packages commit `63016054f948b1f4f285c3c822197f76c25b4b7d` with
@@ -63,24 +110,6 @@ v538/v539/v544 side-by-side directories (`7,836,187,780` bytes). Cleanup
 evidence is recorded in
 `logs/win-v546-6301605-canary/win-v546-cleanup-20260621.json`.
 
-`v546` still has not completed OCR scope approval, owner real-cycle sign-off,
-or publication-lag decision. Release Forecast remains `NOT_READY`.
-
-Current `main`, now packaged in v547 but not yet Windows-canary verified, adds
-source-side false-reject worksheet guidance hardening after the v546 Windows
-canary: non-obvious `pre_filtered_non_target_hint` and `classified_non_target`
-rows are suggested as `needs_operator_review` instead of leaving
-`suggested_decision` blank. This closes the review-routing gap without
-approving any rejected row or relaxing Excel-ready gates. Running the updated
-script against the v546 Stage 6 evidence produced
-`docs/reports/2026-06-21-v546-false-reject-review-summary.md` and
-`docs/reports/2026-06-21-v546-false-reject-review-sheet.csv`: the worksheet
-still has `decision=blank` for all `53` rows pending owner/operator review, but
-`suggested_decision` now has `0` blanks (`20` `correct_reject`, `33`
-`needs_operator_review`). This is v547-packaged analysis on v546 evidence; a
-future v547 Windows canary is required before claiming the updated guidance is
-Windows-canary safe.
-
 Previous packaged bounded Windows canary is `v545`
 (`dist/eidp-windows-v545.zip`, SHA256
 `ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0`).
@@ -109,12 +138,11 @@ algorithm/model defect. Evidence is recorded in
 `logs/win-v545-f3eb166-canary/stage6-evidence-verify-mac-20260621.json`, and
 `logs/win-v545-f3eb166-canary/20260621_003033-summary.json`.
 
-Current source `main` now adds a read-only false-reject `review-rca-summary`
-output for returned worksheets. It helps frame completed RCA as either specific
-rule defects or unsupported generic model failure, but it is source-side
-handoff hardening only: it does not relax strict evidence rules, does not move
-rejected rows into Excel, and is not yet packaged into the v545 ZIP. The current
-blank worksheet RCA summary is recorded at
+Historical v545 note: the read-only false-reject `review-rca-summary` output
+was not yet packaged into the v545 ZIP. It helped frame completed RCA as either
+specific rule defects or unsupported generic model failure without relaxing
+strict evidence rules or moving rejected rows into Excel. The blank worksheet
+RCA summary is recorded at
 `docs/reports/2026-06-21-v545-false-reject-review-rca-summary.md`; it reports
 `RCA conclusion=INVALID_RETURN`, `completed_decisions=0/53`, and
 `blank_decisions=53`, so below-gate yield still must not be labeled as a
