@@ -121,7 +121,12 @@ owner audit logs. The owner-return verifier also requires
 `--false-reject-review-audit-log` whenever a false-reject review CSV is
 submitted, rejects audit logs that do not match regenerated audit events, and
 requires the regenerated audit event count to match completed worksheet
-decisions.
+decisions. Current `main` now also has
+`scripts/build_false_reject_audit.py --write-review-audit-log`, which lets the
+developer validate a completed returned worksheet and write the matching audit
+JSONL in the same command. That convenience option still requires
+`--validate-review-csv` and `--require-decisions`, writes no audit log for blank
+or invalid worksheets, and is not packaged into the existing v548 runtime ZIP.
 
 The next strict-yield action is worksheet-driven, not generic crawler work: a
 high `false_reject` count means fix the specific discovery/filter rule and add

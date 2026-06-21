@@ -234,8 +234,28 @@ That summary distinguishes `SPECIFIC_RULE_DEFECTS_FOUND` from
 does not relax strict FY2026/R8 evidence rules, does not approve rejected rows,
 and does not replace the full owner return gate.
 
-After the completed worksheet validates, generate the per-row audit JSONL for
-archival handoff:
+After the returned CSV is complete, the developer can validate it and generate
+the per-row audit JSONL in one current-main command:
+
+```bash
+uv run python scripts/build_false_reject_audit.py \
+  logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip \
+  --sample-size 12 \
+  --validate-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --require-decisions \
+  --write-review-audit-log docs/reports/2026-06-21-v548-false-reject-review-audit-log.jsonl \
+  --json
+```
+
+Each JSONL row records the immutable worksheet context hash, reviewer,
+`reviewed_at`, decision, notes, source archive, and strict-gate forecast. Blank
+worksheet decisions do not generate audit events. The audit log remains RCA
+handoff evidence only; it still does not make any rejected row Excel-ready.
+The `--write-review-audit-log` convenience option is a current-main developer
+validation step after owner return; it must not be treated as v548 runtime
+release approval.
+
+If the audit JSONL must be rendered separately, use:
 
 ```bash
 uv run python scripts/build_false_reject_audit.py \
@@ -246,11 +266,6 @@ uv run python scripts/build_false_reject_audit.py \
   --format review-audit-log \
   --output docs/reports/2026-06-21-v548-false-reject-review-audit-log.jsonl
 ```
-
-Each JSONL row records the immutable worksheet context hash, reviewer,
-`reviewed_at`, decision, notes, source archive, and strict-gate forecast. Blank
-worksheet decisions do not generate audit events. The audit log remains RCA
-handoff evidence only; it still does not make any rejected row Excel-ready.
 
 To regenerate the row-by-row owner worklist from the v548 Stage 6 evidence:
 

@@ -488,6 +488,83 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert cli_audit_events[0]["audit_row_id"] == audit_events[0]["audit_row_id"]
     assert cli_audit_events[0]["context_hash_sha256"] == audit_events[0]["context_hash_sha256"]
 
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--write-review-audit-log",
+                str(tmp_path / "missing-review-audit-log.jsonl"),
+            ]
+        )
+        == 2
+    )
+    missing_csv = capsys.readouterr()
+    assert missing_csv.out == ""
+    assert "--write-review-audit-log requires --validate-review-csv" in missing_csv.err
+
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(completed_review_path),
+                "--write-review-audit-log",
+                str(tmp_path / "missing-required-review-audit-log.jsonl"),
+            ]
+        )
+        == 2
+    )
+    missing_decisions = capsys.readouterr()
+    assert missing_decisions.out == ""
+    assert "--write-review-audit-log requires --require-decisions" in missing_decisions.err
+
+    invalid_audit_log_path = tmp_path / "invalid-review-audit-log.jsonl"
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(review_path),
+                "--require-decisions",
+                "--write-review-audit-log",
+                str(invalid_audit_log_path),
+            ]
+        )
+        == 1
+    )
+    invalid_payload = json.loads(capsys.readouterr().out)
+    assert invalid_payload["review_status"] == "invalid"
+    assert not invalid_audit_log_path.exists()
+
+    audit_log_path = tmp_path / "review-audit-log.jsonl"
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(completed_review_path),
+                "--require-decisions",
+                "--write-review-audit-log",
+                str(audit_log_path),
+            ]
+        )
+        == 0
+    )
+    write_payload = json.loads(capsys.readouterr().out)
+    assert write_payload["review_status"] == "complete"
+    written_audit_events = [json.loads(line) for line in audit_log_path.read_text(encoding="utf-8").splitlines()]
+    assert len(written_audit_events) == len(rows)
+    assert written_audit_events[0]["audit_row_id"] == audit_events[0]["audit_row_id"]
+    assert written_audit_events[0]["context_hash_sha256"] == audit_events[0]["context_hash_sha256"]
+
 
 def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path: Path, capsys) -> None:
     module = _load_module()

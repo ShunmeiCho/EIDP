@@ -1352,6 +1352,14 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--json", action="store_true", help="Alias for --format json.")
     parser.add_argument("--validate-review-csv", type=Path, help="Validate a completed review CSV for this packet.")
     parser.add_argument("--require-decisions", action="store_true", help="Fail validation when any decision is blank.")
+    parser.add_argument(
+        "--write-review-audit-log",
+        type=Path,
+        help=(
+            "After a completed review CSV validates, write the matching false-reject review audit JSONL to this path. "
+            "Requires --validate-review-csv and --require-decisions."
+        ),
+    )
     parser.add_argument("--output", type=Path, help="Write the audit packet to this path.")
     return parser.parse_args(argv)
 
@@ -1365,25 +1373,37 @@ def main(argv: list[str] | None = None) -> int:
         required_yield_pct=args.required_yield_pct,
     )
 
+    if args.write_review_audit_log is not None and args.validate_review_csv is None:
+        print("--write-review-audit-log requires --validate-review-csv", file=sys.stderr)
+        return 2
+    if args.write_review_audit_log is not None and not args.require_decisions:
+        print("--write-review-audit-log requires --require-decisions", file=sys.stderr)
+        return 2
+
     if args.validate_review_csv is not None:
+        review_csv_text = args.validate_review_csv.read_text(encoding="utf-8-sig")
         if output_format == "review-audit-log" and not args.require_decisions:
             print("--format review-audit-log requires --require-decisions", file=sys.stderr)
             return 2
         validation = validate_review_csv(
             packet,
-            args.validate_review_csv.read_text(encoding="utf-8-sig"),
+            review_csv_text,
             require_decisions=args.require_decisions,
         )
+        audit_log = ""
+        if args.write_review_audit_log is not None and packet.get("ok") is True and validation.get("ok") is True:
+            audit_log = render_review_audit_log(packet, review_csv_text, validation)
+            if not audit_log:
+                print("--write-review-audit-log requires a complete valid review CSV", file=sys.stderr)
+                return 1
+            args.write_review_audit_log.parent.mkdir(parents=True, exist_ok=True)
+            args.write_review_audit_log.write_text(audit_log, encoding="utf-8")
         if output_format == "review-validation-summary":
             rendered = render_review_validation_summary(packet, validation)
         elif output_format == "review-rca-summary":
             rendered = render_review_rca_summary(packet, validation)
         elif output_format == "review-audit-log":
-            rendered = render_review_audit_log(
-                packet,
-                args.validate_review_csv.read_text(encoding="utf-8-sig"),
-                validation,
-            )
+            rendered = audit_log or render_review_audit_log(packet, review_csv_text, validation)
         else:
             rendered = json.dumps(validation, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         ok = packet.get("ok") is True and validation.get("ok") is True

@@ -229,12 +229,18 @@ audit logs. Current `main` also emits a compact
 returns expose completed/blank decision counts, context mismatch count, defect
 framing status, explicit `owner_return_gate_ok`, audit-packet validity, and
 blocking packet/CSV/audit-log error previews directly in
-`scripts/verify_stage6_return.py` output. This is source-side handoff hardening
-only. Current `main` also adds `--format review-rca-summary` to
+`scripts/verify_stage6_return.py` output. Current `main` also lets the developer
+validate a completed returned worksheet and write its matching audit JSONL in a
+single command with
+`scripts/build_false_reject_audit.py --write-review-audit-log`; the option still
+requires `--validate-review-csv` and `--require-decisions` and writes no audit
+log for blank or invalid worksheets. This is source-side handoff hardening only
+and is not packaged into the existing v548 runtime ZIP. Current `main` also adds
+`--format review-rca-summary` to
 `scripts/build_false_reject_audit.py` so a returned worksheet can produce an
 owner-readable RCA conclusion such as `SPECIFIC_RULE_DEFECTS_FOUND` or
 `GENERIC_MODEL_FAILURE_NOT_SUPPORTED`; that output does not change the
-acceptance gates and does not make the v547 packaged runtime release-ready. The
+acceptance gates and does not make the v548 packaged runtime release-ready. The
 historical v545 blank worksheet RCA summary is recorded at
 `docs/reports/2026-06-21-v545-false-reject-review-rca-summary.md`; it reports
 `RCA conclusion=INVALID_RETURN`, `completed_decisions=0/53`, and
@@ -878,7 +884,9 @@ do not remove the FY2026/R8 release blocker.
    before labeling the blocker as an algorithm/model defect. Use
    `--format review-validation-summary` for an owner-readable failure summary
    while the worksheet is incomplete. Generate `--format review-audit-log` only
-   with `--require-decisions` after the worksheet is complete. Use the returned
+   with `--require-decisions` after the worksheet is complete, or use
+   `--write-review-audit-log` to validate the completed worksheet and write the
+   audit JSONL in one current-main developer command. Use the returned
    `defect_framing.status`, not the below-gate rate alone, for that claim.
 4. Run the owner/operator return path from Windows and collect signed KPI,
    audit/outbox, workbook, and `publication_lag` decision evidence.
