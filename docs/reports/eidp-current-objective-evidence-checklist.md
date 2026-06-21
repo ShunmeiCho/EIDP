@@ -234,7 +234,10 @@ decision-count summary, bucket-level decision counts, `false_reject` /
 `needs_operator_review` / `correct_reject` row counts, and defect-framing reason
 to that compact summary; this helps route completed returns to specific rule-fix
 work without relaxing any strict gate and is not packaged into the existing v548
-runtime ZIP. Current `main` also lets the developer
+runtime ZIP. Current `main` also keeps the owner-return verifier blocking when a
+completed false-reject worksheet still contains `false_reject` or
+`needs_operator_review` rows, because those rows are unresolved release evidence
+until fixed/rerun or adjudicated. Current `main` also lets the developer
 validate a completed returned worksheet and write its matching audit JSONL in a
 single command with
 `scripts/build_false_reject_audit.py --write-review-audit-log`; the option still

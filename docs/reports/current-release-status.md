@@ -360,7 +360,10 @@ bucket-level decision counts, `false_reject` / `needs_operator_review` /
 `correct_reject` row counts, and defect-framing reason directly in that compact
 summary. The base summary is packaged in the v548 runtime; the new
 decision-count extension is current-main source-side hardening and is not
-packaged into the existing v548 runtime ZIP.
+packaged into the existing v548 runtime ZIP. Current `main` also blocks the
+owner-return verifier when a completed false-reject worksheet still contains
+`false_reject` or `needs_operator_review` rows, because those rows require
+specific rule fixes or further operator adjudication before release approval.
 
 Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
 `dist/` after v542 verification; SHA256 was

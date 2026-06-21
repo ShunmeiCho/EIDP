@@ -274,11 +274,43 @@ def _verify_false_reject_review(
     if validation.get("review_status") == "complete" and validation.get("completed_decisions") != audit_log_event_count:
         audit_log_errors.append("false-reject review audit log event count must match completed decisions")
     errors.extend(audit_log_errors)
+    defect_framing_errors: list[str] = []
+    defect_framing = validation.get("defect_framing")
+    if (
+        isinstance(defect_framing, dict)
+        and validation.get("ok") is True
+        and validation.get("review_status") == "complete"
+    ):
+        if _positive_review_count(defect_framing.get("false_reject_rows")):
+            defect_framing_errors.append(
+                "false-reject review found false_reject rows; fix specific rules and rerun before release"
+            )
+        if _positive_review_count(defect_framing.get("needs_operator_review_rows")):
+            defect_framing_errors.append(
+                "false-reject review still has needs_operator_review rows; resolve them before release"
+            )
+    errors.extend(defect_framing_errors)
     validation["audit_packet_ok"] = audit_packet_ok
     validation["audit_packet_errors"] = audit_packet_errors
     validation["audit_log_event_count"] = audit_log_event_count
     validation["audit_log_errors"] = audit_log_errors
+    validation["defect_framing_errors"] = defect_framing_errors
     return cast(dict[str, Any], validation)
+
+
+def _positive_review_count(value: object) -> bool:
+    if isinstance(value, bool) or value is None:
+        return False
+    if isinstance(value, int):
+        return value > 0
+    if isinstance(value, float):
+        return value > 0
+    if isinstance(value, str):
+        try:
+            return int(value) > 0
+        except ValueError:
+            return False
+    return False
 
 
 def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -296,7 +328,10 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     audit_log_errors = validation.get("audit_log_errors")
     if not isinstance(audit_log_errors, list):
         audit_log_errors = []
-    blocking_errors = [*audit_packet_errors, *validation_errors, *audit_log_errors]
+    defect_framing_errors = validation.get("defect_framing_errors")
+    if not isinstance(defect_framing_errors, list):
+        defect_framing_errors = []
+    blocking_errors = [*audit_packet_errors, *validation_errors, *audit_log_errors, *defect_framing_errors]
     error_preview = [str(error) for error in blocking_errors[:10]]
     expected_rows = validation.get("expected_rows")
     completed_decisions = validation.get("completed_decisions")
@@ -318,6 +353,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         and review_status == "complete"
         and not audit_packet_errors
         and not audit_log_errors
+        and not defect_framing_errors
     )
 
     if audit_packet_ok is not True or audit_packet_errors:

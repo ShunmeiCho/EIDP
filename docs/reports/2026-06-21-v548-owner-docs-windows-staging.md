@@ -8,7 +8,7 @@ Release Forecast: `NOT_READY`
 | Priority | Finding | Evidence | Action |
 | --- | --- | --- | --- |
 | P0 release blocker | This docs-only staging is not release approval. | v548 still has strict/Excel-ready `12/50 (24.0%)`, `53` blank false-reject worksheet decisions, missing owner real-cycle sign-off, and unapproved `publication_lag` / OCR scope decisions. | Keep release blocked. |
-| P1 release hardening | The owner/operator handoff now targets the latest v548 canary, v548 false-reject worksheet, row-by-row worklist, validation summary, RCA summary, completed-review audit-log generation command, and compact decision-count summary guidance. | `C:\EIDP-staging\v548-owner-docs-20260621` was extracted on Windows with SHA256 verification, required v548 files present, and both `--false-reject-review-audit-log` and `--write-review-audit-log` confirmed in the owner-return runbook. The runbook also documents `false_reject` / `needs_operator_review` / `correct_reject` count routing. | Use this as the current owner/operator docs entry point. |
+| P1 release hardening | The owner/operator handoff now targets the latest v548 canary, v548 false-reject worksheet, row-by-row worklist, validation summary, RCA summary, completed-review audit-log generation command, compact decision-count summary guidance, and blocking semantics for unresolved review decisions. | `C:\EIDP-staging\v548-owner-docs-20260621` was extracted on Windows with SHA256 verification, required v548 files present, and both `--false-reject-review-audit-log` and `--write-review-audit-log` confirmed in the owner-return runbook. The runbook also documents `false_reject` / `needs_operator_review` / `correct_reject` count routing and states that `false_reject` / `needs_operator_review` rows keep the owner-return verifier blocking. | Use this as the current owner/operator docs entry point. |
 | P2 storage hygiene | The docs ZIP is small and stored under the external-SSD-backed `dist/`. | Local ZIP size is about `184K`; no runtime ZIPs, PDFs, databases, or Excel files were added to git. | Keep generated ZIPs out of git. |
 | P3 roadmap/research | University production workflow, cloud, multi-user, and complex frontend remain outside v1. | No v548 owner-docs staging evidence changes v1 scope. | Leave in roadmap. |
 
@@ -17,7 +17,7 @@ Release Forecast: `NOT_READY`
 | Field | Value |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v548-owner-docs-20260621.zip` |
-| ZIP SHA256 | `ac6bd17d093fd5e268e2efa4aa862f5317003183b1e78a44aafa7bc4f29673fc` |
+| ZIP SHA256 | `2ec2f8a44283fedcd415213bd7cdcf80c05b9677b1bd6c910d7ae183b0d8a0ef` |
 | SHA256 sidecar | `C:\EIDP-staging\eidp-v548-owner-docs-20260621.zip.sha256` |
 | Extracted destination | `C:\EIDP-staging\v548-owner-docs-20260621` |
 | Active Scheduled Task after staging | `C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat` |
@@ -27,8 +27,8 @@ Windows verification returned:
 ```json
 {
   "ok": true,
-  "expected_sha": "ac6bd17d093fd5e268e2efa4aa862f5317003183b1e78a44aafa7bc4f29673fc",
-  "actual_sha": "ac6bd17d093fd5e268e2efa4aa862f5317003183b1e78a44aafa7bc4f29673fc",
+  "expected_sha": "2ec2f8a44283fedcd415213bd7cdcf80c05b9677b1bd6c910d7ae183b0d8a0ef",
+  "actual_sha": "2ec2f8a44283fedcd415213bd7cdcf80c05b9677b1bd6c910d7ae183b0d8a0ef",
   "sidecar_expected_sha_present": true,
   "dest": "C:\\EIDP-staging\\v548-owner-docs-20260621",
   "missing": [],
@@ -40,10 +40,13 @@ Windows verification returned:
   "false_reject_review_audit_log_arg_present": true,
   "write_review_audit_log_arg_present": true,
   "decision_count_summary_guidance_present": true,
+  "unresolved_review_decisions_blocking_guidance_present": true,
   "current_status_write_review_audit_log_present": true,
   "current_status_decision_count_extension_present": true,
+  "current_status_unresolved_review_decisions_blocking_present": true,
   "objective_write_review_audit_log_present": true,
   "objective_decision_count_extension_present": true,
+  "objective_unresolved_review_decisions_blocking_present": true,
   "completed_decisions": 0,
   "blank_decisions": 53,
   "validation_completed_decisions": 0,

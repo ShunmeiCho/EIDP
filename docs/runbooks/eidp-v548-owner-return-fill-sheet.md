@@ -165,6 +165,12 @@ The summary also mirrors decision counts, bucket-level decision counts,
 `false_reject` / `needs_operator_review` / `correct_reject` row counts, and the
 defect-framing reason so a completed return can be routed to specific rule-fix
 work without treating the below-gate rate as a generic model defect.
+The owner-return verifier remains blocking when the completed worksheet still
+contains `false_reject` or `needs_operator_review` rows: `false_reject` rows must
+be fixed and rerun, and `needs_operator_review` rows must be resolved before the
+return can support release approval. All-`correct_reject` false-reject reviews
+can pass this sub-gate, but they still do not replace the full owner real-cycle
+and Excel-ready release evidence.
 Current `main` can also render completed false-reject worksheet decisions as a
 JSONL audit log. This is an audit handoff artifact only; it does not write to
 business tables, approve rejected rows, or relax Excel-ready gates.

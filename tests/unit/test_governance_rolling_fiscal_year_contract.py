@@ -132,7 +132,7 @@ def test_v548_owner_handoff_is_current_but_not_release_approval() -> None:
 
     expected_package_sha = "488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c"
     expected_source_sha = "c1a96903ed10f1cc9c48d1a6912061ba0aaf86be"
-    expected_docs_sha = "ac6bd17d093fd5e268e2efa4aa862f5317003183b1e78a44aafa7bc4f29673fc"
+    expected_docs_sha = "2ec2f8a44283fedcd415213bd7cdcf80c05b9677b1bd6c910d7ae183b0d8a0ef"
     previous_v547_package_sha = "f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b"
     previous_v547_source_sha = "86c848f68e1dbde85c9b6422cfc827149940e02a"
 
@@ -190,10 +190,13 @@ def test_v548_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "false_reject_review_audit_log_arg_present" in staging
     assert "write_review_audit_log_arg_present" in staging
     assert "decision_count_summary_guidance_present" in staging
+    assert "unresolved_review_decisions_blocking_guidance_present" in staging
     assert "current_status_write_review_audit_log_present" in staging
     assert "current_status_decision_count_extension_present" in staging
+    assert "current_status_unresolved_review_decisions_blocking_present" in staging
     assert "objective_write_review_audit_log_present" in staging
     assert "objective_decision_count_extension_present" in staging
+    assert "objective_unresolved_review_decisions_blocking_present" in staging
     assert "completed_decisions\": 0" in staging
     assert "blank_decisions\": 53" in staging
     assert "context_mismatch_count\": 0" in staging
