@@ -198,17 +198,27 @@ def _verify_false_reject_review(
     *,
     evidence_zip: Path | None,
     review_csv: Path | None,
+    audit_log: Path | None,
     sample_size: int,
     required_yield_pct: float,
     errors: list[str],
 ) -> dict[str, Any] | None:
-    if evidence_zip is None and review_csv is None:
+    if evidence_zip is None and review_csv is None and audit_log is None:
+        return None
+    if audit_log is not None and (evidence_zip is None or review_csv is None):
+        errors.append(
+            "--false-reject-review-audit-log requires --false-reject-evidence-zip and "
+            "--false-reject-review-csv"
+        )
         return None
     if evidence_zip is None:
         errors.append("--false-reject-review-csv requires --false-reject-evidence-zip")
         return None
     if review_csv is None:
         errors.append("--false-reject-evidence-zip requires --false-reject-review-csv")
+        return None
+    if audit_log is None:
+        errors.append("--false-reject-review-csv requires --false-reject-review-audit-log")
         return None
     if sample_size <= 0:
         errors.append("--false-reject-sample-size must be positive")
@@ -219,6 +229,9 @@ def _verify_false_reject_review(
     if not review_csv.is_file():
         errors.append(f"false-reject review CSV does not exist: {review_csv}")
         return None
+    if not audit_log.is_file():
+        errors.append(f"false-reject review audit log does not exist: {audit_log}")
+        return None
 
     try:
         audit_module = _load_false_reject_audit_module()
@@ -227,11 +240,14 @@ def _verify_false_reject_review(
             sample_size=sample_size,
             required_yield_pct=required_yield_pct,
         )
+        review_csv_text = review_csv.read_text(encoding="utf-8-sig")
         validation = audit_module.validate_review_csv(
             packet,
-            review_csv.read_text(encoding="utf-8-sig"),
+            review_csv_text,
             require_decisions=True,
         )
+        expected_audit_log = audit_module.render_review_audit_log(packet, review_csv_text, validation)
+        actual_audit_log = audit_log.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
     except (OSError, RuntimeError, ValueError, AttributeError) as exc:
         errors.append(f"false-reject review validation failed to run: {exc}")
         return None
@@ -248,6 +264,9 @@ def _verify_false_reject_review(
         errors.append("false-reject review CSV must be complete before it can support owner-return RCA evidence")
     if validation.get("context_mismatch_count") != 0:
         errors.append("false-reject review CSV changed immutable row context")
+    if actual_audit_log != expected_audit_log:
+        errors.append("false-reject review audit log does not match regenerated audit events")
+    validation["audit_log_event_count"] = len([line for line in expected_audit_log.splitlines() if line.strip()])
     return cast(dict[str, Any], validation)
 
 
@@ -265,6 +284,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     completed_decisions = validation.get("completed_decisions")
     blank_decisions = validation.get("blank_decisions")
     context_mismatch_count = validation.get("context_mismatch_count")
+    audit_log_event_count = validation.get("audit_log_event_count")
     review_status = validation.get("review_status")
     ok = validation.get("ok")
 
@@ -282,6 +302,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         "expected_rows": expected_rows,
         "blank_decisions": blank_decisions,
         "context_mismatch_count": context_mismatch_count,
+        "audit_log_event_count": audit_log_event_count,
         "defect_framing_status": defect_framing.get("status"),
         "generic_model_failure_supported": defect_framing.get("generic_model_failure_supported"),
         "specific_algorithm_or_rule_defect_supported": defect_framing.get(
@@ -1572,6 +1593,7 @@ def verify_stage6_return(
     expected_source_commit: str | None = None,
     false_reject_evidence_zip: Path | None = None,
     false_reject_review_csv: Path | None = None,
+    false_reject_review_audit_log: Path | None = None,
     false_reject_sample_size: int = 12,
 ) -> dict[str, Any]:
     errors: list[str] = []
@@ -1691,6 +1713,7 @@ def verify_stage6_return(
     false_reject_review = _verify_false_reject_review(
         evidence_zip=false_reject_evidence_zip,
         review_csv=false_reject_review_csv,
+        audit_log=false_reject_review_audit_log,
         sample_size=false_reject_sample_size,
         required_yield_pct=min_target_pdf_auto_yield,
         errors=errors,
@@ -1723,6 +1746,9 @@ def verify_stage6_return(
             "expected_source_commit": expected_source_commit,
             "false_reject_evidence_zip": str(false_reject_evidence_zip) if false_reject_evidence_zip else None,
             "false_reject_review_csv": str(false_reject_review_csv) if false_reject_review_csv else None,
+            "false_reject_review_audit_log": (
+                str(false_reject_review_audit_log) if false_reject_review_audit_log else None
+            ),
             "false_reject_sample_size": false_reject_sample_size,
         },
         "false_reject_review": false_reject_review,
@@ -1817,6 +1843,13 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="Returned false-reject review worksheet CSV. Requires --false-reject-evidence-zip.",
     )
     parser.add_argument(
+        "--false-reject-review-audit-log",
+        help=(
+            "JSONL audit log generated from the returned false-reject review worksheet. "
+            "Required when --false-reject-review-csv is supplied."
+        ),
+    )
+    parser.add_argument(
         "--false-reject-sample-size",
         type=int,
         default=12,
@@ -1851,6 +1884,9 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.false_reject_evidence_zip) if args.false_reject_evidence_zip else None
         ),
         false_reject_review_csv=Path(args.false_reject_review_csv) if args.false_reject_review_csv else None,
+        false_reject_review_audit_log=(
+            Path(args.false_reject_review_audit_log) if args.false_reject_review_audit_log else None
+        ),
         false_reject_sample_size=args.false_reject_sample_size,
     )
     if args.json:

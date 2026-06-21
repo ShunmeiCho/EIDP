@@ -198,9 +198,10 @@ CSV from current `main`. The staged v547 package carries the packaged v547
 helper, but the regenerated worksheet uses current-`main` explicit-year
 triage guidance unless a fresh Windows package is built with the same helper
 revision. The owner-return verifier now accepts
-`--false-reject-evidence-zip`, `--false-reject-review-csv`, and
-`--false-reject-sample-size`; when supplied, it requires `review_status=complete`
-and `context_mismatch_count=0`. Current `main` also emits a compact
+`--false-reject-evidence-zip`, `--false-reject-review-csv`,
+`--false-reject-review-audit-log`, and `--false-reject-sample-size`; when
+supplied, it requires `review_status=complete`, `context_mismatch_count=0`, and
+a regenerated audit JSONL match. Current `main` also emits a compact
 `false_reject_review_summary` beside the full validation JSON so failed owner
 returns expose completed/blank decision counts, context mismatch count, defect
 framing status, and blocking error previews directly in

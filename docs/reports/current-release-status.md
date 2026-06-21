@@ -77,7 +77,9 @@ worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,
 source archive, and strict-gate forecast. This is RCA/audit handoff evidence
 only: it does not write business tables, does not approve rejected rows, and
-does not make any rejected row Excel-ready.
+does not make any rejected row Excel-ready. The owner-return verifier now
+requires `--false-reject-review-audit-log` whenever a false-reject review CSV is
+submitted, and rejects audit logs that do not match regenerated audit events.
 
 The next strict-yield action is worksheet-driven, not generic crawler work: a
 high `false_reject` count means fix the specific discovery/filter rule and add
@@ -477,9 +479,10 @@ rules: only `decision`, `reviewer`, `reviewed_at`, and `notes` may be filled;
 row context must remain unchanged; and completed worksheets must be validated
 from current `main` before they can support an RCA claim. The owner-return
 verifier now accepts `--false-reject-evidence-zip`,
-`--false-reject-review-csv`, and `--false-reject-sample-size`; when supplied, it
-requires the worksheet to validate with `review_status=complete` and
-`context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to
+`--false-reject-review-csv`, `--false-reject-review-audit-log`, and
+`--false-reject-sample-size`; when supplied, it requires the worksheet to
+validate with `review_status=complete`, `context_mismatch_count=0`, and a
+matching regenerated audit JSONL. The Windows docs-only handoff has been refreshed to
 v547 at `C:\EIDP-staging\v547-owner-docs-20260621`, recorded in
 `docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`, so the staged
 owner docs now include the v547 false-reject worksheet return rules, read-only

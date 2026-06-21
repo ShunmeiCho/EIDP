@@ -130,7 +130,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
 
     expected_package_sha = "f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b"
     expected_source_sha = "86c848f68e1dbde85c9b6422cfc827149940e02a"
-    expected_docs_sha = "2829cfddebfc6aeffda9295ed6fcdde34976b311e6338d20942a69ad475e5039"
+    expected_docs_sha = "311abf8052bba50a5ae8a62d63e0a1a4263aa14d8af88c6f23325771f6b8dd69"
 
     for text in (first_read, request, return_sheet, release_summary, owner_signoff):
         assert expected_package_sha in text
@@ -152,6 +152,10 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
         in return_sheet
     )
     assert "--false-reject-review-csv docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in return_sheet
+    assert (
+        "--false-reject-review-audit-log "
+        "docs/reports/2026-06-21-v547-false-reject-review-audit-log.jsonl"
+    ) in return_sheet
     assert "It does not make v547 `READY`" in owner_signoff
 
     assert "latest owner/operator handoff docs have been refreshed to v547 package identity" in current_status
@@ -167,6 +171,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "C:\\EIDP-staging\\v547-owner-docs-20260621" in staging
     assert "active_task" in staging
     assert "docs\\reports\\2026-06-21-v547-false-reject-review-worklist.md" in staging
+    assert "false_reject_review_audit_log_arg_present" in staging
     assert "EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat" in staging
     assert "This copied documentation only" in staging
     assert "does not approve v1.0" in staging
@@ -364,6 +369,8 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "`false_reject` / `needs_operator_review` rows require `notes`" in current_status
     assert "row context must remain unchanged" in current_status
     assert "The owner-return verifier now accepts `--false-reject-evidence-zip`" in current_status
+    assert "`--false-reject-review-audit-log`" in current_status
+    assert "matching regenerated audit JSONL" in current_status
     assert "`context_mismatch_count=0`" in current_status
     assert expected_v547_package_sha in current_status
     assert expected_v547_package_sha in objective_checklist

@@ -98,6 +98,8 @@ real cycle and returned diagnostics.
 - completed false-reject review worksheet if claiming a discovery/classifier/year
   evidence false reject:
   `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`
+- generated false-reject review audit JSONL if submitting that worksheet:
+  `docs/reports/2026-06-21-v547-false-reject-review-audit-log.jsonl`
 - optional read-only triage guide for that worksheet:
   `docs/reports/2026-06-21-v547-false-reject-review-summary.md`
 
@@ -185,6 +187,7 @@ uv run python scripts/verify_stage6_return.py \
   --expected-source-commit 86c848f68e1dbde85c9b6422cfc827149940e02a \
   --false-reject-evidence-zip logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip \
   --false-reject-review-csv docs/reports/2026-06-21-v547-false-reject-review-sheet.csv \
+  --false-reject-review-audit-log docs/reports/2026-06-21-v547-false-reject-review-audit-log.jsonl \
   --false-reject-sample-size 12 \
   --json
 ```
