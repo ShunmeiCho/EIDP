@@ -357,6 +357,24 @@ def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Pa
     assert result["ok"] is True
     assert result["errors"] == []
     assert result["false_reject_review"]["review_status"] == "complete"
+    assert result["false_reject_review_summary"] == {
+        "ok": True,
+        "review_status": "complete",
+        "completed_decisions": 1,
+        "expected_rows": None,
+        "blank_decisions": None,
+        "context_mismatch_count": 0,
+        "defect_framing_status": None,
+        "generic_model_failure_supported": None,
+        "specific_algorithm_or_rule_defect_supported": None,
+        "blocking_error_count": 0,
+        "blocking_error_preview": [],
+        "next_action": "Use this worksheet only with the full owner-return verifier result.",
+        "excel_gate_warning": (
+            "This summary does not approve rejected rows or allow old-year, unknown-year, non-target, "
+            "school-mismatch, low-confidence, or unresolved rows into Excel."
+        ),
+    }
     assert result["inputs"]["false_reject_evidence_zip"] == str(evidence_zip)
     assert result["inputs"]["false_reject_review_csv"] == str(review_csv)
     assert calls["archive"] == evidence_zip
@@ -412,6 +430,18 @@ def test_verify_stage6_return_rejects_incomplete_false_reject_review(tmp_path: P
 
     assert result["ok"] is False
     assert result["false_reject_review"]["review_status"] == "incomplete"
+    assert result["false_reject_review_summary"]["ok"] is False
+    assert result["false_reject_review_summary"]["review_status"] == "incomplete"
+    assert result["false_reject_review_summary"]["completed_decisions"] == 0
+    assert result["false_reject_review_summary"]["blank_decisions"] is None
+    assert result["false_reject_review_summary"]["context_mismatch_count"] == 0
+    assert result["false_reject_review_summary"]["defect_framing_status"] is None
+    assert result["false_reject_review_summary"]["blocking_error_count"] == 1
+    assert result["false_reject_review_summary"]["blocking_error_preview"] == ["line 2: decision is required"]
+    assert result["false_reject_review_summary"]["next_action"] == (
+        "Fix the listed false-reject review CSV errors before using it as release evidence."
+    )
+    assert "does not approve rejected rows" in result["false_reject_review_summary"]["excel_gate_warning"]
     assert "false-reject review CSV is invalid" in result["errors"]
     assert "false-reject review CSV error: line 2: decision is required" in result["errors"]
     incomplete_error = "false-reject review CSV must be complete before it can support owner-return RCA evidence"

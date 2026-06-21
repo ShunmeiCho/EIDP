@@ -251,6 +251,52 @@ def _verify_false_reject_review(
     return cast(dict[str, Any], validation)
 
 
+def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str, Any] | None:
+    if validation is None:
+        return None
+    defect_framing = validation.get("defect_framing")
+    if not isinstance(defect_framing, dict):
+        defect_framing = {}
+    validation_errors = validation.get("errors")
+    if not isinstance(validation_errors, list):
+        validation_errors = []
+    error_preview = [str(error) for error in validation_errors[:10]]
+    expected_rows = validation.get("expected_rows")
+    completed_decisions = validation.get("completed_decisions")
+    blank_decisions = validation.get("blank_decisions")
+    context_mismatch_count = validation.get("context_mismatch_count")
+    review_status = validation.get("review_status")
+    ok = validation.get("ok")
+
+    if ok is not True:
+        next_action = "Fix the listed false-reject review CSV errors before using it as release evidence."
+    elif review_status != "complete":
+        next_action = "Complete every false-reject review decision before using the worksheet as RCA evidence."
+    else:
+        next_action = "Use this worksheet only with the full owner-return verifier result."
+
+    return {
+        "ok": ok,
+        "review_status": review_status,
+        "completed_decisions": completed_decisions,
+        "expected_rows": expected_rows,
+        "blank_decisions": blank_decisions,
+        "context_mismatch_count": context_mismatch_count,
+        "defect_framing_status": defect_framing.get("status"),
+        "generic_model_failure_supported": defect_framing.get("generic_model_failure_supported"),
+        "specific_algorithm_or_rule_defect_supported": defect_framing.get(
+            "specific_algorithm_or_rule_defect_supported"
+        ),
+        "blocking_error_count": len(validation_errors),
+        "blocking_error_preview": error_preview,
+        "next_action": next_action,
+        "excel_gate_warning": (
+            "This summary does not approve rejected rows or allow old-year, unknown-year, non-target, "
+            "school-mismatch, low-confidence, or unresolved rows into Excel."
+        ),
+    }
+
+
 def _default_repo_path(relative_path: Path) -> Path:
     return Path(__file__).resolve().parents[1] / relative_path
 
@@ -1680,6 +1726,7 @@ def verify_stage6_return(
             "false_reject_sample_size": false_reject_sample_size,
         },
         "false_reject_review": false_reject_review,
+        "false_reject_review_summary": _false_reject_review_summary(false_reject_review),
         "selected_ocr_scope": selected_ocr_scope,
         "mature_year_proof_years": mature_year_proof_years,
         "required_evidence_labels": list(REQUIRED_EVIDENCE_LABELS),

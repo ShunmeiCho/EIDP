@@ -222,6 +222,9 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md" in objective_checklist
+    assert "false_reject_review_summary" in current_status
+    assert "false_reject_review_summary" in objective_checklist
+    assert "source-side handoff hardening" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" not in admin_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in admin_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in admin_checklist

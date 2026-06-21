@@ -150,6 +150,10 @@ Developer validation is run from current `main`, or from the staged v545
 package carrying the same verifier/helper integration, after the returned CSV
 is copied back to the repo. The v545 package proves the verifier and helper
 are available; it does not prove the returned worksheet is complete.
+Current `main` also emits a compact `false_reject_review_summary` in the JSON
+result for easier owner/developer handoff; this is a convenience field only and
+does not change `ok`, `errors`, `review_status=complete`, or
+`context_mismatch_count=0` release gates.
 
 ## Developer Verification After Return
 

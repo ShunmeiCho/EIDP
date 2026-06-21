@@ -149,7 +149,13 @@ CSV from current `main` or from the staged v545 package carrying the helper
 beside the verifier. The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`, and
 `--false-reject-sample-size`; when supplied, it requires `review_status=complete`
-and `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed
+and `context_mismatch_count=0`. Current `main` also emits a compact
+`false_reject_review_summary` beside the full validation JSON so failed owner
+returns expose completed/blank decision counts, context mismatch count, defect
+framing status, and blocking error previews directly in
+`scripts/verify_stage6_return.py` output. This is source-side handoff hardening
+only; it does not change the acceptance gates and does not make the v545
+packaged runtime release-ready. The Windows docs-only handoff has been refreshed
 to v545 at `C:\EIDP-staging\v545-owner-docs-20260621`, recorded in
 `docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`, so the staged
 owner docs now include the v545 false-reject worksheet return rules, worksheet
