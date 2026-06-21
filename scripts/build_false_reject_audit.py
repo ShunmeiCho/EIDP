@@ -660,6 +660,19 @@ def render_review_audit_log(
     expected_by_id = {str(row["audit_row_id"]): row for row in _iter_review_rows(packet)}
     strict_yield = packet.get("strict_yield", {})
     source_files = packet.get("source_files", {})
+    decision_counts = validation.get("decision_counts")
+    bucket_decision_counts = validation.get("bucket_decision_counts")
+    defect_framing = validation.get("defect_framing")
+    validation_summary: dict[str, Any] = {
+        "expected_rows": validation.get("expected_rows"),
+        "submitted_rows": validation.get("submitted_rows"),
+        "completed_decisions": validation.get("completed_decisions"),
+        "blank_decisions": validation.get("blank_decisions"),
+        "decision_counts": decision_counts if isinstance(decision_counts, dict) else {},
+        "bucket_decision_counts": bucket_decision_counts if isinstance(bucket_decision_counts, dict) else {},
+        "context_mismatch_count": validation.get("context_mismatch_count"),
+        "defect_framing": defect_framing if isinstance(defect_framing, dict) else {},
+    }
     events: list[dict[str, Any]] = []
     reader = csv.DictReader(io.StringIO(csv_text))
     for row in reader:
@@ -690,6 +703,7 @@ def render_review_audit_log(
                 "required_yield_pct": strict_yield.get("required_yield_pct"),
                 "ship_gate_status": strict_yield.get("ship_gate_status"),
             },
+            "review_validation_summary": validation_summary,
             "context_hash_sha256": _review_context_hash(expected_row),
             "context": {column: expected_row.get(column, "") for column in REVIEW_CONTEXT_COLUMNS},
             "excel_gate_effect": (

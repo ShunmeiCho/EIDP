@@ -299,6 +299,19 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert "reviewer" not in audit_events[0]["context"]
     assert audit_events[0]["context"]["reason"] == rows[0]["reason"]
     assert audit_events[0]["release_forecast"] == "NOT_READY"
+    assert audit_events[0]["review_validation_summary"]["completed_decisions"] == len(rows)
+    assert audit_events[0]["review_validation_summary"]["blank_decisions"] == 0
+    assert audit_events[0]["review_validation_summary"]["decision_counts"] == {"correct_reject": len(rows)}
+    assert audit_events[0]["review_validation_summary"]["bucket_decision_counts"]["fiscal_year_mismatch"] == {
+        "correct_reject": 1
+    }
+    assert audit_events[0]["review_validation_summary"]["defect_framing"]["status"] == "not_supported"
+    assert (
+        audit_events[0]["review_validation_summary"]["defect_framing"][
+            "generic_model_failure_supported"
+        ]
+        is False
+    )
     assert "does not accept rejected rows into Excel" in audit_events[0]["excel_gate_effect"]
 
     false_reject_rows = [dict(row) for row in rows]

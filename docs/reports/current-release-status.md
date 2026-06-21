@@ -113,11 +113,12 @@ Neither worksheet has been completed or approved.
 Current `main` also adds a `review-audit-log` output for returned false-reject
 worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,
-source archive, and strict-gate forecast. This is RCA/audit handoff evidence
-only: it does not write business tables, does not approve rejected rows, and
-does not make any rejected row Excel-ready. The audit-log renderer itself now
-requires `--require-decisions`, so incomplete worksheets cannot produce partial
-owner audit logs. The owner-return verifier also requires
+source archive, strict-gate forecast, and the review validation summary
+(`decision_counts`, `bucket_decision_counts`, and `defect_framing`). This is
+RCA/audit handoff evidence only: it does not write business tables, does not
+approve rejected rows, and does not make any rejected row Excel-ready. The
+audit-log renderer itself now requires `--require-decisions`, so incomplete
+worksheets cannot produce partial owner audit logs. The owner-return verifier also requires
 `--false-reject-review-audit-log` whenever a false-reject review CSV is
 submitted, rejects audit logs that do not match regenerated audit events, and
 requires the regenerated audit event count to match completed worksheet

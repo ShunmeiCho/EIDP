@@ -245,8 +245,10 @@ validate a completed returned worksheet and write its matching audit JSONL in a
 single command with
 `scripts/build_false_reject_audit.py --write-review-audit-log`; the option still
 requires `--validate-review-csv` and `--require-decisions` and writes no audit
-log for blank or invalid worksheets. This is source-side handoff hardening only
-and is not packaged into the existing v548 runtime ZIP. Current `main` also adds
+log for blank or invalid worksheets. Current `main` also adds event-level review
+validation summaries to those audit JSONL events, including `decision_counts`,
+`bucket_decision_counts`, and `defect_framing`. This is source-side handoff
+hardening only and is not packaged into the existing v548 runtime ZIP. Current `main` also adds
 `--format review-rca-summary` to
 `scripts/build_false_reject_audit.py` so a returned worksheet can produce an
 owner-readable RCA conclusion such as `SPECIFIC_RULE_DEFECTS_FOUND` or
