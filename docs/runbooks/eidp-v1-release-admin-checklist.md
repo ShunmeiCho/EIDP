@@ -204,6 +204,7 @@ Before tagging, attach or reference:
 - v547 false-reject review guidance evidence:
   `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
   `docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
+  `docs/reports/2026-06-21-v547-false-reject-review-worklist.md`,
   `docs/reports/2026-06-21-v547-false-reject-review-validation.json`, and
   `docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`;
 - previous v540 package/non-Windows gate and CI evidence:

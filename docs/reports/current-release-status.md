@@ -54,14 +54,17 @@ or publication-lag decision. Release Forecast remains `NOT_READY`.
 Current v547 false-reject review guidance is Windows-canary verified. Running
 the updated script against the v547 Stage 6 evidence produced
 `docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
+`docs/reports/2026-06-21-v547-false-reject-review-worklist.md`,
 `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
 `docs/reports/2026-06-21-v547-false-reject-review-validation.json`, and
 `docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`: the
-worksheet still has `decision=blank` for all `53` rows pending owner/operator
-review, but `suggested_decision` now has `0` blanks (`20` `correct_reject`,
-`33` `needs_operator_review`). `--require-decisions` fails as expected, so
-blank owner decisions remain blocked and cannot support Excel output or a
-generic model-failure claim.
+worklist is generated with the same `--sample-size 12` as the worksheet and
+lists the `53` owner rows with page/PDF URLs. The worksheet still has
+`decision=blank` for all `53` rows pending owner/operator review, but
+`suggested_decision` now has `0` blanks (`20` `correct_reject`, `33`
+`needs_operator_review`). `--require-decisions` fails as expected, so blank
+owner decisions remain blocked and cannot support Excel output or a generic
+model-failure claim.
 
 The next strict-yield action is worksheet-driven, not generic crawler work: a
 high `false_reject` count means fix the specific discovery/filter rule and add
@@ -467,7 +470,8 @@ requires the worksheet to validate with `review_status=complete` and
 v547 at `C:\EIDP-staging\v547-owner-docs-20260621`, recorded in
 `docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`, so the staged
 owner docs now include the v547 false-reject worksheet return rules, read-only
-review summary, worksheet CSV, and the return-verifier false-reject arguments.
+review summary, row-by-row worklist, worksheet CSV, and the return-verifier
+false-reject arguments.
 The v545, v544, v542, and v541 handoffs remain historical evidence only. This
 still does not change the release conclusion.
 This false-reject owner-return verifier integration was first packaged and

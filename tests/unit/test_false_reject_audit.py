@@ -448,6 +448,31 @@ def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path
     assert "context_mismatch_count=0" in cli_summary
 
 
+def test_false_reject_audit_review_worklist_lists_owner_next_actions(tmp_path: Path, capsys) -> None:
+    module = _load_module()
+    archive = _write_stage6_archive(tmp_path / "stage6-evidence.zip")
+    packet = module.build_false_reject_audit_packet(archive, sample_size=2)
+
+    worklist = module.render_review_worklist(packet)
+
+    assert "Owner False-Reject Review Worklist" in worklist
+    assert "Release Forecast: `NOT_READY`" in worklist
+    assert "Rows requiring owner worksheet decision: `8`" in worklist
+    assert "This worklist is read-only" in worklist
+    assert "does not fill decisions" in worklist
+    assert "## 1. Inspect official evidence before deciding (`4` rows)" in worklist
+    assert "## 2. Confirm suggested correct rejects (`4` rows)" in worklist
+    assert worklist.index("Inspect official evidence") < worklist.index("Confirm suggested correct rejects")
+    assert "https://theta.example/form-candidate.pdf" in worklist
+    assert "https://delta.example/disclosure" in worklist
+    assert "`fiscal_year_mismatch`" in worklist
+
+    assert module.main([str(archive), "--sample-size", "2", "--format", "review-worklist"]) == 0
+    cli_worklist = capsys.readouterr().out
+    assert "Owner False-Reject Review Worklist" in cli_worklist
+    assert "Suggested Decision Counts" in cli_worklist
+
+
 def test_false_reject_audit_validation_summary_requires_review_csv(tmp_path: Path, capsys) -> None:
     module = _load_module()
     archive = _write_stage6_archive(tmp_path / "stage6-evidence.zip")

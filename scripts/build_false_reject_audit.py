@@ -673,6 +673,149 @@ def render_review_summary(packet: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+WORKLIST_SUGGESTION_ORDER = ("needs_operator_review", "correct_reject", "false_reject", "blank")
+
+
+def _worklist_suggestion(row: dict[str, Any]) -> str:
+    return str(row.get("suggested_decision") or "blank")
+
+
+def _worklist_school_id(row: dict[str, Any]) -> int:
+    school_id = row.get("school_id")
+    if isinstance(school_id, int):
+        return school_id
+    if isinstance(school_id, str) and school_id.isdigit():
+        return int(school_id)
+    return 10**9
+
+
+def _worklist_row_sort_key(row: dict[str, Any]) -> tuple[int, str, int, str, str]:
+    suggestion = _worklist_suggestion(row)
+    try:
+        suggestion_rank = WORKLIST_SUGGESTION_ORDER.index(suggestion)
+    except ValueError:
+        suggestion_rank = len(WORKLIST_SUGGESTION_ORDER)
+    return (
+        suggestion_rank,
+        str(row.get("bucket") or ""),
+        _worklist_school_id(row),
+        str(row.get("reason") or ""),
+        str(row.get("pdf_url") or row.get("page_url") or ""),
+    )
+
+
+def _worklist_heading(suggestion: str, count: int) -> str:
+    headings = {
+        "needs_operator_review": "1. Inspect official evidence before deciding",
+        "correct_reject": "2. Confirm suggested correct rejects",
+        "false_reject": "3. Check suggested false rejects",
+        "blank": "4. Resolve rows without a safe suggestion",
+    }
+    return f"## {headings.get(suggestion, suggestion)} (`{count}` rows)"
+
+
+def _worklist_url_line(label: str, value: object) -> str:
+    url = str(value or "")
+    return f"- {label}: <{url}>" if url else f"- {label}: ``"
+
+
+def render_review_worklist(packet: dict[str, Any]) -> str:
+    """Return an owner worklist that organizes every worksheet row by next action."""
+
+    strict_yield = packet.get("strict_yield", {})
+    review_rows = sorted(_iter_review_rows(packet), key=_worklist_row_sort_key)
+    suggestion_counts = Counter(_worklist_suggestion(row) for row in review_rows)
+    ordered_suggestions = [
+        suggestion
+        for suggestion in WORKLIST_SUGGESTION_ORDER
+        if suggestion_counts.get(suggestion, 0)
+    ]
+    ordered_suggestions.extend(
+        suggestion
+        for suggestion in sorted(suggestion_counts)
+        if suggestion not in WORKLIST_SUGGESTION_ORDER
+    )
+
+    lines = [
+        "# Owner False-Reject Review Worklist",
+        "",
+        f"Archive: `{packet.get('archive', '')}`",
+        f"Release Forecast: `{strict_yield.get('release_forecast', 'NOT_READY')}`",
+        (
+            "Strict Excel-ready yield: "
+            f"`{strict_yield.get('excel_ready_acquired_count')}/{strict_yield.get('denominator')}` "
+            f"(`{strict_yield.get('excel_ready_yield_pct')}%`), "
+            f"required `{strict_yield.get('required_yield_pct')}%`."
+        ),
+        f"Rows requiring owner worksheet decision: `{len(review_rows)}`",
+        "",
+        "This worklist is read-only. It organizes the CSV worksheet; it does not fill decisions, approve "
+        "rejected rows, or allow any row into Excel.",
+        "",
+        "## How To Use",
+        "",
+        "- Start with `needs_operator_review` rows; they are the highest-risk rows for false rejects.",
+        "- Confirm `correct_reject` rows only after checking the official page/PDF evidence.",
+        "- Fill only `decision`, `reviewer`, `reviewed_at`, and `notes` in the CSV worksheet.",
+        "- Notes are required for `false_reject` and `needs_operator_review` decisions.",
+        "- Keep old-year, unknown-year, non-target, school-mismatch, and low-confidence rows out of Excel.",
+        "",
+        "## Suggested Decision Counts",
+        "",
+        "| Suggested decision | Rows |",
+        "| --- | ---: |",
+    ]
+    for suggestion in ordered_suggestions:
+        lines.append(f"| `{_md_cell(suggestion)}` | {suggestion_counts[suggestion]} |")
+
+    rows_by_suggestion: dict[str, list[dict[str, Any]]] = {}
+    for row in review_rows:
+        rows_by_suggestion.setdefault(_worklist_suggestion(row), []).append(row)
+
+    for suggestion in ordered_suggestions:
+        rows_for_suggestion = rows_by_suggestion.get(suggestion, [])
+        lines.extend(["", _worklist_heading(suggestion, len(rows_for_suggestion)), ""])
+
+        rows_by_bucket: dict[str, list[dict[str, Any]]] = {}
+        for row in rows_for_suggestion:
+            rows_by_bucket.setdefault(str(row.get("bucket") or ""), []).append(row)
+
+        for bucket in sorted(rows_by_bucket):
+            bucket_rows = rows_by_bucket[bucket]
+            review_question = bucket_rows[0].get("review_question") or ""
+            false_reject_signal = bucket_rows[0].get("false_reject_signal") or ""
+            lines.extend(
+                [
+                    f"### `{_md_cell(bucket)}` (`{len(bucket_rows)}` rows)",
+                    "",
+                    f"Review question: {_md_cell(review_question)}",
+                    f"False-reject signal: {_md_cell(false_reject_signal)}",
+                    "",
+                ]
+            )
+
+            for row in bucket_rows:
+                audit_row_id = _md_cell(row.get("audit_row_id", ""))
+                school_id = _md_cell(row.get("school_id", ""))
+                lines.extend(
+                    [
+                        f"#### `{audit_row_id}` / school `{school_id}`",
+                        "",
+                        f"- Reason: `{_md_cell(row.get('reason', ''))}`",
+                        f"- PDF type: `{_md_cell(row.get('pdf_type', ''))}`",
+                        f"- Detected fiscal year: `{_md_cell(row.get('detected_fiscal_year', ''))}`",
+                        f"- Discovery method: `{_md_cell(row.get('discovery_method', ''))}`",
+                        f"- Anchor: {_md_cell(row.get('anchor_text', ''))}",
+                        f"- Suggested basis: {_md_cell(row.get('suggested_decision_basis', ''))}",
+                        _worklist_url_line("Page URL", row.get("page_url")),
+                        _worklist_url_line("PDF URL", row.get("pdf_url")),
+                        "",
+                    ]
+                )
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def render_review_validation_summary(packet: dict[str, Any], validation: dict[str, Any]) -> str:
     """Return owner-readable validation results for a returned review worksheet."""
 
@@ -1064,7 +1207,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--sample-size", type=int, default=50)
     parser.add_argument(
         "--format",
-        choices=("markdown", "json", "csv", "review-summary", "review-validation-summary", "review-rca-summary"),
+        choices=(
+            "markdown",
+            "json",
+            "csv",
+            "review-summary",
+            "review-worklist",
+            "review-validation-summary",
+            "review-rca-summary",
+        ),
         default="markdown",
     )
     parser.add_argument("--json", action="store_true", help="Alias for --format json.")
@@ -1110,6 +1261,9 @@ def main(argv: list[str] | None = None) -> int:
         ok = packet.get("ok") is True
     elif output_format == "review-summary":
         rendered = render_review_summary(packet)
+        ok = packet.get("ok") is True
+    elif output_format == "review-worklist":
+        rendered = render_review_worklist(packet)
         ok = packet.get("ok") is True
     else:
         rendered = render_markdown(packet)

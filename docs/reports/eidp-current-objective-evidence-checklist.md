@@ -156,7 +156,10 @@ logs/win-v545-f3eb166-canary/stage6-evidence-20260621-004156.zip --sample-size
 The current v547 review worksheet is generated at
 `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv` using the v547
 Stage 6 evidence bundle
-`logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`. The older
+`logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`. The
+row-by-row owner worklist is generated from the same bundle and sample size at
+`docs/reports/2026-06-21-v547-false-reject-review-worklist.md`; it is read-only
+review guidance and the CSV remains the only returned decision artifact. The older
 v545 review worksheet remains historical at
 `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv` using
 `uv run python scripts/build_false_reject_audit.py
@@ -213,8 +216,8 @@ The Windows docs-only handoff has been refreshed
 to v547 at `C:\EIDP-staging\v547-owner-docs-20260621`, recorded in
 `docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`, so the staged
 owner docs now include the v547 false-reject worksheet return rules, worksheet
-CSV, and the return-verifier false-reject arguments. This remains handoff
-evidence only.
+CSV, row-by-row worklist, and the return-verifier false-reject arguments. This
+remains handoff evidence only.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining

@@ -8,8 +8,8 @@ Release Forecast: `NOT_READY`
 | Priority | Finding | Evidence | Action |
 | --- | --- | --- | --- |
 | P0 release blocker | This docs-only staging is not release approval. | v547 still has strict/Excel-ready `12/50 (24.0%)`, `53` blank false-reject worksheet decisions, missing owner real-cycle sign-off, and unapproved `publication_lag` / OCR scope decisions. | Keep release blocked. |
-| P1 release hardening | The owner/operator handoff now targets the current v547 canary and worksheet lane. | `C:\EIDP-staging\v547-owner-docs-20260621` was extracted on Windows with SHA256 verification and required v547 files present. | Use this as the current owner/operator docs entry point. |
-| P2 storage hygiene | The docs ZIP is small and stored under the external-SSD-backed `dist/`. | Local ZIP size is about `1.0M`; no runtime ZIPs or PDFs were added to git. | Keep generated ZIPs out of git. |
+| P1 release hardening | The owner/operator handoff now targets the current v547 canary, worksheet lane, and row-by-row worklist. | `C:\EIDP-staging\v547-owner-docs-20260621` was extracted on Windows with SHA256 verification and required v547 files present. | Use this as the current owner/operator docs entry point. |
+| P2 storage hygiene | The docs ZIP is small and stored under the external-SSD-backed `dist/`. | Local ZIP size is about `172K`; no runtime ZIPs or PDFs were added to git. | Keep generated ZIPs out of git. |
 | P3 roadmap/research | University production workflow, cloud, multi-user, and complex frontend remain outside v1. | No v547 owner-docs staging evidence changes v1 scope. | Leave in roadmap. |
 
 ## Staged Artifacts
@@ -17,7 +17,7 @@ Release Forecast: `NOT_READY`
 | Field | Value |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v547-owner-docs-20260621.zip` |
-| ZIP SHA256 | `1acdf8fb0a2db3b61a24d49ecf2eae9eae9211fa4b0d9f36c91729b3eed2ee54` |
+| ZIP SHA256 | `6ec0507cf62820de686a18d23dbb560e2a3132cdaaabd75ef4ba616ece0eec81` |
 | SHA256 sidecar | `C:\EIDP-staging\eidp-v547-owner-docs-20260621.zip.sha256` |
 | Extracted destination | `C:\EIDP-staging\v547-owner-docs-20260621` |
 | Active Scheduled Task after staging | `"C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat"` |
@@ -27,8 +27,8 @@ Windows verification returned:
 ```json
 {
   "ok": true,
-  "expected_sha": "1acdf8fb0a2db3b61a24d49ecf2eae9eae9211fa4b0d9f36c91729b3eed2ee54",
-  "actual_sha": "1acdf8fb0a2db3b61a24d49ecf2eae9eae9211fa4b0d9f36c91729b3eed2ee54",
+  "expected_sha": "6ec0507cf62820de686a18d23dbb560e2a3132cdaaabd75ef4ba616ece0eec81",
+  "actual_sha": "6EC0507CF62820DE686A18D23DBB560E2A3132CDAAABD75EF4BA616ECE0EEC81",
   "dest": "C:\\EIDP-staging\\v547-owner-docs-20260621",
   "missing": [],
   "active_task": "\"C:\\Users\\cyo20\\EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat\" "
@@ -49,6 +49,7 @@ Windows verification returned:
 - `docs\reports\2026-06-21-v547-package-gates.md`
 - `docs\reports\2026-06-21-v547-windows-canary.md`
 - `docs\reports\2026-06-21-v547-false-reject-review-summary.md`
+- `docs\reports\2026-06-21-v547-false-reject-review-worklist.md`
 - `docs\reports\2026-06-21-v547-false-reject-review-sheet.csv`
 - `docs\reports\2026-06-21-v547-false-reject-review-validation.json`
 - `docs\reports\2026-06-21-v547-false-reject-review-validation-summary.md`

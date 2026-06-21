@@ -155,6 +155,12 @@ result for easier owner/developer handoff; this is a convenience field only and
 does not change `ok`, `errors`, `review_status=complete`, or
 `context_mismatch_count=0` release gates.
 
+For row-by-row review, use
+`docs/reports/2026-06-21-v547-false-reject-review-worklist.md`. It is a
+read-only worklist generated with the same `--sample-size 12` as the v547 CSV,
+so its `53` rows correspond to the worksheet. The worklist is not a return
+artifact; only the completed CSV worksheet is validated.
+
 ## Developer Verification After Return
 
 After copying the owner return files back to the repo, run:
@@ -216,3 +222,13 @@ That summary distinguishes `SPECIFIC_RULE_DEFECTS_FOUND` from
 `GENERIC_MODEL_FAILURE_NOT_SUPPORTED`. It is still read-only RCA evidence: it
 does not relax strict FY2026/R8 evidence rules, does not approve rejected rows,
 and does not replace the full owner return gate.
+
+To regenerate the row-by-row owner worklist from the v547 Stage 6 evidence:
+
+```bash
+uv run python scripts/build_false_reject_audit.py \
+  logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip \
+  --sample-size 12 \
+  --format review-worklist \
+  --output docs/reports/2026-06-21-v547-false-reject-review-worklist.md
+```

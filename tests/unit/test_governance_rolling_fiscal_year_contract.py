@@ -130,7 +130,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
 
     expected_package_sha = "f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b"
     expected_source_sha = "86c848f68e1dbde85c9b6422cfc827149940e02a"
-    expected_docs_sha = "1acdf8fb0a2db3b61a24d49ecf2eae9eae9211fa4b0d9f36c91729b3eed2ee54"
+    expected_docs_sha = "6ec0507cf62820de686a18d23dbb560e2a3132cdaaabd75ef4ba616ece0eec81"
 
     for text in (first_read, request, return_sheet, release_summary, owner_signoff):
         assert expected_package_sha in text
@@ -139,6 +139,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
 
     assert "docs\\reports\\2026-06-21-v547-package-gates.md" in first_read
     assert "docs\\reports\\2026-06-21-v547-false-reject-review-sheet.csv" in first_read
+    assert "docs\\reports\\2026-06-21-v547-false-reject-review-worklist.md" in first_read
     assert "docs\\reports\\2026-06-21-v547-false-reject-audit-packet.md" not in first_read
     assert "GitHub main CI for packaged source commit 86c848f: success, run 27894031180" in first_read
     assert "Do not treat the v547 bounded canary as owner real-cycle sign-off" in first_read
@@ -165,6 +166,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "ok\": true" in staging
     assert "C:\\EIDP-staging\\v547-owner-docs-20260621" in staging
     assert "active_task" in staging
+    assert "docs\\reports\\2026-06-21-v547-false-reject-review-worklist.md" in staging
     assert "EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat" in staging
     assert "This copied documentation only" in staging
     assert "does not approve v1.0" in staging
