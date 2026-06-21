@@ -18,8 +18,9 @@ decision for FY2026/R8 publication lag.
   also v548 at commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`, and it is
   still below the strict/Excel-ready release gate.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
-  release scope. Current v546 did not restore or validate an OCR add-on/runtime
-  proof; if OCR is in scope, attach a valid OCR add-on proof before approval.
+  release scope. Current v548 does not attach a fresh validated OCR
+  add-on/runtime proof; if OCR is in scope, attach a valid OCR add-on proof
+  before approval.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
   `publication_lag` release-exception approval.

@@ -1,6 +1,7 @@
 # Publication-lag Owner Decision Brief
 
 Status: decision required
+Updated: 2026-06-21
 
 This brief is for deciding whether v1 may use a `publication_lag` release
 exception while the current target-year forms are not yet widely published.
@@ -17,6 +18,51 @@ Choose one:
 - `DO_NOT_APPROVE`: do not use the exception; wait until the current target-year
   strict Excel-ready gate is met without the exception.
 - `DEFER`: no release decision yet.
+
+## Current v548 Evidence Snapshot
+
+Release Forecast: `NOT_READY`
+
+The current owner review baseline is v548:
+
+- package: `dist/eidp-windows-v548.zip`
+- package SHA256:
+  `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`
+- package/source commit:
+  `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`
+- current Windows canary:
+  `docs/reports/2026-06-21-v548-windows-canary.md`
+- current owner worksheet:
+  `docs/reports/2026-06-21-v548-false-reject-review-sheet.csv`
+
+The v548 bounded Windows canary selected `50` target-missing specialty schools,
+found candidate sets for `50/50`, downloaded and processed `15` documents, and
+accepted only `12/50 (24.0%)` as strict FY2026/R8 target-document plus
+Excel-ready. Operator-reviewable yield was `47/50 (94.0%)`, with
+`ship_gate_status=below_gate`.
+
+The selected-school status was:
+
+```text
+confirmed_target=12
+publication_lag=30
+target_year_unverified=2
+image_pending=3
+review_or_parse=5
+excel_ready=12
+```
+
+The current false-reject worksheet still has `53` blank owner decisions. The
+developer shadow review found `0` likely false rejects, but it is diagnostic
+only and is not release evidence.
+
+Owner decision impact from the current v548 evidence:
+
+| Owner choice | Release impact now |
+| --- | --- |
+| `APPROVE_RC_ONLY` | Can support only an `RC_ONLY` path after the formal exception record, owner real Windows cycle, completed worksheet return, audit log, and Stage 6 return verification all pass. |
+| `DO_NOT_APPROVE` | Keeps release `NOT_READY` until the current target-year strict Excel-ready gate is met without the exception. |
+| `DEFER` | Keeps release `NOT_READY`; no release-scope decision exists. |
 
 ## If Approved
 

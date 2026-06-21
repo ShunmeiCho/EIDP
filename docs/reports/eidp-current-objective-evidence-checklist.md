@@ -182,6 +182,14 @@ and reports `24` `likely_correct_reject`, `29` `likely_needs_operator_review`,
 `0` `likely_false_reject`, and `15` high-priority owner review rows. It can
 prioritize owner review or future rule-fix RCA, but it is not owner/operator
 approval, not release evidence, and not Excel-ready authorization.
+The canonical owner decision briefs now include the current v548 evidence
+snapshot: `docs/release/owner-decisions/publication-lag.md` records the
+`12/50 (24.0%)` strict/Excel-ready canary, `publication_lag=30`, and the
+`APPROVE_RC_ONLY` / `DO_NOT_APPROVE` / `DEFER` owner choices; and
+`docs/release/owner-decisions/ocr-scope.md` records `image_pending=3` and the
+`CORE_TEXT_PDF_ONLY` / `OCR_ADDON_REQUIRED` / `DEFER` scope choices. These
+briefs do not approve release, do not replace owner real-cycle sign-off, and do
+not allow unconfirmed rows into Excel.
 The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
@@ -930,7 +938,11 @@ do not remove the FY2026/R8 release blocker.
    diagnostic prioritization; do not treat it as owner approval or release
    evidence.
 4. Run the owner/operator return path from Windows and collect signed KPI,
-   audit/outbox, workbook, and `publication_lag` decision evidence.
+   audit/outbox, workbook, and `publication_lag` decision evidence. Use
+   `docs/release/owner-decisions/publication-lag.md` and
+   `docs/release/owner-decisions/ocr-scope.md` as the canonical current v548
+   decision briefs; they are not approval by themselves and must still be
+   checked by `scripts/verify_stage6_return.py`.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.
 6. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
 7. Create the signed `v1.0` tag only after the above blockers are resolved.

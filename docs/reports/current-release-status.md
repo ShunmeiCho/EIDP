@@ -129,6 +129,15 @@ existing v548 Stage 6 rejection fields and reports `24` `likely_correct_reject`,
 high-priority owner review rows. This is diagnostic prioritization only: it is
 not owner/operator approval, not release evidence, and not Excel-ready
 authorization.
+The canonical owner decision briefs are now also anchored to the v548 evidence
+snapshot:
+`docs/release/owner-decisions/publication-lag.md` records the current
+`12/50 (24.0%)` strict/Excel-ready canary, `publication_lag=30`, and the
+available `APPROVE_RC_ONLY` / `DO_NOT_APPROVE` / `DEFER` choices; and
+`docs/release/owner-decisions/ocr-scope.md` records the current `image_pending=3`
+OCR/manual-review scope choice. These briefs are decision support only. They do
+not approve release, do not override the formal exception record, do not replace
+owner real-cycle sign-off, and do not allow unconfirmed rows into Excel.
 Current `main` also adds a `review-audit-log` output for returned false-reject
 worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,

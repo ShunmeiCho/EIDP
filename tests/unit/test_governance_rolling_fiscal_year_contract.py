@@ -99,6 +99,40 @@ def test_owner_decision_briefs_do_not_relax_release_gates() -> None:
     assert "The v1 OCR release scope must be explicitly selected before approval" in known_limits
 
 
+def test_owner_decision_briefs_are_anchored_to_current_v548_evidence() -> None:
+    publication_lag = _normalized_doc("docs/release/owner-decisions/publication-lag.md")
+    ocr_scope = _normalized_doc("docs/release/owner-decisions/ocr-scope.md")
+    current_status = _normalized_doc("docs/reports/current-release-status.md")
+    objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
+    admin_checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
+
+    expected_package_sha = "488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c"
+    expected_source_sha = "c1a96903ed10f1cc9c48d1a6912061ba0aaf86be"
+
+    assert "Current v548 Evidence Snapshot" in publication_lag
+    assert "Release Forecast: `NOT_READY`" in publication_lag
+    assert expected_package_sha in publication_lag
+    assert expected_source_sha in publication_lag
+    assert "12/50 (24.0%)" in publication_lag
+    assert "publication_lag=30" in publication_lag
+    assert "`APPROVE_RC_ONLY` / `DO_NOT_APPROVE` / `DEFER`" in objective_checklist
+    assert "The developer shadow review found `0` likely false rejects" in publication_lag
+    assert "diagnostic only and is not release evidence" in publication_lag
+
+    assert "Current v548 Evidence Snapshot" in ocr_scope
+    assert "Release Forecast: `NOT_READY`" in ocr_scope
+    assert expected_package_sha in ocr_scope
+    assert expected_source_sha in ocr_scope
+    assert "image_pending=3" in ocr_scope
+    assert "`CORE_TEXT_PDF_ONLY` / `OCR_ADDON_REQUIRED` / `DEFER`" in objective_checklist
+    assert "It does not make v548 `READY` by itself" in ocr_scope
+
+    assert "The canonical owner decision briefs are now also anchored to the v548 evidence snapshot" in current_status
+    assert "do not allow unconfirmed rows into Excel" in current_status
+    assert "canonical current v548 decision briefs" in objective_checklist
+    assert "Current v548 does not attach a fresh validated OCR add-on/runtime proof" in admin_checklist
+
+
 def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification() -> None:
     template = _normalized_doc("docs/runbooks/eidp-operator-e2e-template.md")
     checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
