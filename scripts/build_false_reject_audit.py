@@ -1366,6 +1366,9 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.validate_review_csv is not None:
+        if output_format == "review-audit-log" and not args.require_decisions:
+            print("--format review-audit-log requires --require-decisions", file=sys.stderr)
+            return 2
         validation = validate_review_csv(
             packet,
             args.validate_review_csv.read_text(encoding="utf-8-sig"),

@@ -201,7 +201,9 @@ revision. The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`,
 `--false-reject-review-audit-log`, and `--false-reject-sample-size`; when
 supplied, it requires `review_status=complete`, `context_mismatch_count=0`, and
-a regenerated audit JSONL match. Current `main` also emits a compact
+a regenerated audit JSONL match. The audit-log renderer requires
+`--require-decisions`, so incomplete worksheets cannot produce partial owner
+audit logs. Current `main` also emits a compact
 `false_reject_review_summary` beside the full validation JSON so failed owner
 returns expose completed/blank decision counts, context mismatch count, defect
 framing status, and blocking error previews directly in
@@ -811,8 +813,9 @@ do not remove the FY2026/R8 release blocker.
    `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
    before labeling the blocker as an algorithm/model defect. Use
    `--format review-validation-summary` for an owner-readable failure summary
-   while the worksheet is incomplete. Use the returned `defect_framing.status`,
-   not the below-gate rate alone, for that claim.
+   while the worksheet is incomplete. Generate `--format review-audit-log` only
+   with `--require-decisions` after the worksheet is complete. Use the returned
+   `defect_framing.status`, not the below-gate rate alone, for that claim.
 4. Run the owner/operator return path from Windows and collect signed KPI,
    audit/outbox, workbook, and `publication_lag` decision evidence.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.

@@ -77,8 +77,10 @@ worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,
 source archive, and strict-gate forecast. This is RCA/audit handoff evidence
 only: it does not write business tables, does not approve rejected rows, and
-does not make any rejected row Excel-ready. The owner-return verifier now
-requires `--false-reject-review-audit-log` whenever a false-reject review CSV is
+does not make any rejected row Excel-ready. The audit-log renderer itself now
+requires `--require-decisions`, so incomplete worksheets cannot produce partial
+owner audit logs. The owner-return verifier also requires
+`--false-reject-review-audit-log` whenever a false-reject review CSV is
 submitted, and rejects audit logs that do not match regenerated audit events.
 
 The next strict-yield action is worksheet-driven, not generic crawler work: a

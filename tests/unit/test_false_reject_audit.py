@@ -449,6 +449,24 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
                 "2",
                 "--validate-review-csv",
                 str(completed_review_path),
+                "--format",
+                "review-audit-log",
+            ]
+        )
+        == 2
+    )
+    missing_required = capsys.readouterr()
+    assert missing_required.out == ""
+    assert "--format review-audit-log requires --require-decisions" in missing_required.err
+
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(completed_review_path),
                 "--require-decisions",
                 "--format",
                 "review-audit-log",

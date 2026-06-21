@@ -364,10 +364,12 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "scripts/build_false_reject_audit.py" in objective_checklist
     assert "--validate-review-csv" in objective_checklist
     assert "--require-decisions" in objective_checklist
+    assert "Generate `--format review-audit-log` only with `--require-decisions`" in objective_checklist
     assert "context_mismatch_count=0" in current_status
     assert "Completed rows require `reviewer` and an ISO `reviewed_at` timestamp" in current_status
     assert "`false_reject` / `needs_operator_review` rows require `notes`" in current_status
     assert "row context must remain unchanged" in current_status
+    assert "The audit-log renderer itself now requires `--require-decisions`" in current_status
     assert "The owner-return verifier now accepts `--false-reject-evidence-zip`" in current_status
     assert "`--false-reject-review-audit-log`" in current_status
     assert "matching regenerated audit JSONL" in current_status
