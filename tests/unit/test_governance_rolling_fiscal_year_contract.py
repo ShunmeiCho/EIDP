@@ -373,6 +373,8 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "The owner-return verifier now accepts `--false-reject-evidence-zip`" in current_status
     assert "`--false-reject-review-audit-log`" in current_status
     assert "matching regenerated audit JSONL" in current_status
+    assert "audit event count matching completed worksheet decisions" in objective_checklist
+    assert "requires the regenerated audit event count to match completed worksheet decisions" in current_status
     assert "`context_mismatch_count=0`" in current_status
     assert expected_v547_package_sha in current_status
     assert expected_v547_package_sha in objective_checklist

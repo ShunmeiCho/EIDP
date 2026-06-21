@@ -200,8 +200,9 @@ triage guidance unless a fresh Windows package is built with the same helper
 revision. The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`,
 `--false-reject-review-audit-log`, and `--false-reject-sample-size`; when
-supplied, it requires `review_status=complete`, `context_mismatch_count=0`, and
-a regenerated audit JSONL match. The audit-log renderer requires
+supplied, it requires `review_status=complete`, `context_mismatch_count=0`, a
+regenerated audit JSONL match, and audit event count matching completed
+worksheet decisions. The audit-log renderer requires
 `--require-decisions`, so incomplete worksheets cannot produce partial owner
 audit logs. Current `main` also emits a compact
 `false_reject_review_summary` beside the full validation JSON so failed owner

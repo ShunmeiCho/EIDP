@@ -266,7 +266,10 @@ def _verify_false_reject_review(
         errors.append("false-reject review CSV changed immutable row context")
     if actual_audit_log != expected_audit_log:
         errors.append("false-reject review audit log does not match regenerated audit events")
-    validation["audit_log_event_count"] = len([line for line in expected_audit_log.splitlines() if line.strip()])
+    audit_log_event_count = len([line for line in expected_audit_log.splitlines() if line.strip()])
+    if validation.get("review_status") == "complete" and validation.get("completed_decisions") != audit_log_event_count:
+        errors.append("false-reject review audit log event count must match completed decisions")
+    validation["audit_log_event_count"] = audit_log_event_count
     return cast(dict[str, Any], validation)
 
 

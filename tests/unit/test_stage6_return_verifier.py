@@ -582,6 +582,70 @@ def test_verify_stage6_return_rejects_false_reject_review_audit_log_mismatch(
     assert result["false_reject_review"]["audit_log_event_count"] == 1
 
 
+def test_verify_stage6_return_rejects_false_reject_review_audit_log_event_count_mismatch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    evidence_zip = tmp_path / "stage6-evidence.zip"
+    evidence_zip.write_text("fake", encoding="utf-8")
+    review_csv = tmp_path / "false-reject-review.csv"
+    review_csv.write_text("audit_row_id,decision\nrow-1,correct_reject\n", encoding="utf-8")
+    audit_log = tmp_path / "false-reject-review-audit-log.jsonl"
+    audit_log.write_text("", encoding="utf-8")
+
+    class FakeFalseRejectAudit:
+        @staticmethod
+        def build_false_reject_audit_packet(
+            archive: Path,
+            *,
+            sample_size: int,
+            required_yield_pct: float,
+        ) -> dict[str, object]:
+            return {"ok": True, "errors": [], "strict_yield": {"release_forecast": "NOT_READY"}}
+
+        @staticmethod
+        def validate_review_csv(
+            packet: dict[str, object],
+            csv_text: str,
+            *,
+            require_decisions: bool,
+        ) -> dict[str, object]:
+            return {
+                "ok": True,
+                "basis": "false_reject_review_decision_validation",
+                "review_status": "complete",
+                "completed_decisions": 1,
+                "context_mismatch_count": 0,
+                "errors": [],
+            }
+
+        @staticmethod
+        def render_review_audit_log(
+            packet: dict[str, object],
+            csv_text: str,
+            validation: dict[str, object],
+        ) -> str:
+            return ""
+
+    monkeypatch.setattr(module, "_load_false_reject_audit_module", lambda: FakeFalseRejectAudit)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        false_reject_evidence_zip=evidence_zip,
+        false_reject_review_csv=review_csv,
+        false_reject_review_audit_log=audit_log,
+    )
+
+    assert result["ok"] is False
+    assert "false-reject review audit log event count must match completed decisions" in result["errors"]
+    assert result["false_reject_review"]["audit_log_event_count"] == 0
+
+
 def test_verify_stage6_return_accepts_short_owner_signoff_for_ready_path(tmp_path: Path) -> None:
     module = _load_module()
     template, last_run, verify_json = _write_complete_artifacts(tmp_path)

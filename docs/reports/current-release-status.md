@@ -81,7 +81,9 @@ does not make any rejected row Excel-ready. The audit-log renderer itself now
 requires `--require-decisions`, so incomplete worksheets cannot produce partial
 owner audit logs. The owner-return verifier also requires
 `--false-reject-review-audit-log` whenever a false-reject review CSV is
-submitted, and rejects audit logs that do not match regenerated audit events.
+submitted, rejects audit logs that do not match regenerated audit events, and
+requires the regenerated audit event count to match completed worksheet
+decisions.
 
 The next strict-yield action is worksheet-driven, not generic crawler work: a
 high `false_reject` count means fix the specific discovery/filter rule and add
