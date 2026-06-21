@@ -12,10 +12,11 @@ decision for FY2026/R8 publication lag.
   `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified `main`
   commit.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current package/canary candidate is v547
-  at commit `86c848f68e1dbde85c9b6422cfc827149940e02a`; non-Windows gates and
-  Windows side-by-side canary passed, but v547 is still below the
-  strict/Excel-ready release gate.
+  after its last code/package change. Current source/setup package is v548 at
+  commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`; package gates and
+  Windows side-by-side setup passed. The latest bounded Windows weekly canary is
+  still v547 at commit `86c848f68e1dbde85c9b6422cfc827149940e02a`, and it is
+  still below the strict/Excel-ready release gate.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
   release scope. Current v546 did not restore or validate an OCR add-on/runtime
   proof; if OCR is in scope, attach a valid OCR add-on proof before approval.
@@ -60,11 +61,11 @@ Expected:
 Confirm the current local package/source evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v547.zip
-cat dist/eidp-windows-v547.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v547.zip --json
+shasum -a 256 dist/eidp-windows-v548.zip
+cat dist/eidp-windows-v548.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v548.zip --json
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v547.zip \
+  dist/eidp-windows-v548.zip \
   --skip-full-unit \
   --json
 
@@ -73,7 +74,7 @@ test -f dist/eidp-ocr-addon-windows-v497-smoke.zip
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v547.zip \
+  dist/eidp-windows-v548.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -81,7 +82,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b
+488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -116,12 +117,12 @@ Generated Windows ZIPs are large. Keep only the selected release candidate, its
 `.sha256` sidecar, the `dist/eidp-windows.zip` latest alias, and `wheelhouse/`
 unless an older package is actively needed for side-by-side evidence transfer.
 
-After the v547 rebuild, local package gates, and Windows side-by-side canary,
+After the v548 rebuild, local package gates, and Windows side-by-side setup,
 superseded generated artifacts no longer needed for the current evidence lane
-were pruned. Retained core package artifacts on the external SSD are v546
-fallback, v547 current, the latest alias `dist/eidp-windows.zip`, and the
-current owner-docs ZIP. Windows retained active v527, fallback v546, and
-current v547 while v545 transfer ZIPs and the v545 side-by-side directory were
+were pruned. Retained core package artifacts on the external SSD are v547
+fallback, v548 current, the latest alias `dist/eidp-windows.zip`, and the
+current owner-docs ZIPs. Windows retained active v527, fallback v547, and
+current v548 while v546 transfer ZIPs and the v546 side-by-side directory were
 removed.
 AppleDouble `._*` files created by macOS on the external volume must be removed
 from `dist/` before package verification or transfer.
@@ -159,26 +160,37 @@ Excel output.
 
 Before tagging, attach or reference:
 
-- v547 package/source and CI evidence:
+- v548 package/source/setup evidence:
+  `docs/reports/2026-06-21-v548-package-setup-gates.md`,
+  `logs/eidp-windows-v548-distribution-verify-20260621.json`,
+  `logs/eidp-windows-v548-distribution-verify-patterns-20260621.json`,
+  `logs/eidp-windows-v548-release-gates-20260621.json`,
+  `logs/win-v548-c1a9690-validate-after-setup-20260621.json`,
+  `logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`,
+  `logs/eidp-v548-local-prune-20260621.json`,
+  `logs/win-v548-cleanup-20260621.json`, and
+  `dist/eidp-windows-v548.zip`. v548 package SHA256:
+  `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`;
+- v547 package/source and bounded canary evidence:
   `docs/reports/2026-06-21-v547-package-gates.md`,
   `logs/eidp-windows-v547-distribution-verify-20260621.json`,
-  `logs/eidp-windows-v547-release-gates-20260621.json`, and
-  `dist/eidp-windows-v547.zip`. v547 package SHA256:
-  `f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`;
-- v547 Windows bounded canary evidence:
+  `logs/eidp-windows-v547-release-gates-20260621.json`,
+  `dist/eidp-windows-v547.zip`,
   `docs/reports/2026-06-21-v547-windows-canary.md`,
   `logs/win-v547-86c848f-canary/20260621_053425-summary.json`,
   `logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`,
   `logs/win-v547-86c848f-canary/stage6-evidence-verify-20260621-144556.json`,
   `logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`,
   `logs/win-v547-86c848f-canary/win-v547-cleanup-20260621.json`, and
-  `logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`;
-- v546 package/source and CI evidence:
+  `logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`.
+  v547 package SHA256:
+  `f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`;
+- historical v546 package/source and CI evidence, with the core ZIP pruned
+  locally after v548:
   `docs/reports/2026-06-21-v546-rca-summary-package-gates.md`,
   `logs/eidp-windows-v546-distribution-verify-20260621.json`,
-  `logs/eidp-windows-v546-release-gates-20260621.json`,
-  `dist/eidp-windows-v546.zip`, and CI run `27892572590` for source commit
-  `6301605`. v546 package SHA256:
+  `logs/eidp-windows-v546-release-gates-20260621.json`, and CI run
+  `27892572590` for source commit `6301605`. v546 package SHA256:
   `ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`;
 - v546 Windows bounded canary evidence:
   `docs/reports/2026-06-21-v546-rca-summary-windows-canary.md`,
@@ -273,18 +285,23 @@ Before tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v547 package and Windows bounded canary evidence is recorded in
-`docs/reports/2026-06-21-v547-package-gates.md`,
-`docs/reports/2026-06-21-v547-windows-canary.md`,
-`logs/eidp-windows-v547-distribution-verify-20260621.json`,
-`logs/eidp-windows-v547-release-gates-20260621.json`, and
+Current v548 package/setup evidence is recorded in
+`docs/reports/2026-06-21-v548-package-setup-gates.md`,
+`logs/eidp-windows-v548-distribution-verify-20260621.json`,
+`logs/eidp-windows-v548-distribution-verify-patterns-20260621.json`,
+`logs/eidp-windows-v548-release-gates-20260621.json`,
+`logs/win-v548-c1a9690-validate-after-setup-20260621.json`, and
+`logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`. The v548
+package/source commit is `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`, and the
+v548 package SHA256 is
+`488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`.
+
+The latest bounded Windows canary evidence remains v547 and is recorded in
+`docs/reports/2026-06-21-v547-windows-canary.md` and
 `logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`.
-The v547 package/source commit is
-`86c848f68e1dbde85c9b6422cfc827149940e02a`, and the v547 package SHA256 is
-`f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`.
 v547 still remains below the strict/Excel-ready release gate with
-`ship_gate_status=below_gate`; it is not owner/operator real-cycle sign-off and
-not v1.0 approval.
+`ship_gate_status=below_gate`; neither v547 nor v548 is owner/operator
+real-cycle sign-off or v1.0 approval.
 
 Previous v546 Windows bounded canary evidence is recorded in
 `docs/reports/2026-06-21-v546-rca-summary-windows-canary.md`,

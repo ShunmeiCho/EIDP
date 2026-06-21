@@ -823,3 +823,31 @@ do not remove the FY2026/R8 release blocker.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.
 6. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
 7. Create the signed `v1.0` tag only after the above blockers are resolved.
+
+## Current v548 Package/Setup Evidence
+
+- Latest source-side package/setup proof: `v548`.
+- Package: `dist/eidp-windows-v548.zip`.
+- Package SHA256:
+  `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`.
+- Source commit:
+  `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`.
+- Evidence report:
+  `docs/reports/2026-06-21-v548-package-setup-gates.md`.
+- Package verifier logs:
+  `logs/eidp-windows-v548-distribution-verify-20260621.json` and
+  `logs/eidp-windows-v548-distribution-verify-patterns-20260621.json`.
+- Non-Windows release gate log:
+  `logs/eidp-windows-v548-release-gates-20260621.json`.
+- Windows setup validator:
+  `logs/win-v548-c1a9690-validate-after-setup-20260621.json`.
+- Windows active-task recovery proof:
+  `logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`.
+- Cleanup proof:
+  `logs/eidp-v548-local-prune-20260621.json` and
+  `logs/win-v548-cleanup-20260621.json`.
+
+Interpretation: v548 packages the current-main audit-packet validity hardening
+for `false_reject_review_summary` and has Windows setup proof, but it is not a
+new bounded weekly canary and does not change the v547 strict/Excel-ready
+`12/50 (24.0%)` result. Release Forecast remains `NOT_READY`.

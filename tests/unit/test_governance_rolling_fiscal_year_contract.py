@@ -114,7 +114,8 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
     assert "v547 still remains below the strict/Excel-ready release gate" in checklist
-    assert "Current v547 package and Windows bounded canary evidence is recorded" in checklist
+    assert "Current v548 package/setup evidence is recorded" in checklist
+    assert "The latest bounded Windows canary evidence remains v547" in checklist
     assert "Previous v546 Windows bounded canary evidence is recorded" in checklist
 
 
@@ -337,6 +338,12 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "SPECIFIC_RULE_DEFECTS_FOUND" in return_sheet
     assert "GENERIC_MODEL_FAILURE_NOT_SUPPORTED" in return_sheet
     assert "source-side handoff hardening" in objective_checklist
+    assert "Latest source-side package/setup proof: `v548`" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-package-setup-gates.md" in objective_checklist
+    assert "logs/eidp-windows-v548-release-gates-20260621.json" in objective_checklist
+    assert "logs/win-v548-c1a9690-validate-after-setup-20260621.json" in objective_checklist
+    assert "logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt" in objective_checklist
+    assert "not a new bounded weekly canary" in objective_checklist
     assert "v547 package, non-Windows gate, and Windows canary evidence" in objective_checklist
     assert "v546 package, non-Windows gate, and Windows canary evidence" in objective_checklist
     assert "docs/reports/2026-06-21-v547-package-gates.md" in objective_checklist
@@ -351,9 +358,11 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "`12/50` selected target-missing schools" in objective_checklist
     assert "`15` documents were downloaded and processed" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" not in admin_checklist
+    assert "dist/eidp-windows-v548.zip" in admin_checklist
     assert "dist/eidp-windows-v547.zip" in admin_checklist
-    assert "dist/eidp-windows-v546.zip" in admin_checklist
-    assert "v547 Windows bounded canary evidence" in admin_checklist
+    assert "core ZIP pruned locally after v548" in admin_checklist
+    assert "dist/eidp-windows-v546.zip" not in admin_checklist
+    assert "v547 package/source and bounded canary evidence" in admin_checklist
     assert "logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip" in admin_checklist
     assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json" in admin_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in admin_checklist

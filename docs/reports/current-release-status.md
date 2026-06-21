@@ -51,6 +51,41 @@ v547 while removing v545 transfer ZIPs and the v545 side-by-side directory
 `v547` still has not completed OCR scope approval, owner real-cycle sign-off,
 or publication-lag decision. Release Forecast remains `NOT_READY`.
 
+Current `main` source-side package/setup proof is now `v548`
+(`dist/eidp-windows-v548.zip`, SHA256
+`488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`).
+`v548` packages commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be` with
+`git_dirty=false`, including the audit-packet validity hardening for
+`false_reject_review_summary`. Package verification and full non-Windows
+release gates returned `ok=true`: full unit `2059 passed`,
+validator/distribution unit `196 passed`, mypy, Ruff, discovery gold expected
+prediction replay `45/45` exact matches, and both package verifier modes.
+Windows transfer SHA matched, clean side-by-side setup at
+`C:\Users\cyo20\EIDP-v548-c1a9690-env0` returned `rc=0`, after-setup validator
+returned `ok=true` with `school_count=2418`,
+`school_fiscal_year_status_count=2418`, and `sqlite_integrity_check=ok`.
+The active weekly task was restored to
+`C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat`; recovery check
+then returned `ok=true` and `action_matches_expected=true`. Evidence is
+recorded in `docs/reports/2026-06-21-v548-package-setup-gates.md`,
+`logs/eidp-windows-v548-distribution-verify-20260621.json`,
+`logs/eidp-windows-v548-distribution-verify-patterns-20260621.json`,
+`logs/eidp-windows-v548-release-gates-20260621.json`,
+`logs/win-v548-c1a9690-validate-after-setup-20260621.json`,
+`logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`, and
+`logs/win-v548-cleanup-20260621.json`.
+
+`v548` is not a new bounded weekly canary and does not change the strict-yield
+result. The latest bounded Windows canary remains v547 at strict/Excel-ready
+`12/50 (24.0%)`. Release Forecast remains `NOT_READY`.
+
+Local cleanup after v548 removed the superseded v546 ZIP and sidecar from the
+external-SSD-backed `dist/` (`deleted_bytes=210934325`) and retained v547
+fallback, v548 current package, and the latest alias. Windows cleanup removed
+the v546 transfer ZIPs and `C:\Users\cyo20\EIDP-v546-6301605-env0`, freeing
+`1,109,412,996` bytes while retaining active v527, fallback v547, and current
+v548.
+
 Current `main` false-reject review guidance was rerun against the v547
 Windows-canary Stage 6 evidence. It keeps the v547 evidence bundle fixed while
 making explicit non-target-year hints owner-triage only. Running the current
