@@ -277,6 +277,15 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert "full owner return gate must still pass" in completed_rca_summary
     blank_audit_log = module.render_review_audit_log(packet, review_csv, validation)
     assert blank_audit_log == ""
+    partial_rows = list(csv.DictReader(io.StringIO(review_csv)))
+    partial_rows[0]["decision"] = "correct_reject"
+    partial_rows[0]["reviewer"] = "owner"
+    partial_rows[0]["reviewed_at"] = "2026-06-21T00:00:00+09:00"
+    partial_validation = module.validate_review_csv(packet, render_rows(partial_rows))
+    assert partial_validation["ok"] is True
+    assert partial_validation["review_status"] == "incomplete"
+    partial_audit_log = module.render_review_audit_log(packet, render_rows(partial_rows), partial_validation)
+    assert partial_audit_log == ""
     audit_log = module.render_review_audit_log(packet, completed.getvalue(), completed_validation)
     audit_events = [json.loads(line) for line in audit_log.splitlines()]
     assert len(audit_events) == len(rows)

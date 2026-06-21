@@ -652,9 +652,9 @@ def render_review_audit_log(
     csv_text: str,
     validation: dict[str, Any],
 ) -> str:
-    """Return JSONL audit events for validated owner/operator worksheet decisions."""
+    """Return JSONL audit events for a complete owner/operator worksheet."""
 
-    if validation.get("ok") is not True:
+    if validation.get("ok") is not True or validation.get("review_status") != "complete":
         return ""
 
     expected_by_id = {str(row["audit_row_id"]): row for row in _iter_review_rows(packet)}
