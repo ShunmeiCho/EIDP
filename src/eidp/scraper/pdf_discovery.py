@@ -3763,7 +3763,7 @@ def run_pdf_discovery(
     # - schools with a document for the current target fiscal year
     # - schools whose CURRENT revision in their latest fiscal year is excluded
     #   (Sprint 8.2.1: stale demoted revisions must NOT keep a school out).
-    from sqlalchemy import or_
+    from sqlalchemy import and_, case, or_
 
     from eidp.db.current_helpers import latest_excluded_school_ids
 
@@ -3812,9 +3812,42 @@ def run_pdf_discovery(
         )
     if school_ids:
         site_query = site_query.filter(SchoolSite.school_id.in_(school_ids))
+    trusted_source_rank = case(
+        (SchoolSite.discovery_method == "operator_manual", 0),
+        (SchoolSite.discovery_method == "prefecture_aggregator", 1),
+        (SchoolSite.discovery_method == "school_domain_override", 2),
+        (SchoolSite.discovery_method == "seed_csv", 3),
+        (SchoolSite.discovery_method == "scrapling_stealth", 4),
+        (SchoolSite.discovery_method == "corporation_pattern", 5),
+        else_=6,
+    )
+    trusted_disclosure_rank = case(
+        (
+            and_(
+                SchoolSite.url_type == "disclosure",
+                SchoolSite.discovery_method.in_(
+                    (
+                        "operator_manual",
+                        "prefecture_aggregator",
+                        "school_domain_override",
+                        "seed_csv",
+                        "scrapling_stealth",
+                    )
+                ),
+            ),
+            0,
+        ),
+        else_=1,
+    )
     sites = (
         site_query
-        .order_by(SchoolSite.confidence.desc(), SchoolSite.school_id.asc(), SchoolSite.id.asc())
+        .order_by(
+            trusted_source_rank,
+            SchoolSite.school_id.asc(),
+            trusted_disclosure_rank,
+            SchoolSite.confidence.desc(),
+            SchoolSite.id.asc(),
+        )
         .limit(batch_size)
         .all()
     )
