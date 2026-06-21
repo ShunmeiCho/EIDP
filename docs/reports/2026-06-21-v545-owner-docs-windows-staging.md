@@ -6,7 +6,8 @@ Date: 2026-06-21
 
 This follow-up refreshes the docs-only owner/operator handoff from v544 to the
 current v545 package identity. It stages the v545 owner handoff docs plus the
-v545 false-reject RCA packet, worksheet, and blank-worksheet validation:
+v545 false-reject RCA packet, read-only review summary, worksheet, and
+blank-worksheet validation:
 
 - `docs/runbooks/00-READ-ME-FIRST-v545.txt`
 - `docs/runbooks/eidp-v545-release-summary.md`
@@ -21,6 +22,7 @@ v545 false-reject RCA packet, worksheet, and blank-worksheet validation:
 - `docs/reports/2026-05-20-owner-v1.0-decision-brief.md`
 - `docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md`
 - `docs/reports/2026-06-21-v545-false-reject-audit-packet.md`
+- `docs/reports/2026-06-21-v545-false-reject-review-summary.md`
 - `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`
 - `docs/reports/2026-06-21-v545-false-reject-review-validation.json`
 - `docs/release/owner-decisions/publication-lag.md`
@@ -35,24 +37,25 @@ SQLite DB, PDFs, audit JSONL, Excel files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v545-owner-docs-20260621.zip` |
-| ZIP SHA256 | `3675dc09d5aa8e76d56d2655331b0856a08ac28a6c1741c2b9c4f2f01870fd1e` |
+| ZIP SHA256 | `748668b2524a5d9808c69c903bca41107e715c99ea5a897d84461f375500b29d` |
 | ZIP SHA256 sidecar | `C:\EIDP-staging\eidp-v545-owner-docs-20260621.zip.sha256` present and contains the expected ZIP hash |
 | Extracted destination | `C:\EIDP-staging\v545-owner-docs-20260621` |
 | First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v545.txt` present |
-| Owner request | `docs\runbooks\eidp-v545-owner-request-20260621.txt` present and contains `False-reject worksheet rules` plus the return-verifier false-reject arguments |
-| Owner return fill sheet | `docs\runbooks\eidp-v545-owner-return-fill-sheet.md` present and contains the return-verifier false-reject arguments |
-| Current release status | `docs\reports\current-release-status.md` present and contains `NOT_READY` plus the v545 handoff path |
-| Objective checklist | `docs\reports\eidp-current-objective-evidence-checklist.md` present and contains the v545 handoff path |
+| Owner request | `docs\runbooks\eidp-v545-owner-request-20260621.txt` present and contains `False-reject worksheet rules` plus the read-only review summary guidance |
+| Owner return fill sheet | `docs\runbooks\eidp-v545-owner-return-fill-sheet.md` present and contains the return-verifier false-reject arguments plus the read-only summary warning |
+| Current release status | `docs\reports\current-release-status.md` present and contains `NOT_READY`, the v545 handoff path, and the review summary path |
+| Objective checklist | `docs\reports\eidp-current-objective-evidence-checklist.md` present and contains the v545 handoff path plus the read-only review summary |
 | False-reject worksheet | `docs\reports\2026-06-21-v545-false-reject-review-sheet.csv` present |
 | False-reject packet | `docs\reports\2026-06-21-v545-false-reject-audit-packet.md` present |
+| False-reject review summary | `docs\reports\2026-06-21-v545-false-reject-review-summary.md` present and contains the read-only warning plus `12/50` strict-yield context |
 | False-reject validation | `docs\reports\2026-06-21-v545-false-reject-review-validation.json` present |
 
 ## Remote Verification Output
 
 ```text
-expected sha: 3675dc09d5aa8e76d56d2655331b0856a08ac28a6c1741c2b9c4f2f01870fd1e
-actual sha:   3675dc09d5aa8e76d56d2655331b0856a08ac28a6c1741c2b9c4f2f01870fd1e
-sidecar content: 3675dc09d5aa8e76d56d2655331b0856a08ac28a6c1741c2b9c4f2f01870fd1e  dist/eidp-v545-owner-docs-20260621.zip
+expected sha: 748668b2524a5d9808c69c903bca41107e715c99ea5a897d84461f375500b29d
+actual sha:   748668b2524a5d9808c69c903bca41107e715c99ea5a897d84461f375500b29d
+sidecar content: 748668b2524a5d9808c69c903bca41107e715c99ea5a897d84461f375500b29d  dist/eidp-v545-owner-docs-20260621.zip
 docs\runbooks\00-READ-ME-FIRST-v545.txt present: True
 docs\runbooks\eidp-v545-release-summary.md present: True
 docs\runbooks\eidp-v545-owner-signoff.md present: True
@@ -60,12 +63,20 @@ docs\runbooks\eidp-v545-owner-request-20260621.txt present: True
 docs\runbooks\eidp-v545-owner-return-fill-sheet.md present: True
 docs\reports\2026-06-21-v545-false-reject-review-sheet.csv present: True
 docs\reports\2026-06-21-v545-false-reject-audit-packet.md present: True
+docs\reports\2026-06-21-v545-false-reject-review-summary.md present: True
 docs\reports\2026-06-21-v545-false-reject-review-validation.json present: True
 request worksheet rules: True
+request review summary guidance: True
 return sheet verifier false-reject args: True
+return sheet review summary warning: True
 current-release-status NOT_READY: True
 current-release-status v545 handoff: True
+current-release-status review summary: True
 objective checklist v545 handoff: True
+objective checklist review summary: True
+review summary present: True
+review summary read-only warning: True
+review summary strict yield: True
 review worksheet header: audit_row_id,bucket,decision,reviewer,reviewed_at,school_id,reason,pdf_type,detected_fiscal_year,year_evidence,trusted_year_evidence,discovery_method,anchor_text,page_url,pdf_url,suggested_decision,suggested_decision_basis,review_question,false_reject_signal,notes
 scheduled task execute: "C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat"
 C:\EIDP-staging\v545-owner-docs-20260621 present: True
@@ -118,7 +129,7 @@ dist/eidp-windows.zip.sha256
 Current external SSD artifact usage after cleanup:
 
 ```text
-/Volumes/M1nG-ssd/EIDP-artifacts/dist  899M
+/Volumes/M1nG-ssd/EIDP-artifacts/dist  901M
 /Volumes/M1nG-ssd/EIDP-artifacts/logs  1.3G
 ```
 

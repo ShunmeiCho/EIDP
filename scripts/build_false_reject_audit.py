@@ -570,6 +570,103 @@ def render_review_csv(packet: dict[str, Any]) -> str:
     return output.getvalue()
 
 
+def render_review_summary(packet: dict[str, Any]) -> str:
+    """Return a read-only owner triage summary for the review worksheet."""
+
+    strict_yield = packet.get("strict_yield", {})
+    review_rows = _iter_review_rows(packet)
+    decision_counts = Counter(str(row.get("suggested_decision") or "blank") for row in review_rows)
+    bucket_counts: dict[str, Counter[str]] = {}
+    for row in review_rows:
+        bucket = str(row.get("bucket") or "")
+        suggested_decision = str(row.get("suggested_decision") or "blank")
+        bucket_counts.setdefault(bucket, Counter())[suggested_decision] += 1
+
+    priority_rows = [
+        row for row in review_rows if str(row.get("suggested_decision") or "") != "correct_reject"
+    ]
+
+    lines = [
+        "# False-Reject Review Summary",
+        "",
+        f"Archive: `{packet.get('archive', '')}`",
+        f"Release Forecast: `{strict_yield.get('release_forecast', 'NOT_READY')}`",
+        (
+            "Strict Excel-ready yield: "
+            f"`{strict_yield.get('excel_ready_acquired_count')}/{strict_yield.get('denominator')}` "
+            f"(`{strict_yield.get('excel_ready_yield_pct')}%`), "
+            f"required `{strict_yield.get('required_yield_pct')}%`."
+        ),
+        "",
+        "This is read-only triage guidance. It does not fill the worksheet, approve rejected rows, "
+        "or allow any row into Excel.",
+        "",
+        "## Suggested Decision Counts",
+        "",
+        "| Suggested decision | Rows |",
+        "| --- | ---: |",
+    ]
+    for decision, count in sorted(decision_counts.items()):
+        lines.append(f"| `{_md_cell(decision)}` | {count} |")
+
+    lines.extend(
+        [
+            "",
+            "## Suggested Decisions By Bucket",
+            "",
+            "| Bucket | correct_reject | needs_operator_review | false_reject | blank |",
+            "| --- | ---: | ---: | ---: | ---: |",
+        ]
+    )
+    for bucket, counter in sorted(bucket_counts.items()):
+        lines.append(
+            "| "
+            f"`{_md_cell(bucket)}` | "
+            f"{counter.get('correct_reject', 0)} | "
+            f"{counter.get('needs_operator_review', 0)} | "
+            f"{counter.get('false_reject', 0)} | "
+            f"{counter.get('blank', 0)} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Priority Review Rows",
+            "",
+            "Rows listed here are not suggested as obvious `correct_reject`. They still require owner/operator "
+            "decision before they can support any RCA claim.",
+            "",
+            "| Audit row ID | Bucket | Suggested decision | School ID | Reason | Review focus |",
+            "| --- | --- | --- | ---: | --- | --- |",
+        ]
+    )
+    for row in priority_rows:
+        focus = row.get("suggested_decision_basis") or row.get("review_question") or ""
+        lines.append(
+            "| "
+            f"`{_md_cell(row.get('audit_row_id', ''))}` | "
+            f"`{_md_cell(row.get('bucket', ''))}` | "
+            f"`{_md_cell(row.get('suggested_decision') or 'blank')}` | "
+            f"{_md_cell(row.get('school_id', ''))} | "
+            f"`{_md_cell(row.get('reason', ''))}` | "
+            f"{_md_cell(focus)} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Review Rules",
+            "",
+            "- Fill only `decision`, `reviewer`, `reviewed_at`, and `notes` in the CSV worksheet.",
+            "- Mark `false_reject` only with official FY2026/R8 evidence.",
+            "- Keep old-year, unknown-year, non-target, school-mismatch, and low-confidence rows out of Excel.",
+            "- Release remains blocked until the returned worksheet validates with `review_status=complete` "
+            "and `context_mismatch_count=0`.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def _review_decision_counts_json(counter: Counter[str]) -> dict[str, int]:
     return {key or "blank": count for key, count in sorted(counter.items())}
 
@@ -751,7 +848,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("archive", type=Path, help="Path to logs/stage6-evidence-*.zip.")
     parser.add_argument("--required-yield-pct", type=float, default=60.0)
     parser.add_argument("--sample-size", type=int, default=50)
-    parser.add_argument("--format", choices=("markdown", "json", "csv"), default="markdown")
+    parser.add_argument("--format", choices=("markdown", "json", "csv", "review-summary"), default="markdown")
     parser.add_argument("--json", action="store_true", help="Alias for --format json.")
     parser.add_argument("--validate-review-csv", type=Path, help="Validate a completed review CSV for this packet.")
     parser.add_argument("--require-decisions", action="store_true", help="Fail validation when any decision is blank.")
@@ -781,6 +878,9 @@ def main(argv: list[str] | None = None) -> int:
         ok = packet.get("ok") is True
     elif output_format == "csv":
         rendered = render_review_csv(packet)
+        ok = packet.get("ok") is True
+    elif output_format == "review-summary":
+        rendered = render_review_summary(packet)
         ok = packet.get("ok") is True
     else:
         rendered = render_markdown(packet)

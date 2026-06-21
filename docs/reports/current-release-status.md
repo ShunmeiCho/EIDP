@@ -151,8 +151,10 @@ identity and the v545 false-reject RCA packet. The current handoff lane is
 `docs/runbooks/eidp-v545-owner-request-20260621.txt`,
 `docs/runbooks/eidp-v545-owner-return-fill-sheet.md`,
 `docs/reports/2026-06-21-v545-false-reject-audit-packet.md`, and
-`docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`. The staged v545
-blank worksheet validation is recorded at
+`docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`. It also includes
+`docs/reports/2026-06-21-v545-false-reject-review-summary.md`, a read-only
+triage guide that groups suggested decisions without filling the worksheet or
+approving any row. The staged v545 blank worksheet validation is recorded at
 `docs/reports/2026-06-21-v545-false-reject-review-validation.json`: it reports
 `ok=true`, `review_status=incomplete`, `completed_decisions=0`,
 `context_mismatch_count=0`, and `defect_framing.status=pending_review`. This is
@@ -332,10 +334,10 @@ requires the worksheet to validate with `review_status=complete` and
 `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to
 v545 at `C:\EIDP-staging\v545-owner-docs-20260621`, recorded in
 `docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`, so the staged
-owner docs now include the v545 false-reject worksheet return rules, worksheet
-CSV, and the return-verifier false-reject arguments. The v544, v542, and v541
-handoffs remain historical evidence only. This still does not change the
-release conclusion.
+owner docs now include the v545 false-reject worksheet return rules, read-only
+review summary, worksheet CSV, and the return-verifier false-reject arguments.
+The v544, v542, and v541 handoffs remain historical evidence only. This still
+does not change the release conclusion.
 This false-reject owner-return verifier integration was first packaged and
 Windows-canary verified in `dist/eidp-windows-v542.zip` at package commit
 `d98ecd7196631a00c27aff1c240ebc7969579ce7`. CI run `27880148454` passed both

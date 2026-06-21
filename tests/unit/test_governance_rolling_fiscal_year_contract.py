@@ -140,7 +140,7 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     expected_v543_source_sha = "6aa5735d164101cbe6ec85648bcb8b6f46168c63"
     expected_v542_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
     expected_v542_source_sha = "d98ecd7196631a00c27aff1c240ebc7969579ce7"
-    expected_docs_sha = "3675dc09d5aa8e76d56d2655331b0856a08ac28a6c1741c2b9c4f2f01870fd1e"
+    expected_docs_sha = "748668b2524a5d9808c69c903bca41107e715c99ea5a897d84461f375500b29d"
     expected_v544_docs_sha = "c227b2bbc1db305ac7f44e8ad6e74aa0b38f3ddd734b239b52e2d30b014c5671"
     expected_v541_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
     expected_v541_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
@@ -208,6 +208,9 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v545-false-reject-review-summary.md" in current_status
+    assert "docs/reports/2026-06-21-v545-false-reject-review-summary.md" in objective_checklist
+    assert "read-only review summary" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" not in admin_checklist
@@ -259,11 +262,18 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "`scripts/verify_stage6_return.py` can validate the returned worksheet" in objective_checklist
     assert "v545-owner-docs-20260621" in objective_checklist
     assert "v545 false-reject RCA packet" in staging
+    assert "read-only review summary" in staging
+    assert "docs\\reports\\2026-06-21-v545-false-reject-review-summary.md present: True" in staging
+    assert "review summary read-only warning: True" in staging
+    assert "review summary strict yield: True" in staging
     assert "False-reject worksheet rules" in staging
     assert "return sheet verifier false-reject args: True" in staging
+    assert "return sheet review summary warning: True" in staging
     assert "current-release-status NOT_READY: True" in staging
     assert "current-release-status v545 handoff: True" in staging
+    assert "current-release-status review summary: True" in staging
     assert "objective checklist v545 handoff: True" in staging
+    assert "objective checklist review summary: True" in staging
     assert "C:\\EIDP-staging\\v544-owner-docs-20260621 present: False" in staging
     assert "Previous packaged bounded Windows canary: `dist/eidp-windows-v543.zip`" in objective_checklist
     assert "Owner handoff docs have been refreshed to v542" in objective_checklist

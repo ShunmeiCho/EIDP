@@ -32,6 +32,7 @@ Read first
 - docs\runbooks\eidp-v1-release-admin-checklist.md
 - docs\reports\2026-06-21-v545-disclosure-priority-windows-canary.md
 - docs\reports\2026-06-21-v545-false-reject-audit-packet.md
+- docs\reports\2026-06-21-v545-false-reject-review-summary.md
 - docs\reports\2026-06-21-v545-false-reject-review-sheet.csv
 - docs\reports\2026-06-21-v545-false-reject-review-validation.json
 - docs\reports\2026-05-19-publication-lag-release-exception-record.md

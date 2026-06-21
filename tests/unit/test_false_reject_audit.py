@@ -348,3 +348,27 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     )
     required_payload = json.loads(capsys.readouterr().out)
     assert required_payload["review_status"] == "invalid"
+
+
+def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path: Path, capsys) -> None:
+    module = _load_module()
+    archive = _write_stage6_archive(tmp_path / "stage6-evidence.zip")
+    packet = module.build_false_reject_audit_packet(archive, sample_size=2)
+
+    summary = module.render_review_summary(packet)
+
+    assert "False-Reject Review Summary" in summary
+    assert "Release Forecast: `NOT_READY`" in summary
+    assert "This is read-only triage guidance" in summary
+    assert "| `correct_reject` | 4 |" in summary
+    assert "| `needs_operator_review` | 3 |" in summary
+    assert "## Priority Review Rows" in summary
+    assert "`target_fiscal_year_not_detected`" in summary
+    assert "`site_entry_fetch_identity`" in summary
+    assert "`fiscal_year_mismatch`" not in summary.partition("## Priority Review Rows")[2]
+    assert "does not fill the worksheet" in summary
+
+    assert module.main([str(archive), "--sample-size", "2", "--format", "review-summary"]) == 0
+    cli_summary = capsys.readouterr().out
+    assert "Suggested Decisions By Bucket" in cli_summary
+    assert "context_mismatch_count=0" in cli_summary

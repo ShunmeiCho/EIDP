@@ -77,7 +77,8 @@ Latest v545 owner/operator docs staging:
 docs-only handoff ZIP staged at `C:\EIDP-staging\v545-owner-docs-20260621`.
 The v545 handoff carries the current package identity, owner-facing release
 summary, short owner sign-off form, owner request, return fill sheet, v545
-strict-yield canary report, and v545 false-reject audit packet plus worksheet.
+strict-yield canary report, and v545 false-reject audit packet plus review
+summary and worksheet.
 The earlier v544, v542, and v541 handoffs remain historical evidence only.
 Current v545 strict-yield RCA summary:
 `docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md` records
@@ -285,7 +286,8 @@ that keeps manual work below the release threshold.
   return fill sheet, release summary, short owner sign-off form, v545 Windows
   canary report, current release status, publication-lag exception record, OCR
   scope brief, v1 known limitations, and the v545 false-reject RCA packet plus
-  review worksheet. It was staged at `C:\EIDP-staging\v545-owner-docs-20260621`
+  read-only review summary and review worksheet. It was staged at
+  `C:\EIDP-staging\v545-owner-docs-20260621`
   and recorded in `docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`.
   This copied documentation only and did not modify active runtime, DB, PDFs,
   or Task Scheduler.
@@ -319,8 +321,12 @@ that keeps manual work below the release threshold.
   context checks, read-only suggested triage guidance, required
   reviewer/timestamp fields for completed decisions, notes for `false_reject`
   and `needs_operator_review`, and bucket-level decision counts for the RCA
-  lanes. The v545 owner request and owner return fill sheet now describe the
-  required worksheet return rules, and
+  lanes. The companion summary
+  `docs/reports/2026-06-21-v545-false-reject-review-summary.md` groups
+  non-binding suggested decisions and priority rows for faster owner/operator
+  review, but it does not fill the worksheet or approve any row. The v545 owner
+  request and owner return fill sheet now describe the required worksheet return
+  rules, and
   `scripts/verify_stage6_return.py` can validate the returned worksheet through
   its false-reject arguments.
 - Latest post-v535 source hardening: the Sanko shared-origin disclosure probe

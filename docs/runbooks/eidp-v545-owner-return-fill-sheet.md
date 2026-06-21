@@ -98,6 +98,8 @@ real cycle and returned diagnostics.
 - completed false-reject review worksheet if claiming a discovery/classifier/year
   evidence false reject:
   `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`
+- optional read-only triage guide for that worksheet:
+  `docs/reports/2026-06-21-v545-false-reject-review-summary.md`
 
 ## False-Reject RCA Worksheet
 
@@ -111,6 +113,15 @@ Worksheet to fill:
 ```text
 docs/reports/2026-06-21-v545-false-reject-review-sheet.csv
 ```
+
+Read-only triage guide:
+
+```text
+docs/reports/2026-06-21-v545-false-reject-review-summary.md
+```
+
+The summary groups non-binding suggested decisions and priority rows.
+It does not fill the worksheet, approve rejected rows, or allow any row into Excel.
 
 Fill only these columns:
 

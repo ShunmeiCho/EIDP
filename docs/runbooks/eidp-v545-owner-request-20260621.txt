@@ -73,12 +73,16 @@ Required return files for owner real cycle
 - completed false-reject review worksheet, only if the release discussion claims
   material discovery/classifier/year-evidence false rejects:
   docs\reports\2026-06-21-v545-false-reject-review-sheet.csv
+  Use docs\reports\2026-06-21-v545-false-reject-review-summary.md as a
+  read-only triage guide. It does not fill the worksheet or approve any row.
 
 False-reject worksheet rules
 ----------------------------
 The worksheet is an RCA input, not release approval and not Excel proof.
 Fill only decision/reviewer/reviewed_at/notes. Do not edit row context such as
 audit_row_id, bucket, school fields, URLs, anchor text, or review questions.
+The review summary is guidance only; the CSV worksheet remains the source of
+returned owner/operator decisions.
 
 Allowed decisions:
   false_reject
