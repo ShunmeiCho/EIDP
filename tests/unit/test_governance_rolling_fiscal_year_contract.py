@@ -130,7 +130,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
 
     expected_package_sha = "f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b"
     expected_source_sha = "86c848f68e1dbde85c9b6422cfc827149940e02a"
-    expected_docs_sha = "6ec0507cf62820de686a18d23dbb560e2a3132cdaaabd75ef4ba616ece0eec81"
+    expected_docs_sha = "2829cfddebfc6aeffda9295ed6fcdde34976b311e6338d20942a69ad475e5039"
 
     for text in (first_read, request, return_sheet, release_summary, owner_signoff):
         assert expected_package_sha in text

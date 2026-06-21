@@ -2,8 +2,8 @@
 
 Archive: `logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`
 Release Forecast: `NOT_READY`
-Validation OK: `True`
-Review status: `incomplete`
+Validation OK: `False`
+Review status: `invalid`
 Completed decisions: `0/53`
 Blank decisions: `53`
 Context mismatches: `0`
@@ -35,9 +35,29 @@ This summary is read-only. It does not fill the worksheet, approve rejected rows
 
 ## Blocking Errors
 
-- None.
+- line 2: decision is required
+- line 3: decision is required
+- line 4: decision is required
+- line 5: decision is required
+- line 6: decision is required
+- line 7: decision is required
+- line 8: decision is required
+- line 9: decision is required
+- line 10: decision is required
+- line 11: decision is required
+- line 12: decision is required
+- line 13: decision is required
+- line 14: decision is required
+- line 15: decision is required
+- line 16: decision is required
+- line 17: decision is required
+- line 18: decision is required
+- line 19: decision is required
+- line 20: decision is required
+- line 21: decision is required
+- ... 33 more errors
 
 ## Next Action
 
-- Fill every blank decision with reviewer, reviewed_at, and required notes before using this worksheet as RCA evidence.
+- Fix the listed CSV errors before using this worksheet as release evidence.
 - Keep old-year, unknown-year, non-target, school-mismatch, and low-confidence rows out of Excel.

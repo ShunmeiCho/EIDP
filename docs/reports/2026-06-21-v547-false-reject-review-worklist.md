@@ -19,26 +19,15 @@ This worklist is read-only. It organizes the CSV worksheet; it does not fill dec
 
 | Suggested decision | Rows |
 | --- | ---: |
-| `needs_operator_review` | 33 |
-| `correct_reject` | 20 |
+| `needs_operator_review` | 29 |
+| `correct_reject` | 24 |
 
-## 1. Inspect official evidence before deciding (`33` rows)
+## 1. Inspect official evidence before deciding (`29` rows)
 
-### `classified_non_target` (`10` rows)
+### `classified_non_target` (`8` rows)
 
 Review question: Did the classifier mark any target application form as non-target?
 False-reject signal: PDF is a target application form despite the non-target classification.
-
-#### `d947ab42934f6fba` / school `3`
-
-- Reason: `classified_non_target`
-- PDF type: `non_target`
-- Detected fiscal year: ``
-- Discovery method: `school_domain_override`
-- Anchor: 情報処理科 令和6年度
-- Suggested basis: Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject.
-- Page URL: <https://www.nkhs.ac.jp/about/publicindex/>
-- PDF URL: <http://mail.nkhs.ac.jp/release/2024/HC_koukai_2024.pdf>
 
 #### `3a0f8397307c16d4` / school `11`
 
@@ -46,21 +35,10 @@ False-reject signal: PDF is a target application form despite the non-target cla
 - PDF type: `non_target`
 - Detected fiscal year: ``
 - Discovery method: `school_domain_override`
-- Anchor: 
+- Anchor: ``
 - Suggested basis: Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject.
 - Page URL: <https://www.nkz.ac.jp/clginfo/oi/oiC-d_nursingpublichealth_13.html>
 - PDF URL: <https://www.nkz.ac.jp/clginfo/oi/pdf/oiC-d_nursingpublichealth_13.pdf>
-
-#### `f7d6437ae0b7f715` / school `12`
-
-- Reason: `classified_non_target`
-- PDF type: `non_target`
-- Detected fiscal year: `2025`
-- Discovery method: `school_domain_override`
-- Anchor: 
-- Suggested basis: Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject.
-- Page URL: <https://www.nkz.ac.jp/clginfo/ni/niC-d_nursingpublichealth_13.html>
-- PDF URL: <https://www.nkz.ac.jp/clginfo/ni/pdf/niC-d_nursingpublichealth_13.pdf>
 
 #### `9e251721aa515c6b` / school `13`
 
@@ -221,7 +199,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.mode.ac.jp/tokyo>
 - PDF URL: <https://www.mode.ac.jp/tokyo>
@@ -232,7 +210,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.mode.ac.jp/osaka>
 - PDF URL: <https://www.mode.ac.jp/osaka>
@@ -243,7 +221,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.mode.ac.jp/nagoya>
 - PDF URL: <https://www.mode.ac.jp/nagoya>
@@ -254,7 +232,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.hal.ac.jp/tokyo>
 - PDF URL: <https://www.hal.ac.jp/tokyo>
@@ -265,7 +243,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.hal.ac.jp/osaka>
 - PDF URL: <https://www.hal.ac.jp/osaka>
@@ -276,7 +254,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.hal.ac.jp/nagoya>
 - PDF URL: <https://www.hal.ac.jp/nagoya>
@@ -287,7 +265,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.iko.ac.jp/tokyo>
 - PDF URL: <https://www.iko.ac.jp/tokyo>
@@ -298,7 +276,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.iko.ac.jp/osaka>
 - PDF URL: <https://www.iko.ac.jp/osaka>
@@ -309,7 +287,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - PDF type: ``
 - Detected fiscal year: ``
 - Discovery method: ``
-- Anchor: 
+- Anchor: ``
 - Suggested basis: No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page.
 - Page URL: <https://www.iko.ac.jp/nagoya>
 - PDF URL: <https://www.iko.ac.jp/nagoya>
@@ -336,7 +314,7 @@ False-reject signal: The official source points to a valid FY2026/R8 target docu
 - Page URL: <https://www.sanko.ac.jp/disclosure/fukuoka-med/>
 - PDF URL: <https://www.sanko.ac.jp/disclosure/fukuoka-med/docs/99158211b0011c77cfb13002f8106b4eb79443a6.pdf>
 
-### `target_fiscal_year_not_detected` (`6` rows)
+### `target_fiscal_year_not_detected` (`4` rows)
 
 Review question: Can trusted FY2026/R8 evidence be found in the official page, anchor, filename, or PDF body?
 False-reject signal: Trusted FY2026/R8 evidence exists but was not propagated to verification.
@@ -385,35 +363,35 @@ False-reject signal: Trusted FY2026/R8 evidence exists but was not propagated to
 - Page URL: <https://www.neec.ac.jp/portal/public/mext-scholarship/>
 - PDF URL: <https://www.neec.ac.jp/assets/contents/documents/portal/syllabus/kamata/portal_syllabus_kamata_yoshiki.pdf>
 
-#### `9654c51f02f8d03a` / school `40`
 
-- Reason: `target_fiscal_year_not_detected`
-- PDF type: `image_only`
-- Detected fiscal year: ``
-- Discovery method: `seed_csv`
-- Anchor: 2021年度
-- Suggested basis: Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence.
-- Page URL: <https://www.sanko.ac.jp/sendai-beauty/disclosure/>
-- PDF URL: <https://www.sanko.ac.jp/sendai-beauty/pdf/yoshiki2021.pdf>
+## 2. Confirm suggested correct rejects (`24` rows)
 
-#### `53081162229f7ef3` / school `44`
-
-- Reason: `target_fiscal_year_not_detected`
-- PDF type: `image_only`
-- Detected fiscal year: ``
-- Discovery method: `school_domain_override`
-- Anchor: 2019年度
-- Suggested basis: Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence.
-- Page URL: <https://www.sanko.ac.jp/tachikawa-beauty/disclosure/>
-- PDF URL: <https://www.sanko.ac.jp/tachikawa-beauty/pdf/yoshiki.pdf>
-
-
-## 2. Confirm suggested correct rejects (`20` rows)
-
-### `classified_non_target` (`2` rows)
+### `classified_non_target` (`4` rows)
 
 Review question: Did the classifier mark any target application form as non-target?
 False-reject signal: PDF is a target application form despite the non-target classification.
+
+#### `d947ab42934f6fba` / school `3`
+
+- Reason: `classified_non_target`
+- PDF type: `non_target`
+- Detected fiscal year: ``
+- Discovery method: `school_domain_override`
+- Anchor: 情報処理科 令和6年度
+- Suggested basis: Explicit fiscal year 2024 is not FY2026; confirm no trusted target-year evidence exists.
+- Page URL: <https://www.nkhs.ac.jp/about/publicindex/>
+- PDF URL: <http://mail.nkhs.ac.jp/release/2024/HC_koukai_2024.pdf>
+
+#### `f7d6437ae0b7f715` / school `12`
+
+- Reason: `classified_non_target`
+- PDF type: `non_target`
+- Detected fiscal year: `2025`
+- Discovery method: `school_domain_override`
+- Anchor: ``
+- Suggested basis: Explicit fiscal year 2025 is not FY2026; confirm no trusted target-year evidence exists.
+- Page URL: <https://www.nkz.ac.jp/clginfo/ni/niC-d_nursingpublichealth_13.html>
+- PDF URL: <https://www.nkz.ac.jp/clginfo/ni/pdf/niC-d_nursingpublichealth_13.pdf>
 
 #### `7ad33b7e698ea7d2` / school `14`
 
@@ -492,7 +470,7 @@ False-reject signal: PDF/page/anchor contains trusted FY2026/R8 evidence but the
 - PDF type: `target`
 - Detected fiscal year: `2025`
 - Discovery method: `school_domain_override`
-- Anchor: 
+- Anchor: ``
 - Suggested basis: Detected fiscal year 2025 is not FY2026; confirm no trusted target-year evidence exists.
 - Page URL: <https://www.nkz.ac.jp/clginfo/ni/niZ-studyspt_13.html>
 - PDF URL: <https://www.nkz.ac.jp/clginfo/ni/pdf/niZ-studyspt_13.pdf>
@@ -644,3 +622,30 @@ False-reject signal: Anchor/page/PDF title is a target application form, not GPA
 - Suggested basis: Anchor or URL contains an obvious non-target hint; confirm it is not a target application form.
 - Page URL: <https://www.sanko.ac.jp/disclosure/yokohama-med/>
 - PDF URL: <https://www.sanko.ac.jp/disclosure/yokohama-med/docs/kankeisya.pdf>
+
+### `target_fiscal_year_not_detected` (`2` rows)
+
+Review question: Can trusted FY2026/R8 evidence be found in the official page, anchor, filename, or PDF body?
+False-reject signal: Trusted FY2026/R8 evidence exists but was not propagated to verification.
+
+#### `9654c51f02f8d03a` / school `40`
+
+- Reason: `target_fiscal_year_not_detected`
+- PDF type: `image_only`
+- Detected fiscal year: ``
+- Discovery method: `seed_csv`
+- Anchor: 2021年度
+- Suggested basis: Explicit fiscal year 2021 is not FY2026; confirm the row is not target-year evidence.
+- Page URL: <https://www.sanko.ac.jp/sendai-beauty/disclosure/>
+- PDF URL: <https://www.sanko.ac.jp/sendai-beauty/pdf/yoshiki2021.pdf>
+
+#### `53081162229f7ef3` / school `44`
+
+- Reason: `target_fiscal_year_not_detected`
+- PDF type: `image_only`
+- Detected fiscal year: ``
+- Discovery method: `school_domain_override`
+- Anchor: 2019年度
+- Suggested basis: Explicit fiscal year 2019 is not FY2026; confirm the row is not target-year evidence.
+- Page URL: <https://www.sanko.ac.jp/tachikawa-beauty/disclosure/>
+- PDF URL: <https://www.sanko.ac.jp/tachikawa-beauty/pdf/yoshiki.pdf>

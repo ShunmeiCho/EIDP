@@ -473,6 +473,42 @@ def test_false_reject_audit_review_worklist_lists_owner_next_actions(tmp_path: P
     assert "Suggested Decision Counts" in cli_worklist
 
 
+def test_false_reject_audit_triage_marks_explicit_non_target_years_correct_reject() -> None:
+    module = _load_module()
+
+    detected_decision, detected_basis = module._suggested_triage_decision(
+        bucket_name="classified_non_target",
+        row={"detected_fiscal_year": 2025, "anchor_text": ""},
+        target_fiscal_year=2026,
+    )
+    assert detected_decision == "correct_reject"
+    assert "Explicit fiscal year 2025 is not FY2026" in detected_basis
+
+    western_decision, western_basis = module._suggested_triage_decision(
+        bucket_name="target_fiscal_year_not_detected",
+        row={"anchor_text": "2021年度"},
+        target_fiscal_year=2026,
+    )
+    assert western_decision == "correct_reject"
+    assert "Explicit fiscal year 2021 is not FY2026" in western_basis
+
+    reiwa_decision, reiwa_basis = module._suggested_triage_decision(
+        bucket_name="classified_non_target",
+        row={"anchor_text": "情報処理科 令和6年度"},
+        target_fiscal_year=2026,
+    )
+    assert reiwa_decision == "correct_reject"
+    assert "Explicit fiscal year 2024 is not FY2026" in reiwa_basis
+
+    target_year_decision, target_year_basis = module._suggested_triage_decision(
+        bucket_name="classified_non_target",
+        row={"anchor_text": "令和8年度 申請関係書類"},
+        target_fiscal_year=2026,
+    )
+    assert target_year_decision == "needs_operator_review"
+    assert "not obviously safe" in target_year_basis
+
+
 def test_false_reject_audit_validation_summary_requires_review_csv(tmp_path: Path, capsys) -> None:
     module = _load_module()
     archive = _write_stage6_archive(tmp_path / "stage6-evidence.zip")

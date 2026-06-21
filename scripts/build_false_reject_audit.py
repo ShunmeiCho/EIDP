@@ -12,6 +12,7 @@ import csv
 import hashlib
 import io
 import json
+import re
 import sys
 import zipfile
 from collections import Counter
@@ -42,6 +43,9 @@ OBVIOUS_NON_TARGET_HINTS = (
     "募集",
     "入学",
 )
+WESTERN_FISCAL_YEAR_RE = re.compile(r"(20\d{2})\s*年度")
+REIWA_FISCAL_YEAR_RE = re.compile(r"令和\s*([0-9０-９元]+)\s*年度")
+FULLWIDTH_DIGIT_TRANSLATION = str.maketrans("０１２３４５６７８９", "0123456789")
 
 REQUIRED_LABELS = (
     "build_info",
@@ -246,6 +250,49 @@ def _reason_year(reason: str) -> int | None:
     return None
 
 
+def _parse_reiwa_year(value: str) -> int | None:
+    normalized = value.translate(FULLWIDTH_DIGIT_TRANSLATION)
+    if normalized == "元":
+        era_year = 1
+    elif normalized.isdigit():
+        era_year = int(normalized)
+    else:
+        return None
+    return 2018 + era_year
+
+
+def _explicit_fiscal_year_hints(*values: object) -> set[int]:
+    hints: set[int] = set()
+    for value in values:
+        text = str(value or "")
+        for match in WESTERN_FISCAL_YEAR_RE.finditer(text):
+            hints.add(int(match.group(1)))
+        for match in REIWA_FISCAL_YEAR_RE.finditer(text):
+            parsed = _parse_reiwa_year(match.group(1))
+            if parsed is not None:
+                hints.add(parsed)
+    return hints
+
+
+def _non_target_fiscal_year_hint(row: dict[str, Any], target_fiscal_year: int | None) -> int | None:
+    if target_fiscal_year is None:
+        return None
+
+    detected_fiscal_year = row.get("detected_fiscal_year")
+    if isinstance(detected_fiscal_year, int) and detected_fiscal_year != target_fiscal_year:
+        return detected_fiscal_year
+
+    hints = _explicit_fiscal_year_hints(
+        row.get("anchor_text"),
+        row.get("year_evidence"),
+        row.get("trusted_year_evidence"),
+    )
+    if target_fiscal_year in hints:
+        return None
+    non_target_hints = sorted(hint for hint in hints if hint != target_fiscal_year)
+    return non_target_hints[-1] if non_target_hints else None
+
+
 def _suggested_triage_decision(
     *,
     bucket_name: str,
@@ -272,6 +319,15 @@ def _suggested_triage_decision(
         return ("", "Review whether trusted target-year evidence was missed.")
 
     if bucket_name in {"pre_filtered_non_target_hint", "classified_non_target"}:
+        non_target_year = _non_target_fiscal_year_hint(row, target_fiscal_year)
+        if non_target_year is not None:
+            return (
+                "correct_reject",
+                (
+                    f"Explicit fiscal year {non_target_year} is not {target_label}; "
+                    "confirm no trusted target-year evidence exists."
+                ),
+            )
         evidence_text = " ".join(
             str(row.get(key) or "") for key in ("anchor_text", "page_url", "pdf_url", "reason", "pdf_type")
         )
@@ -290,6 +346,15 @@ def _suggested_triage_decision(
         )
 
     if bucket_name == "target_fiscal_year_not_detected":
+        non_target_year = _non_target_fiscal_year_hint(row, target_fiscal_year)
+        if non_target_year is not None:
+            return (
+                "correct_reject",
+                (
+                    f"Explicit fiscal year {non_target_year} is not {target_label}; "
+                    "confirm the row is not target-year evidence."
+                ),
+            )
         return (
             "needs_operator_review",
             "Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence.",
@@ -719,6 +784,11 @@ def _worklist_url_line(label: str, value: object) -> str:
     return f"- {label}: <{url}>" if url else f"- {label}: ``"
 
 
+def _worklist_text_line(label: str, value: object) -> str:
+    text = _md_cell(value)
+    return f"- {label}: {text}" if text else f"- {label}: ``"
+
+
 def render_review_worklist(packet: dict[str, Any]) -> str:
     """Return an owner worklist that organizes every worksheet row by next action."""
 
@@ -805,7 +875,7 @@ def render_review_worklist(packet: dict[str, Any]) -> str:
                         f"- PDF type: `{_md_cell(row.get('pdf_type', ''))}`",
                         f"- Detected fiscal year: `{_md_cell(row.get('detected_fiscal_year', ''))}`",
                         f"- Discovery method: `{_md_cell(row.get('discovery_method', ''))}`",
-                        f"- Anchor: {_md_cell(row.get('anchor_text', ''))}",
+                        _worklist_text_line("Anchor", row.get("anchor_text")),
                         f"- Suggested basis: {_md_cell(row.get('suggested_decision_basis', ''))}",
                         _worklist_url_line("Page URL", row.get("page_url")),
                         _worklist_url_line("PDF URL", row.get("pdf_url")),

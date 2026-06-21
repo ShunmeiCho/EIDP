@@ -146,10 +146,12 @@ Decision meanings:
 - `needs_operator_review`: there is plausible official evidence, but it needs a
   human decision before it can affect any workflow or Excel output.
 
-Developer validation is run from current `main`, or from the staged v547
-package carrying the same verifier/helper integration, after the returned CSV
-is copied back to the repo. The v547 package proves the verifier and helper
-are available; it does not prove the returned worksheet is complete.
+Developer validation is run from current `main` after the returned CSV is
+copied back to the repo. The staged v547 package proves the verifier and helper
+were packaged for the v547 canary, but current `main` has newer read-only
+triage guidance for explicit non-target-year hints; validate this regenerated
+worksheet from current `main` unless a fresh Windows package is built with the
+same helper revision.
 Current `main` also emits a compact `false_reject_review_summary` in the JSON
 result for easier owner/developer handoff; this is a convenience field only and
 does not change `ok`, `errors`, `review_status=complete`, or

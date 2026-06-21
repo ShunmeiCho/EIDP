@@ -17,7 +17,7 @@ Release Forecast: `NOT_READY`
 | Field | Value |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v547-owner-docs-20260621.zip` |
-| ZIP SHA256 | `6ec0507cf62820de686a18d23dbb560e2a3132cdaaabd75ef4ba616ece0eec81` |
+| ZIP SHA256 | `2829cfddebfc6aeffda9295ed6fcdde34976b311e6338d20942a69ad475e5039` |
 | SHA256 sidecar | `C:\EIDP-staging\eidp-v547-owner-docs-20260621.zip.sha256` |
 | Extracted destination | `C:\EIDP-staging\v547-owner-docs-20260621` |
 | Active Scheduled Task after staging | `"C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat"` |
@@ -27,8 +27,8 @@ Windows verification returned:
 ```json
 {
   "ok": true,
-  "expected_sha": "6ec0507cf62820de686a18d23dbb560e2a3132cdaaabd75ef4ba616ece0eec81",
-  "actual_sha": "6EC0507CF62820DE686A18D23DBB560E2A3132CDAAABD75EF4BA616ECE0EEC81",
+  "expected_sha": "2829cfddebfc6aeffda9295ed6fcdde34976b311e6338d20942a69ad475e5039",
+  "actual_sha": "2829CFDDEBFC6AEFFDA9295ED6FCDDE34976B311E6338D20942A69AD475E5039",
   "dest": "C:\\EIDP-staging\\v547-owner-docs-20260621",
   "missing": [],
   "active_task": "\"C:\\Users\\cyo20\\EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat\" "

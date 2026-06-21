@@ -51,8 +51,10 @@ v547 while removing v545 transfer ZIPs and the v545 side-by-side directory
 `v547` still has not completed OCR scope approval, owner real-cycle sign-off,
 or publication-lag decision. Release Forecast remains `NOT_READY`.
 
-Current v547 false-reject review guidance is Windows-canary verified. Running
-the updated script against the v547 Stage 6 evidence produced
+Current `main` false-reject review guidance was rerun against the v547
+Windows-canary Stage 6 evidence. It keeps the v547 evidence bundle fixed while
+making explicit non-target-year hints owner-triage only. Running the current
+script produced
 `docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
 `docs/reports/2026-06-21-v547-false-reject-review-worklist.md`,
 `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
@@ -61,10 +63,15 @@ the updated script against the v547 Stage 6 evidence produced
 worklist is generated with the same `--sample-size 12` as the worksheet and
 lists the `53` owner rows with page/PDF URLs. The worksheet still has
 `decision=blank` for all `53` rows pending owner/operator review, but
-`suggested_decision` now has `0` blanks (`20` `correct_reject`, `33`
+`suggested_decision` now has `0` blanks (`24` `correct_reject`, `29`
 `needs_operator_review`). `--require-decisions` fails as expected, so blank
 owner decisions remain blocked and cannot support Excel output or a generic
 model-failure claim.
+
+The v547 runtime package still remains the latest completed Windows canary
+package, but this regenerated worksheet is a current-`main` helper output. Use
+current `main` for validating this regenerated worksheet unless a fresh package
+is built and Windows-verified with the same helper revision.
 
 The next strict-yield action is worksheet-driven, not generic crawler work: a
 high `false_reject` count means fix the specific discovery/filter rule and add

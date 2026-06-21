@@ -10,18 +10,18 @@ This is read-only triage guidance. It does not fill the worksheet, approve rejec
 
 | Suggested decision | Rows |
 | --- | ---: |
-| `correct_reject` | 20 |
-| `needs_operator_review` | 33 |
+| `correct_reject` | 24 |
+| `needs_operator_review` | 29 |
 
 ## Suggested Decisions By Bucket
 
 | Bucket | correct_reject | needs_operator_review | false_reject | blank |
 | --- | ---: | ---: | ---: | ---: |
-| `classified_non_target` | 2 | 10 | 0 | 0 |
+| `classified_non_target` | 4 | 8 | 0 | 0 |
 | `fiscal_year_mismatch` | 12 | 0 | 0 | 0 |
 | `pre_filtered_non_target_hint` | 6 | 6 | 0 | 0 |
 | `site_entry_fetch_identity` | 0 | 11 | 0 | 0 |
-| `target_fiscal_year_not_detected` | 0 | 6 | 0 | 0 |
+| `target_fiscal_year_not_detected` | 2 | 4 | 0 | 0 |
 
 ## Priority Review Rows
 
@@ -35,9 +35,7 @@ Rows listed here are not suggested as obvious `correct_reject`. They still requi
 | `b7fab3b4be5d26ca` | `pre_filtered_non_target_hint` | `needs_operator_review` | 17 | `pre_filtered_non_target_hint` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
 | `48c7bea6d0b411c5` | `pre_filtered_non_target_hint` | `needs_operator_review` | 19 | `pre_filtered_non_target_hint` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
 | `d1dd4a4bfcb73eec` | `pre_filtered_non_target_hint` | `needs_operator_review` | 21 | `pre_filtered_non_target_hint` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
-| `d947ab42934f6fba` | `classified_non_target` | `needs_operator_review` | 3 | `classified_non_target` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
 | `3a0f8397307c16d4` | `classified_non_target` | `needs_operator_review` | 11 | `classified_non_target` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
-| `f7d6437ae0b7f715` | `classified_non_target` | `needs_operator_review` | 12 | `classified_non_target` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
 | `9e251721aa515c6b` | `classified_non_target` | `needs_operator_review` | 13 | `classified_non_target` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
 | `f36afe0d6149df33` | `classified_non_target` | `needs_operator_review` | 16 | `classified_non_target` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
 | `e06645c66c9ec7fa` | `classified_non_target` | `needs_operator_review` | 17 | `classified_non_target` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
@@ -47,8 +45,6 @@ Rows listed here are not suggested as obvious `correct_reject`. They still requi
 | `52ea4a2b283e7bef` | `classified_non_target` | `needs_operator_review` | 27 | `classified_non_target` | Non-target rejection is not obviously safe from anchor/URL evidence; operator must inspect the official PDF/page before confirming correct_reject or false_reject. |
 | `3df9d0a93752f3c8` | `target_fiscal_year_not_detected` | `needs_operator_review` | 1 | `target_fiscal_year_not_detected` | Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence. |
 | `780758ff3aec558a` | `target_fiscal_year_not_detected` | `needs_operator_review` | 2 | `target_fiscal_year_not_detected` | Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence. |
-| `9654c51f02f8d03a` | `target_fiscal_year_not_detected` | `needs_operator_review` | 40 | `target_fiscal_year_not_detected` | Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence. |
-| `53081162229f7ef3` | `target_fiscal_year_not_detected` | `needs_operator_review` | 44 | `target_fiscal_year_not_detected` | Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence. |
 | `a3873ee6a0eb300e` | `target_fiscal_year_not_detected` | `needs_operator_review` | 1 | `target_fiscal_year_not_detected` | Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence. |
 | `ad9beff98fd03c72` | `target_fiscal_year_not_detected` | `needs_operator_review` | 2 | `target_fiscal_year_not_detected` | Target-form-like row lacks trusted target-year evidence; operator must confirm official FY evidence. |
 | `cff41b0714a9200e` | `site_entry_fetch_identity` | `needs_operator_review` | 4 | `no_candidates_found` | No valid candidate was found or fetch failed; inspect the official SiteEntry/disclosure page. |

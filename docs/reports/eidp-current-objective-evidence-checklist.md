@@ -194,8 +194,10 @@ algorithm/model defect. Completed rows require `reviewer` and an ISO
 The current source runbooks now tell the owner/operator how to return that
 worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
 immutable row context untouched, and have the developer validate the returned
-CSV from current `main` or from the staged v547 package carrying the helper
-beside the verifier. The owner-return verifier now accepts
+CSV from current `main`. The staged v547 package carries the packaged v547
+helper, but the regenerated worksheet uses current-`main` explicit-year
+triage guidance unless a fresh Windows package is built with the same helper
+revision. The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`, and
 `--false-reject-sample-size`; when supplied, it requires `review_status=complete`
 and `context_mismatch_count=0`. Current `main` also emits a compact
@@ -263,7 +265,7 @@ validation recorded in
 `docs/reports/2026-06-21-v547-false-reject-review-validation.json` and
 `docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`; the
 owner `decision` cells remain blank, but suggested decisions now have `0`
-blanks (`20` `correct_reject`, `33` `needs_operator_review`). This does not
+blanks (`24` `correct_reject`, `29` `needs_operator_review`). This does not
 approve any row and does not relax strict FY gates.
 Release verdict: **NOT_READY**
 

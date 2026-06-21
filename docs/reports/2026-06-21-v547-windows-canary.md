@@ -174,7 +174,9 @@ instead of relaxing Excel-ready gates.
 
 ## False-Reject Review Evidence
 
-The v547 worksheet was regenerated from the v547 Stage 6 evidence:
+The v547 worksheet was regenerated from the v547 Stage 6 evidence. Later
+current-`main` helper reruns keep the same evidence bundle fixed and only update
+read-only triage guidance; they do not rerun the Windows canary package:
 
 - summary: `docs/reports/2026-06-21-v547-false-reject-review-summary.md`;
 - worksheet: `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`;
@@ -185,8 +187,8 @@ Validation result:
 
 - worksheet rows: `53`;
 - `suggested_decision` blanks: `0`;
-- suggested `correct_reject`: `20`;
-- suggested `needs_operator_review`: `33`;
+- suggested `correct_reject`: `24`;
+- suggested `needs_operator_review`: `29`;
 - submitted owner/operator decisions: `0/53`;
 - `--require-decisions` fails as expected because every `decision` is blank.
 
