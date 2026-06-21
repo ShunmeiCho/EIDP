@@ -258,30 +258,32 @@ prove release readiness. Evidence is recorded in
 `logs/win-v542-d98ecd7-canary/stage6-evidence-verify-20260621-040959.json`,
 and `logs/win-v542-d98ecd7-canary/20260620_185933-summary.json`.
 
-The latest owner/operator handoff docs have been refreshed to v545 package
-identity and the v545 false-reject RCA packet. The current handoff lane is
-`C:\EIDP-staging\v545-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`, and includes
-`docs/runbooks/00-READ-ME-FIRST-v545.txt`,
-`docs/runbooks/eidp-v545-release-summary.md`,
-`docs/runbooks/eidp-v545-owner-signoff.md`,
-`docs/runbooks/eidp-v545-owner-request-20260621.txt`,
-`docs/runbooks/eidp-v545-owner-return-fill-sheet.md`,
-`docs/reports/2026-06-21-v545-false-reject-audit-packet.md`, and
-`docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`. It also includes
-`docs/reports/2026-06-21-v545-false-reject-review-summary.md`, a read-only
+The latest owner/operator handoff docs have been refreshed to v547 package
+identity and the v547 false-reject review worksheet. The current handoff lane is
+`C:\EIDP-staging\v547-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`, and includes
+`docs/runbooks/00-READ-ME-FIRST-v547.txt`,
+`docs/runbooks/eidp-v547-release-summary.md`,
+`docs/runbooks/eidp-v547-owner-signoff.md`,
+`docs/runbooks/eidp-v547-owner-request-20260621.txt`,
+`docs/runbooks/eidp-v547-owner-return-fill-sheet.md`,
+`docs/reports/2026-06-21-v547-package-gates.md`,
+`docs/reports/2026-06-21-v547-windows-canary.md`, and
+`docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`. It also includes
+`docs/reports/2026-06-21-v547-false-reject-review-summary.md`, a read-only
 triage guide that groups suggested decisions without filling the worksheet or
-approving any row. The staged v545 blank worksheet validation is recorded at
-`docs/reports/2026-06-21-v545-false-reject-review-validation.json`: it reports
+approving any row. The staged v547 blank worksheet validation is recorded at
+`docs/reports/2026-06-21-v547-false-reject-review-validation.json`: it reports
 `ok=true`, `review_status=incomplete`, `completed_decisions=0`,
 `context_mismatch_count=0`, and `defect_framing.status=pending_review`. A
 readable require-decisions failure summary is also recorded at
-`docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md`: it
-reports `Validation OK=False`, `completed_decisions=0/53`, `blank_decisions=53`,
-and `context_mismatches=0`. This is a docs-only handoff and does not approve
-v1.0, prove an algorithm/model defect, or replace the missing owner real-cycle
-evidence. The earlier v544, v542, and v541 owner-docs refreshes remain
-historical handoff evidence only.
+`docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`: it
+reports `Validation OK=True` for the blank worksheet structure,
+`completed_decisions=0/53`, `blank_decisions=53`, and `context_mismatches=0`;
+the same worksheet still fails when `--require-decisions` is used. This is a
+docs-only handoff and does not approve v1.0, prove an algorithm/model defect,
+or replace the missing owner real-cycle evidence. The earlier v545, v544, v542,
+and v541 owner-docs refreshes remain historical handoff evidence only.
 
 Current `main` now adds a compact `false_reject_review_summary` field to
 `scripts/verify_stage6_return.py` results whenever false-reject worksheet
@@ -432,7 +434,7 @@ order, without counting old-year PDFs, unknown-year documents, non-target files,
 or identity mismatches as FY2026/R8 success. This also must not be simplified
 to "the algorithm/model is broken" until a rejection-bucket false-reject audit
 shows material over-rejection or fiscal-year extraction mistakes.
-The current v545 false-reject audit packet is now recorded in
+The historical v545 false-reject audit packet is recorded in
 `docs/reports/2026-06-21-v545-false-reject-audit-packet.md`; it was generated
 from the v545 Stage 6 evidence ZIP and samples fiscal-year mismatch,
 pre-filtered non-target, classified non-target, target-year-unverified, and
@@ -462,12 +464,12 @@ verifier now accepts `--false-reject-evidence-zip`,
 `--false-reject-review-csv`, and `--false-reject-sample-size`; when supplied, it
 requires the worksheet to validate with `review_status=complete` and
 `context_mismatch_count=0`. The Windows docs-only handoff has been refreshed to
-v545 at `C:\EIDP-staging\v545-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`, so the staged
-owner docs now include the v545 false-reject worksheet return rules, read-only
+v547 at `C:\EIDP-staging\v547-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`, so the staged
+owner docs now include the v547 false-reject worksheet return rules, read-only
 review summary, worksheet CSV, and the return-verifier false-reject arguments.
-The v544, v542, and v541 handoffs remain historical evidence only. This still
-does not change the release conclusion.
+The v545, v544, v542, and v541 handoffs remain historical evidence only. This
+still does not change the release conclusion.
 This false-reject owner-return verifier integration was first packaged and
 Windows-canary verified in `dist/eidp-windows-v542.zip` at package commit
 `d98ecd7196631a00c27aff1c240ebc7969579ce7`. CI run `27880148454` passed both
@@ -539,10 +541,11 @@ and v544 refreshed the latest alias. After v544 owner-docs staging, cleanup
 removed the superseded v542 owner-doc transfer ZIP/sidecar from `dist` and
 removed the v542 owner-doc ZIP/sidecar/extracted docs from `C:\EIDP-staging`.
 After v545 was built and Windows-validated, cleanup retained v544 fallback,
-v545 current, the latest alias, the current wheelhouse, and the current v545
+v545 current, the latest alias, the current wheelhouse, and the historical v545
 owner-doc transfer artifact while pruning local v535/v536/v542/v543 core ZIPs
-and sidecars. Windows cleanup retained active v527, fallback v544, and current
-v545 while pruning v542/v543 transfer ZIPs and v540-v543 diagnostic
+and sidecars. After v547 owner-docs staging, the current owner-doc transfer
+artifact is v547. Windows cleanup retained active v527, fallback v544, and
+current v545 while pruning v542/v543 transfer ZIPs and v540-v543 diagnostic
 side-by-side directories. Reports and Stage 6 evidence for older packages
 remain preserved under `docs/` and `logs/`.
 
@@ -589,11 +592,11 @@ brief, and the v526 owner return fill sheet, and now has SHA256
 the latest package with complete non-OCR Windows side-by-side smoke evidence,
 including setup, validate, recovery, UI, Excel, limit-50 canary, and Stage 6
 bundle verification. The current owner/operator handoff docs are now
-`docs/runbooks/00-READ-ME-FIRST-v545.txt`,
-`docs/runbooks/eidp-v545-release-summary.md`,
-`docs/runbooks/eidp-v545-owner-signoff.md`,
-`docs/runbooks/eidp-v545-owner-request-20260621.txt`, and
-`docs/runbooks/eidp-v545-owner-return-fill-sheet.md`; they do not approve
+`docs/runbooks/00-READ-ME-FIRST-v547.txt`,
+`docs/runbooks/eidp-v547-release-summary.md`,
+`docs/runbooks/eidp-v547-owner-signoff.md`,
+`docs/runbooks/eidp-v547-owner-request-20260621.txt`, and
+`docs/runbooks/eidp-v547-owner-return-fill-sheet.md`; they do not approve
 v1.0 and do not replace the missing owner real-cycle evidence.
 `v502` and `v501` are superseded Windows evidence baselines.
 
