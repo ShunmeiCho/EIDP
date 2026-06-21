@@ -101,10 +101,13 @@ lists the `53` owner rows with page/PDF URLs. The worksheet still has
 owner decisions remain blocked and cannot support Excel output or a generic
 model-failure claim.
 
-The current v548 owner/operator handoff is staged at
-`C:\EIDP-staging\v548-owner-docs-20260621`, so the owner review packet now
-matches the v548 bounded canary and v548 worksheet above. The previous v547
-worksheet remains historical handoff evidence only:
+The current v548 owner/operator handoff r2 is staged at
+`C:\EIDP-staging\v548-owner-docs-20260622-r2`, so the owner review packet now
+matches the v548 bounded canary and v548 worksheet above and includes the
+owner short form plus `scripts/apply_owner_short_form_return.py` mapper helper.
+The previous 2026-06-21 v548 handoff and v547 worksheet remain historical
+handoff evidence only:
+`docs/reports/2026-06-21-v548-owner-docs-windows-staging.md`,
 `docs/reports/2026-06-21-v547-false-reject-review-sheet.csv`,
 `docs/reports/2026-06-21-v547-false-reject-review-summary.md`,
 `docs/reports/2026-06-21-v547-false-reject-review-validation.json`, and
@@ -358,9 +361,10 @@ prove release readiness. Evidence is recorded in
 and `logs/win-v542-d98ecd7-canary/20260620_185933-summary.json`.
 
 The latest owner/operator handoff docs have been refreshed to v548 package
-identity and the v548 false-reject review worksheet. The current handoff lane is
-`C:\EIDP-staging\v548-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v548-owner-docs-windows-staging.md`, and includes
+identity, the v548 false-reject review worksheet, and the short-form return
+mapper. The current handoff lane is
+`C:\EIDP-staging\v548-owner-docs-20260622-r2`, recorded in
+`docs/reports/2026-06-22-v548-owner-docs-r2-windows-staging.md`, and includes
 `docs/runbooks/00-READ-ME-FIRST-v548.txt`,
 `docs/runbooks/eidp-v548-release-summary.md`,
 `docs/runbooks/eidp-v548-owner-signoff.md`,
@@ -373,15 +377,22 @@ identity and the v548 false-reject review worksheet. The current handoff lane is
 `docs/reports/2026-06-21-v548-false-reject-review-worklist.md`,
 `docs/reports/2026-06-21-v548-false-reject-review-validation.json`,
 `docs/reports/2026-06-21-v548-false-reject-review-validation-summary.md`, and
-`docs/reports/2026-06-21-v548-false-reject-review-rca-summary.md`. The staged
-v548 blank worksheet validation reports `completed_decisions=0`,
+`docs/reports/2026-06-21-v548-false-reject-review-rca-summary.md`. It also
+includes `docs/reports/2026-06-21-v548-owner-review-short-form.csv`,
+`docs/reports/2026-06-21-v548-owner-review-short-form.xlsx`,
+`docs/reports/2026-06-21-v548-owner-review-short-form.md`,
+`docs/reports/2026-06-21-v548-developer-shadow-review.md`,
+`scripts/apply_owner_short_form_return.py`, `scripts/build_false_reject_audit.py`,
+and `scripts/verify_stage6_return.py`. The staged v548 blank worksheet
+validation reports `completed_decisions=0`,
 `blank_decisions=53`, `context_mismatch_count=0`, and
 `defect_framing.status=pending_review`; `--require-decisions` remains blocking,
-and the owner return runbook includes the required
-`--false-reject-review-audit-log` argument. This is a docs-only handoff and does
-not approve v1.0, prove an algorithm/model defect, or replace the missing owner
-real-cycle evidence. The previous v547 handoff and earlier v545, v544, v542,
-and v541 owner-docs refreshes remain historical handoff evidence only.
+and the owner return runbook includes `scripts/apply_owner_short_form_return.py`
+plus the required `--false-reject-review-audit-log` argument. This is a
+docs/helper handoff and does not approve v1.0, prove an algorithm/model defect,
+or replace the missing owner real-cycle evidence. The previous 2026-06-21 v548
+handoff, v547 handoff, and earlier v545, v544, v542, and v541 owner-docs
+refreshes remain historical handoff evidence only.
 
 Current `main` now adds a compact `false_reject_review_summary` field to
 `scripts/verify_stage6_return.py` results whenever false-reject worksheet
@@ -573,13 +584,15 @@ verifier now accepts `--false-reject-evidence-zip`,
 `--false-reject-review-csv`, `--false-reject-review-audit-log`, and
 `--false-reject-sample-size`; when supplied, it requires the worksheet to
 validate with `review_status=complete`, `context_mismatch_count=0`, and a
-matching regenerated audit JSONL. The Windows docs-only handoff has been
-refreshed to v548 at `C:\EIDP-staging\v548-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v548-owner-docs-windows-staging.md`, so the staged
-owner docs now include the v548 false-reject worksheet return rules, read-only
-review summary, row-by-row worklist, worksheet CSV, validation summary, RCA
-summary, and the return-verifier false-reject arguments.
-The v547, v545, v544, v542, and v541 handoffs remain historical evidence only.
+matching regenerated audit JSONL. The Windows docs/helper handoff has been
+refreshed to v548 r2 at `C:\EIDP-staging\v548-owner-docs-20260622-r2`,
+recorded in `docs/reports/2026-06-22-v548-owner-docs-r2-windows-staging.md`,
+so the staged owner docs now include the v548 false-reject worksheet return
+rules, read-only review summary, row-by-row worklist, worksheet CSV,
+validation summary, RCA summary, owner short-form CSV/XLSX, short-form mapper
+helper, and the return-verifier false-reject arguments.
+The previous 2026-06-21 v548, v547, v545, v544, v542, and v541 handoffs remain
+historical evidence only.
 This still does not change the release conclusion.
 This false-reject owner-return verifier integration was first packaged and
 Windows-canary verified in `dist/eidp-windows-v542.zip` at package commit
@@ -655,15 +668,16 @@ After v545 was built and Windows-validated, cleanup retained v544 fallback,
 v545 current, the latest alias, the current wheelhouse, and the historical v545
 owner-doc transfer artifact while pruning local v535/v536/v542/v543 core ZIPs
 and sidecars. After v547 owner-docs staging, the owner-doc transfer artifact was
-refreshed to v547. After v548 owner-docs staging, the current owner-doc transfer
-artifact is v548 at `dist/eidp-v548-owner-docs-20260621.zip`; the exact ZIP
-SHA256 is recorded outside the ZIP in
-`docs/reports/2026-06-21-v548-owner-docs-windows-staging.md` and the
+refreshed to v547. After v548 r2 owner-docs staging, the current owner-doc
+transfer artifact is v548 r2 at `dist/eidp-v548-owner-docs-20260622-r2.zip`;
+the exact ZIP SHA256 is recorded outside the ZIP in
+`docs/reports/2026-06-22-v548-owner-docs-r2-windows-staging.md` and the
 `.sha256` sidecar. Windows
 cleanup retained active v527, fallback v547, and current v548 runtime
-artifacts, and Windows docs staging now retains the current v548 owner-docs
-packet plus previous v547 and historical v545 handoff evidence. Reports and
-Stage 6 evidence for older packages remain preserved under `docs/` and `logs/`.
+artifacts, and Windows docs staging now retains the current v548 r2 owner-docs
+packet plus previous 2026-06-21 v548, previous v547, and historical v545 handoff
+evidence. Reports and Stage 6 evidence for older packages remain preserved
+under `docs/` and `logs/`.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle

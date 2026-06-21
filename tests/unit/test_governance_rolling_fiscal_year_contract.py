@@ -213,11 +213,11 @@ def test_v548_owner_handoff_is_current_but_not_release_approval() -> None:
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
     admin_checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
-    staging = _normalized_doc("docs/reports/2026-06-21-v548-owner-docs-windows-staging.md")
+    staging = _normalized_doc("docs/reports/2026-06-22-v548-owner-docs-r2-windows-staging.md")
 
     expected_package_sha = "488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c"
     expected_source_sha = "c1a96903ed10f1cc9c48d1a6912061ba0aaf86be"
-    expected_docs_sha = "2ec2f8a44283fedcd415213bd7cdcf80c05b9677b1bd6c910d7ae183b0d8a0ef"
+    expected_docs_sha = "f1764410589cff4906238c29ff76c092470770b3cac03e528a967ac6f6db8a4c"
     previous_v547_package_sha = "f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b"
     previous_v547_source_sha = "86c848f68e1dbde85c9b6422cfc827149940e02a"
 
@@ -253,40 +253,40 @@ def test_v548_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "It does not make v548 `READY`" in owner_signoff
 
     assert "latest owner/operator handoff docs have been refreshed to v548 package identity" in current_status
-    assert "C:\\EIDP-staging\\v548-owner-docs-20260621" in current_status
-    assert "docs/reports/2026-06-21-v548-owner-docs-windows-staging.md" in current_status
-    assert "previous v547 handoff and earlier v545, v544, v542, and v541" in current_status
+    assert "C:\\EIDP-staging\\v548-owner-docs-20260622-r2" in current_status
+    assert "docs/reports/2026-06-22-v548-owner-docs-r2-windows-staging.md" in current_status
+    assert "previous 2026-06-21 v548 handoff" in current_status
+    assert "v547 handoff, and earlier v545, v544, v542, and v541" in current_status
     assert "audit-packet validity" in current_status
     assert "Latest v548 owner/operator docs staging" in objective_checklist
-    assert "current staged owner handoff lane is v548" in objective_checklist
-    assert "The previous v547 handoff" in objective_checklist
+    assert "C:\\EIDP-staging\\v548-owner-docs-20260622-r2" in objective_checklist
+    assert "The previous 2026-06-21 v548 handoff" in objective_checklist
     assert "staged owner handoff docs still target v547" not in objective_checklist
     assert "still target v545 until owner docs are refreshed again" not in objective_checklist
     assert "blocking packet/CSV/audit-log error previews" in objective_checklist
     assert "v548 owner/operator handoff docs staging evidence" in admin_checklist
-    assert "dist/eidp-v548-owner-docs-20260621.zip" in admin_checklist
+    assert "dist/eidp-v548-owner-docs-20260622-r2.zip" in admin_checklist
 
     assert expected_docs_sha in staging
     assert "ok\": true" in staging
-    assert "C:\\EIDP-staging\\v548-owner-docs-20260621" in staging
+    assert "C:\\EIDP-staging\\v548-owner-docs-20260622-r2" in staging
     assert "active_task_expected_path_present\": true" in staging
     assert "docs\\reports\\2026-06-21-v548-false-reject-review-worklist.md" in staging
     assert "docs\\reports\\2026-06-21-v548-false-reject-review-rca-summary.md" in staging
-    assert "false_reject_review_audit_log_arg_present" in staging
-    assert "write_review_audit_log_arg_present" in staging
-    assert "decision_count_summary_guidance_present" in staging
-    assert "unresolved_review_decisions_blocking_guidance_present" in staging
-    assert "current_status_write_review_audit_log_present" in staging
-    assert "current_status_decision_count_extension_present" in staging
-    assert "current_status_unresolved_review_decisions_blocking_present" in staging
-    assert "objective_write_review_audit_log_present" in staging
-    assert "objective_decision_count_extension_present" in staging
-    assert "objective_unresolved_review_decisions_blocking_present" in staging
-    assert "completed_decisions\": 0" in staging
-    assert "blank_decisions\": 53" in staging
-    assert "context_mismatch_count\": 0" in staging
+    assert "docs\\reports\\2026-06-21-v548-owner-review-short-form.xlsx" in staging
+    assert "scripts\\apply_owner_short_form_return.py" in staging
+    assert "short_form_xlsx_present\": true" in staging
+    assert "mapper_script_present\": true" in staging
+    assert "runbook_mapper_command_present\": true" in staging
+    assert "short_form_mapper_command_present\": true" in staging
+    assert "evidence_consumption_boundary_present\": true" in staging
+    assert "stop_p1_hardening_present\": true" in staging
+    assert "yield_denominator_rule_present\": true" in staging
+    assert "mapper_not_release_present\": true" in staging
+    assert "mapper_not_audit_present\": true" in staging
+    assert "mapper_not_excel_present\": true" in staging
     assert "EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat" in staging
-    assert "This copied documentation only" in staging
+    assert "This copied documentation and small helper scripts only" in staging
     assert "does not approve v1.0" in staging
 
 
