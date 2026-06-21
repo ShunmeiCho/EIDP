@@ -252,10 +252,13 @@ def _verify_false_reject_review(
         errors.append(f"false-reject review validation failed to run: {exc}")
         return None
 
-    if packet.get("ok") is not True:
-        errors.append("false-reject audit packet is not valid")
+    audit_packet_errors: list[str] = []
+    audit_packet_ok = packet.get("ok") is True
+    if not audit_packet_ok:
+        audit_packet_errors.append("false-reject audit packet is not valid")
         for packet_error in packet.get("errors", []):
-            errors.append(f"false-reject audit packet error: {packet_error}")
+            audit_packet_errors.append(f"false-reject audit packet error: {packet_error}")
+    errors.extend(audit_packet_errors)
     if validation.get("ok") is not True:
         errors.append("false-reject review CSV is invalid")
         for validation_error in validation.get("errors", []):
@@ -271,6 +274,8 @@ def _verify_false_reject_review(
     if validation.get("review_status") == "complete" and validation.get("completed_decisions") != audit_log_event_count:
         audit_log_errors.append("false-reject review audit log event count must match completed decisions")
     errors.extend(audit_log_errors)
+    validation["audit_packet_ok"] = audit_packet_ok
+    validation["audit_packet_errors"] = audit_packet_errors
     validation["audit_log_event_count"] = audit_log_event_count
     validation["audit_log_errors"] = audit_log_errors
     return cast(dict[str, Any], validation)
@@ -285,10 +290,13 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     validation_errors = validation.get("errors")
     if not isinstance(validation_errors, list):
         validation_errors = []
+    audit_packet_errors = validation.get("audit_packet_errors")
+    if not isinstance(audit_packet_errors, list):
+        audit_packet_errors = []
     audit_log_errors = validation.get("audit_log_errors")
     if not isinstance(audit_log_errors, list):
         audit_log_errors = []
-    blocking_errors = [*validation_errors, *audit_log_errors]
+    blocking_errors = [*audit_packet_errors, *validation_errors, *audit_log_errors]
     error_preview = [str(error) for error in blocking_errors[:10]]
     expected_rows = validation.get("expected_rows")
     completed_decisions = validation.get("completed_decisions")
@@ -297,9 +305,18 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     audit_log_event_count = validation.get("audit_log_event_count")
     review_status = validation.get("review_status")
     ok = validation.get("ok")
-    owner_return_gate_ok = ok is True and review_status == "complete" and not audit_log_errors
+    audit_packet_ok = validation.get("audit_packet_ok")
+    owner_return_gate_ok = (
+        audit_packet_ok is True
+        and ok is True
+        and review_status == "complete"
+        and not audit_packet_errors
+        and not audit_log_errors
+    )
 
-    if ok is not True:
+    if audit_packet_ok is not True or audit_packet_errors:
+        next_action = "Fix the false-reject audit packet before using the returned worksheet as release evidence."
+    elif ok is not True:
         next_action = "Fix the listed false-reject review CSV errors before using it as release evidence."
     elif review_status != "complete":
         next_action = "Complete every false-reject review decision before using the worksheet as RCA evidence."
@@ -310,6 +327,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
 
     return {
         "ok": ok,
+        "audit_packet_ok": audit_packet_ok,
         "owner_return_gate_ok": owner_return_gate_ok,
         "review_status": review_status,
         "completed_decisions": completed_decisions,

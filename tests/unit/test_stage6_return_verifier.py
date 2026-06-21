@@ -373,6 +373,7 @@ def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Pa
     assert result["false_reject_review"]["review_status"] == "complete"
     assert result["false_reject_review_summary"] == {
         "ok": True,
+        "audit_packet_ok": True,
         "owner_return_gate_ok": True,
         "review_status": "complete",
         "completed_decisions": 1,
@@ -401,6 +402,91 @@ def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Pa
     assert calls["audit_csv_text"] == calls["csv_text"]
     assert calls["audit_validation"] is result["false_reject_review"]
     assert result["false_reject_review"]["audit_log_event_count"] == 1
+
+
+def test_verify_stage6_return_surfaces_invalid_false_reject_audit_packet_in_summary(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    evidence_zip = tmp_path / "stage6-evidence.zip"
+    evidence_zip.write_text("fake", encoding="utf-8")
+    review_csv = tmp_path / "false-reject-review.csv"
+    review_csv.write_text("audit_row_id,decision\nrow-1,correct_reject\n", encoding="utf-8")
+    audit_log = tmp_path / "false-reject-review-audit-log.jsonl"
+    audit_log.write_text("expected-audit-log\n", encoding="utf-8")
+
+    class FakeFalseRejectAudit:
+        @staticmethod
+        def build_false_reject_audit_packet(
+            archive: Path,
+            *,
+            sample_size: int,
+            required_yield_pct: float,
+        ) -> dict[str, object]:
+            return {
+                "ok": False,
+                "errors": ["missing strict-yield evidence"],
+                "strict_yield": {"release_forecast": "NOT_READY"},
+            }
+
+        @staticmethod
+        def validate_review_csv(
+            packet: dict[str, object],
+            csv_text: str,
+            *,
+            require_decisions: bool,
+        ) -> dict[str, object]:
+            return {
+                "ok": True,
+                "basis": "false_reject_review_decision_validation",
+                "review_status": "complete",
+                "completed_decisions": 1,
+                "context_mismatch_count": 0,
+                "errors": [],
+            }
+
+        @staticmethod
+        def render_review_audit_log(
+            packet: dict[str, object],
+            csv_text: str,
+            validation: dict[str, object],
+        ) -> str:
+            return "expected-audit-log\n"
+
+    monkeypatch.setattr(module, "_load_false_reject_audit_module", lambda: FakeFalseRejectAudit)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        false_reject_evidence_zip=evidence_zip,
+        false_reject_review_csv=review_csv,
+        false_reject_review_audit_log=audit_log,
+    )
+
+    assert result["ok"] is False
+    assert "false-reject audit packet is not valid" in result["errors"]
+    assert "false-reject audit packet error: missing strict-yield evidence" in result["errors"]
+    assert result["false_reject_review"]["ok"] is True
+    assert result["false_reject_review"]["audit_packet_ok"] is False
+    assert result["false_reject_review"]["audit_packet_errors"] == [
+        "false-reject audit packet is not valid",
+        "false-reject audit packet error: missing strict-yield evidence",
+    ]
+    assert result["false_reject_review_summary"]["ok"] is True
+    assert result["false_reject_review_summary"]["audit_packet_ok"] is False
+    assert result["false_reject_review_summary"]["owner_return_gate_ok"] is False
+    assert result["false_reject_review_summary"]["blocking_error_count"] == 2
+    assert result["false_reject_review_summary"]["blocking_error_preview"] == [
+        "false-reject audit packet is not valid",
+        "false-reject audit packet error: missing strict-yield evidence",
+    ]
+    assert result["false_reject_review_summary"]["next_action"] == (
+        "Fix the false-reject audit packet before using the returned worksheet as release evidence."
+    )
 
 
 def test_verify_stage6_return_rejects_incomplete_false_reject_review(tmp_path: Path, monkeypatch) -> None:

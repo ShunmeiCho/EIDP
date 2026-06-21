@@ -311,8 +311,9 @@ Current `main` now adds a compact `false_reject_review_summary` field to
 `scripts/verify_stage6_return.py` results whenever false-reject worksheet
 validation is supplied. The field mirrors `review_status`, completed/blank
 decision counts, context mismatch count, defect framing status, an explicit
-`owner_return_gate_ok`, and the first blocking CSV or audit-log gate errors so
-the owner-return failure is readable without loosening any gate. This is
+`owner_return_gate_ok`, audit-packet validity, and the first blocking packet,
+CSV, or audit-log gate errors so the owner-return failure is readable without
+loosening any gate. This is
 source-side hardening after the v545 packaged runtime; a
 future package/canary is required before claiming this convenience field is
 available from a Windows package.

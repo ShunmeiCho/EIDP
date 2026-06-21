@@ -162,9 +162,11 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "C:\\EIDP-staging\\v547-owner-docs-20260621" in current_status
     assert "docs/reports/2026-06-21-v547-owner-docs-windows-staging.md" in current_status
     assert "earlier v545, v544, v542, and v541 owner-docs refreshes remain historical" in current_status
+    assert "audit-packet validity" in current_status
     assert "Latest v547 owner/operator docs staging" in objective_checklist
     assert "The current staged owner handoff lane is now v547" in objective_checklist
     assert "still target v545 until owner docs are refreshed again" not in objective_checklist
+    assert "blocking packet/CSV/audit-log error previews" in objective_checklist
 
     assert expected_docs_sha in staging
     assert "ok\": true" in staging
@@ -377,8 +379,8 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "requires the regenerated audit event count to match completed worksheet decisions" in current_status
     assert "`owner_return_gate_ok`" in current_status
     assert "explicit `owner_return_gate_ok`" in objective_checklist
-    assert "blocking CSV or audit-log gate errors" in current_status
-    assert "blocking CSV/audit-log error previews" in objective_checklist
+    assert "first blocking packet, CSV, or audit-log gate errors" in current_status
+    assert "blocking packet/CSV/audit-log error previews" in objective_checklist
     assert "`context_mismatch_count=0`" in current_status
     assert expected_v547_package_sha in current_status
     assert expected_v547_package_sha in objective_checklist
