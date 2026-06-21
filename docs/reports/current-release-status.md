@@ -3,6 +3,26 @@
 Updated: 2026-06-21
 Branch: `main`
 
+Current source package candidate is `v547`
+(`dist/eidp-windows-v547.zip`, SHA256
+`f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`).
+`v547` packages commit `86c848f68e1dbde85c9b6422cfc827149940e02a` with
+`git_dirty=false`. It packages the current-main false-reject worksheet guidance
+hardening, where non-obvious `pre_filtered_non_target_hint` and
+`classified_non_target` rows are suggested as `needs_operator_review` instead
+of leaving `suggested_decision` blank. Local package verification and full
+non-Windows release gates returned `ok=true`, including full unit
+`2052 passed`, validator/distribution unit `196 passed`, mypy, Ruff, discovery
+gold replay `45/45` exact matches, and both package verifier modes. Evidence
+is recorded in `docs/reports/2026-06-21-v547-package-gates.md`,
+`logs/eidp-windows-v547-distribution-verify-20260621.json`, and
+`logs/eidp-windows-v547-release-gates-20260621.json`. Local v547 cleanup
+evidence is recorded in `logs/eidp-v547-local-prune-20260621.json`; it removed
+superseded v545 ZIP artifacts (`deleted_bytes=210931692`) and retained v546
+fallback, v547 current package, and the latest alias on the external-SSD-backed
+`dist/`. v547 has not completed Windows side-by-side setup/canary evidence, so
+the latest bounded Windows canary remains v546.
+
 Current packaged bounded Windows canary is `v546`
 (`dist/eidp-windows-v546.zip`, SHA256
 `ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`).
@@ -46,19 +66,20 @@ evidence is recorded in
 `v546` still has not completed OCR scope approval, owner real-cycle sign-off,
 or publication-lag decision. Release Forecast remains `NOT_READY`.
 
-Current `main` now adds source-side false-reject worksheet guidance hardening
-after the v546 package: non-obvious `pre_filtered_non_target_hint` and
-`classified_non_target` rows are suggested as `needs_operator_review` instead
-of leaving `suggested_decision` blank. This closes the review-routing gap
-without approving any rejected row or relaxing Excel-ready gates. Running the
-updated script against the v546 Stage 6 evidence produced
+Current `main`, now packaged in v547 but not yet Windows-canary verified, adds
+source-side false-reject worksheet guidance hardening after the v546 Windows
+canary: non-obvious `pre_filtered_non_target_hint` and `classified_non_target`
+rows are suggested as `needs_operator_review` instead of leaving
+`suggested_decision` blank. This closes the review-routing gap without
+approving any rejected row or relaxing Excel-ready gates. Running the updated
+script against the v546 Stage 6 evidence produced
 `docs/reports/2026-06-21-v546-false-reject-review-summary.md` and
 `docs/reports/2026-06-21-v546-false-reject-review-sheet.csv`: the worksheet
 still has `decision=blank` for all `53` rows pending owner/operator review, but
 `suggested_decision` now has `0` blanks (`20` `correct_reject`, `33`
-`needs_operator_review`). This is current-main analysis on v546 evidence; a
-future package/canary is required before claiming the updated guidance ships in
-a Windows ZIP.
+`needs_operator_review`). This is v547-packaged analysis on v546 evidence; a
+future v547 Windows canary is required before claiming the updated guidance is
+Windows-canary safe.
 
 Previous packaged bounded Windows canary is `v545`
 (`dist/eidp-windows-v545.zip`, SHA256
