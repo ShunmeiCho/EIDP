@@ -373,6 +373,7 @@ def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Pa
     assert result["false_reject_review"]["review_status"] == "complete"
     assert result["false_reject_review_summary"] == {
         "ok": True,
+        "owner_return_gate_ok": True,
         "review_status": "complete",
         "completed_decisions": 1,
         "expected_rows": None,
@@ -461,6 +462,7 @@ def test_verify_stage6_return_rejects_incomplete_false_reject_review(tmp_path: P
     assert result["ok"] is False
     assert result["false_reject_review"]["review_status"] == "incomplete"
     assert result["false_reject_review_summary"]["ok"] is False
+    assert result["false_reject_review_summary"]["owner_return_gate_ok"] is False
     assert result["false_reject_review_summary"]["review_status"] == "incomplete"
     assert result["false_reject_review_summary"]["completed_decisions"] == 0
     assert result["false_reject_review_summary"]["blank_decisions"] is None
@@ -581,6 +583,7 @@ def test_verify_stage6_return_rejects_false_reject_review_audit_log_mismatch(
     assert "false-reject review audit log does not match regenerated audit events" in result["errors"]
     assert result["false_reject_review"]["audit_log_event_count"] == 1
     assert result["false_reject_review_summary"]["blocking_error_count"] == 1
+    assert result["false_reject_review_summary"]["owner_return_gate_ok"] is False
     assert result["false_reject_review_summary"]["blocking_error_preview"] == [
         "false-reject review audit log does not match regenerated audit events"
     ]
@@ -652,6 +655,7 @@ def test_verify_stage6_return_rejects_false_reject_review_audit_log_event_count_
     assert "false-reject review audit log event count must match completed decisions" in result["errors"]
     assert result["false_reject_review"]["audit_log_event_count"] == 0
     assert result["false_reject_review_summary"]["blocking_error_count"] == 1
+    assert result["false_reject_review_summary"]["owner_return_gate_ok"] is False
     assert result["false_reject_review_summary"]["blocking_error_preview"] == [
         "false-reject review audit log event count must match completed decisions"
     ]

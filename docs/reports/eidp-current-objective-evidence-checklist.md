@@ -207,7 +207,8 @@ worksheet decisions. The audit-log renderer requires
 audit logs. Current `main` also emits a compact
 `false_reject_review_summary` beside the full validation JSON so failed owner
 returns expose completed/blank decision counts, context mismatch count, defect
-framing status, and blocking CSV/audit-log error previews directly in
+framing status, explicit `owner_return_gate_ok`, and blocking CSV/audit-log
+error previews directly in
 `scripts/verify_stage6_return.py` output. This is source-side handoff hardening
 only. Current `main` also adds `--format review-rca-summary` to
 `scripts/build_false_reject_audit.py` so a returned worksheet can produce an

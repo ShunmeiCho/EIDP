@@ -297,6 +297,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     audit_log_event_count = validation.get("audit_log_event_count")
     review_status = validation.get("review_status")
     ok = validation.get("ok")
+    owner_return_gate_ok = ok is True and review_status == "complete" and not audit_log_errors
 
     if ok is not True:
         next_action = "Fix the listed false-reject review CSV errors before using it as release evidence."
@@ -309,6 +310,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
 
     return {
         "ok": ok,
+        "owner_return_gate_ok": owner_return_gate_ok,
         "review_status": review_status,
         "completed_decisions": completed_decisions,
         "expected_rows": expected_rows,
