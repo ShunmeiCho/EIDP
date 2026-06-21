@@ -237,6 +237,17 @@ that keeps manual work below the release threshold.
   `f3eb1663c0333f296856a84f447ef2424ea77ddf`
 - v545 package SHA256:
   `ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0`
+- v546 source package / non-Windows gate evidence:
+  `docs/reports/2026-06-21-v546-rca-summary-package-gates.md`,
+  `logs/eidp-windows-v546-distribution-verify-20260621.json`, and
+  `logs/eidp-windows-v546-release-gates-20260621.json`. This records
+  `ok=true`, package/source commit
+  `63016054f948b1f4f285c3c822197f76c25b4b7d`, `git_dirty=false`, full unit
+  `2052 passed`, validator/distribution unit `196 passed`, discovery gold
+  replay `45/45` exact matches, package SHA256
+  `ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`, and
+  cleanup of superseded v544 ZIP artifacts. v546 is not Windows release
+  evidence until side-by-side Windows setup/canary completes.
 - v545 package gate evidence:
   `logs/eidp-windows-v545-distribution-verify-20260621.json`. This records
   `ok=true`, `has_runtime=true`, `wheel_count=84`, `git_dirty=false`, and
@@ -261,8 +272,10 @@ that keeps manual work below the release threshold.
   `6aa5735d164101cbe6ec85648bcb8b6f46168c63`
 - v543 package SHA256:
   `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`
-- Current v545 package/canary contains the latest trusted-disclosure-priority
-  hardening and is now the current staged owner handoff lane.
+- Current v546 source package contains the latest false-reject RCA summary
+  handoff hardening and passes non-Windows gates; current v545 package/canary
+  remains the latest Windows bounded canary and current staged owner handoff
+  lane.
 - Previous v544 package/canary contains the false-reject audit helper packaging
   fix and false-reject worksheet triage guidance. The v544, v542, and v541 r3
   owner handoffs remain historical handoff evidence only.

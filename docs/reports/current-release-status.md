@@ -3,6 +3,28 @@
 Updated: 2026-06-21
 Branch: `main`
 
+Current source package candidate is `v546`
+(`dist/eidp-windows-v546.zip`, SHA256
+`ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`).
+`v546` packages commit `63016054f948b1f4f285c3c822197f76c25b4b7d` with
+`git_dirty=false`. It packages the false-reject `review-rca-summary`
+handoff hardening from current `main`; local package verification and full
+non-Windows release gates returned `ok=true`, including full unit
+`2052 passed`, validator/distribution unit `196 passed`, mypy, Ruff, discovery
+gold replay `45/45` exact matches, and both package verifier modes. Evidence
+is recorded in `docs/reports/2026-06-21-v546-rca-summary-package-gates.md`,
+`logs/eidp-windows-v546-distribution-verify-20260621.json`, and
+`logs/eidp-windows-v546-release-gates-20260621.json`.
+Local v546 cleanup evidence is recorded in
+`logs/eidp-v546-local-prune-20260621.json`; it removed superseded v544 ZIP
+artifacts (`deleted_bytes=210931317`) and retained v545 fallback, v546 current
+package, and the latest alias on the external-SSD-backed `dist/`.
+
+`v546` is not Windows release evidence yet. It has not completed Windows
+side-by-side setup, bounded weekly canary, Stage 6 Windows evidence, OCR scope
+approval, owner real-cycle sign-off, or publication-lag decision. Release
+Forecast remains `NOT_READY`.
+
 Latest packaged bounded Windows canary is `v545`
 (`dist/eidp-windows-v545.zip`, SHA256
 `ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0`).

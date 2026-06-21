@@ -12,10 +12,11 @@ decision for FY2026/R8 publication lag.
   `723a5072f63e8a874bef85cc52d869f5e6daff15` or a later verified `main`
   commit.
 - The selected release candidate has not been Windows side-by-side validated
-  after its last code/package change. Current packaged bounded Windows canary
-  is v545 at commit `f3eb1663c0333f296856a84f447ef2424ea77ddf`. Any
-  source/package change after v545 requires a new Windows package/canary before
-  it counts as Windows release evidence.
+  after its last code/package change. Current source package candidate is v546
+  at commit `63016054f948b1f4f285c3c822197f76c25b4b7d`, with non-Windows
+  gates passed. Latest packaged bounded Windows canary remains v545 at commit
+  `f3eb1663c0333f296856a84f447ef2424ea77ddf`. v546 requires Windows
+  side-by-side setup/canary before it counts as Windows release evidence.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
   release scope. Current v545 did not restore or validate an OCR add-on/runtime
   proof; if OCR is in scope, attach a valid OCR add-on proof before approval.
@@ -60,11 +61,11 @@ Expected:
 Confirm the current local package/source evidence:
 
 ```bash
-shasum -a 256 dist/eidp-windows-v545.zip
-cat dist/eidp-windows-v545.zip.sha256
-uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v545.zip --json
+shasum -a 256 dist/eidp-windows-v546.zip
+cat dist/eidp-windows-v546.zip.sha256
+uv run python scripts/verify_windows_distribution.py dist/eidp-windows-v546.zip --json
 uv run python scripts/run_non_windows_release_gates.py \
-  dist/eidp-windows-v545.zip \
+  dist/eidp-windows-v546.zip \
   --skip-full-unit \
   --json
 
@@ -73,7 +74,7 @@ test -f dist/eidp-ocr-addon-windows-v497-smoke.zip
 shasum -a 256 dist/eidp-ocr-addon-windows-v497-smoke.zip
 cat dist/eidp-ocr-addon-windows-v497-smoke.zip.sha256
 uv run python scripts/verify_windows_distribution.py \
-  dist/eidp-windows-v545.zip \
+  dist/eidp-windows-v546.zip \
   --ocr-addon dist/eidp-ocr-addon-windows-v497-smoke.zip \
   --json
 ```
@@ -81,7 +82,7 @@ uv run python scripts/verify_windows_distribution.py \
 Expected ZIP SHA256:
 
 ```text
-ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0
+ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd
 ```
 
 Expected OCR add-on SHA256, if OCR is in v1.0 scope:
@@ -156,6 +157,14 @@ Excel output.
 
 Before tagging, attach or reference:
 
+- v546 package/source and CI evidence:
+  `docs/reports/2026-06-21-v546-rca-summary-package-gates.md`,
+  `logs/eidp-windows-v546-distribution-verify-20260621.json`,
+  `logs/eidp-windows-v546-release-gates-20260621.json`, and CI run
+  `27892572590` for source commit `6301605`;
+- v546 Windows bounded canary evidence:
+  not present yet; this is a P0 release blocker before v546 can count as
+  Windows release evidence;
 - v545 package/source and CI evidence:
   `docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md`,
   `logs/eidp-windows-v545-distribution-verify-20260621.json`, and CI run
