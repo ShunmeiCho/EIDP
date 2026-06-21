@@ -133,6 +133,8 @@ def test_v544_owner_handoff_is_current_but_not_release_approval() -> None:
 
     expected_package_sha = "781da0a3c1a3f4ae80536c68de2971a1ae431a01c7eb2d58001de061f62df0c1"
     expected_v544_source_sha = "74325bc278c3e96052ef27e67cd554e426c87c60"
+    expected_v545_package_sha = "ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0"
+    expected_v545_source_sha = "f3eb1663c0333f296856a84f447ef2424ea77ddf"
     expected_v543_package_sha = "c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094"
     expected_v543_source_sha = "6aa5735d164101cbe6ec85648bcb8b6f46168c63"
     expected_v542_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
@@ -218,6 +220,10 @@ def test_v544_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "row context must remain unchanged" in current_status
     assert "The owner-return verifier now accepts `--false-reject-evidence-zip`" in current_status
     assert "`context_mismatch_count=0`" in current_status
+    assert expected_v545_package_sha in current_status
+    assert expected_v545_package_sha in objective_checklist
+    assert expected_v545_source_sha in current_status
+    assert expected_v545_source_sha in objective_checklist
     assert expected_package_sha in current_status
     assert expected_package_sha in objective_checklist
     assert expected_v544_source_sha in current_status
@@ -235,8 +241,10 @@ def test_v544_owner_handoff_is_current_but_not_release_approval() -> None:
     )
     assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in current_status
     assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in objective_checklist
-    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v544.zip`" in objective_checklist
-    assert "Current v544 package/canary contains the latest false-reject audit helper" in objective_checklist
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v545.zip`" in objective_checklist
+    assert "Current v545 package/canary contains the latest trusted-disclosure-priority" in objective_checklist
+    assert "Owner handoff docs remain refreshed to v544" in objective_checklist
+    assert "Current v544 package/canary contains the false-reject audit helper" in objective_checklist
     assert "Current v542 package/canary contains the post-v541 false-reject owner-return" in objective_checklist
     assert "from current `main` or from a v544+ package carrying the helper" in current_status
     assert "v544-owner-docs-20260621" in current_status

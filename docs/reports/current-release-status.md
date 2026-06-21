@@ -3,7 +3,43 @@
 Updated: 2026-06-21
 Branch: `main`
 
-Latest packaged bounded Windows canary is `v544`
+Latest packaged bounded Windows canary is `v545`
+(`dist/eidp-windows-v545.zip`, SHA256
+`ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0`).
+`v545` packages commit `f3eb1663c0333f296856a84f447ef2424ea77ddf` with
+`git_dirty=false`. It refreshes the package from current `main` after
+prioritizing trusted `SchoolSite.url_type="disclosure"` rows ahead of ordinary
+school homepages during PDF discovery. Local v545 distribution evidence is
+recorded in `logs/eidp-windows-v545-distribution-verify-20260621.json`; the
+package verifier returned `ok=true`, with `has_runtime=true`, `wheel_count=84`,
+and `BUILD_INFO.git_commit=f3eb1663c0333f296856a84f447ef2424ea77ddf`.
+
+`v545` completed side-by-side Windows setup and a bounded limit-50 weekly
+canary at `C:\Users\cyo20\EIDP-v545-f3eb166-env0`. The canary confirmed
+setup `rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`,
+weekly canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence
+verification `ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
+operator-reviewable yield `47/50 (94.0%)`, and
+`ship_gate_status=below_gate`. That `24.0%` is bounded-cohort evidence for the
+selected 50 target-missing schools, not whole-database readiness. Therefore
+v545 proves the trusted-disclosure-priority hardening is Windows-canary safe;
+it does not prove release readiness and does not support claiming a generic
+algorithm/model defect. Evidence is recorded in
+`docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md`,
+`logs/win-v545-f3eb166-canary/stage6-evidence-20260621-004156.zip`,
+`logs/win-v545-f3eb166-canary/stage6-evidence-verify-20260621-094157.json`,
+`logs/win-v545-f3eb166-canary/stage6-evidence-verify-mac-20260621.json`, and
+`logs/win-v545-f3eb166-canary/20260621_003033-summary.json`.
+
+Local cleanup after v545 retained v544 fallback and v545 current packages while
+removing superseded v535/v536/v542/v543 local ZIPs and sidecars
+(`843676935` bytes). Windows cleanup retained active v527, fallback v544, and
+current v545 while removing v542/v543 transfer ZIPs and v540-v543 side-by-side
+diagnostic directories (`4015573603` bytes). Cleanup evidence is recorded in
+`logs/eidp-v545-local-prune-20260621.json` and
+`logs/win-v545-f3eb166-canary/win-v545-cleanup-20260621.json`.
+
+Previous packaged bounded Windows canary was `v544`
 (`dist/eidp-windows-v544.zip`, SHA256
 `781da0a3c1a3f4ae80536c68de2971a1ae431a01c7eb2d58001de061f62df0c1`).
 `v544` packages commit `74325bc278c3e96052ef27e67cd554e426c87c60` with
@@ -217,10 +253,12 @@ Previous bounded Windows canary: `v536`
 `logs/win-v536-stage6-v536-non-windows-release-gates-20260620.json`, and
 `logs/win-v536-stage6/stage6-evidence-20260620-074649.zip`.
 
-The latest complete Windows side-by-side smoke remains `v535`
-(`dist/eidp-windows-v535.zip`, SHA256
-`72ef94f35a2cd482eb9650d1a466cb8441f7d96a660a8901710d96603e7d8e9f`).
-`v535` is package/source verified on macOS, carries the post-v533
+The latest complete Windows side-by-side smoke evidence remains `v535`.
+The source package was `dist/eidp-windows-v535.zip` (SHA256
+`72ef94f35a2cd482eb9650d1a466cb8441f7d96a660a8901710d96603e7d8e9f`);
+the local ZIP was pruned from the external-SSD-backed `dist/` during the v545
+cleanup after its smoke evidence had already been preserved. `v535` is
+package/source verified on macOS, carries the post-v533
 release-proof hardening that requires v1 evidence to stay scoped to
 `専門学校`, and rebuilds after the AppleDouble wheelhouse-sidecar gate rejected
 v534. The v535 ZIP contains `0` AppleDouble sidecars, `84` real wheelhouse
@@ -367,15 +405,18 @@ v543 and v544 have now been built on the same external-SSD-backed `dist` path,
 and v544 refreshed the latest alias. After v544 owner-docs staging, cleanup
 removed the superseded v542 owner-doc transfer ZIP/sidecar from `dist` and
 removed the v542 owner-doc ZIP/sidecar/extracted docs from `C:\EIDP-staging`.
-The current retained core packages are v535, v536, v542, v543, v544, and the
-latest alias; the current retained owner-doc transfer artifact is
-`dist/eidp-v544-owner-docs-20260621.zip`. Reports and Stage 6 evidence for
-v540/v541 remain preserved under `docs/` and `logs/`.
+After v545 was built and Windows-validated, cleanup retained v544 fallback,
+v545 current, the latest alias, the current wheelhouse, and the current v544
+owner-doc transfer artifact while pruning local v535/v536/v542/v543 core ZIPs
+and sidecars. Windows cleanup retained active v527, fallback v544, and current
+v545 while pruning v542/v543 transfer ZIPs and v540-v543 diagnostic
+side-by-side directories. Reports and Stage 6 evidence for older packages
+remain preserved under `docs/` and `logs/`.
 
 Latest complete Windows side-by-side smoke is still `v535` for setup,
 active-task safety, UI, bounded weekly canary, Excel export, Stage 6 bundle
 creation, and Stage 6 evidence verification. Latest packaged bounded Windows
-canary is `v544`; latest owner handoff docs are v544. The Windows canary
+canary is `v545`; latest owner handoff docs are v544. The Windows canary
 still reports FY2026/R8 strict yield below gate (`12/50`, `24.0%`). Release is
 still blocked by missing owner real
 Windows cycle/sign-off, unapproved `publication_lag` exception, and unresolved
