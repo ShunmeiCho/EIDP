@@ -275,6 +275,22 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert "RCA conclusion: `GENERIC_MODEL_FAILURE_NOT_SUPPORTED`" in completed_rca_summary
     assert "Specific algorithm/rule defect supported: `False`" in completed_rca_summary
     assert "full owner return gate must still pass" in completed_rca_summary
+    blank_audit_log = module.render_review_audit_log(packet, review_csv, validation)
+    assert blank_audit_log == ""
+    audit_log = module.render_review_audit_log(packet, completed.getvalue(), completed_validation)
+    audit_events = [json.loads(line) for line in audit_log.splitlines()]
+    assert len(audit_events) == len(rows)
+    assert audit_events[0]["event_type"] == "false_reject_review_decision"
+    assert audit_events[0]["basis"] == "false_reject_review_decision_audit_log"
+    assert audit_events[0]["decision"] == "correct_reject"
+    assert audit_events[0]["reviewer"] == "owner"
+    assert audit_events[0]["reviewed_at"] == "2026-06-21T00:00:00+09:00"
+    assert len(audit_events[0]["context_hash_sha256"]) == 64
+    assert "decision" not in audit_events[0]["context"]
+    assert "reviewer" not in audit_events[0]["context"]
+    assert audit_events[0]["context"]["reason"] == rows[0]["reason"]
+    assert audit_events[0]["release_forecast"] == "NOT_READY"
+    assert "does not accept rejected rows into Excel" in audit_events[0]["excel_gate_effect"]
 
     false_reject_rows = [dict(row) for row in rows]
     false_reject_rows[0]["decision"] = "false_reject"
@@ -344,6 +360,8 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
 
     review_path = tmp_path / "review.csv"
     review_path.write_text(review_csv, encoding="utf-8")
+    completed_review_path = tmp_path / "completed-review.csv"
+    completed_review_path.write_text(completed.getvalue(), encoding="utf-8")
     assert module.main([str(archive), "--sample-size", "2", "--format", "csv"]) == 0
     csv_output = capsys.readouterr().out
     assert "false_reject_signal,notes" in csv_output.splitlines()[0]
@@ -422,6 +440,26 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     cli_rca_summary = capsys.readouterr().out
     assert "False-Reject RCA Summary" in cli_rca_summary
     assert "RCA conclusion: `INVALID_RETURN`" in cli_rca_summary
+
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(completed_review_path),
+                "--require-decisions",
+                "--format",
+                "review-audit-log",
+            ]
+        )
+        == 0
+    )
+    cli_audit_events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert len(cli_audit_events) == len(rows)
+    assert cli_audit_events[0]["audit_row_id"] == audit_events[0]["audit_row_id"]
+    assert cli_audit_events[0]["context_hash_sha256"] == audit_events[0]["context_hash_sha256"]
 
 
 def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path: Path, capsys) -> None:
@@ -522,3 +560,8 @@ def test_false_reject_audit_validation_summary_requires_review_csv(tmp_path: Pat
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "--format review-rca-summary requires --validate-review-csv" in captured.err
+
+    assert module.main([str(archive), "--format", "review-audit-log"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "--format review-audit-log requires --validate-review-csv" in captured.err

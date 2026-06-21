@@ -641,6 +641,66 @@ def render_review_csv(packet: dict[str, Any]) -> str:
     return output.getvalue()
 
 
+def _review_context_hash(row: dict[str, Any]) -> str:
+    payload = {column: str(row.get(column) or "") for column in REVIEW_CONTEXT_COLUMNS}
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def render_review_audit_log(
+    packet: dict[str, Any],
+    csv_text: str,
+    validation: dict[str, Any],
+) -> str:
+    """Return JSONL audit events for validated owner/operator worksheet decisions."""
+
+    if validation.get("ok") is not True:
+        return ""
+
+    expected_by_id = {str(row["audit_row_id"]): row for row in _iter_review_rows(packet)}
+    strict_yield = packet.get("strict_yield", {})
+    source_files = packet.get("source_files", {})
+    events: list[dict[str, Any]] = []
+    reader = csv.DictReader(io.StringIO(csv_text))
+    for row in reader:
+        audit_row_id = str(row.get("audit_row_id") or "").strip()
+        decision = str(row.get("decision") or "").strip()
+        if not decision:
+            continue
+        expected_row = expected_by_id.get(audit_row_id)
+        if expected_row is None:
+            continue
+        event = {
+            "event_type": "false_reject_review_decision",
+            "basis": "false_reject_review_decision_audit_log",
+            "audit_row_id": audit_row_id,
+            "decision": decision,
+            "reviewer": str(row.get("reviewer") or "").strip(),
+            "reviewed_at": str(row.get("reviewed_at") or "").strip(),
+            "notes": str(row.get("notes") or "").strip(),
+            "source_archive": str(packet.get("archive") or ""),
+            "source_packet_generated_at": str(packet.get("generated_at") or ""),
+            "source_files": source_files if isinstance(source_files, dict) else {},
+            "release_forecast": str(strict_yield.get("release_forecast") or "NOT_READY"),
+            "target_fiscal_year": strict_yield.get("target_fiscal_year"),
+            "strict_excel_ready": {
+                "count": strict_yield.get("excel_ready_acquired_count"),
+                "denominator": strict_yield.get("denominator"),
+                "yield_pct": strict_yield.get("excel_ready_yield_pct"),
+                "required_yield_pct": strict_yield.get("required_yield_pct"),
+                "ship_gate_status": strict_yield.get("ship_gate_status"),
+            },
+            "context_hash_sha256": _review_context_hash(expected_row),
+            "context": {column: expected_row.get(column, "") for column in REVIEW_CONTEXT_COLUMNS},
+            "excel_gate_effect": (
+                "Audit-only owner RCA decision; this event does not accept rejected rows into Excel "
+                "or relax strict target-year evidence gates."
+            ),
+        }
+        events.append(event)
+    return "".join(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n" for event in events)
+
+
 def render_review_summary(packet: dict[str, Any]) -> str:
     """Return a read-only owner triage summary for the review worksheet."""
 
@@ -1285,6 +1345,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             "review-worklist",
             "review-validation-summary",
             "review-rca-summary",
+            "review-audit-log",
         ),
         default="markdown",
     )
@@ -1314,6 +1375,12 @@ def main(argv: list[str] | None = None) -> int:
             rendered = render_review_validation_summary(packet, validation)
         elif output_format == "review-rca-summary":
             rendered = render_review_rca_summary(packet, validation)
+        elif output_format == "review-audit-log":
+            rendered = render_review_audit_log(
+                packet,
+                args.validate_review_csv.read_text(encoding="utf-8-sig"),
+                validation,
+            )
         else:
             rendered = json.dumps(validation, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         ok = packet.get("ok") is True and validation.get("ok") is True
@@ -1322,6 +1389,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     elif output_format == "review-rca-summary":
         print("--format review-rca-summary requires --validate-review-csv", file=sys.stderr)
+        return 2
+    elif output_format == "review-audit-log":
+        print("--format review-audit-log requires --validate-review-csv", file=sys.stderr)
         return 2
     elif output_format == "json":
         rendered = json.dumps(packet, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

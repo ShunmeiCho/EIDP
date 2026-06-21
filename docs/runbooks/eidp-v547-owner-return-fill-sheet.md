@@ -156,6 +156,9 @@ Current `main` also emits a compact `false_reject_review_summary` in the JSON
 result for easier owner/developer handoff; this is a convenience field only and
 does not change `ok`, `errors`, `review_status=complete`, or
 `context_mismatch_count=0` release gates.
+Current `main` can also render completed false-reject worksheet decisions as a
+JSONL audit log. This is an audit handoff artifact only; it does not write to
+business tables, approve rejected rows, or relax Excel-ready gates.
 
 For row-by-row review, use
 `docs/reports/2026-06-21-v547-false-reject-review-worklist.md`. It is a
@@ -224,6 +227,24 @@ That summary distinguishes `SPECIFIC_RULE_DEFECTS_FOUND` from
 `GENERIC_MODEL_FAILURE_NOT_SUPPORTED`. It is still read-only RCA evidence: it
 does not relax strict FY2026/R8 evidence rules, does not approve rejected rows,
 and does not replace the full owner return gate.
+
+After the completed worksheet validates, generate the per-row audit JSONL for
+archival handoff:
+
+```bash
+uv run python scripts/build_false_reject_audit.py \
+  logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip \
+  --sample-size 12 \
+  --validate-review-csv docs/reports/2026-06-21-v547-false-reject-review-sheet.csv \
+  --require-decisions \
+  --format review-audit-log \
+  --output docs/reports/2026-06-21-v547-false-reject-review-audit-log.jsonl
+```
+
+Each JSONL row records the immutable worksheet context hash, reviewer,
+`reviewed_at`, decision, notes, source archive, and strict-gate forecast. Blank
+worksheet decisions do not generate audit events. The audit log remains RCA
+handoff evidence only; it still does not make any rejected row Excel-ready.
 
 To regenerate the row-by-row owner worklist from the v547 Stage 6 evidence:
 

@@ -72,6 +72,12 @@ The v547 runtime package still remains the latest completed Windows canary
 package, but this regenerated worksheet is a current-`main` helper output. Use
 current `main` for validating this regenerated worksheet unless a fresh package
 is built and Windows-verified with the same helper revision.
+Current `main` also adds a `review-audit-log` output for returned false-reject
+worksheets. It emits one JSONL audit event for each validated nonblank owner
+decision, with immutable worksheet context hash, reviewer, timestamp, notes,
+source archive, and strict-gate forecast. This is RCA/audit handoff evidence
+only: it does not write business tables, does not approve rejected rows, and
+does not make any rejected row Excel-ready.
 
 The next strict-yield action is worksheet-driven, not generic crawler work: a
 high `false_reject` count means fix the specific discovery/filter rule and add
