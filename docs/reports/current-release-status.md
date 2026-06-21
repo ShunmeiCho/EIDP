@@ -120,6 +120,15 @@ splits the same 53 v548 rows into owner-review packs (`24` suggested
 `correct_reject`, `29` suggested `needs_operator_review`, `0` suspected
 `false_reject`); it is evidence intake only, not release approval, and the
 canonical returned artifact remains the v548 worksheet.
+Because owner decisions are still absent, a developer diagnostic shadow review
+is also recorded at
+`docs/reports/2026-06-21-v548-developer-shadow-review.csv` and
+`docs/reports/2026-06-21-v548-developer-shadow-review.md`. It uses only the
+existing v548 Stage 6 rejection fields and reports `24` `likely_correct_reject`,
+`29` `likely_needs_operator_review`, `0` `likely_false_reject`, and `15`
+high-priority owner review rows. This is diagnostic prioritization only: it is
+not owner/operator approval, not release evidence, and not Excel-ready
+authorization.
 Current `main` also adds a `review-audit-log` output for returned false-reject
 worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,

@@ -174,6 +174,14 @@ scope is recorded in
 `0` suspected `false_reject`. This is intake evidence only: completed decisions
 must still be mapped back to the canonical v548 worksheet and validated before
 release evidence can be claimed.
+Because owner decisions are still absent, the developer diagnostic shadow review
+is recorded at `docs/reports/2026-06-21-v548-developer-shadow-review.csv` and
+`docs/reports/2026-06-21-v548-developer-shadow-review.md`. It uses only the
+existing v548 Stage 6 rejection fields, not live official-page/PDF inspection,
+and reports `24` `likely_correct_reject`, `29` `likely_needs_operator_review`,
+`0` `likely_false_reject`, and `15` high-priority owner review rows. It can
+prioritize owner review or future rule-fix RCA, but it is not owner/operator
+approval, not release evidence, and not Excel-ready authorization.
 The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
@@ -917,6 +925,10 @@ do not remove the FY2026/R8 release blocker.
    `--write-review-audit-log` to validate the completed worksheet and write the
    audit JSONL in one current-main developer command. Use the returned
    `defect_framing.status`, not the below-gate rate alone, for that claim.
+   If owner review is not immediately available, use
+   `docs/reports/2026-06-21-v548-developer-shadow-review.md` only for
+   diagnostic prioritization; do not treat it as owner approval or release
+   evidence.
 4. Run the owner/operator return path from Windows and collect signed KPI,
    audit/outbox, workbook, and `publication_lag` decision evidence.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.

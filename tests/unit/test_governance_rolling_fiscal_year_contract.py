@@ -341,10 +341,15 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v548-owner-review-short-form.csv" in current_status
     assert "docs/reports/2026-06-21-v548-owner-review-short-form.xlsx" in current_status
     assert "canonical returned artifact remains the v548 worksheet" in current_status
+    assert "docs/reports/2026-06-21-v548-developer-shadow-review.csv" in current_status
+    assert "not owner/operator approval, not release evidence" in current_status
     assert "The current owner review baseline is frozen at v548" in objective_checklist
     assert "docs/reports/2026-06-21-v548-owner-review-short-form.csv" in objective_checklist
     assert "docs/reports/2026-06-21-v548-owner-review-short-form.xlsx" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-developer-shadow-review.md" in objective_checklist
+    assert "not release evidence, and not Excel-ready authorization" in objective_checklist
     assert "dropdown workbook is easier for the owner" in required_next_actions
+    assert "diagnostic prioritization" in required_next_actions
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in current_status
