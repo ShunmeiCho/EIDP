@@ -667,6 +667,113 @@ def render_review_summary(packet: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_review_validation_summary(packet: dict[str, Any], validation: dict[str, Any]) -> str:
+    """Return owner-readable validation results for a returned review worksheet."""
+
+    strict_yield = packet.get("strict_yield", {})
+    defect_framing = validation.get("defect_framing", {})
+    errors = [str(error) for error in validation.get("errors", [])]
+    decision_counts = validation.get("decision_counts", {})
+    bucket_decision_counts = validation.get("bucket_decision_counts", {})
+    expected_rows = validation.get("expected_rows", 0)
+    completed_decisions = validation.get("completed_decisions", 0)
+    blank_decisions = validation.get("blank_decisions", 0)
+    context_mismatch_count = validation.get("context_mismatch_count", 0)
+
+    lines = [
+        "# False-Reject Review Validation Summary",
+        "",
+        f"Archive: `{packet.get('archive', '')}`",
+        f"Release Forecast: `{strict_yield.get('release_forecast', 'NOT_READY')}`",
+        f"Validation OK: `{validation.get('ok')}`",
+        f"Review status: `{validation.get('review_status')}`",
+        f"Completed decisions: `{completed_decisions}/{expected_rows}`",
+        f"Blank decisions: `{blank_decisions}`",
+        f"Context mismatches: `{context_mismatch_count}`",
+        "",
+        "This summary is read-only. It does not fill the worksheet, approve rejected rows, "
+        "or allow any row into Excel.",
+        "",
+        "## Decision Counts",
+        "",
+        "| Decision | Rows |",
+        "| --- | ---: |",
+    ]
+    if isinstance(decision_counts, dict):
+        for decision, count in sorted(decision_counts.items()):
+            lines.append(f"| `{_md_cell(decision)}` | {count} |")
+    else:
+        lines.append("| `unavailable` | 0 |")
+
+    lines.extend(
+        [
+            "",
+            "## Decisions By Bucket",
+            "",
+            "| Bucket | false_reject | correct_reject | needs_operator_review | blank |",
+            "| --- | ---: | ---: | ---: | ---: |",
+        ]
+    )
+    if isinstance(bucket_decision_counts, dict):
+        for bucket, counts in sorted(bucket_decision_counts.items()):
+            counter = counts if isinstance(counts, dict) else {}
+            lines.append(
+                "| "
+                f"`{_md_cell(bucket)}` | "
+                f"{counter.get('false_reject', 0)} | "
+                f"{counter.get('correct_reject', 0)} | "
+                f"{counter.get('needs_operator_review', 0)} | "
+                f"{counter.get('', counter.get('blank', 0))} |"
+            )
+
+    lines.extend(
+        [
+            "",
+            "## Defect Framing",
+            "",
+            f"- Generic algorithm/model failure supported: `{defect_framing.get('generic_model_failure_supported')}`",
+            (
+                "- Specific algorithm/rule defect supported: "
+                f"`{defect_framing.get('specific_algorithm_or_rule_defect_supported')}`"
+            ),
+            f"- Status: `{defect_framing.get('status')}`",
+            f"- Reason: {_md_cell(defect_framing.get('reason', ''))}",
+            "",
+            "## Blocking Errors",
+            "",
+        ]
+    )
+    if errors:
+        for error in errors[:20]:
+            lines.append(f"- {_md_cell(error)}")
+        if len(errors) > 20:
+            lines.append(f"- ... {len(errors) - 20} more errors")
+    else:
+        lines.append("- None.")
+
+    next_action = (
+        "Fix the listed CSV errors before using this worksheet as release evidence."
+        if errors
+        else "Return-verifier evidence can use this worksheet only after the full owner gate also passes."
+    )
+    if not errors and validation.get("review_status") != "complete":
+        next_action = (
+            "Fill every blank decision with reviewer, reviewed_at, and required notes before using this "
+            "worksheet as RCA evidence."
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Next Action",
+            "",
+            f"- {next_action}",
+            "- Keep old-year, unknown-year, non-target, school-mismatch, and low-confidence rows out of Excel.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def _review_decision_counts_json(counter: Counter[str]) -> dict[str, int]:
     return {key or "blank": count for key, count in sorted(counter.items())}
 
@@ -848,7 +955,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("archive", type=Path, help="Path to logs/stage6-evidence-*.zip.")
     parser.add_argument("--required-yield-pct", type=float, default=60.0)
     parser.add_argument("--sample-size", type=int, default=50)
-    parser.add_argument("--format", choices=("markdown", "json", "csv", "review-summary"), default="markdown")
+    parser.add_argument(
+        "--format",
+        choices=("markdown", "json", "csv", "review-summary", "review-validation-summary"),
+        default="markdown",
+    )
     parser.add_argument("--json", action="store_true", help="Alias for --format json.")
     parser.add_argument("--validate-review-csv", type=Path, help="Validate a completed review CSV for this packet.")
     parser.add_argument("--require-decisions", action="store_true", help="Fail validation when any decision is blank.")
@@ -871,8 +982,14 @@ def main(argv: list[str] | None = None) -> int:
             args.validate_review_csv.read_text(encoding="utf-8-sig"),
             require_decisions=args.require_decisions,
         )
-        rendered = json.dumps(validation, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        if output_format == "review-validation-summary":
+            rendered = render_review_validation_summary(packet, validation)
+        else:
+            rendered = json.dumps(validation, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         ok = packet.get("ok") is True and validation.get("ok") is True
+    elif output_format == "review-validation-summary":
+        print("--format review-validation-summary requires --validate-review-csv", file=sys.stderr)
+        return 2
     elif output_format == "json":
         rendered = json.dumps(packet, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         ok = packet.get("ok") is True

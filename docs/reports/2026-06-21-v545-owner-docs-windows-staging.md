@@ -6,8 +6,8 @@ Date: 2026-06-21
 
 This follow-up refreshes the docs-only owner/operator handoff from v544 to the
 current v545 package identity. It stages the v545 owner handoff docs plus the
-v545 false-reject RCA packet, read-only review summary, worksheet, and
-blank-worksheet validation:
+v545 false-reject RCA packet, read-only review summary, worksheet,
+blank-worksheet validation, and owner-readable validation failure summary:
 
 - `docs/runbooks/00-READ-ME-FIRST-v545.txt`
 - `docs/runbooks/eidp-v545-release-summary.md`
@@ -25,6 +25,7 @@ blank-worksheet validation:
 - `docs/reports/2026-06-21-v545-false-reject-review-summary.md`
 - `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`
 - `docs/reports/2026-06-21-v545-false-reject-review-validation.json`
+- `docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md`
 - `docs/release/owner-decisions/publication-lag.md`
 - `docs/release/owner-decisions/ocr-scope.md`
 - `docs/release/v1-known-limitations.md`
@@ -37,7 +38,7 @@ SQLite DB, PDFs, audit JSONL, Excel files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v545-owner-docs-20260621.zip` |
-| ZIP SHA256 | `a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380` |
+| ZIP SHA256 | `13a2950b14a0481bc33c8e736a091f308d2b340270aeb36ee2dbd290742bb6a7` |
 | ZIP SHA256 sidecar | `C:\EIDP-staging\eidp-v545-owner-docs-20260621.zip.sha256` present and contains the expected ZIP hash |
 | Extracted destination | `C:\EIDP-staging\v545-owner-docs-20260621` |
 | First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v545.txt` present and contains stable current-main recheck wording instead of a moving latest-docs commit |
@@ -50,22 +51,32 @@ SQLite DB, PDFs, audit JSONL, Excel files, or Task Scheduler registration.
 | False-reject packet | `docs\reports\2026-06-21-v545-false-reject-audit-packet.md` present |
 | False-reject review summary | `docs\reports\2026-06-21-v545-false-reject-review-summary.md` present and contains the read-only warning plus `12/50` strict-yield context |
 | False-reject validation | `docs\reports\2026-06-21-v545-false-reject-review-validation.json` present |
+| False-reject validation summary | `docs\reports\2026-06-21-v545-false-reject-review-validation-summary.md` present and contains `Completed decisions: 0/53`, `Blank decisions: 53`, and the read-only Excel warning |
 
 ## Remote Verification Output
 
 ```text
-expected sha: a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380
-actual sha:   a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380
-sidecar content: a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380  dist/eidp-v545-owner-docs-20260621.zip
+expected SHA: 13a2950b14a0481bc33c8e736a091f308d2b340270aeb36ee2dbd290742bb6a7
+actual SHA:   13a2950b14a0481bc33c8e736a091f308d2b340270aeb36ee2dbd290742bb6a7
 docs\runbooks\00-READ-ME-FIRST-v545.txt present: True
-docs\runbooks\eidp-v545-release-summary.md present: True
-docs\runbooks\eidp-v545-owner-signoff.md present: True
-docs\runbooks\eidp-v545-owner-request-20260621.txt present: True
 docs\runbooks\eidp-v545-owner-return-fill-sheet.md present: True
-docs\reports\2026-06-21-v545-false-reject-review-sheet.csv present: True
-docs\reports\2026-06-21-v545-false-reject-audit-packet.md present: True
-docs\reports\2026-06-21-v545-false-reject-review-summary.md present: True
+docs\reports\current-release-status.md present: True
+docs\reports\eidp-current-objective-evidence-checklist.md present: True
+docs\reports\2026-06-21-v545-false-reject-review-validation-summary.md present: True
 docs\reports\2026-06-21-v545-false-reject-review-validation.json present: True
+docs\reports\2026-06-21-v545-false-reject-review-sheet.csv present: True
+docs\release\v1-known-limitations.md present: True
+summary Validation OK False: True
+summary completed 0/53: True
+summary blank 53: True
+summary context mismatch 0: True
+summary Excel warning: True
+first-read lists validation summary: True
+current status lists validation summary: True
+checklist lists validation summary: True
+core v545 ZIP present: True
+superseded v544 owner-docs staging absent: True
+scheduled task EIDP Weekly Run action: "C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat"
 current-main recheck wording in first-read: True
 current-main recheck wording in release summary: True
 current-main recheck wording in return sheet: True
@@ -79,17 +90,15 @@ return sheet review summary warning: True
 current-release-status NOT_READY: True
 current-release-status v545 handoff: True
 current-release-status review summary: True
+current-release-status validation summary: True
 objective checklist v545 handoff: True
 objective checklist review summary: True
-review summary present: True
+objective checklist validation summary: True
 review summary read-only warning: True
 review summary strict yield: True
-review worksheet header: audit_row_id,bucket,decision,reviewer,reviewed_at,school_id,reason,pdf_type,detected_fiscal_year,year_evidence,trusted_year_evidence,discovery_method,anchor_text,page_url,pdf_url,suggested_decision,suggested_decision_basis,review_question,false_reject_signal,notes
-scheduled task execute: "C:\Users\cyo20\EIDP-v527-69fe81f-env0\scripts\weekly_run.bat"
-C:\EIDP-staging\v545-owner-docs-20260621 present: True
-C:\EIDP-staging\v544-owner-docs-20260621 present: False
-C:\EIDP-staging\eidp-windows-v544.zip present: True
-C:\EIDP-staging\eidp-windows-v545.zip present: True
+validation summary completed 0/53: True
+validation summary blank 53: True
+validation summary Excel warning: True
 ```
 
 ## Cleanup

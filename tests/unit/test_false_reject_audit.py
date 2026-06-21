@@ -349,6 +349,37 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     required_payload = json.loads(capsys.readouterr().out)
     assert required_payload["review_status"] == "invalid"
 
+    validation_summary = module.render_review_validation_summary(packet, required_payload)
+    assert "False-Reject Review Validation Summary" in validation_summary
+    assert "Release Forecast: `NOT_READY`" in validation_summary
+    assert "Validation OK: `False`" in validation_summary
+    assert f"Completed decisions: `0/{len(rows)}`" in validation_summary
+    assert f"Blank decisions: `{len(rows)}`" in validation_summary
+    assert "Context mismatches: `0`" in validation_summary
+    assert "line 2: decision is required" in validation_summary
+    assert "This summary is read-only" in validation_summary
+    assert "allow any row into Excel" in validation_summary
+    assert "Fix the listed CSV errors" in validation_summary
+
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(review_path),
+                "--require-decisions",
+                "--format",
+                "review-validation-summary",
+            ]
+        )
+        == 1
+    )
+    cli_validation_summary = capsys.readouterr().out
+    assert "False-Reject Review Validation Summary" in cli_validation_summary
+    assert "Review status: `invalid`" in cli_validation_summary
+
 
 def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path: Path, capsys) -> None:
     module = _load_module()
@@ -372,3 +403,13 @@ def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path
     cli_summary = capsys.readouterr().out
     assert "Suggested Decisions By Bucket" in cli_summary
     assert "context_mismatch_count=0" in cli_summary
+
+
+def test_false_reject_audit_validation_summary_requires_review_csv(tmp_path: Path, capsys) -> None:
+    module = _load_module()
+    archive = _write_stage6_archive(tmp_path / "stage6-evidence.zip")
+
+    assert module.main([str(archive), "--format", "review-validation-summary"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "--format review-validation-summary requires --validate-review-csv" in captured.err

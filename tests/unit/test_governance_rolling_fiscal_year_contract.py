@@ -140,7 +140,7 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     expected_v543_source_sha = "6aa5735d164101cbe6ec85648bcb8b6f46168c63"
     expected_v542_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
     expected_v542_source_sha = "d98ecd7196631a00c27aff1c240ebc7969579ce7"
-    expected_docs_sha = "a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380"
+    expected_docs_sha = "13a2950b14a0481bc33c8e736a091f308d2b340270aeb36ee2dbd290742bb6a7"
     expected_v544_docs_sha = "c227b2bbc1db305ac7f44e8ad6e74aa0b38f3ddd734b239b52e2d30b014c5671"
     expected_v541_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
     expected_v541_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
@@ -220,6 +220,8 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "read-only review summary" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in objective_checklist
+    assert "docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md" in current_status
+    assert "docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" not in admin_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in admin_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in admin_checklist
@@ -276,18 +278,23 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "moving latest-docs commit absent in first-read: True" in staging
     assert "moving latest-docs commit absent in release summary: True" in staging
     assert "moving latest-docs commit absent in return sheet: True" in staging
-    assert "docs\\reports\\2026-06-21-v545-false-reject-review-summary.md present: True" in staging
+    assert "docs\\reports\\2026-06-21-v545-false-reject-review-summary.md` present" in staging
     assert "review summary read-only warning: True" in staging
     assert "review summary strict yield: True" in staging
+    assert "validation summary completed 0/53: True" in staging
+    assert "validation summary blank 53: True" in staging
+    assert "validation summary Excel warning: True" in staging
     assert "False-reject worksheet rules" in staging
     assert "return sheet verifier false-reject args: True" in staging
     assert "return sheet review summary warning: True" in staging
     assert "current-release-status NOT_READY: True" in staging
     assert "current-release-status v545 handoff: True" in staging
     assert "current-release-status review summary: True" in staging
+    assert "current-release-status validation summary: True" in staging
     assert "objective checklist v545 handoff: True" in staging
     assert "objective checklist review summary: True" in staging
-    assert "C:\\EIDP-staging\\v544-owner-docs-20260621 present: False" in staging
+    assert "objective checklist validation summary: True" in staging
+    assert "superseded v544 owner-docs staging absent: True" in staging
     assert "Previous packaged bounded Windows canary: `dist/eidp-windows-v543.zip`" in objective_checklist
     assert "Owner handoff docs have been refreshed to v542" in objective_checklist
     assert "C:\\EIDP-staging\\v545-owner-docs-20260621" in objective_checklist
@@ -296,7 +303,10 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "Refresh owner/operator handoff docs to v545" not in objective_checklist
     assert expected_docs_sha in staging
     assert "ZIP SHA256" in staging
-    assert "scheduled task execute: \"C:\\Users\\cyo20\\EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat\"" in staging
+    assert (
+        "scheduled task EIDP Weekly Run action: "
+        "\"C:\\Users\\cyo20\\EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat\"" in staging
+    )
     assert expected_v544_docs_sha in historical_staging_v544
     assert "v542 Owner Docs Windows Staging" in historical_staging_v542
     assert expected_v541_docs_sha in historical_staging_v541

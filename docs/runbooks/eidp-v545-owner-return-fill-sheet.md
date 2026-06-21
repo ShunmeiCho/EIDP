@@ -121,7 +121,8 @@ docs/reports/2026-06-21-v545-false-reject-review-summary.md
 ```
 
 The summary groups non-binding suggested decisions and priority rows.
-It does not fill the worksheet, approve rejected rows, or allow any row into Excel.
+This is read-only triage guidance. It does not fill the worksheet, approve
+rejected rows, or allow any row into Excel.
 
 Fill only these columns:
 
@@ -189,3 +190,9 @@ uv run python scripts/build_false_reject_audit.py \
 
 This command must return `ok=true`, `review_status=complete`, and
 `context_mismatch_count=0` before the worksheet can be used as RCA evidence.
+For an owner-readable failure summary while the worksheet is still incomplete,
+rerun the same command with:
+
+```bash
+  --format review-validation-summary
+```

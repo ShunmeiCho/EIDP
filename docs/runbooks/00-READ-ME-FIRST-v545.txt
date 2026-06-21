@@ -35,6 +35,7 @@ Read first
 - docs\reports\2026-06-21-v545-false-reject-review-summary.md
 - docs\reports\2026-06-21-v545-false-reject-review-sheet.csv
 - docs\reports\2026-06-21-v545-false-reject-review-validation.json
+- docs\reports\2026-06-21-v545-false-reject-review-validation-summary.md
 - docs\reports\2026-05-19-publication-lag-release-exception-record.md
 - docs\release\owner-decisions\publication-lag.md
 - docs\release\owner-decisions\ocr-scope.md

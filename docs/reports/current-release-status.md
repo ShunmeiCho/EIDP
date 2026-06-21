@@ -157,10 +157,14 @@ triage guide that groups suggested decisions without filling the worksheet or
 approving any row. The staged v545 blank worksheet validation is recorded at
 `docs/reports/2026-06-21-v545-false-reject-review-validation.json`: it reports
 `ok=true`, `review_status=incomplete`, `completed_decisions=0`,
-`context_mismatch_count=0`, and `defect_framing.status=pending_review`. This is
-a docs-only handoff and does not approve v1.0, prove an algorithm/model defect,
-or replace the missing owner real-cycle evidence. The earlier v544, v542, and
-v541 owner-docs refreshes remain historical handoff evidence only.
+`context_mismatch_count=0`, and `defect_framing.status=pending_review`. A
+readable require-decisions failure summary is also recorded at
+`docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md`: it
+reports `Validation OK=False`, `completed_decisions=0/53`, `blank_decisions=53`,
+and `context_mismatches=0`. This is a docs-only handoff and does not approve
+v1.0, prove an algorithm/model defect, or replace the missing owner real-cycle
+evidence. The earlier v544, v542, and v541 owner-docs refreshes remain
+historical handoff evidence only.
 
 Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
 `dist/` after v542 verification; SHA256 was

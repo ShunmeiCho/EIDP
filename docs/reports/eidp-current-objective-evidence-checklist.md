@@ -134,10 +134,14 @@ and emits machine-readable `defect_framing`. The current blank worksheet
 validation is recorded at
 `docs/reports/2026-06-21-v545-false-reject-review-validation.json`; it reports
 `completed_decisions=0`, `blank_decisions=53`, `context_mismatch_count=0`, and
-`defect_framing.status=pending_review`, so below-gate yield must not yet be
-labeled as an algorithm/model defect. Completed rows require `reviewer` and an
-ISO `reviewed_at` timestamp; `false_reject` and `needs_operator_review` rows
-require `notes`.
+`defect_framing.status=pending_review`. The owner-readable require-decisions
+failure summary is recorded at
+`docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md`; it
+reports `Validation OK=False`, `completed_decisions=0/53`, `blank_decisions=53`,
+and `context_mismatches=0`, so below-gate yield must not yet be labeled as an
+algorithm/model defect. Completed rows require `reviewer` and an ISO
+`reviewed_at` timestamp; `false_reject` and `needs_operator_review` rows require
+`notes`.
 The current source runbooks now tell the owner/operator how to return that
 worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
 immutable row context untouched, and have the developer validate the returned
@@ -676,8 +680,10 @@ do not remove the FY2026/R8 release blocker.
    sampled rows as `false_reject`, `correct_reject`, or
    `needs_operator_review`, then validate the returned CSV with
    `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
-   before labeling the blocker as an algorithm/model defect. Use the returned
-   `defect_framing.status`, not the below-gate rate alone, for that claim.
+   before labeling the blocker as an algorithm/model defect. Use
+   `--format review-validation-summary` for an owner-readable failure summary
+   while the worksheet is incomplete. Use the returned `defect_framing.status`,
+   not the below-gate rate alone, for that claim.
 4. Run the owner/operator return path from Windows and collect signed KPI,
    audit/outbox, workbook, and `publication_lag` decision evidence.
 5. Run the owner real Windows cycle and return KPI/sign-off evidence.
