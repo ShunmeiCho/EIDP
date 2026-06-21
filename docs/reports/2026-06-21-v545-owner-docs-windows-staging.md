@@ -37,11 +37,11 @@ SQLite DB, PDFs, audit JSONL, Excel files, or Task Scheduler registration.
 | Check | Evidence |
 | --- | --- |
 | Docs ZIP | `C:\EIDP-staging\eidp-v545-owner-docs-20260621.zip` |
-| ZIP SHA256 | `1b7f5d21ece3da3defe1956111213d004a1c6ba32f33bcc88e87f7471052bc1d` |
+| ZIP SHA256 | `a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380` |
 | ZIP SHA256 sidecar | `C:\EIDP-staging\eidp-v545-owner-docs-20260621.zip.sha256` present and contains the expected ZIP hash |
 | Extracted destination | `C:\EIDP-staging\v545-owner-docs-20260621` |
-| First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v545.txt` present and contains latest docs commit `294d329` plus CI `27890470359` |
-| Release summary | `docs\runbooks\eidp-v545-release-summary.md` present and contains latest docs commit `294d329` plus CI `27890470359` |
+| First-read handoff | `docs\runbooks\00-READ-ME-FIRST-v545.txt` present and contains stable current-main recheck wording instead of a moving latest-docs commit |
+| Release summary | `docs\runbooks\eidp-v545-release-summary.md` present and contains stable current-main recheck wording instead of a moving latest-docs commit |
 | Owner request | `docs\runbooks\eidp-v545-owner-request-20260621.txt` present and contains `False-reject worksheet rules` plus the read-only review summary guidance |
 | Owner return fill sheet | `docs\runbooks\eidp-v545-owner-return-fill-sheet.md` present and contains the return-verifier false-reject arguments plus the read-only summary warning |
 | Current release status | `docs\reports\current-release-status.md` present and contains `NOT_READY`, the v545 handoff path, and the review summary path |
@@ -54,9 +54,9 @@ SQLite DB, PDFs, audit JSONL, Excel files, or Task Scheduler registration.
 ## Remote Verification Output
 
 ```text
-expected sha: 1b7f5d21ece3da3defe1956111213d004a1c6ba32f33bcc88e87f7471052bc1d
-actual sha:   1b7f5d21ece3da3defe1956111213d004a1c6ba32f33bcc88e87f7471052bc1d
-sidecar content: 1b7f5d21ece3da3defe1956111213d004a1c6ba32f33bcc88e87f7471052bc1d  dist/eidp-v545-owner-docs-20260621.zip
+expected sha: a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380
+actual sha:   a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380
+sidecar content: a4fbb17f8700933a858c295b9525cef7264037b77eae4133ac3846d0a5dc8380  dist/eidp-v545-owner-docs-20260621.zip
 docs\runbooks\00-READ-ME-FIRST-v545.txt present: True
 docs\runbooks\eidp-v545-release-summary.md present: True
 docs\runbooks\eidp-v545-owner-signoff.md present: True
@@ -66,12 +66,12 @@ docs\reports\2026-06-21-v545-false-reject-review-sheet.csv present: True
 docs\reports\2026-06-21-v545-false-reject-audit-packet.md present: True
 docs\reports\2026-06-21-v545-false-reject-review-summary.md present: True
 docs\reports\2026-06-21-v545-false-reject-review-validation.json present: True
-latest docs commit in first-read: True
-latest docs CI in first-read: True
-latest docs commit in release summary: True
-latest docs CI in release summary: True
-latest docs commit in return sheet: True
-latest docs CI in return sheet: True
+current-main recheck wording in first-read: True
+current-main recheck wording in release summary: True
+current-main recheck wording in return sheet: True
+moving latest-docs commit absent in first-read: True
+moving latest-docs commit absent in release summary: True
+moving latest-docs commit absent in return sheet: True
 request worksheet rules: True
 request review summary guidance: True
 return sheet verifier false-reject args: True

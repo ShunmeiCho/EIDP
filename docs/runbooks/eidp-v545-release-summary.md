@@ -38,10 +38,11 @@ operation.
 
 ## Evidence Available
 
-- GitHub CI for latest v545 false-reject review-summary docs commit `294d329`:
-  success, run `27890470359`.
 - GitHub CI for packaged source commit `f3eb166`: success,
   run `27888117592`.
+- Docs-only handoff update commits do not change the packaged runtime.
+- Re-check current main CI before release approval instead of relying on a
+  moving "latest docs commit" value in this summary.
 - Windows side-by-side v545 setup, bounded weekly canary, after-weekly
   validation, and Stage 6 evidence verification completed.
 - Stage 6 verification result:

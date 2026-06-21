@@ -49,10 +49,9 @@ Current evidence
 - Package/source verification: ok=true
 - Core ZIP verifier: ok=true
 - GitHub main CI for packaged source commit f3eb166: success, run 27888117592
-- GitHub main CI for the latest v545 false-reject review-summary docs commit
-  294d329: success, run 27890470359
-- Re-check current `main` before release approval if additional handoff docs
-  are committed after this file.
+- GitHub main CI for docs-only handoff updates is not fixed to a moving
+  "latest docs commit" in this file.
+- Re-check current main before release approval.
 - Windows side-by-side validation for v545: setup/weekly/Stage 6 ok
 - Active-task safety: ok=true; active task still points to v527
 - v545 strict/Excel-ready FY2026 canary yield: 12/50 (24.0%)

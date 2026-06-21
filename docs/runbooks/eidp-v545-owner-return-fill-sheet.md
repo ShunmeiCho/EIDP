@@ -32,7 +32,7 @@ v1.0 on hold until enough FY2026/R8 target-form PDFs are public.
 | Windows extract path | `%USERPROFILE%\EIDP-v545-f3eb166-env0` |
 | current active root to preserve | `%USERPROFILE%\EIDP-v527-69fe81f-env0` |
 | non-Windows release gate | `logs/eidp-windows-v545-release-gates-20260621.json` -> `ok=true` |
-| GitHub main CI | packaged source commit f3eb166: CI `27888117592` -> success; latest v545 false-reject review-summary docs commit 294d329: CI `27890470359` -> success; re-check current `main` before release approval |
+| GitHub main CI | packaged source commit f3eb166: CI `27888117592` -> success; docs-only handoff commits do not change packaged runtime; re-check current main CI before release approval |
 | Windows validation evidence | `docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md` |
 | OCR runtime evidence | v545 OCR runtime validation is not complete; required if OCR remains in v1.0 scope |
 | setup validation evidence | `docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md` records after-setup validator `ok=true` |
