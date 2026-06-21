@@ -3,55 +3,7 @@
 Updated: 2026-06-21
 Branch: `main`
 
-Current packaged bounded Windows canary is `v547`
-(`dist/eidp-windows-v547.zip`, SHA256
-`f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`).
-`v547` packages commit `86c848f68e1dbde85c9b6422cfc827149940e02a` with
-`git_dirty=false`. It packages the current-main false-reject worksheet guidance
-hardening, where non-obvious `pre_filtered_non_target_hint` and
-`classified_non_target` rows are suggested as `needs_operator_review` instead
-of leaving `suggested_decision` blank. Local package verification and full
-non-Windows release gates returned `ok=true`, including full unit
-`2052 passed`, validator/distribution unit `196 passed`, mypy, Ruff, discovery
-gold replay `45/45` exact matches, and both package verifier modes. Evidence
-is recorded in `docs/reports/2026-06-21-v547-package-gates.md`,
-`logs/eidp-windows-v547-distribution-verify-20260621.json`, and
-`logs/eidp-windows-v547-release-gates-20260621.json`. Local v547 cleanup
-evidence is recorded in `logs/eidp-v547-local-prune-20260621.json`; it removed
-superseded v545 ZIP artifacts (`deleted_bytes=210931692`) and retained v546
-fallback, v547 current package, and the latest alias on the external-SSD-backed
-`dist/`.
-
-`v547` completed side-by-side Windows setup and a bounded limit-50 weekly
-canary at `C:\Users\cyo20\EIDP-v547-86c848f-env0`. The canary confirmed setup
-`rc=0`, after-setup validator `ok=true`, active-task safety `ok=true`, weekly
-canary `rc=0`, after-weekly validator `ok=true`, Stage 6 evidence verification
-`ok=true`, strict/Excel-ready FY2026 yield `12/50 (24.0%)`,
-operator-reviewable yield `47/50 (94.0%)`, and `ship_gate_status=below_gate`.
-That `24.0%` is bounded-cohort evidence for the selected 50 target-missing
-schools, not whole-database readiness. It is also not a PDF acquisition success
-rate or an overall project completion rate: candidate sets were found for
-`50/50` selected schools, `15` documents were downloaded and processed, and
-only `12` schools reached strict target PDF plus Excel-ready. Therefore v547
-proves the false-reject worksheet guidance hardening is packaged and
-Windows-canary safe; it does not prove release readiness and does not support
-claiming a generic algorithm/model defect. Evidence is recorded in
-`docs/reports/2026-06-21-v547-windows-canary.md`,
-`logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`,
-`logs/win-v547-86c848f-canary/stage6-evidence-verify-20260621-144556.json`,
-`logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`, and
-`logs/win-v547-86c848f-canary/20260621_053425-summary.json`.
-
-Windows cleanup after v547 retained active v527, fallback v546, and current
-v547 while removing v545 transfer ZIPs and the v545 side-by-side directory
-(`1,109,396,361` bytes total). Cleanup evidence is recorded in
-`logs/win-v547-86c848f-canary/win-v547-cleanup-20260621.json` and
-`logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`.
-
-`v547` still has not completed OCR scope approval, owner real-cycle sign-off,
-or publication-lag decision. Release Forecast remains `NOT_READY`.
-
-Current `main` source-side package/setup proof is now `v548`
+Current packaged bounded Windows canary is `v548`
 (`dist/eidp-windows-v548.zip`, SHA256
 `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`).
 `v548` packages commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be` with
@@ -75,9 +27,27 @@ recorded in `docs/reports/2026-06-21-v548-package-setup-gates.md`,
 `logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`, and
 `logs/win-v548-cleanup-20260621.json`.
 
-`v548` is not a new bounded weekly canary and does not change the strict-yield
-result. The latest bounded Windows canary remains v547 at strict/Excel-ready
-`12/50 (24.0%)`. Release Forecast remains `NOT_READY`.
+`v548` also completed a bounded limit-50 weekly canary at
+`C:\Users\cyo20\EIDP-v548-c1a9690-env0`. The canary confirmed weekly `rc=0`,
+after-weekly validator `ok=true`, Stage 6 evidence verification `ok=true`,
+Mac-side Stage 6 evidence replay `ok=true`, strict/Excel-ready FY2026 yield
+`12/50 (24.0%)`, operator-reviewable yield `47/50 (94.0%)`, and
+`ship_gate_status=below_gate`. That `24.0%` is bounded-cohort evidence for the
+selected 50 target-missing schools, not whole-database readiness. It is also
+not a PDF acquisition success rate or an overall project completion rate:
+candidate sets were found for `50/50` selected schools, `15` documents were
+downloaded and processed, and only `12` schools reached strict target PDF plus
+Excel-ready. Therefore v548 proves the audit-packet summary hardening is
+packaged and Windows-canary safe; it does not prove release readiness and does
+not support claiming a generic algorithm/model defect. Evidence is recorded in
+`docs/reports/2026-06-21-v548-windows-canary.md`,
+`logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip`,
+`logs/win-v548-c1a9690-canary/stage6-evidence-verify-20260621-200255.json`,
+`logs/win-v548-c1a9690-canary/stage6-evidence-verify-mac-20260621.json`, and
+`logs/win-v548-c1a9690-canary/20260621_105136-summary.json`.
+
+`v548` still has not completed OCR scope approval, owner real-cycle sign-off,
+or publication-lag decision. Release Forecast remains `NOT_READY`.
 
 Local cleanup after v548 removed the superseded v546 ZIP and sidecar from the
 external-SSD-backed `dist/` (`deleted_bytes=210934325`) and retained v547
@@ -85,6 +55,32 @@ fallback, v548 current package, and the latest alias. Windows cleanup removed
 the v546 transfer ZIPs and `C:\Users\cyo20\EIDP-v546-6301605-env0`, freeing
 `1,109,412,996` bytes while retaining active v527, fallback v547, and current
 v548.
+
+Previous packaged bounded Windows canary is `v547`
+(`dist/eidp-windows-v547.zip`, SHA256
+`f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`).
+`v547` packages commit `86c848f68e1dbde85c9b6422cfc827149940e02a` with
+`git_dirty=false`. It packages the current-main false-reject worksheet guidance
+hardening, where non-obvious `pre_filtered_non_target_hint` and
+`classified_non_target` rows are suggested as `needs_operator_review` instead
+of leaving `suggested_decision` blank. Local package verification, full
+non-Windows release gates, side-by-side setup, bounded weekly canary, and
+Stage 6 evidence verification all returned `ok=true` / `rc=0`. The v547 canary
+also remained below gate at strict/Excel-ready `12/50 (24.0%)`. Evidence is
+recorded in `docs/reports/2026-06-21-v547-package-gates.md`,
+`logs/eidp-windows-v547-distribution-verify-20260621.json`,
+`logs/eidp-windows-v547-release-gates-20260621.json`,
+`docs/reports/2026-06-21-v547-windows-canary.md`,
+`logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`,
+`logs/win-v547-86c848f-canary/stage6-evidence-verify-20260621-144556.json`,
+`logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`, and
+`logs/win-v547-86c848f-canary/20260621_053425-summary.json`.
+
+Windows cleanup after v547 retained active v527, fallback v546, and current
+v547 while removing v545 transfer ZIPs and the v545 side-by-side directory
+(`1,109,396,361` bytes total). Cleanup evidence is recorded in
+`logs/win-v547-86c848f-canary/win-v547-cleanup-20260621.json` and
+`logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`.
 
 Current `main` false-reject review guidance was rerun against the v547
 Windows-canary Stage 6 evidence. It keeps the v547 evidence bundle fixed while
@@ -103,10 +99,11 @@ lists the `53` owner rows with page/PDF URLs. The worksheet still has
 owner decisions remain blocked and cannot support Excel output or a generic
 model-failure claim.
 
-The v547 runtime package still remains the latest completed Windows canary
-package, but this regenerated worksheet is a current-`main` helper output. Use
-current `main` for validating this regenerated worksheet unless a fresh package
-is built and Windows-verified with the same helper revision.
+The regenerated false-reject worksheet remains tied to the v547 Stage 6
+evidence bundle. v548 is now the latest Windows-canary package for
+owner-return helper behavior, but the v547 worksheet itself has not been
+completed or approved. Use current `main` / v548 helper behavior for validating
+this regenerated worksheet unless a later package supersedes v548.
 Current `main` also adds a `review-audit-log` output for returned false-reject
 worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,

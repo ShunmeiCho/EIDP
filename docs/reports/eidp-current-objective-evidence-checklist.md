@@ -16,7 +16,23 @@ Windows-staged owner docs ZIP now includes this report and the
 target-yearless RCA spot check plus the owner v1.0 A/B decision brief and v526
 owner return fill sheet, and has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
-Current v547 package/source and bounded Windows canary check:
+Current v548 package/source and bounded Windows canary check:
+`docs/reports/2026-06-21-v548-package-setup-gates.md` records the v548 package
+at commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`, package SHA256
+`488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`,
+`git_dirty=false`, package verifier `ok=true`, full non-Windows release gates
+`ok=true`, full unit `2059 passed`, validator/distribution unit `196 passed`,
+mypy, Ruff, discovery gold replay `45/45` exact matches, Windows setup
+`rc=0`, after-setup validator `ok=true`, and active-task recovery
+`ok=true`.
+`docs/reports/2026-06-21-v548-windows-canary.md` records weekly limit-50
+canary, after-weekly validation, Stage 6 evidence verification, and Mac-side
+Stage 6 replay. The v548 canary remains below gate with strict/Excel-ready
+`12/50 (24.0%)`, operator-reviewable `47/50 (94.0%)`, and
+`ship_gate_status=below_gate`. v548 proves the audit-packet summary hardening
+is packaged and Windows-canary safe; it does not prove release readiness or
+justify labeling the blocker as a generic algorithm/model failure.
+Previous v547 package/source and bounded Windows canary check:
 `docs/reports/2026-06-21-v547-package-gates.md` records the v547 package at
 commit `86c848f68e1dbde85c9b6422cfc827149940e02a`, package SHA256
 `f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`,
@@ -29,9 +45,7 @@ validation, active-task safety, weekly limit-50 canary, after-weekly
 validation, Stage 6 evidence verification, and cleanup for superseded Windows
 release artifacts. The v547 canary remains below gate with strict/Excel-ready
 `12/50 (24.0%)`, operator-reviewable `47/50 (94.0%)`, and
-`ship_gate_status=below_gate`. v547 proves the false-reject worksheet guidance
-hardening is packaged and Windows-canary safe; it does not prove release
-readiness or justify labeling the blocker as a generic algorithm/model failure.
+`ship_gate_status=below_gate`; it is now fallback/historical canary evidence.
 Previous v546 package/source and bounded Windows canary check:
 `docs/reports/2026-06-21-v546-rca-summary-windows-canary.md` records
 the v546 package at commit `63016054f948b1f4f285c3c822197f76c25b4b7d`,
@@ -112,10 +126,11 @@ package-gate report, v547 strict-yield canary report, and v547 false-reject
 review summary and worksheet.
 The earlier v545, v544, v542, and v541 handoffs remain historical evidence
 only.
-Current v546 strict-yield RCA summary:
-`docs/reports/2026-06-21-v546-rca-summary-windows-canary.md` records
-the unchanged `12/50 (24.0%)` blocker after packaging and Windows-canary
-verifying the false-reject RCA-summary handoff helper. The v546 selected school
+Current v548 strict-yield RCA summary:
+`docs/reports/2026-06-21-v548-windows-canary.md` records
+the unchanged `12/50 (24.0%)` blocker after packaging, Windows setup, bounded
+weekly canary, and Stage 6 verification of the audit-packet summary hardening.
+The v548 selected school
 status is
 `publication_lag=30`, `target_year_unverified=2`, `image_pending=3`,
 `review_or_parse=5`, and `excel_ready=12`. Discovery rejection counters remain
@@ -194,10 +209,9 @@ algorithm/model defect. Completed rows require `reviewer` and an ISO
 The current source runbooks now tell the owner/operator how to return that
 worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
 immutable row context untouched, and have the developer validate the returned
-CSV from current `main`. The staged v547 package carries the packaged v547
-helper, but the regenerated worksheet uses current-`main` explicit-year
-triage guidance unless a fresh Windows package is built with the same helper
-revision. The owner-return verifier now accepts
+CSV from current `main`. The staged v547 owner handoff still carries the v547
+worksheet, but the v548 package is now the latest Windows-canary proof for the
+owner-return helper behavior. The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`,
 `--false-reject-review-audit-log`, and `--false-reject-sample-size`; when
 supplied, it requires `review_status=complete`, `context_mismatch_count=0`, a
@@ -272,11 +286,17 @@ validation recorded in
 owner `decision` cells remain blank, but suggested decisions now have `0`
 blanks (`24` `correct_reject`, `29` `needs_operator_review`). This does not
 approve any row and does not relax strict FY gates.
+Post-v547 audit-packet summary hardening:
+v548 now packages, setup-verifies, and Windows-canary verifies the
+`false_reject_review_summary` audit-packet validity surface in
+`scripts/verify_stage6_return.py`. v548 aligns the latest package/setup proof
+and latest bounded Windows canary, but strict/Excel-ready remains
+`12/50 (24.0%)`, so the release verdict is unchanged.
 Release verdict: **NOT_READY**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
 objective. It intentionally replaces the older historical v464/v460 narrative
-with the current v547 package/source and bounded Windows canary state.
+with the current v548 package/source and bounded Windows canary state.
 
 ## Objective Restated
 
@@ -306,7 +326,32 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Latest packaged bounded Windows canary: `dist/eidp-windows-v547.zip`
+- Latest packaged bounded Windows canary: `dist/eidp-windows-v548.zip`
+- v548 package/source commit:
+  `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`
+- v548 package SHA256:
+  `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`
+- v548 package, non-Windows gate, and Windows canary evidence:
+  `docs/reports/2026-06-21-v548-package-setup-gates.md`,
+  `docs/reports/2026-06-21-v548-windows-canary.md`,
+  `logs/eidp-windows-v548-distribution-verify-20260621.json`,
+  `logs/eidp-windows-v548-release-gates-20260621.json`,
+  `logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip`, and
+  `logs/win-v548-c1a9690-canary/stage6-evidence-verify-mac-20260621.json`.
+  This records
+  `ok=true`, `git_dirty=false`, full unit `2059 passed`,
+  validator/distribution unit `196 passed`, discovery gold replay `45/45`
+  exact matches, package/source check at commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`,
+  Windows setup/canary/Stage 6 verification `ok=true`, strict/Excel-ready
+  `12/50 (24.0%)`, operator-reviewable `47/50 (94.0%)`, local cleanup
+  `deleted_bytes=210934325`, and Windows cleanup `deleted_bytes=1109412996`.
+  The `24.0%` value is not a PDF acquisition success rate and not overall
+  project completion; it is `12/50` selected target-missing schools that reached
+  strict target PDF plus Excel-ready after `50/50` candidate sets were found and
+  `15` documents were downloaded and processed.
+  v548 packages the current false-reject audit-packet summary hardening and is
+  Windows-canary verified, but it remains below gate.
+- Previous packaged bounded Windows canary: `dist/eidp-windows-v547.zip`
 - v547 package/source commit:
   `86c848f68e1dbde85c9b6422cfc827149940e02a`
 - v547 package SHA256:
@@ -318,19 +363,7 @@ that keeps manual work below the release threshold.
   `logs/eidp-windows-v547-release-gates-20260621.json`,
   `logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`, and
   `logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`.
-  This records
-  `ok=true`, `git_dirty=false`, full unit `2052 passed`,
-  validator/distribution unit `196 passed`, discovery gold replay `45/45`
-  exact matches, package/source check at commit `86c848f68e1dbde85c9b6422cfc827149940e02a`,
-  Windows setup/canary/Stage 6 verification `ok=true`, strict/Excel-ready
-  `12/50 (24.0%)`, operator-reviewable `47/50 (94.0%)`, local cleanup
-  `deleted_bytes=210931692`, and Windows cleanup `deleted_bytes=1109396361`.
-  The `24.0%` value is not a PDF acquisition success rate and not overall
-  project completion; it is `12/50` selected target-missing schools that reached
-  strict target PDF plus Excel-ready after `50/50` candidate sets were found and
-  `15` documents were downloaded and processed.
-  v547 packages the current false-reject worksheet guidance hardening and is
-  Windows-canary verified, but it remains below gate.
+  v547 remains fallback/historical canary evidence and is below gate.
 - Previous packaged bounded Windows canary: `dist/eidp-windows-v546.zip`
 - v546 package/source commit:
   `63016054f948b1f4f285c3c822197f76c25b4b7d`
@@ -376,9 +409,10 @@ that keeps manual work below the release threshold.
   `6aa5735d164101cbe6ec85648bcb8b6f46168c63`
 - v543 package SHA256:
   `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`
-- Current v547 package contains the latest false-reject worksheet guidance
-  hardening, passes non-Windows gates, and is the latest Windows bounded
-  canary. The current staged owner handoff lane is now v547.
+- Current v548 package contains the latest `false_reject_review_summary`
+  audit-packet validity hardening, passes non-Windows gates, and is the latest
+  Windows bounded canary. The current staged owner handoff lane remains v547
+  until those docs are refreshed.
 - Previous v544 package/canary contains the false-reject audit helper packaging
   fix and false-reject worksheet triage guidance. The v544, v542, and v541 r3
   owner handoffs remain historical handoff evidence only.
@@ -386,7 +420,7 @@ that keeps manual work below the release threshold.
   verifier integration. Owner handoff docs have been refreshed to v542; v541 r3
   remains historical handoff evidence only.
 - Latest complete Windows side-by-side smoke: v535
-- Latest bounded Windows canary: v547
+- Latest bounded Windows canary: v548
 - Latest partial Windows side-by-side setup/canary: v502, superseded by v523/v524/v525/v526/v532/v533/v535/v540/v541/v542/v543/v544/v545
 - Latest source/package discovery fix: v523 package rebuild including v522 stale-yearless RCA bucket classification
 - Latest source/package verifier hardening: v524/v525/v526 owner-return verifier requires
@@ -824,9 +858,9 @@ do not remove the FY2026/R8 release blocker.
 6. Run `scripts/verify_stage6_return.py` against the returned owner evidence.
 7. Create the signed `v1.0` tag only after the above blockers are resolved.
 
-## Current v548 Package/Setup Evidence
+## Current v548 Package/Setup And Canary Evidence
 
-- Latest source-side package/setup proof: `v548`.
+- Latest source-side package/setup and bounded canary proof: `v548`.
 - Package: `dist/eidp-windows-v548.zip`.
 - Package SHA256:
   `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`.
@@ -834,6 +868,8 @@ do not remove the FY2026/R8 release blocker.
   `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`.
 - Evidence report:
   `docs/reports/2026-06-21-v548-package-setup-gates.md`.
+- Windows canary report:
+  `docs/reports/2026-06-21-v548-windows-canary.md`.
 - Package verifier logs:
   `logs/eidp-windows-v548-distribution-verify-20260621.json` and
   `logs/eidp-windows-v548-distribution-verify-patterns-20260621.json`.
@@ -843,11 +879,17 @@ do not remove the FY2026/R8 release blocker.
   `logs/win-v548-c1a9690-validate-after-setup-20260621.json`.
 - Windows active-task recovery proof:
   `logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`.
+- Windows bounded canary summary:
+  `logs/win-v548-c1a9690-canary/20260621_105136-summary.json`.
+- Windows Stage 6 evidence:
+  `logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip`,
+  `logs/win-v548-c1a9690-canary/stage6-evidence-verify-20260621-200255.json`,
+  and `logs/win-v548-c1a9690-canary/stage6-evidence-verify-mac-20260621.json`.
 - Cleanup proof:
   `logs/eidp-v548-local-prune-20260621.json` and
   `logs/win-v548-cleanup-20260621.json`.
 
 Interpretation: v548 packages the current-main audit-packet validity hardening
-for `false_reject_review_summary` and has Windows setup proof, but it is not a
-new bounded weekly canary and does not change the v547 strict/Excel-ready
-`12/50 (24.0%)` result. Release Forecast remains `NOT_READY`.
+for `false_reject_review_summary` and has Windows setup plus bounded canary
+proof. It still remains below gate at strict/Excel-ready `12/50 (24.0%)`.
+Release Forecast remains `NOT_READY`.

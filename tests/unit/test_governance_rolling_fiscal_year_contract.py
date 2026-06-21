@@ -113,9 +113,9 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Stage 6 return verifier has not checked the canonical owner decision briefs" in checklist
     assert "publication_lag_decision_brief" in checklist
     assert "ocr_scope_decision_brief" in checklist
-    assert "v547 still remains below the strict/Excel-ready release gate" in checklist
-    assert "Current v548 package/setup evidence is recorded" in checklist
-    assert "The latest bounded Windows canary evidence remains v547" in checklist
+    assert "v548 still remains below the strict/Excel-ready release gate" in checklist
+    assert "Current v548 package/setup and bounded canary evidence is recorded" in checklist
+    assert "Previous v547 bounded Windows canary evidence is recorded" in checklist
     assert "Previous v546 Windows bounded canary evidence is recorded" in checklist
 
 
@@ -165,7 +165,7 @@ def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "earlier v545, v544, v542, and v541 owner-docs refreshes remain historical" in current_status
     assert "audit-packet validity" in current_status
     assert "Latest v547 owner/operator docs staging" in objective_checklist
-    assert "The current staged owner handoff lane is now v547" in objective_checklist
+    assert "current staged owner handoff lane remains v547" in objective_checklist
     assert "still target v545 until owner docs are refreshed again" not in objective_checklist
     assert "blocking packet/CSV/audit-log error previews" in objective_checklist
 
@@ -272,11 +272,16 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "docs/runbooks/eidp-v545-owner-signoff.md" not in current_status
     assert "docs/runbooks/eidp-v545-owner-request-20260621.txt" not in current_status
     assert "docs/runbooks/eidp-v545-owner-return-fill-sheet.md" not in current_status
-    assert "Current packaged bounded Windows canary is `v547`" in current_status
+    assert "Current packaged bounded Windows canary is `v548`" in current_status
+    assert "docs/reports/2026-06-21-v548-package-setup-gates.md" in current_status
+    assert "docs/reports/2026-06-21-v548-windows-canary.md" in current_status
+    assert "logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip" in current_status
+    assert "logs/win-v548-c1a9690-canary/stage6-evidence-verify-mac-20260621.json" in current_status
+    assert "logs/win-v548-c1a9690-canary/20260621_105136-summary.json" in current_status
+    assert "Previous packaged bounded Windows canary is `v547`" in current_status
     assert "docs/reports/2026-06-21-v547-package-gates.md" in current_status
     assert "logs/eidp-windows-v547-distribution-verify-20260621.json" in current_status
     assert "logs/eidp-windows-v547-release-gates-20260621.json" in current_status
-    assert "logs/eidp-v547-local-prune-20260621.json" in current_status
     assert "docs/reports/2026-06-21-v547-windows-canary.md" in current_status
     assert "logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip" in current_status
     assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-20260621-144556.json" in current_status
@@ -287,8 +292,8 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "logs/eidp-windows-v546-distribution-verify-20260621.json" in current_status
     assert "logs/eidp-windows-v546-release-gates-20260621.json" in current_status
     assert "logs/eidp-v546-local-prune-20260621.json" in current_status
-    assert "v547` completed side-by-side Windows setup" in current_status
-    assert "v546` completed side-by-side Windows setup" in current_status
+    assert "v548` also completed a bounded limit-50 weekly canary" in current_status
+    assert "v547 canary also remained below gate" in current_status
     assert "strict/Excel-ready FY2026 yield `12/50 (24.0%)`" in current_status
     assert "not a PDF acquisition success rate" in current_status
     assert "not a PDF acquisition success rate or an overall project completion rate" in current_status
@@ -338,12 +343,14 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "SPECIFIC_RULE_DEFECTS_FOUND" in return_sheet
     assert "GENERIC_MODEL_FAILURE_NOT_SUPPORTED" in return_sheet
     assert "source-side handoff hardening" in objective_checklist
-    assert "Latest source-side package/setup proof: `v548`" in objective_checklist
+    assert "Latest source-side package/setup and bounded canary proof: `v548`" in objective_checklist
     assert "docs/reports/2026-06-21-v548-package-setup-gates.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-windows-canary.md" in objective_checklist
     assert "logs/eidp-windows-v548-release-gates-20260621.json" in objective_checklist
     assert "logs/win-v548-c1a9690-validate-after-setup-20260621.json" in objective_checklist
     assert "logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt" in objective_checklist
-    assert "not a new bounded weekly canary" in objective_checklist
+    assert "logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip" in objective_checklist
+    assert "Latest bounded Windows canary: v548" in objective_checklist
     assert "v547 package, non-Windows gate, and Windows canary evidence" in objective_checklist
     assert "v546 package, non-Windows gate, and Windows canary evidence" in objective_checklist
     assert "docs/reports/2026-06-21-v547-package-gates.md" in objective_checklist
@@ -362,7 +369,10 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "dist/eidp-windows-v547.zip" in admin_checklist
     assert "core ZIP pruned locally after v548" in admin_checklist
     assert "dist/eidp-windows-v546.zip" not in admin_checklist
-    assert "v547 package/source and bounded canary evidence" in admin_checklist
+    assert "v548 package/source/setup and bounded canary evidence" in admin_checklist
+    assert "logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip" in admin_checklist
+    assert "logs/win-v548-c1a9690-canary/stage6-evidence-verify-mac-20260621.json" in admin_checklist
+    assert "v547 fallback package/source and bounded canary evidence" in admin_checklist
     assert "logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip" in admin_checklist
     assert "logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json" in admin_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in admin_checklist
@@ -424,9 +434,9 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     )
     assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in current_status
     assert "docs/reports/2026-06-21-v544-triage-helper-windows-canary.md" in objective_checklist
-    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v547.zip`" in objective_checklist
-    assert "Current v547 package contains the latest false-reject worksheet guidance" in objective_checklist
-    assert "Latest bounded Windows canary: v547" in objective_checklist
+    assert "Latest packaged bounded Windows canary: `dist/eidp-windows-v548.zip`" in objective_checklist
+    assert "Current v548 package contains the latest `false_reject_review_summary`" in objective_checklist
+    assert "Latest bounded Windows canary: v548" in objective_checklist
     assert "The `24.0%` value is not a PDF download/acquisition success rate" in v547_windows_canary
     assert "not the overall project completion rate" in v547_windows_canary
     assert "candidate sets for `50/50` selected schools" in v547_windows_canary

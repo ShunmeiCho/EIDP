@@ -15,7 +15,7 @@ decision for FY2026/R8 publication lag.
   after its last code/package change. Current source/setup package is v548 at
   commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`; package gates and
   Windows side-by-side setup passed. The latest bounded Windows weekly canary is
-  still v547 at commit `86c848f68e1dbde85c9b6422cfc827149940e02a`, and it is
+  also v548 at commit `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`, and it is
   still below the strict/Excel-ready release gate.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
   release scope. Current v546 did not restore or validate an OCR add-on/runtime
@@ -160,18 +160,23 @@ Excel output.
 
 Before tagging, attach or reference:
 
-- v548 package/source/setup evidence:
+- v548 package/source/setup and bounded canary evidence:
   `docs/reports/2026-06-21-v548-package-setup-gates.md`,
   `logs/eidp-windows-v548-distribution-verify-20260621.json`,
   `logs/eidp-windows-v548-distribution-verify-patterns-20260621.json`,
   `logs/eidp-windows-v548-release-gates-20260621.json`,
   `logs/win-v548-c1a9690-validate-after-setup-20260621.json`,
   `logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`,
+  `docs/reports/2026-06-21-v548-windows-canary.md`,
+  `logs/win-v548-c1a9690-canary/20260621_105136-summary.json`,
+  `logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip`,
+  `logs/win-v548-c1a9690-canary/stage6-evidence-verify-20260621-200255.json`,
+  `logs/win-v548-c1a9690-canary/stage6-evidence-verify-mac-20260621.json`,
   `logs/eidp-v548-local-prune-20260621.json`,
   `logs/win-v548-cleanup-20260621.json`, and
   `dist/eidp-windows-v548.zip`. v548 package SHA256:
   `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`;
-- v547 package/source and bounded canary evidence:
+- v547 fallback package/source and bounded canary evidence:
   `docs/reports/2026-06-21-v547-package-gates.md`,
   `logs/eidp-windows-v547-distribution-verify-20260621.json`,
   `logs/eidp-windows-v547-release-gates-20260621.json`,
@@ -185,6 +190,8 @@ Before tagging, attach or reference:
   `logs/win-v547-86c848f-canary/win-v547-explicit-dir-cleanup-20260621.json`.
   v547 package SHA256:
   `f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b`;
+  v547 package/source commit:
+  `86c848f68e1dbde85c9b6422cfc827149940e02a`;
 - historical v546 package/source and CI evidence, with the core ZIP pruned
   locally after v548:
   `docs/reports/2026-06-21-v546-rca-summary-package-gates.md`,
@@ -285,23 +292,28 @@ Before tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v548 package/setup evidence is recorded in
+Current v548 package/setup and bounded canary evidence is recorded in
 `docs/reports/2026-06-21-v548-package-setup-gates.md`,
 `logs/eidp-windows-v548-distribution-verify-20260621.json`,
 `logs/eidp-windows-v548-distribution-verify-patterns-20260621.json`,
 `logs/eidp-windows-v548-release-gates-20260621.json`,
 `logs/win-v548-c1a9690-validate-after-setup-20260621.json`, and
-`logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`. The v548
-package/source commit is `c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`, and the
-v548 package SHA256 is
+`logs/win-v548-c1a9690-stage6-recovery-20260621.out.txt`, plus
+`docs/reports/2026-06-21-v548-windows-canary.md`,
+`logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip`, and
+`logs/win-v548-c1a9690-canary/stage6-evidence-verify-mac-20260621.json`. The
+v548 package/source commit is
+`c1a96903ed10f1cc9c48d1a6912061ba0aaf86be`, and the v548 package SHA256 is
 `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`.
+v548 still remains below the strict/Excel-ready release gate with
+`ship_gate_status=below_gate`; it is not owner/operator real-cycle sign-off or
+v1.0 approval.
 
-The latest bounded Windows canary evidence remains v547 and is recorded in
+Previous v547 bounded Windows canary evidence is recorded in
 `docs/reports/2026-06-21-v547-windows-canary.md` and
 `logs/win-v547-86c848f-canary/stage6-evidence-verify-mac-20260621.json`.
-v547 still remains below the strict/Excel-ready release gate with
-`ship_gate_status=below_gate`; neither v547 nor v548 is owner/operator
-real-cycle sign-off or v1.0 approval.
+v547 also remains below the strict/Excel-ready release gate with
+`ship_gate_status=below_gate`; it is fallback/historical evidence only.
 
 Previous v546 Windows bounded canary evidence is recorded in
 `docs/reports/2026-06-21-v546-rca-summary-windows-canary.md`,
