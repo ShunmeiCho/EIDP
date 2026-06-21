@@ -137,42 +137,51 @@ accepted as FY2026/R8 target application documents and then become Excel-ready.
 It also is not framed as a generic algorithm/model failure unless
 rejection-bucket false-reject evidence proves material over-rejection or
 fiscal-year extraction mistakes.
-The earlier v535 RCA plan and v541/v542/v543/v544 false-reject packets remain
-historical decomposition. The current false-reject review lane uses the v545
-Windows canary evidence, and the staged owner handoff docs now target v545, so
-the v545 worksheet is the current staged owner worksheet.
+The earlier v535 RCA plan and v541/v542/v543/v544/v545 false-reject packets
+remain historical decomposition. The current false-reject review lane uses the
+v547 Windows canary evidence and v547 worksheet. The staged owner handoff docs
+still target v545 until owner docs are refreshed again, so do not use the staged
+v545 handoff as proof that the v547 worksheet has been completed.
 The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
 `ok=true`, `20` RCA packets, and `524` candidate rows. The below-gate release
 status is recorded in the v541 weekly summary as `ship_gate_status=below_gate`.
-The current false-reject audit packet is generated and recorded at
+The historical v545 false-reject audit packet is recorded at
 `docs/reports/2026-06-21-v545-false-reject-audit-packet.md` using
 `uv run python scripts/build_false_reject_audit.py
 logs/win-v545-f3eb166-canary/stage6-evidence-20260621-004156.zip --sample-size
 12 --output docs/reports/2026-06-21-v545-false-reject-audit-packet.md`.
-Its review worksheet is generated at
+The current v547 review worksheet is generated at
+`docs/reports/2026-06-21-v547-false-reject-review-sheet.csv` using the v547
+Stage 6 evidence bundle
+`logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip`. The older
+v545 review worksheet remains historical at
 `docs/reports/2026-06-21-v545-false-reject-review-sheet.csv` using
 `uv run python scripts/build_false_reject_audit.py
 logs/win-v545-f3eb166-canary/stage6-evidence-20260621-004156.zip --sample-size
 12 --format csv --output
-docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`. The blank
-worksheet includes read-only `suggested_decision` / `suggested_decision_basis`
-triage guidance for obvious old-year, non-target, yearless, and identity-risk
-rows, but the actual `decision` cells remain blank and must be completed by the
-owner/operator. It reports `53` sampled rows and validates with
+docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`; its historical
+validation remains recorded at
+`docs/reports/2026-06-21-v545-false-reject-review-validation.json` and
+`docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md`. The
+v547 blank worksheet includes read-only `suggested_decision` /
+`suggested_decision_basis` triage guidance for obvious old-year, non-target,
+yearless, and identity-risk rows, but the actual `decision` cells remain blank
+and must be completed by the owner/operator. It reports `53` sampled rows and
+validates with
 `defect_framing.status=pending_review`, while the same command with
 `--validate-review-csv
-docs/reports/2026-06-21-v545-false-reject-review-sheet.csv --require-decisions`
+docs/reports/2026-06-21-v547-false-reject-review-sheet.csv --require-decisions`
 fails until every sampled row has one of the allowed decisions. The validator
 also rejects changed immutable row context, reports `bucket_decision_counts`,
-and emits machine-readable `defect_framing`. The current blank worksheet
+and emits machine-readable `defect_framing`. The current v547 blank worksheet
 validation is recorded at
-`docs/reports/2026-06-21-v545-false-reject-review-validation.json`; it reports
+`docs/reports/2026-06-21-v547-false-reject-review-validation.json`; it reports
 `completed_decisions=0`, `blank_decisions=53`, `context_mismatch_count=0`, and
 `defect_framing.status=pending_review`. The owner-readable require-decisions
 failure summary is recorded at
-`docs/reports/2026-06-21-v545-false-reject-review-validation-summary.md`; it
+`docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`; it
 reports `Validation OK=False`, `completed_decisions=0/53`, `blank_decisions=53`,
 and `context_mismatches=0`, so below-gate yield must not yet be labeled as an
 algorithm/model defect. Completed rows require `reviewer` and an ISO

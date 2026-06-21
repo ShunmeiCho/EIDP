@@ -239,6 +239,8 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "not framed as a generic algorithm/model failure" in objective_checklist
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
+    assert "The current false-reject review lane uses the v547 Windows canary evidence" in objective_checklist
+    assert "do not use the staged v545 handoff as proof" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in current_status
@@ -258,6 +260,7 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "docs/reports/2026-06-21-v547-false-reject-review-summary.md" in objective_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-validation.json" in objective_checklist
     assert "docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md" in objective_checklist
+    assert "current v547 blank worksheet validation is recorded" in objective_checklist
     assert "false_reject_review_summary" in current_status
     assert "false_reject_review_summary" in objective_checklist
     assert "review-rca-summary" in current_status
