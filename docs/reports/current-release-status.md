@@ -110,6 +110,16 @@ worksheet remains historical handoff evidence only:
 `docs/reports/2026-06-21-v547-false-reject-review-validation.json`, and
 `docs/reports/2026-06-21-v547-false-reject-review-validation-summary.md`.
 Neither worksheet has been completed or approved.
+`v548` is now frozen as the current owner review baseline until a new bounded
+Windows canary changes the packet. The owner-facing short form is generated at
+`docs/reports/2026-06-21-v548-owner-review-short-form.csv` and
+`docs/reports/2026-06-21-v548-owner-review-short-form.xlsx`, with its scope
+recorded in
+`docs/reports/2026-06-21-v548-owner-review-short-form.md`. The short form only
+splits the same 53 v548 rows into owner-review packs (`24` suggested
+`correct_reject`, `29` suggested `needs_operator_review`, `0` suspected
+`false_reject`); it is evidence intake only, not release approval, and the
+canonical returned artifact remains the v548 worksheet.
 Current `main` also adds a `review-audit-log` output for returned false-reject
 worksheets. It emits one JSONL audit event for each validated nonblank owner
 decision, with immutable worksheet context hash, reviewer, timestamp, notes,

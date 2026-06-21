@@ -337,6 +337,14 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "v548 worksheet, and Windows-staged v548 owner handoff" in objective_checklist
     assert "staged owner handoff docs still target v547" not in objective_checklist
     assert "Neither the v547 nor v548 worksheet has been completed or approved" in objective_checklist
+    assert "v548` is now frozen as the current owner review baseline" in current_status
+    assert "docs/reports/2026-06-21-v548-owner-review-short-form.csv" in current_status
+    assert "docs/reports/2026-06-21-v548-owner-review-short-form.xlsx" in current_status
+    assert "canonical returned artifact remains the v548 worksheet" in current_status
+    assert "The current owner review baseline is frozen at v548" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-owner-review-short-form.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v548-owner-review-short-form.xlsx" in objective_checklist
+    assert "dropdown workbook is easier for the owner" in required_next_actions
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in current_status

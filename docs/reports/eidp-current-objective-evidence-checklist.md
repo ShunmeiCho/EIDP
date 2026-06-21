@@ -162,6 +162,18 @@ remain historical decomposition. The current false-reject review lane uses the
 v548 Windows canary evidence, v548 worksheet, and Windows-staged v548 owner
 handoff. The previous v547 worksheet remains historical handoff evidence only.
 Neither the v547 nor v548 worksheet has been completed or approved.
+The current owner review baseline is frozen at v548 until a new bounded Windows
+canary changes the packet. For owner intake, the same 53 v548 worksheet rows
+are also available as the short form
+`docs/reports/2026-06-21-v548-owner-review-short-form.csv` and the
+dropdown-enabled workbook
+`docs/reports/2026-06-21-v548-owner-review-short-form.xlsx`; the short-form
+scope is recorded in
+`docs/reports/2026-06-21-v548-owner-review-short-form.md`. The split is
+`24` suggested `correct_reject`, `29` suggested `needs_operator_review`, and
+`0` suspected `false_reject`. This is intake evidence only: completed decisions
+must still be mapped back to the canonical v548 worksheet and validated before
+release evidence can be claimed.
 The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
@@ -892,7 +904,11 @@ do not remove the FY2026/R8 release blocker.
    target-year-unverified third, and site-entry/fetch/identity lanes fourth.
 3. Review `docs/reports/2026-06-21-v548-false-reject-review-sheet.csv` and mark
    sampled rows as `false_reject`, `correct_reject`, or
-   `needs_operator_review`, then validate the returned CSV with
+   `needs_operator_review`. Use the owner intake short form
+   `docs/reports/2026-06-21-v548-owner-review-short-form.xlsx` when a smaller
+   dropdown workbook is easier for the owner, but map returned decisions back
+   to the canonical v548 worksheet before release validation. Then validate the
+   returned CSV with
    `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
    before labeling the blocker as an algorithm/model defect. Use
    `--format review-validation-summary` for an owner-readable failure summary
