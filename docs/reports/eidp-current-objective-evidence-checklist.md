@@ -16,7 +16,20 @@ Windows-staged owner docs ZIP now includes this report and the
 target-yearless RCA spot check plus the owner v1.0 A/B decision brief and v526
 owner return fill sheet, and has SHA256
 `28b12cbec895233b3ad97dff4c7757e2fb89cbd3130c4a604443a06bb8e38d29`.
-Current v545 package/source and bounded Windows canary check:
+Current v546 package/source and bounded Windows canary check:
+`docs/reports/2026-06-21-v546-rca-summary-windows-canary.md` records
+the v546 package at commit `63016054f948b1f4f285c3c822197f76c25b4b7d`,
+package SHA256
+`ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`,
+`git_dirty=false`, Windows setup validation, active-task safety, weekly
+limit-50 canary, after-weekly validation, Stage 6 evidence verification, and
+cleanup for superseded Windows release artifacts. The v546 canary remains
+below gate with strict/Excel-ready `12/50 (24.0%)`, operator-reviewable
+`47/50 (94.0%)`, and `ship_gate_status=below_gate`. v546 proves the
+false-reject RCA-summary handoff hardening is packaged and Windows-canary safe;
+it does not prove release readiness or justify labeling the blocker as a
+generic algorithm/model failure.
+Previous v545 package/source and bounded Windows canary check:
 `docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md` records
 the v545 package at commit `f3eb1663c0333f296856a84f447ef2424ea77ddf`,
 package SHA256 `ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0`,
@@ -67,11 +80,12 @@ Windows setup validation, active-task safety, weekly limit-50 canary, and
 Stage 6 evidence verification for `C:\Users\cyo20\EIDP-v540-fbdd0bd-env0`.
 The v540 canary remains below gate with strict/Excel-ready `12/50 (24.0%)`
 and `ship_gate_status=below_gate`.
-Latest complete UI/Excel side-by-side smoke remains v535:
+Latest complete UI/Excel smoke evidence remains v535:
 `docs/reports/2026-06-20-v535-full-windows-side-by-side-smoke.md` records setup
 validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
-`C:\Users\cyo20\EIDP-v535-d742327-env0`.
+`C:\Users\cyo20\EIDP-v535-d742327-env0`. The v535 runtime directory was pruned
+after v546 evidence collection; the report remains historical evidence only.
 Latest v545 owner/operator docs staging:
 `docs/reports/2026-06-21-v545-owner-docs-windows-staging.md` records the
 docs-only handoff ZIP staged at `C:\EIDP-staging\v545-owner-docs-20260621`.
@@ -80,10 +94,11 @@ summary, short owner sign-off form, owner request, return fill sheet, v545
 strict-yield canary report, and v545 false-reject audit packet plus review
 summary and worksheet.
 The earlier v544, v542, and v541 handoffs remain historical evidence only.
-Current v545 strict-yield RCA summary:
-`docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md` records
-the unchanged `12/50 (24.0%)` blocker after prioritizing trusted disclosure
-site entries over ordinary homepages. The v545 selected school status is
+Current v546 strict-yield RCA summary:
+`docs/reports/2026-06-21-v546-rca-summary-windows-canary.md` records
+the unchanged `12/50 (24.0%)` blocker after packaging and Windows-canary
+verifying the false-reject RCA-summary handoff helper. The v546 selected school
+status is
 `publication_lag=30`, `target_year_unverified=2`, `image_pending=3`,
 `review_or_parse=5`, and `excel_ready=12`. Discovery rejection counters remain
 dominated by `pre_filtered_non_target_hint=432`, `fiscal_year_mismatch=206`,
@@ -91,6 +106,10 @@ and `classified_non_target=103`, with `no_candidates_found=9`. This reinforces
 that the current blocker is strict evidence-gate yield under FY2026/R8 public
 availability and candidate quality, not Windows setup, packaging, or a generic
 model failure.
+Previous v545 strict-yield RCA summary:
+`docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md` records
+the same `12/50 (24.0%)` blocker after prioritizing trusted disclosure site
+entries over ordinary homepages.
 Previous v544 strict-yield RCA summary:
 `docs/reports/2026-06-21-v544-triage-helper-windows-canary.md` records the
 `12/50 (24.0%)` blocker and the same release-safe RCA lanes without counting
@@ -197,11 +216,27 @@ v545 now packages and Windows-canary verifies trusted disclosure-page priority
 in `run_pdf_discovery`. It also records cleanup of superseded local v535/v536/
 v542/v543 ZIPs and Windows v540-v543 diagnostic side-by-side directories while
 preserving active v527, fallback v544, and current v545.
+Post-v545 source/package hardening:
+v546 now packages and Windows-canary verifies the false-reject
+`review-rca-summary` output. It also records cleanup of superseded Windows
+v532/v533/v535/v536/v537/v538/v539/v544 side-by-side directories and v535/v536/
+v544 transfer ZIPs while preserving active v527, fallback v545, and current
+v546.
+Post-v546 source-side review-routing hardening:
+current `main` now suggests non-obvious `pre_filtered_non_target_hint` and
+`classified_non_target` rows as `needs_operator_review` instead of leaving
+`suggested_decision` blank. Running the updated helper against v546 Stage 6
+evidence produced `docs/reports/2026-06-21-v546-false-reject-review-summary.md`
+and `docs/reports/2026-06-21-v546-false-reject-review-sheet.csv`; the owner
+`decision` cells remain blank, but suggested decisions now have `0` blanks
+(`20` `correct_reject`, `33` `needs_operator_review`). This does not approve
+any row, does not relax strict FY gates, and requires a future package/canary
+before it counts as Windows packaged behavior.
 Release verdict: **NOT_READY**
 
 This file is the prompt-to-artifact checklist for the current long-term EIDP
 objective. It intentionally replaces the older historical v464/v460 narrative
-with the current v545 package/source state and v545 bounded Windows canary
+with the current v546 package/source state and v546 bounded Windows canary
 state.
 
 ## Objective Restated
@@ -232,22 +267,26 @@ that keeps manual work below the release threshold.
 
 ## Current Candidate Boundary
 
-- Latest packaged bounded Windows canary: `dist/eidp-windows-v545.zip`
-- v545 package/source commit:
-  `f3eb1663c0333f296856a84f447ef2424ea77ddf`
-- v545 package SHA256:
-  `ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0`
-- v546 source package / non-Windows gate evidence:
+- Latest packaged bounded Windows canary: `dist/eidp-windows-v546.zip`
+- v546 package/source commit:
+  `63016054f948b1f4f285c3c822197f76c25b4b7d`
+- v546 package SHA256:
+  `ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`
+- v546 package, non-Windows gate, and Windows canary evidence:
   `docs/reports/2026-06-21-v546-rca-summary-package-gates.md`,
-  `logs/eidp-windows-v546-distribution-verify-20260621.json`, and
+  `docs/reports/2026-06-21-v546-rca-summary-windows-canary.md`,
+  `logs/eidp-windows-v546-distribution-verify-20260621.json`,
+  `logs/win-v546-6301605-canary/stage6-evidence-20260621-043811.zip`, and
   `logs/eidp-windows-v546-release-gates-20260621.json`. This records
-  `ok=true`, package/source commit
-  `63016054f948b1f4f285c3c822197f76c25b4b7d`, `git_dirty=false`, full unit
-  `2052 passed`, validator/distribution unit `196 passed`, discovery gold
-  replay `45/45` exact matches, package SHA256
-  `ece0bbf3c1e96f3bf5be6dd553f3a547244edf15ad65ea2bc38c61600887ecfd`, and
-  cleanup of superseded v544 ZIP artifacts. v546 is not Windows release
-  evidence until side-by-side Windows setup/canary completes.
+  `ok=true`, `git_dirty=false`, full unit `2052 passed`,
+  validator/distribution unit `196 passed`, discovery gold replay `45/45`
+  exact matches, Windows setup/canary/Stage 6 verification `ok=true`,
+  strict/Excel-ready `12/50 (24.0%)`, operator-reviewable `47/50 (94.0%)`,
+  and Windows cleanup `deleted_bytes=7836187780`.
+- previous v545 package/source commit:
+  `f3eb1663c0333f296856a84f447ef2424ea77ddf`
+- previous v545 package SHA256:
+  `ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0`
 - v545 package gate evidence:
   `logs/eidp-windows-v545-distribution-verify-20260621.json`. This records
   `ok=true`, `has_runtime=true`, `wheel_count=84`, `git_dirty=false`, and
@@ -272,10 +311,10 @@ that keeps manual work below the release threshold.
   `6aa5735d164101cbe6ec85648bcb8b6f46168c63`
 - v543 package SHA256:
   `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`
-- Current v546 source package contains the latest false-reject RCA summary
-  handoff hardening and passes non-Windows gates; current v545 package/canary
-  remains the latest Windows bounded canary and current staged owner handoff
-  lane.
+- Current v546 package contains the latest false-reject RCA summary handoff
+  hardening, passes non-Windows gates, and is the latest Windows bounded
+  canary. The current staged owner handoff lane remains v545 until owner docs
+  are refreshed again.
 - Previous v544 package/canary contains the false-reject audit helper packaging
   fix and false-reject worksheet triage guidance. The v544, v542, and v541 r3
   owner handoffs remain historical handoff evidence only.

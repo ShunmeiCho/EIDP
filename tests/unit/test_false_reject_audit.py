@@ -56,6 +56,14 @@ def _write_stage6_archive(path: Path) -> Path:
             "pdf_url": "https://gamma.example/eval.pdf",
         },
         {
+            "school_id": 8,
+            "reason": "classified_non_target",
+            "pdf_type": "non_target",
+            "anchor_text": "令和8年度 申請関係書類",
+            "page_url": "https://theta.example/disclosure",
+            "pdf_url": "https://theta.example/form-candidate.pdf",
+        },
+        {
             "school_id": 4,
             "reason": "target_fiscal_year_not_detected",
             "pdf_type": "target",
@@ -204,6 +212,10 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     yearless_row = next(row for row in rows if row["bucket"] == "target_fiscal_year_not_detected")
     assert yearless_row["decision"] == ""
     assert yearless_row["suggested_decision"] == "needs_operator_review"
+    ambiguous_non_target_row = next(row for row in rows if row["school_id"] == "8")
+    assert ambiguous_non_target_row["decision"] == ""
+    assert ambiguous_non_target_row["suggested_decision"] == "needs_operator_review"
+    assert "not obviously safe" in ambiguous_non_target_row["suggested_decision_basis"]
     legacy_csv = io.StringIO()
     legacy_columns = [
         column
@@ -423,7 +435,7 @@ def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path
     assert "Release Forecast: `NOT_READY`" in summary
     assert "This is read-only triage guidance" in summary
     assert "| `correct_reject` | 4 |" in summary
-    assert "| `needs_operator_review` | 3 |" in summary
+    assert "| `needs_operator_review` | 4 |" in summary
     assert "## Priority Review Rows" in summary
     assert "`target_fiscal_year_not_detected`" in summary
     assert "`site_entry_fetch_identity`" in summary

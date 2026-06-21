@@ -281,7 +281,13 @@ def _suggested_triage_decision(
                 "correct_reject",
                 "Anchor or URL contains an obvious non-target hint; confirm it is not a target application form.",
             )
-        return ("", "Review whether this non-target classification rejected a real target application form.")
+        return (
+            "needs_operator_review",
+            (
+                "Non-target rejection is not obviously safe from anchor/URL evidence; "
+                "operator must inspect the official PDF/page before confirming correct_reject or false_reject."
+            ),
+        )
 
     if bucket_name == "target_fiscal_year_not_detected":
         return (

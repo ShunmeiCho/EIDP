@@ -14,11 +14,10 @@ decision for FY2026/R8 publication lag.
 - The selected release candidate has not been Windows side-by-side validated
   after its last code/package change. Current source package candidate is v546
   at commit `63016054f948b1f4f285c3c822197f76c25b4b7d`, with non-Windows
-  gates passed. Latest packaged bounded Windows canary remains v545 at commit
-  `f3eb1663c0333f296856a84f447ef2424ea77ddf`. v546 requires Windows
-  side-by-side setup/canary before it counts as Windows release evidence.
+  gates passed and Windows side-by-side canary completed. v546 still remains
+  below the strict/Excel-ready release gate.
 - The selected release candidate has no valid OCR runtime proof while OCR is in
-  release scope. Current v545 did not restore or validate an OCR add-on/runtime
+  release scope. Current v546 did not restore or validate an OCR add-on/runtime
   proof; if OCR is in scope, attach a valid OCR add-on proof before approval.
 - The owner real cycle and evidence bundle are missing.
 - The strict FY2026/R8 gate is below 60% and there is no explicit
@@ -117,12 +116,12 @@ Generated Windows ZIPs are large. Keep only the selected release candidate, its
 `.sha256` sidecar, the `dist/eidp-windows.zip` latest alias, and `wheelhouse/`
 unless an older package is actively needed for side-by-side evidence transfer.
 
-After the v543 rebuild and Windows canary, superseded generated artifacts no
+After the v546 rebuild and Windows canary, superseded generated artifacts no
 longer needed for the current evidence lane were pruned. Retained core package
-artifacts are v535, v536, v542, and v543, plus the latest alias
-`dist/eidp-windows.zip`. AppleDouble `._*` files created by macOS on the
-external volume must be removed from `dist/` before package verification or
-transfer.
+artifacts on the external SSD are v545 fallback, v546 current, the latest alias
+`dist/eidp-windows.zip`, and the current owner-docs ZIP. AppleDouble `._*`
+files created by macOS on the external volume must be removed from `dist/`
+before package verification or transfer.
 
 On the current Mac workstation, generated artifacts are stored on the external
 SSD mounted at `/Volumes/M1nG-ssd`:
@@ -163,8 +162,12 @@ Before tagging, attach or reference:
   `logs/eidp-windows-v546-release-gates-20260621.json`, and CI run
   `27892572590` for source commit `6301605`;
 - v546 Windows bounded canary evidence:
-  not present yet; this is a P0 release blocker before v546 can count as
-  Windows release evidence;
+  `docs/reports/2026-06-21-v546-rca-summary-windows-canary.md`,
+  `logs/win-v546-6301605-canary/20260621_042630-summary.json`,
+  `logs/win-v546-6301605-canary/stage6-evidence-20260621-043811.zip`,
+  `logs/win-v546-6301605-canary/stage6-evidence-verify-20260621-133825.json`,
+  `logs/win-v546-6301605-canary/stage6-evidence-verify-mac-20260621.json`,
+  and `logs/win-v546-6301605-canary/win-v546-cleanup-20260621.json`;
 - v545 package/source and CI evidence:
   `docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md`,
   `logs/eidp-windows-v545-distribution-verify-20260621.json`, and CI run
@@ -245,10 +248,10 @@ Before tagging, attach or reference:
   release-scope decision that OCR is optional/manual fallback for v1.0;
 - explicit release-scope approval if FY2026/R8 remains below the strict gate.
 
-Current v545 package evidence is recorded in
-`docs/reports/2026-06-21-v545-disclosure-priority-windows-canary.md`,
-`logs/eidp-windows-v545-distribution-verify-20260621.json`, and
-`logs/win-v545-f3eb166-canary/stage6-evidence-verify-mac-20260621.json`.
+Current v546 package evidence is recorded in
+`docs/reports/2026-06-21-v546-rca-summary-windows-canary.md`,
+`logs/eidp-windows-v546-distribution-verify-20260621.json`, and
+`logs/win-v546-6301605-canary/stage6-evidence-verify-mac-20260621.json`.
 It is bounded canary evidence with `ship_gate_status=below_gate`; it is not
 owner/operator real-cycle sign-off and not v1.0 approval.
 
