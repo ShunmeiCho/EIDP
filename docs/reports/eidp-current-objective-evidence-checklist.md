@@ -229,7 +229,12 @@ audit logs. Current `main` also emits a compact
 returns expose completed/blank decision counts, context mismatch count, defect
 framing status, explicit `owner_return_gate_ok`, audit-packet validity, and
 blocking packet/CSV/audit-log error previews directly in
-`scripts/verify_stage6_return.py` output. Current `main` also lets the developer
+`scripts/verify_stage6_return.py` output. Current `main` now also adds
+decision-count summary, bucket-level decision counts, `false_reject` /
+`needs_operator_review` / `correct_reject` row counts, and defect-framing reason
+to that compact summary; this helps route completed returns to specific rule-fix
+work without relaxing any strict gate and is not packaged into the existing v548
+runtime ZIP. Current `main` also lets the developer
 validate a completed returned worksheet and write its matching audit JSONL in a
 single command with
 `scripts/build_false_reject_audit.py --write-review-audit-log`; the option still

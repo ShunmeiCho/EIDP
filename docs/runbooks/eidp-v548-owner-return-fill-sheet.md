@@ -161,6 +161,10 @@ Current `main` also emits a compact `false_reject_review_summary` in the JSON
 result for easier owner/developer handoff; this is a convenience field only and
 does not change `ok`, `errors`, `review_status=complete`, or
 `context_mismatch_count=0` release gates.
+The summary also mirrors decision counts, bucket-level decision counts,
+`false_reject` / `needs_operator_review` / `correct_reject` row counts, and the
+defect-framing reason so a completed return can be routed to specific rule-fix
+work without treating the below-gate rate as a generic model defect.
 Current `main` can also render completed false-reject worksheet decisions as a
 JSONL audit log. This is an audit handoff artifact only; it does not write to
 business tables, approve rejected rows, or relax Excel-ready gates.

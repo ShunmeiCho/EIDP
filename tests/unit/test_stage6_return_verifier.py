@@ -307,7 +307,7 @@ def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Pa
     evidence_zip = tmp_path / "stage6-evidence.zip"
     evidence_zip.write_text("fake", encoding="utf-8")
     review_csv = tmp_path / "false-reject-review.csv"
-    review_csv.write_text("audit_row_id,decision\nrow-1,correct_reject\n", encoding="utf-8")
+    review_csv.write_text("audit_row_id,decision\nrow-1,false_reject\n", encoding="utf-8")
     audit_log = tmp_path / "false-reject-review-audit-log.jsonl"
     audit_log.write_text("expected-audit-log\n", encoding="utf-8")
     calls: dict[str, object] = {}
@@ -339,8 +339,21 @@ def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Pa
                 "ok": True,
                 "basis": "false_reject_review_decision_validation",
                 "review_status": "complete",
+                "expected_rows": 1,
                 "completed_decisions": 1,
+                "blank_decisions": 0,
+                "decision_counts": {"false_reject": 1},
+                "bucket_decision_counts": {"fiscal_year_mismatch": {"false_reject": 1}},
                 "context_mismatch_count": 0,
+                "defect_framing": {
+                    "generic_model_failure_supported": False,
+                    "specific_algorithm_or_rule_defect_supported": True,
+                    "status": "specific_false_rejects_found",
+                    "false_reject_rows": 1,
+                    "needs_operator_review_rows": 0,
+                    "correct_reject_rows": 0,
+                    "reason": "Completed review found a specific false-reject row.",
+                },
                 "errors": [],
             }
 
@@ -377,16 +390,25 @@ def test_verify_stage6_return_accepts_completed_false_reject_review(tmp_path: Pa
         "owner_return_gate_ok": True,
         "review_status": "complete",
         "completed_decisions": 1,
-        "expected_rows": None,
-        "blank_decisions": None,
+        "expected_rows": 1,
+        "blank_decisions": 0,
         "context_mismatch_count": 0,
         "audit_log_event_count": 1,
-        "defect_framing_status": None,
-        "generic_model_failure_supported": None,
-        "specific_algorithm_or_rule_defect_supported": None,
+        "decision_counts": {"false_reject": 1},
+        "bucket_decision_counts": {"fiscal_year_mismatch": {"false_reject": 1}},
+        "defect_framing_status": "specific_false_rejects_found",
+        "defect_framing_reason": "Completed review found a specific false-reject row.",
+        "false_reject_rows": 1,
+        "needs_operator_review_rows": 0,
+        "correct_reject_rows": 0,
+        "generic_model_failure_supported": False,
+        "specific_algorithm_or_rule_defect_supported": True,
         "blocking_error_count": 0,
         "blocking_error_preview": [],
-        "next_action": "Use this worksheet only with the full owner-return verifier result.",
+        "next_action": (
+            "Use the false_reject rows as specific rule-fix work; rejected rows still stay out of Excel until "
+            "a rerun passes the strict gate."
+        ),
         "excel_gate_warning": (
             "This summary does not approve rejected rows or allow old-year, unknown-year, non-target, "
             "school-mismatch, low-confidence, or unresolved rows into Excel."

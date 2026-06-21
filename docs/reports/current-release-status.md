@@ -355,10 +355,12 @@ validation is supplied. The field mirrors `review_status`, completed/blank
 decision counts, context mismatch count, defect framing status, an explicit
 `owner_return_gate_ok`, audit-packet validity, and the first blocking packet,
 CSV, or audit-log gate errors so the owner-return failure is readable without
-loosening any gate. This is
-source-side hardening after the v545 packaged runtime; a
-future package/canary is required before claiming this convenience field is
-available from a Windows package.
+loosening any gate. Current `main` now also carries the decision-count summary,
+bucket-level decision counts, `false_reject` / `needs_operator_review` /
+`correct_reject` row counts, and defect-framing reason directly in that compact
+summary. The base summary is packaged in the v548 runtime; the new
+decision-count extension is current-main source-side hardening and is not
+packaged into the existing v548 runtime ZIP.
 
 Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
 `dist/` after v542 verification; SHA256 was

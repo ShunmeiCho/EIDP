@@ -303,6 +303,12 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     blank_decisions = validation.get("blank_decisions")
     context_mismatch_count = validation.get("context_mismatch_count")
     audit_log_event_count = validation.get("audit_log_event_count")
+    decision_counts = validation.get("decision_counts")
+    if not isinstance(decision_counts, dict):
+        decision_counts = {}
+    bucket_decision_counts = validation.get("bucket_decision_counts")
+    if not isinstance(bucket_decision_counts, dict):
+        bucket_decision_counts = {}
     review_status = validation.get("review_status")
     ok = validation.get("ok")
     audit_packet_ok = validation.get("audit_packet_ok")
@@ -322,6 +328,15 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         next_action = "Complete every false-reject review decision before using the worksheet as RCA evidence."
     elif audit_log_errors:
         next_action = "Regenerate the false-reject review audit log from the completed worksheet."
+    elif defect_framing.get("status") == "specific_false_rejects_found":
+        next_action = (
+            "Use the false_reject rows as specific rule-fix work; rejected rows still stay out of Excel until "
+            "a rerun passes the strict gate."
+        )
+    elif defect_framing.get("status") == "inconclusive_operator_review":
+        next_action = "Resolve needs_operator_review rows before making an algorithm or rule-defect claim."
+    elif defect_framing.get("status") == "not_supported":
+        next_action = "Record the completed review as correct-reject evidence and continue the remaining release gates."
     else:
         next_action = "Use this worksheet only with the full owner-return verifier result."
 
@@ -335,7 +350,13 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         "blank_decisions": blank_decisions,
         "context_mismatch_count": context_mismatch_count,
         "audit_log_event_count": audit_log_event_count,
+        "decision_counts": decision_counts,
+        "bucket_decision_counts": bucket_decision_counts,
         "defect_framing_status": defect_framing.get("status"),
+        "defect_framing_reason": defect_framing.get("reason"),
+        "false_reject_rows": defect_framing.get("false_reject_rows"),
+        "needs_operator_review_rows": defect_framing.get("needs_operator_review_rows"),
+        "correct_reject_rows": defect_framing.get("correct_reject_rows"),
         "generic_model_failure_supported": defect_framing.get("generic_model_failure_supported"),
         "specific_algorithm_or_rule_defect_supported": defect_framing.get(
             "specific_algorithm_or_rule_defect_supported"
