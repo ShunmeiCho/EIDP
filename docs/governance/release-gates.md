@@ -63,6 +63,13 @@ gating all passed for the evaluated fiscal year. It is not a broad PDF discovery
 rate, not a "PDF contains the year string" rate, and not an old-year or
 sibling-school fallback rate.
 
+Every yield percentage must state its denominator and interpretation. For
+example, `12/50 = 24.0%` in the v548 bounded Windows canary is the strict
+target PDF plus Excel-ready rate for a selected target-missing cohort. It is
+not whole-database readiness, not PDF acquisition rate, and not project
+completion rate. Do not use an unstated-denominator percentage for release
+decisions.
+
 Do not claim GA if the evaluated fiscal year's strict yield is below the active
 release gate or if publication-lag exceptions are unresolved.
 

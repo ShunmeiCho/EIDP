@@ -33,6 +33,9 @@ def test_release_gate_defines_sixty_percent_as_strict_excel_ready_not_broad_disc
     assert "target application PDF identity" in text
     assert "Excel-ready" in text
     assert "not a broad PDF discovery rate" in text
+    assert "Every yield percentage must state its denominator and interpretation" in text
+    assert "`12/50 = 24.0%`" in text
+    assert "not whole-database readiness, not PDF acquisition rate, and not project completion rate" in text
 
 
 def test_v1_exit_criteria_preserve_future_year_scope_without_expanding_v1() -> None:
@@ -54,6 +57,14 @@ def test_goal_execution_requires_lightweight_forecast_and_formal_release_checkli
     assert "P0: open release blockers" in text
     assert "full release gate checklist and evidence bundle" in text
     assert "A release forecast is not a substitute for the checklist" in text
+    assert "## Evidence Consumption Boundary" in text
+    assert "stop adding new P1 hardening by default" in text
+    assert "owner/operator false-reject worksheet return" in text
+    assert "developer shadow review for diagnostics only" in text
+    assert "`publication_lag` or OCR owner decision brief" in text
+    assert "concrete rule fix for a confirmed `false_reject` row" in text
+    assert "Do not generate a new verifier, package, or release summary merely to show continued motion" in text
+    assert "review packet is frozen as the current baseline" in text
 
 
 def test_owner_signoff_is_simple_but_evidence_based() -> None:
@@ -153,6 +164,46 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Previous v546 Windows bounded canary evidence is recorded" in checklist
 
 
+def test_v548_owner_short_form_return_mapper_is_documented_as_intake_only() -> None:
+    script = _normalized_doc("scripts/apply_owner_short_form_return.py")
+    short_form = _normalized_doc("docs/reports/2026-06-21-v548-owner-review-short-form.md")
+    return_sheet = _normalized_doc("docs/runbooks/eidp-v548-owner-return-fill-sheet.md")
+    current_status = _normalized_doc("docs/reports/current-release-status.md")
+    objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
+
+    for text in (short_form, return_sheet, current_status, objective_checklist):
+        assert "scripts/apply_owner_short_form_return.py" in text
+        assert "canonical" in text
+        assert "does not write audit logs" in text
+        assert "approve release" in text
+        assert "Excel" in text
+
+    for text in (short_form, return_sheet, objective_checklist):
+        assert "--canonical-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv" in text
+        assert "--owner-short-form-csv <returned-owner-short-form.csv>" in text
+        assert "--reviewer \"<owner-or-operator-id>\"" in text
+        assert "--reviewed-at \"<ISO timestamp>\"" in text
+        assert "--require-complete" in text
+        assert "--output <returned-canonical-false-reject-review-sheet.csv>" in text
+        assert "<returned-canonical-false-reject-review-sheet.csv>" in text
+
+    assert "owner_short_form_to_false_reject_review_mapping" in script
+    assert '"release_forecast": "NOT_READY"' in script
+    assert "does not approve release" in script
+    assert "does not write audit logs" in script
+    assert "does not allow rejected rows into Excel" in script
+    assert "audit_row_id" in script
+    assert "school_id" in script
+    assert "rejection_bucket" in script
+    assert "system_suggested_decision" in script
+    assert "owner_decision is required" in script
+    assert "owner_notes are required" in script
+
+    assert "blank v548 short-form smoke run returned `ok=true`" in objective_checklist
+    assert "the same file with `--require-complete` fails with `53` required-decision errors" in objective_checklist
+    assert "returns `release_forecast=NOT_READY`" in current_status
+
+
 def test_v548_owner_handoff_is_current_but_not_release_approval() -> None:
     first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v548.txt")
     request = _normalized_doc("docs/runbooks/eidp-v548-owner-request-20260621.txt")
@@ -193,7 +244,7 @@ def test_v548_owner_handoff_is_current_but_not_release_approval() -> None:
         "--false-reject-evidence-zip logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip"
         in return_sheet
     )
-    assert "--false-reject-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv" in return_sheet
+    assert "--false-reject-review-csv <returned-canonical-false-reject-review-sheet.csv>" in return_sheet
     assert (
         "--false-reject-review-audit-log "
         "docs/reports/2026-06-21-v548-false-reject-review-audit-log.jsonl"

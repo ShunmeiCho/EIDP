@@ -119,7 +119,12 @@ recorded in
 splits the same 53 v548 rows into owner-review packs (`24` suggested
 `correct_reject`, `29` suggested `needs_operator_review`, `0` suspected
 `false_reject`); it is evidence intake only, not release approval, and the
-canonical returned artifact remains the v548 worksheet.
+canonical returned artifact remains the v548 worksheet. Current `main` now also
+adds `scripts/apply_owner_short_form_return.py` so a returned short form can be
+mapped back to a canonical worksheet copy without manual row copying. The
+mapper checks exact `audit_row_id` coverage and immutable short-form context,
+returns `release_forecast=NOT_READY`, and only prepares the canonical CSV; it
+does not write audit logs, approve release, or allow rejected rows into Excel.
 Because owner decisions are still absent, a developer diagnostic shadow review
 is also recorded at
 `docs/reports/2026-06-21-v548-developer-shadow-review.csv` and

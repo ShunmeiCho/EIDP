@@ -18,6 +18,30 @@ The owner should fill only `owner_decision` and `owner_notes` in the short form.
 
 The source worksheet does not include school names. The repo-local `data/eidp.sqlite3` is currently empty, so the short form uses trusted `school_id` labels rather than guessing school names from older samples.
 
+## Mapping Back To The Canonical Worksheet
+
+After the owner returns the short form, map it back to a canonical worksheet copy:
+
+```bash
+uv run python scripts/apply_owner_short_form_return.py \
+  --canonical-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --owner-short-form-csv <returned-owner-short-form.csv> \
+  --reviewer "<owner-or-operator-id>" \
+  --reviewed-at "<ISO timestamp>" \
+  --require-complete \
+  --output <returned-canonical-false-reject-review-sheet.csv> \
+  --json
+```
+
+The mapper requires exact `audit_row_id` coverage and unchanged short-form
+context (`school_id`, URLs, rejection bucket, and system suggestion). It only
+prepares the returned canonical CSV. It does not write audit logs, approve
+release, or allow rejected rows into Excel. After mapping, validate
+`<returned-canonical-false-reject-review-sheet.csv>` with
+`scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
+and then run `scripts/verify_stage6_return.py` with the same returned canonical
+CSV.
+
 ## Pack Counts
 
 | Pack | Rows |

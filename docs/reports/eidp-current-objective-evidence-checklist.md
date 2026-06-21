@@ -173,7 +173,14 @@ scope is recorded in
 `24` suggested `correct_reject`, `29` suggested `needs_operator_review`, and
 `0` suspected `false_reject`. This is intake evidence only: completed decisions
 must still be mapped back to the canonical v548 worksheet and validated before
-release evidence can be claimed.
+release evidence can be claimed. Current `main` adds
+`scripts/apply_owner_short_form_return.py` for that mapping step; it checks
+exact `audit_row_id` coverage and immutable row context, returns
+`release_forecast=NOT_READY`, and only writes a canonical CSV copy. It does not
+write audit logs, approve release, or make any rejected row Excel-ready. A
+blank v548 short-form smoke run returned `ok=true`, `completed_decisions=0`,
+and `blank_decisions=53`; the same file with `--require-complete` fails with
+`53` required-decision errors, as expected.
 Because owner decisions are still absent, the developer diagnostic shadow review
 is recorded at `docs/reports/2026-06-21-v548-developer-shadow-review.csv` and
 `docs/reports/2026-06-21-v548-developer-shadow-review.md`. It uses only the
@@ -923,8 +930,21 @@ do not remove the FY2026/R8 release blocker.
    `needs_operator_review`. Use the owner intake short form
    `docs/reports/2026-06-21-v548-owner-review-short-form.xlsx` when a smaller
    dropdown workbook is easier for the owner, but map returned decisions back
-   to the canonical v548 worksheet before release validation. Then validate the
-   returned CSV with
+   to the canonical v548 worksheet before release validation:
+
+   ```bash
+   uv run python scripts/apply_owner_short_form_return.py \
+     --canonical-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+     --owner-short-form-csv <returned-owner-short-form.csv> \
+     --reviewer "<owner-or-operator-id>" \
+     --reviewed-at "<ISO timestamp>" \
+     --require-complete \
+     --output <returned-canonical-false-reject-review-sheet.csv> \
+     --json
+   ```
+
+   This command only prepares the canonical returned worksheet; it is not audit
+   evidence or release approval. Then validate the returned CSV with
    `scripts/build_false_reject_audit.py --validate-review-csv --require-decisions`
    before labeling the blocker as an algorithm/model defect. Use
    `--format review-validation-summary` for an owner-readable failure summary

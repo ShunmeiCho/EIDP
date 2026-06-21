@@ -52,6 +52,33 @@ Classify findings before acting:
 | P3 Roadmap | Valuable but outside v1 | Do not implement in v1 without approval |
 
 Only P0 and P1 items may enter the current release path by default.
+Within P1, prioritize only work that directly protects release evidence,
+unblocks owner-return or Windows-canary evidence, or prevents wrong data from
+entering Excel. If a P1 item will not change the P0 decision and will not
+unblock owner/operator evidence consumption, pause it.
+
+## Evidence Consumption Boundary
+
+When Windows canary, Stage 6 evidence, owner-return verifier, and current
+release status are sufficient to collect the next owner/operator decision,
+stop adding new P1 hardening by default. The next release-unblocking work must
+be one of:
+
+- owner/operator false-reject worksheet return
+- developer shadow review for diagnostics only
+- `publication_lag` or OCR owner decision brief
+- a concrete rule fix for a confirmed `false_reject` row
+- Windows canary rerun only after the reviewed evidence packet materially
+  changes
+
+Do not generate a new verifier, package, or release summary merely to show
+continued motion while the existing owner/operator evidence remains
+unconsumed.
+
+Once an owner/operator review packet is frozen as the current baseline, do not
+replace it for non-business P1 hardening. Keep that baseline unless a new
+Windows canary changes the reviewed evidence packet or the current worksheet
+has a material defect.
 
 ## Slice Discipline
 

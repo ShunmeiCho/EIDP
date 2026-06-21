@@ -57,6 +57,30 @@ summary and `docs/runbooks/eidp-v548-owner-signoff.md` as the short owner
 decision form. Do not ask the owner to manually fill or reproduce the
 engineering checklist.
 
+For the false-reject worksheet specifically, the owner may return the shorter
+intake workbook `docs/reports/2026-06-21-v548-owner-review-short-form.xlsx`
+instead of editing the full canonical worksheet directly. After return, map the
+short form back to a canonical worksheet copy before running release
+verification:
+
+```bash
+uv run python scripts/apply_owner_short_form_return.py \
+  --canonical-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --owner-short-form-csv <returned-owner-short-form.csv> \
+  --reviewer "<owner-or-operator-id>" \
+  --reviewed-at "<ISO timestamp>" \
+  --require-complete \
+  --output <returned-canonical-false-reject-review-sheet.csv> \
+  --json
+```
+
+The mapper validates exact `audit_row_id` coverage and immutable row context
+(`school_id`, URLs, rejection bucket, and system suggestion). It only prepares
+the canonical CSV return artifact. It does not write audit logs, approve
+release, or allow rejected rows into Excel. Use the mapped
+`<returned-canonical-false-reject-review-sheet.csv>` in the verifier commands
+below.
+
 For v548, current evidence supports `NOT_READY` only. `publication_lag`
 approval can support at most `RC_ONLY` after all required return evidence is
 complete. It must not allow unconfirmed rows into final Excel output.
@@ -199,7 +223,7 @@ uv run python scripts/verify_stage6_return.py \
   --expected-package-sha256 488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c \
   --expected-source-commit c1a96903ed10f1cc9c48d1a6912061ba0aaf86be \
   --false-reject-evidence-zip logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip \
-  --false-reject-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --false-reject-review-csv <returned-canonical-false-reject-review-sheet.csv> \
   --false-reject-review-audit-log docs/reports/2026-06-21-v548-false-reject-review-audit-log.jsonl \
   --false-reject-sample-size 12 \
   --json
@@ -215,7 +239,7 @@ return verifier, the same check can be run directly for debugging:
 uv run python scripts/build_false_reject_audit.py \
   logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip \
   --sample-size 12 \
-  --validate-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --validate-review-csv <returned-canonical-false-reject-review-sheet.csv> \
   --require-decisions
 ```
 
@@ -234,7 +258,7 @@ After the worksheet validates, generate the RCA framing summary with:
 uv run python scripts/build_false_reject_audit.py \
   logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip \
   --sample-size 12 \
-  --validate-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --validate-review-csv <returned-canonical-false-reject-review-sheet.csv> \
   --require-decisions \
   --format review-rca-summary
 ```
@@ -251,7 +275,7 @@ the per-row audit JSONL in one current-main command:
 uv run python scripts/build_false_reject_audit.py \
   logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip \
   --sample-size 12 \
-  --validate-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --validate-review-csv <returned-canonical-false-reject-review-sheet.csv> \
   --require-decisions \
   --write-review-audit-log docs/reports/2026-06-21-v548-false-reject-review-audit-log.jsonl \
   --json
@@ -271,7 +295,7 @@ If the audit JSONL must be rendered separately, use:
 uv run python scripts/build_false_reject_audit.py \
   logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip \
   --sample-size 12 \
-  --validate-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv \
+  --validate-review-csv <returned-canonical-false-reject-review-sheet.csv> \
   --require-decisions \
   --format review-audit-log \
   --output docs/reports/2026-06-21-v548-false-reject-review-audit-log.jsonl
