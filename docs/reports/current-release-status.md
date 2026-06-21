@@ -300,13 +300,13 @@ order, without counting old-year PDFs, unknown-year documents, non-target files,
 or identity mismatches as FY2026/R8 success. This also must not be simplified
 to "the algorithm/model is broken" until a rejection-bucket false-reject audit
 shows material over-rejection or fiscal-year extraction mistakes.
-The current v544 false-reject audit packet is now recorded in
-`docs/reports/2026-06-21-v544-false-reject-audit-packet.md`; it was generated
-from the v544 Stage 6 evidence ZIP and samples fiscal-year mismatch,
+The current v545 false-reject audit packet is now recorded in
+`docs/reports/2026-06-21-v545-false-reject-audit-packet.md`; it was generated
+from the v545 Stage 6 evidence ZIP and samples fiscal-year mismatch,
 pre-filtered non-target, classified non-target, target-year-unverified, and
 site-entry/fetch/identity rows without changing release status.
 The same packet now has a companion decision worksheet at
-`docs/reports/2026-06-21-v544-false-reject-review-sheet.csv`. It contains stable
+`docs/reports/2026-06-21-v545-false-reject-review-sheet.csv`. It contains stable
 `audit_row_id` values and blank `decision` cells restricted to
 `false_reject`, `correct_reject`, or `needs_operator_review`. It also includes
 read-only `suggested_decision` / `suggested_decision_basis` guidance for obvious
@@ -316,9 +316,10 @@ Validating it with
 `--require-decisions` correctly fails until the owner/operator completes the
 sample review. The return validator also rejects changed row context and emits
 `bucket_decision_counts`; the current blank worksheet validates as
-`review_status=incomplete`, `completed_decisions=0`, and
+`defect_framing.status=pending_review`, `completed_decisions=0`,
+`blank_decisions=53`, and
 `context_mismatch_count=0` in
-`docs/reports/2026-06-21-v544-false-reject-review-validation.json`. Completed
+`docs/reports/2026-06-21-v545-false-reject-review-validation.json`. Completed
 rows require `reviewer` and an ISO `reviewed_at` timestamp, and `false_reject`
 / `needs_operator_review` rows require `notes`.
 The owner/operator return runbooks now include the false-reject worksheet return
@@ -332,9 +333,11 @@ requires the worksheet to validate with `review_status=complete` and
 v544 at `C:\EIDP-staging\v544-owner-docs-20260621`, recorded in
 `docs/reports/2026-06-21-v544-owner-docs-windows-staging.md`, so the staged
 owner docs now include the v544 false-reject worksheet return rules, worksheet
-CSV, and the return-verifier false-reject arguments. The v542 and v541 handoffs
-remain historical evidence only. This still does not change the release
-conclusion.
+CSV, and the return-verifier false-reject arguments. The current source/main
+RCA lane has since advanced to the v545 worksheet listed above; a new owner-doc
+handoff would be needed before treating v545 as the staged owner worksheet. The
+v542 and v541 handoffs remain historical evidence only. This still does not
+change the release conclusion.
 This false-reject owner-return verifier integration was first packaged and
 Windows-canary verified in `dist/eidp-windows-v542.zip` at package commit
 `d98ecd7196631a00c27aff1c240ebc7969579ce7`. CI run `27880148454` passed both

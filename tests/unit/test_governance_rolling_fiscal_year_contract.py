@@ -202,12 +202,15 @@ def test_v544_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "not framed as a generic algorithm/model failure" in objective_checklist
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
+    assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in current_status
+    assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in objective_checklist
+    assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in current_status
+    assert "docs/reports/2026-06-21-v545-false-reject-review-sheet.csv" in objective_checklist
+    assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in current_status
+    assert "docs/reports/2026-06-21-v545-false-reject-review-validation.json" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" in current_status
-    assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-review-sheet.csv" in current_status
-    assert "docs/reports/2026-06-21-v544-false-reject-review-sheet.csv" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-review-validation.json" in current_status
-    assert "docs/reports/2026-06-21-v544-false-reject-review-validation.json" in objective_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-audit-packet.md" in admin_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-review-sheet.csv" in admin_checklist
     assert "docs/reports/2026-06-21-v544-false-reject-review-validation.json" in admin_checklist
