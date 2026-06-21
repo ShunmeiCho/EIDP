@@ -274,6 +274,8 @@ def _verify_false_reject_review(
     if validation.get("review_status") == "complete" and validation.get("completed_decisions") != audit_log_event_count:
         audit_log_errors.append("false-reject review audit log event count must match completed decisions")
     errors.extend(audit_log_errors)
+    validation_contract_errors = _false_reject_review_contract_errors(validation)
+    errors.extend(validation_contract_errors)
     defect_framing_errors: list[str] = []
     defect_framing = validation.get("defect_framing")
     if (
@@ -294,8 +296,36 @@ def _verify_false_reject_review(
     validation["audit_packet_errors"] = audit_packet_errors
     validation["audit_log_event_count"] = audit_log_event_count
     validation["audit_log_errors"] = audit_log_errors
+    validation["validation_contract_errors"] = validation_contract_errors
     validation["defect_framing_errors"] = defect_framing_errors
     return cast(dict[str, Any], validation)
+
+
+def _false_reject_review_contract_errors(validation: dict[str, Any]) -> list[str]:
+    if validation.get("ok") is not True or validation.get("review_status") != "complete":
+        return []
+    errors: list[str] = []
+    if not isinstance(validation.get("decision_counts"), dict):
+        errors.append("false-reject review validation must include decision_counts")
+    if not isinstance(validation.get("bucket_decision_counts"), dict):
+        errors.append("false-reject review validation must include bucket_decision_counts")
+    defect_framing = validation.get("defect_framing")
+    if not isinstance(defect_framing, dict):
+        errors.append("false-reject review validation must include defect_framing summary")
+        return errors
+    required_defect_fields = (
+        "generic_model_failure_supported",
+        "specific_algorithm_or_rule_defect_supported",
+        "status",
+        "false_reject_rows",
+        "needs_operator_review_rows",
+        "correct_reject_rows",
+        "reason",
+    )
+    for field in required_defect_fields:
+        if field not in defect_framing:
+            errors.append(f"false-reject review defect_framing is missing {field}")
+    return errors
 
 
 def _positive_review_count(value: object) -> bool:
@@ -328,10 +358,19 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
     audit_log_errors = validation.get("audit_log_errors")
     if not isinstance(audit_log_errors, list):
         audit_log_errors = []
+    validation_contract_errors = validation.get("validation_contract_errors")
+    if not isinstance(validation_contract_errors, list):
+        validation_contract_errors = []
     defect_framing_errors = validation.get("defect_framing_errors")
     if not isinstance(defect_framing_errors, list):
         defect_framing_errors = []
-    blocking_errors = [*audit_packet_errors, *validation_errors, *audit_log_errors, *defect_framing_errors]
+    blocking_errors = [
+        *audit_packet_errors,
+        *validation_errors,
+        *audit_log_errors,
+        *validation_contract_errors,
+        *defect_framing_errors,
+    ]
     error_preview = [str(error) for error in blocking_errors[:10]]
     expected_rows = validation.get("expected_rows")
     completed_decisions = validation.get("completed_decisions")
@@ -353,6 +392,7 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         and review_status == "complete"
         and not audit_packet_errors
         and not audit_log_errors
+        and not validation_contract_errors
         and not defect_framing_errors
     )
 
@@ -364,6 +404,11 @@ def _false_reject_review_summary(validation: dict[str, Any] | None) -> dict[str,
         next_action = "Complete every false-reject review decision before using the worksheet as RCA evidence."
     elif audit_log_errors:
         next_action = "Regenerate the false-reject review audit log from the completed worksheet."
+    elif validation_contract_errors:
+        next_action = (
+            "Regenerate the false-reject review validation with the current audit helper before using it as "
+            "release evidence."
+        )
     elif defect_framing.get("status") == "specific_false_rejects_found":
         next_action = (
             "Use the false_reject rows as specific rule-fix work; rejected rows still stay out of Excel until "

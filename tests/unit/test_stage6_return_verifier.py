@@ -545,6 +545,85 @@ def test_verify_stage6_return_blocks_unresolved_false_reject_review_decisions(
         assert result["false_reject_review_summary"]["next_action"] == expected_next_action
 
 
+def test_verify_stage6_return_blocks_false_reject_review_without_summary_contract(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    template, last_run, verify_json = _write_complete_artifacts(tmp_path)
+    evidence_zip = tmp_path / "stage6-evidence.zip"
+    evidence_zip.write_text("fake", encoding="utf-8")
+    review_csv = tmp_path / "false-reject-review.csv"
+    review_csv.write_text("audit_row_id,decision\nrow-1,correct_reject\n", encoding="utf-8")
+    audit_log = tmp_path / "false-reject-review-audit-log.jsonl"
+    audit_log.write_text("expected-audit-log\n", encoding="utf-8")
+
+    class FakeFalseRejectAudit:
+        @staticmethod
+        def build_false_reject_audit_packet(
+            archive: Path,
+            *,
+            sample_size: int,
+            required_yield_pct: float,
+        ) -> dict[str, object]:
+            return {"ok": True, "errors": [], "strict_yield": {"release_forecast": "NOT_READY"}}
+
+        @staticmethod
+        def validate_review_csv(
+            packet: dict[str, object],
+            csv_text: str,
+            *,
+            require_decisions: bool,
+        ) -> dict[str, object]:
+            return {
+                "ok": True,
+                "basis": "false_reject_review_decision_validation",
+                "review_status": "complete",
+                "expected_rows": 1,
+                "completed_decisions": 1,
+                "blank_decisions": 0,
+                "context_mismatch_count": 0,
+                "errors": [],
+            }
+
+        @staticmethod
+        def render_review_audit_log(
+            packet: dict[str, object],
+            csv_text: str,
+            validation: dict[str, object],
+        ) -> str:
+            return "expected-audit-log\n"
+
+    monkeypatch.setattr(module, "_load_false_reject_audit_module", lambda: FakeFalseRejectAudit)
+
+    result = module.verify_stage6_return(
+        e2e_template=template,
+        last_run=last_run,
+        evidence_verify_json=verify_json,
+        target_fy=2026,
+        false_reject_evidence_zip=evidence_zip,
+        false_reject_review_csv=review_csv,
+        false_reject_review_audit_log=audit_log,
+    )
+
+    expected_errors = [
+        "false-reject review validation must include decision_counts",
+        "false-reject review validation must include bucket_decision_counts",
+        "false-reject review validation must include defect_framing summary",
+    ]
+    assert result["ok"] is False
+    for expected_error in expected_errors:
+        assert expected_error in result["errors"]
+    assert result["false_reject_review"]["validation_contract_errors"] == expected_errors
+    assert result["false_reject_review_summary"]["owner_return_gate_ok"] is False
+    assert result["false_reject_review_summary"]["blocking_error_count"] == 3
+    assert result["false_reject_review_summary"]["blocking_error_preview"] == expected_errors
+    assert result["false_reject_review_summary"]["next_action"] == (
+        "Regenerate the false-reject review validation with the current audit helper before using it as "
+        "release evidence."
+    )
+
+
 def test_verify_stage6_return_surfaces_invalid_false_reject_audit_packet_in_summary(
     tmp_path: Path,
     monkeypatch,
@@ -584,7 +663,18 @@ def test_verify_stage6_return_surfaces_invalid_false_reject_audit_packet_in_summ
                 "basis": "false_reject_review_decision_validation",
                 "review_status": "complete",
                 "completed_decisions": 1,
+                "decision_counts": {"correct_reject": 1},
+                "bucket_decision_counts": {"fiscal_year_mismatch": {"correct_reject": 1}},
                 "context_mismatch_count": 0,
+                "defect_framing": {
+                    "generic_model_failure_supported": False,
+                    "specific_algorithm_or_rule_defect_supported": False,
+                    "status": "not_supported",
+                    "false_reject_rows": 0,
+                    "needs_operator_review_rows": 0,
+                    "correct_reject_rows": 1,
+                    "reason": "Completed review found no false-reject rows.",
+                },
                 "errors": [],
             }
 
@@ -782,7 +872,18 @@ def test_verify_stage6_return_rejects_false_reject_review_audit_log_mismatch(
                 "basis": "false_reject_review_decision_validation",
                 "review_status": "complete",
                 "completed_decisions": 1,
+                "decision_counts": {"correct_reject": 1},
+                "bucket_decision_counts": {"fiscal_year_mismatch": {"correct_reject": 1}},
                 "context_mismatch_count": 0,
+                "defect_framing": {
+                    "generic_model_failure_supported": False,
+                    "specific_algorithm_or_rule_defect_supported": False,
+                    "status": "not_supported",
+                    "false_reject_rows": 0,
+                    "needs_operator_review_rows": 0,
+                    "correct_reject_rows": 1,
+                    "reason": "Completed review found no false-reject rows.",
+                },
                 "errors": [],
             }
 
@@ -854,7 +955,18 @@ def test_verify_stage6_return_rejects_false_reject_review_audit_log_event_count_
                 "basis": "false_reject_review_decision_validation",
                 "review_status": "complete",
                 "completed_decisions": 1,
+                "decision_counts": {"correct_reject": 1},
+                "bucket_decision_counts": {"fiscal_year_mismatch": {"correct_reject": 1}},
                 "context_mismatch_count": 0,
+                "defect_framing": {
+                    "generic_model_failure_supported": False,
+                    "specific_algorithm_or_rule_defect_supported": False,
+                    "status": "not_supported",
+                    "false_reject_rows": 0,
+                    "needs_operator_review_rows": 0,
+                    "correct_reject_rows": 1,
+                    "reason": "Completed review found no false-reject rows.",
+                },
                 "errors": [],
             }
 

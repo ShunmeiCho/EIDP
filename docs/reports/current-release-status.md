@@ -364,6 +364,10 @@ packaged into the existing v548 runtime ZIP. Current `main` also blocks the
 owner-return verifier when a completed false-reject worksheet still contains
 `false_reject` or `needs_operator_review` rows, because those rows require
 specific rule fixes or further operator adjudication before release approval.
+Current `main` also blocks completed false-reject review validation that lacks
+the compact decision-count and defect-framing summary fields; a returned
+worksheet must be validated with the current audit helper before it can support
+owner-return RCA evidence.
 
 Previous packaged bounded Windows canary was `v541` (core ZIP pruned from
 `dist/` after v542 verification; SHA256 was
