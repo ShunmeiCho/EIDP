@@ -154,8 +154,16 @@ and `context_mismatch_count=0`. Current `main` also emits a compact
 returns expose completed/blank decision counts, context mismatch count, defect
 framing status, and blocking error previews directly in
 `scripts/verify_stage6_return.py` output. This is source-side handoff hardening
-only; it does not change the acceptance gates and does not make the v545
-packaged runtime release-ready. The Windows docs-only handoff has been refreshed
+only. Current `main` also adds `--format review-rca-summary` to
+`scripts/build_false_reject_audit.py` so a returned worksheet can produce an
+owner-readable RCA conclusion such as `SPECIFIC_RULE_DEFECTS_FOUND` or
+`GENERIC_MODEL_FAILURE_NOT_SUPPORTED`; that output does not change the
+acceptance gates and does not make the v545 packaged runtime release-ready. The
+current blank worksheet RCA summary is recorded at
+`docs/reports/2026-06-21-v545-false-reject-review-rca-summary.md`; it reports
+`RCA conclusion=INVALID_RETURN`, `completed_decisions=0/53`, and
+`blank_decisions=53`, so it reinforces the current P0 rather than clearing it.
+The Windows docs-only handoff has been refreshed
 to v545 at `C:\EIDP-staging\v545-owner-docs-20260621`, recorded in
 `docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`, so the staged
 owner docs now include the v545 false-reject worksheet return rules, worksheet

@@ -31,6 +31,17 @@ algorithm/model defect. Evidence is recorded in
 `logs/win-v545-f3eb166-canary/stage6-evidence-verify-mac-20260621.json`, and
 `logs/win-v545-f3eb166-canary/20260621_003033-summary.json`.
 
+Current source `main` now adds a read-only false-reject `review-rca-summary`
+output for returned worksheets. It helps frame completed RCA as either specific
+rule defects or unsupported generic model failure, but it is source-side
+handoff hardening only: it does not relax strict evidence rules, does not move
+rejected rows into Excel, and is not yet packaged into the v545 ZIP. The current
+blank worksheet RCA summary is recorded at
+`docs/reports/2026-06-21-v545-false-reject-review-rca-summary.md`; it reports
+`RCA conclusion=INVALID_RETURN`, `completed_decisions=0/53`, and
+`blank_decisions=53`, so below-gate yield still must not be labeled as a
+generic algorithm/model defect.
+
 Local cleanup after v545 retained v544 fallback and v545 current packages while
 removing superseded v535/v536/v542/v543 local ZIPs and sidecars
 (`843676935` bytes). Windows cleanup retained active v527, fallback v544, and

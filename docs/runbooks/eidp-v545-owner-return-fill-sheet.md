@@ -200,3 +200,19 @@ rerun the same command with:
 ```bash
   --format review-validation-summary
 ```
+
+After the worksheet validates, generate the RCA framing summary with:
+
+```bash
+uv run python scripts/build_false_reject_audit.py \
+  logs/win-v545-f3eb166-canary/stage6-evidence-20260621-004156.zip \
+  --sample-size 12 \
+  --validate-review-csv docs/reports/2026-06-21-v545-false-reject-review-sheet.csv \
+  --require-decisions \
+  --format review-rca-summary
+```
+
+That summary distinguishes `SPECIFIC_RULE_DEFECTS_FOUND` from
+`GENERIC_MODEL_FAILURE_NOT_SUPPORTED`. It is still read-only RCA evidence: it
+does not relax strict FY2026/R8 evidence rules, does not approve rejected rows,
+and does not replace the full owner return gate.

@@ -774,6 +774,107 @@ def render_review_validation_summary(packet: dict[str, Any], validation: dict[st
     return "\n".join(lines) + "\n"
 
 
+def render_review_rca_summary(packet: dict[str, Any], validation: dict[str, Any]) -> str:
+    """Return a final RCA framing summary for a returned false-reject worksheet."""
+
+    strict_yield = packet.get("strict_yield", {})
+    defect_framing = validation.get("defect_framing", {})
+    errors = [str(error) for error in validation.get("errors", [])]
+    review_status = str(validation.get("review_status") or "invalid")
+    completed_decisions = validation.get("completed_decisions", 0)
+    expected_rows = validation.get("expected_rows", 0)
+    blank_decisions = validation.get("blank_decisions", 0)
+    context_mismatch_count = validation.get("context_mismatch_count", 0)
+    status = str(defect_framing.get("status") or "invalid")
+
+    if validation.get("ok") is not True:
+        conclusion = "INVALID_RETURN"
+        action = "Fix the returned CSV errors before using this worksheet as RCA evidence."
+    elif review_status != "complete":
+        conclusion = "PENDING_REVIEW"
+        action = "Complete every review decision before making an algorithm/rule-defect claim."
+    elif status == "specific_false_rejects_found":
+        conclusion = "SPECIFIC_RULE_DEFECTS_FOUND"
+        action = "Fix the specific false-reject causes, then rerun Windows canary evidence before release claims."
+    elif status == "inconclusive_operator_review":
+        conclusion = "INCONCLUSIVE_OPERATOR_REVIEW"
+        action = "Adjudicate operator-review rows before claiming either correct rejection or a defect."
+    else:
+        conclusion = "GENERIC_MODEL_FAILURE_NOT_SUPPORTED"
+        action = (
+            "Treat low strict yield as correct strict rejects/publication lag/source availability until evidence "
+            "changes."
+        )
+
+    lines = [
+        "# False-Reject RCA Summary",
+        "",
+        f"Archive: `{packet.get('archive', '')}`",
+        f"Release Forecast: `{strict_yield.get('release_forecast', 'NOT_READY')}`",
+        f"RCA conclusion: `{conclusion}`",
+        f"Validation OK: `{validation.get('ok')}`",
+        f"Review status: `{review_status}`",
+        f"Completed decisions: `{completed_decisions}/{expected_rows}`",
+        f"Blank decisions: `{blank_decisions}`",
+        f"Context mismatches: `{context_mismatch_count}`",
+        "",
+        "This summary is read-only. It does not relax strict FY2026/R8 evidence rules and does not allow "
+        "rejected rows into Excel.",
+        "",
+        "## Defect Framing",
+        "",
+        f"- Generic algorithm/model failure supported: `{defect_framing.get('generic_model_failure_supported')}`",
+        (
+            "- Specific algorithm/rule defect supported: "
+            f"`{defect_framing.get('specific_algorithm_or_rule_defect_supported')}`"
+        ),
+        f"- Status: `{status}`",
+        f"- False-reject rows: `{defect_framing.get('false_reject_rows', 0)}`",
+        f"- Needs-operator-review rows: `{defect_framing.get('needs_operator_review_rows', 0)}`",
+        f"- Correct-reject rows: `{defect_framing.get('correct_reject_rows', 0)}`",
+        f"- Reason: {_md_cell(defect_framing.get('reason', ''))}",
+        "",
+        "## Decision Counts",
+        "",
+        "| Decision | Rows |",
+        "| --- | ---: |",
+    ]
+
+    decision_counts = validation.get("decision_counts", {})
+    if isinstance(decision_counts, dict):
+        for decision, count in sorted(decision_counts.items()):
+            lines.append(f"| `{_md_cell(decision)}` | {count} |")
+    else:
+        lines.append("| `unavailable` | 0 |")
+
+    lines.extend(
+        [
+            "",
+            "## Blocking Errors",
+            "",
+        ]
+    )
+    if errors:
+        for error in errors[:20]:
+            lines.append(f"- {_md_cell(error)}")
+        if len(errors) > 20:
+            lines.append(f"- ... {len(errors) - 20} more errors")
+    else:
+        lines.append("- None.")
+
+    lines.extend(
+        [
+            "",
+            "## Next Action",
+            "",
+            f"- {action}",
+            "- Keep old-year, unknown-year, non-target, school-mismatch, and low-confidence rows out of Excel.",
+            "- A completed RCA worksheet is not a release sign-off; the full owner return gate must still pass.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def _review_decision_counts_json(counter: Counter[str]) -> dict[str, int]:
     return {key or "blank": count for key, count in sorted(counter.items())}
 
@@ -957,7 +1058,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--sample-size", type=int, default=50)
     parser.add_argument(
         "--format",
-        choices=("markdown", "json", "csv", "review-summary", "review-validation-summary"),
+        choices=("markdown", "json", "csv", "review-summary", "review-validation-summary", "review-rca-summary"),
         default="markdown",
     )
     parser.add_argument("--json", action="store_true", help="Alias for --format json.")
@@ -984,11 +1085,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         if output_format == "review-validation-summary":
             rendered = render_review_validation_summary(packet, validation)
+        elif output_format == "review-rca-summary":
+            rendered = render_review_rca_summary(packet, validation)
         else:
             rendered = json.dumps(validation, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         ok = packet.get("ok") is True and validation.get("ok") is True
     elif output_format == "review-validation-summary":
         print("--format review-validation-summary requires --validate-review-csv", file=sys.stderr)
+        return 2
+    elif output_format == "review-rca-summary":
+        print("--format review-rca-summary requires --validate-review-csv", file=sys.stderr)
         return 2
     elif output_format == "json":
         rendered = json.dumps(packet, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

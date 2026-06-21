@@ -258,6 +258,11 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
             "explained by correct strict rejects unless new evidence appears."
         ),
     }
+    completed_rca_summary = module.render_review_rca_summary(packet, completed_validation)
+    assert "False-Reject RCA Summary" in completed_rca_summary
+    assert "RCA conclusion: `GENERIC_MODEL_FAILURE_NOT_SUPPORTED`" in completed_rca_summary
+    assert "Specific algorithm/rule defect supported: `False`" in completed_rca_summary
+    assert "full owner return gate must still pass" in completed_rca_summary
 
     false_reject_rows = [dict(row) for row in rows]
     false_reject_rows[0]["decision"] = "false_reject"
@@ -270,6 +275,9 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert false_reject_validation["defect_framing"]["specific_algorithm_or_rule_defect_supported"] is True
     assert false_reject_validation["defect_framing"]["generic_model_failure_supported"] is False
     assert false_reject_validation["defect_framing"]["false_reject_rows"] == 1
+    false_reject_rca_summary = module.render_review_rca_summary(packet, false_reject_validation)
+    assert "RCA conclusion: `SPECIFIC_RULE_DEFECTS_FOUND`" in false_reject_rca_summary
+    assert "Fix the specific false-reject causes" in false_reject_rca_summary
 
     operator_review_rows = [dict(row) for row in rows]
     operator_review_rows[0]["decision"] = "needs_operator_review"
@@ -360,6 +368,10 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     assert "This summary is read-only" in validation_summary
     assert "allow any row into Excel" in validation_summary
     assert "Fix the listed CSV errors" in validation_summary
+    invalid_rca_summary = module.render_review_rca_summary(packet, required_payload)
+    assert "RCA conclusion: `INVALID_RETURN`" in invalid_rca_summary
+    assert "Fix the returned CSV errors" in invalid_rca_summary
+    assert "does not allow rejected rows into Excel" in invalid_rca_summary
 
     assert (
         module.main(
@@ -379,6 +391,25 @@ def test_false_reject_audit_review_csv_can_be_validated(tmp_path: Path, capsys) 
     cli_validation_summary = capsys.readouterr().out
     assert "False-Reject Review Validation Summary" in cli_validation_summary
     assert "Review status: `invalid`" in cli_validation_summary
+
+    assert (
+        module.main(
+            [
+                str(archive),
+                "--sample-size",
+                "2",
+                "--validate-review-csv",
+                str(review_path),
+                "--require-decisions",
+                "--format",
+                "review-rca-summary",
+            ]
+        )
+        == 1
+    )
+    cli_rca_summary = capsys.readouterr().out
+    assert "False-Reject RCA Summary" in cli_rca_summary
+    assert "RCA conclusion: `INVALID_RETURN`" in cli_rca_summary
 
 
 def test_false_reject_audit_review_summary_prioritizes_non_obvious_rows(tmp_path: Path, capsys) -> None:
@@ -413,3 +444,8 @@ def test_false_reject_audit_validation_summary_requires_review_csv(tmp_path: Pat
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "--format review-validation-summary requires --validate-review-csv" in captured.err
+
+    assert module.main([str(archive), "--format", "review-rca-summary"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "--format review-rca-summary requires --validate-review-csv" in captured.err
