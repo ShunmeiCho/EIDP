@@ -1,6 +1,6 @@
 # EIDP Current Release Status
 
-Updated: 2026-06-21
+Updated: 2026-06-22
 Branch: `main`
 
 Current packaged bounded Windows canary is `v548`
@@ -171,6 +171,19 @@ regression tests; mostly `correct_reject` rows point to publication-lag /
 old-year / non-target noise and at most an explicit `RC_ONLY` exception; many
 `needs_operator_review` rows mean the operator queue and evidence display need
 to be improved while keeping Excel-ready gates strict.
+
+The current v548 owner return intake audit is recorded at
+`docs/reports/2026-06-22-v548-owner-return-intake-audit.md`. It confirms
+`main` is clean at `9ad09dd`, GitHub CI run `27908759856` succeeded, the r2
+docs/helper ZIP checksum and zip integrity still pass locally, and
+`C:\EIDP-staging\v548-owner-docs-20260622-r2` exists on Windows. The same
+read-only Windows check found only staged handoff materials, including the
+short-form template, return runbook, mapper helper, and verifier helper. It did
+not find a returned owner short form, returned canonical false-reject
+worksheet, signed KPI evidence, `publication_lag` decision, OCR scope decision,
+or owner real-cycle sign-off. Therefore there is still no owner/operator
+evidence to consume, the mapper/verifier should not be run as if owner
+decisions had been returned, and the release forecast remains `NOT_READY`.
 
 Previous packaged bounded Windows canary is `v546`
 (`dist/eidp-windows-v546.zip`, SHA256

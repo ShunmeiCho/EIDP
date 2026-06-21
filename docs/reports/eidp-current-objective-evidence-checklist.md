@@ -1,6 +1,6 @@
 # EIDP Current Objective Evidence Checklist
 
-Updated: 2026-06-21
+Updated: 2026-06-22
 Branch: `main`
 PR: `#8`, merged on 2026-06-19T15:26:20Z
 PR merge check:
@@ -302,6 +302,13 @@ owner docs now include the v548 false-reject worksheet return rules, worksheet
 CSV, row-by-row worklist, validation summary, RCA summary, owner short-form
 CSV/XLSX, the short-form mapper helper, and the return-verifier false-reject
 arguments. This remains handoff evidence only.
+The latest owner return intake audit is recorded at
+`docs/reports/2026-06-22-v548-owner-return-intake-audit.md`. It confirms the
+current r2 Windows staging tree exists and contains the expected handoff files,
+but it found no returned owner short form, returned canonical worksheet, signed
+KPI evidence, `publication_lag` decision, OCR scope decision, or owner
+real-cycle sign-off. Therefore there is still no owner/operator evidence to
+consume, and v548 remains `NOT_READY`.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -961,7 +968,9 @@ do not remove the FY2026/R8 release blocker.
    If owner review is not immediately available, use
    `docs/reports/2026-06-21-v548-developer-shadow-review.md` only for
    diagnostic prioritization; do not treat it as owner approval or release
-   evidence.
+   evidence. The 2026-06-22 owner return intake audit found no returned short
+   form or returned canonical worksheet in the current r2 Windows staging tree,
+   so this step is still waiting on external owner/operator input.
 4. Run the owner/operator return path from Windows and collect signed KPI,
    audit/outbox, workbook, and `publication_lag` decision evidence. Use
    `docs/release/owner-decisions/publication-lag.md` and
