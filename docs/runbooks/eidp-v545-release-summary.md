@@ -38,8 +38,8 @@ operation.
 
 ## Evidence Available
 
-- GitHub CI for latest v545 false-reject docs commit `cf588e2`: success,
-  run `27889303389`.
+- GitHub CI for latest v545 false-reject review-summary docs commit `294d329`:
+  success, run `27890470359`.
 - GitHub CI for packaged source commit `f3eb166`: success,
   run `27888117592`.
 - Windows side-by-side v545 setup, bounded weekly canary, after-weekly

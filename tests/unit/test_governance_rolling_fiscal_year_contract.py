@@ -134,13 +134,15 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
 
     expected_package_sha = "ba4d36189d671ce59e01cf8f1bffeb0710d8d2b171376e4cbc0cb4e362f1b8d0"
     expected_source_sha = "f3eb1663c0333f296856a84f447ef2424ea77ddf"
+    expected_latest_docs_commit = "294d329"
+    expected_latest_docs_ci = "27890470359"
     expected_v544_package_sha = "781da0a3c1a3f4ae80536c68de2971a1ae431a01c7eb2d58001de061f62df0c1"
     expected_v544_source_sha = "74325bc278c3e96052ef27e67cd554e426c87c60"
     expected_v543_package_sha = "c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094"
     expected_v543_source_sha = "6aa5735d164101cbe6ec85648bcb8b6f46168c63"
     expected_v542_package_sha = "89ace547fcabf43f80b697024f5c13d1398244ad4d4b165160a489c8386f9ecc"
     expected_v542_source_sha = "d98ecd7196631a00c27aff1c240ebc7969579ce7"
-    expected_docs_sha = "748668b2524a5d9808c69c903bca41107e715c99ea5a897d84461f375500b29d"
+    expected_docs_sha = "1b7f5d21ece3da3defe1956111213d004a1c6ba32f33bcc88e87f7471052bc1d"
     expected_v544_docs_sha = "c227b2bbc1db305ac7f44e8ad6e74aa0b38f3ddd734b239b52e2d30b014c5671"
     expected_v541_docs_sha = "4ab692e47c0077eaedac91f340a561507ebaac79277bdce9db17d28ceea6c731"
     expected_v541_docs_r3_sha = "8b28d260a81f7854c4c6ecf678f7cbaaef26aa48139e4744f5d5f54dc018dc49"
@@ -155,6 +157,12 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert expected_source_sha in return_sheet
     assert expected_source_sha in release_summary
     assert expected_source_sha in owner_signoff
+    assert expected_latest_docs_commit in first_read
+    assert expected_latest_docs_commit in return_sheet
+    assert expected_latest_docs_commit in release_summary
+    assert expected_latest_docs_ci in first_read
+    assert expected_latest_docs_ci in return_sheet
+    assert expected_latest_docs_ci in release_summary
     assert "docs\\runbooks\\eidp-v545-release-summary.md" in first_read
     assert "docs\\runbooks\\eidp-v545-owner-signoff.md" in first_read
     assert "latest false-reject worksheet triage guidance" in first_read
@@ -263,6 +271,12 @@ def test_v545_owner_handoff_is_current_but_not_release_approval() -> None:
     assert "v545-owner-docs-20260621" in objective_checklist
     assert "v545 false-reject RCA packet" in staging
     assert "read-only review summary" in staging
+    assert "latest docs commit in first-read: True" in staging
+    assert "latest docs CI in first-read: True" in staging
+    assert "latest docs commit in release summary: True" in staging
+    assert "latest docs CI in release summary: True" in staging
+    assert "latest docs commit in return sheet: True" in staging
+    assert "latest docs CI in return sheet: True" in staging
     assert "docs\\reports\\2026-06-21-v545-false-reject-review-summary.md present: True" in staging
     assert "review summary read-only warning: True" in staging
     assert "review summary strict yield: True" in staging
