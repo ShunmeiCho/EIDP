@@ -117,15 +117,19 @@ validation, active-task safety, UI smoke, weekly limit-50 canary, Excel smoke,
 Stage 6 evidence creation, and Stage 6 evidence verification for
 `C:\Users\cyo20\EIDP-v535-d742327-env0`. The v535 runtime directory was pruned
 after v546 evidence collection; the report remains historical evidence only.
-Latest v547 owner/operator docs staging:
-`docs/reports/2026-06-21-v547-owner-docs-windows-staging.md` records the
-docs-only handoff ZIP staged at `C:\EIDP-staging\v547-owner-docs-20260621`.
-The v547 handoff carries the current package identity, owner-facing release
-summary, short owner sign-off form, owner request, return fill sheet, v547
-package-gate report, v547 strict-yield canary report, and v547 false-reject
-review summary and worksheet.
-The earlier v545, v544, v542, and v541 handoffs remain historical evidence
-only.
+Latest v548 owner/operator docs staging:
+`docs/reports/2026-06-21-v548-owner-docs-windows-staging.md` records the
+docs-only handoff ZIP staged at `C:\EIDP-staging\v548-owner-docs-20260621`.
+The v548 handoff carries the current package identity, owner-facing release
+summary, short owner sign-off form, owner request, return fill sheet, v548
+package/setup gate report, v548 strict-yield canary report, and the v548
+false-reject review summary, row-by-row worklist, worksheet, validation
+summary, and RCA summary. The staged v548 blank worksheet validation reports
+`completed_decisions=0`, `blank_decisions=53`, `context_mismatch_count=0`, and
+`defect_framing.status=pending_review`; the owner return runbook includes
+`--false-reject-review-audit-log`.
+The previous v547 handoff and earlier v545, v544, v542, and v541 handoffs
+remain historical evidence only.
 Current v548 strict-yield RCA summary:
 `docs/reports/2026-06-21-v548-windows-canary.md` records
 the unchanged `12/50 (24.0%)` blocker after packaging, Windows setup, bounded
@@ -155,10 +159,9 @@ rejection-bucket false-reject evidence proves material over-rejection or
 fiscal-year extraction mistakes.
 The earlier v535 RCA plan and v541/v542/v543/v544/v545 false-reject packets
 remain historical decomposition. The current false-reject review lane uses the
-v548 Windows canary evidence and v548 worksheet. The staged owner handoff docs
-still target v547 until a new docs-only handoff is refreshed, but they no
-longer represent the latest false-reject worksheet. Neither the v547 nor v548
-worksheet has been completed or approved.
+v548 Windows canary evidence, v548 worksheet, and Windows-staged v548 owner
+handoff. The previous v547 worksheet remains historical handoff evidence only.
+Neither the v547 nor v548 worksheet has been completed or approved.
 The v541 RCA bucket summary remains reproducible with
 `uv run python scripts/summarize_stage6_rca.py
 logs/win-v541-e62d074-canary/stage6-evidence-20260620-153655.zip --json`, which returns
@@ -209,11 +212,11 @@ and `context_mismatches=0`, so below-gate yield must not yet be labeled as an
 algorithm/model defect. Completed rows require `reviewer` and an ISO
 `reviewed_at` timestamp; `false_reject` and `needs_operator_review` rows require
 `notes`.
-The current source runbooks now tell the owner/operator how to return that
-worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`, leave
-immutable row context untouched, and have the developer validate the returned
-CSV from current `main`. The staged v547 owner handoff still carries the v547
-worksheet and must be refreshed before it is used as the latest owner packet.
+The current v548 staged owner runbooks tell the owner/operator how to return
+that worksheet: fill only `decision`, `reviewer`, `reviewed_at`, and `notes`,
+leave immutable row context untouched, and have the developer validate the
+returned CSV from current `main`. The previous staged v547 owner handoff remains
+historical and must not be used as the latest owner packet.
 The owner-return verifier now accepts
 `--false-reject-evidence-zip`, `--false-reject-review-csv`,
 `--false-reject-review-audit-log`, and `--false-reject-sample-size`; when
@@ -237,11 +240,11 @@ historical v545 blank worksheet RCA summary is recorded at
 `RCA conclusion=INVALID_RETURN`, `completed_decisions=0/53`, and
 `blank_decisions=53`, so it reinforces the current P0 rather than clearing it.
 The Windows docs-only handoff has been refreshed
-to v547 at `C:\EIDP-staging\v547-owner-docs-20260621`, recorded in
-`docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`, so the staged
-owner docs now include the v547 false-reject worksheet return rules, worksheet
-CSV, row-by-row worklist, and the return-verifier false-reject arguments. This
-remains handoff evidence only.
+to v548 at `C:\EIDP-staging\v548-owner-docs-20260621`, recorded in
+`docs/reports/2026-06-21-v548-owner-docs-windows-staging.md`, so the staged
+owner docs now include the v548 false-reject worksheet return rules, worksheet
+CSV, row-by-row worklist, validation summary, RCA summary, and the
+return-verifier false-reject arguments. This remains handoff evidence only.
 Post-v535 source hardening:
 `docs/reports/2026-06-20-sanko-shared-origin-disclosure-probe.md` adds a
 bounded same-host Sanko disclosure probe for the remaining
@@ -429,8 +432,7 @@ that keeps manual work below the release threshold.
   `c3b80835225864f57f62c33fa87cde2cdb5b2006ee2da0fdfa726cccfdc5a094`
 - Current v548 package contains the latest `false_reject_review_summary`
   audit-packet validity hardening, passes non-Windows gates, and is the latest
-  Windows bounded canary. The current staged owner handoff lane remains v547
-  until those docs are refreshed.
+  Windows bounded canary. The current staged owner handoff lane is v548.
 - Previous v544 package/canary contains the false-reject audit helper packaging
   fix and false-reject worksheet triage guidance. The v544, v542, and v541 r3
   owner handoffs remain historical handoff evidence only.
@@ -467,18 +469,20 @@ that keeps manual work below the release threshold.
   rows / exact official overrides, and bounded same-site disclosure expansion;
   v530 removes target-form/PDF search terms from URL completion and rejects
   direct document/PDF SERP hits before they can become `SchoolSite` rows.
-- Latest docs-only owner/operator handoff staging: the Windows-staged v547
-  owner docs ZIP includes the v547 first-read handoff, owner request, owner
-  return fill sheet, release summary, short owner sign-off form, v547 package
-  gates, v547 Windows canary report, current release status,
+- Latest docs-only owner/operator handoff staging: the Windows-staged v548
+  owner docs ZIP includes the v548 first-read handoff, owner request, owner
+  return fill sheet, release summary, short owner sign-off form, v548 package
+  setup gates, v548 Windows canary report, current release status,
   publication-lag exception record, OCR scope brief, v1 known limitations, and
-  the v547 false-reject read-only review summary and review worksheet. It was
-  staged at `C:\EIDP-staging\v547-owner-docs-20260621` and recorded in
-  `docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`. This copied
+  the v548 false-reject read-only review summary, row-by-row worklist, worksheet,
+  validation summary, and RCA summary. It was staged at
+  `C:\EIDP-staging\v548-owner-docs-20260621` and recorded in
+  `docs/reports/2026-06-21-v548-owner-docs-windows-staging.md`. This copied
   documentation only and did not modify active runtime, DB, PDFs, or Task
   Scheduler.
-- Historical docs-only handoff evidence: v545, v544, v542, v541 base, and v541 r3 are
-  recorded in `docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`,
+- Historical docs-only handoff evidence: v547, v545, v544, v542, v541 base, and v541 r3 are
+  recorded in `docs/reports/2026-06-21-v547-owner-docs-windows-staging.md`,
+  `docs/reports/2026-06-21-v545-owner-docs-windows-staging.md`,
   `docs/reports/2026-06-21-v544-owner-docs-windows-staging.md`,
   `docs/reports/2026-06-21-v542-owner-docs-windows-staging.md`,
   `docs/reports/2026-06-21-v541-owner-docs-windows-staging.md`, and
@@ -630,7 +634,7 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
 | Stage 6 evidence bundle and verifier pass | v543 evidence ZIP and verifier: `logs/win-v543-6aa5735-canary/stage6-evidence-20260620-213335.zip`, `logs/win-v543-6aa5735-canary/stage6-evidence-verify-20260621-063335.json`, and Mac-side `logs/win-v543-6aa5735-canary/stage6-evidence-verify-mac-20260621.json` with `ok=true`; required labels present and no unsafe/forbidden entries | PASS |
 | v526/v525/v524/v523 RCA is current | `docs/reports/2026-05-20-v526-extracted-confirmation-package.md`, `docs/reports/2026-05-20-v525-rc-metadata-package.md`, `docs/reports/2026-05-20-v524-full-windows-side-by-side-smoke.md`, and `docs/reports/2026-05-20-v523-full-windows-side-by-side-smoke.md`: v526/v525/v524/v523 repeat the same strict `5/50 (10.0%)`, operator-reviewable `50/50 (100.0%)`, `ship_gate_status=below_gate` blocker; v526 discovery stats record `pre_filtered_non_target_hint=631`, `fiscal_year_mismatch=267`, `classified_non_target=88`, `no_candidates_found=8`, `target_fiscal_year_not_detected=5`, and `http_error_httpstatuserror=1`, with no `candidate_school_mismatch` in the v526 Windows run | PASS for RCA, FAIL for yield |
 | Weekly selected-school denominator actually gets crawled | v514 focused isolated Mac smoke `target-year-discovery-after-sitecount-fix/20260519_231930-summary.json`: selected NEEC school IDs 1-3 were crawled (`crawled=3`) and remained reviewable, not strict FY2026 successes; v516 selection probe excludes already confirmed target schools 4 and 7 from the target-missing queue while preserving a 50-school queue; v517 targeted school ID 55 smoke confirms the new exact override is crawled and yields FY2019-FY2025 target-form evidence instead of corporation-only non-target evidence; v518 packages that case as discovery gold-set regression evidence; v519 filters vocational-practice basic-info PDFs out of target-form review; v519 Mac continuation canary with copied URL sources crawls 58 site rows for 50 selected schools and moves school ID 55 to `publication_lag_or_old_target_pdf`; v520 adds exact Katayanagi crawl entries while preserving NEEC no-year PDFs as reviewable, not strict successes; v521 suppresses same-school `corporation_pattern` rows when exact school-domain overrides exist, reducing the Katayanagi limit-3 crawl from 6 to 3 and candidate-school mismatches from 69 to 0; the v526/v525/v524/v523 Windows limit-50 canaries each download 5 strict/current PDFs and keep all 50 selected schools reviewable | PASS for code/evidence contract, FAIL for strict yield |
-| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v545/v544/v543/v542/v541/v540 bounded Windows canaries and the v545 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
+| Owner real Windows cycle and sign-off are complete | No completed owner KPI/sign-off template or owner-return verifier pass is present; v526 negative verifier probe blocks missing Excel ready/consistency proof, audit/outbox proof rows, and unapproved `publication_lag` fields. v548/v547/v546/v545/v544/v543/v542/v541/v540 bounded Windows canaries and the v548 owner-docs staging are runtime/handoff evidence, not owner/operator sign-off. | BLOCKED |
 | v1.0 tag is allowed | PR #8 is merged into `main`, but FY2026 strict proof, owner real cycle, and exception approval are incomplete | BLOCKED |
 
 ## Fresh Local Verification In This Audit Pass
@@ -729,15 +733,21 @@ the current FY2026/R8 60-70% target-PDF acquisition line or owner sign-off.
   cleanup pruned local v535/v536/v542/v543 core ZIPs and sidecars while
   retaining v544 fallback, v545 current, the latest alias, the current
   wheelhouse, and historical v545 handoff artifacts. After v547 owner-docs
-  staging, the current owner-docs transfer artifact is v547.
+  staging, the owner-docs transfer artifact was v547. After v548 owner-docs
+  staging, the current owner-docs transfer artifact is v548:
+  `dist/eidp-v548-owner-docs-20260621.zip`. Its exact SHA256 is recorded
+  outside the ZIP in `docs/reports/2026-06-21-v548-owner-docs-windows-staging.md`
+  and the `.sha256` sidecar, avoiding a self-referential checksum inside the
+  handoff ZIP.
 - Windows staging cleanup after v542 removed superseded core ZIPs and sidecars
   for v527, v532, v533, v537, v538, v540, and v541, plus temporary v542
   setup/canary/logtail scripts. After v544 owner-docs staging, cleanup removed
   superseded v542 owner-doc ZIP/sidecar/extracted docs while retaining the v544
-  owner-doc handoff. After v547 owner-docs staging, `C:\EIDP-staging` now
-  retains current v547 owner-docs staging, historical v545 owner docs, and the
-  active/fallback/current runtime artifacts recorded in the v547 Windows
-  canary report.
+  owner-doc handoff. After v547 owner-docs staging, `C:\EIDP-staging` retained
+  v547 owner-docs staging and historical v545 owner docs. After v548 owner-docs
+  staging, it now retains current v548 owner-docs staging, previous v547 owner
+  docs, historical v545 owner docs, and the active/fallback/current runtime
+  artifacts recorded in the v548 Windows canary report.
 - Local artifact storage now uses the external SSD mounted at
   `/Volumes/M1nG-ssd`: repository paths `dist` and `logs` are symlinks to
   `/Volumes/M1nG-ssd/EIDP-artifacts/dist` and

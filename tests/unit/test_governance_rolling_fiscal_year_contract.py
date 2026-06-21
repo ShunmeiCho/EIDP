@@ -119,62 +119,77 @@ def test_stage6_return_docs_wire_owner_decision_briefs_into_release_verification
     assert "Previous v546 Windows bounded canary evidence is recorded" in checklist
 
 
-def test_v547_owner_handoff_is_current_but_not_release_approval() -> None:
-    first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v547.txt")
-    request = _normalized_doc("docs/runbooks/eidp-v547-owner-request-20260621.txt")
-    return_sheet = _normalized_doc("docs/runbooks/eidp-v547-owner-return-fill-sheet.md")
-    release_summary = _normalized_doc("docs/runbooks/eidp-v547-release-summary.md")
-    owner_signoff = _normalized_doc("docs/runbooks/eidp-v547-owner-signoff.md")
+def test_v548_owner_handoff_is_current_but_not_release_approval() -> None:
+    first_read = _normalized_doc("docs/runbooks/00-READ-ME-FIRST-v548.txt")
+    request = _normalized_doc("docs/runbooks/eidp-v548-owner-request-20260621.txt")
+    return_sheet = _normalized_doc("docs/runbooks/eidp-v548-owner-return-fill-sheet.md")
+    release_summary = _normalized_doc("docs/runbooks/eidp-v548-release-summary.md")
+    owner_signoff = _normalized_doc("docs/runbooks/eidp-v548-owner-signoff.md")
     current_status = _normalized_doc("docs/reports/current-release-status.md")
     objective_checklist = _normalized_doc("docs/reports/eidp-current-objective-evidence-checklist.md")
-    staging = _normalized_doc("docs/reports/2026-06-21-v547-owner-docs-windows-staging.md")
+    admin_checklist = _normalized_doc("docs/runbooks/eidp-v1-release-admin-checklist.md")
+    staging = _normalized_doc("docs/reports/2026-06-21-v548-owner-docs-windows-staging.md")
 
-    expected_package_sha = "f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b"
-    expected_source_sha = "86c848f68e1dbde85c9b6422cfc827149940e02a"
-    expected_docs_sha = "311abf8052bba50a5ae8a62d63e0a1a4263aa14d8af88c6f23325771f6b8dd69"
+    expected_package_sha = "488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c"
+    expected_source_sha = "c1a96903ed10f1cc9c48d1a6912061ba0aaf86be"
+    expected_docs_sha = "f53a74015729e3b5cc988339f18b59288564fc24b149e6309fa659746e0a1cc9"
+    previous_v547_package_sha = "f167e17b89f0ff96a45c817abcfd0403a2d487eddf3fb3a85a73d866b351de4b"
+    previous_v547_source_sha = "86c848f68e1dbde85c9b6422cfc827149940e02a"
 
     for text in (first_read, request, return_sheet, release_summary, owner_signoff):
         assert expected_package_sha in text
         assert expected_source_sha in text
-        assert "v545" not in text
+        assert previous_v547_package_sha not in text
+        assert previous_v547_source_sha not in text
 
-    assert "docs\\reports\\2026-06-21-v547-package-gates.md" in first_read
-    assert "docs\\reports\\2026-06-21-v547-false-reject-review-sheet.csv" in first_read
-    assert "docs\\reports\\2026-06-21-v547-false-reject-review-worklist.md" in first_read
-    assert "docs\\reports\\2026-06-21-v547-false-reject-audit-packet.md" not in first_read
-    assert "GitHub main CI for packaged source commit 86c848f: success, run 27894031180" in first_read
-    assert "Do not treat the v547 bounded canary as owner real-cycle sign-off" in first_read
+    assert "docs\\reports\\2026-06-21-v548-package-setup-gates.md" in first_read
+    assert "docs\\reports\\2026-06-21-v548-false-reject-audit-packet.md" in first_read
+    assert "docs\\reports\\2026-06-21-v548-false-reject-review-sheet.csv" in first_read
+    assert "docs\\reports\\2026-06-21-v548-false-reject-review-worklist.md" in first_read
+    assert "docs\\reports\\2026-06-21-v548-false-reject-review-validation-summary.md" in first_read
+    assert "docs\\reports\\2026-06-21-v548-false-reject-review-rca-summary.md" in first_read
+    assert "GitHub main CI for packaged source commit c1a9690: success, run 27900695351" in first_read
+    assert "GitHub main CI for latest docs/worksheet commit 900168c: success" in first_read
+    assert "Do not treat the v548 bounded canary as owner real-cycle sign-off" in first_read
     assert "release conclusion remains NOT_READY" in request
     assert "Current release conclusion: `NOT_READY`" in release_summary
     assert "Current release conclusion | `NOT_READY`" in owner_signoff
-    assert "docs\\runbooks\\eidp-v547-owner-signoff.md" in request
+    assert "docs\\runbooks\\eidp-v548-owner-signoff.md" in request
     assert (
-        "--false-reject-evidence-zip logs/win-v547-86c848f-canary/stage6-evidence-20260621-054545.zip"
+        "--false-reject-evidence-zip logs/win-v548-c1a9690-canary/stage6-evidence-20260621-110254.zip"
         in return_sheet
     )
-    assert "--false-reject-review-csv docs/reports/2026-06-21-v547-false-reject-review-sheet.csv" in return_sheet
+    assert "--false-reject-review-csv docs/reports/2026-06-21-v548-false-reject-review-sheet.csv" in return_sheet
     assert (
         "--false-reject-review-audit-log "
-        "docs/reports/2026-06-21-v547-false-reject-review-audit-log.jsonl"
+        "docs/reports/2026-06-21-v548-false-reject-review-audit-log.jsonl"
     ) in return_sheet
-    assert "It does not make v547 `READY`" in owner_signoff
+    assert "It does not make v548 `READY`" in owner_signoff
 
-    assert "latest owner/operator handoff docs have been refreshed to v547 package identity" in current_status
-    assert "C:\\EIDP-staging\\v547-owner-docs-20260621" in current_status
-    assert "docs/reports/2026-06-21-v547-owner-docs-windows-staging.md" in current_status
-    assert "earlier v545, v544, v542, and v541 owner-docs refreshes remain historical" in current_status
+    assert "latest owner/operator handoff docs have been refreshed to v548 package identity" in current_status
+    assert "C:\\EIDP-staging\\v548-owner-docs-20260621" in current_status
+    assert "docs/reports/2026-06-21-v548-owner-docs-windows-staging.md" in current_status
+    assert "previous v547 handoff and earlier v545, v544, v542, and v541" in current_status
     assert "audit-packet validity" in current_status
-    assert "Latest v547 owner/operator docs staging" in objective_checklist
-    assert "staged owner handoff docs still target v547" in objective_checklist
+    assert "Latest v548 owner/operator docs staging" in objective_checklist
+    assert "current staged owner handoff lane is v548" in objective_checklist
+    assert "The previous v547 handoff" in objective_checklist
+    assert "staged owner handoff docs still target v547" not in objective_checklist
     assert "still target v545 until owner docs are refreshed again" not in objective_checklist
     assert "blocking packet/CSV/audit-log error previews" in objective_checklist
+    assert "v548 owner/operator handoff docs staging evidence" in admin_checklist
+    assert "dist/eidp-v548-owner-docs-20260621.zip" in admin_checklist
 
     assert expected_docs_sha in staging
     assert "ok\": true" in staging
-    assert "C:\\EIDP-staging\\v547-owner-docs-20260621" in staging
-    assert "active_task" in staging
-    assert "docs\\reports\\2026-06-21-v547-false-reject-review-worklist.md" in staging
+    assert "C:\\EIDP-staging\\v548-owner-docs-20260621" in staging
+    assert "active_task_expected_path_present\": true" in staging
+    assert "docs\\reports\\2026-06-21-v548-false-reject-review-worklist.md" in staging
+    assert "docs\\reports\\2026-06-21-v548-false-reject-review-rca-summary.md" in staging
     assert "false_reject_review_audit_log_arg_present" in staging
+    assert "completed_decisions\": 0" in staging
+    assert "blank_decisions\": 53" in staging
+    assert "context_mismatch_count\": 0" in staging
     assert "EIDP-v527-69fe81f-env0\\scripts\\weekly_run.bat" in staging
     assert "This copied documentation only" in staging
     assert "does not approve v1.0" in staging
@@ -309,7 +324,8 @@ def test_v545_owner_handoff_is_historical_not_release_approval() -> None:
     assert "rejection-bucket false-reject audit" in objective_checklist
     assert "fiscal-year mismatch / publication-lag or old target" in objective_checklist
     assert "The current false-reject review lane uses the v548 Windows canary evidence" in objective_checklist
-    assert "staged owner handoff docs still target v547" in objective_checklist
+    assert "v548 worksheet, and Windows-staged v548 owner handoff" in objective_checklist
+    assert "staged owner handoff docs still target v547" not in objective_checklist
     assert "Neither the v547 nor v548 worksheet has been completed or approved" in objective_checklist
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in current_status
     assert "docs/reports/2026-06-21-v545-false-reject-audit-packet.md" in objective_checklist

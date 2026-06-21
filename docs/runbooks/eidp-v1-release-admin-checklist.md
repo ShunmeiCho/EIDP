@@ -121,9 +121,13 @@ After the v548 rebuild, local package gates, and Windows side-by-side setup,
 superseded generated artifacts no longer needed for the current evidence lane
 were pruned. Retained core package artifacts on the external SSD are v547
 fallback, v548 current, the latest alias `dist/eidp-windows.zip`, and the
-current owner-docs ZIPs. Windows retained active v527, fallback v547, and
+current v548 owner-docs ZIP. Windows retained active v527, fallback v547, and
 current v548 while v546 transfer ZIPs and the v546 side-by-side directory were
-removed.
+removed. The current owner/operator handoff ZIP is
+`dist/eidp-v548-owner-docs-20260621.zip`, staged at
+`C:\EIDP-staging\v548-owner-docs-20260621`; its exact SHA256 is recorded in the
+external staging report and `.sha256` sidecar rather than inside the ZIP.
+Previous v547 owner-docs staging is historical fallback handoff evidence.
 AppleDouble `._*` files created by macOS on the external volume must be removed
 from `dist/` before package verification or transfer.
 
@@ -176,6 +180,13 @@ Before tagging, attach or reference:
   `logs/win-v548-cleanup-20260621.json`, and
   `dist/eidp-windows-v548.zip`. v548 package SHA256:
   `488d9e90a5dba99ef3a3eba3489832c6a878a8fa376bb1dd4808168e0975a67c`;
+- v548 owner/operator handoff docs staging evidence:
+  `docs/reports/2026-06-21-v548-owner-docs-windows-staging.md`,
+  `dist/eidp-v548-owner-docs-20260621.zip`, and
+  `dist/eidp-v548-owner-docs-20260621.zip.sha256`. The staging report and
+  sidecar record the exact v548 owner-docs ZIP SHA256 outside the ZIP; Windows
+  extracted destination: `C:\EIDP-staging\v548-owner-docs-20260621`. This is
+  documentation handoff only and does not approve v1.0;
 - v547 fallback package/source and bounded canary evidence:
   `docs/reports/2026-06-21-v547-package-gates.md`,
   `logs/eidp-windows-v547-distribution-verify-20260621.json`,
