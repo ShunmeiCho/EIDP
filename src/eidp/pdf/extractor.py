@@ -20,9 +20,7 @@ import structlog
 
 from eidp.config import MAX_SUPPORTED_TARGET_FISCAL_YEAR, MIN_SUPPORTED_TARGET_FISCAL_YEAR, settings
 from eidp.fiscal_year import fiscal_year_from_japanese_era_text, format_fiscal_year_as_japanese_era
-from eidp.pdf.field_aliases import METRIC_ALIASES
 from eidp.pdf.schema import DepartmentRecord, SchoolAnnotation, SupportRecipientRecord
-from eidp.pdf.table_grid_extractor import TableDepartmentRecord, map_page_tables_to_records
 
 log = structlog.get_logger()
 
@@ -765,60 +763,6 @@ def _strip_leading_field_prefix(name: str) -> str:
 PdfTable = list[list[Any]]
 
 
-def _contains_metric_alias(text: str, metric: str) -> bool:
-    """Return True when normalized page text contains any alias for a metric."""
-    normed = "".join(unicodedata.normalize("NFKC", text).split())
-    return any(alias in normed for alias in METRIC_ALIASES[metric])
-
-
-def _table_grid_to_department(
-    record: TableDepartmentRecord,
-    *,
-    duration_years: int | None = None,
-    day_or_evening: str = "",
-) -> DepartmentRecord:
-    """Convert a table-grid record to the legacy parser's DepartmentRecord shape."""
-    return DepartmentRecord(
-        name=record.department_name,
-        course_name=record.course_name or None,
-        duration_years=duration_years,
-        day_or_evening=day_or_evening or None,
-        capacity=record.capacity,
-        enrollment=record.enrollment,
-        intl_students=record.intl_students,
-    )
-
-
-def _select_table_grid_record(
-    records: list[TableDepartmentRecord], table_dept_name: str
-) -> TableDepartmentRecord | None:
-    """Choose the table-grid record for the current legacy section when unambiguous."""
-    if not records:
-        return None
-    if table_dept_name:
-        wanted = _norm(table_dept_name)
-        for record in records:
-            if _norm(record.department_name) == wanted:
-                return record
-    if len(records) == 1:
-        return records[0]
-    return None
-
-
-def _merge_table_grid_metrics(
-    dept: DepartmentRecord, record: TableDepartmentRecord
-) -> DepartmentRecord:
-    """Prefer table-positioned enrollment metrics while preserving text-only fields."""
-    updates: dict[str, Any] = {}
-    for field_name in ("capacity", "enrollment", "intl_students"):
-        value = getattr(record, field_name)
-        if value is not None:
-            updates[field_name] = value
-    if not dept.course_name and record.course_name:
-        updates["course_name"] = record.course_name
-    return dept.model_copy(update=updates) if updates else dept
-
-
 def _find_dept_table(tables: list[PdfTable]) -> tuple[PdfTable | None, int]:
     """Find the table containing the dept identity header row (学科名 + 課程名).
 
@@ -954,20 +898,6 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
 
         # Split into department sections
         departments: list[DepartmentRecord] = []
-        table_grid_records_by_page: dict[int, list[TableDepartmentRecord]] = {}
-        for page_no, page in enumerate(page_objects):
-            try:
-                table_records = map_page_tables_to_records(page.extract_tables() or [], page_no=page_no)
-            except Exception as e:
-                log.warning(
-                    "table_grid_extract_failed",
-                    page_no=page_no,
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-                continue
-            if table_records:
-                table_grid_records_by_page[page_no] = table_records
 
         # Find department section boundaries
         normed_pages = [_norm(pt) for pt in page_texts]
@@ -977,14 +907,14 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
             markers = sum([
                 "分野" in page_text,
                 "学科名" in page_text,
-                _contains_metric_alias(page_text, "capacity"),
+                "生徒総定員" in page_text,
             ])
             # Exclude pages that are PURELY financial (様式第2号の4) without
             # actual enrollment data. Pages that have BOTH financial and enrollment
             # content (small school single-page PDFs) should be included.
             is_financial = "財務" in page_text or "経営情報の公表" in page_text
-            has_enrollment = _contains_metric_alias(page_text, "enrollment")
-            if table_grid_records_by_page.get(i) or (markers >= 2 and (not is_financial or has_enrollment)):
+            has_enrollment = "生徒実員" in page_text
+            if markers >= 2 and (not is_financial or has_enrollment):
                 dept_section_starts.append(i)
 
         for idx, start_page in enumerate(dept_section_starts):
@@ -1002,27 +932,13 @@ def parse_pdf(pdf_path: Path) -> SchoolAnnotation:
             if _is_course_breakdown_section(table_dept, section_text):
                 continue
 
-            table_records = table_grid_records_by_page.get(start_page, [])
-            table_record = _select_table_grid_record(table_records, table_dept)
             dept = _parse_department_section(
                 section_text,
                 table_dept_name=table_dept,
                 table_course_name=table_course,
             )
-            if dept is None and table_records:
-                departments.extend(
-                    _table_grid_to_department(
-                        record,
-                        duration_years=table_duration,
-                        day_or_evening=table_day_night,
-                    )
-                    for record in table_records
-                )
-                continue
             # Override duration/day_night from table if text parsing missed them
             if dept is not None:
-                if table_record is not None:
-                    dept = _merge_table_grid_metrics(dept, table_record)
                 if dept.duration_years is None and table_duration is not None:
                     dept = dept.model_copy(update={"duration_years": table_duration})
                 if not dept.day_or_evening and table_day_night:

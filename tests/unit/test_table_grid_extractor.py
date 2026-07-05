@@ -65,7 +65,6 @@ def test_evidence_pins_page_table_row_col_and_raw_value() -> None:
     assert cap.table_index == 2
     assert cap.col_index == 0
     assert "120" in cap.raw_value
-    assert cap.confidence == 1.0
 
 
 def test_seito_and_gakusei_headers_both_extract() -> None:

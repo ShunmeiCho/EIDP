@@ -50,7 +50,6 @@ class CellEvidence:
     raw_label: str
     raw_value: str
     canonical_metric: str
-    confidence: float
 
 
 @dataclass(frozen=True)
@@ -151,7 +150,6 @@ def map_table_to_record(
                 raw_label=_clean(cell),
                 raw_value=str(data[col]),
                 canonical_metric=metric,
-                confidence=1.0,
             )
         )
 
