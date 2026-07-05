@@ -69,6 +69,38 @@ def test_fiscal_year_beyond_master_raises(tmp_path: Path) -> None:
         )
 
 
+def _make_master_with_blank_dept(tmp_path: Path) -> Path:
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "学科別"
+    ws.append([None] * 7 + ["2019年度", None, None])
+    ws.append(["都道府県", "法人名", "学校名", "課程名", "学科名", "昼夜", "年限", "収定", "在籍", "留学生"])
+    ws.append(["北海道", "大原学園", "札幌校", "商業実務", "会計2年制学科", "昼", "2", 80, 70, 0])
+    ws.append(["北海道", "大原学園", "札幌校", "文化教養", "停止学科", "昼", "2", 40, 0, 0])
+    ws.append(["北海道", "大原学園", "札幌校", "文化教養", "廃止学科", "昼", "2", None, None, None])
+    path = tmp_path / "blank_master.xlsx"
+    wb.save(str(path))
+    wb.close()
+    return path
+
+
+def test_blank_enrollment_department_is_skipped_but_zero_is_kept(tmp_path: Path) -> None:
+    """A master dept whose FY 在籍 cell is blank (None) is inactive for that FY and must
+    NOT be emitted as an expected row -- master carries legacy blank dept rows. 在籍=0
+    (募集停止 but still counted) is a real value and MUST be kept (0 != blank)."""
+    path = _make_master_with_blank_dept(tmp_path)
+    rows = load_master_metric_rows(
+        path, corporation_name="大原学園", school_name="札幌校", fiscal_year=2019,
+    )
+    keys = {r.department_key for r in rows}
+    assert "商業実務|会計2年制" in keys  # active dept
+    assert "文化教養|停止" in keys  # 在籍0 kept: 0 is a real value, not blank
+    assert "文化教養|廃止" not in keys  # blank 在籍 -> inactive FY row, skipped
+    assert len(rows) == 6  # two kept depts x three metric rows
+
+
 @pytest.mark.skipif(not Path("data/master.xlsx").exists(), reason="operator data/master.xlsx absent")
 def test_real_master_loads_ohara_fy2025_read_only() -> None:
     rows = load_master_metric_rows(

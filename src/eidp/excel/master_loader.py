@@ -88,6 +88,12 @@ def load_master_metric_rows(
             if target_pref and normalize_text(str(row[0] or "")) != target_pref:
                 continue
             dept = compose_department_key(str(row[3] or ""), str(row[4] or ""))
+            if _safe_int(row[enr_col]) is None:
+                # A department with no FY 在籍 (enrollment) value is inactive for that FY;
+                # master carries legacy dept rows with blank cells. Skip the whole dept so
+                # its blanks never become phantom missing_actual diffs. 在籍=0 (募集停止,
+                # still counted) is a real value (not None) and is kept.
+                continue
             for metric, col in zip(_METRIC_LABELS, (cap_col, enr_col, intl_col), strict=True):
                 rows.append(
                     MasterMetricRow(
