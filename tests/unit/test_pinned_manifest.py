@@ -32,6 +32,7 @@ def _valid_row() -> dict:
         "school_key": "大原学園",
         "campus_key": "大原簿記情報専門学校札幌校",
         "school_name": "大原簿記情報専門学校札幌校",
+        "prefecture": "北海道",
         "fiscal_year": 2025,
         "pdf_paths": ["pdf/2025-1-01-01-5.pdf"],
         "pdf_url": "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf",
@@ -68,6 +69,7 @@ def test_load_rung1a_fixture_pins_school_01() -> None:
     assert row.school_key == "大原学園"
     assert row.campus_key == "大原簿記情報専門学校札幌校"
     assert row.school_name == "大原簿記情報専門学校札幌校"
+    assert row.prefecture == "北海道"
     assert row.fiscal_year == 2025
     assert row.pdf_paths == ["pdf/2025-1-01-01-5.pdf"]
     assert row.pdf_url == "https://www.o-hara.ac.jp/about/joho/pdf/2025-1-01-01-5.pdf"
@@ -183,6 +185,7 @@ def test_missing_source_type_raises(tmp_path: Path) -> None:
         "school_key",
         "campus_key",
         "school_name",
+        "prefecture",
         "fiscal_year",
         "pdf_paths",
         "pdf_url",

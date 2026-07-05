@@ -60,6 +60,31 @@ def test_department_key_lands_pdf_onto_master() -> None:
     assert department_key(master_name) == department_key(pdf_name)
 
 
+def test_department_key_never_collapses_to_empty_key() -> None:
+    # Guardrail (pre-Rung1c): a name that is nothing but strippable suffixes must NOT become
+    # '' -- an empty key would false-merge unrelated departments. Fall back to pre-strip form.
+    assert department_key("コース") == "コース"  # コース fully stripped -> guarded to pre-strip
+    assert department_key("　コース　") == "コース"
+    assert department_key("科") == "科"  # single-char suffix kept (len guard, no strip)
+    # Codex Rung-1c merge review: a bare '学科' must NOT collapse to '学' via the 科-strip.
+    # It is a header/garbage token, not a department; preserved verbatim so it can never
+    # false-merge into a 1-char key on either side of review_master_diff / double_check.
+    assert department_key("学科") == "学科"
+    assert department_key("　学科　") == "学科"
+    assert department_key("") == ""  # genuinely empty input has no department name
+
+
+def test_department_key_drops_trailing_course_qualifier() -> None:
+    # 8 山形校: PDF writes '(ビジネスコース)', master '（ビジネス）'. After NFKC the only
+    # residue is コース; stripping it at the trailing edge makes both key identically.
+    assert department_key("税理士・ビジネス学科(ビジネスコース)") == "税理士・ビジネス学科(ビジネス)"
+    assert department_key("税理士・ビジネス学科(ビジネスコース)") == department_key(
+        "税理士・ビジネス学科（ビジネス）"
+    )
+    # コース is only dropped at the trailing edge / before a closing paren, never mid-name.
+    assert department_key("公務員学科2年制") == "公務員学科2年制"
+
+
 def test_fy_metric_columns_capacity_enrollment_intl_offsets() -> None:
     # 収定 / 在籍 / 留学生 are consecutive; FY block start comes from the master layout.
     assert fy_metric_columns(2019) == (7, 8, 9)

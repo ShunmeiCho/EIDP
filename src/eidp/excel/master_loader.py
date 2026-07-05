@@ -19,7 +19,12 @@ from eidp.pdf.master_ground_truth import (
     normalize_text,
 )
 
-__all__ = ["MasterMetricRow", "compose_department_key", "load_master_metric_rows"]
+__all__ = [
+    "MasterMetricRow",
+    "SkippedDepartmentRow",
+    "compose_department_key",
+    "load_master_metric_rows",
+]
 
 _SHEET = "学科別"
 _METRIC_LABELS = ("capacity", "enrollment", "intl_students")
@@ -35,6 +40,18 @@ class MasterMetricRow:
     value: int | float | str | None
     source_sheet: str
     source_cell: str | None
+
+
+@dataclass(frozen=True)
+class SkippedDepartmentRow:
+    """A master department dropped from the metric rows, with an explicit reason so the
+    skip is auditable (no silent skip). Currently: blank FY 在籍 = inactive/legacy dept."""
+
+    school_key: str
+    campus_key: str | None
+    department_key: str
+    fiscal_year: int
+    skip_reason: str
 
 
 def compose_department_key(field_category: str | None, department_name: str | None) -> str:
@@ -60,6 +77,7 @@ def load_master_metric_rows(
     school_name: str,
     fiscal_year: int,
     prefecture: str | None = None,
+    skipped: list[SkippedDepartmentRow] | None = None,
 ) -> list[MasterMetricRow]:
     """Load the (capacity/enrollment/intl_students) metric rows for one school+FY.
 
@@ -88,6 +106,23 @@ def load_master_metric_rows(
             if target_pref and normalize_text(str(row[0] or "")) != target_pref:
                 continue
             dept = compose_department_key(str(row[3] or ""), str(row[4] or ""))
+            if _safe_int(row[enr_col]) is None:
+                # A department with no FY 在籍 (enrollment) value is inactive for that FY;
+                # master carries legacy dept rows with blank cells. Skip the whole dept so
+                # its blanks never become phantom missing_actual diffs. 在籍=0 (募集停止,
+                # still counted) is a real value (not None) and is kept. The skip is recorded
+                # (not silent) so an operator can audit every dropped master row.
+                if skipped is not None:
+                    skipped.append(
+                        SkippedDepartmentRow(
+                            school_key=target_corp,
+                            campus_key=target_school,
+                            department_key=dept,
+                            fiscal_year=fiscal_year,
+                            skip_reason="blank_enrollment_legacy",
+                        )
+                    )
+                continue
             for metric, col in zip(_METRIC_LABELS, (cap_col, enr_col, intl_col), strict=True):
                 rows.append(
                     MasterMetricRow(

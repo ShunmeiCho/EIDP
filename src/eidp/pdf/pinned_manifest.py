@@ -50,6 +50,7 @@ _REQUIRED_STR_FIELDS = (
     "school_key",
     "campus_key",
     "school_name",
+    "prefecture",
     "pdf_url",
     "source_page_url",
     "status",
@@ -73,6 +74,7 @@ class PinnedManifestRow:
     school_key: str  # 法人名 (e.g. 大原学園)
     campus_key: str  # 学校名 (e.g. 大原簿記情報専門学校札幌校)
     school_name: str  # human-readable school/campus name
+    prefecture: str  # 都道府県 -- required so sibling-campus discrimination has a second key
     fiscal_year: int
     pdf_paths: list[str]  # PDF path(s) on the disclosure page (relative hrefs)
     pdf_url: str  # resolved absolute URL of the primary pinned PDF
@@ -150,6 +152,7 @@ def _parse_row(raw: Any, index: int) -> PinnedManifestRow:
         school_key=raw["school_key"],
         campus_key=raw["campus_key"],
         school_name=raw["school_name"],
+        prefecture=raw["prefecture"],
         fiscal_year=fiscal_year,
         pdf_paths=list(pdf_paths),
         pdf_url=raw["pdf_url"],

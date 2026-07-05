@@ -43,7 +43,7 @@ def test_rung1a_enrollment_gate_passes_capacity_reconciled() -> None:
     )
     expected = load_master_metric_rows(
         _MASTER, corporation_name=row.school_key, school_name=row.campus_key,
-        fiscal_year=row.fiscal_year,
+        fiscal_year=row.fiscal_year, prefecture=row.prefecture,
     )
     result = diff_metric_rows(expected, actual)
     gate = rung_gate(result)
