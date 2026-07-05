@@ -12,8 +12,12 @@ Contract asserted here (synthetic records only; no PDF or Excel I/O):
 - CellEvidence page/table/row/col flows into source_cell so provenance survives.
 """
 
+from pathlib import Path
+
+import pytest
+
 from eidp.excel.actual_row_converter import convert_to_master_metric_rows
-from eidp.excel.master_loader import MasterMetricRow, compose_department_key
+from eidp.excel.master_loader import MasterMetricRow, compose_department_key, load_master_metric_rows
 from eidp.pdf.master_ground_truth import normalize_text
 from eidp.pdf.table_grid_extractor import CellEvidence, TableDepartmentRecord
 
@@ -28,7 +32,19 @@ def _evidence(metric: str, *, page_no: int, table_index: int, row_index: int,
         raw_label=metric,
         raw_value="x",
         canonical_metric=metric,
+        confidence=1.0,
     )
+
+
+def _operator_master_path() -> Path | None:
+    repo_root = Path(__file__).resolve().parents[2]
+    candidates = [repo_root / "data" / "master.xlsx"]
+    if repo_root.parent.name == ".worktrees":
+        candidates.append(repo_root.parent.parent / "data" / "master.xlsx")
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _record(**overrides: object) -> TableDepartmentRecord:
@@ -208,3 +224,46 @@ def test_none_metric_diffs_as_exact_match_not_missing() -> None:
     assert result.counts["exact_match"] == 1
     assert result.counts["missing_actual"] == 0
     assert result.counts["unexpected_actual"] == 0
+
+
+@pytest.mark.skipif(_operator_master_path() is None, reason="operator data/master.xlsx absent")
+def test_real_master_diff_matches_small_ohara_subset_read_only() -> None:
+    master_path = _operator_master_path()
+    assert master_path is not None
+    before = master_path.read_bytes()
+    record = _record(
+        department_name="ビジネスキャリア2年制",
+        capacity=140,
+        enrollment=113,
+        intl_students=0,
+        evidence=(
+            _evidence("capacity", page_no=8, table_index=2, row_index=7, col_index=0),
+            _evidence("enrollment", page_no=8, table_index=2, row_index=7, col_index=2),
+            _evidence("intl_students", page_no=8, table_index=2, row_index=7, col_index=3),
+        ),
+    )
+
+    expected = load_master_metric_rows(
+        master_path,
+        corporation_name="大原学園",
+        school_name="大原簿記情報専門学校札幌校",
+        fiscal_year=2025,
+    )
+    expected_subset = [
+        row for row in expected if row.department_key == "商業実務|ビジネスキャリア2年制"
+    ]
+    actual = convert_to_master_metric_rows(
+        [record],
+        school_key="大原学園",
+        campus_key="大原簿記情報専門学校札幌校",
+        fiscal_year=2025,
+    )
+
+    from eidp.excel.master_diff import diff_metric_rows
+
+    result = diff_metric_rows(expected_subset, actual)
+
+    assert len(expected_subset) == 3
+    assert result.counts["exact_match"] == 3
+    assert result.has_failures is False
+    assert master_path.read_bytes() == before
